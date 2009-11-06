@@ -14,8 +14,8 @@ def override_current_time(current_time):
 
 def current_time():
     """Standard interface for generating the current time."""
-    if _current_time is not None:
-        return _current_time
+    if _current_time_override is not None:
+        return _current_time_override
     else:
         return datetime.datetime.now()
         

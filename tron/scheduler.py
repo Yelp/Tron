@@ -1,6 +1,7 @@
 import datetime
 
 from tron import utils
+import utils.time
 
 class BaseScheduler(object):
     """Common base class for schedulers.
@@ -23,10 +24,10 @@ class ConstantScheduler(BaseScheduler):
 class DailyScheduler(BaseScheduler):
     """The daily scheduler schedules one run per day"""
     def next_run(self, job):
-        run = super(DailyScheduler, self).next_run()
+        run = super(DailyScheduler, self).next_run(job)
 
         # For a daily scheduler, always assume the next job run is tomorrow
-        run_time = (utils.time.current_time() + datetime.timedelta(days=1)).replace(hour=0, minute=0, secs=0)
+        run_time = (utils.time.current_time() + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0)
 
         run.start_time = run_time
 
