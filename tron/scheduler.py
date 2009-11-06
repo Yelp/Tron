@@ -1,6 +1,6 @@
 import datetime
 
-from tron import utils.time
+from tron import utils
 
 class BaseScheduler(object):
     """Common base class for schedulers.
@@ -9,10 +9,11 @@ class BaseScheduler(object):
     """
     def __init__(self):
         super(BaseScheduler, self).__init__()
-        self.start_time = datetime.datetime.now()
+        
 
     def next_run(self, job):
         run = job.build_run()
+        run.start_time = datetime.datetime.now()
         return run
 
 class ConstantScheduler(BaseScheduler):
