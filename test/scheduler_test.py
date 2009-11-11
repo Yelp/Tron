@@ -10,9 +10,6 @@ class ConstantSchedulerTest(TestCase):
     def build_scheduler(self):
         self.scheduler = scheduler.ConstantScheduler()
         self.job = turtle.Turtle()
-        def build_run():
-            return turtle.Turtle()
-        self.job.build_run = build_run
     
     def test_next_run(self):
         next_run = self.scheduler.next_run(self.job)
