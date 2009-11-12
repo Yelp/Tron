@@ -1,3 +1,6 @@
+from types import FunctionType
+import functools
+
 from testify import *
 from testify.test_case import TwistedFailureError
 from twisted.internet import reactor, defer
@@ -84,6 +87,7 @@ def run_reactor(timeout=DEFAULT_TIMEOUT, assert_raises=None):
                 reactor.crash()
                 raise
 
+        @functools.wraps(method)
         def run_defer(*args, **kwargs):
             deferred = defer.maybeDeferred(method, *args, **kwargs)
 
@@ -105,5 +109,9 @@ def run_reactor(timeout=DEFAULT_TIMEOUT, assert_raises=None):
                 assert_not_reached("No exception was raised (expected %s)" % assert_raises)
         
             return None
+        
+        if isinstance(method, FunctionType):
+            run_defer.func_doc = method.func_doc
+            run_defer.func_name = method.func_name
         return run_defer
     return wrapper

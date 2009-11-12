@@ -3,10 +3,8 @@ class JobRun(object):
     def __init__(self, job):
         super(JobRun, self).__init__()
         self.job = job
+        self.is_done = False
 
-    def is_complete(self):
-        return False
-        
 class Job(object):
     def __init__(self):
         self._is_configured = False
@@ -16,7 +14,7 @@ class Job(object):
     def next_run(self):
         """Check the scheduler and decide when the next run should be"""
         for run in self.runs:
-            if not run.is_complete():
+            if not run.is_done:
                 return run
         else:
             return self.scheduler.pick_next_run()
@@ -32,6 +30,7 @@ class Job(object):
         """Update configuration of job"""
         if self._is_configured:
             # We are updating a config
+            pass
         else:
             # Initializing a job
             
@@ -55,7 +54,7 @@ class JobSet(object):
             else:
                 existing_job.configure(job_config)
 
-        for job_name self.jobs.iterkeys():
+        for job_name in self.jobs.iterkeys():
             if job_name not in found_jobs:
                 dead_job = self.jobs[job_name]
                 self.jobs.remove(dead_job)

@@ -8,27 +8,35 @@ class SimpleTestCase(TestCase):
     """Make sure our setup methods get called"""
     ran_class_setup = 0
     ran_setup = False
+    ran_methods = 0
 
     @class_setup
-    @testing.run_reactor
+    @testing.run_reactor()
     def simple_test_setup(self):
         self.ran_class_setup += 1
         self.ran_setup = False
 
     @setup
-    @testing.run_reactor
+    @testing.run_reactor()
     def per_method_setup(self):
         self.ran_setup = True
 
-    @testing.run_reactor
+    @testing.run_reactor()
     def test_method_one(self):
         assert_equal(self.ran_class_setup, 1)
         assert self.ran_setup
+        self.ran_methods += 1
 
-    @testing.run_reactor
+    @testing.run_reactor()
     def test_method_two(self):
         assert_equal(self.ran_class_setup, 1)
         assert self.ran_setup
+        self.ran_methods += 1
+
+    @class_teardown
+    def check_we_ran(self):
+        assert self.ran_setup
+        assert_equal(self.ran_methods, 2)
 
 class SimpleDeferredTestCase(TestCase):
     
