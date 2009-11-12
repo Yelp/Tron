@@ -12,40 +12,13 @@ from twisted.conch.client import default, options
 from twisted.python import log
 
 
-class ClientUserAuth(userauth.SSHUserAuthClient):
-    def __init__(self, user, instance):
-        super(ClientUserAuth, self).__init__(user, instance)
-        self.agent = SSHAgentClient()
-        self.agent.requestIdentities().addCallback(self._cbAgentIdentities)
-
-    def _cbAgentIdentities(self, data):
-        self.identities = data
-
-    def getPassword(self, prompt = None):
-        # this says we won't do password authentication
-        return
-
-    def getPublicKey(self):
-        # public_key_data = open("/Users/rhettg/.ssh/identity.pub").read()
-        # return keys.getPublicKeyString(data = public_key_data)
-        return keys.Key.fromFile("/Users/rhettg/.ssh/identity.pub").blob()
-
-    def signData(self, publicKey, signData):
-        return self.agent.signData(publicKey, signData)
-        
-
 class ClientTransport(transport.SSHClientTransport):
 
     def verifyHostKey(self, pubKey, fingerprint):
         return defer.succeed(1)
-        # if fingerprint != 'b1:94:6a:c9:24:92:d2:34:7c:62:35:b4:d2:61:11:84':
-        #     return defer.fail(error.ConchError('bad key'))
-        # else:
-        #     return defer.succeed(1)
 
     def connectionSecure(self):
         self.requestService(default.SSHUserAuthClient(os.getlogin(), options.ConchOptions(), ClientConnection()))
-        #self.requestService(default.SSHUserAuthClient('user', ClientConnection()))
 
 class ClientConnection(connection.SSHConnection):
     def serviceStarted(self):
