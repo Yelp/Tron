@@ -3,6 +3,7 @@ from testify import *
 from tron import mcp, job, scheduler
 
 class SimpleTest(TestCase):
+    @setup
     def build_jobs(self):
         self.job = job.Job()
         self.job.name = "Test Job"

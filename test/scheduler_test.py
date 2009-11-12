@@ -13,7 +13,7 @@ class ConstantSchedulerTest(TestCase):
     
     def test_next_run(self):
         next_run = self.scheduler.next_run(self.job)
-        assert_lte(datetime.datetime.now() - next_run.start_time, datetime.timedelta(seconds=2))
+        assert_lte(datetime.datetime.now() - next_run.run_time, datetime.timedelta(seconds=2))
 
 class DailySchedulerTest(TestCase):
     @setup
@@ -27,7 +27,7 @@ class DailySchedulerTest(TestCase):
     def test_next_run(self):
         next_run = self.scheduler.next_run(self.job)
 
-        next_run_date = next_run.start_time.date()
+        next_run_date = next_run.run_time.date()
         today = datetime.date.today()
         
         assert_gt(next_run_date, today)

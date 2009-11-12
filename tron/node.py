@@ -22,6 +22,8 @@ class Node(object):
     def run(self, run):
         """Execute the specified run"""
 
+        run.start()
+
         if self.connection is None:
             self.run_state[run.id] = RUN_STATE_CONNECTING
             if self.connection_defer is None:

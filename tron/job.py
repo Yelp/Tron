@@ -1,40 +1,74 @@
+import uuid
+
+from tron.utils import time
+
+JOB_RUN_WAITING = 0
+JOB_RUN_RUNNING = 1
+JOB_RUN_FAILED = 10
+JOB_RUN_SUCCEEDED = 11
+
 class JobRun(object):
     """An instance of running a job"""
     def __init__(self, job):
         super(JobRun, self).__init__()
         self.job = job
-        self.is_done = False
+        
+        self.id = "%s.%s" % (job.name, uuid.uuid4().hex)
+        
+        self.start_time = None
+        self.end_time = None
+        self.state = None
+
+    def start(self):
+        self.start_time = time.current_time()
+        self.state = JOB_RUN_RUNNING
+
+    def fail(self, exit_status):
+        """Mark the run as having failed, providing an exit status"""
+        self.state = JOB_RUN_FAILED
+        self.exit_status = exit_status
+        self.end_time = time.current_time()
+
+    def succeed(self):
+        """Mark the run as having succeeded"""
+        self.exit_status = 0
+        self.state = JOB_RUN_SUCCEEDED
+        self.end_time = time.current_time()
+
+    @property
+    def is_done(self):
+        return self.state in (JOB_RUN_FAILED, JOB_RUN_SUCCEEDED)
+
+    @property
+    def is_running(self):
+        return self.state == JOB_RUN_RUNNING
+
 
 class Job(object):
-    def __init__(self):
-        self._is_configured = False
+    def __init__(self, name=None):
+        self.name = name
         self.scheduler = None
         self.runs = []
-        
+
     def next_run(self):
         """Check the scheduler and decide when the next run should be"""
         for run in self.runs:
             if not run.is_done:
                 return run
+
+        if self.scheduler:
+            return self.scheduler.next_run(self)
         else:
-            return self.scheduler.pick_next_run()
+            return None
 
     def build_run(self):
         """Build an instance of JobRun for this job
         
         This is used by the scheduler when scheduling a run
         """
-        return JobRun(self)
-            
-    def configure(self, config):
-        """Update configuration of job"""
-        if self._is_configured:
-            # We are updating a config
-            pass
-        else:
-            # Initializing a job
-            
-            self._is_configured = True
+        new_run = JobRun(self)
+        self.runs.append(new_run)
+        return new_run
     
 class JobSet(object):
     def __init__(self):
