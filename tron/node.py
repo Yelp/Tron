@@ -25,8 +25,23 @@ class Node(object):
         A run consists of a very specific set of interfaces which allow us to execute a command on this remote machine and
         return results.
         """
+        
+        # When this run completes, for good or bad, we'll inform the caller by calling 'succeed' or 'fail' on the run
+        # Since the definined interface is on these specific callbacks, we won't bother returning the deferred here. This
+        # allows the caller to not really care about twisted specific stuff at all, all it needs to know is that one of those
+        # functions will eventually be called back
+
+        df = defer.Deferred()
+        assert run.id not in self.run_defer
+        assert run.id not in self.run_state
+
+        self.run_defer[run.id] = df
+        self.run_state[run.id] = RUN_STATE_CONNECTING
+        
+        # Now let's see if we need to start this off by establishing a connection or if we are already connected
         if self.connection is None:
-            self.run_state[run.id] = RUN_STATE_CONNECTING
+            # TODO: Is this safe ? Could we have started connected but self.connection is none ?
+            
             if self.connection_defer is None:
                 self.connection_defer = self._connect()
             
@@ -36,14 +51,6 @@ class Node(object):
             self.connection_defer.addCallback(call_open_channel)
         else:
             self._open_channel(run)
-
-        # When this run completes, for good or bad, we'll inform the caller by calling 'succeed' or 'fail' on the run
-        # Since the definined interface is on these specific callbacks, we won't bother returning the deferred here. This
-        # allows the caller to not really care about twisted specific stuff at all, all it needs to know is that one of those
-        # functions will eventually be called back
-
-        df = defer.Deferred()
-        self.run_defer[run.id] = df
     
     def _connect(self):
         # This is complicated because we have to deal with a few different steps before our connection is really available for us:
@@ -105,7 +112,7 @@ class Node(object):
         else:
             run.succeed()
         
-        self.run_defer[run.id].callback(run_result)
+        self.run_defer[run.id].callback(run)
 
         # Cleanup, we care nothing this run anymore
         del self.run_state[run.id]

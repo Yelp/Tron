@@ -26,8 +26,9 @@ class MasterControlProgram(object):
         
         Check for work to do, and do it. Should be called regularly (via a timer)
         """
+        log.debug("Checking for available jobs")
         current_runs = []
         for job in self.jobs.itervalues():
             job_run = job.next_run()
-            if job_run and job_run.should_start():
+            if job_run and job_run.should_start:
                 job_run.start()

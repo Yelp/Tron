@@ -4,9 +4,6 @@ from testify.utils import turtle
 from tron import job, scheduler
 
 
-def fixup_run(job_run):
-    """Alter the job run so it doesn't actually execute the job, but rather fakes it"""
-
 class JobRunState(TestCase):
     """Check that our job runs can start/stop and manage their state"""
     @setup

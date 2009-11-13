@@ -1,0 +1,39 @@
+#!/usr/bin/env python
+import logging
+import sys
+
+from twisted.python import log
+from twisted.internet import reactor, task
+
+from tron import mcp, job, resource, node, scheduler
+
+def main():
+    # Setup logging
+    observer = log.PythonLoggingObserver()
+    observer.start()
+    
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s %(levelname)s %(message)s',
+                        stream=sys.stdout,)
+    
+    # Configure the mcp
+    master_control = mcp.MasterControlProgram()
+    
+    my_node = node.Node("dev05")
+    
+    my_job = job.Job("First Job")
+    my_job.node = my_node
+    my_job.path = "who"
+    my_job.scheduler = scheduler.ConstantScheduler()
+    
+    master_control.add_job(my_job)
+    
+    # Setup the mcp polling
+    l = task.LoopingCall(master_control.check_and_run)
+    l.start(1.0) # call every second
+    
+    # and then off to reactor land...
+    reactor.run()
+
+if __name__ == '__main__':
+    main()
