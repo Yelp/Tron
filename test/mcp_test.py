@@ -10,7 +10,6 @@ class SimpleTest(TestCase):
         job.scheduler = scheduler.ConstantScheduler()
         
         self.master = mcp.MasterControlProgram()
-        self.master.add_node(turtle.Turtle())
         self.master.add_job(job)
         
     def test(self):

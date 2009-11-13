@@ -20,10 +20,11 @@ class Node(object):
         self.run_state = {}
 
     def run(self, run):
-        """Execute the specified run"""
-
-        run.start()
-
+        """Execute the specified run
+        
+        A run consists of a very specific set of interfaces which allow us to execute a command on this remote machine and
+        return results.
+        """
         if self.connection is None:
             self.run_state[run.id] = RUN_STATE_CONNECTING
             if self.connection_defer is None:
@@ -36,10 +37,13 @@ class Node(object):
         else:
             self._open_channel(run)
 
-        # When this run completes, for good or bad, we'll inform the caller based on this deferred
+        # When this run completes, for good or bad, we'll inform the caller by calling 'succeed' or 'fail' on the run
+        # Since the definined interface is on these specific callbacks, we won't bother returning the deferred here. This
+        # allows the caller to not really care about twisted specific stuff at all, all it needs to know is that one of those
+        # functions will eventually be called back
+
         df = defer.Deferred()
         self.run_defer[run.id] = df
-        return df
     
     def _connect(self):
         # This is complicated because we have to deal with a few different steps before our connection is really available for us:
@@ -80,20 +84,29 @@ class Node(object):
 
         chan = ssh.ExecChannel(conn=self.connection)
 
-        chan.command = run.job.path
+        chan.command = run.command
         chan.exit_defer = defer.Deferred()
         chan.exit_defer.addCallback(self._channel_complete, run)
         
         self.connection.openChannel(chan)
+        # TODO: We'll maybe need to setup timers here with run.timeout_secs
     
     def _channel_complete(self, channel, run):
-        # TODO: Should probably do something with the output and exit status
+        """Callback once our channel has completed it's operation
+        
+        This is how we let our run know that we succeeded or failed.
+        """
         assert self.run_state[run.id] < RUN_STATE_COMPLETE
+        self.run_state[run.id] = RUN_STATE_COMPLETE
 
+        # TODO: Should probably do something with the output
         if channel.exit_status != 0:
             run.fail(channel.exit_status)
         else:
             run.succeed()
+        
+        self.run_defer[run.id].callback(run_result)
 
-        self.run_state[run.id] = RUN_STATE_COMPLETE
-        self.run_defer[run.id].callback(run)
+        # Cleanup, we care nothing this run anymore
+        del self.run_state[run.id]
+        del self.run_defer[run.id]

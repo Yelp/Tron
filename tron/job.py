@@ -25,6 +25,12 @@ class JobRun(object):
     def start(self):
         self.start_time = time.current_time()
         self.state = JOB_RUN_RUNNING
+        
+        # And now we try to actually start some work....
+        self._execute()
+
+    def _execute(self):
+        self.job.node.run(self)
 
     def fail(self, exit_status):
         """Mark the run as having failed, providing an exit status"""
@@ -37,6 +43,17 @@ class JobRun(object):
         self.exit_status = 0
         self.state = JOB_RUN_SUCCEEDED
         self.end_time = time.current_time()
+
+    @property
+    def command(self):
+        return self.job.path
+
+    @property
+    def timeout_secs(self):
+        if self.job.timeout is None:
+            return None
+        else:
+            return self.job.timeout.seconds
 
     @property
     def is_done(self):
@@ -65,10 +82,11 @@ class JobRun(object):
 
 
 class Job(object):
-    def __init__(self, name=None, node=None):
+    def __init__(self, name=None, node=None, timeout=None):
         self.name = name
         self.node = node
         self.scheduler = None
+        self.timeout = None
         self.runs = []
         self.resources = []
 

@@ -28,6 +28,6 @@ class MasterControlProgram(object):
         """
         current_runs = []
         for job in self.jobs.itervalues():
-            run = job.next_run()
-            if run and run.should_start():
-                run.start()
+            job_run = job.next_run()
+            if job_run and job_run.should_start():
+                job_run.start()

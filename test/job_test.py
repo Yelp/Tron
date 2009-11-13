@@ -3,13 +3,22 @@ from testify.utils import turtle
 
 from tron import job, scheduler
 
+
+def fixup_run(job_run):
+    """Alter the job run so it doesn't actually execute the job, but rather fakes it"""
+
 class JobRunState(TestCase):
     """Check that our job runs can start/stop and manage their state"""
     @setup
     def build_job(self):
         self.job = job.Job(name="Test Job")
         self.run = self.job.build_run()
-    
+
+        def noop_execute():
+            pass
+
+        self.run._execute = noop_execute
+
     def test_success(self):
         assert not self.run.is_running
         assert not self.run.is_done
@@ -45,7 +54,7 @@ class JobRunBuildingTest(TestCase):
     
     def test_build_run(self):
         run = self.job.build_run()
-        
+
         assert self.job.runs[-1] == run
         assert run.id
         
