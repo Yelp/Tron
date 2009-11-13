@@ -15,9 +15,12 @@ class JobRun(object):
         
         self.id = "%s.%s" % (job.name, uuid.uuid4().hex)
         
-        self.start_time = None
-        self.end_time = None
-        self.state = None
+        self.run_time = None    # What time are we supposed to start
+
+        self.start_time = None  # What time did we start
+        self.end_time = None    # What time did we end
+
+        self.state = JOB_RUN_WAITING
 
     def start(self):
         self.start_time = time.current_time()
@@ -43,12 +46,31 @@ class JobRun(object):
     def is_running(self):
         return self.state == JOB_RUN_RUNNING
 
+    @property
+    def is_success(self):
+        return self.state == JOB_RUN_SUCCEEDED
+
+    @property
+    def should_start(self):
+        if self.state != JOB_RUN_WAITING:
+            return False
+        
+        # First things first... is it time to start ?
+        if self.run_time > time.current_time():
+            raise Exception('here i am: %s %s' % (self.run_time, time.current_time()))
+            return False
+        
+        # Ok, it's time, what about our jobs dependencies
+        return bool(all(r.ready for r in self.job.resources))
+
 
 class Job(object):
-    def __init__(self, name=None):
+    def __init__(self, name=None, node=None):
         self.name = name
+        self.node = node
         self.scheduler = None
         self.runs = []
+        self.resources = []
 
     def next_run(self):
         """Check the scheduler and decide when the next run should be"""
@@ -70,6 +92,7 @@ class Job(object):
         self.runs.append(new_run)
         return new_run
     
+
 class JobSet(object):
     def __init__(self):
         """docstring for __init__"""
