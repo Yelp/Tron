@@ -2,33 +2,54 @@
 import logging
 import sys
 import datetime
+import optparse
 
 from twisted.python import log
 from twisted.internet import reactor, task
 
-from tron import mcp, job, resource, node, scheduler
+from tron import mcp, job, resource, node, scheduler, config
 
-def main():
-    # Setup logging
+def parse_options():
+    parser = optparse.OptionParser()
+    
+    parser.add_option("--config-file", action="store", dest="config_file", help="(require) Configuration file to load", default=None)
+    parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
+    
+    (options, args) = parser.parse_args(sys.argv)
+    if options.config_file is None:
+        parser.error("Configuration file must be specified with --config-file option")
+
+    return options
+
+def setup_logging(options):
+    level = logging.WARNING
+    stream = sys.stderr
+    if options.verbose > 0:
+        stream = sys.stdout
+        level = logging.INFO
+    if options.verbose > 1:
+        level = logging.DEBUG
+    
+    logging.basicConfig(level=level,
+                        format='%(asctime)s %(name)s %(levelname)s %(message)s',
+                        stream=stream,)
+
+    # Hookup twisted to standard logging
     observer = log.PythonLoggingObserver()
     observer.start()
+
+def main():
+    options = parse_options()
     
-    logging.basicConfig(level=logging.DEBUG,
-                        format='%(asctime)s %(levelname)s %(message)s',
-                        stream=sys.stdout,)
+    setup_logging(options)
     
     # Configure the mcp
     master_control = mcp.MasterControlProgram()
     
-    my_node = node.Node("dev05")
-    
-    my_job = job.Job("First Job")
-    my_job.node = my_node
-    my_job.path = "false"
-    my_job.scheduler = scheduler.IntervalScheduler(datetime.timedelta(seconds=5))
-    
-    master_control.add_job(my_job)
-    
+    config_file = open(options.config_file, "r")
+    configuration = config.load_config(config_file)
+    configuration.apply(master_control)
+        
     # Setup the mcp polling
     l = task.LoopingCall(master_control.check_and_run)
     l.start(1.0) # call every second

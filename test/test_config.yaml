@@ -1,0 +1,13 @@
+--- !TronConfiguration
+
+nodes:
+    - &nodeBatch00 !Node
+        hostname: bastion.yelpcorp.com
+
+jobs:
+    - &jobFoo !Job
+        name: "Foo Job"
+        node: *nodeBatch00
+        command: "true"
+        schedule: !IntervalScheduler
+            interval: 10s
