@@ -1,6 +1,9 @@
 import uuid
+import logging
 
 from tron.utils import time
+
+log = logging.getLogger('tron.job')
 
 JOB_RUN_WAITING = 0
 JOB_RUN_RUNNING = 1
@@ -21,8 +24,10 @@ class JobRun(object):
         self.end_time = None    # What time did we end
 
         self.state = JOB_RUN_WAITING
-
+        self.exit_status = None
+        
     def start(self):
+        log.info("Starting job run %s", self.id)
         self.start_time = time.current_time()
         self.state = JOB_RUN_RUNNING
         
@@ -34,12 +39,15 @@ class JobRun(object):
 
     def fail(self, exit_status):
         """Mark the run as having failed, providing an exit status"""
+        log.info("Job run %s failed with exit status %r", self.id, exit_status)
+
         self.state = JOB_RUN_FAILED
         self.exit_status = exit_status
         self.end_time = time.current_time()
 
     def succeed(self):
         """Mark the run as having succeeded"""
+        log.info("Job run %s succeeded", self.id)
         self.exit_status = 0
         self.state = JOB_RUN_SUCCEEDED
         self.end_time = time.current_time()
@@ -74,7 +82,6 @@ class JobRun(object):
         
         # First things first... is it time to start ?
         if self.run_time > time.current_time():
-            raise Exception('here i am: %s %s' % (self.run_time, time.current_time()))
             return False
         
         # Ok, it's time, what about our jobs dependencies
