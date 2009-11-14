@@ -54,7 +54,7 @@ class JobRun(object):
 
     @property
     def command(self):
-        return self.job.path
+        return self.job.command
 
     @property
     def timeout_secs(self):

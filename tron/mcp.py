@@ -15,11 +15,11 @@ class MasterControlProgram(object):
     def __init__(self):
         self.jobs = {}
     
-    def add_job(self, job):
-        if job.name in self.jobs:
-            raise JobExistsError(job)
+    def add_job(self, tron_job):
+        if tron_job.name in self.jobs:
+            raise JobExistsError(tron_job)
         else:
-            self.jobs[job.name] = job
+            self.jobs[tron_job.name] = tron_job
     
     def check_and_run(self):
         """This is where it all happens
@@ -28,7 +28,7 @@ class MasterControlProgram(object):
         """
         log.debug("Checking for available jobs")
         current_runs = []
-        for job in self.jobs.itervalues():
-            job_run = job.next_run()
+        for tron_job in self.jobs.itervalues():
+            job_run = tron_job.next_run()
             if job_run and job_run.should_start:
                 job_run.start()

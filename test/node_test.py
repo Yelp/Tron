@@ -10,13 +10,15 @@ class NodeTestCase(TestCase):
         my_node = node.Node("bastion.yelpcorp.com")
 
         job = turtle.Turtle()
-        job.path = "/bin/false"
+        job.command = "/bin/false"
 
         run = turtle.Turtle()
         run.id = "1"
         run.job = job
+        run.command = job.command
         
-        df = my_node.run(run)
+        my_node.run(run)
+        df = my_node.run_defer[run.id]
         df.addCallback(self._cb_test_stuff)
         return df
 
