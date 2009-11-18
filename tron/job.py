@@ -93,7 +93,7 @@ class Job(object):
         self.name = name
         self.node = node
         self.scheduler = None
-        self.timeout = None
+        self.timeout = timeout
         self.runs = []
         self.resources = []
 
