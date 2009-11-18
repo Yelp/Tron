@@ -6,8 +6,9 @@ import optparse
 
 from twisted.python import log
 from twisted.internet import reactor, task
+from twisted.web import server
 
-from tron import mcp, job, resource, node, scheduler, config
+from tron import mcp, job, resource, node, scheduler, config, www
 
 def parse_options():
     parser = optparse.OptionParser()
@@ -53,6 +54,9 @@ def main():
     # Setup the mcp polling
     l = task.LoopingCall(master_control.check_and_run)
     l.start(1.0) # call every second
+    
+    # Start up our web management interface
+    reactor.listenTCP(8082, server.Site(www.RootResource(master_control)))
     
     # and then off to reactor land...
     reactor.run()

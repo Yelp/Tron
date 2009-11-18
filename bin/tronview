@@ -1,0 +1,54 @@
+#!/usr/bin/env python
+import sys
+import urllib2
+import urlparse
+import simplejson
+
+TROND_SERVICE = "http://localhost:8082"
+USER_AGENT = "Tron View/1.0 +http://github.com/Yelp/Tron"
+
+JOBS_COLUMNS = (
+    ('Name', 20,),
+    ('Scheduler', 20,),
+    ("Node", 25,),
+    ("Last Success", 28,),
+    ("Status", 10,),
+)
+
+def request(path):
+    request = urllib2.Request(urlparse.urljoin(TROND_SERVICE, path))
+    request.add_header("User-Agent", USER_AGENT)
+    opener = urllib2.build_opener()
+
+    output = opener.open(request)
+    
+    result = simplejson.load(output)
+    return result
+
+def main():
+    """run tronview"""
+    server_status = request("/")
+    if not server_status or not server_status['status']:
+        print >>sys.stderr, "Error connecting to tron server at %s" % TROND_SERVICE
+        sys.exit(1)
+
+    job_result = request("/jobs")
+    assert 'jobs' in job_result
+    
+    if len(job_result['jobs']) == 0:
+        print "No jobs"
+    else:
+        # Print a header
+        print " ".join((name.rjust(size) for name, size in JOBS_COLUMNS))
+
+        # Show job data
+        for job in job_result['jobs']:
+            print " ".join(val.rjust(size) for val, (_, size) in zip((job['name'], job['scheduler'], job['node'], job['last_success'], job['status']), JOBS_COLUMNS))
+            #print job_str % (job['name'], job['scheduler'], job['node'], job['last_success'], job['status'])
+            #if job['runs']:
+                # Print run header
+                # show runs
+            #    pass
+        
+if __name__ == '__main__':
+    main()
