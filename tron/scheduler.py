@@ -12,6 +12,9 @@ class ConstantScheduler(object):
         run.run_time = time.current_time()
         return run
 
+    def __str__(self):
+        return "CONSTANT"
+
 
 class DailyScheduler(object):
     """The daily scheduler schedules one run per day"""
@@ -23,7 +26,10 @@ class DailyScheduler(object):
 
         run.run_time = run_time
         return run
-        
+
+    def __str__(self):
+        return "DAILY"
+
 
 class IntervalScheduler(object):
     """The interval scheduler runs a job (to success) based on a configured interval
@@ -44,6 +50,8 @@ class IntervalScheduler(object):
             run.run_time = time.current_time()
         
         return run
-    
+
+    def __str__(self):
+        return "INTERVAL:%s" % self.interval
         
     

@@ -5,7 +5,7 @@ Got to know what's going on ?
 from twisted.internet import reactor
 
 from twisted.cred import checkers
-from twisted.web import server, resource
+from twisted.web import server, resource, http, error
 from twisted.web.woven import simpleguard
 
 import simplejson
@@ -42,7 +42,7 @@ import simplejson
 
 class JobResource(resource.Resource):
     """A resource that describes a particular job"""
-    is_leaf = True
+    isLeaf = True
     def __init__(self, job):
         self._job = job
         resource.Resource.__init__(self)
@@ -54,6 +54,16 @@ class JobResource(resource.Resource):
 
         run_output = []
         for job_run in self._job.runs:
+            if job_run.is_done:
+                if job_run.is_success:
+                    state = "S"
+                else:
+                    state = "F"
+            elif job_run.is_running:
+                state = "R"
+            else:
+                state = "W"
+                
             run_output.append({
                 'id': job_run.id,
                 'href': "/runs/%s" % job_run.id,
@@ -61,6 +71,7 @@ class JobResource(resource.Resource):
                 'start_time': job_run.start_time and str(job_run.start_time),
                 'end_time': job_run.end_time and str(job_run.end_time),
                 'exit_status': job_run.exit_status,
+                'state': state,
             })
 
         resources_output = []
@@ -68,7 +79,7 @@ class JobResource(resource.Resource):
         output = {
             'name': self._job.name,
             'node': self._job.node.hostname,
-            'schedule': schedule_output,
+            'scheduler': schedule_output,
             'runs': run_output,
             'resources': resources_output,
         }
@@ -77,7 +88,7 @@ class JobResource(resource.Resource):
 
 class JobsResource(resource.Resource):
     """Resource for all our daemon's jobs"""
-    is_leaf = True
+
     def __init__(self, master_control):
         self._master_control = master_control
         resource.Resource.__init__(self)
@@ -88,8 +99,7 @@ class JobsResource(resource.Resource):
         else:
             found_job = self._master_control.jobs.get(name)
             if found_job is None:
-                request.setResponseCode(http.NOT_FOUND)
-                return None
+                return error.NoResource()
             else:
                 return JobResource(found_job)
     
@@ -116,7 +126,7 @@ class JobsResource(resource.Resource):
                 'name': current_job.name,
                 'href': "/jobs/%s" % current_job.name,
                 'node': current_job.node.hostname,
-                'scheduler': "",
+                'scheduler': str(current_job.scheduler),
                 'status': status,
                 'last_success': last_success,
             }
@@ -129,8 +139,6 @@ class JobsResource(resource.Resource):
 
 
 class RootResource(resource.Resource):
-    is_leaf = True
-
     def __init__(self, master_control):
         self._master_control = master_control
         resource.Resource.__init__(self)

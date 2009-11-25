@@ -6,7 +6,7 @@ nodes:
 
 jobs:
     - &jobFoo !Job
-        name: "Foo Job"
+        name: "foo"
         node: *nodeBatch00
         command: "true"
         schedule: !IntervalScheduler

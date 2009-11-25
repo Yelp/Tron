@@ -15,6 +15,9 @@ class ConstantSchedulerTest(TestCase):
         next_run = self.scheduler.next_run(self.job)
         assert_lte(datetime.datetime.now() - next_run.run_time, datetime.timedelta(seconds=2))
 
+    def __str__(self):
+        return "CONSTANT"
+
 class DailySchedulerTest(TestCase):
     @setup
     def build_scheduler(self):

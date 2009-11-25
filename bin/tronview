@@ -1,11 +1,16 @@
-#!/usr/bin/env python
+#!/usr/bin/env python -t
 import sys
+import os.path
 import urllib2
 import urlparse
 import simplejson
+import optparse
+
+import yaml
 
 TROND_SERVICE = "http://localhost:8082"
 USER_AGENT = "Tron View/1.0 +http://github.com/Yelp/Tron"
+CONFIG_FILE_NAME = "~/.tron"
 
 JOBS_COLUMNS = (
     ('Name', 20,),
@@ -15,8 +20,15 @@ JOBS_COLUMNS = (
     ("Status", 10,),
 )
 
-def request(path):
-    request = urllib2.Request(urlparse.urljoin(TROND_SERVICE, path))
+RUNS_COLUMNS = (
+    ('ID', 36),
+    ('State', 6),
+    ('Start Time', 23),
+    ('End Time', 23),
+)
+
+def request(options, path):
+    request = urllib2.Request(urlparse.urljoin(options.server, path))
     request.add_header("User-Agent", USER_AGENT)
     opener = urllib2.build_opener()
 
@@ -25,30 +37,112 @@ def request(path):
     result = simplejson.load(output)
     return result
 
-def main():
-    """run tronview"""
-    server_status = request("/")
-    if not server_status or not server_status['status']:
-        print >>sys.stderr, "Error connecting to tron server at %s" % TROND_SERVICE
-        sys.exit(1)
+def parse_options():
+    parser = optparse.OptionParser()
+    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to")
+    parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
 
-    job_result = request("/jobs")
+    (options, args) = parser.parse_args(sys.argv)
+
+
+    return options, args[1:]
+
+def load_config(options):
+    file_name = os.path.expanduser(CONFIG_FILE_NAME)
+    
+    if os.path.exists(file_name):
+        config = yaml.load(open(file_name, "r"))
+        options.server = options.server or config.get('server')
+
+def save_config(options):
+    file_name = os.path.expanduser(CONFIG_FILE_NAME)
+    
+    if os.path.exists(file_name):
+        config_file = open(file_name, "r")
+        config = yaml.load(config_file)
+        config_file.close()
+    else:
+        config = {}
+
+    config['server'] = options.server
+    
+    config_file = open(file_name, "w")
+    yaml.dump(config, config_file)
+    config_file.close()
+
+def view_jobs(options):
+    """docstring for view_jobs"""
+
+    job_result = request(options, "/jobs")
     assert 'jobs' in job_result
     
     if len(job_result['jobs']) == 0:
         print "No jobs"
     else:
         # Print a header
-        print " ".join((name.rjust(size) for name, size in JOBS_COLUMNS))
+        print "Connected to tron server %s" % options.server
+        print
+        print " ".join((name.ljust(size) for name, size in JOBS_COLUMNS))
 
         # Show job data
         for job in job_result['jobs']:
-            print " ".join(val.rjust(size) for val, (_, size) in zip((job['name'], job['scheduler'], job['node'], job['last_success'], job['status']), JOBS_COLUMNS))
-            #print job_str % (job['name'], job['scheduler'], job['node'], job['last_success'], job['status'])
-            #if job['runs']:
-                # Print run header
-                # show runs
-            #    pass
+            print " ".join(val.ljust(size) for val, (_, size) in zip((job['name'], job['scheduler'], job['node'], job['last_success'], job['status']), JOBS_COLUMNS))
+
+
+def view_job(options, job_name):
+    """Retrieve details of the specified job and display"""
+    job_result = request(options, "/jobs/%s" % job_name)
+    
+    print "Job: %s" % job_result['name']
+    print "Node: %s" % job_result['node']
+    print "Scheduler: %s" % job_result['scheduler']
+    print
+    print "Run History: (%d total)" % len(job_result['runs'])
+    print "\t" + " ".join(title.ljust(size) for title, size in RUNS_COLUMNS)
+    for run in reversed(job_result['runs'][:20]):
+        run_id = run['id']
+        run_state = run['state']
+
+        if run['exit_status'] is None:
+            run_exit = "-"
+        else:
+            run_exit = run['exit_status']
         
+        if run['start_time'] is None:
+            run_start = "-"
+        else:
+            run_start = run['start_time'][:-7]
+
+        if run['end_time'] is None:
+            run_end = "-"
+        else:
+            run_end = run['end_time'][:-7]
+
+            
+        print "\t" + " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_start, run_end), RUNS_COLUMNS))
+
+
+def main():
+    """run tronview"""
+    options, args = parse_options()
+    
+    load_config(options)
+
+    if options.server is None:
+        print >>sys.stderr, "Server not specified"
+        sys.exit(1)
+
+    server_status = request(options, "/")
+    if not server_status or not server_status['status']:
+        print >>sys.stderr, "Error connecting to tron server at %s" % options.server
+        sys.exit(1)
+
+    if args:
+        view_job(options, args[0])
+    else:
+        view_jobs(options, )
+
+    save_config(options)
+
 if __name__ == '__main__':
     main()
