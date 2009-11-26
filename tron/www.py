@@ -150,7 +150,7 @@ class RootResource(resource.Resource):
         if name == '':
             return self
         else:
-            return resource.Resource.getChild(name, request)
+            return resource.Resource.getChild(self, name, request)
 
     def render_GET(self, request):
         request.setHeader("content-type", "text/json")
