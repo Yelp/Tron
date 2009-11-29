@@ -53,7 +53,7 @@ def respond(request, response_dict, code=http.OK, headers=None):
             request.setHeader(key, val)
     if response_dict:
         return simplejson.dumps(response_dict)
-    return None
+    return ""
 
 def job_run_state(job_run):
     if job_run.is_done:
