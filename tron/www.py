@@ -55,6 +55,19 @@ def respond(request, response_dict, code=http.OK, headers=None):
         return simplejson.dumps(response_dict)
     return None
 
+def job_run_state(job_run):
+    if job_run.is_done:
+        if job_run.is_success:
+            state = "S"
+        else:
+            state = "F"
+    elif job_run.is_running:
+        state = "R"
+    else:
+        state = "W"
+
+    return state
+
 
 class JobRunResource(resource.Resource):
     isLeaf = True
@@ -62,6 +75,19 @@ class JobRunResource(resource.Resource):
         self._run = run
         resource.Resource.__init__(self)
     
+    def render_GET(self, request):
+        state = job_run_state(self._run)
+        run_output = {
+            'id': self._run.id,
+            'run_time': self._run.run_time and str(self._run.run_time),
+            'start_time': self._run.start_time and str(self._run.start_time),
+            'end_time': self._run.end_time and str(self._run.end_time),
+            'exit_status': self._run.exit_status,
+            'state': state,
+        }
+
+        return respond(request, run_output)
+        
 
 class JobResource(resource.Resource):
     """A resource that describes a particular job"""
@@ -70,20 +96,22 @@ class JobResource(resource.Resource):
         self._job = job
         resource.Resource.__init__(self)
 
+    def getChild(self, name, request):
+        if name == '':
+            return self
+        else:
+            for run in self._job.runs:
+                if run.id == name:
+                    return JobRunResource(run)
+            else:
+                return error.NoResource()
+
     def render_GET(self, request):
         schedule_output = str(self._job.scheduler)
 
         run_output = []
         for job_run in self._job.runs:
-            if job_run.is_done:
-                if job_run.is_success:
-                    state = "S"
-                else:
-                    state = "F"
-            elif job_run.is_running:
-                state = "R"
-            else:
-                state = "W"
+            state = job_run_state(job_run)
                 
             run_output.append({
                 'id': job_run.id,
