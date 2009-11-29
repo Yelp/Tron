@@ -12,6 +12,17 @@ from tron import www
 from tron.utils import time
 
 TEST_NODE = turtle.Turtle(hostname="host")
+
+class JobsResourceServer(turtle.Turtle):
+    def childLink(self, child):
+        return "/jobs/%s" % child
+
+class JobResourceServer(turtle.Turtle):
+    def __init__(self, job):
+        self._job = job
+    def childLink(self, child):
+        return "/jobs/%s/%s" % (self._job.name, child)
+        
 class RootTest(TestCase):
     @class_setup
     def build_root(self):
@@ -45,7 +56,8 @@ class JobsTest(TestCase):
         self.mc.jobs = {self.job.name: self.job}
 
         self.resource = www.JobsResource(self.mc)
-    
+        self.resource.server = JobsResourceServer()
+
     def test_job_list(self):
         """Test that we get a proper job list"""
         resp = self.resource.render_GET(turtle.Turtle())
@@ -83,6 +95,7 @@ class JobDetailTest(TestCase):
                                 )
 
         self.resource = www.JobResource(self.job)
+        self.resource.server = JobResourceServer(self.job)
     
     def test_detail(self):
         resp = self.resource.render_GET(turtle.Turtle())
@@ -105,10 +118,11 @@ class JobQueueTest(TestCase):
                                 )
 
         self.resource = www.JobResource(self.job)
-    
+        self.resource.server = JobResourceServer(self.job)
+
     def test(self):
         req = twisted.web.http.Request(turtle.Turtle(), None)
-        req.args = {'action': 'queue'}
+        req.args = {'action': ['queue']}
         resp = self.resource.render_POST(req)
         
         # Verify the response
@@ -140,10 +154,11 @@ class JobQueueDuplicateTest(TestCase):
                                 )
 
         self.resource = www.JobResource(self.job)
-
+        self.resource.server = JobResourceServer(self.job)
+        
     def test(self):
         req = twisted.web.http.Request(turtle.Turtle(), None)
-        req.args = {'action': 'queue'}
+        req.args = {'action': ['queue']}
         resp = self.resource.render_POST(req)
 
         # Verify the response

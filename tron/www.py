@@ -55,6 +55,7 @@ def respond(request, response_dict, code=http.OK, headers=None):
         return simplejson.dumps(response_dict)
     return None
 
+
 class JobRunResource(resource.Resource):
     isLeaf = True
     def __init__(self, run):
@@ -69,10 +70,6 @@ class JobResource(resource.Resource):
         self._job = job
         resource.Resource.__init__(self)
 
-    @property
-    def href(self):
-        return "/jobs/%s" % (self._job.name)
-        
     def render_GET(self, request):
         schedule_output = str(self._job.scheduler)
 
@@ -90,7 +87,7 @@ class JobResource(resource.Resource):
                 
             run_output.append({
                 'id': job_run.id,
-                'href': "/jobs/%s/%s" % (self._job.name, job_run.id),
+                'href': self.server.childLink(job_run.id),
                 'run_time': job_run.run_time and str(job_run.run_time),
                 'start_time': job_run.start_time and str(job_run.start_time),
                 'end_time': job_run.end_time and str(job_run.end_time),
@@ -174,7 +171,7 @@ class JobsResource(resource.Resource):
 
             job_desc = {
                 'name': current_job.name,
-                'href': "/jobs/%s" % current_job.name,
+                'href': self.server.childLink(current_job.name),
                 'node': current_job.node.hostname,
                 'scheduler': str(current_job.scheduler),
                 'status': status,
