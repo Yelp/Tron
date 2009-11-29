@@ -34,7 +34,19 @@ def queue_job(options, job_name):
         print "Job Queued as run: %s" % content['id']
     else:
         print >>sys.stderr, "Unexpected response from queue_job operation: %r" % ((status, content),)
-    
+
+def start_run(options, run_id):
+    data = {'action': 'start'}
+    status, content = cmd.request(options, "/runs/%s" % (run_id,), data=data)
+
+    if status == cmd.OK:
+        if content['state'] == "R":
+            print "Job Run %s now running" % content['id']
+        else:
+            print "Job Run %s now in state %s" % (content['id'], content['state'])
+    else:
+        print >>sys.stderr, "Unexpected response from run start operation: %r" % ((status, content),)
+       
 def main():
     """run tronctl"""
     options, args = parse_options()

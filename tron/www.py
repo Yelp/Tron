@@ -87,7 +87,24 @@ class JobRunResource(resource.Resource):
         }
 
         return respond(request, run_output)
-        
+
+    def render_POST(self, request):
+        log.debug("Handling post request for run %s", self._run.id)
+        if request.args['action'][0] == "start":
+            return self._start(request)
+        else:
+            log.warning("Unknown request action %s", request.args['action'])
+            request.setResponseCode(http.NOT_IMPLEMENTED)
+            return
+
+    def _start(self, request):
+        if not self._run.is_done and not self._run.is_running:
+            log.info("Starting job run %s", self._run.id)
+            self._run.start()
+        else:
+            log.warning("Request to start job run %s when it's already done", self._run.id)
+
+        return respond(request, None, code=http.SEE_OTHER, headers={'Location': "/runs/%s" % (self._run.id,)})
 
 class JobResource(resource.Resource):
     """A resource that describes a particular job"""
@@ -175,11 +192,11 @@ class JobResource(resource.Resource):
 
 class JobsResource(resource.Resource):
     """Resource for all our daemon's jobs"""
-
     def __init__(self, master_control):
         self._master_control = master_control
         resource.Resource.__init__(self)
-    
+
+
     def getChild(self, name, request):
         if name == '':
             return self
@@ -225,6 +242,20 @@ class JobsResource(resource.Resource):
         return respond(request, output)
 
 
+class RunsResource(resource.Resource):
+    """Resource for looking up runs directly (by id)"""
+    def __init__(self, master_control):
+        self._master_control = master_control
+        resource.Resource.__init__(self)
+
+    def getChild(self, name, request):
+        found_run = self._master_control.runs.get(name)
+        if found_run:
+            return JobRunResource(found_run)
+        else:
+            return error.NoResource()
+
+
 class RootResource(resource.Resource):
     def __init__(self, master_control):
         self._master_control = master_control
@@ -232,6 +263,7 @@ class RootResource(resource.Resource):
 
         # Setup children
         self.putChild('jobs', JobsResource(master_control))
+        self.putChild('runs', RunsResource(master_control))
 
     def getChild(self, name, request):
         if name == '':

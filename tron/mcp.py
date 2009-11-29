@@ -1,4 +1,5 @@
 import logging
+import weakref
 
 log = logging.getLogger('tron.mcp')
 
@@ -14,6 +15,9 @@ class MasterControlProgram(object):
     """
     def __init__(self):
         self.jobs = {}
+        
+        # We keep a sort of index into the runs we know about.
+        self.runs = weakref.WeakValueDictionary()
     
     def add_job(self, tron_job):
         if tron_job.name in self.jobs:
@@ -30,5 +34,11 @@ class MasterControlProgram(object):
         current_runs = []
         for tron_job in self.jobs.itervalues():
             job_run = tron_job.next_run()
+            
+            # Make sure we know about this run instance
+            if job_run.id not in self.runs:
+                self.runs[job_run.id] = job_run
+            
+            # Should we actually start this run ?
             if job_run and job_run.should_start:
                 job_run.start()

@@ -170,3 +170,41 @@ class JobQueueDuplicateTest(TestCase):
         func = self.job.build_run
         assert_equal(len(func.calls), 0)
 
+
+class JobRunStartTest(TestCase):
+    """Test that we can force start a job run"""
+    @class_setup
+    def build_resource(self):
+        self.run = turtle.Turtle(
+                      id="1",
+                      start_time=None,
+                      end_time=None,
+                      exit_status=None,
+                      is_done=False,
+                      )
+
+        self.job = turtle.Turtle(
+                                 name="foo",
+                                 runs=[self.run],
+                                 scheduler=None,
+                                 node=TEST_NODE,
+                                )
+
+        self.resource = www.JobRunResource(self.run)
+
+    def test(self):
+        req = twisted.web.server.Request(turtle.Turtle(), None)
+        req.prePathURL = lambda : "/jobs/foo/1"
+        req.args = {'action': ['start']}
+        req.childLink = lambda val : "/jobs/foo/%s" % val
+        resp = self.resource.render_POST(req)
+
+        # Verify the response
+        assert_equal(req.code, twisted.web.http.SEE_OTHER)
+        assert_equal(req.responseHeaders.getRawHeaders('Location')[0], "/jobs/foo/1")
+
+        # Check if a run would have been queued
+        func = self.run.start
+        assert_equal(len(func.calls), 0)
+
+
