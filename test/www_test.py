@@ -7,21 +7,24 @@ from testify.utils import turtle
 import simplejson
 import twisted.web.error
 import twisted.web.http
+import twisted.web.server
 
 from tron import www
 from tron.utils import time
 
 TEST_NODE = turtle.Turtle(hostname="host")
+REQUEST = twisted.web.server.Request(turtle.Turtle(), None)
+REQUEST.childLink = lambda val : "/jobs/%s" % val
 
-class JobsResourceServer(turtle.Turtle):
-    def childLink(self, child):
-        return "/jobs/%s" % child
-
-class JobResourceServer(turtle.Turtle):
-    def __init__(self, job):
-        self._job = job
-    def childLink(self, child):
-        return "/jobs/%s/%s" % (self._job.name, child)
+# class JobsResourceServer(turtle.Turtle):
+#     def childLink(self, child):
+#         return "/jobs/%s" % child
+# 
+# class JobResourceServer(turtle.Turtle):
+#     def __init__(self, job):
+#         self._job = job
+#     def childLink(self, child):
+#         return "/jobs/%s/%s" % (self._job.name, child)
         
 class RootTest(TestCase):
     @class_setup
@@ -56,11 +59,10 @@ class JobsTest(TestCase):
         self.mc.jobs = {self.job.name: self.job}
 
         self.resource = www.JobsResource(self.mc)
-        self.resource.server = JobsResourceServer()
 
     def test_job_list(self):
         """Test that we get a proper job list"""
-        resp = self.resource.render_GET(turtle.Turtle())
+        resp = self.resource.render_GET(REQUEST)
         job_result = simplejson.loads(resp)
         assert 'jobs' in job_result
         assert job_result['jobs'][0]['name'] == "foo"
@@ -95,10 +97,9 @@ class JobDetailTest(TestCase):
                                 )
 
         self.resource = www.JobResource(self.job)
-        self.resource.server = JobResourceServer(self.job)
     
     def test_detail(self):
-        resp = self.resource.render_GET(turtle.Turtle())
+        resp = self.resource.render_GET(REQUEST)
         job_result = simplejson.loads(resp)
         
         assert_equal(job_result['name'], self.job.name)
@@ -118,16 +119,16 @@ class JobQueueTest(TestCase):
                                 )
 
         self.resource = www.JobResource(self.job)
-        self.resource.server = JobResourceServer(self.job)
 
     def test(self):
-        req = twisted.web.http.Request(turtle.Turtle(), None)
+        req = twisted.web.server.Request(turtle.Turtle(), None)
         req.args = {'action': ['queue']}
+        req.childLink = lambda val : "/jobs/foo/%s" % val
         resp = self.resource.render_POST(req)
         
         # Verify the response
         assert_equal(req.code, twisted.web.http.SEE_OTHER)
-        assert req.responseHeaders.getRawHeaders('Location')[0].startswith("/jobs/%s/" % self.job.name)
+        assert req.responseHeaders.getRawHeaders('Location')[0].startswith("/jobs/%s/" % (self.job.name,))
         
         # Check if a run would have been queued
         func = self.job.build_run
@@ -154,11 +155,11 @@ class JobQueueDuplicateTest(TestCase):
                                 )
 
         self.resource = www.JobResource(self.job)
-        self.resource.server = JobResourceServer(self.job)
         
     def test(self):
-        req = twisted.web.http.Request(turtle.Turtle(), None)
+        req = twisted.web.server.Request(turtle.Turtle(), None)
         req.args = {'action': ['queue']}
+        req.childLink = lambda val : "/jobs/foo/%s" % val
         resp = self.resource.render_POST(req)
 
         # Verify the response

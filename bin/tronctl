@@ -53,7 +53,7 @@ def main():
     command = args[0]
     if command == "start":
         start_run(options, args[1])
-    elif command == "queue":
+    elif command in ("schedule", "sched"):
         queue_job(options, args[1])
 
     cmd.save_config(options)

@@ -115,7 +115,7 @@ class JobResource(resource.Resource):
                 
             run_output.append({
                 'id': job_run.id,
-                'href': self.server.childLink(job_run.id),
+                'href': request.childLink(job_run.id),
                 'run_time': job_run.run_time and str(job_run.run_time),
                 'start_time': job_run.start_time and str(job_run.start_time),
                 'end_time': job_run.end_time and str(job_run.end_time),
@@ -137,19 +137,31 @@ class JobResource(resource.Resource):
     def _queue(self, request):
         """Queue up a run for the current job"""
         # Let's see if there is already a queued run
-        if self._job.runs and not self._job.runs[-1].is_done:
+        last_run = None
+        if self._job.runs:
             last_run = self._job.runs[-1]
-            log.info("Request to queue job %s but run %s is already waiting", self._job.name, last_run.id)
 
-            run_href = "/jobs/%s/%s" % (self._job.name, last_run.id)
+        if last_run and not last_run.is_done:
+            if last_run.run_time >= time.current_time():
+                # There is a scheduled run, but it isn't time yet.
+                # Set this run to start now!
+                last_run.run_time = time.current_time()
+
+                log.info("Request to queue job %s rescheduling run %s", self._job.name, last_run.id)
+            else:
+                # There is already a run that is set to run now so there is nothing for us to do
+                log.info("Request to queue job %s but we're already waiting on run %s", self._job.name, last_run.id)
+
+            run_href = request.childLink(last_run.id)
             log.debug("Redirecting to %s", run_href)
-            return respond(request, {'reason': "Job already queued"}, code=http.SEE_OTHER, headers={'Location': run_href})
-        else:
-            log.debug("Creating new run for %s", self._job.name)
-            new_run = self._job.build_run()
-            new_run.run_time = time.current_time()
-            run_href = "/jobs/%s/%s" % (self._job.name, new_run.id)
             return respond(request, None, code=http.SEE_OTHER, headers={'Location': run_href})
+                
+        log.info("Creating new run for %s", self._job.name)
+        new_run = self._job.build_run()
+        new_run.run_time = time.current_time()
+
+        run_href = request.childLink(new_run.id)
+        return respond(request, None, code=http.SEE_OTHER, headers={'Location': run_href})
 
     def render_POST(self, request):
         log.debug("Handling post request for %s", self._job.name)
@@ -199,7 +211,7 @@ class JobsResource(resource.Resource):
 
             job_desc = {
                 'name': current_job.name,
-                'href': self.server.childLink(current_job.name),
+                'href': request.childLink(current_job.name),
                 'node': current_job.node.hostname,
                 'scheduler': str(current_job.scheduler),
                 'status': status,
