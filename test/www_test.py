@@ -6,8 +6,10 @@ from testify.utils import turtle
 
 import simplejson
 import twisted.web.error
+import twisted.web.http
 
 from tron import www
+from tron.utils import time
 
 TEST_NODE = turtle.Turtle(hostname="host")
 class RootTest(TestCase):
@@ -89,4 +91,66 @@ class JobDetailTest(TestCase):
         assert_equal(job_result['name'], self.job.name)
         assert_equal(len(job_result['runs']), 1)
         assert_equal(job_result['runs'][0]['id'], "1")
+
+
+class JobQueueTest(TestCase):
+    """Test that we can create a new job run"""
+    @class_setup
+    def build_resource(self):
+        self.job = turtle.Turtle(
+                                 name="foo",
+                                 runs=[],
+                                 scheduler=None,
+                                 node=TEST_NODE,
+                                )
+
+        self.resource = www.JobResource(self.job)
+    
+    def test(self):
+        req = twisted.web.http.Request(turtle.Turtle(), None)
+        req.args = {'action': 'queue'}
+        resp = self.resource.render_POST(req)
         
+        # Verify the response
+        assert_equal(req.code, twisted.web.http.SEE_OTHER)
+        assert req.responseHeaders.getRawHeaders('Location')[0].startswith("/jobs/%s/" % self.job.name)
+        
+        # Check if a run would have been queued
+        func = self.job.build_run
+        assert_equal(len(func.calls), 1)
+
+
+class JobQueueDuplicateTest(TestCase):
+    """Test that queuing a job that is already waiting is handled correctly"""
+    @class_setup
+    def build_resource(self):
+        self.job = turtle.Turtle(
+                                 name="foo",
+                                 runs=[
+                                     turtle.Turtle(
+                                                   id="1",
+                                                   start_time=None,
+                                                   end_time=None,
+                                                   exit_status=None,
+                                                   is_done=False,
+                                                   )
+                                 ],
+                                 scheduler=None,
+                                 node=TEST_NODE,
+                                )
+
+        self.resource = www.JobResource(self.job)
+
+    def test(self):
+        req = twisted.web.http.Request(turtle.Turtle(), None)
+        req.args = {'action': 'queue'}
+        resp = self.resource.render_POST(req)
+
+        # Verify the response
+        assert_equal(req.code, twisted.web.http.SEE_OTHER)
+        assert_equal(req.responseHeaders.getRawHeaders('Location')[0], "/jobs/%s/%s" % (self.job.name, "1"))
+
+        # Check if a run would have been queued
+        func = self.job.build_run
+        assert_equal(len(func.calls), 0)
+

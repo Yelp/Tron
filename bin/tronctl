@@ -1,0 +1,62 @@
+#!/usr/bin/env python -t
+"""Tron Control
+
+Part of the command line interface to the tron daemon. Provides the interface to controlling jobs and runs.
+"""
+import sys
+import os.path
+import urllib2
+import urlparse
+import simplejson
+import optparse
+
+import yaml
+
+from tron import cmd
+
+def parse_options():
+    parser = optparse.OptionParser("usage: %prog [-v] [--server=<servername>] <command> <object>")
+    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to")
+    parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
+
+    (options, args) = parser.parse_args(sys.argv)
+
+    if len(args) != 3:
+        parser.error("Missing command")
+
+    return options, args[1:]
+
+def queue_job(options, job_name):
+    data = {'action': 'queue'}
+    status, content = cmd.request(options, "/jobs/%s" % (job_name,), data=data)
+
+    if status == cmd.OK:
+        print "Job Queued as run: %s" % content['id']
+    else:
+        print >>sys.stderr, "Unexpected response from queue_job operation: %r" % ((status, content),)
+    
+def main():
+    """run tronctl"""
+    options, args = parse_options()
+    
+    cmd.load_config(options)
+
+    if options.server is None:
+        print >>sys.stderr, "Server not specified"
+        sys.exit(1)
+
+    status, content = cmd.request(options, "/")
+    if status != cmd.OK or not content or not content['status']:
+        print >>sys.stderr, "Error connecting to tron server at %s" % options.server
+        sys.exit(1)
+
+    command = args[0]
+    if command == "start":
+        start_run(options, args[1])
+    elif command == "queue":
+        queue_job(options, args[1])
+
+    cmd.save_config(options)
+
+if __name__ == '__main__':
+    main()

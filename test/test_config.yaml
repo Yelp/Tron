@@ -10,4 +10,4 @@ jobs:
         node: *nodeBatch00
         command: "true"
         schedule: !IntervalScheduler
-            interval: 10s
+            interval: 100s

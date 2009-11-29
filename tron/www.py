@@ -2,6 +2,8 @@
 
 Got to know what's going on ?
 """
+import logging
+
 from twisted.internet import reactor
 
 from twisted.cred import checkers
@@ -9,6 +11,8 @@ from twisted.web import server, resource, http, error
 from twisted.web.woven import simpleguard
 
 import simplejson
+
+from tron.utils import time
 
 # Sample code for http auth
 # from twisted.cred import checkers
@@ -38,18 +42,38 @@ import simplejson
 #       resource = simpleguard.guardResource(SimpleResource(), [checker])))
 # reactor.run()
 
+log = logging.getLogger("tron.www")
 
+def respond(request, response_dict, code=http.OK, headers=None):
+    """Helper to generate a json response"""
+    request.setResponseCode(code)
+    request.setHeader('content-type', 'text/json')
+    if headers:
+        for key, val in headers.iteritems():
+            request.setHeader(key, val)
+    if response_dict:
+        return simplejson.dumps(response_dict)
+    return None
+
+class JobRunResource(resource.Resource):
+    isLeaf = True
+    def __init__(self, run):
+        self._run = run
+        resource.Resource.__init__(self)
+    
 
 class JobResource(resource.Resource):
     """A resource that describes a particular job"""
-    isLeaf = True
+    isLeaf = False
     def __init__(self, job):
         self._job = job
         resource.Resource.__init__(self)
 
+    @property
+    def href(self):
+        return "/jobs/%s" % (self._job.name)
+        
     def render_GET(self, request):
-        request.setHeader("content-type", "text/json")
-
         schedule_output = str(self._job.scheduler)
 
         run_output = []
@@ -66,7 +90,7 @@ class JobResource(resource.Resource):
                 
             run_output.append({
                 'id': job_run.id,
-                'href': "/runs/%s" % job_run.id,
+                'href': "/jobs/%s/%s" % (self._job.name, job_run.id),
                 'run_time': job_run.run_time and str(job_run.run_time),
                 'start_time': job_run.start_time and str(job_run.start_time),
                 'end_time': job_run.end_time and str(job_run.end_time),
@@ -83,8 +107,34 @@ class JobResource(resource.Resource):
             'runs': run_output,
             'resources': resources_output,
         }
-        return simplejson.dumps(output)
-    
+        return respond(request, output)
+
+    def _queue(self, request):
+        """Queue up a run for the current job"""
+        # Let's see if there is already a queued run
+        if self._job.runs and not self._job.runs[-1].is_done:
+            last_run = self._job.runs[-1]
+            log.info("Request to queue job %s but run %s is already waiting", self._job.name, last_run.id)
+
+            run_href = "/jobs/%s/%s" % (self._job.name, last_run.id)
+            log.debug("Redirecting to %s", run_href)
+            return respond(request, {'reason': "Job already queued"}, code=http.SEE_OTHER, headers={'Location': run_href})
+        else:
+            log.debug("Creating new run for %s", self._job.name)
+            new_run = self._job.build_run()
+            new_run.run_time = time.current_time()
+            run_href = "/jobs/%s/%s" % (self._job.name, new_run.id)
+            return respond(request, None, code=http.SEE_OTHER, headers={'Location': run_href})
+
+    def render_POST(self, request):
+        log.debug("Handling post request for %s", self._job.name)
+        if request.args['action'][0] == "queue":
+            return self._queue(request)
+        else:
+            log.warning("Unknown request action %s", request.args['action'])
+            request.setResponseCode(http.NOT_IMPLEMENTED)
+            return
+            
 
 class JobsResource(resource.Resource):
     """Resource for all our daemon's jobs"""
@@ -135,7 +185,7 @@ class JobsResource(resource.Resource):
         output = {
             'jobs': job_list,
         }
-        return simplejson.dumps(output)
+        return respond(request, output)
 
 
 class RootResource(resource.Resource):
@@ -153,10 +203,7 @@ class RootResource(resource.Resource):
             return resource.Resource.getChild(self, name, request)
 
     def render_GET(self, request):
-        request.setHeader("content-type", "text/json")
-
-        return simplejson.dumps({'status': "i'm alive biatch"})
-
+        return respond(request, {'status': "I'm alive biatch"})
 
 if __name__ == '__main__':
     from twisted.internet import reactor
