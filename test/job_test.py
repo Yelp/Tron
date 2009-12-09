@@ -149,6 +149,19 @@ class JobRunVariablesTest(TestCase):
         timestamp = int(timeutils.to_timestamp(self.now)) - 100
         assert_equal(self._cmd(), "somescript -t %d" % timestamp)
 
+    def test_daynumber(self):
+        self.job.command = "somescript -d %(daynumber)s"
+        assert_equal(self._cmd(), "somescript -d %d" % (self.now.toordinal(),))
+
+    def test_daynumber_plus(self):
+        self.job.command = "somescript -d %(daynumber+1)s"
+        tmrw = self.now + datetime.timedelta(days=1)
+        assert_equal(self._cmd(), "somescript -d %d" % (tmrw.toordinal(),))
+
+    def test_daynumber_minus(self):
+        self.job.command = "somescript -d %(daynumber-1)s"
+        ystr = self.now - datetime.timedelta(days=1)
+        assert_equal(self._cmd(), "somescript -d %d" % (ystr.toordinal(),))
 
         
 if __name__ == '__main__':

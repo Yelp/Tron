@@ -12,7 +12,8 @@ JOB_RUN_RUNNING = 1
 JOB_RUN_FAILED = 10
 JOB_RUN_SUCCEEDED = 11
 
-class JobRunVariables(dict):
+class JobRunVariables(object):
+    """Dictionary like object that provides variable subsitution for job commands"""
     def __init__(self, job_run):
         self.run = job_run
 
@@ -21,8 +22,6 @@ class JobRunVariables(dict):
         match = re.match(r'([\w]+)([+-]*)(\d*)', name)
         attr, op, value = match.groups()
         if attr == "shortdate":
-            run_date = self.run.run_time
-            
             if value:
                 delta = datetime.timedelta(days=int(value))
                 if op == "-":
@@ -32,9 +31,27 @@ class JobRunVariables(dict):
                 run_date = self.run.run_time
             
             return "%.4d-%.2d-%.2d" % (run_date.year, run_date.month, run_date.day)
+        elif attr == "unixtime":
+            delta = 0
+            if value:
+                delta = int(value)
+            if op == "-":
+                delta *= -1
+            return int(timeutils.to_timestamp(self.run.run_time)) + delta
+        elif attr == "daynumber":
+            delta = 0
+            if value:
+                delta = int(value)
+            if op == "-":
+                delta *= -1
+            return self.run.run_time.toordinal() + delta
         elif attr == "jobname":
+            if op:
+                raise ValueError("Adjustments not allowed")
             return self.run.job.name
         elif attr == "runid":
+            if op:
+                raise ValueError("Adjustments not allowed")
             return self.run.id
         else:
             return super(JobRunVariables, self).__getitem__(name)
