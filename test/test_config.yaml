@@ -8,6 +8,6 @@ jobs:
     - &jobFoo !Job
         name: "foo"
         node: *nodeBatch00
-        command: "true"
+        command: "echo 'This is %(unixtime)s' > $HOME/%(shortdate)s.txt"
         schedule: !IntervalScheduler
             interval: 100s
