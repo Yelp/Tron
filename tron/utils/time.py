@@ -1,5 +1,6 @@
 """Time utilites"""
 import datetime
+import time
 
 # Global time override
 _current_time_override = None
@@ -19,3 +20,6 @@ def current_time():
     else:
         return datetime.datetime.now()
         
+def to_timestamp(time_val):
+    """Generate a unix timestamp for the given datetime instance"""
+    return time.mktime(time_val.timetuple())

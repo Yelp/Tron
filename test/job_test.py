@@ -1,8 +1,10 @@
+import datetime
+
 from testify import *
 from testify.utils import turtle
 
 from tron import job, scheduler
-
+from tron.utils import time
 
 class JobRunState(TestCase):
     """Check that our job runs can start/stop and manage their state"""
@@ -90,5 +92,64 @@ class JobRunReadyTest(TestCase):
         assert run.should_start
         
 
+class JobRunVariablesTest(TestCase):
+    @class_setup
+    def freeze_time(self):
+        time.override_current_time(datetime.datetime.now())
+        self.now = time.current_time()
+
+    @class_teardown
+    def unfreeze_time(self):
+        time.override_current_time(None)
+    
+    @setup
+    def build_job(self):
+        self.job = job.Job(name="Test Job")
+        self.job.scheduler = scheduler.ConstantScheduler()
+    
+    def _cmd(self):
+        job_run = self.job.next_run()
+        return job_run.command
+
+    def test_name(self):
+        self.job.command = "somescript --name=%(jobname)s"
+        assert_equal(self._cmd(), "somescript --name=%s" % self.job.name)
+
+    def test_runid(self):
+        self.job.command = "somescript --id=%(runid)s"
+        job_run = self.job.next_run()
+        assert_equal(job_run.command, "somescript --id=%s" % job_run.id)
+
+    def test_shortdate(self):
+        self.job.command = "somescript -d %(shortdate)s"
+        assert_equal(self._cmd(), "somescript -d %.4d-%.2d-%.2d" % (self.now.year, self.now.month, self.now.day))
+
+    def test_shortdate_plus(self):
+        self.job.command = "somescript -d %(shortdate+1)s"
+        tmrw = self.now + datetime.timedelta(days=1)
+        assert_equal(self._cmd(), "somescript -d %.4d-%.2d-%.2d" % (tmrw.year, tmrw.month, tmrw.day))
+
+    def test_shortdate_minus(self):
+        self.job.command = "somescript -d %(shortdate-1)s"
+        ystr = self.now - datetime.timedelta(days=1)
+        assert_equal(self._cmd(), "somescript -d %.4d-%.2d-%.2d" % (ystr.year, ystr.month, ystr.day))
+
+    def test_unixtime(self):
+        self.job.command = "somescript -t %(unixtime)s"
+        timestamp = int(time.mktime(self.now.timetuple()))
+        assert_equal(self._cmd(), "somescript -t %d" % timestamp)
+
+    def test_unixtime_plus(self):
+        self.job.command = "somescript -t %(unixtime+100)s"
+        timestamp = int(time.to_timestamp(self.now)) + 100
+        assert_equal(self._cmd(), "somescript -t %d" % timestamp)
+
+    def test_unixtime_minus(self):
+        self.job.command = "somescript -t %(unixtime-100)s"
+        timestamp = int(time.to_timestamp(self.now)) - 100
+        assert_equal(self._cmd(), "somescript -t %d" % timestamp)
+
+
+        
 if __name__ == '__main__':
     run()

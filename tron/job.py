@@ -1,5 +1,7 @@
 import uuid
 import logging
+import re
+import datetime
 
 from tron.utils import time
 
@@ -9,6 +11,34 @@ JOB_RUN_WAITING = 0
 JOB_RUN_RUNNING = 1
 JOB_RUN_FAILED = 10
 JOB_RUN_SUCCEEDED = 11
+
+class JobRunVariables(dict):
+    def __init__(self, job_run):
+        self.run = job_run
+
+    def __getitem__(self, name):
+        # Extract any arthimetic stuff
+        match = re.match(r'([\w]+)([+-]*)(\d*)', name)
+        attr, op, value = match.groups()
+        if attr == "shortdate":
+            run_date = self.run.run_time
+            
+            if value:
+                delta = datetime.timedelta(days=int(value))
+                if op == "-":
+                    delta *= -1
+                run_date = self.run.run_time + delta
+            else:
+                run_date = self.run.run_time
+            
+            return "%.4d-%.2d-%.2d" % (run_date.year, run_date.month, run_date.day)
+        elif attr == "jobname":
+            return self.run.job.name
+        elif attr == "runid":
+            return self.run.id
+        else:
+            return super(JobRunVariables, self).__getitem__(name)
+
 
 class JobRun(object):
     """An instance of running a job"""
@@ -54,7 +84,8 @@ class JobRun(object):
 
     @property
     def command(self):
-        return self.job.command
+        job_vars = JobRunVariables(self)
+        return self.job.command % job_vars
 
     @property
     def timeout_secs(self):
