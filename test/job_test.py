@@ -4,7 +4,7 @@ from testify import *
 from testify.utils import turtle
 
 from tron import job, scheduler
-from tron.utils import time
+from tron.utils import timeutils
 
 class JobRunState(TestCase):
     """Check that our job runs can start/stop and manage their state"""
@@ -95,12 +95,12 @@ class JobRunReadyTest(TestCase):
 class JobRunVariablesTest(TestCase):
     @class_setup
     def freeze_time(self):
-        time.override_current_time(datetime.datetime.now())
-        self.now = time.current_time()
+        timeutils.override_current_time(datetime.datetime.now())
+        self.now = timeutils.current_time()
 
     @class_teardown
     def unfreeze_time(self):
-        time.override_current_time(None)
+        timeutils.override_current_time(None)
     
     @setup
     def build_job(self):
@@ -136,17 +136,17 @@ class JobRunVariablesTest(TestCase):
 
     def test_unixtime(self):
         self.job.command = "somescript -t %(unixtime)s"
-        timestamp = int(time.mktime(self.now.timetuple()))
+        timestamp = int(timeutils.to_timestamp(self.now))
         assert_equal(self._cmd(), "somescript -t %d" % timestamp)
 
     def test_unixtime_plus(self):
         self.job.command = "somescript -t %(unixtime+100)s"
-        timestamp = int(time.to_timestamp(self.now)) + 100
+        timestamp = int(timeutils.to_timestamp(self.now)) + 100
         assert_equal(self._cmd(), "somescript -t %d" % timestamp)
 
     def test_unixtime_minus(self):
         self.job.command = "somescript -t %(unixtime-100)s"
-        timestamp = int(time.to_timestamp(self.now)) - 100
+        timestamp = int(timeutils.to_timestamp(self.now)) - 100
         assert_equal(self._cmd(), "somescript -t %d" % timestamp)
 
 

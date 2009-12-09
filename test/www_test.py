@@ -10,7 +10,6 @@ import twisted.web.http
 import twisted.web.server
 
 from tron import www
-from tron.utils import time
 
 TEST_NODE = turtle.Turtle(hostname="host")
 REQUEST = twisted.web.server.Request(turtle.Turtle(), None)

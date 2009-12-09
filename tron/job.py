@@ -3,7 +3,7 @@ import logging
 import re
 import datetime
 
-from tron.utils import time
+from tron.utils import timeutils
 
 log = logging.getLogger('tron.job')
 
@@ -58,7 +58,7 @@ class JobRun(object):
         
     def start(self):
         log.info("Starting job run %s", self.id)
-        self.start_time = time.current_time()
+        self.start_time = timeutils.current_time()
         self.state = JOB_RUN_RUNNING
         
         # And now we try to actually start some work....
@@ -73,14 +73,14 @@ class JobRun(object):
 
         self.state = JOB_RUN_FAILED
         self.exit_status = exit_status
-        self.end_time = time.current_time()
+        self.end_time = timeutils.current_time()
 
     def succeed(self):
         """Mark the run as having succeeded"""
         log.info("Job run %s succeeded", self.id)
         self.exit_status = 0
         self.state = JOB_RUN_SUCCEEDED
-        self.end_time = time.current_time()
+        self.end_time = timeutils.current_time()
 
     @property
     def command(self):
@@ -112,7 +112,7 @@ class JobRun(object):
             return False
         
         # First things first... is it time to start ?
-        if self.run_time > time.current_time():
+        if self.run_time > timeutils.current_time():
             return False
         
         # Ok, it's time, what about our jobs dependencies
