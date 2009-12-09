@@ -1,7 +1,9 @@
 import uuid
 import logging
+import re
+import datetime
 
-from tron.utils import time
+from tron.utils import timeutils
 
 log = logging.getLogger('tron.job')
 
@@ -9,6 +11,51 @@ JOB_RUN_WAITING = 0
 JOB_RUN_RUNNING = 1
 JOB_RUN_FAILED = 10
 JOB_RUN_SUCCEEDED = 11
+
+class JobRunVariables(object):
+    """Dictionary like object that provides variable subsitution for job commands"""
+    def __init__(self, job_run):
+        self.run = job_run
+
+    def __getitem__(self, name):
+        # Extract any arthimetic stuff
+        match = re.match(r'([\w]+)([+-]*)(\d*)', name)
+        attr, op, value = match.groups()
+        if attr == "shortdate":
+            if value:
+                delta = datetime.timedelta(days=int(value))
+                if op == "-":
+                    delta *= -1
+                run_date = self.run.run_time + delta
+            else:
+                run_date = self.run.run_time
+            
+            return "%.4d-%.2d-%.2d" % (run_date.year, run_date.month, run_date.day)
+        elif attr == "unixtime":
+            delta = 0
+            if value:
+                delta = int(value)
+            if op == "-":
+                delta *= -1
+            return int(timeutils.to_timestamp(self.run.run_time)) + delta
+        elif attr == "daynumber":
+            delta = 0
+            if value:
+                delta = int(value)
+            if op == "-":
+                delta *= -1
+            return self.run.run_time.toordinal() + delta
+        elif attr == "jobname":
+            if op:
+                raise ValueError("Adjustments not allowed")
+            return self.run.job.name
+        elif attr == "runid":
+            if op:
+                raise ValueError("Adjustments not allowed")
+            return self.run.id
+        else:
+            return super(JobRunVariables, self).__getitem__(name)
+
 
 class JobRun(object):
     """An instance of running a job"""
@@ -28,7 +75,7 @@ class JobRun(object):
         
     def start(self):
         log.info("Starting job run %s", self.id)
-        self.start_time = time.current_time()
+        self.start_time = timeutils.current_time()
         self.state = JOB_RUN_RUNNING
         
         # And now we try to actually start some work....
@@ -43,18 +90,19 @@ class JobRun(object):
 
         self.state = JOB_RUN_FAILED
         self.exit_status = exit_status
-        self.end_time = time.current_time()
+        self.end_time = timeutils.current_time()
 
     def succeed(self):
         """Mark the run as having succeeded"""
         log.info("Job run %s succeeded", self.id)
         self.exit_status = 0
         self.state = JOB_RUN_SUCCEEDED
-        self.end_time = time.current_time()
+        self.end_time = timeutils.current_time()
 
     @property
     def command(self):
-        return self.job.command
+        job_vars = JobRunVariables(self)
+        return self.job.command % job_vars
 
     @property
     def timeout_secs(self):
@@ -81,7 +129,7 @@ class JobRun(object):
             return False
         
         # First things first... is it time to start ?
-        if self.run_time > time.current_time():
+        if self.run_time > timeutils.current_time():
             return False
         
         # Ok, it's time, what about our jobs dependencies

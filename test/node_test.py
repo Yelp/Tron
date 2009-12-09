@@ -2,7 +2,7 @@ from testify import *
 from testify.utils import turtle
 
 from tron import node
-from tron.utils.testing import run_reactor
+from tron.utils.testingutils import run_reactor
 
 class NodeTestCase(TestCase):
     @run_reactor()

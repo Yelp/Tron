@@ -4,7 +4,7 @@ from testify import *
 from testify.utils import turtle
 
 from tron import resource
-from tron.utils import time
+from tron.utils import timeutils
 
 class BasicTestCase(TestCase):
     """Check that basic resource checking works"""
@@ -16,11 +16,11 @@ class BasicTestCase(TestCase):
         self.resource = resource.JobResource(self.job)
         
         # Freeze the current time to prevent race conditions
-        time.override_current_time(datetime.datetime.now())
+        timeutils.override_current_time(datetime.datetime.now())
 
     @teardown
     def restore_time(self):
-        time.override_current_time(None)
+        timeutils.override_current_time(None)
         
     def test_check_no_runs(self):
         assert not self.resource.is_ready
@@ -48,14 +48,14 @@ class CheckIntervalTestCase(TestCase):
         self.job.runs = []
     
         start_time = datetime.datetime.now()
-        time.override_current_time(start_time)
+        timeutils.override_current_time(start_time)
     
         self.resource = resource.JobResource(self.job)
         self.resource.check_interval = datetime.timedelta(minutes=1)
     
     @teardown
     def restore_time(self):
-        time.override_current_time(None)
+        timeutils.override_current_time(None)
 
     def test_interval_check(self):
         job_run = turtle.Turtle()
@@ -71,7 +71,7 @@ class CheckIntervalTestCase(TestCase):
         
         # Now push time ahead so we'll re-check
         next_check = self.resource.next_check_time
-        time.override_current_time(next_check)
+        timeutils.override_current_time(next_check)
         assert self.resource.is_ready
         
 
@@ -83,7 +83,7 @@ class LastSuccessTestCase(TestCase):
         self.job.runs = []
     
         start_time = datetime.datetime.now()
-        time.override_current_time(start_time)
+        timeutils.override_current_time(start_time)
         
         self.resource = resource.JobResource(self.job)
         self.resource.last_succeed_interval = datetime.timedelta(minutes=1)
@@ -91,7 +91,7 @@ class LastSuccessTestCase(TestCase):
     def test_success_too_old(self):
         job_run = turtle.Turtle()
         job_run.is_success = True
-        job_run.end_time = time.current_time() - datetime.timedelta(days=1)
+        job_run.end_time = timeutils.current_time() - datetime.timedelta(days=1)
         self.job.runs.append(job_run)
         
         assert not self.resource.is_ready
@@ -99,7 +99,7 @@ class LastSuccessTestCase(TestCase):
     def test_success(self):
         job_run = turtle.Turtle()
         job_run.is_success = True
-        job_run.end_time = time.current_time() - datetime.timedelta(seconds=30)
+        job_run.end_time = timeutils.current_time() - datetime.timedelta(seconds=30)
         self.job.runs.append(job_run)
         
         assert self.resource.is_ready
@@ -107,12 +107,12 @@ class LastSuccessTestCase(TestCase):
     def test_success_but_recent_failure(self):
         job_run = turtle.Turtle()
         job_run.is_success = True
-        job_run.end_time = time.current_time() - datetime.timedelta(seconds=30)
+        job_run.end_time = timeutils.current_time() - datetime.timedelta(seconds=30)
         self.job.runs.append(job_run)
 
         bad_job_run = turtle.Turtle()
         bad_job_run.is_success = False
-        bad_job_run.end_time = time.current_time()
+        bad_job_run.end_time = timeutils.current_time()
         self.job.runs.append(bad_job_run)
         
         assert self.resource.is_ready

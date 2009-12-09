@@ -12,7 +12,7 @@ from twisted.web.woven import simpleguard
 
 import simplejson
 
-from tron.utils import time
+from tron.utils import timeutils
 
 # Sample code for http auth
 # from twisted.cred import checkers
@@ -159,10 +159,10 @@ class JobResource(resource.Resource):
             last_run = self._job.runs[-1]
 
         if last_run and not last_run.is_done:
-            if last_run.run_time >= time.current_time():
+            if last_run.run_time >= timeutils.current_time():
                 # There is a scheduled run, but it isn't time yet.
                 # Set this run to start now!
-                last_run.run_time = time.current_time()
+                last_run.run_time = timeutils.current_time()
 
                 log.info("Request to queue job %s rescheduling run %s", self._job.name, last_run.id)
             else:
@@ -175,7 +175,7 @@ class JobResource(resource.Resource):
                 
         log.info("Creating new run for %s", self._job.name)
         new_run = self._job.build_run()
-        new_run.run_time = time.current_time()
+        new_run.run_time = timeutils.current_time()
 
         run_href = request.childLink(new_run.id)
         return respond(request, None, code=http.SEE_OTHER, headers={'Location': run_href})

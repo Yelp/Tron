@@ -1,7 +1,7 @@
 import datetime
 import logging
 
-from tron.utils import time
+from tron.utils import timeutils
 
 log = logging.getLogger('tron.scheduler')
 
@@ -9,7 +9,7 @@ class ConstantScheduler(object):
     """The constant scheduler always schedules a run because the job should be running constantly"""
     def next_run(self, job):
         run = job.build_run()
-        run.run_time = time.current_time()
+        run.run_time = timeutils.current_time()
         return run
 
     def __str__(self):
@@ -22,7 +22,7 @@ class DailyScheduler(object):
         run = job.build_run()
 
         # For a daily scheduler, always assume the next job run is tomorrow
-        run_time = (time.current_time() + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0)
+        run_time = (timeutils.current_time() + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0)
 
         run.run_time = run_time
         return run
@@ -47,7 +47,7 @@ class IntervalScheduler(object):
                 break
         else:
             log.debug("Found no past runs for job %s, next run is now", run)
-            run.run_time = time.current_time()
+            run.run_time = timeutils.current_time()
         
         return run
 
