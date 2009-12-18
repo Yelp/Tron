@@ -92,6 +92,14 @@ class JobRun(object):
         self.exit_status = exit_status
         self.end_time = timeutils.current_time()
 
+    def fail_unknown(self):
+        """Mark the run as having failed, but note that we don't actually know what result was"""
+        log.info("Lost communication with job run %s", self.id)
+
+        self.state = JOB_RUN_FAILED
+        self.exit_status = None
+        self.end_time = None
+
     def succeed(self):
         """Mark the run as having succeeded"""
         log.info("Job run %s succeeded", self.id)

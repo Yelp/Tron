@@ -10,4 +10,4 @@ jobs:
         node: *nodeBatch00
         command: "echo 'This is %(unixtime)s' > $HOME/%(shortdate)s.txt"
         schedule: !IntervalScheduler
-            interval: 100s
+            interval: 20s

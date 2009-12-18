@@ -28,14 +28,33 @@ class ClientTransport(transport.SSHClientTransport):
         self.requestService(default.SSHUserAuthClient(os.getlogin(), options.ConchOptions(), conn))
 
 class ClientConnection(connection.SSHConnection):
-    service_defer = None
+    service_start_defer = None
+    service_stop_defer = None
     def serviceStarted(self):
-        self.service_defer.callback(self)
-        #self.openChannel(CatChannel(conn=self))
+        log.info("Service started")
+        connection.SSHConnection.serviceStarted(self)
+        self.service_start_defer.callback(self)
 
+    def serviceStopped(self):
+        log.info("Service stopped")
+        connection.SSHConnection.serviceStopped(self)
+        self.service_stop_defer.callback(self)
+
+    def channelClosed(self, channel):
+        log.info("Closing Channel: %r", channel.id)
+        if not channel.conn:
+            log.warning("Channel %r failed to open", channel.id)
+            # Channel has no connection, so we were still trying to open it
+            # The normal error handling won't notify us since the channel never successfully opened.
+            channel.openFailed(None)
+
+        connection.SSHConnection.channelClosed(self, channel)
+        
 class ExecChannel(channel.SSHChannel):
     name = 'session'
     exit_defer = None
+    start_defer = None
+    
     command = None
     exit_status = None
     data = None
@@ -46,8 +65,14 @@ class ExecChannel(channel.SSHChannel):
         # self.conn.sendRequest(self, 'env', env, wantReply=True).addCallback(self._cbEnvSendRequest)
         
         self.data = []
+        log.debug("Channel %s is open, calling deferred", self.id)
+        self.start_defer.callback(self)
         self.conn.sendRequest(self, 'exec', common.NS(self.command), wantReply=True).addCallback(self._cbExecSendRequest)
 
+    def openFailed(self, reason):
+        log.error("Open failed due to %r", reason)
+        self.start_defer.errback(self)
+        
     # def _cbEnvSendRequest(self, ignored):
     #     self.conn.sendEOF(self)
     # 
@@ -73,5 +98,9 @@ class ExecChannel(channel.SSHChannel):
         return "".join(self.data)
 
     def closed(self):
+        if self.exit_status is None:
+            log.warning("Channel has been closed without receiving an exit status")
+            self.exit_defer.errback(self)
+
         self.loseConnection()
 

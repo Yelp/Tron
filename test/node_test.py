@@ -18,9 +18,9 @@ class NodeTestCase(TestCase):
         run.command = job.command
         
         my_node.run(run)
-        df = my_node.run_defer[run.id]
-        df.addCallback(self._cb_test_stuff)
-        return df
+        state = my_node.run_states[run.id]
+        state.deferred.addCallback(self._cb_test_stuff)
+        return state.deferred
 
     def _cb_test_stuff(self, conn):
         self.log.info("Job is runned")
