@@ -48,12 +48,15 @@ def view_jobs(options):
 
         # Show job data
         for job in content['jobs']:
-            print " ".join(val.ljust(size) for val, (_, size) in zip((job['name'], job['scheduler'], job['node'], job['last_success'], job['status']), JOBS_COLUMNS))
+            print " ".join(str(val).ljust(size) for val, (_, size) in zip((job['name'], job['scheduler'], job['node'], job['last_success'], job['status']), JOBS_COLUMNS))
 
 def view_job(options, job_name):
     """Retrieve details of the specified job and display"""
-    stauts, job_content = cmd.request(options, "/jobs/%s" % job_name)
-    
+    status, job_content = cmd.request(options, "/jobs/%s" % job_name)
+    if status == cmd.ERROR:
+        print >>sys.stderr, "Failure from server"
+        sys.exit(1)
+
     print "Job: %s" % job_content['name']
     print "Node: %s" % job_content['node']
     print "Scheduler: %s" % job_content['scheduler']

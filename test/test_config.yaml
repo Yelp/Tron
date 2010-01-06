@@ -2,7 +2,7 @@
 
 nodes:
     - &nodeBatch00 !Node
-        hostname: bastion.yelpcorp.com
+        hostname: 192.168.0.189
 
 jobs:
     - &jobFoo !Job
@@ -10,4 +10,11 @@ jobs:
         node: *nodeBatch00
         command: "echo 'This is %(unixtime)s' > $HOME/%(shortdate)s.txt"
         schedule: !IntervalScheduler
-            interval: 100s
+            interval: 20s
+        
+    - &jobBar !Job
+        name: "bar"
+        node: *nodeBatch00
+        command: "sleep 60"
+        schedule: !IntervalScheduler
+            interval: 80s

@@ -10,7 +10,7 @@ from twisted.conch.ssh import connection
 from twisted.conch.ssh import keys, userauth, agent
 from twisted.conch.ssh import transport
 from twisted.conch.client import default, options
-from twisted.python import log
+from twisted.python import log, failure
 
 log = logging.getLogger('tron.ssh')
 
@@ -28,17 +28,38 @@ class ClientTransport(transport.SSHClientTransport):
         self.requestService(default.SSHUserAuthClient(os.getlogin(), options.ConchOptions(), conn))
 
 class ClientConnection(connection.SSHConnection):
-    service_defer = None
+    service_start_defer = None
+    service_stop_defer = None
     def serviceStarted(self):
-        self.service_defer.callback(self)
-        #self.openChannel(CatChannel(conn=self))
+        log.info("Service started")
+        connection.SSHConnection.serviceStarted(self)
+        if not self.service_stop_defer.called:
+            self.service_start_defer.callback(self)
 
+    def serviceStopped(self):
+        log.info("Service stopped")
+        connection.SSHConnection.serviceStopped(self)
+        if not self.service_stop_defer.called:
+            self.service_stop_defer.callback(self)
+
+    def channelClosed(self, channel):
+        if not channel.conn:
+            log.warning("Channel %r failed to open", channel.id)
+            # Channel has no connection, so we were still trying to open it
+            # The normal error handling won't notify us since the channel never successfully opened.
+            channel.openFailed(None)
+
+        connection.SSHConnection.channelClosed(self, channel)
+        
 class ExecChannel(channel.SSHChannel):
     name = 'session'
     exit_defer = None
+    start_defer = None
+    
     command = None
     exit_status = None
     data = None
+    running = False
 
     def channelOpen(self, data):
         # env = common.NS('TEST_ENV') + common.NS("hello")
@@ -46,13 +67,23 @@ class ExecChannel(channel.SSHChannel):
         # self.conn.sendRequest(self, 'env', env, wantReply=True).addCallback(self._cbEnvSendRequest)
         
         self.data = []
-        self.conn.sendRequest(self, 'exec', common.NS(self.command), wantReply=True).addCallback(self._cbExecSendRequest)
-
-    # def _cbEnvSendRequest(self, ignored):
-    #     self.conn.sendEOF(self)
-    # 
-    #     self.conn.sendRequest(self, 'exec', common.NS('env'), wantReply=True).addCallback(self._cbExecSendRequest)
-
+        self.running = True
+        if self.start_defer:
+            log.debug("Channel %s is open, calling deferred", self.id)
+            self.start_defer.callback(self)
+            self.conn.sendRequest(self, 'exec', common.NS(self.command), wantReply=True).addCallback(self._cbExecSendRequest)
+        else:
+            # A missing start defer means that we are no longer expected to do anything when the channel opens
+            # It probably means we gave up on this connection and failed the job, but later the channel opened up
+            # correctly.
+            log.warning("Channel open delayed, giving up and closing")
+            self.loseConnection()
+            
+    def openFailed(self, reason):
+        log.error("Open failed due to %r", reason)
+        if self.start_defer:
+            self.start_defer.errback(self)
+        
     def _cbExecSendRequest(self, ignored):
         #self.write('This data will be echoed back to us by "cat."\r\n')
         self.conn.sendEOF(self)
@@ -64,6 +95,7 @@ class ExecChannel(channel.SSHChannel):
         log.info("Received exit status request: %d", status)
         self.exit_status = status
         self.exit_defer.callback(self)
+        self.running = False
         return True
 
     def dataReceived(self, data):
@@ -73,5 +105,9 @@ class ExecChannel(channel.SSHChannel):
         return "".join(self.data)
 
     def closed(self):
+        if self.exit_status is None and self.running and self.exit_defer and not self.exit_defer.called:
+            log.warning("Channel has been closed without receiving an exit status")
+            self.exit_defer.errback(failure.Failure())
+        
         self.loseConnection()
 
