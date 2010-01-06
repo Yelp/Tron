@@ -10,7 +10,7 @@ from twisted.conch.ssh import connection
 from twisted.conch.ssh import keys, userauth, agent
 from twisted.conch.ssh import transport
 from twisted.conch.client import default, options
-from twisted.python import log
+from twisted.python import log, failure
 
 log = logging.getLogger('tron.ssh')
 
@@ -43,7 +43,6 @@ class ClientConnection(connection.SSHConnection):
             self.service_stop_defer.callback(self)
 
     def channelClosed(self, channel):
-        log.info("Closing Channel: %r", channel.id)
         if not channel.conn:
             log.warning("Channel %r failed to open", channel.id)
             # Channel has no connection, so we were still trying to open it
@@ -68,7 +67,7 @@ class ExecChannel(channel.SSHChannel):
         # self.conn.sendRequest(self, 'env', env, wantReply=True).addCallback(self._cbEnvSendRequest)
         
         self.data = []
-        running = True
+        self.running = True
         if self.start_defer:
             log.debug("Channel %s is open, calling deferred", self.id)
             self.start_defer.callback(self)
@@ -85,11 +84,6 @@ class ExecChannel(channel.SSHChannel):
         if self.start_defer:
             self.start_defer.errback(self)
         
-    # def _cbEnvSendRequest(self, ignored):
-    #     self.conn.sendEOF(self)
-    # 
-    #     self.conn.sendRequest(self, 'exec', common.NS('env'), wantReply=True).addCallback(self._cbExecSendRequest)
-
     def _cbExecSendRequest(self, ignored):
         #self.write('This data will be echoed back to us by "cat."\r\n')
         self.conn.sendEOF(self)
@@ -113,7 +107,7 @@ class ExecChannel(channel.SSHChannel):
     def closed(self):
         if self.exit_status is None and self.running and self.exit_defer and not self.exit_defer.called:
             log.warning("Channel has been closed without receiving an exit status")
-            self.exit_defer.errback(self)
-
+            self.exit_defer.errback(failure.Failure())
+        
         self.loseConnection()
 

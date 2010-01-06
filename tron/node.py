@@ -207,12 +207,12 @@ class Node(object):
         self.run_states[run.id].channel = None
         del self.run_states[run.id]
 
-    def _channel_complete_unknown(self, failure, run):
+    def _channel_complete_unknown(self, result, run):
         """Channel has closed on a running process without a proper exit
         
         We don't actually know if the run succeeded
         """
-        log.error("Failure waiting on channel completion: %s", str(failure))
+        log.error("Failure waiting on channel completion: %s", str(result))
         self._fail_run(run, failure.Failure(exc_value=ResultError()))
 
     def _run_started(self, channel, run):
@@ -235,5 +235,8 @@ class Node(object):
 
         self._fail_run(run, failure.Failure(exc_value=ConnectError()))
         
-        self.connection.serviceStopped()
+        # We want to hard hangup on this connection. It could theoretically come back thanks to
+        # the magic of TCP, but something is up, best to fail right now then limp along for
+        # and unknown amount of time.
+        self.connection.transport.connectionLost(failure.Failure())
         
