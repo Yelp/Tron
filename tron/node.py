@@ -20,7 +20,18 @@ RUN_STATE_COMPLETE = 100    # Process has exited
 
 class Error(Exception): pass
 
-class RunError(Error): pass
+class ConnectError(Error): 
+    """There was a problem connecting, run was never started"""
+    pass
+
+
+class ResultError(Error): 
+    """There was a problem retrieving the result from this run
+    
+    We did try to execute the command, but we don't know if it succeeded or failed.
+    """
+    pass
+
 
 class RunState(object):
     def __init__(self, run):
@@ -70,12 +81,12 @@ class Node(object):
         # isn't strictly necessary.
         return self.run_states[run.id].deferred
 
-    def _fail_run(self, run, result, orig_failure):
+    def _fail_run(self, run, result):
         """Indicate the run has failed, and cleanup state"""
-        run.fail(result)
+        self.run_states[run.id].deferred.errback(result)
         
-        run_fail = failure.Failure(exc_value=RunError((result, orig_failure)))
-        self.run_states[run.id].deferred.errback(run_fail)
+        # Cleanup
+        self.run_states[run.id].channel = None
         del self.run_states[run.id]
         
     def _connect_then_run(self, run):
@@ -87,10 +98,10 @@ class Node(object):
             self._open_channel(run)
             return arg
 
-        def connect_fail(failure):
-            log.warning("Failed to connect to %s: %r", self.hostname, str(failure))
+        def connect_fail(result):
+            log.debug("Failed to connect to %s: %r", self.hostname, str(result))
             self.connection_defer = None
-            self._fail_run(run, None, failure)
+            self._fail_run(run, failure.Failure(exc_value=ConnectError()))
 
         self.connection_defer.addCallback(call_open_channel)
         self.connection_defer.addErrback(connect_fail)
@@ -189,12 +200,8 @@ class Node(object):
         self.run_states[run.id].state = RUN_STATE_COMPLETE
 
         # TODO: Should probably do something with the output
-        if channel.exit_status != 0:
-            run.fail(channel.exit_status)
-        else:
-            run.succeed()
         
-        self.run_states[run.id].deferred.callback(run)
+        self.run_states[run.id].deferred.callback(channel.exit_status)
 
         # Cleanup, we care nothing about this run anymore
         self.run_states[run.id].channel = None
@@ -205,13 +212,8 @@ class Node(object):
         
         We don't actually know if the run succeeded
         """
-        log.error("Failure: %s", str(failure))
-        run.fail_unknown()
-        self.run_states[run.id].deferred.errback(run)
-
-        # Cleanup, we care nothing this run anymore
-        self.run_state[run.id].channel = None
-        del self.run_states[run.id]
+        log.error("Failure waiting on channel completion: %s", str(failure))
+        self._fail_run(run, failure.Failure(exc_value=ResultError()))
 
     def _run_started(self, channel, run):
         """Our run is actually a running process now, update the state"""
@@ -223,12 +225,11 @@ class Node(object):
     def _run_start_error(self, failure, run):
         """We failed to even run the command due to communication difficulties
         
-        We're going to mark this run as back to connecting.
         Once all the runs have closed out we can try to reconnect.
         """
 
         log.error("Error running %s, disconnecting from %s", run.id, self.hostname)
-        self._fail_run(run, None, failure)
+        self._fail_run(run, failure.Failure(exc_value=ConnectError()))
         channel.start_defer = None
         
         self.connection.serviceStopped()

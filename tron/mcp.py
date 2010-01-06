@@ -42,3 +42,4 @@ class MasterControlProgram(object):
             # Should we actually start this run ?
             if job_run and job_run.should_start:
                 job_run.start()
+                    

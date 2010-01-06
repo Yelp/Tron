@@ -3,6 +3,9 @@ import logging
 import re
 import datetime
 
+from twisted.internet import defer
+
+from tron import node
 from tron.utils import timeutils
 
 log = logging.getLogger('tron.job')
@@ -79,10 +82,43 @@ class JobRun(object):
         self.state = JOB_RUN_RUNNING
         
         # And now we try to actually start some work....
-        self._execute()
+        ret = self._execute()
+        if isinstance(ret, defer.Deferred):
+            self._setup_callbacks(ret)
 
     def _execute(self):
-        self.job.node.run(self)
+        return self.job.node.run(self)
+
+    def _handle_errback(self, result):
+        """Handle an error where the node wasn't able to give us an exit code"""
+        log.info("Job error: %s", str(result))
+        if isinstance(result.value, node.ConnectError):
+            log.warning("Failed to connect to host %s for run %s", self.job.node.hostname, self.id)
+            self.fail(None)
+        elif isinstance(result.value, node.ResultError):
+            log.warning("Failed to retrieve exit for run %s after executing command on host %s", self.id, self.job.node.hostname)
+            self.fail_unknown()
+        else:
+            log.warning("Unknown failure for run %s on host %s: %s", self.id, self.node.hostname, str(failure))
+            self.fail_unknown()
+            
+            # Maybe someone else wants it ?
+            return result
+
+    def _handle_callback(self, exit_code):
+        """If the node successfully executes and get's a result from our run, handle the exit code here."""
+        if exit_code == 0:
+            self.succeed()
+        else:
+            self.fail(exit_status)
+
+        return exit_code
+        
+    def _setup_callbacks(self, deferred):
+        """Execution has been deferred, so setup the callbacks so we can record our own status"""
+        
+        deferred.addCallback(self._handle_callback)
+        deferred.addErrback(self._handle_errback)
 
     def fail(self, exit_status):
         """Mark the run as having failed, providing an exit status"""
