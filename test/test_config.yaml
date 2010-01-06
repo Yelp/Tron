@@ -2,7 +2,7 @@
 
 nodes:
     - &nodeBatch00 !Node
-        hostname: bastion.yelpcorp.com
+        hostname: 192.168.2.122
 
 jobs:
     - &jobFoo !Job

@@ -33,12 +33,14 @@ class ClientConnection(connection.SSHConnection):
     def serviceStarted(self):
         log.info("Service started")
         connection.SSHConnection.serviceStarted(self)
-        self.service_start_defer.callback(self)
+        if not self.service_stop_defer.called:
+            self.service_start_defer.callback(self)
 
     def serviceStopped(self):
         log.info("Service stopped")
         connection.SSHConnection.serviceStopped(self)
-        self.service_stop_defer.callback(self)
+        if not self.service_stop_defer.called:
+            self.service_stop_defer.callback(self)
 
     def channelClosed(self, channel):
         log.info("Closing Channel: %r", channel.id)
@@ -58,6 +60,7 @@ class ExecChannel(channel.SSHChannel):
     command = None
     exit_status = None
     data = None
+    running = False
 
     def channelOpen(self, data):
         # env = common.NS('TEST_ENV') + common.NS("hello")
@@ -65,13 +68,22 @@ class ExecChannel(channel.SSHChannel):
         # self.conn.sendRequest(self, 'env', env, wantReply=True).addCallback(self._cbEnvSendRequest)
         
         self.data = []
-        log.debug("Channel %s is open, calling deferred", self.id)
-        self.start_defer.callback(self)
-        self.conn.sendRequest(self, 'exec', common.NS(self.command), wantReply=True).addCallback(self._cbExecSendRequest)
-
+        running = True
+        if self.start_defer:
+            log.debug("Channel %s is open, calling deferred", self.id)
+            self.start_defer.callback(self)
+            self.conn.sendRequest(self, 'exec', common.NS(self.command), wantReply=True).addCallback(self._cbExecSendRequest)
+        else:
+            # A missing start defer means that we are no longer expected to do anything when the channel opens
+            # It probably means we gave up on this connection and failed the job, but later the channel opened up
+            # correctly.
+            log.warning("Channel open delayed, giving up and closing")
+            self.loseConnection()
+            
     def openFailed(self, reason):
         log.error("Open failed due to %r", reason)
-        self.start_defer.errback(self)
+        if self.start_defer:
+            self.start_defer.errback(self)
         
     # def _cbEnvSendRequest(self, ignored):
     #     self.conn.sendEOF(self)
@@ -89,6 +101,7 @@ class ExecChannel(channel.SSHChannel):
         log.info("Received exit status request: %d", status)
         self.exit_status = status
         self.exit_defer.callback(self)
+        self.running = False
         return True
 
     def dataReceived(self, data):
@@ -98,7 +111,7 @@ class ExecChannel(channel.SSHChannel):
         return "".join(self.data)
 
     def closed(self):
-        if self.exit_status is None:
+        if self.exit_status is None and self.running and self.exit_defer and not self.exit_defer.called:
             log.warning("Channel has been closed without receiving an exit status")
             self.exit_defer.errback(self)
 
