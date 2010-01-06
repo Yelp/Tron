@@ -2,7 +2,7 @@
 
 nodes:
     - &nodeBatch00 !Node
-        hostname: 192.168.2.122
+        hostname: 192.168.0.189
 
 jobs:
     - &jobFoo !Job

@@ -5,7 +5,7 @@ import datetime
 import optparse
 
 from twisted.python import log
-from twisted.internet import reactor, task
+from twisted.internet import reactor, task, defer
 from twisted.web import server
 
 from tron import mcp, job, resource, node, scheduler, config, www
@@ -38,6 +38,9 @@ def setup_logging(options):
     # Hookup twisted to standard logging
     observer = log.PythonLoggingObserver()
     observer.start()
+
+    # Show stack traces for errors in twisted deferreds.
+    defer.setDebugging(True)
 
 def main():
     options = parse_options()

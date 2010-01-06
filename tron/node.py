@@ -222,15 +222,18 @@ class Node(object):
         assert self.run_states[run.id].state == RUN_STATE_STARTING
         self.run_states[run.id].state = RUN_STATE_RUNNING
         
-    def _run_start_error(self, failure, run):
+    def _run_start_error(self, result, run):
         """We failed to even run the command due to communication difficulties
         
         Once all the runs have closed out we can try to reconnect.
         """
+        log.error("Error running %s, disconnecting from %s: %s", run.id, self.hostname, str(result))
+        
+        # We clear out the deferred that likely called us because there are actually more than one error paths
+        # because of user timeouts.
+        self.run_states[run.id].channel.start_defer = None
 
-        log.error("Error running %s, disconnecting from %s", run.id, self.hostname)
         self._fail_run(run, failure.Failure(exc_value=ConnectError()))
-        channel.start_defer = None
         
         self.connection.serviceStopped()
         
