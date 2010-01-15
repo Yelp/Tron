@@ -1,8 +1,12 @@
 --- !TronConfiguration
+ssh_options: !SSHOptions
+    agent: true
+    #identities:
+    #    - "~/.ssh/test_id"
 
 nodes:
     - &nodeBatch00 !Node
-        hostname: 192.168.0.189
+        hostname: nullhole.com
 
 jobs:
     - &jobFoo !Job

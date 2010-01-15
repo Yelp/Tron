@@ -8,10 +8,16 @@ from tron import ssh
 
 log = logging.getLogger('tron.node')
 
-# How long do we wait before we give up starting a job run
+# We should also only wait a certain amount of time for a connection to be established.
+CONNECT_TIMEOUT = 30
+
+
+# We should also only wait a certain amount of time for a new channel to be established
+# when we already have an open connection.
 # This timeout will usually get triggered prior to even a TCP timeout, so
 # essentially it's our shortcut to discovering the connection died
 RUN_START_TIMEOUT = 20
+
 
 RUN_STATE_CONNECTING = 0    # Love to run this, but we need to finish connecting to our node first
 RUN_STATE_STARTING = 5      # We are connected and trying to open a channel to exec the process
@@ -134,14 +140,15 @@ class Node(object):
         
         # TODO: We need a timeout and handle error conditions to err all the runs waiting on this
         
-        client_creator = protocol.ClientCreator(reactor, ssh.ClientTransport)
+        client_creator = protocol.ClientCreator(reactor, ssh.ClientTransport, options=self.conch_options)
         create_defer = client_creator.connectTCP(self.hostname, 22)
 
         # We're going to create a deferred, returned to the caller, that will be called back when we
         # have an established, secure connection ready for opening channels. The value will be this instance
         # of node.
         connect_defer = defer.Deferred()
-        
+        connect_defer.setTimeout(CONNECT_TIMEOUT)
+
         def on_service_started(connection):
             # Booyah, time to start doing stuff
             self.connection = connection

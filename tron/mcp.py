@@ -15,7 +15,8 @@ class MasterControlProgram(object):
     """
     def __init__(self):
         self.jobs = {}
-        
+        self.nodes = []
+
         # We keep a sort of index into the runs we know about.
         self.runs = weakref.WeakValueDictionary()
     
@@ -25,6 +26,9 @@ class MasterControlProgram(object):
         else:
             self.jobs[tron_job.name] = tron_job
     
+        if tron_job.node not in self.nodes:
+            self.nodes.append(tron_job.node)
+
     def check_and_run(self):
         """This is where it all happens
         

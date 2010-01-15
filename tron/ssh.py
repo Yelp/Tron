@@ -3,7 +3,7 @@ import struct
 import logging
 
 from twisted.internet import protocol, reactor, defer
-
+from twisted.cred import credentials
 from twisted.conch import error
 from twisted.conch.ssh import channel, common
 from twisted.conch.ssh import connection
@@ -14,8 +14,39 @@ from twisted.python import log, failure
 
 log = logging.getLogger('tron.ssh')
 
+class Error(Exception): pass
+
+
+class ChannelClosedEarlyError(Error):
+    """Indicates the SSH Channel has closed before we were done handling the command"""
+    pass
+
+# We need to sub-class and redefine the AuthClient here because there is no way with the
+# default client to force it to not try certain authentication methods. If things get
+# much worse I'll just have to make our own custom version of the default module.
+class NoPasswordAuthClient(default.SSHUserAuthClient):
+    def tryAuth(self, kind):
+        kind = kind.replace('-', '_')
+        if kind != 'publickey':
+            log.info('skipping auth method %s (not supported)' % kind)
+            return
+
+        log.info('trying to auth with %s!' % kind)
+        f= getattr(self,'auth_%s'%kind, None)
+        if f:
+            return f()
+        else:
+            return
+
 class ClientTransport(transport.SSHClientTransport):
     connection_defer = None
+
+    def __init__(self, *args, **kwargs):
+        # These silly twisted classes tend not to have init functions, and they're all old style classes
+        # transport.SSHClientTransport.__init__(self, *args, **kwargs)
+        if 'options' in kwargs:
+            self.options = kwargs['options']
+        
     def verifyHostKey(self, pubKey, fingerprint):
         return defer.succeed(1)
 
@@ -25,7 +56,10 @@ class ClientTransport(transport.SSHClientTransport):
 
         self.connection_defer.callback(conn)
         
-        self.requestService(default.SSHUserAuthClient(os.getlogin(), options.ConchOptions(), conn))
+        auth_service = NoPasswordAuthClient(os.getlogin(), self.options, conn)
+
+        self.requestService(auth_service)
+
 
 class ClientConnection(connection.SSHConnection):
     service_start_defer = None
@@ -51,6 +85,7 @@ class ClientConnection(connection.SSHConnection):
 
         connection.SSHConnection.channelClosed(self, channel)
         
+
 class ExecChannel(channel.SSHChannel):
     name = 'session'
     exit_defer = None
@@ -62,10 +97,6 @@ class ExecChannel(channel.SSHChannel):
     running = False
 
     def channelOpen(self, data):
-        # env = common.NS('TEST_ENV') + common.NS("hello")
-        # env setting doesn't appear to work. We get a "channel request failed"
-        # self.conn.sendRequest(self, 'env', env, wantReply=True).addCallback(self._cbEnvSendRequest)
-        
         self.data = []
         self.running = True
         if self.start_defer:
@@ -85,7 +116,6 @@ class ExecChannel(channel.SSHChannel):
             self.start_defer.errback(self)
         
     def _cbExecSendRequest(self, ignored):
-        #self.write('This data will be echoed back to us by "cat."\r\n')
         self.conn.sendEOF(self)
 
     def request_exit_status(self, data):
@@ -107,7 +137,7 @@ class ExecChannel(channel.SSHChannel):
     def closed(self):
         if self.exit_status is None and self.running and self.exit_defer and not self.exit_defer.called:
             log.warning("Channel has been closed without receiving an exit status")
-            self.exit_defer.errback(failure.Failure())
+            self.exit_defer.errback(failure.Failure(exc_value=ChannelClosedEarlyError()))
         
         self.loseConnection()
 

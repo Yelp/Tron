@@ -3,8 +3,11 @@ import re
 import logging
 import weakref
 import datetime
+import os
+import os.path
 
 import yaml
+from twisted.conch.client import options
 
 from tron import job, node, scheduler
 
@@ -39,6 +42,7 @@ class _ConfiguredObject(yaml.YAMLObject):
 
         return actualized_obj
 
+
 class TronConfiguration(yaml.YAMLObject):
     yaml_tag = u'!TronConfiguration'
 
@@ -52,7 +56,7 @@ class TronConfiguration(yaml.YAMLObject):
                 log.debug("Building new job %s", job_config.name)
                 # Create a new one
                 new_job = job_config.actualized
-                mcp.jobs[new_job.name] = new_job
+                mcp.add_job(new_job)
             else:
                 log.debug("Updating existing job %s", existing_job.name)
                 job_config.update(existing_job)
@@ -66,6 +70,45 @@ class TronConfiguration(yaml.YAMLObject):
     def apply(self, mcp):
         """Apply the configuration to the specified master control program"""
         self._apply_jobs(mcp)
+        if hasattr(self, 'ssh_options'):
+            self.ssh_options._apply(mcp)
+            
+
+class SSHOptions(yaml.YAMLObject):
+    yaml_tag = u'!SSHOptions'
+    
+    def _build_conch_options(self):
+        """Verify and construct the ssh (conch) option object
+        
+        This is just a dictionary like object that options the twisted ssh implementation uses.
+        """
+        ssh_options = options.ConchOptions()
+        if not self.agent:
+            ssh_options['noagent'] = True
+        else:
+            if 'SSH_AUTH_SOCK' in os.environ:
+                ssh_options['agent'] = True
+            else:
+                raise Error("No SSH Agent available ($SSH_AUTH_SOCK)")
+
+        if hasattr(self, "identities"):
+            for file_name in self.identities:
+                file_path = os.path.expanduser(file_name)
+                if not os.path.exists(file_path):
+                    raise Error("Private key file %s doesn't exist" % file_name)
+                if not os.path.exists(file_path + ".pub"):
+                    raise Error("Public key %s doesn't exist" % (file_name + ".pub"))
+            
+                ssh_options.opt_identity(file_name)
+        
+        return ssh_options
+        
+    def _apply(self, mcp):
+        options = self._build_conch_options()
+
+        for node in mcp.nodes:
+            node.conch_options = options
+
 
 class Job(_ConfiguredObject):
     yaml_tag = u'!Job'
@@ -91,6 +134,7 @@ class Job(_ConfiguredObject):
 
         # Setup dependencies
 
+
 class Node(_ConfiguredObject):
     yaml_tag = u'!Node'
     actual_class = node.Node
@@ -99,14 +143,18 @@ class Node(_ConfiguredObject):
         real_node = self._ref()
         real_node.hostname = self.hostname
         
+
 class NodeResource(yaml.YAMLObject):
     yaml_tag = u'!NodeResource'
+
 
 class JobResource(yaml.YAMLObject):
     yaml_tag = u'!JobResource'
 
+
 class FileResource(yaml.YAMLObject):
     yaml_tag = u'!FileResource'
+
 
 class Scheduler(object):
     @classmethod
@@ -115,6 +163,7 @@ class Scheduler(object):
             return DailyScheduler().actualized
         else:
             raise ValueError("Unknown scheduler %r", scheduler_name)
+
 
 class ConstantScheduler(_ConfiguredObject):
     yaml_tab = u'!ConstantScheduler'
@@ -170,10 +219,9 @@ class DailyScheduler(_ConfiguredObject):
     yaml_tag = u'!DailyScheduler'
     actual_class = scheduler.DailyScheduler
 
-class Error(Exception):
-    pass
 
 class InvalidConfigError(Error): pass
+
 
 def load_config(config_file):
     """docstring for load_config"""
@@ -182,6 +230,7 @@ def load_config(config_file):
         raise InvalidConfigError("Failed to find a configuration document in specified file")
     
     return config
+
 
 def configure_daemon(path, daemon):
     config = load_config(path)
