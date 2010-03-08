@@ -1,0 +1,3 @@
+include *.txt
+recursive-include test *.py *.yaml
+recursive-include docs *.txt *.yaml
