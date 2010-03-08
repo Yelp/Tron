@@ -4,6 +4,10 @@ ssh_options: !SSHOptions
     #identities:
     #    - "~/.ssh/test_id"
 
+notification_options: !NotificationOptions
+    smtp_host: "localhost:2525"
+    notification_addr: rhettg@gmail.com
+
 nodes:
     - &nodeBatch00 !Node
         hostname: nullhole.com

@@ -8,13 +8,14 @@ from twisted.python import log
 from twisted.internet import reactor, task, defer
 from twisted.web import server
 
-from tron import mcp, job, resource, node, scheduler, config, www
+from tron import mcp, job, resource, node, scheduler, config, www, monitor, emailer
 
 def parse_options():
     parser = optparse.OptionParser()
     
     parser.add_option("--config-file", action="store", dest="config_file", help="(require) Configuration file to load", default=None)
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
+    parser.add_option("--debug", action="store_true", dest="debug", help="Debug mode, extra error reporting")
     
     (options, args) = parser.parse_args(sys.argv)
     if options.config_file is None:
@@ -40,7 +41,8 @@ def setup_logging(options):
     observer.start()
 
     # Show stack traces for errors in twisted deferreds.
-    defer.setDebugging(True)
+    if options.debug:
+        defer.setDebugging(True)
 
 def main():
     options = parse_options()
@@ -53,7 +55,7 @@ def main():
     config_file = open(options.config_file, "r")
     configuration = config.load_config(config_file)
     configuration.apply(master_control)
-        
+    
     # Setup the mcp polling
     l = task.LoopingCall(master_control.check_and_run)
     l.start(1.0) # call every second

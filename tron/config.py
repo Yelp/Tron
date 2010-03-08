@@ -9,7 +9,7 @@ import os.path
 import yaml
 from twisted.conch.client import options
 
-from tron import job, node, scheduler
+from tron import job, node, scheduler, monitor, emailer
 
 log = logging.getLogger("tron.config")
 
@@ -72,7 +72,10 @@ class TronConfiguration(yaml.YAMLObject):
         self._apply_jobs(mcp)
         if hasattr(self, 'ssh_options'):
             self.ssh_options._apply(mcp)
-            
+        
+        if hasattr(self, 'notification_options'):
+            self.notification_options._apply(mcp)
+
 
 class SSHOptions(yaml.YAMLObject):
     yaml_tag = u'!SSHOptions'
@@ -108,6 +111,19 @@ class SSHOptions(yaml.YAMLObject):
 
         for node in mcp.nodes:
             node.conch_options = options
+
+
+class NotificationOptions(yaml.YAMLObject):
+    yaml_tag = u'!NotificationOptions'
+    def _apply(self, mcp):
+        if not hasattr(self, 'smtp_host'):
+            raise Error("smtp_host required")
+        if not hasattr(self, 'notification_addr'):
+            raise Error("notification_addr required")
+        
+        em = emailer.Emailer(self.smtp_host, self.notification_addr)
+        mcp.monitor = monitor.CrashReporter(em)
+        mcp.monitor.start()
 
 
 class Job(_ConfiguredObject):
