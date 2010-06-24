@@ -135,7 +135,8 @@ class Job(_ConfiguredObject):
         real_job = self._ref()
         real_job.name = self.name
         real_job.command = self.command
-        
+        real_job.output_dir = self.output_dir if hasattr(self, "output_dir") else None
+
         # Set the node
         if self.node:
             real_job.node = self.node.actualized

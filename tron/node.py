@@ -70,7 +70,7 @@ class Node(object):
         # Since the definined interface is on these specific callbacks, we won't bother returning the deferred here. This
         # allows the caller to not really care about twisted specific stuff at all, all it needs to know is that one of those
         # functions will eventually be called back
-
+        
         if run.id in self.run_states:
             raise Error("Run %s already running !?!", run.id)
 
@@ -182,6 +182,9 @@ class Node(object):
         self.run_states[run.id].state = RUN_STATE_STARTING
 
         chan = ssh.ExecChannel(conn=self.connection)
+        if run.output_file:
+            chan.addOutputCallback(self._get_output_callback(run))
+            chan.addEndCallback(self._get_end_callback(run))
 
         chan.command = run.command
         chan.start_defer = defer.Deferred()
@@ -195,25 +198,41 @@ class Node(object):
         chan.start_defer.setTimeout(RUN_START_TIMEOUT)
         
         self.run_states[run.id].channel = chan
-        
         self.connection.openChannel(chan)
-    
+
+    def _get_output_callback(self, run):
+        """Generates an output received callback for the channel.  
+        """
+        def callback(data):
+            log.info("Received stdout data: writing to %s", run.output_file.name)
+            run.output_file.write(data)
+            run.output_file.flush()
+        
+        return callback
+
+    def _get_end_callback(self, run):
+        """Generates callback for the channel when it closes.  
+        """
+        def callback():
+            log.info("Channel closed: closing output file %s", run.output_file.name)
+            run.output_file.close()
+        
+        return callback
+
     def _channel_complete(self, channel, run):
         """Callback once our channel has completed it's operation
         
         This is how we let our run know that we succeeded or failed.
         """
         assert self.run_states[run.id].state < RUN_STATE_COMPLETE
-        self.run_states[run.id].state = RUN_STATE_COMPLETE
-
-        # TODO: Should probably do something with the output
         
+        self.run_states[run.id].state = RUN_STATE_COMPLETE
         self.run_states[run.id].deferred.callback(channel.exit_status)
 
         # Cleanup, we care nothing about this run anymore
         self.run_states[run.id].channel = None
         del self.run_states[run.id]
-
+    
     def _channel_complete_unknown(self, result, run):
         """Channel has closed on a running process without a proper exit
         

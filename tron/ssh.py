@@ -93,12 +93,18 @@ class ExecChannel(channel.SSHChannel):
     
     command = None
     exit_status = None
-    data = None
     running = False
+
+    def __init__(self, *args, **kwargs):
+        channel.SSHChannel.__init__(self, *args, **kwargs)
+        self.output_callbacks = []
+        self.end_callbacks = []
+        self.data = []
 
     def channelOpen(self, data):
         self.data = []
         self.running = True
+
         if self.start_defer:
             log.debug("Channel %s is open, calling deferred", self.id)
             self.start_defer.callback(self)
@@ -110,6 +116,12 @@ class ExecChannel(channel.SSHChannel):
             log.warning("Channel open delayed, giving up and closing")
             self.loseConnection()
             
+    def addOutputCallback(self, output_callback):
+        self.output_callbacks.append(output_callback)
+
+    def addEndCallback(self, end_callback):
+        self.end_callbacks.append(end_callback)
+
     def openFailed(self, reason):
         log.error("Open failed due to %r", reason)
         if self.start_defer:
@@ -130,6 +142,13 @@ class ExecChannel(channel.SSHChannel):
 
     def dataReceived(self, data):
         self.data.append(data)
+        for callback in self.output_callbacks:
+            callback(data)
+
+    def extReceived(self, dataType, data):
+        self.data.append(data)
+        for callback in self.output_callbacks:
+            callback(data)
 
     def getStdout(self):
         return "".join(self.data)
@@ -139,5 +158,7 @@ class ExecChannel(channel.SSHChannel):
             log.warning("Channel has been closed without receiving an exit status")
             self.exit_defer.errback(failure.Failure(exc_value=ChannelClosedEarlyError()))
         
+        for callback in self.end_callbacks:
+            callback()
         self.loseConnection()
 

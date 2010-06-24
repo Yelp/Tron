@@ -2,6 +2,7 @@ import uuid
 import logging
 import re
 import datetime
+import os
 
 from twisted.internet import defer
 
@@ -69,7 +70,9 @@ class JobRun(object):
         self.id = "%s.%s" % (job.name, uuid.uuid4().hex)
         
         self.run_time = None    # What time are we supposed to start
+        self.output_file = None
 
+       
         self.start_time = None  # What time did we start
         self.end_time = None    # What time did we end
 
@@ -80,13 +83,22 @@ class JobRun(object):
         log.info("Starting job run %s", self.id)
         self.start_time = timeutils.current_time()
         self.state = JOB_RUN_RUNNING
-        
+ 
         # And now we try to actually start some work....
         ret = self._execute()
         if isinstance(ret, defer.Deferred):
             self._setup_callbacks(ret)
 
     def _execute(self):
+        if self.job.output_dir:
+            try:
+                if os.path.isdir(self.job.output_dir):
+                    self.output_file = open(self.job.output_dir + "/" + self.job.name + ".out", 'a')
+                else:
+                    self.output_file = open(self.job.output_dir + ".out", 'a')
+            except IOError, e:
+                log.error(str(e) + " - Not storing command output!")
+        
         return self.job.node.run(self)
 
     def _handle_errback(self, result):
@@ -99,11 +111,11 @@ class JobRun(object):
             log.warning("Failed to retrieve exit for run %s after executing command on host %s", self.id, self.job.node.hostname)
             self.fail_unknown()
         else:
-            log.warning("Unknown failure for run %s on host %s: %s", self.id, self.node.hostname, str(failure))
+            log.warning("Unknown failure for run %s on host %s: %s", self.id, self.job.node.hostname, str(result))
             self.fail_unknown()
             
-            # Maybe someone else wants it ?
-            return result
+        # Maybe someone else wants it ?
+        return result
 
     def _handle_callback(self, exit_code):
         """If the node successfully executes and get's a result from our run, handle the exit code here."""
@@ -111,7 +123,9 @@ class JobRun(object):
             self.succeed()
         else:
             self.fail(exit_status)
-
+        
+        if self.output_file:
+            self.output_file.close()
         return exit_code
         
     def _setup_callbacks(self, deferred):
@@ -188,6 +202,7 @@ class Job(object):
         self.timeout = timeout
         self.runs = []
         self.resources = []
+        self.output_dir = None
 
     def next_run(self):
         """Check the scheduler and decide when the next run should be"""
