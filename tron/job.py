@@ -71,7 +71,6 @@ class JobRun(object):
         
         self.run_time = None    # What time are we supposed to start
         self.output_file = None
-
        
         self.start_time = None  # What time did we start
         self.end_time = None    # What time did we end
@@ -83,7 +82,7 @@ class JobRun(object):
         log.info("Starting job run %s", self.id)
         self.start_time = timeutils.current_time()
         self.state = JOB_RUN_RUNNING
- 
+
         # And now we try to actually start some work....
         ret = self._execute()
         if isinstance(ret, defer.Deferred):
@@ -95,10 +94,10 @@ class JobRun(object):
                 if os.path.isdir(self.job.output_dir):
                     self.output_file = open(self.job.output_dir + "/" + self.job.name + ".out", 'a')
                 else:
-                    self.output_file = open(self.job.output_dir + ".out", 'a')
+                    self.output_file = open(self.job.output_dir, 'a')
             except IOError, e:
                 log.error(str(e) + " - Not storing command output!")
-        
+       
         return self.job.node.run(self)
 
     def _handle_errback(self, result):

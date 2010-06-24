@@ -1,9 +1,10 @@
 import datetime
+import os
 
 from testify import *
 from testify.utils import turtle
 
-from tron import job, scheduler
+from tron import node, job, scheduler
 from tron.utils import timeutils
 
 class JobRunState(TestCase):
@@ -43,7 +44,6 @@ class JobRunState(TestCase):
         assert self.run.is_done
         assert self.run.end_time
         assert_equal(self.run.exit_status, 1)
-
 
 class JobRunBuildingTest(TestCase):
     """Check hat we can create and manage job runs"""
@@ -91,6 +91,36 @@ class JobRunReadyTest(TestCase):
         res.ready = True
         assert run.should_start
         
+
+class JobRunLogFileTest(TestCase):
+    @setup
+    def build_job(self):
+        self.node = node.Node(hostname="Test Node")
+
+        def noop_execute(stuff):
+            pass
+
+        self.node.run = noop_execute
+        self.job = job.Job(name="Test Job", node=self.node)
+
+    def test_no_logging(self):
+        run = self.job.build_run()
+        run.start()
+
+    def test_directory_log(self):
+        self.job.output_dir = "."
+        run = self.job.build_run()
+        run.start()
+        assert os.path.isfile("./Test Job.out")
+        os.remove("./Test Job.out")
+        
+    def test_file_log(self):
+        self.job.output_dir = "./test_output_file.out"
+        run = self.job.build_run()
+        run.start()
+        assert os.path.isfile("./test_output_file.out")
+        os.remove("./test_output_file.out")
+
 
 class JobRunVariablesTest(TestCase):
     @class_setup

@@ -10,8 +10,6 @@ class SimpleTest(TestCase):
 --- !TronConfiguration
 ssh_options: !SSHOptions
     agent: true
-    identities:
-        - "~/.ssh/identity"
 
 nodes:
     - &nodeBatch00 !Node
@@ -21,6 +19,7 @@ jobs:
         name: "Foo Job"
         node: *nodeBatch00
         command: "$BATCH_DIR/foo.py --test"
+        output_dir: "/home/user/"
         schedule: !IntervalScheduler
             interval: 1hr
 """
@@ -40,5 +39,8 @@ jobs:
         assert_equal(my_job.node.hostname, "batch0")
         assert_equal(my_job.node.conch_options['noagent'], False)
         
+        assert hasattr(my_job, "output_dir")
+        assert_equal(my_job.output_dir, "/home/user/")
+
         assert isinstance(my_job.scheduler, scheduler.IntervalScheduler)
         assert_equal(my_job.scheduler.interval, datetime.timedelta(hours=1))
