@@ -89,17 +89,16 @@ class JobRun(object):
         if isinstance(ret, defer.Deferred):
             self._setup_callbacks(ret)
 
-    def start_dependants(self):
-        for next in self.dependants:
-            next.start()
-
     def _execute(self):
         if self.job.output_dir:
+            if os.path.isdir(self.job.output_dir):
+                file_name = self.job.output_dir + "/" + self.job.name + ".out"
+            else:
+                file_name = self.job.output_dir
+            
             try:
-                if os.path.isdir(self.job.output_dir):
-                    self.output_file = open(self.job.output_dir + "/" + self.job.name + ".out", 'a')
-                else:
-                    self.output_file = open(self.job.output_dir, 'a')
+                log.info("Opening file %s for output", file_name)
+                self.output_file = open(file_name, 'a')
             except IOError, e:
                 log.error(str(e) + " - Not storing command output!")
        
@@ -135,6 +134,14 @@ class JobRun(object):
         
         deferred.addCallback(self._handle_callback)
         deferred.addErrback(self._handle_errback)
+
+    def start_dependants(self):
+        for next in self.dependants:
+            next.start()
+
+    def ignore_dependants(self):
+        for next in self.dependants:
+            log.info("Not running job %s, the dependant job failed", next.job.name)
 
     def fail(self, exit_status):
         """Mark the run as having failed, providing an exit status"""

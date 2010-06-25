@@ -141,11 +141,11 @@ class Job(_ConfiguredObject):
         # Set the node
         real_job.node = self.node.actualized if hasattr(self, "node") else None
 
-        if not hasattr(self, "schedule") and not hasattr(self, "dependant_on"):
-            raise Error("Job configuration needs a schedule or dependant_on option")
+        if not hasattr(self, "schedule") and not hasattr(self, "follow_on_success"):
+            raise Error("Job configuration needs a schedule or follow_on_success option")
         
-        if hasattr(self, "dependant_on"):
-            self.dependant_on.actualized.dependants.append(real_job)
+        if hasattr(self, "follow_on_success"):
+            self.follow_on_success.actualized.dependants.append(real_job)
         
         # Build scheduler
         if hasattr(self, "schedule"):

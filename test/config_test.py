@@ -27,7 +27,7 @@ jobs:
         name: "Bar Job"
         node: *nodeBatch00
         command: "echo oh oh oh"
-        dependant_on: *jobFoo
+        follow_on_success: *jobFoo
 """
     @setup
     def setup(self):
@@ -65,7 +65,7 @@ jobs:
         assert isinstance(self.foo_job.scheduler, scheduler.IntervalScheduler)
         assert_equal(self.foo_job.scheduler.interval, datetime.timedelta(hours=1))
     
-    def test_dependant_on_attribute(self):
+    def test_follow_on_success_attribute(self):
         assert_equal(len(self.foo_job.dependants), 1)
         assert_equal(self.foo_job.dependants[0], self.bar_job)
 
