@@ -182,9 +182,9 @@ class Node(object):
         self.run_states[run.id].state = RUN_STATE_STARTING
 
         chan = ssh.ExecChannel(conn=self.connection)
-        if run.output_file:
-            chan.addOutputCallback(self._get_output_callback(run))
-            chan.addEndCallback(self._get_end_callback(run))
+        
+        chan.addOutputCallback(self._get_output_callback(run))
+        chan.addEndCallback(self._get_end_callback(run))
 
         chan.command = run.command
         chan.start_defer = defer.Deferred()
@@ -204,9 +204,10 @@ class Node(object):
         """Generates an output received callback for the channel.  
         """
         def callback(data):
-            log.info("Received stdout data: writing to %s", run.output_file.name)
-            run.output_file.write(data)
-            run.output_file.flush()
+            if run.output_file:
+                log.info("Received stdout data: writing to %s", run.output_file.name)
+                run.output_file.write(data)
+                run.output_file.flush()
         
         return callback
 
@@ -214,9 +215,10 @@ class Node(object):
         """Generates callback for the channel when it closes.  
         """
         def callback():
-            log.info("Channel closed: closing output file %s", run.output_file.name)
-            run.output_file.close()
-        
+            if run.output_file:
+                log.info("Channel closed: closing output file %s", run.output_file.name)
+                run.output_file.close()
+
         return callback
 
     def _channel_complete(self, channel, run):

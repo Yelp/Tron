@@ -45,6 +45,58 @@ class JobRunState(TestCase):
         assert self.run.end_time
         assert_equal(self.run.exit_status, 1)
 
+class JobRunJobDependency(TestCase):
+    @setup
+    def build_job(self):
+        self.job = job.Job(name="Test Job")
+        self.dep_job = job.Job(name="Test Job")
+        self.job.dependants.append(self.dep_job)
+        self.run = self.job.build_run()
+        self.dep_run = self.run.dependants[0]
+
+        def noop_execute():
+            pass
+
+        self.run._execute = noop_execute
+        self.dep_run._execute = noop_execute
+
+    def test_success(self):
+        assert not self.dep_run.is_running
+        assert not self.dep_run.is_done
+        assert not self.dep_run.start_time
+        assert not self.dep_run.end_time
+        
+        self.run.start()
+
+        assert not self.dep_run.is_running
+        assert not self.dep_run.is_done
+        assert not self.dep_run.start_time
+        assert not self.dep_run.end_time
+
+        self.run.succeed()
+
+        assert self.dep_run.is_running
+        assert not self.dep_run.is_done
+        assert self.dep_run.start_time
+        assert not self.dep_run.end_time
+        
+        self.dep_run.succeed()
+
+        assert not self.dep_run.is_running
+        assert self.dep_run.is_done
+        assert self.dep_run.start_time
+        assert self.dep_run.end_time
+
+    def test_fail(self):
+        self.run.start()
+        self.run.fail(1)
+
+        assert not self.dep_run.is_running
+        assert not self.dep_run.is_done
+        assert not self.dep_run.start_time
+        assert not self.dep_run.end_time
+
+
 class JobRunBuildingTest(TestCase):
     """Check hat we can create and manage job runs"""
     @setup

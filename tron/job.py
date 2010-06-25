@@ -77,7 +77,8 @@ class JobRun(object):
 
         self.state = JOB_RUN_WAITING
         self.exit_status = None
-        
+        self.dependants = [j.build_run() for j in job.dependants]
+
     def start(self):
         log.info("Starting job run %s", self.id)
         self.start_time = timeutils.current_time()
@@ -87,6 +88,10 @@ class JobRun(object):
         ret = self._execute()
         if isinstance(ret, defer.Deferred):
             self._setup_callbacks(ret)
+
+    def start_dependants(self):
+        for next in self.dependants:
+            next.start()
 
     def _execute(self):
         if self.job.output_dir:
@@ -122,9 +127,7 @@ class JobRun(object):
             self.succeed()
         else:
             self.fail(exit_status)
-        
-        if self.output_file:
-            self.output_file.close()
+       
         return exit_code
         
     def _setup_callbacks(self, deferred):
@@ -155,6 +158,7 @@ class JobRun(object):
         self.exit_status = 0
         self.state = JOB_RUN_SUCCEEDED
         self.end_time = timeutils.current_time()
+        self.start_dependants()
 
     @property
     def command(self):
@@ -186,7 +190,7 @@ class JobRun(object):
             return False
         
         # First things first... is it time to start ?
-        if self.run_time > timeutils.current_time():
+        if not self.run_time or self.run_time > timeutils.current_time():
             return False
         
         # Ok, it's time, what about our jobs dependencies
@@ -202,6 +206,7 @@ class Job(object):
         self.runs = []
         self.resources = []
         self.output_dir = None
+        self.dependants = []
 
     def next_run(self):
         """Check the scheduler and decide when the next run should be"""

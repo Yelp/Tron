@@ -135,22 +135,27 @@ class Job(_ConfiguredObject):
         real_job = self._ref()
         real_job.name = self.name
         real_job.command = self.command
+        real_job.dependants = []
         real_job.output_dir = self.output_dir if hasattr(self, "output_dir") else None
 
         # Set the node
-        if self.node:
-            real_job.node = self.node.actualized
+        real_job.node = self.node.actualized if hasattr(self, "node") else None
 
+        if not hasattr(self, "schedule") and not hasattr(self, "dependant_on"):
+            raise Error("Job configuration needs a schedule or dependant_on option")
+        
+        if hasattr(self, "dependant_on"):
+            self.dependant_on.actualized.dependants.append(real_job)
+        
         # Build scheduler
-        if isinstance(self.schedule, basestring):
-            # This is a short string
-            real_job.scheduler = Scheduler.from_string(self.schedule)
-        else:
-            # This is a scheduler instance, which has more info
-            real_job.scheduler = self.schedule.actualized
-
-        # TODO:Setup dependencies
-
+        if hasattr(self, "schedule"):
+            if isinstance(self.schedule, basestring):
+                # This is a short string
+                real_job.scheduler = Scheduler.from_string(self.schedule)
+            else:
+                # This is a scheduler instance, which has more info
+                real_job.scheduler = self.schedule.actualized
+        
 
 class Node(_ConfiguredObject):
     yaml_tag = u'!Node'
