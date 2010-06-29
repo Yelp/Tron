@@ -99,6 +99,7 @@ class ExecChannel(channel.SSHChannel):
         channel.SSHChannel.__init__(self, *args, **kwargs)
         self.output_callbacks = []
         self.end_callbacks = []
+        self.error_callbacks = []
         self.data = []
 
     def channelOpen(self, data):
@@ -118,6 +119,9 @@ class ExecChannel(channel.SSHChannel):
             
     def addOutputCallback(self, output_callback):
         self.output_callbacks.append(output_callback)
+
+    def addErrorCallback(self, error_callback):
+        self.error_callbacks.append(error_callback)
 
     def addEndCallback(self, end_callback):
         self.end_callbacks.append(end_callback)
@@ -147,7 +151,7 @@ class ExecChannel(channel.SSHChannel):
 
     def extReceived(self, dataType, data):
         self.data.append(data)
-        for callback in self.output_callbacks:
+        for callback in self.error_callbacks:
             callback(data)
 
     def getStdout(self):

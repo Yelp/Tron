@@ -5,7 +5,7 @@ import datetime
 import optparse
 
 from twisted.python import log
-from twisted.internet import reactor, task, defer
+from twisted.internet import reactor, defer
 from twisted.web import server
 
 from tron import mcp, job, resource, node, scheduler, config, www, monitor, emailer
@@ -57,8 +57,7 @@ def main():
     configuration.apply(master_control)
     
     # Setup the mcp polling
-    l = task.LoopingCall(master_control.check_and_run)
-    l.start(1.0) # call every second
+    reactor.callLater(1, master_control.run_jobs)
     
     # Start up our web management interface
     reactor.listenTCP(8082, server.Site(www.RootResource(master_control)))

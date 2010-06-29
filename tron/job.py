@@ -79,6 +79,9 @@ class JobRun(object):
         self.exit_status = None
         self.dependants = [j.build_run() for j in job.dependants]
 
+    def __cmp__(self, other):
+        return cmp(self.run_time, other.run_time)
+
     def start(self):
         log.info("Starting job run %s", self.id)
         self.start_time = timeutils.current_time()
@@ -125,7 +128,7 @@ class JobRun(object):
         if exit_code == 0:
             self.succeed()
         else:
-            self.fail(exit_status)
+            self.fail(exit_code)
        
         return exit_code
         
@@ -180,6 +183,10 @@ class JobRun(object):
             return self.job.timeout.seconds
 
     @property
+    def is_waiting(self):
+        return self.state == JOB_RUN_WAITING
+
+    @property
     def is_done(self):
         return self.state in (JOB_RUN_FAILED, JOB_RUN_SUCCEEDED)
 
@@ -218,8 +225,8 @@ class Job(object):
     def next_run(self):
         """Check the scheduler and decide when the next run should be"""
         for run in self.runs:
-            if not run.is_done:
-                return run
+            if run.is_waiting:
+                return None
 
         if self.scheduler:
             return self.scheduler.next_run(self)

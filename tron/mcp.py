@@ -1,6 +1,10 @@
 import logging
 import weakref
 
+from twisted.internet import reactor
+from tron.utils import timeutils
+
+SECS_PER_DAY = 86400
 log = logging.getLogger('tron.mcp')
 
 class Error(Exception): pass
@@ -16,10 +20,8 @@ class MasterControlProgram(object):
     def __init__(self):
         self.jobs = {}
         self.nodes = []
+        self.next_runs = {}
 
-        # We keep a sort of index into the runs we know about.
-        self.runs = weakref.WeakValueDictionary()
-    
     def add_job(self, tron_job):
         if tron_job.name in self.jobs:
             raise JobExistsError(tron_job)
@@ -27,22 +29,31 @@ class MasterControlProgram(object):
             self.jobs[tron_job.name] = tron_job
     
         if tron_job.node not in self.nodes:
-            self.nodes.append(tron_job.node)
+            self.nodes.append(tron_job.node) 
 
-    def check_and_run(self):
-        """This is where it all happens
+    def _sleep_time(self, next_run):
+        sleep = next_run - timeutils.current_time()
+        seconds = sleep.days * SECS_PER_DAY + sleep.seconds
+        return max(0, seconds)
+
+    def _run_job(self, now):
+        """This runs when a job was scheduled.
         
-        Check for work to do, and do it. Should be called regularly (via a timer)
+        Here we run the job and schedule the next time it should run
         """
-        log.debug("Checking for available jobs")
+        log.debug("Running next scheduled job")
+        now.start()
+
+        next = now.job.next_run()
+        if not next is None:
+            self.next_runs[next.job.name] = next.run_time
+            reactor.callLater(self._sleep_time(next.run_time), self._run_job, next)
+
+    def run_jobs(self):
+        """This schedules the first time each job runs"""
         for tron_job in self.jobs.itervalues():
-            job_run = tron_job.next_run()
-            
-            # Make sure we know about this run instance
-            if job_run and job_run.id not in self.runs:
-                self.runs[job_run.id] = job_run
-            
-            # Should we actually start this run ?
-            if job_run and job_run.should_start:
-                job_run.start()
-                    
+            if tron_job.scheduler:
+                run = tron_job.next_run()
+                self.next_runs[tron_job.name] = run.run_time
+                reactor.callLater(self._sleep_time(run.run_time), self._run_job, run)
+
