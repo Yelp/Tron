@@ -184,6 +184,7 @@ class Node(object):
         chan = ssh.ExecChannel(conn=self.connection)
         
         chan.addOutputCallback(self._get_output_callback(run))
+        chan.addErrorCallback(self._get_error_callback(run))
         chan.addEndCallback(self._get_end_callback(run))
 
         chan.command = run.command
@@ -205,7 +206,19 @@ class Node(object):
         """
         def callback(data):
             if run.output_file:
-                log.info("Received stdout data: writing to %s", run.output_file.name)
+                log.info("Received data for job %s: writing to %s", run.job.name, run.output_file.name)
+                run.output_file.write(data)
+                run.output_file.flush()
+        
+        return callback
+
+    def _get_error_callback(self, run):
+        """Generates an error received callback for the channel.
+        """
+        def callback(data):
+            log.error("Received stderr data for job %s: %s", run.job.name, data)
+            if run.output_file:
+                log.error("Writing error to %s", run.output_file.name)
                 run.output_file.write(data)
                 run.output_file.flush()
         
