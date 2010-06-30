@@ -11,8 +11,9 @@ from tron.utils import timeutils
 
 log = logging.getLogger('tron.job')
 
-JOB_RUN_WAITING = 0
-JOB_RUN_RUNNING = 1
+JOB_RUN_SCHEDULED = 0
+JOB_RUN_WAITING = 1
+JOB_RUN_RUNNING = 2
 JOB_RUN_FAILED = 10
 JOB_RUN_SUCCEEDED = 11
 
@@ -75,15 +76,24 @@ class JobRun(object):
         self.start_time = None  # What time did we start
         self.end_time = None    # What time did we end
 
-        self.state = JOB_RUN_WAITING
+        self.state = JOB_RUN_SCHEDULED
         self.exit_status = None
-        self.dependants = [j.build_run() for j in job.dependants]
-
-    def __cmp__(self, other):
-        return cmp(self.run_time, other.run_time)
+        self.prev = None
+        self.waiting = []
 
     def start(self):
+        if not self.prev is None and not self.prev.is_done:
+            if self.job.queueing:
+                self.prev.waiting.append(self)
+                self.state = JOB_RUN_WAITING
+                log.warning("Previous job, %s, not finished - placing in queue", self.job.name)
+            else:
+                log.warning("Previous job, %s, not finished - cancelling", self.job.name)
+                self.state = JOB_RUN_FAILED
+            return
+
         log.info("Starting job run %s", self.id)
+        
         self.start_time = timeutils.current_time()
         self.state = JOB_RUN_RUNNING
 
@@ -139,12 +149,11 @@ class JobRun(object):
         deferred.addErrback(self._handle_errback)
 
     def start_dependants(self):
-        for next in self.dependants:
-            next.start()
+        [j.start() for j in self.waiting]
+        [j.build_run().start() for j in self.job.dependants]
 
     def ignore_dependants(self):
-        for next in self.dependants:
-            log.info("Not running job %s, the dependant job failed", next.job.name)
+        [log.info("Not running job %s, the dependant job failed", self.job.name) for j in self.job.dependants]
 
     def fail(self, exit_status):
         """Mark the run as having failed, providing an exit status"""
@@ -187,6 +196,10 @@ class JobRun(object):
         return self.state == JOB_RUN_WAITING
 
     @property
+    def is_scheduled(self):
+        return self.state == JOB_RUN_SCHEDULED
+
+    @property
     def is_done(self):
         return self.state in (JOB_RUN_FAILED, JOB_RUN_SUCCEEDED)
 
@@ -200,7 +213,7 @@ class JobRun(object):
 
     @property
     def should_start(self):
-        if self.state != JOB_RUN_WAITING:
+        if self.state != JOB_RUN_SCHEDULED:
             return False
         
         # First things first... is it time to start ?
@@ -221,13 +234,10 @@ class Job(object):
         self.resources = []
         self.output_dir = None
         self.dependants = []
+        self.queueing = True
 
     def next_run(self):
         """Check the scheduler and decide when the next run should be"""
-        for run in self.runs:
-            if run.is_waiting:
-                return None
-
         if self.scheduler:
             return self.scheduler.next_run(self)
         else:

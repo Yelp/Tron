@@ -22,7 +22,7 @@ class DailyScheduler(object):
         run = job.build_run()
 
         # For a daily scheduler, always assume the next job run is tomorrow
-        run_time = (timeutils.current_time() + datetime.timedelta(days=1)).replace(hour=0, minute=0, second=0)
+        run_time = (timeutils.current_time() + datetime.timedelta(days=1)).replace(hour=0, minute=1, second=1)
 
         run.run_time = run_time
         return run
@@ -42,8 +42,8 @@ class IntervalScheduler(object):
 
         # Find the last success to pick the next time to run
         for past_run in reversed(job.runs):
-            if past_run.is_success or past_run.is_running:
-                run.run_time = past_run.start_time + self.interval
+            if past_run.is_success or past_run.is_running or past_run.is_waiting:
+                run.run_time = past_run.run_time + self.interval
                 break
         else:
             log.debug("Found no past runs for job %s, next run is now", run)
