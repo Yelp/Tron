@@ -106,11 +106,11 @@ class JobRunBuildingTest(TestCase):
     def test_build_run(self):
         run = self.job.build_run()
 
-        assert self.job.runs[-1] == run
+        assert_equal(self.job.runs[-1], run)
         assert run.id
         
         other_run = self.job.next_run()
-        assert other_run == run
+        assert_equal(other_run, run)
         assert_equal(len(self.job.runs), 1)
 
     def test_no_schedule(self):

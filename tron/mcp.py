@@ -1,11 +1,15 @@
 import logging
 import weakref
+import shutil
+import yaml
+import os
 
 from twisted.internet import reactor
 from tron.utils import timeutils
 
 SECS_PER_DAY = 86400
 log = logging.getLogger('tron.mcp')
+SCHEDULE_FILE = '.tron_schedule.yaml'
 
 class Error(Exception): pass
 
@@ -20,7 +24,7 @@ class MasterControlProgram(object):
     def __init__(self):
         self.jobs = {}
         self.nodes = []
-        self.next_runs = {}
+        self.schedule = {}
 
     def add_job(self, tron_job):
         if tron_job.name in self.jobs:
@@ -31,10 +35,31 @@ class MasterControlProgram(object):
         if tron_job.node not in self.nodes:
             self.nodes.append(tron_job.node) 
 
+    def _store_schedule(self):
+        log.info("Storing schedule in %s", SCHEDULE_FILE)
+        temp_schedule = open('.tmp' + SCHEDULE_FILE, 'wb')
+        yaml.dump(self.schedule, temp_schedule, default_flow_style=False)
+        temp_schedule.close()
+        shutil.move('.tmp' + SCHEDULE_FILE, SCHEDULE_FILE)
+
+    def _load_schedule(self):
+        log.info("Past schedule exists. Restoring schedule")
+        schedule_file = open(SCHEDULE_FILE)
+        self.schedule = yaml.load(schedule_file)
+        schedule_file.close()
+
     def _sleep_time(self, next_run):
         sleep = next_run - timeutils.current_time()
         seconds = sleep.days * SECS_PER_DAY + sleep.seconds
         return max(0, seconds)
+
+    def _next_run_time(self, job):
+        next = job.next_run()
+        if not next is None:
+            reactor.callLater(self._sleep_time(next.run_time), self._run_job, next)
+        
+        self.schedule[job.name] = [run.run_time for run in job.runs]
+        return next
 
     def _run_job(self, now):
         """This runs when a job was scheduled.
@@ -44,16 +69,19 @@ class MasterControlProgram(object):
         log.debug("Running next scheduled job")
         now.start()
 
-        next = now.job.next_run()
-        if not next is None:
-            self.next_runs[next.job.name] = next.run_time
-            reactor.callLater(self._sleep_time(next.run_time), self._run_job, next)
-
+        next = self._next_run_time(now.job)
+        next.prev = now
+        self._store_schedule()
+    
     def run_jobs(self):
         """This schedules the first time each job runs"""
+        if os.path.isfile(SCHEDULE_FILE):
+            self._load_schedule()
+            return
+        
         for tron_job in self.jobs.itervalues():
             if tron_job.scheduler:
-                run = tron_job.next_run()
-                self.next_runs[tron_job.name] = run.run_time
-                reactor.callLater(self._sleep_time(run.run_time), self._run_job, run)
+                self._next_run_time(tron_job)
+
+        self._store_schedule()
 
