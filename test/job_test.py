@@ -12,6 +12,7 @@ class JobRunState(TestCase):
     @setup
     def build_job(self):
         self.job = job.Job(name="Test Job")
+        self.job.command = "Test command"
         self.run = self.job.build_run()
 
         def noop_execute():
