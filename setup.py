@@ -18,7 +18,7 @@ setup(
         "Intended Audience :: System Administrators",
         "Development Status :: 3 - Alpha",
     ],
-	requires = ['twisted (>=8.2.0)', 'testify (>=0.1.2)'],
+	requires = ['twisted (>=10.0.0)',],
     packages=["tron", "tron.utils"],
 	scripts=['bin/trond', 'bin/tronview', 'bin/tronctl'],
 	data_files=[('share/doc/tron', ['docs/sample-config.yaml']),],
