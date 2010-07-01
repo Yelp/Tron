@@ -54,12 +54,13 @@ class MasterControlProgram(object):
         seconds = sleep.days * SECS_PER_DAY + sleep.seconds
         return max(0, seconds)
 
-    def _next_run_time(self, job):
+    def _schedule_next_run(self, job):
         next = job.next_run()
         if not next is None:
+            log.info("Scheduling next run for %s", job.name)
             reactor.callLater(self._sleep_time(next.run_time), self._run_job, next)
-        
-        job.scheduled.append((next.run_time, next.command))
+            job.scheduled.append(next.store_data)
+
         return next
 
     def _run_job(self, now):
@@ -68,10 +69,10 @@ class MasterControlProgram(object):
         Here we run the job and schedule the next time it should run
         """
         log.debug("Running next scheduled job")
-        now.start()
+        now.scheduled_start()
         
-        next = self._next_run_time(now.job)
-        next.prev = now
+        next = self._schedule_next_run(now.job)
+        next.prev = now.prev if now.is_cancelled else now
 
         self.schedule[now.job.name] = now.job.scheduled
         self.running[now.job.name] = now.job.running
@@ -85,9 +86,7 @@ class MasterControlProgram(object):
         
         for tron_job in self.jobs.itervalues():
             if tron_job.scheduler:
-                self.schedule[tron_job.name] = []
-                self.running[tron_job.name] = []
-                self._next_run_time(tron_job)
+                self._schedule_next_run(tron_job)
 
         self._store_data()
 

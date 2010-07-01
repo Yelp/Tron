@@ -14,6 +14,7 @@ log = logging.getLogger('tron.job')
 JOB_RUN_SCHEDULED = 0
 JOB_RUN_WAITING = 1
 JOB_RUN_RUNNING = 2
+JOB_RUN_CANCELLED = 3
 JOB_RUN_FAILED = 10
 JOB_RUN_SUCCEEDED = 11
 
@@ -81,21 +82,25 @@ class JobRun(object):
         self.prev = None
         self.waiting = []
 
-    def start(self):
-        if not self.prev is None and not self.prev.is_done:
-            if self.job.queueing:
-                self.prev.waiting.append(self)
-                self.state = JOB_RUN_WAITING
-                log.warning("Previous job, %s, not finished - placing in queue", self.job.name)
-            else:
-                log.warning("Previous job, %s, not finished - cancelling", self.job.name)
-                self.state = JOB_RUN_FAILED
+    def scheduled_start(self):
+        self.job.scheduled.remove(self.store_data)
+        
+        if self.should_start:
+            self.start()
             return
 
+        if self.job.queueing:
+            self.prev.waiting.append(self)
+            self.state = JOB_RUN_WAITING
+            log.warning("Previous job, %s, not finished - placing in queue", self.job.name)
+        else:
+            log.warning("Previous job, %s, not finished - cancelling", self.job.name)
+            self.state = JOB_RUN_CANCELLED
+
+    def start(self):
         log.info("Starting job run %s", self.id)
         
-        self.job.scheduled.remove((self.run_time, self.command))
-        self.job.running.append((self.run_time, self.command))
+        self.job.running.append(self.store_data)
         self.start_time = timeutils.current_time()
         self.state = JOB_RUN_RUNNING
 
@@ -104,7 +109,7 @@ class JobRun(object):
         if isinstance(ret, defer.Deferred):
             self._setup_callbacks(ret)
 
-    def _execute(self):
+    def _open_output_file(self):
         if self.job.output_dir:
             if os.path.isdir(self.job.output_dir):
                 file_name = self.job.output_dir + "/" + self.job.name + ".out"
@@ -116,7 +121,9 @@ class JobRun(object):
                 self.output_file = open(file_name, 'a')
             except IOError, e:
                 log.error(str(e) + " - Not storing command output!")
-       
+
+    def _execute(self):
+        self._open_output_file()
         return self.job.node.run(self)
 
     def _handle_errback(self, result):
@@ -137,7 +144,7 @@ class JobRun(object):
 
     def _handle_callback(self, exit_code):
         """If the node successfully executes and get's a result from our run, handle the exit code here."""
-        self.job.running.remove((self.run_time, self.command))
+        self.job.running.remove(self.store_data)
         if exit_code == 0:
             self.succeed()
         else:
@@ -195,8 +202,16 @@ class JobRun(object):
             return self.job.timeout.seconds
 
     @property
+    def store_data(self):
+        return (self.run_time, self.command)
+
+    @property
     def is_waiting(self):
         return self.state == JOB_RUN_WAITING
+    
+    @property
+    def is_cancelled(self):
+        return self.state == JOB_RUN_CANCELLED
 
     @property
     def is_scheduled(self):
@@ -218,9 +233,7 @@ class JobRun(object):
     def should_start(self):
         if self.state != JOB_RUN_SCHEDULED:
             return False
-        
-        # First things first... is it time to start ?
-        if not self.run_time or self.run_time > timeutils.current_time():
+        if not self.prev is None and not self.prev.is_done:
             return False
         
         # Ok, it's time, what about our jobs dependencies
@@ -238,7 +251,7 @@ class Job(object):
         self.output_dir = None
         
         self.dependants = []
-        self.queueing = True
+        self.queueing = False
         self.scheduled = []
         self.running = []
 
