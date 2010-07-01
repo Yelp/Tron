@@ -25,6 +25,7 @@ class MasterControlProgram(object):
         self.jobs = {}
         self.nodes = []
         self.schedule = {}
+        self.running = {}
 
     def add_job(self, tron_job):
         if tron_job.name in self.jobs:
@@ -35,14 +36,14 @@ class MasterControlProgram(object):
         if tron_job.node not in self.nodes:
             self.nodes.append(tron_job.node) 
 
-    def _store_schedule(self):
+    def _store_data(self):
         log.info("Storing schedule in %s", SCHEDULE_FILE)
         temp_schedule = open('.tmp' + SCHEDULE_FILE, 'wb')
-        yaml.dump(self.schedule, temp_schedule, default_flow_style=False)
+        yaml.dump({'schedule': self.schedule, 'running': self.running}, temp_schedule, default_flow_style=False)
         temp_schedule.close()
         shutil.move('.tmp' + SCHEDULE_FILE, SCHEDULE_FILE)
 
-    def _load_schedule(self):
+    def _load_data(self):
         log.info("Past schedule exists. Restoring schedule")
         schedule_file = open(SCHEDULE_FILE)
         self.schedule = yaml.load(schedule_file)
@@ -58,7 +59,7 @@ class MasterControlProgram(object):
         if not next is None:
             reactor.callLater(self._sleep_time(next.run_time), self._run_job, next)
         
-        self.schedule[job.name] = [run.run_time for run in job.runs]
+        job.scheduled.append((next.run_time, next.command))
         return next
 
     def _run_job(self, now):
@@ -68,20 +69,25 @@ class MasterControlProgram(object):
         """
         log.debug("Running next scheduled job")
         now.start()
-
+        
         next = self._next_run_time(now.job)
         next.prev = now
-        self._store_schedule()
+
+        self.schedule[now.job.name] = now.job.scheduled
+        self.running[now.job.name] = now.job.running
+        self._store_data()
     
     def run_jobs(self):
         """This schedules the first time each job runs"""
         if os.path.isfile(SCHEDULE_FILE):
-            self._load_schedule()
+            self._load_data()
             return
         
         for tron_job in self.jobs.itervalues():
             if tron_job.scheduler:
+                self.schedule[tron_job.name] = []
+                self.running[tron_job.name] = []
                 self._next_run_time(tron_job)
 
-        self._store_schedule()
+        self._store_data()
 

@@ -94,6 +94,8 @@ class JobRun(object):
 
         log.info("Starting job run %s", self.id)
         
+        self.job.scheduled.remove((self.run_time, self.command))
+        self.job.running.append((self.run_time, self.command))
         self.start_time = timeutils.current_time()
         self.state = JOB_RUN_RUNNING
 
@@ -135,6 +137,7 @@ class JobRun(object):
 
     def _handle_callback(self, exit_code):
         """If the node successfully executes and get's a result from our run, handle the exit code here."""
+        self.job.running.remove((self.run_time, self.command))
         if exit_code == 0:
             self.succeed()
         else:
@@ -233,8 +236,11 @@ class Job(object):
         self.runs = []
         self.resources = []
         self.output_dir = None
+        
         self.dependants = []
         self.queueing = True
+        self.scheduled = []
+        self.running = []
 
     def next_run(self):
         """Check the scheduler and decide when the next run should be"""

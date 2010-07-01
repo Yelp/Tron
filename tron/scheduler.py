@@ -38,17 +38,15 @@ class IntervalScheduler(object):
         self.interval = interval
     
     def next_run(self, job):
-        run = job.build_run()
-
         # Find the last success to pick the next time to run
-        for past_run in reversed(job.runs):
-            if past_run.is_success or past_run.is_running or past_run.is_waiting:
-                run.run_time = past_run.run_time + self.interval
-                break
+        if job.runs:
+            run_time = job.runs[-1].run_time + self.interval
         else:
-            log.debug("Found no past runs for job %s, next run is now", run)
-            run.run_time = timeutils.current_time()
+            log.debug("Found no past runs for job %s, next run is now", job.name)
+            run_time = timeutils.current_time()
         
+        run = job.build_run()
+        run.run_time = run_time
         return run
 
     def __str__(self):
