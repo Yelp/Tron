@@ -8,6 +8,7 @@ from twisted.internet import reactor
 from tron.utils import timeutils
 
 SECS_PER_DAY = 86400
+MICRO_SEC = .000001
 log = logging.getLogger('tron.mcp')
 SCHEDULE_FILE = '.tron_schedule.yaml'
 
@@ -51,7 +52,7 @@ class MasterControlProgram(object):
 
     def _sleep_time(self, next_run):
         sleep = next_run - timeutils.current_time()
-        seconds = sleep.days * SECS_PER_DAY + sleep.seconds
+        seconds = sleep.days * SECS_PER_DAY + sleep.seconds + sleep.microseconds * MICRO_SEC
         return max(0, seconds)
 
     def _schedule_next_run(self, job):
@@ -63,6 +64,11 @@ class MasterControlProgram(object):
 
         return next
 
+    def _update_job_state(self, job):
+        self.schedule[job.name] = job.scheduled
+        self.running[job.name] = job.running
+        self._store_data()
+
     def _run_job(self, now):
         """This runs when a job was scheduled.
         
@@ -73,11 +79,8 @@ class MasterControlProgram(object):
         
         next = self._schedule_next_run(now.job)
         next.prev = now.prev if now.is_cancelled else now
+        self._update_job_state(now.job)
 
-        self.schedule[now.job.name] = now.job.scheduled
-        self.running[now.job.name] = now.job.running
-        self._store_data()
-    
     def run_jobs(self):
         """This schedules the first time each job runs"""
         if os.path.isfile(SCHEDULE_FILE):
