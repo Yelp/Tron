@@ -7,6 +7,10 @@ from testify.utils import turtle
 from tron import node, job, scheduler
 from tron.utils import timeutils
 
+class TestNode(object):
+    def run(self, run):
+        return run
+
 class JobRunState(TestCase):
     """Check that our job runs can start/stop and manage their state"""
     @setup
@@ -49,53 +53,46 @@ class JobRunState(TestCase):
 class JobRunJobDependency(TestCase):
     @setup
     def build_job(self):
-        self.job = job.Job(name="Test Job")
-        self.dep_job = job.Job(name="Test Job")
+        self.job = job.Job(name="Test Job1")
+        self.job.command = "Test command1"
+        self.job.node = TestNode()
+
+        self.dep_job = job.Job(name="Test Job2")
+        self.dep_job.command = "Test command2"
+        self.dep_job.node = TestNode()
+
         self.job.dependants.append(self.dep_job)
         self.run = self.job.build_run()
-        self.dep_run = self.run.dependants[0]
-
-        def noop_execute():
-            pass
-
-        self.run._execute = noop_execute
-        self.dep_run._execute = noop_execute
 
     def test_success(self):
-        assert not self.dep_run.is_running
-        assert not self.dep_run.is_done
-        assert not self.dep_run.start_time
-        assert not self.dep_run.end_time
+        assert_equal(len(self.dep_job.runs), 0)
         
         self.run.start()
 
-        assert not self.dep_run.is_running
-        assert not self.dep_run.is_done
-        assert not self.dep_run.start_time
-        assert not self.dep_run.end_time
+        assert_equal(len(self.dep_job.runs), 0)
 
         self.run.succeed()
 
-        assert self.dep_run.is_running
-        assert not self.dep_run.is_done
-        assert self.dep_run.start_time
-        assert not self.dep_run.end_time
-        
-        self.dep_run.succeed()
+        assert_equal(len(self.dep_job.runs), 1)
+        dep_run = self.dep_job.runs[0]
+ 
+        assert dep_run.is_running
+        assert not dep_run.is_done
+        assert dep_run.start_time
+        assert not dep_run.end_time
+       
+        dep_run.succeed()
 
-        assert not self.dep_run.is_running
-        assert self.dep_run.is_done
-        assert self.dep_run.start_time
-        assert self.dep_run.end_time
-
+        assert not dep_run.is_running
+        assert dep_run.is_done
+        assert dep_run.start_time
+        assert dep_run.end_time
+              
     def test_fail(self):
         self.run.start()
         self.run.fail(1)
 
-        assert not self.dep_run.is_running
-        assert not self.dep_run.is_done
-        assert not self.dep_run.start_time
-        assert not self.dep_run.end_time
+        assert_equal(len(self.dep_job.runs), 0)
 
 
 class JobRunBuildingTest(TestCase):
@@ -103,15 +100,13 @@ class JobRunBuildingTest(TestCase):
     @setup
     def build_job(self):
         self.job = job.Job(name="Test Job")
-    
+
     def test_build_run(self):
         run = self.job.build_run()
 
         assert_equal(self.job.runs[-1], run)
         assert run.id
         
-        other_run = self.job.next_run()
-        assert_equal(other_run, run)
         assert_equal(len(self.job.runs), 1)
 
     def test_no_schedule(self):
@@ -148,13 +143,8 @@ class JobRunReadyTest(TestCase):
 class JobRunLogFileTest(TestCase):
     @setup
     def build_job(self):
-        self.node = node.Node(hostname="Test Node")
-
-        def noop_execute(stuff):
-            pass
-
-        self.node.run = noop_execute
-        self.job = job.Job(name="Test Job", node=self.node)
+        self.job = job.Job(name="Test Job", node=TestNode())
+        self.job.command = "Test command"
 
     def test_no_logging(self):
         run = self.job.build_run()
