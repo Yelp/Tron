@@ -11,6 +11,81 @@ class TestNode(object):
     def run(self, run):
         return run
 
+class TestJob(TestCase):
+    """Unit testing for Job class"""
+    @setup
+    def setup(self):
+        self.job = job.Job(name="Test Job")
+
+    def test_next_run(self):
+        assert_equals(self.job.next_run(), None)
+        self.job.scheduler = scheduler.ConstantScheduler()
+        assert self.job.next_run()
+
+    def test_build_run(self):
+        run = self.job.build_run()
+        assert_equals(len(self.job.runs), 1)
+        assert_equals(self.job.runs[0], run)
+
+class TestJobRun(TestCase):
+    """Unit testing for JobRun class"""
+    @setup
+    def setup(self):
+        self.job = job.Job(name="Test Job")
+        self.job.scheduler = scheduler.ConstantScheduler()
+        self.job.queueing = True
+        self.job.command = "Test command"
+        
+        self.run = self.job.next_run()
+        self.run._execute = lambda: True
+        self.job.scheduled.append(self.run.store_data)
+
+    def test_scheduled_start_succeed(self):
+        self.run.scheduled_start()
+
+        assert self.run.is_running
+        assert_equals(len(self.job.scheduled), 0)
+        
+    def test_scheduled_start_wait(self):
+        run2 = self.job.next_run()
+        self.job.scheduled.append(run2.store_data)
+        run2.prev = self.run
+        run2._execute = lambda: True
+        
+        assert_equals(len(self.job.scheduled), 2)
+        run2.scheduled_start()
+        assert run2.is_waiting
+        assert_equals(len(self.job.scheduled), 1)
+        
+        self.run.scheduled_start()
+        assert self.run.is_running
+        
+        self.run.succeed()
+        assert self.run.is_success
+        assert run2.is_running
+
+    def test_scheduled_start_cancel(self):
+        self.job.queueing = False
+        run2 = self.job.next_run()
+        self.job.scheduled.append(run2.store_data)
+        run2.prev = self.run
+        run2._execute = lambda: True
+        
+        assert_equals(len(self.job.scheduled), 2)
+        run2.scheduled_start()
+        assert run2.is_cancelled
+        assert_equals(len(self.job.scheduled), 1)
+        
+        self.run.scheduled_start()
+        assert self.run.is_running
+        
+        self.run.succeed()
+        assert self.run.is_success
+        assert run2.is_cancelled
+
+    def test_start(self):
+        pass
+
 class JobRunState(TestCase):
     """Check that our job runs can start/stop and manage their state"""
     @setup
