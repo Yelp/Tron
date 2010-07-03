@@ -12,7 +12,7 @@ from tron.utils import timeutils
 log = logging.getLogger('tron.job')
 
 JOB_RUN_SCHEDULED = 0
-JOB_RUN_WAITING = 1
+JOB_RUN_QUEUED = 1
 JOB_RUN_RUNNING = 2
 JOB_RUN_CANCELLED = 3
 JOB_RUN_FAILED = 10
@@ -83,16 +83,22 @@ class JobRun(object):
         self.waiting = []
 
     def scheduled_start(self):
-        self.job.scheduled.remove(self.store_data)
+        """Called when the job is scheduled to run.
+
+        If the job should start then it starts.  Otherwise, if queueing is enabled
+        it queues the job, if not, cancels the job.
+        """
+        self.job.scheduled.pop(self.id)
         
         if self.should_start:
             self.start()
             return
 
         if self.job.queueing:
-            self.prev.waiting.append(self)
-            self.state = JOB_RUN_WAITING
             log.warning("Previous job, %s, not finished - placing in queue", self.job.name)
+            self.prev.waiting.append(self)
+            self.job.queued[self.id] = self.state_data
+            self.state = JOB_RUN_QUEUED
         else:
             log.warning("Previous job, %s, not finished - cancelling", self.job.name)
             self.state = JOB_RUN_CANCELLED
@@ -100,7 +106,7 @@ class JobRun(object):
     def start(self):
         log.info("Starting job run %s", self.id)
         
-        self.job.running.append(self.store_data)
+        self.job.running[self.id] = self.state_data
         self.start_time = timeutils.current_time()
         self.state = JOB_RUN_RUNNING
 
@@ -144,7 +150,7 @@ class JobRun(object):
 
     def _handle_callback(self, exit_code):
         """If the node successfully executes and get's a result from our run, handle the exit code here."""
-        self.job.running.remove(self.store_data)
+        self.job.running.pop(self.id)
         if exit_code == 0:
             self.succeed()
         else:
@@ -159,7 +165,10 @@ class JobRun(object):
         deferred.addErrback(self._handle_errback)
 
     def start_dependants(self):
-        [j.start() for j in self.waiting]
+        for j in self.waiting:
+            j.start()
+            self.job.queued.pop(j.id)
+        
         [j.build_run().start() for j in self.job.dependants]
 
     def ignore_dependants(self):
@@ -189,6 +198,20 @@ class JobRun(object):
         self.end_time = timeutils.current_time()
         self.start_dependants()
 
+    def restore_state(self, state):
+        self.state = state['state']
+        self.run_time = state['run_time']
+        if 'previous' in state:
+            self.prev = self.job.get_run_by_id(state['previous'])
+            self.prev.waiting.append(self)
+
+    @property
+    def state_data(self):
+        data = {'state': self.state, 'run_time': self.run_time, 'command': self.command}
+        if self.prev and not self.is_running:
+            data['previous'] = self.prev.id
+        return data
+
     @property
     def command(self):
         job_vars = JobRunVariables(self)
@@ -202,12 +225,8 @@ class JobRun(object):
             return self.job.timeout.seconds
 
     @property
-    def store_data(self):
-        return (self.run_time, self.command)
-
-    @property
     def is_waiting(self):
-        return self.state == JOB_RUN_WAITING
+        return self.state == JOB_RUN_QUEUED
     
     @property
     def is_cancelled(self):
@@ -219,7 +238,7 @@ class JobRun(object):
 
     @property
     def is_done(self):
-        return self.state in (JOB_RUN_FAILED, JOB_RUN_SUCCEEDED)
+        return self.state in (JOB_RUN_FAILED, JOB_RUN_SUCCEEDED, JOB_RUN_CANCELLED)
 
     @property
     def is_running(self):
@@ -251,9 +270,10 @@ class Job(object):
         self.output_dir = None
         
         self.dependants = []
-        self.queueing = False
-        self.scheduled = []
-        self.running = []
+        self.queueing = True
+        self.scheduled = {}
+        self.running = {}
+        self.queued = {}
 
     def next_run(self):
         """Check the scheduler and decide when the next run should be"""
@@ -270,7 +290,20 @@ class Job(object):
         new_run = JobRun(self)
         self.runs.append(new_run)
         return new_run
+
+    def restore(self, id, state):
+        """Restores an instance of JobRun for this job
+
+        This is used when tron shut down unexpectedly
+        """
+        restored = self.build_run()
+        restored.id = id
+        restored.restore_state(state)
+        return restored
     
+    def get_run_by_id(self, id):
+        print id
+        return filter(lambda cur: cur.id == id, self.runs)[0] 
 
 class JobSet(object):
     def __init__(self):
