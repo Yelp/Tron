@@ -146,7 +146,7 @@ class Job(_ConfiguredObject):
         
         if hasattr(self, "follow_on_success"):
             self.follow_on_success.actualized.dependants.append(real_job)
-        
+       
         # Build scheduler
         if hasattr(self, "schedule"):
             if isinstance(self.schedule, basestring):
@@ -155,7 +155,12 @@ class Job(_ConfiguredObject):
             else:
                 # This is a scheduler instance, which has more info
                 real_job.scheduler = self.schedule.actualized
-        
+
+            real_job.scheduler.set_job_queueing(real_job)
+
+        if hasattr(self, "queueing_enabled"):
+            real_job.queueing = self.queueing_enabled
+
 
 class Node(_ConfiguredObject):
     yaml_tag = u'!Node'
@@ -240,7 +245,9 @@ class IntervalScheduler(_ConfiguredObject):
 class DailyScheduler(_ConfiguredObject):
     yaml_tag = u'!DailyScheduler'
     actual_class = scheduler.DailyScheduler
-
+    
+    def _apply(self):
+        sched = self._ref()
 
 class InvalidConfigError(Error): pass
 

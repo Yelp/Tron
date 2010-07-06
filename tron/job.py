@@ -97,8 +97,8 @@ class JobRun(object):
         if self.job.queueing:
             log.warning("Previous job, %s, not finished - placing in queue", self.job.name)
             self.prev.waiting.append(self)
-            self.job.queued[self.id] = self.state_data
             self.state = JOB_RUN_QUEUED
+            self.job.queued[self.id] = self.state_data
         else:
             log.warning("Previous job, %s, not finished - cancelling", self.job.name)
             self.state = JOB_RUN_CANCELLED
@@ -106,9 +106,9 @@ class JobRun(object):
     def start(self):
         log.info("Starting job run %s", self.id)
         
-        self.job.running[self.id] = self.state_data
         self.start_time = timeutils.current_time()
         self.state = JOB_RUN_RUNNING
+        self.job.running[self.id] = self.state_data
 
         # And now we try to actually start some work....
         ret = self._execute()
@@ -150,7 +150,6 @@ class JobRun(object):
 
     def _handle_callback(self, exit_code):
         """If the node successfully executes and get's a result from our run, handle the exit code here."""
-        self.job.running.pop(self.id)
         if exit_code == 0:
             self.succeed()
         else:
@@ -178,6 +177,7 @@ class JobRun(object):
         """Mark the run as having failed, providing an exit status"""
         log.info("Job run %s failed with exit status %r", self.id, exit_status)
 
+        self.job.running.pop(self.id)
         self.state = JOB_RUN_FAILED
         self.exit_status = exit_status
         self.end_time = timeutils.current_time()
@@ -186,6 +186,7 @@ class JobRun(object):
         """Mark the run as having failed, but note that we don't actually know what result was"""
         log.info("Lost communication with job run %s", self.id)
 
+        self.job.running.pop(self.id)
         self.state = JOB_RUN_FAILED
         self.exit_status = None
         self.end_time = None
@@ -196,19 +197,22 @@ class JobRun(object):
         self.exit_status = 0
         self.state = JOB_RUN_SUCCEEDED
         self.end_time = timeutils.current_time()
+        self.job.running.pop(self.id)
         self.start_dependants()
 
     def restore_state(self, state):
         self.state = state['state']
         self.run_time = state['run_time']
-        if 'previous' in state:
+        if 'previous' in state and not self.is_running:
             self.prev = self.job.get_run_by_id(state['previous'])
-            self.prev.waiting.append(self)
+            
+            if self.state == JOB_RUN_QUEUED:
+                self.prev.waiting.append(self)
 
     @property
     def state_data(self):
         data = {'state': self.state, 'run_time': self.run_time, 'command': self.command}
-        if self.prev and not self.is_running:
+        if self.prev:
             data['previous'] = self.prev.id
         return data
 
@@ -271,6 +275,7 @@ class Job(object):
         
         self.dependants = []
         self.queueing = True
+        
         self.scheduled = {}
         self.running = {}
         self.queued = {}
@@ -302,7 +307,6 @@ class Job(object):
         return restored
     
     def get_run_by_id(self, id):
-        print id
         return filter(lambda cur: cur.id == id, self.runs)[0] 
 
 class JobSet(object):

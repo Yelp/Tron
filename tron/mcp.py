@@ -12,6 +12,15 @@ MICRO_SEC = .000001
 log = logging.getLogger('tron.mcp')
 SCHEDULE_FILE = '.tron_schedule.yaml'
 
+def request_bool(message = ''):
+    input = raw_input(message + ' (y/n): ').lower()
+    
+    while input != 'y' and input != 'n':
+        input = raw_input('Please enter \'y\' or \'n\'. \n' + message + ' (y/n): ').lower()
+
+    return input == 'y'
+
+
 class Error(Exception): pass
 
 class JobExistsError(Error): pass
@@ -42,10 +51,15 @@ class StateHandler(object):
         shutil.move('.tmp' + SCHEDULE_FILE, SCHEDULE_FILE)
 
     def load_data(self):
-        log.info("Past schedule exists. Restoring schedule")
-        schedule_file = open(SCHEDULE_FILE)
-        self.data = yaml.load(schedule_file)
-        schedule_file.close()
+        log.info("Past schedule exists. Probing user")
+        
+        if request_bool('Past schedule exists. Restore?'):
+            log.info('Restoring state from %s', SCHEDULE_FILE)
+            schedule_file = open(SCHEDULE_FILE)
+            self.data = yaml.load(schedule_file)
+            schedule_file.close()
+        else:
+            log.info('Ignoring previous schedule')
 
 
 class MasterControlProgram(object):
@@ -73,11 +87,17 @@ class MasterControlProgram(object):
         seconds = sleep.days * SECS_PER_DAY + sleep.seconds + sleep.microseconds * MICRO_SEC
         return max(0, seconds)
 
-    def _schedule_next_run(self, job):
+    def _schedule_next_run(self, job, prev):
         next = job.next_run()
         if not next is None:
             log.info("Scheduling next run for %s", job.name)
+            
             reactor.callLater(self._sleep_time(next.run_time), self._run_job, next)
+            if not prev is None and prev.is_cancelled:
+                next.prev = prev.prev
+            else:
+                next.prev = prev
+           
             job.scheduled[next.id] = next.state_data
             self.state_handler.state_changed(job)
 
@@ -108,13 +128,16 @@ class MasterControlProgram(object):
                 reactor.callLater(sleep, self._run_job, run)
 
     def _resolve_running(self, job):
-        print "There are %d instances for job %s with indeterminate results!" % (len(job.running), job.name)
-
         for id in [id for (id, state) in job.running.iteritems()]:
-            print "job id: %s" % job.name
-            print yaml.dump(state)
-            print "Did the job complete successfully?"
-            job.get_run_by_id(id)._handle_callback(0)
+            print "There are %d instances for job %s with indeterminate results!" % (len(job.running), job.name)
+            
+            print "job id: %s" % id
+            print yaml.dump(state, default_flow_style=False)
+            
+            if request_bool('Did this job complete successfully?'):
+                job.get_run_by_id(id).succeed()
+            else:
+                job.get_run_by_id(id).fail_unknown()
 
     def _restore_job(self, job):
         self._restore_running(job)
@@ -130,8 +153,7 @@ class MasterControlProgram(object):
         log.debug("Running next scheduled job")
         now.scheduled_start()
         
-        next = self._schedule_next_run(now.job)
-        next.prev = now.prev if now.is_cancelled else now
+        next = self._schedule_next_run(now.job, now)
 
     def run_jobs(self):
         """This schedules the first time each job runs"""
@@ -142,5 +164,5 @@ class MasterControlProgram(object):
             if self.state_handler.has_data(tron_job):
                 self._restore_job(tron_job)
             elif tron_job.scheduler:
-                self._schedule_next_run(tron_job)
+                self._schedule_next_run(tron_job, None)
 

@@ -15,6 +15,8 @@ class ConstantScheduler(object):
     def __str__(self):
         return "CONSTANT"
 
+    def set_job_queueing(self, job):
+        job.dependants.append(self)
 
 class DailyScheduler(object):
     """The daily scheduler schedules one run per day"""
@@ -30,6 +32,8 @@ class DailyScheduler(object):
     def __str__(self):
         return "DAILY"
 
+    def set_job_queueing(self, job):
+        job.queueing = True
 
 class IntervalScheduler(object):
     """The interval scheduler runs a job (to success) based on a configured interval
@@ -52,4 +56,6 @@ class IntervalScheduler(object):
     def __str__(self):
         return "INTERVAL:%s" % self.interval
         
-    
+    def set_job_queueing(self, job):
+        job.queueing = False
+
