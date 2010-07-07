@@ -8,7 +8,7 @@ from twisted.internet import reactor
 
 from twisted.cred import checkers
 from twisted.web import server, resource, http, error
-from twisted.web.woven import simpleguard
+#from twisted.web.woven import simpleguard
 
 import simplejson
 
