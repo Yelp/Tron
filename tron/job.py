@@ -222,7 +222,8 @@ class JobRun(object):
             self.state = JOB_RUN_UNKNOWN
         elif 'previous' in state:
             self.prev = self.job.get_run_by_id(state['previous'])
-            self.prev.waiting.append(self)
+            if self.prev:
+                self.prev.waiting.append(self)
 
     @property
     def state_data(self):
