@@ -6,9 +6,8 @@ from testify.utils import turtle
 from tron.utils import timeutils
 from tron import mcp, job, scheduler
 
-class MockNode(object):
-    def run(self, run):
-        return run
+def equals_with_delta(val, check, delta):
+    return val <= check + delta and val >= check - delta
 
 class MockJob(turtle.Turtle):
     name = "Test Job"
@@ -37,8 +36,55 @@ class MockJob(turtle.Turtle):
         self.runs.append(my_run)
         return my_run
 
-def equals_with_delta(val, check, delta):
-    return val <= check + delta and val >= check - delta
+class MockNode(object):
+    def run(self, run):
+        return run
+
+class TestGlobalFunctions(TestCase):
+    def test_sleep_time(self):
+        assert_equal(mcp.sleep_time(timeutils.current_time()), 0)
+        assert_equal(mcp.sleep_time(timeutils.current_time() - datetime.timedelta(seconds=5)), 0)
+        
+        seconds = 5
+        time = mcp.sleep_time(timeutils.current_time() + datetime.timedelta(seconds=seconds)) 
+        assert equals_with_delta(time, seconds, .01)
+
+class TestStateHandler(TestCase):
+    @setup
+    def setup(self):
+        self.mcp = mcp.MasterControlProgram()
+        self.state_handler = self.mcp.state_handler
+        self.job = job.Job("Test Job")
+        self.job.scheduler = scheduler.IntervalScheduler(datetime.timedelta(seconds=0))
+        self.job.command = "Test command"
+        self.job.queueing = True
+        self.job.node = turtle.Turtle()
+        
+    def create_state(self):
+        self.state_handler._store_data = lambda: None
+        self.running = self.job.next_run()
+        self.running.scheduled_start()
+        self.queued = self.job.next_run(self.running)
+        self.queued.scheduled_start()
+        self.scheduled = self.job.next_run(self.queued)
+        
+    def test_state_changed(self):
+        self.create_state()
+        self.state_handler.state_changed(self.job)
+        
+        assert_equals(len(self.state_handler.data['scheduled'][self.job.name]), 1)
+        assert_equals(len(self.state_handler.data['running'][self.job.name]), 1)
+        assert_equals(len(self.state_handler.data['queued'][self.job.name]), 1)
+
+        assert_equals(self.state_handler.data['scheduled'][self.job.name][self.scheduled.id], self.scheduled.state_data)
+        assert_equals(self.state_handler.data['running'][self.job.name][self.running.id], self.running.state_data)
+        assert_equals(self.state_handler.data['queued'][self.job.name][self.queued.id], self.queued.state_data)
+
+    def test_store_data(self):
+        pass
+
+    def test_load_data(self):
+        pass
 
 class TestMasterControlProgram(TestCase):
     @setup
@@ -74,30 +120,19 @@ class TestMasterControlProgram(TestCase):
         except mcp.JobExistsError:
             pass
 
-    def test_store_data(self):
-        pass
-
-    def test_load_data(self):
-        pass
-
-    def test_sleep_time(self):
-        assert_equals(self.mcp._sleep_time(timeutils.current_time()), 0)
-        
-        seconds = 5
-        time = self.mcp._sleep_time(timeutils.current_time() + datetime.timedelta(seconds=seconds)) 
-        assert equals_with_delta(time, seconds, .01)
-    
     def test_schedule_next_run(self):
         jo = job.Job()
         jo.command = "Test command"
         jo.scheduler = scheduler.ConstantScheduler()
 
         def call_now(time, func, next):
+            next._execute = lambda:True
+            next.start()
             next.succeed()
 
         callLater = mcp.reactor.callLater
         mcp.reactor.callLater = call_now
-        next = self.mcp._schedule_next_run(jo)
+        next = self.mcp._schedule_next_run(jo, None)
         assert_equals(len(jo.scheduled), 1)
         assert_equals(jo, next.job)
         assert next.is_done

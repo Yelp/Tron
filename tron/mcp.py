@@ -12,13 +12,10 @@ MICRO_SEC = .000001
 log = logging.getLogger('tron.mcp')
 SCHEDULE_FILE = '.tron_schedule.yaml'
 
-def request_bool(message = ''):
-    input = raw_input(message + ' (y/n): ').lower()
-    
-    while input != 'y' and input != 'n':
-        input = raw_input('Please enter \'y\' or \'n\'. \n' + message + ' (y/n): ').lower()
-
-    return input == 'y'
+def sleep_time(run_time):
+    sleep = run_time - timeutils.current_time()
+    seconds = sleep.days * SECS_PER_DAY + sleep.seconds + sleep.microseconds * MICRO_SEC
+    return max(0, seconds)
 
 
 class Error(Exception): pass
@@ -26,12 +23,41 @@ class Error(Exception): pass
 class JobExistsError(Error): pass
 
 class StateHandler(object):
-    def __init__(self, jobs={}):
+    def __init__(self, mcp):
         self.data = {}
+        self.mcp = mcp
         self.data['scheduled'] = {}
         self.data['running'] = {}
         self.data['queued'] = {}
-        self.jobs = jobs
+
+    def _restore_running(self, job):
+        job.running = self.data['running'][job.name]
+        ids = [id for id, state in job.running.iteritems()]
+        for id in ids:
+            self.mcp.runs[id] = job.restore(id, state)
+
+    def _restore_queued(self, job):
+        job.queued = self.data['queued'][job.name]
+        
+        for id, state in sorted(job.queued.iteritems(), key=lambda (i, j): j['run_time']):
+            self.mcp.runs[id] = job.restore(id, state)
+        
+    def _restore_scheduled(self, job):
+        job.scheduled = self.data['scheduled'][job.name]
+        
+        for id, state in job.scheduled.iteritems():
+            run = job.restore(id, state)
+            sleep = sleep_time(run.run_time)
+            if sleep == 0:
+                run.run_time = timeutils.current_time()
+
+            reactor.callLater(sleep, self.mcp.run_job, run)
+            self.mcp.runs[run.id] = run
+
+    def restore_job(self, job):
+        self._restore_running(job)
+        self._restore_queued(job)
+        self._restore_scheduled(job)
     
     def state_changed(self, job):
         self.data['scheduled'][job.name] = job.scheduled
@@ -51,16 +77,12 @@ class StateHandler(object):
         shutil.move('.tmp' + SCHEDULE_FILE, SCHEDULE_FILE)
 
     def load_data(self):
-        log.info("Past schedule exists. Probing user")
+        log.info("Past schedule exists. Restoring")
         
-        if request_bool('Past schedule exists. Restore?'):
-            log.info('Restoring state from %s', SCHEDULE_FILE)
-            schedule_file = open(SCHEDULE_FILE)
-            self.data = yaml.load(schedule_file)
-            schedule_file.close()
-        else:
-            log.info('Ignoring previous schedule')
-
+        log.info('Restoring state from %s', SCHEDULE_FILE)
+        schedule_file = open(SCHEDULE_FILE)
+        self.data = yaml.load(schedule_file)
+        schedule_file.close()
 
 class MasterControlProgram(object):
     """master of tron's domain
@@ -70,8 +92,9 @@ class MasterControlProgram(object):
     """
     def __init__(self):
         self.jobs = {}
+        self.runs = {}
         self.nodes = []
-        self.state_handler = StateHandler()
+        self.state_handler = StateHandler(self)
 
     def add_job(self, tron_job):
         if tron_job.name in self.jobs:
@@ -81,71 +104,19 @@ class MasterControlProgram(object):
     
         if tron_job.node not in self.nodes:
             self.nodes.append(tron_job.node) 
-    
-    def _sleep_time(self, run_time):
-        sleep = run_time - timeutils.current_time()
-        seconds = sleep.days * SECS_PER_DAY + sleep.seconds + sleep.microseconds * MICRO_SEC
-        return max(0, seconds)
+        
+        tron_job.state_callback = self.state_handler.state_changed
 
     def _schedule_next_run(self, job, prev):
-        next = job.next_run()
+        next = job.next_run(prev)
         if not next is None:
             log.info("Scheduling next run for %s", job.name)
-            
-            reactor.callLater(self._sleep_time(next.run_time), self._run_job, next)
-            if not prev is None and prev.is_cancelled:
-                next.prev = prev.prev
-            else:
-                next.prev = prev
-           
-            job.scheduled[next.id] = next.state_data
-            self.state_handler.state_changed(job)
+            reactor.callLater(sleep_time(next.run_time), self.run_job, next)
 
+        self.runs[next.id] = next
         return next
 
-    def _restore_running(self, job):
-        job.running = self.state_handler.data['running'][job.name]
-
-        for id, state in job.running.iteritems():
-            job.restore(id, state)
- 
-    def _restore_queued(self, job):
-        job.queued = self.state_handler.data['queued'][job.name]
-        
-        for id, state in sorted(job.queued.iteritems(), key=lambda (i, j): j['run_time']):
-            job.restore(id, state)
-    
-    def _restore_scheduled(self, job):
-        job.scheduled = self.state_handler.data['scheduled'][job.name]
-        
-        for id, state in job.scheduled.iteritems():
-            run = job.restore(id, state)
-            sleep = self._sleep_time(run.run_time)
-            if sleep == 0:
-                run.run_time = timeutils.current_time()
-                self._run_job(run)
-            else:
-                reactor.callLater(sleep, self._run_job, run)
-
-    def _resolve_running(self, job):
-        for id in [id for (id, state) in job.running.iteritems()]:
-            print "There are %d instances for job %s with indeterminate results!" % (len(job.running), job.name)
-            
-            print "job id: %s" % id
-            print yaml.dump(state, default_flow_style=False)
-            
-            if request_bool('Did this job complete successfully?'):
-                job.get_run_by_id(id).succeed()
-            else:
-                job.get_run_by_id(id).fail_unknown()
-
-    def _restore_job(self, job):
-        self._restore_running(job)
-        self._restore_queued(job)
-        self._restore_scheduled(job)
-        self._resolve_running(job)
-
-    def _run_job(self, now):
+    def run_job(self, now):
         """This runs when a job was scheduled.
         
         Here we run the job and schedule the next time it should run
@@ -162,7 +133,7 @@ class MasterControlProgram(object):
 
         for tron_job in self.jobs.itervalues():
             if self.state_handler.has_data(tron_job):
-                self._restore_job(tron_job)
+                self.state_handler.restore_job(tron_job)
             elif tron_job.scheduler:
                 self._schedule_next_run(tron_job, None)
 

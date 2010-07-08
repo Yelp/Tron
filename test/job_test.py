@@ -11,50 +11,90 @@ class TestNode(object):
     def run(self, run):
         return run
 
+class NoneScheduler(object):
+    def next_run(self, job):
+        return None
+
 class TestJob(TestCase):
     """Unit testing for Job class"""
     @setup
     def setup(self):
         self.job = job.Job(name="Test Job")
+        self.job.command = "Test command"
 
     def test_next_run(self):
         assert_equals(self.job.next_run(), None)
+        
+        self.job.scheduler = NoneScheduler()
+        assert_equals(self.job.next_run(), None)
+        assert_equals(len(self.job.scheduled), 0)
+
         self.job.scheduler = scheduler.ConstantScheduler()
         assert self.job.next_run()
+        assert_equals(len(self.job.scheduled), 1)
+
+    def test_next_run_prev(self):
+        self.job.scheduler = scheduler.DailyScheduler()
+        run = self.job.next_run()
+        assert_equals(run.prev, None)
+
+        run2 = self.job.next_run(run)
+
+        assert run
+        assert run2
+        assert_equals(len(self.job.scheduled), 2)
+        assert_equals(run2.prev, run)
+
+        run3 = self.job.next_run(run2)
+        assert_equals(run3.prev, run2)
+
+        run3.state = job.JOB_RUN_CANCELLED
+        run4 = self.job.next_run(run3)
+        assert_equals(run4.prev, run2)
 
     def test_build_run(self):
         run = self.job.build_run()
         assert_equals(len(self.job.runs), 1)
         assert_equals(self.job.runs[0], run)
 
+    def test_restore(self):
+        run = self.job.build_run()
+        rest = self.job.restore(run.id, run.state_data)
+        
+        assert_equals(len(self.job.runs), 2) 
+        assert_equals(rest.id, run.id)
+        assert_equals(rest.state_data, run.state_data)
+
 class TestJobRun(TestCase):
     """Unit testing for JobRun class"""
     @setup
     def setup(self):
         self.job = job.Job(name="Test Job")
-        self.job.scheduler = scheduler.ConstantScheduler()
+        self.job.scheduler = scheduler.DailyScheduler()
         self.job.queueing = True
         self.job.command = "Test command"
-        
+
         self.run = self.job.next_run()
         self.run._execute = lambda: True
-        self.job.scheduled.append(self.run.store_data)
+        self.job.scheduled[self.run.id] = self.run.state_data
 
     def test_scheduled_start_succeed(self):
         self.run.scheduled_start()
 
         assert self.run.is_running
         assert_equals(len(self.job.scheduled), 0)
-        
+        assert_equals(len(self.job.running), 1)
+        assert_equals(self.run.state, job.JOB_RUN_RUNNING)
+
     def test_scheduled_start_wait(self):
         run2 = self.job.next_run()
-        self.job.scheduled.append(run2.store_data)
+        self.job.scheduled[run2.id] = run2.state_data
         run2.prev = self.run
         run2._execute = lambda: True
         
         assert_equals(len(self.job.scheduled), 2)
         run2.scheduled_start()
-        assert run2.is_waiting
+        assert run2.is_queued
         assert_equals(len(self.job.scheduled), 1)
         
         self.run.scheduled_start()
@@ -67,7 +107,7 @@ class TestJobRun(TestCase):
     def test_scheduled_start_cancel(self):
         self.job.queueing = False
         run2 = self.job.next_run()
-        self.job.scheduled.append(run2.store_data)
+        self.job.scheduled[run2.id] = run2.state_data
         run2.prev = self.run
         run2._execute = lambda: True
         
@@ -83,8 +123,6 @@ class TestJobRun(TestCase):
         assert self.run.is_success
         assert run2.is_cancelled
 
-    def test_start(self):
-        pass
 
 class JobRunState(TestCase):
     """Check that our job runs can start/stop and manage their state"""
@@ -197,6 +235,7 @@ class JobRunReadyTest(TestCase):
     @setup
     def build_job(self):
         self.job = job.Job(name="Test Job")
+        self.job.command = "Test command"
         self.job.scheduler = scheduler.ConstantScheduler()
 
     def test_ready_no_resources(self):

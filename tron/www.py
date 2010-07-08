@@ -58,10 +58,16 @@ def job_run_state(job_run):
     if job_run.is_done:
         if job_run.is_success:
             state = "S"
+        elif job_run.is_cancelled:
+            state = "C"
         else:
             state = "F"
     elif job_run.is_running:
         state = "R"
+    elif job_run.is_unknown:
+        state = "U"
+    elif job_run.is_queued:
+        state = "Q"
     else:
         state = "W"
 
@@ -91,19 +97,41 @@ class JobRunResource(resource.Resource):
         log.debug("Handling post request for run %s", self._run.id)
         if request.args['action'][0] == "start":
             return self._start(request)
+        elif request.args['action'][0] == "succeed":
+            return self._succeed(request)
+        elif request.args['action'][0] == "fail":
+            return self._fail(request)
         else:
             log.warning("Unknown request action %s", request.args['action'])
             request.setResponseCode(http.NOT_IMPLEMENTED)
             return
 
     def _start(self, request):
-        if not self._run.is_done and not self._run.is_running:
+        if not self._run.is_ran and not self._run.is_running:
             log.info("Starting job run %s", self._run.id)
             self._run.start()
         else:
             log.warning("Request to start job run %s when it's already done", self._run.id)
 
         return respond(request, None, code=http.SEE_OTHER, headers={'Location': "/runs/%s" % (self._run.id,)})
+
+    def _succeed(self, request):
+        if not self._run.is_success:
+            log.info("Marking job run %s for success", self._run.id)
+            self._run.succeed()
+        else:
+            log.warning("Request to mark job run %s succeed when it has already", self._run.id)
+
+        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/runs/%s" % (self._run.id,)})
+
+    def _fail(self, request):
+        if not self._run.is_done:
+            log.info("Marking job run %s as failed", self._run.id)
+            self._run.fail()
+        else:
+            log.warning("Request to fail job run %s when it's already done", self._run.id)
+
+        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/runs/%s" % (self._run.id,)})
 
 class JobResource(resource.Resource):
     """A resource that describes a particular job"""
@@ -248,7 +276,7 @@ class RunsResource(resource.Resource):
         resource.Resource.__init__(self)
 
     def getChild(self, name, request):
-        found_run = self._master_control.runs.get(name)
+        found_run = self._master_control.runs[name]
         if found_run:
             return JobRunResource(found_run)
         else:
