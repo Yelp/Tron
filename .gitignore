@@ -1,3 +1,6 @@
 dist
 build
+ssh.log
+tron.log
+MANIFEST
 *.pyc
