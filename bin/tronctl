@@ -46,7 +46,31 @@ def start_run(options, run_id):
             print "Job Run %s now in state %s" % (content['id'], content['state'])
     else:
         print >>sys.stderr, "Unexpected response from run start operation: %r" % ((status, content),)
-       
+      
+def succeed(options, run_id):
+    data = {'action': 'succeed'}
+    status, content = cmd.request(options, "/runs/%s" % (run_id,), data=data)
+
+    if status == cmd.OK:
+        if content['state'] == "S":
+            print "Job Run %s marked succeeded" % content['id']
+        else:
+            print "Job Run %s now in state %s" % (content['id'], content['state'])
+    else:
+        print >>sys.stderr, "Unexpected response from run start operation: %r" % ((status, content),)
+
+def fail(options, run_id):
+    data = {'action': 'fail'}
+    status, content = cmd.request(options, "/runs/%s" % (run_id,), data=data)
+
+    if status == cmd.OK:
+        if content['state'] == "F":
+            print "Job Run %s marked failed" % content['id']
+        else:
+            print "Job Run %s now in state %s" % (content['id'], content['state'])
+    else:
+        print >>sys.stderr, "Unexpected response from run start operation: %r" % ((status, content),)
+
 def main():
     """run tronctl"""
     options, args = parse_options()
@@ -67,7 +91,11 @@ def main():
         start_run(options, args[1])
     elif command in ("schedule", "sched"):
         queue_job(options, args[1])
-
+    elif command in ("succeed", "mark_succeeded"):
+        succeed(options, args[1])
+    elif command in ("fail", "marked_failed"):
+        fail(options, args[1]) 
+    
     cmd.save_config(options)
 
 if __name__ == '__main__':

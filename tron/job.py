@@ -15,6 +15,7 @@ JOB_RUN_SCHEDULED = 0
 JOB_RUN_QUEUED = 1
 JOB_RUN_RUNNING = 2
 JOB_RUN_CANCELLED = 3
+JOB_RUN_UNKNOWN = 4
 JOB_RUN_FAILED = 10
 JOB_RUN_SUCCEEDED = 11
 
@@ -100,8 +101,10 @@ class JobRun(object):
             self.state = JOB_RUN_QUEUED
             self.job.queued[self.id] = self.state_data
         else:
-            log.warning("Previous job, %s, not finished - cancelling", self.job.name)
+            log.warning("Previous job, %s, not finished - cancelling instance", self.job.name)
             self.state = JOB_RUN_CANCELLED
+
+        self.job.state_changed()
 
     def start(self):
         log.info("Starting job run %s", self.id)
@@ -109,6 +112,7 @@ class JobRun(object):
         self.start_time = timeutils.current_time()
         self.state = JOB_RUN_RUNNING
         self.job.running[self.id] = self.state_data
+        self.job.state_changed()
 
         # And now we try to actually start some work....
         ret = self._execute()
@@ -164,29 +168,36 @@ class JobRun(object):
         deferred.addErrback(self._handle_errback)
 
     def start_dependants(self):
-        for j in self.waiting:
-            j.start()
-            self.job.queued.pop(j.id)
-        
-        [j.build_run().start() for j in self.job.dependants]
+        for run in self.waiting:
+            self.job.queued.pop(run.id)
+            run.start()
+       
+        for job in self.job.dependants:
+            run = job.build_run()
+            run.run_time = timeutils.current_time()
+            run.start()
 
     def ignore_dependants(self):
-        [log.info("Not running job %s, the dependant job failed", self.job.name) for j in self.job.dependants]
+        [log.info("Not running waiting run %s, the dependant job failed", r.id) for r in self.waiting]
+        [log.info("Not running job %s, the dependant job failed", j.name) for j in self.job.dependants]
+
+    def _finish(self):
+        self.job.running.pop(self.id)
+        self.job.state_changed()
 
     def fail(self, exit_status):
         """Mark the run as having failed, providing an exit status"""
         log.info("Job run %s failed with exit status %r", self.id, exit_status)
 
-        self.job.running.pop(self.id)
         self.state = JOB_RUN_FAILED
         self.exit_status = exit_status
         self.end_time = timeutils.current_time()
+        self._finish()
 
     def fail_unknown(self):
         """Mark the run as having failed, but note that we don't actually know what result was"""
         log.info("Lost communication with job run %s", self.id)
 
-        self.job.running.pop(self.id)
         self.state = JOB_RUN_FAILED
         self.exit_status = None
         self.end_time = None
@@ -194,26 +205,31 @@ class JobRun(object):
     def succeed(self):
         """Mark the run as having succeeded"""
         log.info("Job run %s succeeded", self.id)
+        
         self.exit_status = 0
         self.state = JOB_RUN_SUCCEEDED
         self.end_time = timeutils.current_time()
-        self.job.running.pop(self.id)
+        
+        self._finish()
         self.start_dependants()
 
     def restore_state(self, state):
         self.state = state['state']
         self.run_time = state['run_time']
-        if 'previous' in state and not self.is_running:
+        self.start_time = state['start_time']
+
+        if self.is_running:
+            self.state = JOB_RUN_UNKNOWN
+        elif 'previous' in state:
             self.prev = self.job.get_run_by_id(state['previous'])
-            
-            if self.state == JOB_RUN_QUEUED:
-                self.prev.waiting.append(self)
+            self.prev.waiting.append(self)
 
     @property
     def state_data(self):
-        data = {'state': self.state, 'run_time': self.run_time, 'command': self.command}
+        data = {'state': self.state, 'run_time': self.run_time, 'start_time': self.start_time, 'command': self.command}
         if self.prev:
             data['previous'] = self.prev.id
+
         return data
 
     @property
@@ -229,7 +245,7 @@ class JobRun(object):
             return self.job.timeout.seconds
 
     @property
-    def is_waiting(self):
+    def is_queued(self):
         return self.state == JOB_RUN_QUEUED
     
     @property
@@ -245,6 +261,14 @@ class JobRun(object):
         return self.state in (JOB_RUN_FAILED, JOB_RUN_SUCCEEDED, JOB_RUN_CANCELLED)
 
     @property
+    def is_ran(self):
+        return self.state in (JOB_RUN_FAILED, JOB_RUN_SUCCEEDED)
+
+    @property
+    def is_unknown(self):
+        return self.state == JOB_RUN_UNKNOWN
+
+    @property
     def is_running(self):
         return self.state == JOB_RUN_RUNNING
 
@@ -256,7 +280,7 @@ class JobRun(object):
     def should_start(self):
         if self.state != JOB_RUN_SCHEDULED:
             return False
-        if not self.prev is None and not self.prev.is_done:
+        if not self.prev is None and not self.prev.is_success:
             return False
         
         # Ok, it's time, what about our jobs dependencies
@@ -274,18 +298,34 @@ class Job(object):
         self.output_dir = None
         
         self.dependants = []
-        self.queueing = True
+        self.queueing = False
         
         self.scheduled = {}
         self.running = {}
         self.queued = {}
+        self.state_callback = None
 
-    def next_run(self):
+    def state_changed(self):
+        if self.state_callback:
+            self.state_callback(self)
+
+    def next_run(self, prev=None):
         """Check the scheduler and decide when the next run should be"""
         if self.scheduler:
-            return self.scheduler.next_run(self)
-        else:
-            return None
+            next = self.scheduler.next_run(self)
+            if next is None:
+                return None
+
+            if not prev is None and prev.is_cancelled:
+                next.prev = prev.prev
+            else:
+                next.prev = prev
+           
+            self.scheduled[next.id] = next.state_data
+            self.state_changed()
+            return next
+        
+        return None
 
     def build_run(self):
         """Build an instance of JobRun for this job
@@ -307,7 +347,8 @@ class Job(object):
         return restored
     
     def get_run_by_id(self, id):
-        return filter(lambda cur: cur.id == id, self.runs)[0] 
+        runs = filter(lambda cur: cur.id == id, self.runs) 
+        return runs[0] if runs else None
 
 class JobSet(object):
     def __init__(self):

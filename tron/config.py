@@ -188,6 +188,8 @@ class Scheduler(object):
     def from_string(self, scheduler_name):
         if scheduler_name == "daily":
             return DailyScheduler().actualized
+        elif scheduler_name == "constant":
+            return ConstantScheduler().actualized
         else:
             raise ValueError("Unknown scheduler %r", scheduler_name)
 
@@ -195,6 +197,9 @@ class Scheduler(object):
 class ConstantScheduler(_ConfiguredObject):
     yaml_tab = u'!ConstantScheduler'
     actual_class = scheduler.ConstantScheduler
+    
+    def _apply(self):
+        sched = self._ref()
 
 
 # Shortcut values for intervals

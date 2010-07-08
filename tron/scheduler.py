@@ -6,17 +6,19 @@ from tron.utils import timeutils
 log = logging.getLogger('tron.scheduler')
 
 class ConstantScheduler(object):
-    """The constant scheduler always schedules a run because the job should be running constantly"""
+    """The constant scheduler only schedules the first one but sets itself as a dependant so always runs"""
     def next_run(self, job):
-        run = job.build_run()
-        run.run_time = timeutils.current_time()
-        return run
+        if not job.runs:
+            run = job.build_run()
+            run.run_time = timeutils.current_time()
+            return run
+        return None
 
     def __str__(self):
         return "CONSTANT"
 
     def set_job_queueing(self, job):
-        job.dependants.append(self)
+        job.dependants.append(job)
 
 class DailyScheduler(object):
     """The daily scheduler schedules one run per day"""
