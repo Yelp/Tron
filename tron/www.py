@@ -58,19 +58,19 @@ def respond(request, response_dict, code=http.OK, headers=None):
 def job_run_state(job_run):
     if job_run.is_done:
         if job_run.is_success:
-            state = "S"
+            state = "SUCC"
         elif job_run.is_cancelled:
-            state = "C"
+            state = "CANC"
         else:
-            state = "F"
+            state = "FAIL"
     elif job_run.is_running:
-        state = "R"
+        state = "RUNN"
     elif job_run.is_unknown:
-        state = "U"
+        state = "UNKWN"
     elif job_run.is_queued:
-        state = "Q"
+        state = "QUE"
     else:
-        state = "W"
+        state = "SCHE"
 
     return state
 
