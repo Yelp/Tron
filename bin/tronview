@@ -25,6 +25,7 @@ def parse_options():
     parser = optparse.OptionParser()
     parser.add_option("--server", action="store", dest="server", help="Server URL to connect to")
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
+    parser.add_option("--numshown", "-n", type="int", dest="num_shown", help="Max number of jobs shown", default=20)
 
     (options, args) = parser.parse_args(sys.argv)
 
@@ -63,7 +64,7 @@ def view_job(options, job_name):
     print
     print "Run History: (%d total)" % len(job_content['runs'])
     print "\t" + " ".join(title.ljust(size) for title, size in RUNS_COLUMNS)
-    for run in reversed(job_content['runs'][:20]):
+    for run in reversed(job_content['runs'][-options.num_shown:]):
         run_id = run['id']
         run_state = run['state']
 
