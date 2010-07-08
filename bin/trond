@@ -3,6 +3,7 @@ import logging
 import sys
 import datetime
 import optparse
+import os
 
 from twisted.python import log
 from twisted.internet import reactor, defer
@@ -14,13 +15,17 @@ def parse_options():
     parser = optparse.OptionParser()
     
     parser.add_option("--config-file", action="store", dest="config_file", help="(require) Configuration file to load", default=None)
+    parser.add_option("--state_dir", action="store", dest="state_dir", help="Directory where tron's state is backed up", default=None)
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
     parser.add_option("--debug", action="store_true", dest="debug", help="Debug mode, extra error reporting")
     
     (options, args) = parser.parse_args(sys.argv)
     if options.config_file is None:
         parser.error("Configuration file must be specified with --config-file option")
-
+    
+    if options.state_dir and not os.path.isdir(options.state_dir):
+        parser.error("State directory is not valid.")
+    
     return options
 
 def setup_logging(options):
@@ -50,12 +55,18 @@ def main():
     setup_logging(options)
     
     # Configure the mcp
-    master_control = mcp.MasterControlProgram()
+    master_control = mcp.MasterControlProgram(options.state_dir)
     
     config_file = open(options.config_file, "r")
     configuration = config.load_config(config_file)
     configuration.apply(master_control)
     
+    state_dir = master_control.state_handler.state_dir
+    if not os.path.isdir(state_dir):
+        sys.exit("Specified state directory \'%s\' is not a directory" % state_dir)
+    if not os.access(state_dir, os.W_OK):
+        sys.exit("Specified state directory \'%s\' is not writable" % state_dir)
+
     # Setup the mcp polling
     reactor.callLater(1, master_control.run_jobs)
     
