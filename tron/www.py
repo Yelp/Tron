@@ -102,6 +102,8 @@ class JobRunResource(resource.Resource):
             return self._succeed(request)
         elif request.args['action'][0] == "fail":
             return self._fail(request)
+        elif request.args['action'][0] == "cancel":
+            return self._cancel(request)
         else:
             log.warning("Unknown request action %s", request.args['action'])
             request.setResponseCode(http.NOT_IMPLEMENTED)
@@ -122,6 +124,15 @@ class JobRunResource(resource.Resource):
             self._run.succeed()
         else:
             log.warning("Request to mark job run %s succeed when it has already", self._run.id)
+
+        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/runs/%s" % (self._run.id,)})
+
+    def _cancel(self, request):
+        if self._run.is_scheduled or self._run.is_queued:
+            log.info("Cancelling job %s", self._run.id)
+            self._run.cancel()
+        else:
+            log.warning("Request to cancel job run %s when it's already cancelled", self._run.id)
 
         return respond(request, None, code=http.SEE_OTHER, headers={'location': "/runs/%s" % (self._run.id,)})
 

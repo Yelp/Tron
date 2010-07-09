@@ -106,6 +106,12 @@ class JobRun(object):
 
         self.job.state_changed()
 
+    def delayed_start(self):
+        if self.is_cancelled:
+            log.info("User cancelled job run %s, not running", self.id)
+        else:
+           self.start()
+
     def start(self):
         log.info("Starting job run %s", self.id)
         
@@ -118,6 +124,12 @@ class JobRun(object):
         ret = self._execute()
         if isinstance(ret, defer.Deferred):
             self._setup_callbacks(ret)
+
+    def cancel(self):
+        if self.is_scheduled or self.is_queued:
+            self.state = JOB_RUN_CANCELLED
+            self.prev.waiting += self.waiting
+            self.waiting = []
 
     def _open_output_file(self):
         if self.job.output_dir:
@@ -170,7 +182,7 @@ class JobRun(object):
     def start_dependants(self):
         for run in self.waiting:
             self.job.queued.pop(run.id)
-            run.start()
+            run.delayed_start()
        
         for job in self.job.dependants:
             run = job.build_run()

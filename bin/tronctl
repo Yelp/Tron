@@ -40,20 +40,32 @@ def start_run(options, run_id):
     status, content = cmd.request(options, "/runs/%s" % (run_id,), data=data)
 
     if status == cmd.OK:
-        if content['state'] == "R":
+        if content['state'] == "RUNN":
             print "Job Run %s now running" % content['id']
         else:
             print "Job Run %s now in state %s" % (content['id'], content['state'])
     else:
         print >>sys.stderr, "Unexpected response from run start operation: %r" % ((status, content),)
-      
+
+def cancel(options, run_id):
+    data = {'action': 'cancel'}
+    status, content = cmd.request(options, "/runs/%s" % (run_id,), data=data)
+
+    if status == cmd.OK:
+        if content['state'] == "CANC":
+            print "Job Run %s now cancelled" % content['id']
+        else:
+            print "Job Run %s now in state %s" % (content['id'], content['state'])
+    else:
+        print >>sys.stderr, "Unexpected response from run start operation: %r" % ((status, content),)
+
 def succeed(options, run_id):
     data = {'action': 'succeed'}
     status, content = cmd.request(options, "/runs/%s" % (run_id,), data=data)
 
     if status == cmd.OK:
-        if content['state'] == "S":
-            print "Job Run %s marked succeeded" % content['id']
+        if content['state'] == "SUCC":
+            print "Job Run %s is now marked succeeded" % content['id']
         else:
             print "Job Run %s now in state %s" % (content['id'], content['state'])
     else:
@@ -65,7 +77,7 @@ def fail(options, run_id):
 
     if status == cmd.OK:
         if content['state'] == "F":
-            print "Job Run %s marked failed" % content['id']
+            print "Job Run %s is now marked failed" % content['id']
         else:
             print "Job Run %s now in state %s" % (content['id'], content['state'])
     else:
@@ -95,6 +107,8 @@ def main():
         succeed(options, args[1])
     elif command in ("fail", "marked_failed"):
         fail(options, args[1]) 
+    elif command in ("cancel"):
+        cancel(options, args[1])    
     
     cmd.save_config(options)
 
