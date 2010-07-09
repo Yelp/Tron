@@ -298,6 +298,7 @@ class Job(object):
         self.resources = []
         self.output_dir = None
         
+        self.depend = None
         self.dependants = []
         self.queueing = False
         
@@ -350,6 +351,10 @@ class Job(object):
     def get_run_by_id(self, id):
         runs = filter(lambda cur: cur.id == id, self.runs) 
         return runs[0] if runs else None
+
+    @property
+    def scheduler_str(self):
+        return str(self.scheduler) if self.scheduler else "FOLLOW:%s" % self.depend.name
 
 class JobSet(object):
     def __init__(self):

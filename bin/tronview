@@ -15,8 +15,9 @@ JOBS_COLUMNS = (
 )
 
 RUNS_COLUMNS = (
-    ('ID', 36),
+    ('ID', 40),
     ('State', 6),
+    ('Scheduled Time', 23), 
     ('Start Time', 23),
     ('End Time', 23),
 )
@@ -72,7 +73,12 @@ def view_job(options, job_name):
             run_exit = "-"
         else:
             run_exit = run['exit_status']
-        
+       
+        if run['run_time'] is None:
+            run_time = "-"
+        else:
+            run_time = run['run_time'][:-7]
+
         if run['start_time'] is None:
             run_start = "-"
         else:
@@ -84,7 +90,7 @@ def view_job(options, job_name):
             run_end = run['end_time'][:-7]
 
             
-        print "\t" + " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_start, run_end), RUNS_COLUMNS))
+        print "\t" + " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, run_start, run_end), RUNS_COLUMNS))
 
 def main():
     """run tronview"""

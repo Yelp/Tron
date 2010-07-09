@@ -155,6 +155,7 @@ class Job(_ConfiguredObject):
             raise Error("Job configuration needs a schedule or follow_on_success option")
         
         if hasattr(self, "follow_on_success"):
+            real_job.depend = self.follow_on_success.actualized
             self.follow_on_success.actualized.dependants.append(real_job)
        
         # Build scheduler

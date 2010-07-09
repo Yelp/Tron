@@ -152,8 +152,6 @@ class JobResource(resource.Resource):
                 return error.NoResource()
 
     def render_GET(self, request):
-        schedule_output = str(self._job.scheduler)
-
         run_output = []
         for job_run in self._job.runs:
             state = job_run_state(job_run)
@@ -173,7 +171,7 @@ class JobResource(resource.Resource):
         output = {
             'name': self._job.name,
             'node': self._job.node.hostname,
-            'scheduler': schedule_output,
+            'scheduler': self._job.scheduler_str,
             'runs': run_output,
             'resources': resources_output,
         }
@@ -258,7 +256,7 @@ class JobsResource(resource.Resource):
                 'name': current_job.name,
                 'href': request.childLink(current_job.name),
                 'node': current_job.node.hostname,
-                'scheduler': str(current_job.scheduler),
+                'scheduler': current_job.scheduler_str,
                 'status': status,
                 'last_success': last_success,
             }

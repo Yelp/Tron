@@ -117,8 +117,8 @@ class MasterControlProgram(object):
         if not next is None:
             log.info("Scheduling next run for %s", job.name)
             reactor.callLater(sleep_time(next.run_time), self.run_job, next)
+            self.runs[next.id] = next
 
-        self.runs[next.id] = next
         return next
 
     def run_job(self, now):
