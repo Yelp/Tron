@@ -60,9 +60,12 @@ def request(options, path, data=None):
     opener = urllib2.build_opener()
     try:
         output = opener.open(request)
-    except urllib2.URLError, e:
+    except urllib2.HTTPError, e:
         log.error("Recieved error response: %s" % e)
         return ERROR, e.code
+    except urllib2.URLError, e:
+        log.error("Recieved error response: %s" % e)
+        return ERROR, e.reason
 
     result = simplejson.load(output)
     return OK, result

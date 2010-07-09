@@ -10,7 +10,7 @@ from tron.utils import timeutils
 SECS_PER_DAY = 86400
 MICRO_SEC = .000001
 log = logging.getLogger('tron.mcp')
-SCHEDULE_FILE = '.tron_schedule.yaml'
+STATE_FILE = 'tron_state.yaml'
 
 def sleep_time(run_time):
     sleep = run_time - timeutils.current_time()
@@ -23,12 +23,13 @@ class Error(Exception): pass
 class JobExistsError(Error): pass
 
 class StateHandler(object):
-    def __init__(self, mcp):
+    def __init__(self, mcp, state_dir=None):
         self.data = {}
         self.mcp = mcp
         self.data['scheduled'] = {}
         self.data['running'] = {}
         self.data['queued'] = {}
+        self.state_dir = state_dir
 
     def _restore_running(self, job):
         job.running = self.data['running'][job.name]
@@ -69,18 +70,22 @@ class StateHandler(object):
         return job.name in self.data['scheduled']
     
     def _store_data(self):
-        log.info("Storing schedule in %s", SCHEDULE_FILE)
+        log.info("Storing schedule in %s", STATE_FILE)
+       
+        tmp_path = self.state_dir + '/.tmp.' + STATE_FILE
+        temp_schedule = open(tmp_path, 'wb')
         
-        temp_schedule = open('.tmp' + SCHEDULE_FILE, 'wb')
         yaml.dump(self.data, temp_schedule, default_flow_style=False)
         temp_schedule.close()
-        shutil.move('.tmp' + SCHEDULE_FILE, SCHEDULE_FILE)
+        shutil.move(tmp_path, self.get_state_file_path())
+
+    def get_state_file_path(self):
+        return self.state_dir + '/' + STATE_FILE
 
     def load_data(self):
-        log.info("Past schedule exists. Restoring")
+        log.info('Restoring state from %s', self.get_state_file_path())
         
-        log.info('Restoring state from %s', SCHEDULE_FILE)
-        schedule_file = open(SCHEDULE_FILE)
+        schedule_file = open(self.get_state_file_path())
         self.data = yaml.load(schedule_file)
         schedule_file.close()
 
@@ -90,11 +95,11 @@ class MasterControlProgram(object):
     This object is responsible for figuring who needs to run and when. It will be the main entry point
     where our daemon finds work to do
     """
-    def __init__(self):
+    def __init__(self, state_dir=None):
         self.jobs = {}
         self.runs = {}
         self.nodes = []
-        self.state_handler = StateHandler(self)
+        self.state_handler = StateHandler(self, state_dir)
 
     def add_job(self, tron_job):
         if tron_job.name in self.jobs:
@@ -128,7 +133,7 @@ class MasterControlProgram(object):
 
     def run_jobs(self):
         """This schedules the first time each job runs"""
-        if os.path.isfile(SCHEDULE_FILE):
+        if os.path.isfile(self.state_handler.get_state_file_path()):
             self.state_handler.load_data()
 
         for tron_job in self.jobs.itervalues():

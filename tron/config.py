@@ -66,7 +66,16 @@ class TronConfiguration(yaml.YAMLObject):
                 log.debug("Removing job %s", job_name)
                 dead_job = mcp.jobs[job_name]
                 mcp.jobs.remove(dead_job)
-
+    
+    def _get_state_dir(self, mcp):
+        if mcp.state_handler.state_dir:
+            return mcp.state_handler.state_dir
+        if hasattr(self, 'state_dir'):
+            return self.state_dir
+        if 'TMPDIR' in os.environ:
+            return os.environ['TMPDIR']
+        return '/tmp'
+    
     def apply(self, mcp):
         """Apply the configuration to the specified master control program"""
         self._apply_jobs(mcp)
@@ -76,6 +85,7 @@ class TronConfiguration(yaml.YAMLObject):
         if hasattr(self, 'notification_options'):
             self.notification_options._apply(mcp)
 
+        mcp.state_handler.state_dir = self._get_state_dir(mcp)
 
 class SSHOptions(yaml.YAMLObject):
     yaml_tag = u'!SSHOptions'
