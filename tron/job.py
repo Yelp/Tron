@@ -80,8 +80,8 @@ class JobRun(object):
 
         self.state = JOB_RUN_SCHEDULED
         self.exit_status = None
-        self.prev = None
-        self.waiting = []
+        self.prev = None        # Previous non-cancelled run
+        self.next = None        # Next scheduled run
 
     def scheduled_start(self):
         """Called when the job is scheduled to run.
@@ -93,11 +93,9 @@ class JobRun(object):
         
         if self.should_start:
             self.start()
-            return
 
-        if self.job.queueing:
+        elif self.job.queueing:
             log.warning("Previous job, %s, not finished - placing in queue", self.job.name)
-            self.prev.waiting.append(self)
             self.state = JOB_RUN_QUEUED
             self.job.queued[self.id] = self.state_data
         else:
@@ -107,9 +105,8 @@ class JobRun(object):
         self.job.state_changed()
 
     def delayed_start(self):
-        if self.is_cancelled:
-            log.info("User cancelled job run %s, not running", self.id)
-        else:
+        if self.is_queued:
+           self.job.queued.pop(self.id)
            self.start()
 
     def start(self):
@@ -128,9 +125,7 @@ class JobRun(object):
     def cancel(self):
         if self.is_scheduled or self.is_queued:
             self.state = JOB_RUN_CANCELLED
-            self.prev.waiting += self.waiting
-            self.waiting = []
-
+    
     def _open_output_file(self):
         if self.job.output_dir:
             if os.path.isdir(self.job.output_dir):
@@ -180,9 +175,8 @@ class JobRun(object):
         deferred.addErrback(self._handle_errback)
 
     def start_dependants(self):
-        for run in self.waiting:
-            self.job.queued.pop(run.id)
-            run.delayed_start()
+        if self.next and self.next.is_queued:
+            self.next.delayed_start()
        
         for job in self.job.dependants:
             run = job.build_run()
@@ -190,7 +184,8 @@ class JobRun(object):
             run.start()
 
     def ignore_dependants(self):
-        [log.info("Not running waiting run %s, the dependant job failed", r.id) for r in self.waiting]
+        if self.next and self.next.is_queued:
+            log.info("Not running waiting run %s, the dependant job failed", self.next.id)
         [log.info("Not running job %s, the dependant job failed", j.name) for j in self.job.dependants]
 
     def _finish(self):
@@ -235,7 +230,7 @@ class JobRun(object):
         elif 'previous' in state:
             self.prev = self.job.get_run_by_id(state['previous'])
             if self.prev:
-                self.prev.waiting.append(self)
+                self.prev.next = self
 
     @property
     def state_data(self):
@@ -323,6 +318,28 @@ class Job(object):
         if self.state_callback:
             self.state_callback(self)
 
+    def _insert_new_run(self, run):
+        """Inserts run into run list ignoring cancelled runs"""
+        if not run.prev is None:
+            run.prev.next = run
+            if run.prev.is_cancelled:
+                run.prev = run.prev.prev
+                run.prev.next = run
+
+    def remove_run(self, run):
+        """Remove a previously non-cancelled run from the run list"""
+        assert not run.is_cancelled
+        if run.next:
+            run.next.prev = run.prev
+        if run.prev:
+            run.prev.next = run.next
+
+    def reinsert_run(self, run):
+        """Reinserts a previously cancelled run into the run list"""
+        assert run.is_cancelled
+        run.prev.next.prev = run
+        run.prev.next = run
+
     def next_run(self, prev=None):
         """Check the scheduler and decide when the next run should be"""
         if self.scheduler:
@@ -330,11 +347,9 @@ class Job(object):
             if next is None:
                 return None
 
-            if not prev is None and prev.is_cancelled:
-                next.prev = prev.prev
-            else:
-                next.prev = prev
-           
+            next.prev = prev
+            self._insert_new_run(next)
+
             self.scheduled[next.id] = next.state_data
             self.state_changed()
             return next
