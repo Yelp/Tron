@@ -189,7 +189,8 @@ class JobRun(object):
         [log.info("Not running job %s, the dependant job failed", j.name) for j in self.job.dependants]
 
     def _finish(self):
-        self.job.running.pop(self.id)
+        if self.is_running:
+            self.job.running.pop(self.id)
         self.job.state_changed()
 
     def fail(self, exit_status):
@@ -229,14 +230,16 @@ class JobRun(object):
             self.state = JOB_RUN_UNKNOWN
         elif 'previous' in state:
             self.prev = self.job.get_run_by_id(state['previous'])
-            if self.prev:
-                self.prev.next = self
+        if 'next' in state:
+            self.next = self.job.get_run_by_id(state['next'])
 
     @property
     def state_data(self):
         data = {'state': self.state, 'run_time': self.run_time, 'start_time': self.start_time, 'command': self.command}
         if self.prev:
             data['previous'] = self.prev.id
+        if self.next:
+            data['next'] = self.next.id
 
         return data
 
