@@ -26,48 +26,28 @@ class StateHandler(object):
     def __init__(self, mcp, state_dir=None):
         self.data = {}
         self.mcp = mcp
-        self.data['scheduled'] = {}
-        self.data['running'] = {}
-        self.data['queued'] = {}
         self.state_dir = state_dir
 
-    def _restore_running(self, job):
-        job.running = self.data['running'][job.name]
-        ids = [id for id, state in job.running.iteritems()]
-        for id in ids:
-            self.mcp.runs[id] = job.restore(id, state)
-
-    def _restore_queued(self, job):
-        job.queued = self.data['queued'][job.name]
+    def _restore_run(self, job, id, state):
+        run = job.restore(id, state)
+        self.mcp.runs[id] = run
         
-        for id, state in sorted(job.queued.iteritems(), key=lambda (i, j): j['run_time']):
-            self.mcp.runs[id] = job.restore(id, state)
-        
-    def _restore_scheduled(self, job):
-        job.scheduled = self.data['scheduled'][job.name]
-        
-        for id, state in job.scheduled.iteritems():
-            run = job.restore(id, state)
+        if run.is_scheduled:
             sleep = sleep_time(run.run_time)
             if sleep == 0:
                 run.run_time = timeutils.current_time()
-
             reactor.callLater(sleep, self.mcp.run_job, run)
-            self.mcp.runs[run.id] = run
 
     def restore_job(self, job):
-        self._restore_running(job)
-        self._restore_queued(job)
-        self._restore_scheduled(job)
-    
+        for id, state in sorted(self.data[job.name].iteritems(), key=lambda (i, s): s['run_time']):
+            self._restore_run(job, id, state)
+
     def state_changed(self, job):
-        self.data['scheduled'][job.name] = job.scheduled
-        self.data['running'][job.name] = job.running
-        self.data['queued'][job.name] = job.queued
+        self.data[job.name] = job.data 
         self._store_data() 
 
     def has_data(self, job):
-        return job.name in self.data['scheduled']
+        return job.name in self.data
     
     def _store_data(self):
         log.info("Storing schedule in %s", STATE_FILE)

@@ -89,24 +89,20 @@ class JobRun(object):
         If the job should start then it starts.  Otherwise, if queueing is enabled
         it queues the job, if not, cancels the job.
         """
-        self.job.scheduled.pop(self.id)
-        
         if self.should_start:
             self.start()
 
         elif self.job.queueing:
             log.warning("Previous job, %s, not finished - placing in queue", self.job.name)
             self.state = JOB_RUN_QUEUED
-            self.job.queued[self.id] = self.state_data
         else:
             log.warning("Previous job, %s, not finished - cancelling instance", self.job.name)
             self.state = JOB_RUN_CANCELLED
 
-        self.job.state_changed()
+        self.job.state_changed(self)
 
     def delayed_start(self):
         if self.is_queued:
-           self.job.queued.pop(self.id)
            self.start()
 
     def start(self):
@@ -114,8 +110,7 @@ class JobRun(object):
         
         self.start_time = timeutils.current_time()
         self.state = JOB_RUN_RUNNING
-        self.job.running[self.id] = self.state_data
-        self.job.state_changed()
+        self.job.state_changed(self)
 
         # And now we try to actually start some work....
         ret = self._execute()
@@ -189,9 +184,7 @@ class JobRun(object):
         [log.info("Not running job %s, the dependant job failed", j.name) for j in self.job.dependants]
 
     def _finish(self):
-        if self.is_running:
-            self.job.running.pop(self.id)
-        self.job.state_changed()
+        self.job.state_changed(self)
 
     def fail(self, exit_status):
         """Mark the run as having failed, providing an exit status"""
@@ -312,12 +305,11 @@ class Job(object):
         self.dependants = []
         self.queueing = False
         
-        self.scheduled = {}
-        self.running = {}
-        self.queued = {}
+        self.data = {}
         self.state_callback = None
 
-    def state_changed(self):
+    def state_changed(self, run):
+        self.data[run.id] = run.state_data
         if self.state_callback:
             self.state_callback(self)
 
@@ -353,8 +345,7 @@ class Job(object):
             next.prev = prev
             self._insert_new_run(next)
 
-            self.scheduled[next.id] = next.state_data
-            self.state_changed()
+            self.state_changed(next)
             return next
         
         return None
@@ -376,6 +367,7 @@ class Job(object):
         restored = self.build_run()
         restored.id = id
         restored.restore_state(state)
+        self.state_changed(restored)
         return restored
     
     def get_run_by_id(self, id):
