@@ -11,9 +11,8 @@ class TestNode(object):
     def run(self, run):
         return run
 
-class NoneScheduler(object):
-    def next_run(self, job):
-        return None
+def get_runs_by_state(job, state):
+    return filter(lambda r: r.state == state, job.runs)
 
 class TestJob(TestCase):
     """Unit testing for Job class"""
@@ -25,13 +24,15 @@ class TestJob(TestCase):
     def test_next_run(self):
         assert_equals(self.job.next_run(), None)
         
-        self.job.scheduler = NoneScheduler()
+        self.job.scheduler = turtle.Turtle()
+        self.job.scheduler.next_run = lambda j:None
+
         assert_equals(self.job.next_run(), None)
-        assert_equals(len(self.job.scheduled), 0)
+        assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 0)
 
         self.job.scheduler = scheduler.ConstantScheduler()
         assert self.job.next_run()
-        assert_equals(len(self.job.scheduled), 1)
+        assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 1)
 
     def test_next_run_prev(self):
         self.job.scheduler = scheduler.DailyScheduler()
@@ -42,7 +43,7 @@ class TestJob(TestCase):
 
         assert run
         assert run2
-        assert_equals(len(self.job.scheduled), 2)
+        assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 2)
         assert_equals(run2.prev, run)
 
         run3 = self.job.next_run(run2)
@@ -76,26 +77,24 @@ class TestJobRun(TestCase):
 
         self.run = self.job.next_run()
         self.run._execute = lambda: True
-        self.job.scheduled[self.run.id] = self.run.state_data
+        self.job.data[self.run.id] = self.run.state_data
 
     def test_scheduled_start_succeed(self):
         self.run.scheduled_start()
 
         assert self.run.is_running
-        assert_equals(len(self.job.scheduled), 0)
-        assert_equals(len(self.job.running), 1)
+        assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 0)
+        assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_RUNNING)), 1)
         assert_equals(self.run.state, job.JOB_RUN_RUNNING)
 
     def test_scheduled_start_wait(self):
-        run2 = self.job.next_run()
-        self.job.scheduled[run2.id] = run2.state_data
-        run2.prev = self.run
+        run2 = self.job.next_run(self.run)
         run2._execute = lambda: True
         
-        assert_equals(len(self.job.scheduled), 2)
+        assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 2)
         run2.scheduled_start()
         assert run2.is_queued
-        assert_equals(len(self.job.scheduled), 1)
+        assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 1)
         
         self.run.scheduled_start()
         assert self.run.is_running
@@ -107,14 +106,14 @@ class TestJobRun(TestCase):
     def test_scheduled_start_cancel(self):
         self.job.queueing = False
         run2 = self.job.next_run()
-        self.job.scheduled[run2.id] = run2.state_data
+        #self.job.scheduled[run2.id] = run2.state_data
         run2.prev = self.run
         run2._execute = lambda: True
         
-        assert_equals(len(self.job.scheduled), 2)
+        assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 2)
         run2.scheduled_start()
         assert run2.is_cancelled
-        assert_equals(len(self.job.scheduled), 1)
+        assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 1)
         
         self.run.scheduled_start()
         assert self.run.is_running

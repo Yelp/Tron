@@ -32,7 +32,7 @@ jobs:
     @setup
     def setup(self):
         self.test_config = config.load_config(StringIO.StringIO(self.sample_config))
-        self.my_mcp = mcp.MasterControlProgram()
+        self.my_mcp = mcp.MasterControlProgram('state')
         self.test_config.apply(self.my_mcp)
         self.foo_job = self.my_mcp.jobs["Foo Job"]
         self.bar_job = self.my_mcp.jobs["Bar Job"]

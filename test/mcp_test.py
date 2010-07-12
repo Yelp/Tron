@@ -52,7 +52,7 @@ class TestGlobalFunctions(TestCase):
 class TestStateHandler(TestCase):
     @setup
     def setup(self):
-        self.mcp = mcp.MasterControlProgram()
+        self.mcp = mcp.MasterControlProgram(".")
         self.state_handler = self.mcp.state_handler
         self.job = job.Job("Test Job")
         self.job.scheduler = scheduler.IntervalScheduler(datetime.timedelta(seconds=0))
@@ -72,13 +72,13 @@ class TestStateHandler(TestCase):
         self.create_state()
         self.state_handler.state_changed(self.job)
         
-        assert_equals(len(self.state_handler.data['scheduled'][self.job.name]), 1)
-        assert_equals(len(self.state_handler.data['running'][self.job.name]), 1)
-        assert_equals(len(self.state_handler.data['queued'][self.job.name]), 1)
+        assert_equals(len(self.state_handler.data[self.job.name]), 3)
+        assert_equals(len(self.state_handler.data[self.job.name]), 3)
+        assert_equals(len(self.state_handler.data[self.job.name]), 3)
 
-        assert_equals(self.state_handler.data['scheduled'][self.job.name][self.scheduled.id], self.scheduled.state_data)
-        assert_equals(self.state_handler.data['running'][self.job.name][self.running.id], self.running.state_data)
-        assert_equals(self.state_handler.data['queued'][self.job.name][self.queued.id], self.queued.state_data)
+        assert_equals(self.state_handler.data[self.job.name][self.scheduled.id], self.scheduled.state_data)
+        assert_equals(self.state_handler.data[self.job.name][self.running.id], self.running.state_data)
+        assert_equals(self.state_handler.data[self.job.name][self.queued.id], self.queued.state_data)
 
     def test_store_data(self):
         pass
@@ -90,7 +90,7 @@ class TestMasterControlProgram(TestCase):
     @setup
     def build_jobs(self):
         self.job = MockJob()
-        self.mcp = mcp.MasterControlProgram()
+        self.mcp = mcp.MasterControlProgram(".")
         
     def test_add_job(self):
         assert_equal(len(self.mcp.jobs), 0)
@@ -133,7 +133,8 @@ class TestMasterControlProgram(TestCase):
         callLater = mcp.reactor.callLater
         mcp.reactor.callLater = call_now
         next = self.mcp._schedule_next_run(jo, None)
-        assert_equals(len(jo.scheduled), 1)
+        
+        assert_equals(len(filter(lambda r:r.state == job.JOB_RUN_SUCCEEDED, jo.runs)), 1)
         assert_equals(jo, next.job)
         assert next.is_done
 

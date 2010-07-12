@@ -23,7 +23,7 @@ class Error(Exception): pass
 class JobExistsError(Error): pass
 
 class StateHandler(object):
-    def __init__(self, mcp, state_dir=None):
+    def __init__(self, mcp, state_dir):
         self.data = {}
         self.mcp = mcp
         self.state_dir = state_dir
@@ -39,7 +39,9 @@ class StateHandler(object):
             reactor.callLater(sleep, self.mcp.run_job, run)
 
     def restore_job(self, job):
-        for id, state in sorted(self.data[job.name].iteritems(), key=lambda (i, s): s['run_time']):
+        old_runs = sorted(self.data[job.name].iteritems(), key=lambda (i, s): s['run_time'])
+        
+        for id, state in old_runs:
             self._restore_run(job, id, state)
 
     def state_changed(self, job):
@@ -75,7 +77,7 @@ class MasterControlProgram(object):
     This object is responsible for figuring who needs to run and when. It will be the main entry point
     where our daemon finds work to do
     """
-    def __init__(self, state_dir=None):
+    def __init__(self, state_dir):
         self.jobs = {}
         self.runs = {}
         self.nodes = []
@@ -92,7 +94,7 @@ class MasterControlProgram(object):
         
         tron_job.state_callback = self.state_handler.state_changed
 
-    def _schedule_next_run(self, job, prev):
+    def _schedule_next_run(self, job, prev=None):
         next = job.next_run(prev)
         if not next is None:
             log.info("Scheduling next run for %s", job.name)
@@ -120,5 +122,5 @@ class MasterControlProgram(object):
             if self.state_handler.has_data(tron_job):
                 self.state_handler.restore_job(tron_job)
             elif tron_job.scheduler:
-                self._schedule_next_run(tron_job, None)
+                self._schedule_next_run(tron_job)
 
