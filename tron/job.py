@@ -187,9 +187,6 @@ class JobRun(object):
             log.info("Not running waiting run %s, the dependant job failed", self.next.id)
         [log.info("Not running job %s, the dependant job failed", j.name) for j in self.job.dependants]
 
-    def _finish(self):
-        self.job.state_changed(self)
-
     def fail(self, exit_status):
         """Mark the run as having failed, providing an exit status"""
         log.info("Job run %s failed with exit status %r", self.id, exit_status)
@@ -197,7 +194,7 @@ class JobRun(object):
         self.state = JOB_RUN_FAILED
         self.exit_status = exit_status
         self.end_time = timeutils.current_time()
-        self._finish()
+        self.job.state_changed(self)
 
     def fail_unknown(self):
         """Mark the run as having failed, but note that we don't actually know what result was"""
@@ -206,6 +203,7 @@ class JobRun(object):
         self.state = JOB_RUN_FAILED
         self.exit_status = None
         self.end_time = None
+        self.job.state_changed(self)
 
     def succeed(self):
         """Mark the run as having succeeded"""
@@ -215,7 +213,7 @@ class JobRun(object):
         self.state = JOB_RUN_SUCCEEDED
         self.end_time = timeutils.current_time()
         
-        self._finish()
+        self.job.state_changed(self)
         self.start_dependants()
 
     def restore_state(self, state):
