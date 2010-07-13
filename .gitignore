@@ -4,4 +4,3 @@ ssh.log
 tron.log
 MANIFEST
 *.pyc
-.tron*
