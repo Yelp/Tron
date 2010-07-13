@@ -1,8 +1,8 @@
 import logging
 import weakref
-import shutil
 import yaml
 import os
+import subprocess
 
 from twisted.internet import reactor
 from tron.utils import timeutils
@@ -27,6 +27,7 @@ class StateHandler(object):
         self.data = {}
         self.mcp = mcp
         self.state_dir = state_dir
+        self.write_proc = None
 
     def _restore_run(self, job, id, state):
         run = job.restore(id, state)
@@ -52,14 +53,14 @@ class StateHandler(object):
         return job.name in self.data
     
     def _store_data(self):
-        log.info("Storing schedule in %s", STATE_FILE)
-       
-        tmp_path = self.state_dir + '/.tmp.' + STATE_FILE
-        temp_schedule = open(tmp_path, 'wb')
+        if self.write_proc and self.write_proc.poll():
+            return
         
-        yaml.dump(self.data, temp_schedule, default_flow_style=False)
-        temp_schedule.close()
-        shutil.move(tmp_path, self.get_state_file_path())
+        log.info("Storing schedule in %s", STATE_FILE)
+        file_path = '%s/%s' % (self.state_dir, STATE_FILE)
+        
+        dump = yaml.dump(self.data, default_flow_style=False)
+        self.write_proc = subprocess.Popen(['/bin/sh', '-c', 'echo "%s" > %s' % (dump, file_path)])
 
     def get_state_file_path(self):
         return self.state_dir + '/' + STATE_FILE
