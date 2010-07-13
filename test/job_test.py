@@ -51,7 +51,7 @@ class TestJob(TestCase):
 
         run3.state = job.JOB_RUN_CANCELLED
         run4 = self.job.next_run(run3)
-        assert_equals(run4.prev, run2)
+        assert_equals(run4.prev, run3)
 
     def test_build_run(self):
         run = self.job.build_run()

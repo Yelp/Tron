@@ -55,7 +55,7 @@ class StateHandler(object):
         return job.name in self.data
     
     def store_data(self):
-        if self.write_proc and self.write_proc.poll():
+        if self.write_proc and self.write_proc.poll() is None:
             return
         
         log.info("Storing schedule in %s", STATE_FILE)
@@ -112,9 +112,8 @@ class MasterControlProgram(object):
         Here we run the job and schedule the next time it should run
         """
         log.debug("Running next scheduled job")
-        now.scheduled_start()
-        
         next = self._schedule_next_run(now.job, now)
+        now.scheduled_start()
 
     def run_jobs(self):
         """This schedules the first time each job runs"""
