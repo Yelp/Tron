@@ -28,6 +28,7 @@ class StateHandler(object):
         self.mcp = mcp
         self.state_dir = state_dir
         self.write_proc = None
+        self.writing_enabled = False
 
     def _restore_run(self, job, id, state):
         run = job.restore(id, state)
@@ -41,18 +42,19 @@ class StateHandler(object):
 
     def restore_job(self, job):
         old_runs = sorted(self.data[job.name].iteritems(), key=lambda (i, s): s['run_time'])
-        
+
         for id, state in old_runs:
             self._restore_run(job, id, state)
 
     def state_changed(self, job):
-        self.data[job.name] = job.data 
-        self._store_data() 
+        self.data[job.name] = job.data
+        if self.writing_enabled:
+            self.store_data() 
 
     def has_data(self, job):
         return job.name in self.data
     
-    def _store_data(self):
+    def store_data(self):
         if self.write_proc and self.write_proc.poll():
             return
         
@@ -124,4 +126,8 @@ class MasterControlProgram(object):
                 self.state_handler.restore_job(tron_job)
             elif tron_job.scheduler:
                 self._schedule_next_run(tron_job)
+        
+        self.state_handler.writing_enabled = True
+        self.state_handler.store_data()
+        
 

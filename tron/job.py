@@ -80,8 +80,8 @@ class JobRun(object):
 
         self.state = JOB_RUN_SCHEDULED
         self.exit_status = None
-        self.prev = None        # Previous non-cancelled run
-        self.next = None        # Next scheduled run
+        self.prev = None
+        self.next = None
 
     def scheduled_start(self):
         """Called when the job is scheduled to run.
@@ -170,8 +170,12 @@ class JobRun(object):
         deferred.addErrback(self._handle_errback)
 
     def start_dependants(self):
-        if self.next and self.next.is_queued:
-            self.next.delayed_start()
+        dep = self.next
+        while dep and dep.is_cancelled:
+            dep = dep.next
+        
+        if dep and dep.is_queued:
+            dep.delayed_start()
        
         for job in self.job.dependants:
             run = job.build_run()
@@ -218,21 +222,22 @@ class JobRun(object):
         self.state = state['state']
         self.run_time = state['run_time']
         self.start_time = state['start_time']
+        self.end_time = state['end_time']
 
         if self.is_running:
             self.state = JOB_RUN_UNKNOWN
-        elif 'previous' in state:
+        if 'previous' in state:
             self.prev = self.job.get_run_by_id(state['previous'])
-        if 'next' in state:
-            self.next = self.job.get_run_by_id(state['next'])
+            self.prev.next = self
+            self.job.state_changed(self.prev)
+        
+        self.job.state_changed(self)
 
     @property
     def state_data(self):
-        data = {'state': self.state, 'run_time': self.run_time, 'start_time': self.start_time, 'command': self.command}
+        data = {'state': self.state, 'run_time': self.run_time, 'start_time': self.start_time, 'end_time': self.end_time, 'command': self.command}
         if self.prev:
             data['previous'] = self.prev.id
-        if self.next:
-            data['next'] = self.next.id
 
         return data
 
@@ -284,9 +289,12 @@ class JobRun(object):
     def should_start(self):
         if self.state != JOB_RUN_SCHEDULED:
             return False
-        if not self.prev is None and not self.prev.is_success:
-            return False
-        
+        prev_ran = self.prev
+        while prev_ran and not prev_ran.is_success:
+            if not prev_ran.is_cancelled:
+                return False
+            prev_ran = prev_ran.prev
+
         # Ok, it's time, what about our jobs dependencies
         return bool(all(r.ready for r in self.job.resources))
 
@@ -313,28 +321,6 @@ class Job(object):
         if self.state_callback:
             self.state_callback(self)
 
-    def _insert_new_run(self, run):
-        """Inserts run into run list ignoring cancelled runs"""
-        if not run.prev is None:
-            run.prev.next = run
-            if run.prev.is_cancelled:
-                run.prev = run.prev.prev
-                run.prev.next = run
-
-    def remove_run(self, run):
-        """Remove a previously non-cancelled run from the run list"""
-        assert not run.is_cancelled
-        if run.next:
-            run.next.prev = run.prev
-        if run.prev:
-            run.prev.next = run.next
-
-    def reinsert_run(self, run):
-        """Reinserts a previously cancelled run into the run list"""
-        assert run.is_cancelled
-        run.prev.next.prev = run
-        run.prev.next = run
-
     def next_run(self, prev=None):
         """Check the scheduler and decide when the next run should be"""
         if self.scheduler:
@@ -343,7 +329,9 @@ class Job(object):
                 return None
 
             next.prev = prev
-            self._insert_new_run(next)
+            if next.prev:
+                next.prev.next = next
+                self.state_changed(next.prev)
 
             self.state_changed(next)
             return next
