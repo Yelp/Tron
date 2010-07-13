@@ -112,8 +112,6 @@ class JobRunResource(resource.Resource):
     def _start(self, request):
         if not self._run.is_ran and not self._run.is_running:
             log.info("Starting job run %s", self._run.id)
-            if self._run.is_cancelled:
-                self._run.job.reinsert_run(self._run)
             self._run.start()
         else:
             log.warning("Request to start job run %s when it's already done", self._run.id)
@@ -123,8 +121,6 @@ class JobRunResource(resource.Resource):
     def _succeed(self, request):
         if not self._run.is_success:
             log.info("Marking job run %s for success", self._run.id)
-            if self._run.is_cancelled:
-                self._run.job.reinsert_run(self._run)
             self._run.succeed()
         else:
             log.warning("Request to mark job run %s succeed when it has already", self._run.id)
@@ -134,7 +130,6 @@ class JobRunResource(resource.Resource):
     def _cancel(self, request):
         if self._run.is_scheduled or self._run.is_queued:
             log.info("Cancelling job %s", self._run.id)
-            self._run.job.remove_run(self._run)
             self._run.cancel()
         else:
             log.warning("Request to cancel job run %s when it's already cancelled", self._run.id)
@@ -144,8 +139,6 @@ class JobRunResource(resource.Resource):
     def _fail(self, request):
         if not self._run.is_done:
             log.info("Marking job run %s as failed", self._run.id)
-            if self._run.is_cancelled:
-                self._run.job.reinsert_run(self._run)
             self._run.fail()
         else:
             log.warning("Request to fail job run %s when it's already done", self._run.id)
