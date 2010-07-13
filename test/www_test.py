@@ -50,9 +50,9 @@ class JobsTest(TestCase):
     def build_resource(self):
         self.mc = turtle.Turtle()
         self.job = turtle.Turtle(
-                            name="foo", 
+                            name="testname", 
                             runs=[], 
-                            scheduler=None, 
+                            scheduler_str="testsched", 
                             node=TEST_NODE)
         
         self.mc.jobs = {self.job.name: self.job}
@@ -64,11 +64,11 @@ class JobsTest(TestCase):
         resp = self.resource.render_GET(REQUEST)
         job_result = simplejson.loads(resp)
         assert 'jobs' in job_result
-        assert job_result['jobs'][0]['name'] == "foo"
+        assert job_result['jobs'][0]['name'] == "testname"
     
     def test_get_job(self):
         """Test that we can find a specific job"""
-        child = self.resource.getChildWithDefault("foo", turtle.Turtle())
+        child = self.resource.getChildWithDefault("testname", turtle.Turtle())
         assert isinstance(child, www.JobResource)
         assert child._job is self.job
 
@@ -91,7 +91,7 @@ class JobDetailTest(TestCase):
                                                      )
                                                      
                                  ],
-                                 scheduler=None,
+                                 scheduler_str="testsched",
                                  node=TEST_NODE,
                                 )
 
