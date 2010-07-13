@@ -126,7 +126,7 @@ class MasterControlProgram(object):
             elif tron_job.scheduler:
                 self._schedule_next_run(tron_job)
         
-        self.state_handler.writing_enabled = False
+        self.state_handler.writing_enabled = True
         self.state_handler.store_data()
         
 
