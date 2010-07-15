@@ -4,7 +4,7 @@ import os
 from testify import *
 from testify.utils import turtle
 
-from tron import node, job, scheduler
+from tron import node, job, job_flow, scheduler
 from tron.utils import timeutils
 
 class TestNode(object):
@@ -20,37 +20,38 @@ class TestJob(TestCase):
     def setup(self):
         self.job = job.Job(name="Test Job")
         self.job.command = "Test command"
+        self.flow = job_flow.JobFlow("Test Flow", self.job)
 
     def test_next_run(self):
-        assert_equals(self.job.next_run(), None)
+        assert_equals(self.flow.next_run(), None)
         
         self.job.scheduler = turtle.Turtle()
         self.job.scheduler.next_run = lambda j:None
 
-        assert_equals(self.job.next_run(), None)
+        assert_equals(self.flow.next_run(), None)
         assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 0)
 
-        self.job.scheduler = scheduler.ConstantScheduler()
-        assert self.job.next_run()
+        self.flow.scheduler = scheduler.ConstantScheduler()
+        assert self.flow.next_run()
         assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 1)
 
     def test_next_run_prev(self):
-        self.job.scheduler = scheduler.DailyScheduler()
-        run = self.job.next_run()
+        self.flow.scheduler = scheduler.DailyScheduler()
+        run = self.flow.next_run()
         assert_equals(run.prev, None)
 
-        run2 = self.job.next_run(run)
+        run2 = self.flow.next_run()
 
         assert run
         assert run2
         assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 2)
         assert_equals(run2.prev, run)
 
-        run3 = self.job.next_run(run2)
+        run3 = self.flow.next_run()
         assert_equals(run3.prev, run2)
 
-        run3.state = job.JOB_RUN_CANCELLED
-        run4 = self.job.next_run(run3)
+        run3.runs[0].state = job.JOB_RUN_CANCELLED
+        run4 = self.flow.next_run()
         assert_equals(run4.prev, run3)
 
     def test_build_run(self):
@@ -70,17 +71,18 @@ class TestJobRun(TestCase):
     """Unit testing for JobRun class"""
     @setup
     def setup(self):
-        self.job = job.Job(name="Test Job")
-        self.job.scheduler = scheduler.DailyScheduler()
-        self.job.queueing = True
+        self.job = job.Job(name="Test Job", node=turtle.Turtle())
+        self.flow = job_flow.JobFlow("Test Flow", self.job)
+        self.flow.scheduler = scheduler.DailyScheduler()
+        self.flow.queueing = True
         self.job.command = "Test command"
 
-        self.run = self.job.next_run()
-        self.run._execute = lambda: True
+        self.flow_run = self.flow.next_run()
+        self.run = self.flow_run.runs[0]
         self.job.data[self.run.id] = self.run.state_data
 
     def test_scheduled_start_succeed(self):
-        self.run.scheduled_start()
+        self.flow_run.scheduled_start()
 
         assert self.run.is_running
         assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 0)
@@ -88,39 +90,36 @@ class TestJobRun(TestCase):
         assert_equals(self.run.state, job.JOB_RUN_RUNNING)
 
     def test_scheduled_start_wait(self):
-        run2 = self.job.next_run(self.run)
-        run2._execute = lambda: True
+        flow_run2 = self.flow.next_run()
         
         assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 2)
-        run2.scheduled_start()
-        assert run2.is_queued
+        flow_run2.scheduled_start()
+        assert flow_run2.is_queued
         assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 1)
         
-        self.run.scheduled_start()
+        self.flow_run.scheduled_start()
         assert self.run.is_running
         
         self.run.succeed()
         assert self.run.is_success
-        assert run2.is_running
+        assert flow_run2.runs[0].is_running
 
     def test_scheduled_start_cancel(self):
-        self.job.queueing = False
-        run2 = self.job.next_run()
+        self.flow.queueing = False
+        flow_run2 = self.flow.next_run()
         #self.job.scheduled[run2.id] = run2.state_data
-        run2.prev = self.run
-        run2._execute = lambda: True
         
         assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 2)
-        run2.scheduled_start()
-        assert run2.is_cancelled
+        flow_run2.scheduled_start()
+        assert flow_run2.is_cancelled
         assert_equals(len(get_runs_by_state(self.job, job.JOB_RUN_SCHEDULED)), 1)
         
-        self.run.scheduled_start()
+        self.flow_run.scheduled_start()
         assert self.run.is_running
         
         self.run.succeed()
         assert self.run.is_success
-        assert run2.is_cancelled
+        assert flow_run2.is_cancelled
 
 
 class JobRunState(TestCase):
@@ -212,6 +211,7 @@ class JobRunBuildingTest(TestCase):
     @setup
     def build_job(self):
         self.job = job.Job(name="Test Job")
+        self.flow = job_flow.JobFlow(self.job)
 
     def test_build_run(self):
         run = self.job.build_run()
@@ -222,7 +222,7 @@ class JobRunBuildingTest(TestCase):
         assert_equal(len(self.job.runs), 1)
 
     def test_no_schedule(self):
-        run = self.job.next_run()
+        run = self.flow.next_run()
         assert_equal(run, None)
 
 
@@ -291,11 +291,12 @@ class JobRunVariablesTest(TestCase):
     @setup
     def build_job(self):
         self.job = job.Job(name="Test Job")
-        self.job.scheduler = scheduler.ConstantScheduler()
+        self.flow = job_flow.JobFlow("Test Flow", self.job)
+        self.flow.scheduler = scheduler.ConstantScheduler()
     
     def _cmd(self):
-        job_run = self.job.next_run()
-        return job_run.command
+        flow_run = self.flow.next_run()
+        return flow_run.runs[0].command
 
     def test_name(self):
         self.job.command = "somescript --name=%(jobname)s"
@@ -303,7 +304,8 @@ class JobRunVariablesTest(TestCase):
 
     def test_runid(self):
         self.job.command = "somescript --id=%(runid)s"
-        job_run = self.job.next_run()
+        flow_run = self.flow.next_run()
+        job_run = flow_run.runs[0]
         assert_equal(job_run.command, "somescript --id=%s" % job_run.id)
 
     def test_shortdate(self):

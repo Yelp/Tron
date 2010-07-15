@@ -100,8 +100,8 @@ class MasterControlProgram(object):
                 self.nodes.append(tron_job.node) 
             tron_job.state_callback = self.state_handler.state_changed
 
-    def _schedule_next_run(self, flow, prev=None):
-        next = flow.next_run(prev)
+    def _schedule_next_run(self, flow):
+        next = flow.next_run()
         if not next is None:
             log.info("Scheduling next flow for %s", next.flow.name)
             reactor.callLater(sleep_time(next.run_time), self.run_flow, next)
@@ -116,7 +116,7 @@ class MasterControlProgram(object):
         Here we run the flow and schedule the next time it should run
         """
         log.debug("Running next scheduled flow")
-        next = self._schedule_next_run(now.flow, now)
+        next = self._schedule_next_run(now.flow)
         now.scheduled_start()
 
     def run_flows(self):

@@ -36,6 +36,7 @@ jobs:
         self.test_config.apply(self.my_mcp)
         self.foo_job = self.my_mcp.jobs["Foo Job"]
         self.bar_job = self.my_mcp.jobs["Bar Job"]
+        self.flow = self.my_mcp.flows['Foo Job']
 
     def test_attributes(self):
         assert hasattr(self.test_config, "nodes")
@@ -62,10 +63,15 @@ jobs:
         assert self.bar_job.output_dir is None
 
     def test_schedule_attribute(self):
-        assert isinstance(self.foo_job.scheduler, scheduler.IntervalScheduler)
-        assert_equal(self.foo_job.scheduler.interval, datetime.timedelta(hours=1))
+        assert isinstance(self.flow.scheduler, scheduler.IntervalScheduler)
+        assert_equal(self.flow.scheduler.interval, datetime.timedelta(hours=1))
     
+    def test_flow_setup(self):
+        assert_equals(len(self.flow.topo_jobs), 2)
+        assert_equals(self.flow.topo_jobs[0], self.foo_job)
+        assert_equals(self.flow.topo_jobs[1], self.bar_job)
+
     def test_follow_on_success_attribute(self):
-        assert_equal(len(self.foo_job.dependants), 1)
-        assert_equal(self.foo_job.dependants[0], self.bar_job)
+        assert_equal(len(self.bar_job.required_jobs), 1)
+        assert_equal(self.bar_job.required_jobs[0], self.foo_job)
 

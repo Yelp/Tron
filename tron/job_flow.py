@@ -29,8 +29,11 @@ class JobFlowRun(object):
                 r.start()
         
     def run_completed(self):
-        if self.next and self.next.is_queued and self.is_success:
-            self.next.start()
+        if self.is_success:
+            if self.next and self.next.is_queued:
+                self.next.start()
+            if self.flow.constant:
+                self.flow.build_run(self).start()
 
     def queue(self):
         for r in self.runs:
@@ -65,22 +68,23 @@ class JobFlow(object):
         self.topo_jobs = [job] if job else []
         self.scheduler = None
         self.queueing = False
+        self.last = None
+        self.constant = False
 
-    def next_run(self, prev=None):
-        flow_run = JobFlowRun(self, prev)
-
-        if not self.scheduler.next_run(flow_run):
+    def next_run(self):
+        if not self.scheduler:
             return None
-        
+        return self.scheduler.next_run(self)
+
+    def build_run(self, prev=None):
+        flow_run = JobFlowRun(self, prev)
         if prev:
             prev.next = flow_run
-        
+
         runs = {}
         for j in self.topo_jobs:
             run = j.build_run()
-            if not run:
-                continue
-
+            
             if j.required_jobs:
                 run.state = job.JOB_RUN_QUEUED
 
@@ -92,5 +96,6 @@ class JobFlow(object):
                 runs[req.name].waiting_runs.append(run)
                 run.required_runs.append(runs[req.name])
       
+        self.last = flow_run
         return flow_run
 
