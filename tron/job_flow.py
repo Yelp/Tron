@@ -12,6 +12,12 @@ class JobFlowRun(object):
         self.next = None
         self.run_time = None
 
+    def set_run_time(self, run_time):
+        self.run_time = run_time
+        for r in self.runs:
+            if not r.required_runs:
+                r.run_time = run_time
+
     def scheduled_start(self):
         if self.should_start:
             self.start()
@@ -87,7 +93,7 @@ class JobFlow(object):
             
             if j.required_jobs:
                 run.state = job.JOB_RUN_QUEUED
-
+            
             run.flow_run = flow_run
             flow_run.runs.append(run)
             runs[j.name] = run

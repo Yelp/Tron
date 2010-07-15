@@ -92,7 +92,8 @@ class JobRun(object):
         
         self.start_time = timeutils.current_time()
         self.state = JOB_RUN_RUNNING
-
+        self._open_output_file()
+        
         # And now we try to actually start some work....
         ret = self.job.node.run(self)
         if isinstance(ret, defer.Deferred):
@@ -105,7 +106,7 @@ class JobRun(object):
     def _open_output_file(self):
         if self.job.output_dir:
             if os.path.isdir(self.job.output_dir):
-                file_name = self.job.output_dir + "/" + self.flow.name + ".out"
+                file_name = self.job.output_dir + "/" + self.job.name + ".out"
             else:
                 file_name = self.job.output_dir
             

@@ -7,10 +7,6 @@ from testify.utils import turtle
 from tron import node, job, job_flow, scheduler
 from tron.utils import timeutils
 
-class TestNode(object):
-    def run(self, run):
-        return run
-
 def get_runs_by_state(job, state):
     return filter(lambda r: r.state == state, job.runs)
 
@@ -128,7 +124,9 @@ class JobRunState(TestCase):
     def build_job(self):
         self.job = job.Job(name="Test Job")
         self.job.command = "Test command"
+        self.job.node = turtle.Turtle()
         self.run = self.job.build_run()
+        self.run.flow_run = turtle.Turtle()
 
         def noop_execute():
             pass
@@ -166,44 +164,51 @@ class JobRunJobDependency(TestCase):
     def build_job(self):
         self.job = job.Job(name="Test Job1")
         self.job.command = "Test command1"
-        self.job.node = TestNode()
+        self.job.node = turtle.Turtle()
 
         self.dep_job = job.Job(name="Test Job2")
         self.dep_job.command = "Test command2"
-        self.dep_job.node = TestNode()
+        self.dep_job.node = turtle.Turtle()
+        self.dep_job.required_jobs.append(self.job)
 
-        self.job.dependants.append(self.dep_job)
-        self.run = self.job.build_run()
+        self.job_flow = job_flow.JobFlow("Test Flow", self.job)
+        self.job_flow.topo_jobs.append(self.dep_job)
+        self.job_flow.scheduler = scheduler.DailyScheduler()
+        self.flow_run = self.job_flow.next_run()
+        self.run = self.flow_run.runs[0]
+        self.dep_run = self.flow_run.runs[1]
 
     def test_success(self):
-        assert_equal(len(self.dep_job.runs), 0)
+        assert_equal(len(self.dep_job.runs), 1)
+        assert self.dep_run.is_queued
         
         self.run.start()
 
-        assert_equal(len(self.dep_job.runs), 0)
+        assert_equal(len(self.dep_job.runs), 1)
+        assert self.dep_run.is_queued
 
         self.run.succeed()
 
         assert_equal(len(self.dep_job.runs), 1)
-        dep_run = self.dep_job.runs[0]
  
-        assert dep_run.is_running
-        assert not dep_run.is_done
-        assert dep_run.start_time
-        assert not dep_run.end_time
+        assert self.dep_run.is_running
+        assert not self.dep_run.is_done
+        assert self.dep_run.start_time
+        assert not self.dep_run.end_time
        
-        dep_run.succeed()
+        self.dep_run.succeed()
 
-        assert not dep_run.is_running
-        assert dep_run.is_done
-        assert dep_run.start_time
-        assert dep_run.end_time
+        assert not self.dep_run.is_running
+        assert self.dep_run.is_done
+        assert self.dep_run.start_time
+        assert self.dep_run.end_time
               
     def test_fail(self):
         self.run.start()
         self.run.fail(1)
 
-        assert_equal(len(self.dep_job.runs), 0)
+        assert_equal(len(self.dep_job.runs), 1)
+        assert self.dep_run.is_queued
 
 
 class JobRunBuildingTest(TestCase):
@@ -235,18 +240,20 @@ class JobRunReadyTest(TestCase):
     def build_job(self):
         self.job = job.Job(name="Test Job")
         self.job.command = "Test command"
-        self.job.scheduler = scheduler.ConstantScheduler()
+        self.flow = job_flow.JobFlow("Test Flow", self.job)
+        self.flow.scheduler = scheduler.ConstantScheduler()
 
     def test_ready_no_resources(self):
-        run = self.job.next_run()
-        assert run.should_start
+        flow_run = self.flow.next_run()
+        assert flow_run.should_start
     
     def test_ready_with_resources(self):
         res = turtle.Turtle()
         res.ready = False
         self.job.resources.append(res)
         
-        run = self.job.next_run()
+        flow_run = self.flow.next_run()
+        run = flow_run.runs[0]
         assert not run.should_start
         
         res.ready = True
@@ -256,7 +263,8 @@ class JobRunReadyTest(TestCase):
 class JobRunLogFileTest(TestCase):
     @setup
     def build_job(self):
-        self.job = job.Job(name="Test Job", node=TestNode())
+        self.job = job.Job(name="Test Job", node=turtle.Turtle())
+        self.flow = job_flow.JobFlow("Test Flow", self.job)
         self.job.command = "Test command"
 
     def test_no_logging(self):

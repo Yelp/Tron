@@ -11,7 +11,7 @@ class ConstantScheduler(object):
         if flow.last:
             return None
         flow_run = flow.build_run(flow.last)
-        flow_run.run_time = timeutils.current_time()
+        flow_run.set_run_time(timeutils.current_time())
         return flow_run
 
     def __str__(self):
@@ -27,7 +27,7 @@ class DailyScheduler(object):
         run_time = (timeutils.current_time() + datetime.timedelta(days=1)).replace(hour=0, minute=1, second=1)
 
         flow_run = flow.build_run(flow.last)
-        flow_run.run_time = run_time
+        flow_run.set_run_time(run_time)
         return flow_run
 
     def __str__(self):
@@ -51,7 +51,7 @@ class IntervalScheduler(object):
             run_time = timeutils.current_time()
         
         flow_run = flow.build_run(flow.last)
-        flow_run.run_time = run_time
+        flow_run.set_run_time(run_time)
         return flow_run
 
     def __str__(self):
