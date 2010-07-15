@@ -20,7 +20,7 @@ def sleep_time(run_time):
 
 class Error(Exception): pass
 
-class JobExistsError(Error): pass
+class FlowExistsError(Error): pass
 
 class StateHandler(object):
     def __init__(self, mcp, state_dir):
@@ -81,52 +81,55 @@ class MasterControlProgram(object):
     where our daemon finds work to do
     """
     def __init__(self, state_dir):
+        self.flows = {}
         self.jobs = {}
         self.runs = {}
         self.nodes = []
         self.state_handler = StateHandler(self, state_dir)
 
-    def add_job(self, tron_job):
-        if tron_job.name in self.jobs:
-            raise JobExistsError(tron_job)
-        else:
-            self.jobs[tron_job.name] = tron_job
-    
-        if tron_job.node not in self.nodes:
-            self.nodes.append(tron_job.node) 
-        
-        tron_job.state_callback = self.state_handler.state_changed
+    def add_flow(self, tron_flow):
+        if tron_flow.name in self.flows:
+            raise FlowExistsError(tron_flow)
+            
+        self.flows[tron_flow.name] = tron_flow
 
-    def _schedule_next_run(self, job, prev=None):
-        next = job.next_run(prev)
+        for tron_job in tron_flow.topo_jobs:
+            self.jobs[tron_job.name] = tron_job
+            
+            if tron_job.node not in self.nodes:
+                self.nodes.append(tron_job.node) 
+            tron_job.state_callback = self.state_handler.state_changed
+
+    def _schedule_next_run(self, flow, prev=None):
+        next = flow.next_run(prev)
         if not next is None:
-            log.info("Scheduling next run for %s", job.name)
-            reactor.callLater(sleep_time(next.run_time), self.run_job, next)
-            self.runs[next.id] = next
+            log.info("Scheduling next flow for %s", next.flow.name)
+            reactor.callLater(sleep_time(next.run_time), self.run_flow, next)
+            for run in next.runs:
+                self.runs[run.id] = run
 
         return next
 
-    def run_job(self, now):
-        """This runs when a job was scheduled.
+    def run_flow(self, now):
+        """This runs when a flow was scheduled.
         
-        Here we run the job and schedule the next time it should run
+        Here we run the flow and schedule the next time it should run
         """
-        log.debug("Running next scheduled job")
-        next = self._schedule_next_run(now.job, now)
+        log.debug("Running next scheduled flow")
+        next = self._schedule_next_run(now.flow, now)
         now.scheduled_start()
 
-    def run_jobs(self):
-        """This schedules the first time each job runs"""
+    def run_flows(self):
+        """This schedules the first time each flow runs"""
         if os.path.isfile(self.state_handler.get_state_file_path()):
             self.state_handler.load_data()
 
-        for tron_job in self.jobs.itervalues():
-            if self.state_handler.has_data(tron_job):
-                self.state_handler.restore_job(tron_job)
-            elif tron_job.scheduler:
-                self._schedule_next_run(tron_job)
+        for tron_flow in self.flows.itervalues():
+            if self.state_handler.has_data(tron_flow):
+                self.state_handler.restore_flow(tron_flow)
+            elif tron_flow.scheduler:
+                self._schedule_next_run(tron_flow)
         
         self.state_handler.writing_enabled = True
         self.state_handler.store_data()
-        
 

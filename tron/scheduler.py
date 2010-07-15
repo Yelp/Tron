@@ -7,57 +7,53 @@ log = logging.getLogger('tron.scheduler')
 
 class ConstantScheduler(object):
     """The constant scheduler only schedules the first one but sets itself as a dependant so always runs"""
-    def next_run(self, job):
-        if not job.runs:
-            run = job.build_run()
-            run.run_time = timeutils.current_time()
-            return run
-        return None
+    def next_run(self, flow):
+        if flow.prev:
+            return None
+        flow.run_time = timeutils.current_time()
+        return flow
 
     def __str__(self):
         return "CONSTANT"
 
-    def set_job_queueing(self, job):
-        job.dependants.append(job)
+    def set_flow_queueing(self, flow):
+        pass
 
 class DailyScheduler(object):
     """The daily scheduler schedules one run per day"""
-    def next_run(self, job):
-        run = job.build_run()
-
+    def next_run(self, flow):
         # For a daily scheduler, always assume the next job run is tomorrow
         run_time = (timeutils.current_time() + datetime.timedelta(days=1)).replace(hour=0, minute=1, second=1)
 
-        run.run_time = run_time
-        return run
+        flow.run_time = run_time
+        return flow
 
     def __str__(self):
         return "DAILY"
 
-    def set_job_queueing(self, job):
-        job.queueing = True
+    def set_flow_queueing(self, flow):
+        flow.queueing = True
 
 class IntervalScheduler(object):
-    """The interval scheduler runs a job (to success) based on a configured interval
+    """The interval scheduler runs a flow (to success) based on a configured interval
     """
     def __init__(self, interval=None):
         self.interval = interval
     
-    def next_run(self, job):
+    def next_run(self, flow):
         # Find the last success to pick the next time to run
-        if job.runs:
-            run_time = job.runs[-1].run_time + self.interval
+        if flow.prev:
+            run_time = flow.prev.run_time + self.interval
         else:
-            log.debug("Found no past runs for job %s, next run is now", job.name)
+            log.debug("Found no past runs for flow %s, next run is now", flow.flow.name)
             run_time = timeutils.current_time()
         
-        run = job.build_run()
-        run.run_time = run_time
-        return run
+        flow.run_time = run_time
+        return flow
 
     def __str__(self):
         return "INTERVAL:%s" % self.interval
         
-    def set_job_queueing(self, job):
-        job.queueing = False
+    def set_flow_queueing(self, flow):
+        flow.queueing = False
 

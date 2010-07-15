@@ -13,9 +13,9 @@ log = logging.getLogger('tron.job')
 
 JOB_RUN_SCHEDULED = 0
 JOB_RUN_QUEUED = 1
-JOB_RUN_RUNNING = 2
-JOB_RUN_CANCELLED = 3
-JOB_RUN_UNKNOWN = 4
+JOB_RUN_CANCELLED = 2
+JOB_RUN_UNKNOWN = 3
+JOB_RUN_RUNNING = 4
 JOB_RUN_FAILED = 10
 JOB_RUN_SUCCEEDED = 11
 
@@ -69,51 +69,32 @@ class JobRun(object):
     def __init__(self, job):
         super(JobRun, self).__init__()
         self.job = job
-        
         self.id = "%s.%s" % (job.name, uuid.uuid4().hex)
         
         self.run_time = None    # What time are we supposed to start
-        self.output_file = None
-       
         self.start_time = None  # What time did we start
         self.end_time = None    # What time did we end
 
         self.state = JOB_RUN_SCHEDULED
         self.exit_status = None
-        self.prev = None
-        self.next = None
+        self.output_file = None
+        self.flow_run = None
 
-    def scheduled_start(self):
-        """Called when the job is scheduled to run.
+        self.required_runs = []
+        self.waiting_runs = []
 
-        If the job should start then it starts.  Otherwise, if queueing is enabled
-        it queues the job, if not, cancels the job.
-        """
+    def attempt_start(self):
         if self.should_start:
             self.start()
-
-        elif self.job.queueing:
-            log.warning("Previous job, %s, not finished - placing in queue", self.job.name)
-            self.state = JOB_RUN_QUEUED
-        else:
-            log.warning("Previous job, %s, not finished - cancelling instance", self.job.name)
-            self.state = JOB_RUN_CANCELLED
-
-        self.job.state_changed(self)
-
-    def delayed_start(self):
-        if self.is_queued:
-           self.start()
 
     def start(self):
         log.info("Starting job run %s", self.id)
         
         self.start_time = timeutils.current_time()
         self.state = JOB_RUN_RUNNING
-        self.job.state_changed(self)
 
         # And now we try to actually start some work....
-        ret = self._execute()
+        ret = self.job.node.run(self)
         if isinstance(ret, defer.Deferred):
             self._setup_callbacks(ret)
 
@@ -124,7 +105,7 @@ class JobRun(object):
     def _open_output_file(self):
         if self.job.output_dir:
             if os.path.isdir(self.job.output_dir):
-                file_name = self.job.output_dir + "/" + self.job.name + ".out"
+                file_name = self.job.output_dir + "/" + self.flow.name + ".out"
             else:
                 file_name = self.job.output_dir
             
@@ -133,10 +114,6 @@ class JobRun(object):
                 self.output_file = open(file_name, 'a')
             except IOError, e:
                 log.error(str(e) + " - Not storing command output!")
-
-    def _execute(self):
-        self._open_output_file()
-        return self.job.node.run(self)
 
     def _handle_errback(self, result):
         """Handle an error where the node wasn't able to give us an exit code"""
@@ -165,27 +142,17 @@ class JobRun(object):
         
     def _setup_callbacks(self, deferred):
         """Execution has been deferred, so setup the callbacks so we can record our own status"""
-        
         deferred.addCallback(self._handle_callback)
         deferred.addErrback(self._handle_errback)
 
     def start_dependants(self):
-        dep = self.next
-        while dep and dep.is_cancelled:
-            dep = dep.next
-        
-        if dep and dep.is_queued:
-            dep.delayed_start()
-       
-        for job in self.job.dependants:
-            run = job.build_run()
+        for run in self.waiting_runs:
             run.run_time = timeutils.current_time()
-            run.start()
+            run.attempt_start()
 
     def ignore_dependants(self):
-        if self.next and self.next.is_queued:
-            log.info("Not running waiting run %s, the dependant job failed", self.next.id)
-        [log.info("Not running job %s, the dependant job failed", j.name) for j in self.job.dependants]
+        for run in self.waiting_runs:
+            log.info("Not running waiting run %s, the dependant job failed", run.id)
 
     def fail(self, exit_status):
         """Mark the run as having failed, providing an exit status"""
@@ -194,7 +161,6 @@ class JobRun(object):
         self.state = JOB_RUN_FAILED
         self.exit_status = exit_status
         self.end_time = timeutils.current_time()
-        self.job.state_changed(self)
 
     def fail_unknown(self):
         """Mark the run as having failed, but note that we don't actually know what result was"""
@@ -203,7 +169,6 @@ class JobRun(object):
         self.state = JOB_RUN_FAILED
         self.exit_status = None
         self.end_time = None
-        self.job.state_changed(self)
 
     def succeed(self):
         """Mark the run as having succeeded"""
@@ -213,7 +178,7 @@ class JobRun(object):
         self.state = JOB_RUN_SUCCEEDED
         self.end_time = timeutils.current_time()
         
-        self.job.state_changed(self)
+        self.flow_run.run_completed()
         self.start_dependants()
 
     def restore_state(self, state):
@@ -224,18 +189,10 @@ class JobRun(object):
 
         if self.is_running:
             self.state = JOB_RUN_UNKNOWN
-        if 'previous' in state:
-            self.prev = self.job.get_run_by_id(state['previous'])
-            self.prev.next = self
-            self.job.state_changed(self.prev)
         
-        self.job.state_changed(self)
-
     @property
     def state_data(self):
         data = {'state': self.state, 'run_time': self.run_time, 'start_time': self.start_time, 'end_time': self.end_time, 'command': self.command}
-        if self.prev:
-            data['previous'] = self.prev.id
 
         return data
 
@@ -285,56 +242,24 @@ class JobRun(object):
 
     @property
     def should_start(self):
-        if self.state != JOB_RUN_SCHEDULED:
+        if not all([r.is_success for r in self.required_runs]):
             return False
-        prev_ran = self.prev
-        while prev_ran and not prev_ran.is_success:
-            if not prev_ran.is_cancelled:
-                return False
-            prev_ran = prev_ran.prev
-
         # Ok, it's time, what about our jobs dependencies
         return bool(all(r.ready for r in self.job.resources))
-
-
+ 
 class Job(object):
     def __init__(self, name=None, node=None, timeout=None):
         self.name = name
         self.node = node
-        self.scheduler = None
         self.timeout = timeout
         self.runs = []
         self.resources = []
-        self.output_dir = None
-        
-        self.depend = None
-        self.dependants = []
-        self.queueing = False
-        
+
+        self.required_jobs = []
         self.data = {}
         self.state_callback = None
-
-    def state_changed(self, run):
-        self.data[run.id] = run.state_data
-        if self.state_callback:
-            self.state_callback(self)
-
-    def next_run(self, prev=None):
-        """Check the scheduler and decide when the next run should be"""
-        if self.scheduler:
-            next = self.scheduler.next_run(self)
-            if next is None:
-                return None
-
-            next.prev = prev
-            if next.prev:
-                next.prev.next = next
-                self.state_changed(next.prev)
-
-            self.state_changed(next)
-            return next
-        
-        return None
+        self.output_dir = None
+        self.flow = None
 
     def build_run(self):
         """Build an instance of JobRun for this job
@@ -353,7 +278,6 @@ class Job(object):
         restored = self.build_run()
         restored.id = id
         restored.restore_state(state)
-        self.state_changed(restored)
         return restored
     
     def get_run_by_id(self, id):
@@ -362,7 +286,7 @@ class Job(object):
 
     @property
     def scheduler_str(self):
-        return str(self.scheduler) if self.scheduler else "FOLLOW:%s" % self.depend.name
+        return str(self.flow.scheduler) if self.flow.scheduler else "FOLLOW:%s" % self.depend.name
 
 class JobSet(object):
     def __init__(self):

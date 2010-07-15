@@ -68,7 +68,7 @@ def main():
         sys.exit("Specified state directory \'%s\' is not writable" % state_dir)
 
     # Setup the mcp polling
-    reactor.callLater(1, master_control.run_jobs)
+    reactor.callLater(1, master_control.run_flows)
     
     # Start up our web management interface
     reactor.listenTCP(8082, server.Site(www.RootResource(master_control)))
