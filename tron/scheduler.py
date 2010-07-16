@@ -8,9 +8,9 @@ log = logging.getLogger('tron.scheduler')
 class ConstantScheduler(object):
     """The constant scheduler only schedules the first one but sets itself as a dependant so always runs"""
     def next_run(self, flow):
-        if flow.last:
+        if flow.runs:
             return None
-        flow_run = flow.build_run(flow.last)
+        flow_run = flow.build_run()
         flow_run.set_run_time(timeutils.current_time())
         return flow_run
 
@@ -26,7 +26,8 @@ class DailyScheduler(object):
         # For a daily scheduler, always assume the next job run is tomorrow
         run_time = (timeutils.current_time() + datetime.timedelta(days=1)).replace(hour=0, minute=1, second=1)
 
-        flow_run = flow.build_run(flow.last)
+        last = flow.runs[-1] if flow.runs else None
+        flow_run = flow.build_run(last)
         flow_run.set_run_time(run_time)
         return flow_run
 
@@ -44,13 +45,15 @@ class IntervalScheduler(object):
     
     def next_run(self, flow):
         # Find the last success to pick the next time to run
-        if flow.last:
-            run_time = flow.last.run_time + self.interval
+        if flow.runs:
+            last = flow.runs[-1]
+            run_time = last.run_time + self.interval
         else:
             log.debug("Found no past runs for flow %s, next run is now", flow.name)
+            last = None
             run_time = timeutils.current_time()
         
-        flow_run = flow.build_run(flow.last)
+        flow_run = flow.build_run(last)
         flow_run.set_run_time(run_time)
         return flow_run
 

@@ -67,7 +67,6 @@ class JobRunVariables(object):
 class JobRun(object):
     """An instance of running a job"""
     def __init__(self, job):
-        super(JobRun, self).__init__()
         self.job = job
         self.id = "%s.%s" % (job.name, uuid.uuid4().hex)
         
@@ -75,13 +74,15 @@ class JobRun(object):
         self.start_time = None  # What time did we start
         self.end_time = None    # What time did we end
 
-        self.state = JOB_RUN_SCHEDULED
+        self.state = JOB_RUN_QUEUED if job.required_jobs else JOB_RUN_SCHEDULED
         self.exit_status = None
         self.output_file = None
         self.flow_run = None
 
         self.required_runs = []
         self.waiting_runs = []
+        self.data = {}
+        self.state_changed()
 
     def attempt_start(self):
         if self.should_start:
@@ -93,7 +94,8 @@ class JobRun(object):
         self.start_time = timeutils.current_time()
         self.state = JOB_RUN_RUNNING
         self._open_output_file()
-        
+        self.state_changed()
+
         # And now we try to actually start some work....
         ret = self.job.node.run(self)
         if isinstance(ret, defer.Deferred):
@@ -102,7 +104,13 @@ class JobRun(object):
     def cancel(self):
         if self.is_scheduled or self.is_queued:
             self.state = JOB_RUN_CANCELLED
+            self.state_changed()
     
+    def queue(self):
+        if self.is_scheduled or self.is_cancelled:
+            self.state = JOB_RUN_QUEUED
+            self.state_changed()
+
     def _open_output_file(self):
         if self.job.output_dir:
             if os.path.isdir(self.job.output_dir):
@@ -162,6 +170,7 @@ class JobRun(object):
         self.state = JOB_RUN_FAILED
         self.exit_status = exit_status
         self.end_time = timeutils.current_time()
+        self.state_changed()
 
     def fail_unknown(self):
         """Mark the run as having failed, but note that we don't actually know what result was"""
@@ -170,6 +179,7 @@ class JobRun(object):
         self.state = JOB_RUN_FAILED
         self.exit_status = None
         self.end_time = None
+        self.state_changed()
 
     def succeed(self):
         """Mark the run as having succeeded"""
@@ -180,9 +190,11 @@ class JobRun(object):
         self.end_time = timeutils.current_time()
         
         self.flow_run.run_completed()
+        self.state_changed()
         self.start_dependants()
 
     def restore_state(self, state):
+        self.id = state['id']
         self.state = state['state']
         self.run_time = state['run_time']
         self.start_time = state['start_time']
@@ -191,11 +203,16 @@ class JobRun(object):
         if self.is_running:
             self.state = JOB_RUN_UNKNOWN
         
-    @property
-    def state_data(self):
-        data = {'state': self.state, 'run_time': self.run_time, 'start_time': self.start_time, 'end_time': self.end_time, 'command': self.command}
-
-        return data
+    def state_changed(self):
+        self.data['id'] = self.id
+        self.data['state'] = self.state
+        self.data['run_time'] = self.run_time
+        self.data['start_time'] = self.start_time
+        self.data['end_time'] = self.end_time
+        self.data['command'] = self.command
+        
+        if self.job.flow.state_callback:
+            self.job.flow.state_callback()
 
     @property
     def command(self):
@@ -243,10 +260,10 @@ class JobRun(object):
 
     @property
     def should_start(self):
-        if not all([r.is_success for r in self.required_runs]):
+        if not self.is_scheduled and not self.is_queued:
             return False
-        # Ok, it's time, what about our jobs dependencies
-        return bool(all(r.ready for r in self.job.resources))
+
+        return all([r.is_success for r in self.required_runs])
  
 class Job(object):
     def __init__(self, name=None, node=None, timeout=None):
@@ -254,11 +271,8 @@ class Job(object):
         self.node = node
         self.timeout = timeout
         self.runs = []
-        self.resources = []
 
         self.required_jobs = []
-        self.data = {}
-        self.state_callback = None
         self.output_dir = None
         self.flow = None
 
@@ -289,26 +303,3 @@ class Job(object):
     def scheduler_str(self):
         return str(self.flow.scheduler) if self.flow.scheduler else "FOLLOW:%s" % self.depend.name
 
-class JobSet(object):
-    def __init__(self):
-        """docstring for __init__"""
-        self.jobs = {}
-
-    def sync_to_config(self, config):
-        found_jobs = []
-        for job_config in config.jobs:
-            found_jobs.append(job_config.name)
-            existing_job = self.jobs.get(job_config.name)
-            if existing_job is None:
-                # Create a new one
-                job = Job()
-                job.configure(job_config)
-                self.jobs[job.name] = job
-            else:
-                existing_job.configure(job_config)
-
-        for job_name in self.jobs.iterkeys():
-            if job_name not in found_jobs:
-                dead_job = self.jobs[job_name]
-                self.jobs.remove(dead_job)
-                

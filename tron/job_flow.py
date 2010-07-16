@@ -7,13 +7,17 @@ log = logging.getLogger('tron.job_flow')
 class JobFlowRun(object):
     def __init__(self, flow, prev=None):
         self.flow = flow
-        self.runs = []
         self.prev = prev
         self.next = None
         self.run_time = None
+        
+        self.runs = []
+        self.data = {'runs':[], 'run_time':None}
 
     def set_run_time(self, run_time):
         self.run_time = run_time
+        self.data['run_time'] = run_time
+
         for r in self.runs:
             if not r.required_runs:
                 r.run_time = run_time
@@ -30,9 +34,7 @@ class JobFlowRun(object):
 
     def start(self):
         log.info("Starting job flow %s", self.flow.name)
-        for r in self.runs:
-            if not r.required_runs:
-                r.start()
+        [r.attempt_start() for r in self.runs]
         
     def run_completed(self):
         if self.is_success:
@@ -42,8 +44,7 @@ class JobFlowRun(object):
                 self.flow.build_run(self).start()
 
     def queue(self):
-        for r in self.runs:
-            r.state = job.JOB_RUN_QUEUED 
+        [r.queue() for r in self.runs]
         
     def cancel(self):
         [r.cancel() for r in self.runs]
@@ -55,6 +56,10 @@ class JobFlowRun(object):
     @property
     def is_queued(self):
         return all([r.is_queued for r in self.runs])
+    
+    @property
+    def is_scheduled(self):
+        return any([r.is_scheduled for r in self.runs])
 
     @property
     def is_cancelled(self):
@@ -74,8 +79,11 @@ class JobFlow(object):
         self.topo_jobs = [job] if job else []
         self.scheduler = None
         self.queueing = False
-        self.last = None
+        self.runs = []
         self.constant = False
+        
+        self.state_callback = None
+        self.data = []
 
     def next_run(self):
         if not self.scheduler:
@@ -91,17 +99,24 @@ class JobFlow(object):
         for j in self.topo_jobs:
             run = j.build_run()
             
-            if j.required_jobs:
-                run.state = job.JOB_RUN_QUEUED
-            
             run.flow_run = flow_run
-            flow_run.runs.append(run)
             runs[j.name] = run
+            
+            flow_run.runs.append(run)
+            flow_run.data['runs'].append(run.data)
 
             for req in j.required_jobs:
                 runs[req.name].waiting_runs.append(run)
                 run.required_runs.append(runs[req.name])
       
-        self.last = flow_run
+        self.runs.append(flow_run)
+        self.data.append(flow_run.data)
         return flow_run
 
+    def restore_run(self, data, prev=None):
+        run = self.build_run(prev)
+        for r, state in zip(run.runs, data['runs']):
+            r.restore_state(state)
+        
+        run.set_run_time(data['run_time'])
+        return run

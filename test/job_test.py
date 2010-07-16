@@ -17,6 +17,7 @@ class TestJob(TestCase):
         self.job = job.Job(name="Test Job")
         self.job.command = "Test command"
         self.flow = job_flow.JobFlow("Test Flow", self.job)
+        self.job.flow = self.flow
 
     def test_next_run(self):
         assert_equals(self.flow.next_run(), None)
@@ -71,6 +72,7 @@ class TestJobRun(TestCase):
         self.flow = job_flow.JobFlow("Test Flow", self.job)
         self.flow.scheduler = scheduler.DailyScheduler()
         self.flow.queueing = True
+        self.job.flow = self.flow
         self.job.command = "Test command"
 
         self.flow_run = self.flow.next_run()
@@ -217,6 +219,7 @@ class JobRunBuildingTest(TestCase):
     def build_job(self):
         self.job = job.Job(name="Test Job")
         self.flow = job_flow.JobFlow(self.job)
+        self.job.flow = self.flow
 
     def test_build_run(self):
         run = self.job.build_run()
@@ -241,6 +244,7 @@ class JobRunReadyTest(TestCase):
         self.job = job.Job(name="Test Job")
         self.job.command = "Test command"
         self.flow = job_flow.JobFlow("Test Flow", self.job)
+        self.job.flow = self.flow
         self.flow.scheduler = scheduler.ConstantScheduler()
 
     def test_ready_no_resources(self):
@@ -265,6 +269,7 @@ class JobRunLogFileTest(TestCase):
     def build_job(self):
         self.job = job.Job(name="Test Job", node=turtle.Turtle())
         self.flow = job_flow.JobFlow("Test Flow", self.job)
+        self.job.flow = self.flow
         self.job.command = "Test command"
 
     def test_no_logging(self):
@@ -300,6 +305,7 @@ class JobRunVariablesTest(TestCase):
     def build_job(self):
         self.job = job.Job(name="Test Job")
         self.flow = job_flow.JobFlow("Test Flow", self.job)
+        self.job.flow = self.flow
         self.flow.scheduler = scheduler.ConstantScheduler()
     
     def _cmd(self):

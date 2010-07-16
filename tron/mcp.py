@@ -23,36 +23,34 @@ class Error(Exception): pass
 class FlowExistsError(Error): pass
 
 class StateHandler(object):
-    def __init__(self, mcp, state_dir):
+    def __init__(self, mcp, state_dir, writing=False):
         self.data = {}
         self.mcp = mcp
         self.state_dir = state_dir
         self.write_proc = None
-        self.writing_enabled = False
+        self.writing_enabled = writing
 
-    def _restore_run(self, job, id, state):
-        run = job.restore(id, state)
-        self.mcp.runs[id] = run
-        
-        if run.is_scheduled:
-            sleep = sleep_time(run.run_time)
-            if sleep == 0:
-                run.run_time = timeutils.current_time()
-            reactor.callLater(sleep, self.mcp.run_job, run)
+    def _reschedule(self, run):
+        sleep = sleep_time(run.run_time)
+        if sleep == 0:
+            run.run_time = timeutils.current_time()
+        reactor.callLater(sleep, self.mcp.run_flow, run)
 
-    def restore_job(self, job):
-        old_runs = sorted(self.data[job.name].iteritems(), key=lambda (i, s): s['run_time'])
+    def restore_flow(self, flow):
+        prev = None
+        for data in self.data[flow.name]:
+            run = flow.restore_run(data, prev)
+            
+            if run.is_scheduled:
+                self._reschedule(run)
+            prev = run
 
-        for id, state in old_runs:
-            self._restore_run(job, id, state)
-
-    def state_changed(self, job):
-        self.data[job.name] = job.data
+    def state_changed(self):
         if self.writing_enabled:
             self.store_data() 
 
-    def has_data(self, job):
-        return job.name in self.data
+    def has_data(self, flow):
+        return flow.name in self.data
     
     def store_data(self):
         if self.write_proc and self.write_proc.poll() is None:
@@ -61,7 +59,7 @@ class StateHandler(object):
         log.info("Storing schedule in %s", STATE_FILE)
         file_path = '%s/%s' % (self.state_dir, STATE_FILE)
         
-        dump = yaml.dump(self.data, default_flow_style=False)
+        dump = yaml.dump(self.data, default_flow_style=False, indent=4)
         self.write_proc = subprocess.Popen(['/bin/sh', '-c', 'echo "%s" > %s' % (dump, file_path)])
 
     def get_state_file_path(self):
@@ -92,13 +90,13 @@ class MasterControlProgram(object):
             raise FlowExistsError(tron_flow)
             
         self.flows[tron_flow.name] = tron_flow
+        tron_flow.state_callback = self.state_handler.state_changed
 
         for tron_job in tron_flow.topo_jobs:
             self.jobs[tron_job.name] = tron_job
             
             if tron_job.node not in self.nodes:
                 self.nodes.append(tron_job.node) 
-            tron_job.state_callback = self.state_handler.state_changed
 
     def _schedule_next_run(self, flow):
         next = flow.next_run()
@@ -127,8 +125,9 @@ class MasterControlProgram(object):
         for tron_flow in self.flows.itervalues():
             if self.state_handler.has_data(tron_flow):
                 self.state_handler.restore_flow(tron_flow)
-            elif tron_flow.scheduler:
+            else:
                 self._schedule_next_run(tron_flow)
+                self.state_handler.data[tron_flow.name] = tron_flow.data
         
         self.state_handler.writing_enabled = True
         self.state_handler.store_data()
