@@ -9,7 +9,7 @@ import os.path
 import yaml
 from twisted.conch.client import options
 
-from tron import job, job_flow, node, scheduler, monitor, emailer
+from tron import task, job, node, scheduler, monitor, emailer
 
 log = logging.getLogger("tron.config")
 
@@ -45,26 +45,26 @@ class _ConfiguredObject(yaml.YAMLObject):
 class TronConfiguration(yaml.YAMLObject):
     yaml_tag = u'!TronConfiguration'
 
-    def _apply_jobs(self, mcp):
-        """Configure jobs"""
-        found_jobs = []
-        found_flows = {}
-        for job_config in self.jobs:
-            found_jobs.append(job_config.name)
-            new_job = job_config.actualized
-            log.debug("Building new job %s", job_config.name)
+    def _apply_tasks(self, mcp):
+        """Configure tasks"""
+        found_tasks = []
+        found_jobs = {}
+        for task_config in self.tasks:
+            found_tasks.append(task_config.name)
+            new_task = task_config.actualized
+            log.debug("Building new task %s", task_config.name)
 
-            if not new_job.flow.name in found_flows:
-                found_flows[new_job.flow.name] = new_job.flow
+            if not new_task.job.name in found_jobs:
+                found_jobs[new_task.job.name] = new_task.job
 
-        for flow in found_flows.itervalues():
-            mcp.add_flow(flow)
+        for job in found_jobs.itervalues():
+            mcp.add_job(job)
 
-        for flow_name in mcp.flows.iterkeys():
-            if flow_name not in found_jobs:
-                log.debug("Removing flow %s", flow_name)
-                dead_flow = mcp.flows[flow_name]
-                mcp.flows.remove(dead_flow)
+        for job_name in mcp.jobs.iterkeys():
+            if job_name not in found_tasks:
+                log.debug("Removing job %s", job_name)
+                dead_job = mcp.jobs[job_name]
+                mcp.jobs.remove(dead_job)
     
     def _get_state_dir(self, mcp):
         if mcp.state_handler.state_dir:
@@ -77,7 +77,7 @@ class TronConfiguration(yaml.YAMLObject):
     
     def apply(self, mcp):
         """Apply the configuration to the specified master control program"""
-        self._apply_jobs(mcp)
+        self._apply_tasks(mcp)
         if hasattr(self, 'ssh_options'):
             self.ssh_options._apply(mcp)
         
@@ -135,44 +135,44 @@ class NotificationOptions(yaml.YAMLObject):
         mcp.monitor.start()
 
 
-class Job(_ConfiguredObject):
-    yaml_tag = u'!Job'
-    actual_class = job.Job
+class Task(_ConfiguredObject):
+    yaml_tag = u'!Task'
+    actual_class = task.Task
     
     def _apply(self):
-        """Configured the specific job instance"""
-        real_job = self._ref()
-        real_job.name = self.name
-        real_job.command = self.command
-        real_job.dependants = []
-        real_job.output_dir = self.output_dir if hasattr(self, "output_dir") else None
+        """Configured the specific task instance"""
+        real_task = self._ref()
+        real_task.name = self.name
+        real_task.command = self.command
+        real_task.dependants = []
+        real_task.output_dir = self.output_dir if hasattr(self, "output_dir") else None
 
         # Set the node
-        real_job.node = self.node.actualized if hasattr(self, "node") else None
+        real_task.node = self.node.actualized if hasattr(self, "node") else None
 
         if not hasattr(self, "schedule") and not hasattr(self, "follow_on_success"):
-            raise Error("Job configuration needs a schedule or follow_on_success option")
+            raise Error("Task configuration needs a schedule or follow_on_success option")
         
         if hasattr(self, "follow_on_success"):
-            real_job.required_jobs.append(self.follow_on_success.actualized)
-            real_job.flow = self.follow_on_success.actualized.flow
-            real_job.flow.topo_jobs.append(real_job)
+            real_task.required_tasks.append(self.follow_on_success.actualized)
+            real_task.job = self.follow_on_success.actualized.job
+            real_task.job.topo_tasks.append(real_task)
 
         # Build scheduler
         if hasattr(self, "schedule"):
-            real_job.flow = job_flow.JobFlow(real_job.name, real_job)
+            real_task.job = job.Job(real_task.name, real_task)
 
             if isinstance(self.schedule, basestring):
                 # This is a short string
-                real_job.flow.scheduler = Scheduler.from_string(self.schedule)
+                real_task.job.scheduler = Scheduler.from_string(self.schedule)
             else:
                 # This is a scheduler instance, which has more info
-                real_job.flow.scheduler = self.schedule.actualized
+                real_task.job.scheduler = self.schedule.actualized
 
-            real_job.flow.scheduler.set_flow_queueing(real_job.flow)
+            real_task.job.scheduler.set_job_queueing(real_task.job)
 
         if hasattr(self, "queueing_enabled"):
-            real_job.flow.queueing = self.queueing_enabled
+            real_task.job.queueing = self.queueing_enabled
 
 
 class Node(_ConfiguredObject):
@@ -188,8 +188,8 @@ class NodeResource(yaml.YAMLObject):
     yaml_tag = u'!NodeResource'
 
 
-class JobResource(yaml.YAMLObject):
-    yaml_tag = u'!JobResource'
+class TaskResource(yaml.YAMLObject):
+    yaml_tag = u'!TaskResource'
 
 
 class FileResource(yaml.YAMLObject):

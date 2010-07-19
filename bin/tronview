@@ -9,9 +9,7 @@ TROND_SERVICE = "http://localhost:8082"
 JOBS_COLUMNS = (
     ('Name', 20,),
     ('Scheduler', 20,),
-    ("Node", 25,),
     ("Last Success", 28,),
-    ("Status", 10,),
 )
 
 RUNS_COLUMNS = (
@@ -33,7 +31,7 @@ def parse_options():
 
     return options, args[1:]
 
-def view_jobs(options):
+def view_all(options):
     """docstring for view_jobs"""
 
     status, content = cmd.request(options, "/jobs")
@@ -50,7 +48,7 @@ def view_jobs(options):
 
         # Show job data
         for job in content['jobs']:
-            print " ".join(str(val).ljust(size) for val, (_, size) in zip((job['name'], job['scheduler'], job['node'], job['last_success'], job['status']), JOBS_COLUMNS))
+            print " ".join(str(val).ljust(size) for val, (_, size) in zip((job['name'], job['scheduler'], job['last_success']), JOBS_COLUMNS))
 
 def view_job(options, job_name):
     """Retrieve details of the specified job and display"""
@@ -60,7 +58,6 @@ def view_job(options, job_name):
         sys.exit(1)
 
     print "Job: %s" % job_content['name']
-    print "Node: %s" % job_content['node']
     print "Scheduler: %s" % job_content['scheduler']
     print
     print "Run History: (%d total)" % len(job_content['runs'])
@@ -69,28 +66,25 @@ def view_job(options, job_name):
         run_id = run['id']
         run_state = run['state']
 
-        if run['exit_status'] is None:
-            run_exit = "-"
-        else:
-            run_exit = run['exit_status']
-       
         if run['run_time'] is None:
             run_time = "-"
         else:
             run_time = run['run_time'][:-7]
 
         if run['start_time'] is None:
-            run_start = "-"
+            start_time = "-"
         else:
-            run_start = run['start_time'][:-7]
+            start_time = run['start_time'][:-7]
 
         if run['end_time'] is None:
-            run_end = "-"
+            end_time = "-"
         else:
-            run_end = run['end_time'][:-7]
+            end_time = run['end_time'][:-7]
 
-            
-        print "\t" + " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, run_start, run_end), RUNS_COLUMNS))
+        print "\t" + " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time), RUNS_COLUMNS))
+
+def view_job_run(options, job_run_id):
+    status, job_run_content = cmd.request(options, "/jobs/runs/%s" % job_name)
 
 def main():
     """run tronview"""
@@ -107,10 +101,12 @@ def main():
         print >>sys.stderr, "Error connecting to tron server at %s" % options.server
         sys.exit(1)
 
-    if args:
+    if not args:
+        view_all(options, )
+    elif args[0].count('.') == 0:
         view_job(options, args[0])
     else:
-        view_jobs(options, )
+        view_job_run(options, args[0])
 
     cmd.save_config(options)
 

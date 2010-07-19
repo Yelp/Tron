@@ -56,21 +56,20 @@ def respond(request, response_dict, code=http.OK, headers=None):
     return ""
 
 def job_run_state(job_run):
-    if job_run.is_done:
-        if job_run.is_success:
-            state = "SUCC"
-        elif job_run.is_cancelled:
-            state = "CANC"
-        else:
-            state = "FAIL"
-    elif job_run.is_running:
-        state = "RUNN"
+    if job_run.is_success:
+        state = "SUCC"
+    elif job_run.is_cancelled:
+        state = "CANC"
+    elif job_run.is_failed:
+        state = "FAIL"
+    elif job_run.is_scheduled:
+        state = "SCHE"
     elif job_run.is_unknown:
         state = "UNKWN"
     elif job_run.is_queued:
         state = "QUE"
     else:
-        state = "SCHE"
+        state = "RUNN"
 
     return state
 
@@ -153,6 +152,7 @@ class JobResource(resource.Resource):
         resource.Resource.__init__(self)
 
     def getChild(self, name, request):
+        print "JOB RESOURCE"
         if name == '':
             return self
         else:
@@ -173,7 +173,6 @@ class JobResource(resource.Resource):
                 'run_time': job_run.run_time and str(job_run.run_time),
                 'start_time': job_run.start_time and str(job_run.start_time),
                 'end_time': job_run.end_time and str(job_run.end_time),
-                'exit_status': job_run.exit_status,
                 'state': state,
             })
 
@@ -181,10 +180,8 @@ class JobResource(resource.Resource):
 
         output = {
             'name': self._job.name,
-            'node': self._job.node.hostname,
-            'scheduler': self._job.scheduler_str,
+            'scheduler': str(self._job.scheduler),
             'runs': run_output,
-            'resources': resources_output,
         }
         return respond(request, output)
 
@@ -235,14 +232,20 @@ class JobsResource(resource.Resource):
 
 
     def getChild(self, name, request):
+        print "JOBS RESOURCE"
         if name == '':
             return self
         else:
-            found_job = self._master_control.jobs.get(name)
-            if found_job is None:
+            job_name, _, run_num = name.rpartition('.')
+            if job_name == '':
+                found = self._master_control.jobs.get(name)
+            else:
+                job = self._master_control.jobs.get(job_name)
+                found = job.runs[int(run_num)] if job else None
+            if found is None:
                 return error.NoResource()
             else:
-                return JobResource(found_job)
+                return JobResource(found)
     
     def render_GET(self, request):
         request.setHeader("content-type", "text/json")
@@ -250,13 +253,8 @@ class JobsResource(resource.Resource):
         job_list = []
         for current_job in self._master_control.jobs.itervalues():
             last_success = None
-            status = ""
             if current_job.runs:
                 last_job = current_job.runs[-1]
-                if last_job.is_running:
-                    status = "running"
-                elif not last_job.is_done:
-                    status = "waiting"
                 
                 for job_run in reversed(current_job.runs):
                     if job_run.is_success:
@@ -266,9 +264,7 @@ class JobsResource(resource.Resource):
             job_desc = {
                 'name': current_job.name,
                 'href': request.childLink(current_job.name),
-                'node': current_job.node.hostname,
-                'scheduler': current_job.scheduler_str,
-                'status': status,
+                'scheduler': str(current_job.scheduler),
                 'last_success': last_success,
             }
             job_list.append(job_desc)
@@ -286,6 +282,7 @@ class RunsResource(resource.Resource):
         resource.Resource.__init__(self)
 
     def getChild(self, name, request):
+        print "RUNS RESOURCE"
         found_run = self._master_control.runs[name]
         if found_run:
             return JobRunResource(found_run)
@@ -297,12 +294,13 @@ class RootResource(resource.Resource):
     def __init__(self, master_control):
         self._master_control = master_control
         resource.Resource.__init__(self)
-
+        
         # Setup children
         self.putChild('jobs', JobsResource(master_control))
         self.putChild('runs', RunsResource(master_control))
 
     def getChild(self, name, request):
+        print "ROOT RESOURCE"
         if name == '':
             return self
         else:
