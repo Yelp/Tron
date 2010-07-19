@@ -38,12 +38,14 @@ class StateHandler(object):
 
     def restore_job(self, job):
         prev = None
+
         for data in self.data[job.name]:
             run = job.restore_run(data, prev)
-            
+
             if run.is_scheduled:
                 self._reschedule(run)
             prev = run
+        self.data[job.name] = job.data
 
     def state_changed(self):
         if self.writing_enabled:

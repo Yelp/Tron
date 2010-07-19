@@ -73,25 +73,34 @@ def job_run_state(job_run):
 
     return state
 
-
 class JobRunResource(resource.Resource):
     isLeaf = True
     def __init__(self, run):
         self._run = run
         resource.Resource.__init__(self)
-    
+   
     def render_GET(self, request):
-        state = job_run_state(self._run)
-        run_output = {
-            'id': self._run.id,
-            'run_time': self._run.run_time and str(self._run.run_time),
-            'start_time': self._run.start_time and str(self._run.start_time),
-            'end_time': self._run.end_time and str(self._run.end_time),
-            'exit_status': self._run.exit_status,
+        run_output = []
+        
+        for task_run in self._run.runs:
+            state = job_run_state(task_run)
+            
+            run_output.append({
+                'id': task_run.id,
+                'run_time': task_run.run_time and str(task_run.run_time),
+                'start_time': task_run.start_time and str(task_run.start_time),
+                'end_time': task_run.end_time and str(task_run.end_time),
+                'exit_status': task_run.exit_status,
+                'state': state,
+            })
+
+        output = {
+            'runs': run_output, 
+            'id': self._run.id, 
             'state': state,
         }
-
-        return respond(request, run_output)
+        
+        return respond(request, output)
 
     def render_POST(self, request):
         log.debug("Handling post request for run %s", self._run.id)
@@ -109,22 +118,23 @@ class JobRunResource(resource.Resource):
             return
 
     def _start(self, request):
-        if not self._run.is_ran and not self._run.is_running:
+        if self._run.is_scheduled or self._run.is_cancelled or self._run.is_queued:
             log.info("Starting job run %s", self._run.id)
             self._run.start()
         else:
             log.warning("Request to start job run %s when it's already done", self._run.id)
 
-        return respond(request, None, code=http.SEE_OTHER, headers={'Location': "/runs/%s" % (self._run.id,)})
+        return respond(request, None, code=http.SEE_OTHER, headers={'Location': "/jobs/%s" % self._run.id.replace('.', '/')})
 
     def _succeed(self, request):
+        raise AttributeError("Succeed not supported")
         if not self._run.is_success:
             log.info("Marking job run %s for success", self._run.id)
             self._run.succeed()
         else:
             log.warning("Request to mark job run %s succeed when it has already", self._run.id)
 
-        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/runs/%s" % (self._run.id,)})
+        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._run.id.replace('.', '/')})
 
     def _cancel(self, request):
         if self._run.is_scheduled or self._run.is_queued:
@@ -133,16 +143,17 @@ class JobRunResource(resource.Resource):
         else:
             log.warning("Request to cancel job run %s when it's already cancelled", self._run.id)
 
-        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/runs/%s" % (self._run.id,)})
+        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._run.id.replace('.', '/')})
 
     def _fail(self, request):
+        raise AttributeError("Fail not supported.")
         if not self._run.is_done:
             log.info("Marking job run %s as failed", self._run.id)
             self._run.fail()
         else:
             log.warning("Request to fail job run %s when it's already done", self._run.id)
 
-        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/runs/%s" % (self._run.id,)})
+        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._run.id.replace('.', '/')})
 
 class JobResource(resource.Resource):
     """A resource that describes a particular job"""
@@ -151,16 +162,14 @@ class JobResource(resource.Resource):
         self._job = job
         resource.Resource.__init__(self)
 
-    def getChild(self, name, request):
-        print "JOB RESOURCE"
-        if name == '':
+    def getChild(self, run_num, request):
+        if run_num == '':
             return self
-        else:
-            for run in self._job.runs:
-                if run.id == name:
-                    return JobRunResource(run)
-            else:
-                return error.NoResource()
+        
+        if run_num.isdigit() and int(run_num) < len(self._job.runs):
+            return JobRunResource(self._job.runs[int(run_num)])
+        
+        return error.NoResource()
 
     def render_GET(self, request):
         run_output = []
@@ -182,6 +191,7 @@ class JobResource(resource.Resource):
             'name': self._job.name,
             'scheduler': str(self._job.scheduler),
             'runs': run_output,
+            'task_names': map(lambda t: t.name, self._job.topo_tasks)
         }
         return respond(request, output)
 
@@ -232,21 +242,15 @@ class JobsResource(resource.Resource):
 
 
     def getChild(self, name, request):
-        print "JOBS RESOURCE"
         if name == '':
             return self
-        else:
-            job_name, _, run_num = name.rpartition('.')
-            if job_name == '':
-                found = self._master_control.jobs.get(name)
-            else:
-                job = self._master_control.jobs.get(job_name)
-                found = job.runs[int(run_num)] if job else None
-            if found is None:
-                return error.NoResource()
-            else:
-                return JobResource(found)
-    
+        
+        found = self._master_control.jobs.get(name)
+        if found is None:
+            return error.NoResource()
+        
+        return JobResource(found)
+        
     def render_GET(self, request):
         request.setHeader("content-type", "text/json")
         
@@ -275,19 +279,18 @@ class JobsResource(resource.Resource):
         return respond(request, output)
 
 
-class RunsResource(resource.Resource):
-    """Resource for looking up runs directly (by id)"""
-    def __init__(self, master_control):
-        self._master_control = master_control
-        resource.Resource.__init__(self)
-
-    def getChild(self, name, request):
-        print "RUNS RESOURCE"
-        found_run = self._master_control.runs[name]
-        if found_run:
-            return JobRunResource(found_run)
-        else:
-            return error.NoResource()
+#class RunsResource(resource.Resource):
+#    """Resource for looking up runs directly (by id)"""
+#    def __init__(self, master_control):
+#        self._master_control = master_control
+#        resource.Resource.__init__(self)
+#
+#    def getChild(self, name, request):
+#        found_run = self._master_control.runs[name]
+#        if found_run:
+#            return JobRunResource(found_run)
+#        else:
+#            return error.NoResource()
 
 
 class RootResource(resource.Resource):
@@ -297,10 +300,8 @@ class RootResource(resource.Resource):
         
         # Setup children
         self.putChild('jobs', JobsResource(master_control))
-        self.putChild('runs', RunsResource(master_control))
 
     def getChild(self, name, request):
-        print "ROOT RESOURCE"
         if name == '':
             return self
         else:

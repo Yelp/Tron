@@ -26,60 +26,12 @@ def parse_options():
 
     return options, args[1:]
 
-def queue_job(options, job_name):
-    data = {'action': 'queue'}
-    status, content = cmd.request(options, "/jobs/%s" % (job_name,), data=data)
+def edit_job_run(options, action, run_id):
+    data = {'action': action}
+    status, content = cmd.request(options, "/jobs/%s" % run_id.replace('.', '/'), data=data)
 
     if status == cmd.OK:
-        print "Job Queued as run: %s" % content['id']
-    else:
-        print >>sys.stderr, "Unexpected response from queue_job operation: %r" % ((status, content),)
-
-def start_run(options, run_id):
-    data = {'action': 'start'}
-    status, content = cmd.request(options, "/runs/%s" % (run_id,), data=data)
-
-    if status == cmd.OK:
-        if content['state'] == "RUNN":
-            print "Job Run %s now running" % content['id']
-        else:
-            print "Job Run %s now in state %s" % (content['id'], content['state'])
-    else:
-        print >>sys.stderr, "Unexpected response from run start operation: %r" % ((status, content),)
-
-def cancel(options, run_id):
-    data = {'action': 'cancel'}
-    status, content = cmd.request(options, "/runs/%s" % (run_id,), data=data)
-
-    if status == cmd.OK:
-        if content['state'] == "CANC":
-            print "Job Run %s now cancelled" % content['id']
-        else:
-            print "Job Run %s now in state %s" % (content['id'], content['state'])
-    else:
-        print >>sys.stderr, "Unexpected response from run start operation: %r" % ((status, content),)
-
-def succeed(options, run_id):
-    data = {'action': 'succeed'}
-    status, content = cmd.request(options, "/runs/%s" % (run_id,), data=data)
-
-    if status == cmd.OK:
-        if content['state'] == "SUCC":
-            print "Job Run %s is now marked succeeded" % content['id']
-        else:
-            print "Job Run %s now in state %s" % (content['id'], content['state'])
-    else:
-        print >>sys.stderr, "Unexpected response from run start operation: %r" % ((status, content),)
-
-def fail(options, run_id):
-    data = {'action': 'fail'}
-    status, content = cmd.request(options, "/runs/%s" % (run_id,), data=data)
-
-    if status == cmd.OK:
-        if content['state'] == "F":
-            print "Job Run %s is now marked failed" % content['id']
-        else:
-            print "Job Run %s now in state %s" % (content['id'], content['state'])
+        print "Job Run %s now in state %s" % (content['id'], content['state'])
     else:
         print >>sys.stderr, "Unexpected response from run start operation: %r" % ((status, content),)
 
@@ -98,18 +50,7 @@ def main():
         print >>sys.stderr, "Error connecting to tron server at %s" % options.server
         sys.exit(1)
 
-    command = args[0]
-    if command == "start":
-        start_run(options, args[1])
-    elif command in ("schedule", "sched"):
-        queue_job(options, args[1])
-    elif command in ("succeed", "mark_succeeded"):
-        succeed(options, args[1])
-    elif command in ("fail", "marked_failed"):
-        fail(options, args[1]) 
-    elif command in ("cancel"):
-        cancel(options, args[1])    
-    
+    edit_job_run(options, args[0], args[1])
     cmd.save_config(options)
 
 if __name__ == '__main__':

@@ -68,7 +68,7 @@ class TaskRun(object):
     """An instance of running a task"""
     def __init__(self, task):
         self.task = task
-        self.id = "%s.%s" % (task.name, uuid.uuid4().hex)
+        self.id = "%s.%s.%s" % (task.job.name, task.name, len(task.runs))
         
         self.run_time = None    # What time are we supposed to start
         self.start_time = None  # What time did we start
@@ -86,6 +86,7 @@ class TaskRun(object):
 
     def attempt_start(self):
         if self.should_start:
+            "NOW ITS STARTING"
             self.start()
 
     def start(self):
@@ -156,7 +157,6 @@ class TaskRun(object):
 
     def start_dependants(self):
         for run in self.waiting_runs:
-            run.run_time = timeutils.current_time()
             run.attempt_start()
 
     def ignore_dependants(self):

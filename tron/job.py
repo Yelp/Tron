@@ -7,8 +7,7 @@ log = logging.getLogger('tron.job')
 
 class JobRun(object):
     def __init__(self, job, prev=None):
-        self.run_num = len(job.runs)
-        self.id = "%s.%s" % (job.name, self.run_num)
+        self.id = "%s.%s" % (job.name, len(job.runs))
         self.job = job
         self.prev = prev
         self.next = None
@@ -18,7 +17,7 @@ class JobRun(object):
         self.end_time = None
         
         self.runs = []
-        self.data = {'runs':[], 'run_time':None}
+        self.data = {'runs':[], 'run_time':None, 'start_time': None, 'end_time': None}
 
     def set_run_time(self, run_time):
         self.run_time = run_time
@@ -31,7 +30,7 @@ class JobRun(object):
     def scheduled_start(self):
         if self.should_start:
             self.start()
-        elif self.job.queueing:
+        elif self.job.queueing and not self.is_cancelled:
             log.warning("Previous job, %s, not finished - placing in queue", self.job.name)
             self.queue()
         else:
@@ -41,21 +40,33 @@ class JobRun(object):
     def start(self):
         log.info("Starting task job %s", self.job.name)
         self.start_time = timeutils.current_time()
-        [r.attempt_start() for r in self.runs]
+        self.data['start_time'] = self.start_time
+
+        for r in self.runs:
+            r.attempt_start()
         
     def run_completed(self):
         if self.is_success:
             self.end_time = timeutils.current_time()
-            if self.next and self.next.is_queued:
-                self.next.start()
+            self.data['end_time'] = self.end_time
+            
+            next = self.next
+            while next and next.is_cancelled:
+                next = next.next
+           
+            if next and next.is_queued:
+                next.start()
+
             if self.job.constant:
                 self.job.build_run(self).start()
 
     def queue(self):
-        [r.queue() for r in self.runs]
+        for r in self.runs:
+            r.queue()
         
     def cancel(self):
-        [r.cancel() for r in self.runs]
+        for r in self.runs:
+            r.cancel()
 
     @property
     def is_failed(self):
@@ -83,6 +94,9 @@ class JobRun(object):
 
     @property
     def should_start(self):
+        if self.is_cancelled:
+            return False
+
         prev_job = self.prev
         while prev_job and prev_job.is_cancelled:
             prev_job = prev_job.prev
@@ -90,7 +104,6 @@ class JobRun(object):
         return not prev_job or prev_job.is_success
 
 class Job(object):
-    num_runs = 0
     def __init__(self, name, task=None):
         self.name = name
         self.topo_tasks = [task] if task else []
@@ -135,6 +148,10 @@ class Job(object):
         for r, state in zip(run.runs, data['runs']):
             r.restore_state(state)
         
+        r.run_time = data['run_time']
+        r.start_time = data['start_time']
+        r.end_time = data['end_time']
+
         run.set_run_time(data['run_time'])
         return run
 
