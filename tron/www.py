@@ -8,39 +8,10 @@ from twisted.internet import reactor
 
 from twisted.cred import checkers
 from twisted.web import server, resource, http, error
-#from twisted.web.woven import simpleguard
 
 import simplejson
 
 from tron.utils import timeutils
-
-# Sample code for http auth
-# from twisted.cred import checkers
-# from twisted.internet import reactor
-# from twisted.web import server, resource
-# from twisted.web.woven import simpleguard
-# 
-# class SimpleResource(resource.Resource):
-# 
-#     def getChild(self, path, request):
-#         return self
-# 
-#     def render_GET(self, request):
-#         auth = request.getComponent(simpleguard.Authenticated)
-#         if auth:
-#             return "hello my friend "+auth.name
-#         else:
-#             return """
-#                 I don't think we've met
-#         <a href="perspective-init">login</a>
-#             """
-# 
-# checker = checkers.InMemoryUsernamePasswordDatabaseDontUse()
-# checker.addUser("bob", "12345")
-# 
-# reactor.listenTCP(8889, server.Site(
-#       resource = simpleguard.guardResource(SimpleResource(), [checker])))
-# reactor.run()
 
 log = logging.getLogger("tron.www")
 
@@ -81,9 +52,10 @@ class JobRunResource(resource.Resource):
    
     def render_GET(self, request):
         run_output = []
+        state = job_run_state(self._run)
         
         for task_run in self._run.runs:
-            state = job_run_state(task_run)
+            task_state = job_run_state(task_run)
             
             run_output.append({
                 'id': task_run.id,
@@ -91,7 +63,7 @@ class JobRunResource(resource.Resource):
                 'start_time': task_run.start_time and str(task_run.start_time),
                 'end_time': task_run.end_time and str(task_run.end_time),
                 'exit_status': task_run.exit_status,
-                'state': state,
+                'state': task_state,
             })
 
         output = {
@@ -112,10 +84,9 @@ class JobRunResource(resource.Resource):
             return self._fail(request)
         elif request.args['action'][0] == "cancel":
             return self._cancel(request)
-        else:
-            log.warning("Unknown request action %s", request.args['action'])
-            request.setResponseCode(http.NOT_IMPLEMENTED)
-            return
+        
+        log.warning("Unknown request action %s", request.args['action'])
+        request.setResponseCode(http.NOT_IMPLEMENTED)
 
     def _start(self, request):
         if self._run.is_scheduled or self._run.is_cancelled or self._run.is_queued:
@@ -146,12 +117,11 @@ class JobRunResource(resource.Resource):
         return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._run.id.replace('.', '/')})
 
     def _fail(self, request):
-        raise AttributeError("Fail not supported.")
-        if not self._run.is_done:
+        if self._run.is_cancelled or self._run.is_scheduled or self._run.is_queued or self._run.is_unknown:
             log.info("Marking job run %s as failed", self._run.id)
             self._run.fail()
         else:
-            log.warning("Request to fail job run %s when it's already done", self._run.id)
+            log.warning("Request to fail job run %s when it's already running or done", self._run.id)
 
         return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._run.id.replace('.', '/')})
 

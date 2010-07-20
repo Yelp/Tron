@@ -76,6 +76,10 @@ class JobRun(object):
         for r in self.runs:
             r.cancel()
 
+    def fail(self):
+        for r in self.runs:
+            r.fail(0)
+
     @property
     def is_failed(self):
         return any([r.is_failed for r in self.runs])
