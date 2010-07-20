@@ -228,10 +228,8 @@ class JobResource(resource.Resource):
         log.debug("Handling post request for %s", self._job.name)
         if request.args['action'][0] == "queue":
             return self._queue(request)
-        else:
-            log.warning("Unknown request action %s", request.args['action'])
-            request.setResponseCode(http.NOT_IMPLEMENTED)
-            return
+        log.warning("Unknown request action %s", request.args['action'])
+        request.setResponseCode(http.NOT_IMPLEMENTED)
             
 
 class JobsResource(resource.Resource):
@@ -277,20 +275,6 @@ class JobsResource(resource.Resource):
             'jobs': job_list,
         }
         return respond(request, output)
-
-
-#class RunsResource(resource.Resource):
-#    """Resource for looking up runs directly (by id)"""
-#    def __init__(self, master_control):
-#        self._master_control = master_control
-#        resource.Resource.__init__(self)
-#
-#    def getChild(self, name, request):
-#        found_run = self._master_control.runs[name]
-#        if found_run:
-#            return JobRunResource(found_run)
-#        else:
-#            return error.NoResource()
 
 
 class RootResource(resource.Resource):

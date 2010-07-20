@@ -202,7 +202,8 @@ class TaskRun(object):
 
         if self.is_running:
             self.state = TASK_RUN_UNKNOWN
-        
+        self.state_changed()
+
     def state_changed(self):
         self.data['id'] = self.id
         self.data['state'] = self.state
@@ -289,16 +290,6 @@ class Task(object):
         self.runs.append(new_run)
         return new_run
 
-    def restore(self, id, state):
-        """Restores an instance of TaskRun for this task
-
-        This is used when tron shut down unexpectedly
-        """
-        restored = self.build_run()
-        restored.id = id
-        restored.restore_state(state)
-        return restored
-    
     def get_run_by_id(self, id):
         runs = filter(lambda cur: cur.id == id, self.runs) 
         return runs[0] if runs else None

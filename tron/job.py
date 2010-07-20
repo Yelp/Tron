@@ -59,6 +59,14 @@ class JobRun(object):
 
             if self.job.constant:
                 self.job.build_run(self).start()
+    
+    def state_changed(self):
+        self.data['run_time'] = self.run_time
+        self.data['start_time'] = self.start_time
+        self.data['end_time'] = self.end_time
+
+        if self.job.state_callback:
+            self.job.state_callback()
 
     def queue(self):
         for r in self.runs:
@@ -114,7 +122,8 @@ class Job(object):
         
         self.state_callback = None
         self.data = []
-    
+        self.state_callback = None
+
     def next_run(self):
         if not self.scheduler:
             return None
@@ -147,11 +156,10 @@ class Job(object):
         run = self.build_run(prev)
         for r, state in zip(run.runs, data['runs']):
             r.restore_state(state)
-        
-        r.run_time = data['run_time']
-        r.start_time = data['start_time']
-        r.end_time = data['end_time']
 
+        run.start_time = data['start_time']
+        run.end_time = data['end_time']
         run.set_run_time(data['run_time'])
+        run.state_changed()
         return run
 

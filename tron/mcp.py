@@ -45,7 +45,6 @@ class StateHandler(object):
             if run.is_scheduled:
                 self._reschedule(run)
             prev = run
-        self.data[job.name] = job.data
 
     def state_changed(self):
         if self.writing_enabled:
@@ -70,9 +69,9 @@ class StateHandler(object):
     def load_data(self):
         log.info('Restoring state from %s', self.get_state_file_path())
         
-        schedule_file = open(self.get_state_file_path())
-        self.data = yaml.load(schedule_file)
-        schedule_file.close()
+        data_file = open(self.get_state_file_path())
+        self.data = yaml.load(data_file)
+        data_file.close()
 
 class MasterControlProgram(object):
     """master of tron's domain
@@ -129,7 +128,7 @@ class MasterControlProgram(object):
                 self.state_handler.restore_job(tron_job)
             else:
                 self._schedule_next_run(tron_job)
-                self.state_handler.data[tron_job.name] = tron_job.data
+            self.state_handler.data[tron_job.name] = tron_job.data
         
         self.state_handler.writing_enabled = True
         self.state_handler.store_data()
