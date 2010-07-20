@@ -98,8 +98,7 @@ class JobRunResource(resource.Resource):
         return respond(request, None, code=http.SEE_OTHER, headers={'Location': "/jobs/%s" % self._run.id.replace('.', '/')})
 
     def _succeed(self, request):
-        raise AttributeError("Succeed not supported")
-        if not self._run.is_success:
+        if not self._run.is_running and not self._run.is_success:
             log.info("Marking job run %s for success", self._run.id)
             self._run.succeed()
         else:
@@ -117,7 +116,7 @@ class JobRunResource(resource.Resource):
         return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._run.id.replace('.', '/')})
 
     def _fail(self, request):
-        if self._run.is_cancelled or self._run.is_scheduled or self._run.is_queued or self._run.is_unknown:
+        if not self._run.is_running and not self._run.is_success and not self._run.is_failed:
             log.info("Marking job run %s as failed", self._run.id)
             self._run.fail()
         else:

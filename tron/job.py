@@ -59,7 +59,9 @@ class JobRun(object):
 
             if self.job.constant:
                 self.job.build_run(self).start()
-    
+        elif self.is_failed:
+            self.end_time = timeutils.current_time()
+
     def state_changed(self):
         self.data['run_time'] = self.run_time
         self.data['start_time'] = self.start_time
@@ -75,6 +77,10 @@ class JobRun(object):
     def cancel(self):
         for r in self.runs:
             r.cancel()
+    
+    def succeed(self):
+        for r in self.runs:
+            r.mark_success()
 
     def fail(self):
         for r in self.runs:
@@ -91,7 +97,11 @@ class JobRun(object):
     @property
     def is_queued(self):
         return all([r.is_queued for r in self.runs])
-    
+   
+    @property
+    def is_running(self):
+        return any([r.is_running for r in self.runs])
+
     @property
     def is_scheduled(self):
         return any([r.is_scheduled for r in self.runs])

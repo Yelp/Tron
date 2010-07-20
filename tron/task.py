@@ -170,6 +170,7 @@ class TaskRun(object):
         self.state = TASK_RUN_FAILED
         self.exit_status = exit_status
         self.end_time = timeutils.current_time()
+        self.job_run.run_completed()
         self.state_changed()
 
     def fail_unknown(self):
@@ -179,18 +180,21 @@ class TaskRun(object):
         self.state = TASK_RUN_FAILED
         self.exit_status = None
         self.end_time = None
+        self.job_run.run_completed()
+        self.state_changed()
+
+    def mark_success(self):
+        self.exit_status = 0
+        self.state = TASK_RUN_SUCCEEDED
+        self.end_time = timeutils.current_time()
+        self.job_run.run_completed()
         self.state_changed()
 
     def succeed(self):
         """Mark the run as having succeeded"""
         log.info("Task run %s succeeded", self.id)
         
-        self.exit_status = 0
-        self.state = TASK_RUN_SUCCEEDED
-        self.end_time = timeutils.current_time()
-        
-        self.job_run.run_completed()
-        self.state_changed()
+        self.mark_success()
         self.start_dependants()
 
     def restore_state(self, state):

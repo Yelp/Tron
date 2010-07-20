@@ -14,9 +14,11 @@ import yaml
 
 from tron import cmd
 
+LOCAL = "http://localhost:8082"
+
 def parse_options():
     parser = optparse.OptionParser("usage: %prog [-v] [--server=<servername>] <command> <object>")
-    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to")
+    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=LOCAL)
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
 
     (options, args) = parser.parse_args(sys.argv)
