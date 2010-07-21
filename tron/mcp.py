@@ -2,6 +2,7 @@ import logging
 import weakref
 import yaml
 import os
+import sys
 import subprocess
 
 from twisted.internet import reactor
@@ -27,7 +28,7 @@ class StateHandler(object):
         self.data = {}
         self.mcp = mcp
         self.state_dir = state_dir
-        self.write_proc = None
+        self.write_pid = None
         self.writing_enabled = writing
 
     def _reschedule(self, run):
@@ -54,14 +55,22 @@ class StateHandler(object):
         return job.name in self.data
     
     def store_data(self):
-        if self.write_proc and self.write_proc.poll() is None:
+        """Stores the state of tron"""
+        # If tron is already storing data, don't start again till it's done
+        if self.write_pid and not os.waitpid(self.write_pid, os.WNOHANG)[0]:
             return
-        
+
         file_path = '%s/%s' % (self.state_dir, STATE_FILE)
-        log.info("Storing schedule in %s", file_path)
+        log.info("Storing state in %s", file_path)
         
-        dump = yaml.dump(self.data, default_flow_style=False, indent=4)
-        self.write_proc = subprocess.Popen(['/bin/sh', '-c', 'echo "%s" > %s' % (dump, file_path)])
+        pid = os.fork()
+        if pid:
+            self.write_pid = pid
+        else:
+            file = open(file_path, 'w')
+            dump = yaml.dump(self.data, file, default_flow_style=False, indent=4)
+            file.close()
+            os._exit(os.EX_OK)
 
     def get_state_file_path(self):
         return self.state_dir + '/' + STATE_FILE

@@ -45,23 +45,17 @@ class _ConfiguredObject(yaml.YAMLObject):
 class TronConfiguration(yaml.YAMLObject):
     yaml_tag = u'!TronConfiguration'
 
-    def _apply_tasks(self, mcp):
+    def _apply_jobs(self, mcp):
         """Configure tasks"""
-        found_tasks = []
-        found_jobs = {}
-        for task_config in self.tasks:
-            found_tasks.append(task_config.name)
-            new_task = task_config.actualized
-            log.debug("Building new task %s", task_config.name)
-
-            if not new_task.job.name in found_jobs:
-                found_jobs[new_task.job.name] = new_task.job
-
-        for job in found_jobs.itervalues():
-            mcp.add_job(job)
+        found_jobs = []
+        for job_config in self.jobs:
+            found_jobs.append(job_config.name)
+            new_job = job_config.actualized
+            log.debug("Building new job %s", job_config.name)
+            mcp.add_job(new_job)
 
         for job_name in mcp.jobs.iterkeys():
-            if job_name not in found_tasks:
+            if job_name not in found_jobs:
                 log.debug("Removing job %s", job_name)
                 dead_job = mcp.jobs[job_name]
                 mcp.jobs.remove(dead_job)
@@ -77,7 +71,7 @@ class TronConfiguration(yaml.YAMLObject):
     
     def apply(self, mcp):
         """Apply the configuration to the specified master control program"""
-        self._apply_tasks(mcp)
+        self._apply_jobs(mcp)
         if hasattr(self, 'ssh_options'):
             self.ssh_options._apply(mcp)
         
@@ -135,45 +129,59 @@ class NotificationOptions(yaml.YAMLObject):
         mcp.monitor.start()
 
 
+class Job(_ConfiguredObject):
+    yaml_tag = u'!Job'
+    actual_class = job.Job
+
+    def _apply(self):
+        real_job = self._ref()
+        real_job.name = self.name
+        real_job.node = self.node.actualized if hasattr(self, "node") else None
+        
+        # Build scheduler
+        if hasattr(self, "schedule"):
+            if isinstance(self.schedule, basestring):
+                # This is a short string
+                real_job.scheduler = Scheduler.from_string(self.schedule)
+            else:
+                # This is a scheduler instance, which has more info
+                real_job.scheduler = self.schedule.actualized
+
+            real_job.scheduler.set_job_queueing(real_job)
+
+        if hasattr(self, "queueing"):
+            real_job.queueing = self.queueing
+
+        for t_config in self.tasks:
+            task = t_config.actualized
+            real_job.topo_tasks.append(task)
+            task.job = real_job
+
+            if task.node is None:
+                assert real_job.node
+                task.node = real_job.node
+
 class Task(_ConfiguredObject):
     yaml_tag = u'!Task'
     actual_class = task.Task
     
+    def _apply_requirements(self, real_task, requirements):
+        if hasattr(requirements, '__iter__'):
+            for req in requirements:
+                real_task.required_tasks.append(req.actualized)
+        else:
+            real_task.required_tasks.append(requirements.actualized)
+
     def _apply(self):
         """Configured the specific task instance"""
         real_task = self._ref()
         real_task.name = self.name
         real_task.command = self.command
-        real_task.dependants = []
         real_task.output_dir = self.output_dir if hasattr(self, "output_dir") else None
-
-        # Set the node
         real_task.node = self.node.actualized if hasattr(self, "node") else None
 
-        if not hasattr(self, "schedule") and not hasattr(self, "follow_on_success"):
-            raise Error("Task configuration needs a schedule or follow_on_success option")
-        
-        if hasattr(self, "follow_on_success"):
-            real_task.required_tasks.append(self.follow_on_success.actualized)
-            real_task.job = self.follow_on_success.actualized.job
-            real_task.job.topo_tasks.append(real_task)
-
-        # Build scheduler
-        if hasattr(self, "schedule"):
-            real_task.job = job.Job(real_task.name, real_task)
-
-            if isinstance(self.schedule, basestring):
-                # This is a short string
-                real_task.job.scheduler = Scheduler.from_string(self.schedule)
-            else:
-                # This is a scheduler instance, which has more info
-                real_task.job.scheduler = self.schedule.actualized
-
-            real_task.job.scheduler.set_job_queueing(real_task.job)
-
-        if hasattr(self, "queueing_enabled"):
-            real_task.job.queueing = self.queueing_enabled
-
+        if hasattr(self, "requires"):
+            self._apply_requirements(real_task, self.requires)
 
 class Node(_ConfiguredObject):
     yaml_tag = u'!Node'

@@ -21,7 +21,7 @@ JOB_RUN_COLUMNS = (
 )
 
 TASK_RUN_COLUMNS = (
-    ('Task Run ID', 30),
+    ('Task Run ID', 40),
     ('State', 6),
     ('Scheduled Time', 23),
     ('Start Time', 23),

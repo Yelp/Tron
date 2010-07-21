@@ -126,7 +126,7 @@ class JobRun(object):
         return not prev_job or prev_job.is_success
 
 class Job(object):
-    def __init__(self, name, task=None):
+    def __init__(self, name=None, task=None):
         self.name = name
         self.topo_tasks = [task] if task else []
         self.scheduler = None
