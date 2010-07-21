@@ -20,8 +20,8 @@ JOB_RUN_COLUMNS = (
     ('End Time', 23),
 )
 
-TASK_RUN_COLUMNS = (
-    ('Task Run ID', 40),
+ACTION_RUN_COLUMNS = (
+    ('Action Run ID', 40),
     ('State', 6),
     ('Scheduled Time', 23),
     ('Start Time', 23),
@@ -67,9 +67,9 @@ def view_job(options, job_name):
     print "Job: %s" % job_content['name']
     print "Scheduler: %s\n" % job_content['scheduler']
     
-    print "List of Tasks (topological):"
-    for task_name in job_content['task_names']:
-        print task_name
+    print "List of Actions (topological):"
+    for action_name in job_content['action_names']:
+        print action_name
    
     print "\nRun History: (%d total)" % len(job_content['runs'])
     print " ".join(title.ljust(size) for title, size in JOB_RUN_COLUMNS)
@@ -103,7 +103,7 @@ def view_job_run(options, name_id_url):
     print "Job Run: %s" % job_run_content['id']
     print "State: %s" % job_run_content['state']
     print 
-    print " ".join(title.ljust(size) for title, size in TASK_RUN_COLUMNS)
+    print " ".join(title.ljust(size) for title, size in ACTION_RUN_COLUMNS)
     
     for run in job_run_content['runs'][-options.num_shown:]:
         run_id = run['id']
@@ -124,7 +124,7 @@ def view_job_run(options, name_id_url):
         else:
             end_time = run['end_time'][:-7]
 
-        print " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time), TASK_RUN_COLUMNS))
+        print " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time), ACTION_RUN_COLUMNS))
        
 
 def main():

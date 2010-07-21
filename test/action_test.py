@@ -4,33 +4,33 @@ import os
 from testify import *
 from testify.utils import turtle
 
-from tron import node, task, job, scheduler
+from tron import node, action, job, scheduler
 from tron.utils import timeutils
 
-def get_runs_by_state(task, state):
-    return filter(lambda r: r.state == state, task.runs)
+def get_runs_by_state(action, state):
+    return filter(lambda r: r.state == state, action.runs)
 
-class TestTask(TestCase):
-    """Unit testing for Task class"""
+class TestAction(TestCase):
+    """Unit testing for Action class"""
     @setup
     def setup(self):
-        self.task = task.Task(name="Test Task")
-        self.task.command = "Test command"
-        self.job = job.Job("Test Job", self.task)
-        self.task.job = self.job
+        self.action = action.Action(name="Test Action")
+        self.action.command = "Test command"
+        self.job = job.Job("Test Job", self.action)
+        self.action.job = self.job
 
     def test_next_run(self):
         assert_equals(self.job.next_run(), None)
         
-        self.task.scheduler = turtle.Turtle()
-        self.task.scheduler.next_run = lambda j:None
+        self.action.scheduler = turtle.Turtle()
+        self.action.scheduler.next_run = lambda j:None
 
         assert_equals(self.job.next_run(), None)
-        assert_equals(len(get_runs_by_state(self.task, task.TASK_RUN_SCHEDULED)), 0)
+        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 0)
 
         self.job.scheduler = scheduler.ConstantScheduler()
         assert self.job.next_run()
-        assert_equals(len(get_runs_by_state(self.task, task.TASK_RUN_SCHEDULED)), 1)
+        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 1)
 
     def test_next_run_prev(self):
         self.job.scheduler = scheduler.DailyScheduler()
@@ -41,32 +41,32 @@ class TestTask(TestCase):
 
         assert run
         assert run2
-        assert_equals(len(get_runs_by_state(self.task, task.TASK_RUN_SCHEDULED)), 2)
+        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 2)
         assert_equals(run2.prev, run)
 
         run3 = self.job.next_run()
         assert_equals(run3.prev, run2)
 
-        run3.runs[0].state = task.TASK_RUN_CANCELLED
+        run3.runs[0].state = action.ACTION_RUN_CANCELLED
         run4 = self.job.next_run()
         assert_equals(run4.prev, run3)
 
     def test_build_run(self):
-        run = self.task.build_run()
-        assert_equals(len(self.task.runs), 1)
-        assert_equals(self.task.runs[0], run)
+        run = self.action.build_run()
+        assert_equals(len(self.action.runs), 1)
+        assert_equals(self.action.runs[0], run)
 
 
-class TestTaskRun(TestCase):
-    """Unit testing for TaskRun class"""
+class TestActionRun(TestCase):
+    """Unit testing for ActionRun class"""
     @setup
     def setup(self):
-        self.task = task.Task(name="Test Task", node=turtle.Turtle())
-        self.job = job.Job("Test Job", self.task)
+        self.action = action.Action(name="Test Action", node=turtle.Turtle())
+        self.job = job.Job("Test Job", self.action)
         self.job.scheduler = scheduler.DailyScheduler()
         self.job.queueing = True
-        self.task.job = self.job
-        self.task.command = "Test command"
+        self.action.job = self.job
+        self.action.command = "Test command"
 
         self.job_run = self.job.next_run()
         self.run = self.job_run.runs[0]
@@ -75,17 +75,17 @@ class TestTaskRun(TestCase):
         self.job_run.scheduled_start()
 
         assert self.run.is_running
-        assert_equals(len(get_runs_by_state(self.task, task.TASK_RUN_SCHEDULED)), 0)
-        assert_equals(len(get_runs_by_state(self.task, task.TASK_RUN_RUNNING)), 1)
-        assert_equals(self.run.state, task.TASK_RUN_RUNNING)
+        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 0)
+        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_RUNNING)), 1)
+        assert_equals(self.run.state, action.ACTION_RUN_RUNNING)
 
     def test_scheduled_start_wait(self):
         job_run2 = self.job.next_run()
         
-        assert_equals(len(get_runs_by_state(self.task, task.TASK_RUN_SCHEDULED)), 2)
+        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 2)
         job_run2.scheduled_start()
         assert job_run2.is_queued
-        assert_equals(len(get_runs_by_state(self.task, task.TASK_RUN_SCHEDULED)), 1)
+        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 1)
         
         self.job_run.scheduled_start()
         assert self.run.is_running
@@ -97,12 +97,12 @@ class TestTaskRun(TestCase):
     def test_scheduled_start_cancel(self):
         self.job.queueing = False
         job_run2 = self.job.next_run()
-        #self.task.scheduled[run2.id] = run2.state_data
+        #self.action.scheduled[run2.id] = run2.state_data
         
-        assert_equals(len(get_runs_by_state(self.task, task.TASK_RUN_SCHEDULED)), 2)
+        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 2)
         job_run2.scheduled_start()
         assert job_run2.is_cancelled
-        assert_equals(len(get_runs_by_state(self.task, task.TASK_RUN_SCHEDULED)), 1)
+        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 1)
         
         self.job_run.scheduled_start()
         assert self.run.is_running
@@ -112,15 +112,15 @@ class TestTaskRun(TestCase):
         assert job_run2.is_cancelled
 
 
-class TaskRunState(TestCase):
-    """Check that our task runs can start/stop and manage their state"""
+class ActionRunState(TestCase):
+    """Check that our action runs can start/stop and manage their state"""
     @setup
     def build_job(self):
-        self.task = task.Task(name="Test Task")
-        self.task.command = "Test command"
-        self.task.node = turtle.Turtle()
-        self.task.job = turtle.Turtle()
-        self.run = self.task.build_run()
+        self.action = action.Action(name="Test Action")
+        self.action.command = "Test command"
+        self.action.node = turtle.Turtle()
+        self.action.job = turtle.Turtle()
+        self.run = self.action.build_run()
         self.run.job_run = turtle.Turtle()
 
         def noop_execute():
@@ -157,37 +157,37 @@ class TaskRunState(TestCase):
 class TestRunDependency(TestCase):
     @setup
     def build_job(self):
-        self.task = task.Task(name="Test Task1")
-        self.task.command = "Test command1"
-        self.task.node = turtle.Turtle()
+        self.action = action.Action(name="Test Action1")
+        self.action.command = "Test command1"
+        self.action.node = turtle.Turtle()
 
-        self.dep_task = task.Task(name="Test Task2")
-        self.dep_task.command = "Test command2"
-        self.dep_task.node = turtle.Turtle()
-        self.dep_task.required_tasks.append(self.task)
+        self.dep_action = action.Action(name="Test Action2")
+        self.dep_action.command = "Test command2"
+        self.dep_action.node = turtle.Turtle()
+        self.dep_action.required_actions.append(self.action)
 
-        self.job = job.Job("Test Job", self.task)
-        self.task.job = self.job
-        self.dep_task.job = self.job 
+        self.job = job.Job("Test Job", self.action)
+        self.action.job = self.job
+        self.dep_action.job = self.job 
 
-        self.job.topo_tasks.append(self.dep_task)
+        self.job.topo_actions.append(self.dep_action)
         self.job.scheduler = scheduler.DailyScheduler()
         self.job_run = self.job.next_run()
         self.run = self.job_run.runs[0]
         self.dep_run = self.job_run.runs[1]
 
     def test_success(self):
-        assert_equal(len(self.dep_task.runs), 1)
+        assert_equal(len(self.dep_action.runs), 1)
         assert self.dep_run.is_queued
         
         self.run.start()
 
-        assert_equal(len(self.dep_task.runs), 1)
+        assert_equal(len(self.dep_action.runs), 1)
         assert self.dep_run.is_queued
 
         self.run.succeed()
 
-        assert_equal(len(self.dep_task.runs), 1)
+        assert_equal(len(self.dep_action.runs), 1)
  
         assert self.dep_run.is_running
         assert not self.dep_run.is_done
@@ -205,133 +205,131 @@ class TestRunDependency(TestCase):
         self.run.start()
         self.run.fail(1)
 
-        assert_equal(len(self.dep_task.runs), 1)
+        assert_equal(len(self.dep_action.runs), 1)
         assert self.dep_run.is_queued
 
 
-class TaskRunBuildingTest(TestCase):
-    """Check hat we can create and manage task runs"""
+class ActionRunBuildingTest(TestCase):
+    """Check hat we can create and manage action runs"""
     @setup
     def build_job(self):
-        self.task = task.Task(name="Test Task")
-        self.job = job.Job(self.task)
-        self.task.job = self.job
-        self.task.command = "Test Task Command"
+        self.action = action.Action(name="Test Action")
+        self.job = job.Job(self.action)
+        self.action.job = self.job
+        self.action.command = "Test Action Command"
 
     def test_build_run(self):
-        run = self.task.build_run()
+        run = self.action.build_run()
 
-        assert_equal(self.task.runs[-1], run)
+        assert_equal(self.action.runs[-1], run)
         assert run.id
         
-        assert_equal(len(self.task.runs), 1)
+        assert_equal(len(self.action.runs), 1)
 
     def test_no_schedule(self):
         run = self.job.next_run()
         assert_equal(run, None)
 
 
-class TaskRunLogFileTest(TestCase):
+class ActionRunLogFileTest(TestCase):
     @setup
     def build_job(self):
-        self.task = task.Task(name="Test Task", node=turtle.Turtle())
-        self.job = job.Job("Test Job", self.task)
-        self.task.job = self.job
-        self.task.command = "Test command"
+        self.action = action.Action(name="Test Action", node=turtle.Turtle())
+        self.job = job.Job("Test Job", self.action)
+        self.action.job = self.job
+        self.action.command = "Test command"
 
     def test_no_logging(self):
-        run = self.task.build_run()
+        run = self.action.build_run()
         run.start()
 
     def test_directory_log(self):
-        self.task.output_dir = "."
-        run = self.task.build_run()
+        self.action.output_dir = "."
+        run = self.action.build_run()
         run.start()
-        assert os.path.isfile("./Test Task.out")
-        os.remove("./Test Task.out")
+        assert os.path.isfile("./Test Action.out")
+        os.remove("./Test Action.out")
         
     def test_file_log(self):
-        self.task.output_dir = "./test_output_file.out"
-        run = self.task.build_run()
+        self.action.output_dir = "./test_output_file.out"
+        run = self.action.build_run()
         run.start()
         assert os.path.isfile("./test_output_file.out")
         os.remove("./test_output_file.out")
 
 
-class TaskRunVariablesTest(TestCase):
+class ActionRunVariablesTest(TestCase):
     @class_setup
     def freeze_time(self):
-        pass
-        #timeutils.override_current_time(datetime.datetime.now())
+        timeutils.override_current_time(datetime.datetime.now())
         self.now = timeutils.current_time()
 
     @class_teardown
     def unfreeze_time(self):
-        pass
-        #timeutils.override_current_time(None)
+        timeutils.override_current_time(None)
     
     @setup
     def build_job(self):
-        self.task = task.Task(name="Test Task")
-        self.task.command = "Test Task Command"
-        self.job = job.Job("Test Job", self.task)
-        self.task.job = self.job
-        self.job.scheduler = scheduler.DailyScheduler()
+        self.action = action.Action(name="Test Action")
+        self.action.command = "Test Action Command"
+        self.job = job.Job("Test Job", self.action)
+        self.action.job = self.job
+        self.job.scheduler = scheduler.ConstantScheduler()
 
     def _cmd(self):
         job_run = self.job.next_run()
         return job_run.runs[0].command
 
     def test_name(self):
-        self.task.command = "somescript --name=%(jobname)s"
-        assert_equal(self._cmd(), "somescript --name=%s" % self.task.name)
+        self.action.command = "somescript --name=%(actionname)s"
+        assert_equal(self._cmd(), "somescript --name=%s" % self.action.name)
 
     def test_runid(self):
-        self.task.command = "somescript --id=%(runid)s"
+        self.action.command = "somescript --id=%(runid)s"
         job_run = self.job.next_run()
-        task_run = job_run.runs[0]
-        assert_equal(task_run.command, "somescript --id=%s" % task_run.id)
+        action_run = job_run.runs[0]
+        assert_equal(action_run.command, "somescript --id=%s" % action_run.id)
 
     def test_shortdate(self):
-        self.task.command = "somescript -d %(shortdate)s"
+        self.action.command = "somescript -d %(shortdate)s"
         assert_equal(self._cmd(), "somescript -d %.4d-%.2d-%.2d" % (self.now.year, self.now.month, self.now.day))
 
     def test_shortdate_plus(self):
-        self.task.command = "somescript -d %(shortdate+1)s"
+        self.action.command = "somescript -d %(shortdate+1)s"
         tmrw = self.now + datetime.timedelta(days=1)
         assert_equal(self._cmd(), "somescript -d %.4d-%.2d-%.2d" % (tmrw.year, tmrw.month, tmrw.day))
 
     def test_shortdate_minus(self):
-        self.task.command = "somescript -d %(shortdate-1)s"
+        self.action.command = "somescript -d %(shortdate-1)s"
         ystr = self.now - datetime.timedelta(days=1)
         assert_equal(self._cmd(), "somescript -d %.4d-%.2d-%.2d" % (ystr.year, ystr.month, ystr.day))
 
     def test_unixtime(self):
-        self.task.command = "somescript -t %(unixtime)s"
+        self.action.command = "somescript -t %(unixtime)s"
         timestamp = int(timeutils.to_timestamp(self.now))
         assert_equal(self._cmd(), "somescript -t %d" % timestamp)
 
     def test_unixtime_plus(self):
-        self.task.command = "somescript -t %(unixtime+100)s"
+        self.action.command = "somescript -t %(unixtime+100)s"
         timestamp = int(timeutils.to_timestamp(self.now)) + 100
         assert_equal(self._cmd(), "somescript -t %d" % timestamp)
 
     def test_unixtime_minus(self):
-        self.task.command = "somescript -t %(unixtime-100)s"
+        self.action.command = "somescript -t %(unixtime-100)s"
         timestamp = int(timeutils.to_timestamp(self.now)) - 100
         assert_equal(self._cmd(), "somescript -t %d" % timestamp)
 
     def test_daynumber(self):
-        self.task.command = "somescript -d %(daynumber)s"
+        self.action.command = "somescript -d %(daynumber)s"
         assert_equal(self._cmd(), "somescript -d %d" % (self.now.toordinal(),))
 
     def test_daynumber_plus(self):
-        self.task.command = "somescript -d %(daynumber+1)s"
+        self.action.command = "somescript -d %(daynumber+1)s"
         tmrw = self.now + datetime.timedelta(days=1)
         assert_equal(self._cmd(), "somescript -d %d" % (tmrw.toordinal(),))
 
     def test_daynumber_minus(self):
-        self.task.command = "somescript -d %(daynumber-1)s"
+        self.action.command = "somescript -d %(daynumber-1)s"
         ystr = self.now - datetime.timedelta(days=1)
         assert_equal(self._cmd(), "somescript -d %d" % (ystr.toordinal(),))
 

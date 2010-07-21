@@ -9,7 +9,7 @@ import os.path
 import yaml
 from twisted.conch.client import options
 
-from tron import task, job, node, scheduler, monitor, emailer
+from tron import action, job, node, scheduler, monitor, emailer
 
 log = logging.getLogger("tron.config")
 
@@ -46,7 +46,7 @@ class TronConfiguration(yaml.YAMLObject):
     yaml_tag = u'!TronConfiguration'
 
     def _apply_jobs(self, mcp):
-        """Configure tasks"""
+        """Configure actions"""
         found_jobs = []
         for job_config in self.jobs:
             found_jobs.append(job_config.name)
@@ -152,36 +152,36 @@ class Job(_ConfiguredObject):
         if hasattr(self, "queueing"):
             real_job.queueing = self.queueing
 
-        for t_config in self.tasks:
-            task = t_config.actualized
-            real_job.topo_tasks.append(task)
-            task.job = real_job
+        for a_config in self.actions:
+            action = a_config.actualized
+            real_job.topo_actions.append(action)
+            action.job = real_job
 
-            if task.node is None:
+            if action.node is None:
                 assert real_job.node
-                task.node = real_job.node
+                action.node = real_job.node
 
-class Task(_ConfiguredObject):
-    yaml_tag = u'!Task'
-    actual_class = task.Task
+class Action(_ConfiguredObject):
+    yaml_tag = u'!Action'
+    actual_class = action.Action
     
-    def _apply_requirements(self, real_task, requirements):
+    def _apply_requirements(self, real_action, requirements):
         if hasattr(requirements, '__iter__'):
             for req in requirements:
-                real_task.required_tasks.append(req.actualized)
+                real_action.required_actions.append(req.actualized)
         else:
-            real_task.required_tasks.append(requirements.actualized)
+            real_action.required_actions.append(requirements.actualized)
 
     def _apply(self):
-        """Configured the specific task instance"""
-        real_task = self._ref()
-        real_task.name = self.name
-        real_task.command = self.command
-        real_task.output_dir = self.output_dir if hasattr(self, "output_dir") else None
-        real_task.node = self.node.actualized if hasattr(self, "node") else None
+        """Configured the specific action instance"""
+        real_action = self._ref()
+        real_action.name = self.name
+        real_action.command = self.command
+        real_action.output_dir = self.output_dir if hasattr(self, "output_dir") else None
+        real_action.node = self.node.actualized if hasattr(self, "node") else None
 
         if hasattr(self, "requires"):
-            self._apply_requirements(real_task, self.requires)
+            self._apply_requirements(real_action, self.requires)
 
 class Node(_ConfiguredObject):
     yaml_tag = u'!Node'
@@ -196,8 +196,8 @@ class NodeResource(yaml.YAMLObject):
     yaml_tag = u'!NodeResource'
 
 
-class TaskResource(yaml.YAMLObject):
-    yaml_tag = u'!TaskResource'
+class ActionResource(yaml.YAMLObject):
+    yaml_tag = u'!ActionResource'
 
 
 class FileResource(yaml.YAMLObject):

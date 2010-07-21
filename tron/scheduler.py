@@ -23,7 +23,7 @@ class ConstantScheduler(object):
 class DailyScheduler(object):
     """The daily scheduler schedules one run per day"""
     def next_run(self, job):
-        # For a daily scheduler, always assume the next task run is tomorrow
+        # For a daily scheduler, always assume the next job run is tomorrow
         run_time = (timeutils.current_time() + datetime.timedelta(days=1)).replace(hour=0, minute=1, second=1)
 
         last = job.runs[-1] if job.runs else None

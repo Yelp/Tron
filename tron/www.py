@@ -54,16 +54,16 @@ class JobRunResource(resource.Resource):
         run_output = []
         state = job_run_state(self._run)
         
-        for task_run in self._run.runs:
-            task_state = job_run_state(task_run)
+        for action_run in self._run.runs:
+            action_state = job_run_state(action_run)
             
             run_output.append({
-                'id': task_run.id,
-                'run_time': task_run.run_time and str(task_run.run_time),
-                'start_time': task_run.start_time and str(task_run.start_time),
-                'end_time': task_run.end_time and str(task_run.end_time),
-                'exit_status': task_run.exit_status,
-                'state': task_state,
+                'id': action_run.id,
+                'run_time': action_run.run_time and str(action_run.run_time),
+                'start_time': action_run.start_time and str(action_run.start_time),
+                'end_time': action_run.end_time and str(action_run.end_time),
+                'exit_status': action_run.exit_status,
+                'state': action_state,
             })
 
         output = {
@@ -155,12 +155,12 @@ class JobResource(resource.Resource):
             })
 
         resources_output = []
-
+        
         output = {
             'name': self._job.name,
             'scheduler': str(self._job.scheduler),
             'runs': run_output,
-            'task_names': map(lambda t: t.name, self._job.topo_tasks)
+            'action_names': map(lambda t: t.name, self._job.topo_actions)
         }
         return respond(request, output)
 

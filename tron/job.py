@@ -1,6 +1,6 @@
 import logging
 
-from tron import task
+from tron import action
 from tron.utils import timeutils
 
 log = logging.getLogger('tron.job')
@@ -38,7 +38,7 @@ class JobRun(object):
             self.cancel()
 
     def start(self):
-        log.info("Starting task job %s", self.job.name)
+        log.info("Starting action job %s", self.job.name)
         self.start_time = timeutils.current_time()
         self.data['start_time'] = self.start_time
 
@@ -126,9 +126,9 @@ class JobRun(object):
         return not prev_job or prev_job.is_success
 
 class Job(object):
-    def __init__(self, name=None, task=None):
+    def __init__(self, name=None, action=None):
         self.name = name
-        self.topo_tasks = [task] if task else []
+        self.topo_actions = [action] if action else []
         self.scheduler = None
         self.queueing = False
         self.runs = []
@@ -149,7 +149,7 @@ class Job(object):
             prev.next = job_run
 
         runs = {}
-        for t in self.topo_tasks:
+        for t in self.topo_actions:
             run = t.build_run()
             
             run.job_run = job_run
@@ -158,7 +158,7 @@ class Job(object):
             job_run.runs.append(run)
             job_run.data['runs'].append(run.data)
 
-            for req in t.required_tasks:
+            for req in t.required_actions:
                 runs[req.name].waiting_runs.append(run)
                 run.required_runs.append(runs[req.name])
       

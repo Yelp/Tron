@@ -83,7 +83,7 @@ class Node(object):
             self._open_channel(run)
     
         # We return the deferred here, but really we're trying to keep the rest of the world from getting too
-        # involved with twisted. We will call back to mark the task success/fail directly, so using this deferred
+        # involved with twisted. We will call back to mark the action success/fail directly, so using this deferred
         # isn't strictly necessary.
         return self.run_states[run.id].deferred
 
@@ -206,7 +206,7 @@ class Node(object):
         """
         def callback(data):
             if run.output_file:
-                log.info("Received data for task %s: writing to %s", run.task.name, run.output_file.name)
+                log.info("Received data for action %s: writing to %s", run.action.name, run.output_file.name)
                 run.output_file.write(data)
                 run.output_file.flush()
         
@@ -216,7 +216,7 @@ class Node(object):
         """Generates an error received callback for the channel.
         """
         def callback(data):
-            log.error("Received stderr data for task %s: %s", run.task.name, data)
+            log.error("Received stderr data for action %s: %s", run.action.name, data)
             if run.output_file:
                 log.error("Writing error to %s", run.output_file.name)
                 run.output_file.write(data)

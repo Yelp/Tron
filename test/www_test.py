@@ -93,6 +93,7 @@ class JobDetailTest(TestCase):
                                  ],
                                  scheduler_str="testsched",
                                  node=TEST_NODE,
+                                 topo_actions=[],
                                 )
 
         self.resource = www.JobResource(self.job)
@@ -201,7 +202,7 @@ class JobRunStartTest(TestCase):
 
         # Verify the response
         assert_equal(req.code, twisted.web.http.SEE_OTHER)
-        assert_equal(req.responseHeaders.getRawHeaders('Location')[0], "/runs/1")
+        assert_equal(req.responseHeaders.getRawHeaders('Location')[0], "/jobs/1")
 
         # Check if a run would have been queued
         func = self.run.start

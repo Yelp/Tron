@@ -90,7 +90,7 @@ class MasterControlProgram(object):
     """
     def __init__(self, state_dir):
         self.jobs = {}
-        self.tasks = {}
+        self.actions = {}
         self.runs = {}
         self.nodes = []
         self.state_handler = StateHandler(self, state_dir)
@@ -102,11 +102,11 @@ class MasterControlProgram(object):
         self.jobs[tron_job.name] = tron_job
         tron_job.state_callback = self.state_handler.state_changed
 
-        for tron_task in tron_job.topo_tasks:
-            self.tasks[tron_task.name] = tron_task
+        for tron_action in tron_job.topo_actions:
+            self.actions[tron_action.name] = tron_action
             
-            if tron_task.node not in self.nodes:
-                self.nodes.append(tron_task.node) 
+            if tron_action.node not in self.nodes:
+                self.nodes.append(tron_action.node) 
 
     def _schedule_next_run(self, job):
         next = job.next_run()

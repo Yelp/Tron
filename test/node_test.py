@@ -4,7 +4,7 @@ import tempfile
 from testify import *
 from testify.utils import turtle
 
-from tron import node, job
+from tron import node, action, job
 from tron.utils.testingutils import run_reactor
 
 class NodeTestCase(TestCase):
@@ -16,24 +16,27 @@ class NodeTestCase(TestCase):
         state = 0
 
     def test_output_logging(self):
-        jo = job.Job(name="Test Job")
-        jo.command = "echo Hello"
+        act = action.Action(name="Test Action")
+        act.command = "echo Hello"
+        jo = job.Job("Test Job", act)
+        act.job = jo
 
         run = jo.build_run()
-        run.output_file = tempfile.TemporaryFile('w+b')
         nod = node.Node(hostname="localhost")
+        act_run = run.runs[0]
+        act_run.output_file = tempfile.TemporaryFile('w+b')
         
         nod.connection = self.TestConnection()
-        nod.run_states = {run.id:self.TestRunState()}
-        nod.run_states[run.id].state = node.RUN_STATE_CONNECTING
+        nod.run_states = {act_run.id:self.TestRunState()}
+        nod.run_states[act_run.id].state = node.RUN_STATE_CONNECTING
 
-        nod._open_channel(run)
+        nod._open_channel(act_run)
         assert not nod.connection.chan is None
         nod.connection.chan.dataReceived("test")
 
-        run.output_file.seek(0)
-        assert run.output_file.read(4) == "test"
-        run.output_file.close()
+        act_run.output_file.seek(0)
+        assert act_run.output_file.read(4) == "test"
+        act_run.output_file.close()
 
 
 if __name__ == '__main__':

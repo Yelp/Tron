@@ -4,41 +4,10 @@ from testify import *
 from testify.utils import turtle
 
 from tron.utils import timeutils
-from tron import mcp, job, job_flow, scheduler
+from tron import mcp, job, action, scheduler
 
 def equals_with_delta(val, check, delta):
     return val <= check + delta and val >= check - delta
-
-class MockJob(turtle.Turtle):
-    name = "Test Job"
-    scheduler = scheduler.ConstantScheduler()
-    
-    def __init__(self):
-        self.runs = []
-        self.node = MockNode()
-    def next_run(self):
-        class MockJobRun(turtle.Turtle):
-            should_start = True
-            self.prev = None    
-            
-            def scheduled_start(self):
-                self.start()
-
-            def start(self):
-                self.is_done = True
-                self.is_success = True
-
-            @property
-            def is_cancelled(self):
-                return True
-
-        my_run = MockJobRun()
-        self.runs.append(my_run)
-        return my_run
-
-class MockNode(object):
-    def run(self, run):
-        return run
 
 class TestGlobalFunctions(TestCase):
     def test_sleep_time(self):
@@ -54,13 +23,13 @@ class TestStateHandler(TestCase):
     def setup(self):
         self.mcp = mcp.MasterControlProgram(".")
         self.state_handler = self.mcp.state_handler
-        self.job = job.Job("Test Job")
-        self.flow = job_flow.JobFlow("Test Flow", self.job)
+        self.action = action.Action("Test Action")
+        self.action = action.Action("Test Action", self.action)
         
-        self.flow.scheduler = scheduler.IntervalScheduler(datetime.timedelta(seconds=0))
-        self.job.command = "Test command"
-        self.flow.queueing = True
-        self.job.node = turtle.Turtle()
+        self.action.scheduler = scheduler.IntervalScheduler(datetime.timedelta(seconds=0))
+        self.action.command = "Test command"
+        self.action.queueing = True
+        self.action.node = turtle.Turtle()
         
     def test_state_changed(self):
         pass
@@ -73,47 +42,49 @@ class TestStateHandler(TestCase):
 
 class TestMasterControlProgram(TestCase):
     @setup
-    def build_jobs(self):
-        self.job = MockJob()
-        self.flow = job_flow.JobFlow("Test Flow", self.job)
+    def build_actions(self):
+        self.action = action.Action("Test Action")
+        self.job = job.Job("Test Job", self.action)
         self.mcp = mcp.MasterControlProgram(".")
         
-    def test_add_flow(self):
-        assert_equal(len(self.mcp.flows), 0)
+    def test_add_action(self):
+        assert_equal(len(self.mcp.actions), 0)
         assert_equal(len(self.mcp.nodes), 0)
-        assert_equal(len(self.mcp.jobs), 0)
+        assert_equal(len(self.mcp.actions), 0)
 
-        self.mcp.add_flow(self.flow)
+        self.mcp.add_job(self.job)
         
-        assert_equal(len(self.mcp.jobs), 1)
-        assert_equal(self.mcp.jobs[self.job.name], self.job)
+        assert_equal(len(self.mcp.actions), 1)
+        assert_equal(self.mcp.actions[self.action.name], self.action)
         assert_equal(len(self.mcp.nodes), 1)
-        assert_equal(self.mcp.nodes[0], self.job.node)
+        assert_equal(self.mcp.nodes[0], self.action.node)
 
-        job2 = MockJob()
-        job2.node = self.job.node
-        job2.name = self.job.name + "2"
-        flow2 = job_flow.JobFlow("Test Flow2", job2)
+        action2 = action.Action("Test Action2")
+        job2 = job.Job("Test Job2", action2)
+        action2.node = self.action.node
 
-        self.mcp.add_flow(flow2)
+        self.mcp.add_job(job2)
 
-        assert_equal(len(self.mcp.jobs), 2)
-        assert_equal(self.mcp.jobs[job2.name], job2)
+        assert_equal(len(self.mcp.actions), 2)
+        assert_equal(self.mcp.actions[action2.name], action2)
         assert_equal(len(self.mcp.nodes), 1)
-        assert_equal(self.mcp.nodes[0], self.job.node)
+        assert_equal(self.mcp.nodes[0], self.action.node)
 
         try:
-            self.mcp.add_flow(self.flow)
+            self.mcp.add_job(self.job)
             assert False
-        except mcp.FlowExistsError:
+        except mcp.JobExistsError:
             pass
 
     def test_schedule_next_run(self):
-        jo = job.Job()
-        jo.command = "Test command"
+        act = action.Action("Test Action")
+        jo = job.Job("Test Job", act)
         jo.node = turtle.Turtle()
-        flo = job_flow.JobFlow("jo flo", jo)
-        flo.scheduler = scheduler.ConstantScheduler()
+        jo.scheduler = scheduler.ConstantScheduler()
+
+        act.job = jo
+        act.command = "Test command"
+        act.node = turtle.Turtle()
 
         def call_now(time, func, next):
             next.start()
@@ -121,10 +92,10 @@ class TestMasterControlProgram(TestCase):
 
         callLater = mcp.reactor.callLater
         mcp.reactor.callLater = call_now
-        next = self.mcp._schedule_next_run(flo)
+        next = self.mcp._schedule_next_run(jo)
         
-        assert_equals(len(filter(lambda r:r.state == job.JOB_RUN_SUCCEEDED, jo.runs)), 1)
-        assert_equals(jo, next.runs[0].job)
+        assert_equals(len(filter(lambda r:r.is_success, jo.runs)), 1)
+        assert_equals(jo.topo_actions[0], next.runs[0].action)
         assert next.is_success
 
         mcp.reactor.callLater = callLater
