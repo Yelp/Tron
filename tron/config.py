@@ -136,8 +136,10 @@ class Job(_ConfiguredObject):
     def _apply(self):
         real_job = self._ref()
         real_job.name = self.name
-        real_job.node = self.node.actualized if hasattr(self, "node") else None
-        
+
+        if hasattr(self, "node"):
+            real_job.node_pool = self.node.actualized
+
         # Build scheduler
         if hasattr(self, "schedule"):
             if isinstance(self.schedule, basestring):
@@ -156,10 +158,7 @@ class Job(_ConfiguredObject):
             action = a_config.actualized
             real_job.topo_actions.append(action)
             action.job = real_job
-
-            if action.node is None:
-                assert real_job.node
-                action.node = real_job.node
+            assert real_job.node_pool or action.node_pool
 
 class Action(_ConfiguredObject):
     yaml_tag = u'!Action'
@@ -178,19 +177,29 @@ class Action(_ConfiguredObject):
         real_action.name = self.name
         real_action.command = self.command
         real_action.output_dir = self.output_dir if hasattr(self, "output_dir") else None
-        real_action.node = self.node.actualized if hasattr(self, "node") else None
+        real_action.node_pool = self.node.actualized if hasattr(self, "node") else None
 
         if hasattr(self, "requires"):
             self._apply_requirements(real_action, self.requires)
 
+class NodePool(_ConfiguredObject):
+    yaml_tag = u'!NodePool'
+    actual_class = node.NodePool
+    
+    def _apply(self):
+        real_node_pool = self._ref()
+        for name in self.hostnames:
+            real_node_pool.nodes.append(node.Node(name))
+        
+        
 class Node(_ConfiguredObject):
     yaml_tag = u'!Node'
-    actual_class = node.Node
+    actual_class = node.NodePool
     
     def _apply(self):
         real_node = self._ref()
-        real_node.hostname = self.hostname
-        
+        real_node.nodes.append(node.Node(self.hostname))
+ 
 
 class NodeResource(yaml.YAMLObject):
     yaml_tag = u'!NodeResource'

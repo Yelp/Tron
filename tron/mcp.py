@@ -95,18 +95,25 @@ class MasterControlProgram(object):
         self.nodes = []
         self.state_handler = StateHandler(self, state_dir)
 
+    def add_nodes(self, node_pool):
+        if not node_pool:
+            return
+
+        for node in node_pool.nodes:
+            if not node in self.nodes:
+                self.nodes.append(node)
+
     def add_job(self, tron_job):
         if tron_job.name in self.jobs:
             raise JobExistsError(tron_job)
             
         self.jobs[tron_job.name] = tron_job
         tron_job.state_callback = self.state_handler.state_changed
+        self.add_nodes(tron_job.node_pool)
 
         for tron_action in tron_job.topo_actions:
             self.actions[tron_action.name] = tron_action
-            
-            if tron_action.node not in self.nodes:
-                self.nodes.append(tron_action.node) 
+            self.add_nodes(tron_action.node_pool)
 
     def _schedule_next_run(self, job):
         next = job.next_run()

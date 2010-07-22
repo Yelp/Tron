@@ -78,6 +78,7 @@ class ActionRun(object):
         self.exit_status = None
         self.output_file = None
         self.job_run = None
+        self.node = action.node_pool.next() if action.node_pool else None
 
         self.required_runs = []
         self.waiting_runs = []
@@ -96,7 +97,7 @@ class ActionRun(object):
         self.state_changed()
 
         # And now we try to actually start some work....
-        ret = self.action.node.run(self)
+        ret = self.node.run(self)
         if isinstance(ret, defer.Deferred):
             self._setup_callbacks(ret)
 
@@ -127,13 +128,13 @@ class ActionRun(object):
         """Handle an error where the node wasn't able to give us an exit code"""
         log.info("Action error: %s", str(result))
         if isinstance(result.value, node.ConnectError):
-            log.warning("Failed to connect to host %s for run %s", self.action.node.hostname, self.id)
+            log.warning("Failed to connect to host %s for run %s", self.node.hostname, self.id)
             self.fail(None)
         elif isinstance(result.value, node.ResultError):
-            log.warning("Failed to retrieve exit for run %s after executing command on host %s", self.id, self.action.node.hostname)
+            log.warning("Failed to retrieve exit for run %s after executing command on host %s", self.id, self.node.hostname)
             self.fail_unknown()
         else:
-            log.warning("Unknown failure for run %s on host %s: %s", self.id, self.action.node.hostname, str(result))
+            log.warning("Unknown failure for run %s on host %s: %s", self.id, self.node.hostname, str(result))
             self.fail_unknown()
             
         # Maybe someone else wants it ?
@@ -273,9 +274,9 @@ class ActionRun(object):
         return all([r.is_success for r in self.required_runs])
  
 class Action(object):
-    def __init__(self, name=None, node=None, timeout=None):
+    def __init__(self, name=None, node_pool=None, timeout=None):
         self.name = name
-        self.node = node
+        self.node_pool = node_pool
         self.timeout = timeout
         self.runs = []
 

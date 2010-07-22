@@ -61,7 +61,7 @@ class TestActionRun(TestCase):
     """Unit testing for ActionRun class"""
     @setup
     def setup(self):
-        self.action = action.Action(name="Test Action", node=turtle.Turtle())
+        self.action = action.Action(name="Test Action", node_pool=turtle.Turtle())
         self.job = job.Job("Test Job", self.action)
         self.job.scheduler = scheduler.DailyScheduler()
         self.job.queueing = True
@@ -118,7 +118,7 @@ class ActionRunState(TestCase):
     def build_job(self):
         self.action = action.Action(name="Test Action")
         self.action.command = "Test command"
-        self.action.node = turtle.Turtle()
+        self.action.node_pool = turtle.Turtle()
         self.action.job = turtle.Turtle()
         self.run = self.action.build_run()
         self.run.job_run = turtle.Turtle()
@@ -159,11 +159,11 @@ class TestRunDependency(TestCase):
     def build_job(self):
         self.action = action.Action(name="Test Action1")
         self.action.command = "Test command1"
-        self.action.node = turtle.Turtle()
+        self.action.node_pool = turtle.Turtle()
 
         self.dep_action = action.Action(name="Test Action2")
         self.dep_action.command = "Test command2"
-        self.dep_action.node = turtle.Turtle()
+        self.dep_action.node_pool = turtle.Turtle()
         self.dep_action.required_actions.append(self.action)
 
         self.job = job.Job("Test Job", self.action)
@@ -234,7 +234,7 @@ class ActionRunBuildingTest(TestCase):
 class ActionRunLogFileTest(TestCase):
     @setup
     def build_job(self):
-        self.action = action.Action(name="Test Action", node=turtle.Turtle())
+        self.action = action.Action(name="Test Action", node_pool=turtle.Turtle())
         self.job = job.Job("Test Job", self.action)
         self.action.job = self.job
         self.action.command = "Test command"

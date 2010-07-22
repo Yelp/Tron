@@ -15,10 +15,11 @@ ssh_options: !SSHOptions
 
 nodes:
     - &node0 !Node
-        hostname: batch0
+        hostname: 'batch0'
     - &node1 !Node
-        hostname: batch1
-
+        hostname: 'batch1'
+    - &nodePool !NodePool
+        hostnames: ['batch2', 'batch3']
 jobs:
     - &job0 !Job
         name: "job0"
@@ -76,7 +77,7 @@ jobs:
 
     - &job4 !Job
         name: "job4"
-        node: *node1
+        node: *nodePool
         schedule: "daily"
         actions:
             - &actionDaily !Action
@@ -93,7 +94,7 @@ jobs:
 
         self.node0 = self.my_mcp.nodes[0]
         self.node1 = self.my_mcp.nodes[1]
-
+        
         self.job0 = self.my_mcp.jobs['job0']
         self.job1 = self.my_mcp.jobs['job1']
         self.job2 = self.my_mcp.jobs['job2']
@@ -109,10 +110,10 @@ jobs:
         assert hasattr(self.test_config, "ssh_options")
 
         assert_equal(len(self.test_config.jobs), 5)
-        assert_equal(len(self.test_config.nodes), 2)
+        assert_equal(len(self.test_config.nodes), 3)
         
     def test_node_attribute(self):
-        assert_equal(len(self.my_mcp.nodes), 2)
+        assert_equal(len(self.my_mcp.nodes), 4)
         assert_equal(self.my_mcp.nodes[0].hostname, "batch0")
         assert_equal(self.my_mcp.nodes[1].hostname, "batch1")
 
@@ -131,13 +132,17 @@ jobs:
     
     def test_job_node_attribute(self):
         for j in self.all_jobs:
-            assert hasattr(j, "node")
+            assert hasattr(j, "node_pool")
         
-        assert_equal(self.job0.node, self.node0)
-        assert_equal(self.job1.node, self.node0)
-        assert_equal(self.job2.node, self.node1)
-        assert_equal(self.job3.node, self.node1)
-        assert_equal(self.job4.node, self.node1)
+        node2 = self.my_mcp.nodes[2]
+        node3 = self.my_mcp.nodes[3]
+
+        assert_equal(self.job0.node_pool.nodes[0], self.node0)
+        assert_equal(self.job1.node_pool.nodes[0], self.node0)
+        assert_equal(self.job2.node_pool.nodes[0], self.node1)
+        assert_equal(self.job3.node_pool.nodes[0], self.node1)
+        assert_equal(self.job4.node_pool.nodes[0], node2)
+        assert_equal(self.job4.node_pool.nodes[1], node3)
 
     def test_job_schedule_attribute(self):
         for j in self.all_jobs:

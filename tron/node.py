@@ -1,10 +1,10 @@
 import logging
+import itertools
 
 from twisted.internet import protocol, defer, reactor
 from twisted.python import failure
 
 from tron import ssh
-
 
 log = logging.getLogger('tron.node')
 
@@ -46,6 +46,17 @@ class RunState(object):
         self.deferred = defer.Deferred()
         self.channel = None
 
+class NodePool(object):
+    def __init__(self, hostname=None):
+        self.nodes = []
+        self.iter = None
+        if hostname:
+            self.nodes.append(Node(hostname))
+
+    def next(self):
+        if not self.iter:
+            self.iter = itertools.cycle(self.nodes)
+        return self.iter.next()
 
 class Node(object):
     """A node is tron's interface to communicating with an actual machine"""

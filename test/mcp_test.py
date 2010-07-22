@@ -4,7 +4,7 @@ from testify import *
 from testify.utils import turtle
 
 from tron.utils import timeutils
-from tron import mcp, job, action, scheduler
+from tron import mcp, node, job, action, scheduler
 
 def equals_with_delta(val, check, delta):
     return val <= check + delta and val >= check - delta
@@ -46,7 +46,8 @@ class TestMasterControlProgram(TestCase):
         self.action = action.Action("Test Action")
         self.job = job.Job("Test Job", self.action)
         self.mcp = mcp.MasterControlProgram(".")
-        
+        self.job.node_pool = node.NodePool('test hostname')
+
     def test_add_action(self):
         assert_equal(len(self.mcp.actions), 0)
         assert_equal(len(self.mcp.nodes), 0)
@@ -57,18 +58,18 @@ class TestMasterControlProgram(TestCase):
         assert_equal(len(self.mcp.actions), 1)
         assert_equal(self.mcp.actions[self.action.name], self.action)
         assert_equal(len(self.mcp.nodes), 1)
-        assert_equal(self.mcp.nodes[0], self.action.node)
+        assert_equal(self.mcp.nodes[0], self.job.node_pool.nodes[0])
 
         action2 = action.Action("Test Action2")
         job2 = job.Job("Test Job2", action2)
-        action2.node = self.action.node
+        action2.node_pool = self.action.node_pool
 
         self.mcp.add_job(job2)
 
         assert_equal(len(self.mcp.actions), 2)
         assert_equal(self.mcp.actions[action2.name], action2)
         assert_equal(len(self.mcp.nodes), 1)
-        assert_equal(self.mcp.nodes[0], self.action.node)
+        assert_equal(self.mcp.nodes[0], self.job.node_pool.nodes[0])
 
         try:
             self.mcp.add_job(self.job)
@@ -79,7 +80,7 @@ class TestMasterControlProgram(TestCase):
     def test_schedule_next_run(self):
         act = action.Action("Test Action")
         jo = job.Job("Test Job", act)
-        jo.node = turtle.Turtle()
+        jo.node_pool = turtle.Turtle()
         jo.scheduler = scheduler.ConstantScheduler()
 
         act.job = jo

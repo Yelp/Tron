@@ -15,6 +15,7 @@ class JobRun(object):
         self.run_time = None
         self.start_time = None
         self.end_time = None
+        self.node = None
         
         self.runs = []
         self.data = {'runs':[], 'run_time':None, 'start_time': None, 'end_time': None}
@@ -137,31 +138,42 @@ class Job(object):
         self.state_callback = None
         self.data = []
         self.state_callback = None
+        self.node_pool = None
 
     def next_run(self):
         if not self.scheduler:
             return None
-        return self.scheduler.next_run(self)
+        
+        job_run = self.scheduler.next_run(self)
+        for r in job_run.runs:
+            r.state_changed()
+            
+        return job_run
 
     def build_run(self, prev=None):
         job_run = JobRun(self, prev)
+        if self.node_pool:
+            job_run.node = self.node_pool.next() 
+        
         if prev:
             prev.next = job_run
 
         runs = {}
-        for t in self.topo_actions:
-            run = t.build_run()
+        for a in self.topo_actions:
+            run = a.build_run()
+            if not run.node:
+                run.node = job_run.node
             
             run.job_run = job_run
-            runs[t.name] = run
+            runs[a.name] = run
             
             job_run.runs.append(run)
             job_run.data['runs'].append(run.data)
 
-            for req in t.required_actions:
+            for req in a.required_actions:
                 runs[req.name].waiting_runs.append(run)
                 run.required_runs.append(runs[req.name])
-      
+     
         self.runs.append(job_run)
         self.data.append(job_run.data)
         return job_run
