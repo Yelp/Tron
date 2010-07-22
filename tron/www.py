@@ -44,12 +44,24 @@ def job_run_state(job_run):
 
     return state
 
-class JobRunResource(resource.Resource):
+class ActionRunResource(resource.Resource):
     isLeaf = True
+
+class JobRunResource(resource.Resource):
+    isLeaf = False
     def __init__(self, run):
         self._run = run
         resource.Resource.__init__(self)
-   
+
+    def getChild(self, run_num, request):
+        if run_num == '':
+            return self
+        
+        if 
+            return ActionRunResource(self._run.)
+        
+        return error.NoResource()
+
     def render_GET(self, request):
         run_output = []
         state = job_run_state(self._run)

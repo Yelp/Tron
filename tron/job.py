@@ -145,8 +145,9 @@ class Job(object):
             return None
         
         job_run = self.scheduler.next_run(self)
-        for r in job_run.runs:
-            r.state_changed()
+        if job_run:
+            for r in job_run.runs:
+                r.state_changed()
             
         return job_run
 

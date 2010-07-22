@@ -68,7 +68,7 @@ class ActionRun(object):
     """An instance of running a action"""
     def __init__(self, action):
         self.action = action
-        self.id = "%s.%s.%s" % (action.job.name, action.name, len(action.runs))
+        self.id = "%s.%s.%s" % (action.job.name, len(action.runs), action.name)
         
         self.run_time = None    # What time are we supposed to start
         self.start_time = None  # What time did we start
