@@ -1,0 +1,115 @@
+--- !TronConfiguration
+state_dir: "."
+
+ssh_options: !SSHOptions
+    agent: true
+
+nodes:
+    - &nodeBatch00 !Node
+        hostname: 'dev4sv'
+    - &nodeBatch01 !NodePool
+        hostnames: ['dev4sv', 'dev3sv']
+
+jobs:
+    - &intJob !Job
+        name: "interval0a"
+        node: *nodeBatch00
+        schedule: !IntervalScheduler
+            interval: 20s
+        actions:
+            - &intAction !Action
+                name: "actionInterval0a"
+                command: "sleep 3; echo 3"
+                output_dir: "/Users/mtytel"
+                
+    - &jobFoo !Job
+        name: "interval0b"
+        node: *nodeBatch00
+        schedule: !IntervalScheduler
+            interval: 20s
+        actions:
+            - &intAction2 !Action
+                name: "actionInterval0b"
+                command: "python test.py"
+                output_dir: "/Users/mtytel/trontest"
+            - &actionBar !Action
+                name: "actionFollow"
+                command: "echo 1;sleep 5;echo 2"
+                requires: *intAction2
+
+    - &jobFail !Job
+        name: "testfail1"
+        node: *nodeBatch01
+        schedule: !IntervalScheduler
+            interval: 20s
+        actions:
+            - &actionFail !Action
+                name: "actionTestFail1"
+                output_dir: "/Users/mtytel"
+                command: "sleep 5;failfailfail"
+
+    - &jobConstant !Job
+        name: "constant1"
+        node: *nodeBatch01
+        schedule: "constant"
+        actions:
+            - &actionConstant0 !Action
+                name: "constantLeader0"
+                command: "sleep 5; echo constant; sleep 2"
+                output_dir: "/Users/mtytel"
+            - &actionConstant1 !Action
+                name: "constantLeader1"
+                node: *nodeBatch00
+                command: "sleep 1; echo following; sleep 2"
+                output_dir: "/Users/mtytel/"
+             - &actionFollow2 !Action
+                name: "follow0"
+                command: "sleep 1; echo following; sleep 2"
+                requires: [*actionConstant0, *actionConstant1]
+                output_dir: "/Users/mtytel/trontest"
+            
+    - &jobDaily !Job
+        name: "daily1"
+        node: *nodeBatch01
+        schedule: "daily"
+        actions:
+            - &actionDaily !Action
+                name: "actionDaily1"
+                command: "sleep 5;echo daily1; sleep 2"
+                output_dir: "/Users/mtytel"
+
+    - &jobQueue !Job
+        name: "queueing1"
+        node: *nodeBatch01
+        queueing: True
+        schedule: !IntervalScheduler
+            interval: 12s
+        actions:
+            - &actionQueue !Action
+                name: "actionQueueing1"
+                command: "sleep 10; echo queueing; sleep 10"
+                output_dir: "/Users/mtytel/trontest"
+
+    - &jobCancel !Job
+        name: "cancel0"
+        node: *nodeBatch00
+        schedule: !IntervalScheduler
+            interval: 12s
+        actions:
+            - &actionCancel !Action
+                name: "actionCancel"
+                output_dir: "/Users/mtytel/trontest"
+                command: "sleep 10; echo cancelnext; sleep 10"
+
+    - &jobFailQueue !Job
+        name: "failqueue1"
+        node: *nodeBatch01
+        schedule: !IntervalScheduler
+            interval: 12s
+        queueing: True
+        actions:
+            - &actionFailQueue !Action
+                name: "actionFailQueue1"
+                command: "sleep 10; failfailfail"
+                output_dir: "/Users/mtytel/trontest"
+

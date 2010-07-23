@@ -1,0 +1,33 @@
+.\" Process this file with
+.\" groff -man -Tascii foo.1
+.\"
+.TH trond 8 "July 2010" Linux "User Manuals"
+.SH NAME
+trond \- the controlling daemon for tron
+.SH SYNOPSIS
+.B trond
+.RB "[" "--config-file" " | " "-c"
+.IR "config_file" "]"
+.RB "[" "--verbose" " | " "-v" "]"
+.RB "[" "--debug" ]"
+.SH DESCRIPTION
+.B trond
+is the tron daemon that manages all jobs and actions
+.SH OPTIONS
+.IP --config-file | -c
+The tron configuration file that contains all information for jobs and actions
+.IP --verbose
+Displays status messages along the way
+.IP --debug
+Enters debug mode
+.SH FILES
+.SH ENVIRONMENT
+.SH DIAGNOSTICS
+.SH BUGS
+Email found bugs to infra@yelp.com
+.SH AUTHOR
+Matthew Tytel
+.SH "SEE ALSO"
+.BR tronview (8),
+.BR tronctl (8),
+

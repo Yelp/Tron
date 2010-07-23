@@ -1,0 +1,41 @@
+.\" Process this file with
+.\" groff -man -Tascii foo.1
+.\"
+.TH tronctl 8 "July 2010" Linux "User Manuals"
+.SH NAME
+tronctl \- send management commands to jobs and actions within tron
+.SH SYNOPSIS
+.B tronctl
+.RB "[" "--server "
+.IR "server_name" "]"
+.RI "[" "command" "] [" "job_name" " | " "job_run_id" "]"
+.RB "[" "--verbose" " | " "-v" "]"
+.SH DESCRIPTION
+.B tronctl
+is the control interface for tron. Through tronctl you can start, cancel, succeed, and fail job runs and action runs.
+.SH OPTIONS
+.IP "--server config-file"
+The server the tron instance is running on
+.IP --verbose
+Displays status messages along the way
+.SH COMMANDS
+.IP start
+Starts the specified job run or action run
+.IP cancel
+Cancels the specified job run or action run
+.IP succeed
+Marks the specified job run or action run as succeeded. This behaves the same as the job actually completing. Dependant actions are ran and following jobs start.
+.IP fail
+Marks the specified job run or action run as failed.  This behaves the same as the job actually failing. Dependant actions are queued and following jobs are queued or cancelled
+.SH FILES
+.SH ENVIRONMENT
+.IP SOMEDIR
+.SH DIAGNOSTICS
+.SH BUGS
+Email found bugs to infra@yelp.com
+.SH AUTHOR
+Matthew Tytel
+.SH "SEE ALSO"
+.BR trond (8),
+.BR tronview (8),
+

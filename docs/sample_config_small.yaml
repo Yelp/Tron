@@ -1,0 +1,41 @@
+--- !TronConfiguration
+state_dir: '.'
+
+ssh_options: !SSHOptions
+    agent: true
+
+nodes:
+    - &node !Node
+        hostname: 'dev4sv'
+    - &pool !NodePool
+        hostnames: ['dev2sv', 'dev3sv']
+
+jobs:
+    - &job0 !Job
+        name: "job0"
+        node: *pool
+        schedule: !IntervalScheduler
+            interval: 20s
+        queueing: False
+        actions:
+            - &start !Action
+                name: "actionStart"
+                command: "sleep 3; echo 3"
+                node: *node
+            - &follow !Action
+                name: "actionFollow"
+                command: "sleep 2; echo hi; sleep 2"
+                requires: *start
+
+    - &job1 !Job
+        name: "job1"
+        node: *node
+        schedule: !IntervalScheduler
+            interval: 9s
+        queueing: True
+        actions:
+            - &action !Action
+                name: "actionAlone"
+                command: "sleep 10; echo DONE"
+                output_dir: "/Users/user"
+

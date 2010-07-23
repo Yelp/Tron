@@ -14,7 +14,7 @@ from tron import mcp, job, resource, node, scheduler, config, www, monitor, emai
 def parse_options():
     parser = optparse.OptionParser()
     
-    parser.add_option("--config-file", action="store", dest="config_file", help="(require) Configuration file to load", default=None)
+    parser.add_option("--config-file", "-c", action="store", dest="config_file", help="(require) Configuration file to load", default=None)
     parser.add_option("--state_dir", action="store", dest="state_dir", help="Directory where tron's state is backed up", default=None)
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
     parser.add_option("--debug", action="store_true", dest="debug", help="Debug mode, extra error reporting")
