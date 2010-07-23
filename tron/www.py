@@ -165,7 +165,7 @@ class JobRunResource(resource.Resource):
     def _start(self, request):
         if self._run.is_scheduled or self._run.is_cancelled or self._run.is_queued:
             log.info("Starting job run %s", self._run.id)
-            self._run.start()
+            self._run.manual_start()
         else:
             log.warning("Request to start job run %s when it's already done", self._run.id)
 

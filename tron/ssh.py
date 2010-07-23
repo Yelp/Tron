@@ -1,4 +1,5 @@
 import os
+import pwd
 import struct
 import logging
 
@@ -56,7 +57,7 @@ class ClientTransport(transport.SSHClientTransport):
 
         self.connection_defer.callback(conn)
         
-        auth_service = NoPasswordAuthClient(os.getlogin(), self.options, conn)
+        auth_service = NoPasswordAuthClient(pwd.getpwuid(os.getuid())[0], self.options, conn)
 
         self.requestService(auth_service)
 

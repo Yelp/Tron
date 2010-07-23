@@ -12,6 +12,8 @@ state_dir: "."
 
 ssh_options: !SSHOptions
     agent: true
+    identities: 
+        - ~/.ssh/id_dsa
 
 nodes:
     - &node0 !Node
@@ -64,16 +66,20 @@ jobs:
         node: *node1
         schedule: "constant"
         actions:
-            - &actionConstant !Action
+            - &actionConstant0 !Action
                 name: "task3.0"
                 command: "test_command3.0"
                 output_dir: "output_dir3.0"
-            - &actionFollow !Action
+            - &actionConstant1 !Action
                 name: "task3.1"
-                node: *node0
                 command: "test_command3.1"
-                requires: *actionConstant
                 output_dir: "output_dir3.1"
+            - &actionFollow !Action
+                name: "task3.2"
+                node: *node0
+                command: "test_command3.2"
+                requires: [*actionConstant0, *actionConstant1]
+                output_dir: "output_dir3.2"
 
     - &job4 !Job
         name: "job4"
@@ -186,7 +192,7 @@ jobs:
 
     def test_actions_requirements(self):
         dep0 = self.job1.topo_actions[1]
-        dep1 = self.job3.topo_actions[1]
+        dep1 = self.job3.topo_actions[2]
         req0 = self.job1.topo_actions[0]
         req1 = self.job3.topo_actions[0]
 
@@ -194,7 +200,7 @@ jobs:
         assert hasattr(dep1, 'required_actions')
         
         assert_equals(len(dep0.required_actions), 1)
-        assert_equals(len(dep1.required_actions), 1)
+        assert_equals(len(dep1.required_actions), 2)
         assert_equals(len(req0.required_actions), 0)
         assert_equals(len(req1.required_actions), 0)
 

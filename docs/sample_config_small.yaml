@@ -31,8 +31,8 @@ jobs:
         name: "job1"
         node: *node
         schedule: !IntervalScheduler
-            interval: 9s
-        queueing: True
+            interval: 5s
+        queueing: False
         actions:
             - &action !Action
                 name: "actionAlone"

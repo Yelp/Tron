@@ -45,7 +45,15 @@ class JobRun(object):
 
         for r in self.runs:
             r.attempt_start()
-        
+    
+    def manual_start(self):
+        log.info("Starting action job %s", self.job.name)
+        self.start_time = timeutils.current_time()
+        self.data['start_time'] = self.start_time
+
+        for r in self.runs:
+            r.start()
+
     def run_completed(self):
         if self.is_success:
             self.end_time = timeutils.current_time()

@@ -3,6 +3,7 @@ import datetime
 from testify import *
 from testify.utils import turtle
 
+from twisted.internet import reactor
 from tron.utils import timeutils
 from tron import mcp, node, job, action, scheduler
 
@@ -19,20 +20,51 @@ class TestGlobalFunctions(TestCase):
         assert equals_with_delta(time, seconds, .01)
 
 class TestStateHandler(TestCase):
+    @class_setup
+    def freeze_time(self):
+        timeutils.override_current_time(datetime.datetime.now())
+        self.now = timeutils.current_time()
+
+    @class_teardown
+    def unfreeze_time(self):
+        timeutils.override_current_time(None)
+ 
     @setup
     def setup(self):
         self.mcp = mcp.MasterControlProgram(".")
         self.state_handler = self.mcp.state_handler
         self.action = action.Action("Test Action")
-        self.action = action.Action("Test Action", self.action)
         
-        self.action.scheduler = scheduler.IntervalScheduler(datetime.timedelta(seconds=0))
         self.action.command = "Test command"
         self.action.queueing = True
         self.action.node = turtle.Turtle()
+        self.job = job.Job("Test Job", self.action)
+
+        self.job.node_pool = turtle.Turtle()
+        self.job.scheduler = scheduler.IntervalScheduler(datetime.timedelta(seconds=5))
+        self.action.job = self.job
         
-    def test_state_changed(self):
-        pass
+    def test_reschedule(self):
+        def callNow(sleep, func, run):
+            raise NotImplementedError(sleep)
+        
+        run = self.job.next_run()
+        callLate = reactor.callLater
+        #reactor.callLater = callNow
+       
+        #try:
+        #    self.state_handler._reschedule(run)
+        #    assert False
+        #except NotImplementedError as sleep:
+        #    assert_equals(sleep, 0)
+#
+        #try:
+        #    self.state_handler._reschedule(run)
+        #    assert False
+        #except NotImplementedError as sleep:
+        #    assert_equals(sleep, 5)
+#
+        #reactor.callLater = callLate
 
     def test_store_data(self):
         pass
