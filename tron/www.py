@@ -44,11 +44,85 @@ def job_run_state(job_run):
 
     return state
 
-class JobRunResource(resource.Resource):
+class ActionRunResource(resource.Resource):
     isLeaf = True
+    def __init__(self, act_run):
+        self._act_run = act_run
+        resource.Resource.__init__(self)
+
+    def render_GET(self, request):
+        output = {
+            'id': self._act_run.id, 
+            'state': job_run_state(self._act_run),
+        }
+ 
+        return respond(request, output)
+
+    def render_POST(self, request):
+        log.debug("Handling post request for action run %s", self._act_run.id)
+        cmd = request.args['action'][0]
+        if cmd == 'start':
+            return self._start(request)
+        elif cmd == 'succeed':
+            return self._succeed(request)
+        elif cmd == 'cancel':
+            return self._cancel(request)
+        elif cmd == 'fail':
+            return self._fail(request)
+    
+    def _start(self, request):
+        if self._act_run.is_scheduled or self._act_run.is_cancelled or self._act_run.is_queued:
+            log.info("Starting job run %s", self._act_run.id)
+            self._act_run.start()
+        else:
+            log.warning("Request to start job run %s when it's already done", self._act_run.id)
+
+        return respond(request, None, code=http.SEE_OTHER, headers={'Location': "/jobs/%s" % self._act_run.id.replace('.', '/')})
+
+    def _succeed(self, request):
+        if not self._act_run.is_running and not self._act_run.is_success:
+            log.info("Marking job run %s for success", self._act_run.id)
+            self._act_run.succeed()
+        else:
+            log.warning("Request to mark job run %s succeed when it has already", self._act_run.id)
+
+        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._act_run.id.replace('.', '/')})
+
+    def _cancel(self, request):
+        if self._act_run.is_scheduled or self._act_run.is_queued:
+            log.info("Cancelling job %s", self._act_run.id)
+            self._act_run.cancel()
+        else:
+            log.warning("Request to cancel job run %s when it's already cancelled", self._act_run.id)
+
+        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._act_run.id.replace('.', '/')})
+
+    def _fail(self, request):
+        if not self._act_run.is_running and not self._act_run.is_success and not self._act_run.is_failed:
+            log.info("Marking job run %s as failed", self._act_run.id)
+            self._act_run.fail(0)
+        else:
+            log.warning("Request to fail job run %s when it's already running or done", self._act_run.id)
+
+        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._act_run.id.replace('.', '/')})
+
+
+
+class JobRunResource(resource.Resource):
+    isLeaf = False
     def __init__(self, run):
         self._run = run
         resource.Resource.__init__(self)
+
+    def getChild(self, act_name, request):
+        if act_name == '':
+            return self
+        
+        for act_run in self._run.runs:
+            if act_name == act_run.action.name:
+                return ActionRunResource(act_run)
+
+        return error.NoResource() 
 
     def render_GET(self, request):
         run_output = []
