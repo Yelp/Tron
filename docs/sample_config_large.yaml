@@ -8,7 +8,7 @@ nodes:
     - &nodeBatch00 !Node
         hostname: 'dev4sv'
     - &nodeBatch01 !NodePool
-        hostnames: ['dev4sv', 'dev3sv']
+        hostnames: ['dev3sv', 'dev4sv']
 
 jobs:
     - &intJob !Job
@@ -62,7 +62,7 @@ jobs:
                 node: *nodeBatch00
                 command: "sleep 1; echo following; sleep 2"
                 output_dir: "/Users/mtytel/"
-             - &actionFollow2 !Action
+            - &actionFoll !Action
                 name: "follow0"
                 command: "sleep 1; echo following; sleep 2"
                 requires: [*actionConstant0, *actionConstant1]

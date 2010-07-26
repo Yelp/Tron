@@ -29,14 +29,15 @@ class JobRun(object):
                 r.run_time = run_time
 
     def scheduled_start(self):
-        if self.should_start:
-            self.start()
-        elif self.job.queueing and not self.is_cancelled:
-            log.warning("Previous job, %s, not finished - placing in queue", self.job.name)
-            self.queue()
-        else:
-            log.warning("Previous job, %s, not finished - cancelling instance", self.job.name)
-            self.cancel()
+        self.attempt_start()
+
+        if self.is_scheduled:
+            if self.job.queueing:
+                log.warning("Previous job, %s, not finished - placing in queue", self.job.name)
+                self.queue()
+            else:
+                log.warning("Previous job, %s, not finished - cancelling instance", self.job.name)
+                self.cancel()
 
     def start(self):
         log.info("Starting action job %s", self.job.name)
@@ -46,13 +47,9 @@ class JobRun(object):
         for r in self.runs:
             r.attempt_start()
     
-    def manual_start(self):
-        log.info("Starting action job %s", self.job.name)
-        self.start_time = timeutils.current_time()
-        self.data['start_time'] = self.start_time
-
-        for r in self.runs:
-            r.start()
+    def attempt_start(self):
+        if self.should_start:
+            self.start()
 
     def run_completed(self):
         if self.is_success:
@@ -64,7 +61,7 @@ class JobRun(object):
                 next = next.next
            
             if next and next.is_queued:
-                next.start()
+                next.attempt_start()
 
             if self.job.constant:
                 self.job.build_run(self).start()
@@ -125,7 +122,7 @@ class JobRun(object):
 
     @property
     def should_start(self):
-        if self.is_cancelled:
+        if not self.is_scheduled and not self.is_queued:
             return False
 
         prev_job = self.prev

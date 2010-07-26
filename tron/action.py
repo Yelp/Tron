@@ -268,9 +268,6 @@ class ActionRun(object):
 
     @property
     def should_start(self):
-        if not self.is_scheduled and not self.is_queued:
-            return False
-
         return all([r.is_success for r in self.required_runs])
  
 class Action(object):
