@@ -1,13 +1,17 @@
 import logging
+from collections import deque
 
 from tron import action
 from tron.utils import timeutils
 
 log = logging.getLogger('tron.job')
 
+RUN_LIMIT = 10
+
 class JobRun(object):
     def __init__(self, job, prev=None):
-        self.id = "%s.%s" % (job.name, len(job.runs))
+        self.run_num = job.next_num()
+        self.id = "%s.%s" % (job.name, self.run_num)
         self.job = job
         self.prev = prev
         self.next = None
@@ -132,16 +136,22 @@ class JobRun(object):
         return not prev_job or prev_job.is_success
 
 class Job(object):
-    def __init__(self, name=None, action=None):
+    run_num = 0
+    def next_num(self):
+        self.run_num += 1
+        return self.run_num - 1
+
+    def __init__(self, name=None, action=None, run_limit=RUN_LIMIT):
         self.name = name
         self.topo_actions = [action] if action else []
         self.scheduler = None
         self.queueing = False
-        self.runs = []
+        self.runs = deque()
         self.constant = False
         
         self.state_callback = None
-        self.data = []
+        self.run_limit = run_limit
+        self.data = deque()
         self.state_callback = None
         self.node_pool = None
 
@@ -156,6 +166,26 @@ class Job(object):
             
         return job_run
 
+    def get_run_by_num(self, num):
+        ind = num - self.runs[-1].run_num
+        return self.runs[-ind] if ind in range(len(self.runs)) else None
+
+    def remove_old_runs(self, num):
+        for po in range(num):
+            if not self.runs[-1].is_success and not self.runs[-1].is_cancelled:
+                return
+            old = self.runs.pop()
+            self.data.pop()
+            old.next.prev = None
+
+            for act in old.runs:
+                act.job_run = None
+                act.required_runs = None
+                act.waiting_runs = None
+            
+            old.runs = None
+            old.next = None
+
     def build_run(self, prev=None):
         job_run = JobRun(self, prev)
         if self.node_pool:
@@ -166,7 +196,7 @@ class Job(object):
 
         runs = {}
         for a in self.topo_actions:
-            run = a.build_run()
+            run = a.build_run(job_run)
             if not run.node:
                 run.node = job_run.node
             
@@ -180,8 +210,10 @@ class Job(object):
                 runs[req.name].waiting_runs.append(run)
                 run.required_runs.append(runs[req.name])
      
-        self.runs.append(job_run)
-        self.data.append(job_run.data)
+        self.runs.appendleft(job_run)
+        self.data.appendleft(job_run.data)
+        self.remove_old_runs(len(self.runs) - self.run_limit)
+
         return job_run
 
     def restore_run(self, data, prev=None):

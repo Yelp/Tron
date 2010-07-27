@@ -210,7 +210,7 @@ class JobResource(resource.Resource):
             return self
         
         if run_num.isdigit() and int(run_num) < len(self._job.runs):
-            return JobRunResource(self._job.runs[int(run_num)])
+            return JobRunResource(self._job.get_run_by_num(int(run_num)))
         
         return error.NoResource()
 

@@ -91,7 +91,6 @@ class MasterControlProgram(object):
     def __init__(self, working_dir):
         self.jobs = {}
         self.actions = {}
-        self.runs = {}
         self.nodes = []
         self.state_handler = StateHandler(self, working_dir)
 
@@ -125,8 +124,6 @@ class MasterControlProgram(object):
         if not next is None:
             log.info("Scheduling next job for %s", next.job.name)
             reactor.callLater(sleep_time(next.run_time), self.run_job, next)
-            for run in next.runs:
-                self.runs[run.id] = run
 
         return next
 

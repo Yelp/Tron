@@ -4,6 +4,7 @@ import sys
 import datetime
 import optparse
 import os
+import gc
 
 from twisted.python import log
 from twisted.internet import reactor, defer
@@ -50,6 +51,7 @@ def setup_logging(options):
         defer.setDebugging(True)
 
 def main():
+    gc.enable()
     options = parse_options()
     
     setup_logging(options)

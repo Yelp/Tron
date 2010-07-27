@@ -73,7 +73,7 @@ def view_job(options, job_name):
    
     print "\nRun History: (%d total)" % len(job_content['runs'])
     print " ".join(title.ljust(size) for title, size in JOB_RUN_COLUMNS)
-    for run in reversed(job_content['runs'][-options.num_shown:]):
+    for run in job_content['runs'][:options.num_shown]:
         run_id = run['id']
         run_state = run['state']
 

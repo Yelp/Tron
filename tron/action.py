@@ -66,9 +66,10 @@ class ActionRunVariables(object):
 
 class ActionRun(object):
     """An instance of running a action"""
-    def __init__(self, action):
+    def __init__(self, action, job_run):
         self.action = action
-        self.id = "%s.%s.%s" % (action.job.name, len(action.runs), action.name)
+        self.job_run = job_run
+        self.id = "%s.%s" % (job_run.id, action.name)
         
         self.run_time = None    # What time are we supposed to start
         self.start_time = None  # What time did we start
@@ -77,8 +78,7 @@ class ActionRun(object):
         self.state = ACTION_RUN_QUEUED if action.required_actions else ACTION_RUN_SCHEDULED
         self.exit_status = None
         self.output_file = None
-        self.job_run = None
-        self.node = action.node_pool.next() if action.node_pool else None
+        self.node = action.node_pool.next() if action.node_pool else job_run.node
 
         self.required_runs = []
         self.waiting_runs = []
@@ -272,23 +272,17 @@ class Action(object):
         self.name = name
         self.node_pool = node_pool
         self.timeout = timeout
-        self.runs = []
 
         self.required_actions = []
         self.output_path = None
         self.job = None
         self.command = None
 
-    def build_run(self):
+    def build_run(self, job_run):
         """Build an instance of ActionRun for this action
         
         This is used by the scheduler when scheduling a run
         """
-        new_run = ActionRun(self)
-        self.runs.append(new_run)
+        new_run = ActionRun(self, job_run)
         return new_run
-
-    def get_run_by_id(self, id):
-        runs = filter(lambda cur: cur.id == id, self.runs) 
-        return runs[0] if runs else None
 
