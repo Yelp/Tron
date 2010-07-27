@@ -1,5 +1,5 @@
 --- !TronConfiguration
-state_dir: '.'
+working_dir: './working'
 
 ssh_options: !SSHOptions
     agent: true
@@ -37,5 +37,4 @@ jobs:
             - &action !Action
                 name: "actionAlone"
                 command: "sleep 10; echo DONE"
-                output_dir: "/Users/user"
 

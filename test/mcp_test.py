@@ -1,4 +1,6 @@
 import datetime
+import os 
+import shutil
 
 from testify import *
 from testify.utils import turtle
@@ -21,17 +23,19 @@ class TestGlobalFunctions(TestCase):
 
 class TestStateHandler(TestCase):
     @class_setup
-    def freeze_time(self):
+    def class_setup(self):
+        os.mkdir('./mcp_test_dir')
         timeutils.override_current_time(datetime.datetime.now())
         self.now = timeutils.current_time()
 
     @class_teardown
-    def unfreeze_time(self):
+    def class_teardown(self):
         timeutils.override_current_time(None)
- 
+        shutil.rmtree('./mcp_test_dir')
+
     @setup
     def setup(self):
-        self.mcp = mcp.MasterControlProgram(".")
+        self.mcp = mcp.MasterControlProgram("./mcp_test_dir")
         self.state_handler = self.mcp.state_handler
         self.action = action.Action("Test Action")
         
@@ -73,11 +77,19 @@ class TestStateHandler(TestCase):
         pass
 
 class TestMasterControlProgram(TestCase):
+    @class_setup
+    def class_setup(self):
+        os.mkdir('./mcp_test_dir')
+
+    @class_teardown
+    def class_teardown(self):
+        shutil.rmtree('./mcp_test_dir')
+
     @setup
     def build_actions(self):
         self.action = action.Action("Test Action")
         self.job = job.Job("Test Job", self.action)
-        self.mcp = mcp.MasterControlProgram(".")
+        self.mcp = mcp.MasterControlProgram("./mcp_test_dir")
         self.job.node_pool = node.NodePool('test hostname')
 
     def test_add_action(self):

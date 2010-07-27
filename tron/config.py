@@ -60,25 +60,25 @@ class TronConfiguration(yaml.YAMLObject):
                 dead_job = mcp.jobs[job_name]
                 mcp.jobs.remove(dead_job)
     
-    def _get_state_dir(self, mcp):
-        if mcp.state_handler.state_dir:
-            return mcp.state_handler.state_dir
-        if hasattr(self, 'state_dir'):
-            return self.state_dir
+    def _get_working_dir(self, mcp):
+        if mcp.state_handler.working_dir:
+            return mcp.state_handler.working_dir
+        if hasattr(self, 'working_dir'):
+            return self.working_dir
         if 'TMPDIR' in os.environ:
             return os.environ['TMPDIR']
         return '/tmp'
     
     def apply(self, mcp):
         """Apply the configuration to the specified master control program"""
+        mcp.state_handler.working_dir = self._get_working_dir(mcp)
+        
         self._apply_jobs(mcp)
         if hasattr(self, 'ssh_options'):
             self.ssh_options._apply(mcp)
         
         if hasattr(self, 'notification_options'):
             self.notification_options._apply(mcp)
-
-        mcp.state_handler.state_dir = self._get_state_dir(mcp)
 
 class SSHOptions(yaml.YAMLObject):
     yaml_tag = u'!SSHOptions'
@@ -176,7 +176,6 @@ class Action(_ConfiguredObject):
         real_action = self._ref()
         real_action.name = self.name
         real_action.command = self.command
-        real_action.output_dir = self.output_dir if hasattr(self, "output_dir") else None
         real_action.node_pool = self.node.actualized if hasattr(self, "node") else None
 
         if hasattr(self, "requires"):

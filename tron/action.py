@@ -112,17 +112,14 @@ class ActionRun(object):
             self.state_changed()
 
     def _open_output_file(self):
-        if self.action.output_dir:
-            if os.path.isdir(self.action.output_dir):
-                file_name = self.action.output_dir + "/" + self.action.name + ".out"
-            else:
-                file_name = self.action.output_dir
-            
-            try:
-                log.info("Opening file %s for output", file_name)
-                self.output_file = open(file_name, 'a')
-            except IOError, e:
-                log.error(str(e) + " - Not storing command output!")
+        if self.action.output_path is None:
+            return
+
+        try:
+            log.info("Opening file %s for output", self.action.output_path)
+            self.output_file = open(self.action.output_path, 'a')
+        except IOError, e:
+            log.error(str(e) + " - Not storing command output!")
 
     def _handle_errback(self, result):
         """Handle an error where the node wasn't able to give us an exit code"""
@@ -278,7 +275,7 @@ class Action(object):
         self.runs = []
 
         self.required_actions = []
-        self.output_dir = None
+        self.output_path = None
         self.job = None
         self.command = None
 

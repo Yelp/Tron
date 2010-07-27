@@ -1,6 +1,8 @@
 """Tests for our configuration system"""
 import StringIO
 import datetime
+import os
+import shutil
 
 from testify import *
 from tron import config, mcp, scheduler
@@ -8,7 +10,7 @@ from tron import config, mcp, scheduler
 class ConfigTest(TestCase):
     config = """
 --- !TronConfiguration
-state_dir: "."
+working_dir: "./config_test_dir"
 
 ssh_options: !SSHOptions
     agent: true
@@ -24,93 +26,92 @@ nodes:
         hostnames: ['batch2', 'batch3']
 jobs:
     - &job0 !Job
-        name: "job0"
+        name: "test_job0"
         node: *node0
         schedule: !IntervalScheduler
             interval: 20s
         actions:
             - &intAction !Action
-                name: "task0.0"
+                name: "action0.0"
                 command: "test_command0.0"
-                output_dir: "output_dir0.0"
                 
     - &job1 !Job
-        name: "job1"
+        name: "test_job1"
         node: *node0
         schedule: !IntervalScheduler
             interval: 20s
         actions:
             - &intAction2 !Action
-                name: "task1.0"
+                name: "action1.0"
                 command: "test_command1.0"
-                output_dir: "output_dir1.0"
             - &actionBar !Action
-                name: "task1.1"
+                name: "action1.1"
                 command: "test_command1.1"
-                output_dir: "output_dir1.1"
                 requires: *intAction2
 
     - &job2 !Job
-        name: "job2"
+        name: "test_job2"
         node: *node1
         schedule: !IntervalScheduler
             interval: 20s
         actions:
             - &actionFail !Action
-                name: "task2.0"
-                output_dir: "output_dir2.0"
+                name: "action2.0"
                 command: "test_command2.0"
 
     - &job3 !Job
-        name: "job3"
+        name: "test_job3"
         node: *node1
         schedule: "constant"
         actions:
             - &actionConstant0 !Action
-                name: "task3.0"
+                name: "action3.0"
                 command: "test_command3.0"
-                output_dir: "output_dir3.0"
             - &actionConstant1 !Action
-                name: "task3.1"
+                name: "action3.1"
                 command: "test_command3.1"
-                output_dir: "output_dir3.1"
             - &actionFollow !Action
-                name: "task3.2"
+                name: "action3.2"
                 node: *node0
                 command: "test_command3.2"
                 requires: [*actionConstant0, *actionConstant1]
-                output_dir: "output_dir3.2"
 
     - &job4 !Job
-        name: "job4"
+        name: "test_job4"
         node: *nodePool
         schedule: "daily"
         actions:
             - &actionDaily !Action
-                name: "task4.0"
+                name: "action4.0"
                 command: "test_command4.0"
-                output_dir: "output_dir4.0"
 """
-    
+    @class_setup
+    def class_setup(self):
+        os.mkdir('./config_test_dir')
+
     @setup
     def setup(self):
         self.test_config = config.load_config(StringIO.StringIO(self.config))
-        self.my_mcp = mcp.MasterControlProgram('state')
+        self.my_mcp = mcp.MasterControlProgram('./config_test_dir')
         self.test_config.apply(self.my_mcp)
 
         self.node0 = self.my_mcp.nodes[0]
         self.node1 = self.my_mcp.nodes[1]
         
-        self.job0 = self.my_mcp.jobs['job0']
-        self.job1 = self.my_mcp.jobs['job1']
-        self.job2 = self.my_mcp.jobs['job2']
-        self.job3 = self.my_mcp.jobs['job3']
-        self.job4 = self.my_mcp.jobs['job4']
+        self.job0 = self.my_mcp.jobs['test_job0']
+        self.job1 = self.my_mcp.jobs['test_job1']
+        self.job2 = self.my_mcp.jobs['test_job2']
+        self.job3 = self.my_mcp.jobs['test_job3']
+        self.job4 = self.my_mcp.jobs['test_job4']
 
         self.all_jobs = [self.job0, self.job1, self.job2, self.job3, self.job4]
 
+    @class_teardown
+    def teardown(self):
+        shutil.rmtree('./config_test_dir')
+
     def test_attributes(self):
-        assert hasattr(self.test_config, "state_dir")
+        assert hasattr(self.test_config, "working_dir")
         assert hasattr(self.test_config, "nodes")
         assert hasattr(self.test_config, "jobs")
         assert hasattr(self.test_config, "ssh_options")
@@ -130,11 +131,11 @@ jobs:
         for j in self.all_jobs:
             assert hasattr(j, "name")
             
-        assert_equal(self.job0.name, "job0")
-        assert_equal(self.job1.name, "job1")
-        assert_equal(self.job2.name, "job2")
-        assert_equal(self.job3.name, "job3")
-        assert_equal(self.job4.name, "job4")
+        assert_equal(self.job0.name, "test_job0")
+        assert_equal(self.job1.name, "test_job1")
+        assert_equal(self.job2.name, "test_job2")
+        assert_equal(self.job3.name, "test_job3")
+        assert_equal(self.job4.name, "test_job4")
     
     def test_job_node_attribute(self):
         for j in self.all_jobs:
@@ -170,7 +171,7 @@ jobs:
             for act_count in range(len(j.topo_actions)):
                 a = j.topo_actions[act_count]
                 assert hasattr(a, "name")
-                assert_equal(a.name, "task%s.%s" % (job_count, act_count))
+                assert_equal(a.name, "action%s.%s" % (job_count, act_count))
     
     def test_actions_command_attribute(self): 
         for job_count in range(len(self.all_jobs)):
@@ -181,14 +182,14 @@ jobs:
                 assert hasattr(a, "command")
                 assert_equal(a.command, "test_command%s.%s" % (job_count, act_count))
       
-    def test_actions_output_dir_attribute(self): 
+    def test_actions_output_path(self): 
         for job_count in range(len(self.all_jobs)):
             j = self.all_jobs[job_count]
 
             for act_count in range(len(j.topo_actions)):
                 a = j.topo_actions[act_count]
-                assert hasattr(a, "output_dir")
-                assert_equal(a.output_dir, "output_dir%s.%s" % (job_count, act_count))
+                assert hasattr(a, "output_path")
+                assert_equal(a.output_path, os.path.join("./config_test_dir", "test_job%s" % job_count, "action%s.%s.out" % (job_count, act_count)))
 
     def test_actions_requirements(self):
         dep0 = self.job1.topo_actions[1]

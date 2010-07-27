@@ -243,15 +243,8 @@ class ActionRunLogFileTest(TestCase):
         run = self.action.build_run()
         run.start()
 
-    def test_directory_log(self):
-        self.action.output_dir = "."
-        run = self.action.build_run()
-        run.start()
-        assert os.path.isfile("./Test Action.out")
-        os.remove("./Test Action.out")
-        
     def test_file_log(self):
-        self.action.output_dir = "./test_output_file.out"
+        self.action.output_path = "./test_output_file.out"
         run = self.action.build_run()
         run.start()
         assert os.path.isfile("./test_output_file.out")

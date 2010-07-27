@@ -24,10 +24,10 @@ class Error(Exception): pass
 class JobExistsError(Error): pass
 
 class StateHandler(object):
-    def __init__(self, mcp, state_dir, writing=False):
+    def __init__(self, mcp, working_dir, writing=False):
         self.data = {}
         self.mcp = mcp
-        self.state_dir = state_dir
+        self.working_dir = working_dir
         self.write_pid = None
         self.writing_enabled = writing
 
@@ -60,7 +60,7 @@ class StateHandler(object):
         if self.write_pid and not os.waitpid(self.write_pid, os.WNOHANG)[0]:
             return
 
-        file_path = '%s/%s' % (self.state_dir, STATE_FILE)
+        file_path = '%s/%s' % (self.working_dir, STATE_FILE)
         log.info("Storing state in %s", file_path)
         
         pid = os.fork()
@@ -73,7 +73,7 @@ class StateHandler(object):
             os._exit(os.EX_OK)
 
     def get_state_file_path(self):
-        return self.state_dir + '/' + STATE_FILE
+        return os.path.normpath(self.working_dir + '/' + STATE_FILE)
 
     def load_data(self):
         log.info('Restoring state from %s', self.get_state_file_path())
@@ -88,12 +88,12 @@ class MasterControlProgram(object):
     This object is responsible for figuring who needs to run and when. It will be the main entry point
     where our daemon finds work to do
     """
-    def __init__(self, state_dir):
+    def __init__(self, working_dir):
         self.jobs = {}
         self.actions = {}
         self.runs = {}
         self.nodes = []
-        self.state_handler = StateHandler(self, state_dir)
+        self.state_handler = StateHandler(self, working_dir)
 
     def add_nodes(self, node_pool):
         if not node_pool:
@@ -106,13 +106,18 @@ class MasterControlProgram(object):
     def add_job(self, tron_job):
         if tron_job.name in self.jobs:
             raise JobExistsError(tron_job)
-            
+        
+        job_dir = os.path.join(self.state_handler.working_dir, tron_job.name)
+        if not os.path.exists(job_dir):
+            os.mkdir(job_dir)
+
         self.jobs[tron_job.name] = tron_job
         tron_job.state_callback = self.state_handler.state_changed
         self.add_nodes(tron_job.node_pool)
 
         for tron_action in tron_job.topo_actions:
             self.actions[tron_action.name] = tron_action
+            tron_action.output_path = os.path.join(job_dir, tron_action.name + '.out')
             self.add_nodes(tron_action.node_pool)
 
     def _schedule_next_run(self, job):

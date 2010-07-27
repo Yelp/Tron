@@ -1,5 +1,5 @@
 --- !TronConfiguration
-state_dir: "."
+working_dir: "/Users/mtytel/Tron/working"
 
 ssh_options: !SSHOptions
     agent: true
@@ -20,7 +20,6 @@ jobs:
             - &intAction !Action
                 name: "actionInterval0a"
                 command: "sleep 3; echo 3"
-                output_dir: "/Users/mtytel"
                 
     - &jobFoo !Job
         name: "interval0b"
@@ -31,7 +30,6 @@ jobs:
             - &intAction2 !Action
                 name: "actionInterval0b"
                 command: "python test.py"
-                output_dir: "/Users/mtytel/trontest"
             - &actionBar !Action
                 name: "actionFollow"
                 command: "echo 1;sleep 5;echo 2"
@@ -45,7 +43,6 @@ jobs:
         actions:
             - &actionFail !Action
                 name: "actionTestFail1"
-                output_dir: "/Users/mtytel"
                 command: "sleep 5;failfailfail"
 
     - &jobConstant !Job
@@ -56,17 +53,14 @@ jobs:
             - &actionConstant0 !Action
                 name: "constantLeader0"
                 command: "sleep 5; echo constant; sleep 2"
-                output_dir: "/Users/mtytel"
             - &actionConstant1 !Action
                 name: "constantLeader1"
                 node: *nodeBatch00
                 command: "sleep 1; echo following; sleep 2"
-                output_dir: "/Users/mtytel/"
             - &actionFoll !Action
                 name: "follow0"
                 command: "sleep 1; echo following; sleep 2"
                 requires: [*actionConstant0, *actionConstant1]
-                output_dir: "/Users/mtytel/trontest"
             
     - &jobDaily !Job
         name: "daily1"
@@ -76,7 +70,6 @@ jobs:
             - &actionDaily !Action
                 name: "actionDaily1"
                 command: "sleep 5;echo daily1; sleep 2"
-                output_dir: "/Users/mtytel"
 
     - &jobQueue !Job
         name: "queueing1"
@@ -88,7 +81,6 @@ jobs:
             - &actionQueue !Action
                 name: "actionQueueing1"
                 command: "sleep 10; echo queueing; sleep 10"
-                output_dir: "/Users/mtytel/trontest"
 
     - &jobCancel !Job
         name: "cancel0"
@@ -98,7 +90,6 @@ jobs:
         actions:
             - &actionCancel !Action
                 name: "actionCancel"
-                output_dir: "/Users/mtytel/trontest"
                 command: "sleep 10; echo cancelnext; sleep 10"
 
     - &jobFailQueue !Job
@@ -111,5 +102,4 @@ jobs:
             - &actionFailQueue !Action
                 name: "actionFailQueue1"
                 command: "sleep 10; failfailfail"
-                output_dir: "/Users/mtytel/trontest"
 
