@@ -7,7 +7,7 @@ import logging
 from twisted.internet import reactor
 
 from twisted.cred import checkers
-from twisted.web import server, resource, http, error
+from twisted.web import server, resource, http
 
 import simplejson
 
@@ -124,7 +124,7 @@ class JobRunResource(resource.Resource):
             if act_name == act_run.action.name:
                 return ActionRunResource(act_run)
 
-        return error.NoResource() 
+        return resource.NoResource() 
 
     def render_GET(self, request):
         run_output = []
@@ -217,7 +217,7 @@ class JobResource(resource.Resource):
             if run:
                 return JobRunResource(run)
         
-        return error.NoResource()
+        return resource.NoResource()
 
     def render_GET(self, request):
         run_output = []
@@ -294,7 +294,7 @@ class JobsResource(resource.Resource):
         
         found = self._master_control.jobs.get(name)
         if found is None:
-            return error.NoResource()
+            return resource.NoResource()
         
         return JobResource(found)
         

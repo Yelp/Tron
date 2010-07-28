@@ -5,7 +5,7 @@ from testify import *
 from testify.utils import turtle
 
 import simplejson
-import twisted.web.error
+import twisted.web.resource
 import twisted.web.http
 import twisted.web.server
 
@@ -74,7 +74,7 @@ class JobsTest(TestCase):
 
     def test_missing_job(self):
         child = self.resource.getChildWithDefault("bar", turtle.Turtle())
-        assert isinstance(child, twisted.web.error.NoResource)
+        assert isinstance(child, twisted.web.resource.NoResource)
         
 
 class JobDetailTest(TestCase):
