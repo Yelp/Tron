@@ -26,7 +26,7 @@ class DailyScheduler(object):
         # For a daily scheduler, always assume the next job run is tomorrow
         run_time = (timeutils.current_time() + datetime.timedelta(days=1)).replace(hour=0, minute=1, second=1)
 
-        last = job.runs[-1] if job.runs else None
+        last = job.runs[0] if job.runs else None
         job_run = job.build_run(last)
         job_run.set_run_time(run_time)
         return job_run

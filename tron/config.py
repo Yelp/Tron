@@ -154,6 +154,9 @@ class Job(_ConfiguredObject):
         if hasattr(self, "queueing"):
             real_job.queueing = self.queueing
 
+        if hasattr(self, "run_limit"):
+            real_job.run_limit = self.run_limit
+
         for a_config in self.actions:
             action = a_config.actualized
             real_job.topo_actions.append(action)

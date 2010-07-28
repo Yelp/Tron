@@ -19,7 +19,6 @@ class ConstantSchedulerTest(TestCase):
         next_run = self.job.next_run()
         assert_gte(datetime.datetime.now(), next_run.run_time)
    
-        self.action.runs.append(next_run)
         next_run2 = self.scheduler.next_run(self.job)
         assert_equal(next_run2, None)
 

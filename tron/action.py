@@ -83,6 +83,7 @@ class ActionRun(object):
         self.required_runs = []
         self.waiting_runs = []
         self.data = {}
+        self.state_changed()
 
     def attempt_start(self):
         if self.should_start:
@@ -210,7 +211,9 @@ class ActionRun(object):
         self.data['run_time'] = self.run_time
         self.data['start_time'] = self.start_time
         self.data['end_time'] = self.end_time
-        self.data['command'] = self.command
+        
+        if self.run_time:
+            self.data['command'] = self.command
         
         if self.action.job.state_callback:
             self.action.job.state_callback()

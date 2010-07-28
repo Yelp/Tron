@@ -71,7 +71,7 @@ class ActionRunResource(resource.Resource):
             return self._fail(request)
     
     def _start(self, request):
-        if self._act_run.is_scheduled or self._act_run.is_cancelled or self._act_run.is_queued:
+        if not self._act_run.is_failed and not self._act_run.is_success and not self._act_run.is_running:
             log.info("Starting job run %s", self._act_run.id)
             self._act_run.start()
         else:
@@ -163,7 +163,7 @@ class JobRunResource(resource.Resource):
         request.setResponseCode(http.NOT_IMPLEMENTED)
 
     def _start(self, request):
-        if self._run.is_scheduled or self._run.is_cancelled or self._run.is_queued:
+        if not self._run.is_failed and not self._run.is_success and not self._run.is_running:
             log.info("Starting job run %s", self._run.id)
             self._run.start()
         else:
@@ -209,8 +209,10 @@ class JobResource(resource.Resource):
         if run_num == '':
             return self
         
-        if run_num.isdigit() and int(run_num) < len(self._job.runs):
-            return JobRunResource(self._job.get_run_by_num(int(run_num)))
+        if run_num.isdigit():
+            run = self._job.get_run_by_num(int(run_num))
+            if run:
+                return JobRunResource(run)
         
         return error.NoResource()
 

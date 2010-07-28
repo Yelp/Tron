@@ -5,6 +5,7 @@ import os
 import sys
 import subprocess
 
+from tron import job
 from twisted.internet import reactor
 from tron.utils import timeutils
 
@@ -23,6 +24,7 @@ class Error(Exception): pass
 
 class JobExistsError(Error): pass
 
+
 class StateHandler(object):
     def __init__(self, mcp, working_dir, writing=False):
         self.data = {}
@@ -31,20 +33,15 @@ class StateHandler(object):
         self.write_pid = None
         self.writing_enabled = writing
 
-    def _reschedule(self, run):
-        sleep = sleep_time(run.run_time)
-        if sleep == 0:
-            run.run_time = timeutils.current_time()
-        reactor.callLater(sleep, self.mcp.run_job, run)
-
     def restore_job(self, job):
         prev = None
 
-        for data in self.data[job.name]:
+        job.run_num = self.data[job.name][-1]['run_num']
+        for data in reversed(self.data[job.name]):
             run = job.restore_run(data, prev)
 
             if run.is_scheduled:
-                self._reschedule(run)
+                reactor.callLater(sleep_time(run.run_time), self.mcp.run_job, run)
             prev = run
 
     def state_changed(self):
@@ -68,12 +65,12 @@ class StateHandler(object):
             self.write_pid = pid
         else:
             file = open(file_path, 'w')
-            dump = yaml.dump(self.data, file, default_flow_style=False, indent=4)
+            yaml.dump(self.data, file, default_flow_style=False, indent=4)
             file.close()
             os._exit(os.EX_OK)
 
     def get_state_file_path(self):
-        return os.path.normpath(self.working_dir + '/' + STATE_FILE)
+        return os.path.join(self.working_dir, STATE_FILE)
 
     def load_data(self):
         log.info('Restoring state from %s', self.get_state_file_path())
@@ -123,7 +120,10 @@ class MasterControlProgram(object):
         next = job.next_run()
         if not next is None:
             log.info("Scheduling next job for %s", next.job.name)
-            reactor.callLater(sleep_time(next.run_time), self.run_job, next)
+            sleep = sleep_time(next.run_time)
+            if sleep == 0:
+                next.set_run_time(timeutils.current_time())
+            reactor.callLater(sleep, self.run_job, next)
 
         return next
 

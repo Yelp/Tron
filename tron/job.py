@@ -6,12 +6,11 @@ from tron.utils import timeutils
 
 log = logging.getLogger('tron.job')
 
-RUN_LIMIT = 10
+RUN_LIMIT = 50
 
 class JobRun(object):
     def __init__(self, job, prev=None):
         self.run_num = job.next_num()
-        self.id = "%s.%s" % (job.name, self.run_num)
         self.job = job
         self.prev = prev
         self.next = None
@@ -22,8 +21,8 @@ class JobRun(object):
         self.node = None
         
         self.runs = []
-        self.data = {'runs':[], 'run_time':None, 'start_time': None, 'end_time': None}
-
+        self.data = {'runs':[], 'run_time':None, 'start_time': None, 'end_time': None, 'run_num': self.run_num}
+    
     def set_run_time(self, run_time):
         self.run_time = run_time
         self.data['run_time'] = run_time
@@ -97,6 +96,10 @@ class JobRun(object):
             r.fail(0)
 
     @property
+    def id(self):
+        return "%s.%s" % (self.job.name, self.run_num)
+    
+    @property
     def is_failed(self):
         return any([r.is_failed for r in self.runs])
 
@@ -133,7 +136,7 @@ class JobRun(object):
         while prev_job and prev_job.is_cancelled:
             prev_job = prev_job.prev
 
-        return not prev_job or prev_job.is_success
+        return not prev_job or prev_job.is_success or prev_job.is_failed
 
 class Job(object):
     run_num = 0
@@ -141,7 +144,7 @@ class Job(object):
         self.run_num += 1
         return self.run_num - 1
 
-    def __init__(self, name=None, action=None, run_limit=RUN_LIMIT):
+    def __init__(self, name=None, action=None):
         self.name = name
         self.topo_actions = [action] if action else []
         self.scheduler = None
@@ -150,7 +153,7 @@ class Job(object):
         self.constant = False
         
         self.state_callback = None
-        self.run_limit = run_limit
+        self.run_limit = RUN_LIMIT
         self.data = deque()
         self.state_callback = None
         self.node_pool = None
@@ -167,8 +170,8 @@ class Job(object):
         return job_run
 
     def get_run_by_num(self, num):
-        ind = num - self.runs[-1].run_num
-        return self.runs[-ind] if ind in range(len(self.runs)) else None
+        ind = self.runs[0].run_num - num
+        return self.runs[ind] if ind in range(len(self.runs)) else None
 
     def remove_old_runs(self, num):
         for po in range(num):
@@ -177,6 +180,7 @@ class Job(object):
             old = self.runs.pop()
             self.data.pop()
             old.next.prev = None
+            continue
 
             for act in old.runs:
                 act.job_run = None
@@ -221,6 +225,7 @@ class Job(object):
         for r, state in zip(run.runs, data['runs']):
             r.restore_state(state)
 
+        run.run_num = data['run_num']
         run.start_time = data['start_time']
         run.end_time = data['end_time']
         run.set_run_time(data['run_time'])

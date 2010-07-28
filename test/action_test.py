@@ -7,8 +7,11 @@ from testify.utils import turtle
 from tron import node, action, job, scheduler
 from tron.utils import timeutils
 
-def get_runs_by_state(action, state):
-    return filter(lambda r: r.state == state, action.runs)
+def get_num_runs_by_state(job, state):
+    count = 0
+    for run in job.runs:
+        count += len(filter(lambda r: r.state == state, run.runs))
+    return count
 
 class TestAction(TestCase):
     """Unit testing for Action class"""
@@ -26,11 +29,11 @@ class TestAction(TestCase):
         self.action.scheduler.next_run = lambda j:None
 
         assert_equals(self.job.next_run(), None)
-        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 0)
+        assert_equals(get_num_runs_by_state(self.job, action.ACTION_RUN_SCHEDULED), 0)
 
         self.job.scheduler = scheduler.ConstantScheduler()
         assert self.job.next_run()
-        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 1)
+        assert_equals(get_num_runs_by_state(self.job, action.ACTION_RUN_SCHEDULED), 1)
 
     def test_next_run_prev(self):
         self.job.scheduler = scheduler.DailyScheduler()
@@ -41,7 +44,7 @@ class TestAction(TestCase):
 
         assert run
         assert run2
-        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 2)
+        assert_equals(get_num_runs_by_state(self.job, action.ACTION_RUN_SCHEDULED), 2)
         assert_equals(run2.prev, run)
 
         run3 = self.job.next_run()
@@ -50,11 +53,6 @@ class TestAction(TestCase):
         run3.runs[0].state = action.ACTION_RUN_CANCELLED
         run4 = self.job.next_run()
         assert_equals(run4.prev, run3)
-
-    def test_build_run(self):
-        run = self.action.build_run()
-        assert_equals(len(self.action.runs), 1)
-        assert_equals(self.action.runs[0], run)
 
 
 class TestActionRun(TestCase):
@@ -75,17 +73,17 @@ class TestActionRun(TestCase):
         self.job_run.scheduled_start()
 
         assert self.run.is_running
-        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 0)
-        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_RUNNING)), 1)
+        assert_equals(get_num_runs_by_state(self.job, action.ACTION_RUN_SCHEDULED), 0)
+        assert_equals(get_num_runs_by_state(self.job, action.ACTION_RUN_RUNNING), 1)
         assert_equals(self.run.state, action.ACTION_RUN_RUNNING)
 
     def test_scheduled_start_wait(self):
         job_run2 = self.job.next_run()
         
-        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 2)
+        assert_equals(get_num_runs_by_state(self.job, action.ACTION_RUN_SCHEDULED), 2)
         job_run2.scheduled_start()
         assert job_run2.is_queued
-        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 1)
+        assert_equals(get_num_runs_by_state(self.job, action.ACTION_RUN_SCHEDULED), 1)
         
         self.job_run.scheduled_start()
         assert self.run.is_running
@@ -99,10 +97,10 @@ class TestActionRun(TestCase):
         job_run2 = self.job.next_run()
         #self.action.scheduled[run2.id] = run2.state_data
         
-        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 2)
+        assert_equals(get_num_runs_by_state(self.job, action.ACTION_RUN_SCHEDULED), 2)
         job_run2.scheduled_start()
         assert job_run2.is_cancelled
-        assert_equals(len(get_runs_by_state(self.action, action.ACTION_RUN_SCHEDULED)), 1)
+        assert_equals(get_num_runs_by_state(self.job, action.ACTION_RUN_SCHEDULED), 1)
         
         self.job_run.scheduled_start()
         assert self.run.is_running
@@ -120,7 +118,7 @@ class ActionRunState(TestCase):
         self.action.command = "Test command"
         self.action.node_pool = turtle.Turtle()
         self.action.job = turtle.Turtle()
-        self.run = self.action.build_run()
+        self.run = self.action.build_run(turtle.Turtle())
         self.run.job_run = turtle.Turtle()
 
         def noop_execute():
@@ -177,18 +175,12 @@ class TestRunDependency(TestCase):
         self.dep_run = self.job_run.runs[1]
 
     def test_success(self):
-        assert_equal(len(self.dep_action.runs), 1)
         assert self.dep_run.is_queued
-        
         self.run.start()
-
-        assert_equal(len(self.dep_action.runs), 1)
+        
         assert self.dep_run.is_queued
-
         self.run.succeed()
-
-        assert_equal(len(self.dep_action.runs), 1)
- 
+        
         assert self.dep_run.is_running
         assert not self.dep_run.is_done
         assert self.dep_run.start_time
@@ -205,7 +197,6 @@ class TestRunDependency(TestCase):
         self.run.start()
         self.run.fail(1)
 
-        assert_equal(len(self.dep_action.runs), 1)
         assert self.dep_run.is_queued
 
 
@@ -219,12 +210,10 @@ class ActionRunBuildingTest(TestCase):
         self.action.command = "Test Action Command"
 
     def test_build_run(self):
-        run = self.action.build_run()
-
-        assert_equal(self.action.runs[-1], run)
+        run = self.job.build_run()
+        act_run = self.action.build_run(run)
+        assert_equal(act_run.job_run, run)
         assert run.id
-        
-        assert_equal(len(self.action.runs), 1)
 
     def test_no_schedule(self):
         run = self.job.next_run()
@@ -240,12 +229,12 @@ class ActionRunLogFileTest(TestCase):
         self.action.command = "Test command"
 
     def test_no_logging(self):
-        run = self.action.build_run()
+        run = self.action.build_run(turtle.Turtle())
         run.start()
 
     def test_file_log(self):
         self.action.output_path = "./test_output_file.out"
-        run = self.action.build_run()
+        run = self.action.build_run(turtle.Turtle())
         run.start()
         assert os.path.isfile("./test_output_file.out")
         os.remove("./test_output_file.out")
