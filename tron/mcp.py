@@ -107,9 +107,9 @@ class MasterControlProgram(object):
         if tron_job.name in self.jobs:
             raise JobExistsError(tron_job)
         
-        job_dir = os.path.join(self.state_handler.working_dir, tron_job.name)
-        if not os.path.exists(job_dir):
-            os.mkdir(job_dir)
+        tron_job.output_dir = os.path.join(self.state_handler.working_dir, tron_job.name)
+        if not os.path.exists(tron_job.output_dir):
+            os.mkdir(tron_job.output_dir)
 
         self.jobs[tron_job.name] = tron_job
         tron_job.state_callback = self.state_handler.state_changed
@@ -117,7 +117,6 @@ class MasterControlProgram(object):
 
         for tron_action in tron_job.topo_actions:
             self.actions[tron_action.name] = tron_action
-            tron_action.output_path = os.path.join(job_dir, tron_action.name + '.out')
             self.add_nodes(tron_action.node_pool)
 
     def _schedule_next_run(self, job):

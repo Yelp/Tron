@@ -76,7 +76,9 @@ class ActionRun(object):
 
         self.state = ACTION_RUN_QUEUED if action.required_actions else ACTION_RUN_SCHEDULED
         self.exit_status = None
+        self.output_path = os.path.join(action.job.output_dir, self.id + '.out')
         self.output_file = None
+
         self.job_run = None
         self.node = action.node_pool.next() if action.node_pool else None
 
@@ -112,12 +114,12 @@ class ActionRun(object):
             self.state_changed()
 
     def _open_output_file(self):
-        if self.action.output_path is None:
+        if self.output_path is None:
             return
 
         try:
-            log.info("Opening file %s for output", self.action.output_path)
-            self.output_file = open(self.action.output_path, 'a')
+            log.info("Opening file %s for output", self.output_path)
+            self.output_file = open(self.output_path, 'w')
         except IOError, e:
             log.error(str(e) + " - Not storing command output!")
 
@@ -275,7 +277,6 @@ class Action(object):
         self.runs = []
 
         self.required_actions = []
-        self.output_path = None
         self.job = None
         self.command = None
 
