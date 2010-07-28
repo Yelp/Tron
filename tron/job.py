@@ -157,6 +157,7 @@ class Job(object):
         self.data = deque()
         self.state_callback = None
         self.node_pool = None
+        self.output_dir = None
 
     def next_run(self):
         if not self.scheduler:
