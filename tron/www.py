@@ -44,6 +44,7 @@ def job_run_state(job_run):
 
     return state
 
+
 class ActionRunResource(resource.Resource):
     isLeaf = True
     def __init__(self, act_run):
@@ -54,8 +55,10 @@ class ActionRunResource(resource.Resource):
         output = {
             'id': self._act_run.id, 
             'state': job_run_state(self._act_run),
+            'node': self._act_run.node.hostname,
+            'output': self._act_run.tail_output(),
         }
- 
+
         return respond(request, output)
 
     def render_POST(self, request):
@@ -105,8 +108,7 @@ class ActionRunResource(resource.Resource):
             log.warning("Request to fail job run %s when it's already running or done", self._act_run.id)
 
         return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._act_run.id.replace('.', '/')})
-
-
+        
 
 class JobRunResource(resource.Resource):
     isLeaf = False
@@ -144,6 +146,7 @@ class JobRunResource(resource.Resource):
             'runs': run_output, 
             'id': self._run.id, 
             'state': state,
+            'node': self._run.node.hostname,
         }
         
         return respond(request, output)
@@ -236,7 +239,8 @@ class JobResource(resource.Resource):
             'name': self._job.name,
             'scheduler': str(self._job.scheduler),
             'runs': run_output,
-            'action_names': map(lambda t: t.name, self._job.topo_actions)
+            'action_names': map(lambda t: t.name, self._job.topo_actions),
+            'node_pool': map(lambda n: n.hostname, self._job.node_pool.nodes),
         }
         return respond(request, output)
 

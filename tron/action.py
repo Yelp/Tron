@@ -87,6 +87,28 @@ class ActionRun(object):
         self.data = {}
         self.state_changed()
 
+    def tail_output(self, num_lines=0):
+        try:
+            out = open(self.output_path)
+        except IOError:
+            return []
+
+        if not num_lines or num_lines <= 0:
+            return out.readlines()
+        
+        pos = num_lines
+        lines = []
+        while len(lines) < num_lines:
+            try:
+                out.seek(-pos, os.SEEK_END)   
+            except IOError:
+                out.seek(0)
+                break
+            finally:
+                lines = list(out)
+            pos *= 2
+        return lines[-num_lines:]
+
     def attempt_start(self):
         if self.should_start:
             self.start()
