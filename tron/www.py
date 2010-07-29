@@ -124,7 +124,7 @@ class JobRunResource(resource.Resource):
             if act_name == act_run.action.name:
                 return ActionRunResource(act_run)
 
-        return resource.NoResource() 
+        return resource.NoResource("Cannot find action '%s' for job run '%s'" % (act_name, self._run.id)) 
 
     def render_GET(self, request):
         run_output = []
@@ -217,7 +217,7 @@ class JobResource(resource.Resource):
             if run:
                 return JobRunResource(run)
         
-        return resource.NoResource()
+        return resource.NoResource("Cannot run number '%s' for job '%s'" % (run_num, self._job.name))
 
     def render_GET(self, request):
         run_output = []
@@ -294,7 +294,7 @@ class JobsResource(resource.Resource):
         
         found = self._master_control.jobs.get(name)
         if found is None:
-            return resource.NoResource()
+            return resource.NoResource("Cannot  find job '%s'" % name)
         
         return JobResource(found)
         
