@@ -130,7 +130,10 @@ def view_job_run(options, job_run_id):
         print " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time), ACTION_RUN_COLUMNS))
 
 def view_action_run(options, act_run_id):
-    status, act_run_content = cmd.request(options, "/jobs/%s" % act_run_id.replace('.', '/'))
+    url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'), options.num_shown)
+    print url
+    status, act_run_content = cmd.request(options, url)
+
     if status == cmd.ERROR:
         print >>sys.stderr, "%s: Cannot find action run %s" % (act_run_content, act_run_id)
         sys.exit(1)

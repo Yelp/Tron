@@ -56,8 +56,9 @@ class ActionRunResource(resource.Resource):
             'id': self._act_run.id, 
             'state': job_run_state(self._act_run),
             'node': self._act_run.node.hostname,
-            'output': self._act_run.tail_output(),
         }
+        if request.args and request.args['num_lines'][0].isdigit():
+            output['output'] = self._act_run.tail_output(int(request.args['num_lines'][0]))
 
         return respond(request, output)
 
@@ -72,6 +73,9 @@ class ActionRunResource(resource.Resource):
             return self._cancel(request)
         elif cmd == 'fail':
             return self._fail(request)
+
+        log.warning("Unknown request action %s", request.args['action'])
+        request.setResponseCode(http.NOT_IMPLEMENTED)
     
     def _start(self, request):
         if not self._act_run.is_failed and not self._act_run.is_success and not self._act_run.is_running:
@@ -153,13 +157,14 @@ class JobRunResource(resource.Resource):
 
     def render_POST(self, request):
         log.debug("Handling post request for run %s", self._run.id)
-        if request.args['action'][0] == "start":
+        cmd = request.args['action'][0]
+        if cmd == "start":
             return self._start(request)
-        elif request.args['action'][0] == "succeed":
+        elif cmd == "succeed":
             return self._succeed(request)
-        elif request.args['action'][0] == "fail":
+        elif cmd == "fail":
             return self._fail(request)
-        elif request.args['action'][0] == "cancel":
+        elif cmd == "cancel":
             return self._cancel(request)
         
         log.warning("Unknown request action %s", request.args['action'])

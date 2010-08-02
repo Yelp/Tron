@@ -31,10 +31,10 @@ jobs:
         name: "job1"
         node: *node
         schedule: !IntervalScheduler
-            interval: 5s
+            interval: 30s
         queueing: False
         actions:
             - &action !Action
                 name: "actionAlone"
-                command: "sleep 10; echo DONE"
+                command: "cat big.txt; sleep 10"
 
