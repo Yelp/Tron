@@ -61,7 +61,7 @@ def view_job(options, job_name):
     """Retrieve details of the specified job and display"""
     status, job_content = cmd.request(options, "/jobs/%s" % job_name)
     if status == cmd.ERROR:
-        print >>sys.stderr, "Failure from server"
+        print >>sys.stderr, "%s: Cannot find job %s" % (job_content, job_name)
         sys.exit(1)
 
     print "Job: %s" % job_content['name']
@@ -96,10 +96,10 @@ def view_job(options, job_name):
 
         print " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time), JOB_RUN_COLUMNS))
 
-def view_job_run(options, name_id_url):
-    status, job_run_content = cmd.request(options, "/jobs/%s" % name_id_url)
+def view_job_run(options, job_run_id):
+    status, job_run_content = cmd.request(options, "/jobs/%s" % job_run_id.replace('.', '/'))
     if status == cmd.ERROR:
-        print >>sys.stderr, "Failure from server"
+        print >>sys.stderr, "%s: Cannot find job run %s" % (job_run_content, job_run_id)
         sys.exit(1)
    
     print "Job Run: %s" % job_run_content['id']
@@ -129,10 +129,10 @@ def view_job_run(options, name_id_url):
 
         print " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time), ACTION_RUN_COLUMNS))
 
-def view_action_run(options, name_id_url):
-    status, act_run_content = cmd.request(options, "/jobs/%s" % name_id_url)
+def view_action_run(options, act_run_id):
+    status, act_run_content = cmd.request(options, "/jobs/%s" % act_run_id.replace('.', '/'))
     if status == cmd.ERROR:
-        print >>sys.stderr, "Failure from server"
+        print >>sys.stderr, "%s: Cannot find action run %s" % (act_run_content, act_run_id)
         sys.exit(1)
     
     print "Action Run: %s" % act_run_content['id']
@@ -164,9 +164,9 @@ def main():
         if level == 0:
             view_job(options, args[0])
         elif level == 1:
-            view_job_run(options, args[0].replace('.', '/'))
+            view_job_run(options, args[0])
         else:
-            view_action_run(options, args[0].replace('.', '/'))
+            view_action_run(options, args[0])
 
     cmd.save_config(options)
 
