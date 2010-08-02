@@ -182,15 +182,6 @@ jobs:
                 assert hasattr(a, "command")
                 assert_equal(a.command, "test_command%s.%s" % (job_count, act_count))
       
-    def test_actions_output_path(self): 
-        for job_count in range(len(self.all_jobs)):
-            j = self.all_jobs[job_count]
-
-            for act_count in range(len(j.topo_actions)):
-                a = j.topo_actions[act_count]
-                assert hasattr(a, "output_path")
-                assert_equal(a.output_path, os.path.join("./config_test_dir", "test_job%s" % job_count, "action%s.%s.out" % (job_count, act_count)))
-
     def test_actions_requirements(self):
         dep0 = self.job1.topo_actions[1]
         dep1 = self.job3.topo_actions[2]

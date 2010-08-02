@@ -118,6 +118,7 @@ class ActionRunState(TestCase):
         self.action.command = "Test command"
         self.action.node_pool = turtle.Turtle()
         self.action.job = turtle.Turtle()
+        self.action.job.output_dir = None
         self.run = self.action.build_run(turtle.Turtle())
         self.run.job_run = turtle.Turtle()
 
@@ -233,8 +234,8 @@ class ActionRunLogFileTest(TestCase):
         run.start()
 
     def test_file_log(self):
-        self.action.output_path = "./test_output_file.out"
         run = self.action.build_run(turtle.Turtle())
+        run.output_path = "./test_output_file.out"
         run.start()
         assert os.path.isfile("./test_output_file.out")
         os.remove("./test_output_file.out")

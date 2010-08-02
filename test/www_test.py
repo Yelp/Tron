@@ -11,7 +11,8 @@ import twisted.web.server
 
 from tron import www
 
-TEST_NODE = turtle.Turtle(hostname="host")
+TEST_NODES = [turtle.Turtle(hostname="host")]
+TEST_POOL = turtle.Turtle(nodes=TEST_NODES)
 REQUEST = twisted.web.server.Request(turtle.Turtle(), None)
 REQUEST.childLink = lambda val : "/jobs/%s" % val
 
@@ -53,7 +54,7 @@ class JobsTest(TestCase):
                             name="testname", 
                             runs=[], 
                             scheduler_str="testsched", 
-                            node=TEST_NODE)
+                            node_pool=TEST_POOL)
         
         self.mc.jobs = {self.job.name: self.job}
 
@@ -92,7 +93,7 @@ class JobDetailTest(TestCase):
                                                      
                                  ],
                                  scheduler_str="testsched",
-                                 node=TEST_NODE,
+                                 node_pool=TEST_POOL,
                                  topo_actions=[],
                                 )
 
@@ -115,7 +116,7 @@ class JobQueueTest(TestCase):
                                  name="foo",
                                  runs=[],
                                  scheduler=None,
-                                 node=TEST_NODE,
+                                 node_pool=TEST_POOL,
                                 )
 
         self.resource = www.JobResource(self.job)
@@ -152,7 +153,7 @@ class JobQueueDuplicateTest(TestCase):
                                                    )
                                  ],
                                  scheduler=None,
-                                 node=TEST_NODE,
+                                 node_pool=TEST_POOL,
                                 )
 
         self.resource = www.JobResource(self.job)
@@ -188,7 +189,7 @@ class JobRunStartTest(TestCase):
                                  name="foo",
                                  runs=[self.run],
                                  scheduler=None,
-                                 node=TEST_NODE,
+                                 node_pool=TEST_POOL,
                                 )
 
         self.resource = www.JobRunResource(self.run)

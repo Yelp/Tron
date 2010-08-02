@@ -77,10 +77,14 @@ class ActionRun(object):
 
         self.state = ACTION_RUN_QUEUED if action.required_actions else ACTION_RUN_SCHEDULED
         self.exit_status = None
-        self.output_path = os.path.join(action.job.output_dir, self.id + '.out')
+
+        self.output_path = None
+        if action.job.output_dir:
+            self.output_path = os.path.join(action.job.output_dir, self.id + '.out')
         self.output_file = None
+        
         self.node = action.node_pool.next() if action.node_pool else job_run.node
-        self.job_run = None
+        self.job_run = job_run
 
         self.required_runs = []
         self.waiting_runs = []
