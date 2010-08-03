@@ -131,7 +131,6 @@ def view_job_run(options, job_run_id):
 
 def view_action_run(options, act_run_id):
     url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'), options.num_shown)
-    print url
     status, act_run_content = cmd.request(options, url)
 
     if status == cmd.ERROR:

@@ -44,6 +44,10 @@ jobs:
             - &actionFail !Action
                 name: "actionTestFail1"
                 command: "sleep 5;failfailfail"
+            - &actionCanc !Action
+                name: "actionCanc"
+                requires: *actionFail
+                command: "sleep 1; echo Canc; sleep 1"
 
     - &jobConstant !Job
         name: "constant1"

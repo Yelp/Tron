@@ -136,7 +136,7 @@ class JobRun(object):
         while prev_job and prev_job.is_cancelled:
             prev_job = prev_job.prev
 
-        return not (prev_job and (prev_job.is_running or prev_job.is_scheduled))
+        return not (prev_job and (prev_job.is_running or prev_job.is_queued or prev_job.is_scheduled))
 
 class Job(object):
     run_num = 0

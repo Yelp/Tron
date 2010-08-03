@@ -1,4 +1,5 @@
 #!/usr/bin/env python
+import yaml
 import logging
 import sys
 import datetime
@@ -60,8 +61,13 @@ def main():
     master_control = mcp.MasterControlProgram(options.working_dir)
     
     config_file = open(options.config_file, "r")
-    configuration = config.load_config(config_file)
-    configuration.apply(master_control)
+
+    try:
+        configuration = config.load_config(config_file)
+        configuration.apply(master_control)
+    except yaml.YAMLError, e:
+        print "Error in configuration file:", e
+        sys.exit()
    
     working_dir = master_control.state_handler.working_dir
     if not os.path.isdir(working_dir):
