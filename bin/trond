@@ -17,9 +17,10 @@ def parse_options():
     parser = optparse.OptionParser()
     
     parser.add_option("--config-file", "-c", action="store", dest="config_file", help="(require) Configuration file to load", default=None)
-    parser.add_option("--working_dir", action="store", dest="working_dir", help="Directory where tron's state and output is stored", default=None)
+    parser.add_option("--working-dir", action="store", dest="working_dir", help="Directory where tron's state and output is stored", default=None)
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
     parser.add_option("--debug", action="store_true", dest="debug", help="Debug mode, extra error reporting")
+    parser.add_option("--log-file", "-l", action="store", dest="log_file", help="Where the logs are stored", default=None)
     
     (options, args) = parser.parse_args(sys.argv)
     if options.config_file is None:
@@ -38,10 +39,15 @@ def setup_logging(options):
         level = logging.INFO
     if options.verbose > 1:
         level = logging.DEBUG
-    
-    logging.basicConfig(level=level,
-                        format='%(asctime)s %(name)s %(levelname)s %(message)s',
-                        stream=stream,)
+
+    try:
+        logging.basicConfig(level=level,
+                            format='%(asctime)s %(name)s %(levelname)s %(message)s',
+                            stream=stream, 
+                            filename=options.log_file)
+    except IOError, e:
+        print >>sys.stderr, e
+        sys.exit()
 
     # Hookup twisted to standard logging
     observer = log.PythonLoggingObserver()
@@ -66,7 +72,7 @@ def main():
         configuration = config.load_config(config_file)
         configuration.apply(master_control)
     except yaml.YAMLError, e:
-        print "Error in configuration file:", e
+        print >>sys.stderr, "Error in configuration file:", e
         sys.exit()
    
     working_dir = master_control.state_handler.working_dir

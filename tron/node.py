@@ -98,14 +98,15 @@ class Node(object):
         # isn't strictly necessary.
         return self.run_states[run.id].deferred
 
+    def _cleanup(self, run):
+        self.run_states[run.id].channel = None
+        del self.run_states[run.id]
+
     def _fail_run(self, run, result):
         """Indicate the run has failed, and cleanup state"""
         self.run_states[run.id].deferred.errback(result)
-        
-        # Cleanup
-        self.run_states[run.id].channel = None
-        del self.run_states[run.id]
-        
+        self._cleanup(run)
+
     def _connect_then_run(self, run):
         # Have we started the connection process ?
         if self.connection_defer is None:
@@ -116,9 +117,9 @@ class Node(object):
             return arg
 
         def connect_fail(result):
-            log.debug("Failed to connect to %s: %r", self.hostname, str(result))
+            log.warning("Cannot run %s, Failed to connect to %s", run.id, self.hostname)
             self.connection_defer = None
-            self._fail_run(run, failure.Failure(exc_value=ConnectError()))
+            self._fail_run(run, failure.Failure(exc_value=ConnectError("Connection to %s failed" % self.hostname)))
 
         self.connection_defer.addCallback(call_open_channel)
         self.connection_defer.addErrback(connect_fail)
@@ -181,9 +182,12 @@ class Node(object):
             transport.connection_defer = defer.Deferred()
             transport.connection_defer.addCallback(on_connection_secure)
             return transport
-         
+        
+        def on_transport_fail(fail):
+            log.warning("Cannot connect to %s", self.hostname)
+
         create_defer.addCallback(on_transport_create)
-        create_defer.addErrback(connect_defer.errback)
+        create_defer.addErrback(on_transport_fail)
         return connect_defer
         
     def _open_channel(self, run):
@@ -254,10 +258,7 @@ class Node(object):
         
         self.run_states[run.id].state = RUN_STATE_COMPLETE
         self.run_states[run.id].deferred.callback(channel.exit_status)
-
-        # Cleanup, we care nothing about this run anymore
-        self.run_states[run.id].channel = None
-        del self.run_states[run.id]
+        self._cleanup(run)
     
     def _channel_complete_unknown(self, result, run):
         """Channel has closed on a running process without a proper exit
@@ -285,7 +286,7 @@ class Node(object):
         # because of user timeouts.
         self.run_states[run.id].channel.start_defer = None
 
-        self._fail_run(run, failure.Failure(exc_value=ConnectError()))
+        self._fail_run(run, failure.Failure(exc_value=ConnectError("Connection to %s failed" % self.hostname)))
         
         # We want to hard hangup on this connection. It could theoretically come back thanks to
         # the magic of TCP, but something is up, best to fail right now then limp along for

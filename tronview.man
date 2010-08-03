@@ -10,11 +10,24 @@ tronview \- view status of jobs within tron
 .IR "numshown" "]"
 .RB "[" "--server "
 .IR "server_name" "]"
-.RI "[" "job_name" " | " "job_run_id" "]"
+.RI "[" "job_name" " | " "job_run_id" " | " "action_run_id" "]"
 .RB "[" "--verbose" "]"
 .SH DESCRIPTION
 .B tronview
-displays the status of tron scheduled jobs in three tiers. When job_name or job_run_id is not specified, tronview displays all job names, their schedules, and the last time they completed successfully.  When a job name is specified, tronview displays run instances with the most recent at the top.  For each job run instance, the job run id, status, scheduled time, start time, and end time are shown.  When a job run id is specified, tronview displays all action instances within the job run.  For each action run instance, the action run id, status, scheduled time, start time and end time are shown.
+displays the status of tron scheduled jobs in four tiers. 
+
+.B tronview
+- all jobs: If no arguments passed, tronview displays all job names, their schedules, and the last time they completed successfully.
+
+.B tronview
+<job name> - runs for a job:  If a job name is specified, tronview displays run instances with the most recent at the top.  For each job run instance, the job run id, status, scheduled time, start time, and end time are shown.
+
+.B tronview
+<job run id> - actions for a job run:  If a job run id is specified, tronview displays all actions within the job run.  For each action, the action run id, status, scheduled time, start time and end time are shown.
+
+.B tronview 
+<action run id> - action information:  If an action run id is specified, tronview displays the action run id, status, assigned node, and output.
+
 .SH OPTIONS
 .IP "-n numshown"
 The maximum number of jobs, job runs, or tasks to display

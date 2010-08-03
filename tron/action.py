@@ -163,9 +163,6 @@ class ActionRun(object):
             log.warning("Unknown failure for run %s on host %s: %s", self.id, self.node.hostname, str(result))
             self.fail_unknown()
             
-        # Maybe someone else wants it ?
-        return result
-
     def _handle_callback(self, exit_code):
         """If the node successfully executes and get's a result from our run, handle the exit code here."""
         if exit_code == 0:
