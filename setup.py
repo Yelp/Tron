@@ -21,7 +21,7 @@ setup(
 	requires = ['twisted (>=10.0.0)',],
     packages=["tron", "tron.utils"],
 	scripts=['bin/trond', 'bin/tronview', 'bin/tronctl'],
-	data_files=[('share/doc/tron', ['docs/sample-config.yaml']),],
+	data_files=[('share/doc/tron', ['docs/sample_config_large.yaml', 'docs/sample_config_small.yaml']),],
 	long_description="""\
 Tron is a job scheduling, running and monitoring package designed to replace Cron for complex job running requirements.
   - Centralized configuration for running jobs across multiple machines
