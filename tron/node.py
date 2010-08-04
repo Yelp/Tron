@@ -291,5 +291,5 @@ class Node(object):
         # We want to hard hangup on this connection. It could theoretically come back thanks to
         # the magic of TCP, but something is up, best to fail right now then limp along for
         # and unknown amount of time.
-        self.connection.transport.connectionLost(failure.Failure())
+        #self.connection.transport.connectionLost(failure.Failure())
         

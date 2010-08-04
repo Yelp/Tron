@@ -6,7 +6,7 @@ from tron.utils import timeutils
 
 log = logging.getLogger('tron.job')
 
-RUN_LIMIT = 50
+RUN_LIMIT = 5
 
 class JobRun(object):
     def __init__(self, job, prev=None):
@@ -54,8 +54,18 @@ class JobRun(object):
         if self.should_start:
             self.start()
 
+    def last_success_check(self):
+        if not self.job.last_success or self.run_num > self.job.last_success.run_num:
+            self.job.last_success = self
+
     def run_completed(self):
         if self.is_success:
+            self.last_success_check()
+            
+            if self.job.constant:
+                self.job.build_run(self).start()
+
+        if not self.is_running:
             self.end_time = timeutils.current_time()
             self.data['end_time'] = self.end_time
             
@@ -65,11 +75,6 @@ class JobRun(object):
            
             if next and next.is_queued:
                 next.attempt_start()
-
-            if self.job.constant:
-                self.job.build_run(self).start()
-        elif self.is_failed:
-            self.end_time = timeutils.current_time()
 
     def state_changed(self):
         self.data['run_time'] = self.run_time
@@ -88,6 +93,7 @@ class JobRun(object):
             r.cancel()
     
     def succeed(self):
+        self.last_success_check()
         for r in self.runs:
             r.mark_success()
 
@@ -148,13 +154,15 @@ class Job(object):
         self.name = name
         self.topo_actions = [action] if action else []
         self.scheduler = None
-        self.queueing = False
         self.runs = deque()
+        self.data = deque()
+        
+        self.queueing = False
         self.constant = False
+        self.last_success = None
         
         self.state_callback = None
         self.run_limit = RUN_LIMIT
-        self.data = deque()
         self.state_callback = None
         self.node_pool = None
         self.output_dir = None
@@ -165,8 +173,8 @@ class Job(object):
         
         job_run = self.scheduler.next_run(self)
         if job_run:
-            for r in job_run.runs:
-                r.state_changed()
+            for a in job_run.runs:
+                a.state_changed()
             
         return job_run
 
@@ -174,22 +182,14 @@ class Job(object):
         ind = self.runs[0].run_num - num
         return self.runs[ind] if ind in range(len(self.runs)) else None
 
-    def remove_old_runs(self, num):
-        for po in range(num):
-            if not self.runs[-1].is_success and not self.runs[-1].is_cancelled:
-                return
+    def remove_old_runs(self):
+        """Remove old runs so we don't have more than the run limit.
+        Exception - Will only remove runs if there is a success after it
+        """
+        while len(self.runs) > self.run_limit and self.last_success and self.runs[-1].run_num < self.last_success.run_num:
             old = self.runs.pop()
             self.data.pop()
             old.next.prev = None
-            continue
-
-            for act in old.runs:
-                act.job_run = None
-                act.required_runs = None
-                act.waiting_runs = None
-            
-            old.runs = None
-            old.next = None
 
     def build_run(self, prev=None):
         job_run = JobRun(self, prev)
@@ -217,7 +217,7 @@ class Job(object):
      
         self.runs.appendleft(job_run)
         self.data.appendleft(job_run.data)
-        self.remove_old_runs(len(self.runs) - self.run_limit)
+        self.remove_old_runs()
 
         return job_run
 

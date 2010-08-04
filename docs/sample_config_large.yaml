@@ -105,5 +105,5 @@ jobs:
         actions:
             - &actionFailQueue !Action
                 name: "actionFailQueue1"
-                command: "sleep 10; failfailfail"
+                command: "sleep 15; failfailfail"
 
