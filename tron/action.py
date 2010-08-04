@@ -93,7 +93,7 @@ class ActionRun(object):
 
     def tail_output(self, num_lines=0):
         try:
-            out = open(self.output_path)
+            out = open(self.output_path, 'r')
         except IOError:
             return []
 
@@ -146,7 +146,7 @@ class ActionRun(object):
 
         try:
             log.info("Opening file %s for output", self.output_path)
-            self.output_file = open(self.output_path, 'w')
+            self.output_file = open(self.output_path, 'a')
         except IOError, e:
             log.error(str(e) + " - Not storing command output!")
 

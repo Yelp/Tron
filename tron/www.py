@@ -28,22 +28,19 @@ def respond(request, response_dict, code=http.OK, headers=None):
 
 def job_run_state(job_run):
     if job_run.is_success:
-        state = "SUCC"
-    elif job_run.is_cancelled:
-        state = "CANC"
-    elif job_run.is_failed:
-        state = "FAIL"
-    elif job_run.is_scheduled:
-        state = "SCHE"
-    elif job_run.is_unknown:
-        state = "UNKWN"
-    elif job_run.is_queued:
-        state = "QUE"
-    else:
-        state = "RUNN"
-
-    return state
-
+        return "SUCC"
+    if job_run.is_cancelled:
+        return "CANC"
+    if job_run.is_running:
+        return "RUNN"
+    if job_run.is_failed:
+        return "FAIL"
+    if job_run.is_scheduled:
+        return "SCHE"
+    if job_run.is_queued:
+        return "QUE"
+        
+    return "UNKWN"
 
 class ActionRunResource(resource.Resource):
     isLeaf = True
@@ -78,7 +75,7 @@ class ActionRunResource(resource.Resource):
         request.setResponseCode(http.NOT_IMPLEMENTED)
     
     def _start(self, request):
-        if not self._act_run.is_failed and not self._act_run.is_success and not self._act_run.is_running:
+        if not self._act_run.is_success and not self._act_run.is_running:
             log.info("Starting job run %s", self._act_run.id)
             self._act_run.start()
         else:
@@ -171,7 +168,7 @@ class JobRunResource(resource.Resource):
         request.setResponseCode(http.NOT_IMPLEMENTED)
 
     def _start(self, request):
-        if not self._run.is_failed and not self._run.is_success and not self._run.is_running:
+        if not self._run.is_success and not self._run.is_running:
             log.info("Starting job run %s", self._run.id)
             self._run.start()
         else:

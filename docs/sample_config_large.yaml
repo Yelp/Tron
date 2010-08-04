@@ -32,7 +32,7 @@ jobs:
                 command: "python test.py"
             - &actionBar !Action
                 name: "actionFollow"
-                command: "echo 1;sleep 5;echo 2"
+                command: "echo 1;sleep 5;easdfasdfdscho 2"
                 requires: *intAction2
 
     - &jobFail !Job
