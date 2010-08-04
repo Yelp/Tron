@@ -6,7 +6,7 @@ from tron.utils import timeutils
 
 log = logging.getLogger('tron.job')
 
-RUN_LIMIT = 5
+RUN_LIMIT = 50
 
 class JobRun(object):
     def __init__(self, job, prev=None):
