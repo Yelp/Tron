@@ -9,7 +9,7 @@ log = logging.getLogger('tron.job')
 RUN_LIMIT = 50
 
 class JobRun(object):
-    def __init__(self, job, prev=None):
+    def __init__(self, job, prev=None, data=None):
         self.run_num = job.next_num()
         self.job = job
         self.prev = prev
@@ -22,7 +22,7 @@ class JobRun(object):
         
         self.runs = []
         self.data = {'runs':[], 'run_time':None, 'start_time': None, 'end_time': None, 'run_num': self.run_num}
-    
+               
     def set_run_time(self, run_time):
         self.run_time = run_time
         self.data['run_time'] = run_time
@@ -166,7 +166,7 @@ class Job(object):
         self.state_callback = None
         self.node_pool = None
         self.output_dir = None
-
+        
     def next_run(self):
         if not self.scheduler:
             return None
@@ -183,8 +183,8 @@ class Job(object):
         return self.runs[ind] if ind in range(len(self.runs)) else None
 
     def remove_old_runs(self):
-        """Remove old runs so we don't have more than the run limit.
-        Exception - Will only remove runs if there is a success after it
+        """Remove old runs so the number left matches the run limit.
+        However only removes runs up to the last success
         """
         while len(self.runs) > self.run_limit and self.last_success and self.runs[-1].run_num < self.last_success.run_num:
             old = self.runs.pop()
@@ -202,10 +202,6 @@ class Job(object):
         runs = {}
         for a in self.topo_actions:
             run = a.build_run(job_run)
-            if not run.node:
-                run.node = job_run.node
-            
-            run.job_run = job_run
             runs[a.name] = run
             
             job_run.runs.append(run)

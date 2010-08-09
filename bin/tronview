@@ -75,6 +75,10 @@ def view_job(options, job_name):
     print
     print "Run History: (%d total)" % len(job_content['runs'])
     print " ".join(title.ljust(size) for title, size in JOB_RUN_COLUMNS)
+
+    if not options.num_shown:
+        options.num_shown = len(job_content['runs'])
+
     for run in job_content['runs'][:options.num_shown]:
         run_id = run['id']
         run_state = run['state']
@@ -108,7 +112,7 @@ def view_job_run(options, job_run_id):
     print
     print " ".join(title.ljust(size) for title, size in ACTION_RUN_COLUMNS)
     
-    for run in job_run_content['runs'][-options.num_shown:]:
+    for run in job_run_content['runs']:
         run_id = run['id']
         run_state = run['state']
 
@@ -140,6 +144,10 @@ def view_action_run(options, act_run_id):
     print "Action Run: %s" % act_run_content['id']
     print "State: %s" % act_run_content['state']
     print "Node: %s" % act_run_content['node']
+    print
+    print "Requirements:"
+    for req in act_run_content['requirements']:
+        print req
     print
     print "Output:"
     print "".join(act_run_content['output'])
