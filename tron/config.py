@@ -286,6 +286,13 @@ class DailyScheduler(_ConfiguredObject):
     def _apply(self):
         sched = self._ref()
 
+        if hasattr(self, 'start_time'):
+            if not isinstance(self.start_time, basestring):
+                raise InvalidConfigError("Start time must be in string format HH:MM:SS")
+
+            hour, minute, second = [int(val) for val in self.start_time.strip().split(':')]
+            sched.start_time = datetime.time(hour=hour, minute=minute, second=second)
+
 class InvalidConfigError(Error): pass
 
 
