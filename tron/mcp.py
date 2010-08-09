@@ -55,9 +55,9 @@ class StateHandler(object):
         """Stores the state of tron"""
         # If tron is already storing data, don't start again till it's done
         if self.write_pid and not os.waitpid(self.write_pid, os.WNOHANG)[0]:
-            return
+            return 
 
-        file_path = '%s/%s' % (self.working_dir, STATE_FILE)
+        file_path = os.path.join(self.working_dir, STATE_FILE)
         log.info("Storing state in %s", file_path)
         
         pid = os.fork()

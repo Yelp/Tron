@@ -74,17 +74,16 @@ class ActionRun(object):
         self.run_time = None    # What time are we supposed to start
         self.start_time = None  # What time did we start
         self.end_time = None    # What time did we end
-
-        self.state = ACTION_RUN_QUEUED if action.required_actions else ACTION_RUN_SCHEDULED
         self.exit_status = None
+        self.state = ACTION_RUN_QUEUED if action.required_actions else ACTION_RUN_SCHEDULED
 
         self.output_path = None
         if action.job.output_dir:
             self.output_path = os.path.join(action.job.output_dir, self.id + '.out')
         self.output_file = None
         
-        self.node = action.node_pool.next() if action.node_pool else job_run.node
         self.job_run = job_run
+        self.node = action.node_pool.next() if action.node_pool else job_run.node
 
         self.required_runs = []
         self.waiting_runs = []

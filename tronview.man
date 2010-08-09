@@ -3,41 +3,105 @@
 .\"
 .TH tronview 8 "July 2010" Linux "User Manuals"
 .SH NAME
-tronview \- view status of jobs within tron
+tronview \- view status of tron jobs
 .SH SYNOPSIS
 .B tronview 
 .RB "[" "-n "
 .IR "numshown" "]"
 .RB "[" "--server "
 .IR "server_name" "]"
+.RB "[" "--verbose" " | " "-v" "]"
 .RI "[" "job_name" " | " "job_run_id" " | " "action_run_id" "]"
-.RB "[" "--verbose" "]"
 .SH DESCRIPTION
 .B tronview
 displays the status of tron scheduled jobs in four tiers. 
 
-.B tronview
-- all jobs: If no arguments passed, tronview displays all job names, their schedules, and the last time they completed successfully.
+.IP "tronview"
+all jobs: If no arguments passed, tronview displays all job names,
+their schedules, and the last time they completed successfully.
 
-.B tronview
-<job name> - runs for a job:  If a job name is specified, tronview displays run instances with the most recent at the top.  For each job run instance, the job run id, status, scheduled time, start time, and end time are shown.
+.IP "tronview <job_name>"
+runs for a job: If a job name is specified, tronview displays run
+instances with the most recent at the top.  For each job run instance,
+the job run id, status, scheduled time, start time, and end time are shown.
 
-.B tronview
-<job run id> - actions for a job run:  If a job run id is specified, tronview displays all actions within the job run.  For each action, the action run id, status, scheduled time, start time and end time are shown.
+.IP "tronview <job_run_id>"
+actions for a job run: If a job run id is specified, tronview displays all
+actions within the job run.  For each action, the action run id, status,
+scheduled time, start time and end time are shown.
 
-.B tronview 
-<action run id> - action information:  If an action run id is specified, tronview displays the action run id, status, assigned node, and output.
+.IP "tronview <action_run_id>"
+action information: If an action run id is specified, tronview displays the
+action run id, status, assigned node, and output.
 
 .SH OPTIONS
 .IP "-n numshown"
-The maximum number of jobs, job runs, or tasks to display
+The maximum number of job runs or lines of output to display. Does not affect
+the display of all jobs and the display of actions for given job
 .IP "--server config-file"
-The server the tron instance is running on
+The server the tron instance is running on. If no server is specified localhost is used.
 .IP --verbose
 Displays status messages along the way
-.SH FILES
-.SH ENVIRONMENT
-.IP SOMEDIR
+.SH EXAMPLES
+Here are a few examples that show each tier of tronview
+
+ $ tronview
+
+ Name                 Scheduler            Last Success
+
+ Connected to tron server http://localhost:8082
+
+ Name                 Scheduler            Last Success
+ job2                 CONSTANT             2010-08-06 10:40:06.903994
+ job1                 DAILY                None
+ job0                 INTERVAL:0:00:20     2010-08-06 10:40:00.070011
+
+ ========================================================================================================
+ 
+ $ tronview job0
+ Job: job0
+ Scheduler: INTERVAL:0:00:20
+
+ List of Actions (topological):
+ actionStart
+ actionFollow
+
+ Node Pool:
+ dev2sv
+ dev3sv
+
+ Run History: (4 total)
+ Job Run ID                     State  Scheduled Time          Start Time              End Time
+ job0.3                         SCHE   2010-08-06 10:43:38     -                       -
+ job0.2                         RUNN   2010-08-06 10:43:18     2010-08-06 10:43:18     -
+ job0.1                         SUCC   2010-08-06 10:42:58     2010-08-06 10:42:58     2010-08-06 10:43:05
+ job0.0                         SUCC   2010-08-06 10:42:38     2010-08-06 10:42:38     2010-08-06 10:42:46
+
+ ========================================================================================================
+ 
+ $ tronview job0.2
+ Job Run: job0.2
+ State: RUNN
+ Node: machine0
+
+ Action Run ID                            State  Scheduled Time          Start Time              End Time
+ job0.2.actionStart                       SUCC   2010-08-06 10:43:18     2010-08-06 10:43:18     2010-08-06 10:43:21
+ job0.2.actionFollow                      RUNN   -                       2010-08-06 10:43:21     -            
+
+ ========================================================================================================
+ 
+ $ tronview job0.2.actionFollow
+ Action Run: job0.2.actionFollow
+ State: RUNN
+ Node: machine0
+
+ Requirements:
+ actionStart
+ 
+ Output:
+ actionFollow is printing some stuff to stdout
+ 
+ 
 .SH DIAGNOSTICS
 .SH BUGS
 Email found bugs to infra@yelp.com

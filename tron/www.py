@@ -53,10 +53,12 @@ class ActionRunResource(resource.Resource):
             'id': self._act_run.id, 
             'state': job_run_state(self._act_run),
             'node': self._act_run.node.hostname,
+            'requirements': [req.name for req in self._act_run.action.required_actions],
         }
+        
         if request.args and request.args['num_lines'][0].isdigit():
             output['output'] = self._act_run.tail_output(int(request.args['num_lines'][0]))
-
+            
         return respond(request, output)
 
     def render_POST(self, request):
@@ -305,15 +307,7 @@ class JobsResource(resource.Resource):
         
         job_list = []
         for current_job in self._master_control.jobs.itervalues():
-            last_success = None
-            if current_job.runs:
-                last_job = current_job.runs[-1]
-                
-                for job_run in reversed(current_job.runs):
-                    if job_run.is_success:
-                        last_success = str(job_run.end_time)
-                        break
-
+            last_success = str(current_job.last_success.end_time) if current_job.last_success else None
             job_desc = {
                 'name': current_job.name,
                 'href': request.childLink(current_job.name),

@@ -8,26 +8,66 @@ tronctl \- send management commands to jobs and actions within tron
 .B tronctl
 .RB "[" "--server "
 .IR "server_name" "]"
-.RI "[" "command" "] [" "job_name" " | " "job_run_id" "]"
 .RB "[" "--verbose" " | " "-v" "]"
+.I "command" "run_id"
 .SH DESCRIPTION
 .B tronctl
-is the control interface for tron. Through tronctl you can start, cancel, succeed, and fail job runs and action runs.
+is the control interface for tron. Through tronctl you can start,
+cancel, succeed, and fail job runs and action runs.
 .SH OPTIONS
 .IP "--server config-file"
 The server the tron instance is running on
 .IP --verbose
 Displays status messages along the way
+.SH STATES
+.IP SCHE
+the run is scheduled for a specific time
+.IP RUNN
+the run is currently running
+.IP SUCC
+the run completed successfully 
+.IP FAIL
+the run failed
+.IP QUE
+the run is queued behind another run(s) and will start when said runs finish
+.IP CANC
+the run is cancelled. Does not run at scheduled time and the job run queue ignores the run
+.IP UNKWN
+the run is in and unknown state.  This state occurs when tron restores a job that was
+running at the time of shutdown
+
 .SH COMMANDS
 .IP start
-Starts the specified job run or action run
+Starts the specified job run or action run.
+This run begins regardless of previous requirements
+ Valid states that you can run "start" on: 
 .IP cancel
-Cancels the specified job run or action run
+Cancels the specified job run or action run.
+Cancelled runs don't start at their scheduled time and
+they are skipped over when there is a job run queue. 
 .IP succeed
-Marks the specified job run or action run as succeeded. This behaves the same as the job actually completing. Dependant actions are ran and following jobs start.
+Marks the specified job run or action run as succeeded.
+This behaves the same as the run actually completing.
+Dependant actions are ran and queued runs start.
 .IP fail
-Marks the specified job run or action run as failed.  This behaves the same as the job actually failing. Dependant actions are queued and following jobs are queued or cancelled
-.SH FILES
+Marks the specified job run or action run as failed.
+This behaves the same as the job actually failing.
+Dependant actions are queued and following jobs are queued or cancelled
+.SH EXAMPLES
+Here are a few examples that show the use of tronctl commands
+
+ $ tronctl start job0.2
+ Job Run job0.2 now in state RUNN
+
+ $ tronctl cancel job0.3
+ Job Run job0.3 now in state CANC
+
+ $ tronctl fail job0.3
+ Job Run job0.3 now in state FAIL
+
+ $ tronctl succeed job0.3
+ Job Run job0.3 now in state SUCC
+
 .SH ENVIRONMENT
 .IP SOMEDIR
 .SH DIAGNOSTICS
