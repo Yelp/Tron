@@ -12,16 +12,8 @@ JOB_COLUMNS = (
     ("Last Success", 28,),
 )
 
-JOB_RUN_COLUMNS = (
-    ('Job Run ID', 30),
-    ('State', 6),
-    ('Scheduled Time', 23), 
-    ('Start Time', 23),
-    ('End Time', 23),
-)
-
-ACTION_RUN_COLUMNS = (
-    ('Action Run ID', 40),
+RUN_COLUMNS = (
+    ('Action Run ID', 30),
     ('State', 6),
     ('Scheduled Time', 23),
     ('Start Time', 23),
@@ -74,7 +66,7 @@ def view_job(options, job_name):
     print "\n".join(job_content['node_pool'])
     print
     print "Run History: (%d total)" % len(job_content['runs'])
-    print " ".join(title.ljust(size) for title, size in JOB_RUN_COLUMNS)
+    print " ".join(title.ljust(size) for title, size in RUN_COLUMNS)
 
     if not options.num_shown:
         options.num_shown = len(job_content['runs'])
@@ -98,7 +90,7 @@ def view_job(options, job_name):
         else:
             end_time = run['end_time'][:-7]
 
-        print " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time), JOB_RUN_COLUMNS))
+        print "".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time), RUN_COLUMNS))
 
 def view_job_run(options, job_run_id):
     status, job_run_content = cmd.request(options, "/jobs/%s" % job_run_id.replace('.', '/'))
@@ -110,7 +102,7 @@ def view_job_run(options, job_run_id):
     print "State: %s" % job_run_content['state']
     print "Node: %s" % job_run_content['node']
     print
-    print " ".join(title.ljust(size) for title, size in ACTION_RUN_COLUMNS)
+    print " ".join(title.ljust(size) for title, size in RUN_COLUMNS)
     
     for run in job_run_content['runs']:
         run_id = run['id']
@@ -131,7 +123,7 @@ def view_job_run(options, job_run_id):
         else:
             end_time = run['end_time'][:-7]
 
-        print " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time), ACTION_RUN_COLUMNS))
+        print " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time), RUN_COLUMNS))
 
 def view_action_run(options, act_run_id):
     url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'), options.num_shown)

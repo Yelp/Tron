@@ -40,19 +40,22 @@ running at the time of shutdown
 .IP start
 Starts the specified job run or action run.
 This run begins regardless of previous requirements
- Valid states that you can run "start" on: 
+ Valid states that you can run "start" on: SCHE, FAIL, QUE, CANC, UNKWN
 .IP cancel
 Cancels the specified job run or action run.
 Cancelled runs don't start at their scheduled time and
 they are skipped over when there is a job run queue. 
+ Valid states that you can run "cancel" on: SCHE, QUE
 .IP succeed
 Marks the specified job run or action run as succeeded.
 This behaves the same as the run actually completing.
 Dependant actions are ran and queued runs start.
+ Valid states that you can run "succeed" on: SCHE, FAIL, QUE, CANC, UNKWN
 .IP fail
 Marks the specified job run or action run as failed.
 This behaves the same as the job actually failing.
 Dependant actions are queued and following jobs are queued or cancelled
+ Valid states that you can run "fail" on: SCHE, QUE, CANC, UNKWN
 .SH EXAMPLES
 Here are a few examples that show the use of tronctl commands
 

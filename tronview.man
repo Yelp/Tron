@@ -36,8 +36,8 @@ action run id, status, assigned node, and output.
 
 .SH OPTIONS
 .IP "-n numshown"
-The maximum number of job runs or lines of output to display. Does not affect
-the display of all jobs and the display of actions for given job
+The maximum number of job runs or lines of output to display(0 for show all). 
+Does not affect the display of all jobs and the display of actions for given job
 .IP "--server config-file"
 The server the tron instance is running on. If no server is specified localhost is used.
 .IP --verbose
