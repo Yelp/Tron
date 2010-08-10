@@ -160,6 +160,7 @@ class Job(object):
         self.queueing = False
         self.constant = False
         self.last_success = None
+        self.last_ran = None
         
         self.state_callback = None
         self.run_limit = RUN_LIMIT
@@ -221,11 +222,15 @@ class Job(object):
         run = self.build_run(prev)
         for r, state in zip(run.runs, data['runs']):
             r.restore_state(state)
-
+            
         run.run_num = data['run_num']
         run.start_time = data['start_time']
         run.end_time = data['end_time']
         run.set_run_time(data['run_time'])
+        
+        if run.is_success:
+            self.last_success = run
+
         run.state_changed()
         return run
 
