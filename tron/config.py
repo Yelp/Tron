@@ -136,6 +136,9 @@ class Job(_ConfiguredObject):
     def _apply(self):
         real_job = self._ref()
         real_job.name = self.name
+        
+        if not re.match(r'[a-z_]\w*$', self.name, re.I):
+            raise yaml.YAMLError("Invalid job name '%s' - not a valid identifier" % self.name)
 
         if hasattr(self, "node"):
             real_job.node_pool = self.node.actualized
@@ -161,7 +164,10 @@ class Job(_ConfiguredObject):
             action = a_config.actualized
             real_job.topo_actions.append(action)
             action.job = real_job
-            assert real_job.node_pool or action.node_pool
+            
+            if not real_job.node_pool and not action.node_pool:
+                raise yaml.YAMLError("Either job '%s' or its action '%s' must have a node" 
+                % (real_job.name, action.name))
 
 class Action(_ConfiguredObject):
     yaml_tag = u'!Action'
@@ -177,6 +183,9 @@ class Action(_ConfiguredObject):
     def _apply(self):
         """Configured the specific action instance"""
         real_action = self._ref()
+        if not re.match(r'[a-z_]\w*$', self.name, re.I):
+            raise yaml.YAMLError("Invalid action name '%s' - not a valid identifier" % self.name)
+
         real_action.name = self.name
         real_action.command = self.command
         real_action.node_pool = self.node.actualized if hasattr(self, "node") else None
