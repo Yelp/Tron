@@ -52,7 +52,7 @@ class TestAction(TestCase):
 
         run3.runs[0].state = action.ACTION_RUN_CANCELLED
         run4 = self.job.next_run()
-        assert_equals(run4.prev, run3)
+        assert_equals(run4.prev, run2)
 
 
 class TestActionRun(TestCase):

@@ -63,7 +63,7 @@ class ActionRunResource(resource.Resource):
 
     def render_POST(self, request):
         log.debug("Handling post request for action run %s", self._act_run.id)
-        cmd = request.args['action'][0]
+        cmd = request.args['command'][0]
         if cmd == 'start':
             return self._start(request)
         elif cmd == 'succeed':
@@ -73,7 +73,7 @@ class ActionRunResource(resource.Resource):
         elif cmd == 'fail':
             return self._fail(request)
 
-        log.warning("Unknown request action %s", request.args['action'])
+        log.warning("Unknown request command %s", request.args['command'])
         request.setResponseCode(http.NOT_IMPLEMENTED)
     
     def _start(self, request):
@@ -156,7 +156,7 @@ class JobRunResource(resource.Resource):
 
     def render_POST(self, request):
         log.debug("Handling post request for run %s", self._run.id)
-        cmd = request.args['action'][0]
+        cmd = request.args['command'][0]
         if cmd == "start":
             return self._start(request)
         elif cmd == "succeed":
@@ -166,7 +166,7 @@ class JobRunResource(resource.Resource):
         elif cmd == "cancel":
             return self._cancel(request)
         
-        log.warning("Unknown request action %s", request.args['action'])
+        log.warning("Unknown request command %s", request.args['command'])
         request.setResponseCode(http.NOT_IMPLEMENTED)
 
     def _start(self, request):
@@ -208,8 +208,9 @@ class JobRunResource(resource.Resource):
 class JobResource(resource.Resource):
     """A resource that describes a particular job"""
     isLeaf = False
-    def __init__(self, job):
+    def __init__(self, job, master_control):
         self._job = job
+        self._master_control = master_control
         resource.Resource.__init__(self)
 
     def getChild(self, run_num, request):
@@ -248,42 +249,18 @@ class JobResource(resource.Resource):
         }
         return respond(request, output)
 
-    def _queue(self, request):
-        """Queue up a run for the current job"""
-        # Let's see if there is already a queued run
-        last_run = None
-        if self._job.runs:
-            last_run = self._job.runs[-1]
-
-        if last_run and not last_run.is_done:
-            if last_run.run_time >= timeutils.current_time():
-                # There is a scheduled run, but it isn't time yet.
-                # Set this run to start now!
-                last_run.run_time = timeutils.current_time()
-
-                log.info("Request to queue job %s rescheduling run %s", self._job.name, last_run.id)
-            else:
-                # There is already a run that is set to run now so there is nothing for us to do
-                log.info("Request to queue job %s but we're already waiting on run %s", self._job.name, last_run.id)
-
-            run_href = request.childLink(last_run.id)
-            log.debug("Redirecting to %s", run_href)
-            return respond(request, None, code=http.SEE_OTHER, headers={'Location': run_href})
-                
-        log.info("Creating new run for %s", self._job.name)
-        new_run = self._job.build_run()
-        new_run.run_time = timeutils.current_time()
-
-        run_href = request.childLink(new_run.id)
-        return respond(request, None, code=http.SEE_OTHER, headers={'Location': run_href})
-
     def render_POST(self, request):
         log.debug("Handling post request for %s", self._job.name)
-        if request.args['action'][0] == "queue":
-            return self._queue(request)
-        log.warning("Unknown request action %s", request.args['action'])
-        request.setResponseCode(http.NOT_IMPLEMENTED)
-            
+        if request.args['command'][0] == 'start':
+            self._master_control.activate_job(self._job)
+            return respond(request, {'result': "Job %s is activated" % self._job.name})
+
+        if request.args['command'][0] == 'stop':
+            self._master_control.deactivate_job(self._job)
+            return respond(request, {'result': "Job %s is deactivated" % self._job.name})
+
+        log.warning("Unknown request job command %s", request.args['command'])
+        return respond(request, None, code=http.NOT_IMPLEMENTED)
 
 class JobsResource(resource.Resource):
     """Resource for all our daemon's jobs"""
@@ -300,7 +277,7 @@ class JobsResource(resource.Resource):
         if found is None:
             return resource.NoResource("Cannot  find job '%s'" % name)
         
-        return JobResource(found)
+        return JobResource(found, self._master_control)
         
     def render_GET(self, request):
         request.setHeader("content-type", "text/json")
@@ -320,7 +297,19 @@ class JobsResource(resource.Resource):
             'jobs': job_list,
         }
         return respond(request, output)
-
+    
+    def render_POST(self, request):
+        log.debug("Handling post request on all jobs")
+        if request.args['command'][0] == 'stopall':
+            self._master_control.deactivate_all()
+            return respond(request, {'result': "All jobs are now deactivated"})
+       
+        if request.args['command'][0] == 'startall':
+            self._master_control.activate_all()
+            return respond(request, {'result': "All jobs are now activated"})
+        
+        log.warning("Unknown request command %s for all jobs", request.args['command'])
+        return respond(request, None, code=http.NOT_IMPLEMENTED)
 
 class RootResource(resource.Resource):
     def __init__(self, master_control):

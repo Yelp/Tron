@@ -124,17 +124,40 @@ class MasterControlProgram(object):
                 next.set_run_time(timeutils.current_time())
             reactor.callLater(sleep, self.run_job, next)
 
-        return next
-
     def run_job(self, now):
         """This runs when a job was scheduled.
-        
         Here we run the job and schedule the next time it should run
         """
+        if not now.job.running:
+            return
+        
+        # If this is there are no other valid runs after, schedule a new one  
+        if now.job.last_valid_run() == now:
+            self._schedule_next_run(now.job)
+        
         log.debug("Running next scheduled job")
-        next = self._schedule_next_run(now.job)
         now.scheduled_start()
 
+    def activate_job(self, job):
+        job.running = True
+        last = job.last_valid_run()
+        if not last or not last.is_scheduled:
+            self._schedule_next_run(job)
+
+    def deactivate_job(self, job):
+        job.running = False
+        last = job.last_valid_run()
+        if last.is_scheduled:
+            last.cancel()
+
+    def deactivate_all(self):
+        for jo in self.jobs.itervalues():
+            self.deactivate_job(jo)
+
+    def activate_all(self):
+        for jo in self.jobs.itervalues():
+            self.activate_job(jo)
+    
     def run_jobs(self):
         """This schedules the first time each job runs"""
         if os.path.isfile(self.state_handler.get_state_file_path()):

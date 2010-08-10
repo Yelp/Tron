@@ -93,7 +93,6 @@ class JobRun(object):
             r.cancel()
     
     def succeed(self):
-        self.last_success_check()
         for r in self.runs:
             r.mark_success()
 
@@ -158,9 +157,9 @@ class Job(object):
         self.data = deque()
         
         self.queueing = False
+        self.running = True
         self.constant = False
         self.last_success = None
-        self.last_ran = None
         
         self.state_callback = None
         self.run_limit = RUN_LIMIT
@@ -168,16 +167,12 @@ class Job(object):
         self.node_pool = None
         self.output_dir = None
         
-    def next_run(self):
-        if not self.scheduler:
-            return None
-        
-        job_run = self.scheduler.next_run(self)
-        if job_run:
-            for a in job_run.runs:
-                a.state_changed()
-            
-        return job_run
+    def last_valid_run(self):
+        last = self.runs[0] if self.runs else None
+        while last and last.is_cancelled:
+            last = last.prev
+
+        return last
 
     def get_run_by_num(self, num):
         ind = self.runs[0].run_num - num
@@ -191,6 +186,17 @@ class Job(object):
             old = self.runs.pop()
             self.data.pop()
             old.next.prev = None
+
+    def next_run(self):
+        if not self.scheduler:
+            return None
+        
+        job_run = self.scheduler.next_run(self)
+        if job_run:
+            for a in job_run.runs:
+                a.state_changed()
+            
+        return job_run
 
     def build_run(self, prev=None):
         job_run = JobRun(self, prev)

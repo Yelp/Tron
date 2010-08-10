@@ -32,7 +32,7 @@ jobs:
             interval: 20s
         actions:
             - &intAction !Action
-                name: "action0.0"
+                name: "action0_0"
                 command: "test_command0.0"
                 
     - &job1 !Job
@@ -42,10 +42,10 @@ jobs:
             interval: 20s
         actions:
             - &intAction2 !Action
-                name: "action1.0"
+                name: "action1_0"
                 command: "test_command1.0"
             - &actionBar !Action
-                name: "action1.1"
+                name: "action1_1"
                 command: "test_command1.1"
                 requires: *intAction2
 
@@ -56,7 +56,7 @@ jobs:
             interval: 20s
         actions:
             - &actionFail !Action
-                name: "action2.0"
+                name: "action2_0"
                 command: "test_command2.0"
 
     - &job3 !Job
@@ -65,13 +65,13 @@ jobs:
         schedule: "constant"
         actions:
             - &actionConstant0 !Action
-                name: "action3.0"
+                name: "action3_0"
                 command: "test_command3.0"
             - &actionConstant1 !Action
-                name: "action3.1"
+                name: "action3_1"
                 command: "test_command3.1"
             - &actionFollow !Action
-                name: "action3.2"
+                name: "action3_2"
                 node: *node0
                 command: "test_command3.2"
                 requires: [*actionConstant0, *actionConstant1]
@@ -82,7 +82,7 @@ jobs:
         schedule: "daily"
         actions:
             - &actionDaily !Action
-                name: "action4.0"
+                name: "action4_0"
                 command: "test_command4.0"
 """
     @class_setup
@@ -171,7 +171,7 @@ jobs:
             for act_count in range(len(j.topo_actions)):
                 a = j.topo_actions[act_count]
                 assert hasattr(a, "name")
-                assert_equal(a.name, "action%s.%s" % (job_count, act_count))
+                assert_equal(a.name, "action%s_%s" % (job_count, act_count))
     
     def test_actions_command_attribute(self): 
         for job_count in range(len(self.all_jobs)):

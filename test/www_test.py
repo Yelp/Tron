@@ -97,7 +97,7 @@ class JobDetailTest(TestCase):
                                  topo_actions=[],
                                 )
 
-        self.resource = www.JobResource(self.job)
+        self.resource = www.JobResource(self.job, turtle.Turtle())
     
     def test_detail(self):
         resp = self.resource.render_GET(REQUEST)
@@ -119,11 +119,11 @@ class JobQueueTest(TestCase):
                                  node_pool=TEST_POOL,
                                 )
 
-        self.resource = www.JobResource(self.job)
+        self.resource = www.JobResource(self.job, turtle.Turtle())
 
     def test(self):
         req = twisted.web.server.Request(turtle.Turtle(), None)
-        req.args = {'action': ['queue']}
+        req.args = {'command': ['queue']}
         req.childLink = lambda val : "/jobs/foo/%s" % val
         resp = self.resource.render_POST(req)
         
@@ -156,11 +156,11 @@ class JobQueueDuplicateTest(TestCase):
                                  node_pool=TEST_POOL,
                                 )
 
-        self.resource = www.JobResource(self.job)
+        self.resource = www.JobResource(self.job, turtle.Turtle())
         
     def test(self):
         req = twisted.web.server.Request(turtle.Turtle(), None)
-        req.args = {'action': ['queue']}
+        req.args = {'command': ['queue']}
         req.childLink = lambda val : "/jobs/foo/%s" % val
         resp = self.resource.render_POST(req)
 
@@ -197,7 +197,7 @@ class JobRunStartTest(TestCase):
     def test(self):
         req = twisted.web.server.Request(turtle.Turtle(), None)
         req.prePathURL = lambda : "/jobs/foo/1"
-        req.args = {'action': ['start']}
+        req.args = {'command': ['start']}
         req.childLink = lambda val : "/jobs/foo/%s" % val
         resp = self.resource.render_POST(req)
 
