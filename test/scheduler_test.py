@@ -54,6 +54,28 @@ class DailySchedulerTest(TestCase):
     def test__str__(self):
         assert_equal(str(self.scheduler), "DAILY")
 
+
+class DailySchedulerTimeTest(TestCase):
+    @setup
+    def build_scheduler(self):
+        self.scheduler = scheduler.DailyScheduler(start_time=datetime.time(hour=16, minute=30))
+        self.action = action.Action("Test Action - Beer Time")
+        self.job = job.Job("Test Job", self.action)
+        self.job.scheduler = self.scheduler
+        self.action.job = self.job
+    
+    def test_next_run(self):
+        next_run = self.scheduler.next_run(self.job)
+        next_run_date = next_run.run_time.date()
+
+        today = datetime.date.today()
+        tomorrow = today + datetime.timedelta(days=1)
+        
+        assert_gt(next_run_date, today)
+        assert_equal(next_run_date - today, datetime.timedelta(days=1))
+        assert_lte(datetime.datetime(year=tomorrow.year, month=tomorrow.month, day=tomorrow.day, hour=12), next_run.run_time)
+
+
 class IntervalSchedulerTest(TestCase):
     @setup
     def build_scheduler(self):

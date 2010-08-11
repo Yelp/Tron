@@ -52,8 +52,8 @@ jobs:
     - &job2 !Job
         name: "test_job2"
         node: *node1
-        schedule: !IntervalScheduler
-            interval: 20s
+        schedule: !DailyScheduler
+            start_time: "16:30:00"
         actions:
             - &actionFail !Action
                 name: "action2_0"
@@ -159,8 +159,8 @@ jobs:
         assert_equal(self.job0.scheduler.interval, datetime.timedelta(seconds=20))
         assert isinstance(self.job1.scheduler, scheduler.IntervalScheduler)
         assert_equal(self.job1.scheduler.interval, datetime.timedelta(seconds=20))
-        assert isinstance(self.job2.scheduler, scheduler.IntervalScheduler)
-        assert_equal(self.job2.scheduler.interval, datetime.timedelta(seconds=20))
+        assert isinstance(self.job2.scheduler, scheduler.DailyScheduler)
+        assert_equal(self.job2.scheduler.start_time, datetime.time(hour=16, minute=30, second=0))
         assert isinstance(self.job3.scheduler, scheduler.ConstantScheduler)
         assert isinstance(self.job4.scheduler, scheduler.DailyScheduler)
      

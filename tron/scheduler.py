@@ -23,9 +23,16 @@ class ConstantScheduler(object):
 
 class DailyScheduler(object):
     """The daily scheduler schedules one run per day"""
+    def __init__(self, start_time=None):
+        # What time of day does this thing start ? Default to 1 second after midnight
+        self.start_time = start_time or datetime.time(hour=0, minute=0, second=1)
+        
     def next_run(self, job):
         # For a daily scheduler, always assume the next job run is tomorrow
-        run_time = (timeutils.current_time() + datetime.timedelta(days=1)).replace(hour=0, minute=1, second=1)
+        run_time = (timeutils.current_time() + datetime.timedelta(days=1)).replace(
+                                                                            hour=self.start_time.hour, 
+                                                                            minute=self.start_time.minute, 
+                                                                            second=self.start_time.second)
 
         last = job.runs[0] if job.runs else None
         job_run = job.build_run(last)
