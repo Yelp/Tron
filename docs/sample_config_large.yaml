@@ -78,7 +78,6 @@ jobs:
     - &jobQueue !Job
         name: "queueing1"
         node: *nodeBatch01
-        queueing: True
         schedule: !IntervalScheduler
             interval: 12s
         actions:
@@ -89,6 +88,7 @@ jobs:
     - &jobCancel !Job
         name: "cancel0"
         node: *nodeBatch00
+        queueing: False
         schedule: !IntervalScheduler
             interval: 12s
         actions:
@@ -101,7 +101,6 @@ jobs:
         node: *nodeBatch01
         schedule: !IntervalScheduler
             interval: 12s
-        queueing: True
         actions:
             - &actionFailQueue !Action
                 name: "actionFailQueue1"

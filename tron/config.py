@@ -152,8 +152,6 @@ class Job(_ConfiguredObject):
                 # This is a scheduler instance, which has more info
                 real_job.scheduler = self.schedule.actualized
 
-            real_job.scheduler.set_job_queueing(real_job)
-
         if hasattr(self, "queueing"):
             real_job.queueing = self.queueing
 

@@ -89,7 +89,10 @@ class MasterControlProgram(object):
         self.state_handler = StateHandler(self, working_dir)
 
     def add_nodes(self, node_pool):
-        for node in node_pool.nodes or []:
+        if not node_pool:
+            return
+
+        for node in node_pool.nodes:
             if not node in self.nodes:
                 self.nodes.append(node)
 
@@ -112,7 +115,7 @@ class MasterControlProgram(object):
         self.add_nodes(tron_job.node_pool)
 
         self.setup_job_dir(tron_job)
-        self.setup_job_acitons(tron_job)
+        self.setup_job_actions(tron_job)
 
     def _schedule(self, run):
         sleep = sleep_time(run.run_time)
@@ -138,8 +141,8 @@ class MasterControlProgram(object):
         now.scheduled_start()
 
     def enable_job(self, job):
-        self._schedule_next_run(job)
         job.enable()
+        self._schedule_next_run(job)
 
     def disable_job(self, job):
         job.disable()

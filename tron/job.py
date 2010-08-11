@@ -47,16 +47,7 @@ class JobRun(object):
 
         for r in self.runs:
             r.attempt_start()
-
-    def enable(self):
-        self.running = True
-    
-    def disable(self):
-        self.running = False
-        for r in self.runs:
-            if r.is_scheduled or r.is_queued:
-                r.cancel()
-    
+   
     def attempt_start(self):
         if self.should_start:
             self.start()
@@ -70,7 +61,7 @@ class JobRun(object):
             self.last_success_check()
             
             if self.job.constant and self.job.running:
-                self.job.build_run(self).start()
+                self.job.build_run().start()
 
         if not self.is_running:
             self.end_time = timeutils.current_time()
@@ -110,7 +101,7 @@ class JobRun(object):
 
     @property
     def should_start(self):
-        return self.job.running and (self.is_scheduled or self.is_queued):
+        return self.job.running and not self.is_running and self.job.next_to_run() == self
 
     @property
     def id(self):
@@ -167,10 +158,19 @@ class Job(object):
         self.state_callback = None
         self.node_pool = None
         self.output_dir = None
+ 
+    def enable(self):
+        self.running = True
+    
+    def disable(self):
+        self.running = False
+        for r in self.runs:
+            if r.is_scheduled or r.is_queued:
+                r.cancel()
         
     def next_to_run(self):
         def choose(prev, next):
-            return next if next.is_queued or next.is_scheduled else prev
+            return next if next.is_queued or next.is_scheduled or next.is_running else prev
 
         return reduce(choose, self.runs, None)
 
@@ -180,10 +180,14 @@ class Job(object):
 
     def remove_old_runs(self):
         """Remove old runs so the number left matches the run limit.
-        However only removes runs up to the last success and doesn't remove running or queued runs
+        However only removes runs up to the last success or up to the next to run
         """
-        while len(self.runs) > self.run_limit and not self.runs[-1].is_queued and 
-         not self.runs[-1].is_running and self.last_success and self.last_success.run_num < self.runs[-1].run_num:
+        next = self.next_to_run()
+        next_num = next.run_num if next else self.runs[0].run_num
+        succ_num = self.last_success.run_num if self.last_success else 0
+        keep_num = min([next_num, succ_num])
+
+        while len(self.runs) > self.run_limit and keep_num > self.runs[-1].run_num:
             old = self.runs.pop()
             self.data.pop()
 

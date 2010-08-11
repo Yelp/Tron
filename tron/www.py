@@ -238,13 +238,13 @@ class JobResource(resource.Resource):
 
     def render_POST(self, request):
         log.debug("Handling post request for %s", self._job.name)
-        if request.args['command'][0] == 'start':
-            self._master_control.activate_job(self._job)
-            return respond(request, {'result': "Job %s is activated" % self._job.name})
+        if request.args['command'][0] == 'enable':
+            self._master_control.enable_job(self._job)
+            return respond(request, {'result': "Job %s is enabled" % self._job.name})
 
-        if request.args['command'][0] == 'stop':
-            self._master_control.deactivate_job(self._job)
-            return respond(request, {'result': "Job %s is deactivated" % self._job.name})
+        if request.args['command'][0] == 'disable':
+            self._master_control.disable_job(self._job)
+            return respond(request, {'result': "Job %s is disabled" % self._job.name})
 
         log.warning("Unknown request job command %s", request.args['command'])
         return respond(request, None, code=http.NOT_IMPLEMENTED)
@@ -286,13 +286,13 @@ class JobsResource(resource.Resource):
     
     def render_POST(self, request):
         log.debug("Handling post request on all jobs")
-        if request.args['command'][0] == 'stopall':
-            self._master_control.deactivate_all()
-            return respond(request, {'result': "All jobs are now deactivated"})
+        if request.args['command'][0] == 'disableall':
+            self._master_control.disable_all()
+            return respond(request, {'result': "All jobs are now disabled"})
        
-        if request.args['command'][0] == 'startall':
-            self._master_control.activate_all()
-            return respond(request, {'result': "All jobs are now activated"})
+        if request.args['command'][0] == 'enableall':
+            self._master_control.enable_all()
+            return respond(request, {'result': "All jobs are now enabled"})
         
         log.warning("Unknown request command %s for all jobs", request.args['command'])
         return respond(request, None, code=http.NOT_IMPLEMENTED)
