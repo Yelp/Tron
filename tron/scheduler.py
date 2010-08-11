@@ -53,13 +53,13 @@ class IntervalScheduler(object):
     
     def next_run(self, job):
         # Find the last success to pick the next time to run
-        if job.runs:
+        if job.runs and not job.running:
             last = job.runs[0]
             run_time = last.run_time + self.interval
         else:
             log.debug("Found no past runs for job %s, next run is now", job.name)
             last = None
-            run_time = timeutils.current_time()
+            run_time = timeutils.current_time() + self.interval
         
         job_run = job.build_run(last)
         job_run.set_run_time(run_time)
@@ -69,5 +69,5 @@ class IntervalScheduler(object):
         return "INTERVAL:%s" % self.interval
         
     def set_job_queueing(self, job):
-        job.queueing = False
+        job.queueing = True
 

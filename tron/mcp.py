@@ -34,15 +34,12 @@ class StateHandler(object):
         self.writing_enabled = writing
 
     def restore_job(self, job):
-        prev = None
-
         job.run_num = self.data[job.name][-1]['run_num']
         for data in reversed(self.data[job.name]):
-            run = job.restore_run(data, prev)
+            run = job.restore_run(data)
 
             if run.is_scheduled:
                 reactor.callLater(sleep_time(run.run_time), self.mcp.run_job, run)
-            prev = run
 
     def state_changed(self):
         if self.writing_enabled:
@@ -92,28 +89,30 @@ class MasterControlProgram(object):
         self.state_handler = StateHandler(self, working_dir)
 
     def add_nodes(self, node_pool):
-        if not node_pool:
-            return
-
-        for node in node_pool.nodes:
+        for node in node_pool.nodes or []:
             if not node in self.nodes:
                 self.nodes.append(node)
+
+    def setup_job_dir(self, job):
+        job.output_dir = os.path.join(self.state_handler.working_dir, job.name)
+        if not os.path.exists(job.output_dir):
+            os.mkdir(job.output_dir)
+
+    def setup_job_actions(self, job):
+        for action in job.topo_actions:
+            self.actions[action.name] = action
+            self.add_nodes(action.node_pool)
 
     def add_job(self, tron_job):
         if tron_job.name in self.jobs:
             raise JobExistsError(tron_job)
         
-        tron_job.output_dir = os.path.join(self.state_handler.working_dir, tron_job.name)
-        if not os.path.exists(tron_job.output_dir):
-            os.mkdir(tron_job.output_dir)
-
         self.jobs[tron_job.name] = tron_job
         tron_job.state_callback = self.state_handler.state_changed
         self.add_nodes(tron_job.node_pool)
 
-        for tron_action in tron_job.topo_actions:
-            self.actions[tron_action.name] = tron_action
-            self.add_nodes(tron_action.node_pool)
+        self.setup_job_dir(tron_job)
+        self.setup_job_acitons(tron_job)
 
     def _schedule(self, run):
         sleep = sleep_time(run.run_time)
@@ -138,28 +137,20 @@ class MasterControlProgram(object):
         log.debug("Running next scheduled job")
         now.scheduled_start()
 
-    def activate_job(self, job):
-        job.running = True
-        next = job.next_to_run()
-        if not next:
-            self._schedule_next_run(job)
-        else:
-            next.schedule()
-            self._schedule(next)
+    def enable_job(self, job):
+        self._schedule_next_run(job)
+        job.enable()
 
-    def deactivate_job(self, job):
-        job.running = False
-        next = job.next_to_run()
-        if next and next.is_scheduled:
-            next.queue()
+    def disable_job(self, job):
+        job.disable()
 
-    def deactivate_all(self):
+    def disable_all(self):
         for jo in self.jobs.itervalues():
-            self.deactivate_job(jo)
+            self.disable_job(jo)
 
-    def activate_all(self):
+    def enable_all(self):
         for jo in self.jobs.itervalues():
-            self.activate_job(jo)
+            self.enable_job(jo)
     
     def run_jobs(self):
         """This schedules the first time each job runs"""

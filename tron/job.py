@@ -9,11 +9,9 @@ log = logging.getLogger('tron.job')
 RUN_LIMIT = 50
 
 class JobRun(object):
-    def __init__(self, job, prev=None, data=None):
+    def __init__(self, job, data=None):
         self.run_num = job.next_num()
         self.job = job
-        self.prev = prev
-        self.next = None
         
         self.run_time = None
         self.start_time = None
@@ -36,10 +34,10 @@ class JobRun(object):
 
         if self.is_scheduled:
             if self.job.queueing:
-                log.warning("Previous job, %s, not finished - placing in queue", self.job.name)
+                log.warning("A previous run for %s has not finished - placing in queue", self.job.name)
                 self.queue()
             else:
-                log.warning("Previous job, %s, not finished - cancelling instance", self.job.name)
+                log.warning("A previous run for %s has not finished - cancelling", self.job.name)
                 self.cancel()
 
     def start(self):
@@ -49,6 +47,15 @@ class JobRun(object):
 
         for r in self.runs:
             r.attempt_start()
+
+    def enable(self):
+        self.running = True
+    
+    def disable(self):
+        self.running = False
+        for r in self.runs:
+            if r.is_scheduled or r.is_queued:
+                r.cancel()
     
     def attempt_start(self):
         if self.should_start:
@@ -69,10 +76,7 @@ class JobRun(object):
             self.end_time = timeutils.current_time()
             self.data['end_time'] = self.end_time
             
-            next = self.next
-            while next and next.is_cancelled:
-                next = next.next
-           
+            next = self.job.next_to_run()
             if next and next.is_queued:
                 next.attempt_start()
 
@@ -103,6 +107,10 @@ class JobRun(object):
     def fail(self):
         for r in self.runs:
             r.fail(0)
+
+    @property
+    def should_start(self):
+        return self.job.running and (self.is_scheduled or self.is_queued):
 
     @property
     def id(self):
@@ -136,17 +144,6 @@ class JobRun(object):
     def is_cancelled(self):
         return all([r.is_cancelled for r in self.runs])
 
-    @property
-    def should_start(self):
-        if not self.job.running or not (self.is_scheduled or self.is_queued):
-            return False
-
-        prev_job = self.prev
-        while prev_job and prev_job.is_cancelled:
-            prev_job = prev_job.prev
-
-        return not (prev_job and (prev_job.is_running or prev_job.is_queued or prev_job.is_scheduled))
-
 class Job(object):
     run_num = 0
     def next_num(self):
@@ -160,7 +157,7 @@ class Job(object):
         self.runs = deque()
         self.data = deque()
         
-        self.queueing = False
+        self.queueing = True
         self.running = True
         self.constant = False
         self.last_success = None
@@ -183,12 +180,12 @@ class Job(object):
 
     def remove_old_runs(self):
         """Remove old runs so the number left matches the run limit.
-        However only removes runs up to the last success
+        However only removes runs up to the last success and doesn't remove running or queued runs
         """
-        while len(self.runs) > self.run_limit and self.last_success and self.runs[-1].run_num < self.last_success.run_num:
+        while len(self.runs) > self.run_limit and not self.runs[-1].is_queued and 
+         not self.runs[-1].is_running and self.last_success and self.last_success.run_num < self.runs[-1].run_num:
             old = self.runs.pop()
             self.data.pop()
-            old.next.prev = None
 
     def next_run(self):
         if not self.scheduler or not self.running:
@@ -201,14 +198,11 @@ class Job(object):
             
         return job_run
 
-    def build_run(self, prev=None):
-        job_run = JobRun(self, prev)
+    def build_run(self):
+        job_run = JobRun(self)
         if self.node_pool:
             job_run.node = self.node_pool.next() 
         
-        if prev:
-            prev.next = job_run
-
         runs = {}
         for a in self.topo_actions:
             run = a.build_run(job_run)
@@ -227,8 +221,8 @@ class Job(object):
 
         return job_run
 
-    def restore_run(self, data, prev=None):
-        run = self.build_run(prev)
+    def restore_run(self, data):
+        run = self.build_run()
         for r, state in zip(run.runs, data['runs']):
             r.restore_state(state)
             
