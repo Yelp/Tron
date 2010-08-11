@@ -137,7 +137,8 @@ class TestMasterControlProgram(TestCase):
 
         callLater = mcp.reactor.callLater
         mcp.reactor.callLater = call_now
-        next = self.mcp._schedule_next_run(jo)
+        self.mcp._schedule_next_run(jo)
+        next = jo.runs[0]
         
         assert_equals(len(filter(lambda r:r.is_success, jo.runs)), 1)
         assert_equals(jo.topo_actions[0], next.runs[0].action)

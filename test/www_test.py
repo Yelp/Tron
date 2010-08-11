@@ -123,14 +123,12 @@ class JobQueueTest(TestCase):
 
     def test(self):
         req = twisted.web.server.Request(turtle.Turtle(), None)
-        req.args = {'command': ['queue']}
+        req.args = {'command': ['stop']}
         req.childLink = lambda val : "/jobs/foo/%s" % val
         resp = self.resource.render_POST(req)
         
         # Verify the response
-        assert_equal(req.code, twisted.web.http.SEE_OTHER)
-        assert req.responseHeaders.getRawHeaders('Location')[0].startswith("/jobs/%s/" % (self.job.name,))
-        
+        assert_equal(req.code, twisted.web.http.OK)
         # Check if a run would have been queued
         func = self.job.build_run
         # FIXME: failing
@@ -160,14 +158,12 @@ class JobQueueDuplicateTest(TestCase):
         
     def test(self):
         req = twisted.web.server.Request(turtle.Turtle(), None)
-        req.args = {'command': ['queue']}
+        req.args = {'command': ['stop']}
         req.childLink = lambda val : "/jobs/foo/%s" % val
         resp = self.resource.render_POST(req)
 
         # Verify the response
-        assert_equal(req.code, twisted.web.http.SEE_OTHER)
-        assert_equal(req.responseHeaders.getRawHeaders('Location')[0], "/jobs/%s/%s" % (self.job.name, "1"))
-
+        assert_equal(req.code, twisted.web.http.OK)
         # Check if a run would have been queued
         func = self.job.build_run
         assert_equal(len(func.calls), 0)
