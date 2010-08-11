@@ -27,7 +27,6 @@ def load_config(options):
         config = yaml.load(open(file_name, "r"))
         options.server = options.server or config.get('server')
 
-
 def save_config(options):
     file_name = os.path.expanduser(CONFIG_FILE_NAME)
     
@@ -43,7 +42,6 @@ def save_config(options):
     config_file = open(file_name, "w")
     yaml.dump(config, config_file)
     config_file.close()
-
 
 def request(options, path, data=None):
     enc_data = None

@@ -155,7 +155,7 @@ def main():
         sys.exit(1)
 
     status, content = cmd.request(options, "/")
-    if status != cmd.OK or not content or not content['status']:
+    if status != cmd.OK or not content:
         print >>sys.stderr, "Error connecting to tron server at %s" % options.server
         sys.exit(1)
 

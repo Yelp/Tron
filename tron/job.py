@@ -62,7 +62,7 @@ class JobRun(object):
         if self.is_success:
             self.last_success_check()
             
-            if self.job.constant:
+            if self.job.constant and self.job.running:
                 self.job.build_run(self).start()
 
         if not self.is_running:
@@ -83,6 +83,10 @@ class JobRun(object):
 
         if self.job.state_callback:
             self.job.state_callback()
+
+    def schedule(self):
+        for r in self.runs:
+            r.schedule()
 
     def queue(self):
         for r in self.runs:
@@ -134,7 +138,7 @@ class JobRun(object):
 
     @property
     def should_start(self):
-        if not self.is_scheduled and not self.is_queued:
+        if not self.job.running or not (self.is_scheduled or self.is_queued):
             return False
 
         prev_job = self.prev
@@ -167,12 +171,11 @@ class Job(object):
         self.node_pool = None
         self.output_dir = None
         
-    def last_valid_run(self):
-        last = self.runs[0] if self.runs else None
-        while last and last.is_cancelled:
-            last = last.prev
+    def next_to_run(self):
+        def choose(prev, next):
+            return next if next.is_queued or next.is_scheduled else prev
 
-        return last
+        return reduce(choose, self.runs, None)
 
     def get_run_by_num(self, num):
         ind = self.runs[0].run_num - num
@@ -188,7 +191,7 @@ class Job(object):
             old.next.prev = None
 
     def next_run(self):
-        if not self.scheduler:
+        if not self.scheduler or not self.running:
             return None
         
         job_run = self.scheduler.next_run(self)

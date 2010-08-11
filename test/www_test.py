@@ -198,9 +198,7 @@ class JobRunStartTest(TestCase):
         resp = self.resource.render_POST(req)
 
         # Verify the response
-        assert_equal(req.code, twisted.web.http.SEE_OTHER)
-        assert_equal(req.responseHeaders.getRawHeaders('Location')[0], "/jobs/1")
-
+        assert_equal(req.code, twisted.web.http.OK)
         # Check if a run would have been queued
         func = self.run.start
         assert_equal(len(func.calls), 0)

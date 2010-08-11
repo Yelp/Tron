@@ -134,6 +134,11 @@ class ActionRun(object):
             self.state = ACTION_RUN_CANCELLED
             self.state_changed()
     
+    def schedule(self):
+        if not self.required_runs:
+            self.state = ACTION_RUN_SCHEDULED
+            self.state_changed()
+    
     def queue(self):
         if self.is_scheduled or self.is_cancelled:
             self.state = ACTION_RUN_QUEUED

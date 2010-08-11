@@ -115,40 +115,43 @@ class MasterControlProgram(object):
             self.actions[tron_action.name] = tron_action
             self.add_nodes(tron_action.node_pool)
 
+    def _schedule(self, run):
+        sleep = sleep_time(run.run_time)
+        if sleep == 0:
+            run.set_run_time(timeutils.current_time())
+        reactor.callLater(sleep, self.run_job, run)
+
     def _schedule_next_run(self, job):
         next = job.next_run()
         if not next is None:
             log.info("Scheduling next job for %s", next.job.name)
-            sleep = sleep_time(next.run_time)
-            if sleep == 0:
-                next.set_run_time(timeutils.current_time())
-            reactor.callLater(sleep, self.run_job, next)
+            self._schedule(next)
 
     def run_job(self, now):
         """This runs when a job was scheduled.
         Here we run the job and schedule the next time it should run
         """
-        if not now.job.running:
+        if now.is_running or now.is_failed or now.is_success:
             return
         
-        # If this is there are no other valid runs after, schedule a new one  
-        if now.job.last_valid_run() == now:
-            self._schedule_next_run(now.job)
-        
+        self._schedule_next_run(now.job)
         log.debug("Running next scheduled job")
         now.scheduled_start()
 
     def activate_job(self, job):
         job.running = True
-        last = job.last_valid_run()
-        if not last or not last.is_scheduled:
+        next = job.next_to_run()
+        if not next:
             self._schedule_next_run(job)
+        else:
+            next.schedule()
+            self._schedule(next)
 
     def deactivate_job(self, job):
         job.running = False
-        last = job.last_valid_run()
-        if last.is_scheduled:
-            last.cancel()
+        next = job.next_to_run()
+        if next and next.is_scheduled:
+            next.queue()
 
     def deactivate_all(self):
         for jo in self.jobs.itervalues():

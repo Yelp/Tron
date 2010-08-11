@@ -65,16 +65,18 @@ class ActionRunResource(resource.Resource):
         log.debug("Handling post request for action run %s", self._act_run.id)
         cmd = request.args['command'][0]
         if cmd == 'start':
-            return self._start(request)
+            self._start(request)
         elif cmd == 'succeed':
-            return self._succeed(request)
+            self._succeed(request)
         elif cmd == 'cancel':
-            return self._cancel(request)
+            self._cancel(request)
         elif cmd == 'fail':
-            return self._fail(request)
+            self._fail(request)
+        else:
+            log.warning("Unknown request command %s", request.args['command'])
+            return respond(request, None, code=http.NOT_IMPLEMENTED)
 
-        log.warning("Unknown request command %s", request.args['command'])
-        request.setResponseCode(http.NOT_IMPLEMENTED)
+        return respond(request, {'result': "Action run now in result %s" % job_run_state(self._act_run)})
     
     def _start(self, request):
         if not self._act_run.is_success and not self._act_run.is_running:
@@ -83,16 +85,12 @@ class ActionRunResource(resource.Resource):
         else:
             log.warning("Request to start job run %s when it's already done", self._act_run.id)
 
-        return respond(request, None, code=http.SEE_OTHER, headers={'Location': "/jobs/%s" % self._act_run.id.replace('.', '/')})
-
     def _succeed(self, request):
         if not self._act_run.is_running and not self._act_run.is_success:
             log.info("Marking job run %s for success", self._act_run.id)
             self._act_run.succeed()
         else:
             log.warning("Request to mark job run %s succeed when it has already", self._act_run.id)
-
-        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._act_run.id.replace('.', '/')})
 
     def _cancel(self, request):
         if self._act_run.is_scheduled or self._act_run.is_queued:
@@ -101,17 +99,12 @@ class ActionRunResource(resource.Resource):
         else:
             log.warning("Request to cancel job run %s when it's already cancelled", self._act_run.id)
 
-        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._act_run.id.replace('.', '/')})
-
     def _fail(self, request):
         if not self._act_run.is_running and not self._act_run.is_success and not self._act_run.is_failed:
             log.info("Marking job run %s as failed", self._act_run.id)
             self._act_run.fail(0)
         else:
             log.warning("Request to fail job run %s when it's already running or done", self._act_run.id)
-
-        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._act_run.id.replace('.', '/')})
-        
 
 class JobRunResource(resource.Resource):
     isLeaf = False
@@ -158,16 +151,18 @@ class JobRunResource(resource.Resource):
         log.debug("Handling post request for run %s", self._run.id)
         cmd = request.args['command'][0]
         if cmd == "start":
-            return self._start(request)
+            self._start(request)
         elif cmd == "succeed":
-            return self._succeed(request)
+            self._succeed(request)
         elif cmd == "fail":
-            return self._fail(request)
+            self._fail(request)
         elif cmd == "cancel":
-            return self._cancel(request)
+            self._cancel(request)
+        else:
+            log.warning("Unknown request command %s", request.args['command'])
+            return respond(request, None, code=http.NOT_IMPLEMENTED)
         
-        log.warning("Unknown request command %s", request.args['command'])
-        request.setResponseCode(http.NOT_IMPLEMENTED)
+        return respond(request, {'result': "Job run now in result %s" % job_run_state(self._run)})
 
     def _start(self, request):
         if not self._run.is_success and not self._run.is_running:
@@ -176,16 +171,12 @@ class JobRunResource(resource.Resource):
         else:
             log.warning("Request to start job run %s when it's already done", self._run.id)
 
-        return respond(request, None, code=http.SEE_OTHER, headers={'Location': "/jobs/%s" % self._run.id.replace('.', '/')})
-
     def _succeed(self, request):
         if not self._run.is_running and not self._run.is_success:
             log.info("Marking job run %s for success", self._run.id)
             self._run.succeed()
         else:
             log.warning("Request to mark job run %s succeed when it has already", self._run.id)
-
-        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._run.id.replace('.', '/')})
 
     def _cancel(self, request):
         if self._run.is_scheduled or self._run.is_queued:
@@ -194,16 +185,12 @@ class JobRunResource(resource.Resource):
         else:
             log.warning("Request to cancel job run %s when it's already cancelled", self._run.id)
 
-        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._run.id.replace('.', '/')})
-
     def _fail(self, request):
         if not self._run.is_running and not self._run.is_success and not self._run.is_failed:
             log.info("Marking job run %s as failed", self._run.id)
             self._run.fail()
         else:
             log.warning("Request to fail job run %s when it's already running or done", self._run.id)
-
-        return respond(request, None, code=http.SEE_OTHER, headers={'location': "/jobs/%s" % self._run.id.replace('.', '/')})
 
 class JobResource(resource.Resource):
     """A resource that describes a particular job"""
@@ -268,7 +255,6 @@ class JobsResource(resource.Resource):
         self._master_control = master_control
         resource.Resource.__init__(self)
 
-
     def getChild(self, name, request):
         if name == '':
             return self
@@ -327,6 +313,7 @@ class RootResource(resource.Resource):
 
     def render_GET(self, request):
         return respond(request, {'status': "I'm alive biatch"})
+
 
 if __name__ == '__main__':
     from twisted.internet import reactor
