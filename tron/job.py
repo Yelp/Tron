@@ -39,7 +39,7 @@ class JobRun(object):
             else:
                 log.warning("A previous run for %s has not finished - cancelling", self.job.name)
                 self.cancel()
-
+    
     def start(self):
         log.info("Starting action job %s", self.job.name)
         self.start_time = timeutils.current_time()
@@ -47,7 +47,11 @@ class JobRun(object):
 
         for r in self.runs:
             r.attempt_start()
-   
+  
+    def manual_start(self):
+        self.queue()
+        self.attempt_start()
+
     def attempt_start(self):
         if self.should_start:
             self.start()
@@ -158,7 +162,7 @@ class Job(object):
         self.state_callback = None
         self.node_pool = None
         self.output_dir = None
- 
+
     def enable(self):
         self.running = True
     
@@ -169,8 +173,12 @@ class Job(object):
                 r.cancel()
         
     def next_to_run(self):
+        """Returns a currently running job.
+        If no currently running jobs are found, returns the next to run
+        """
         def choose(prev, next):
-            return next if next.is_queued or next.is_scheduled or next.is_running else prev
+            return next if not (prev and prev.is_running) and \
+               (next.is_queued or next.is_scheduled or next.is_running) else prev
 
         return reduce(choose, self.runs, None)
 
@@ -192,7 +200,7 @@ class Job(object):
             self.data.pop()
 
     def next_run(self):
-        if not self.scheduler or not self.running:
+        if not self.scheduler:
             return None
         
         job_run = self.scheduler.next_run(self)

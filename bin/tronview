@@ -13,7 +13,7 @@ JOB_COLUMNS = (
 )
 
 RUN_COLUMNS = (
-    ('Action Run ID', 30),
+    ('Action Run ID', 40),
     ('State', 6),
     ('Scheduled Time', 23),
     ('Start Time', 23),

@@ -133,16 +133,18 @@ class MasterControlProgram(object):
         """This runs when a job was scheduled.
         Here we run the job and schedule the next time it should run
         """
-        if now.is_running or now.is_failed or now.is_success:
+        if not now.job.running:
             return
         
         self._schedule_next_run(now.job)
-        log.debug("Running next scheduled job")
-        now.scheduled_start()
+        if not (now.is_running or now.is_failed or now.is_success):
+            log.debug("Running next scheduled job")
+            now.scheduled_start()
 
     def enable_job(self, job):
+        if not job.runs[0].is_scheduled:
+            self._schedule_next_run(job)
         job.enable()
-        self._schedule_next_run(job)
 
     def disable_job(self, job):
         job.disable()
