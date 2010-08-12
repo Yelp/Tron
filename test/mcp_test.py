@@ -125,7 +125,7 @@ class TestMasterControlProgram(TestCase):
         act = action.Action("Test Action")
         jo = job.Job("Test Job", act)
         jo.node_pool = turtle.Turtle()
-        jo.scheduler = scheduler.ConstantScheduler()
+        jo.scheduler = scheduler.DailyScheduler()
 
         act.job = jo
         act.command = "Test command"
@@ -138,12 +138,13 @@ class TestMasterControlProgram(TestCase):
         callLater = mcp.reactor.callLater
         mcp.reactor.callLater = call_now
         self.mcp._schedule_next_run(jo)
+        mcp.reactor.callLater = callLater
         next = jo.runs[0]
         
         assert_equals(len(filter(lambda r:r.is_success, jo.runs)), 1)
         assert_equals(jo.topo_actions[0], next.runs[0].action)
+        assert next.runs[0].is_success
         assert next.is_success
 
-        mcp.reactor.callLater = callLater
 
 

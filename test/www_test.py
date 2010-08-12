@@ -123,7 +123,7 @@ class JobQueueTest(TestCase):
 
     def test(self):
         req = twisted.web.server.Request(turtle.Turtle(), None)
-        req.args = {'command': ['stop']}
+        req.args = {'command': ['disable']}
         req.childLink = lambda val : "/jobs/foo/%s" % val
         resp = self.resource.render_POST(req)
         
@@ -158,7 +158,7 @@ class JobQueueDuplicateTest(TestCase):
         
     def test(self):
         req = twisted.web.server.Request(turtle.Turtle(), None)
-        req.args = {'command': ['stop']}
+        req.args = {'command': ['disable']}
         req.childLink = lambda val : "/jobs/foo/%s" % val
         resp = self.resource.render_POST(req)
 

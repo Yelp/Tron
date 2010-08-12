@@ -35,25 +35,6 @@ class TestAction(TestCase):
         assert self.job.next_run()
         assert_equals(get_num_runs_by_state(self.job, action.ACTION_RUN_SCHEDULED), 1)
 
-    def test_next_run_prev(self):
-        self.job.scheduler = scheduler.DailyScheduler()
-        run = self.job.next_run()
-        assert_equals(run.prev, None)
-
-        run2 = self.job.next_run()
-
-        assert run
-        assert run2
-        assert_equals(get_num_runs_by_state(self.job, action.ACTION_RUN_SCHEDULED), 2)
-        assert_equals(run2.prev, run)
-
-        run3 = self.job.next_run()
-        assert_equals(run3.prev, run2)
-
-        run3.runs[0].state = action.ACTION_RUN_CANCELLED
-        run4 = self.job.next_run()
-        assert_equals(run4.prev, run3)
-
 
 class TestActionRun(TestCase):
     """Unit testing for ActionRun class"""

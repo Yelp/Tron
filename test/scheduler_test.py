@@ -22,10 +22,6 @@ class ConstantSchedulerTest(TestCase):
         next_run2 = self.scheduler.next_run(self.job)
         assert_equal(next_run2, None)
 
-    def test_set_job_queueing(self):
-        self.scheduler.set_job_queueing(self.job)
-        assert self.job.constant
-
     def test__str__(self):
         assert_equal(str(self.scheduler), "CONSTANT")
 
@@ -46,10 +42,6 @@ class DailySchedulerTest(TestCase):
         
         assert_gt(next_run_date, today)
         assert_equal(next_run_date - today, datetime.timedelta(days=1))
-
-    def test_set_job_queueing(self):
-        self.scheduler.set_job_queueing(self.job)
-        assert self.job.queueing
 
     def test__str__(self):
         assert_equal(str(self.scheduler), "DAILY")
@@ -88,14 +80,10 @@ class IntervalSchedulerTest(TestCase):
 
     def test_next_run(self):
         next_run = self.scheduler.next_run(self.job)
-        assert_gte(datetime.datetime.now(), next_run.run_time)
+        assert_gte(datetime.datetime.now() + self.interval, next_run.run_time)
         
         next_run2 = self.scheduler.next_run(self.job)
         assert_equal(next_run2.run_time - next_run.run_time, self.interval)
-
-    def test_set_job_queueing(self):
-        self.scheduler.set_job_queueing(self.action)
-        assert not self.action.queueing
 
     def test__str__(self):
         assert_equal(str(self.scheduler), "INTERVAL:%s" % self.interval)
