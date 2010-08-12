@@ -33,7 +33,7 @@ def parse_options():
 def view_all(options):
     """docstring for view_jobs"""
 
-    status, content = cmd.request(options, "/jobs")
+    status, content = cmd.request(options.server, "/jobs")
     assert status == cmd.OK
     assert 'jobs' in content
     
@@ -51,7 +51,7 @@ def view_all(options):
 
 def view_job(options, job_name):
     """Retrieve details of the specified job and display"""
-    status, job_content = cmd.request(options, "/jobs/%s" % job_name)
+    status, job_content = cmd.request(options.server, "/jobs/%s" % job_name)
     if status == cmd.ERROR:
         print >>sys.stderr, "%s: Cannot find job %s" % (job_content, job_name)
         sys.exit(1)
@@ -93,7 +93,7 @@ def view_job(options, job_name):
         print "".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time), RUN_COLUMNS))
 
 def view_job_run(options, job_run_id):
-    status, job_run_content = cmd.request(options, "/jobs/%s" % job_run_id.replace('.', '/'))
+    status, job_run_content = cmd.request(options.server, "/jobs/%s" % job_run_id.replace('.', '/'))
     if status == cmd.ERROR:
         print >>sys.stderr, "%s: Cannot find job run %s" % (job_run_content, job_run_id)
         sys.exit(1)
@@ -127,7 +127,7 @@ def view_job_run(options, job_run_id):
 
 def view_action_run(options, act_run_id):
     url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'), options.num_shown)
-    status, act_run_content = cmd.request(options, url)
+    status, act_run_content = cmd.request(options.server, url)
 
     if status == cmd.ERROR:
         print >>sys.stderr, "%s: Cannot find action run %s" % (act_run_content, act_run_id)
@@ -154,7 +154,7 @@ def main():
         print >>sys.stderr, "Server not specified"
         sys.exit(1)
 
-    status, content = cmd.request(options, "/")
+    status, content = cmd.request(options.server, "/")
     if status != cmd.OK or not content:
         print >>sys.stderr, "Error connecting to tron server at %s" % options.server
         sys.exit(1)
@@ -174,3 +174,4 @@ def main():
 
 if __name__ == '__main__':
     main()
+

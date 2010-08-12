@@ -67,11 +67,11 @@ class JobRun(object):
             if self.job.constant and self.job.running:
                 self.job.build_run().start()
 
-        if not self.is_running:
+        if self.is_done:
             self.end_time = timeutils.current_time()
             self.data['end_time'] = self.end_time
             
-            next = self.job.next_to_run()
+            next = self.job.next_to_finish()
             if next and next.is_queued:
                 next.attempt_start()
 
@@ -105,7 +105,7 @@ class JobRun(object):
 
     @property
     def should_start(self):
-        return self.job.running and not self.is_running and self.job.next_to_run() == self
+        return self.job.running and not self.is_running and self.job.next_to_finish() == self
 
     @property
     def id(self):
@@ -118,6 +118,10 @@ class JobRun(object):
     @property
     def is_success(self):
         return all([r.is_success for r in self.runs])
+
+    @property
+    def is_done(self):
+        return not any([r.is_running or r.is_queued or r.is_scheduled for r in self.runs])
 
     @property
     def is_queued(self):
@@ -172,7 +176,7 @@ class Job(object):
             if r.is_scheduled or r.is_queued:
                 r.cancel()
         
-    def next_to_run(self):
+    def next_to_finish(self):
         """Returns a currently running job.
         If no currently running jobs are found, returns the next to run
         """
@@ -190,7 +194,7 @@ class Job(object):
         """Remove old runs so the number left matches the run limit.
         However only removes runs up to the last success or up to the next to run
         """
-        next = self.next_to_run()
+        next = self.next_to_finish()
         next_num = next.run_num if next else self.runs[0].run_num
         succ_num = self.last_success.run_num if self.last_success else 0
         keep_num = min([next_num, succ_num])

@@ -30,7 +30,7 @@ def parse_options():
 
 def edit(options, command, id):
     data = {'command': command}
-    status, content = cmd.request(options, "/jobs/%s" % id.replace('.', '/'), data=data)
+    status, content = cmd.request(options.server, "/jobs/%s" % id.replace('.', '/'), data=data)
 
     if status == cmd.OK:
         print content['result']
@@ -43,7 +43,7 @@ def main():
     
     cmd.load_config(options)
 
-    status, content = cmd.request(options, "/")
+    status, content = cmd.request(options.server, "/")
     if status != cmd.OK or not content:
         print >>sys.stderr, "Error connecting to tron server at %s" % options.server
         sys.exit(1)

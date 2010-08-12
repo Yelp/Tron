@@ -17,23 +17,47 @@ jobs:
         schedule: !IntervalScheduler
             interval: 20s
         actions:
-            - &intAction !Action
-                name: "actionInterval0a"
+            - &intAction0 !Action
+                name: "actionInterval00"
                 command: "sleep 3; echo 3"
-                
+            - &intAction1 !Action
+                name: "actionInterval01"
+                command: "sleep 3; echo 3"
+                requires: *intAction0
+            - &intAction2 !Action
+                name: "actionInterval02"
+                command: "sleep 3; echo 3"
+                requires: *intAction0
+            - &intAction3 !Action
+                name: "actionInterval03"
+                command: "sleep 3; echo 3"
+                requires: [*intAction1, *intAction2]
+            - &intAction4 !Action
+                name: "actionInterval04"
+                command: "sleep 9; echo 3"
+                requires: *intAction0
+            - &intAction5 !Action
+                name: "actionInterval05"
+                command: "sleep 3; echo 3"
+                requires: [*intAction4, *intAction3]
+            - &intAction6 !Action
+                name: "actionInterval06"
+                command: "sleep 3; echo 3"
+                requires: [*intAction2, *intAction4]
+ 
     - &jobFoo !Job
         name: "interval0b"
         node: *nodeBatch00
         schedule: !IntervalScheduler
             interval: 20s
         actions:
-            - &intAction2 !Action
+            - &actionFoo !Action
                 name: "actionInterval0b"
                 command: "python test.py"
             - &actionBar !Action
                 name: "actionFollow"
                 command: "echo 1;sleep 5;easdfasdfdscho 2"
-                requires: *intAction2
+                requires: *actionFoo
 
     - &jobFail !Job
         name: "testfail1"

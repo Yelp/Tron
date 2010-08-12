@@ -43,12 +43,12 @@ def save_config(options):
     yaml.dump(config, config_file)
     config_file.close()
 
-def request(options, path, data=None):
+def request(serv, path, data=None):
     enc_data = None
     if data:
         enc_data = urllib.urlencode(data)
 
-    request = urllib2.Request(urlparse.urljoin(options.server, path), enc_data)
+    request = urllib2.Request(urlparse.urljoin(serv, path), enc_data)
 
     # Which is the proper way to encode data ?
     # if data:

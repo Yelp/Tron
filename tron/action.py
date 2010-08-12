@@ -297,7 +297,8 @@ class ActionRun(object):
 
     @property
     def should_start(self):
-        return all([r.is_success for r in self.required_runs])
+        return all([r.is_success for r in self.required_runs]) and \
+            (self.is_scheduled or self.is_queued)
  
 class Action(object):
     def __init__(self, name=None, node_pool=None, timeout=None):
