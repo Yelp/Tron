@@ -81,7 +81,8 @@ class IntervalSchedulerTest(TestCase):
     def test_next_run(self):
         next_run = self.scheduler.next_run(self.job)
         assert_gte(datetime.datetime.now() + self.interval, next_run.run_time)
-        
+       
+        self.job.runs.append(next_run)
         next_run2 = self.scheduler.next_run(self.job)
         assert_equal(next_run2.run_time - next_run.run_time, self.interval)
 

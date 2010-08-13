@@ -86,6 +86,7 @@ class JobDetailTest(TestCase):
                                  runs=[
                                        turtle.Turtle(
                                                      id="1",
+                                                     run_num=1,
                                                      start_time=None,
                                                      end_time=None,
                                                      exit_status=None,
