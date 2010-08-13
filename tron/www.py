@@ -129,12 +129,17 @@ class JobRunResource(resource.Resource):
         for action_run in self._run.runs:
             action_state = job_run_state(action_run)
             
+            last_time = action_run.end_time if action_run.end_time else timeutils.current_time()
+            duration = (last_time - action_run.start_time).seconds if action_run.start_time else 0
+           
             run_output.append({
                 'id': action_run.id,
+                'name': action_run.action.name,
                 'run_time': action_run.run_time and str(action_run.run_time),
                 'start_time': action_run.start_time and str(action_run.start_time),
                 'end_time': action_run.end_time and str(action_run.end_time),
                 'exit_status': action_run.exit_status,
+                'duration': duration,
                 'state': action_state,
             })
 
@@ -215,13 +220,18 @@ class JobResource(resource.Resource):
         run_output = []
         for job_run in self._job.runs:
             state = job_run_state(job_run)
-                
+            
+            last_time = job_run.end_time if job_run.end_time else timeutils.current_time()
+            duration = (last_time - job_run.start_time).seconds if job_run.start_time else 0
+
             run_output.append({
                 'id': job_run.id,
                 'href': request.childLink(job_run.id),
                 'run_time': job_run.run_time and str(job_run.run_time),
                 'start_time': job_run.start_time and str(job_run.start_time),
                 'end_time': job_run.end_time and str(job_run.end_time),
+                'duration': duration,
+                'run_num': job_run.run_num,
                 'state': state,
             })
 

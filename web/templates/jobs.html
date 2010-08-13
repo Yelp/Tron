@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+{% block body %}
+    <h1>Jobs</h1>
+    <ul> 
+    {% for job in data['jobs'] %}
+        <li><a href='{{ job['name'] }}'>{{ job['name'] }}</a> 
+            <ul>
+                <li>Sheduler: {{ job['scheduler'] }}</li>
+                <li>Last Success: {{ job['last_success'] }}</li> 
+            </ul>
+        </li>
+    {% end %}
+    </ul>
+{% end %}
+

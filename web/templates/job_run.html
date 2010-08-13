@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+{% block body %}
+    <h1>{{ data['id'] }}</h1>
+    <h2>State: {{ data['state'] }}</h2>
+    <h2>Node {{ data['node'] }}</h2>
+
+    <div id="placeholder" style="width:800px;height:300px"></div>
+{% end %}
+
+{% block graph_script %}
+<script id="source">
+$(function () {
+    var data = [], ticks = []
+    var i = 0;
+    {% for run in data['runs'] %}
+        ticks.push([i, '{{ run['name'] }}' ]);
+        data.push([i, {{ run['duration'] }} ]);
+        ++i;
+    {% end %}
+
+    function plotWithOptions() {
+        $.plot($("#placeholder"), [ { data: data, label: ""} ], {
+            series: {
+                stack: 0,
+                bars: { show: true, barWidth: 0.6 }
+            },
+            xaxis: {
+                ticks: ticks
+            },
+            grid: {
+                hoverable: true,
+                clickable: true
+            }
+        });
+    }
+
+    function showTooltip(x, y, contents) {
+        $('<div id="tooltip">' + contents + '</div>').css( {
+            position: 'absolute',
+            display: 'none',
+            top: y + 5,
+            left: x + 5,
+            border: '1px solid #fdd',
+            padding: '2px',
+            'background-color': '#fee',
+            opacity: 0.80
+        }).appendTo("body").fadeIn(0);
+    }
+
+    var previousPoint = null;
+    $("#placeholder").bind("plothover", function (event, pos, item) {
+        $("#x").text(pos.x.toFixed(2));
+        $("#y").text(pos.y.toFixed(2));
+        if (item) {
+            if (previousPoint != item.datapoint) {
+                previousPoint = item.datapoint;
+                
+                $("#tooltip").remove();
+                var x = item.datapoint[0].toFixed(2),
+                    y = item.datapoint[1].toFixed(2);
+                  
+                showTooltip(item.pageX, item.pageY,
+                            item.series.label + ticks[Math.round(x)][1] + ": " + y + " secs");
+            }
+        }
+        else {
+            $("#tooltip").remove();
+            previousPoint = null;
+        }
+    });
+
+    $("#placeholder").bind("plotclick", function (event, pos, item) {
+        if (item) {
+            var x = item.datapoint[0].toFixed(2);
+            window.location = ticks[Math.round(x)][1];
+        }
+    });
+    plotWithOptions();
+    
+});
+</script>
+
+{% end %}
+

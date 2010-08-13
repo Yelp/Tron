@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block body %}
+    <h1>{{ data['id'] }}</h1>
+    <h2>State: {{ data['state'] }}</h2>
+    <h2>Node: {{ data['node'] }}</h2>
+    <h2>Required Actions:</h2>
+    <ul>
+        {% for req in data['requirements'] %}
+            <li><a href="../{{req}}">{{req}}</a></li>
+        {% end %}
+    </ul>
+{% end %}
+
