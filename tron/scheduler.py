@@ -9,7 +9,7 @@ class ConstantScheduler(object):
     """The constant scheduler only schedules the first one.  The job run starts then next when finished"""
     def next_run(self, job):
         if job.runs and (job.runs[0].is_running or job.runs[0].is_scheduled):
-            return
+            return None
         
         job.constant = True
         job_run = job.build_run()

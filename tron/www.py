@@ -256,6 +256,10 @@ class JobResource(resource.Resource):
             self._master_control.disable_job(self._job)
             return respond(request, {'result': "Job %s is disabled" % self._job.name})
 
+        if request.args['command'][0] == 'start':
+            run = self._job.manual_start()
+            return respond(request, {'result': "New job %s created" % run.id})
+
         log.warning("Unknown request job command %s", request.args['command'])
         return respond(request, None, code=http.NOT_IMPLEMENTED)
 
@@ -303,7 +307,7 @@ class JobsResource(resource.Resource):
         if request.args['command'][0] == 'enableall':
             self._master_control.enable_all()
             return respond(request, {'result': "All jobs are now enabled"})
-        
+
         log.warning("Unknown request command %s for all jobs", request.args['command'])
         return respond(request, None, code=http.NOT_IMPLEMENTED)
 
