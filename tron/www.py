@@ -284,9 +284,21 @@ class JobsResource(resource.Resource):
         job_list = []
         for current_job in self._master_control.jobs.itervalues():
             last_success = str(current_job.last_success.end_time) if current_job.last_success else None
+            
+            # We need to describe the current state of this job
+            status = "UNKNOWN"
+            current_run = current_job.next_to_finish()
+            if current_run and current_run.is_running:
+                status = "RUNNING"
+            elif current_run and current_run.is_scheduled:
+                status = "ENABLED"
+            elif not current_run:
+                status = "DISABLED"
+                
             job_desc = {
                 'name': current_job.name,
                 'href': request.childLink(current_job.name),
+                'status': status,
                 'scheduler': str(current_job.scheduler),
                 'last_success': last_success,
             }
