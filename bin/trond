@@ -57,8 +57,8 @@ def setup_logging(options):
     if options.debug:
         defer.setDebugging(True)
 
-def load_config(master_control):
-    config_file = open(options.config_file, "r")
+def load_config(file, master_control):
+    config_file = open(file, "r")
     try:
         configuration = config.load_config(config_file)
         configuration.apply(master_control)
@@ -73,7 +73,7 @@ def main():
     
     # Configure the mcp
     master_control = mcp.MasterControlProgram(options.working_dir)
-    self.load_config(master_control)
+    load_config(options.config_file, master_control)
 
     working_dir = master_control.state_handler.working_dir
     if not os.path.isdir(working_dir):

@@ -87,8 +87,6 @@ class ActionRun(object):
 
         self.required_runs = []
         self.waiting_runs = []
-        self.data = {}
-        self.state_changed()
 
     def tail_output(self, num_lines=0):
         try:
@@ -122,7 +120,6 @@ class ActionRun(object):
         self.start_time = timeutils.current_time()
         self.state = ACTION_RUN_RUNNING
         self._open_output_file()
-        self.state_changed()
 
         # And now we try to actually start some work....
         ret = self.node.run(self)
@@ -132,17 +129,14 @@ class ActionRun(object):
     def cancel(self):
         if self.is_scheduled or self.is_queued:
             self.state = ACTION_RUN_CANCELLED
-            self.state_changed()
     
     def schedule(self):
         if not self.required_runs:
             self.state = ACTION_RUN_SCHEDULED
-            self.state_changed()
     
     def queue(self):
         if self.is_scheduled or self.is_cancelled:
             self.state = ACTION_RUN_QUEUED
-            self.state_changed()
 
     def _open_output_file(self):
         if self.output_path is None:
@@ -197,7 +191,6 @@ class ActionRun(object):
         self.exit_status = exit_status
         self.end_time = timeutils.current_time()
         self.job_run.run_completed()
-        self.state_changed()
 
     def fail_unknown(self):
         """Mark the run as having failed, but note that we don't actually know what result was"""
@@ -207,14 +200,12 @@ class ActionRun(object):
         self.exit_status = None
         self.end_time = None
         self.job_run.run_completed()
-        self.state_changed()
 
     def mark_success(self):
         self.exit_status = 0
         self.state = ACTION_RUN_SUCCEEDED
         self.end_time = timeutils.current_time()
         self.job_run.run_completed()
-        self.state_changed()
 
     def succeed(self):
         """Mark the run as having succeeded"""
@@ -232,21 +223,17 @@ class ActionRun(object):
 
         if self.is_running:
             self.state = ACTION_RUN_UNKNOWN
-        self.state_changed()
 
-    def state_changed(self):
-        self.data['id'] = self.id
-        self.data['state'] = self.state
-        self.data['run_time'] = self.run_time
-        self.data['start_time'] = self.start_time
-        self.data['end_time'] = self.end_time
+    @property
+    def data(self):
+        return {'id': self.id,
+                'state': self.state,
+                'run_time': self.run_time,
+                'start_time': self.start_time,
+                'end_time': self.end_time,
+                'command': self.command
+        }
         
-        if self.run_time:
-            self.data['command'] = self.command
-        
-        if self.action.job.state_callback:
-            self.action.job.state_callback()
-
     @property
     def command(self):
         action_vars = ActionRunVariables(self)

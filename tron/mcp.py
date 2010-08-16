@@ -13,6 +13,7 @@ SECS_PER_DAY = 86400
 MICRO_SEC = .000001
 log = logging.getLogger('tron.mcp')
 STATE_FILE = 'tron_state.yaml'
+STATE_SLEEP = 10
 
 def sleep_time(run_time):
     sleep = run_time - timeutils.current_time()
@@ -25,31 +26,28 @@ class Error(Exception): pass
 
 class StateHandler(object):
     def __init__(self, mcp, working_dir, writing=False):
-        self.data = {}
         self.mcp = mcp
         self.working_dir = working_dir
         self.write_pid = None
         self.writing_enabled = writing
 
-    def restore_job(self, job):
-        job.run_num = self.data[job.name][-1]['run_num']
-        for data in reversed(self.data[job.name]):
-            run = job.restore_run(data)
-
+    def restore_job(self, job, data):
+        for r_data in reversed(data):
+            run = job.restore_run(r_data)
             if run.is_scheduled:
                 reactor.callLater(sleep_time(run.run_time), self.mcp.run_job, run)
 
-    def state_changed(self):
-        if self.writing_enabled:
-            self.store_data() 
+        next = job.next_to_finish()
+        if not next:
+            self.mcp.schedule_next_run(job)
+        elif next.is_queued:
+            next.start()
 
-    def has_data(self, job):
-        return job.name in self.data
-    
     def store_data(self):
         """Stores the state of tron"""
+        print 'STATE STORE'
         # If tron is already storing data, don't start again till it's done
-        if self.write_pid and not os.waitpid(self.write_pid, os.WNOHANG)[0]:
+        if not self.writing_enabled or (self.write_pid and not os.waitpid(self.write_pid, os.WNOHANG)[0]):
             return 
 
         file_path = os.path.join(self.working_dir, STATE_FILE)
@@ -63,6 +61,8 @@ class StateHandler(object):
             yaml.dump(self.data, file, default_flow_style=False, indent=4)
             file.close()
             os._exit(os.EX_OK)
+        
+        reactor.callLater(STATE_SLEEP, self.store_data)
 
     def get_state_file_path(self):
         return os.path.join(self.working_dir, STATE_FILE)
@@ -71,8 +71,17 @@ class StateHandler(object):
         log.info('Restoring state from %s', self.get_state_file_path())
         
         data_file = open(self.get_state_file_path())
-        self.data = yaml.load(data_file)
+        data = yaml.load(data_file)
         data_file.close()
+
+        return data
+    
+    @property
+    def data(self):
+        data = {}
+        for j in self.mcp.jobs.itervalues():
+            data[j.name] = j.data
+        return data
 
 class MasterControlProgram(object):
     """master of tron's domain
@@ -109,8 +118,6 @@ class MasterControlProgram(object):
             tron_job.absorb_old_job(self.jobs[tron_job.name])
 
         self.jobs[tron_job.name] = tron_job
-        tron_job.state_callback = self.state_handler.state_changed
-        
         self.add_job_nodes(tron_job)
         self.setup_job_dir(tron_job)
 
@@ -120,7 +127,7 @@ class MasterControlProgram(object):
             run.set_run_time(timeutils.current_time())
         reactor.callLater(sleep, self.run_job, run)
 
-    def _schedule_next_run(self, job):
+    def schedule_next_run(self, job):
         next = job.next_run()
         if not next is None:
             log.info("Scheduling next job for %s", next.job.name)
@@ -133,14 +140,14 @@ class MasterControlProgram(object):
         if not now.job.running:
             return
         
-        self._schedule_next_run(now.job)
+        self.schedule_next_run(now.job)
         if not (now.is_running or now.is_failed or now.is_success):
             log.debug("Running next scheduled job")
             now.scheduled_start()
 
     def enable_job(self, job):
         if not job.runs[0].is_scheduled:
-            self._schedule_next_run(job)
+            self.schedule_next_run(job)
         job.enable()
 
     def disable_job(self, job):
@@ -156,15 +163,15 @@ class MasterControlProgram(object):
     
     def run_jobs(self):
         """This schedules the first time each job runs"""
+        data = None
         if os.path.isfile(self.state_handler.get_state_file_path()):
-            self.state_handler.load_data()
+            data = self.state_handler.load_data()
 
         for tron_job in self.jobs.itervalues():
-            if self.state_handler.has_data(tron_job):
-                self.state_handler.restore_job(tron_job)
+            if data and tron_job.name in data:
+                self.state_handler.restore_job(tron_job, data[tron_job.name])
             else:
-                self._schedule_next_run(tron_job)
-            self.state_handler.data[tron_job.name] = tron_job.data
+                self.schedule_next_run(tron_job)
         
         self.state_handler.writing_enabled = True
         self.state_handler.store_data()

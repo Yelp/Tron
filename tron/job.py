@@ -9,7 +9,7 @@ log = logging.getLogger('tron.job')
 RUN_LIMIT = 50
 
 class JobRun(object):
-    def __init__(self, job, data=None):
+    def __init__(self, job):
         self.run_num = job.next_num()
         self.job = job
         
@@ -17,13 +17,10 @@ class JobRun(object):
         self.start_time = None
         self.end_time = None
         self.node = None
-        
         self.runs = []
-        self.data = {'runs':[], 'run_time':None, 'start_time': None, 'end_time': None, 'run_num': self.run_num}
                
     def set_run_time(self, run_time):
         self.run_time = run_time
-        self.data['run_time'] = run_time
 
         for r in self.runs:
             if not r.required_runs:
@@ -43,7 +40,6 @@ class JobRun(object):
     def start(self):
         log.info("Starting action job %s", self.job.name)
         self.start_time = timeutils.current_time()
-        self.data['start_time'] = self.start_time
 
         for r in self.runs:
             r.attempt_start()
@@ -69,19 +65,19 @@ class JobRun(object):
 
         if self.is_done:
             self.end_time = timeutils.current_time()
-            self.data['end_time'] = self.end_time
             
             next = self.job.next_to_finish()
             if next and next.is_queued:
                 next.attempt_start()
 
-    def state_changed(self):
-        self.data['run_time'] = self.run_time
-        self.data['start_time'] = self.start_time
-        self.data['end_time'] = self.end_time
-
-        if self.job.state_callback:
-            self.job.state_callback()
+    @property
+    def data(self):
+        return {'runs':[r.data for r in self.runs],
+                'run_num': self.run_num,
+                'run_time': self.run_time,
+                'start_time': self.start_time,
+                'end_time': self.end_time
+        }
 
     def schedule(self):
         for r in self.runs:
@@ -154,16 +150,13 @@ class Job(object):
         self.topo_actions = [action] if action else []
         self.scheduler = None
         self.runs = deque()
-        self.data = deque()
         
         self.queueing = True
         self.running = True
         self.constant = False
         self.last_success = None
         
-        self.state_callback = None
         self.run_limit = RUN_LIMIT
-        self.state_callback = None
         self.node_pool = None
         self.output_dir = None
 
@@ -187,8 +180,10 @@ class Job(object):
         return reduce(choose, self.runs, None)
 
     def get_run_by_num(self, num):
-        ind = self.runs[0].run_num - num
-        return self.runs[ind] if ind in range(len(self.runs)) else None
+        for r in self.runs:
+            if r.run_num == num:
+                return r
+        return None
 
     def remove_old_runs(self):
         """Remove old runs so the number left matches the run limit.
@@ -201,7 +196,6 @@ class Job(object):
 
         while len(self.runs) > self.run_limit and keep_num > self.runs[-1].run_num:
             old = self.runs.pop()
-            self.data.pop()
 
     def next_run(self):
         if not self.scheduler:
@@ -209,11 +203,7 @@ class Job(object):
         
         job_run = self.scheduler.next_run(self)
         if job_run:
-            for a in job_run.runs:
-                a.state_changed()
- 
             self.runs.appendleft(job_run)
-            self.data.appendleft(job_run.data)
             self.remove_old_runs()
            
         return job_run
@@ -230,12 +220,11 @@ class Job(object):
             runs[a.name] = run
             
             job_run.runs.append(run)
-            job_run.data['runs'].append(run.data)
 
             for req in a.required_actions:
                 runs[req.name].waiting_runs.append(run)
                 run.required_runs.append(runs[req.name])
-     
+
         return job_run
 
     def manual_start(self):
@@ -256,8 +245,11 @@ class Job(object):
 
     def absorb_old_job(self, old):
         self.runs = old.runs
-        self.data = old.data
         self.last_success = old.last_success
+
+    @property
+    def data(self):
+        return [r.data for r in self.runs]
 
     def restore_run(self, data):
         run = self.build_run()
@@ -270,11 +262,9 @@ class Job(object):
         run.set_run_time(data['run_time'])
        
         self.runs.appendleft(run)
-        self.data.appendleft(run.data)
 
         if run.is_success:
             self.last_success = run
 
-        run.state_changed()
         return run
 

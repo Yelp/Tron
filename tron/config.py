@@ -50,13 +50,13 @@ class TronConfiguration(yaml.YAMLObject):
         found_jobs = []
 
         # Check for duplicates before we start editing jobs
-        def check_dup(dic, nex)
+        def check_dup(dic, nex):
             if nex.name in dic:
                 raise yaml.YAMLError("Job %s is previously defined" % nex.name)
             dic[nex.name] = 1
             return dic
          
-        found_jobs = reduce(check_dup, self.jobs)
+        found_jobs = reduce(check_dup, self.jobs, {})
 
         for job_config in self.jobs:
             new_job = job_config.actualized
