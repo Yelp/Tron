@@ -92,35 +92,6 @@ class TestMasterControlProgram(TestCase):
         self.mcp = mcp.MasterControlProgram("./mcp_test_dir")
         self.job.node_pool = node.NodePool('test hostname')
 
-    def test_add_action(self):
-        assert_equal(len(self.mcp.actions), 0)
-        assert_equal(len(self.mcp.nodes), 0)
-        assert_equal(len(self.mcp.actions), 0)
-
-        self.mcp.add_job(self.job)
-        
-        assert_equal(len(self.mcp.actions), 1)
-        assert_equal(self.mcp.actions[self.action.name], self.action)
-        assert_equal(len(self.mcp.nodes), 1)
-        assert_equal(self.mcp.nodes[0], self.job.node_pool.nodes[0])
-
-        action2 = action.Action("Test Action2")
-        job2 = job.Job("Test Job2", action2)
-        action2.node_pool = self.action.node_pool
-
-        self.mcp.add_job(job2)
-
-        assert_equal(len(self.mcp.actions), 2)
-        assert_equal(self.mcp.actions[action2.name], action2)
-        assert_equal(len(self.mcp.nodes), 1)
-        assert_equal(self.mcp.nodes[0], self.job.node_pool.nodes[0])
-
-        try:
-            self.mcp.add_job(self.job)
-            assert False
-        except mcp.JobExistsError:
-            pass
-
     def test_schedule_next_run(self):
         act = action.Action("Test Action")
         jo = job.Job("Test Job", act)
@@ -137,7 +108,7 @@ class TestMasterControlProgram(TestCase):
 
         callLater = mcp.reactor.callLater
         mcp.reactor.callLater = call_now
-        self.mcp._schedule_next_run(jo)
+        self.mcp.schedule_next_run(jo)
         mcp.reactor.callLater = callLater
         next = jo.runs[0]
         
