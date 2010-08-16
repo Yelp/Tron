@@ -13,7 +13,7 @@ SECS_PER_DAY = 86400
 MICRO_SEC = .000001
 log = logging.getLogger('tron.mcp')
 STATE_FILE = 'tron_state.yaml'
-STATE_SLEEP = 10
+STATE_SLEEP = 3
 
 def sleep_time(run_time):
     sleep = run_time - timeutils.current_time()
@@ -45,7 +45,6 @@ class StateHandler(object):
 
     def store_data(self):
         """Stores the state of tron"""
-        print 'STATE STORE'
         # If tron is already storing data, don't start again till it's done
         if not self.writing_enabled or (self.write_pid and not os.waitpid(self.write_pid, os.WNOHANG)[0]):
             return 
