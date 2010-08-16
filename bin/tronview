@@ -8,6 +8,7 @@ LOCAL = "http://localhost:8082"
 
 JOB_COLUMNS = (
     ('Name', 20,),
+	('State', 20),
     ('Scheduler', 20,),
     ("Last Success", 28,),
 )
@@ -47,7 +48,7 @@ def view_all(options):
 
         # Show job data
         for job in content['jobs']:
-            print " ".join(str(val).ljust(size) for val, (_, size) in zip((job['name'], job['scheduler'], job['last_success']), JOB_COLUMNS))
+            print " ".join(str(val).ljust(size) for val, (_, size) in zip((job['name'], job['status'], job['scheduler'], job['last_success']), JOB_COLUMNS))
 
 def view_job(options, job_name):
     """Retrieve details of the specified job and display"""
