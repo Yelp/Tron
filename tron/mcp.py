@@ -32,16 +32,18 @@ class StateHandler(object):
         self.writing_enabled = writing
 
     def restore_job(self, job, data):
-        for r_data in reversed(data):
+        job.running = data['running']
+        for r_data in reversed(data['runs']):
             run = job.restore_run(r_data)
             if run.is_scheduled:
                 reactor.callLater(sleep_time(run.run_time), self.mcp.run_job, run)
 
         next = job.next_to_finish()
-        if not next:
-            self.mcp.schedule_next_run(job)
-        elif next.is_queued:
-            next.start()
+        if job.running:
+            if not next:
+                self.mcp.schedule_next_run(job)
+            elif next.is_queued:
+                next.start()
 
     def store_data(self):
         """Stores the state of tron"""

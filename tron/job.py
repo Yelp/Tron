@@ -162,6 +162,9 @@ class Job(object):
 
     def enable(self):
         self.running = True
+        next = self.next_to_finish()
+        if next and next.is_queued:
+            next.start()
     
     def disable(self):
         self.running = False
@@ -249,7 +252,9 @@ class Job(object):
 
     @property
     def data(self):
-        return [r.data for r in self.runs]
+        return {'runs': [r.data for r in self.runs],
+                'running': self.running
+        }
 
     def restore_run(self, data):
         run = self.build_run()
