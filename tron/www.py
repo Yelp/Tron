@@ -5,7 +5,6 @@ Got to know what's going on ?
 import logging
 
 from twisted.internet import reactor
-
 from twisted.cred import checkers
 from twisted.web import server, resource, http
 
@@ -311,6 +310,17 @@ class JobsResource(resource.Resource):
         log.warning("Unknown request command %s for all jobs", request.args['command'])
         return respond(request, None, code=http.NOT_IMPLEMENTED)
 
+class ConfigResource(resource.Resource):
+    """Resource for configuration changes"""
+    isLeaf = True
+    def __init__(self, master_control):
+        self._master_control = master_control
+        resource.Resource.__init__(self)
+
+    def render_GET(self, request):
+        
+    
+
 class RootResource(resource.Resource):
     def __init__(self, master_control):
         self._master_control = master_control
@@ -318,6 +328,7 @@ class RootResource(resource.Resource):
         
         # Setup children
         self.putChild('jobs', JobsResource(master_control))
+        self.putChild('config', ConfigResource(master_control))
 
     def getChild(self, name, request):
         if name == '':

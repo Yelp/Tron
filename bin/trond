@@ -57,24 +57,24 @@ def setup_logging(options):
     if options.debug:
         defer.setDebugging(True)
 
-def main():
-    gc.enable()
-    options = parse_options()
-    
-    setup_logging(options)
-    
-    # Configure the mcp
-    master_control = mcp.MasterControlProgram(options.working_dir)
-    
+def load_config(master_control):
     config_file = open(options.config_file, "r")
-
     try:
         configuration = config.load_config(config_file)
         configuration.apply(master_control)
     except yaml.YAMLError, e:
         print >>sys.stderr, "Error in configuration file:", e
         sys.exit()
-   
+
+def main():
+    options = parse_options()
+    
+    setup_logging(options)
+    
+    # Configure the mcp
+    master_control = mcp.MasterControlProgram(options.working_dir)
+    self.load_config(master_control)
+
     working_dir = master_control.state_handler.working_dir
     if not os.path.isdir(working_dir):
         sys.exit("Specified working directory \'%s\' is not a directory" % working_dir)

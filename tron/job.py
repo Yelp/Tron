@@ -160,7 +160,6 @@ class Job(object):
         self.running = True
         self.constant = False
         self.last_success = None
-        self.manual = None
         
         self.state_callback = None
         self.run_limit = RUN_LIMIT
@@ -178,15 +177,13 @@ class Job(object):
                 r.cancel()
         
     def next_to_finish(self):
-        """Returns a currently running job.
-        If no currently running jobs are found, returns the next to run
+        """Returns the next run to finish. Useful for getting the currently 
+        running job run or next queued/schedule job run.
         """
         def choose(prev, next):
             return next if not (prev and prev.is_running) and \
                (next.is_queued or next.is_scheduled or next.is_running) else prev
 
-        if self.manual and not self.manual.is_done:
-            return self.manual
         return reduce(choose, self.runs, None)
 
     def get_run_by_num(self, num):
@@ -243,13 +240,24 @@ class Job(object):
 
     def manual_start(self):
         run = self.build_run()
-        self.runs.append(run)
+        if self.runs[0].is_scheduled:
+            top = self.runs.popleft()
+            self.runs.appendleft(run)
+            self.runs.appendleft(top)
+        else:
+            self.runs.appendleft(run)
+
         run.queue()
 
         if self.next_to_finish() == run:
             run.start()
 
         return run
+
+    def absorb_old_job(self, old):
+        self.runs = old.runs
+        self.data = old.data
+        self.last_success = old.last_success
 
     def restore_run(self, data):
         run = self.build_run()

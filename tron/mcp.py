@@ -22,8 +22,6 @@ def sleep_time(run_time):
 
 class Error(Exception): pass
 
-class JobExistsError(Error): pass
-
 
 class StateHandler(object):
     def __init__(self, mcp, working_dir, writing=False):
@@ -84,7 +82,6 @@ class MasterControlProgram(object):
     """
     def __init__(self, working_dir):
         self.jobs = {}
-        self.actions = {}
         self.nodes = []
         self.state_handler = StateHandler(self, working_dir)
 
@@ -96,26 +93,26 @@ class MasterControlProgram(object):
             if not node in self.nodes:
                 self.nodes.append(node)
 
+    def add_job_nodes(self, job):
+        self.add_nodes(job.node_pool)
+        for action in job.topo_actions:
+            self.add_nodes(action.node_pool)
+
     def setup_job_dir(self, job):
         job.output_dir = os.path.join(self.state_handler.working_dir, job.name)
         if not os.path.exists(job.output_dir):
             os.mkdir(job.output_dir)
 
-    def setup_job_actions(self, job):
-        for action in job.topo_actions:
-            self.actions[action.name] = action
-            self.add_nodes(action.node_pool)
-
     def add_job(self, tron_job):
         if tron_job.name in self.jobs:
-            raise JobExistsError(tron_job)
-        
+            self.jobs[tron_job.name].disable()
+            tron_job.absorb_old_job(self.jobs[tron_job.name])
+
         self.jobs[tron_job.name] = tron_job
         tron_job.state_callback = self.state_handler.state_changed
-        self.add_nodes(tron_job.node_pool)
-
+        
+        self.add_job_nodes(tron_job)
         self.setup_job_dir(tron_job)
-        self.setup_job_actions(tron_job)
 
     def _schedule(self, run):
         sleep = sleep_time(run.run_time)

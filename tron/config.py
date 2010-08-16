@@ -48,8 +48,17 @@ class TronConfiguration(yaml.YAMLObject):
     def _apply_jobs(self, mcp):
         """Configure actions"""
         found_jobs = []
+
+        # Check for duplicates before we start editing jobs
+        def check_dup(dic, nex)
+            if nex.name in dic:
+                raise yaml.YAMLError("Job %s is previously defined" % nex.name)
+            dic[nex.name] = 1
+            return dic
+         
+        found_jobs = reduce(check_dup, self.jobs)
+
         for job_config in self.jobs:
-            found_jobs.append(job_config.name)
             new_job = job_config.actualized
             log.debug("Building new job %s", job_config.name)
             mcp.add_job(new_job)
@@ -57,8 +66,7 @@ class TronConfiguration(yaml.YAMLObject):
         for job_name in mcp.jobs.iterkeys():
             if job_name not in found_jobs:
                 log.debug("Removing job %s", job_name)
-                dead_job = mcp.jobs[job_name]
-                mcp.jobs.remove(dead_job)
+                del mcp.jobs[job_name]
     
     def _get_working_dir(self, mcp):
         if mcp.state_handler.working_dir:
