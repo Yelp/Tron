@@ -141,8 +141,10 @@ def view_action_run(options, act_run_id):
     for req in act_run_content['requirements']:
         print req
     print
-    print "Output:"
-    print "".join(act_run_content['output'])
+    print "stdout:"
+    print "".join(act_run_content['stdout'])
+    print "stderr:"
+    print "".join(act_run_content['stderr'])
 
 def main():
     """run tronview"""

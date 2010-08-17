@@ -220,10 +220,10 @@ class Node(object):
         """Generates an output received callback for the channel.  
         """
         def callback(data):
-            if run.output_file:
-                log.info("Received data for action %s: writing to %s", run.action.name, run.output_file.name)
-                run.output_file.write(data)
-                run.output_file.flush()
+            if run.stdout_file:
+                log.info("Received data for action %s: writing to %s", run.action.name, run.stdout_file.name)
+                run.stdout_file.write(data)
+                run.stdout_file.flush()
         
         return callback
 
@@ -232,10 +232,10 @@ class Node(object):
         """
         def callback(data):
             log.error("Received stderr data for action %s: %s", run.action.name, data)
-            if run.output_file:
-                log.error("Writing error to %s", run.output_file.name)
-                run.output_file.write(data)
-                run.output_file.flush()
+            if run.stderr_file:
+                log.error("Writing error to %s", run.stderr_file.name)
+                run.stderr_file.write(data)
+                run.stderr_file.flush()
         
         return callback
 
@@ -243,9 +243,11 @@ class Node(object):
         """Generates callback for the channel when it closes.  
         """
         def callback():
-            if run.output_file:
-                log.info("Channel closed: closing output file %s", run.output_file.name)
-                run.output_file.close()
+            if run.stdout_file:
+                log.info("Channel closed: closing output file %s", run.stdout_file.name)
+                run.stdout_file.close()
+            if run.stderr_file:
+                run.stderr_file.close()
 
         return callback
 

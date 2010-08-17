@@ -1,4 +1,6 @@
 import logging
+import os
+import shutil
 from collections import deque
 
 from tron import action
@@ -12,7 +14,9 @@ class JobRun(object):
     def __init__(self, job):
         self.run_num = job.next_num()
         self.job = job
-        
+        self.id = "%s.%s" % (job.name, self.run_num)
+        self.output_dir = os.path.join(job.output_dir, self.id)
+       
         self.run_time = None
         self.start_time = None
         self.end_time = None
@@ -103,10 +107,6 @@ class JobRun(object):
     def should_start(self):
         return self.job.running and not self.is_running and self.job.next_to_finish() == self
 
-    @property
-    def id(self):
-        return "%s.%s" % (self.job.name, self.run_num)
-    
     @property
     def is_failed(self):
         return any([r.is_failed for r in self.runs])
@@ -199,6 +199,8 @@ class Job(object):
 
         while len(self.runs) > self.run_limit and keep_num > self.runs[-1].run_num:
             old = self.runs.pop()
+            if os.path.exists(old.output_dir):
+                shutil.rmtree(old.output_dir)
 
     def next_run(self):
         if not self.scheduler:
@@ -208,7 +210,10 @@ class Job(object):
         if job_run:
             self.runs.appendleft(job_run)
             self.remove_old_runs()
-           
+        
+            if os.path.exists(self.output_dir) and not os.path.exists(job_run.output_dir):
+                os.mkdir(job_run.output_dir)
+   
         return job_run
 
     def build_run(self):

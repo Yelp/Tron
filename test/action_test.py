@@ -20,6 +20,7 @@ class TestAction(TestCase):
         self.action = action.Action(name="Test Action")
         self.action.command = "Test command"
         self.job = job.Job("Test Job", self.action)
+        self.job.output_dir = "test_dir"
         self.action.job = self.job
 
     def test_next_run(self):
@@ -42,6 +43,7 @@ class TestActionRun(TestCase):
     def setup(self):
         self.action = action.Action(name="Test Action", node_pool=turtle.Turtle())
         self.job = job.Job("Test Job", self.action)
+        self.job.output_dir = "test_dir"
         self.job.scheduler = scheduler.DailyScheduler()
         self.job.queueing = True
         self.action.job = self.job
@@ -100,7 +102,7 @@ class ActionRunState(TestCase):
         self.action.node_pool = turtle.Turtle()
         self.action.job = turtle.Turtle()
         self.action.job.output_dir = None
-        self.run = self.action.build_run(turtle.Turtle())
+        self.run = self.action.build_run(turtle.Turtle(output_dir='test_dir'))
         self.run.job_run = turtle.Turtle()
 
         def noop_execute():
@@ -147,6 +149,7 @@ class TestRunDependency(TestCase):
         self.dep_action.required_actions.append(self.action)
 
         self.job = job.Job("Test Job", self.action)
+        self.job.output_dir = "test_dir"
         self.action.job = self.job
         self.dep_action.job = self.job 
 
@@ -188,6 +191,7 @@ class ActionRunBuildingTest(TestCase):
     def build_job(self):
         self.action = action.Action(name="Test Action")
         self.job = job.Job(self.action)
+        self.job.output_dir = "test_dir"
         self.action.job = self.job
         self.action.command = "Test Action Command"
 
@@ -207,19 +211,23 @@ class ActionRunLogFileTest(TestCase):
     def build_job(self):
         self.action = action.Action(name="Test Action", node_pool=turtle.Turtle())
         self.job = job.Job("Test Job", self.action)
+        self.job.output_dir = "test_dir"
         self.action.job = self.job
         self.action.command = "Test command"
 
     def test_no_logging(self):
-        run = self.action.build_run(turtle.Turtle())
+        run = self.action.build_run(turtle.Turtle(output_dir='test_dir'))
         run.start()
 
     def test_file_log(self):
-        run = self.action.build_run(turtle.Turtle())
-        run.output_path = "./test_output_file.out"
+        run = self.action.build_run(turtle.Turtle(output_dir='test_dir'))
+        run.stdout_path = "./test_stdout_file.out"
+        run.stderr_path = "./test_stderr_file.out"
         run.start()
-        assert os.path.isfile("./test_output_file.out")
-        os.remove("./test_output_file.out")
+        assert os.path.isfile("./test_stdout_file.out")
+        assert os.path.isfile("./test_stderr_file.out")
+        os.remove("./test_stdout_file.out")
+        os.remove("./test_stderr_file.out")
 
 
 class ActionRunVariablesTest(TestCase):
@@ -237,6 +245,7 @@ class ActionRunVariablesTest(TestCase):
         self.action = action.Action(name="Test Action")
         self.action.command = "Test Action Command"
         self.job = job.Job("Test Job", self.action)
+        self.job.output_dir = "test_dir"
         self.action.job = self.job
         self.job.scheduler = scheduler.ConstantScheduler()
 

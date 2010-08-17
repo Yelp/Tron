@@ -56,7 +56,8 @@ class ActionRunResource(resource.Resource):
         }
         
         if request.args and request.args['num_lines'][0].isdigit():
-            output['output'] = self._act_run.tail_output(int(request.args['num_lines'][0]))
+            output['stdout'] = self._act_run.tail_stdout(int(request.args['num_lines'][0]))
+            output['stderr'] = self._act_run.tail_stderr(int(request.args['num_lines'][0]))
             
         return respond(request, output)
 
