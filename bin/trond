@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-import yaml
 import logging
 import sys
 import datetime
@@ -11,7 +10,7 @@ from twisted.python import log
 from twisted.internet import reactor, defer
 from twisted.web import server
 
-from tron import mcp, job, resource, node, scheduler, config, www, monitor, emailer
+from tron import mcp, job, resource, node, scheduler, www, monitor, emailer
 
 def parse_options():
     parser = optparse.OptionParser()
@@ -57,23 +56,14 @@ def setup_logging(options):
     if options.debug:
         defer.setDebugging(True)
 
-def load_config(file, master_control):
-    config_file = open(file, "r")
-    try:
-        configuration = config.load_config(config_file)
-        configuration.apply(master_control)
-    except yaml.YAMLError, e:
-        print >>sys.stderr, "Error in configuration file:", e
-        sys.exit()
-
 def main():
     options = parse_options()
     
     setup_logging(options)
     
     # Configure the mcp
-    master_control = mcp.MasterControlProgram(options.working_dir)
-    load_config(options.config_file, master_control)
+    master_control = mcp.MasterControlProgram(options.working_dir, options.config_file)
+    master_control.load_config()
 
     working_dir = master_control.state_handler.working_dir
     if not os.path.isdir(working_dir):
@@ -81,8 +71,8 @@ def main():
     if not os.access(working_dir, os.W_OK):
         sys.exit("Specified working directory \'%s\' is not writable" % working_dir)
 
-    # Setup the mcp polling
-    reactor.callLater(1, master_control.run_jobs)
+    # Setup the mcp timed callbacks
+    reactor.callLater(0, master_control.run_jobs)
     
     # Start up our web management interface
     reactor.listenTCP(8082, server.Site(www.RootResource(master_control)))

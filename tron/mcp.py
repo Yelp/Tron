@@ -4,8 +4,9 @@ import yaml
 import os
 import sys
 import subprocess
+import yaml
 
-from tron import job
+from tron import job, config
 from twisted.internet import reactor
 from tron.utils import timeutils
 
@@ -90,10 +91,20 @@ class MasterControlProgram(object):
     This object is responsible for figuring who needs to run and when. It will be the main entry point
     where our daemon finds work to do
     """
-    def __init__(self, working_dir):
+    def __init__(self, working_dir, config_file):
         self.jobs = {}
         self.nodes = []
         self.state_handler = StateHandler(self, working_dir)
+        self.config_file = config_file
+
+    def load_config(self):
+        opened_config = open(self.config_file, "r")
+        try:
+            configuration = config.load_config(opened_config)
+            configuration.apply(self)
+        except yaml.YAMLError, e:
+            print >>sys.stderr, "Error in configuration file:", e
+            sys.exit()
 
     def add_nodes(self, node_pool):
         if not node_pool:
@@ -129,8 +140,10 @@ class MasterControlProgram(object):
         reactor.callLater(sleep, self.run_job, run)
 
     def schedule_next_run(self, job):
+        if job.runs and job.runs[0].is_scheduled:
+            return
         next = job.next_run()
-        if not next is None:
+        if next:
             log.info("Scheduling next job for %s", next.job.name)
             self._schedule(next)
 
@@ -141,10 +154,11 @@ class MasterControlProgram(object):
         if not now.job.running:
             return
         
-        self.schedule_next_run(now.job)
         if not (now.is_running or now.is_failed or now.is_success):
             log.debug("Running next scheduled job")
             now.scheduled_start()
+        
+        self.schedule_next_run(now.job)
 
     def enable_job(self, job):
         if not job.runs[0].is_scheduled:

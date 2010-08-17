@@ -92,7 +92,7 @@ jobs:
     @setup
     def setup(self):
         self.test_config = config.load_config(StringIO.StringIO(self.config))
-        self.my_mcp = mcp.MasterControlProgram('./config_test_dir')
+        self.my_mcp = mcp.MasterControlProgram('./config_test_dir', 'config')
         self.test_config.apply(self.my_mcp)
 
         self.node0 = self.my_mcp.nodes[0]

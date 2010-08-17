@@ -318,8 +318,12 @@ class ConfigResource(resource.Resource):
         resource.Resource.__init__(self)
 
     def render_GET(self, request):
-        return None
-    
+        self._master_control.load_config()
+        for jo in self._master_control.jobs.itervalues():
+            self._master_control.disable_job(jo)
+            self._master_control.enable_job(jo)
+
+        respond(request, {})
 
 class RootResource(resource.Resource):
     def __init__(self, master_control):

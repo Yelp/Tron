@@ -249,6 +249,7 @@ class Job(object):
     def absorb_old_job(self, old):
         self.runs = old.runs
         self.last_success = old.last_success
+        self.run_num = old.run_num
 
     @property
     def data(self):
