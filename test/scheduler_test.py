@@ -12,6 +12,7 @@ class ConstantSchedulerTest(TestCase):
         self.action = action.Action("Test Action")
         self.action.command = "Test Command"
         self.job = job.Job("Test Job", self.action)
+        self.job.output_dir = 'test_dir'
         self.job.scheduler = self.scheduler
         self.action.job = self.job
     
@@ -31,6 +32,7 @@ class DailySchedulerTest(TestCase):
         self.scheduler = scheduler.DailyScheduler()
         self.action = action.Action("Test Action")
         self.job = job.Job("Test Job", self.action)
+        self.job.output_dir = 'test_dir'
         self.job.scheduler = self.scheduler
         self.action.job = self.job
 
@@ -53,6 +55,7 @@ class DailySchedulerTimeTest(TestCase):
         self.scheduler = scheduler.DailyScheduler(start_time=datetime.time(hour=16, minute=30))
         self.action = action.Action("Test Action - Beer Time")
         self.job = job.Job("Test Job", self.action)
+        self.job.output_dir = 'test_dir'
         self.job.scheduler = self.scheduler
         self.action.job = self.job
     
@@ -75,6 +78,7 @@ class IntervalSchedulerTest(TestCase):
         self.scheduler = scheduler.IntervalScheduler(self.interval)
         self.action = action.Action("Test Action")
         self.job = job.Job("Test Job", self.action)
+        self.job.output_dir = 'test_dir'
         self.job.scheduler = self.scheduler
         self.action.job = self.job
 

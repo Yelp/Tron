@@ -77,10 +77,10 @@ class ActionRun(object):
         self.exit_status = None
         self.state = ACTION_RUN_QUEUED if action.required_actions else ACTION_RUN_SCHEDULED
 
-        self.output_path = None
-        if action.job.output_dir:
-            self.output_path = os.path.join(action.job.output_dir, self.id + '.out')
-        self.output_file = None
+        self.stdout_path = os.path.join(job_run.output_dir, self.action.name + '.stdout')
+        self.stderr_path = os.path.join(job_run.output_dir, self.action.name + '.stderr')
+        self.stdout_file = None
+        self.stderr_file = None
         
         self.job_run = job_run
         self.node = action.node_pool.next() if action.node_pool else job_run.node
@@ -88,14 +88,22 @@ class ActionRun(object):
         self.required_runs = []
         self.waiting_runs = []
 
-    def tail_output(self, num_lines=0):
+    def tail_stdout(self, num_lines=0):
+        return self.tail_file(self.stdout_path, num_lines)
+
+    def tail_stderr(self, num_lines=0):
+        return self.tail_file(self.stderr_path, num_lines)
+    
+    def tail_file(self, path, num_lines):
         try:
-            out = open(self.output_path, 'r')
+            out = open(path, 'r')
         except IOError:
             return []
 
         if not num_lines or num_lines <= 0:
-            return out.readlines()
+            lines = out.readlines()
+            out.close()
+            return lines
         
         pos = num_lines
         lines = []
@@ -108,6 +116,8 @@ class ActionRun(object):
             finally:
                 lines = list(out)
             pos *= 2
+           
+        out.close()
         return lines[-num_lines:]
 
     def attempt_start(self):
@@ -139,12 +149,10 @@ class ActionRun(object):
             self.state = ACTION_RUN_QUEUED
 
     def _open_output_file(self):
-        if self.output_path is None:
-            return
-
         try:
-            log.info("Opening file %s for output", self.output_path)
-            self.output_file = open(self.output_path, 'a')
+            log.info("Opening file %s for output", self.stdout_path)
+            self.stdout_file = open(self.stdout_path, 'a')
+            self.stderr_file = open(self.stderr_path, 'a')
         except IOError, e:
             log.error(str(e) + " - Not storing command output!")
 

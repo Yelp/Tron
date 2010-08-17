@@ -19,12 +19,13 @@ class NodeTestCase(TestCase):
         act = action.Action(name="Test Action")
         act.command = "echo Hello"
         jo = job.Job("Test Job", act)
+        jo.output_dir = 'test_dir'
         act.job = jo
 
         run = jo.build_run()
         nod = node.Node(hostname="localhost")
         act_run = run.runs[0]
-        act_run.output_file = tempfile.TemporaryFile('w+b')
+        act_run.stdout_file = tempfile.TemporaryFile('w+b')
         
         nod.connection = self.TestConnection()
         nod.run_states = {act_run.id:self.TestRunState()}
@@ -34,9 +35,9 @@ class NodeTestCase(TestCase):
         assert not nod.connection.chan is None
         nod.connection.chan.dataReceived("test")
 
-        act_run.output_file.seek(0)
-        assert act_run.output_file.read(4) == "test"
-        act_run.output_file.close()
+        act_run.stdout_file.seek(0)
+        assert act_run.stdout_file.read(4) == "test"
+        act_run.stdout_file.close()
 
 
 if __name__ == '__main__':

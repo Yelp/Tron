@@ -43,6 +43,7 @@ class TestStateHandler(TestCase):
         self.action.queueing = True
         self.action.node = turtle.Turtle()
         self.job = job.Job("Test Job", self.action)
+        self.job.output_dir = 'test_dir'
 
         self.job.node_pool = turtle.Turtle()
         self.job.scheduler = scheduler.IntervalScheduler(datetime.timedelta(seconds=5))
@@ -89,12 +90,14 @@ class TestMasterControlProgram(TestCase):
     def build_actions(self):
         self.action = action.Action("Test Action")
         self.job = job.Job("Test Job", self.action)
+        self.job.output_dir = 'test_dir'
         self.mcp = mcp.MasterControlProgram("./mcp_test_dir", "config")
         self.job.node_pool = node.NodePool('test hostname')
 
     def test_schedule_next_run(self):
         act = action.Action("Test Action")
         jo = job.Job("Test Job", act)
+        jo.output_dir = 'test_dir'
         jo.node_pool = turtle.Turtle()
         jo.scheduler = scheduler.DailyScheduler()
 
