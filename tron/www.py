@@ -311,6 +311,7 @@ class JobsResource(resource.Resource):
         log.warning("Unknown request command %s for all jobs", request.args['command'])
         return respond(request, None, code=http.NOT_IMPLEMENTED)
 
+
 class ConfigResource(resource.Resource):
     """Resource for configuration changes"""
     isLeaf = True
@@ -319,12 +320,18 @@ class ConfigResource(resource.Resource):
         resource.Resource.__init__(self)
 
     def render_GET(self, request):
+        return respond(request, {'config':self._master_control.config_lines()})
+
+    def render_POST(self, request):
+        lines = request.args['config'][0]
+        self._master_control.rewrite_config(lines)
         self._master_control.load_config()
+
         for jo in self._master_control.jobs.itervalues():
             self._master_control.disable_job(jo)
             self._master_control.enable_job(jo)
 
-        respond(request, {})
+        return respond(request, {'status': "I'm alive biatch"})
 
 class RootResource(resource.Resource):
     def __init__(self, master_control):
@@ -338,8 +345,7 @@ class RootResource(resource.Resource):
     def getChild(self, name, request):
         if name == '':
             return self
-        else:
-            return resource.Resource.getChild(self, name, request)
+        return resource.Resource.getChild(self, name, request)
 
     def render_GET(self, request):
         return respond(request, {'status': "I'm alive biatch"})

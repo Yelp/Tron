@@ -102,9 +102,23 @@ class MasterControlProgram(object):
         try:
             configuration = config.load_config(opened_config)
             configuration.apply(self)
+            opened_config.close()
         except yaml.YAMLError, e:
             print >>sys.stderr, "Error in configuration file:", e
-            sys.exit()
+            return False
+        
+        return True
+
+    def config_lines(self):
+        conf = open(self.config_file, 'r')
+        data = conf.read()
+        conf.close()
+        return data
+
+    def rewrite_config(self, lines):
+        conf = open(self.config_file, 'w')
+        conf.write(lines)
+        conf.close()
 
     def add_nodes(self, node_pool):
         if not node_pool:
@@ -161,7 +175,7 @@ class MasterControlProgram(object):
         self.schedule_next_run(now.job)
 
     def enable_job(self, job):
-        if not job.runs[0].is_scheduled:
+        if not job.runs or not job.runs[0].is_scheduled:
             self.schedule_next_run(job)
         job.enable()
 

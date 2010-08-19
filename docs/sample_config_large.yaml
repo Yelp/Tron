@@ -129,4 +129,13 @@ jobs:
             - &actionFailQueue !Action
                 name: "actionFailQueue1"
                 command: "sleep 15; failfailfail"
+    - &jobAddition !Job
+        name: "nextaddition"
+        node: *nodeBatch01
+        schedule: !IntervalScheduler
+            interval: 12s
+        actions:
+            - &actionAddition !Action
+                name: "somenewshit"
+                command: "sleep 4; echo jobs done"
 

@@ -63,7 +63,7 @@ class TronConfiguration(yaml.YAMLObject):
             log.debug("Building new job %s", job_config.name)
             mcp.add_job(new_job)
 
-        for job_name in mcp.jobs.iterkeys():
+        for job_name in mcp.jobs.keys():
             if job_name not in found_jobs:
                 log.debug("Removing job %s", job_name)
                 del mcp.jobs[job_name]
