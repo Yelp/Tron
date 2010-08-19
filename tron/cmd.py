@@ -1,6 +1,7 @@
 """
 Common code for command line utilities (see bin/)
 """
+import sys
 import os.path
 import urllib2
 import urllib
@@ -48,8 +49,9 @@ def request(serv, path, data=None):
     if data:
         enc_data = urllib.urlencode(data)
 
-    request = urllib2.Request(urlparse.urljoin(serv, path), enc_data)
-
+    uri = urlparse.urljoin(serv, path)
+    request = urllib2.Request(uri, enc_data)
+    log.info("Request to %r", uri)
     # Which is the proper way to encode data ?
     # if data:
     #     request.add_data(urllib.urlencode(data))
@@ -68,3 +70,15 @@ def request(serv, path, data=None):
     result = simplejson.load(output)
     return OK, result
 
+def setup_logging(options):
+    if options.verbose:
+        level = logging.INFO
+    else:
+        level = logging.WARNING
+
+    logging.basicConfig(level=level,
+                        format='%(name)s %(levelname)s %(message)s',
+                        stream=sys.stdout)
+    
+    
+    
