@@ -1,26 +1,37 @@
 #!/usr/bin/env python
 import os
 import tempfile
-import yaml
+import optparse
+import sys
 
 from tron import cmd
 
 LOCAL = "http://localhost:8082"
 
 
-if __name__ == '__main__':
-    status, content = cmd.request(LOCAL, "/config")
-    config_lines = content['config']
+def parse_options():
+    parser = optparse.OptionParser()
+    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=LOCAL)
+    (options, args) = parser.parse_args(sys.argv)
 
+    return options
+
+def edit_config(contents):
     fi = tempfile.NamedTemporaryFile(suffix='.yaml')
-    fi.write(config_lines)
+    fi.write(contents)
     fi.flush()
 
     editor = os.getenv('EDITOR') or os.getenv('VISUAL') or 'vim'
     if not os.system("%s %s" % (editor, fi.name)):
         upload = file(fi.name, 'r')
-        contents = upload.read()
-        data = {'config': contents}
-        cmd.request(LOCAL, "/config", data)
+        cmd.request(LOCAL, "/config", {'config': upload.read()})
+        upload.close()
     
     fi.close()
+
+if __name__ == '__main__':
+    options = parse_options()
+    status, content = cmd.request(options.server, "/config")
+
+    edit_config(content['config'])
+    

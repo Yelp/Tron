@@ -323,13 +323,12 @@ class ConfigResource(resource.Resource):
         return respond(request, {'config':self._master_control.config_lines()})
 
     def render_POST(self, request):
-        lines = request.args['config'][0]
-        self._master_control.rewrite_config(lines)
+        new_config = request.args['config'][0]
+        self._master_control.rewrite_config(new_config)
         self._master_control.load_config()
 
-        for jo in self._master_control.jobs.itervalues():
-            self._master_control.disable_job(jo)
-            self._master_control.enable_job(jo)
+        self._master_control.disable_all()
+        self._master_control.enable_all()
 
         return respond(request, {'status': "I'm alive biatch"})
 
