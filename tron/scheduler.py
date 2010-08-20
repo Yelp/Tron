@@ -19,6 +19,12 @@ class ConstantScheduler(object):
     def __str__(self):
         return "CONSTANT"
 
+    def __eq__(self, other):
+        return isinstance(other, ConstantScheduler)
+
+    def __ne__(self, other):
+        return not self == other
+
 class DailyScheduler(object):
     """The daily scheduler schedules one run per day"""
     def __init__(self, start_time=None):
@@ -38,6 +44,13 @@ class DailyScheduler(object):
 
     def __str__(self):
         return "DAILY"
+    
+    def __eq__(self, other):
+        return isinstance(other, DailyScheduler)
+
+    def __ne__(self, other):
+        return not self == other
+
 
 class IntervalScheduler(object):
     """The interval scheduler runs a job (to success) based on a configured interval
@@ -47,10 +60,10 @@ class IntervalScheduler(object):
     
     def next_run(self, job):
         # Find the last success to pick the next time to run
-        if job.runs and job.running:
+        if job.runs and job.enabled:
             run_time = job.runs[0].run_time + self.interval
         else:
-            log.debug("Found no past runs for job %s, next run is now", job.name)
+            log.debug("Job is starting up, next run is one interval from now", job.name)
             run_time = timeutils.current_time() + self.interval
         
         job_run = job.build_run()
@@ -60,3 +73,10 @@ class IntervalScheduler(object):
     def __str__(self):
         return "INTERVAL:%s" % self.interval
         
+    def __eq__(self, other):
+        return isinstance(other, IntervalScheduler) and self.interval == other.interval
+    
+    def __ne__(self, other):
+        return not self == other
+
+

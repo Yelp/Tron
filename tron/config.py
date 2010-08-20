@@ -71,15 +71,22 @@ class TronConfiguration(yaml.YAMLObject):
     def _get_working_dir(self, mcp):
         if mcp.state_handler.working_dir:
             return mcp.state_handler.working_dir
-        if hasattr(self, 'working_dir'):
+        elif hasattr(self, 'working_dir'):
             return self.working_dir
-        if 'TMPDIR' in os.environ:
+        elif 'TMPDIR' in os.environ:
             return os.environ['TMPDIR']
-        return '/tmp'
-    
+        else:
+            return '/tmp'
+   
     def apply(self, mcp):
         """Apply the configuration to the specified master control program"""
-        mcp.state_handler.working_dir = self._get_working_dir(mcp)
+        working_dir = self._get_working_dir(mcp)
+        if not os.path.isdir(working_dir):
+            raise ConfigError("Specified working directory \'%s\' is not a directory" % working_dir)
+        if not os.access(working_dir, os.W_OK):
+            raise ConfigError("Specified working directory \'%s\' is not writable" % working_dir)
+        
+        mcp.state_handler.working_dir = working_dir
         
         self._apply_jobs(mcp)
         if hasattr(self, 'ssh_options'):

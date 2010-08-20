@@ -53,6 +53,12 @@ class NodePool(object):
         if hostname:
             self.nodes.append(Node(hostname))
 
+    def __eq__(self, other):
+        return all([me.hostname == you.hostname for (me, you) in zip(self.nodes, other.nodes)])
+
+    def __ne__(self, other):
+        return not self == other
+
     def next(self):
         if not self.iter:
             self.iter = itertools.cycle(self.nodes)

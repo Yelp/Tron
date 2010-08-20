@@ -1,5 +1,7 @@
 import datetime
 import os
+import tempfile
+import shutil
 
 from testify import *
 from testify.utils import turtle
@@ -17,11 +19,16 @@ class TestAction(TestCase):
     """Unit testing for Action class"""
     @setup
     def setup(self):
+        self.test_dir = tempfile.mkdtemp()
         self.action = action.Action(name="Test Action")
         self.action.command = "Test command"
         self.job = job.Job("Test Job", self.action)
-        self.job.output_dir = "test_dir"
+        self.job.output_dir = self.test_dir
         self.action.job = self.job
+
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)
 
     def test_next_run(self):
         assert_equals(self.job.next_run(), None)
@@ -41,9 +48,10 @@ class TestActionRun(TestCase):
     """Unit testing for ActionRun class"""
     @setup
     def setup(self):
+        self.test_dir = tempfile.mkdtemp()
         self.action = action.Action(name="Test Action", node_pool=turtle.Turtle())
         self.job = job.Job("Test Job", self.action)
-        self.job.output_dir = "test_dir"
+        self.job.output_dir = self.test_dir
         self.job.scheduler = scheduler.DailyScheduler()
         self.job.queueing = True
         self.action.job = self.job
@@ -51,6 +59,10 @@ class TestActionRun(TestCase):
 
         self.job_run = self.job.next_run()
         self.run = self.job_run.runs[0]
+
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)
 
     def test_scheduled_start_succeed(self):
         self.job_run.scheduled_start()
@@ -97,18 +109,23 @@ class ActionRunState(TestCase):
     """Check that our action runs can start/stop and manage their state"""
     @setup
     def build_job(self):
+        self.test_dir = tempfile.mkdtemp()
         self.action = action.Action(name="Test Action")
         self.action.command = "Test command"
         self.action.node_pool = turtle.Turtle()
         self.action.job = turtle.Turtle()
         self.action.job.output_dir = None
-        self.run = self.action.build_run(turtle.Turtle(output_dir='test_dir'))
+        self.run = self.action.build_run(turtle.Turtle(output_dir=self.test_dir))
         self.run.job_run = turtle.Turtle()
 
         def noop_execute():
             pass
 
         self.run._execute = noop_execute
+
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)
 
     def test_success(self):
         assert not self.run.is_running
@@ -139,6 +156,7 @@ class ActionRunState(TestCase):
 class TestRunDependency(TestCase):
     @setup
     def build_job(self):
+        self.test_dir = tempfile.mkdtemp()
         self.action = action.Action(name="Test Action1")
         self.action.command = "Test command1"
         self.action.node_pool = turtle.Turtle()
@@ -149,7 +167,7 @@ class TestRunDependency(TestCase):
         self.dep_action.required_actions.append(self.action)
 
         self.job = job.Job("Test Job", self.action)
-        self.job.output_dir = "test_dir"
+        self.job.output_dir = self.test_dir
         self.action.job = self.job
         self.dep_action.job = self.job 
 
@@ -158,6 +176,10 @@ class TestRunDependency(TestCase):
         self.job_run = self.job.next_run()
         self.run = self.job_run.runs[0]
         self.dep_run = self.job_run.runs[1]
+
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)
 
     def test_success(self):
         assert self.dep_run.is_queued
@@ -189,12 +211,17 @@ class ActionRunBuildingTest(TestCase):
     """Check hat we can create and manage action runs"""
     @setup
     def build_job(self):
+        self.test_dir = tempfile.mkdtemp()
         self.action = action.Action(name="Test Action")
         self.job = job.Job(self.action)
-        self.job.output_dir = "test_dir"
+        self.job.output_dir = self.test_dir
         self.action.job = self.job
         self.action.command = "Test Action Command"
 
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)
+        
     def test_build_run(self):
         run = self.job.build_run()
         act_run = self.action.build_run(run)
@@ -209,18 +236,23 @@ class ActionRunBuildingTest(TestCase):
 class ActionRunLogFileTest(TestCase):
     @setup
     def build_job(self):
+        self.test_dir = tempfile.mkdtemp()
         self.action = action.Action(name="Test Action", node_pool=turtle.Turtle())
         self.job = job.Job("Test Job", self.action)
-        self.job.output_dir = "test_dir"
+        self.job.output_dir = self.test_dir
         self.action.job = self.job
         self.action.command = "Test command"
 
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)
+ 
     def test_no_logging(self):
-        run = self.action.build_run(turtle.Turtle(output_dir='test_dir'))
+        run = self.action.build_run(turtle.Turtle(output_dir=self.test_dir))
         run.start()
 
     def test_file_log(self):
-        run = self.action.build_run(turtle.Turtle(output_dir='test_dir'))
+        run = self.action.build_run(turtle.Turtle(output_dir=self.test_dir))
         run.stdout_path = "./test_stdout_file.out"
         run.stderr_path = "./test_stderr_file.out"
         run.start()
@@ -242,12 +274,17 @@ class ActionRunVariablesTest(TestCase):
     
     @setup
     def build_job(self):
+        self.test_dir = tempfile.mkdtemp()
         self.action = action.Action(name="Test Action")
         self.action.command = "Test Action Command"
         self.job = job.Job("Test Job", self.action)
-        self.job.output_dir = "test_dir"
+        self.job.output_dir = self.test_dir
         self.action.job = self.job
         self.job.scheduler = scheduler.ConstantScheduler()
+
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)
 
     def _cmd(self):
         job_run = self.job.next_run()

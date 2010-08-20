@@ -2,6 +2,7 @@
 import StringIO
 import datetime
 import os
+import tempfile
 import shutil
 
 from testify import *
@@ -104,19 +105,16 @@ jobs:
  
 """
     
-    @class_setup
-    def class_setup(self):
-        os.mkdir('./config_test_dir')
-
     @setup
     def setup(self):
+        self.test_dir = tempfile.mkdtemp()
         self.test_config = config.load_config(StringIO.StringIO(self.config))
-        self.my_mcp = mcp.MasterControlProgram('./config_test_dir', 'config')
+        self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')
         self.test_config.apply(self.my_mcp)
 
-    @class_teardown
+    @teardown
     def teardown(self):
-        shutil.rmtree('./config_test_dir')
+        shutil.rmtree(self.test_dir)
 
     def test_job_list(self):
         assert_equal(len(self.my_mcp.jobs), 3)
@@ -191,9 +189,10 @@ jobs:
         assert_equal(job2.topo_actions[0].name, 'action_change')
         assert_equal(job2.topo_actions[0].command, 'command_changed')
         
-        assert_equal(len(job2.runs), 2)
-        assert job2.runs[1].is_running
-        assert job2.runs[0].is_cancelled
+        assert_equal(len(job2.runs), 3)
+        assert job2.runs[2].is_running
+        assert job2.runs[1].is_cancelled
+        assert job2.runs[0].is_scheduled
     
     def test_job_new(self):
         assert not 'test_new' in self.my_mcp.jobs

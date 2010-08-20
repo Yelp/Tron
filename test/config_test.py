@@ -3,6 +3,7 @@ import StringIO
 import datetime
 import os
 import shutil
+import tempfile
 
 from testify import *
 from tron import config, mcp, scheduler
@@ -85,14 +86,11 @@ jobs:
                 name: "action4_0"
                 command: "test_command4.0"
 """
-    @class_setup
-    def class_setup(self):
-        os.mkdir('./config_test_dir')
-
     @setup
     def setup(self):
+        self.test_dir = tempfile.mkdtemp()
         self.test_config = config.load_config(StringIO.StringIO(self.config))
-        self.my_mcp = mcp.MasterControlProgram('./config_test_dir', 'config')
+        self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')
         self.test_config.apply(self.my_mcp)
 
         self.node0 = self.my_mcp.nodes[0]
@@ -106,9 +104,9 @@ jobs:
 
         self.all_jobs = [self.job0, self.job1, self.job2, self.job3, self.job4]
 
-    @class_teardown
+    @teardown
     def teardown(self):
-        shutil.rmtree('./config_test_dir')
+        shutil.rmtree(self.test_dir)
 
     def test_attributes(self):
         assert hasattr(self.test_config, "working_dir")

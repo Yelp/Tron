@@ -11,6 +11,7 @@ from twisted.web import server, resource, http
 import simplejson
 
 from tron.utils import timeutils
+from tron import mcp
 
 log = logging.getLogger("tron.www")
 
@@ -325,12 +326,13 @@ class ConfigResource(resource.Resource):
     def render_POST(self, request):
         new_config = request.args['config'][0]
         self._master_control.rewrite_config(new_config)
-        self._master_control.load_config()
-
-        self._master_control.disable_all()
-        self._master_control.enable_all()
-
-        return respond(request, {'status': "I'm alive biatch"})
+        response = {'status': "I'm alive biatch"}
+        try:
+            self._master_control.load_config()
+        except (OSError, mcp.ConfigError), e:
+            response['error'] = str(e)
+        
+        return respond(request, response)
 
 class RootResource(resource.Resource):
     def __init__(self, master_control):

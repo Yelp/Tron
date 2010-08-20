@@ -63,19 +63,17 @@ def main():
     
     # Configure the mcp
     master_control = mcp.MasterControlProgram(options.working_dir, options.config_file)
-    master_control.load_config()
+    try:
+        master_control.load_config()
+    except mcp.ConfigError, e:
+        print >>sys.stderr, "Error in configuration file:", e
+        sys.exit()
 
-    working_dir = master_control.state_handler.working_dir
-    if not os.path.isdir(working_dir):
-        sys.exit("Specified working directory \'%s\' is not a directory" % working_dir)
-    if not os.access(working_dir, os.W_OK):
-        sys.exit("Specified working directory \'%s\' is not writable" % working_dir)
+    # Start up our web management interface
+    reactor.listenTCP(8082, server.Site(www.RootResource(master_control)))
 
     # Setup the mcp timed callbacks
     reactor.callLater(0, master_control.run_jobs)
-    
-    # Start up our web management interface
-    reactor.listenTCP(8082, server.Site(www.RootResource(master_control)))
     
     # and then off to reactor land...
     reactor.run()

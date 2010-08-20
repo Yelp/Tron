@@ -305,6 +305,13 @@ class Action(object):
         self.job = None
         self.command = None
 
+    def __eq__(self, other):
+        if not isinstance(other, Action) or self.name != other.name or \
+           self.node_pool != other.node_pool or self.command != other.command:
+            return False
+
+        return all([me == you for (me, you) in zip(self.required_actions, other.required_actions)]) 
+
     def build_run(self, job_run):
         """Build an instance of ActionRun for this action
         

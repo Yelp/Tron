@@ -1,5 +1,6 @@
 import os
 import tempfile
+import shutil
 
 from testify import *
 from testify.utils import turtle
@@ -12,14 +13,19 @@ class NodeTestCase(TestCase):
         def openChannel(self, chan):
             self.chan = chan
 
-    class TestRunState(object):
-        state = 0
+    @setup
+    def setup(self):
+        self.test_dir = tempfile.mkdtemp()
+
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)
 
     def test_output_logging(self):
         act = action.Action(name="Test Action")
         act.command = "echo Hello"
         jo = job.Job("Test Job", act)
-        jo.output_dir = 'test_dir'
+        jo.output_dir = self.test_dir
         act.job = jo
 
         run = jo.build_run()
@@ -28,7 +34,7 @@ class NodeTestCase(TestCase):
         act_run.stdout_file = tempfile.TemporaryFile('w+b')
         
         nod.connection = self.TestConnection()
-        nod.run_states = {act_run.id:self.TestRunState()}
+        nod.run_states = {act_run.id:turtle.Turtle(state=0)}
         nod.run_states[act_run.id].state = node.RUN_STATE_CONNECTING
 
         nod._open_channel(act_run)

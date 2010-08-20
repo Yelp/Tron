@@ -1,6 +1,7 @@
 import datetime
 import os 
 import shutil
+import tempfile
 
 from testify import *
 from testify.utils import turtle
@@ -24,18 +25,17 @@ class TestGlobalFunctions(TestCase):
 class TestStateHandler(TestCase):
     @class_setup
     def class_setup(self):
-        os.mkdir('./mcp_test_dir')
         timeutils.override_current_time(datetime.datetime.now())
         self.now = timeutils.current_time()
 
     @class_teardown
     def class_teardown(self):
         timeutils.override_current_time(None)
-        shutil.rmtree('./mcp_test_dir')
 
     @setup
     def setup(self):
-        self.mcp = mcp.MasterControlProgram("./mcp_test_dir", "config")
+        self.test_dir = tempfile.mkdtemp()
+        self.mcp = mcp.MasterControlProgram(self.test_dir, "config")
         self.state_handler = self.mcp.state_handler
         self.action = action.Action("Test Action")
         
@@ -43,11 +43,15 @@ class TestStateHandler(TestCase):
         self.action.queueing = True
         self.action.node = turtle.Turtle()
         self.job = job.Job("Test Job", self.action)
-        self.job.output_dir = 'test_dir'
+        self.job.output_dir = self.test_dir
 
         self.job.node_pool = turtle.Turtle()
         self.job.scheduler = scheduler.IntervalScheduler(datetime.timedelta(seconds=5))
         self.action.job = self.job
+
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)
         
     def test_reschedule(self):
         def callNow(sleep, func, run):
@@ -78,26 +82,24 @@ class TestStateHandler(TestCase):
         pass
 
 class TestMasterControlProgram(TestCase):
-    @class_setup
-    def class_setup(self):
-        os.mkdir('./mcp_test_dir')
-
-    @class_teardown
-    def class_teardown(self):
-        shutil.rmtree('./mcp_test_dir')
-
+    
     @setup
     def build_actions(self):
+        self.test_dir = tempfile.mkdtemp()
         self.action = action.Action("Test Action")
         self.job = job.Job("Test Job", self.action)
-        self.job.output_dir = 'test_dir'
-        self.mcp = mcp.MasterControlProgram("./mcp_test_dir", "config")
+        self.job.output_dir = self.test_dir
+        self.mcp = mcp.MasterControlProgram(self.test_dir, "config")
         self.job.node_pool = node.NodePool('test hostname')
+    
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)
 
     def test_schedule_next_run(self):
         act = action.Action("Test Action")
         jo = job.Job("Test Job", act)
-        jo.output_dir = 'test_dir'
+        jo.output_dir = self.test_dir
         jo.node_pool = turtle.Turtle()
         jo.scheduler = scheduler.DailyScheduler()
 

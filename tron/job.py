@@ -64,7 +64,7 @@ class JobRun(object):
         if self.is_success:
             self.last_success_check()
             
-            if self.job.constant and self.job.running:
+            if self.job.constant and self.job.enabled:
                 self.job.next_run().start()
 
         if self.is_done:
@@ -105,7 +105,7 @@ class JobRun(object):
 
     @property
     def should_start(self):
-        return self.job.running and not self.is_running and self.job.next_to_finish() == self
+        return self.job.enabled and not self.is_running and self.job.next_to_finish() == self
 
     @property
     def is_failed(self):
@@ -152,7 +152,7 @@ class Job(object):
         self.runs = deque()
         
         self.queueing = True
-        self.running = True
+        self.enabled = True
         self.constant = False
         self.last_success = None
         
@@ -160,14 +160,24 @@ class Job(object):
         self.node_pool = None
         self.output_dir = None
 
+    def __eq__(self, other):
+        if not isinstance(other, Job) or self.name != other.name or \
+           self.scheduler != other.scheduler or self.node_pool != other.node_pool:
+            return False
+
+        return all([me == you for (me, you) in zip(self.topo_actions, other.topo_actions)])
+
+    def __ne__(self, other):
+        return not self == other
+
     def enable(self):
-        self.running = True
+        self.enabled = True
         next = self.next_to_finish()
         if next and next.is_queued:
             next.start()
     
     def disable(self):
-        self.running = False
+        self.enabled = False
         for r in self.runs:
             if r.is_scheduled or r.is_queued:
                 r.cancel()
@@ -253,13 +263,14 @@ class Job(object):
 
     def absorb_old_job(self, old):
         self.runs = old.runs
+        self.output_dir = old.output_dir
         self.last_success = old.last_success
         self.run_num = old.run_num
 
     @property
     def data(self):
         return {'runs': [r.data for r in self.runs],
-                'running': self.running
+                'enabled': self.enabled
         }
 
     def restore_run(self, data):

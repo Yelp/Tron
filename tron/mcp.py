@@ -22,7 +22,7 @@ def sleep_time(run_time):
     return max(0, seconds)
 
 
-class Error(Exception): pass
+class ConfigError(Exception): pass
 
 
 class StateHandler(object):
@@ -33,18 +33,15 @@ class StateHandler(object):
         self.writing_enabled = writing
 
     def restore_job(self, job, data):
-        job.running = data['running']
+        job.enabled = data['enabled']
         for r_data in reversed(data['runs']):
             run = job.restore_run(r_data)
             if run.is_scheduled:
                 reactor.callLater(sleep_time(run.run_time), self.mcp.run_job, run)
 
         next = job.next_to_finish()
-        if job.running:
-            if not next:
-                self.mcp.schedule_next_run(job)
-            elif next.is_queued:
-                next.start()
+        if job.enabled and next and next.is_queued:
+            next.start()
 
     def store_data(self):
         """Stores the state of tron"""
@@ -103,11 +100,8 @@ class MasterControlProgram(object):
             configuration = config.load_config(opened_config)
             configuration.apply(self)
             opened_config.close()
-        except yaml.YAMLError, e:
-            print >>sys.stderr, "Error in configuration file:", e
-            return False
-        
-        return True
+        except (OSError, yaml.YAMLError), e:
+            raise ConfigError(e)
 
     def config_lines(self):
         conf = open(self.config_file, 'r')
@@ -140,12 +134,16 @@ class MasterControlProgram(object):
 
     def add_job(self, tron_job):
         if tron_job.name in self.jobs:
-            self.jobs[tron_job.name].disable()
+            if tron_job == self.jobs[tron_job.name]:
+                return
+            
             tron_job.absorb_old_job(self.jobs[tron_job.name])
-
+            self.disable_job(tron_job)
+            self.enable_job(tron_job)
+        
         self.jobs[tron_job.name] = tron_job
-        self.add_job_nodes(tron_job)
         self.setup_job_dir(tron_job)
+        self.add_job_nodes(tron_job)
 
     def _schedule(self, run):
         sleep = sleep_time(run.run_time)
@@ -165,7 +163,7 @@ class MasterControlProgram(object):
         """This runs when a job was scheduled.
         Here we run the job and schedule the next time it should run
         """
-        if not now.job.running:
+        if not now.job.enabled:
             return
         
         if not (now.is_running or now.is_failed or now.is_success):
@@ -190,16 +188,20 @@ class MasterControlProgram(object):
         for jo in self.jobs.itervalues():
             self.enable_job(jo)
     
+    def try_restore(self):
+        data = None
+        if not os.path.isfile(self.state_handler.get_state_file_path()):
+            return 
+        
+        data = self.state_handler.load_data()
+        for name in data.iterkeys():
+            if name in self.jobs:
+                self.state_handler.restore_job(self.jobs[name], data[name])
+
     def run_jobs(self):
         """This schedules the first time each job runs"""
-        data = None
-        if os.path.isfile(self.state_handler.get_state_file_path()):
-            data = self.state_handler.load_data()
-
         for tron_job in self.jobs.itervalues():
-            if data and tron_job.name in data:
-                self.state_handler.restore_job(tron_job, data[tron_job.name])
-            else:
+            if tron_job.enabled:
                 self.schedule_next_run(tron_job)
         
         self.state_handler.writing_enabled = True

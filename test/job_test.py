@@ -1,4 +1,7 @@
 
+import tempfile
+import shutil
+
 from testify import *
 from testify.utils import turtle
 from tron import job, action, scheduler
@@ -7,6 +10,7 @@ from tron.utils import timeutils
 class TestJobRun(TestCase):
     @setup
     def setup(self):
+        self.test_dir = tempfile.mkdtemp()
         self.action1 = action.Action(name="Test Act1")
         self.action2 = action.Action(name="Test Act1")
         self.action2.required_actions.append(self.action1)
@@ -14,13 +18,17 @@ class TestJobRun(TestCase):
         self.action2.command = "Test Command"
 
         self.job = job.Job("Test Job", self.action1)
-        self.job.output_dir = 'test_dir'
+        self.job.output_dir = self.test_dir
         self.job.topo_actions.append(self.action2)
         self.job.scheduler = scheduler.DailyScheduler()
         self.job.node_pool = turtle.Turtle()
         self.action1.job = self.job
         self.action2.job = self.job
      
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)
+
     def test_set_run_time(self):
         jr = self.job.next_run()
         time = timeutils.current_time()
@@ -82,14 +90,19 @@ class TestJob(TestCase):
     """Unit testing for Job class"""
     @setup
     def setup(self):
+        self.test_dir = tempfile.mkdtemp()
         self.action = action.Action(name="Test Action")
         self.action.command = "Test Command"
 
         self.job = job.Job("Test Job", self.action)
-        self.job.output_dir = 'test_dir'
+        self.job.output_dir = self.test_dir
         self.job.scheduler = scheduler.DailyScheduler()
         self.action.job = self.job
-        
+      
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)       
+
     def test_remove_old_runs(self):
         self.job.run_limit = 3
         runs = []
@@ -152,14 +165,14 @@ class TestJob(TestCase):
         runs[4].start()
 
         self.job.disable()
-        assert not self.job.running
+        assert not self.job.enabled
        
         for r in runs:
             assert r.is_running or r.is_cancelled
 
     def test_enable(self):
         self.job.enable()
-        assert self.job.running
+        assert self.job.enabled
 
     def test_next_num(self):
         for i in range(10):
