@@ -46,15 +46,10 @@ Displays status messages along the way
 Here are a few examples that show each tier of tronview
 
  $ tronview
-
- Name                 Scheduler            Last Success
-
- Connected to tron server http://localhost:8082
-
- Name                 Scheduler            Last Success
- job2                 CONSTANT             2010-08-06 10:40:06.903994
- job1                 DAILY                None
- job0                 INTERVAL:0:00:20     2010-08-06 10:40:00.070011
+ Name                 State                Scheduler            Last Success
+ job2                 DISABLED             CONSTANT             2010-08-06 10:40:06.903994
+ job1                 ENABLED              DAILY                None
+ job0                 RUNNING              INTERVAL:0:00:20     2010-08-06 10:40:00.070011
 
  ========================================================================================================
  
@@ -98,10 +93,11 @@ Here are a few examples that show each tier of tronview
  Requirements:
  actionStart
  
- Output:
+ stdout:
  actionFollow is printing some stuff to stdout
  
- 
+ stderr:
+  
 .SH DIAGNOSTICS
 .SH BUGS
 Email found bugs to infra@yelp.com

@@ -37,25 +37,37 @@ the run is in and unknown state.  This state occurs when tron restores a job tha
 running at the time of shutdown
 
 .SH COMMANDS
-.IP start
-Starts the specified job run or action run.
-This run begins regardless of previous requirements
+.IP "start <job_name>"
+Creates a new run of the specified job. If no other instance is running, it starts
+
+.IP "start <job_run_id | action_run_id>"
+Tries to start the given job or action run. An action run starts regardless. A Job run
+only starts if no other instance is running.
  Valid states that you can run "start" on: SCHE, FAIL, QUE, CANC, UNKWN
-.IP cancel
+.IP "cancel <job_run_id | action_run_id>"
 Cancels the specified job run or action run.
 Cancelled runs don't start at their scheduled time and
 they are skipped over when there is a job run queue. 
  Valid states that you can run "cancel" on: SCHE, QUE
-.IP succeed
+.IP "succeed <job_run_id | action_run_id>"
 Marks the specified job run or action run as succeeded.
 This behaves the same as the run actually completing.
 Dependant actions are ran and queued runs start.
  Valid states that you can run "succeed" on: SCHE, FAIL, QUE, CANC, UNKWN
-.IP fail
+.IP "fail <job_run_id | action_run_id>"
 Marks the specified job run or action run as failed.
 This behaves the same as the job actually failing.
 Dependant actions are queued and following jobs are queued or cancelled
  Valid states that you can run "fail" on: SCHE, QUE, CANC, UNKWN
+.IP "disable <job_name>"
+Disables the specified job. Cancels all scheduled and queued runs. Doesn't
+schedule any more.
+.IP "enable <job_name>"
+Enables the specified job by starting the oldest job that still needs to run
+.IP disableall
+Disables all jobs
+.IP enableall
+Enables all jobs
 .SH EXAMPLES
 Here are a few examples that show the use of tronctl commands
 
