@@ -4,7 +4,7 @@ import logging
 import weakref
 import datetime
 import os
-import os.path
+from collections import deque
 
 import yaml
 from twisted.conch.client import options
@@ -71,12 +71,11 @@ class TronConfiguration(yaml.YAMLObject):
     def _get_working_dir(self, mcp):
         if mcp.state_handler.working_dir:
             return mcp.state_handler.working_dir
-        elif hasattr(self, 'working_dir'):
+        if hasattr(self, 'working_dir'):
             return self.working_dir
-        elif 'TMPDIR' in os.environ:
+        if 'TMPDIR' in os.environ:
             return os.environ['TMPDIR']
-        else:
-            return '/tmp'
+        return '/tmp'
    
     def apply(self, mcp):
         """Apply the configuration to the specified master control program"""
@@ -166,6 +165,8 @@ class Job(_ConfiguredObject):
             else:
                 # This is a scheduler instance, which has more info
                 real_job.scheduler = self.schedule.actualized
+            
+            real_job.scheduler.job_setup(real_job)
 
         if hasattr(self, "queueing"):
             real_job.queueing = self.queueing
@@ -242,6 +243,8 @@ class Scheduler(object):
     def from_string(self, scheduler_name):
         if scheduler_name == "daily":
             return DailyScheduler().actualized
+        elif scheduler_name == "weekly":
+            return DailyScheduler(days=7).actualized
         elif scheduler_name == "constant":
             return ConstantScheduler().actualized
         else:
@@ -259,8 +262,6 @@ class ConstantScheduler(_ConfiguredObject):
 # Shortcut values for intervals
 TIME_INTERVAL_SHORTCUTS = {
     'hourly': dict(hours=1),
-    'weekly': dict(days=7),
-    'daily': dict(days=1),
 }
 
 # Translations from possible configuration units to the argument to datetime.timedelta
@@ -300,10 +301,29 @@ class IntervalScheduler(_ConfiguredObject):
                 
         sched.interval = datetime.timedelta(**kwargs)
         
-        
+
+WEEK = 'mtwrfsu'
+CONVERT = {
+    'mo': 'm', 'tu': 't', 'we': 'w', 'th': 'r', 'fr': 'f', 'sa': 's', 'su': 'u',
+    'm' : 'm', 't' : 't', 'w' : 'w', 'r' : 'r', 'f' : 'f', 's' : 's', 'u' : 'u',
+}
+
 class DailyScheduler(_ConfiguredObject):
     yaml_tag = u'!DailyScheduler'
     actual_class = scheduler.DailyScheduler
+
+    def _get_week_binary(self):
+        week = [False for i in range(7)]
+        for day in self.days:
+            week[WEEK.index(CONVERT[day[0:2].lower()])] = True
+
+        count = week.index(True) + 1
+        inc = deque()
+
+        for val in reversed(week):
+            inc.appendleft(count)
+            count = 1 if val else count + 1
+        return inc
     
     def _apply(self):
         sched = self._ref()
@@ -314,6 +334,12 @@ class DailyScheduler(_ConfiguredObject):
 
             hour, minute, second = [int(val) for val in self.start_time.strip().split(':')]
             sched.start_time = datetime.time(hour=hour, minute=minute, second=second)
+
+        if hasattr(self, 'days'):
+            if hasattr(self.days, '__iter__') or isinstance(self.days, basestring):
+                sched.week = self._get_week_binary()
+            else:
+                sched.days = self.days
 
 class InvalidConfigError(Error): pass
 

@@ -138,8 +138,9 @@ class MasterControlProgram(object):
                 return
             
             tron_job.absorb_old_job(self.jobs[tron_job.name])
-            self.disable_job(tron_job)
-            self.enable_job(tron_job)
+            if tron_job.enabled:
+                self.disable_job(tron_job)
+                self.enable_job(tron_job)
         
         self.jobs[tron_job.name] = tron_job
         self.setup_job_dir(tron_job)
@@ -189,7 +190,6 @@ class MasterControlProgram(object):
             self.enable_job(jo)
     
     def try_restore(self):
-        data = None
         if not os.path.isfile(self.state_handler.get_state_file_path()):
             return 
         
@@ -206,4 +206,5 @@ class MasterControlProgram(object):
         
         self.state_handler.writing_enabled = True
         self.state_handler.store_data()
+
 

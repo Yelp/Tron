@@ -161,8 +161,8 @@ class Job(object):
         self.output_dir = None
 
     def __eq__(self, other):
-        if not isinstance(other, Job) or self.name != other.name or \
-           self.scheduler != other.scheduler or self.node_pool != other.node_pool:
+        if not isinstance(other, Job) or self.name != other.name or self.queueing != other.queueing \
+           or self.scheduler != other.scheduler or self.node_pool != other.node_pool:
             return False
 
         return all([me == you for (me, you) in zip(self.topo_actions, other.topo_actions)])
@@ -266,6 +266,7 @@ class Job(object):
         self.output_dir = old.output_dir
         self.last_success = old.last_success
         self.run_num = old.run_num
+        self.enabled = old.enabled
 
     @property
     def data(self):
