@@ -73,6 +73,7 @@ def main():
     reactor.listenTCP(8082, server.Site(www.RootResource(master_control)))
 
     # Setup the mcp timed callbacks
+    master_control.try_restore()
     reactor.callLater(0, master_control.run_jobs)
     
     # and then off to reactor land...

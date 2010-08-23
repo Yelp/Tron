@@ -24,7 +24,9 @@ def edit_config(contents):
     editor = os.getenv('EDITOR') or os.getenv('VISUAL') or 'vim'
     if not os.system("%s %s" % (editor, fi.name)):
         upload = file(fi.name, 'r')
-        cmd.request(LOCAL, "/config", {'config': upload.read()})
+        status, content = cmd.request(LOCAL, "/config", {'config': upload.read()})
+        if 'error' in content:
+            print "Error in configuration:", content['error']
         upload.close()
     
     fi.close()
