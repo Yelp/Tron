@@ -161,7 +161,7 @@ jobs:
         assert_equal(self.job2.scheduler.start_time, datetime.time(hour=16, minute=30, second=0))
         assert isinstance(self.job3.scheduler, scheduler.ConstantScheduler)
         assert isinstance(self.job4.scheduler, scheduler.DailyScheduler)
-     
+
     def test_actions_name_attribute(self): 
         for job_count in range(len(self.all_jobs)):
             j = self.all_jobs[job_count]
