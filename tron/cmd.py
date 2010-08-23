@@ -24,18 +24,20 @@ log = logging.getLogger("tron.cmd")
 def load_config(options):
     file_name = os.path.expanduser(CONFIG_FILE_NAME)
     
-    if os.path.exists(file_name):
+    try:
         config = yaml.load(open(file_name, "r"))
         options.server = options.server or config.get('server')
+    except IOError:
+        log.error("Cannot open config file")
 
 def save_config(options):
     file_name = os.path.expanduser(CONFIG_FILE_NAME)
     
-    if os.path.exists(file_name):
+    try:
         config_file = open(file_name, "r")
         config = yaml.load(config_file)
         config_file.close()
-    else:
+    except IOError:
         config = {}
 
     config['server'] = options.server

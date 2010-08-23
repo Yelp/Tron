@@ -44,10 +44,12 @@ class DailyScheduler(object):
         else:
             days = self.week[timeutils.current_time().weekday()] if self.week else self.days
         
-        run_time = (timeutils.current_time() + datetime.timedelta(days=days)).replace(
-                                                                            hour=self.start_time.hour, 
-                                                                            minute=self.start_time.minute, 
-                                                                            second=self.start_time.second)
+        run_time = (timeutils.current_time() + datetime.timedelta(seconds=20))
+        
+        #run_time = (timeutils.current_time() + datetime.timedelta(days=days)).replace(
+        #                                                                    hour=self.start_time.hour, 
+        #                                                                    minute=self.start_time.minute, 
+        #                                                                    second=self.start_time.second)
 
         job_run = job.build_run()
         job_run.set_run_time(run_time)

@@ -69,9 +69,13 @@ class StateHandler(object):
     def load_data(self):
         log.info('Restoring state from %s', self.get_state_file_path())
         
-        data_file = open(self.get_state_file_path())
-        data = yaml.load(data_file)
-        data_file.close()
+        try:
+            data_file = open(self.get_state_file_path())
+            data = yaml.load(data_file)
+            data_file.close()
+        except IOError, e:
+            data = {}
+            log.error("Cannot load state file: %s" % str(e))
 
         return data
     
@@ -95,24 +99,31 @@ class MasterControlProgram(object):
         self.config_file = config_file
 
     def load_config(self):
-        opened_config = open(self.config_file, "r")
         try:
+            opened_config = open(self.config_file, "r")
             configuration = config.load_config(opened_config)
             configuration.apply(self)
             opened_config.close()
-        except (OSError, yaml.YAMLError), e:
+        except (IOError, yaml.YAMLError), e:
             raise ConfigError(e)
 
     def config_lines(self):
-        conf = open(self.config_file, 'r')
-        data = conf.read()
-        conf.close()
-        return data
+        try:
+            conf = open(self.config_file, 'r')
+            data = conf.read()
+            conf.close()
+            return data
+        except IOError:
+            log.error("Cannot open configuration file!")
+            return ""
 
     def rewrite_config(self, lines):
-        conf = open(self.config_file, 'w')
-        conf.write(lines)
-        conf.close()
+        try:
+            conf = open(self.config_file, 'w')
+            conf.write(lines)
+            conf.close()
+        except IOError:
+            log.error("Cannot write to configuration file!")
 
     def add_nodes(self, node_pool):
         if not node_pool:
@@ -140,11 +151,11 @@ class MasterControlProgram(object):
             tron_job.absorb_old_job(self.jobs[tron_job.name])
             if tron_job.enabled:
                 self.disable_job(tron_job)
-                self.enable_job(tron_job)
         
         self.jobs[tron_job.name] = tron_job
         self.setup_job_dir(tron_job)
         self.add_job_nodes(tron_job)
+        self.enable_job(tron_job)
 
     def _schedule(self, run):
         sleep = sleep_time(run.run_time)
