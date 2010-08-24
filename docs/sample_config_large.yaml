@@ -29,7 +29,7 @@ jobs:
                 command: "sleep 3; echo 4"
                 requires: *intAction0
     - &jobFoo !Job
-        name: "interval0v"
+        name: "interval0b"
         node: *nodeBatch00
         schedule: !IntervalScheduler
             interval: 20s

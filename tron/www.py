@@ -346,6 +346,7 @@ class ConfigResource(resource.Resource):
             response['error'] = str(e)
         
         return respond(request, response)
+        
 
 class RootResource(resource.Resource):
     def __init__(self, master_control):

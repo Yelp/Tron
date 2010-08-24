@@ -10,7 +10,7 @@ from twisted.python import log
 from twisted.internet import reactor, defer
 from twisted.web import server
 
-from tron import mcp, job, resource, node, scheduler, www, monitor, emailer
+from tron import mcp, job, resource, node, scheduler, www, monitor, emailer, config
 
 def parse_options():
     parser = optparse.OptionParser()
@@ -65,7 +65,7 @@ def main():
     master_control = mcp.MasterControlProgram(options.working_dir, options.config_file)
     try:
         master_control.load_config()
-    except mcp.ConfigError, e:
+    except config.ConfigError, e:
         print >>sys.stderr, "Error in configuration file:", e
         sys.exit()
 

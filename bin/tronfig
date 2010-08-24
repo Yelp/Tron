@@ -3,8 +3,9 @@ import os
 import tempfile
 import optparse
 import sys
+import yaml
 
-from tron import cmd
+from tron import cmd, config
 
 def parse_options():
     parser = optparse.OptionParser("usage: %prog [options] [-]")
@@ -20,11 +21,22 @@ def parse_options():
 
 def upload_config(options, contents):
     status, content = cmd.request(options.server, "/config", {'config': contents})
-    if status != cmd.OK:
-        print >>sys.stderr, "Error in configuration: %r" % (content,)
-	sys.exit(1)
+    if 'error' in content:
+        print >>sys.stderr, "Configuration uploaded but errors occurred. Please fix: %s" % content['error']
+        sys.exit(1)
     else:
         print "Configuration uploaded successfully"
+
+def test_config(file_name):
+    file = open(file_name)
+    try:
+        config.load_config(file)
+        file.close()
+        return True
+    except (yaml.YAMLError, config.ConfigError), e:
+        print >>sys.stderr, "Error in configuration: %s" % str(e)
+        file.close()
+        return False
 
 def edit_config(options, contents):
     fi = tempfile.NamedTemporaryFile(suffix='.yaml')
@@ -32,11 +44,13 @@ def edit_config(options, contents):
     fi.flush()
 
     editor = os.getenv('EDITOR') or os.getenv('VISUAL') or 'vim'
-    if not os.system("%s %s" % (editor, fi.name)):
-        upload = file(fi.name, 'r')
-        upload_config(options, upload.read())
-        upload.close()
+    while not os.system("%s %s" % (editor, fi.name)) and not test_config(fi.name):
+        if raw_input("There are errors in your configuration. Continue editing? (y/n): ")[:1].lower() == 'n':
+            return
     
+    upload = open(fi.name)
+    upload_config(options, upload.read())
+    upload.close()
     fi.close()
 
 if __name__ == '__main__':
@@ -63,3 +77,4 @@ if __name__ == '__main__':
             print content['config']
     
     cmd.save_config(options)
+
