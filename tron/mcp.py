@@ -148,11 +148,11 @@ class MasterControlProgram(object):
             tron_job.absorb_old_job(self.jobs[tron_job.name])
             if tron_job.enabled:
                 self.disable_job(tron_job)
+                self.enable_job(tron_job)
         
         self.jobs[tron_job.name] = tron_job
         self.setup_job_dir(tron_job)
         self.add_job_nodes(tron_job)
-        self.enable_job(tron_job)
 
     def _schedule(self, run):
         sleep = sleep_time(run.run_time)

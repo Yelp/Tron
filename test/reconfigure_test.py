@@ -127,7 +127,7 @@ jobs:
     def test_job_unchanged(self):
         assert 'test_unchanged' in self.my_mcp.jobs
         job0 = self.my_mcp.jobs['test_unchanged']
-        run0 = job0.runs[0]
+        run0 = job0.next_run()
         run0.start()
         run1 = job0.next_run()
 
@@ -169,7 +169,7 @@ jobs:
     def test_job_changed(self):
         assert 'test_change' in self.my_mcp.jobs
         job2 = self.my_mcp.jobs['test_change']
-        run0 = job2.runs[0]
+        run0 = job2.next_run()
         run0.start()
         run1 = job2.next_run()
         assert_equal(len(job2.runs), 2)
