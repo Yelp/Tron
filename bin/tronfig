@@ -8,6 +8,7 @@ from tron import cmd
 
 def parse_options():
     parser = optparse.OptionParser("usage: %prog [options] [-]")
+    parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
     parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=cmd.LOCAL)
     (options, args) = parser.parse_args(sys.argv)
 
@@ -40,6 +41,8 @@ def edit_config(options, contents):
 
 if __name__ == '__main__':
     options = parse_options()
+    cmd.setup_logging(options)
+
     cmd.load_config(options)
 
     if options.from_stdin:

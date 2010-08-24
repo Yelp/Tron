@@ -2,6 +2,7 @@
 Common code for command line utilities (see bin/)
 """
 import sys
+import os
 import os.path
 import urllib2
 import urllib
@@ -24,12 +25,15 @@ log = logging.getLogger("tron.cmd")
 
 def load_config(options):
     file_name = os.path.expanduser(CONFIG_FILE_NAME)
+    if not os.access(file_name, os.R_OK):
+        log.debug("Config file %s doesn't yet exist", file_name)
+        return
     
     try:
         config = yaml.load(open(file_name, "r"))
         options.server = options.server or config.get('server')
-    except IOError:
-        log.error("Cannot open config file")
+    except IOError, e:
+        log.error("Failure loading config file: %r", e)
 
 def save_config(options):
     file_name = os.path.expanduser(CONFIG_FILE_NAME)
