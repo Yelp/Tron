@@ -43,7 +43,7 @@ log = logging.getLogger('')
 
 def parse_options():
     parser = TronCtlOptionParser("usage: %prog [options] <command> [<job | job run | action>]")
-    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=cmd.LOCAL)
+    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=None)
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
     (options, args) = parser.parse_args(sys.argv)
 

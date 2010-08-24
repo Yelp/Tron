@@ -9,7 +9,7 @@ from tron import cmd
 def parse_options():
     parser = optparse.OptionParser("usage: %prog [options] [-]")
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
-    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=cmd.LOCAL)
+    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=None)
     (options, args) = parser.parse_args(sys.argv)
 
     options.from_stdin = False

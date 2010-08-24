@@ -21,7 +21,7 @@ RUN_COLUMNS = (
 
 def parse_options():
     parser = optparse.OptionParser("usage: %prog [options] [<job | job run | action>]")
-    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=cmd.LOCAL)
+    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=None)
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
     parser.add_option("--numshown", "-n", type="int", dest="num_shown", help="Max number of jobs shown", default=20)
 

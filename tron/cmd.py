@@ -27,11 +27,12 @@ def load_config(options):
     file_name = os.path.expanduser(CONFIG_FILE_NAME)
     if not os.access(file_name, os.R_OK):
         log.debug("Config file %s doesn't yet exist", file_name)
+        options.server = options.server or LOCAL
         return
     
     try:
         config = yaml.load(open(file_name, "r"))
-        options.server = options.server or config.get('server')
+        options.server = options.server or config.get('server', LOCAL)
     except IOError, e:
         log.error("Failure loading config file: %r", e)
 
