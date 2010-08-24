@@ -1,9 +1,16 @@
 import datetime
 import logging
 
+from collections import deque
 from tron.utils import timeutils
 
 log = logging.getLogger('tron.scheduler')
+
+WEEK = 'mtwrfsu'
+CONVERT = {
+    'mo': 'm', 'tu': 't', 'we': 'w', 'th': 'r', 'fr': 'f', 'sa': 's', 'su': 'u',
+    'm' : 'm', 't' : 't', 'w' : 'w', 'r' : 'r', 'f' : 'f', 's' : 's', 'u' : 'u',
+}
 
 class ConstantScheduler(object):
     """The constant scheduler only schedules the first one.  The job run starts then next when finished"""
@@ -11,7 +18,6 @@ class ConstantScheduler(object):
         if job.runs and (job.runs[0].is_running or job.runs[0].is_scheduled):
             return None
         
-        job.constant = True
         job_run = job.build_run()
         job_run.set_run_time(timeutils.current_time())
         return job_run
@@ -29,27 +35,44 @@ class ConstantScheduler(object):
     def __ne__(self, other):
         return not self == other
 
+
 class DailyScheduler(object):
     """The daily scheduler schedules one run per day"""
-    def __init__(self, start_time=None, days=1, week=None):
+    def __init__(self, start_time=None, days=1):
         # What time of day does this thing start ? Default to 1 second after midnight
         self.start_time = start_time or datetime.time(hour=0, minute=0, second=1)
-        self.days = days
-        self.week = week
+        self.wait_days = self.get_daily_waits(days)
         
+    def get_daily_waits(self, days):
+        """Computes how many days to wait till the next run from any day.
+        e.g. If the next run is on Thursday and today is Monday.  Monday's entry is 3
+        """
+        if isinstance(days, int):
+            return [days for i in range(7)]
+
+        week = [False for i in range(7)]
+        for day in days:
+            week[WEEK.index(CONVERT[day[0:2].lower()])] = True
+
+        count = week.index(True) + 1
+        waits = deque()
+
+        for val in reversed(week):
+            waits.appendleft(count)
+            count = 1 if val else count + 1
+        return waits
+    
     def next_run(self, job):
         # Find the next time to run
         if job.runs:
-            days = self.week[job.runs[0].run_time.weekday()] if self.week else self.days
+            days = self.wait_days[job.runs[0].run_time.weekday()]
         else:
-            days = self.week[timeutils.current_time().weekday()] if self.week else self.days
+            days = self.wait_days[timeutils.current_time().weekday()]
         
-        run_time = (timeutils.current_time() + datetime.timedelta(seconds=20))
-        
-        #run_time = (timeutils.current_time() + datetime.timedelta(days=days)).replace(
-        #                                                                    hour=self.start_time.hour, 
-        #                                                                    minute=self.start_time.minute, 
-        #                                                                    second=self.start_time.second)
+        run_time = (timeutils.current_time() + datetime.timedelta(days=days)).replace(
+                                                                            hour=self.start_time.hour, 
+                                                                            minute=self.start_time.minute, 
+                                                                            second=self.start_time.second)
 
         job_run = job.build_run()
         job_run.set_run_time(run_time)
@@ -62,8 +85,8 @@ class DailyScheduler(object):
         return "DAILY"
     
     def __eq__(self, other):
-        return isinstance(other, DailyScheduler) and self.days == other.days and \
-           self.week == other.week and self.start_time == other.start_time
+        return isinstance(other, DailyScheduler) and \
+           self.wait_days == other.wait_days and self.start_time == other.start_time
 
     def __ne__(self, other):
         return not self == other

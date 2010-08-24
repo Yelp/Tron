@@ -22,9 +22,6 @@ def sleep_time(run_time):
     return max(0, seconds)
 
 
-class ConfigError(Exception): pass
-
-
 class StateHandler(object):
     def __init__(self, mcp, working_dir, writing=False):
         self.mcp = mcp
@@ -105,7 +102,7 @@ class MasterControlProgram(object):
             configuration.apply(self)
             opened_config.close()
         except (IOError, yaml.YAMLError), e:
-            raise ConfigError(e)
+            raise config.ConfigError(e)
 
     def config_lines(self):
         try:

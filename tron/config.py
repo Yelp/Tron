@@ -4,7 +4,6 @@ import logging
 import weakref
 import datetime
 import os
-from collections import deque
 
 import yaml
 from twisted.conch.client import options
@@ -16,6 +15,8 @@ log = logging.getLogger("tron.config")
 class Error(Exception):
     pass
     
+class ConfigError(Exception):
+    pass
     
 class _ConfiguredObject(yaml.YAMLObject):
     """Base class for common configured objects where the configuration generates one actualized 
@@ -241,14 +242,13 @@ class FileResource(yaml.YAMLObject):
 class Scheduler(object):
     @classmethod
     def from_string(self, scheduler_name):
+        if scheduler_name == "constant":
+            return ConstantScheduler().actualized
         if scheduler_name == "daily":
             return DailyScheduler().actualized
-        elif scheduler_name == "weekly":
-            return DailyScheduler(days=7).actualized
-        elif scheduler_name == "constant":
-            return ConstantScheduler().actualized
-        else:
-            raise ValueError("Unknown scheduler %r", scheduler_name)
+        if scheduler_name == "weekly":
+            return scheduler.DailyScheduler(days=7)
+        return scheduler.DailyScheduler(days=scheduler_name)
 
 
 class ConstantScheduler(_ConfiguredObject):
@@ -302,53 +302,28 @@ class IntervalScheduler(_ConfiguredObject):
         sched.interval = datetime.timedelta(**kwargs)
         
 
-WEEK = 'mtwrfsu'
-CONVERT = {
-    'mo': 'm', 'tu': 't', 'we': 'w', 'th': 'r', 'fr': 'f', 'sa': 's', 'su': 'u',
-    'm' : 'm', 't' : 't', 'w' : 'w', 'r' : 'r', 'f' : 'f', 's' : 's', 'u' : 'u',
-}
-
 class DailyScheduler(_ConfiguredObject):
     yaml_tag = u'!DailyScheduler'
     actual_class = scheduler.DailyScheduler
 
-    def _get_week_binary(self):
-        week = [False for i in range(7)]
-        for day in self.days:
-            week[WEEK.index(CONVERT[day[0:2].lower()])] = True
-
-        count = week.index(True) + 1
-        inc = deque()
-
-        for val in reversed(week):
-            inc.appendleft(count)
-            count = 1 if val else count + 1
-        return inc
-    
     def _apply(self):
         sched = self._ref()
 
         if hasattr(self, 'start_time'):
             if not isinstance(self.start_time, basestring):
-                raise InvalidConfigError("Start time must be in string format HH:MM:SS")
+                raise ConfigError("Start time must be in string format HH:MM:SS")
 
             hour, minute, second = [int(val) for val in self.start_time.strip().split(':')]
             sched.start_time = datetime.time(hour=hour, minute=minute, second=second)
 
         if hasattr(self, 'days'):
-            if hasattr(self.days, '__iter__') or isinstance(self.days, basestring):
-                sched.week = self._get_week_binary()
-            else:
-                sched.days = self.days
-
-class InvalidConfigError(Error): pass
-
+            sched.wait_days = sched.get_daily_waits(self.days)
 
 def load_config(config_file):
     """docstring for load_config"""
     config = yaml.load(config_file)
     if not isinstance(config, TronConfiguration):
-        raise InvalidConfigError("Failed to find a configuration document in specified file")
+        raise ConfigError("Failed to find a configuration document in specified file")
     
     return config
 

@@ -73,6 +73,15 @@ jobs:
                 command: "sleep 1; echo following; sleep 2"
                 requires: [*actionConstant0, *actionConstant1]
             
+    - &jobMF !Job
+        name: "dailyMF"
+        node: *nodeBatch01
+        schedule: "MS"
+        actions:
+            - &actionMF !Action
+                name: "actionMF"
+                command: "sleep 5;echo mf; sleep 2"
+
     - &jobDaily !Job
         name: "daily1"
         node: *nodeBatch01
