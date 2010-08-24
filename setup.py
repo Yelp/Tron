@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name="tron",
-    version='0.1.0',
+    version='0.1.1',
 	provides="tron",
     author="Yelp",
     author_email="opensource@yelp.com",
@@ -20,7 +20,7 @@ setup(
     ],
 	requires = ['twisted (>=10.0.0)',],
     packages=["tron", "tron.utils"],
-	scripts=['bin/trond', 'bin/tronview', 'bin/tronctl'],
+	scripts=['bin/trond', 'bin/tronview', 'bin/tronctl', 'bin/tronfig'],
 	data_files=[('share/doc/tron', ['docs/sample_config_large.yaml', 'docs/sample_config_small.yaml']),],
 	long_description="""\
 Tron is a job scheduling, running and monitoring package designed to replace Cron for complex job running requirements.
