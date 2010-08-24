@@ -15,8 +15,6 @@ import yaml
 
 from tron import cmd
 
-LOCAL = "http://localhost:8082"
-
 COMMAND_HELP = (
     ('start', 'Start the selected job, job run or action'),
     ('cancel', 'Cancel the selected job run'),
@@ -45,7 +43,7 @@ log = logging.getLogger('')
 
 def parse_options():
     parser = TronCtlOptionParser("usage: %prog [options] <command> [<job | job run | action>]")
-    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=LOCAL)
+    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=cmd.LOCAL)
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
     (options, args) = parser.parse_args(sys.argv)
 

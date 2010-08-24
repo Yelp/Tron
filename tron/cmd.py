@@ -13,6 +13,7 @@ import yaml
 
 USER_AGENT = "Tron View/1.0 +http://github.com/Yelp/Tron"
 CONFIG_FILE_NAME = "~/.tron"
+LOCAL = "http://localhost:8082"
 
 # Result Codes
 OK = "OK"
