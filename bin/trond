@@ -20,6 +20,8 @@ def parse_options():
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
     parser.add_option("--debug", action="store_true", dest="debug", help="Debug mode, extra error reporting")
     parser.add_option("--log-file", "-l", action="store", dest="log_file", help="Where the logs are stored", default=None)
+    parser.add_option("--port", "-P", action="store", dest="listen_port", help="What port to listen on, defaults %default", default=8082, type=int)
+    parser.add_option("--host", "-H", action="store", dest="listen_host", help="What host to listen on defaults to %default", default="localhost", type=str)
     
     (options, args) = parser.parse_args(sys.argv)
     if options.config_file is None:
@@ -70,7 +72,7 @@ def main():
         sys.exit()
 
     # Start up our web management interface
-    reactor.listenTCP(8082, server.Site(www.RootResource(master_control)))
+    reactor.listenTCP(options.listen_port, server.Site(www.RootResource(master_control)), interface=options.listen_host)
 
     # Setup the mcp timed callbacks
     master_control.try_restore()
