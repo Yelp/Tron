@@ -6,17 +6,26 @@ import sys
 
 from tron import cmd
 
-LOCAL = "http://localhost:8082"
-
-
 def parse_options():
-    parser = optparse.OptionParser()
-    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=LOCAL)
+    parser = optparse.OptionParser("usage: %prog [options] [-]")
+    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=cmd.LOCAL)
     (options, args) = parser.parse_args(sys.argv)
+
+    options.from_stdin = False
+    if args[-1] == "-":
+        options.from_stdin = True
 
     return options
 
-def edit_config(contents):
+def upload_config(options, contents):
+    status, content = cmd.request(options.server, "/config", {'config': contents})
+    if status != cmd.OK:
+        print >>sys.stderr, "Error in configuration: %r" % (content,)
+	sys.exit(1)
+    else:
+        print "Configuration uploaded successfully"
+
+def edit_config(options, contents):
     fi = tempfile.NamedTemporaryFile(suffix='.yaml')
     fi.write(contents)
     fi.flush()
@@ -24,16 +33,30 @@ def edit_config(contents):
     editor = os.getenv('EDITOR') or os.getenv('VISUAL') or 'vim'
     if not os.system("%s %s" % (editor, fi.name)):
         upload = file(fi.name, 'r')
-        status, content = cmd.request(LOCAL, "/config", {'config': upload.read()})
-        if 'error' in content:
-            print "Error in configuration:", content['error']
+        upload_config(options, upload.read())
         upload.close()
     
     fi.close()
 
 if __name__ == '__main__':
     options = parse_options()
-    status, content = cmd.request(options.server, "/config")
+    cmd.load_config(options)
 
-    edit_config(content['config'])
+    if options.from_stdin:
+        # We're taking config from stdin and uploading it directly
+        incoming_config = sys.stdin.read()
+        upload_config(options, incoming_config)
+    else:
+        # We're going to need config from the server
+        status, content = cmd.request(options.server, "/config")
+        if status != cmd.OK:
+            print >>sys.stderr, "Error from server at %s : %r" % (options.server, content)
+            sys.exit(1)
+
+        if os.isatty(sys.stdout.fileno()):
+            edit_config(options, content['config'])
+        else:
+            # Just dump it to stdout
+            print content['config']
     
+    cmd.save_config(options)
