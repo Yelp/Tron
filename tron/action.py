@@ -135,18 +135,23 @@ class ActionRun(object):
         ret = self.node.run(self)
         if isinstance(ret, defer.Deferred):
             self._setup_callbacks(ret)
+        
+        self.action.job.change_callback()
 
     def cancel(self):
         if self.is_scheduled or self.is_queued:
             self.state = ACTION_RUN_CANCELLED
+            self.action.job.change_callback()
     
     def schedule(self):
         if not self.required_runs:
             self.state = ACTION_RUN_SCHEDULED
+            self.action.job.change_callback()
     
     def queue(self):
         if self.is_scheduled or self.is_cancelled:
             self.state = ACTION_RUN_QUEUED
+            self.action.job.change_callback()
 
     def _open_output_file(self):
         try:
@@ -199,6 +204,7 @@ class ActionRun(object):
         self.exit_status = exit_status
         self.end_time = timeutils.current_time()
         self.job_run.run_completed()
+        self.action.job.change_callback()
 
     def fail_unknown(self):
         """Mark the run as having failed, but note that we don't actually know what result was"""
@@ -208,6 +214,7 @@ class ActionRun(object):
         self.exit_status = None
         self.end_time = None
         self.job_run.run_completed()
+        self.action.job.change_callback()
 
     def mark_success(self):
         self.exit_status = 0
@@ -221,6 +228,7 @@ class ActionRun(object):
         
         self.mark_success()
         self.start_dependants()
+        self.action.job.change_callback()
 
     def restore_state(self, state):
         self.id = state['id']
@@ -231,6 +239,7 @@ class ActionRun(object):
 
         if self.is_running:
             self.state = ACTION_RUN_UNKNOWN
+        self.action.job.change_callback()
 
     @property
     def data(self):

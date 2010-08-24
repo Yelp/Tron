@@ -341,6 +341,7 @@ class ConfigResource(resource.Resource):
         response = {'status': "I'm alive biatch"}
         try:
             self._master_control.load_config()
+            self._master_control.run_jobs()
         except (OSError, config.ConfigError), e:
             response['error'] = str(e)
         
