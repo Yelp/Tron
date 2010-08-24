@@ -159,6 +159,11 @@ class Job(object):
         self.run_limit = RUN_LIMIT
         self.node_pool = None
         self.output_dir = None
+        self.store_callback = None
+
+    def change_callback(self):
+        if self.store_callback:
+            self.store_callback()
 
     def __eq__(self, other):
         if not isinstance(other, Job) or self.name != other.name or self.queueing != other.queueing \
@@ -289,5 +294,6 @@ class Job(object):
         if run.is_success:
             self.last_success = run
 
+        assert not run.is_running
         return run
 

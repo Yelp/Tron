@@ -44,6 +44,7 @@ class StateHandler(object):
         """Stores the state of tron"""
         # If tron is already storing data, don't start again till it's done
         if not self.writing_enabled or (self.write_pid and not os.waitpid(self.write_pid, os.WNOHANG)[0]):
+            reactor.callLater(STATE_SLEEP, self.store_data)
             return 
 
         file_path = os.path.join(self.working_dir, STATE_FILE)
@@ -57,8 +58,6 @@ class StateHandler(object):
             yaml.dump(self.data, file, default_flow_style=False, indent=4)
             file.close()
             os._exit(os.EX_OK)
-        
-        reactor.callLater(STATE_SLEEP, self.store_data)
 
     def get_state_file_path(self):
         return os.path.join(self.working_dir, STATE_FILE)
@@ -110,8 +109,8 @@ class MasterControlProgram(object):
             data = conf.read()
             conf.close()
             return data
-        except IOError:
-            log.error("Cannot open configuration file!")
+        except IOError, e:
+            log.error(str(e) + " - Cannot open configuration file!")
             return ""
 
     def rewrite_config(self, lines):
@@ -119,8 +118,8 @@ class MasterControlProgram(object):
             conf = open(self.config_file, 'w')
             conf.write(lines)
             conf.close()
-        except IOError:
-            log.error("Cannot write to configuration file!")
+        except IOError, e:
+            log.error(str(e) + " - Cannot write to configuration file!")
 
     def add_nodes(self, node_pool):
         if not node_pool:
@@ -153,6 +152,7 @@ class MasterControlProgram(object):
         self.jobs[tron_job.name] = tron_job
         self.setup_job_dir(tron_job)
         self.add_job_nodes(tron_job)
+        tron_job.store_callback = self.state_handler.store_data
 
     def _schedule(self, run):
         sleep = sleep_time(run.run_time)
