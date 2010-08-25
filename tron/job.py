@@ -167,7 +167,8 @@ class Job(object):
 
     def __eq__(self, other):
         if not isinstance(other, Job) or self.name != other.name or self.queueing != other.queueing \
-           or self.scheduler != other.scheduler or self.node_pool != other.node_pool:
+           or self.scheduler != other.scheduler or self.node_pool != other.node_pool \
+           or len(self.topo_actions) != len(other.topo_actions):
             return False
 
         return all([me == you for (me, you) in zip(self.topo_actions, other.topo_actions)])
@@ -296,11 +297,5 @@ class Job(object):
 
         assert not run.is_running
         return run
-
-class Service(Job):
-    def __init__(self, *args, **kwargs):
-        super(Service, self).__init__(*args, **kwargs)
-        enable_cmd = None
-        disable_cmd = None
 
 
