@@ -297,3 +297,10 @@ class Job(object):
         assert not run.is_running
         return run
 
+class Service(Job):
+    def __init__(self, *args, **kwargs):
+        super(Service, self).__init__(*args, **kwargs)
+        enable_cmd = None
+        disable_cmd = None
+
+
