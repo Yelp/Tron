@@ -1,5 +1,6 @@
 import logging
 import itertools
+import random
 
 from twisted.internet import protocol, defer, reactor
 from twisted.python import failure
@@ -60,9 +61,9 @@ class NodePool(object):
         return not self == other
 
     def next(self):
-        if not self.iter:
-            self.iter = itertools.cycle(self.nodes)
-        return self.iter.next()
+        #if not self.iter:
+        #    self.iter = itertools.cycle(self.nodes)
+        return self.nodes[random.randrange(len(self.nodes))]
 
 class Node(object):
     """A node is tron's interface to communicating with an actual machine"""
