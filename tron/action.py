@@ -257,13 +257,6 @@ class ActionRun(object):
         return self.action.command % action_vars
 
     @property
-    def timeout_secs(self):
-        if self.action.timeout is None:
-            return None
-        else:
-            return self.action.timeout.seconds
-
-    @property
     def is_queued(self):
         return self.state == ACTION_RUN_QUEUED
     
@@ -305,10 +298,9 @@ class ActionRun(object):
             (self.is_scheduled or self.is_queued)
  
 class Action(object):
-    def __init__(self, name=None, node_pool=None, timeout=None):
+    def __init__(self, name=None, node_pool=None):
         self.name = name
         self.node_pool = node_pool
-        self.timeout = timeout
 
         self.required_actions = []
         self.job = None

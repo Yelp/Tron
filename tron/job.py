@@ -227,9 +227,6 @@ class Job(object):
             self.runs.appendleft(job_run)
             self.remove_old_runs()
         
-            if os.path.exists(self.output_dir) and not os.path.exists(job_run.output_dir):
-                os.mkdir(job_run.output_dir)
-   
         return job_run
 
     def build_run(self):
@@ -248,6 +245,9 @@ class Job(object):
             for req in a.required_actions:
                 runs[req.name].waiting_runs.append(run)
                 run.required_runs.append(runs[req.name])
+
+        if os.path.exists(self.output_dir) and not os.path.exists(job_run.output_dir):
+            os.mkdir(job_run.output_dir)
 
         return job_run
 
