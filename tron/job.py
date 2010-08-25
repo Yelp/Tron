@@ -229,12 +229,7 @@ class Job(object):
         
         return job_run
 
-    def build_run(self):
-        job_run = JobRun(self)
-        if self.node_pool:
-            job_run.node = self.node_pool.next() 
-        
-        #Build actions and setup requirements
+    def build_action_dag(self, job_run):
         runs = {}
         for a in self.topo_actions:
             run = a.build_run(job_run)
@@ -245,11 +240,18 @@ class Job(object):
             for req in a.required_actions:
                 runs[req.name].waiting_runs.append(run)
                 run.required_runs.append(runs[req.name])
+        
+    def build_run(self, node=None):
+        job_run = JobRun(self)
+        job_run.node = node or self.node_pool.next(node) 
 
         if os.path.exists(self.output_dir) and not os.path.exists(job_run.output_dir):
             os.mkdir(job_run.output_dir)
 
+        self.build_action_dag(job_run)
+
         return job_run
+
 
     def manual_start(self):
         run = self.build_run()
