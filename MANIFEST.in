@@ -2,4 +2,4 @@ include *.txt
 include Makefile
 recursive-include debian *
 recursive-include test *.py *.yaml
-recursive-include docs *.txt *.yaml
+recursive-include docs *.txt *.yaml *.1 *.8
