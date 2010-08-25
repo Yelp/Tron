@@ -33,3 +33,4 @@ clean:
 		fakeroot $(MAKE) -f $(CURDIR)/debian/rules clean
 		rm -rf build/ MANIFEST
 		find . -name '*.pyc' -delete
+		find . -name "._*" -delete
