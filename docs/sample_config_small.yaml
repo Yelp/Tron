@@ -33,3 +33,18 @@ jobs:
                 name: "actionAlone"
                 command: "cat big.txt; sleep 10"
 
+services:
+    - &servOne !Service
+        name: "testserv"
+        node: *pool
+        enable: !Action
+            name: "enableaction"
+            command: "sleep 10; echo one"
+        monitor:
+            actions:
+                - !Action
+                    name: "actionMonitor"
+                    command: "echo hello; sleep 1"
+            schedule: !IntervalScheduler
+                interval: 20s
+

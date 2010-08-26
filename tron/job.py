@@ -152,7 +152,7 @@ class Job(object):
         self.runs = deque()
         
         self.queueing = True
-        self.enabled = True
+        self.enabled = False
         self.constant = False
         self.last_success = None
         
@@ -161,6 +161,11 @@ class Job(object):
         self.output_dir = None
         self.store_callback = None
 
+        # Service Data
+        enable_act = None
+        disable_act = None
+        ed_runs = []
+
     def change_callback(self):
         if self.store_callback:
             self.store_callback()
@@ -168,7 +173,8 @@ class Job(object):
     def __eq__(self, other):
         if not isinstance(other, Job) or self.name != other.name or self.queueing != other.queueing \
            or self.scheduler != other.scheduler or self.node_pool != other.node_pool \
-           or len(self.topo_actions) != len(other.topo_actions):
+           or len(self.topo_actions) != len(other.topo_actions) or self.enable_act != other.enable_act \
+           or self.disable_act != other.disable_act:
             return False
 
         return all([me == you for (me, you) in zip(self.topo_actions, other.topo_actions)])
@@ -177,12 +183,22 @@ class Job(object):
         return not self == other
 
     def enable(self):
+        if not self.enabled and self.enable_act:
+            run = enable_act.build_run()
+            ed_runs.append(run)
+            run.start()
+
         self.enabled = True
         next = self.next_to_finish()
         if next and next.is_queued:
             next.start()
     
     def disable(self):
+        if self.enabled and self.disable_act:
+            run = disable_act.build_run()
+            ed_runs.append(run)
+            run.start()
+
         self.enabled = False
         for r in self.runs:
             if r.is_scheduled or r.is_queued:

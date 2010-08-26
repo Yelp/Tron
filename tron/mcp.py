@@ -93,7 +93,6 @@ class MasterControlProgram(object):
     """
     def __init__(self, working_dir, config_file):
         self.jobs = {}
-        self.services = {}
         self.nodes = []
         self.state_handler = StateHandler(self, working_dir)
         self.config_file = config_file
@@ -143,26 +142,21 @@ class MasterControlProgram(object):
         if not os.path.exists(job.output_dir):
             os.mkdir(job.output_dir)
 
-    def _add(self, exist, job):
-        if job.name in exist:
-            if job == exist[job.name]:
+    def add_job(self, job):
+        if job.name in self.jobs:
+            if job == self.jobs[job.name]:
                 return
             
-            job.absorb_old_job(exist[job.name])
+            job.absorb_old_job(self.jobs[job.name])
             if job.enabled:
                 self.disable_job(job)
                 self.enable_job(job)
         
-        exist[job.name] = job
+        print job.name
+        self.jobs[job.name] = job
         self.setup_job_dir(job)
         self.add_job_nodes(job)
         job.store_callback = self.state_handler.store_data
-
-    def add_job(self, job):
-        self._add(self.jobs, job)
-
-    def add_service(self, service):
-        self._add(self.services, service)
 
     def _schedule(self, run):
         sleep = sleep_time(run.run_time)
@@ -203,34 +197,24 @@ class MasterControlProgram(object):
         for jo in self.jobs.itervalues():
             self.disable_job(jo)
             
-        for se in self.services.itervalues():
-            self.disable_job(se)
-
     def enable_all(self):
         for jo in self.jobs.itervalues():
             self.enable_job(jo)
 
-        for se in self.services.itervalues():
-            self.enable_job(se)
-      
     def try_restore(self):
         if not os.path.isfile(self.state_handler.get_state_file_path()):
             return 
         
         data = self.state_handler.load_data()
-        for name in data['jobs'].iterkeys():
+        for name in data.iterkeys():
             if name in self.jobs:
                 self.state_handler.restore_job(self.jobs[name], data[name])
-
-        for name in data['services'].iterkeys():
-            if name in self.services:
-                selv.state_handler.restore_job(self.services[name], data[name])
 
     def run_jobs(self):
         """This schedules the first time each job runs"""
         for tron_job in self.jobs.itervalues():
             if tron_job.enabled:
-                self.schedule_next_run(tron_job)
+                self.enable_job(tron_job)
         
         self.state_handler.writing_enabled = True
         self.state_handler.store_data()

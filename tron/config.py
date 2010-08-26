@@ -8,7 +8,7 @@ import os
 import yaml
 from twisted.conch.client import options
 
-from tron import action, service, job, node, scheduler, monitor, emailer
+from tron import action, job, node, scheduler, monitor, emailer
 
 log = logging.getLogger("tron.config")
 
@@ -70,20 +70,11 @@ class TronConfiguration(yaml.YAMLObject):
                     del mcp.jobs[job_name]
 
         if hasattr(self, 'services'):
-            #found_servs = reduce(check_dup, self.services, {})
             for serv_config in self.services:
                 new_serv = serv_config.actualized
                 log.debug("Building new service %s", serv_config.name)
                 mcp.add_job(new_serv)
             
-            #for job_name in mcp.jobs.keys():
-            #    if job_name not in found_jobs:
-            #        log.debug("Removing job %s", job_name)
-            #        del mcp.jobs[job_name]
-
-       
-
-    
     def _get_working_dir(self, mcp):
         if mcp.state_handler.working_dir:
             return mcp.state_handler.working_dir
@@ -213,7 +204,7 @@ class Job(_ConfiguredObject):
 
 class Service(Job):
     yaml_tag = u'!Service'
-    actual_class = service.Service
+    actual_class = job.Job
 
     def _apply(self):
         real_service = self._ref()
