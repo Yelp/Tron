@@ -55,7 +55,8 @@ class NodePool(object):
             self.nodes.append(Node(hostname))
 
     def __eq__(self, other):
-        return all([me.hostname == you.hostname for (me, you) in zip(self.nodes, other.nodes)])
+        return isinstance(other, NodePool) and \
+           all([me.hostname == you.hostname for (me, you) in zip(self.nodes, other.nodes)])
 
     def __ne__(self, other):
         return not self == other

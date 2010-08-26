@@ -14,14 +14,14 @@ jobs:
     - &job0 !Job
         name: "job0"
         node: *pool
+        all_nodes: True
         schedule: !IntervalScheduler
             interval: 20s
         queueing: False
         actions:
             - &start !Action
                 name: "actionStartEdit"
-                command: "sleep 3; echo asdfasdf"
-                node: *node
+                command: "python test.py"
     - &job1 !Job
         name: "job1"
         node: *node

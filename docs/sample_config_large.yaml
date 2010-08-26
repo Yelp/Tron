@@ -5,15 +5,15 @@ ssh_options: !SSHOptions
     agent: true
 
 nodes:
-    - &nodeBatch00 !Node
+    - &node0 !Node
         hostname: 'dev4sv'
-    - &nodeBatch01 !NodePool
+    - &node_pool !NodePool
         hostnames: ['dev3sv', 'dev4sv']
 
 jobs:
     - &intJob !Job
         name: "interval0a"
-        node: *nodeBatch00
+        node: *node0
         schedule: !IntervalScheduler
             interval: 20s
         actions:
@@ -30,7 +30,7 @@ jobs:
                 requires: *intAction0
     - &jobFoo !Job
         name: "interval0b"
-        node: *nodeBatch00
+        node: *node0
         schedule: !IntervalScheduler
             interval: 20s
         actions:
@@ -44,7 +44,7 @@ jobs:
 
     - &jobFail !Job
         name: "testfail1"
-        node: *nodeBatch01
+        node: *node_pool
         schedule: !IntervalScheduler
             interval: 20s
         actions:
@@ -58,7 +58,7 @@ jobs:
 
     - &jobConstant !Job
         name: "constant1"
-        node: *nodeBatch01
+        node: *node_pool
         schedule: "constant"
         actions:
             - &actionConstant0 !Action
@@ -66,7 +66,7 @@ jobs:
                 command: "sleep 5; echo constant; sleep 2"
             - &actionConstant1 !Action
                 name: "constantLeader1"
-                node: *nodeBatch00
+                node: *node0
                 command: "sleep 1; echo following; sleep 2"
             - &actionFoll !Action
                 name: "follow0"
@@ -75,7 +75,7 @@ jobs:
             
     - &jobMF !Job
         name: "dailyMF"
-        node: *nodeBatch01
+        node: *node_pool
         schedule: "MS"
         actions:
             - &actionMF !Action
@@ -84,7 +84,7 @@ jobs:
 
     - &jobDaily !Job
         name: "daily1"
-        node: *nodeBatch01
+        node: *node_pool
         schedule: "daily"
         actions:
             - &actionDaily !Action
@@ -93,7 +93,7 @@ jobs:
 
     - &jobQueue !Job
         name: "queueing1"
-        node: *nodeBatch01
+        node: *node_pool
         schedule: !IntervalScheduler
             interval: 12s
         actions:
@@ -103,7 +103,7 @@ jobs:
 
     - &jobCancel !Job
         name: "cancel0"
-        node: *nodeBatch00
+        node: *node0
         queueing: False
         schedule: !IntervalScheduler
             interval: 12s
@@ -114,7 +114,7 @@ jobs:
 
     - &jobFailQueue !Job
         name: "failqueue1"
-        node: *nodeBatch01
+        node: *node_pool
         schedule: !IntervalScheduler
             interval: 12s
         actions:
@@ -123,7 +123,7 @@ jobs:
                 command: "sleep 15; failfailfail"
     - &jobAddition !Job
         name: "nextaddition"
-        node: *nodeBatch01
+        node: *node_pool
         schedule: !IntervalScheduler
             interval: 12s
         actions:

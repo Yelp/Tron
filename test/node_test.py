@@ -26,6 +26,7 @@ class NodeTestCase(TestCase):
         act.command = "echo Hello"
         jo = job.Job("Test Job", act)
         jo.output_dir = self.test_dir
+        jo.node_pool = turtle.Turtle()
         act.job = jo
 
         run = jo.build_run()

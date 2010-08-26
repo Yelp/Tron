@@ -57,7 +57,7 @@ class TestStateHandler(TestCase):
         def callNow(sleep, func, run):
             raise NotImplementedError(sleep)
         
-        run = self.job.next_run()
+        run = self.job.next_runs()[0]
         callLate = reactor.callLater
         #reactor.callLater = callNow
        

@@ -175,6 +175,9 @@ class Job(_ConfiguredObject):
         if hasattr(self, "run_limit"):
             real_job.run_limit = self.run_limit
 
+        if hasattr(self, "all_nodes"):
+            real_job.all_nodes = self.all_nodes
+
         for a_config in self.actions:
             action = a_config.actualized
             real_job.topo_actions.append(action)

@@ -65,7 +65,7 @@ class JobRun(object):
             self.last_success_check()
             
             if self.job.constant and self.job.enabled:
-                self.job.next_run().start()
+                self.job.build_run().start()
 
         if self.is_done:
             self.end_time = timeutils.current_time()
@@ -105,7 +105,9 @@ class JobRun(object):
 
     @property
     def should_start(self):
-        return self.job.enabled and not self.is_running and self.job.next_to_finish() == self
+        if not self.job.enabled or self.is_running:
+            return False
+        return self.job.next_to_finish(self.node if self.job.all_nodes else None) == self
 
     @property
     def is_failed(self):
@@ -152,6 +154,7 @@ class Job(object):
         self.runs = deque()
         
         self.queueing = True
+        self.all_nodes = False
         self.enabled = True
         self.constant = False
         self.last_success = None
@@ -187,14 +190,14 @@ class Job(object):
         for r in self.runs:
             if r.is_scheduled or r.is_queued:
                 r.cancel()
-        
-    def next_to_finish(self):
-        """Returns the next run to finish. Useful for getting the currently 
-        running job run or next queued/schedule job run.
+    
+    def next_to_finish(self, node=None):
+        """Returns the next run to finish(optional node requirement). Useful for 
+        getting the currently running job run or next queued/schedule job run.
         """
         def choose(prev, next):
-            return next if not (prev and prev.is_running) and \
-               (next.is_queued or next.is_scheduled or next.is_running) else prev
+            return prev if (prev and prev.is_running) or \
+               (node and next.node != node) or next.is_done else next
 
         return reduce(choose, self.runs, None)
 
@@ -218,16 +221,11 @@ class Job(object):
             if os.path.exists(old.output_dir):
                 shutil.rmtree(old.output_dir)
 
-    def next_run(self):
+    def next_runs(self):
         if not self.scheduler:
-            return None
+            return []
         
-        job_run = self.scheduler.next_run(self)
-        if job_run:
-            self.runs.appendleft(job_run)
-            self.remove_old_runs()
-        
-        return job_run
+        return self.scheduler.next_runs(self)
 
     def build_action_dag(self, job_run):
         runs = {}
@@ -243,15 +241,21 @@ class Job(object):
         
     def build_run(self, node=None):
         job_run = JobRun(self)
-        job_run.node = node or self.node_pool.next(node) 
+        job_run.node = node or self.node_pool.next() 
 
         if os.path.exists(self.output_dir) and not os.path.exists(job_run.output_dir):
             os.mkdir(job_run.output_dir)
 
         self.build_action_dag(job_run)
+        self.runs.appendleft(job_run)
+        self.remove_old_runs()
 
         return job_run
 
+    def build_runs(self):
+        if self.all_nodes:
+            return [self.build_run(node) for node in self.node_pool.nodes]
+        return [self.build_run()]
 
     def manual_start(self):
         run = self.build_run()
@@ -292,12 +296,9 @@ class Job(object):
         run.end_time = data['end_time']
         run.set_run_time(data['run_time'])
        
-        self.runs.appendleft(run)
-
         if run.is_success:
             self.last_success = run
 
-        assert not run.is_running
         return run
 
 

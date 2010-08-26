@@ -127,9 +127,9 @@ jobs:
     def test_job_unchanged(self):
         assert 'test_unchanged' in self.my_mcp.jobs
         job0 = self.my_mcp.jobs['test_unchanged']
-        run0 = job0.next_run()
+        run0 = job0.next_runs()[0]
         run0.start()
-        run1 = job0.next_run()
+        run1 = job0.next_runs()[0]
 
         assert_equal(job0.name, "test_unchanged")
         assert_equal(len(job0.topo_actions), 1)
@@ -153,9 +153,9 @@ jobs:
     def test_job_removed(self):
         assert 'test_remove' in self.my_mcp.jobs
         job1 = self.my_mcp.jobs['test_remove']
-        run0 = job1.next_run()
+        run0 = job1.next_runs()[0]
         run0.start()
-        run1 = job1.next_run()
+        run1 = job1.next_runs()[0]
 
         assert_equal(job1.name, "test_remove")
         assert_equal(len(job1.topo_actions), 1)
@@ -169,9 +169,9 @@ jobs:
     def test_job_changed(self):
         assert 'test_change' in self.my_mcp.jobs
         job2 = self.my_mcp.jobs['test_change']
-        run0 = job2.next_run()
+        run0 = job2.next_runs()[0]
         run0.start()
-        run1 = job2.next_run()
+        run1 = job2.next_runs()[0]
         assert_equal(len(job2.runs), 2)
 
         assert_equal(job2.name, "test_change")
