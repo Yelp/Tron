@@ -196,8 +196,8 @@ class Job(object):
         getting the currently running job run or next queued/schedule job run.
         """
         def choose(prev, next):
-            return prev if (prev and prev.is_running) or \
-               (node and next.node != node) or next.is_done else next
+            return prev if (prev and prev.is_running) or (node and next.node != node) \
+               or next.is_success or next.is_failed or next.is_cancelled or next.is_unknown else next
 
         return reduce(choose, self.runs, None)
 

@@ -15,7 +15,7 @@ CONVERT = {
 class ConstantScheduler(object):
     """The constant scheduler only schedules the first one.  The job run starts then next when finished"""
     def next_runs(self, job):
-        if job.runs and (job.runs[0].is_running or job.runs[0].is_scheduled):
+        if job.next_to_finish():
             return []
         
         job_runs = job.build_runs()
@@ -66,7 +66,11 @@ class DailyScheduler(object):
     
     def next_runs(self, job):
         # Find the next time to run
-        days = self.wait_days[timeutils.current_time().weekday()]
+        if job.runs:
+            days = self.wait_days[job.runs[0].run_time.weekday()]
+        else:
+            days = self.wait_days[timeutils.current_time().weekday()]
+
         run_time = (timeutils.current_time() + datetime.timedelta(days=days)).replace(
                                                                             hour=self.start_time.hour, 
                                                                             minute=self.start_time.minute, 
