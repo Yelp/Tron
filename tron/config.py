@@ -8,7 +8,7 @@ import os
 import yaml
 from twisted.conch.client import options
 
-from tron import action, job, node, scheduler, monitor, emailer
+from tron import action, service, job, node, scheduler, monitor, emailer
 
 log = logging.getLogger("tron.config")
 
@@ -53,21 +53,36 @@ class TronConfiguration(yaml.YAMLObject):
         # Check for duplicates before we start editing jobs
         def check_dup(dic, nex):
             if nex.name in dic:
-                raise yaml.YAMLError("Job %s is previously defined" % nex.name)
+                raise yaml.YAMLError("%s is previously defined" % nex.name)
             dic[nex.name] = 1
             return dic
          
-        found_jobs = reduce(check_dup, self.jobs, {})
+        if hasattr(self, 'jobs'):
+            found_jobs = reduce(check_dup, self.jobs, {})
+            for job_config in self.jobs:
+                new_job = job_config.actualized
+                log.debug("Building new job %s", job_config.name)
+                mcp.add_job(new_job)
 
-        for job_config in self.jobs:
-            new_job = job_config.actualized
-            log.debug("Building new job %s", job_config.name)
-            mcp.add_job(new_job)
+            for job_name in mcp.jobs.keys():
+                if job_name not in found_jobs:
+                    log.debug("Removing job %s", job_name)
+                    del mcp.jobs[job_name]
 
-        for job_name in mcp.jobs.keys():
-            if job_name not in found_jobs:
-                log.debug("Removing job %s", job_name)
-                del mcp.jobs[job_name]
+        if hasattr(self, 'services'):
+            #found_servs = reduce(check_dup, self.services, {})
+            for serv_config in self.services:
+                new_serv = serv_config.actualized
+                log.debug("Building new service %s", serv_config.name)
+                mcp.add_job(new_serv)
+            
+            #for job_name in mcp.jobs.keys():
+            #    if job_name not in found_jobs:
+            #        log.debug("Removing job %s", job_name)
+            #        del mcp.jobs[job_name]
+
+       
+
     
     def _get_working_dir(self, mcp):
         if mcp.state_handler.working_dir:
@@ -143,31 +158,48 @@ class NotificationOptions(yaml.YAMLObject):
         mcp.monitor = monitor.CrashReporter(em)
         mcp.monitor.start()
 
-
+ 
 class Job(_ConfiguredObject):
     yaml_tag = u'!Job'
     actual_class = job.Job
 
-    def _apply(self):
-        real_job = self._ref()
-        real_job.name = self.name
+    def _match_name(self, real, name):
+        real.name = name
         
-        if not re.match(r'[a-z_]\w*$', self.name, re.I):
+        if not re.match(r'[a-z_]\w*$', name, re.I):
             raise yaml.YAMLError("Invalid job name '%s' - not a valid identifier" % self.name)
 
-        if hasattr(self, "node"):
-            real_job.node_pool = self.node.actualized
+    def _match_schedule(self, real, schedule):
+        if isinstance(schedule, basestring):
+            # This is a short string
+            real.scheduler = Scheduler.from_string(schedule)
+        else:
+            # This is a scheduler instance, which has more info
+            real.scheduler = schedule.actualized
+        real.scheduler.job_setup(real)
 
-        # Build scheduler
-        if hasattr(self, "schedule"):
-            if isinstance(self.schedule, basestring):
-                # This is a short string
-                real_job.scheduler = Scheduler.from_string(self.schedule)
-            else:
-                # This is a scheduler instance, which has more info
-                real_job.scheduler = self.schedule.actualized
-            
-            real_job.scheduler.job_setup(real_job)
+    def _create_action(self, real, act_conf):
+        action = act_conf.actualized
+        action.job = real
+        
+        if not real.node_pool and not action.node_pool:
+            raise yaml.YAMLError("Either job '%s' or its action '%s' must have a node" 
+               % (real.name, action.name))
+
+        return action
+
+    def _match_actions(self, real, actions):
+        for act_conf in actions:
+            action = self._create_action(real, act_conf)
+            real.topo_actions.append(action)
+                    
+    def _apply(self):
+        real_job = self._ref()
+        real_job.node_pool = self.node.actualized
+        
+        self._match_name(real_job, self.name)
+        self._match_schedule(real_job, self.schedule)
+        self._match_actions(real_job, self.actions)
 
         if hasattr(self, "queueing"):
             real_job.queueing = self.queueing
@@ -175,14 +207,27 @@ class Job(_ConfiguredObject):
         if hasattr(self, "run_limit"):
             real_job.run_limit = self.run_limit
 
-        for a_config in self.actions:
-            action = a_config.actualized
-            real_job.topo_actions.append(action)
-            action.job = real_job
-            
-            if not real_job.node_pool and not action.node_pool:
-                raise yaml.YAMLError("Either job '%s' or its action '%s' must have a node" 
-                % (real_job.name, action.name))
+        if hasattr(self, "all_nodes"):
+            real_job.all_nodes = self.all_nodes
+
+
+class Service(Job):
+    yaml_tag = u'!Service'
+    actual_class = service.Service
+
+    def _apply(self):
+        real_service = self._ref()
+        real_service.node_pool = self.node.actualized
+        
+        self._match_name(real_service, self.name)
+        self._match_schedule(real_service, self.monitor['schedule'])
+        self._match_actions(real_service, self.monitor['actions'])
+
+        if hasattr(self, "enable"):
+            real_service.enable_act = self._create_action(real_service, self.enable)
+        
+        if hasattr(self, "disable"):
+            real_service.disable_act = self._create_action(real_service, self.disable)
 
 class Action(_ConfiguredObject):
     yaml_tag = u'!Action'

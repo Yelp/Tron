@@ -2,6 +2,7 @@ import logging
 import weakref
 import yaml
 import os
+import shutil
 import sys
 import subprocess
 import yaml
@@ -47,6 +48,7 @@ class StateHandler(object):
             reactor.callLater(STATE_SLEEP, self.store_data)
             return 
 
+        tmp_path = os.path.join(self.working_dir, '.tmp.' + STATE_FILE)
         file_path = os.path.join(self.working_dir, STATE_FILE)
         log.info("Storing state in %s", file_path)
         
@@ -54,9 +56,10 @@ class StateHandler(object):
         if pid:
             self.write_pid = pid
         else:
-            file = open(file_path, 'w')
+            file = open(tmp_path, 'w')
             yaml.dump(self.data, file, default_flow_style=False, indent=4)
             file.close()
+            shutil.move(tmp_path, file_path)
             os._exit(os.EX_OK)
 
     def get_state_file_path(self):
@@ -90,6 +93,7 @@ class MasterControlProgram(object):
     """
     def __init__(self, working_dir, config_file):
         self.jobs = {}
+        self.services = {}
         self.nodes = []
         self.state_handler = StateHandler(self, working_dir)
         self.config_file = config_file
@@ -139,20 +143,26 @@ class MasterControlProgram(object):
         if not os.path.exists(job.output_dir):
             os.mkdir(job.output_dir)
 
-    def add_job(self, tron_job):
-        if tron_job.name in self.jobs:
-            if tron_job == self.jobs[tron_job.name]:
+    def _add(self, exist, job):
+        if job.name in exist:
+            if job == exist[job.name]:
                 return
             
-            tron_job.absorb_old_job(self.jobs[tron_job.name])
-            if tron_job.enabled:
-                self.disable_job(tron_job)
-                self.enable_job(tron_job)
+            job.absorb_old_job(exist[job.name])
+            if job.enabled:
+                self.disable_job(job)
+                self.enable_job(job)
         
-        self.jobs[tron_job.name] = tron_job
-        self.setup_job_dir(tron_job)
-        self.add_job_nodes(tron_job)
-        tron_job.store_callback = self.state_handler.store_data
+        exist[job.name] = job
+        self.setup_job_dir(job)
+        self.add_job_nodes(job)
+        job.store_callback = self.state_handler.store_data
+
+    def add_job(self, job):
+        self._add(self.jobs, job)
+
+    def add_service(self, service):
+        self._add(self.services, service)
 
     def _schedule(self, run):
         sleep = sleep_time(run.run_time)
@@ -192,19 +202,29 @@ class MasterControlProgram(object):
     def disable_all(self):
         for jo in self.jobs.itervalues():
             self.disable_job(jo)
+            
+        for se in self.services.itervalues():
+            self.disable_job(se)
 
     def enable_all(self):
         for jo in self.jobs.itervalues():
             self.enable_job(jo)
-    
+
+        for se in self.services.itervalues():
+            self.enable_job(se)
+      
     def try_restore(self):
         if not os.path.isfile(self.state_handler.get_state_file_path()):
             return 
         
         data = self.state_handler.load_data()
-        for name in data.iterkeys():
+        for name in data['jobs'].iterkeys():
             if name in self.jobs:
                 self.state_handler.restore_job(self.jobs[name], data[name])
+
+        for name in data['services'].iterkeys():
+            if name in self.services:
+                selv.state_handler.restore_job(self.services[name], data[name])
 
     def run_jobs(self):
         """This schedules the first time each job runs"""

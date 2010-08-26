@@ -276,7 +276,7 @@ class JobsResource(resource.Resource):
         
         found = self._master_control.jobs.get(name)
         if found is None:
-            return resource.NoResource("Cannot  find job '%s'" % name)
+            return resource.NoResource("Cannot find job '%s'" % name)
         
         return JobResource(found, self._master_control)
         
