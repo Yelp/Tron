@@ -60,6 +60,10 @@ class ActionRunVariables(object):
             if op:
                 raise ValueError("Adjustments not allowed")
             return self.run.id
+        elif attr == "node":
+            if op:
+                raise ValueError("Adjustments not allowed")
+            return self.run.node.hostname
         else:
             return super(ActionRunVariables, self).__getitem__(name)
 
