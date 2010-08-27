@@ -217,24 +217,30 @@ class JobResource(resource.Resource):
         
         return resource.NoResource("Cannot run number '%s' for job '%s'" % (run_num, self._job.name))
 
+    def get_run_data(self, request, run):
+        state = job_run_state(run)
+        last_time = run.end_time if run.end_time else timeutils.current_time()
+        duration = (last_time - run.start_time).seconds if run.start_time else 0
+
+        return {
+                'id': run.id,
+                'href': request.childLink(run.id),
+                'run_time': run.run_time and str(run.run_time),
+                'start_time': run.start_time and str(run.start_time),
+                'end_time': run.end_time and str(run.end_time),
+                'duration': duration,
+                'run_num': run.run_num,
+                'state': state,
+            }
+
     def render_GET(self, request):
         run_output = []
         for job_run in self._job.runs:
-            state = job_run_state(job_run)
-            
-            last_time = job_run.end_time if job_run.end_time else timeutils.current_time()
-            duration = (last_time - job_run.start_time).seconds if job_run.start_time else 0
+            run_output.append(self.get_run_data(request, job_run))
 
-            run_output.append({
-                'id': job_run.id,
-                'href': request.childLink(job_run.id),
-                'run_time': job_run.run_time and str(job_run.run_time),
-                'start_time': job_run.start_time and str(job_run.start_time),
-                'end_time': job_run.end_time and str(job_run.end_time),
-                'duration': duration,
-                'run_num': job_run.run_num,
-                'state': state,
-            })
+        ed_run_output = []
+        for ed_run in self._job.ed_runs:
+            ed_run_output.append(self.get_run_data(request, ed_run))
 
         resources_output = []
         
@@ -242,6 +248,7 @@ class JobResource(resource.Resource):
             'name': self._job.name,
             'scheduler': str(self._job.scheduler),
             'runs': run_output,
+            'ed_runs': ed_run_output,
             'action_names': map(lambda t: t.name, self._job.topo_actions),
             'node_pool': map(lambda n: n.hostname, self._job.node_pool.nodes),
         }
@@ -283,15 +290,18 @@ class JobsResource(resource.Resource):
     def render_GET(self, request):
         request.setHeader("content-type", "text/json")
         
+        serv_list = []
         job_list = []
         for current_job in self._master_control.jobs.itervalues():
             last_success = str(current_job.last_success.end_time) if current_job.last_success else None
             
             # We need to describe the current state of this job
-            status = "UNKNOWN"
+            is_service = current_job.enable_act or current_job.disable_act
             current_run = current_job.next_to_finish()
+            status = "UNKNOWN"
+
             if current_run and current_run.is_running:
-                status = "RUNNING"
+                status = "MONITORING" if is_service else "RUNNING"
             elif current_run and current_run.is_scheduled:
                 status = "ENABLED"
             elif not current_run:
@@ -304,10 +314,14 @@ class JobsResource(resource.Resource):
                 'scheduler': str(current_job.scheduler),
                 'last_success': last_success,
             }
-            job_list.append(job_desc)
+            if is_service:
+                serv_list.append(job_desc)
+            else:
+                job_list.append(job_desc)
 
         output = {
             'jobs': job_list,
+            'services': serv_list,
         }
         return respond(request, output)
     

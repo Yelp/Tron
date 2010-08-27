@@ -11,8 +11,8 @@ log = logging.getLogger('tron.job')
 RUN_LIMIT = 50
 
 class JobRun(object):
-    def __init__(self, job):
-        self.run_num = job.next_num()
+    def __init__(self, job, run_num=None):
+        self.run_num = run_num or job.next_num()
         self.job = job
         self.id = "%s.%s" % (job.name, self.run_num)
         self.output_dir = os.path.join(job.output_dir, self.id)
@@ -152,7 +152,7 @@ class Job(object):
         self.runs = deque()
         
         self.queueing = True
-        self.enabled = False
+        self.enabled = True
         self.constant = False
         self.last_success = None
         
@@ -162,9 +162,9 @@ class Job(object):
         self.store_callback = None
 
         # Service Data
-        enable_act = None
-        disable_act = None
-        ed_runs = []
+        self.enable_act = None
+        self.disable_act = None
+        self.ed_runs = []
 
     def change_callback(self):
         if self.store_callback:
@@ -183,9 +183,9 @@ class Job(object):
         return not self == other
 
     def enable(self):
-        if not self.enabled and self.enable_act:
-            run = enable_act.build_run()
-            ed_runs.append(run)
+        if self.enable_act:
+            run = self.build_run([self.enable_act])
+            self.ed_runs.append(run)
             run.start()
 
         self.enabled = True
@@ -194,9 +194,9 @@ class Job(object):
             next.start()
     
     def disable(self):
-        if self.enabled and self.disable_act:
-            run = disable_act.build_run()
-            ed_runs.append(run)
+        if self.disable_act:
+            run = self.build_run([self.disable_act])
+            self.ed_runs.append(run)
             run.start()
 
         self.enabled = False
@@ -245,14 +245,16 @@ class Job(object):
         
         return job_run
 
-    def build_run(self):
-        job_run = JobRun(self)
+    def build_run(self, actions=None, run_num=None):
+        actions = actions or self.topo_actions
+
+        job_run = JobRun(self, run_num=run_num)
         if self.node_pool:
             job_run.node = self.node_pool.next() 
         
         #Build actions and setup requirements
         runs = {}
-        for a in self.topo_actions:
+        for a in actions:
             run = a.build_run(job_run)
             runs[a.name] = run
             
@@ -293,15 +295,18 @@ class Job(object):
     @property
     def data(self):
         return {'runs': [r.data for r in self.runs],
+                'ed_runs':[r.data for r in self.ed_runs],
                 'enabled': self.enabled
         }
 
+    
     def restore_run(self, data):
-        run = self.build_run()
+        run = self.build_run(run_num=data['run_num'])
+        self.run_num = max([run.run_num + 1, self.run_num])
+
         for r, state in zip(run.runs, data['runs']):
             r.restore_state(state)
             
-        run.run_num = data['run_num']
         run.start_time = data['start_time']
         run.end_time = data['end_time']
         run.set_run_time(data['run_time'])

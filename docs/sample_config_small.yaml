@@ -22,16 +22,6 @@ jobs:
                 name: "actionStartEdit"
                 command: "sleep 3; echo asdfasdf"
                 node: *node
-    - &job1 !Job
-        name: "job1"
-        node: *node
-        schedule: !IntervalScheduler
-            interval: 30s
-        queueing: False
-        actions:
-            - &action !Action
-                name: "actionAlone"
-                command: "cat big.txt; sleep 10"
 
 services:
     - &servOne !Service
@@ -43,8 +33,8 @@ services:
         monitor:
             actions:
                 - !Action
-                    name: "actionMonitor"
-                    command: "echo hello; sleep 1"
+                    name: "actionMo"
+                    command: "echo hello; sleep 5"
             schedule: !IntervalScheduler
                 interval: 20s
 

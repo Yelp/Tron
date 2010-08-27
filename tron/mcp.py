@@ -32,6 +32,10 @@ class StateHandler(object):
 
     def restore_job(self, job, data):
         job.enabled = data['enabled']
+
+        for ed_r_data in reversed(data['ed_runs']):
+            run = job.restore_ed_run(ed_r_data)
+
         for r_data in reversed(data['runs']):
             run = job.restore_run(r_data)
             if run.is_scheduled:
@@ -152,7 +156,6 @@ class MasterControlProgram(object):
                 self.disable_job(job)
                 self.enable_job(job)
         
-        print job.name
         self.jobs[job.name] = job
         self.setup_job_dir(job)
         self.add_job_nodes(job)
@@ -186,9 +189,9 @@ class MasterControlProgram(object):
         self.schedule_next_run(now.job)
 
     def enable_job(self, job):
+        job.enable()
         if not job.runs or not job.runs[0].is_scheduled:
             self.schedule_next_run(job)
-        job.enable()
 
     def disable_job(self, job):
         job.disable()
