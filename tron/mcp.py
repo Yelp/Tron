@@ -7,7 +7,7 @@ import sys
 import subprocess
 import yaml
 
-from tron import job, config
+from tron import job, config, command_context
 from twisted.internet import reactor
 from tron.utils import timeutils
 
@@ -49,6 +49,8 @@ class StateHandler(object):
             run = job.restore_main_run(r_data)
             if run.is_scheduled:
                 reactor.callLater(sleep_time(run.run_time), self.mcp.run_job, run)
+
+        job.set_context(self.mcp.context)
 
         next = job.next_to_finish()
         if job.enabled and next and next.is_queued:
@@ -104,11 +106,12 @@ class MasterControlProgram(object):
     This object is responsible for figuring who needs to run and when. It will be the main entry point
     where our daemon finds work to do
     """
-    def __init__(self, working_dir, config_file):
+    def __init__(self, working_dir, config_file, context=None):
         self.jobs = {}
         self.nodes = []
         self.state_handler = StateHandler(self, working_dir)
         self.config_file = config_file
+        self.context = context
 
     def load_config(self):
         try:
@@ -166,6 +169,8 @@ class MasterControlProgram(object):
                 self.enable_job(job)
         
         self.jobs[job.name] = job
+
+        job.set_context(self.context)
         self.setup_job_dir(job)
         self.add_job_nodes(job)
         job.store_callback = self.state_handler.store_data

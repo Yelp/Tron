@@ -8,7 +8,7 @@ import os
 import yaml
 from twisted.conch.client import options
 
-from tron import action, job, node, scheduler, monitor, emailer
+from tron import action, job, node, scheduler, monitor, emailer, command_context
 
 log = logging.getLogger("tron.config")
 
@@ -89,13 +89,18 @@ class TronConfiguration(yaml.YAMLObject):
             raise ConfigError("Specified working directory \'%s\' is not writable" % working_dir)
         
         mcp.state_handler.working_dir = working_dir
+
+        if hasattr(self, 'command_context'):
+            mcp.context = command_context.CommandContext(self.command_context)
         
         self._apply_jobs(mcp)
+
         if hasattr(self, 'ssh_options'):
             self.ssh_options._apply(mcp)
         
         if hasattr(self, 'notification_options'):
             self.notification_options._apply(mcp)
+        
 
 class SSHOptions(yaml.YAMLObject):
     yaml_tag = u'!SSHOptions'

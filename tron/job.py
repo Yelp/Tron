@@ -3,7 +3,7 @@ import os
 import shutil
 from collections import deque
 
-from tron import action
+from tron import action, command_context
 from tron.utils import timeutils
 
 log = logging.getLogger('tron.job')
@@ -22,6 +22,7 @@ class JobRun(object):
         self.end_time = None
         self.node = None
         self.runs = []
+        self.context = command_context.CommandContext(self, job.context)
                
     def set_run_time(self, run_time):
         self.run_time = run_time
@@ -147,7 +148,7 @@ class Job(object):
         self.run_num += 1
         return self.run_num - 1
 
-    def __init__(self, name=None, action=None):
+    def __init__(self, name=None, action=None, context=None):
         self.name = name
         self.topo_actions = [action] if action else []
         self.scheduler = None
@@ -163,6 +164,7 @@ class Job(object):
         self.node_pool = None
         self.output_dir = None
         self.store_callback = None
+        self.context = command_context.CommandContext(self)
 
         # Service Data
         self.enable_act = None
@@ -186,6 +188,9 @@ class Job(object):
 
     def __ne__(self, other):
         return not self == other
+
+    def set_context(self, context):
+        self.context = command_context.CommandContext(self.context, context)
 
     def enable(self):
         if self.enable_act:

@@ -18,6 +18,10 @@ ssh_options: !SSHOptions
     identities: 
         - test/test_id_rsa
 
+command_context:
+    batch_dir: /tron/batch/test/foo
+    python: /usr/bin/python
+    
 nodes:
     - &node0 !Node
         hostname: 'batch0'
@@ -197,3 +201,8 @@ jobs:
         assert_equals(dep0.required_actions[0], req0)
         assert_equals(dep1.required_actions[0], req1)
 
+    def test_command_context(self):
+        assert hasattr(self.test_config, "command_context")
+        assert_equal(self.test_config.command_context['python'], "/usr/bin/python")
+        #assert_equal(self.my_mcp.context['python'], "/usr/bin/python")
+        assert_equal(self.job1.context['python'], "/usr/bin/python")

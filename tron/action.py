@@ -6,7 +6,7 @@ import os
 
 from twisted.internet import defer
 
-from tron import node
+from tron import node, command_context
 from tron.utils import timeutils
 
 log = logging.getLogger('tron.action')
@@ -19,13 +19,31 @@ ACTION_RUN_RUNNING = 4
 ACTION_RUN_FAILED = 10
 ACTION_RUN_SUCCEEDED = 11
 
-class ActionRunVariables(object):
-    """Dictionary like object that provides variable subsitution for action commands"""
+
+class ActionRunContext(object):
+    """Context object that gives us access to data about the action run itself"""
     def __init__(self, action_run):
-        self.run = action_run
+        self.action_run = action_run
+    
+    @property
+    def actionname(self):
+        return self.action_run.action.name
+
+    @property
+    def runid(self):
+        return self.action_run.id
+
+    @property
+    def node(self):
+        return self.action_run.node.hostname
 
     def __getitem__(self, name):
-        # Extract any arthimetic stuff
+        # We've got a complex getitem implementaiton because we want to suport crazy date arithmetic syntax for
+        # the run time of the action.
+        # This allows features like running a job with an argument that is the previous day by doing something like
+        #   ./my_job --run-date=%(shortdate-1)s
+        run_time = self.action_run.run_time
+
         match = re.match(r'([\w]+)([+-]*)(\d*)', name)
         attr, op, value = match.groups()
         if attr == "shortdate":
@@ -33,9 +51,9 @@ class ActionRunVariables(object):
                 delta = datetime.timedelta(days=int(value))
                 if op == "-":
                     delta *= -1
-                run_date = self.run.job_run.run_time + delta
+                run_date = run_time + delta
             else:
-                run_date = self.run.job_run.run_time
+                run_date = run_time
             
             return "%.4d-%.2d-%.2d" % (run_date.year, run_date.month, run_date.day)
         elif attr == "unixtime":
@@ -44,28 +62,16 @@ class ActionRunVariables(object):
                 delta = int(value)
             if op == "-":
                 delta *= -1
-            return int(timeutils.to_timestamp(self.run.job_run.run_time)) + delta
+            return int(timeutils.to_timestamp(run_time)) + delta
         elif attr == "daynumber":
             delta = 0
             if value:
                 delta = int(value)
             if op == "-":
                 delta *= -1
-            return self.run.job_run.run_time.toordinal() + delta
-        elif attr == "actionname":
-            if op:
-                raise ValueError("Adjustments not allowed")
-            return self.run.action.name
-        elif attr == "runid":
-            if op:
-                raise ValueError("Adjustments not allowed")
-            return self.run.id
-        elif attr == "node":
-            if op:
-                raise ValueError("Adjustments not allowed")
-            return self.run.node.hostname
+            return run_time.toordinal() + delta
         else:
-            return super(ActionRunVariables, self).__getitem__(name)
+            raise KeyError(name)
 
 
 class ActionRun(object):
@@ -88,6 +94,9 @@ class ActionRun(object):
         
         self.job_run = job_run
         self.node = action.node_pool.next() if action.node_pool else job_run.node
+
+        action_run_context = ActionRunContext(self)
+        self.context = command_context.CommandContext(action_run_context, job_run.context)
 
         self.required_runs = []
         self.waiting_runs = []
@@ -257,8 +266,14 @@ class ActionRun(object):
         
     @property
     def command(self):
-        action_vars = ActionRunVariables(self)
-        return self.action.command % action_vars
+        return self.action.command % self.context
+
+    @property
+    def timeout_secs(self):
+        if self.action.timeout is None:
+            return None
+        else:
+            return self.action.timeout.seconds
 
     @property
     def is_queued(self):
