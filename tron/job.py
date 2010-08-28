@@ -189,7 +189,7 @@ class Job(object):
 
     def enable(self):
         if self.enable_act:
-            run = self.build_run([self.enable_act])
+            run = self.build_run(actions=[self.enable_act])
             self.enable_runs.appendleft(run)
             run.start()
 
@@ -200,7 +200,7 @@ class Job(object):
     
     def disable(self):
         if self.disable_act:
-            run = self.build_run([self.disable_act])
+            run = self.build_run(actions=[self.disable_act])
             self.disable_runs.appendleft(run)
             run.start()
 
@@ -247,13 +247,7 @@ class Job(object):
         
         return self.scheduler.next_runs(self)
 
-    def build_run(self, actions=None, run_num=None):
-        actions = actions or self.topo_actions
-
-        job_run = JobRun(self, run_num=run_num)
-        if self.node_pool:
-            job_run.node = self.node_pool.next() 
-        
+    def build_action_dag(self, job_run, actions):
         #Build actions and setup requirements
         runs = {}
         for a in actions:
@@ -266,14 +260,19 @@ class Job(object):
                 runs[req.name].waiting_runs.append(run)
                 run.required_runs.append(runs[req.name])
         
-    def build_run(self, node=None):
+    def build_run(self, node=None, actions=None, run_num=None):
         job_run = JobRun(self)
         job_run.node = node or self.node_pool.next() 
+        actions = actions or self.topo_actions
 
+        job_run = JobRun(self, run_num=run_num)
+        if self.node_pool:
+            job_run.node = self.node_pool.next() 
+ 
         if os.path.exists(self.output_dir) and not os.path.exists(job_run.output_dir):
             os.mkdir(job_run.output_dir)
 
-        self.build_action_dag(job_run)
+        self.build_action_dag(job_run, actions)
         self.runs.appendleft(job_run)
         self.remove_old_runs()
 
