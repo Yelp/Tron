@@ -15,6 +15,7 @@ class ConstantSchedulerTest(TestCase):
         self.action = action.Action("Test Action")
         self.action.command = "Test Command"
         self.job = job.Job("Test Job", self.action)
+        self.job.node_pool = turtle.Turtle()
         self.job.output_dir = self.test_dir
         self.job.scheduler = self.scheduler
         self.action.job = self.job
@@ -23,12 +24,11 @@ class ConstantSchedulerTest(TestCase):
     def teardown(self):
         shutil.rmtree(self.test_dir)
     
-    def test_next_run(self):
-        next_run = self.job.next_run()
+    def test_next_runs(self):
+        next_run = self.job.next_runs()[0]
         assert_gte(datetime.datetime.now(), next_run.run_time)
    
-        next_run2 = self.scheduler.next_run(self.job)
-        assert_equal(next_run2, None)
+        assert_equal(self.scheduler.next_runs(self.job), [])
 
     def test__str__(self):
         assert_equal(str(self.scheduler), "CONSTANT")
@@ -40,6 +40,7 @@ class DailySchedulerTest(TestCase):
         self.scheduler = scheduler.DailyScheduler()
         self.action = action.Action("Test Action")
         self.job = job.Job("Test Job", self.action)
+        self.job.node_pool = turtle.Turtle()
         self.job.output_dir = self.test_dir
         self.job.scheduler = self.scheduler
         self.action.job = self.job
@@ -48,8 +49,8 @@ class DailySchedulerTest(TestCase):
     def teardown(self):
         shutil.rmtree(self.test_dir)
  
-    def test_next_run(self):
-        next_run = self.scheduler.next_run(self.job)
+    def test_next_runs(self):
+        next_run = self.scheduler.next_runs(self.job)[0]
 
         next_run_date = next_run.run_time.date()
         today = datetime.date.today()
@@ -68,6 +69,7 @@ class DailySchedulerTimeTest(TestCase):
         self.scheduler = scheduler.DailyScheduler(start_time=datetime.time(hour=16, minute=30))
         self.action = action.Action("Test Action - Beer Time")
         self.job = job.Job("Test Job", self.action)
+        self.job.node_pool = turtle.Turtle()
         self.job.output_dir = self.test_dir
         self.job.scheduler = self.scheduler
         self.action.job = self.job
@@ -76,8 +78,8 @@ class DailySchedulerTimeTest(TestCase):
     def teardown(self):
         shutil.rmtree(self.test_dir)
  
-    def test_next_run(self):
-        next_run = self.scheduler.next_run(self.job)
+    def test_next_runs(self):
+        next_run = self.scheduler.next_runs(self.job)[0]
         next_run_date = next_run.run_time.date()
 
         today = datetime.date.today()
@@ -96,6 +98,7 @@ class IntervalSchedulerTest(TestCase):
         self.scheduler = scheduler.IntervalScheduler(self.interval)
         self.action = action.Action("Test Action")
         self.job = job.Job("Test Job", self.action)
+        self.job.node_pool = turtle.Turtle()
         self.job.output_dir = self.test_dir
         self.job.scheduler = self.scheduler
         self.action.job = self.job
@@ -104,8 +107,8 @@ class IntervalSchedulerTest(TestCase):
     def teardown(self):
         shutil.rmtree(self.test_dir)
  
-    def test_next_run(self):
-        next_run = self.scheduler.next_run(self.job)
+    def test_next_runs(self):
+        next_run = self.scheduler.next_runs(self.job)[0]
         assert_gte(datetime.datetime.now() + self.interval, next_run.run_time)
        
     def test__str__(self):

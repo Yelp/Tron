@@ -14,6 +14,7 @@ jobs:
     - &job0 !Job
         name: "job0"
         node: *pool
+        all_nodes: True
         schedule: !IntervalScheduler
             interval: 20s
         queueing: False
@@ -23,6 +24,16 @@ jobs:
                 command: "sleep 3; echo asdfasdf"
                 node: *node
 
+    - &job1 !Job
+        name: "job1"
+        node: *node
+        schedule: !IntervalScheduler
+            interval: 30s
+        queueing: False
+        actions:
+            - &action !Action
+                name: "actionAlone"
+                command: "cat big.txt; sleep 10"
 services:
     - &servOne !Service
         name: "testserv"
@@ -37,4 +48,5 @@ services:
                     command: "echo hello; sleep 5"
             schedule: !IntervalScheduler
                 interval: 20s
+                command: "python test.py"
 

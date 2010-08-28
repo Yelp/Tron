@@ -14,13 +14,15 @@ CONVERT = {
 
 class ConstantScheduler(object):
     """The constant scheduler only schedules the first one.  The job run starts then next when finished"""
-    def next_run(self, job):
-        if job.runs and (job.runs[0].is_running or job.runs[0].is_scheduled):
-            return None
+    def next_runs(self, job):
+        if job.next_to_finish():
+            return []
         
-        job_run = job.build_run()
-        job_run.set_run_time(timeutils.current_time())
-        return job_run
+        job_runs = job.build_runs()
+        for job_run in job_runs:
+            job_run.set_run_time(timeutils.current_time())
+        
+        return job_runs
 
     def job_setup(self, job):
         job.constant = True
@@ -62,17 +64,23 @@ class DailyScheduler(object):
             count = 1 if val else count + 1
         return waits
     
-    def next_run(self, job):
+    def next_runs(self, job):
         # Find the next time to run
-        days = self.wait_days[timeutils.current_time().weekday()]
+        if job.runs:
+            days = self.wait_days[job.runs[0].run_time.weekday()]
+        else:
+            days = self.wait_days[timeutils.current_time().weekday()]
+
         run_time = (timeutils.current_time() + datetime.timedelta(days=days)).replace(
                                                                             hour=self.start_time.hour, 
                                                                             minute=self.start_time.minute, 
                                                                             second=self.start_time.second)
 
-        job_run = job.build_run()
-        job_run.set_run_time(run_time)
-        return job_run
+        job_runs = job.build_runs()
+        for job_run in job_runs:
+            job_run.set_run_time(run_time)
+ 
+        return job_runs
     
     def job_setup(self, job):
         job.queueing = True
@@ -94,12 +102,14 @@ class IntervalScheduler(object):
     def __init__(self, interval=None):
         self.interval = interval
     
-    def next_run(self, job):
+    def next_runs(self, job):
         run_time = timeutils.current_time() + self.interval
         
-        job_run = job.build_run()
-        job_run.set_run_time(run_time)
-        return job_run
+        job_runs = job.build_runs()
+        for job_run in job_runs:
+            job_run.set_run_time(run_time)
+        
+        return job_runs
 
     def job_setup(self, job):
         job.queueing = False

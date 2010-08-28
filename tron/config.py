@@ -197,7 +197,6 @@ class Job(_ConfiguredObject):
         if hasattr(self, "all_nodes"):
             real_job.all_nodes = self.all_nodes
 
-
 class Service(Job):
     yaml_tag = u'!Service'
     actual_class = job.Job

@@ -82,7 +82,7 @@ class TestJobRun(TestCase):
         shutil.rmtree(self.test_dir)
 
     def test_set_run_time(self):
-        jr = self.job.next_run()
+        jr = self.job.next_runs()[0]
         time = timeutils.current_time()
         jr.set_run_time(time)
 
@@ -91,7 +91,7 @@ class TestJobRun(TestCase):
         assert not jr.runs[1].run_time
 
     def test_start(self):
-        jr = self.job.next_run()
+        jr = self.job.next_runs()[0]
         jr.start()
 
         assert jr.runs[0].is_running
@@ -99,8 +99,8 @@ class TestJobRun(TestCase):
 
     def test_scheduled_start(self):
         self.job.queueing = True
-        jr1 = self.job.next_run()
-        jr2 = self.job.next_run()
+        jr1 = self.job.next_runs()[0]
+        jr2 = self.job.next_runs()[0]
 
         jr2.scheduled_start()
         assert jr2.is_queued
@@ -114,9 +114,9 @@ class TestJobRun(TestCase):
         assert jr1.is_running
 
     def test_last_success_check(self):
-        jr1 = self.job.next_run()
-        jr2 = self.job.next_run()
-        jr3 = self.job.next_run()
+        jr1 = self.job.next_runs()[0]
+        jr2 = self.job.next_runs()[0]
+        jr3 = self.job.next_runs()[0]
 
         jr2.last_success_check()
         assert_equal(self.job.last_success, jr2)
@@ -128,8 +128,8 @@ class TestJobRun(TestCase):
         assert_equal(self.job.last_success, jr3)
 
     def test_manual_start(self):
-        jr1 = self.job.next_run()
-        jr2 = self.job.next_run()
+        jr1 = self.job.next_runs()[0]
+        jr2 = self.job.next_runs()[0]
 
         jr2.manual_start()
         assert jr2.is_queued
@@ -148,6 +148,7 @@ class TestJob(TestCase):
 
         self.job = job.Job("Test Job", self.action)
         self.job.output_dir = self.test_dir
+        self.job.node_pool = turtle.Turtle()
         self.job.scheduler = scheduler.DailyScheduler()
         self.action.job = self.job
       
@@ -159,7 +160,7 @@ class TestJob(TestCase):
         self.job.run_limit = 3
         runs = []
         for i in range(6):
-            runs.append(self.job.next_run())
+            runs.append(self.job.next_runs()[0])
             runs[i].runs[0].node = turtle.Turtle()
 
         self.job.remove_old_runs()
@@ -185,7 +186,7 @@ class TestJob(TestCase):
 
         runs[3].cancel()
         for i in range(5):
-            self.job.next_run()
+            self.job.next_runs()[0]
 
         self.job.remove_old_runs()
         assert_equals(len(self.job.runs), 6)
@@ -193,7 +194,7 @@ class TestJob(TestCase):
     def test_next_to_finish(self):
         runs = []
         for i in range(5):
-            runs.append(self.job.next_run())
+            runs.append(self.job.next_runs()[0])
             runs[i].runs[0].node = turtle.Turtle()
 
         assert_equals(self.job.next_to_finish(), runs[0])
@@ -210,7 +211,7 @@ class TestJob(TestCase):
     def test_disable(self):
         runs = []
         for i in range(10):
-            runs.append(self.job.next_run())
+            runs.append(self.job.next_runs()[0])
             runs[i].runs[0].node = turtle.Turtle()
 
         runs[0].start()
@@ -234,7 +235,7 @@ class TestJob(TestCase):
         runs = []
         
         for i in range(10):
-            runs.append(self.job.next_run())
+            runs.append(self.job.next_runs()[0])
 
         for i in range(10):
             assert_equals(self.job.get_run_by_num(runs[i].run_num), runs[i])
@@ -246,11 +247,11 @@ class TestJob(TestCase):
         act.job = self.job
         
         self.job.topo_actions.append(act)
-        run1 = self.job.next_run()
+        run1 = self.job.next_runs()[0]
         assert_equals(run1.runs[0].action, self.action)
         assert_equals(run1.runs[1].action, act)
         
-        run2 = self.job.next_run()
+        run2 = self.job.next_runs()[0]
         assert_equals(self.job.runs[1], run1)
         
         assert_equals(run2.runs[0].action, self.action)

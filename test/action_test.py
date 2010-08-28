@@ -23,6 +23,7 @@ class TestAction(TestCase):
         self.action = action.Action(name="Test Action")
         self.action.command = "Test command"
         self.job = job.Job("Test Job", self.action)
+        self.job.node_pool = turtle.Turtle()
         self.job.output_dir = self.test_dir
         self.action.job = self.job
 
@@ -31,16 +32,16 @@ class TestAction(TestCase):
         shutil.rmtree(self.test_dir)
 
     def test_next_run(self):
-        assert_equals(self.job.next_run(), None)
+        assert_equals(self.job.next_runs(), [])
         
         self.action.scheduler = turtle.Turtle()
         self.action.scheduler.next_run = lambda j:None
 
-        assert_equals(self.job.next_run(), None)
+        assert_equals(self.job.next_runs(), [])
         assert_equals(get_num_runs_by_state(self.job, action.ACTION_RUN_SCHEDULED), 0)
 
         self.job.scheduler = scheduler.ConstantScheduler()
-        assert self.job.next_run()
+        assert self.job.next_runs()[0]
         assert_equals(get_num_runs_by_state(self.job, action.ACTION_RUN_SCHEDULED), 1)
 
 
@@ -51,13 +52,14 @@ class TestActionRun(TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.action = action.Action(name="Test Action", node_pool=turtle.Turtle())
         self.job = job.Job("Test Job", self.action)
+        self.job.node_pool = turtle.Turtle()
         self.job.output_dir = self.test_dir
         self.job.scheduler = scheduler.DailyScheduler()
         self.job.queueing = True
         self.action.job = self.job
         self.action.command = "Test command"
 
-        self.job_run = self.job.next_run()
+        self.job_run = self.job.next_runs()[0]
         self.run = self.job_run.runs[0]
 
     @teardown
@@ -73,7 +75,7 @@ class TestActionRun(TestCase):
         assert_equals(self.run.state, action.ACTION_RUN_RUNNING)
 
     def test_scheduled_start_wait(self):
-        job_run2 = self.job.next_run()
+        job_run2 = self.job.next_runs()[0]
         
         assert_equals(get_num_runs_by_state(self.job, action.ACTION_RUN_SCHEDULED), 2)
         job_run2.scheduled_start()
@@ -89,7 +91,7 @@ class TestActionRun(TestCase):
 
     def test_scheduled_start_cancel(self):
         self.job.queueing = False
-        job_run2 = self.job.next_run()
+        job_run2 = self.job.next_runs()[0]
         #self.action.scheduled[run2.id] = run2.state_data
         
         assert_equals(get_num_runs_by_state(self.job, action.ACTION_RUN_SCHEDULED), 2)
@@ -167,13 +169,14 @@ class TestRunDependency(TestCase):
         self.dep_action.required_actions.append(self.action)
 
         self.job = job.Job("Test Job", self.action)
+        self.job.node_pool = turtle.Turtle()
         self.job.output_dir = self.test_dir
         self.action.job = self.job
         self.dep_action.job = self.job 
 
         self.job.topo_actions.append(self.dep_action)
         self.job.scheduler = scheduler.DailyScheduler()
-        self.job_run = self.job.next_run()
+        self.job_run = self.job.next_runs()[0]
         self.run = self.job_run.runs[0]
         self.dep_run = self.job_run.runs[1]
 
@@ -214,6 +217,7 @@ class ActionRunBuildingTest(TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.action = action.Action(name="Test Action")
         self.job = job.Job(self.action)
+        self.job.node_pool = turtle.Turtle()
         self.job.output_dir = self.test_dir
         self.action.job = self.job
         self.action.command = "Test Action Command"
@@ -229,8 +233,8 @@ class ActionRunBuildingTest(TestCase):
         assert run.id
 
     def test_no_schedule(self):
-        run = self.job.next_run()
-        assert_equal(run, None)
+        runs = self.job.next_runs()
+        assert_equal(runs, [])
 
 
 class ActionRunLogFileTest(TestCase):
@@ -239,6 +243,7 @@ class ActionRunLogFileTest(TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.action = action.Action(name="Test Action", node_pool=turtle.Turtle())
         self.job = job.Job("Test Job", self.action)
+        self.job.node_pool = turtle.Turtle()
         self.job.output_dir = self.test_dir
         self.action.job = self.job
         self.action.command = "Test command"
@@ -278,6 +283,7 @@ class ActionRunVariablesTest(TestCase):
         self.action = action.Action(name="Test Action")
         self.action.command = "Test Action Command"
         self.job = job.Job("Test Job", self.action)
+        self.job.node_pool = node.NodePool("host")
         self.job.output_dir = self.test_dir
         self.action.job = self.job
         self.job.scheduler = scheduler.ConstantScheduler()
@@ -287,7 +293,7 @@ class ActionRunVariablesTest(TestCase):
         shutil.rmtree(self.test_dir)
 
     def _cmd(self):
-        job_run = self.job.next_run()
+        job_run = self.job.next_runs()[0]
         return job_run.runs[0].command
 
     def test_name(self):
@@ -296,7 +302,7 @@ class ActionRunVariablesTest(TestCase):
 
     def test_runid(self):
         self.action.command = "somescript --id=%(runid)s"
-        job_run = self.job.next_run()
+        job_run = self.job.next_runs()[0]
         action_run = job_run.runs[0]
         assert_equal(action_run.command, "somescript --id=%s" % action_run.id)
 
@@ -342,7 +348,11 @@ class ActionRunVariablesTest(TestCase):
         self.action.command = "somescript -d %(daynumber-1)s"
         ystr = self.now - datetime.timedelta(days=1)
         assert_equal(self._cmd(), "somescript -d %d" % (ystr.toordinal(),))
-
+    
+    def test_node_hostname(self):
+        self.action.command = "somescript -d %(node)s"
+        assert_equal(self._cmd(), "somescript -d host")
         
+
 if __name__ == '__main__':
     run()

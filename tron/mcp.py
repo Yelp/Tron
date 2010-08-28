@@ -179,8 +179,8 @@ class MasterControlProgram(object):
     def schedule_next_run(self, job):
         if job.runs and job.runs[0].is_scheduled:
             return
-        next = job.next_run()
-        if next:
+        
+        for next in job.next_runs():
             log.info("Scheduling next job for %s", next.job.name)
             self._schedule(next)
 
