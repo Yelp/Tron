@@ -12,7 +12,7 @@ RUN_LIMIT = 50
 
 class JobRun(object):
     def __init__(self, job, run_num=None):
-        self.run_num = run_num or job.next_num()
+        self.run_num = job.next_num() if run_num is None else run_num
         self.job = job
         self.id = "%s.%s" % (job.name, self.run_num)
         self.output_dir = os.path.join(job.output_dir, self.id)
@@ -164,7 +164,8 @@ class Job(object):
         # Service Data
         self.enable_act = None
         self.disable_act = None
-        self.ed_runs = []
+        self.enable_runs = deque()
+        self.disable_runs = deque()
 
     def change_callback(self):
         if self.store_callback:
@@ -174,10 +175,11 @@ class Job(object):
         if not isinstance(other, Job) or self.name != other.name or self.queueing != other.queueing \
            or self.scheduler != other.scheduler or self.node_pool != other.node_pool \
            or len(self.topo_actions) != len(other.topo_actions) or self.enable_act != other.enable_act \
-           or self.disable_act != other.disable_act:
+           or self.disable_act != other.disable_act or self.run_limit != other.run_limit:
             return False
 
-        return all([me == you for (me, you) in zip(self.topo_actions, other.topo_actions)])
+        return all([me == you for (me, you) in zip(self.topo_actions, other.topo_actions)]) and \
+               self.enable_act == other.enable_act and self.disable_act == other.disable_act
 
     def __ne__(self, other):
         return not self == other
@@ -185,7 +187,7 @@ class Job(object):
     def enable(self):
         if self.enable_act:
             run = self.build_run([self.enable_act])
-            self.ed_runs.append(run)
+            self.enable_runs.appendleft(run)
             run.start()
 
         self.enabled = True
@@ -196,7 +198,7 @@ class Job(object):
     def disable(self):
         if self.disable_act:
             run = self.build_run([self.disable_act])
-            self.ed_runs.append(run)
+            self.disable_runs.appendleft(run)
             run.start()
 
         self.enabled = False
@@ -215,10 +217,12 @@ class Job(object):
         return reduce(choose, self.runs, None)
 
     def get_run_by_num(self, num):
-        for r in self.runs:
-            if r.run_num == num:
-                return r
-        return None
+        def choose(chosen, next):
+            return next if next.run_num == num else chosen
+
+        return reduce(choose, self.enable_runs, None) or \
+               reduce(choose, self.disable_runs, None) or \
+               reduce(choose, self.runs, None)
 
     def remove_old_runs(self):
         """Remove old runs so the number left matches the run limit.
@@ -287,6 +291,9 @@ class Job(object):
 
     def absorb_old_job(self, old):
         self.runs = old.runs
+        self.enable_runs = old.enable_runs
+        self.disable_runs = old.disable_runs
+
         self.output_dir = old.output_dir
         self.last_success = old.last_success
         self.run_num = old.run_num
@@ -295,13 +302,30 @@ class Job(object):
     @property
     def data(self):
         return {'runs': [r.data for r in self.runs],
-                'ed_runs':[r.data for r in self.ed_runs],
+                'enable_runs':[r.data for r in self.enable_runs],
+                'disable_runs':[r.data for r in self.disable_runs],
                 'enabled': self.enabled
         }
 
-    
-    def restore_run(self, data):
-        run = self.build_run(run_num=data['run_num'])
+    def restore_enable_run(self, data):
+        run = self.restore_run(data, [self.enable_act])
+        self.enable_runs.append(run)
+        return run
+
+    def restore_disable_run(self, data):
+        run = self.restore_run(data, [self.disable_act])
+        self.disable_runs.append(run)
+        return run
+
+    def restore_main_run(self, data):
+        run = self.restore_run(data, self.topo_actions)
+        self.runs.append(run)
+        if run.is_success and not self.last_success:
+            self.last_success = run
+        return run
+
+    def restore_run(self, data, actions):
+        run = self.build_run(run_num=data['run_num'], actions=actions)
         self.run_num = max([run.run_num + 1, self.run_num])
 
         for r, state in zip(run.runs, data['runs']):
@@ -310,11 +334,6 @@ class Job(object):
         run.start_time = data['start_time']
         run.end_time = data['end_time']
         run.set_run_time(data['run_time'])
-       
-        self.runs.appendleft(run)
-
-        if run.is_success:
-            self.last_success = run
 
         assert not run.is_running
         return run

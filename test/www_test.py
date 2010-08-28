@@ -52,11 +52,19 @@ class JobsTest(TestCase):
         self.mc = turtle.Turtle()
         self.job = turtle.Turtle(
                             name="testname", 
+                            enable_act=None,
+                            disable_act=None,
                             runs=[], 
                             scheduler_str="testsched", 
                             node_pool=TEST_POOL)
         
-        self.mc.jobs = {self.job.name: self.job}
+        self.service = turtle.Turtle(
+                            name='name',
+                            runs=[],
+                            scheduler_str="testsched",
+                            node_pool=TEST_POOL)
+
+        self.mc.jobs = {self.job.name: self.job, self.service.name: self.service}
 
         self.resource = www.JobsResource(self.mc)
 
@@ -66,7 +74,14 @@ class JobsTest(TestCase):
         job_result = simplejson.loads(resp)
         assert 'jobs' in job_result
         assert job_result['jobs'][0]['name'] == "testname"
-    
+ 
+    def test_service_list(self):
+        """Test that we get a proper job list"""
+        resp = self.resource.render_GET(REQUEST)
+        job_result = simplejson.loads(resp)
+        assert 'services' in job_result
+        assert job_result['services'][0]['name'] == "name"   
+
     def test_get_job(self):
         """Test that we can find a specific job"""
         child = self.resource.getChildWithDefault("testname", turtle.Turtle())
@@ -83,6 +98,8 @@ class JobDetailTest(TestCase):
     def build_resource(self):
         self.job = turtle.Turtle(
                                  name="foo",
+                                 enable_runs=[],
+                                 disable_runs=[],
                                  runs=[
                                        turtle.Turtle(
                                                      id="1",

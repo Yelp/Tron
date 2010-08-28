@@ -238,9 +238,13 @@ class JobResource(resource.Resource):
         for job_run in self._job.runs:
             run_output.append(self.get_run_data(request, job_run))
 
-        ed_run_output = []
-        for ed_run in self._job.ed_runs:
-            ed_run_output.append(self.get_run_data(request, ed_run))
+        enable_run_output = []
+        for e_run in self._job.enable_runs:
+            enable_run_output.append(self.get_run_data(request, e_run))
+
+        disable_run_output = []
+        for d_run in self._job.disable_runs:
+            disable_run_output.append(self.get_run_data(request, d_run))
 
         resources_output = []
         
@@ -248,7 +252,8 @@ class JobResource(resource.Resource):
             'name': self._job.name,
             'scheduler': str(self._job.scheduler),
             'runs': run_output,
-            'ed_runs': ed_run_output,
+            'enable_runs': enable_run_output,
+            'disable_runs': disable_run_output,
             'action_names': map(lambda t: t.name, self._job.topo_actions),
             'node_pool': map(lambda n: n.hostname, self._job.node_pool.nodes),
         }

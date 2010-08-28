@@ -56,25 +56,21 @@ class TronConfiguration(yaml.YAMLObject):
                 raise yaml.YAMLError("%s is previously defined" % nex.name)
             dic[nex.name] = 1
             return dic
-         
-        if hasattr(self, 'jobs'):
-            found_jobs = reduce(check_dup, self.jobs, {})
-            for job_config in self.jobs:
-                new_job = job_config.actualized
-                log.debug("Building new job %s", job_config.name)
-                mcp.add_job(new_job)
+        
+        jobs = self.jobs if hasattr(self, 'jobs') else []
+        jobs.extend(self.services if hasattr(self, 'services') else [])
 
-            for job_name in mcp.jobs.keys():
-                if job_name not in found_jobs:
-                    log.debug("Removing job %s", job_name)
-                    del mcp.jobs[job_name]
+        found_jobs = reduce(check_dup, jobs, {})
+        for job_config in jobs:
+            new_job = job_config.actualized
+            log.debug("Building new job %s", job_config.name)
+            mcp.add_job(new_job)
 
-        if hasattr(self, 'services'):
-            for serv_config in self.services:
-                new_serv = serv_config.actualized
-                log.debug("Building new service %s", serv_config.name)
-                mcp.add_job(new_serv)
-            
+        for job_name in mcp.jobs.keys():
+            if job_name not in found_jobs:
+                log.debug("Removing job %s", job_name)
+                del mcp.jobs[job_name]
+
     def _get_working_dir(self, mcp):
         if mcp.state_handler.working_dir:
             return mcp.state_handler.working_dir

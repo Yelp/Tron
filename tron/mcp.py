@@ -33,11 +33,20 @@ class StateHandler(object):
     def restore_job(self, job, data):
         job.enabled = data['enabled']
 
-        for ed_r_data in reversed(data['ed_runs']):
-            run = job.restore_ed_run(ed_r_data)
+        try:
+            for e_data in data['enable_runs']:
+                run = job.restore_enable_run(e_data)
+        except Exception, e:
+            log.error("Cannot restore enabling runs for job %s: %s" % (job.name, str(e))) 
 
-        for r_data in reversed(data['runs']):
-            run = job.restore_run(r_data)
+        try:
+            for d_data in data['disable_runs']:
+                run = job.restore_disable_run(d_data)
+        except Exception, e:
+            log.error("Cannot restore disabling runs for job %s: %s" % (job.name, str(e))) 
+
+        for r_data in data['runs']:
+            run = job.restore_main_run(r_data)
             if run.is_scheduled:
                 reactor.callLater(sleep_time(run.run_time), self.mcp.run_job, run)
 
@@ -217,7 +226,10 @@ class MasterControlProgram(object):
         """This schedules the first time each job runs"""
         for tron_job in self.jobs.itervalues():
             if tron_job.enabled:
-                self.enable_job(tron_job)
+                if tron_job.runs:
+                    self.schedule_next_run(tron_job)
+                else:
+                    self.enable_job(tron_job)
         
         self.state_handler.writing_enabled = True
         self.state_handler.store_data()

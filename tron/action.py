@@ -313,6 +313,9 @@ class Action(object):
 
         return all([me == you for (me, you) in zip(self.required_actions, other.required_actions)]) 
 
+    def __ne__(self, other):
+        return not self == other
+
     def build_run(self, job_run):
         """Build an instance of ActionRun for this action
         

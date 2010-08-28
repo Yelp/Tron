@@ -98,11 +98,16 @@ def view_job(options, job_name):
     print "Node Pool:"
     print "\n".join(job_content['node_pool'])
     print
-    if job_content['ed_runs']:
-        print "Enable/Disable Run History: (%d total)" % len(job_content['ed_runs'])
-        print_job_runs(options, job_content['ed_runs'])
-        
-    print
+    if job_content['enable_runs']:
+        print "Enabling Run History: (%d total)" % len(job_content['enable_runs'])
+        print_job_runs(options, job_content['enable_runs'])
+        print
+
+    if job_content['disable_runs']:
+        print "Disabling Run History: (%d total)" % len(job_content['disable_runs'])
+        print_job_runs(options, job_content['disable_runs'])       
+        print
+
     print "Run History: (%d total)" % len(job_content['runs'])
     print_job_runs(options, job_content['runs'])
 
