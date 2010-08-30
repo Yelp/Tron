@@ -44,7 +44,7 @@ def view_all(options):
         print " ".join((name.ljust(size) for name, size in JOB_COLUMNS))
 
         # Show service data
-        for job in content['services']:
+        for job in sorted(content['services'], key=lambda s: s['name']):
             print " ".join(str(val).ljust(size) for val, (_, size) in zip((job['name'], job['status'], job['scheduler'], job['last_success']), JOB_COLUMNS))
 
     print
@@ -55,7 +55,7 @@ def view_all(options):
         print " ".join((name.ljust(size) for name, size in JOB_COLUMNS))
 
         # Show job data
-        for job in content['jobs']:
+        for job in sorted(content['jobs'], key=lambda j: j['name']):
             print " ".join(str(val).ljust(size) for val, (_, size) in zip((job['name'], job['status'], job['scheduler'], job['last_success']), JOB_COLUMNS))
 
 def print_job_runs(options, runs):
