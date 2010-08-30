@@ -121,13 +121,41 @@ jobs:
             - &actionFailQueue !Action
                 name: "actionFailQueue1"
                 command: "sleep 15; failfailfail"
-    - &jobAddition !Job
-        name: "nextaddition"
+
+    - &jobAllNodes !Job
+        name: "allnodes"
         node: *node_pool
+        all_nodes: True
         schedule: !IntervalScheduler
-            interval: 12s
+            interval: 50s
         actions:
             - &actionAddition !Action
-                name: "somenewshit"
-                command: "sleep 4; echo jobs done"
+                name: "allnode0"
+                command: "sleep 4; echo im awake"
 
+            - &acitonWait !Action
+                name: "allnode1"
+                command: "sleep 2; echo jobs done"
+
+services:
+    - &service0 !Service
+        name: "service0"
+        node: *node_pool
+        enable: !Action
+            name: "enable"
+            command: "sleep 4; echo enabled"
+        disable: !Action
+            name: "disable"
+            command: "sleep 5; echo disabled"
+        monitor:
+            schedule: !IntervalScheduler
+                interval: 40s
+            actions:
+                - &mon0 !Action
+                    name: "mon0"
+                    command: "sleep 4; echo mon0"
+                - !Action
+                    name: "mon1"
+                    command: "sleep1; echo mon1"
+                    requires: *mon0
+        

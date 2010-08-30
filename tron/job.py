@@ -248,7 +248,7 @@ class Job(object):
         return self.scheduler.next_runs(self)
 
     def build_action_dag(self, job_run, actions):
-        #Build actions and setup requirements
+        """Build actions and setup requirements"""
         runs = {}
         for a in actions:
             run = a.build_run(job_run)
@@ -267,11 +267,13 @@ class Job(object):
         if os.path.exists(self.output_dir) and not os.path.exists(job_run.output_dir):
             os.mkdir(job_run.output_dir)
 
-        actions = actions or self.topo_actions
-        self.build_action_dag(job_run, actions)
-        self.runs.appendleft(job_run)
-        self.remove_old_runs()
+        # If the actions aren't specified, then we know this is a normal run
+        if not actions:
+            self.runs.appendleft(job_run)
+            actions = self.topo_actions
+            self.remove_old_runs()
 
+        self.build_action_dag(job_run, actions)
         return job_run
 
     def build_runs(self):
