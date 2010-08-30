@@ -11,109 +11,104 @@ nodes:
         hostnames: ['dev3sv', 'dev4sv']
 
 jobs:
-    - &intJob !Job
-        name: "interval0a"
+    - !Job
+        name: "interval_dag"
         node: *node0
         schedule: !IntervalScheduler
             interval: 20s
         actions:
-            - &intAction0 !Action
-                name: "actionInterval00"
-                command: "sleep 3; echo 4"
-            - &intAction1 !Action
-                name: "actionInterval01"
-                command: "sleep 3; echo 4"
-                requires: *intAction0
-            - &intAction2 !Action
-                name: "actionInterval02"
-                command: "sleep 3; echo 4"
-                requires: *intAction0
-    - &jobFoo !Job
-        name: "interval0b"
-        node: *node0
-        schedule: !IntervalScheduler
-            interval: 20s
-        actions:
-            - &actionFoo !Action
-                name: "actionInterval0b"
-                command: "python test.py"
-            - &actionBar !Action
-                name: "actionFollow"
-                command: "echo 1;sleep 5;easdfasdfdscho 2"
-                requires: *actionFoo
+            - &dag0 !Action
+                name: "dag0"
+                command: "sleep 3; echo 0"
+            - &dag1 !Action
+                name: "dag1"
+                command: "sleep 3; echo 1"
+                requires: *dag0
+            - &dag2 !Action
+                name: "dag2"
+                command: "sleep 3; echo 2"
+                requires: *dag0
+            - !Action
+                name: "dag3"
+                command: "sleep 1; echo 3"
+                requires: [*dag1, *dag2]
 
-    - &jobFail !Job
-        name: "testfail1"
+    - !Job
+        name: "fail_dag"
         node: *node_pool
         schedule: !IntervalScheduler
             interval: 20s
         actions:
-            - &actionFail !Action
-                name: "actionTestFail1"
+            - &action_fail !Action
+                name: "action_test_fail1"
                 command: "sleep 5;failfailfail"
-            - &actionCanc !Action
-                name: "actionCanc"
-                requires: *actionFail
-                command: "sleep 1; echo Canc; sleep 1"
+            - !Action
+                name: "cancel0"
+                requires: *action_fail
+                command: "sleep 1; echo cancelled; sleep 1"
+            - !Action
+                name: "cancel1"
+                requires: *action_fail
+                command: "sleep 1; echo cancelled; sleep 1"
 
-    - &jobConstant !Job
-        name: "constant1"
+    - !Job
+        name: "constant"
         node: *node_pool
         schedule: "constant"
         actions:
-            - &actionConstant0 !Action
-                name: "constantLeader0"
+            - &action_const0 !Action
+                name: "constant_lead0"
                 command: "sleep 5; echo constant; sleep 2"
-            - &actionConstant1 !Action
-                name: "constantLeader1"
+            - &action_const1 !Action
+                name: "different_node"
                 node: *node0
                 command: "sleep 1; echo following; sleep 2"
             - &actionFoll !Action
-                name: "follow0"
+                name: "follow"
                 command: "sleep 1; echo following; sleep 2"
-                requires: [*actionConstant0, *actionConstant1]
+                requires: [*action_const0, *action_const1]
             
-    - &jobMF !Job
-        name: "dailyMF"
+    - !Job
+        name: "daily_mws"
         node: *node_pool
-        schedule: "MS"
+        schedule: "MWS" # All Days: MTWRFSU
         actions:
             - &actionMF !Action
-                name: "actionMF"
-                command: "sleep 5;echo mf; sleep 2"
+                name: "action_mws"
+                command: "sleep 5; echo mws; sleep 2"
 
-    - &jobDaily !Job
-        name: "daily1"
+    - !Job
+        name: "daily"
         node: *node_pool
         schedule: "daily"
         actions:
             - &actionDaily !Action
-                name: "actionDaily1"
-                command: "sleep 5;echo daily1; sleep 2"
+                name: "action_daily"
+                command: "sleep 5; echo daily; sleep 2"
 
-    - &jobQueue !Job
-        name: "queueing1"
+    - !Job
+        name: "queueing"
         node: *node_pool
+        queueing: True
         schedule: !IntervalScheduler
             interval: 12s
         actions:
-            - &actionQueue !Action
-                name: "actionQueueing1"
+            - !Action
+                name: "long_action"
                 command: "sleep 10; echo queueing; sleep 10"
 
-    - &jobCancel !Job
-        name: "cancel0"
+    - !Job
+        name: "cancel"
         node: *node0
-        queueing: False
         schedule: !IntervalScheduler
             interval: 12s
         actions:
-            - &actionCancel !Action
+            - !Action
                 name: "actionCancel"
                 command: "sleep 10; echo cancelnext; sleep 10"
 
-    - &jobFailQueue !Job
-        name: "failqueue1"
+    - !Job
+        name: "fail_queue"
         node: *node_pool
         schedule: !IntervalScheduler
             interval: 12s
@@ -122,23 +117,22 @@ jobs:
                 name: "actionFailQueue1"
                 command: "sleep 15; failfailfail"
 
-    - &jobAllNodes !Job
-        name: "allnodes"
+    - !Job
+        name: "all_nodes"
         node: *node_pool
         all_nodes: True
         schedule: !IntervalScheduler
             interval: 50s
         actions:
             - &actionAddition !Action
-                name: "allnode0"
+                name: "all_node0"
                 command: "sleep 4; echo im awake"
-
             - &acitonWait !Action
-                name: "allnode1"
+                name: "all_node1"
                 command: "sleep 2; echo jobs done"
 
 services:
-    - &service0 !Service
+    - !Service
         name: "service0"
         node: *node_pool
         enable: !Action
