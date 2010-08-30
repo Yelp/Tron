@@ -46,8 +46,8 @@ class DailyScheduler(object):
         self.wait_days = self.get_daily_waits(days)
         
     def get_daily_waits(self, days):
-        """Computes how many days to wait till the next run from any day.
-        e.g. If the next run is on Thursday and today is Monday.  Monday's entry is 3
+        """Computes how many days to wait till the next run from any day, starting with Monday.
+        Example: MF runner:  [4, 3, 2, 1, 3, 2, 1]
         """
         if isinstance(days, int):
             return [days for i in range(7)]

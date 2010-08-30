@@ -261,17 +261,13 @@ class Job(object):
                 run.required_runs.append(runs[req.name])
         
     def build_run(self, node=None, actions=None, run_num=None):
-        job_run = JobRun(self)
-        job_run.node = node or self.node_pool.next() 
-        actions = actions or self.topo_actions
-
         job_run = JobRun(self, run_num=run_num)
-        if self.node_pool:
-            job_run.node = self.node_pool.next() 
+        job_run.node = node or self.node_pool.next() 
  
         if os.path.exists(self.output_dir) and not os.path.exists(job_run.output_dir):
             os.mkdir(job_run.output_dir)
 
+        actions = actions or self.topo_actions
         self.build_action_dag(job_run, actions)
         self.runs.appendleft(job_run)
         self.remove_old_runs()
@@ -280,17 +276,16 @@ class Job(object):
 
     def build_runs(self):
         if self.all_nodes:
-            return [self.build_run(node) for node in self.node_pool.nodes]
+            return [self.build_run(node=node) for node in self.node_pool.nodes]
         return [self.build_run()]
 
     def manual_start(self):
-        run = self.build_run()
-        if self.runs[0].is_scheduled:
+        if self.runs and self.runs[0].is_scheduled:
             top = self.runs.popleft()
-            self.runs.appendleft(run)
+            run = self.build_run()
             self.runs.appendleft(top)
         else:
-            self.runs.appendleft(run)
+            run = self.build_run()
 
         run.queue()
 

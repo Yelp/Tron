@@ -156,6 +156,18 @@ class TestJob(TestCase):
     def teardown(self):
         shutil.rmtree(self.test_dir)       
 
+    def test_all_nodes_build_run(self):
+        self.job.all_nodes = True
+        self.job.node_pool = turtle.Turtle(nodes=[turtle.Turtle(), turtle.Turtle(), turtle.Turtle()])
+        runs = self.job.build_runs()
+
+        assert_equals(len(runs), 3)
+
+        assert_equals(runs[0].node, self.job.node_pool.nodes[0])
+        assert_equals(runs[1].node, self.job.node_pool.nodes[1])
+        assert_equals(runs[2].node, self.job.node_pool.nodes[2])
+
+
     def test_remove_old_runs(self):
         self.job.run_limit = 3
         runs = []
@@ -228,8 +240,11 @@ class TestJob(TestCase):
         assert self.job.enabled
 
     def test_next_num(self):
+        job2 = job.Job("New Job")
+
         for i in range(10):
             assert_equals(self.job.next_num(), i)
+            assert_equals(job2.next_num(), i)
 
     def test_get_run_by_num(self):
         runs = []
@@ -257,5 +272,37 @@ class TestJob(TestCase):
         assert_equals(run2.runs[0].action, self.action)
         assert_equals(run2.runs[1].action, act)
         
-        
+    def test_manual_start_no_scheduled(self):
+        r1 = self.job.build_run()
+        r1.succeed()
 
+        mr1 = self.job.manual_start()
+        assert_equal(len(self.job.runs), 2)
+        assert mr1.is_running
+
+        mr2 = self.job.manual_start()
+        assert_equal(len(self.job.runs), 3)
+        assert mr2.is_queued
+
+    def test_manual_start_scheduled_run(self):
+        r1 = self.job.next_runs()[0]
+        r1.succeed()
+        r2 = self.job.next_runs()[0]
+
+        mr1 = self.job.manual_start()
+        assert_equal(len(self.job.runs), 3)
+
+        assert_equal(self.job.runs[0], r2)
+        assert_equal(self.job.runs[1], mr1)
+        assert_equal(self.job.runs[2], r1)
+
+        assert mr1.is_running
+
+        mr2 = self.job.manual_start()
+        assert_equal(len(self.job.runs), 4)
+        assert_equal(self.job.runs[1], mr2)
+        assert_equal(self.job.runs[2], mr1)
+
+        assert mr2.is_queued
+
+        
