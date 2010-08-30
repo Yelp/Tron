@@ -1,3 +1,11 @@
+tron (0.1.2) UNRELEASED; urgency=low
+
+  * Services (matthewtytel)
+  * Smarter node pools (run all nodes) (matthewtytel)
+  * Randomized node pool selection (matthewtytel)
+
+ -- Rhett Garber <rhettg@gmail.com>  Thu, 19 Aug 2010 11:05:00 -0700
+
 tron (0.1.1) UNRELEASED; urgency=low
 
   * On the fly reconfiguration (matthewtytel)
