@@ -126,7 +126,7 @@ def view_job_run(options, job_run_id):
         end_time = (run['end_time'] and run['end_time'][:-7]) or "-"
         duration = (run['duration'] and run['duration'][:-7]) or "-"
 
-        print " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time), RUN_COLUMNS))
+        print " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time, duration), RUN_COLUMNS))
 
 def view_action_run(options, act_run_id):
     url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'), options.num_shown)
