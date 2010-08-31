@@ -1,0 +1,20 @@
+--- !TronConfiguration
+ssh_options: !SSHOptions
+    agent: true
+
+nodes:
+    - &node0 !Node
+        hostname: 'examplehost1'
+    - &node_pool !NodePool
+        hostnames: ['examplehost2', 'examplehost3']
+
+jobs:
+    - !Job
+       name: "uptime_job"
+       node: *node_pool
+       schedule: !IntervalScheduler
+           interval: 1m
+       actions:
+           - !Action
+             name: "uptimer"
+             command: "uptime"

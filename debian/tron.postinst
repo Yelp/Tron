@@ -1,0 +1,10 @@
+#!/bin/sh -e
+#
+# Post-installation script for tron
+
+chown batch:root /var/log/tron/
+chmod 750 /var/log/tron/
+
+#DEBHELPER#
+
+exit 0
