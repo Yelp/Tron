@@ -12,7 +12,7 @@ jobs:
     - !Job
        name: "uptime_job"
        node: *node_pool
-       schule: !IntervalScheduler
+       schedule: !IntervalScheduler
            interval: 1m
        actions:
            - !Action

@@ -38,12 +38,12 @@
 #                       Monitoring of jobs
 ### END INIT INFO
 
-PATH=/usr/bin
+PATH=/usr/bin:/usr/sbin:/sbin:/bin
 
 DAEMON=/usr/bin/trond # Introduce the server's location here
 NAME=tron             # Introduce the short server's name here
 DESC=tron             # Introduce a short description here
-LOGDIR=/var/log/      # Log directory to use
+LOGDIR=/var/log/tron  # Log directory to use
 
 PIDFILE=/var/run/$NAME.pid
 
@@ -70,7 +70,7 @@ DIETIME=10              # Time to wait for the server to die, in seconds
                         # when it actually did)
 
 LOGFILE=$LOGDIR/$NAME.log  # Server logfile
-DAEMONUSER=batch        # Users to run the daemons as. If this value
+DAEMONUSER="batch"      # Users to run the daemons as. If this value
                         # is set start-stop-daemon will chuid the server
 
 # Include defaults if available
@@ -257,21 +257,20 @@ case "$1" in
         fi
         ;;
   reload)
-           log_daemon_msg "Reloading $DESC configuration files" "$NAME"
-           if running ; then
-              reload_server
-              if ! running ;  then
-                 log_progress_msg "died on reload"
-                 log_end_msg 1
-                 exit 0
-              fi
-           else
-              log_progress_msg "server is not running"
+        log_daemon_msg "Reloading $DESC configuration files" "$NAME"
+        if running ; then
+           reload_server
+           if ! running ;  then
+              log_progress_msg "died on reload"
               log_end_msg 1
               exit 0
            fi
-                                                                                    #;;
-
+        else
+           log_progress_msg "server is not running"
+           log_end_msg 1
+           exit 0
+        fi
+		;;
   *)
         N=/etc/init.d/$NAME
         echo "Usage: $N {start|stop|force-stop|restart|force-reload|status}" >&2
