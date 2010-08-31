@@ -6,9 +6,12 @@ ssh_options: !SSHOptions
 
 nodes:
     - &node0 !Node
-        hostname: 'dev4sv'
+        hostname: 'dev2sv'
+    - &node1 !Node
+        hostname: 'dev3sv'
+
     - &node_pool !NodePool
-        hostnames: ['dev3sv', 'dev4sv']
+        nodes: [*node0, *node1]
 
 jobs:
     - !Job

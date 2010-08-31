@@ -5,10 +5,13 @@ ssh_options: !SSHOptions
     agent: true
 
 nodes:
-    - &node !Node
-        hostname: 'dev4sv'
+    - &node1 !Node
+        hostname: 'dev2sv'
+    - &node2 !Node
+        hostname: 'dev3sv'
+
     - &pool !NodePool
-        hostnames: ['dev2sv', 'dev3sv']
+        nodes: [*node1, *node2]
 
 jobs:
     - &job0 !Job
