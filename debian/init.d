@@ -40,7 +40,7 @@
 
 PATH=/usr/bin
 
-DAEMON=/usr/bin/tron  # Introduce the server's location here
+DAEMON=/usr/bin/trond # Introduce the server's location here
 NAME=tron             # Introduce the short server's name here
 DESC=tron             # Introduce a short description here
 LOGDIR=/var/log/      # Log directory to use
