@@ -4,8 +4,10 @@ import tempfile
 import optparse
 import sys
 import yaml
+import tempfile
+import shutil
 
-from tron import cmd, config
+from tron import mcp, cmd, config
 
 def parse_options():
     parser = optparse.OptionParser("usage: %prog [options] [-]")
@@ -28,15 +30,20 @@ def upload_config(options, contents):
         print "Configuration uploaded successfully"
 
 def test_config(file_name):
-    file = open(file_name)
+    tmpdir = tempfile.mkdtemp()
+    worked = True
+    
+    # Can the MCP handle the configuration?
     try:
-        config.load_config(file)
-        file.close()
+        master = mcp.MasterControlProgram(tmpdir, file_name)
+        master.load_config()
+        shutil.rmtree(tmpdir)
         return True
-    except (yaml.YAMLError, config.ConfigError), e:
+    except Exception, e:
         print >>sys.stderr, "Error in configuration: %s" % str(e)
-        file.close()
-        return False
+        shutil.rmtree(tmpdir)
+
+    return False
 
 def edit_config(options, contents):
     fi = tempfile.NamedTemporaryFile(suffix='.yaml')

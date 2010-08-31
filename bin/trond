@@ -67,7 +67,7 @@ def main():
     master_control = mcp.MasterControlProgram(options.working_dir, options.config_file)
     try:
         master_control.load_config()
-    except config.ConfigError, e:
+    except Exception, e:
         print >>sys.stderr, "Error in configuration file:", e
         sys.exit()
 
