@@ -1,0 +1,10 @@
+# Defaults for tron initscript
+# sourced by /etc/init.d/tron
+# installed at /etc/default/tron by the maintainer scripts
+
+#
+# This is a POSIX shell fragment
+#
+
+# Additional options that are passed to the Daemon.
+DAEMON_OPTS="-v -c /etc/tron/tron.yaml -l /var/log/tron.log"
