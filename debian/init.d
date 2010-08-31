@@ -38,9 +38,9 @@
 #                       Monitoring of jobs
 ### END INIT INFO
 
-PATH=/usr/sbin:/usr/bin
+PATH=/usr/bin
 
-DAEMON=/usr/sbin/tron # Introduce the server's location here
+DAEMON=/usr/bin/tron  # Introduce the server's location here
 NAME=tron             # Introduce the short server's name here
 DESC=tron             # Introduce a short description here
 LOGDIR=/var/log/      # Log directory to use
@@ -282,3 +282,4 @@ case "$1" in
 esac
 
 exit 0
+# vim: set syntax=sh:
