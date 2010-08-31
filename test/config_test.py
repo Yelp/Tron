@@ -234,7 +234,7 @@ services:
     def test_command_context(self):
         assert hasattr(self.test_config, "command_context")
         assert_equal(self.test_config.command_context['python'], "/usr/bin/python")
-        #assert_equal(self.my_mcp.context['python'], "/usr/bin/python")
+        assert_equal(self.my_mcp.context['python'], "/usr/bin/python")
         assert_equal(self.job1.context['python'], "/usr/bin/python")
 
     def test_service_attributes(self):
