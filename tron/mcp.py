@@ -154,7 +154,7 @@ class MasterControlProgram(object):
             return
 
         for node in node_pool.nodes:
-            if not node in self.nodes:
+            if node not in self.nodes:
                 self.nodes.append(node)
 
     def add_job_nodes(self, job):

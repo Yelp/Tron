@@ -53,6 +53,20 @@ class _ConfiguredObject(yaml.YAMLObject, FromDictBuilderMixin):
     def _build(self):
         return self.actual_class()
 
+    def __cmp__(self, other):
+        if not isinstance(other, self.__class__):
+            return -1
+
+        our_dict = [(key, value) for key, value in self.__dict__.iteritems() if not key.startswith('_')]
+        other_dict = [(key, value) for key, value in other.__dict__.iteritems() if not key.startswith('_')]
+        
+        c = cmp(our_dict, other_dict)
+        print c, our_dict, other_dict
+        return c
+
+    def __hash__(self):
+        raise Exception('hashing')
+
     @property
     def actualized(self):
         if not hasattr(self, '_ref'):
@@ -117,7 +131,6 @@ class TronConfiguration(yaml.YAMLObject):
 
         if hasattr(self, 'ssh_options'):
             self.ssh_options = default_or_from_tag(self.ssh_options, SSHOptions)
-                
             self.ssh_options._apply(mcp)
         
         if hasattr(self, 'notification_options'):
@@ -210,7 +223,15 @@ class Job(_ConfiguredObject):
                     
     def _apply(self):
         real_job = self._ref()
-        real_job.node_pool = self.node.actualized
+        node = default_or_from_tag(self.node, Node)
+
+        if not isinstance(node, NodePool):
+            node_pool = NodePool()
+            node_pool.nodes.append(node)
+        else:
+            node_pool = node
+            
+        real_job.node_pool = node_pool.actualized
         
         self._match_name(real_job, self.name)
         self._match_schedule(real_job, self.schedule)
@@ -225,6 +246,7 @@ class Job(_ConfiguredObject):
 
         if hasattr(self, "all_nodes"):
             real_job.all_nodes = self.all_nodes
+
 
 class Service(Job):
     yaml_tag = u'!Service'
@@ -243,6 +265,7 @@ class Service(Job):
         
         if hasattr(self, "disable"):
             real_service.disable_act = self._create_action(real_service, self.disable)
+
 
 class Action(_ConfiguredObject):
     yaml_tag = u'!Action'
@@ -266,29 +289,38 @@ class Action(_ConfiguredObject):
         real_action.command = self.command
         if hasattr(self, "node"):
             node = default_or_from_tag(self.node, Node)
-            real_action.node_pool = node.actualized
+            if not isinstance(node, NodePool):
+                node_pool = NodePool()
+                node_pool.nodes.append(node)
+            else:
+                node_pool = node
+                
+            real_action.node_pool = node_pool.actualized
 
         if hasattr(self, "requires"):
             self._apply_requirements(real_action, self.requires)
 
+
 class NodePool(_ConfiguredObject):
     yaml_tag = u'!NodePool'
     actual_class = node.NodePool
-    
+    def __init__(self, *args, **kwargs):
+        super(NodePool, self).__init__(*args, **kwargs)
+        self.nodes = []
     def _apply(self):
         real_node_pool = self._ref()
-        for name in self.hostnames:
-            real_node_pool.nodes.append(node.Node(name))
+        for node in self.nodes:
+            real_node_pool.nodes.append(default_or_from_tag(node, Node).actualized)
         
         
 class Node(_ConfiguredObject):
     yaml_tag = u'!Node'
-    actual_class = node.NodePool
+    actual_class = node.Node
     
     def _apply(self):
         real_node = self._ref()
-        real_node.nodes.append(node.Node(self.hostname))
- 
+        real_node.hostname = self.hostname
+
 
 class NodeResource(yaml.YAMLObject):
     yaml_tag = u'!NodeResource'

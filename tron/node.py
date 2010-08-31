@@ -78,6 +78,15 @@ class Node(object):
     
         self.run_states = {}       # Map of run id to instance of RunState
 
+    def __cmp__(self, other):
+        if not isinstance(other, self.__class__):
+            return -1
+
+        CMP_KEYS = ('hostname')
+        self_dict = dict((key, value) for key, value in self.__dict__.iteritems() if key in CMP_KEYS)
+        other_dict = dict((key, value) for key, value in other.__dict__.iteritems() if key in CMP_KEYS)
+        return cmp(self_dict, other_dict)
+
     def run(self, run):
         """Execute the specified run
         
