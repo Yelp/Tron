@@ -92,23 +92,21 @@ jobs:
                 command: "test_command4.0"
 
 services:
-    - !Service
+    -
         name: "service0"
         node: *nodePool
-        enable: !Action
-            name: "enable"
+        enable:
             command: "service_command0"
-        disable: !Action
-            name: "disable"
+        disable:
             command: "service_command1"
         monitor:
             schedule: !IntervalScheduler
                 interval: 40s
             actions:
-                - &mon0 !Action
+                - &mon0
                     name: "mon0"
                     command: "service_command2"
-                - !Action
+                -
                     name: "mon1"
                     command: "service_command3"
                     requires: *mon0
@@ -144,7 +142,8 @@ services:
         assert hasattr(self.test_config, "jobs")
         assert hasattr(self.test_config, "ssh_options")
 
-        assert_equal(len(self.test_config.jobs), 6)
+        assert_equal(len(self.test_config.jobs), 5)
+        assert_equal(len(self.test_config.services), 1)
         assert_equal(len(self.test_config.nodes), 3)
         
     def test_node_attribute(self):

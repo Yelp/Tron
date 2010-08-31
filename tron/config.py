@@ -258,18 +258,31 @@ class Service(Job):
         
         self._match_name(real_service, self.name)
         self._match_schedule(real_service, self.monitor['schedule'])
-        self._match_actions(real_service, self.monitor['actions'])
+
+        monitor_actions = [default_or_from_tag(act, Action) for act in self.monitor['actions']]
+        self._match_actions(real_service, monitor_actions)
 
         if hasattr(self, "enable"):
-            real_service.enable_act = self._create_action(real_service, self.enable)
+            enable = default_or_from_tag(self.enable, Action)
+            enable.name = enable.name or "enable"
+            
+            real_service.enable_act = self._create_action(real_service, enable)
         
         if hasattr(self, "disable"):
-            real_service.disable_act = self._create_action(real_service, self.disable)
+            disable = default_or_from_tag(self.disable, Action)
+            disable.name = disable.name or "disable"
+
+            real_service.disable_act = self._create_action(real_service, disable)
 
 
 class Action(_ConfiguredObject):
     yaml_tag = u'!Action'
     actual_class = action.Action
+
+    def __init__(self, *args, **kwargs):
+        super(Action, self).__init__(*args, **kwargs)
+        self.name = None
+        self.command = None
     
     def _apply_requirements(self, real_action, requirements):
         if not isinstance(requirements, list):
