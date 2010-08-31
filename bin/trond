@@ -3,6 +3,7 @@ import logging
 import sys
 import datetime
 import optparse
+import signal
 import os
 import gc
 
@@ -11,6 +12,8 @@ from twisted.internet import reactor, defer
 from twisted.web import server
 
 from tron import mcp, job, resource, node, scheduler, www, monitor, emailer, config
+
+logger = logging.getLogger('bin.trond')
 
 def parse_options():
     parser = optparse.OptionParser()
@@ -70,6 +73,12 @@ def main():
     except Exception, e:
         print >>sys.stderr, "Error in configuration file:", e
         sys.exit()
+    
+    def sighup_handler(signum, frame):
+        logger.info("SIGHUP Caught!")
+        reactor.callLater(0, master_control.live_reconfig)
+
+    signal.signal(signal.SIGHUP, sighup_handler)
 
     # Start up our web management interface
     reactor.listenTCP(options.listen_port, server.Site(www.RootResource(master_control)), interface=options.listen_host)

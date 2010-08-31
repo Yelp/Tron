@@ -359,8 +359,7 @@ class ConfigResource(resource.Resource):
         self._master_control.rewrite_config(new_config)
         response = {'status': "I'm alive biatch"}
         try:
-            self._master_control.load_config()
-            self._master_control.run_jobs()
+            self._master_control.live_reconfig()
         except Exception, e:
             response['error'] = str(e)
         
