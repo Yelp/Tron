@@ -17,8 +17,28 @@ class Error(Exception):
     
 class ConfigError(Exception):
     pass
+
+class FromDictBuilderMixin(object):
+    """Mixin class for building YAMLObjects from dictionaries"""
+    @classmethod
+    def from_dict(cls, obj_dict):
+        # We just assume we want to make all the dictionary values into attributes
+        new_obj = cls()
+        new_obj.__dict__.update(obj_dict)
+        return new_obj
+
+
+def default_or_from_tag(value, cls):
+    """Construct a YAMLObject unless it already is one
     
-class _ConfiguredObject(yaml.YAMLObject):
+    We use this for providing default config types so it isn't required to "tag" everything with !MyConfigClass
+    """
+    if not isinstance(value, yaml.YAMLObject):
+        return cls.from_dict(value)
+    return value
+
+    
+class _ConfiguredObject(yaml.YAMLObject, FromDictBuilderMixin):
     """Base class for common configured objects where the configuration generates one actualized 
     object in the app that may be referenced by other objects."""
     actual_class = None     # Redefined to indicate the type of object this configuration will build
@@ -57,8 +77,8 @@ class TronConfiguration(yaml.YAMLObject):
             dic[nex.name] = 1
             return dic
         
-        jobs = self.jobs if hasattr(self, 'jobs') else []
-        jobs.extend(self.services if hasattr(self, 'services') else [])
+        jobs = [default_or_from_tag(job_val, Job) for job_val in getattr(self, 'jobs', [])]
+        jobs.extend([default_or_from_tag(job_val, Service) for job_val in getattr(self, 'services', [])])
 
         found_jobs = reduce(check_dup, jobs, {})
         for job_config in jobs:
@@ -96,13 +116,16 @@ class TronConfiguration(yaml.YAMLObject):
         self._apply_jobs(mcp)
 
         if hasattr(self, 'ssh_options'):
+            self.ssh_options = default_or_from_tag(self.ssh_options, SSHOptions)
+                
             self.ssh_options._apply(mcp)
         
         if hasattr(self, 'notification_options'):
+            self.notification_options = default_or_from_tag(self.notification_options, NotificationOptions)
             self.notification_options._apply(mcp)
         
 
-class SSHOptions(yaml.YAMLObject):
+class SSHOptions(yaml.YAMLObject, FromDictBuilderMixin):
     yaml_tag = u'!SSHOptions'
     
     def _build_conch_options(self):
@@ -138,7 +161,7 @@ class SSHOptions(yaml.YAMLObject):
             node.conch_options = options
 
 
-class NotificationOptions(yaml.YAMLObject):
+class NotificationOptions(yaml.YAMLObject, FromDictBuilderMixin):
     yaml_tag = u'!NotificationOptions'
     def _apply(self, mcp):
         if not hasattr(self, 'smtp_host'):
@@ -191,7 +214,8 @@ class Job(_ConfiguredObject):
         
         self._match_name(real_job, self.name)
         self._match_schedule(real_job, self.schedule)
-        self._match_actions(real_job, self.actions)
+        actions = [default_or_from_tag(action, Action) for action in self.actions]
+        self._match_actions(real_job, actions)
 
         if hasattr(self, "queueing"):
             real_job.queueing = self.queueing
@@ -225,11 +249,12 @@ class Action(_ConfiguredObject):
     actual_class = action.Action
     
     def _apply_requirements(self, real_action, requirements):
-        if hasattr(requirements, '__iter__'):
-            for req in requirements:
-                real_action.required_actions.append(req.actualized)
-        else:
-            real_action.required_actions.append(requirements.actualized)
+        if not isinstance(requirements, list):
+            requirements = [requirements]
+            
+        requirements = [default_or_from_tag(req, Action) for req in requirements]
+        for req in requirements:
+            real_action.required_actions.append(req.actualized)
 
     def _apply(self):
         """Configured the specific action instance"""
@@ -239,7 +264,9 @@ class Action(_ConfiguredObject):
 
         real_action.name = self.name
         real_action.command = self.command
-        real_action.node_pool = self.node.actualized if hasattr(self, "node") else None
+        if hasattr(self, "node"):
+            node = default_or_from_tag(self.node, Node)
+            real_action.node_pool = node.actualized
 
         if hasattr(self, "requires"):
             self._apply_requirements(real_action, self.requires)

@@ -40,21 +40,21 @@ jobs:
                 name: "action0_0"
                 command: "test_command0.0"
                 
-    - &job1 !Job
+    - &job1
         name: "test_job1"
         node: *node0
         schedule: !IntervalScheduler
             interval: 20s
         actions:
-            - &intAction2 !Action
+            - &intAction2
                 name: "action1_0"
                 command: "test_command1.0"
-            - &actionBar !Action
+            - &actionBar
                 name: "action1_1"
                 command: "test_command1.1"
                 requires: *intAction2
 
-    - &job2 !Job
+    - &job2
         name: "test_job2"
         node: *node1
         schedule: !DailyScheduler
@@ -64,30 +64,30 @@ jobs:
                 name: "action2_0"
                 command: "test_command2.0"
 
-    - &job3 !Job
+    - &job3
         name: "test_job3"
         node: *node1
         schedule: "constant"
         actions:
-            - &actionConstant0 !Action
+            - &actionConstant0
                 name: "action3_0"
                 command: "test_command3.0"
-            - &actionConstant1 !Action
+            - &actionConstant1
                 name: "action3_1"
                 command: "test_command3.1"
-            - &actionFollow !Action
+            - &actionFollow
                 name: "action3_2"
                 node: *node0
                 command: "test_command3.2"
                 requires: [*actionConstant0, *actionConstant1]
 
-    - &job4 !Job
+    - &job4
         name: "test_job4"
         node: *nodePool
         all_nodes: True
         schedule: "daily"
         actions:
-            - &actionDaily !Action
+            - &actionDaily
                 name: "action4_0"
                 command: "test_command4.0"
 
@@ -185,10 +185,13 @@ services:
 
         assert isinstance(self.job0.scheduler, scheduler.IntervalScheduler)
         assert_equal(self.job0.scheduler.interval, datetime.timedelta(seconds=20))
+
         assert isinstance(self.job1.scheduler, scheduler.IntervalScheduler)
         assert_equal(self.job1.scheduler.interval, datetime.timedelta(seconds=20))
+
         assert isinstance(self.job2.scheduler, scheduler.DailyScheduler)
         assert_equal(self.job2.scheduler.start_time, datetime.time(hour=16, minute=30, second=0))
+
         assert isinstance(self.job3.scheduler, scheduler.ConstantScheduler)
         assert isinstance(self.job4.scheduler, scheduler.DailyScheduler)
 
