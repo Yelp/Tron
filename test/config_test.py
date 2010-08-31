@@ -80,11 +80,35 @@ jobs:
     - &job4 !Job
         name: "test_job4"
         node: *nodePool
+        all_nodes: True
         schedule: "daily"
         actions:
             - &actionDaily !Action
                 name: "action4_0"
                 command: "test_command4.0"
+
+services:
+    - !Service
+        name: "service0"
+        node: *nodePool
+        enable: !Action
+            name: "enable"
+            command: "service_command0"
+        disable: !Action
+            name: "disable"
+            command: "service_command1"
+        monitor:
+            schedule: !IntervalScheduler
+                interval: 40s
+            actions:
+                - &mon0 !Action
+                    name: "mon0"
+                    command: "service_command2"
+                - !Action
+                    name: "mon1"
+                    command: "service_command3"
+                    requires: *mon0
+
 """
     @setup
     def setup(self):
@@ -102,6 +126,8 @@ jobs:
         self.job3 = self.my_mcp.jobs['test_job3']
         self.job4 = self.my_mcp.jobs['test_job4']
 
+        self.serv = self.my_mcp.jobs['service0']
+
         self.all_jobs = [self.job0, self.job1, self.job2, self.job3, self.job4]
 
     @teardown
@@ -114,7 +140,7 @@ jobs:
         assert hasattr(self.test_config, "jobs")
         assert hasattr(self.test_config, "ssh_options")
 
-        assert_equal(len(self.test_config.jobs), 5)
+        assert_equal(len(self.test_config.jobs), 6)
         assert_equal(len(self.test_config.nodes), 3)
         
     def test_node_attribute(self):
@@ -170,6 +196,10 @@ jobs:
                 a = j.topo_actions[act_count]
                 assert hasattr(a, "name")
                 assert_equal(a.name, "action%s_%s" % (job_count, act_count))
+
+    def test_all_ndoes_attribute(self):
+        assert self.job4.all_nodes
+        assert not self.job3.all_nodes
     
     def test_actions_command_attribute(self): 
         for job_count in range(len(self.all_jobs)):
@@ -196,4 +226,26 @@ jobs:
 
         assert_equals(dep0.required_actions[0], req0)
         assert_equals(dep1.required_actions[0], req1)
+
+    def test_service_attributes(self):
+        assert_equals(self.serv.name, 'service0')
+
+        assert self.serv.enable_act
+        assert_equals(self.serv.enable_act.name, 'enable')
+        assert_equals(self.serv.enable_act.command, 'service_command0')
+
+        assert self.serv.disable_act
+        assert_equals(self.serv.disable_act.name, 'disable')
+        assert_equals(self.serv.disable_act.command, 'service_command1')
+
+        assert_equals(len(self.serv.topo_actions), 2)
+        assert_equals(self.serv.topo_actions[0].name, 'mon0')
+        assert_equals(self.serv.topo_actions[0].command, 'service_command2')
+        assert_equals(len(self.serv.topo_actions[0].required_actions), 0)
+
+        assert_equals(self.serv.topo_actions[1].name, 'mon1')
+        assert_equals(self.serv.topo_actions[1].command, 'service_command3')
+        assert_equals(len(self.serv.topo_actions[1].required_actions), 1)
+        assert_equals(self.serv.topo_actions[1].required_actions[0], self.serv.topo_actions[0])
+        
 

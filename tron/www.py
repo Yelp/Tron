@@ -361,7 +361,7 @@ class ConfigResource(resource.Resource):
         try:
             self._master_control.load_config()
             self._master_control.run_jobs()
-        except (OSError, config.ConfigError), e:
+        except Exception, e:
             response['error'] = str(e)
         
         return respond(request, response)
