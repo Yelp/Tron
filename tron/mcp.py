@@ -113,13 +113,22 @@ class MasterControlProgram(object):
         self.config_file = config_file
         self.context = context
 
+    def live_reconfig(self):
+        try:
+            self.load_config()
+            self.run_jobs()
+        except Exception, e:
+            log.error("Reconfiguration failed.  Cancelling")
+    
     def load_config(self):
+        log.info("Loading configuration from %s" % self.config_file)
         try:
             opened_config = open(self.config_file, "r")
             configuration = config.load_config(opened_config)
             configuration.apply(self)
             opened_config.close()
         except (IOError, yaml.YAMLError), e:
+            log.error("Error reading configuration from %s" % self.config_file)
             raise config.ConfigError(e)
 
     def config_lines(self):

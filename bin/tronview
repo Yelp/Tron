@@ -17,6 +17,7 @@ RUN_COLUMNS = (
     ('Scheduled Time', 23),
     ('Start Time', 23),
     ('End Time', 23),
+    ('Duration', 23),
 )
 
 def parse_options():
@@ -44,7 +45,7 @@ def view_all(options):
         print " ".join((name.ljust(size) for name, size in JOB_COLUMNS))
 
         # Show service data
-        for job in content['services']:
+        for job in sorted(content['services'], key=lambda s: s['name']):
             print " ".join(str(val).ljust(size) for val, (_, size) in zip((job['name'], job['status'], job['scheduler'], job['last_success']), JOB_COLUMNS))
 
     print
@@ -55,7 +56,7 @@ def view_all(options):
         print " ".join((name.ljust(size) for name, size in JOB_COLUMNS))
 
         # Show job data
-        for job in content['jobs']:
+        for job in sorted(content['jobs'], key=lambda j: j['name']):
             print " ".join(str(val).ljust(size) for val, (_, size) in zip((job['name'], job['status'], job['scheduler'], job['last_success']), JOB_COLUMNS))
 
 def print_job_runs(options, runs):
@@ -65,22 +66,12 @@ def print_job_runs(options, runs):
         run_id = run['id']
         run_state = run['state']
 
-        if run['run_time'] is None:
-            run_time = "-"
-        else:
-            run_time = run['run_time'][:-7]
+        run_time = (run['run_time'] and run['run_time'][:-7]) or "-"
+        start_time = (run['start_time'] and run['start_time'][:-7]) or "-"
+        end_time = (run['end_time'] and run['end_time'][:-7]) or "-"
+        duration = (run['duration'] and run['duration'][:-7]) or "-"
 
-        if run['start_time'] is None:
-            start_time = "-"
-        else:
-            start_time = run['start_time'][:-7]
-
-        if run['end_time'] is None:
-            end_time = "-"
-        else:
-            end_time = run['end_time'][:-7]
-
-        print "".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time), RUN_COLUMNS))
+        print " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time, duration), RUN_COLUMNS))
 
 def view_job(options, job_name):
     """Retrieve details of the specified job and display"""
@@ -130,22 +121,12 @@ def view_job_run(options, job_run_id):
         run_id = run['id']
         run_state = run['state']
 
-        if run['run_time'] is None:
-            run_time = "-"
-        else:
-            run_time = run['run_time'][:-7]
+        run_time = (run['run_time'] and run['run_time'][:-7]) or "-"
+        start_time = (run['start_time'] and run['start_time'][:-7]) or "-"
+        end_time = (run['end_time'] and run['end_time'][:-7]) or "-"
+        duration = (run['duration'] and run['duration'][:-7]) or "-"
 
-        if run['start_time'] is None:
-            start_time = "-"
-        else:
-            start_time = run['start_time'][:-7]
-
-        if run['end_time'] is None:
-            end_time = "-"
-        else:
-            end_time = run['end_time'][:-7]
-
-        print " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time), RUN_COLUMNS))
+        print " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time, duration), RUN_COLUMNS))
 
 def view_action_run(options, act_run_id):
     url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'), options.num_shown)

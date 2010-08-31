@@ -131,7 +131,7 @@ class JobRunResource(resource.Resource):
             action_state = job_run_state(action_run)
             
             last_time = action_run.end_time if action_run.end_time else timeutils.current_time()
-            duration = (last_time - action_run.start_time).seconds if action_run.start_time else 0
+            duration = str(last_time - action_run.start_time) if action_run.start_time else ""
            
             run_output.append({
                 'id': action_run.id,
@@ -220,7 +220,7 @@ class JobResource(resource.Resource):
     def get_run_data(self, request, run):
         state = job_run_state(run)
         last_time = run.end_time if run.end_time else timeutils.current_time()
-        duration = (last_time - run.start_time).seconds if run.start_time else 0
+        duration = str(last_time - run.start_time) if run.start_time else ""
 
         return {
                 'id': run.id,
@@ -359,9 +359,8 @@ class ConfigResource(resource.Resource):
         self._master_control.rewrite_config(new_config)
         response = {'status': "I'm alive biatch"}
         try:
-            self._master_control.load_config()
-            self._master_control.run_jobs()
-        except (OSError, config.ConfigError), e:
+            self._master_control.live_reconfig()
+        except Exception, e:
             response['error'] = str(e)
         
         return respond(request, response)
