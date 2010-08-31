@@ -17,8 +17,7 @@ jobs:
     -
         name: "interval_dag"
         node: *node0
-        schedule: !IntervalScheduler
-            interval: 20s
+        schedule: "interval 20s"
         actions:
             - &dag0
                 name: "dag0"
@@ -39,8 +38,7 @@ jobs:
     -
         name: "fail_dag"
         node: *node_pool
-        schedule: !IntervalScheduler
-            interval: 20s
+        schedule: "interval 20s"
         actions:
             - &action_fail
                 name: "action_test_fail1"
@@ -74,7 +72,7 @@ jobs:
     -
         name: "daily_mws"
         node: *node_pool
-        schedule: "MWS" # All Days: MTWRFSU
+        schedule: "daily 00:00:00 MWS" # All Days: MTWRFSU
         actions:
             - &actionMF
                 name: "action_mws"
@@ -93,8 +91,7 @@ jobs:
         name: "queueing"
         node: *node_pool
         queueing: True
-        schedule: !IntervalScheduler
-            interval: 12s
+        schedule: "interval 12s"
         actions:
             - !Action
                 name: "long_action"
@@ -103,8 +100,7 @@ jobs:
     -
         name: "cancel"
         node: *node0
-        schedule: !IntervalScheduler
-            interval: 12s
+        schedule: "interval 12s"
         actions:
             -
                 name: "actionCancel"
@@ -113,8 +109,7 @@ jobs:
     -
         name: "fail_queue"
         node: *node_pool
-        schedule: !IntervalScheduler
-            interval: 12s
+        schedule: "interval 12s"
         actions:
             - &actionFailQueue
                 name: "actionFailQueue1"
@@ -124,8 +119,7 @@ jobs:
         name: "all_nodes"
         node: *node_pool
         all_nodes: True
-        schedule: !IntervalScheduler
-            interval: 50s
+        schedule: "interval 50s"
         actions:
             - &actionAddition
                 name: "all_node0"
@@ -143,8 +137,7 @@ services:
         disable:
             command: "sleep 5; echo disabled"
         monitor:
-            schedule: !IntervalScheduler
-                interval: 40s
+            schedule: "interval 40s"
             actions:
                 - &mon0
                     name: "mon0"

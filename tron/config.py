@@ -349,14 +349,20 @@ class FileResource(yaml.YAMLObject):
 
 class Scheduler(object):
     @classmethod
-    def from_string(self, scheduler_name):
+    def from_string(self, scheduler_str):
+        scheduler_args = scheduler_str.split()
+        
+        scheduler_name = scheduler_args.pop(0)
+        
         if scheduler_name == "constant":
             return ConstantScheduler().actualized
         if scheduler_name == "daily":
-            return DailyScheduler().actualized
-        if scheduler_name == "weekly":
-            return scheduler.DailyScheduler(days=7)
-        return scheduler.DailyScheduler(days=scheduler_name)
+            return DailyScheduler(*scheduler_args).actualized
+        if scheduler_name == "interval":
+            return IntervalScheduler(*scheduler_args).actualized
+
+        raise Error("Unknown scheduler %r" % scheduler_str)
+
 
 
 class ConstantScheduler(_ConfiguredObject):
@@ -384,7 +390,12 @@ TIME_INTERVAL_UNITS = {
 class IntervalScheduler(_ConfiguredObject):
     yaml_tag = u'!IntervalScheduler'
     actual_class = scheduler.IntervalScheduler
-    
+    def __init__(self, *args, **kwargs):
+        if len(args) > 0:
+            self.interval = args[0]
+
+        super(IntervalScheduler, self).__init__(*args, **kwargs)
+
     def _apply(self):
         sched = self._ref()
         
@@ -413,6 +424,17 @@ class IntervalScheduler(_ConfiguredObject):
 class DailyScheduler(_ConfiguredObject):
     yaml_tag = u'!DailyScheduler'
     actual_class = scheduler.DailyScheduler
+    def __init__(self, *args, **kwargs):
+
+        if len(args) > 0:
+            self.start_time = args[0]
+
+        if len(args) > 1:
+            self.days = args[1]
+        if 'days' in kwargs:
+            self.days = kwargs['days']
+
+        super(DailyScheduler, self).__init__(*args, **kwargs)
 
     def _apply(self):
         sched = self._ref()

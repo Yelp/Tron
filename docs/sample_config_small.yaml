@@ -18,11 +18,10 @@ jobs:
         name: "job0"
         node: *pool
         all_nodes: True
-        schedule: !IntervalScheduler
-            interval: 20s
+        schedule: "interval 20s"
         queueing: False
         actions:
-            - &start !Action
+            - &start
                 name: "actionStartEdit"
                 command: "sleep 3; echo asdfasdf"
                 node: *node
@@ -30,8 +29,7 @@ jobs:
     - &job1 !Job
         name: "job1"
         node: *node
-        schedule: !IntervalScheduler
-            interval: 30s
+        schedule: "interval 20s"
         queueing: False
         actions:
             - &action !Action
@@ -48,7 +46,5 @@ services:
                 - 
                     name: "actionMo"
                     command: "echo hello; sleep 5"
-            schedule: !IntervalScheduler
-                interval: 20s
-                command: "python test.py"
+            schedule: "interval 20s"
 

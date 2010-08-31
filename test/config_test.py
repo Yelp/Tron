@@ -33,8 +33,7 @@ jobs:
     - &job0 !Job
         name: "test_job0"
         node: *node0
-        schedule: !IntervalScheduler
-            interval: 20s
+        schedule: "interval 20s"
         actions:
             - &intAction !Action
                 name: "action0_0"
@@ -43,8 +42,7 @@ jobs:
     - &job1
         name: "test_job1"
         node: *node0
-        schedule: !IntervalScheduler
-            interval: 20s
+        schedule: "daily 00:30:00 MWF"
         actions:
             - &intAction2
                 name: "action1_0"
@@ -57,8 +55,7 @@ jobs:
     - &job2
         name: "test_job2"
         node: *node1
-        schedule: !DailyScheduler
-            start_time: "16:30:00"
+        schedule: "daily 16:30:00"
         actions:
             - &actionFail !Action
                 name: "action2_0"
@@ -183,8 +180,9 @@ services:
         assert isinstance(self.job0.scheduler, scheduler.IntervalScheduler)
         assert_equal(self.job0.scheduler.interval, datetime.timedelta(seconds=20))
 
-        assert isinstance(self.job1.scheduler, scheduler.IntervalScheduler)
-        assert_equal(self.job1.scheduler.interval, datetime.timedelta(seconds=20))
+        assert isinstance(self.job1.scheduler, scheduler.DailyScheduler)
+        assert_equal(self.job1.scheduler.start_time, datetime.time(hour=0, minute=30, second=0))
+        assert self.job1.scheduler.wait_days
 
         assert isinstance(self.job2.scheduler, scheduler.DailyScheduler)
         assert_equal(self.job2.scheduler.start_time, datetime.time(hour=16, minute=30, second=0))
