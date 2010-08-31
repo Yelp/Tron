@@ -226,8 +226,8 @@ services:
         assert_equals(len(req0.required_actions), 0)
         assert_equals(len(req1.required_actions), 0)
 
-        assert_equals(dep0.required_actions[0], req0)
-        assert_equals(dep1.required_actions[0], req1)
+        assert dep0.required_actions[0] is req0
+        assert dep1.required_actions[0] is req1
 
     def test_command_context(self):
         assert hasattr(self.test_config, "command_context")

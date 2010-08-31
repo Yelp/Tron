@@ -172,6 +172,28 @@ class Job(object):
         self.enable_runs = deque()
         self.disable_runs = deque()
 
+    def _register_action(self, action):
+        """Prepare an action to be *owned* by this job"""
+        if action in self.topo_actions:
+            raise Error("Action %s already in jobs %s" % (action.name, job.name))
+
+        # Needs a back reference. This should probably be done differently some
+        action.job = self
+
+    def add_action(self, action):
+        self._register_action(action)
+        self.topo_actions.append(action)
+
+    def set_enable_action(self, action):
+        """Set the action to be run on enable"""
+        self._register_action(action)
+        self.enable_act = action
+
+    def set_disable_action(self, action):
+        """Set the action to be run on disable"""
+        self._register_action(action)
+        self.disable_act = action
+
     def change_callback(self):
         if self.store_callback:
             self.store_callback()

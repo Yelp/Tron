@@ -169,10 +169,14 @@ class MasterControlProgram(object):
 
     def add_job(self, job):
         if job.name in self.jobs:
+            # Jobs have a complex eq implementation that allows us to catch jobs that have not changed and thus
+            # don't need to be updated during a reconfigure
             if job == self.jobs[job.name]:
                 return
             
+            # We're updating an existing job, we have to copy over run time information
             job.absorb_old_job(self.jobs[job.name])
+
             if job.enabled:
                 self.disable_job(job)
                 self.enable_job(job)

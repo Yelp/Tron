@@ -32,9 +32,20 @@ def default_or_from_tag(value, cls):
     """Construct a YAMLObject unless it already is one
     
     We use this for providing default config types so it isn't required to "tag" everything with !MyConfigClass
+    Since YAML may present us the same dictionary a few times thanks to references any actual operations we do
+    in this function will be *persisted* by adding a key to the base dictionary with the instance we create
     """
     if not isinstance(value, yaml.YAMLObject):
-        return cls.from_dict(value)
+        # First we check if we've already defaulted this instance before
+        if '__obj__' in value:
+            classified = value['__obj__']
+            if classified:
+                return classified
+        
+        classified = cls.from_dict(value)
+        value['__obj__'] = classified
+        return classified
+
     return value
 
     
@@ -216,10 +227,16 @@ class Job(_ConfiguredObject):
 
         return action
 
-    def _match_actions(self, real, actions):
-        for act_conf in actions:
-            action = self._create_action(real, act_conf)
-            real.topo_actions.append(action)
+    def _match_actions(self, real_job, actions):
+        for action_conf in actions:
+            action = default_or_from_tag(action_conf, Action)
+            real_action = action.actualized
+
+            if not real_job.node_pool and not real_action.node_pool:
+                raise yaml.YAMLError("Either job '%s' or its action '%s' must have a node" 
+                   % (real_job.name, action_action.name))
+
+            real_job.add_action(real_action)
                     
     def _apply(self):
         real_job = self._ref()
@@ -235,8 +252,7 @@ class Job(_ConfiguredObject):
         
         self._match_name(real_job, self.name)
         self._match_schedule(real_job, self.schedule)
-        actions = [default_or_from_tag(action, Action) for action in self.actions]
-        self._match_actions(real_job, actions)
+        self._match_actions(real_job, self.actions)
 
         if hasattr(self, "queueing"):
             real_job.queueing = self.queueing
@@ -258,21 +274,17 @@ class Service(Job):
         
         self._match_name(real_service, self.name)
         self._match_schedule(real_service, self.monitor['schedule'])
-
-        monitor_actions = [default_or_from_tag(act, Action) for act in self.monitor['actions']]
-        self._match_actions(real_service, monitor_actions)
+        self._match_actions(real_service, self.monitor['actions'])
 
         if hasattr(self, "enable"):
             enable = default_or_from_tag(self.enable, Action)
             enable.name = enable.name or "enable"
-            
-            real_service.enable_act = self._create_action(real_service, enable)
+            real_service.set_enable_action(enable.actualized)
         
         if hasattr(self, "disable"):
             disable = default_or_from_tag(self.disable, Action)
             disable.name = disable.name or "disable"
-
-            real_service.disable_act = self._create_action(real_service, disable)
+            real_service.set_disable_action(disable.actualized)
 
 
 class Action(_ConfiguredObject):
@@ -287,7 +299,7 @@ class Action(_ConfiguredObject):
     def _apply_requirements(self, real_action, requirements):
         if not isinstance(requirements, list):
             requirements = [requirements]
-            
+
         requirements = [default_or_from_tag(req, Action) for req in requirements]
         for req in requirements:
             real_action.required_actions.append(req.actualized)
