@@ -269,13 +269,6 @@ class ActionRun(object):
         return self.action.command % self.context
 
     @property
-    def timeout_secs(self):
-        if self.action.timeout is None:
-            return None
-        else:
-            return self.action.timeout.seconds
-
-    @property
     def is_queued(self):
         return self.state == ACTION_RUN_QUEUED
     
