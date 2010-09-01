@@ -40,10 +40,11 @@ class JobRun(object):
             else:
                 log.warning("A previous run for %s has not finished - cancelling", self.job.name)
                 self.cancel()
-    
+
     def start(self):
         log.info("Starting action job %s", self.job.name)
         self.start_time = timeutils.current_time()
+        self.end_time = None
 
         for r in self.runs:
             r.attempt_start()

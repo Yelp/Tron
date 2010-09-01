@@ -39,17 +39,21 @@ jobs:
         schedule: !IntervalScheduler
             interval: 20s
         actions:
-            - &action_fail !Action
-                name: "action_test_fail1"
-                command: "sleep 5;failfailfail"
-            - !Action
-                name: "cancel0"
-                requires: *action_fail
+            - &succ0 !Action
+                name: "succ0"
+                command: "sleep 5; echo start"
+            - &succ1 !Action
+                name: "succ1"
+                requires: *succ0
                 command: "sleep 1; echo cancelled; sleep 1"
+            - &fail !Action
+                name: "fail"
+                requires: *succ0
+                command: "sleep 4; echo cancelled; fdsadsfaeafaefa"
             - !Action
-                name: "cancel1"
-                requires: *action_fail
-                command: "sleep 1; echo cancelled; sleep 1"
+                name: "end"
+                requires: [*succ1, *fail]
+                command: "sleep 5; echo done"
 
     - !Job
         name: "constant"

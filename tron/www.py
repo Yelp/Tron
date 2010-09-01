@@ -91,14 +91,14 @@ class ActionRunResource(resource.Resource):
             log.info("Marking job run %s for success", self._act_run.id)
             self._act_run.succeed()
         else:
-            log.warning("Request to mark job run %s succeed when it has already", self._act_run.id)
+            log.warning("Request to mark job run %s succeeded when it's running or already succeeded", self._act_run.id)
 
     def _cancel(self, request):
         if self._act_run.is_scheduled or self._act_run.is_queued:
             log.info("Cancelling job %s", self._act_run.id)
             self._act_run.cancel()
         else:
-            log.warning("Request to cancel job run %s when it's already cancelled", self._act_run.id)
+            log.warning("Request to cancel job run %s when it's not possible", self._act_run.id)
 
     def _fail(self, request):
         if not self._act_run.is_running and not self._act_run.is_success and not self._act_run.is_failed:
@@ -158,6 +158,8 @@ class JobRunResource(resource.Resource):
         cmd = request.args['command'][0]
         if cmd == "start":
             self._start(request)
+        elif cmd == 'restart':
+            self._restart(request)
         elif cmd == "succeed":
             self._succeed(request)
         elif cmd == "fail":
@@ -170,10 +172,15 @@ class JobRunResource(resource.Resource):
         
         return respond(request, {'result': "Job run now in result %s" % job_run_state(self._run)})
 
+    def _restart(self, request):
+        log.info("Resetting all action runs to scheduled state")
+        self._run.schedule()
+        self._start(request)
+
     def _start(self, request):
         if not self._run.is_success and not self._run.is_running:
             log.info("Starting job run %s", self._run.id)
-            self._run.manual_start()
+            self._run.start()
         else:
             log.warning("Request to start job run %s when it's already done", self._run.id)
 
