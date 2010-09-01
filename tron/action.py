@@ -79,6 +79,7 @@ class ActionRun(object):
     def __init__(self, action, job_run):
         self.action = action
         self.job_run = job_run
+        self.state_callback = job_run.state_callback
         self.id = "%s.%s" % (job_run.id, action.name)
         
         self.run_time = None    # What time are we supposed to start
@@ -92,7 +93,6 @@ class ActionRun(object):
         self.stdout_file = None
         self.stderr_file = None
         
-        self.job_run = job_run
         self.node = action.node_pool.next() if action.node_pool else job_run.node
 
         action_run_context = ActionRunContext(self)
@@ -150,12 +150,12 @@ class ActionRun(object):
         if isinstance(ret, defer.Deferred):
             self._setup_callbacks(ret)
         
-        self.action.job.change_callback()
+        self.state_callback()
 
     def cancel(self):
         if self.is_scheduled or self.is_queued:
             self.state = ACTION_RUN_CANCELLED
-            self.action.job.change_callback()
+            self.state_callback()
     
     def schedule(self):
         if not self.required_runs:
@@ -163,12 +163,12 @@ class ActionRun(object):
         else:
             self.state = ACTION_RUN_QUEUED
         
-        self.action.job.change_callback()
+        self.state_callback()
     
     def queue(self):
         if self.is_scheduled or self.is_cancelled:
             self.state = ACTION_RUN_QUEUED
-            self.action.job.change_callback()
+            self.state_callback()
 
     def _open_output_file(self):
         try:
@@ -221,7 +221,7 @@ class ActionRun(object):
         self.exit_status = exit_status
         self.end_time = timeutils.current_time()
         self.job_run.run_completed()
-        self.action.job.change_callback()
+        self.state_callback()
 
     def fail_unknown(self):
         """Mark the run as having failed, but note that we don't actually know what result was"""
@@ -231,7 +231,7 @@ class ActionRun(object):
         self.exit_status = None
         self.end_time = None
         self.job_run.run_completed()
-        self.action.job.change_callback()
+        self.state_callback()
 
     def mark_success(self):
         self.exit_status = 0
@@ -245,7 +245,7 @@ class ActionRun(object):
         
         self.mark_success()
         self.start_dependants()
-        self.action.job.change_callback()
+        self.state_callback()
 
     def restore_state(self, state):
         self.id = state['id']
@@ -256,7 +256,7 @@ class ActionRun(object):
 
         if self.is_running:
             self.state = ACTION_RUN_UNKNOWN
-        self.action.job.change_callback()
+        self.state_callback()
 
     @property
     def data(self):

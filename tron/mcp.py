@@ -29,6 +29,7 @@ class StateHandler(object):
         self.working_dir = working_dir
         self.write_pid = None
         self.writing_enabled = writing
+        self.store_delayed = False
 
     def restore_job(self, job, data):
         job.enabled = data['enabled']
@@ -56,16 +57,29 @@ class StateHandler(object):
         if job.enabled and next and next.is_queued:
             next.start()
 
-    def store_data(self):
+    def delay_store(self):
+        self.store_delayed = False
+        self.store_state()
+
+    def kill_child(self):
+        if self.write_pid:
+            if os.waitpid(self.write_pid, os.WNOHANG)[0]:
+                self.write_pid = None
+
+    def store_state(self):
         """Stores the state of tron"""
         # If tron is already storing data, don't start again till it's done
         if not self.writing_enabled or (self.write_pid and not os.waitpid(self.write_pid, os.WNOHANG)[0]):
-            reactor.callLater(STATE_SLEEP, self.store_data)
+            # If a child is writing, we don't want to ignore this change, so lets try it later
+            if not self.store_delayed:
+                self.store_delayed = True
+                reactor.callLater(STATE_SLEEP, self.delay_store)
             return 
 
         tmp_path = os.path.join(self.working_dir, '.tmp.' + STATE_FILE)
         file_path = os.path.join(self.working_dir, STATE_FILE)
         log.info("Storing state in %s", file_path)
+        reactor.callLater(STATE_SLEEP, self.kill_child)
         
         pid = os.fork()
         if pid:
@@ -186,7 +200,7 @@ class MasterControlProgram(object):
         job.set_context(self.context)
         self.setup_job_dir(job)
         self.add_job_nodes(job)
-        job.store_callback = self.state_handler.store_data
+        job.state_callback = self.state_handler.store_state
 
     def _schedule(self, run):
         sleep = sleep_time(run.run_time)
@@ -250,6 +264,6 @@ class MasterControlProgram(object):
                     self.enable_job(tron_job)
         
         self.state_handler.writing_enabled = True
-        self.state_handler.store_data()
+        self.state_handler.store_state()
 
 
