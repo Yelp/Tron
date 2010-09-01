@@ -1,6 +1,10 @@
 tron (0.1.3-1) UNRELEASED; urgency=low
 
-  * Better debian packaging
+  * Better debian packaging (roguelazer)
+  * Cleaner configuration (rhettg)
+  * SIGHUP handling for reconfiguration (matthewtytel)
+  * Command Context (environment variables for command execution) (rhettg)
+  * Show job duration, alphabetize job list and direct stdout/stderr access (matthewtytel)
 
  -- James Brown <roguelazer@gmail.com>  Mon, 30 Aug 2010 18:33:00 -0700
 
