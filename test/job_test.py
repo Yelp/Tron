@@ -97,6 +97,21 @@ class TestJobRun(TestCase):
         assert jr.runs[0].is_running
         assert not jr.runs[1].is_running
 
+    def test_schedule(self):
+        jr = self.job.next_runs()[0]
+        assert jr.runs[0].is_scheduled
+        assert jr.runs[1].is_queued
+
+        jr.succeed()
+
+        assert jr.runs[0].is_success
+        assert jr.runs[1].is_success
+
+        jr.schedule()
+
+        assert jr.runs[0].is_scheduled
+        assert jr.runs[1].is_queued
+
     def test_scheduled_start(self):
         self.job.queueing = True
         jr1 = self.job.next_runs()[0]

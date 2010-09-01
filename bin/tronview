@@ -25,6 +25,8 @@ def parse_options():
     parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=None)
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
     parser.add_option("--numshown", "-n", type="int", dest="num_shown", help="Max number of jobs shown", default=20)
+    parser.add_option("--stdout", "-o", action="count", dest="stdout", help="Solely displays stdout", default=0)
+    parser.add_option("--stderr", "-e", action="count", dest="stderr", help="Solely displays stderr", default=0)
 
     (options, args) = parser.parse_args(sys.argv)
 
@@ -135,7 +137,15 @@ def view_action_run(options, act_run_id):
     if status == cmd.ERROR:
         print >>sys.stderr, "%s: Cannot find action run %s" % (act_run_content, act_run_id)
         sys.exit(1)
+
+    if options.stdout:
+        print "".join(act_run_content['stdout'])   
+        return
     
+    if options.stderr:
+        print "".join(act_run_content['stderr'])
+        return
+
     print "Action Run: %s" % act_run_content['id']
     print "State: %s" % act_run_content['state']
     print "Node: %s" % act_run_content['node']

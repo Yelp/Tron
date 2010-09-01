@@ -141,6 +141,7 @@ class ActionRun(object):
         log.info("Starting action run %s", self.id)
         
         self.start_time = timeutils.current_time()
+        self.end_time = None
         self.state = ACTION_RUN_RUNNING
         self._open_output_file()
 
@@ -159,7 +160,10 @@ class ActionRun(object):
     def schedule(self):
         if not self.required_runs:
             self.state = ACTION_RUN_SCHEDULED
-            self.action.job.change_callback()
+        else:
+            self.state = ACTION_RUN_QUEUED
+        
+        self.action.job.change_callback()
     
     def queue(self):
         if self.is_scheduled or self.is_cancelled:
@@ -285,10 +289,6 @@ class ActionRun(object):
         return self.state in (ACTION_RUN_FAILED, ACTION_RUN_SUCCEEDED, ACTION_RUN_CANCELLED)
 
     @property
-    def is_ran(self):
-        return self.state in (ACTION_RUN_FAILED, ACTION_RUN_SUCCEEDED)
-
-    @property
     def is_unknown(self):
         return self.state == ACTION_RUN_UNKNOWN
 
@@ -307,7 +307,7 @@ class ActionRun(object):
     @property
     def should_start(self):
         return all([r.is_success for r in self.required_runs]) and \
-            (self.is_scheduled or self.is_queued)
+           not (self.is_running or self.is_success)
  
 class Action(object):
     def __init__(self, name=None, node_pool=None):

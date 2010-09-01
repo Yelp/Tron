@@ -58,6 +58,7 @@ def edit(options, command, id):
 
     if status == cmd.OK:
         log.info(content['result'])
+        print content['result']
         return True
     else:
         return False
