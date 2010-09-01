@@ -97,8 +97,7 @@ services:
         disable:
             command: "service_command1"
         monitor:
-            schedule: !IntervalScheduler
-                interval: 40s
+            schedule: "interval 5 mins"
             actions:
                 - &mon0
                     name: "mon0"

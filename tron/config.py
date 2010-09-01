@@ -363,7 +363,7 @@ class Scheduler(object):
         if scheduler_name == "daily":
             return DailyScheduler(*scheduler_args).actualized
         if scheduler_name == "interval":
-            return IntervalScheduler(*scheduler_args).actualized
+            return IntervalScheduler(''.join(scheduler_args)).actualized
 
         raise Error("Unknown scheduler %r" % scheduler_str)
 
