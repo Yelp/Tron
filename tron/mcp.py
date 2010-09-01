@@ -1,3 +1,4 @@
+from __future__ import with_statement
 import logging
 import weakref
 import yaml
@@ -11,9 +12,10 @@ from tron import job, config, command_context
 from twisted.internet import reactor
 from tron.utils import timeutils
 
+log = logging.getLogger('tron.mcp')
+
 SECS_PER_DAY = 86400
 MICRO_SEC = .000001
-log = logging.getLogger('tron.mcp')
 STATE_FILE = 'tron_state.yaml'
 STATE_SLEEP = 3
 
@@ -84,11 +86,12 @@ class StateHandler(object):
         if pid:
             self.write_pid = pid
         else:
-            file = open(tmp_path, 'w')
-            yaml.dump(self.data, file, default_flow_style=False, indent=4)
-            file.close()
-            shutil.move(tmp_path, file_path)
-            os._exit(os.EX_OK)
+            try:
+                with open(tmp_path, 'w') as data_file:
+                    yaml.dump(self.data, data_file, default_flow_style=False, indent=4)
+                shutil.move(tmp_path, file_path)
+            finally:
+                os._exit(os.EX_OK)
 
     def get_state_file_path(self):
         return os.path.join(self.working_dir, STATE_FILE)
@@ -112,6 +115,7 @@ class StateHandler(object):
         for j in self.mcp.jobs.itervalues():
             data[j.name] = j.data
         return data
+
 
 class MasterControlProgram(object):
     """master of tron's domain
