@@ -77,7 +77,7 @@ class ActionRunResource(resource.Resource):
             log.warning("Unknown request command %s", request.args['command'])
             return respond(request, None, code=http.NOT_IMPLEMENTED)
 
-        return respond(request, {'result': "Action run now in result %s" % job_run_state(self._act_run)})
+        return respond(request, {'result': "Action run now in state %s" % job_run_state(self._act_run)})
     
     def _start(self, request):
         if not self._act_run.is_success and not self._act_run.is_running:
@@ -170,7 +170,7 @@ class JobRunResource(resource.Resource):
             log.warning("Unknown request command %s", request.args['command'])
             return respond(request, None, code=http.NOT_IMPLEMENTED)
         
-        return respond(request, {'result': "Job run now in result %s" % job_run_state(self._run)})
+        return respond(request, {'result': "Job run now in state %s" % job_run_state(self._run)})
 
     def _restart(self, request):
         log.info("Resetting all action runs to scheduled state")
