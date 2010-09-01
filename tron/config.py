@@ -217,16 +217,6 @@ class Job(_ConfiguredObject):
             real.scheduler = schedule.actualized
         real.scheduler.job_setup(real)
 
-    def _create_action(self, real, act_conf):
-        action = act_conf.actualized
-        action.job = real
-        
-        if not real.node_pool and not action.node_pool:
-            raise yaml.YAMLError("Either job '%s' or its action '%s' must have a node" 
-               % (real.name, action.name))
-
-        return action
-
     def _match_actions(self, real_job, actions):
         for action_conf in actions:
             action = default_or_from_tag(action_conf, Action)
