@@ -32,6 +32,11 @@ def parse_options():
 
     return options, args[1:]
 
+def trunc(value, length):
+    if len(value) > length:
+        return value[:length-3] + '...'
+    return value
+
 def view_all(options):
     """docstring for view_jobs"""
 
@@ -48,7 +53,7 @@ def view_all(options):
 
         # Show service data
         for job in sorted(content['services'], key=lambda s: s['name']):
-            print " ".join(str(val).ljust(size) for val, (_, size) in zip((job['name'], job['status'], job['scheduler'], job['last_success']), JOB_COLUMNS))
+            print " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((job['name'], job['status'], job['scheduler'], job['last_success']), JOB_COLUMNS))
 
     print
     print "Jobs:"
@@ -59,7 +64,7 @@ def view_all(options):
 
         # Show job data
         for job in sorted(content['jobs'], key=lambda j: j['name']):
-            print " ".join(str(val).ljust(size) for val, (_, size) in zip((job['name'], job['status'], job['scheduler'], job['last_success']), JOB_COLUMNS))
+            print " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((job['name'], job['status'], job['scheduler'], job['last_success']), JOB_COLUMNS))
 
 def print_job_runs(options, runs):
     print " ".join(title.ljust(size) for title, size in RUN_COLUMNS)
@@ -73,7 +78,7 @@ def print_job_runs(options, runs):
         end_time = (run['end_time'] and run['end_time'][:-7]) or "-"
         duration = (run['duration'] and run['duration'][:-7]) or "-"
 
-        print " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time, duration), RUN_COLUMNS))
+        print " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time, duration), RUN_COLUMNS))
 
 def view_job(options, job_name):
     """Retrieve details of the specified job and display"""
@@ -128,7 +133,7 @@ def view_job_run(options, job_run_id):
         end_time = (run['end_time'] and run['end_time'][:-7]) or "-"
         duration = (run['duration'] and run['duration'][:-7]) or "-"
 
-        print " ".join(str(val).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time, duration), RUN_COLUMNS))
+        print " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((run_id, run_state, run_time, start_time, end_time, duration), RUN_COLUMNS))
 
 def view_action_run(options, act_run_id):
     url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'), options.num_shown)
