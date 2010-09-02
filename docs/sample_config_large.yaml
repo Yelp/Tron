@@ -9,7 +9,6 @@ nodes:
         hostname: 'dev2sv'
     - &node1
         hostname: 'dev3sv'
-
     - &node_pool !NodePool
         nodes: [*node0, *node1]
 

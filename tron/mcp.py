@@ -29,6 +29,7 @@ class StateHandler(object):
         self.working_dir = working_dir
         self.write_pid = None
         self.writing_enabled = writing
+        self.store_delayed = False
 
     def restore_job(self, job, data):
         job.enabled = data['enabled']
@@ -56,10 +57,17 @@ class StateHandler(object):
         if job.enabled and next and next.is_queued:
             next.start()
 
+    def delay_store(self):
+        self.store_delayed = False
+        self.store_state()
+
     def store_state(self):
         """Stores the state of tron"""
         # If tron is already storing data, don't start again till it's done
         if not self.writing_enabled or (self.write_pid and not os.waitpid(self.write_pid, os.WNOHANG)[0]):
+            # If a child is writing, we don't want to ignore this change, so lets try it later
+            #if not self.store_delayed:
+            #    self.store_delayed = True
             return 
 
         tmp_path = os.path.join(self.working_dir, '.tmp.' + STATE_FILE)
@@ -249,6 +257,6 @@ class MasterControlProgram(object):
                     self.enable_job(tron_job)
         
         self.state_handler.writing_enabled = True
-        self.state_handler.store_data()
+        self.state_handler.store_state()
 
 
