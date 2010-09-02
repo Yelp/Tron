@@ -4,6 +4,8 @@
 
 chown batch:root /var/log/tron/
 chmod 750 /var/log/tron/
+chown batch:root /var/lib/tron/
+chmod 750 /var/lib/tron/
 
 #DEBHELPER#
 

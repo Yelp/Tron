@@ -1,2 +1,3 @@
 var/log/tron/
+var/lib/tron/
 etc/tron/
