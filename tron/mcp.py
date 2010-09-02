@@ -61,18 +61,24 @@ class StateHandler(object):
         self.store_delayed = False
         self.store_state()
 
+    def kill_child(self):
+        if self.write_pid:
+            os.waitpid(self.write_pid, os.WNOHANG)[0]
+
     def store_state(self):
         """Stores the state of tron"""
         # If tron is already storing data, don't start again till it's done
         if not self.writing_enabled or (self.write_pid and not os.waitpid(self.write_pid, os.WNOHANG)[0]):
             # If a child is writing, we don't want to ignore this change, so lets try it later
-            #if not self.store_delayed:
-            #    self.store_delayed = True
+            if not self.store_delayed:
+                self.store_delayed = True
+                reactor.callLater(STATE_SLEEP, self.delay_store)
             return 
 
         tmp_path = os.path.join(self.working_dir, '.tmp.' + STATE_FILE)
         file_path = os.path.join(self.working_dir, STATE_FILE)
         log.info("Storing state in %s", file_path)
+        reactor.callLater(STATE_SLEEP, self.kill_child)
         
         pid = os.fork()
         if pid:
