@@ -63,7 +63,7 @@ class JobRun(object):
         if not self.job.last_success or self.run_num > self.job.last_success.run_num:
             self.job.last_success = self
 
-    def state_changed(self):
+    def run_completed(self):
         if self.is_success:
             self.last_success_check()
             
@@ -76,8 +76,6 @@ class JobRun(object):
             next = self.job.next_to_finish()
             if next and next.is_queued:
                 next.attempt_start()
-
-        self.state_callback()
 
     @property
     def data(self):

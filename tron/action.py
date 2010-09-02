@@ -79,7 +79,7 @@ class ActionRun(object):
     def __init__(self, action, job_run):
         self.action = action
         self.job_run = job_run
-        self.state_callback = job_run.state_changed
+        self.state_callback = job_run.state_callback
         self.id = "%s.%s" % (job_run.id, action.name)
         
         self.run_time = None    # What time are we supposed to start
@@ -220,6 +220,7 @@ class ActionRun(object):
         self.state = ACTION_RUN_FAILED
         self.exit_status = exit_status
         self.end_time = timeutils.current_time()
+        self.job_run.run_completed()
         self.state_callback()
 
     def fail_unknown(self):
@@ -229,13 +230,14 @@ class ActionRun(object):
         self.state = ACTION_RUN_FAILED
         self.exit_status = None
         self.end_time = None
+        self.job_run.run_completed()
         self.state_callback()
 
     def mark_success(self):
         self.exit_status = 0
         self.state = ACTION_RUN_SUCCEEDED
         self.end_time = timeutils.current_time()
-        self.state_callback()
+        self.job_run.run_completed()
 
     def succeed(self):
         """Mark the run as having succeeded"""
@@ -313,6 +315,7 @@ class Action(object):
         self.node_pool = node_pool
 
         self.required_actions = []
+        self.job = None
         self.command = None
 
     def __eq__(self, other):
