@@ -56,11 +56,10 @@ class StateHandler(object):
         if job.enabled and next and next.is_queued:
             next.start()
 
-    def store_data(self):
+    def store_state(self):
         """Stores the state of tron"""
         # If tron is already storing data, don't start again till it's done
         if not self.writing_enabled or (self.write_pid and not os.waitpid(self.write_pid, os.WNOHANG)[0]):
-            reactor.callLater(STATE_SLEEP, self.store_data)
             return 
 
         tmp_path = os.path.join(self.working_dir, '.tmp.' + STATE_FILE)
@@ -186,7 +185,7 @@ class MasterControlProgram(object):
         job.set_context(self.context)
         self.setup_job_dir(job)
         self.add_job_nodes(job)
-        job.store_callback = self.state_handler.store_data
+        job.state_callback = self.state_handler.store_state
 
     def _schedule(self, run):
         sleep = sleep_time(run.run_time)

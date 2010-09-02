@@ -14,6 +14,7 @@ class JobRun(object):
     def __init__(self, job, run_num=None):
         self.run_num = job.next_num() if run_num is None else run_num
         self.job = job
+        self.state_callback = job.state_callback
         self.id = "%s.%s" % (job.name, self.run_num)
         self.output_dir = os.path.join(job.output_dir, self.id)
        
@@ -62,7 +63,7 @@ class JobRun(object):
         if not self.job.last_success or self.run_num > self.job.last_success.run_num:
             self.job.last_success = self
 
-    def run_completed(self):
+    def state_changed(self):
         if self.is_success:
             self.last_success_check()
             
@@ -75,6 +76,8 @@ class JobRun(object):
             next = self.job.next_to_finish()
             if next and next.is_queued:
                 next.attempt_start()
+
+        self.state_callback()
 
     @property
     def data(self):
@@ -164,7 +167,7 @@ class Job(object):
         self.run_limit = RUN_LIMIT
         self.node_pool = None
         self.output_dir = None
-        self.store_callback = None
+        self.state_callback = lambda:None
         self.context = command_context.CommandContext(self)
 
         # Service Data
@@ -177,9 +180,6 @@ class Job(object):
         """Prepare an action to be *owned* by this job"""
         if action in self.topo_actions:
             raise Error("Action %s already in jobs %s" % (action.name, job.name))
-
-        # Needs a back reference. This should probably be done differently some
-        action.job = self
 
     def add_action(self, action):
         self._register_action(action)
@@ -194,10 +194,6 @@ class Job(object):
         """Set the action to be run on disable"""
         self._register_action(action)
         self.disable_act = action
-
-    def change_callback(self):
-        if self.store_callback:
-            self.store_callback()
 
     def __eq__(self, other):
         if not isinstance(other, Job) or self.name != other.name or self.queueing != other.queueing \
