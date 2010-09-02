@@ -75,7 +75,7 @@ class TestStateHandler(TestCase):
 #
         #reactor.callLater = callLate
 
-    def test_store_state(self):
+    def test_store_data(self):
         pass
 
     def test_load_data(self):

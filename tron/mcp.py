@@ -64,6 +64,7 @@ class StateHandler(object):
     def kill_child(self):
         if self.write_pid:
             os.waitpid(self.write_pid, os.WNOHANG)[0]
+            self.write_pid = None
 
     def store_state(self):
         """Stores the state of tron"""
