@@ -8,7 +8,7 @@ import os
 import yaml
 from twisted.conch.client import options
 
-from tron import action, job, node, scheduler, monitor, emailer
+from tron import action, job, node, scheduler, monitor, emailer, command_context
 
 log = logging.getLogger("tron.config")
 
@@ -17,8 +17,39 @@ class Error(Exception):
     
 class ConfigError(Exception):
     pass
+
+class FromDictBuilderMixin(object):
+    """Mixin class for building YAMLObjects from dictionaries"""
+    @classmethod
+    def from_dict(cls, obj_dict):
+        # We just assume we want to make all the dictionary values into attributes
+        new_obj = cls()
+        new_obj.__dict__.update(obj_dict)
+        return new_obj
+
+
+def default_or_from_tag(value, cls):
+    """Construct a YAMLObject unless it already is one
     
-class _ConfiguredObject(yaml.YAMLObject):
+    We use this for providing default config types so it isn't required to "tag" everything with !MyConfigClass
+    Since YAML may present us the same dictionary a few times thanks to references any actual operations we do
+    in this function will be *persisted* by adding a key to the base dictionary with the instance we create
+    """
+    if not isinstance(value, yaml.YAMLObject):
+        # First we check if we've already defaulted this instance before
+        if '__obj__' in value:
+            classified = value['__obj__']
+            if classified:
+                return classified
+        
+        classified = cls.from_dict(value)
+        value['__obj__'] = classified
+        return classified
+
+    return value
+
+    
+class _ConfiguredObject(yaml.YAMLObject, FromDictBuilderMixin):
     """Base class for common configured objects where the configuration generates one actualized 
     object in the app that may be referenced by other objects."""
     actual_class = None     # Redefined to indicate the type of object this configuration will build
@@ -32,6 +63,20 @@ class _ConfiguredObject(yaml.YAMLObject):
         
     def _build(self):
         return self.actual_class()
+
+    def __cmp__(self, other):
+        if not isinstance(other, self.__class__):
+            return -1
+
+        our_dict = [(key, value) for key, value in self.__dict__.iteritems() if not key.startswith('_')]
+        other_dict = [(key, value) for key, value in other.__dict__.iteritems() if not key.startswith('_')]
+        
+        c = cmp(our_dict, other_dict)
+        print c, our_dict, other_dict
+        return c
+
+    def __hash__(self):
+        raise Exception('hashing')
 
     @property
     def actualized(self):
@@ -57,8 +102,8 @@ class TronConfiguration(yaml.YAMLObject):
             dic[nex.name] = 1
             return dic
         
-        jobs = self.jobs if hasattr(self, 'jobs') else []
-        jobs.extend(self.services if hasattr(self, 'services') else [])
+        jobs = [default_or_from_tag(job_val, Job) for job_val in getattr(self, 'jobs', [])]
+        jobs.extend([default_or_from_tag(job_val, Service) for job_val in getattr(self, 'services', [])])
 
         found_jobs = reduce(check_dup, jobs, {})
         for job_config in jobs:
@@ -89,15 +134,22 @@ class TronConfiguration(yaml.YAMLObject):
             raise ConfigError("Specified working directory \'%s\' is not writable" % working_dir)
         
         mcp.state_handler.working_dir = working_dir
+
+        if hasattr(self, 'command_context'):
+            mcp.context = command_context.CommandContext(self.command_context)
         
         self._apply_jobs(mcp)
+
         if hasattr(self, 'ssh_options'):
+            self.ssh_options = default_or_from_tag(self.ssh_options, SSHOptions)
             self.ssh_options._apply(mcp)
         
         if hasattr(self, 'notification_options'):
+            self.notification_options = default_or_from_tag(self.notification_options, NotificationOptions)
             self.notification_options._apply(mcp)
+        
 
-class SSHOptions(yaml.YAMLObject):
+class SSHOptions(yaml.YAMLObject, FromDictBuilderMixin):
     yaml_tag = u'!SSHOptions'
     
     def _build_conch_options(self):
@@ -133,7 +185,7 @@ class SSHOptions(yaml.YAMLObject):
             node.conch_options = options
 
 
-class NotificationOptions(yaml.YAMLObject):
+class NotificationOptions(yaml.YAMLObject, FromDictBuilderMixin):
     yaml_tag = u'!NotificationOptions'
     def _apply(self, mcp):
         if not hasattr(self, 'smtp_host'):
@@ -165,24 +217,28 @@ class Job(_ConfiguredObject):
             real.scheduler = schedule.actualized
         real.scheduler.job_setup(real)
 
-    def _create_action(self, real, act_conf):
-        action = act_conf.actualized
-        action.job = real
-        
-        if not real.node_pool and not action.node_pool:
-            raise yaml.YAMLError("Either job '%s' or its action '%s' must have a node" 
-               % (real.name, action.name))
+    def _match_actions(self, real_job, actions):
+        for action_conf in actions:
+            action = default_or_from_tag(action_conf, Action)
+            real_action = action.actualized
 
-        return action
+            if not real_job.node_pool and not real_action.node_pool:
+                raise yaml.YAMLError("Either job '%s' or its action '%s' must have a node" 
+                   % (real_job.name, action_action.name))
 
-    def _match_actions(self, real, actions):
-        for act_conf in actions:
-            action = self._create_action(real, act_conf)
-            real.topo_actions.append(action)
+            real_job.add_action(real_action)
                     
     def _apply(self):
         real_job = self._ref()
-        real_job.node_pool = self.node.actualized
+        node = default_or_from_tag(self.node, Node)
+
+        if not isinstance(node, NodePool):
+            node_pool = NodePool()
+            node_pool.nodes.append(node)
+        else:
+            node_pool = node
+            
+        real_job.node_pool = node_pool.actualized
         
         self._match_name(real_job, self.name)
         self._match_schedule(real_job, self.schedule)
@@ -197,6 +253,7 @@ class Job(_ConfiguredObject):
         if hasattr(self, "all_nodes"):
             real_job.all_nodes = self.all_nodes
 
+
 class Service(Job):
     yaml_tag = u'!Service'
     actual_class = job.Job
@@ -210,21 +267,32 @@ class Service(Job):
         self._match_actions(real_service, self.monitor['actions'])
 
         if hasattr(self, "enable"):
-            real_service.enable_act = self._create_action(real_service, self.enable)
+            enable = default_or_from_tag(self.enable, Action)
+            enable.name = enable.name or "enable"
+            real_service.set_enable_action(enable.actualized)
         
         if hasattr(self, "disable"):
-            real_service.disable_act = self._create_action(real_service, self.disable)
+            disable = default_or_from_tag(self.disable, Action)
+            disable.name = disable.name or "disable"
+            real_service.set_disable_action(disable.actualized)
+
 
 class Action(_ConfiguredObject):
     yaml_tag = u'!Action'
     actual_class = action.Action
+
+    def __init__(self, *args, **kwargs):
+        super(Action, self).__init__(*args, **kwargs)
+        self.name = None
+        self.command = None
     
     def _apply_requirements(self, real_action, requirements):
-        if hasattr(requirements, '__iter__'):
-            for req in requirements:
-                real_action.required_actions.append(req.actualized)
-        else:
-            real_action.required_actions.append(requirements.actualized)
+        if not isinstance(requirements, list):
+            requirements = [requirements]
+
+        requirements = [default_or_from_tag(req, Action) for req in requirements]
+        for req in requirements:
+            real_action.required_actions.append(req.actualized)
 
     def _apply(self):
         """Configured the specific action instance"""
@@ -234,29 +302,40 @@ class Action(_ConfiguredObject):
 
         real_action.name = self.name
         real_action.command = self.command
-        real_action.node_pool = self.node.actualized if hasattr(self, "node") else None
+        if hasattr(self, "node"):
+            node = default_or_from_tag(self.node, Node)
+            if not isinstance(node, NodePool):
+                node_pool = NodePool()
+                node_pool.nodes.append(node)
+            else:
+                node_pool = node
+                
+            real_action.node_pool = node_pool.actualized
 
         if hasattr(self, "requires"):
             self._apply_requirements(real_action, self.requires)
 
+
 class NodePool(_ConfiguredObject):
     yaml_tag = u'!NodePool'
     actual_class = node.NodePool
-    
+    def __init__(self, *args, **kwargs):
+        super(NodePool, self).__init__(*args, **kwargs)
+        self.nodes = []
     def _apply(self):
         real_node_pool = self._ref()
-        for name in self.hostnames:
-            real_node_pool.nodes.append(node.Node(name))
+        for node in self.nodes:
+            real_node_pool.nodes.append(default_or_from_tag(node, Node).actualized)
         
         
 class Node(_ConfiguredObject):
     yaml_tag = u'!Node'
-    actual_class = node.NodePool
+    actual_class = node.Node
     
     def _apply(self):
         real_node = self._ref()
-        real_node.nodes.append(node.Node(self.hostname))
- 
+        real_node.hostname = self.hostname
+
 
 class NodeResource(yaml.YAMLObject):
     yaml_tag = u'!NodeResource'
@@ -272,14 +351,20 @@ class FileResource(yaml.YAMLObject):
 
 class Scheduler(object):
     @classmethod
-    def from_string(self, scheduler_name):
+    def from_string(self, scheduler_str):
+        scheduler_args = scheduler_str.split()
+        
+        scheduler_name = scheduler_args.pop(0)
+        
         if scheduler_name == "constant":
             return ConstantScheduler().actualized
         if scheduler_name == "daily":
-            return DailyScheduler().actualized
-        if scheduler_name == "weekly":
-            return scheduler.DailyScheduler(days=7)
-        return scheduler.DailyScheduler(days=scheduler_name)
+            return DailyScheduler(*scheduler_args).actualized
+        if scheduler_name == "interval":
+            return IntervalScheduler(*scheduler_args).actualized
+
+        raise Error("Unknown scheduler %r" % scheduler_str)
+
 
 
 class ConstantScheduler(_ConfiguredObject):
@@ -307,7 +392,12 @@ TIME_INTERVAL_UNITS = {
 class IntervalScheduler(_ConfiguredObject):
     yaml_tag = u'!IntervalScheduler'
     actual_class = scheduler.IntervalScheduler
-    
+    def __init__(self, *args, **kwargs):
+        if len(args) > 0:
+            self.interval = args[0]
+
+        super(IntervalScheduler, self).__init__(*args, **kwargs)
+
     def _apply(self):
         sched = self._ref()
         
@@ -336,6 +426,17 @@ class IntervalScheduler(_ConfiguredObject):
 class DailyScheduler(_ConfiguredObject):
     yaml_tag = u'!DailyScheduler'
     actual_class = scheduler.DailyScheduler
+    def __init__(self, *args, **kwargs):
+
+        if len(args) > 0:
+            self.start_time = args[0]
+
+        if len(args) > 1:
+            self.days = args[1]
+        if 'days' in kwargs:
+            self.days = kwargs['days']
+
+        super(DailyScheduler, self).__init__(*args, **kwargs)
 
     def _apply(self):
         sched = self._ref()

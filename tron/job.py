@@ -3,7 +3,7 @@ import os
 import shutil
 from collections import deque
 
-from tron import action
+from tron import action, command_context
 from tron.utils import timeutils
 
 log = logging.getLogger('tron.job')
@@ -22,6 +22,7 @@ class JobRun(object):
         self.end_time = None
         self.node = None
         self.runs = []
+        self.context = command_context.CommandContext(self, job.context)
                
     def set_run_time(self, run_time):
         self.run_time = run_time
@@ -40,10 +41,11 @@ class JobRun(object):
             else:
                 log.warning("A previous run for %s has not finished - cancelling", self.job.name)
                 self.cancel()
-    
+
     def start(self):
         log.info("Starting action job %s", self.job.name)
         self.start_time = timeutils.current_time()
+        self.end_time = None
 
         for r in self.runs:
             r.attempt_start()
@@ -147,7 +149,7 @@ class Job(object):
         self.run_num += 1
         return self.run_num - 1
 
-    def __init__(self, name=None, action=None):
+    def __init__(self, name=None, action=None, context=None):
         self.name = name
         self.topo_actions = [action] if action else []
         self.scheduler = None
@@ -163,12 +165,35 @@ class Job(object):
         self.node_pool = None
         self.output_dir = None
         self.store_callback = None
+        self.context = command_context.CommandContext(self)
 
         # Service Data
         self.enable_act = None
         self.disable_act = None
         self.enable_runs = deque()
         self.disable_runs = deque()
+
+    def _register_action(self, action):
+        """Prepare an action to be *owned* by this job"""
+        if action in self.topo_actions:
+            raise Error("Action %s already in jobs %s" % (action.name, job.name))
+
+        # Needs a back reference. This should probably be done differently some
+        action.job = self
+
+    def add_action(self, action):
+        self._register_action(action)
+        self.topo_actions.append(action)
+
+    def set_enable_action(self, action):
+        """Set the action to be run on enable"""
+        self._register_action(action)
+        self.enable_act = action
+
+    def set_disable_action(self, action):
+        """Set the action to be run on disable"""
+        self._register_action(action)
+        self.disable_act = action
 
     def change_callback(self):
         if self.store_callback:
@@ -186,6 +211,9 @@ class Job(object):
 
     def __ne__(self, other):
         return not self == other
+
+    def set_context(self, context):
+        self.context = command_context.CommandContext(self.context, context)
 
     def enable(self):
         if self.enable_act:

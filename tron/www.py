@@ -77,7 +77,7 @@ class ActionRunResource(resource.Resource):
             log.warning("Unknown request command %s", request.args['command'])
             return respond(request, None, code=http.NOT_IMPLEMENTED)
 
-        return respond(request, {'result': "Action run now in result %s" % job_run_state(self._act_run)})
+        return respond(request, {'result': "Action run now in state %s" % job_run_state(self._act_run)})
     
     def _start(self, request):
         if not self._act_run.is_success and not self._act_run.is_running:
@@ -91,14 +91,14 @@ class ActionRunResource(resource.Resource):
             log.info("Marking job run %s for success", self._act_run.id)
             self._act_run.succeed()
         else:
-            log.warning("Request to mark job run %s succeed when it has already", self._act_run.id)
+            log.warning("Request to mark job run %s succeeded when it's running or already succeeded", self._act_run.id)
 
     def _cancel(self, request):
         if self._act_run.is_scheduled or self._act_run.is_queued:
             log.info("Cancelling job %s", self._act_run.id)
             self._act_run.cancel()
         else:
-            log.warning("Request to cancel job run %s when it's already cancelled", self._act_run.id)
+            log.warning("Request to cancel job run %s when it's not possible", self._act_run.id)
 
     def _fail(self, request):
         if not self._act_run.is_running and not self._act_run.is_success and not self._act_run.is_failed:
@@ -131,7 +131,7 @@ class JobRunResource(resource.Resource):
             action_state = job_run_state(action_run)
             
             last_time = action_run.end_time if action_run.end_time else timeutils.current_time()
-            duration = (last_time - action_run.start_time).seconds if action_run.start_time else 0
+            duration = str(last_time - action_run.start_time) if action_run.start_time else ""
            
             run_output.append({
                 'id': action_run.id,
@@ -158,6 +158,8 @@ class JobRunResource(resource.Resource):
         cmd = request.args['command'][0]
         if cmd == "start":
             self._start(request)
+        elif cmd == 'restart':
+            self._restart(request)
         elif cmd == "succeed":
             self._succeed(request)
         elif cmd == "fail":
@@ -168,12 +170,17 @@ class JobRunResource(resource.Resource):
             log.warning("Unknown request command %s", request.args['command'])
             return respond(request, None, code=http.NOT_IMPLEMENTED)
         
-        return respond(request, {'result': "Job run now in result %s" % job_run_state(self._run)})
+        return respond(request, {'result': "Job run now in state %s" % job_run_state(self._run)})
+
+    def _restart(self, request):
+        log.info("Resetting all action runs to scheduled state")
+        self._run.schedule()
+        self._start(request)
 
     def _start(self, request):
         if not self._run.is_success and not self._run.is_running:
             log.info("Starting job run %s", self._run.id)
-            self._run.manual_start()
+            self._run.start()
         else:
             log.warning("Request to start job run %s when it's already done", self._run.id)
 
@@ -220,7 +227,7 @@ class JobResource(resource.Resource):
     def get_run_data(self, request, run):
         state = job_run_state(run)
         last_time = run.end_time if run.end_time else timeutils.current_time()
-        duration = (last_time - run.start_time).seconds if run.start_time else 0
+        duration = str(last_time - run.start_time) if run.start_time else ""
 
         return {
                 'id': run.id,
@@ -359,9 +366,8 @@ class ConfigResource(resource.Resource):
         self._master_control.rewrite_config(new_config)
         response = {'status': "I'm alive biatch"}
         try:
-            self._master_control.load_config()
-            self._master_control.run_jobs()
-        except (OSError, config.ConfigError), e:
+            self._master_control.live_reconfig()
+        except Exception, e:
             response['error'] = str(e)
         
         return respond(request, response)

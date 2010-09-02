@@ -7,7 +7,7 @@ import sys
 import subprocess
 import yaml
 
-from tron import job, config
+from tron import job, config, command_context
 from twisted.internet import reactor
 from tron.utils import timeutils
 
@@ -49,6 +49,8 @@ class StateHandler(object):
             run = job.restore_main_run(r_data)
             if run.is_scheduled:
                 reactor.callLater(sleep_time(run.run_time), self.mcp.run_job, run)
+
+        job.set_context(self.mcp.context)
 
         next = job.next_to_finish()
         if job.enabled and next and next.is_queued:
@@ -104,19 +106,29 @@ class MasterControlProgram(object):
     This object is responsible for figuring who needs to run and when. It will be the main entry point
     where our daemon finds work to do
     """
-    def __init__(self, working_dir, config_file):
+    def __init__(self, working_dir, config_file, context=None):
         self.jobs = {}
         self.nodes = []
         self.state_handler = StateHandler(self, working_dir)
         self.config_file = config_file
+        self.context = context
 
+    def live_reconfig(self):
+        try:
+            self.load_config()
+            self.run_jobs()
+        except Exception, e:
+            log.error("Reconfiguration failed.  Cancelling")
+    
     def load_config(self):
+        log.info("Loading configuration from %s" % self.config_file)
         try:
             opened_config = open(self.config_file, "r")
             configuration = config.load_config(opened_config)
             configuration.apply(self)
             opened_config.close()
         except (IOError, yaml.YAMLError), e:
+            log.error("Error reading configuration from %s" % self.config_file)
             raise config.ConfigError(e)
 
     def config_lines(self):
@@ -142,7 +154,7 @@ class MasterControlProgram(object):
             return
 
         for node in node_pool.nodes:
-            if not node in self.nodes:
+            if node not in self.nodes:
                 self.nodes.append(node)
 
     def add_job_nodes(self, job):
@@ -157,15 +169,21 @@ class MasterControlProgram(object):
 
     def add_job(self, job):
         if job.name in self.jobs:
+            # Jobs have a complex eq implementation that allows us to catch jobs that have not changed and thus
+            # don't need to be updated during a reconfigure
             if job == self.jobs[job.name]:
                 return
             
+            # We're updating an existing job, we have to copy over run time information
             job.absorb_old_job(self.jobs[job.name])
+
             if job.enabled:
                 self.disable_job(job)
                 self.enable_job(job)
         
         self.jobs[job.name] = job
+
+        job.set_context(self.context)
         self.setup_job_dir(job)
         self.add_job_nodes(job)
         job.store_callback = self.state_handler.store_data

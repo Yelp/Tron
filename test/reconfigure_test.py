@@ -24,7 +24,7 @@ nodes:
     - &node1 !Node
         hostname: 'batch1'
     - &nodePool !NodePool
-        hostnames: ['batch2', 'batch3']
+        nodes: [*node0, *node1]
 jobs:
     - &job0 !Job
         name: "test_unchanged"
@@ -72,8 +72,11 @@ ssh_options: !SSHOptions
 nodes:
     - &node0 !Node
         hostname: 'batch0'
+    - &node1 !Node
+        hostname: 'batch1'
+
     - &nodePool !NodePool
-        hostnames: ['batch2', 'batch3']
+        nodes: [*node0, *node1]
 jobs:
     - &job0 !Job
         name: "test_unchanged"
