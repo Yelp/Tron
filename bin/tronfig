@@ -29,17 +29,28 @@ def upload_config(options, contents):
     else:
         print "Configuration uploaded successfully"
 
+def clean_config(load):
+    if hasattr(load, 'ssh_options'):
+        del load.ssh_options
+
+    return load
+
 def test_config(file_name):
     tmpdir = tempfile.mkdtemp()
-    worked = True
     
     # Can the MCP handle the configuration?
     try:
-        master = mcp.MasterControlProgram(tmpdir, file_name)
+        # The local MCP can't handle all the configuration, so clean it
+        edited_config = clean_config(yaml.load(file(file_name)))
+        edited_file = tempfile.NamedTemporaryFile()
+        edited_file.write(yaml.dump(edited_config))
+        edited_file.flush()
+
+        master = mcp.MasterControlProgram(tmpdir, edited_file.name)
         master.load_config()
         shutil.rmtree(tmpdir)
         return True
-    except Exception, e:
+    except IOError, e:
         print >>sys.stderr, "Error in configuration: %s" % str(e)
         shutil.rmtree(tmpdir)
 

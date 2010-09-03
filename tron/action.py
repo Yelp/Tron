@@ -76,11 +76,9 @@ class ActionRunContext(object):
 
 class ActionRun(object):
     """An instance of running a action"""
-    def __init__(self, action, job_run):
+    def __init__(self, action):
         self.action = action
-        self.job_run = job_run
-        self.state_callback = job_run.state_callback
-        self.id = "%s.%s" % (job_run.id, action.name)
+        self.id = None
         
         self.run_time = None    # What time are we supposed to start
         self.start_time = None  # What time did we start
@@ -88,15 +86,15 @@ class ActionRun(object):
         self.exit_status = None
         self.state = ACTION_RUN_QUEUED if action.required_actions else ACTION_RUN_SCHEDULED
 
-        self.stdout_path = os.path.join(job_run.output_dir, self.action.name + '.stdout')
-        self.stderr_path = os.path.join(job_run.output_dir, self.action.name + '.stderr')
+        self.node = None
+        new_run.context = None
+        new_run.state_callback = None
+        new_run.complete_callback = None
+
+        self.stdout_path = None
+        self.stderr_path = None
         self.stdout_file = None
         self.stderr_file = None
-        
-        self.node = action.node_pool.next() if action.node_pool else job_run.node
-
-        action_run_context = ActionRunContext(self)
-        self.context = command_context.CommandContext(action_run_context, job_run.context)
 
         self.required_runs = []
         self.waiting_runs = []
@@ -333,6 +331,18 @@ class Action(object):
         
         This is used by the scheduler when scheduling a run
         """
-        new_run = ActionRun(self, job_run)
+        new_run = ActionRun(self)
+        self.id = "%s.%s" % (job_run.id, self.name)
+
+        new_run.state_callback = job_run.state_callback
+        new_run.complete_callback = job_run.run_completed
+
+        self.node = action.node_pool.next() if self.node_pool else job_run.node
+        self.stdout_path = os.path.join(job_run.output_dir, self.action.name + '.stdout')
+        self.stderr_path = os.path.join(job_run.output_dir, self.action.name + '.stderr')
+
+        action_run_context = ActionRunContext(new_run)
+        new_run.context = command_context.CommandContext(action_run_context, context)
+
         return new_run
 
