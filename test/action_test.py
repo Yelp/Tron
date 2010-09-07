@@ -229,7 +229,8 @@ class ActionRunBuildingTest(TestCase):
     def test_build_run(self):
         run = self.job.build_run()
         act_run = self.action.build_run(run)
-        assert_equal(act_run.job_run, run)
+        assert_equal(act_run.state_callback, run.state_callback)
+        assert_equal(act_run.complete_callback, run.run_completed)
         assert run.id
 
     def test_no_schedule(self):

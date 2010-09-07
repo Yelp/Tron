@@ -67,9 +67,9 @@ class DailyScheduler(object):
     def next_runs(self, job):
         # Find the next time to run
         if job.runs:
-            next_day = job.runs[0].run_time + self.wait_days[job.runs[0].run_time.weekday()]
+            next_day = job.runs[0].run_time + datetime.timedelta(days=self.wait_days[job.runs[0].run_time.weekday()])
         else:
-            next_day = timeutils.current_time() + self.wait_days[timeutils.current_time().weekday()]
+            next_day = timeutils.current_time() + datetime.timedelta(self.wait_days[timeutils.current_time().weekday()])
 
         run_time = next_day.replace(
                             hour=self.start_time.hour, 

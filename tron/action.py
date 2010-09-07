@@ -87,9 +87,9 @@ class ActionRun(object):
         self.state = ACTION_RUN_QUEUED if action.required_actions else ACTION_RUN_SCHEDULED
 
         self.node = None
-        new_run.context = None
-        new_run.state_callback = None
-        new_run.complete_callback = None
+        self.context = None
+        self.state_callback = None
+        self.complete_callback = None
 
         self.stdout_path = None
         self.stderr_path = None
@@ -218,7 +218,7 @@ class ActionRun(object):
         self.state = ACTION_RUN_FAILED
         self.exit_status = exit_status
         self.end_time = timeutils.current_time()
-        self.job_run.run_completed()
+        self.complete_callback()
         self.state_callback()
 
     def fail_unknown(self):
@@ -228,14 +228,14 @@ class ActionRun(object):
         self.state = ACTION_RUN_FAILED
         self.exit_status = None
         self.end_time = None
-        self.job_run.run_completed()
+        self.complete_callback()
         self.state_callback()
 
     def mark_success(self):
         self.exit_status = 0
         self.state = ACTION_RUN_SUCCEEDED
         self.end_time = timeutils.current_time()
-        self.job_run.run_completed()
+        self.complete_callback()
 
     def succeed(self):
         """Mark the run as having succeeded"""
@@ -332,17 +332,17 @@ class Action(object):
         This is used by the scheduler when scheduling a run
         """
         new_run = ActionRun(self)
-        self.id = "%s.%s" % (job_run.id, self.name)
+        new_run.id = "%s.%s" % (job_run.id, self.name)
 
         new_run.state_callback = job_run.state_callback
         new_run.complete_callback = job_run.run_completed
 
-        self.node = action.node_pool.next() if self.node_pool else job_run.node
-        self.stdout_path = os.path.join(job_run.output_dir, self.action.name + '.stdout')
-        self.stderr_path = os.path.join(job_run.output_dir, self.action.name + '.stderr')
+        new_run.node = self.node_pool.next() if self.node_pool else job_run.node
+        new_run.stdout_path = os.path.join(job_run.output_dir, self.name + '.stdout')
+        new_run.stderr_path = os.path.join(job_run.output_dir, self.name + '.stderr')
 
         action_run_context = ActionRunContext(new_run)
-        new_run.context = command_context.CommandContext(action_run_context, context)
+        new_run.context = command_context.CommandContext(action_run_context, job_run.context)
 
         return new_run
 
