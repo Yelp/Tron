@@ -19,10 +19,10 @@ def parse_options():
     parser = optparse.OptionParser()
     
     parser.add_option("--config-file", "-c", action="store", dest="config_file", help="(require) Configuration file to load (default %default)", default="/etc/tron/tron.yaml")
-    parser.add_option("--working-dir", action="store", dest="working_dir", help="Directory where tron's state and output is stored", default=None)
+    parser.add_option("--working-dir", action="store", dest="working_dir", help="Directory where tron's state and output is stored (default %default)", default="/var/lib/tron/")
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
     parser.add_option("--debug", action="store_true", dest="debug", help="Debug mode, extra error reporting")
-    parser.add_option("--log-file", "-l", action="store", dest="log_file", help="Where the logs are stored (default %default)", default="/var/log/tron.log")
+    parser.add_option("--log-file", "-l", action="store", dest="log_file", help="Where the logs are stored (default %default)", default="/var/log/tron/tron.log")
     parser.add_option("--port", "-P", action="store", dest="listen_port", help="What port to listen on, defaults %default", default=8082, type=int)
     parser.add_option("--host", "-H", action="store", dest="listen_host", help="What host to listen on defaults to %default", default="localhost", type=str)
     

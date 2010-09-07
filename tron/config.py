@@ -227,11 +227,9 @@ class Job(_ConfiguredObject):
                    % (real_job.name, action_action.name))
 
             real_job.add_action(real_action)
-                    
-    def _apply(self):
-        real_job = self._ref()
-        node = default_or_from_tag(self.node, Node)
-
+    
+    def _match_node(self, real_job, node_conf):
+        node = default_or_from_tag(node_conf, Node)
         if not isinstance(node, NodePool):
             node_pool = NodePool()
             node_pool.nodes.append(node)
@@ -239,8 +237,12 @@ class Job(_ConfiguredObject):
             node_pool = node
             
         real_job.node_pool = node_pool.actualized
-        
+                    
+    def _apply(self):
+        real_job = self._ref()
+
         self._match_name(real_job, self.name)
+        self._match_node(real_job, self.node)
         self._match_schedule(real_job, self.schedule)
         self._match_actions(real_job, self.actions)
 
@@ -260,9 +262,9 @@ class Service(Job):
 
     def _apply(self):
         real_service = self._ref()
-        real_service.node_pool = self.node.actualized
-        
+
         self._match_name(real_service, self.name)
+        self._match_node(real_service, self.node)
         self._match_schedule(real_service, self.monitor['schedule'])
         self._match_actions(real_service, self.monitor['actions'])
 
@@ -361,7 +363,7 @@ class Scheduler(object):
         if scheduler_name == "daily":
             return DailyScheduler(*scheduler_args).actualized
         if scheduler_name == "interval":
-            return IntervalScheduler(*scheduler_args).actualized
+            return IntervalScheduler(''.join(scheduler_args)).actualized
 
         raise Error("Unknown scheduler %r" % scheduler_str)
 

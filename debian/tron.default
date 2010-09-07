@@ -7,7 +7,7 @@
 #
 
 # Additional options that are passed to the Daemon.
-DAEMON_OPTS="-v -c /etc/tron/tron.yaml -l /var/log/tron/tron.log"
+DAEMON_OPTS="-v -c /etc/tron/tron.yaml -l /var/log/tron/tron.log --working-dir=/var/lib/tron/"
 
 # Enable this when you have configured tron to your liking.
 RUN="no"
