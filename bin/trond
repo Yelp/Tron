@@ -68,11 +68,17 @@ def main():
     
     # Configure the mcp
     master_control = mcp.MasterControlProgram(options.working_dir, options.config_file)
-    try:
-        master_control.load_config()
-    except Exception, e:
-        print >>sys.stderr, "Error in configuration file:", e
-        sys.exit()
+    if os.path.exists(options.config_file):
+        try:
+            master_control.load_config()
+        except Exception, e:
+            print >>sys.stderr, "Error in configuration file:", e
+            sys.exit()
+    else:
+        new = open(options.config_file, 'w')
+        new.write("--- %s\n" % config.TronConfiguration.yaml_tag)
+        new.write("working_dir: %r" % options.working_dir)
+        new.close()
     
     def sighup_handler(signum, frame):
         logger.info("SIGHUP Caught!")

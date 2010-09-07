@@ -62,9 +62,8 @@ class StateHandler(object):
         self.store_state()
 
     def kill_child(self):
-        if self.write_pid:
-            if os.waitpid(self.write_pid, os.WNOHANG)[0]:
-                self.write_pid = None
+        if self.write_pid and os.waitpid(self.write_pid, os.WNOHANG)[0]:
+            self.write_pid = None
 
     def store_state(self):
         """Stores the state of tron"""
@@ -132,18 +131,14 @@ class MasterControlProgram(object):
             self.load_config()
             self.run_jobs()
         except Exception, e:
-            log.error("Reconfiguration failed.  Cancelling")
+            log.error("Reconfiguration failed: %" % str(e))
     
     def load_config(self):
         log.info("Loading configuration from %s" % self.config_file)
-        try:
-            opened_config = open(self.config_file, "r")
-            configuration = config.load_config(opened_config)
-            configuration.apply(self)
-            opened_config.close()
-        except (IOError, yaml.YAMLError), e:
-            log.error("Error reading configuration from %s" % self.config_file)
-            raise config.ConfigError(e)
+        opened_config = open(self.config_file, "r")
+        configuration = config.load_config(opened_config)
+        configuration.apply(self)
+        opened_config.close()
 
     def config_lines(self):
         try:
