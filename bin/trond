@@ -14,6 +14,9 @@ from twisted.python import log
 from twisted.internet import reactor, defer
 from twisted.web import server
 
+# Annoying that we have to import twisted internal module here, but we don't really want to use 'twistd' to run our daemon.
+from twisted.scripts import _twistd_unix
+
 from tron import mcp, cmd, job, resource, node, scheduler, www, monitor, emailer, config
 
 logger = logging.getLogger('bin.trond')
@@ -31,7 +34,10 @@ def parse_options():
     parser.add_option("--config-file", "-c", action="store", dest="config_file", help="Configuration file to load (default in working dir)", default=None)
 
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
-    parser.add_option("--debug", action="store_true", dest="debug", help="Debug mode, extra error reporting")
+    parser.add_option("--debug", action="store_true", dest="debug", help="Debug mode, extra error reporting, no daemonizing")
+
+    parser.add_option("--nodaemon", action="store_true", dest="nodaemon", help="Indicates we should not fork and daemonize the process (default %default)", default=False)
+    parser.add_option("--pid-file", action="store", dest="pidfile", help="Where to store pid of the executing process (default %default)", default="/var/run/tron.pid")
 
     parser.add_option("--port", "-P", action="store", dest="listen_port", help="What port to listen on, defaults %default", default=cmd.DEFAULT_PORT, type=int)
     parser.add_option("--host", "-H", action="store", dest="listen_host", help="What host to listen on defaults to %default", default=cmd.DEFAULT_HOST, type=str)
@@ -73,66 +79,111 @@ def setup_logging(options):
     if options.debug:
         defer.setDebugging(True)
 
+# This is rather crazy thing to do, but I don't really like 'twistd', but it has all kinds of 
+# useful functions in it for daemonizing stuff. So rather than use twisted and build a tac file and
+# all that crap, we're going to hack out the parts we like. 
+class FakeConfig(dict):
+    """Wrapper class to make a options object look like dictionary for twistd stuff"""
+    def __init__(self, options):
+        self.options = options
+    def __getitem__(self, key):
+        return getattr(self.options, key)
+
+class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
+    def __init__(self, options):
+        # We arn't supporting all the options that twistd has, so add some default values here.
+        options.profile = None
+        options.chroot = None
+        options.rundir = '.'
+        options.umask = None
+        
+        self.options = options
+
+        self.config = FakeConfig(options)
+
+        # The ApplicationRunner is suppose to have an actual application it runs, but that abstraction just confused me.
+        self.application = None
+        self.profiler = None
+
+    def preApplication(self):
+        _twistd_unix.UnixApplicationRunner.preApplication(self)
+
+        # Setup our environment
+        try:
+            os.makedirs(self.options.working_dir)
+        except OSError, e:
+            if e.errno == errno.EEXIST:
+                pass
+            else:
+                raise
+
+        if not os.path.isdir(self.options.working_dir) or not os.access(self.options.working_dir, os.R_OK|os.R_OK|os.X_OK):
+            print >>sys.stderr, "Error, working directory %s invalid" % (self.options.working_dir)
+            sys.exit(1)
+
+        # See if we can access or create the config file
+        if not os.path.exists(self.options.config_file):
+            try:
+                create_default_config(self.options.config_file)
+            except OSError, create_e:
+                print >>sys.stderr, "Error creating default configuration at %s: %r" % (self.options.config_file, create_e)
+                sys.exit(1)
+
+        if not os.access(self.options.config_file, os.R_OK|os.W_OK):
+            print >>sys.stderr, "Error opening configuration %s: %r" % (self.options.config_file, create_e)
+            sys.exit(1)
+        
+
+    def run(self):
+        self.preApplication()
+        
+        setup_logging(self.options)
+        
+        self.postApplication()
+
+
+    def startApplication(self, application):
+        self.setupEnvironment(self.config['chroot'], 
+                              self.config['rundir'], 
+                              self.config['nodaemon'], 
+                              self.config['umask'], 
+                              self.config['pidfile'])
+
+        
+        # Build and configure the mcp
+        master_control = mcp.MasterControlProgram(self.options.working_dir, self.options.config_file)
+        try:
+            master_control.load_config()
+        except Exception, e:
+            print >>sys.stderr, "Error in configuration file:", e
+            sys.exit(1)
+
+        # Try to load up previous state
+        master_control.try_restore()
+
+        # Setup our reconfiguration signal handler
+        def sighup_handler(signum, frame):
+            logger.info("SIGHUP Caught!")
+            reactor.callLater(0, master_control.live_reconfig)
+            # TODO: Reopen log files
+            #  It's strange that the logging module doesn't seem to have a built-in system for re-opening logs
+            #  on SIGHUP even though that's a pretty normal thing to do. There is functionality for handling the rotating
+            #  directly, but that's.... sorta lame.
+
+        signal.signal(signal.SIGHUP, sighup_handler)
+
+        # Start up our web management interface
+        reactor.listenTCP(self.options.listen_port, server.Site(www.RootResource(master_control)), interface=self.options.listen_host)
+
+        # Setup the mcp timed callbacks
+        reactor.callLater(0, master_control.run_jobs)
+
+        
 def main():
     options = parse_options()
     
-    setup_logging(options)
-    
-    # Setup our environment
-    try:
-        os.makedirs(options.working_dir)
-    except OSError, e:
-        if e.errno == errno.EEXIST:
-            pass
-        else:
-            raise
-    
-    if not os.path.isdir(options.working_dir) or not os.access(options.working_dir, os.R_OK|os.R_OK|os.X_OK):
-        print >>sys.stderr, "Error, working directory %s invalid" % (options.working_dir)
-        sys.exit(1)
-
-    # See if we can access or create the config file
-    if not os.path.exists(options.config_file):
-        try:
-            create_default_config(options.config_file)
-        except OSError, create_e:
-            print >>sys.stderr, "Error creating default configuration at %s: %r" % (options.config_file, create_e)
-            sys.exit(1)
-
-    if not os.access(options.config_file, os.R_OK|os.W_OK):
-        print >>sys.stderr, "Error opening configuration %s: %r" % (options.config_file, create_e)
-        sys.exit(1)
-
-    # Build and configure the mcp
-    master_control = mcp.MasterControlProgram(options.working_dir, options.config_file)
-    try:
-        master_control.load_config()
-    except Exception, e:
-        print >>sys.stderr, "Error in configuration file:", e
-        sys.exit(1)
-    
-    # Try to load up previous state
-    master_control.try_restore()
-    
-    # Setup our reconfiguration signal handler
-    def sighup_handler(signum, frame):
-        logger.info("SIGHUP Caught!")
-        reactor.callLater(0, master_control.live_reconfig)
-        # TODO: Reopen log files
-        #  It's strange that the logging module doesn't seem to have a built-in system for re-opening logs
-        #  on SIGHUP even though that's a pretty normal thing to do. There is functionality for handling the rotating
-        #  directly, but that's.... sorta lame.
-
-    signal.signal(signal.SIGHUP, sighup_handler)
-
-    # Start up our web management interface
-    reactor.listenTCP(options.listen_port, server.Site(www.RootResource(master_control)), interface=options.listen_host)
-
-    # Setup the mcp timed callbacks
-    reactor.callLater(0, master_control.run_jobs)
-    
-    # and then off to reactor land...
-    reactor.run()
+    app_runner = TronApplicationRunner(options)
+    app_runner.run()
 
 if __name__ == '__main__':
     main()
