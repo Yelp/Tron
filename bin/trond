@@ -155,7 +155,7 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
         try:
             master_control.load_config()
         except Exception, e:
-            print >>sys.stderr, "Error in configuration file:", e
+            logger.exception("Error in configuration file %s" % self.options.config_file)
             sys.exit(1)
 
         # Try to load up previous state
