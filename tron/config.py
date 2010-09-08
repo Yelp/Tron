@@ -18,6 +18,63 @@ class Error(Exception):
 class ConfigError(Exception):
     pass
 
+# If a configuration is not provided when trond starts, here is what we begin with.
+# The user can then use tronfig command to customize their installation.
+DEFAULT_CONFIG = """--- !TronConfiguration
+
+ssh_options:
+    ## Tron needs SSH keys to allow the effective user to login to each of the nodes specified
+    ## in the "nodes" section. You can choose to use either an SSH agent or list 
+    # identities:
+    #     - /home/tron/.ssh/id_dsa
+    agent: true
+    
+
+# notification_options:
+      ## In case of trond failures, where should we send notifications to ?
+      # smtp_host: localhost
+      # notification_addr: nobody@localhost
+
+nodes:
+    ## You'll need to list out all the available nodes for doing work.
+    # - &node
+    #     hostname: 'localhost'
+    
+    ## Optionally you can list 'pools' of nodes where selection of a node will be randomly
+    ## determined or jobs can be configured to be run on all nodes in the pool
+    # - &all_nodes !NodePool
+    #     nodes: [*node]
+
+jobs:
+    ## Configure your jobs here by specifing a name, node, schedule and the work flow that should executed.
+    # - &sample_job
+    #     name: "sample_job"
+    #     node: *node
+    #     schedule: "daily"
+    #     actions:
+    #         -
+    #             name: "uname"
+    #             command: "uname -a"
+
+services:
+    ## Configure services here. Services differ from jobs in that they are expected to have an enable/disable and monitoring
+    ## phase.
+    # - &sample_service
+    #     name: "sample_service"
+    #     node: *node
+    #     enable:
+    #         command: "echo 'enabled'"
+    #     disable:
+    #         command: "echo 'disabled'"
+    #     monitor:
+    #         schedule: "interval 10 mins"
+    #         actions:
+    #             -
+    #                 name: "monitor"
+    #                 command: "uptime"
+
+"""
+
 class FromDictBuilderMixin(object):
     """Mixin class for building YAMLObjects from dictionaries"""
     @classmethod
@@ -88,6 +145,7 @@ class _ConfiguredObject(yaml.YAMLObject, FromDictBuilderMixin):
 
         return actualized_obj
 
+
 class TronConfiguration(yaml.YAMLObject):
     yaml_tag = u'!TronConfiguration'
 
@@ -102,8 +160,11 @@ class TronConfiguration(yaml.YAMLObject):
             dic[nex.name] = 1
             return dic
         
-        jobs = [default_or_from_tag(job_val, Job) for job_val in getattr(self, 'jobs', [])]
-        jobs.extend([default_or_from_tag(job_val, Service) for job_val in getattr(self, 'services', [])])
+        jobs = []
+        if getattr(self, 'jobs', None):
+            jobs = [default_or_from_tag(job_val, Job) for job_val in self.jobs]
+        if getattr(self, 'services', None):
+            jobs.extend([default_or_from_tag(job_val, Service) for job_val in self.services])
 
         found_jobs = reduce(check_dup, jobs, {})
         for job_config in jobs:

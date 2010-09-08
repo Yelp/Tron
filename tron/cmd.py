@@ -12,9 +12,13 @@ import logging
 import simplejson
 import yaml
 
-USER_AGENT = "Tron View/1.0 +http://github.com/Yelp/Tron"
+USER_AGENT = "Tron Command/1.0 +http://github.com/Yelp/Tron"
 CONFIG_FILE_NAME = "~/.tron"
-LOCAL = "http://localhost:8082"
+
+DEFAULT_HOST = 'localhost'
+DEFAULT_PORT = 8089
+
+DEFAULT_SERVER = "http://%s:%d" % (DEFAULT_HOST, DEFAULT_PORT)
 
 # Result Codes
 OK = "OK"
@@ -27,12 +31,12 @@ def load_config(options):
     file_name = os.path.expanduser(CONFIG_FILE_NAME)
     if not os.access(file_name, os.R_OK):
         log.debug("Config file %s doesn't yet exist", file_name)
-        options.server = options.server or LOCAL
+        options.server = options.server or DEFAULT_SERVER
         return
     
     try:
         config = yaml.load(open(file_name, "r"))
-        options.server = options.server or config.get('server', LOCAL)
+        options.server = options.server or config.get('server', DEFAULT_SERVER)
     except IOError, e:
         log.error("Failure loading config file: %r", e)
 
