@@ -9,5 +9,8 @@
 # Additional options that are passed to the Daemon.
 DAEMON_OPTS=""
 
+# Set this to be the user that will be setup to SSH into your working nodes
+DAEMONUSER=""
+
 # Enable this when you have configured tron to your liking.
 RUN="no"

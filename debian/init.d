@@ -41,6 +41,7 @@
 PATH=/usr/bin:/usr/sbin:/sbin:/bin
 
 DAEMON=/usr/bin/trond # Introduce the server's location here
+PYTHON=/usr/local/bin/python
 NAME=tron             # Introduce the short server's name here
 DESC=tron             # Introduce a short description here
 LOGDIR=/var/log/tron  # Log directory to use
@@ -60,7 +61,7 @@ DIETIME=10              # Time to wait for the server to die, in seconds
                         # let some servers to die gracefully and
                         # 'restart' will not work
 
-#STARTTIME=2             # Time to wait for the server to start, in seconds
+STARTTIME=1             # Time to wait for the server to start, in seconds
                         # If this value is set each time the server is
                         # started (on start or restart) the script will
                         # stall to try to determine if it is running
@@ -70,7 +71,7 @@ DIETIME=10              # Time to wait for the server to die, in seconds
                         # when it actually did)
 
 LOGFILE=$LOGDIR/$NAME.log  # Server logfile
-DAEMONUSER="batch"      # Users to run the daemons as. If this value
+DAEMONUSER=""      # Users to run the daemons as. If this value
                         # is set start-stop-daemon will chuid the server
 
 # Include defaults if available
@@ -106,7 +107,7 @@ running_pid() {
     name=$2
     [ -z "$pid" ] && return 1
     [ ! -d /proc/$pid ] &&  return 1
-    cmd=`cat /proc/$pid/cmdline | tr "\000" "\n"|head -n 1 |cut -d : -f 1`
+    cmd=`cat /proc/$pid/cmdline | tr "\000" "\n"|grep -v "python"|head -n 1 |cut -d : -f 1`
     # Is this the expected server
     [ "$cmd" != "$name" ] &&  return 1
     return 0
@@ -132,7 +133,8 @@ start_server() {
 # if we are using a daemonuser then change the user id
             start-stop-daemon --start --quiet --pidfile $PIDFILE \
                         --chuid $DAEMONUSER \
-                        --exec $DAEMON -- $DAEMON_OPTS
+                        --startas $DAEMON \
+                        --exec $PYTHON -- $DAEMON_OPTS
             errcode=$?
         fi
         return $errcode
@@ -147,7 +149,8 @@ stop_server() {
 # if we are using a daemonuser then look for process that match
             start-stop-daemon --stop --quiet --pidfile $PIDFILE \
                         --user $DAEMONUSER \
-                        --exec $DAEMON
+                        --startas $DAEMON \
+                        --exec $PYTHON
             errcode=$?
         fi
 
