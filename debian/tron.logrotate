@@ -3,7 +3,7 @@
 	missingok
 	rotate 7
 	postrotate
-		[ ! -f /var/run/tron.pid ] || /etc/init.d/tron restart
+		[ ! -f /var/run/tron.pid ] || /etc/init.d/tron reload
 	endscript
 	compress
 	notifempty

@@ -1,9 +1,9 @@
 #!/bin/sh -e
 #
 # Post-installation script for tron
-
-chown batch:root /var/log/tron/
-chmod 750 /var/log/tron/
+touch /var/log/tron.log
+chown batch:root /var/log/tron.log
+chmod 750 /var/log/tron.log
 chown batch:root /var/lib/tron/
 chmod 750 /var/lib/tron/
 
