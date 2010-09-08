@@ -219,7 +219,7 @@ class SSHOptions(yaml.YAMLObject, FromDictBuilderMixin):
         This is just a dictionary like object that options the twisted ssh implementation uses.
         """
         ssh_options = options.ConchOptions()
-        if not self.agent:
+        if not hasattr(self, 'agent'):
             ssh_options['noagent'] = True
         else:
             if 'SSH_AUTH_SOCK' in os.environ:
