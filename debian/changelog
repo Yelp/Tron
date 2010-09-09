@@ -1,8 +1,10 @@
 tron (0.1.4-1) UNRELEASED; urgency=low
 
   * Simpler default options and config for trond (rhettg)
+  * Trond daemonizing for proper init.d start/stop behavior (rhettg)
   * Fixes to reduce state file writing (matthewtytel)
   * Better pre-validation for tronfig (matthewtytel)
+  * Updates to man pages (matthewtytel)
 
  -- Rhett Garber <rhettg@gmail.com>  Tue, 7 Sep 2010 16:51:00 -0700
 
