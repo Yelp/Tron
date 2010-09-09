@@ -30,7 +30,7 @@ def parse_options():
     parser = optparse.OptionParser()
 
     parser.add_option("--working-dir", action="store", dest="working_dir", help="Directory where tron's state and output is stored (default %default)", default="/var/lib/tron/")
-    parser.add_option("--log-file", "-l", action="store", dest="log_file", help="Where the logs are stored (default %default)", default="/var/log/tron.log")
+    parser.add_option("--log-file", "-l", action="store", dest="log_file", help="Where the logs are stored (default %default)", default="/var/log/tron/tron.log")
     parser.add_option("--config-file", "-c", action="store", dest="config_file", help="Configuration file to load (default in working dir)", default=None)
 
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)

@@ -1,4 +1,4 @@
-/var/log/tron.log {
+/var/log/tron/tron.log {
 	weekly
 	missingok
 	rotate 7

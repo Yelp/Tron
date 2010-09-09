@@ -70,9 +70,9 @@ STARTTIME=1             # Time to wait for the server to start, in seconds
                         # be a false positive (says it did not start
                         # when it actually did)
 
-LOGFILE=$LOGDIR/$NAME.log  # Server logfile
-DAEMONUSER=""      # Users to run the daemons as. If this value
-                        # is set start-stop-daemon will chuid the server
+LOGFILE=$LOGDIR/$NAME.log   # Server logfile
+DAEMONUSER=""               # Users to run the daemons as. If this value
+                            # is set start-stop-daemon will chuid the server
 
 # Include defaults if available
 if [ -f /etc/default/$NAME ] ; then

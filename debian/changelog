@@ -1,7 +1,7 @@
 tron (0.1.4-1) UNRELEASED; urgency=low
 
   * Simpler default options and config for trond (rhettg)
-  * Fixes to reduce state file writing (matthewtytel) 
+  * Fixes to reduce state file writing (matthewtytel)
   * Better pre-validation for tronfig (matthewtytel)
 
  -- Rhett Garber <rhettg@gmail.com>  Tue, 7 Sep 2010 16:51:00 -0700
