@@ -149,6 +149,8 @@ services:
 
         assert_equal(self.my_mcp.nodes[0].conch_options['noagent'], False)
         assert_equal(self.my_mcp.nodes[1].conch_options['noagent'], False)
+        
+        assert self.job4.node_pool.nodes[0] is self.my_mcp.nodes[0]
     
     def test_job_name_attribute(self):
         for j in self.all_jobs:
