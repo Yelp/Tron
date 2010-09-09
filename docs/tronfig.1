@@ -1,0 +1,131 @@
+.\" Process this file with
+.\" groff -man -Tascii foo.1
+.\"
+.TH tronfig 1 "September 2010" Linux "User Manuals"
+.SH NAME
+tronfig \- edit configuration for tron
+.SH SYNOPSIS
+.B tronfig
+.RB "[" "--server "
+.IR "server_name" "]"
+.RB "[" "--verbose" " | " "-v" "]"
+.SH DESCRIPTION
+.B tronfig
+edits the configuration for tron.  It retrieves the configuration file for local 
+editing, verifies the configuration, loads it back to the tron server and makes the
+changes to tron.
+.SH OPTIONS
+.IP "--server <server_name>"
+The server the tron instance is running on
+.IP --verbose
+Displays status messages along the way
+
+.SH CONFIGURATION
+If you start tron without a configuration file, one is created for you.
+ Run tronfig and you'll see the default configuration which looks like this:
+
+--- !TronConfiguration
+
+working_dir: '/var/lib/tron'
+
+.IP "Top Level Sections of Configuration"
+ working_dir
+ ssh_options
+ nodes
+ jobs
+ services
+
+.IP working_dir
+Specify a string that resolves to a directory where you want to store log 
+files, state file, stdout and stderr for all jobs
+ Example:
+    working_dir: '/var/lib/tron'
+
+.IP ssh_options
+These options are how we connect to the nodes we run commands on.
+    agent
+    identities
+
+.IP nodes
+Accepts a list of Node and NodePool objects which tron connects to
+    
+
+.IP jobs
+Accepts a list of Job objects.
+ A Job objects accepts the following options
+    name
+    node
+    schedule
+    actions
+    all_nodes (optional)
+    queueing  (optional)
+    run_limit (optional)
+
+.IP services
+
+
+.SH EXAMPLE CONFIGURATION
+--- !TronConfiguration
+
+working_dir: '/var/lib/tron'
+
+ssh_options: !SSHOptions
+    agent: true
+
+nodes:
+    - &node1 !Node
+        hostname: 'machine1'
+    - &node2 !Node
+        hostname: 'machine2'
+    - &pool !NodePool
+        nodes: [*node1, *node2]
+
+jobs:
+    - &job0 !Job
+        name: "job0"
+        node: *pool
+        all_nodes: True # Every time the Job is scheduled it runs on every node in its node pool
+        schedule: "interval 20s"
+        queueing: False
+        actions:
+            - &start
+                name: "startEdit"
+                command: "echo number 9"
+                node: *node1
+            - 
+                name: "endEdit"
+                command: "echo love me do"
+                requires: [*start]
+
+    - &job1 !Job
+        name: "job1"
+        node: *node1
+        schedule: "interval 20s"
+        queueing: False
+        actions:
+            - &action !Action
+                name: "actionAlone"
+                command: "echo hello goodbye"
+services:
+    -
+        name: "testserv"
+        node: *node2
+        enable:
+            command: "sleep 10; echo one"
+        monitor:
+            actions:
+                - 
+                    name: "actionMon"
+                    command: "echo revolution"
+            schedule: "interval 20s"
+
+.SH FILES
+.IP /etc/tron/tron.yaml
+.SH BUGS
+Email found bugs to yelplabs@yelp.com
+.SH AUTHOR
+Matthew Tytel
+.SH "SEE ALSO"
+.BR trond (8),
+.BR tronview (1),
+
