@@ -88,17 +88,23 @@ Dependant actions are queued and following jobs are queued or cancelled
 .SH EXAMPLES
 Here are a few examples that show the use of tronctl commands
 
- $ tronctl start job0.2
- Job Run job0.2 now in state RUNN
+ $ tronctl start job0
+ New Job Run job0.2 created
 
- $ tronctl cancel job0.3
- Job Run job0.3 now in state CANC
+ $ tronctl start job0.3
+ Job Run job0.3 now in state RUNN
 
- $ tronctl fail job0.3
- Job Run job0.3 now in state FAIL
+ $ tronctl cancel job0.4
+ Job Run job0.4 now in state CANC
 
- $ tronctl succeed job0.3
- Job Run job0.3 now in state SUCC
+ $ tronctl fail job0.4
+ Job Run job0.4 now in state FAIL
+
+ $ tronctl restart job0.4
+ Job Run job0.4 now in state RUNN
+
+ $ tronctl succeed job0.5
+ Job Run job0.5 now in state SUCC
 
 .SH ENVIRONMENT
 .IP SOMEDIR

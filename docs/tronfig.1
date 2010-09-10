@@ -52,14 +52,16 @@ Accepts a list of Node and NodePool objects which tron connects to
 
 .IP jobs
 Accepts a list of Job objects.
+
+.IP Job Object
  A Job objects accepts the following options
-    name
-    node
-    schedule
-    actions
-    all_nodes (optional)
-    queueing  (optional)
-    run_limit (optional)
+    name - The name of the job
+    node - The Node or NodePool object this job runs on
+    schedule - The schedule the job follows
+    actions - The list of actions within the job
+    all_nodes (optional) - True/False, if True the Job runs on all nodes in the NodePool every iteration
+    queueing  (optional) - True/False, if True when Job runs overlap, they queue up, if False, they cancel
+    run_limit (optional) - Number of runs to store in history (default 50)
 
 .IP services
 

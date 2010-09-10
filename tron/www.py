@@ -278,7 +278,7 @@ class JobResource(resource.Resource):
 
         if request.args['command'][0] == 'start':
             run = self._job.manual_start()
-            return respond(request, {'result': "New job %s created" % run.id})
+            return respond(request, {'result': "New Job Run %s created" % run.id})
 
         log.warning("Unknown request job command %s", request.args['command'])
         return respond(request, None, code=http.NOT_IMPLEMENTED)
