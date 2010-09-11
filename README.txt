@@ -1,10 +1,29 @@
-Tron - Batch scheduling System
+Tron - Batch Scheduling System
+==============================
 
-Tron is a cron replacement specifically designed for managing more complex scheduling tasks.
-It nativly handles running scheduled jobs on remote systems, managing dependencies between 
-jobs and specific resources.
+Tron is a centralized system for managing periodic batch processes and services
+across a cluster. If you find [cron](http://en.wikipedia.org/wiki/Cron) or
+[fcron](http://fcron.free.fr/) to be insufficient for managing complex work
+flows across multiple computers, Tron might be for you.
 
-NOTE: This is in pre-alpha condition, meaning there is a lot of work to do before this is in any sort
-of usable conditions. Please see the issue list at http://github.com/rhettg/Tron/issues
+Installation
+------------
 
-The eventual destination for this project is Yelp's github account at http://github.com/Yelp
+Tron ships with a `setup.py` file for installation as well as scripts for building a debian package.
+
+Full instructions for installing without a debian package can be found on 
+
+Documentation
+-------------
+
+Sample configuration files (and man pages) are in the docs/ directory.
+
+Full documentation can be found on the projects Wiki: http://github.com/Yelp/Tron/wiki
+
+Contributing
+------------
+
+We're on Github. We're friendly I swear. Contributions welcome.
+
+Any issues should be either posted and discussed at http://github.com/Yelp/Tron/issues
+or emailed to yelplabs@yelp.com
