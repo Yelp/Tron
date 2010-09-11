@@ -11,19 +11,19 @@ Installation
 
 Tron ships with a `setup.py` file for installation as well as scripts for building a debian package.
 
-Full instructions for installing without a debian package can be found on 
+See [QuickStart](http://github.com/Yelp/Tron/wiki/QuickStart) for more details.
 
 Documentation
 -------------
 
 Sample configuration files (and man pages) are in the docs/ directory.
 
-Full documentation can be found on the projects Wiki: http://github.com/Yelp/Tron/wiki
+Full documentation can be found on the projects [Wiki](http://github.com/Yelp/Tron/wiki)
 
 Contributing
 ------------
 
-We're on Github. We're friendly I swear. Contributions welcome.
+Use Github. We're friendly I swear. Contributions welcome.
 
 Any issues should be either posted and discussed at http://github.com/Yelp/Tron/issues
 or emailed to yelplabs@yelp.com
