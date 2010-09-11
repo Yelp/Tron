@@ -368,6 +368,7 @@ class ConfigResource(resource.Resource):
         try:
             self._master_control.live_reconfig()
         except Exception, e:
+            log.exception("Failure doing live reconfig")
             response['error'] = str(e)
         
         return respond(request, response)
