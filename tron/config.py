@@ -149,6 +149,22 @@ class _ConfiguredObject(yaml.YAMLObject, FromDictBuilderMixin):
 class TronConfiguration(yaml.YAMLObject):
     yaml_tag = u'!TronConfiguration'
 
+    def _apply_nodes(self, mcp):
+        """Handle our node/node pool configuration and make sure MCP knows about them all"""
+        existing_nodes = mcp.nodes
+        mcp.nodes = []
+        try:
+            for node_conf in self.nodes:
+                node = default_or_from_tag(node_conf, Node)
+                # We only deal with the actual nodes, as NodePools are just collections of the same underlying Node
+                # instances.
+                if isinstance(node, Node):
+                    mcp.nodes.append(node.actualized)
+        except Exception:
+            # Restore on failure
+            mcp.nodes = existing_nodes
+            raise
+
     def _apply_jobs(self, mcp):
         """Configure actions"""
         found_jobs = []
@@ -198,6 +214,8 @@ class TronConfiguration(yaml.YAMLObject):
 
         if hasattr(self, 'command_context'):
             mcp.context = command_context.CommandContext(self.command_context)
+        
+        self._apply_nodes(mcp)
         
         self._apply_jobs(mcp)
 
