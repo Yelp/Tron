@@ -48,10 +48,11 @@ def test_config(file_name):
 
         master = mcp.MasterControlProgram(tmpdir, edited_file.name)
         master.load_config()
-        shutil.rmtree(tmpdir)
         return True
-    except IOError, e:
+    except Exception, e:
         print >>sys.stderr, "Error in configuration: %s" % str(e)
+        
+    finally:
         shutil.rmtree(tmpdir)
 
     return False
