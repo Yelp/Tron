@@ -162,19 +162,6 @@ class MasterControlProgram(object):
         except IOError, e:
             log.error(str(e) + " - Cannot write to configuration file!")
 
-    def add_nodes(self, node_pool):
-        if not node_pool:
-            return
-
-        for node in node_pool.nodes:
-            if node not in self.nodes:
-                self.nodes.append(node)
-
-    def add_job_nodes(self, job):
-        self.add_nodes(job.node_pool)
-        for action in job.topo_actions:
-            self.add_nodes(action.node_pool)
-
     def setup_job_dir(self, job):
         job.output_dir = os.path.join(self.state_handler.working_dir, job.name)
         if not os.path.exists(job.output_dir):
@@ -198,7 +185,6 @@ class MasterControlProgram(object):
 
         job.set_context(self.context)
         self.setup_job_dir(job)
-        self.add_job_nodes(job)
         job.state_callback = self.state_handler.store_state
 
     def _schedule(self, run):
