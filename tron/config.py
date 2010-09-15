@@ -213,16 +213,19 @@ class TronConfiguration(yaml.YAMLObject):
         mcp.state_handler.working_dir = working_dir
 
         if hasattr(self, 'command_context'):
-            mcp.context = command_context.CommandContext(self.command_context)
+            if mcp.context:
+                mcp.context.base = self.command_context
+            else:
+                mcp.context = command_context.CommandContext(self.command_context)
         
         self._apply_nodes(mcp)
-        
-        self._apply_jobs(mcp)
 
         if hasattr(self, 'ssh_options'):
             self.ssh_options = default_or_from_tag(self.ssh_options, SSHOptions)
             self.ssh_options._apply(mcp)
         
+        self._apply_jobs(mcp)
+
         if hasattr(self, 'notification_options'):
             self.notification_options = default_or_from_tag(self.notification_options, NotificationOptions)
             self.notification_options._apply(mcp)
@@ -272,6 +275,9 @@ class NotificationOptions(yaml.YAMLObject, FromDictBuilderMixin):
         if not hasattr(self, 'notification_addr'):
             raise Error("notification_addr required")
         
+        if mcp.monitor:
+            mcp.monitor.stop()
+
         em = emailer.Emailer(self.smtp_host, self.notification_addr)
         mcp.monitor = monitor.CrashReporter(em)
         mcp.monitor.start()
