@@ -54,6 +54,7 @@ class JobsTest(TestCase):
                             name="testname", 
                             enable_act=None,
                             disable_act=None,
+                            last_success=None,
                             runs=[], 
                             scheduler_str="testsched", 
                             node_pool=TEST_POOL)
@@ -61,6 +62,7 @@ class JobsTest(TestCase):
         self.service = turtle.Turtle(
                             name='name',
                             runs=[],
+                            last_success=None,
                             scheduler_str="testsched",
                             node_pool=TEST_POOL)
 
@@ -103,6 +105,7 @@ class JobDetailTest(TestCase):
                                  runs=[
                                        turtle.Turtle(
                                                      id="1",
+                                                     node=TEST_NODES[0],
                                                      run_num=1,
                                                      start_time=None,
                                                      end_time=None,

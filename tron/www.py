@@ -232,6 +232,7 @@ class JobResource(resource.Resource):
         return {
                 'id': run.id,
                 'href': request.childLink(run.id),
+                'node': run.node.hostname if run.node else None,
                 'run_time': run.run_time and str(run.run_time),
                 'start_time': run.start_time and str(run.start_time),
                 'end_time': run.end_time and str(run.end_time),
@@ -305,7 +306,7 @@ class JobsResource(resource.Resource):
         serv_list = []
         job_list = []
         for current_job in self._master_control.jobs.itervalues():
-            last_success = str(current_job.last_success.end_time) if current_job.last_success else None
+            last_success = current_job.last_success.end_time.strftime("%Y-%m-%d %H:%M:%S") if current_job.last_success else None
             
             # We need to describe the current state of this job
             is_service = current_job.enable_act or current_job.disable_act
@@ -368,6 +369,7 @@ class ConfigResource(resource.Resource):
         try:
             self._master_control.live_reconfig()
         except Exception, e:
+            log.exception("Failure doing live reconfig")
             response['error'] = str(e)
         
         return respond(request, response)

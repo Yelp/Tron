@@ -2,11 +2,11 @@ from distutils.core import setup
 
 setup(
     name="tron",
-    version='0.1.4',
+    version='0.1.5',
 	provides="tron",
     author="Yelp",
-    author_email="opensource@yelp.com",
-    url="http://github.com/rhettg/Tron",
+    author_email="yelplabs@yelp.com",
+    url="http://github.com/Yelp/Tron",
     description='Job scheduling and monitoring system',
     classifiers=[
         "Programming Language :: Python",
