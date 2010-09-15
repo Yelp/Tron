@@ -135,7 +135,7 @@ class MasterControlProgram(object):
             self.load_config()
             self.run_jobs()
         except Exception, e:
-            log.error("Reconfiguration failed: %" % str(e))
+            log.exception("Reconfiguration failed")
     
     def load_config(self):
         log.info("Loading configuration from %s" % self.config_file)
