@@ -197,7 +197,8 @@ class Job(object):
         if not isinstance(other, Job) or self.name != other.name or self.queueing != other.queueing \
            or self.scheduler != other.scheduler or self.node_pool != other.node_pool \
            or len(self.topo_actions) != len(other.topo_actions) or self.enable_act != other.enable_act \
-           or self.disable_act != other.disable_act or self.run_limit != other.run_limit:
+           or self.disable_act != other.disable_act or self.run_limit != other.run_limit \
+           or self.all_nodes != other.all_nodes:
             return False
 
         return all([me == you for (me, you) in zip(self.topo_actions, other.topo_actions)]) and \
