@@ -291,11 +291,11 @@ class TestJob(TestCase):
         r1 = self.job.build_run()
         r1.succeed()
 
-        mr1 = self.job.manual_start()
+        mr1 = self.job.manual_start()[0]
         assert_equal(len(self.job.runs), 2)
         assert mr1.is_running
 
-        mr2 = self.job.manual_start()
+        mr2 = self.job.manual_start()[0]
         assert_equal(len(self.job.runs), 3)
         assert mr2.is_queued
 
@@ -304,7 +304,7 @@ class TestJob(TestCase):
         r1.succeed()
         r2 = self.job.next_runs()[0]
 
-        mr1 = self.job.manual_start()
+        mr1 = self.job.manual_start()[0]
         assert_equal(len(self.job.runs), 3)
 
         assert_equal(self.job.runs[0], r2)
@@ -313,7 +313,7 @@ class TestJob(TestCase):
 
         assert mr1.is_running
 
-        mr2 = self.job.manual_start()
+        mr2 = self.job.manual_start()[0]
         assert_equal(len(self.job.runs), 4)
         assert_equal(self.job.runs[1], mr2)
         assert_equal(self.job.runs[2], mr1)

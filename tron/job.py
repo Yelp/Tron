@@ -305,19 +305,18 @@ class Job(object):
         return [self.build_run()]
 
     def manual_start(self):
-        if self.runs and self.runs[0].is_scheduled:
-            top = self.runs.popleft()
-            run = self.build_run()
-            self.runs.appendleft(top)
-        else:
-            run = self.build_run()
+        scheduled = deque()
+        while self.runs and self.runs[0].is_scheduled:
+            scheduled.appendleft(self.runs.popleft())
+        
+        man_runs = self.build_runs()
+        self.runs.extendleft(scheduled)
 
-        run.queue()
+        for r in man_runs:
+            r.queue()
+            r.attempt_start()
 
-        if self.next_to_finish() == run:
-            run.start()
-
-        return run
+        return man_runs
 
     def absorb_old_job(self, old):
         self.runs = old.runs

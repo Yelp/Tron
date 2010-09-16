@@ -278,8 +278,8 @@ class JobResource(resource.Resource):
             return respond(request, {'result': "Job %s is disabled" % self._job.name})
 
         if request.args['command'][0] == 'start':
-            run = self._job.manual_start()
-            return respond(request, {'result': "New Job Run %s created" % run.id})
+            runs = self._job.manual_start()
+            return respond(request, {'result': "New Job Runs %s created" % [r.id for r in runs]})
 
         log.warning("Unknown request job command %s", request.args['command'])
         return respond(request, None, code=http.NOT_IMPLEMENTED)
