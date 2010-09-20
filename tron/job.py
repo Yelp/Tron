@@ -168,12 +168,6 @@ class Job(object):
         self.state_callback = lambda:None
         self.context = command_context.CommandContext(self)
 
-        # Service Data
-        self.enable_act = None
-        self.disable_act = None
-        self.enable_runs = deque()
-        self.disable_runs = deque()
-
     def _register_action(self, action):
         """Prepare an action to be *owned* by this job"""
         if action in self.topo_actions:
@@ -183,26 +177,14 @@ class Job(object):
         self._register_action(action)
         self.topo_actions.append(action)
 
-    def set_enable_action(self, action):
-        """Set the action to be run on enable"""
-        self._register_action(action)
-        self.enable_act = action
-
-    def set_disable_action(self, action):
-        """Set the action to be run on disable"""
-        self._register_action(action)
-        self.disable_act = action
-
     def __eq__(self, other):
         if not isinstance(other, Job) or self.name != other.name or self.queueing != other.queueing \
            or self.scheduler != other.scheduler or self.node_pool != other.node_pool \
-           or len(self.topo_actions) != len(other.topo_actions) or self.enable_act != other.enable_act \
-           or self.disable_act != other.disable_act or self.run_limit != other.run_limit \
-           or self.all_nodes != other.all_nodes:
+           or self.all_nodes != other.all_nodes or len(self.topo_actions) != len(other.topo_actions) \
+           or self.run_limit != other.run_limit:
             return False
 
-        return all([me == you for (me, you) in zip(self.topo_actions, other.topo_actions)]) and \
-               self.enable_act == other.enable_act and self.disable_act == other.disable_act
+        return all([me == you for (me, you) in zip(self.topo_actions, other.topo_actions)])
 
     def __ne__(self, other):
         return not self == other
@@ -211,23 +193,15 @@ class Job(object):
         self.context = command_context.CommandContext(self.context, context)
 
     def enable(self):
-        if self.enable_act:
-            run = self.build_run(actions=[self.enable_act])
-            self.enable_runs.appendleft(run)
-            run.start()
-
         self.enabled = True
         next = self.next_to_finish()
+
         if next and next.is_queued:
             next.start()
     
     def disable(self):
-        if self.disable_act:
-            run = self.build_run(actions=[self.disable_act])
-            self.disable_runs.appendleft(run)
-            run.start()
-
         self.enabled = False
+
         for r in self.runs:
             if r.is_scheduled or r.is_queued:
                 r.cancel()
@@ -246,9 +220,7 @@ class Job(object):
         def choose(chosen, next):
             return next if next.run_num == num else chosen
 
-        return reduce(choose, self.enable_runs, None) or \
-               reduce(choose, self.disable_runs, None) or \
-               reduce(choose, self.runs, None)
+        return reduce(choose, self.runs, None)
 
     def remove_old_runs(self):
         """Remove old runs so the number left matches the run limit.
@@ -320,8 +292,6 @@ class Job(object):
 
     def absorb_old_job(self, old):
         self.runs = old.runs
-        self.enable_runs = old.enable_runs
-        self.disable_runs = old.disable_runs
 
         self.output_dir = old.output_dir
         self.last_success = old.last_success
@@ -331,20 +301,8 @@ class Job(object):
     @property
     def data(self):
         return {'runs': [r.data for r in self.runs],
-                'enable_runs':[r.data for r in self.enable_runs],
-                'disable_runs':[r.data for r in self.disable_runs],
                 'enabled': self.enabled
         }
-
-    def restore_enable_run(self, data):
-        run = self.restore_run(data, [self.enable_act])
-        self.enable_runs.append(run)
-        return run
-
-    def restore_disable_run(self, data):
-        run = self.restore_run(data, [self.disable_act])
-        self.disable_runs.append(run)
-        return run
 
     def restore_main_run(self, data):
         run = self.restore_run(data, self.topo_actions)
@@ -365,5 +323,4 @@ class Job(object):
         run.set_run_time(data['run_time'])
 
         return run
-
 

@@ -36,18 +36,6 @@ class StateHandler(object):
     def restore_job(self, job, data):
         job.enabled = data['enabled']
 
-        try:
-            for e_data in data['enable_runs']:
-                run = job.restore_enable_run(e_data)
-        except Exception, e:
-            log.error("Cannot restore enabling runs for job %s: %s" % (job.name, str(e))) 
-
-        try:
-            for d_data in data['disable_runs']:
-                run = job.restore_disable_run(d_data)
-        except Exception, e:
-            log.error("Cannot restore disabling runs for job %s: %s" % (job.name, str(e))) 
-
         for r_data in data['runs']:
             run = job.restore_main_run(r_data)
             if run.is_scheduled:

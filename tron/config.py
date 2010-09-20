@@ -347,17 +347,6 @@ class Service(Job):
         self._match_schedule(real_service, self.monitor['schedule'])
         self._match_actions(real_service, self.monitor['actions'])
 
-        if hasattr(self, "enable"):
-            enable = default_or_from_tag(self.enable, Action)
-            enable.name = enable.name or "enable"
-            real_service.set_enable_action(enable.actualized)
-        
-        if hasattr(self, "disable"):
-            disable = default_or_from_tag(self.disable, Action)
-            disable.name = disable.name or "disable"
-            real_service.set_disable_action(disable.actualized)
-
-
 class Action(_ConfiguredObject):
     yaml_tag = u'!Action'
     actual_class = action.Action
