@@ -335,17 +335,21 @@ class Job(_ConfiguredObject):
             real_job.all_nodes = self.all_nodes
 
 
-class Service(Job):
+class Service(_ConfiguredObject):
     yaml_tag = u'!Service'
     actual_class = job.Job
 
     def _apply(self):
         real_service = self._ref()
 
-        self._match_name(real_service, self.name)
-        self._match_node(real_service, self.node)
-        self._match_schedule(real_service, self.monitor['schedule'])
-        self._match_actions(real_service, self.monitor['actions'])
+        real_service.name = self.name
+
+        if not isinstance(self.node):
+            real_service.node = NodePool()
+            real_service.node.nodes.append(self.node)
+        else:
+            real_service.node = self.node
+
 
 class Action(_ConfiguredObject):
     yaml_tag = u'!Action'

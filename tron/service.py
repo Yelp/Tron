@@ -4,19 +4,20 @@ class ServiceInstance(object):
     def __init__(self, service, inst_num):
         self.instance_num = inst_num
         self.service = service
+        self.pid_url = None
         self.state_callback = service.state_callback
         self.id = "%s.%s" % (service.name, self.instance_num)
 
         self.enabled = False
         self.node = None
         self.context = command_context.CommandContext(self, service.context)
-        self.fails = deque()
+        self.restarts = deque()
         
         self.start_action = None
-        self.check_action = Action("get_pid")
-        self.check_action.command = "cat %(pid_url)s"
+        self.check_action = Action("check")
+        self.check_action.command = "cat %(pid_url)s | xargs kill -0"
         self.kill_action = Action("kill")
-        self.kill_action.command = "kill -1 %(pid)s"
+        self.kill_action.command = "cat %(pid_url)s | xargs kill -1"
 
     def enable(self):
         self.start_action.next_run().start()
@@ -45,4 +46,6 @@ class Service(object):
             i.enable()
 
     def disable(self):
-        pass
+        for i in self.instances:
+            i.disable()
+
