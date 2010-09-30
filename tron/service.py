@@ -12,31 +12,31 @@ class ServiceInstance(object):
         self.node = None
         self.context = command_context.CommandContext(self, service.context)
         self.restarts = deque()
-        
-        self.start_action = None
-        self.check_action = Action("check")
-        self.check_action.command = "cat %(pid_url)s | xargs kill -0"
-        self.kill_action = Action("kill")
-        self.kill_action.command = "cat %(pid_url)s | xargs kill -1"
 
     def enable(self):
-        self.start_action.next_run().start()
+        self.start_action.build_run().start()
 
     def disable(self):
-        self.kill_action.next_run().start()
+        self.kill_action.build_run().start()
 
     def is_running(self):
-        run = self.check_action.next_run()
+        run = self.check_action.build_run()
         run.start()
 
 
 class Service(object):
-    def __init__(self, name=None, action=None, context=None):
+    monitor_action = Action("check")
+    monitor_action.command = "cat %(pid_url)s | xargs kill -0"
+    kill_action = Action("kill")
+    kill_action.command = "cat %(pid_url)s | xargs kill -1"
+    
+    def __init__(self, name=None, context=None):
         self.name = name
         self.monitor = action
         self.scheduler = None
+        self.start_action = None
 
-        self.count = None
+        self.count = 1
         self.state_callback = lambda:None
         self.context = command_context.CommandContext(self)
         self.instances = []

@@ -331,7 +331,7 @@ class Action(object):
         
         This is used by the scheduler when scheduling a run
         """
-        new_run = ActionRun(self)
+        new_run = build_base(job_run.context)
         new_run.id = "%s.%s" % (job_run.id, self.name)
 
         new_run.state_callback = job_run.state_callback
@@ -342,7 +342,13 @@ class Action(object):
         new_run.stderr_path = os.path.join(job_run.output_dir, self.name + '.stderr')
 
         action_run_context = ActionRunContext(new_run)
-        new_run.context = command_context.CommandContext(action_run_context, job_run.context)
+
+        return new_run
+
+    def build_base(self, context):
+        new_run = ActionRun(self)
+        new_context = ActionRunContext(new_run)
+        new_run.context = command_context.CommandContext(new_context, context)
 
         return new_run
 
