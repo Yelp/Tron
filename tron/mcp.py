@@ -117,6 +117,7 @@ class MasterControlProgram(object):
         self.state_handler = StateHandler(self, working_dir)
         self.config_file = config_file
         self.context = context
+        self.monitor = None
 
     def live_reconfig(self):
         try:

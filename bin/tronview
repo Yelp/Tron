@@ -14,7 +14,7 @@ JOB_COLUMNS = (
 RUN_COLUMNS = (
     ('Run ID', 8),
     ('State', 6),
-    ('Node', 10),
+    ('Node', 20),
     ('Scheduled Time', 20),
 )
 
