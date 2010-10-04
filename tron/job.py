@@ -63,6 +63,19 @@ class JobRun(object):
         if not self.job.last_success or self.run_num > self.job.last_success.run_num:
             self.job.last_success = self
 
+    def create_action_run(self, act):
+        act_run = act.build_run(self.context)
+
+        act_run.id = "%s.%s" % (self.id, act.name)
+        act_run.state_callback = self.state_callback        
+        act_run.complete_callback = self.run_completed
+
+        act_run.node = act_run.node_pool.next() if act_run.node_pool else self.node
+        act_run.stdout_path = os.path.join(self.output_dir, act_run.name + '.stdout')
+        act_run.stderr_path = os.path.join(self.output_dir, act_run.name + '.stderr')
+
+        return act_run
+
     def run_completed(self):
         if self.is_success:
             self.last_success_check()
@@ -246,7 +259,7 @@ class Job(object):
         """Build actions and setup requirements"""
         runs = {}
         for a in actions:
-            run = a.build_run(job_run)
+            run = job_run.create_action_run(a)
             runs[a.name] = run
             
             job_run.runs.append(run)

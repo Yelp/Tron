@@ -88,8 +88,8 @@ class ActionRun(object):
 
         self.node = None
         self.context = None
-        self.state_callback = None
-        self.complete_callback = None
+        self.state_callback = lambda:None
+        self.complete_callback = lambda:None
 
         self.stdout_path = None
         self.stderr_path = None
@@ -326,26 +326,11 @@ class Action(object):
     def __ne__(self, other):
         return not self == other
 
-    def build_run(self, job_run):
+    def build_run(self, context):
         """Build an instance of ActionRun for this action
         
         This is used by the scheduler when scheduling a run
         """
-        new_run = build_base(job_run.context)
-        new_run.id = "%s.%s" % (job_run.id, self.name)
-
-        new_run.state_callback = job_run.state_callback
-        new_run.complete_callback = job_run.run_completed
-
-        new_run.node = self.node_pool.next() if self.node_pool else job_run.node
-        new_run.stdout_path = os.path.join(job_run.output_dir, self.name + '.stdout')
-        new_run.stderr_path = os.path.join(job_run.output_dir, self.name + '.stderr')
-
-        action_run_context = ActionRunContext(new_run)
-
-        return new_run
-
-    def build_base(self, context):
         new_run = ActionRun(self)
         new_context = ActionRunContext(new_run)
         new_run.context = command_context.CommandContext(new_context, context)
