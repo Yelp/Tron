@@ -248,7 +248,7 @@ class TestJob(TestCase):
         assert not self.job.enabled
        
         for r in runs:
-            assert r.is_running or r.is_cancelled
+            assert r.is_running or r.job is None
 
     def test_enable(self):
         self.job.enable()

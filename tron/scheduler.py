@@ -74,7 +74,8 @@ class DailyScheduler(object):
         run_time = next_day.replace(
                             hour=self.start_time.hour, 
                             minute=self.start_time.minute, 
-                            second=self.start_time.second)
+                            second=self.start_time.second,
+                            microsecond=0)
 
         job_runs = job.build_runs()
         for job_run in job_runs:

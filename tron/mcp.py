@@ -206,6 +206,9 @@ class MasterControlProgram(object):
         """This runs when a job was scheduled.
         Here we run the job and schedule the next time it should run
         """
+        if not now.job:
+            return
+
         if not now.job.enabled:
             return
         

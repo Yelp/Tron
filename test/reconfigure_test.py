@@ -58,6 +58,16 @@ jobs:
                 name: "action_remove2"
                 command: "command_remove2"
                 requires: *action2
+
+    - &job3 !Job
+        name: "test_daily_change"
+        node: *node0
+        schedule: "daily"
+        actions:
+            - &action4 !Action
+                name: "action_daily_change"
+                command: "command"
+
 """
     reconfig = """
 
@@ -97,6 +107,15 @@ jobs:
                 command: "command_changed"
 
     - &job3 !Job
+        name: "test_daily_change"
+        node: *node0
+        schedule: "daily"
+        actions:
+            - &action4 !Action
+                name: "action_daily_change"
+                command: "command_changed"
+
+    - &job4 !Job
         name: "test_new"
         node: *nodePool
         schedule: !IntervalScheduler
@@ -105,6 +124,7 @@ jobs:
             - &action1 !Action
                 name: "action_new"
                 command: "command_new"
+
  
 """
     
@@ -120,12 +140,12 @@ jobs:
         shutil.rmtree(self.test_dir)
 
     def test_job_list(self):
-        assert_equal(len(self.my_mcp.jobs), 3)
+        assert_equal(len(self.my_mcp.jobs), 4)
         
         test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
         test_reconfig.apply(self.my_mcp)
 
-        assert_equal(len(self.my_mcp.jobs), 3)
+        assert_equal(len(self.my_mcp.jobs), 4)
 
     def test_job_unchanged(self):
         assert 'test_unchanged' in self.my_mcp.jobs
@@ -146,7 +166,7 @@ jobs:
         assert_equal(job0.name, "test_unchanged")
         assert_equal(len(job0.topo_actions), 1)
         assert_equal(job0.topo_actions[0].name, 'action_unchanged')
-        assert_equal(str(job0.scheduler), "DAILY")       
+        assert_equal(str(job0.scheduler), "DAILY")
         
         assert_equal(len(job0.runs), 2)
         assert_equal(job0.runs[1], run0)
@@ -193,9 +213,8 @@ jobs:
         assert_equal(job2.topo_actions[0].name, 'action_change')
         assert_equal(job2.topo_actions[0].command, 'command_changed')
         
-        assert_equal(len(job2.runs), 3)
-        assert job2.runs[2].is_running
-        assert job2.runs[1].is_cancelled
+        assert_equal(len(job2.runs), 2)
+        assert job2.runs[1].is_running
         assert job2.runs[0].is_scheduled
     
     def test_job_new(self):
@@ -211,4 +230,22 @@ jobs:
         assert_equal(job3.topo_actions[0].name, 'action_new')
         assert_equal(job3.topo_actions[0].command, 'command_new')
 
+    def test_daily_reschedule(self):
+        job4 = self.my_mcp.jobs['test_daily_change']
 
+        job4.next_runs()
+
+        assert_equal(len(job4.runs), 1)
+        run = job4.runs[0]
+        assert run.is_scheduled
+
+        test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
+        test_reconfig.apply(self.my_mcp)
+
+        assert run.job is None
+
+        assert_equal(len(job4.runs), 1)
+        next_run = job4.runs[0]
+        assert next_run is not run
+        assert next_run.is_scheduled
+        assert_equal(run.run_time, next_run.run_time)

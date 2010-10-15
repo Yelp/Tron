@@ -220,6 +220,14 @@ class Job(object):
         if next and next.is_queued:
             next.start()
     
+    def remove_run(self, run):
+        self.runs.remove(run)
+
+        if os.path.exists(run.output_dir):
+            shutil.rmtree(run.output_dir)
+        
+        run.job = None
+    
     def disable(self):
         if self.disable_act:
             run = self.build_run(actions=[self.disable_act])
@@ -227,10 +235,12 @@ class Job(object):
             run.start()
 
         self.enabled = False
-        for r in self.runs:
-            if r.is_scheduled or r.is_queued:
-                r.cancel()
-    
+
+        # We need to get rid of all future runs.
+        kill_runs = [run for run in self.runs if (run.is_scheduled or run.is_queued)]
+        for run in kill_runs:
+            self.remove_run(run)
+
     def next_to_finish(self, node=None):
         """Returns the next run to finish(optional node requirement). Useful for 
         getting the currently running job run or next queued/schedule job run.
@@ -259,11 +269,10 @@ class Job(object):
         keep_num = min([next_num, succ_num])
 
         while len(self.runs) > self.run_limit and keep_num > self.runs[-1].run_num:
-            old = self.runs.pop()
-            if os.path.exists(old.output_dir):
-                shutil.rmtree(old.output_dir)
+            self.remove_run(self.runs[-1])
 
     def next_runs(self):
+        """Use the configured scheduler to build the next job runs"""
         if not self.scheduler:
             return []
         
