@@ -18,6 +18,7 @@ from twisted.web import server
 from twisted.scripts import _twistd_unix
 
 from tron import mcp, cmd, job, resource, node, scheduler, www, monitor, emailer, config
+from tron.utils import log_handler
 
 logger = logging.getLogger('bin.trond')
 
@@ -55,21 +56,27 @@ def parse_options():
 
 def setup_logging(options):
     level = logging.WARNING
-    stream = sys.stderr
+    # TODO: Some stderr logging during development might be a good idea
+    #stream = sys.stderr
     if options.verbose > 0:
         stream = sys.stdout
         level = logging.INFO
     if options.verbose > 1:
         level = logging.DEBUG
 
+    root = logging.getLogger('')
+    
     try:
-        logging.basicConfig(level=level,
-                            format='%(asctime)s %(name)s %(levelname)s %(message)s',
-                            stream=stream, 
-                            filename=options.log_file)
+        handler = log_handler.ReOpeningFileHandler(options.log_file)
     except IOError, e:
         print >>sys.stderr, e
         sys.exit()
+
+    formatter = logging.Formatter('%(asctime)s %(name)s %(levelname)s %(message)s')
+    handler.setFormatter(formatter)
+
+    root.addHandler(handler)
+    root.setLevel(level)
 
     # Hookup twisted to standard logging
     observer = log.PythonLoggingObserver()
@@ -78,6 +85,8 @@ def setup_logging(options):
     # Show stack traces for errors in twisted deferreds.
     if options.debug:
         defer.setDebugging(True)
+
+    return handler
 
 # This is rather crazy thing to do, but I don't really like 'twistd', but it has all kinds of 
 # useful functions in it for daemonizing stuff. So rather than use twisted and build a tac file and
@@ -135,7 +144,7 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
     def run(self):
         self.preApplication()
         
-        setup_logging(self.options)
+        self.log_handler = setup_logging(self.options)
         
         self.postApplication()
 
@@ -163,10 +172,7 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
         def sighup_handler(signum, frame):
             logger.info("SIGHUP Caught!")
             reactor.callLater(0, master_control.live_reconfig)
-            # TODO: Reopen log files
-            #  It's strange that the logging module doesn't seem to have a built-in system for re-opening logs
-            #  on SIGHUP even though that's a pretty normal thing to do. There is functionality for handling the rotating
-            #  directly, but that's.... sorta lame.
+            reactor.callLater(0, self.log_handler.reopen)
 
         signal.signal(signal.SIGHUP, sighup_handler)
 
