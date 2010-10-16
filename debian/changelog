@@ -1,3 +1,9 @@
+tron (0.1.6-1) unstable; urgency=low
+
+  * Fix issue with live reconfigs causing intervals to be skipped (rhettg)
+  
+ -- Rhett Garber <rhettg@gmail.com>  Fri, 15 Oct 2010 15:05:00 -0700
+
 tron (0.1.5-1) unstable; urgency=low
 
   * Fixed crash due to config bug where SSH options were sometimes missing (rhettg)
