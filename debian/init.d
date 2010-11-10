@@ -253,10 +253,11 @@ case "$1" in
         if running ;  then
             log_progress_msg "running"
             log_end_msg 0
+			exit 0
         else
             log_progress_msg "apparently not running"
             log_end_msg 1
-            exit 0
+            exit 1
         fi
         ;;
   reload)
