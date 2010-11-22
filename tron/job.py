@@ -37,14 +37,14 @@ class JobRun(object):
 
         if self.is_scheduled:
             if self.job.queueing:
-                log.warning("A previous run for %s has not finished - placing in queue", self.job.name)
+                log.warning("A previous run for %s has not finished - placing in queue", self.job.id)
                 self.queue()
             else:
-                log.warning("A previous run for %s has not finished - cancelling", self.job.name)
+                log.warning("A previous run for %s has not finished - cancelling", self.job.id)
                 self.cancel()
 
     def start(self):
-        log.info("Starting action job %s", self.job.name)
+        log.info("Starting action job %s", self.job.id)
         self.start_time = timeutils.current_time()
         self.end_time = None
 
@@ -296,8 +296,11 @@ class Job(object):
         
     def build_run(self, node=None, actions=None, run_num=None):
         job_run = JobRun(self, run_num=run_num)
+
         job_run.node = node or self.node_pool.next() 
- 
+        log.info("Built run %s", job_run.id)
+
+        # It would be great if this were abstracted out a bit
         if os.path.exists(self.output_dir) and not os.path.exists(job_run.output_dir):
             os.mkdir(job_run.output_dir)
 
