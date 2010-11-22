@@ -8,6 +8,7 @@ import optparse
 import signal
 import os
 import gc
+import re
 import errno
 
 from twisted.python import log
@@ -51,8 +52,8 @@ def parse_options():
     if options.config_file is None:
         options.config_file = os.path.join(options.working_dir, "tron_config.yaml")
     
-    
     return options
+
 
 def setup_logging(options):
     level = logging.WARNING
@@ -67,6 +68,7 @@ def setup_logging(options):
         twist_level = logging.INFO
     if options.verbose > 2:
         twist_level = logging.DEBUG
+        
 
     root = logging.getLogger('')
     
@@ -81,7 +83,6 @@ def setup_logging(options):
 
     root.addHandler(handler)
     root.setLevel(level)
-    
     logging.getLogger('twisted').setLevel(twist_level)
     
     # Hookup twisted to standard logging

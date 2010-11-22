@@ -37,14 +37,14 @@ class JobRun(object):
 
         if self.is_scheduled:
             if self.job.queueing:
-                log.warning("A previous run for %s has not finished - placing in queue", self.job.id)
+                log.warning("A previous run for %s has not finished - placing in queue", self.id)
                 self.queue()
             else:
-                log.warning("A previous run for %s has not finished - cancelling", self.job.id)
+                log.warning("A previous run for %s has not finished - cancelling", self.id)
                 self.cancel()
 
     def start(self):
-        log.info("Starting action job %s", self.job.id)
+        log.info("Starting action job %s", self.id)
         self.start_time = timeutils.current_time()
         self.end_time = None
 
