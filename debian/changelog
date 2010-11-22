@@ -1,8 +1,10 @@
-tron (0.1.6-2) unstable; urgency=low
+tron (0.1.7-1) unstable; urgency=low
 
-  * Improve log rotation scripts under Debian
+  * Improve log rotation scripts under Debian (jbrown)
+  * Fix an issue where removing a job with a live reconfig caused the job not to actually be removed. #44 (rhettg)
+  * Some logging changes to make debugging issues easier (rhettg)
 
- -- James Brown <jbrown@yelp.com>  Wed, 10 Nov 2010 16:22:42 -0800
+ -- Rhett Garber <rhettg@gmail.com>  Mon, 22 Nov 2010 15:52:00 -0800
 
 tron (0.1.6-1) unstable; urgency=low
 
