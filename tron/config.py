@@ -191,7 +191,8 @@ class TronConfiguration(yaml.YAMLObject):
         for job_name in mcp.jobs.keys():
             if job_name not in found_jobs:
                 log.debug("Removing job %s", job_name)
-                del mcp.jobs[job_name]
+                
+                mcp.remove_job(job_name)
 
     def _get_working_dir(self, mcp):
         if mcp.state_handler.working_dir:

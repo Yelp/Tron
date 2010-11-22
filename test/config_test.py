@@ -200,7 +200,7 @@ services:
                 assert hasattr(a, "name")
                 assert_equal(a.name, "action%s_%s" % (job_count, act_count))
 
-    def test_all_ndoes_attribute(self):
+    def test_all_nodes_attribute(self):
         assert self.job4.all_nodes
         assert not self.job3.all_nodes
     

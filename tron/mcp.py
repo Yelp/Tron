@@ -133,11 +133,19 @@ class MasterControlProgram(object):
 
     def live_reconfig(self):
         try:
+            # Temporarily disable state writing because reconfig can cause a lot of state changes
+            old_state_writing = self.state_handler.writing_enabled
+            self.state_handler.writing_enabled = False
+
             self.load_config()
+
+            # Any new jobs will need to be scheduled
             self.run_jobs()
         except Exception, e:
             log.exception("Reconfiguration failed")
-    
+        finally:
+            self.state_handler.writing_enabled = old_state_writing
+
     def load_config(self):
         log.info("Loading configuration from %s" % self.config_file)
         opened_config = open(self.config_file, "r")
@@ -187,6 +195,14 @@ class MasterControlProgram(object):
         job.set_context(self.context)
         self.setup_job_dir(job)
         job.state_callback = self.state_handler.store_state
+
+    def remove_job(self, job_name):
+        if job_name not in self.jobs:
+            raise ValueError("Job %s unknown", job_name)
+
+        job = self.jobs.pop(job_name)
+
+        job.disable()
 
     def _schedule(self, run):
         sleep = sleep_time(run.run_time)

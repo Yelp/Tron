@@ -188,6 +188,8 @@ jobs:
         test_reconfig.apply(self.my_mcp)
         
         assert not 'test_remove' in self.my_mcp.jobs
+        assert not job1.enabled
+        assert not run1.is_scheduled
     
     def test_job_changed(self):
         assert 'test_change' in self.my_mcp.jobs

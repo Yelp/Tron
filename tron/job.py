@@ -144,6 +144,7 @@ class JobRun(object):
     def is_cancelled(self):
         return all([r.is_cancelled for r in self.runs])
 
+
 class Job(object):
     run_num = 0
     def next_num(self):
@@ -240,6 +241,7 @@ class Job(object):
         # We need to get rid of all future runs.
         kill_runs = [run for run in self.runs if (run.is_scheduled or run.is_queued)]
         for run in kill_runs:
+            run.cancel()
             self.remove_run(run)
 
     def next_to_finish(self, node=None):
