@@ -63,8 +63,9 @@ class ActionRunResource(resource.Resource):
         return respond(request, output)
 
     def render_POST(self, request):
-        log.debug("Handling post request for action run %s", self._act_run.id)
         cmd = request.args['command'][0]
+        log.info("Handling '%s' request for action run %s", cmd, self._act_run.id)
+
         if cmd == 'start':
             self._start(request)
         elif cmd == 'succeed':
@@ -154,8 +155,9 @@ class JobRunResource(resource.Resource):
         return respond(request, output)
 
     def render_POST(self, request):
-        log.debug("Handling post request for run %s", self._run.id)
         cmd = request.args['command'][0]
+        log.info("Handling '%s' request for job run %s", cmd, self._run.id)
+
         if cmd == "start":
             self._start(request)
         elif cmd == 'restart':
@@ -268,21 +270,25 @@ class JobResource(resource.Resource):
         return respond(request, output)
 
     def render_POST(self, request):
-        log.debug("Handling post request for %s", self._job.name)
-        if request.args['command'][0] == 'enable':
+        cmd = request.args['command'][0]
+
+        log.info("Handling '%s' request for job run %s", cmd, self._job.name)
+
+        if cmd == 'enable':
             self._master_control.enable_job(self._job)
             return respond(request, {'result': "Job %s is enabled" % self._job.name})
 
-        if request.args['command'][0] == 'disable':
+        if cmd == 'disable':
             self._master_control.disable_job(self._job)
             return respond(request, {'result': "Job %s is disabled" % self._job.name})
 
-        if request.args['command'][0] == 'start':
+        if cmd == 'start':
             runs = self._job.manual_start()
             return respond(request, {'result': "New Job Runs %s created" % [r.id for r in runs]})
 
         log.warning("Unknown request job command %s", request.args['command'])
         return respond(request, None, code=http.NOT_IMPLEMENTED)
+
 
 class JobsResource(resource.Resource):
     """Resource for all our daemon's jobs"""
@@ -339,12 +345,14 @@ class JobsResource(resource.Resource):
         return respond(request, output)
     
     def render_POST(self, request):
-        log.debug("Handling post request on all jobs")
-        if request.args['command'][0] == 'disableall':
+        cmd = request.args['command'][0]
+        log.info("Handling '%s' request on all jobs", cmd)
+
+        if cmd == 'disableall':
             self._master_control.disable_all()
             return respond(request, {'result': "All jobs are now disabled"})
        
-        if request.args['command'][0] == 'enableall':
+        if cmd == 'enableall':
             self._master_control.enable_all()
             return respond(request, {'result': "All jobs are now enabled"})
 
@@ -363,8 +371,11 @@ class ConfigResource(resource.Resource):
         return respond(request, {'config':self._master_control.config_lines()})
 
     def render_POST(self, request):
+        log.info("Handling reconfig request")
         new_config = request.args['config'][0]
         self._master_control.rewrite_config(new_config)
+        
+        # TODO: This should be a more informative reponse
         response = {'status': "I'm alive biatch"}
         try:
             self._master_control.live_reconfig()
