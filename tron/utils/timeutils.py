@@ -19,6 +19,9 @@ def current_time():
         return _current_time_override
     else:
         return datetime.datetime.now()
+
+def current_timestamp():
+    return to_timestamp(current_time())
         
 def to_timestamp(time_val):
     """Generate a unix timestamp for the given datetime instance"""

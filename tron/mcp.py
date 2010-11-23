@@ -7,6 +7,7 @@ import shutil
 import sys
 import subprocess
 import yaml
+import time
 
 from tron import job, config, command_context
 from twisted.internet import reactor
@@ -17,7 +18,8 @@ log = logging.getLogger('tron.mcp')
 SECS_PER_DAY = 86400
 MICRO_SEC = .000001
 STATE_FILE = 'tron_state.yaml'
-STATE_SLEEP = 3
+STATE_SLEEP = 1
+WRITE_DURATION_WARNING_SECS = 30
 
 def sleep_time(run_time):
     sleep = run_time - timeutils.current_time()
@@ -30,6 +32,7 @@ class StateHandler(object):
         self.mcp = mcp
         self.working_dir = working_dir
         self.write_pid = None
+        self.write_start = None
         self.writing_enabled = writing
         self.store_delayed = False
 
@@ -63,28 +66,43 @@ class StateHandler(object):
         self.store_delayed = False
         self.store_state()
 
-    def kill_child(self):
-        if self.write_pid and os.waitpid(self.write_pid, os.WNOHANG)[0]:
-            self.write_pid = None
+    def check_write_child(self):
+        if self.write_pid:
+            pid, status = os.waitpid(self.write_pid, os.WNOHANG)
+            if pid != 0:
+                log.debug("State writing completed in in %d seconds", timeutils.current_timestamp() - self.write_start)
+                if status != 0:
+                    log.warning("State writing process failed with status %d", status)
+
+                self.write_pid = None
+                self.write_start = None
+            else:
+                # Process hasn't exited
+                write_duration = timeutils.current_timestamp() - self.write_start
+                if write_duration > WRITE_DURATION_WARNING_SECS:
+                    log.warning("State writing hasn't completed in %d secs", write_duration)
+
+                reactor.callLater(STATE_SLEEP, self.check_write_child)
 
     def store_state(self):
         """Stores the state of tron"""
         # If tron is already storing data, don't start again till it's done
-        if not self.writing_enabled or (self.write_pid and not os.waitpid(self.write_pid, os.WNOHANG)[0]):
+        if self.write_pid or not self.writing_enabled:
             # If a child is writing, we don't want to ignore this change, so lets try it later
             if not self.store_delayed:
                 self.store_delayed = True
                 reactor.callLater(STATE_SLEEP, self.delay_store)
-            return 
+            return
 
         tmp_path = os.path.join(self.working_dir, '.tmp.' + STATE_FILE)
         file_path = os.path.join(self.working_dir, STATE_FILE)
         log.info("Storing state in %s", file_path)
-        reactor.callLater(STATE_SLEEP, self.kill_child)
         
+        self.write_start = timeutils.current_timestamp()
         pid = os.fork()
         if pid:
             self.write_pid = pid
+            reactor.callLater(STATE_SLEEP, self.check_write_child)
         else:
             try:
                 with open(tmp_path, 'w') as data_file:
