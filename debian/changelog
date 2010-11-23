@@ -3,6 +3,7 @@ tron (0.1.7-1) unstable; urgency=low
   * Improve log rotation scripts under Debian (jbrown)
   * Fix an issue where removing a job with a live reconfig caused the job not to actually be removed. #44 (rhettg)
   * Some logging changes to make debugging issues easier (rhettg)
+  * Some cleanup and better error/delay handling around process control for state writing. (rhettg)
 
  -- Rhett Garber <rhettg@gmail.com>  Mon, 22 Nov 2010 15:52:00 -0800
 
