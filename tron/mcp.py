@@ -70,7 +70,7 @@ class StateHandler(object):
         if self.write_pid:
             pid, status = os.waitpid(self.write_pid, os.WNOHANG)
             if pid != 0:
-                log.debug("State writing completed in in %d seconds", timeutils.current_timestamp() - self.write_start)
+                log.info("State writing completed in in %d seconds", timeutils.current_timestamp() - self.write_start)
                 if status != 0:
                     log.warning("State writing process failed with status %d", status)
 
