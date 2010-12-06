@@ -104,12 +104,16 @@ class StateHandler(object):
             self.write_pid = pid
             reactor.callLater(STATE_SLEEP, self.check_write_child)
         else:
+            exit_status = os.EX_SOFTWARE
             try:
                 with open(tmp_path, 'w') as data_file:
                     yaml.dump(self.data, data_file, default_flow_style=False, indent=4)
                 shutil.move(tmp_path, file_path)
+                exit_status = os.EX_OK
+            except:
+                log.exception("Failure while writing state")
             finally:
-                os._exit(os.EX_OK)
+                os._exit(exit_status)
 
     def get_state_file_path(self):
         return os.path.join(self.working_dir, STATE_FILE)
