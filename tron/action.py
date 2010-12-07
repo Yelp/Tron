@@ -275,11 +275,36 @@ class ActionRun(object):
                 'command': self.command
         }
         
+
+    def render_command(self):
+        """Render our configured command under the command context.
+
+        Note that this can fail in bad ways due to user input issues, so it's
+        recommend that 'command' or 'is_valid_command' be used.
+        """
+        return self.action.command % self.context
+
     @property
     def command(self):
-        if not self.rendered_command or not self.is_done:
-            self.rendered_command = self.action.command % self.context
-        return self.rendered_command
+        try:
+            if not self.rendered_command or not self.is_done:
+                self.rendered_command = self.render_command()
+            return self.rendered_command
+        except Exception:
+            log.exception("Failed generating rendering command. Bad format")
+
+            # If we can't properly build our command, we at least want to
+            # ensure we run something that won't succeed. Ideally this will
+            # be caught earlier. See also is_valid_command
+            return "false"
+
+    @property
+    def is_valid_command(self):
+        try:
+            self.render_command()
+            return True
+        except Exception:
+            return False
 
     @property
     def is_queued(self):
