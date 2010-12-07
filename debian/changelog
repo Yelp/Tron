@@ -1,3 +1,10 @@
+tron (0.1.8-1) unstable; urgency=low
+
+  * Address issue with bad format strings in commands causing untold
+    disasters. #45 (rhettg)
+
+ -- Rhett Garber <rhettg@gmail.com>  Mon, 06 Dec 2010 17:38:00 -0800
+
 tron (0.1.7-1) unstable; urgency=low
 
   * Improve log rotation scripts under Debian (jbrown)
