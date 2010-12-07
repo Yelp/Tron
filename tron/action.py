@@ -19,6 +19,9 @@ ACTION_RUN_RUNNING = 4
 ACTION_RUN_FAILED = 10
 ACTION_RUN_SUCCEEDED = 11
 
+# States where we have executed the run.
+ACTION_RUN_EXECUTED_STATES = [ACTION_RUN_FAILED, ACTION_RUN_SUCCEEDED]
+
 
 class ActionRunContext(object):
     """Context object that gives us access to data about the action run itself"""
@@ -90,6 +93,9 @@ class ActionRun(object):
         self.context = None
         self.state_callback = None
         self.complete_callback = None
+
+        # If we ran the command, we'll store it for posterity.
+        self.rendered_command = None 
 
         self.stdout_path = None
         self.stderr_path = None
@@ -251,7 +257,10 @@ class ActionRun(object):
         self.run_time = state['run_time']
         self.start_time = state['start_time']
         self.end_time = state['end_time']
+        self.rendered_command = state['command']
 
+        # We were running when the state file was built, so we have no idea
+        # what happened now.
         if self.is_running:
             self.state = ACTION_RUN_UNKNOWN
         self.state_callback()
@@ -268,7 +277,9 @@ class ActionRun(object):
         
     @property
     def command(self):
-        return self.action.command % self.context
+        if not self.rendered_command or not self.is_done:
+            self.rendered_command = self.action.command % self.context
+        return self.rendered_command
 
     @property
     def is_queued(self):
@@ -307,6 +318,7 @@ class ActionRun(object):
         return all([r.is_success for r in self.required_runs]) and \
            not (self.is_running or self.is_success)
  
+
 class Action(object):
     def __init__(self, name=None, node_pool=None):
         self.name = name
