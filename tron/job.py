@@ -29,8 +29,7 @@ class JobRun(object):
         self.run_time = run_time
 
         for r in self.runs:
-            if not r.required_runs:
-                r.run_time = run_time
+        	r.run_time = run_time
 
     def scheduled_start(self):
         self.attempt_start()
