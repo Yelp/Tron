@@ -149,6 +149,11 @@ class ActionRun(object):
         self.state = ACTION_RUN_RUNNING
         self._open_output_file()
 
+        if not self.is_valid_command:
+            log.error("Command for action run %s is invalid: %r", self.id, self.action.command)
+            self.fail(-1)
+            return
+
         # And now we try to actually start some work....
         ret = self.node.run(self)
         if isinstance(ret, defer.Deferred):
