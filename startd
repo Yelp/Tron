@@ -1,0 +1,2 @@
+export PYTHONPATH=/nail/home/eugene/pg/Tron
+bin/trond -v --nodaemon --working-dir=working/ -l tron.log --pid-file=trond.pid

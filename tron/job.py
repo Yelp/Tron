@@ -365,8 +365,10 @@ class Job(object):
         for action in data['runs']:
             action_names.append(action['id'].split('.')[-1])
 
-        def action_state_filter(topo_action):
+        def action_filter(topo_action):
             return topo_action.name in action_names
+
+        action_list = filter(action_filter, self.topo_actions)
 
         run = self.restore_run(data, action_list)
         self.runs.append(run)
