@@ -1,6 +1,6 @@
-
 import tempfile
 import shutil
+import datetime
 
 from testify import *
 from testify.utils import turtle
@@ -13,13 +13,13 @@ class TestEnableDisableRuns(TestCase):
         self.test_dir = tempfile.mkdtemp()
         self.action1 = action.Action(name="Test Act1")
         self.action1.command = "Test Command"
-        
+
         self.job = job.Job("Test Job", self.action1)
         self.job.output_dir = self.test_dir
         self.job.scheduler = scheduler.DailyScheduler()
         self.job.node_pool = turtle.Turtle()
         self.action1.job = self.job
-    
+
         self.job.enable_act = action.Action(name='Enable Act')
         self.job.enable_act.command = 'Enable Command'
         self.job.enable_act.job = self.job
@@ -34,7 +34,7 @@ class TestEnableDisableRuns(TestCase):
     def test_enable(self):
         assert_equal(len(self.job.enable_runs), 0)
         self.job.enable()
-        
+
         assert_equal(len(self.job.enable_runs), 1)
         er = self.job.enable_runs[0]
         assert er.is_running
@@ -48,7 +48,7 @@ class TestEnableDisableRuns(TestCase):
     def test_disable(self):
         assert_equal(len(self.job.disable_runs), 0)
         self.job.disable()
-        
+
         assert_equal(len(self.job.disable_runs), 1)
         assert self.job.disable_runs[0].is_running
         dr = self.job.disable_runs[0]
@@ -64,7 +64,7 @@ class TestJobRun(TestCase):
     def setup(self):
         self.test_dir = tempfile.mkdtemp()
         self.action1 = action.Action(name="Test Act1")
-        self.action2 = action.Action(name="Test Act1")
+        self.action2 = action.Action(name="Test Act2")
         self.action2.required_actions.append(self.action1)
         self.action1.command = "Test Command"
         self.action2.command = "Test Command"
@@ -76,7 +76,7 @@ class TestJobRun(TestCase):
         self.job.node_pool = turtle.Turtle()
         self.action1.job = self.job
         self.action2.job = self.job
-     
+
     @teardown
     def teardown(self):
         shutil.rmtree(self.test_dir)
@@ -135,7 +135,7 @@ class TestJobRun(TestCase):
 
         jr2.last_success_check()
         assert_equal(self.job.last_success, jr2)
-        
+
         jr1.last_success_check()
         assert_equal(self.job.last_success, jr2)
 
@@ -151,7 +151,7 @@ class TestJobRun(TestCase):
 
         jr1.manual_start()
         assert jr1.is_running
-    
+
 
 class TestJob(TestCase):
     """Unit testing for Job class"""
@@ -166,10 +166,10 @@ class TestJob(TestCase):
         self.job.node_pool = turtle.Turtle()
         self.job.scheduler = scheduler.DailyScheduler()
         self.action.job = self.job
-      
+
     @teardown
     def teardown(self):
-        shutil.rmtree(self.test_dir)       
+        shutil.rmtree(self.test_dir)
 
     def test_all_nodes_build_run(self):
         self.job.all_nodes = True
@@ -192,7 +192,7 @@ class TestJob(TestCase):
 
         self.job.remove_old_runs()
         assert_equals(len(self.job.runs), 6)
-        
+
         runs[0].queue()
         runs[1].cancel()
         runs[2].succeed()
@@ -206,7 +206,7 @@ class TestJob(TestCase):
         runs[4].succeed()
         self.job.remove_old_runs()
         assert_equals(len(self.job.runs), 3)
-        
+
         runs[5].succeed()
         self.job.remove_old_runs()
         assert_equals(len(self.job.runs), 3)
@@ -217,7 +217,7 @@ class TestJob(TestCase):
 
         self.job.remove_old_runs()
         assert_equals(len(self.job.runs), 6)
- 
+
     def test_next_to_finish(self):
         runs = []
         for i in range(5):
@@ -226,12 +226,12 @@ class TestJob(TestCase):
 
         assert_equals(self.job.next_to_finish(), runs[0])
         runs[0].succeed()
-       
+
         assert_equals(self.job.next_to_finish(), runs[1])
         runs[1].queue()
 
         assert_equals(self.job.next_to_finish(), runs[1])
-    
+
         runs[3].start()
         assert_equals(self.job.next_to_finish(), runs[3])
 
@@ -246,7 +246,7 @@ class TestJob(TestCase):
 
         self.job.disable()
         assert not self.job.enabled
-       
+
         for r in runs:
             assert r.is_running or r.job is None
 
@@ -263,7 +263,7 @@ class TestJob(TestCase):
 
     def test_get_run_by_num(self):
         runs = []
-        
+
         for i in range(10):
             runs.append(self.job.next_runs()[0])
 
@@ -275,18 +275,18 @@ class TestJob(TestCase):
         act = action.Action("Action Test2")
         act.command = "test"
         act.job = self.job
-        
+
         self.job.topo_actions.append(act)
         run1 = self.job.next_runs()[0]
         assert_equals(run1.runs[0].action, self.action)
         assert_equals(run1.runs[1].action, act)
-        
+
         run2 = self.job.next_runs()[0]
         assert_equals(self.job.runs[1], run1)
-        
+
         assert_equals(run2.runs[0].action, self.action)
         assert_equals(run2.runs[1].action, act)
-        
+
     def test_manual_start_no_scheduled(self):
         r1 = self.job.build_run()
         r1.succeed()
@@ -320,4 +320,59 @@ class TestJob(TestCase):
 
         assert mr2.is_queued
 
-        
+    def test_restore_main_run(self):
+        self.job.topo_actions = []
+        run_num = 4
+
+        act1 = action.Action("Action Test1")
+        act1.command = "test1"
+        act1.job = self.job
+        act1_id = ''.join([self.job.name, '.', str(run_num), '.', act1.name])
+
+        act2 = action.Action("Action Test2")
+        act2.command = "test2"
+        act2.job = self.job
+        act2_id = ''.join([self.job.name, '.', str(run_num), '.', act2.name])
+
+        act3 = action.Action("Action Test3")
+        act3.command = "test3"
+        act3.job = self.job
+        act3_id = ''.join([self.job.name, '.', str(run_num), '.', act3.name])
+
+        self.job.topo_actions.append(act1)
+        self.job.topo_actions.append(act2)
+        self.job.topo_actions.append(act3)
+
+        # filter out Action Test2 from restored state. upon trond restart
+        #   restore_main_run(state_data) should filter out actions for runs
+        #   before the new action was introduced
+        state_data = \
+        {'end_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 234159),
+         'run_num': run_num,
+         'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
+         'runs': [{'command': act1.command,
+               'end_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 232693),
+               'id': act1_id,
+               'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
+               'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 128291),
+               'state': 11},
+              {'command': act3.command,
+               'end_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 234116),
+               'id': act3_id,
+               'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
+               'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 133002),
+               'state': 11}],
+         'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 128152)}
+
+
+        job_run = self.job.restore_main_run(state_data)
+
+        # act2 was filtered
+        assert_equal(len(job_run.runs), 2)
+        assert_equal(job_run.runs[0].id, act1_id)
+        assert_equal(job_run.runs[1].id, act3_id)
+
+
+
+if __name__ == '__main__':
+    run()

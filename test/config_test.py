@@ -257,3 +257,5 @@ services:
         assert_equals(len(self.serv.topo_actions[1].required_actions), 1)
         assert_equals(self.serv.topo_actions[1].required_actions[0], self.serv.topo_actions[0])
         
+if __name__ == '__main__':
+    run()

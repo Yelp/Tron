@@ -33,7 +33,7 @@ class NodeTestCase(TestCase):
         nod = node.Node(hostname="localhost")
         act_run = run.runs[0]
         act_run.stdout_file = tempfile.TemporaryFile('w+b')
-        
+
         nod.connection = self.TestConnection()
         nod.run_states = {act_run.id:turtle.Turtle(state=0)}
         nod.run_states[act_run.id].state = node.RUN_STATE_CONNECTING

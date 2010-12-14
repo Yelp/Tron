@@ -17,14 +17,14 @@ class JobRun(object):
         self.state_callback = job.state_callback
         self.id = "%s.%s" % (job.name, self.run_num)
         self.output_dir = os.path.join(job.output_dir, self.id)
-       
+
         self.run_time = None
         self.start_time = None
         self.end_time = None
         self.node = None
         self.runs = []
         self.context = command_context.CommandContext(self, job.context)
-               
+
     def set_run_time(self, run_time):
         self.run_time = run_time
 
@@ -49,7 +49,7 @@ class JobRun(object):
 
         for r in self.runs:
             r.attempt_start()
-  
+
     def manual_start(self):
         self.queue()
         self.attempt_start()
@@ -65,13 +65,13 @@ class JobRun(object):
     def run_completed(self):
         if self.is_success:
             self.last_success_check()
-            
+
             if self.job.constant and self.job.enabled:
                 self.job.build_run().start()
 
         if self.is_done:
             self.end_time = timeutils.current_time()
-            
+
             next = self.job.next_to_finish()
             if next and next.is_queued:
                 next.attempt_start()
@@ -92,11 +92,11 @@ class JobRun(object):
     def queue(self):
         for r in self.runs:
             r.queue()
-        
+
     def cancel(self):
         for r in self.runs:
             r.cancel()
-    
+
     def succeed(self):
         for r in self.runs:
             r.mark_success()
@@ -126,7 +126,7 @@ class JobRun(object):
     @property
     def is_queued(self):
         return all([r.is_queued for r in self.runs])
-   
+
     @property
     def is_running(self):
         return any([r.is_running for r in self.runs])
@@ -155,13 +155,13 @@ class Job(object):
         self.topo_actions = [action] if action else []
         self.scheduler = None
         self.runs = deque()
-        
+
         self.queueing = True
         self.all_nodes = False
         self.enabled = True
         self.constant = False
         self.last_success = None
-        
+
         self.run_limit = RUN_LIMIT
         self.node_pool = None
         self.output_dir = None
@@ -220,15 +220,15 @@ class Job(object):
         next = self.next_to_finish()
         if next and next.is_queued:
             next.start()
-    
+
     def remove_run(self, run):
         self.runs.remove(run)
 
         if os.path.exists(run.output_dir):
             shutil.rmtree(run.output_dir)
-        
+
         run.job = None
-    
+
     def disable(self):
         if self.disable_act:
             run = self.build_run(actions=[self.disable_act])
@@ -244,7 +244,7 @@ class Job(object):
             self.remove_run(run)
 
     def next_to_finish(self, node=None):
-        """Returns the next run to finish(optional node requirement). Useful for 
+        """Returns the next run to finish(optional node requirement). Useful for
         getting the currently running job run or next queued/schedule job run.
         """
         def choose(prev, next):
@@ -277,7 +277,7 @@ class Job(object):
         """Use the configured scheduler to build the next job runs"""
         if not self.scheduler:
             return []
-        
+
         return self.scheduler.next_runs(self)
 
     def build_action_dag(self, job_run, actions):
@@ -286,17 +286,17 @@ class Job(object):
         for a in actions:
             run = a.build_run(job_run)
             runs[a.name] = run
-            
+
             job_run.runs.append(run)
 
             for req in a.required_actions:
                 runs[req.name].waiting_runs.append(run)
                 run.required_runs.append(runs[req.name])
-        
+
     def build_run(self, node=None, actions=None, run_num=None):
         job_run = JobRun(self, run_num=run_num)
 
-        job_run.node = node or self.node_pool.next() 
+        job_run.node = node or self.node_pool.next()
         log.info("Built run %s", job_run.id)
 
         # It would be great if this were abstracted out a bit
@@ -321,7 +321,7 @@ class Job(object):
         scheduled = deque()
         while self.runs and self.runs[0].is_scheduled:
             scheduled.appendleft(self.runs.popleft())
-        
+
         man_runs = self.build_runs()
         self.runs.extendleft(scheduled)
 
@@ -360,10 +360,20 @@ class Job(object):
         return run
 
     def restore_main_run(self, data):
-        run = self.restore_run(data, self.topo_actions)
+        action_names = []
+        for action in data['runs']:
+            action_names.append(action['id'].split('.')[-1])
+
+        def action_filter(topo_action):
+            return topo_action.name in action_names
+
+        action_list = filter(action_filter, self.topo_actions)
+
+        run = self.restore_run(data, action_list)
         self.runs.append(run)
         if run.is_success and not self.last_success:
             self.last_success = run
+
         return run
 
     def restore_run(self, data, actions):
@@ -372,11 +382,10 @@ class Job(object):
 
         for r, state in zip(run.runs, data['runs']):
             r.restore_state(state)
-            
+
         run.start_time = data['start_time']
         run.end_time = data['end_time']
         run.set_run_time(data['run_time'])
 
         return run
-
 
