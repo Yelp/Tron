@@ -371,6 +371,7 @@ class Job(object):
         action_list = filter(action_filter, self.topo_actions)
 
         run = self.restore_run(data, action_list)
+        self.runs.append(run)
         if run.is_success and not self.last_success:
             self.last_success = run
 
