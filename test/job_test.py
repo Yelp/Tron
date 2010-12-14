@@ -1,5 +1,6 @@
 import tempfile
 import shutil
+import datetime
 
 from testify import *
 from testify.utils import turtle
@@ -320,30 +321,57 @@ class TestJob(TestCase):
         assert mr2.is_queued
 
     def test_restore_main_run(self):
+        self.job.topo_actions = []
+        run_num = 4
+
+        act1 = action.Action("Action Test1")
+        act1.command = "test1"
+        act1.job = self.job
+        act1_id = ''.join([self.job.name, '.', str(run_num), '.', act1.name])
+
+        act2 = action.Action("Action Test2")
+        act2.command = "test2"
+        act2.job = self.job
+        act2_id = ''.join([self.job.name, '.', str(run_num), '.', act2.name])
+
+        act3 = action.Action("Action Test3")
+        act3.command = "test3"
+        act3.job = self.job
+        act3_id = ''.join([self.job.name, '.', str(run_num), '.', act3.name])
+
+        self.job.topo_actions.append(act1)
+        self.job.topo_actions.append(act2)
+        self.job.topo_actions.append(act3)
+
+        # filter out Action Test2 from restored state. upon trond restart
+        #   restore_main_run(state_data) should filter out actions for runs
+        #   before the new action was introduced
         state_data = \
         {'end_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 234159),
-         'run_num': 5,
+         'run_num': run_num,
          'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
-         'runs': [{'command': 'free',
+         'runs': [{'command': act1.command,
                'end_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 232693),
-               'id': 'job.5.free_memory',
+               'id': act1_id,
                'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
                'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 128291),
                'state': 11},
-              {'command': 'who',
+              {'command': act3.command,
                'end_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 234116),
-               'id': 'job.5.logged_in',
+               'id': act3_id,
                'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
                'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 133002),
                'state': 11}],
          'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 128152)}
 
-        state_action = state_data['runs'][0]
 
         job_run = self.job.restore_main_run(state_data)
-        job_action = job_run.runs[0]
 
-        assert_equal(job_action.id, state_action['id'])
+        # act2 was filtered
+        assert_equal(len(job_run.runs), 2)
+        assert_equal(job_run.runs[0].id, act1_id)
+        assert_equal(job_run.runs[1].id, act3_id)
+
 
 
 if __name__ == '__main__':
