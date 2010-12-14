@@ -1,3 +1,10 @@
+tron (0.1.9-1) unstable; urgency=low
+
+  * Fix issue with config changes causing previous job runs to be in an
+    unstable state. #42 (ebaum)
+
+ -- Rhett Garber <rhettg@gmail.com>  Mon, 14 Dec 2010 14:12:00 -0800
+
 tron (0.1.8-1) unstable; urgency=low
 
   * Address issue with bad format strings in commands causing untold
