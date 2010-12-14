@@ -225,3 +225,5 @@ class JobRunStartTest(TestCase):
         assert_equal(len(func.calls), 0)
 
 
+if __name__ == '__main__':
+    run()

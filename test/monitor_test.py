@@ -31,3 +31,5 @@ class SimpleDeferredTestCase(TestCase):
         self.mon.stop()
         #args, kwargs = self.test_emailer.send.calls.pop()
         #assert "TestError" in args[0], args
+if __name__ == '__main__':
+    run()

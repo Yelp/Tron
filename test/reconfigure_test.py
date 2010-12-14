@@ -15,7 +15,7 @@ working_dir: "./config_test_dir"
 
 ssh_options: !SSHOptions
     agent: true
-    identities: 
+    identities:
         - test/test_id_rsa
 
 nodes:
@@ -44,7 +44,7 @@ jobs:
             - &action1 !Action
                 name: "action_remove"
                 command: "command_remove"
-                
+
     - &job2 !Job
         name: "test_change"
         node: *nodePool
@@ -76,7 +76,7 @@ working_dir: "./config_test_dir"
 
 ssh_options: !SSHOptions
     agent: true
-    identities: 
+    identities:
         - test/test_id_rsa
 
 nodes:
@@ -125,9 +125,9 @@ jobs:
                 name: "action_new"
                 command: "command_new"
 
- 
+
 """
-    
+
     @setup
     def setup(self):
         self.test_dir = tempfile.mkdtemp()
@@ -141,7 +141,7 @@ jobs:
 
     def test_job_list(self):
         assert_equal(len(self.my_mcp.jobs), 4)
-        
+
         test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
         test_reconfig.apply(self.my_mcp)
 
@@ -158,16 +158,16 @@ jobs:
         assert_equal(len(job0.topo_actions), 1)
         assert_equal(job0.topo_actions[0].name, 'action_unchanged')
         assert_equal(str(job0.scheduler), "DAILY")
-        
+
         test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
         test_reconfig.apply(self.my_mcp)
         job0 = self.my_mcp.jobs['test_unchanged']
-        
+
         assert_equal(job0.name, "test_unchanged")
         assert_equal(len(job0.topo_actions), 1)
         assert_equal(job0.topo_actions[0].name, 'action_unchanged')
         assert_equal(str(job0.scheduler), "DAILY")
-        
+
         assert_equal(len(job0.runs), 2)
         assert_equal(job0.runs[1], run0)
         assert_equal(job0.runs[0], run1)
@@ -183,14 +183,14 @@ jobs:
         assert_equal(job1.name, "test_remove")
         assert_equal(len(job1.topo_actions), 1)
         assert_equal(job1.topo_actions[0].name, 'action_remove')
-        
+
         test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
         test_reconfig.apply(self.my_mcp)
-        
+
         assert not 'test_remove' in self.my_mcp.jobs
         assert not job1.enabled
         assert not run1.is_scheduled
-    
+
     def test_job_changed(self):
         assert 'test_change' in self.my_mcp.jobs
         job2 = self.my_mcp.jobs['test_change']
@@ -205,25 +205,25 @@ jobs:
         assert_equal(job2.topo_actions[1].name, 'action_remove2')
         assert_equal(job2.topo_actions[0].command, 'command_change')
         assert_equal(job2.topo_actions[1].command, 'command_remove2')
-        
+
         test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
         test_reconfig.apply(self.my_mcp)
         job2 = self.my_mcp.jobs['test_change']
-        
+
         assert_equal(job2.name, "test_change")
         assert_equal(len(job2.topo_actions), 1)
         assert_equal(job2.topo_actions[0].name, 'action_change')
         assert_equal(job2.topo_actions[0].command, 'command_changed')
-        
+
         assert_equal(len(job2.runs), 2)
         assert job2.runs[1].is_running
         assert job2.runs[0].is_scheduled
-    
+
     def test_job_new(self):
         assert not 'test_new' in self.my_mcp.jobs
         test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
         test_reconfig.apply(self.my_mcp)
-        
+
         assert 'test_new' in self.my_mcp.jobs
         job3 = self.my_mcp.jobs['test_new']
 
@@ -251,3 +251,6 @@ jobs:
         assert next_run is not run
         assert next_run.is_scheduled
         assert_equal(run.run_time, next_run.run_time)
+
+if __name__ == '__main__':
+    run()

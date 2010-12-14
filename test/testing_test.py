@@ -39,12 +39,12 @@ class SimpleTestCase(TestCase):
         assert_equal(self.ran_methods, 2)
 
 class SimpleDeferredTestCase(TestCase):
-    
+
     @testingutils.run_reactor()
     def test_do_something_deferred(self):
         df = defer.Deferred()
         reactor.callLater(1, df.callback, 42)
-        
+
         df.addCallback(self._cb_record_value)
         return df
 
@@ -62,3 +62,6 @@ class DeferredTimeoutTestCase(TestCase):
         df = defer.Deferred()
         reactor.callLater(30, df.callback, None)
         return df
+
+if __name__ == '__main__':
+    run()
