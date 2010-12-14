@@ -371,9 +371,9 @@ class Job(object):
         action_list = filter(action_filter, self.topo_actions)
 
         run = self.restore_run(data, action_list)
-        self.runs.append(run)
         if run.is_success and not self.last_success:
             self.last_success = run
+
         return run
 
     def restore_run(self, data, actions):
@@ -388,6 +388,4 @@ class Job(object):
         run.set_run_time(data['run_time'])
 
         return run
-
-
 
