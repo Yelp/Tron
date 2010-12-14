@@ -88,7 +88,7 @@ class TestJobRun(TestCase):
 
         assert_equal(jr.run_time, time)
         assert_equal(jr.runs[0].run_time, time)
-        assert not jr.runs[1].run_time
+        assert_equal(jr.runs[1].run_time, time)
 
     def test_start(self):
         jr = self.job.next_runs()[0]
