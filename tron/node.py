@@ -165,9 +165,6 @@ class Node(object):
         #  1. Transport is created (our client creator does this)
         #  2. Our transport is secure, and we can create our connection
         #  3. The connection service is started, so we can use it
-        
-        # TODO: We need a timeout and handle error conditions to err all the runs waiting on this
-        
         client_creator = protocol.ClientCreator(reactor, ssh.ClientTransport, options=self.conch_options)
         create_defer = client_creator.connectTCP(self.hostname, 22)
 
@@ -175,7 +172,7 @@ class Node(object):
         # have an established, secure connection ready for opening channels. The value will be this instance
         # of node.
         connect_defer = defer.Deferred()
-        connect_defer.setTimeout(CONNECT_TIMEOUT)
+        reactor.callLater(CONNECT_TIMEOUT, connect_defer.cancel)
 
         def on_service_started(connection):
             # Booyah, time to start doing stuff
@@ -204,6 +201,7 @@ class Node(object):
 
         create_defer.addCallback(on_transport_create)
         create_defer.addErrback(on_transport_fail)
+
         return connect_defer
         
     def _open_channel(self, run):
@@ -227,7 +225,7 @@ class Node(object):
         chan.exit_defer.addCallback(self._channel_complete, run)
         chan.exit_defer.addErrback(self._channel_complete_unknown, run)
         
-        chan.start_defer.setTimeout(RUN_START_TIMEOUT)
+        reactor.callLater(RUN_START_TIMEOUT, chan.start_defer.cancel)
         
         self.run_states[run.id].channel = chan
         self.connection.openChannel(chan)

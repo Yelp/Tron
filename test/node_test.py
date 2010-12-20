@@ -6,7 +6,7 @@ from testify import *
 from testify.utils import turtle
 
 from tron import node, action, job
-from tron.utils.testingutils import run_reactor
+from tron.utils import testingutils
 
 class NodeTestCase(TestCase):
     class TestConnection(object):
@@ -45,6 +45,32 @@ class NodeTestCase(TestCase):
         act_run.stdout_file.seek(0)
         assert act_run.stdout_file.read(4) == "test"
         act_run.stdout_file.close()
+
+
+class NodeTimeoutTest(TestCase):
+    @setup
+    def build_node(self):
+        self.node = node.Node(hostname="testnodedoesnotexist")
+        self.node.conch_options = turtle.Turtle()
+
+        # Make this test faster
+        node.CONNECT_TIMEOUT = 1
+
+    @setup
+    def build_run(self):
+        self.run = turtle.Turtle()
+        
+    def test_connect_timeout(self):
+        self.job_marked_failed = False
+        def fail_job(*args):
+            self.job_marked_failed = True
+            
+        df = self.node.run(self.run)
+        df.addErrback(fail_job)
+        
+        testingutils.wait_for_deferred(df)
+        assert df.called
+        assert self.job_marked_failed
 
 
 if __name__ == '__main__':
