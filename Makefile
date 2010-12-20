@@ -4,6 +4,8 @@ PROJECT=tron
 BUILDIR=$(CURDIR)/debian/$PROJECT
 VERSION=`$(PYTHON) setup.py --version`
 
+.PHONY : all source install clean devinstall
+
 all:
 		@echo "make source - Create source package"
 		@echo "make install - Install on local system"
@@ -34,3 +36,20 @@ clean:
 		rm -rf build/ MANIFEST
 		find . -name '*.pyc' -delete
 		find . -name "._*" -delete
+
+devclean:
+		rm -rf env
+
+env:
+		mkdir -f env
+
+env/virtualenv.install: env
+		virtualenv env
+		touch $@
+
+devinstall: env env/lib/tron.install
+
+env/lib/tron.install :
+		pip -E env install -e .
+		mkdir -p env/var/tron
+		touch $@
