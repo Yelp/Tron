@@ -111,6 +111,10 @@ class _ConfiguredObject(yaml.YAMLObject, FromDictBuilderMixin):
     object in the app that may be referenced by other objects."""
     actual_class = None     # Redefined to indicate the type of object this configuration will build
 
+    def __init__(self, *args, **kwargs):
+        # No arguments
+        super(_ConfiguredObject, self).__init__()
+
     def _apply(self):
         raise NotImplementedError
 
