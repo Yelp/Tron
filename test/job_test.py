@@ -7,57 +7,6 @@ from testify.utils import turtle
 from tron import job, action, scheduler
 from tron.utils import timeutils
 
-class TestEnableDisableRuns(TestCase):
-    @setup
-    def setup(self):
-        self.test_dir = tempfile.mkdtemp()
-        self.action1 = action.Action(name="Test Act1")
-        self.action1.command = "Test Command"
-
-        self.job = job.Job("Test Job", self.action1)
-        self.job.output_dir = self.test_dir
-        self.job.scheduler = scheduler.DailyScheduler()
-        self.job.node_pool = turtle.Turtle()
-        self.action1.job = self.job
-
-        self.job.enable_act = action.Action(name='Enable Act')
-        self.job.enable_act.command = 'Enable Command'
-        self.job.enable_act.job = self.job
-        self.job.disable_act = action.Action(name='Disable Act')
-        self.job.disable_act.command = 'Disable Command'
-        self.job.disable_act.job = self.job
-
-    @teardown
-    def teardown(self):
-        shutil.rmtree(self.test_dir)
-
-    def test_enable(self):
-        assert_equal(len(self.job.enable_runs), 0)
-        self.job.enable()
-
-        assert_equal(len(self.job.enable_runs), 1)
-        er = self.job.enable_runs[0]
-        assert er.is_running
-        assert_equal(len(er.runs), 1)
-        assert_equal(er.runs[0].action, self.job.enable_act)
-        assert er.runs[0].is_running
-
-        self.job.enable()
-        assert_equal(len(self.job.enable_runs), 2)
-
-    def test_disable(self):
-        assert_equal(len(self.job.disable_runs), 0)
-        self.job.disable()
-
-        assert_equal(len(self.job.disable_runs), 1)
-        assert self.job.disable_runs[0].is_running
-        dr = self.job.disable_runs[0]
-        assert_equal(len(dr.runs), 1)
-        assert_equal(dr.runs[0].action, self.job.disable_act)
-        assert dr.runs[0].is_running
-
-        self.job.disable()
-        assert_equal(len(self.job.disable_runs), 2)
 
 class TestJobRun(TestCase):
     @setup
