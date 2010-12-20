@@ -90,14 +90,16 @@ class Node(object):
     def run(self, run):
         """Execute the specified run
         
-        A run consists of a very specific set of interfaces which allow us to execute a command on this remote machine and
-        return results.
+        A run consists of a very specific set of interfaces which allow us to
+        execute a command on this remote machine and return results.
         """
         
-        # When this run completes, for good or bad, we'll inform the caller by calling 'succeed' or 'fail' on the run
-        # Since the definined interface is on these specific callbacks, we won't bother returning the deferred here. This
-        # allows the caller to not really care about twisted specific stuff at all, all it needs to know is that one of those
-        # functions will eventually be called back
+        # When this run completes, for good or bad, we'll inform the caller by
+        # calling 'succeed' or 'fail' on the run Since the definined interface
+        # is on these specific callbacks, we won't bother returning the
+        # deferred here. This allows the caller to not really care about
+        # twisted specific stuff at all, all it needs to know is that one of
+        # those functions will eventually be called back
         
         if run.id in self.run_states:
             raise Error("Run %s already running !?!", run.id)
