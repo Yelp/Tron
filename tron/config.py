@@ -287,18 +287,24 @@ class NotificationOptions(yaml.YAMLObject, FromDictBuilderMixin):
         mcp.monitor = monitor.CrashReporter(em)
         mcp.monitor.start()
 
- 
-class Job(_ConfiguredObject):
-    yaml_tag = u'!Job'
-    actual_class = job.Job
-
-    def _match_name(self, real, name):
+class Item(_ConfiguredObject):
+    def _match_name(self, real_task, name):
         real.name = name
         
         if not re.match(r'[a-z_]\w*$', name, re.I):
             raise yaml.YAMLError("Invalid job name '%s' - not a valid identifier" % self.name)
 
-    def _match_schedule(self, real, schedule):
+    def _match_node(self, real_task, node):
+        node = default_or_from_tag(node_conf, Node)
+        if not isinstance(node, NodePool):
+            node_pool = NodePool()
+            node_pool.nodes.append(node)
+        else:
+            node_pool = node
+            
+        real_job.node_pool = node_pool.actualized
+
+     def _match_schedule(self, real, schedule):
         if isinstance(schedule, basestring):
             # This is a short string
             real.scheduler = Scheduler.from_string(schedule)
@@ -306,6 +312,11 @@ class Job(_ConfiguredObject):
             # This is a scheduler instance, which has more info
             real.scheduler = schedule.actualized
         real.scheduler.job_setup(real)
+
+                   
+class Job(Item):
+    yaml_tag = u'!Job'
+    actual_class = job.Job
 
     def _match_actions(self, real_job, actions):
         for action_conf in actions:
@@ -317,17 +328,7 @@ class Job(_ConfiguredObject):
                    % (real_job.name, action_action.name))
 
             real_job.add_action(real_action)
-    
-    def _match_node(self, real_job, node_conf):
-        node = default_or_from_tag(node_conf, Node)
-        if not isinstance(node, NodePool):
-            node_pool = NodePool()
-            node_pool.nodes.append(node)
-        else:
-            node_pool = node
-            
-        real_job.node_pool = node_pool.actualized
-                    
+                   
     def _apply(self):
         real_job = self._ref()
 
@@ -346,28 +347,23 @@ class Job(_ConfiguredObject):
             real_job.all_nodes = self.all_nodes
 
 
-class Service(Job):
+class Service(Item):
     yaml_tag = u'!Service'
-    actual_class = job.Job
+    actual_class = service.Service
 
     def _apply(self):
         real_service = self._ref()
 
         self._match_name(real_service, self.name)
         self._match_node(real_service, self.node)
-        self._match_schedule(real_service, self.monitor['schedule'])
-        self._match_actions(real_service, self.monitor['actions'])
-
-        if hasattr(self, "enable"):
-            enable = default_or_from_tag(self.enable, Action)
-            enable.name = enable.name or "enable"
-            real_service.set_enable_action(enable.actualized)
+        self._match_schedule(real_service, self.schedule)
+        real_service.pid = self.pid
         
-        if hasattr(self, "disable"):
-            disable = default_or_from_tag(self.disable, Action)
-            disable.name = disable.name or "disable"
-            real_service.set_disable_action(disable.actualized)
-
+        real_service.start_action = Action("start")
+        real_service.start_action.command = self.command
+        
+        if hasattr(self, "count"):
+            real_service.count = self.count
 
 class Action(_ConfiguredObject):
     yaml_tag = u'!Action'
