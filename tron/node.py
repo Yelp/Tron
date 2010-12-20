@@ -6,6 +6,7 @@ from twisted.internet import protocol, defer, reactor
 from twisted.python import failure
 
 from tron import ssh
+from tron.utils import twistedutils
 
 log = logging.getLogger('tron.node')
 
@@ -172,7 +173,7 @@ class Node(object):
         # have an established, secure connection ready for opening channels. The value will be this instance
         # of node.
         connect_defer = defer.Deferred()
-        reactor.callLater(CONNECT_TIMEOUT, connect_defer.cancel)
+        twistedutils.defer_timeout(connect_defer, CONNECT_TIMEOUT)
 
         def on_service_started(connection):
             # Booyah, time to start doing stuff
@@ -225,7 +226,7 @@ class Node(object):
         chan.exit_defer.addCallback(self._channel_complete, run)
         chan.exit_defer.addErrback(self._channel_complete_unknown, run)
         
-        reactor.callLater(RUN_START_TIMEOUT, chan.start_defer.cancel)
+        twistedutils.defer_timeout(chan.start_defer, RUN_START_TIMEOUT)
         
         self.run_states[run.id].channel = chan
         self.connection.openChannel(chan)
