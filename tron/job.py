@@ -69,9 +69,9 @@ class JobRun(object):
         act_run.state_callback = self.state_callback        
         act_run.complete_callback = self.run_completed
 
-        act_run.node = act_run.node_pool.next() if act_run.node_pool else self.node
-        act_run.stdout_path = os.path.join(self.output_dir, act_run.name + '.stdout')
-        act_run.stderr_path = os.path.join(self.output_dir, act_run.name + '.stderr')
+        act_run.node = act.node_pool.next() if act.node_pool else self.node
+        act_run.stdout_path = os.path.join(self.output_dir, act_run.id + '.stdout')
+        act_run.stderr_path = os.path.join(self.output_dir, act_run.id + '.stderr')
 
         return act_run
 

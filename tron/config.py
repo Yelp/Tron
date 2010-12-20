@@ -8,7 +8,14 @@ import os
 import yaml
 from twisted.conch.client import options
 
-from tron import action, job, node, scheduler, monitor, emailer, command_context
+from tron import action
+from tron import job
+from tron import node
+from tron import scheduler
+from tron import monitor
+from tron import emailer
+from tron import command_context
+from tron import service
 
 log = logging.getLogger("tron.config")
 
@@ -287,55 +294,56 @@ class NotificationOptions(yaml.YAMLObject, FromDictBuilderMixin):
         mcp.monitor = monitor.CrashReporter(em)
         mcp.monitor.start()
 
-class Item(_ConfiguredObject):
-    def _match_name(self, real_task, name):
-        real.name = name
-        
-        if not re.match(r'[a-z_]\w*$', name, re.I):
-            raise yaml.YAMLError("Invalid job name '%s' - not a valid identifier" % self.name)
 
-    def _match_node(self, real_task, node):
-        node = default_or_from_tag(node_conf, Node)
-        if not isinstance(node, NodePool):
-            node_pool = NodePool()
-            node_pool.nodes.append(node)
-        else:
-            node_pool = node
-            
-        real_job.node_pool = node_pool.actualized
+def _match_name(real, name):
+    real.name = name
 
-     def _match_schedule(self, real, schedule):
-        if isinstance(schedule, basestring):
-            # This is a short string
-            real.scheduler = Scheduler.from_string(schedule)
-        else:
-            # This is a scheduler instance, which has more info
-            real.scheduler = schedule.actualized
-        real.scheduler.job_setup(real)
+    if not re.match(r'[a-z_]\w*$', name, re.I):
+        raise yaml.YAMLError("Invalid job name '%s' - not a valid identifier" % name)
+
+def _match_node(real, node_conf):
+    node = default_or_from_tag(node_conf, Node)
+    if not isinstance(node, NodePool):
+        node_pool = NodePool()
+        node_pool.nodes.append(node)
+    else:
+        node_pool = node
+    
+    real.node_pool = node_pool.actualized
+
+def _match_schedule(real, schedule_conf):
+    if isinstance(schedule_conf, basestring):
+        # This is a short string
+        real.scheduler = Scheduler.from_string(schedule_conf)
+    else:
+        # This is a scheduler instance, which has more info
+        real.scheduler = schedule_conf.actualized
+
+    real.scheduler.job_setup(real)
+
+def _match_actions(real, action_conf_list):
+    for action_conf in action_conf_list:
+        action = default_or_from_tag(action_conf, Action)
+        real_action = action.actualized
+
+        if not real.node_pool and not real_action.node_pool:
+            raise yaml.YAMLError("Either job '%s' or its action '%s' must have a node" 
+               % (real.name, action_action.name))
+
+        real.add_action(real_action)
 
                    
-class Job(Item):
+class Job(_ConfiguredObject):
     yaml_tag = u'!Job'
     actual_class = job.Job
-
-    def _match_actions(self, real_job, actions):
-        for action_conf in actions:
-            action = default_or_from_tag(action_conf, Action)
-            real_action = action.actualized
-
-            if not real_job.node_pool and not real_action.node_pool:
-                raise yaml.YAMLError("Either job '%s' or its action '%s' must have a node" 
-                   % (real_job.name, action_action.name))
-
-            real_job.add_action(real_action)
                    
     def _apply(self):
         real_job = self._ref()
 
-        self._match_name(real_job, self.name)
-        self._match_node(real_job, self.node)
-        self._match_schedule(real_job, self.schedule)
-        self._match_actions(real_job, self.actions)
+        _match_name(real_job, self.name)
+        _match_node(real_job, self.node)
+        _match_schedule(real_job, self.schedule)
+        _match_actions(real_job, self.actions)
 
         if hasattr(self, "queueing"):
             real_job.queueing = self.queueing
@@ -347,16 +355,17 @@ class Job(Item):
             real_job.all_nodes = self.all_nodes
 
 
-class Service(Item):
+class Service(_ConfiguredObject):
     yaml_tag = u'!Service'
     actual_class = service.Service
 
     def _apply(self):
         real_service = self._ref()
 
-        self._match_name(real_service, self.name)
-        self._match_node(real_service, self.node)
-        self._match_schedule(real_service, self.schedule)
+        _match_name(real_service, self.name)
+        _match_node(real_service, self.node)
+        _match_schedule(real_service, self.schedule)
+        
         real_service.pid = self.pid
         
         real_service.start_action = Action("start")
@@ -364,6 +373,7 @@ class Service(Item):
         
         if hasattr(self, "count"):
             real_service.count = self.count
+
 
 class Action(_ConfiguredObject):
     yaml_tag = u'!Action'
