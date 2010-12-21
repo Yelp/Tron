@@ -1,41 +1,56 @@
 from types import FunctionType
 import functools
+import logging
 
 from testify import *
 from testify.test_case import TwistedFailureError
 from twisted.internet import reactor, defer
 from twisted.python import failure
 
+from tron.utils import twistedutils
 
+log = logging.getLogger(__name__)
 
 _waiting = False
-def wait_for_deferred(deferred):
+def wait_for_deferred(deferred, timeout=None):
     """Wait for the deferred object to complete
     
     Loosly based on twisted trial test case base, allows us to run reactors in a test case
     """
-    
     global _waiting
     if _waiting:
         raise RuntimeError("_wait is not reentrant")
     _waiting = True
+    _timed_out = []
 
     results = []
     failures = []
     def append(any):
         if results is not None:
             results.append(any)
-    def crash(ign):
-        if results is not None:
-            reactor.crash()
+
+    def timedout_crash():
+        _timed_out.append(True)
+        reactor.crash()
+
+    def stop_after_defer(ign):
+        reactor.stop()
 
     def stop():
+        # Depending on context, sometimes you need to call stop() rather than crash.
+        # I think there is some twisted bug where threads left open don't allow the process
+        # to exit
+        #reactor.stop()
         reactor.crash()
+
 
     def on_failure(f):
         failures.append(f)
 
     deferred.addErrback(on_failure)
+
+    if timeout is not None:
+        reactor.callLater(timeout, stop)
 
     try:
         deferred.addBoth(append)
@@ -43,12 +58,19 @@ def wait_for_deferred(deferred):
             # d might have already been fired, in which case append is
             # called synchronously. Avoid any reactor stuff.
             return
-        deferred.addBoth(crash)
+
+        deferred.addBoth(stop_after_defer)
         reactor.stop = stop
+
         try:
             reactor.run()
         finally:
             del reactor.stop
+        
+        if results or _timed_out:
+            return
+        
+        raise KeyboardInterrupt()
 
     finally:
         _waiting = False
