@@ -105,7 +105,7 @@ class Node(object):
             raise Error("Run %s already running !?!", run.id)
 
         self.run_states[run.id] = RunState(run)
-
+        print "Added %s to run_states" % run.id
         # Now let's see if we need to start this off by establishing a connection or if we are already connected
         if self.connection is None:
             self._connect_then_run(run)
@@ -120,11 +120,21 @@ class Node(object):
     def _cleanup(self, run):
         self.run_states[run.id].channel = None
         del self.run_states[run.id]
+        print "Removed %s from run_states" % run.id
 
     def _fail_run(self, run, result):
         """Indicate the run has failed, and cleanup state"""
-        self.run_states[run.id].deferred.errback(result)
+        if run.id not in self.run_states:
+            log.warning("Run %s no longer tracked (_fail_run)", run.id)
+            return
+        
+        cb = self.run_states[run.id].deferred.errback
+
         self._cleanup(run)
+
+        run.exited(None)
+
+        cb(result)
 
     def _connect_then_run(self, run):
         # Have we started the connection process ?
@@ -215,9 +225,9 @@ class Node(object):
 
         chan = ssh.ExecChannel(conn=self.connection)
         
-        chan.addOutputCallback(self._get_output_callback(run))
-        chan.addErrorCallback(self._get_error_callback(run))
-        chan.addEndCallback(self._get_end_callback(run))
+        chan.addOutputCallback(run.write_stdout)
+        chan.addErrorCallback(run.write_stderr)
+        chan.addEndCallback(run.write_done)
 
         chan.command = run.command
         chan.start_defer = defer.Deferred()
@@ -233,51 +243,23 @@ class Node(object):
         self.run_states[run.id].channel = chan
         self.connection.openChannel(chan)
 
-    def _get_output_callback(self, run):
-        """Generates an output received callback for the channel.  
-        """
-        def callback(data):
-            if run.stdout_file:
-                log.debug("Received data for action %s: writing to %s", run.action.name, run.stdout_file.name)
-                run.stdout_file.write(data)
-                run.stdout_file.flush()
-        
-        return callback
-
-    def _get_error_callback(self, run):
-        """Generates an error received callback for the channel.
-        """
-        def callback(data):
-            log.debug("Received stderr data for action %s: %s", run.action.name, data)
-            if run.stderr_file:
-                log.debug("Writing error to %s", run.stderr_file.name)
-                run.stderr_file.write(data)
-                run.stderr_file.flush()
-        
-        return callback
-
-    def _get_end_callback(self, run):
-        """Generates callback for the channel when it closes.  
-        """
-        def callback():
-            if run.stdout_file:
-                log.debug("Channel closed: closing output file %s", run.stdout_file.name)
-                run.stdout_file.close()
-            if run.stderr_file:
-                run.stderr_file.close()
-
-        return callback
-
     def _channel_complete(self, channel, run):
         """Callback once our channel has completed it's operation
         
         This is how we let our run know that we succeeded or failed.
         """
+        if run.id not in self.run_states:
+            log.warning("Run %s no longer tracked", run.id)
+            return
+            
         assert self.run_states[run.id].state < RUN_STATE_COMPLETE
         
         self.run_states[run.id].state = RUN_STATE_COMPLETE
-        self.run_states[run.id].deferred.callback(channel.exit_status)
+        cb = self.run_states[run.id].deferred.callback
         self._cleanup(run)
+
+        run.exited(channel.exit_status)
+        cb(channel.exit_status)
     
     def _channel_complete_unknown(self, result, run):
         """Channel has closed on a running process without a proper exit
@@ -293,6 +275,8 @@ class Node(object):
         channel.start_defer = None
         assert self.run_states[run.id].state == RUN_STATE_STARTING
         self.run_states[run.id].state = RUN_STATE_RUNNING
+
+        run.started()
         
     def _run_start_error(self, result, run):
         """We failed to even run the command due to communication difficulties

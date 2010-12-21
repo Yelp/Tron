@@ -379,3 +379,74 @@ class Action(object):
 
         return new_run
 
+
+class ActionCommand(object):
+    PENDING = "PENDING"
+    RUNNING = "RUNNING"
+    COMPLETE = "COMPLETE"
+
+    def __init__(self, id, command, stdout=None, stderr=None):
+        """An Action Command is what a node actually executes
+        
+        This object encapsulates everything necessary for a node to execute the command,
+        collect results, and inform anyone who cares.
+        
+        A Node will call:
+          started (when the command starts)
+          exited (when the command exits)
+          write_<channel> (when output is received)
+        
+        Clients should register as listeners for state changes by adding a callable to ActionCommand.listeners
+        The callable will be exected with a single argument of 'self' for convinience.
+        """
+        self.id = id
+        self.command = command
+    
+        self.state = ActionCommand.PENDING
+        self.listeners = list()
+    
+        self.stdout_file = None
+        self.stderr_file = None
+        self.exit_status = None
+        self.start_time = None
+        self.end_time = None
+
+    def started(self):
+        if self.state != ActionCommand.PENDING:
+            raise Error("Invalid state for action %s: %s" % (self.id, self.state))
+
+        self.state = ActionCommand.RUNNING
+        self.start_time = timeutils.current_timestamp()
+        self._inform_state_change()
+        
+    def exited(self, exit_status):
+        if self.state != ActionCommand.RUNNING:
+            raise Error("Invalid state for action %s: %s" % (self.id, self.state))
+
+        self.state = ActionCommand.COMPLETE
+        self.end_time = timeutils.current_timestamp()
+        self.exit_status = exit_status
+        self._inform_state_change()
+    
+    def write_stderr(self, value):
+        if self.stderr_file:
+            self.stderr_file.write(value)
+
+    def write_stdout(self, value):
+        if self.stdout_file:
+            self.stdout_file.write(value)
+
+    def write_done(self):
+        if self.stdout_file:
+            self.stdout_file.close()
+
+        if self.stderr_file:
+            self.stderr_file.close()
+            
+    def _inform_state_change(self):
+        """Inform all our listeners that something has changed with us"""
+        for listener in self.listeners:
+            listener(self)
+
+    def __repr__(self):
+        return "[ActionCommand %s] %s : %s" % (self.id, self.command, self.state)
