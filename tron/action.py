@@ -22,6 +22,7 @@ ACTION_RUN_SUCCEEDED = 11
 # States where we have executed the run.
 ACTION_RUN_EXECUTED_STATES = [ACTION_RUN_FAILED, ACTION_RUN_SUCCEEDED]
 
+class Error(Exception): pass
 
 class ActionRunContext(object):
     """Context object that gives us access to data about the action run itself"""
@@ -384,6 +385,7 @@ class ActionCommand(object):
     PENDING = "PENDING"
     RUNNING = "RUNNING"
     COMPLETE = "COMPLETE"
+    FAILSTART = "FAILSTART"
 
     def __init__(self, id, command, stdout=None, stderr=None):
         """An Action Command is what a node actually executes
@@ -420,14 +422,20 @@ class ActionCommand(object):
         self._inform_state_change()
         
     def exited(self, exit_status):
-        if self.state != ActionCommand.RUNNING:
+        if self.state == "PENDING":
+            # We never even got a chance to start.
+            self.state = ActionCommand.FAILSTART
+
+        elif self.state == ActionCommand.RUNNING:
+            self.state = ActionCommand.COMPLETE
+            self.end_time = timeutils.current_timestamp()
+            self.exit_status = exit_status
+
+        else:
             raise Error("Invalid state for action %s: %s" % (self.id, self.state))
 
-        self.state = ActionCommand.COMPLETE
-        self.end_time = timeutils.current_timestamp()
-        self.exit_status = exit_status
         self._inform_state_change()
-    
+
     def write_stderr(self, value):
         if self.stderr_file:
             self.stderr_file.write(value)

@@ -133,7 +133,6 @@ class Node(object):
         self._cleanup(run)
 
         run.exited(None)
-
         cb(result)
 
     def _connect_then_run(self, run):
