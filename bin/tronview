@@ -7,26 +7,27 @@ from tron import cmd
 
 console_rows = int(os.popen('stty size', 'r').read().split()[0])
 console_cols = int(os.popen('stty size', 'r').read().split()[1])
-jobID_width = console_cols - 54 if console_cols > 80 else 25
-runID_width = console_cols - 64 if console_cols > 80 else 8
-actID_width = console_cols - 60 if console_cols > 80 else 20
+
+job_id_width = console_cols - 54 if console_cols > 54 + 5 else 5
+run_id_width = console_cols - 64 if console_cols > 64 + 5 else 5
+act_id_width = console_cols - 60 if console_cols > 60 + 5 else 5
 
 JOB_COLUMNS = (
-    ('Name', jobID_width),
+    ('Name', job_id_width),
     ('State', 10),
     ('Scheduler', 20),
     ('Last Success', 20),
 )
 
 RUN_COLUMNS = (
-    ('Run ID', runID_width),
+    ('Run ID', run_id_width),
     ('State', 6),
     ('Node', 20),
     ('Scheduled Time', 20),
 )
 
 ACTION_RUN_COLUMNS = (
-    ('Action ID', actID_width),
+    ('Action ID', act_id_width),
     ('State', 6),
     ('Start Time', 20),
     ('End Time', 20),
