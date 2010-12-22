@@ -8,6 +8,7 @@ from twisted.internet import defer
 
 from tron import node, command_context
 from tron.utils import timeutils
+from tron.utils import state
 
 log = logging.getLogger('tron.action')
 
@@ -156,11 +157,11 @@ class ActionRun(object):
             return
 
         # And now we try to actually start some work....
-        ret = self.node.run(self)
-        if isinstance(ret, defer.Deferred):
-            self._setup_callbacks(ret)
-        
-        self.state_callback()
+        self.action_command = ActionCommand(self.id, self.command, stdout=self.stdout_file, stderr=self.stderr_file)
+        self.action_command.listeners.append(self._handle_action_command)
+
+        df = self.node.run(self.action_command)
+        df.addErrback(self._handle_errback)
 
     def cancel(self):
         if self.is_scheduled or self.is_queued:
@@ -188,32 +189,53 @@ class ActionRun(object):
         except IOError, e:
             log.error(str(e) + " - Not storing command output!")
 
+    def _close_output_file(self):
+        if self.stdout_file:
+            self.stdout_file.close()
+        if self.stderr_file:
+            self.stderr_file.close()
+        
+        self.stdout_file = self.stderr_file = None
+
     def _handle_errback(self, result):
-        """Handle an error where the node wasn't able to give us an exit code"""
+        """Handle an error on the action command deferred
+        
+        This isn't the primary way we get notified of failures, as most expected ones will come through us
+        being a listener to the action command. However, if something internally goes wrong we'll catch it
+        here, as well as getting more details on the cause of any exception generated.
+        """
         log.info("Action error: %s", str(result))
         if isinstance(result.value, node.ConnectError):
             log.warning("Failed to connect to host %s for run %s", self.node.hostname, self.id)
-            self.fail(None)
         elif isinstance(result.value, node.ResultError):
             log.warning("Failed to retrieve exit for run %s after executing command on host %s", self.id, self.node.hostname)
-            self.fail_unknown()
         else:
             log.warning("Unknown failure for run %s on host %s: %s", self.id, self.node.hostname, str(result))
             self.fail_unknown()
             
-    def _handle_callback(self, exit_code):
-        """If the node successfully executes and get's a result from our run, handle the exit code here."""
-        if exit_code == 0:
-            self.succeed()
-        else:
-            self.fail(exit_code)
-       
-        return exit_code
+    def _handle_action_command(self, action_command):
+        """Our hook for being a listener to a running action command.
         
-    def _setup_callbacks(self, deferred):
-        """Execution has been deferred, so setup the callbacks so we can record our own status"""
-        deferred.addCallback(self._handle_callback)
-        deferred.addErrback(self._handle_errback)
+        On any state change, the action command will call us back so we can evaluate if we
+        need to change some state ourselves.
+        """
+        assert action_command is self.action_command
+        if action_command.state == ActionCommand.RUNNING:
+            self.state = ACTION_RUN_RUNNING
+            self.state_callback()
+        elif action_command.state == ActionCommand.FAILSTART:
+            self._close_output_file()
+            self.fail(None)
+        elif action_command.state == ActionCommand.COMPLETE:
+            self._close_output_file()
+            if action_command.exit_status is None:
+                self.fail_unknown()
+            elif action_command.exit_status == 0:
+                self.succeed()
+            else:
+                self.fail(action_command.exit_status)
+        else:
+            raise Error("Invalid state for action command : %r" % action_command)
 
     def start_dependants(self):
         for run in self.waiting_runs:
@@ -381,11 +403,12 @@ class Action(object):
         return new_run
 
 
+
 class ActionCommand(object):
-    PENDING = "PENDING"
-    RUNNING = "RUNNING"
-    COMPLETE = "COMPLETE"
-    FAILSTART = "FAILSTART"
+    COMPLETE = state.NamedEventState("complete")
+    FAILSTART = state.NamedEventState("failstart")
+    RUNNING = state.NamedEventState("running", exited=COMPLETE)
+    PENDING = state.NamedEventState("pending", starting=RUNNING, exited=FAILSTART)
 
     def __init__(self, id, command, stdout=None, stderr=None):
         """An Action Command is what a node actually executes
@@ -403,38 +426,41 @@ class ActionCommand(object):
         """
         self.id = id
         self.command = command
-    
-        self.state = ActionCommand.PENDING
-        self.listeners = list()
-    
+
+        # Create our state machine
+        # This guy is pretty simple, as we're just going to have string based events
+        # passed to it, and there is no other external interaction
+        self.machine = state.StateMachine(initial_state=self.PENDING)
+        
+        # Watch for a few specific events
+        self.machine.listen(self.RUNNING, self._machine_running)
+        self.machine.listen(self.COMPLETE, self._machine_complete)
+        
         self.stdout_file = None
         self.stderr_file = None
         self.exit_status = None
         self.start_time = None
         self.end_time = None
 
-    def started(self):
-        if self.state != ActionCommand.PENDING:
-            raise Error("Invalid state for action %s: %s" % (self.id, self.state))
-
-        self.state = ActionCommand.RUNNING
+    def _machine_running(self):
         self.start_time = timeutils.current_timestamp()
-        self._inform_state_change()
+
+    def _machine_complete(self):
+        self.end_time = timeutils.current_timestamp()
+ 
+    @property
+    def state(self):
+        return self.machine.state
+    
+    def starting(self):
+        self.machine.transition("starting")
         
+    def started(self):
+        self.machine.transition("started")
+
     def exited(self, exit_status):
-        if self.state == "PENDING":
-            # We never even got a chance to start.
-            self.state = ActionCommand.FAILSTART
-
-        elif self.state == ActionCommand.RUNNING:
-            self.state = ActionCommand.COMPLETE
-            self.end_time = timeutils.current_timestamp()
-            self.exit_status = exit_status
-
-        else:
-            raise Error("Invalid state for action %s: %s" % (self.id, self.state))
-
-        self._inform_state_change()
+        self.exit_status = exit_status
+        self.machine.transition("exited")
 
     def write_stderr(self, value):
         if self.stderr_file:
@@ -451,10 +477,5 @@ class ActionCommand(object):
         if self.stderr_file:
             self.stderr_file.close()
             
-    def _inform_state_change(self):
-        """Inform all our listeners that something has changed with us"""
-        for listener in self.listeners:
-            listener(self)
-
     def __repr__(self):
         return "[ActionCommand %s] %s : %s" % (self.id, self.command, self.state)
