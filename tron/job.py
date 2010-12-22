@@ -344,7 +344,7 @@ class Job(object):
         run = self.build_run(run_num=data['run_num'], actions=actions)
         self.run_num = max([run.run_num + 1, self.run_num])
 
-        for r, state in zip(run.runs, data['runs']):
+        for r, state in zip(run.action_runs, data['runs']):
             r.restore_state(state)
 
         run.start_time = data['start_time']

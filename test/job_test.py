@@ -19,7 +19,7 @@ class TestJobRun(TestCase):
         self.action2.command = "Test Command"
 
         self.job = job.Job("Test Job", self.action1)
-        self.job.output_dir = self.test_dir
+        self.job.output_path = self.test_dir
         self.job.topo_actions.append(self.action2)
         self.job.scheduler = scheduler.DailyScheduler()
         self.job.node_pool = turtle.Turtle()
@@ -36,30 +36,30 @@ class TestJobRun(TestCase):
         jr.set_run_time(time)
 
         assert_equal(jr.run_time, time)
-        assert_equal(jr.runs[0].run_time, time)
-        assert_equal(jr.runs[1].run_time, time)
+        assert_equal(jr.action_runs[0].run_time, time)
+        assert_equal(jr.action_runs[1].run_time, time)
 
     def test_start(self):
         jr = self.job.next_runs()[0]
         jr.start()
 
-        assert jr.runs[0].is_running
-        assert not jr.runs[1].is_running
+        assert jr.action_runs[0].is_running
+        assert not jr.action_runs[1].is_running
 
     def test_schedule(self):
         jr = self.job.next_runs()[0]
-        assert jr.runs[0].is_scheduled
-        assert jr.runs[1].is_queued
+        assert jr.action_runs[0].is_scheduled
+        assert jr.action_runs[1].is_queued
 
         jr.succeed()
 
-        assert jr.runs[0].is_success
-        assert jr.runs[1].is_success
+        assert jr.action_runs[0].is_success
+        assert jr.action_runs[1].is_success
 
         jr.schedule()
 
-        assert jr.runs[0].is_scheduled
-        assert jr.runs[1].is_queued
+        assert jr.action_runs[0].is_scheduled
+        assert jr.action_runs[1].is_queued
 
     def test_scheduled_start(self):
         self.job.queueing = True
@@ -111,7 +111,7 @@ class TestJob(TestCase):
         self.action.command = "Test Command"
 
         self.job = job.Job("Test Job", self.action)
-        self.job.output_dir = self.test_dir
+        self.job.output_path = self.test_dir
         self.job.node_pool = turtle.Turtle()
         self.job.scheduler = scheduler.DailyScheduler()
         self.action.job = self.job
@@ -137,7 +137,7 @@ class TestJob(TestCase):
         runs = []
         for i in range(6):
             runs.append(self.job.next_runs()[0])
-            runs[i].runs[0].node = turtle.Turtle()
+            runs[i].action_runs[0].node = turtle.Turtle()
 
         self.job.remove_old_runs()
         assert_equals(len(self.job.runs), 6)
@@ -171,7 +171,7 @@ class TestJob(TestCase):
         runs = []
         for i in range(5):
             runs.append(self.job.next_runs()[0])
-            runs[i].runs[0].node = turtle.Turtle()
+            runs[i].action_runs[0].node = turtle.Turtle()
 
         assert_equals(self.job.next_to_finish(), runs[0])
         runs[0].succeed()
@@ -188,7 +188,7 @@ class TestJob(TestCase):
         runs = []
         for i in range(10):
             runs.append(self.job.next_runs()[0])
-            runs[i].runs[0].node = turtle.Turtle()
+            runs[i].action_runs[0].node = turtle.Turtle()
 
         runs[0].start()
         runs[4].start()
@@ -227,14 +227,14 @@ class TestJob(TestCase):
 
         self.job.topo_actions.append(act)
         run1 = self.job.next_runs()[0]
-        assert_equals(run1.runs[0].action, self.action)
-        assert_equals(run1.runs[1].action, act)
+        assert_equals(run1.action_runs[0].action, self.action)
+        assert_equals(run1.action_runs[1].action, act)
 
         run2 = self.job.next_runs()[0]
         assert_equals(self.job.runs[1], run1)
 
-        assert_equals(run2.runs[0].action, self.action)
-        assert_equals(run2.runs[1].action, act)
+        assert_equals(run2.action_runs[0].action, self.action)
+        assert_equals(run2.action_runs[1].action, act)
 
     def test_manual_start_no_scheduled(self):
         r1 = self.job.build_run()
@@ -317,9 +317,9 @@ class TestJob(TestCase):
         job_run = self.job.restore_main_run(state_data)
 
         # act2 was filtered
-        assert_equal(len(job_run.runs), 2)
-        assert_equal(job_run.runs[0].id, act1_id)
-        assert_equal(job_run.runs[1].id, act3_id)
+        assert_equal(len(job_run.action_runs), 2)
+        assert_equal(job_run.action_runs[0].id, act1_id)
+        assert_equal(job_run.action_runs[1].id, act3_id)
 
 
 
