@@ -182,9 +182,9 @@ class MasterControlProgram(object):
             log.error(str(e) + " - Cannot write to configuration file!")
 
     def setup_job_dir(self, job):
-        job.output_dir = os.path.join(self.state_handler.working_dir, job.name)
-        if not os.path.exists(job.output_dir):
-            os.mkdir(job.output_dir)
+        job.output_path = os.path.join(self.state_handler.working_dir, job.name)
+        if not os.path.exists(job.output_path):
+            os.mkdir(job.output_path)
 
     def add_job(self, job):
         if job.name in self.jobs:

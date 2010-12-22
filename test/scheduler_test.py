@@ -16,7 +16,7 @@ class ConstantSchedulerTest(TestCase):
         self.action.command = "Test Command"
         self.job = job.Job("Test Job", self.action)
         self.job.node_pool = turtle.Turtle()
-        self.job.output_dir = self.test_dir
+        self.job.output_path = self.test_dir
         self.job.scheduler = self.scheduler
         self.action.job = self.job
 
@@ -41,7 +41,7 @@ class DailySchedulerTest(TestCase):
         self.action = action.Action("Test Action")
         self.job = job.Job("Test Job", self.action)
         self.job.node_pool = turtle.Turtle()
-        self.job.output_dir = self.test_dir
+        self.job.output_path = self.test_dir
         self.job.scheduler = self.scheduler
         self.action.job = self.job
 
@@ -70,7 +70,7 @@ class DailySchedulerTimeTest(TestCase):
         self.action = action.Action("Test Action - Beer Time")
         self.job = job.Job("Test Job", self.action)
         self.job.node_pool = turtle.Turtle()
-        self.job.output_dir = self.test_dir
+        self.job.output_path = self.test_dir
         self.job.scheduler = self.scheduler
         self.action.job = self.job
     
@@ -99,7 +99,7 @@ class IntervalSchedulerTest(TestCase):
         self.action = action.Action("Test Action")
         self.job = job.Job("Test Job", self.action)
         self.job.node_pool = turtle.Turtle()
-        self.job.output_dir = self.test_dir
+        self.job.output_path = self.test_dir
         self.job.scheduler = self.scheduler
         self.action.job = self.job
 

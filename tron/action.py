@@ -235,29 +235,28 @@ class ActionRun(object):
             log.warning("Unknown failure for run %s on host %s: %s", self.id, self.node.hostname, str(result))
             self.fail_unknown()
             
-    def _handle_action_command(self, action_command):
+    def _handle_action_command(self):
         """Our hook for being a listener to a running action command.
         
         On any state change, the action command will call us back so we can evaluate if we
         need to change some state ourselves.
         """
-        assert action_command is self.action_command
-        if action_command.state == ActionCommand.RUNNING:
+        if self.action_command.state == ActionCommand.RUNNING:
             self.state = ACTION_RUN_RUNNING
             self.state_callback()
-        elif action_command.state == ActionCommand.FAILSTART:
+        elif self.action_command.state == ActionCommand.FAILSTART:
             self._close_output_file()
             self.fail(None)
-        elif action_command.state == ActionCommand.COMPLETE:
+        elif self.action_command.state == ActionCommand.COMPLETE:
             self._close_output_file()
-            if action_command.exit_status is None:
+            if self.action_command.exit_status is None:
                 self.fail_unknown()
-            elif action_command.exit_status == 0:
+            elif self.action_command.exit_status == 0:
                 self.succeed()
             else:
-                self.fail(action_command.exit_status)
+                self.fail(self.action_command.exit_status)
         else:
-            raise Error("Invalid state for action command : %r" % action_command)
+            raise Error("Invalid state for action command : %r" % self.action_command)
 
     def start_dependants(self):
         for run in self.waiting_runs:
@@ -462,8 +461,8 @@ class ActionCommand(object):
         self.machine.listen(self.RUNNING, self._machine_running)
         self.machine.listen(self.COMPLETE, self._machine_complete)
         
-        self.stdout_file = None
-        self.stderr_file = None
+        self.stdout_file = stdout
+        self.stderr_file = stderr
         self.exit_status = None
         self.start_time = None
         self.end_time = None
