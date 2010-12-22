@@ -158,7 +158,7 @@ class ActionRun(object):
 
         # And now we try to actually start some work....
         self.action_command = ActionCommand(self.id, self.command, stdout=self.stdout_file, stderr=self.stderr_file)
-        self.action_command.listeners.append(self._handle_action_command)
+        self.action_command.machine.listen(True, self._handle_action_command)
 
         df = self.node.run(self.action_command)
         df.addErrback(self._handle_errback)
