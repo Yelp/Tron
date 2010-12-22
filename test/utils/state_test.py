@@ -10,10 +10,7 @@ class SimpleTestCase(TestCase):
             True: self.state_green, 
         }
 
-        class TestStateMachine(state.StateMachine):
-            initial_state = self.state_red
-    
-        self.machine = TestStateMachine()
+        self.machine = state.StateMachine(self.state_red)
         
     def test(self):
         # Stay the same
@@ -51,10 +48,7 @@ class MultiOptionTestCase(TestCase):
         })
 
         
-        class TestStateMachine(state.StateMachine):
-            initial_state = self.state_listening
-    
-        self.machine = TestStateMachine()
+        self.machine = state.StateMachine(self.state_listening)
         
     def test(self):
         # Talking, we should listen
@@ -86,10 +80,7 @@ class TestCircular(TestCase):
             True: self.state_telling_truth,
         })
         
-        class TestStateMachine(state.StateMachine):
-            initial_state = self.state_telling_truth
-    
-        self.machine = TestStateMachine()
+        self.machine = state.StateMachine(self.state_telling_truth)
 
     def test(self):
         assert_raises(state.CircularTransitionError, self.machine.transition, True)
