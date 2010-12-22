@@ -12,11 +12,10 @@ RUN_LIMIT = 50
 
 class JobRun(object):
     def __init__(self, job, run_num=None):
-        self.run_num = job.next_num() if run_num is None else run_num
         self.job = job
+        self.run_num = job.next_num() if run_num is None else run_num
         self.state_callback = job.state_callback
         self.id = "%s.%s" % (job.name, self.run_num)
-        self.output_dir = os.path.join(job.output_dir, self.id)
 
         self.run_time = None
         self.start_time = None
@@ -25,11 +24,15 @@ class JobRun(object):
         self.action_runs = []
         self.context = command_context.CommandContext(self, job.context)
 
+    @property
+    def output_path(self):
+        return os.path.join(self.job.output_path, self.id)
+
     def set_run_time(self, run_time):
         self.run_time = run_time
 
-        for a in self.actions:
-        	a.run_time = run_time
+        for action in self.action_runs:
+            action.run_time = run_time
 
     def scheduled_start(self):
         self.attempt_start()
@@ -47,8 +50,8 @@ class JobRun(object):
         self.start_time = timeutils.current_time()
         self.end_time = None
 
-        for a in self.action_runs:
-            r.attempt_start()
+        for action in self.action_runs:
+            action.attempt_start()
 
     def manual_start(self):
         self.queue()
@@ -61,19 +64,6 @@ class JobRun(object):
     def last_success_check(self):
         if not self.job.last_success or self.run_num > self.job.last_success.run_num:
             self.job.last_success = self
-
-    def create_action_run(self, act):
-        act_run = act.build_run(self.context)
-
-        act_run.id = "%s.%s" % (self.id, act.name)
-        act_run.state_callback = self.state_callback
-        act_run.complete_callback = self.run_completed
-
-        act_run.node = act.node_pool.next() if act.node_pool else self.node
-        act_run.stdout_path = os.path.join(self.output_dir, act_run.id + '.stdout')
-        act_run.stderr_path = os.path.join(self.output_dir, act_run.id + '.stderr')
-
-        return act_run
 
     def run_completed(self):
         if self.is_success:
@@ -177,7 +167,7 @@ class Job(object):
 
         self.run_limit = RUN_LIMIT
         self.node_pool = None
-        self.output_dir = None
+        self.output_path = None
         self.state_callback = lambda:None
         self.context = command_context.CommandContext(self)
 
@@ -218,8 +208,8 @@ class Job(object):
     def remove_run(self, run):
         self.runs.remove(run)
 
-        if os.path.exists(run.output_dir):
-            shutil.rmtree(run.output_dir)
+        if os.path.exists(run.output_path):
+            shutil.rmtree(run.output_path)
 
         run.job = None
 
@@ -267,18 +257,19 @@ class Job(object):
 
         return self.scheduler.next_runs(self)
 
-    def build_action_dag(self, job_run, actions):
+    def build_action_dag(self, job_run, all_actions):
         """Build actions and setup requirements"""
-        runs = {}
-        for a in actions:
-            run = job_run.create_action_run(a)
-            runs[a.name] = run
+        action_runs_by_name = {}
+        for action in all_actions:
+            action_run = action.build_run(job_run)
+            action_runs_by_name[action.name] = action_run
 
-            job_run.runs.append(run)
+            job_run.action_runs.append(action_run)
 
-            for req in a.required_actions:
-                runs[req.name].waiting_runs.append(run)
-                run.required_runs.append(runs[req.name])
+            for req_action in action.required_actions:
+                # Two-way, waiting runs and required_runs
+                action_runs_by_name[req_action.name].waiting_runs.append(action_run)
+                action_run.required_runs.append(action_runs_by_name[req_action.name])
 
     def build_run(self, node=None, actions=None, run_num=None):
         job_run = JobRun(self, run_num=run_num)
@@ -287,8 +278,8 @@ class Job(object):
         log.info("Built run %s", job_run.id)
 
         # It would be great if this were abstracted out a bit
-        if os.path.exists(self.output_dir) and not os.path.exists(job_run.output_dir):
-            os.mkdir(job_run.output_dir)
+        if os.path.exists(self.output_path) and not os.path.exists(job_run.output_path):
+            os.mkdir(job_run.output_path)
 
         # If the actions aren't specified, then we know this is a normal run
         if not actions:
@@ -321,7 +312,7 @@ class Job(object):
     def absorb_old_job(self, old):
         self.runs = old.runs
 
-        self.output_dir = old.output_dir
+        self.output_path = old.output_path
         self.last_success = old.last_success
         self.run_num = old.run_num
         self.enabled = old.enabled

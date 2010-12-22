@@ -81,7 +81,7 @@ class ActionRunContext(object):
 
 class ActionRun(object):
     """An instance of running a action"""
-    def __init__(self, action):
+    def __init__(self, action, context=None, output_path=None):
         self.action = action
         self.id = None
         
@@ -93,19 +93,39 @@ class ActionRun(object):
 
         self.node = None
         self.context = None
+
+        new_context = ActionRunContext(self)
+        if context is not None:
+            self.context = command_context.CommandContext(new_context, context)
+        else:
+            self.context = new_context
+            
         self.state_callback = lambda:None
         self.complete_callback = lambda:None
 
         # If we ran the command, we'll store it for posterity.
-        self.rendered_command = None 
+        self.rendered_command = None
 
-        self.stdout_path = None
-        self.stderr_path = None
+        self.output_path = output_path
         self.stdout_file = None
         self.stderr_file = None
 
         self.required_runs = []
         self.waiting_runs = []
+
+    @property
+    def stdout_path(self):
+        if self.output_path is None:
+            return None
+            
+        return os.path.join(self.output_path, self.id + '.stdout')
+
+    @property
+    def stderr_path(self):
+        if self.output_path is None:
+            return None
+            
+        return os.path.join(self.output_path, self.id + '.stderr')
 
     def tail_stdout(self, num_lines=0):
         return self.tail_file(self.stdout_path, num_lines)
@@ -184,8 +204,10 @@ class ActionRun(object):
     def _open_output_file(self):
         try:
             log.info("Opening file %s for output", self.stdout_path)
-            self.stdout_file = open(self.stdout_path, 'a')
-            self.stderr_file = open(self.stderr_path, 'a')
+            if self.stdout_path:
+                self.stdout_file = open(self.stdout_path, 'a')
+            if self.stderr_path:
+                self.stderr_file = open(self.stderr_path, 'a')
         except IOError, e:
             log.error(str(e) + " - Not storing command output!")
 
@@ -373,17 +395,17 @@ class ActionRun(object):
  
 
 class Action(object):
-    def __init__(self, name=None, node_pool=None):
+    def __init__(self, name=None):
         self.name = name
-        self.node_pool = node_pool
 
         self.required_actions = []
         self.job = None
         self.command = None
 
     def __eq__(self, other):
-        if not isinstance(other, Action) or self.name != other.name or \
-           self.node_pool != other.node_pool or self.command != other.command:
+        if not isinstance(other, Action) \
+           or self.name != other.name \
+           or self.command != other.command:
             return False
 
         return all([me == you for (me, you) in zip(self.required_actions, other.required_actions)]) 
@@ -391,17 +413,21 @@ class Action(object):
     def __ne__(self, other):
         return not self == other
 
-    def build_run(self, context):
+    def build_run(self, job_run):
         """Build an instance of ActionRun for this action
         
         This is used by the scheduler when scheduling a run
         """
-        new_run = ActionRun(self)
-        new_context = ActionRunContext(new_run)
-        new_run.context = command_context.CommandContext(new_context, context)
+        new_run = ActionRun(self, context=job_run.context)
+
+        new_run.id = "%s.%s" % (job_run.id, self.name)
+        new_run.output_path = job_run.output_path
+        new_run.node = job_run.node
+
+        new_run.state_callback = job_run.state_callback
+        new_run.complete_callback = job_run.run_completed
 
         return new_run
-
 
 
 class ActionCommand(object):
