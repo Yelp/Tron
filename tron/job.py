@@ -22,14 +22,14 @@ class JobRun(object):
         self.start_time = None
         self.end_time = None
         self.node = None
-        self.runs = []
+        self.action_runs = []
         self.context = command_context.CommandContext(self, job.context)
 
     def set_run_time(self, run_time):
         self.run_time = run_time
 
-        for r in self.runs:
-        	r.run_time = run_time
+        for a in self.actions:
+        	a.run_time = run_time
 
     def scheduled_start(self):
         self.attempt_start()
@@ -47,7 +47,7 @@ class JobRun(object):
         self.start_time = timeutils.current_time()
         self.end_time = None
 
-        for r in self.runs:
+        for a in self.action_runs:
             r.attempt_start()
 
     def manual_start(self):
@@ -66,7 +66,7 @@ class JobRun(object):
         act_run = act.build_run(self.context)
 
         act_run.id = "%s.%s" % (self.id, act.name)
-        act_run.state_callback = self.state_callback        
+        act_run.state_callback = self.state_callback
         act_run.complete_callback = self.run_completed
 
         act_run.node = act.node_pool.next() if act.node_pool else self.node
@@ -91,7 +91,7 @@ class JobRun(object):
 
     @property
     def data(self):
-        return {'runs':[r.data for r in self.runs],
+        return {'runs':[a.data for a in self.action_runs],
                 'run_num': self.run_num,
                 'run_time': self.run_time,
                 'start_time': self.start_time,
@@ -99,23 +99,23 @@ class JobRun(object):
         }
 
     def schedule(self):
-        for r in self.runs:
+        for r in self.action_runs:
             r.schedule()
 
     def queue(self):
-        for r in self.runs:
+        for r in self.action_runs:
             r.queue()
 
     def cancel(self):
-        for r in self.runs:
+        for r in self.action_runs:
             r.cancel()
 
     def succeed(self):
-        for r in self.runs:
+        for r in self.action_runs:
             r.mark_success()
 
     def fail(self):
-        for r in self.runs:
+        for r in self.action_runs:
             r.fail(0)
 
     @property
@@ -126,35 +126,35 @@ class JobRun(object):
 
     @property
     def is_failed(self):
-        return any([r.is_failed for r in self.runs])
+        return any([r.is_failed for r in self.action_runs])
 
     @property
     def is_success(self):
-        return all([r.is_success for r in self.runs])
+        return all([r.is_success for r in self.action_runs])
 
     @property
     def is_done(self):
-        return not any([r.is_running or r.is_queued or r.is_scheduled for r in self.runs])
+        return not any([r.is_running or r.is_queued or r.is_scheduled for r in self.action_runs])
 
     @property
     def is_queued(self):
-        return all([r.is_queued for r in self.runs])
+        return all([r.is_queued for r in self.action_runs])
 
     @property
     def is_running(self):
-        return any([r.is_running for r in self.runs])
+        return any([r.is_running for r in self.action_runs])
 
     @property
     def is_scheduled(self):
-        return any([r.is_scheduled for r in self.runs])
+        return any([r.is_scheduled for r in self.action_runs])
 
     @property
     def is_unknown(self):
-        return any([r.is_unknown for r in self.runs])
+        return any([r.is_unknown for r in self.action_runs])
 
     @property
     def is_cancelled(self):
-        return all([r.is_cancelled for r in self.runs])
+        return all([r.is_cancelled for r in self.action_runs])
 
 
 class Job(object):
