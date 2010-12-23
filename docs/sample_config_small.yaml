@@ -39,12 +39,9 @@ services:
     -
         name: "testserv"
         node: *pool
-        enable:
-            command: "sleep 10; echo one"
-        monitor:
-            actions:
-                - 
-                    name: "actionMo"
-                    command: "echo hello; sleep 5"
-            schedule: "interval 20s"
-
+        count: 10
+        restarts: 3
+        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+        command: "sleep 10; echo %! > %(pid_file)s"
+        monitor: "interval 20s"
+            

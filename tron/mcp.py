@@ -135,6 +135,7 @@ class MasterControlProgram(object):
     """
     def __init__(self, working_dir, config_file, context=None):
         self.jobs = {}
+        self.states = {}
         self.nodes = []
         self.state_handler = StateHandler(self, working_dir)
         self.config_file = config_file
