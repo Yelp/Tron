@@ -1,0 +1,7 @@
+twisted
+pyasn1
+simplejson
+ipython
+testify
+pycrypto
+pyyaml
