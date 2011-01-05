@@ -386,10 +386,9 @@ class Service(_ConfiguredObject):
         _match_node(real_service, self.node)
         _match_schedule(real_service, self.schedule)
         
-        real_service.pid = self.pid
+        real_service.pid_file_template = self.pid_file
         
-        real_service.start_action = Action("start")
-        real_service.start_action.command = self.command
+        real_service.command = self.command
         
         if hasattr(self, "count"):
             real_service.count = self.count
