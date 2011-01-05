@@ -1,17 +1,21 @@
+import logging
+
 from twisted.internet import reactor
 
 from tron import job
 from tron import action
 from tron import command_context
 from tron.utils import state
+from tron.utils import timeutils
 
+log = logging.getLogger(__name__)
 
 class ServiceInstance(object):
     STATE_DOWN = state.NamedEventState("down")
     STATE_UP = state.NamedEventState("up")
     STATE_KILLING = state.NamedEventState("killing", mark_down=STATE_DOWN)
     STATE_MONITORING = state.NamedEventState("monitoring", mark_down=STATE_DOWN, stop=STATE_KILLING, mark_up=STATE_UP)
-    STATE_STARTING = state.NamedEventState("starting", mark_up=STATE_UP, mark_down=STATE_DOWN)
+    STATE_STARTING = state.NamedEventState("starting", mark_down=STATE_DOWN, monitor=STATE_MONITORING, stop=STATE_KILLING)
 
     STATE_UNKNOWN = state.NamedEventState("unknown", mark_monitor=STATE_MONITORING)
     STATE_MONITORING['monitor_fail'] = STATE_UNKNOWN
@@ -30,7 +34,6 @@ class ServiceInstance(object):
         self.machine = state.StateMachine(ServiceInstance.STATE_DOWN)
         
         self.pid_path = None
-        self.monitor_interval = None
 
         self.context = command_context.CommandContext(self, service.context)
         
@@ -45,10 +48,23 @@ class ServiceInstance(object):
     @property
     def listen(self):
         return self.machine.listen
-        
+    
+    @property
+    def pid_file(self):
+        if self.service.pid_file_template:
+            try:
+                return self.service.pid_file_template % self.context
+            except KeyError:
+                log.error("Failed to render pid file template: %r" % self.service.pid_file_template)
+        else:
+            log.warning("No pid_file configured for service %s", self.service.name)
+
+        return None
+    
     def _queue_monitor(self):
         self.monitor_action = None
-        reactor.callLater(self._run_monitor, self.monitor_interval)
+        if self.service.monitor_interval > 0:
+            reactor.callLater(self.service.monitor_interval, self._run_monitor)
 
     def _run_monitor(self):
         if self.monitor_action:
@@ -56,9 +72,16 @@ class ServiceInstance(object):
             return
         
         self.machine.transition("monitor")
-        monitor_command = "cat %(pid_url)s | xargs kill -0" % self.context
+        pid_file = self.pid_file
+        
+        if pid_file is None:
+            # If our pid file doesn't exist or failed to be generated, we can't really monitor
+            self._monitor_complete_failstart()
+            return
+            
+        monitor_command = "cat %(pid_file)s | xargs kill -0" % self.context
 
-        self.monitor_action = action.ActionComand("%s.monitor" % self.id, monitor_command)
+        self.monitor_action = action.ActionCommand("%s.monitor" % self.id, monitor_command)
         self.monitor_action.machine.listen(action.ActionCommand.COMPLETE, self._monitor_complete_callback)
         self.monitor_action.machine.listen(action.ActionCommand.FAILSTART, self._monitor_complete_failstart)
 
@@ -76,11 +99,15 @@ class ServiceInstance(object):
             self.machine.transition("mark_up")
             self._queue_monitor()
 
+        self.monitor_action = None
+
     def _monitor_complete_failstart(self):
         """Callback when our monitor failed to even start"""
         self.machine.transition("monitor_fail")
         self._queue_monitor()
 
+        self.monitor_action = None
+        
     def start(self):
         self.machine.transition("start")
 
@@ -101,7 +128,7 @@ class Service(object):
     STATE_UP = state.NamedEventState("up")
     
     STATE_STOPPING = state.NamedEventState("stopping", mark_all_down=STATE_DOWN)
-    STATE_DEGRADED = state.NamedEventState("degraded", stop=STATE_STOPPING, mark_all_up=STATE_UP)
+    STATE_DEGRADED = state.NamedEventState("degraded", stop=STATE_STOPPING, mark_all_up=STATE_UP, mark_all_down=STATE_DOWN)
     STATE_STARTING = state.NamedEventState("starting", mark_all_up=STATE_UP)
     
     STATE_DOWN['start'] = STATE_STARTING
@@ -115,11 +142,13 @@ class Service(object):
         self.scheduler = None
         self.node_pool = node_pool
         self.count = 0
+        self.monitor_interval = None
         self.machine = state.StateMachine(Service.STATE_DOWN)
 
         # Last instance number used
         self._last_instance = None
 
+        self.pid_file_template = None
         self.context = command_context.CommandContext(self, context)
         self.instances = []
 
@@ -167,12 +196,12 @@ class Service(object):
     
     def _instance_up(self):
         """Callback for service instance to inform us it is up"""
-        if all([instance.state == StateInstance.STATE_UP for instance in self.instances]):
+        if all([instance.state == ServiceInstance.STATE_UP for instance in self.instances]):
             self.machine.transition("mark_all_up")
         
     def _instance_down(self):
         """Callback for service instance to inform us it is down"""
-        if all([instance.state == StateInstance.STATE_DOWN for instance in self.instances]):
+        if all([instance.state == ServiceInstance.STATE_DOWN for instance in self.instances]):
             self.machine.transition("mark_all_down")
         else:
             self.machine.transition("mark_down")
