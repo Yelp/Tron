@@ -202,7 +202,7 @@ class Service(object):
     STATE_UP['mark_down'] = STATE_DEGRADED
     
     
-    def __init__(self, name, command, node_pool=None, context=None):
+    def __init__(self, name=None, command=None, node_pool=None, context=None):
         self.name = name
         self.command = command
         self.scheduler = None
@@ -215,7 +215,11 @@ class Service(object):
         self._last_instance_number = None
 
         self.pid_file_template = None
-        self.context = command_context.CommandContext(self, context)
+
+        self.context = None
+        if context is not None:
+            self.set_context(None)
+
         self.instances = []
 
     @property
@@ -225,6 +229,9 @@ class Service(object):
     @property
     def listen(self):
         return self.machine.listen
+
+    def set_context(self, context):
+        self.context = command_context.CommandContext(self, context)
 
     def start(self):
         if self.instances:

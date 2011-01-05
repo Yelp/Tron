@@ -384,7 +384,7 @@ class Service(_ConfiguredObject):
 
         _match_name(real_service, self.name)
         _match_node(real_service, self.node)
-        _match_schedule(real_service, self.schedule)
+        real_service.monitor_interval = int(self.monitor_interval)
         
         real_service.pid_file_template = self.pid_file
         
