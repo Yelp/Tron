@@ -215,6 +215,32 @@ class MasterControlProgram(object):
 
         job.disable()
 
+    def add_service(self, service):
+        prev_service = self.services.get(service.name)
+        
+        if service == prev_service:
+            return
+            
+        service.set_context(self.context)
+
+        # Trigger storage on any state changes
+        service.listen(None, self.state_handler.store_state)
+
+        self.services[service.name] = service
+
+        if prev_service is None:
+            # New service
+            service.start()
+        else:
+            service.absorb_previous(prev_service)
+
+    def remove_service(self, service_name):
+        if service_name not in self.services:
+            raise ValueError("Service %s unknown", service_name)
+
+        service = self.services.pop(service_name)
+        service.stop()
+
     def _schedule(self, run):
         sleep = sleep_time(run.run_time)
         if sleep == 0:

@@ -177,7 +177,7 @@ class TronConfiguration(yaml.YAMLObject):
             raise
 
     def _apply_jobs(self, mcp):
-        """Configure actions"""
+        """Configure jobs"""
         found_jobs = []
 
         # Check for duplicates before we start editing jobs
@@ -190,20 +190,39 @@ class TronConfiguration(yaml.YAMLObject):
         jobs = []
         if getattr(self, 'jobs', None):
             jobs = [default_or_from_tag(job_val, Job) for job_val in self.jobs]
-        if getattr(self, 'services', None):
-            jobs.extend([default_or_from_tag(job_val, Service) for job_val in self.services])
 
         found_jobs = reduce(check_dup, jobs, {})
         for job_config in jobs:
-            new_job = job_config.actualized
             log.debug("Building new job %s", job_config.name)
+            new_job = job_config.actualized
             mcp.add_job(new_job)
 
         for job_name in mcp.jobs.keys():
             if job_name not in found_jobs:
                 log.debug("Removing job %s", job_name)
-                
                 mcp.remove_job(job_name)
+
+    def _apply_services(self, mcp):
+        """Configure services"""
+        services = []
+        if getattr(self, 'services', None):
+            services.extend([default_or_from_tag(srv_val, Service) for srv_val in self.services])
+
+        found_srv_names = set()
+        for srv_config in services:
+            if srv_config.name in found_srv_names:
+                raise yaml.YAMLError("Duplicate service name %s" % srv_config.name)
+            found_srv_names.add(srv_config.name)
+
+            log.debug("Building new services %s", srv_config.name)
+            new_service = srv_config.actualized
+            mcp.add_service(new_service)
+
+        for srv_name in mcp.services.keys():
+            if srv_name not in found_srv_names:
+                log.debug("Removing service %s", srv_name)
+                mcp.remove_service(srv_name)
+
 
     def _get_working_dir(self, mcp):
         if mcp.state_handler.working_dir:
@@ -237,6 +256,7 @@ class TronConfiguration(yaml.YAMLObject):
             self.ssh_options._apply(mcp)
         
         self._apply_jobs(mcp)
+        self._apply_services(mcp)
 
         if hasattr(self, 'notification_options'):
             self.notification_options = default_or_from_tag(self.notification_options, NotificationOptions)
