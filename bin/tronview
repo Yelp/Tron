@@ -10,7 +10,7 @@ console_cols = int(os.popen('stty size', 'r').read().split()[1])
 
 job_id_width = console_cols - 54 if console_cols > 54 + 5 else 5
 run_id_width = console_cols - 64 if console_cols > 64 + 5 else 5
-act_id_width = console_cols - 60 if console_cols > 60 + 5 else 5
+act_id_width = console_cols - 100 if console_cols > 100 + 5 else 5
 
 JOB_COLUMNS = (
     ('Name', job_id_width),
@@ -28,6 +28,7 @@ RUN_COLUMNS = (
 
 ACTION_RUN_COLUMNS = (
     ('Action ID', act_id_width),
+    ('Command', 20),
     ('State', 6),
     ('Start Time', 20),
     ('End Time', 20),
@@ -170,6 +171,7 @@ def view_action_run(options, act_run_id):
     print "Action Run: %s" % act_run_content['id']
     print "State: %s" % act_run_content['state']
     print "Node: %s" % act_run_content['node']
+    print "Command: %s" % act_run_content['command']
     print
     print "Requirements:"
     for req in act_run_content['requirements']:
