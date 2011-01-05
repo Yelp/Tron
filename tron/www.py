@@ -248,22 +248,12 @@ class JobResource(resource.Resource):
         for job_run in self._job.runs:
             run_output.append(self.get_run_data(request, job_run))
 
-        enable_run_output = []
-        for e_run in self._job.enable_runs:
-            enable_run_output.append(self.get_run_data(request, e_run))
-
-        disable_run_output = []
-        for d_run in self._job.disable_runs:
-            disable_run_output.append(self.get_run_data(request, d_run))
-
         resources_output = []
         
         output = {
             'name': self._job.name,
             'scheduler': str(self._job.scheduler),
             'runs': run_output,
-            'enable_runs': enable_run_output,
-            'disable_runs': disable_run_output,
             'action_names': map(lambda t: t.name, self._job.topo_actions),
             'node_pool': map(lambda n: n.hostname, self._job.node_pool.nodes),
         }
@@ -315,7 +305,7 @@ class JobsResource(resource.Resource):
             last_success = current_job.last_success.end_time.strftime("%Y-%m-%d %H:%M:%S") if current_job.last_success else None
             
             # We need to describe the current state of this job
-            is_service = current_job.enable_act or current_job.disable_act
+            is_service = False
             current_run = current_job.next_to_finish()
             status = "UNKNOWN"
 

@@ -50,7 +50,7 @@ def view_all(options):
     status, content = cmd.request(options.server, "/jobs")
     assert status == cmd.OK
     print "Services:"
-    if len(content['services']) == 0:
+    if len(content.get('services', [])) == 0:
         print "No services"
     else:
         print " ".join((name.ljust(size) for name, size in JOB_COLUMNS))
@@ -104,15 +104,6 @@ def view_job(options, job_name):
     print "Node Pool:"
     print "\n".join(job_content['node_pool'])
     print
-    if job_content['enable_runs']:
-        print "Enabling Run History: (%d total)" % len(job_content['enable_runs'])
-        print_job_runs(options, job_content['enable_runs'])
-        print
-
-    if job_content['disable_runs']:
-        print "Disabling Run History: (%d total)" % len(job_content['disable_runs'])
-        print_job_runs(options, job_content['disable_runs'])       
-        print
 
     print "Run History: (%d total)" % len(job_content['runs'])
     print_job_runs(options, job_content['runs'])
