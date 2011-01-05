@@ -58,7 +58,7 @@ class StateMachine(object):
         Returns True or False based on whether a transition has indeed taken place.
         Listeners for this change will also be notified before returning.
         """
-        log.debug("Checking for transition from %r", self.state)
+        log.debug("Checking for transition from %r (%r)", self.state, target)
         
         try:
             next_state = self.state[target]
