@@ -10,7 +10,7 @@ console_cols = int(os.popen('stty size', 'r').read().split()[1])
 
 job_id_width = console_cols - 54 if console_cols > 54 + 5 else 5
 run_id_width = console_cols - 64 if console_cols > 64 + 5 else 5
-act_id_width = console_cols - 100 if console_cols > 100 + 5 else 5
+act_id_width = console_cols - 60 if console_cols > 60 + 5 else 5
 
 JOB_COLUMNS = (
     ('Name', job_id_width),
@@ -27,8 +27,7 @@ RUN_COLUMNS = (
 )
 
 ACTION_RUN_COLUMNS = (
-    ('Action ID', act_id_width),
-    ('Command', 20),
+    ('Action ID & Command', act_id_width),
     ('State', 6),
     ('Start Time', 20),
     ('End Time', 20),
@@ -151,7 +150,8 @@ def view_job_run(options, job_run_id):
         duration = (run['duration'] and run['duration'][:-7]) or "-"
         command = run['command'] or "-"
 
-        print " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((run_id, command, run_state, start_time, end_time, duration), ACTION_RUN_COLUMNS))
+        print " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((run_id, run_state, start_time, end_time, duration), ACTION_RUN_COLUMNS))
+        print " ".join(["   ", command])
 
 def view_action_run(options, act_run_id):
     url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'), options.num_shown)
