@@ -138,7 +138,7 @@ class Service(object):
     
     def __init__(self, name, command, node_pool=None, context=None):
         self.name = name
-
+        self.command = command
         self.scheduler = None
         self.node_pool = node_pool
         self.count = 0
@@ -146,7 +146,7 @@ class Service(object):
         self.machine = state.StateMachine(Service.STATE_DOWN)
 
         # Last instance number used
-        self._last_instance = None
+        self._last_instance_number = None
 
         self.pid_file_template = None
         self.context = command_context.CommandContext(self, context)
@@ -179,12 +179,12 @@ class Service(object):
     def build_instance(self):
         node = self.node_pool.next()
 
-        if self._last_instance is None:
-            self._last_instance = 0
+        if self._last_instance_number is None:
+            self._last_instance_number = 0
         else:
-            self._last_instance += 1
+            self._last_instance_number += 1
 
-        instance_number = self._last_instance
+        instance_number = self._last_instance_number
 
         service_instance = ServiceInstance(self, node, instance_number)
         self.instances.append(service_instance)
@@ -216,7 +216,7 @@ class Service(object):
 
         # First just copy pieces of state that really matter
         self.machine = prev_service.machine
-        self._last_instance = prev_service._last_instance
+        self._last_instance_number = prev_service._last_instance_number
                 
         rebuild_all_instances = any([
                                      self.node_pool != prev_service.node_pool, 
@@ -230,13 +230,13 @@ class Service(object):
         else:
             # Copy over all the old instances
             self.instances += prev_service.instances
-            
+
             # Now make adjustments to how many there are
             if self.count > prev_service.count:
                 # We need to add some instances
                 for _ in range(self.count - prev_service.count):
                     self.build_instance()
-            elif self.count < prev_service_count:
+            elif self.count < prev_service.count:
                 for _ in range(prev_service.count - self.count):
                     old_instance = self.instances.pop()
                     # This will fire off an action, we could do something with the result rather than just forget it ever existed.
