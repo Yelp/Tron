@@ -10,6 +10,8 @@ from tron.utils import timeutils
 
 log = logging.getLogger(__name__)
 
+class Error(Exception): pass
+
 class ServiceInstance(object):
     STATE_DOWN = state.NamedEventState("down")
     STATE_UP = state.NamedEventState("up")
@@ -61,6 +63,15 @@ class ServiceInstance(object):
 
         return None
     
+    @property
+    def command(self):
+        try:
+            return self.service.command % self.context
+        except KeyError:
+            log.error("Failed to render service command for service %s: %s", self.service.name, self.service.command)
+
+        return None
+    
     def _queue_monitor(self):
         self.monitor_action = None
         if self.service.monitor_interval > 0:
@@ -78,7 +89,7 @@ class ServiceInstance(object):
             # If our pid file doesn't exist or failed to be generated, we can't really monitor
             self._monitor_complete_failstart()
             return
-            
+        
         monitor_command = "cat %(pid_file)s | xargs kill -0" % self.context
 
         self.monitor_action = action.ActionCommand("%s.monitor" % self.id, monitor_command)
@@ -109,10 +120,65 @@ class ServiceInstance(object):
         self.monitor_action = None
         
     def start(self):
+        if self.machine.state != self.STATE_DOWN:
+            return
+
         self.machine.transition("start")
 
+        command = self.command
+        if command is None:
+            self._start_failstart()
+            return
+
+        self.start_action = action.ActionCommand("%s.start" % self.id, command)
+        self.start_action.machine.listen(action.ActionCommand.COMPLETE, self._start_complete_callback)
+        self.start_action.machine.listen(action.ActionCommand.FAILSTART, self._start_complete_failstart)
+
+        self.node.run(self.start_action)
+    
+    def _start_complete_callback(self):
+        if self.start_action.exit_status != 0:
+            self.machine.transition("mark_down")
+        else:
+            self._queue_monitor()
+
+        self.start_action = None
+
+    def _start_complete_failstart(self):
+        log.warning("Failed to start service %s (%s)", self.id, self.node.hostname)
+        self.machine.transition("mark_down")
+        self.start_action = None
+
     def stop(self):
+        if self.machine.state != self.STATE_UP:
+            return
+        
         self.machine.transition("stop")
+
+        pid_file = self.pid_file
+        if pid_file is None:
+            # If our pid file doesn't exist or failed to be generated, we can't really monitor
+            self._stop_complete_failstart()
+            return
+        
+        kill_command = "cat %(pid_file)s | xargs kill" % self.context
+
+        self.stop_action = action.ActionCommand("%s.stop" % self.id, kill_command)
+        self.stop_action.machine.listen(action.ActionCommand.COMPLETE, self._stop_complete_callback)
+        self.stop_action.machine.listen(action.ActionCommand.FAILSTART, self._stop_complete_failstart)
+
+        self.node.run(self.stop_action)
+
+    def _stop_complete_callback(self):
+        if self.stop_action.exit_status != 0:
+            log.error("Failed to stop service instance %s: Exit %r", self.id, self.stop_action.exit_status)
+
+        self._queue_monitor()
+        self.stop_action = None
+
+    def _stop_complete_failstart(self):
+        log.warning("Failed to start kill command for %s", self.id)
+        self._queue_monitor()
 
     @property
     def data(self):
