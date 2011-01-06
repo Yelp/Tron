@@ -120,10 +120,10 @@ class Node(object):
     def _cleanup(self, run):
         self.run_states[run.id].channel = None
         del self.run_states[run.id]
-        print "Removed %s from run_states" % run.id
 
     def _fail_run(self, run, result):
         """Indicate the run has failed, and cleanup state"""
+        log.debug("Run %s has failed", run.id)
         if run.id not in self.run_states:
             log.warning("Run %s no longer tracked (_fail_run)", run.id)
             return
@@ -221,7 +221,7 @@ class Node(object):
         assert self.run_states[run.id].state < RUN_STATE_RUNNING
         
         self.run_states[run.id].state = RUN_STATE_STARTING
-
+        
         chan = ssh.ExecChannel(conn=self.connection)
         
         chan.addOutputCallback(run.write_stdout)
@@ -247,6 +247,7 @@ class Node(object):
         
         This is how we let our run know that we succeeded or failed.
         """
+        log.debug("Run %s has channel complete", run.id)
         if run.id not in self.run_states:
             log.warning("Run %s no longer tracked", run.id)
             return

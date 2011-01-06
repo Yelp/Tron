@@ -241,20 +241,22 @@ class ActionRun(object):
         On any state change, the action command will call us back so we can evaluate if we
         need to change some state ourselves.
         """
+        log.debug("Action command state change: %s", self.action_command.state)
         if self.action_command.state == ActionCommand.RUNNING:
             self.state = ACTION_RUN_RUNNING
             self.state_callback()
         elif self.action_command.state == ActionCommand.FAILSTART:
             self._close_output_file()
             self.fail(None)
-        elif self.action_command.state == ActionCommand.COMPLETE:
-            self._close_output_file()
+        elif self.action_command.state == ActionCommand.EXITING:
             if self.action_command.exit_status is None:
                 self.fail_unknown()
             elif self.action_command.exit_status == 0:
                 self.succeed()
             else:
                 self.fail(self.action_command.exit_status)
+        elif self.action_command.state == ActionCommand.COMPLETE:
+            self._close_output_file()
         else:
             raise Error("Invalid state for action command : %r" % self.action_command)
 
@@ -269,7 +271,6 @@ class ActionRun(object):
     def fail(self, exit_status):
         """Mark the run as having failed, providing an exit status"""
         log.info("Action run %s failed with exit status %r", self.id, exit_status)
-
         self.state = ACTION_RUN_FAILED
         self.exit_status = exit_status
         self.end_time = timeutils.current_time()
@@ -432,8 +433,9 @@ class Action(object):
 class ActionCommand(object):
     COMPLETE = state.NamedEventState("complete")
     FAILSTART = state.NamedEventState("failstart")
-    RUNNING = state.NamedEventState("running", exited=COMPLETE)
-    PENDING = state.NamedEventState("pending", starting=RUNNING, exited=FAILSTART)
+    EXITING = state.NamedEventState("exiting", close=COMPLETE)
+    RUNNING = state.NamedEventState("running", exit=EXITING)
+    PENDING = state.NamedEventState("pending", start=RUNNING, exit=FAILSTART)
 
     def __init__(self, id, command, stdout=None, stderr=None):
         """An Action Command is what a node actually executes
@@ -457,35 +459,24 @@ class ActionCommand(object):
         # passed to it, and there is no other external interaction
         self.machine = state.StateMachine(initial_state=self.PENDING)
         
-        # Watch for a few specific events
-        self.machine.listen(self.RUNNING, self._machine_running)
-        self.machine.listen(self.COMPLETE, self._machine_complete)
-        
         self.stdout_file = stdout
         self.stderr_file = stderr
         self.exit_status = None
         self.start_time = None
         self.end_time = None
 
-    def _machine_running(self):
-        self.start_time = timeutils.current_timestamp()
-
-    def _machine_complete(self):
-        self.end_time = timeutils.current_timestamp()
- 
     @property
     def state(self):
         return self.machine.state
     
-    def starting(self):
-        self.machine.transition("starting")
-        
     def started(self):
-        self.machine.transition("started")
+        self.start_time = timeutils.current_timestamp()
+        self.machine.transition("start")
 
     def exited(self, exit_status):
+        self.end_time = timeutils.current_timestamp()
         self.exit_status = exit_status
-        self.machine.transition("exited")
+        self.machine.transition("exit")
 
     def write_stderr(self, value):
         if self.stderr_file:
@@ -496,11 +487,7 @@ class ActionCommand(object):
             self.stdout_file.write(value)
 
     def write_done(self):
-        if self.stdout_file:
-            self.stdout_file.close()
-
-        if self.stderr_file:
-            self.stderr_file.close()
+        self.machine.transition("close")
             
     def __repr__(self):
         return "[ActionCommand %s] %s : %s" % (self.id, self.command, self.state)
