@@ -190,13 +190,32 @@ def main():
     if not args:
         view_all(options, )
     else:
+        # What are we dealing with ?
+        status, content = cmd.request(options.server, "/")
+        assert status == cmd.OK
+        
+        job_to_uri = dict([(job['name'], job['href']) for job in content['jobs']])
+        service_to_uri = dict([(service['name'], service['href']) for service in content['services']])
+        
         level = args[0].count('.')
-        if level == 0:
-            view_job(options, args[0])
-        elif level == 1:
-            view_job_run(options, args[0])
+        object_name = args[0].split('.')[0]
+        
+        if object_name in job_to_uri:
+            if level == 0:
+                view_job(options, args[0])
+            elif level == 1:
+                view_job_run(options, args[0])
+            else:
+                view_action_run(options, args[0])
+        elif object_name in service_to_uri:
+            if level == 0:
+                view_service(options, args[0])
+            else:
+                print >>sys.stderr, "Too many .'s for a service"
+                sys.exit(1)
         else:
-            view_action_run(options, args[0])
+            print >>sys.stderr, "What is a %s?" % args[0]
+            sys.exit(1)
 
     cmd.save_config(options)
 
