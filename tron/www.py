@@ -3,6 +3,7 @@
 Got to know what's going on ?
 """
 import logging
+import urllib
 
 from twisted.internet import reactor
 from twisted.cred import checkers
@@ -315,7 +316,7 @@ class JobsResource(resource.Resource):
                 
             job_desc = {
                 'name': current_job.name,
-                'href': request.childLink(current_job.name),
+                'href': "/jobs/%s" % urllib.quote(current_job.name),
                 'status': status,
                 'scheduler': str(current_job.scheduler),
                 'last_success': last_success,
@@ -405,7 +406,7 @@ class ServicesResource(resource.Resource):
             service_desc = {
                 'name': current_service.name,
                 'count': current_service.count,
-                'href': request.childLink(current_service.name),
+                'href': "/services/%s" % urllib.quote(current_service.name),
                 'status': status,
             }
             service_list.append(service_desc)
