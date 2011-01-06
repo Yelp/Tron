@@ -482,13 +482,13 @@ class RootResource(resource.Resource):
         
         response = dict()
         response['jobs'] = jobs_resource.get_data(request)
-        response['jobs_href'] = request.childLink('jobs')
+        response['jobs_href'] = request.uri + request.childLink('jobs')
 
         response['services'] = services_resource.get_data(request)
-        response['services_href'] = request.childLink('services')
+        response['services_href'] = request.uri + request.childLink('services')
 
-        response['config_href'] = request.childLink('config')
-        response['status_href'] = request.childLink('status')
+        response['config_href'] = request.uri + request.childLink('config')
+        response['status_href'] = request.uri + request.childLink('status')
 
         return respond(request, response)
 
