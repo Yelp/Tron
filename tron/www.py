@@ -295,10 +295,8 @@ class JobsResource(resource.Resource):
             return resource.NoResource("Cannot find job '%s'" % name)
         
         return JobResource(found, self._master_control)
-        
-    def render_GET(self, request):
-        request.setHeader("content-type", "text/json")
-        
+    
+    def get_data(self, request):
         serv_list = []
         job_list = []
         for current_job in self._master_control.jobs.itervalues():
@@ -324,9 +322,15 @@ class JobsResource(resource.Resource):
             }
             job_list.append(job_desc)
 
+        return job_list
+
+    def render_GET(self, request):
+        request.setHeader("content-type", "text/json")
+        
         output = {
-            'jobs': job_list,
+            'jobs': self.get_data(request),
         }
+
         return respond(request, output)
     
     def render_POST(self, request):
@@ -393,10 +397,8 @@ class ServicesResource(resource.Resource):
             return resource.NoResource("Cannot find service '%s'" % name)
         
         return ServiceResource(found, self._master_control)
-        
-    def render_GET(self, request):
-        request.setHeader("content-type", "text/json")
-        
+    
+    def get_data(self, request):
         service_list = []
         for current_service in self._master_control.services.itervalues():
             status = current_service.state.name.upper()
@@ -407,6 +409,13 @@ class ServicesResource(resource.Resource):
                 'status': status,
             }
             service_list.append(service_desc)
+
+        return service_list
+
+    def render_GET(self, request):
+        request.setHeader("content-type", "text/json")
+        
+        service_list = self.get_data(request)
 
         output = {
             'services': service_list,
@@ -438,7 +447,15 @@ class ConfigResource(resource.Resource):
             response['error'] = str(e)
         
         return respond(request, response)
-        
+
+class StatusResource(resource.Resource):
+    isLeaf = True
+    def __init__(self, master_control):
+        self._master_control = master_control
+        resource.Resource.__init__(self)
+
+    def render_GET(self, request):
+        return respond(request, {'status': "I'm alive biatch"})
 
 class RootResource(resource.Resource):
     def __init__(self, master_control):
@@ -449,6 +466,7 @@ class RootResource(resource.Resource):
         self.putChild('jobs', JobsResource(master_control))
         self.putChild('services', ServicesResource(master_control))
         self.putChild('config', ConfigResource(master_control))
+        self.putChild('status', StatusResource(master_control))
 
     def getChild(self, name, request):
         if name == '':
@@ -456,7 +474,23 @@ class RootResource(resource.Resource):
         return resource.Resource.getChild(self, name, request)
 
     def render_GET(self, request):
-        return respond(request, {'status': "I'm alive biatch"})
+        request.setHeader("content-type", "text/json")
+        
+        # We're going to load a big response with a bunch of stuff we know about this tron instance
+        jobs_resource = self.children["jobs"]
+        services_resource = self.children["services"]
+        
+        response = dict()
+        response['jobs'] = jobs_resource.get_data(request)
+        response['jobs_href'] = request.childLink('jobs')
+
+        response['services'] = services_resource.get_data(request)
+        response['services_href'] = request.childLink('services')
+
+        response['config_href'] = request.childLink('config')
+        response['status_href'] = request.childLink('status')
+
+        return respond(request, response)
 
 
 if __name__ == '__main__':

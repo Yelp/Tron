@@ -36,7 +36,7 @@ class RootTest(TestCase):
     def test_status(self):
         """Verify that we return a status"""
         request = turtle.Turtle()
-        resp = self.resource.render_GET(request)
+        resp = self.resource.getChildWithDefault("status", turtle.Turtle()).render_GET(request)
         
         status = simplejson.loads(resp)
         assert status['status']
@@ -45,6 +45,9 @@ class RootTest(TestCase):
         """Verify that the jobs child is available"""
         child = self.resource.getChildWithDefault("jobs", turtle.Turtle())
         assert isinstance(child, www.JobsResource), child
+
+        child = self.resource.getChildWithDefault("services", turtle.Turtle())
+        assert isinstance(child, www.ServicesResource), child
 
 
 class JobsTest(TestCase):
