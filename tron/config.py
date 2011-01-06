@@ -69,16 +69,10 @@ services:
     # - &sample_service
     #     name: "sample_service"
     #     node: *node
-    #     enable:
-    #         command: "echo 'enabled'"
-    #     disable:
-    #         command: "echo 'disabled'"
-    #     monitor:
-    #         schedule: "interval 10 mins"
-    #         actions:
-    #             -
-    #                 name: "monitor"
-    #                 command: "uptime"
+    #     count: 2
+    #     pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+    #     command: "run_service --pid-file=%(pid_file)s start"
+    #     monitor_interval: 20
 
 """
 

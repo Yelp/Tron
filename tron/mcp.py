@@ -228,10 +228,7 @@ class MasterControlProgram(object):
 
         self.services[service.name] = service
 
-        if prev_service is None:
-            # New service
-            service.start()
-        else:
+        if prev_service is not None:
             service.absorb_previous(prev_service)
 
     def remove_service(self, service_name):
@@ -305,7 +302,8 @@ class MasterControlProgram(object):
                 else:
                     self.enable_job(tron_job)
         
-        self.state_handler.writing_enabled = True
-        self.state_handler.store_state()
-
+    def run_services(self):
+        for service in self.services.itervalues():
+            if not service.is_started:
+                service.start()
 

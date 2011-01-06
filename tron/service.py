@@ -230,6 +230,15 @@ class Service(object):
     def listen(self):
         return self.machine.listen
 
+    @property
+    def is_started(self):
+        """Indicate if the service has been started/initialized
+        
+        For now we're going to decide this if we have instances or not. It doesn't really
+        coorespond well to a "state", but it might at some point need to be some sort of enable/disable thing.
+        """
+        return len(self.instances) > 0
+
     def set_context(self, context):
         self.context = command_context.CommandContext(self, context)
 
