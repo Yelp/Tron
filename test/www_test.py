@@ -13,6 +13,7 @@ from tron import www
 
 TEST_NODES = [turtle.Turtle(hostname="host")]
 TEST_POOL = turtle.Turtle(nodes=TEST_NODES)
+
 REQUEST = twisted.web.server.Request(turtle.Turtle(), None)
 REQUEST.childLink = lambda val : "/jobs/%s" % val
 
@@ -52,21 +53,12 @@ class JobsTest(TestCase):
         self.mc = turtle.Turtle()
         self.job = turtle.Turtle(
                             name="testname", 
-                            enable_act=None,
-                            disable_act=None,
                             last_success=None,
                             runs=[], 
                             scheduler_str="testsched", 
                             node_pool=TEST_POOL)
         
-        self.service = turtle.Turtle(
-                            name='name',
-                            runs=[],
-                            last_success=None,
-                            scheduler_str="testsched",
-                            node_pool=TEST_POOL)
-
-        self.mc.jobs = {self.job.name: self.job, self.service.name: self.service}
+        self.mc.jobs = {self.job.name: self.job}
 
         self.resource = www.JobsResource(self.mc)
 
@@ -77,13 +69,6 @@ class JobsTest(TestCase):
         assert 'jobs' in job_result
         assert job_result['jobs'][0]['name'] == "testname"
  
-    def test_service_list(self):
-        """Test that we get a proper job list"""
-        resp = self.resource.render_GET(REQUEST)
-        job_result = simplejson.loads(resp)
-        assert 'services' in job_result
-        assert job_result['services'][0]['name'] == "name"   
-
     def test_get_job(self):
         """Test that we can find a specific job"""
         child = self.resource.getChildWithDefault("testname", turtle.Turtle())
@@ -100,8 +85,6 @@ class JobDetailTest(TestCase):
     def build_resource(self):
         self.job = turtle.Turtle(
                                  name="foo",
-                                 enable_runs=[],
-                                 disable_runs=[],
                                  runs=[
                                        turtle.Turtle(
                                                      id="1",
@@ -225,5 +208,44 @@ class JobRunStartTest(TestCase):
         assert_equal(len(func.calls), 0)
 
 
+class ServiceTest(TestCase):
+    @class_setup
+    def build_resource(self):
+        self.mc = turtle.Turtle()
+        self.service = turtle.Turtle(
+                            name="testname", 
+                            state=turtle.Turtle(name="up"),
+                            command="run_service.py",
+                            count=2,
+                            node_pool=TEST_POOL,
+                            instances=[
+                                turtle.Turtle(
+                                    id="testname.0",
+                                    node=TEST_NODES[0],
+                                    state=turtle.Turtle(name="up")
+                                )
+                            ])
+        
+        self.mc.services = {self.service.name: self.service}
+
+        self.resource = www.ServicesResource(self.mc)
+
+    def test_service_list(self):
+        """Test that we get a proper job list"""
+        resp = self.resource.render_GET(REQUEST)
+        result = simplejson.loads(resp)
+        assert 'services' in result
+        assert result['services'][0]['name'] == "testname"
+ 
+    def test_get_service(self):
+        """Test that we can find a specific service"""
+        child = self.resource.getChildWithDefault("testname", turtle.Turtle())
+        assert isinstance(child, www.ServiceResource)
+        assert child._service is self.service
+
+    def test_missing_service(self):
+        child = self.resource.getChildWithDefault("bar", turtle.Turtle())
+        assert isinstance(child, twisted.web.resource.NoResource)
+    
 if __name__ == '__main__':
     run()

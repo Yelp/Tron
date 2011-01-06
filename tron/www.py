@@ -305,12 +305,11 @@ class JobsResource(resource.Resource):
             last_success = current_job.last_success.end_time.strftime("%Y-%m-%d %H:%M:%S") if current_job.last_success else None
             
             # We need to describe the current state of this job
-            is_service = False
             current_run = current_job.next_to_finish()
             status = "UNKNOWN"
 
             if current_run and current_run.is_running:
-                status = "MONITORING" if is_service else "RUNNING"
+                status = "RUNNING"
             elif current_run and current_run.is_scheduled:
                 status = "ENABLED"
             elif not current_run:
@@ -323,14 +322,10 @@ class JobsResource(resource.Resource):
                 'scheduler': str(current_job.scheduler),
                 'last_success': last_success,
             }
-            if is_service:
-                serv_list.append(job_desc)
-            else:
-                job_list.append(job_desc)
+            job_list.append(job_desc)
 
         output = {
             'jobs': job_list,
-            'services': serv_list,
         }
         return respond(request, output)
     
@@ -348,6 +343,74 @@ class JobsResource(resource.Resource):
 
         log.warning("Unknown request command %s for all jobs", request.args['command'])
         return respond(request, None, code=http.NOT_IMPLEMENTED)
+
+
+class ServiceResource(resource.Resource):
+    """A resource that describes a particular service"""
+    isLeaf = True
+    def __init__(self, service, master_control):
+        self._service = service
+        self._master_control = master_control
+        resource.Resource.__init__(self)
+
+    def get_instance_data(self, request, instance):
+        return {
+                'id': instance.id,
+                'node': instance.node.hostname if instance.node else None,
+                'state': instance.state.name,
+            }
+
+    def render_GET(self, request):
+        instance_output = []
+        for instance in self._service.instances:
+            instance_output.append(self.get_instance_data(request, instance))
+
+        resources_output = []
+        
+        output = {
+            'name': self._service.name,
+            'state': self._service.state.name,
+            'count': self._service.count,
+            'command': self._service.command,
+            'instances': instance_output,
+            'node_pool': map(lambda n: n.hostname, self._job.node_pool.nodes),
+        }
+        return respond(request, output)
+
+
+class ServicesResource(resource.Resource):
+    """Resource for all our daemon's services"""
+    def __init__(self, master_control):
+        self._master_control = master_control
+        resource.Resource.__init__(self)
+
+    def getChild(self, name, request):
+        if name == '':
+            return self
+        
+        found = self._master_control.services.get(name)
+        if found is None:
+            return resource.NoResource("Cannot find service '%s'" % name)
+        
+        return ServiceResource(found, self._master_control)
+        
+    def render_GET(self, request):
+        request.setHeader("content-type", "text/json")
+        
+        service_list = []
+        for current_service in self._master_control.services.itervalues():
+            status = current_service.state.name
+            service_desc = {
+                'name': current_service.name,
+                'href': request.childLink(current_service.name),
+                'status': status,
+            }
+            service_list.append(service_desc)
+
+        output = {
+            'services': service_list,
+        }
+        return respond(request, output)
 
 
 class ConfigResource(resource.Resource):
