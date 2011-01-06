@@ -369,7 +369,7 @@ class ServiceResource(resource.Resource):
         
         output = {
             'name': self._service.name,
-            'state': self._service.state.name,
+            'state': self._service.state.name.upper(),
             'count': self._service.count,
             'command': self._service.command,
             'instances': instance_output,
@@ -399,9 +399,10 @@ class ServicesResource(resource.Resource):
         
         service_list = []
         for current_service in self._master_control.services.itervalues():
-            status = current_service.state.name
+            status = current_service.state.name.upper()
             service_desc = {
                 'name': current_service.name,
+                'count': current_service.count,
                 'href': request.childLink(current_service.name),
                 'status': status,
             }
@@ -446,6 +447,7 @@ class RootResource(resource.Resource):
         
         # Setup children
         self.putChild('jobs', JobsResource(master_control))
+        self.putChild('services', ServicesResource(master_control))
         self.putChild('config', ConfigResource(master_control))
 
     def getChild(self, name, request):

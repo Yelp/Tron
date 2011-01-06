@@ -11,6 +11,13 @@ JOB_COLUMNS = (
     ("Last Success", 20,),
 )
 
+SERVICE_COLUMNS = (
+    ('Name', 30,),
+	('State', 10),
+    ('Instance Count', 10,),
+)
+
+
 RUN_COLUMNS = (
     ('Run ID', 8),
     ('State', 6),
@@ -47,18 +54,23 @@ def trunc(value, length):
 def view_all(options):
     """docstring for view_jobs"""
 
-    status, content = cmd.request(options.server, "/jobs")
+    status, content = cmd.request(options.server, "/services")
     assert status == cmd.OK
     print "Services:"
     if len(content.get('services', [])) == 0:
         print "No services"
     else:
-        print " ".join((name.ljust(size) for name, size in JOB_COLUMNS))
+        print " ".join((name.ljust(size) for name, size in SERVICE_COLUMNS))
 
         # Show service data
-        for job in sorted(content['services'], key=lambda s: s['name']):
+        for service in sorted(content['services'], key=lambda s: s['name']):
 
-            print " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((job['name'], job['status'], job['scheduler'], job['last_success']), JOB_COLUMNS))
+            print " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((service['name'], service['status'], service['count']), SERVICE_COLUMNS))
+
+
+
+    status, content = cmd.request(options.server, "/jobs")
+    assert status == cmd.OK
 
     print
     print "Jobs:"
