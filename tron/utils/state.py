@@ -32,6 +32,9 @@ class NamedEventState(dict):
     def __init__(self, name, **kwargs):
         self.name = name
         super(NamedEventState, self).__init__(**kwargs)
+    
+    def __eq__(self, other):
+        return self.name == other.name
 
     def __repr__(self):
         return "<%r %s>" % (self.__class__.__name__, self.name)
