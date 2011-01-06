@@ -224,7 +224,7 @@ class MasterControlProgram(object):
         service.set_context(self.context)
 
         # Trigger storage on any state changes
-        service.listen(None, self.state_handler.store_state)
+        service.listen(True, self.state_handler.store_state)
 
         self.services[service.name] = service
 
