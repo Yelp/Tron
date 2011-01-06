@@ -105,7 +105,6 @@ class Node(object):
             raise Error("Run %s already running !?!", run.id)
 
         self.run_states[run.id] = RunState(run)
-        print "Added %s to run_states" % run.id
         # Now let's see if we need to start this off by establishing a connection or if we are already connected
         if self.connection is None:
             self._connect_then_run(run)
