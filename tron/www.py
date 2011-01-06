@@ -118,7 +118,7 @@ class JobRunResource(resource.Resource):
         if act_name == '':
             return self
         
-        for act_run in self._run.runs:
+        for act_run in self._run.action_runs:
             if act_name == act_run.action.name:
                 return ActionRunResource(act_run)
 
@@ -128,7 +128,7 @@ class JobRunResource(resource.Resource):
         run_output = []
         state = job_run_state(self._run)
         
-        for action_run in self._run.runs:
+        for action_run in self._run.action_runs:
             action_state = job_run_state(action_run)
             
             last_time = action_run.end_time if action_run.end_time else timeutils.current_time()
