@@ -37,7 +37,7 @@ ACTION_RUN_COLUMNS = (
 
 def parse_options():
     parser = optparse.OptionParser("usage: %prog [options] [<job | job run | action>]")
-    parser.add_option("--numshown", "-n", type="int", dest="num_to_display", help="Max number of jobs/job-runs shown", default=20)
+    parser.add_option("--numshown", "-n", type="int", dest="num_displays", help="Max number of jobs/job-runs shown", default=20)
     parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=None)
     parser.add_option("--hide-headers", "-z", action="store_const", const = 0, dest="display_headers", help="Don't display headers", default=1)
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
@@ -92,7 +92,7 @@ def print_job_runs(options, runs):
     runs_displayed = 0
 
     for run in runs:
-        if runs_displayed == options.num_to_display:
+        if runs_displayed == options.num_displays:
             break
 
         run_id = '.'.join([''] + run['id'].split('.')[1:])
@@ -148,8 +148,8 @@ def view_job(options, job_name):
         print_job_runs(options, job_content['disable_runs'])       
         print
 
-    if not options.num_to_display:
-        options.num_to_display = len(job_content['runs'])
+    if not options.num_displays:
+        options.num_displays = len(job_content['runs'])
 
 def view_job_run(options, job_run_id):
     status, job_run_content = cmd.request(options.server, "/jobs/%s" % job_run_id.replace('.', '/'))
@@ -171,7 +171,8 @@ def view_job_run(options, job_run_id):
     job_runs_displayed = 0
 
     for run in job_run_content['runs']:
-        if job_runs_displayed == options.num_to_display:
+        if job_runs_displayed == options.num_displays:
+            print "..... truncated"
             break
 
         run_id = '.'.join([''] + run['id'].split('.')[2:])
@@ -195,7 +196,7 @@ def view_job_run(options, job_run_id):
 
 
 def view_action_run(options, act_run_id):
-    url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'), options.num_to_display)
+    url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'), options.num_displays + 1) # +1 to check for truncation
     status, act_run_content = cmd.request(options.server, url)
 
     if status == cmd.ERROR:
@@ -204,17 +205,16 @@ def view_action_run(options, act_run_id):
 
     if options.stdout:
         print "STDOUT: "
-        print "".join(act_run_content['stdout'])
-        return
-    
-    if options.stderr:
-        print "STDERR: "
-        print "".join(act_run_content['stderr'])
+        if act_run_content['stdout'][options.num_displays:]:
+            print "..."
+        print "".join(act_run_content['stdout'][:options.num_displays])
         return
 
-    if options.warn:
+    if options.stderr or options.warn:
         print "STDERR: "
-        print "".join(act_run_content['stderr'])
+        if act_run_content['stderr'][options.num_displays:]:
+            print "..."
+        print "".join(act_run_content['stderr'][:options.num_displays])
         return
 
     if options.display_headers:
@@ -261,4 +261,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
