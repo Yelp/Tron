@@ -3,6 +3,7 @@ import logging
 import re
 import datetime
 import os
+import sys
 
 from twisted.internet import defer
 
@@ -114,28 +115,20 @@ class ActionRun(object):
     def tail_file(self, path, num_lines):
         try:
             out = open(path, 'r')
+            out.close()
         except IOError:
             return []
 
         if not num_lines or num_lines <= 0:
-            lines = out.readlines()
-            out.close()
-            return lines
-        
-        pos = num_lines
-        lines = []
-        while len(lines) < num_lines:
-            try:
-                out.seek(-pos, os.SEEK_END)   
-            except IOError:
-                out.seek(0)
-                break
-            finally:
-                lines = list(out)
-            pos *= 2
-           
-        out.close()
-        return lines[-num_lines:]
+            num_lines = sys.maxint
+
+        tail = os.popen("tail -n %s %s" % (num_lines + 1, path))
+        lines = tail.read().split('\n')[:-1]
+
+        if len(lines) > num_lines:
+            lines[0] = "..."
+
+        return lines
 
     def attempt_start(self):
         if self.should_start:

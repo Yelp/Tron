@@ -37,7 +37,7 @@ ACTION_RUN_COLUMNS = (
 
 def parse_options():
     parser = optparse.OptionParser("usage: %prog [options] [<job | job run | action>]")
-    parser.add_option("--numshown", "-n", type="int", dest="num_displays", help="Max number of jobs/job-runs shown", default=20)
+    parser.add_option("--numshown", "-n", type="int", dest="num_displays", help="Max number of jobs/job-runs shown", default = 10)
     parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=None)
     parser.add_option("--hide-headers", "-z", action="store_const", const = 0, dest="display_headers", help="Don't display headers", default=1)
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
@@ -196,7 +196,7 @@ def view_job_run(options, job_run_id):
 
 
 def view_action_run(options, act_run_id):
-    url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'), options.num_displays + 1) # +1 to check for truncation
+    url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'), options.num_displays)
     status, act_run_content = cmd.request(options.server, url)
 
     if status == cmd.ERROR:
@@ -205,16 +205,12 @@ def view_action_run(options, act_run_id):
 
     if options.stdout:
         print "STDOUT: "
-        if act_run_content['stdout'][options.num_displays:]:
-            print "..."
-        print "".join(act_run_content['stdout'][:options.num_displays])
+        print "\n".join(act_run_content['stdout'])
         return
 
     if options.stderr or options.warn:
         print "STDERR: "
-        if act_run_content['stderr'][options.num_displays:]:
-            print "..."
-        print "".join(act_run_content['stderr'][:options.num_displays])
+        print "\n".join(act_run_content['stderr'])
         return
 
     if options.display_headers:
@@ -230,9 +226,9 @@ def view_action_run(options, act_run_id):
         print req
     print
     print "STDOUT:"
-    print "".join(act_run_content['stdout'])
+    print "\n".join(act_run_content['stdout'])
     print "STDERR:"
-    print "".join(act_run_content['stderr'])
+    print "\n".join(act_run_content['stderr'])
 
 def main():
     """run tronview"""
