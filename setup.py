@@ -2,7 +2,7 @@ from distutils.core import setup
 
 setup(
     name="tron",
-    version='0.1.9',
+    version='0.1.10',
     provides="tron",
     author="Yelp",
     author_email="yelplabs@yelp.com",
