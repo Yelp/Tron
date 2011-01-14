@@ -157,6 +157,9 @@ class TronConfiguration(yaml.YAMLObject):
         """Handle our node/node pool configuration and make sure MCP knows about them all"""
         existing_nodes = mcp.nodes
         mcp.nodes = []
+        if not self.nodes:
+            return
+
         try:
             for node_conf in self.nodes:
                 node = default_or_from_tag(node_conf, Node)
