@@ -34,18 +34,43 @@ ACTION_RUN_COLUMNS = (
     ('Duration', 10),
 )
 
+display_color = False
+colors = {
+        'gray': '\033[90m',
+        'cyan': '\033[91m',
+        'green': '\033[92m',
+        'yellow': '\033[93m',
+        'blue': '\033[94m',
+        'red': '\033[96m',
+        'white': '\033[99m',
+        'hgray': '\033[100m',
+        'hcyan': '\033[101m',
+        'hgreen': '\033[102m',
+        'hyellow': '\033[103m',
+        'hblue': '\033[104m',
+        'hred': '\033[106m',
+        'end': '\033[0m',
+        }
+
+def color(color_name, text):
+    if not display_color:
+        return str(text)
+    return colors[color_name] + str(text) + colors['end']
 
 def parse_options():
     parser = optparse.OptionParser("usage: %prog [options] [<job | job run | action>]")
+    parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
     parser.add_option("--numshown", "-n", type="int", dest="num_displays", help="Max number of jobs/job-runs shown", default = 10)
     parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=None)
     parser.add_option("--hide-headers", "-z", action="store_false", dest="display_headers", help="Don't display headers", default=True)
-    parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
+    parser.add_option("--show-color", "-c", action="store_true", dest="display_color", help="Don't display in color", default=False)
     parser.add_option("--stdout", "-o", action="count", dest="stdout", help="Solely displays stdout", default=0)
     parser.add_option("--stderr", "-e", action="count", dest="stderr", help="Solely displays stderr", default=0)
     parser.add_option("--warn", "-w", action="count", dest="warn", help="Solely displays warnings and errors", default=0)
 
     (options, args) = parser.parse_args(sys.argv)
+    global display_color
+    display_color = options.display_color
 
     return options, args[1:]
 
@@ -63,7 +88,8 @@ def view_all(options):
     if len(content['services']) == 0:
         print "No services"
     else:
-        print " ".join((name.ljust(size) for name, size in JOB_COLUMNS))
+        print color("hgray",
+                " ".join((name.ljust(size) for name, size in JOB_COLUMNS)))
 
         # Show service data
         for job in sorted(content['services'], key=lambda s: s['name']):
@@ -75,18 +101,20 @@ def view_all(options):
     if len(content['jobs']) == 0:
         print "No jobs"
     else:
-        print " ".join((name.ljust(size) for name, size in JOB_COLUMNS))
+        print color("hgray",
+                " ".join((name.ljust(size) for name, size in JOB_COLUMNS)))
 
         # Show job data
         for job in sorted(content['jobs'], key=lambda j: j['name']):
             print " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((job['name'], job['status'], job['scheduler'], job['last_success']), JOB_COLUMNS))
             if options.warn:
                 print
-                view_job(options, job['name'], supress_headers = True)
+                view_job(options, job['name'], supress_headers=True)
                 print
 
 def print_job_runs(options, runs):
-    print " ".join(title.ljust(size) for title, size in RUN_COLUMNS[:4])
+    print color("hgray",
+            " ".join(title.ljust(size) for title, size in RUN_COLUMNS[:4]))
 
     runs_displayed = 0
 
@@ -105,14 +133,17 @@ def print_job_runs(options, runs):
         end_time = (run['end_time'] and run['end_time'][:-7]) or "-"
         duration = (run['duration'] and run['duration'][:-7]) or "-"
 
-        print " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((run_id, run_state, run['node'], run_time), RUN_COLUMNS[:4]))
-        print "%s Start: %s  End: %s  (%s)" % (' ' * RUN_COLUMNS[0][1], start_time, end_time, duration)
+        run_color = "red" if run_state == "FAIL" else "white"
+        print color(run_color,
+                " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((run_id, run_state, run['node'], run_time), RUN_COLUMNS[:4])))
+        print color("gray",
+                "%s Start: %s  End: %s  (%s)" % (' ' * RUN_COLUMNS[0][1], start_time, end_time, duration))
 
         runs_displayed += 1
 
         if options.warn:
             print
-            view_job_run(options, run['id'], supress_headers = True)
+            view_job_run(options, run['id'], supress_headers=True)
             print
 
 def view_job(options, job_name, supress_headers=False):
@@ -161,7 +192,8 @@ def view_job_run(options, job_run_id, supress_headers=False):
         print "Node: %s" % job_run_content['node']
         print
 
-    print " ".join(title.ljust(size) for title, size in ACTION_RUN_COLUMNS)
+    print color("hgray",
+            " ".join(title.ljust(size) for title, size in ACTION_RUN_COLUMNS))
 
     if options.warn and job_run_content['state'] in ['SUCC', 'SCHE']:
         return
@@ -170,7 +202,7 @@ def view_job_run(options, job_run_id, supress_headers=False):
 
     for run in job_run_content['runs']:
         if job_runs_displayed == options.num_displays:
-            print "..... truncated"
+            print "..."
             break
 
         run_id = '.'.join([''] + run['id'].split('.')[2:])
@@ -184,8 +216,10 @@ def view_job_run(options, job_run_id, supress_headers=False):
         duration = (run['duration'] and run['duration'][:-7]) or "-"
         command = run['command'] or "-"
 
-        print " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((run_id, run_state, start_time, end_time, duration), ACTION_RUN_COLUMNS))
-        print " ".join(["COMMAND:", command])
+        action_color = "red" if run_state == "FAIL" else "white"
+        print color(action_color,
+                " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((run_id, run_state, start_time, end_time, duration), ACTION_RUN_COLUMNS)))
+        print color("gray", command)
 
         if options.warn:
             view_action_run(options, run['id'], supress_headers=True)
@@ -193,7 +227,7 @@ def view_job_run(options, job_run_id, supress_headers=False):
         job_runs_displayed += 1
 
 
-def view_action_run(options, act_run_id, supress_headers=True):
+def view_action_run(options, act_run_id, supress_headers=False):
     url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'), options.num_displays)
     status, act_run_content = cmd.request(options.server, url)
 
@@ -217,7 +251,8 @@ def view_action_run(options, act_run_id, supress_headers=True):
         print "Node: %s" % act_run_content['node']
         print
 
-    print "COMMAND: \n%s" % act_run_content['command']
+    print color("gray",
+            "%s" % act_run_content['command'])
     print
     print "REQUIREMENTS:"
     for req in act_run_content['requirements']:
