@@ -193,7 +193,7 @@ def view_job_run(options, job_run_id, supress_headers=False):
         job_runs_displayed += 1
 
 
-def view_action_run(options, act_run_id, supress_headers=True):
+def view_action_run(options, act_run_id, supress_headers=False):
     url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'), options.num_displays)
     status, act_run_content = cmd.request(options.server, url)
 
