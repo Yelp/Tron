@@ -103,7 +103,7 @@ class ServiceInstance(object):
         """Callback when our monitor has completed"""
         assert self.monitor_action
         self.last_check = timeutils.current_time()
-        
+        log.debug("Monitor callback with exit %r", self.monitor_action.exit_staus)
         if self.monitor_action.exit_status != 0:
             self.machine.transition("mark_down")
         else:

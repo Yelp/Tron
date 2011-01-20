@@ -378,7 +378,7 @@ class ServiceResource(resource.Resource):
             'count': self._service.count,
             'command': self._service.command,
             'instances': instance_output,
-            'node_pool': map(lambda n: n.hostname, self._job.node_pool.nodes),
+            'node_pool': map(lambda n: n.hostname, self._service.node_pool.nodes),
         }
         return respond(request, output)
 
