@@ -103,7 +103,7 @@ class ServiceInstance(object):
         """Callback when our monitor has completed"""
         assert self.monitor_action
         self.last_check = timeutils.current_time()
-        log.debug("Monitor callback with exit %r", self.monitor_action.exit_staus)
+        log.debug("Monitor callback with exit %r", self.monitor_action.exit_status)
         if self.monitor_action.exit_status != 0:
             self.machine.transition("mark_down")
         else:
@@ -195,7 +195,7 @@ class Service(object):
     
     STATE_STOPPING = state.NamedEventState("stopping", mark_all_down=STATE_DOWN)
     STATE_DEGRADED = state.NamedEventState("degraded", stop=STATE_STOPPING, mark_all_up=STATE_UP, mark_all_down=STATE_DOWN)
-    STATE_STARTING = state.NamedEventState("starting", mark_all_up=STATE_UP)
+    STATE_STARTING = state.NamedEventState("starting", mark_all_up=STATE_UP, mark_down=STATE_DEGRADED)
     
     STATE_DOWN['start'] = STATE_STARTING
     STATE_UP['stop'] = STATE_STOPPING
@@ -283,10 +283,10 @@ class Service(object):
         
     def _instance_down(self):
         """Callback for service instance to inform us it is down"""
+        self.machine.transition("mark_down")
+
         if all([instance.state == ServiceInstance.STATE_DOWN for instance in self.instances]):
             self.machine.transition("mark_all_down")
-        else:
-            self.machine.transition("mark_down")
 
     def absorb_previous(self, prev_service):
         # Some changes we need to worry about:
