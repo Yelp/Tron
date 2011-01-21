@@ -52,9 +52,9 @@ def parse_options():
 
     return options, args[1:]
 
-def edit(options, command, id):
+def edit(options, command, uri):
     data = {'command': command}
-    status, content = cmd.request(options.server, "/jobs/%s" % id.replace('.', '/'), data=data)
+    status, content = cmd.request(options.server, uri, data=data)
 
     if status == cmd.OK:
         log.info(content['result'])
@@ -74,7 +74,20 @@ def main():
         log.error("Error connecting to tron server at %s", options.server)
         sys.exit(1)
 
-    ret = edit(options, args[0], args[1] if len(args) > 1 else '')
+    job_to_uri = dict([(job['name'], job['href']) for job in content['jobs']])
+    service_to_uri = dict([(service['name'], service['href']) for service in content['services']])
+    
+    obj_uri = None
+    if args[1] in job_to_uri:
+        obj_uri = job_to_uri[args[1]]
+    elif args[1] in service_to_uri:
+        obj_uri = service_to_uri[args[1]]
+
+    if not obj_uri:
+        log.error("Unknown identifier: %s", args[1])
+        sys.exit(1)
+
+    ret = edit(options, args[0], obj_uri)
     cmd.save_config(options)
     if ret:
         sys.exit(0)

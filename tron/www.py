@@ -382,6 +382,20 @@ class ServiceResource(resource.Resource):
         }
         return respond(request, output)
 
+    def render_POST(self, request):
+        cmd = request.args['command'][0]
+        log.info("Handling '%s' request on service %s", cmd, self._service.name)
+
+        if cmd == 'stop':
+            self._service.stop()
+            return respond(request, {'result': "Service stopping"})
+       
+        if cmd == 'start':
+            self._service.start()
+            return respond(request, {'result': "Service starting"})
+
+        log.warning("Unknown request command %s for service %s", request.args['command'], self._service.name)
+        return respond(request, None, code=http.NOT_IMPLEMENTED)
 
 class ServicesResource(resource.Resource):
     """Resource for all our daemon's services"""
