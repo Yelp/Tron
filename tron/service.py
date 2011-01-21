@@ -202,7 +202,7 @@ class Service(object):
     STATE_STOPPING = state.NamedEventState("stopping", all_down=STATE_DOWN)
     STATE_FAILED = state.NamedEventState("failed", stop=STATE_STOPPING)
     STATE_DEGRADED = state.NamedEventState("degraded", stop=STATE_STOPPING, all_up=STATE_UP, all_failed=STATE_FAILED)
-    STATE_STARTING = state.NamedEventState("starting", all_up=STATE_UP, failed=STATE_DEGRADED)
+    STATE_STARTING = state.NamedEventState("starting", all_up=STATE_UP, failed=STATE_DEGRADED, stop=STATE_STOPPING)
     
     STATE_DOWN['start'] = STATE_STARTING
     STATE_UP['stop'] = STATE_STOPPING

@@ -13,6 +13,7 @@ import simplejson
 
 from tron.utils import timeutils
 from tron import config
+from tron import service
 
 log = logging.getLogger("tron.www")
 
