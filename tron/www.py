@@ -388,10 +388,15 @@ class ServiceResource(resource.Resource):
 
         if cmd == 'stop':
             self._service.stop()
+
             return respond(request, {'result': "Service stopping"})
        
         if cmd == 'start':
-            self._service.start()
+            try:
+                self._service.start()
+            except service.InvalidStateError:
+                return respond(request, {'result': "Failed to start: Service is already %s" % self._service.state})
+
             return respond(request, {'result': "Service starting"})
 
         log.warning("Unknown request command %s for service %s", request.args['command'], self._service.name)

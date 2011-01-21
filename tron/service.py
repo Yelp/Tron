@@ -17,12 +17,12 @@ class InvalidStateError(Error): pass
 class ServiceInstance(object):
     STATE_DOWN = state.NamedEventState("down")
     STATE_UP = state.NamedEventState("up")
-    STATE_FAILED = state.NamedEventState("failed", stop=STATE_DOWN, mark_up=STATE_UP)
-    STATE_STOPPING = state.NamedEventState("stopping", mark_down=STATE_DOWN)
-    STATE_MONITORING = state.NamedEventState("monitoring", mark_down=STATE_FAILED, stop=STATE_STOPPING, mark_up=STATE_UP)
-    STATE_STARTING = state.NamedEventState("starting", mark_down=STATE_FAILED, monitor=STATE_MONITORING, stop=STATE_STOPPING)
+    STATE_FAILED = state.NamedEventState("failed", stop=STATE_DOWN, up=STATE_UP)
+    STATE_STOPPING = state.NamedEventState("stopping", down=STATE_DOWN)
+    STATE_MONITORING = state.NamedEventState("monitoring", down=STATE_FAILED, stop=STATE_STOPPING, up=STATE_UP)
+    STATE_STARTING = state.NamedEventState("starting", down=STATE_FAILED, monitor=STATE_MONITORING, stop=STATE_STOPPING)
 
-    STATE_UNKNOWN = state.NamedEventState("unknown", mark_monitor=STATE_MONITORING)
+    STATE_UNKNOWN = state.NamedEventState("unknown", monitor=STATE_MONITORING)
     STATE_MONITORING['monitor_fail'] = STATE_UNKNOWN
 
     STATE_UP['stop'] = STATE_STOPPING
@@ -108,9 +108,9 @@ class ServiceInstance(object):
         self.last_check = timeutils.current_time()
         log.debug("Monitor callback with exit %r", self.monitor_action.exit_status)
         if self.monitor_action.exit_status != 0:
-            self.machine.transition("mark_down")
+            self.machine.transition("down")
         else:
-            self.machine.transition("mark_up")
+            self.machine.transition("up")
             self._queue_monitor()
 
         self.monitor_action = None
@@ -141,7 +141,7 @@ class ServiceInstance(object):
     
     def _start_complete_callback(self):
         if self.start_action.exit_status != 0:
-            self.machine.transition("failed")
+            self.machine.transition("down")
         elif self.machine.state == self.STATE_STOPPING:
             # Someone tried to stop us while we were just getting going. 
             # Go ahead and kick of the kill operation now that we're up.
@@ -153,7 +153,7 @@ class ServiceInstance(object):
 
     def _start_complete_failstart(self):
         log.warning("Failed to start service %s (%s)", self.id, self.node.hostname)
-        self.machine.transition("failed")
+        self.machine.transition("down")
         self.start_action = None
 
     def stop(self):
@@ -162,11 +162,7 @@ class ServiceInstance(object):
         
         self.machine.transition("stop")
         
-        if self.machine.state != self.STATE_STOPPING:
-            # Nothing else to do.
-            return
-        
-        if self.machine.state == self.STATE_UP:
+        if self.machine.state == self.STATE_STOPPING:
             self.kill_instance()
 
     def kill_instance(self):
