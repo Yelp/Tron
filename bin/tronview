@@ -183,13 +183,11 @@ def view_service(options, service_name):
         print >>sys.stderr, "%s: Cannot find job %s" % (service_content, service_name)
         sys.exit(1)
 
-    print service_content
     print "Service: %s" % service_content['name']
     print "State: %s" % service_content['state']
     print "Instances: %r" % service_content['count']
     for service_instance in service_content['instances']:
-        print "  .%d : %s %s" % (service_instance['number'], service_instance['node'], service_instance['state'])
-        
+        print "  %s : %s %s" % (service_instance['id'], service_instance['node'], service_instance['state'])
 
 
 def main():
