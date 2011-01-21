@@ -49,8 +49,10 @@ class SimpleTest(TestCase):
         instance2.monitor_action.exit_status = 1
         instance2._monitor_complete_callback()
         
-        assert_equal(instance2.state, service.ServiceInstance.STATE_DOWN)
+        assert_equal(instance2.state, service.ServiceInstance.STATE_FAILED)
         assert_equal(self.service.state, service.Service.STATE_DEGRADED)
+
+        instance2.stop()
 
         # Bring it back up
         instance2.start()
@@ -71,8 +73,8 @@ class SimpleTest(TestCase):
         instance2._monitor_complete_callback()
 
 
-        assert_equal(instance1.state, service.ServiceInstance.STATE_DOWN)
-        assert_equal(self.service.state, service.Service.STATE_DOWN)
+        assert_equal(instance1.state, service.ServiceInstance.STATE_FAILED)
+        assert_equal(self.service.state, service.Service.STATE_FAILED)
         
 class ReconfigTest(TestCase):
     @setup

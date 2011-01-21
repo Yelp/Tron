@@ -12,17 +12,20 @@ log = logging.getLogger(__name__)
 
 class Error(Exception): pass
 
+class InvalidStateError(Error): pass
+
 class ServiceInstance(object):
     STATE_DOWN = state.NamedEventState("down")
     STATE_UP = state.NamedEventState("up")
-    STATE_KILLING = state.NamedEventState("killing", mark_down=STATE_DOWN)
-    STATE_MONITORING = state.NamedEventState("monitoring", mark_down=STATE_DOWN, stop=STATE_KILLING, mark_up=STATE_UP)
-    STATE_STARTING = state.NamedEventState("starting", mark_down=STATE_DOWN, monitor=STATE_MONITORING, stop=STATE_KILLING)
+    STATE_FAILED = state.NamedEventState("failed", stop=STATE_DOWN, mark_up=STATE_UP)
+    STATE_STOPPING = state.NamedEventState("stopping", mark_down=STATE_DOWN)
+    STATE_MONITORING = state.NamedEventState("monitoring", mark_down=STATE_FAILED, stop=STATE_STOPPING, mark_up=STATE_UP)
+    STATE_STARTING = state.NamedEventState("starting", mark_down=STATE_FAILED, monitor=STATE_MONITORING, stop=STATE_STOPPING)
 
     STATE_UNKNOWN = state.NamedEventState("unknown", mark_monitor=STATE_MONITORING)
     STATE_MONITORING['monitor_fail'] = STATE_UNKNOWN
 
-    STATE_UP['stop'] = STATE_KILLING
+    STATE_UP['stop'] = STATE_STOPPING
     STATE_UP['monitor'] = STATE_MONITORING
     STATE_DOWN['start'] = STATE_STARTING
     
@@ -121,7 +124,7 @@ class ServiceInstance(object):
         
     def start(self):
         if self.machine.state != self.STATE_DOWN:
-            return
+            raise InvalidStateError("Instance must be marked DOWN to start")
 
         self.machine.transition("start")
 
@@ -138,7 +141,11 @@ class ServiceInstance(object):
     
     def _start_complete_callback(self):
         if self.start_action.exit_status != 0:
-            self.machine.transition("mark_down")
+            self.machine.transition("failed")
+        elif self.machine.state == self.STATE_STOPPING:
+            # Someone tried to stop us while we were just getting going. 
+            # Go ahead and kick of the kill operation now that we're up.
+            self.kill_instance()
         else:
             self._queue_monitor()
 
@@ -146,20 +153,24 @@ class ServiceInstance(object):
 
     def _start_complete_failstart(self):
         log.warning("Failed to start service %s (%s)", self.id, self.node.hostname)
-        self.machine.transition("mark_down")
+        self.machine.transition("failed")
         self.start_action = None
 
     def stop(self):
-        if self.machine.state != self.STATE_UP:
-            return
+        if self.machine.state not in (self.STATE_UP, self.STATE_FAILED, self.STATE_STARTING):
+            raise InvalidStateError("Instance must be up or failed to stop")
         
         self.machine.transition("stop")
-
-        pid_file = self.pid_file
-        if pid_file is None:
-            # If our pid file doesn't exist or failed to be generated, we can't really monitor
-            self._stop_complete_failstart()
+        
+        if self.machine.state != self.STATE_STOPPING:
+            # Nothing else to do.
             return
+        
+        if self.machine.state == self.STATE_UP:
+            self.kill_instance()
+
+    def kill_instance(self):
+        assert self.pid_file, self.pid_file
         
         kill_command = "cat %(pid_file)s | xargs kill" % self.context
 
@@ -192,14 +203,14 @@ class ServiceInstance(object):
 class Service(object):
     STATE_DOWN = state.NamedEventState("down")
     STATE_UP = state.NamedEventState("up")
-    
-    STATE_STOPPING = state.NamedEventState("stopping", mark_all_down=STATE_DOWN)
-    STATE_DEGRADED = state.NamedEventState("degraded", stop=STATE_STOPPING, mark_all_up=STATE_UP, mark_all_down=STATE_DOWN)
-    STATE_STARTING = state.NamedEventState("starting", mark_all_up=STATE_UP, mark_down=STATE_DEGRADED)
+    STATE_STOPPING = state.NamedEventState("stopping", all_down=STATE_DOWN)
+    STATE_FAILED = state.NamedEventState("failed", stop=STATE_STOPPING)
+    STATE_DEGRADED = state.NamedEventState("degraded", stop=STATE_STOPPING, all_up=STATE_UP, all_failed=STATE_FAILED)
+    STATE_STARTING = state.NamedEventState("starting", all_up=STATE_UP, failed=STATE_DEGRADED)
     
     STATE_DOWN['start'] = STATE_STARTING
     STATE_UP['stop'] = STATE_STOPPING
-    STATE_UP['mark_down'] = STATE_DEGRADED
+    STATE_UP['failed'] = STATE_DEGRADED
     
     
     def __init__(self, name=None, command=None, node_pool=None, context=None):
@@ -243,8 +254,10 @@ class Service(object):
         self.context = command_context.CommandContext(self, context)
 
     def start(self):
-        if self.instances:
-            raise Error("Service %s already has instances: %r" % self.instances)
+        if self.machine.state != self.STATE_DOWN:
+            raise InvalidStateError("Service must be down to start")
+
+        assert not self.instances
         
         self.machine.transition("start")
         for _ in range(self.count):
@@ -256,7 +269,11 @@ class Service(object):
 
         while self.instances:
             instance = self.instances.pop()
-            instance.stop()
+            try:
+                instance.stop()
+            except InvalidStateError:
+                # We don't really care what they are doing as long as they arn't up
+                pass
 
     def build_instance(self):
         node = self.node_pool.next()
@@ -273,20 +290,27 @@ class Service(object):
 
         service_instance.listen(ServiceInstance.STATE_UP, self._instance_up)
         service_instance.listen(ServiceInstance.STATE_DOWN, self._instance_down)
+        service_instance.listen(ServiceInstance.STATE_FAILED, self._instance_failed)
 
         return service_instance
     
     def _instance_up(self):
         """Callback for service instance to inform us it is up"""
         if all([instance.state == ServiceInstance.STATE_UP for instance in self.instances]):
-            self.machine.transition("mark_all_up")
+            self.machine.transition("all_up")
         
     def _instance_down(self):
-        """Callback for service instance to inform us it is down"""
-        self.machine.transition("mark_down")
+        """Callback for service instance to inform us it is down (gracefully)"""
+        self.machine.transition("down")
 
         if all([instance.state == ServiceInstance.STATE_DOWN for instance in self.instances]):
-            self.machine.transition("mark_all_down")
+            self.machine.transition("all_down")
+
+    def _instance_failed(self):
+        """Callback to indicate an instance failed"""
+        self.machine.transition("failed")
+        if all([instance.state == ServiceInstance.STATE_FAILED for instance in self.instances]):
+            self.machine.transition("all_failed")
 
     def absorb_previous(self, prev_service):
         # Some changes we need to worry about:
