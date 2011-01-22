@@ -263,6 +263,8 @@ def view_action_run(options, act_run_id, supress_preface=False):
 
     print color("gray",
             "%s" % act_run_content['command'])
+    print color("gray",
+            "%s" % act_run_content['raw_command'])
     print
     print "requirements:"
     for req in act_run_content['requirements']:

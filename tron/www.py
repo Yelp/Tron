@@ -54,6 +54,7 @@ class ActionRunResource(resource.Resource):
             'state': job_run_state(self._act_run),
             'node': self._act_run.node.hostname,
             'command': self._act_run.command,
+            'raw_command': self._act_run.action.command,
             'requirements': [req.name for req in self._act_run.action.required_actions],
         }
         
@@ -144,7 +145,7 @@ class JobRunResource(resource.Resource):
                 'exit_status': action_run.exit_status,
                 'duration': duration,
                 'state': action_state,
-                'command': action_run.action.command,
+                'command': action_run.command,
             })
 
         output = {
