@@ -288,6 +288,9 @@ class Service(object):
         service_instance.listen(ServiceInstance.STATE_DOWN, self._instance_down)
         service_instance.listen(ServiceInstance.STATE_FAILED, self._instance_failed)
 
+        # This instance starts off as being down, so we better inform whoever might care.
+        self.machine.transition("down")
+
         return service_instance
     
     def _instance_up(self):
@@ -334,15 +337,19 @@ class Service(object):
             self.instances += prev_service.instances
 
             # Now make adjustments to how many there are
-            if self.count > prev_service.count:
-                # We need to add some instances
-                for _ in range(self.count - prev_service.count):
-                    self.build_instance()
-            elif self.count < prev_service.count:
-                for _ in range(prev_service.count - self.count):
-                    old_instance = self.instances.pop()
-                    # This will fire off an action, we could do something with the result rather than just forget it ever existed.
+            while len(self.instances) < self.count:
+                new_instance = self.build_instance()
+                if self.machine.state == self.STATE_DEGRADED:
+                    new_instance.start()
+
+            while self.count < len(self.instances):
+                old_instance = self.instances.pop()
+                # This will fire off an action, we could do something with the result rather than just forget it ever existed.
+                # Also note that if this stop fails, we'll never know.
+                try:
                     old_instance.stop()
+                except InvalidStateError:
+                    pass
         
         
     @property
