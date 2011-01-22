@@ -13,6 +13,7 @@ log = logging.getLogger('tron.node')
 # We should also only wait a certain amount of time for a connection to be established.
 CONNECT_TIMEOUT = 30
 
+IDLE_CONNECTION_TIMEOUT = 3600
 
 # We should also only wait a certain amount of time for a new channel to be established
 # when we already have an open connection.
@@ -78,6 +79,9 @@ class Node(object):
     
         self.run_states = {}       # Map of run id to instance of RunState
 
+        self.idle_timeout = None
+        self.idle_timer = None
+
     def __cmp__(self, other):
         if not isinstance(other, self.__class__):
             return -1
@@ -104,6 +108,10 @@ class Node(object):
         if run.id in self.run_states:
             raise Error("Run %s already running !?!", run.id)
 
+        if self.idle_timer is not None:
+            self.idle_timer.cancel()
+            self.idle_timer = None
+
         self.run_states[run.id] = RunState(run)
         # Now let's see if we need to start this off by establishing a connection or if we are already connected
         if self.connection is None:
@@ -119,6 +127,14 @@ class Node(object):
     def _cleanup(self, run):
         self.run_states[run.id].channel = None
         del self.run_states[run.id]
+
+        if not self.run_states:
+            self.idle_timer = reactor.callLater(IDLE_CONNECTION_TIMEOUT, self._connection_idle_timeout)
+
+    def _connection_idle_timeout(self):
+        log.info("Connection to %s idle for %d secs. Closing.", self.hostname, IDLE_CONNECTION_TIMEOUT)
+        self.connection.transport.loseConnection()
+        self.idle_timer = None
 
     def _fail_run(self, run, result):
         """Indicate the run has failed, and cleanup state"""
