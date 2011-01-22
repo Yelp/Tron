@@ -77,17 +77,22 @@ def main():
     job_to_uri = dict([(job['name'], job['href']) for job in content['jobs']])
     service_to_uri = dict([(service['name'], service['href']) for service in content['services']])
     
+    obj_name_elements = args[1].split('.')
+    obj_name = obj_name_elements[0]
+    obj_rel_path = "/".join(obj_name_elements[1:])
+
     obj_uri = None
-    if args[1] in job_to_uri:
-        obj_uri = job_to_uri[args[1]]
-    elif args[1] in service_to_uri:
-        obj_uri = service_to_uri[args[1]]
+    if obj_name in job_to_uri:
+        obj_uri = job_to_uri[obj_name]
+    elif obj_name in service_to_uri:
+        obj_uri = service_to_uri[obj_name]
 
     if not obj_uri:
         log.error("Unknown identifier: %s", args[1])
         sys.exit(1)
-
-    ret = edit(options, args[0], obj_uri)
+    
+    full_uri = '/'.join((obj_uri, obj_rel_path))
+    ret = edit(options, args[0], full_uri)
     cmd.save_config(options)
     if ret:
         sys.exit(0)

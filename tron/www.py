@@ -350,14 +350,51 @@ class JobsResource(resource.Resource):
         log.warning("Unknown request command %s for all jobs", request.args['command'])
         return respond(request, None, code=http.NOT_IMPLEMENTED)
 
+class ServiceInstanceResource(resource.Resource):
+    isLeaf = True
+    def __init__(self, service_instance, master_control):
+        self._service_instance = service_instance
+        self._master_control = master_control
+        resource.Resource.__init__(self)
+ 
+    def render_POST(self, request):
+        cmd = request.args['command'][0]
+        log.info("Handling '%s' request on service %s", cmd, self._service_instance.id)
+
+        if cmd == 'stop':
+            self._service_instance.stop()
+
+            return respond(request, {'result': "Service instance stopping"})
+
+        if cmd == 'start':
+            try:
+                self._service_instance.start()
+            except service.InvalidStateError:
+                return respond(request, {'result': "Failed to start: Service is already %s" % self._service_instance.state})
+
+            return respond(request, {'result': "Service instance starting"})
+
+        log.warning("Unknown request command %s for service %s", request.args['command'], self._service_instance.id)
+        return respond(request, None, code=http.NOT_IMPLEMENTED)
+    
 
 class ServiceResource(resource.Resource):
     """A resource that describes a particular service"""
-    isLeaf = True
     def __init__(self, service, master_control):
         self._service = service
         self._master_control = master_control
         resource.Resource.__init__(self)
+
+    def getChild(self, name, request):
+        if name == '':
+            return self
+
+        found = None
+        for instance in self._service.instances:
+            if str(instance.instance_number) == str(name):
+                return ServiceInstanceResource(instance, self._master_control)
+        else:
+            return resource.NoResource("Cannot find service '%s'" % name)
 
     def get_instance_data(self, request, instance):
         return {

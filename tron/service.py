@@ -207,7 +207,7 @@ class Service(object):
     STATE_DOWN['start'] = STATE_STARTING
     STATE_UP['stop'] = STATE_STOPPING
     STATE_UP['failed'] = STATE_DEGRADED
-    
+    STATE_UP['down'] = STATE_DEGRADED
     
     def __init__(self, name=None, command=None, node_pool=None, context=None):
         self.name = name
@@ -250,13 +250,8 @@ class Service(object):
         self.context = command_context.CommandContext(self, context)
 
     def start(self):
-        if self.machine.state != self.STATE_DOWN:
-            raise InvalidStateError("Service must be down to start")
-
-        assert not self.instances
-        
         self.machine.transition("start")
-        for _ in range(self.count):
+        while len(self.instances) < self.count:
             instance = self.build_instance()
             instance.start()
 
@@ -289,7 +284,7 @@ class Service(object):
         service_instance.listen(ServiceInstance.STATE_FAILED, self._instance_failed)
 
         # This instance starts off as being down, so we better inform whoever might care.
-        self.machine.transition("down")
+        service_instance.machine.transition("down")
 
         return service_instance
     
@@ -302,8 +297,13 @@ class Service(object):
         """Callback for service instance to inform us it is down (gracefully)"""
         self.machine.transition("down")
 
-        if all([instance.state == ServiceInstance.STATE_DOWN for instance in self.instances]):
+        # Filter out our instance because we don't store downed instances
+        self.instances = [inst for inst in self.instances if inst.state != inst.STATE_DOWN]
+
+        if not self.instances:
             self.machine.transition("all_down")
+            # Reset our instances
+            self._last_instance_number = None
 
     def _instance_failed(self):
         """Callback to indicate an instance failed"""
