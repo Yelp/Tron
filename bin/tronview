@@ -89,7 +89,8 @@ def view_all(options):
     if len(content['services']) == 0:
         print "No services"
     else:
-        JOB_COLUMNS[0][1] = min(job_id_width, max(len(service['name']) for service in content['services']))
+            # service width is dependent on the console width bounded by the title width and service-name max length
+        JOB_COLUMNS[0][1] = min(job_id_width, max(len(JOB_COLUMNS[0][0]) + 1, max(len(service['name']) for service in content['services'])))
         print color("hgray",
                 " ".join((name.ljust(size) for name, size in JOB_COLUMNS)))
 
@@ -103,6 +104,7 @@ def view_all(options):
     if len(content['jobs']) == 0:
         print "No jobs"
     else:
+        # job width is dependent on the console width bounded by the title width and job-name max length
         JOB_COLUMNS[0][1] = min(job_id_width, max(len(job['name']) for job in content['jobs']))
         print color("hgray",
                 " ".join((name.ljust(size) for name, size in JOB_COLUMNS)))
@@ -116,8 +118,8 @@ def view_all(options):
                 print
 
 def print_job_runs(options, runs):
-    # run id width min is the title bounded by the console width  and run_num length
-    RUN_COLUMNS[0][1] = max(len(RUN_COLUMNS[0][0]), min(run_id_width, len(str(runs[0]['run_num']))))
+    # job run width is dependent on the console width bounded by the title width and job-run max length
+    RUN_COLUMNS[0][1] = max(len(RUN_COLUMNS[0][0]) + 1, min(run_id_width, len(str(runs[0]['run_num']))))
     print color("hgray",
             " ".join(title.ljust(size) for title, size in RUN_COLUMNS))
 
@@ -198,10 +200,8 @@ def view_job_run(options, job_run_id, supress_preface=False):
         print "Node: %s" % job_run_content['node']
         print
 
-    # action name's min is the title bounded by the console width and name length
-    ACTION_RUN_COLUMNS[0][1] = min(act_id_width,
-            max(len('.' + (run['name']))
-            for run in job_run_content['runs']))
+    # action run width is dependent on the console width bounded by the title width and action-name max length
+    ACTION_RUN_COLUMNS[0][1] = min(act_id_width, max(len(ACTION_RUN_COLUMNS[0][0]) + 1, max(len('.' + (run['name'])) for run in job_run_content['runs'])))
     print color("hgray",
             " ".join(title.ljust(size) for title, size in ACTION_RUN_COLUMNS))
 
