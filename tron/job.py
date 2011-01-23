@@ -112,8 +112,8 @@ class JobRun(object):
         return self.job.next_to_finish(self.node if self.job.all_nodes else None) == self
 
     @property
-    def is_failed(self):
-        return any([r.is_failed for r in self.runs])
+    def is_failure(self):
+        return any([r.is_failure for r in self.runs])
 
     @property
     def is_success(self):
@@ -243,13 +243,29 @@ class Job(object):
             run.cancel()
             self.remove_run(run)
 
+    def newest(self):
+        return self.runs[0]
+
+    def newest_run_by_state(self, state):
+        for run in self.runs:
+            if run.is_success and state == 'SUCC' or \
+                run.is_cancelled and state == 'CANC' or \
+                run.is_running and state == 'RUNN' or \
+                run.is_failure and state == 'FAIL' or \
+                run.is_scheduled and state == 'SCHE' or \
+                run.is_queued and state == 'QUE' or \
+                run.is_unknown and state == 'UNKWN':
+                return run
+
+        log.warning("No runs with state %s exist", state)
+
     def next_to_finish(self, node=None):
         """Returns the next run to finish(optional node requirement). Useful for
         getting the currently running job run or next queued/schedule job run.
         """
         def choose(prev, next):
             return prev if (prev and prev.is_running) or (node and next.node != node) \
-               or next.is_success or next.is_failed or next.is_cancelled or next.is_unknown else next
+               or next.is_success or next.is_failure or next.is_cancelled or next.is_unknown else next
 
         return reduce(choose, self.runs, None)
 

@@ -329,7 +329,7 @@ class ActionRun(object):
         return self.state == ACTION_RUN_RUNNING
 
     @property
-    def is_failed(self):
+    def is_failure(self):
         return self.state == ACTION_RUN_FAILED
 
     @property
