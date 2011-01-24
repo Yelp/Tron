@@ -56,7 +56,7 @@ colors = {
 def color(color_name, text):
     if not display_color:
         return str(text)
-    return colors[color_name] + str(text) + colors['end']
+    return colors[color_name.lower()] + str(text) + colors['end']
 
 def parse_options():
     parser = optparse.OptionParser("usage: %prog [options] [<job | job run | action>]")
