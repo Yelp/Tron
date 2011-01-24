@@ -218,6 +218,20 @@ class TestJob(TestCase):
         self.job.remove_old_runs()
         assert_equals(len(self.job.runs), 6)
 
+    def test_newest(self):
+        runs = []
+        for i in range(5):
+            runs.append(self.job.next_runs()[0])
+            runs[i].runs[0].node = turtle.Turtle()
+
+        assert_equals(self.job.newest(), runs[-1])
+        runs[0].succeed()
+
+        assert_equals(self.job.newest(), runs[-1])
+        runs[1].queue()
+
+        assert_equals(self.job.newest(), runs[-1])
+
     def test_next_to_finish(self):
         runs = []
         for i in range(5):
