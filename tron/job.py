@@ -248,13 +248,13 @@ class Job(object):
 
     def newest_run_by_state(self, state):
         for run in self.runs:
-            if run.is_success and state == 'SUCC' or \
-                run.is_cancelled and state == 'CANC' or \
-                run.is_running and state == 'RUNN' or \
-                run.is_failure and state == 'FAIL' or \
-                run.is_scheduled and state == 'SCHE' or \
-                run.is_queued and state == 'QUE' or \
-                run.is_unknown and state == 'UNKWN':
+            if state == 'SUCC' and run.is_success or \
+                state == 'CANC' and run.is_cancelled or \
+                state == 'RUNN' and run.is_running or \
+                state == 'FAIL' and run.is_failure or \
+                state == 'SCHE' and run.is_scheduled or \
+                state == 'QUE' and run.is_queued or \
+                state == 'UNKWN' and run.is_unknown:
                 return run
 
         log.warning("No runs with state %s exist", state)
