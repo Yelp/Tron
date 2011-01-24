@@ -84,3 +84,15 @@ class TestCircular(TestCase):
 
     def test(self):
         assert_raises(state.CircularTransitionError, self.machine.transition, True)
+
+class TestNamedSearch(TestCase):
+    @setup
+    def create_state_graph(self):
+        self.start = STATE_A = state.NamedEventState("a")
+        STATE_B = state.NamedEventState("b")
+        self.end = STATE_C = state.NamedEventState("c", next=STATE_A)
+        STATE_A['next'] = STATE_B
+        STATE_B['next'] = STATE_C
+    
+    def test(self):
+        assert_equal(state.named_event_by_name(self.start, "c"), self.end)

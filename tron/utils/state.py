@@ -42,6 +42,24 @@ class NamedEventState(dict):
     def __repr__(self):
         return "<%r %s>" % (self.__class__.__name__, self.name)
 
+def named_event_by_name(starting_state, state_name):
+    """Traverse the state graph and pull out the one with the provided name
+    
+    Does a simple breadth-first-search, being careful to avoid cycles
+    """
+    seen_states = set()
+    state_list = [starting_state]
+    while state_list:
+        current_state = state_list.pop()
+        seen_states.add(current_state.name)
+        if state_name == current_state.name:
+            return current_state
+        
+        for next_state in current_state.itervalues():
+            if next_state.name not in seen_states:
+                state_list.append(next_state)
+
+    raise ValueError(state_name)
 
 class StateMachine(object):
     """StateMachine is a class that can be used for managing state machines
@@ -57,7 +75,8 @@ class StateMachine(object):
         self.initial_state = initial_state
         self.state = self.initial_state
         self._listeners = list()
-    
+        self._state_by_name = None
+
     def transition(self, target, stop_item=None):
         """Check our current state for a transition based on the input 'target'
         
