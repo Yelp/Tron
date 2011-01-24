@@ -262,8 +262,11 @@ def view_action_run(options, act_run_id, supress_preface=False):
         print "Node: %s" % act_run_content['node']
         print
 
-    print color("gray",
-            "%s" % act_run_content['command'])
+    # a raw command is without command context
+    if act_run_content['command'] != act_run_content['raw_command']:
+        print color("gray",
+                "%s" % act_run_content['command'])
+
     print color("gray",
             "%s" % act_run_content['raw_command'])
     print
