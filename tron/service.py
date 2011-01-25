@@ -38,8 +38,6 @@ class ServiceInstance(object):
         
         self.machine = state.StateMachine(ServiceInstance.STATE_DOWN)
         
-        self.pid_path = None
-
         self.context = command_context.CommandContext(self, service.context)
         
         self.monitor_action = None
@@ -266,6 +264,16 @@ class Service(object):
                 # We don't really care what they are doing as long as they arn't up
                 pass
 
+    def _create_instance(self, node, instance_number):
+        service_instance = ServiceInstance(self, node, instance_number)
+        self.instances.append(service_instance)
+
+        service_instance.listen(ServiceInstance.STATE_UP, self._instance_up)
+        service_instance.listen(ServiceInstance.STATE_DOWN, self._instance_down)
+        service_instance.listen(ServiceInstance.STATE_FAILED, self._instance_failed)
+
+        return service_instance
+
     def build_instance(self):
         node = self.node_pool.next()
 
@@ -276,12 +284,7 @@ class Service(object):
 
         instance_number = self._last_instance_number
 
-        service_instance = ServiceInstance(self, node, instance_number)
-        self.instances.append(service_instance)
-
-        service_instance.listen(ServiceInstance.STATE_UP, self._instance_up)
-        service_instance.listen(ServiceInstance.STATE_DOWN, self._instance_down)
-        service_instance.listen(ServiceInstance.STATE_FAILED, self._instance_failed)
+        service_instance = self._create_instance(node, instance_number)
 
         # This instance starts off as being down, so we better inform whoever might care.
         service_instance.machine.transition("down")
@@ -354,7 +357,39 @@ class Service(object):
         
     @property
     def data(self):
-        raise NotImplementedError()
-    
+        data = {
+            'state': str(self.machine.state),
+            'last_instance_number': self._last_instance_number,
+            
+        }
+        data['instances'] = []
+        for instance in self.instances:
+            service_data = {
+                'node': instance.node.hostname,
+                'instance_number': instance.instance_number,
+                'state': str(instance.state),
+            }
+
+            data['instances'].append(service_data)
+
+        return data
+        
     def restore(self, data):
-        raise NotImplementedError()
+        """Restore state of this service from datafile"""
+        # The state of a service is more easier than for jobs. There are just a few things we want to guarantee:
+        #  1. If service instances are up, they can continue to be up. We'll just start monitoring from where we left off.
+        #  2. Failures are maintained and have to be cleared.
+        
+        # Start our machine from where it left off
+        self.machine.state = state.named_event_by_name(Service.STATE_DOWN, data['state'])
+        self._last_instance_number = data['last_instance_number']
+
+        # Restore all the instances
+        for instance in data['instances']:
+            node = self.node_pool[instance['node']]
+            service_instance = self._create_instance(node, instance['instance_number'])
+            if instance['state'] == ServiceInstance.STATE_FAILED.name:
+                service_instance.machine.state = ServiceInstance.STATE_FAILED
+            else:
+                service_instance.machine.state = ServiceInstance.STATE_UP
+                service_instance._run_monitor()

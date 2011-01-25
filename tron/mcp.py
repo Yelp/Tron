@@ -50,6 +50,10 @@ class StateHandler(object):
         if job.enabled and next and next.is_queued:
             next.start()
 
+    def restore_service(self, service, data):
+        service.restore(data)
+        service.set_context(self.mcp.context)
+
     def delay_store(self):
         self.store_delayed = False
         self.store_state()
@@ -124,6 +128,9 @@ class StateHandler(object):
         data = {}
         for j in self.mcp.jobs.itervalues():
             data[j.name] = j.data
+        for s in self.mcp.services.itervalues():
+            data[s.name] = s.data
+
         return data
 
 
@@ -188,6 +195,8 @@ class MasterControlProgram(object):
             os.mkdir(job.output_path)
 
     def add_job(self, job):
+        if job.name in self.services:
+            raise ValueError("Job %s is already a service", job.name)
         if job.name in self.jobs:
             # Jobs have a complex eq implementation that allows us to catch jobs that have not changed and thus
             # don't need to be updated during a reconfigure
@@ -216,6 +225,9 @@ class MasterControlProgram(object):
         job.disable()
 
     def add_service(self, service):
+        if service.name in self.jobs:
+            raise ValueError("Service %s is already a job", service.name)
+        
         prev_service = self.services.get(service.name)
         
         if service == prev_service:
@@ -286,12 +298,14 @@ class MasterControlProgram(object):
 
     def try_restore(self):
         if not os.path.isfile(self.state_handler.get_state_file_path()):
-            return 
+            return
         
         data = self.state_handler.load_data()
         for name in data.iterkeys():
             if name in self.jobs:
                 self.state_handler.restore_job(self.jobs[name], data[name])
+            if name in self.services:
+                self.state_handler.restore_servce(self.services[name], data[name])
 
     def run_jobs(self):
         """This schedules the first time each job runs"""

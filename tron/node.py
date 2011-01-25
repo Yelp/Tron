@@ -67,6 +67,13 @@ class NodePool(object):
         #    self.iter = itertools.cycle(self.nodes)
         return self.nodes[random.randrange(len(self.nodes))]
 
+    def __getitem__(self, value):
+        for node in self.nodes:
+            if node.hostname == value:
+                return node
+        else:
+            raise KeyError(value)
+
 class Node(object):
     """A node is tron's interface to communicating with an actual machine"""
     def __init__(self, hostname=None):
