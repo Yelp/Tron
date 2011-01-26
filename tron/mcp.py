@@ -9,6 +9,7 @@ import subprocess
 import yaml
 import time
 
+import tron
 from tron import job, config, command_context
 from twisted.internet import reactor
 from tron.utils import timeutils
@@ -20,6 +21,8 @@ MICRO_SEC = .000001
 STATE_FILE = 'tron_state.yaml'
 STATE_SLEEP = 1
 WRITE_DURATION_WARNING_SECS = 30
+
+class StateFileVersionError(Exception): pass
 
 def sleep_time(run_time):
     sleep = run_time - timeutils.current_time()
@@ -121,21 +124,42 @@ class StateHandler(object):
     def load_data(self):
         log.info('Restoring state from %s', self.get_state_file_path())
         
-        try:
-            data_file = open(self.get_state_file_path())
-            data = yaml.load(data_file)
-            data_file.close()
-        except IOError, e:
-            data = {}
-            log.error("Cannot load state file: %s" % str(e))
+        with open(self.get_state_file_path()) as data_file:
+            return self._load_data_file(data_file)
 
-        return data
+    def _load_data_file(self, data_file):
+        data = yaml.load(data_file)
+
+        if 'version' not in data:
+            # Pre-versioned state files need to be reformatted a bit
+            data = {
+                'version': [0, 1, 9],
+                'jobs': data
+            }
+        
+        # For properly comparing version, we need to convert this guy to a tuple
+        data['version'] = tuple(data['version'])
+
+        # By default we assume backwards compatability.
+        if data['version'] == tron.__version_info__:
+            return data
+        elif data['version'] > tron.__version_info__:
+            raise StateFileVersionError("State file has new version: %r", data['version'])
+        else:
+            # Potential version conversions
+            return data
     
     @property
     def data(self):
-        data = {}
+        data = {
+            'version': tron.__version_info__,
+            'create_time': int(time.time()),
+            'jobs': {}
+        }
+
         for j in self.mcp.jobs.itervalues():
-            data[j.name] = j.data
+            data['jobs'][j.name] = j.data
+
         return data
 
 
@@ -277,6 +301,9 @@ class MasterControlProgram(object):
             return 
         
         data = self.state_handler.load_data()
+        if not data:
+            return
+
         for name in data.iterkeys():
             if name in self.jobs:
                 self.state_handler.restore_job(self.jobs[name], data[name])
