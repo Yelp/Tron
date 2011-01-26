@@ -78,6 +78,8 @@ class StateHandler(object):
 
     def store_state(self):
         """Stores the state of tron"""
+        log.debug("store_state called: %r, %r", self.write_pid, self.writing_enabled)
+
         # If tron is already storing data, don't start again till it's done
         if self.write_pid or not self.writing_enabled:
             # If a child is writing, we don't want to ignore this change, so lets try it later
@@ -305,7 +307,7 @@ class MasterControlProgram(object):
             if name in self.jobs:
                 self.state_handler.restore_job(self.jobs[name], data[name])
             if name in self.services:
-                self.state_handler.restore_servce(self.services[name], data[name])
+                self.state_handler.restore_service(self.services[name], data[name])
 
     def run_jobs(self):
         """This schedules the first time each job runs"""
