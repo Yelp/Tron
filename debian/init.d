@@ -134,7 +134,6 @@ start_server() {
             start-stop-daemon --start --quiet --pidfile $PIDFILE \
                         --chuid $DAEMONUSER \
                         --startas $DAEMON \
-                        --umask 022
                         --exec $PYTHON -- $DAEMON_OPTS
             errcode=$?
         fi

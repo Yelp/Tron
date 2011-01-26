@@ -114,7 +114,7 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
         options.profile = None
         options.chroot = None
         options.rundir = '.'
-        options.umask = None
+        options.umask = 022
         
         self.options = options
 
