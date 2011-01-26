@@ -3,6 +3,7 @@ import os
 import sys
 import optparse
 
+import tron
 from tron import cmd
 
 console_rows = int(os.popen('stty size', 'r').read().split()[0])
@@ -36,7 +37,7 @@ ACTION_RUN_COLUMNS = (
 
 
 def parse_options():
-    parser = optparse.OptionParser("usage: %prog [options] [<job | job run | action>]")
+    parser = optparse.OptionParser("usage: %prog [options] [<job | job run | action>]", version="%%prog %s" % tron.__version__)
     parser.add_option("--numshown", "-n", type="int", dest="num_displays", help="Max number of jobs/job-runs shown", default = 10)
     parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=None)
     parser.add_option("--hide-headers", "-z", action="store_false", dest="display_headers", help="Don't display headers", default=True)
