@@ -8,6 +8,8 @@ tron (0.1.10-1) unstable; urgency=low
   * Show warnings option for tronview. Fixes #46 (ebaum)
   * Suppress headers option for tronview. (ebaum)
   * Fix an issue where default empty config failed to apply. (rhettg)
+  * Add versioning to both tron module, command and state file (rhettg)
+  * Set umask on daemon to allow proper pid-file control (rhettg)
 
  -- Rhett Garber <rhettg@gmail.com>  Fri, 14 Jan 2011 13:10:00 -0800
 
