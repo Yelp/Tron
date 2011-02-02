@@ -244,7 +244,10 @@ class Job(object):
             self.remove_run(run)
 
     def newest(self):
-        return self.runs[0]
+        if self.runs[0]:
+            return self.runs[0]
+        else:
+            return None
 
     def newest_run_by_state(self, state):
         for run in self.runs:
