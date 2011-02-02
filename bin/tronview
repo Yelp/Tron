@@ -64,7 +64,7 @@ def parse_options():
     parser.add_option("--numshown", "-n", type="int", dest="num_displays", help="Max number of jobs/job-runs shown", default = 10)
     parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=None)
     parser.add_option("--hide-preface", "-z", action="store_false", dest="display_preface", help="Don't display preface", default=True)
-    parser.add_option("--color", "-c", action="store_true", dest="display_color", help="Don't display in color", default=False)
+    parser.add_option("--color", "-c", action="store_true", dest="display_color", help="Display in color", default=False)
     parser.add_option("--stdout", "-o", action="count", dest="stdout", help="Solely displays stdout", default=0)
     parser.add_option("--stderr", "-e", action="count", dest="stderr", help="Solely displays stderr", default=0)
     parser.add_option("--warn", "-w", action="count", dest="warn", help="Solely displays warnings and errors", default=0)
