@@ -247,12 +247,12 @@ def view_action_run(options, act_run_id, supress_preface=False):
         sys.exit(1)
 
     if options.stdout:
-        print "stdout: "
+        print "Stdout: "
         print "\n".join(act_run_content['stdout'])
         return
 
     if options.stderr or options.warn:
-        print "stderr: "
+        print "Stderr: "
         print "\n".join(act_run_content['stderr'])
         return
 
@@ -270,13 +270,13 @@ def view_action_run(options, act_run_id, supress_preface=False):
     print color("gray",
             "%s" % act_run_content['raw_command'])
     print
-    print "requirements:"
+    print "Requirements:"
     for req in act_run_content['requirements']:
         print req
     print
-    print "stdout:"
+    print "Stdout:"
     print "\n".join(act_run_content['stdout'])
-    print "stderr:"
+    print "Stderr:"
     print "\n".join(act_run_content['stderr'])
 
 def main():
