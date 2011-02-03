@@ -298,15 +298,23 @@ class MasterControlProgram(object):
 
     def try_restore(self):
         if not os.path.isfile(self.state_handler.get_state_file_path()):
+            log.info("No state data found")
             return 
         
         data = self.state_handler.load_data()
         if not data:
+            log.warning("Failed to load state data")
             return
 
-        for name in data.iterkeys():
+        state_load_count = 0
+        for name in data['jobs'].iterkeys():
             if name in self.jobs:
-                self.state_handler.restore_job(self.jobs[name], data[name])
+                self.state_handler.restore_job(self.jobs[name], data['jobs'][name])
+                state_load_count += 1
+            else:
+                log.warning("Job name %s from state file unknown", name)
+
+        log.info("Loaded state for %d jobs", state_load_count)
 
     def run_jobs(self):
         """This schedules the first time each job runs"""
