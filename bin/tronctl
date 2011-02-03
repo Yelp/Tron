@@ -13,6 +13,7 @@ import logging
 
 import yaml
 
+import tron
 from tron import cmd
 
 COMMAND_HELP = (
@@ -42,7 +43,7 @@ class TronCtlOptionParser(optparse.OptionParser):
 log = logging.getLogger('')
 
 def parse_options():
-    parser = TronCtlOptionParser("usage: %prog [options] <command> [<job | job run | action>]")
+    parser = TronCtlOptionParser("usage: %prog [options] <command> [<job | job run | action>]", version="%%prog %s" % tron.__version__)
     parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=None)
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
     (options, args) = parser.parse_args(sys.argv)

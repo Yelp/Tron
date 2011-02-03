@@ -2,6 +2,7 @@ import datetime
 import os 
 import shutil
 import tempfile
+import StringIO
 
 from testify import *
 from testify.utils import turtle
@@ -80,6 +81,66 @@ class TestStateHandler(TestCase):
 
     def test_load_data(self):
         pass
+
+
+class TestNoVersionState(TestCase):
+    @setup
+    def build_files(self):
+        self.state_data = """
+sample_job:
+    disable_runs: []
+    enable_runs: []
+    enabled: true
+    runs:
+    -   end_time: null
+        run_num: 68801
+        run_time: &id001 2011-01-25 18:21:12.614273
+        runs:
+        -   command: do_stuff
+            end_time: null
+            id: batch_email_sender.68801.check
+            run_time: *id001
+            start_time: null
+            state: 0
+        start_time: null
+"""
+        self.data_file = StringIO.StringIO(self.state_data)
+
+    def test(self):
+        handler = mcp.StateHandler(turtle.Turtle(), "/tmp")
+        data = handler._load_data_file(self.data_file)
+        assert_equal(data['version'], (0, 1, 9))
+        assert_equal(len(data['jobs']), 1)
+
+class FutureVersionTest(TestCase):
+    @setup
+    def build_files(self):
+        self.state_data = """
+version: [99, 0, 0]
+jobs:
+    sample_job:
+        disable_runs: []
+        enable_runs: []
+        enabled: true
+        runs:
+        -   end_time: null
+            run_num: 68801
+            run_time: &id001 2011-01-25 18:21:12.614273
+            runs:
+            -   command: do_stuff
+                end_time: null
+                id: batch_email_sender.68801.check
+                run_time: *id001
+                start_time: null
+                state: 0
+            start_time: null
+"""
+        self.data_file = StringIO.StringIO(self.state_data)
+
+    def test(self):
+        handler = mcp.StateHandler(turtle.Turtle(), "/tmp")
+        assert_raises(mcp.StateFileVersionError, handler._load_data_file, self.data_file)
+        data = (self.data_file)
 
 class TestMasterControlProgram(TestCase):
     

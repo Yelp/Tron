@@ -18,6 +18,7 @@ from twisted.web import server
 # Annoying that we have to import twisted internal module here, but we don't really want to use 'twistd' to run our daemon.
 from twisted.scripts import _twistd_unix
 
+import tron
 from tron import mcp, cmd, job, resource, node, scheduler, www, monitor, emailer, config
 from tron.utils import log_handler
 
@@ -29,7 +30,7 @@ def create_default_config(config_path):
         config_file.write(config.DEFAULT_CONFIG)
 
 def parse_options():
-    parser = optparse.OptionParser()
+    parser = optparse.OptionParser(version="%%prog %s" % tron.__version__)
 
     parser.add_option("--working-dir", action="store", dest="working_dir", help="Directory where tron's state and output is stored (default %default)", default="/var/lib/tron/")
     parser.add_option("--log-file", "-l", action="store", dest="log_file", help="Where the logs are stored (default %default)", default="/var/log/tron/tron.log")
@@ -113,7 +114,7 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
         options.profile = None
         options.chroot = None
         options.rundir = '.'
-        options.umask = None
+        options.umask = 022
         
         self.options = options
 
