@@ -29,7 +29,7 @@ class JobRun(object):
         self.run_time = run_time
 
         for r in self.runs:
-        	r.run_time = run_time
+            r.run_time = run_time
 
     def scheduled_start(self):
         self.attempt_start()
@@ -208,7 +208,7 @@ class Job(object):
         return not self == other
 
     def set_context(self, context):
-        self.context = command_context.CommandContext(self.context, context)
+        self.context.next = context
 
     def enable(self):
         if self.enable_act:
@@ -359,6 +359,9 @@ class Job(object):
         self.last_success = old.last_success
         self.run_num = old.run_num
         self.enabled = old.enabled
+
+        self.context = old.context
+        self.context.base = self
 
     @property
     def data(self):

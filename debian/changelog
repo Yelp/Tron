@@ -10,6 +10,9 @@ tron (0.1.10-1) unstable; urgency=low
   * Fix an issue where default empty config failed to apply. (rhettg)
   * Add versioning to both tron module, command and state file (rhettg)
   * Set umask on daemon to allow proper pid-file control (rhettg)
+  * Fix issue with command context not propogating on live reconfigs. Fixes
+    #53 (rhettg)
+
 
  -- Rhett Garber <rhettg@gmail.com>  Fri, 14 Jan 2011 13:10:00 -0800
 
