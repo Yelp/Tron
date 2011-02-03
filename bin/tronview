@@ -231,7 +231,6 @@ def view_job_run(options, job_run_id, supress_preface=False):
         action_color = "red" if run_state == "FAIL" else "white"
         print color(action_color,
                 " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((run_id, run_state, start_time, end_time, duration), ACTION_RUN_COLUMNS)))
-        print color("gray", command)
 
         if options.warn:
             view_action_run(options, run['id'], supress_preface=True)
@@ -265,8 +264,10 @@ def view_action_run(options, act_run_id, supress_preface=False):
 
     # a raw command is without command context
     if act_run_content['command'] != act_run_content['raw_command']:
-        print color("gray",
-                "%s" % act_run_content['command'])
+        if act_run_content['command'] == 'false':
+            print color("red", "Bad Command")
+        else:
+            print color("gray", "%s" % act_run_content['command'])
 
     print color("gray",
             "%s" % act_run_content['raw_command'])
