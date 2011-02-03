@@ -33,7 +33,7 @@ def job_run_state(job_run):
         return "CANC"
     if job_run.is_running:
         return "RUNN"
-    if job_run.is_failed:
+    if job_run.is_failure:
         return "FAIL"
     if job_run.is_scheduled:
         return "SCHE"
@@ -54,6 +54,7 @@ class ActionRunResource(resource.Resource):
             'state': job_run_state(self._act_run),
             'node': self._act_run.node.hostname,
             'command': self._act_run.command,
+            'raw_command': self._act_run.action.command,
             'requirements': [req.name for req in self._act_run.action.required_actions],
         }
         
@@ -103,7 +104,7 @@ class ActionRunResource(resource.Resource):
             log.warning("Request to cancel job run %s when it's not possible", self._act_run.id)
 
     def _fail(self, request):
-        if not self._act_run.is_running and not self._act_run.is_success and not self._act_run.is_failed:
+        if not self._act_run.is_running and not self._act_run.is_success and not self._act_run.is_failure:
             log.info("Marking job run %s as failed", self._act_run.id)
             self._act_run.fail(0)
         else:
@@ -144,7 +145,7 @@ class JobRunResource(resource.Resource):
                 'exit_status': action_run.exit_status,
                 'duration': duration,
                 'state': action_state,
-                'command': action_run.action.command,
+                'command': action_run.command,
             })
 
         output = {
@@ -203,7 +204,7 @@ class JobRunResource(resource.Resource):
             log.warning("Request to cancel job run %s when it's already cancelled", self._run.id)
 
     def _fail(self, request):
-        if not self._run.is_running and not self._run.is_success and not self._run.is_failed:
+        if not self._run.is_running and not self._run.is_success and not self._run.is_failure:
             log.info("Marking job run %s as failed", self._run.id)
             self._run.fail()
         else:
@@ -220,12 +221,18 @@ class JobResource(resource.Resource):
     def getChild(self, run_num, request):
         if run_num == '':
             return self
-        
+
+        run = None
+
+        if run_num.upper() == 'HEAD':
+            run = self._job.newest()
+        if run_num.upper() in ['SUCC', 'CANC', 'RUNN', 'FAIL', 'SCHE', 'QUE', 'UNKWN']:
+            run = self._job.newest_run_by_state(run_num.upper())
         if run_num.isdigit():
             run = self._job.get_run_by_num(int(run_num))
-            if run:
-                return JobRunResource(run)
-        
+
+        if run:
+            return JobRunResource(run)
         return resource.NoResource("Cannot run number '%s' for job '%s'" % (run_num, self._job.name))
 
     def get_run_data(self, request, run):

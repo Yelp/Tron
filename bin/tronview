@@ -12,40 +12,66 @@ job_id_width = console_cols - 54 if console_cols > 54 + 5 else 5
 run_id_width = console_cols - 64 if console_cols > 64 + 5 else 5
 act_id_width = console_cols - 60 if console_cols > 60 + 5 else 5
 
-JOB_COLUMNS = (
-    ('Name', job_id_width),
-    ('State', 10),
-    ('Scheduler', 20),
-    ('Last Success', 20),
-)
+JOB_COLUMNS = [
+    ['Name', job_id_width],
+    ['State', 10],
+    ['Scheduler', 20],
+    ['Last Success', 20],
+]
 
-RUN_COLUMNS = (
-    ('Run ID', run_id_width),
-    ('State', 6),
-    ('Node', 20),
-    ('Scheduled Time', 20),
-)
+RUN_COLUMNS = [
+    ['Run ID', run_id_width],
+    ['State', 6],
+    ['Node', 20],
+    ['Scheduled Time', 20],
+]
 
-ACTION_RUN_COLUMNS = (
-    ('Action ID & Command', act_id_width),
-    ('State', 6),
-    ('Start Time', 20),
-    ('End Time', 20),
-    ('Duration', 10),
-)
+ACTION_RUN_COLUMNS = [
+    ['Action ID & Command', act_id_width],
+    ['State', 6],
+    ['Start Time', 20],
+    ['End Time', 20],
+    ['Duration', 10],
+]
 
+display_color = False
+colors = {
+        'gray': '\033[90m',
+        'cyan': '\033[91m',
+        'green': '\033[92m',
+        'yellow': '\033[93m',
+        'blue': '\033[94m',
+        'red': '\033[96m',
+        'white': '\033[99m',
+        # h is for highlighted
+        'hgray': '\033[100m',
+        'hcyan': '\033[101m',
+        'hgreen': '\033[102m',
+        'hyellow': '\033[103m',
+        'hblue': '\033[104m',
+        'hred': '\033[106m',
+        'end': '\033[0m',
+        }
+
+def color(color_name, text):
+    if not display_color:
+        return str(text)
+    return colors[color_name.lower()] + str(text) + colors['end']
 
 def parse_options():
     parser = optparse.OptionParser("usage: %prog [options] [<job | job run | action>]")
+    parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
     parser.add_option("--numshown", "-n", type="int", dest="num_displays", help="Max number of jobs/job-runs shown", default = 10)
     parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=None)
-    parser.add_option("--hide-headers", "-z", action="store_false", dest="display_headers", help="Don't display headers", default=True)
-    parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
+    parser.add_option("--hide-preface", "-z", action="store_false", dest="display_preface", help="Don't display preface", default=True)
+    parser.add_option("--color", "-c", action="store_true", dest="display_color", help="Display in color", default=False)
     parser.add_option("--stdout", "-o", action="count", dest="stdout", help="Solely displays stdout", default=0)
     parser.add_option("--stderr", "-e", action="count", dest="stderr", help="Solely displays stderr", default=0)
     parser.add_option("--warn", "-w", action="count", dest="warn", help="Solely displays warnings and errors", default=0)
 
     (options, args) = parser.parse_args(sys.argv)
+    global display_color
+    display_color = options.display_color
 
     return options, args[1:]
 
@@ -63,7 +89,10 @@ def view_all(options):
     if len(content['services']) == 0:
         print "No services"
     else:
-        print " ".join((name.ljust(size) for name, size in JOB_COLUMNS))
+            # service width is dependent on the console width bounded by the title width and service-name max length
+        JOB_COLUMNS[0][1] = min(job_id_width, max(len(JOB_COLUMNS[0][0]) + 1, max(len(service['name']) for service in content['services'])))
+        print color("hgray",
+                " ".join((name.ljust(size) for name, size in JOB_COLUMNS)))
 
         # Show service data
         for job in sorted(content['services'], key=lambda s: s['name']):
@@ -75,18 +104,24 @@ def view_all(options):
     if len(content['jobs']) == 0:
         print "No jobs"
     else:
-        print " ".join((name.ljust(size) for name, size in JOB_COLUMNS))
+        # job width is dependent on the console width bounded by the title width and job-name max length
+        JOB_COLUMNS[0][1] = min(job_id_width, max(len(job['name']) for job in content['jobs']))
+        print color("hgray",
+                " ".join((name.ljust(size) for name, size in JOB_COLUMNS)))
 
         # Show job data
         for job in sorted(content['jobs'], key=lambda j: j['name']):
             print " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((job['name'], job['status'], job['scheduler'], job['last_success']), JOB_COLUMNS))
             if options.warn:
                 print
-                view_job(options, job['name'], supress_headers = True)
+                view_job(options, job['name'], supress_preface=True)
                 print
 
 def print_job_runs(options, runs):
-    print " ".join(title.ljust(size) for title, size in RUN_COLUMNS[:4])
+    # job run width is dependent on the console width bounded by the title width and job-run max length
+    RUN_COLUMNS[0][1] = max(len(RUN_COLUMNS[0][0]) + 1, min(run_id_width, len(str(runs[0]['run_num']))))
+    print color("hgray",
+            " ".join(title.ljust(size) for title, size in RUN_COLUMNS))
 
     runs_displayed = 0
 
@@ -97,7 +132,8 @@ def print_job_runs(options, runs):
         run_id = '.'.join([''] + run['id'].split('.')[1:])
         run_state = run['state']
 
-        if options.warn and run_state in ['SUCC', 'SCHE']:
+
+        if options.warn and run_state not in ['FAIL', 'UNKWN', 'QUE']:
             continue
 
         run_time = (run['run_time'] and run['run_time'][:-7]) or "-"
@@ -105,24 +141,27 @@ def print_job_runs(options, runs):
         end_time = (run['end_time'] and run['end_time'][:-7]) or "-"
         duration = (run['duration'] and run['duration'][:-7]) or "-"
 
-        print " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((run_id, run_state, run['node'], run_time), RUN_COLUMNS[:4]))
-        print "%s Start: %s  End: %s  (%s)" % (' ' * RUN_COLUMNS[0][1], start_time, end_time, duration)
+        run_color = "red" if run_state == "FAIL" else "white"
+        print color(run_color,
+                " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((run_id, run_state, run['node'], run_time), RUN_COLUMNS)))
+        print color("gray",
+                "%s Start: %s  End: %s  (%s)" % (' ' * RUN_COLUMNS[0][1], start_time, end_time, duration))
 
         runs_displayed += 1
 
         if options.warn:
             print
-            view_job_run(options, run['id'], supress_headers = True)
+            view_job_run(options, run['id'], supress_preface=True)
             print
 
-def view_job(options, job_name, supress_headers=False):
+def view_job(options, job_name, supress_preface=False):
     """Retrieve details of the specified job and display"""
     status, job_content = cmd.request(options.server, "/jobs/%s" % job_name)
     if status == cmd.ERROR:
         print >>sys.stderr, "%s: Cannot find job %s" % (job_content, job_name)
         sys.exit(1)
 
-    if options.display_headers and not supress_headers:
+    if options.display_preface and not supress_preface:
         print job_content['name'] + ":"
         print "Scheduler: %s\n" % job_content['scheduler']
 
@@ -143,40 +182,44 @@ def view_job(options, job_name, supress_headers=False):
 
     if job_content['disable_runs']:
         print "Disabling Run History: (%d total)" % len(job_content['disable_runs'])
-        print_job_runs(options, job_content['disable_runs'])       
+        print_job_runs(options, job_content['disable_runs'])
         print
 
     if not options.num_displays:
         options.num_displays = len(job_content['runs'])
 
-def view_job_run(options, job_run_id, supress_headers=False):
+def view_job_run(options, job_run_id, supress_preface=False):
     status, job_run_content = cmd.request(options.server, "/jobs/%s" % job_run_id.replace('.', '/'))
     if status == cmd.ERROR:
         print >>sys.stderr, "%s: Cannot find job run %s" % (job_run_content, job_run_id)
         sys.exit(1)
 
-    if options.display_headers and not supress_headers:
+    if options.display_preface and not supress_preface:
         print "Job Run: %s" % job_run_content['id']
         print "State: %s" % job_run_content['state']
         print "Node: %s" % job_run_content['node']
         print
 
-    print " ".join(title.ljust(size) for title, size in ACTION_RUN_COLUMNS)
+    # action run width is dependent on the console width bounded by the title width and action-name max length
+    ACTION_RUN_COLUMNS[0][1] = min(act_id_width, max(len(ACTION_RUN_COLUMNS[0][0]) + 1, max(len('.' + (run['name'])) for run in job_run_content['runs'])))
+    print color("hgray",
+            " ".join(title.ljust(size) for title, size in ACTION_RUN_COLUMNS))
 
-    if options.warn and job_run_content['state'] in ['SUCC', 'SCHE']:
+    if options.warn and job_run_content['state'] not in ['FAIL', 'UNKWN', 'QUE']:
         return
 
     job_runs_displayed = 0
 
     for run in job_run_content['runs']:
         if job_runs_displayed == options.num_displays:
-            print "..... truncated"
+            print "..."
             break
 
+        # you need the dot. you just do.
         run_id = '.'.join([''] + run['id'].split('.')[2:])
         run_state = run['state']
 
-        if options.warn and run_state in ['SUCC', 'SCHE']:
+        if options.warn and run_state not in ['FAIL', 'UNKWN', 'QUE']:
             continue
 
         start_time = (run['start_time'] and run['start_time'][:-7]) or "-"
@@ -184,16 +227,18 @@ def view_job_run(options, job_run_id, supress_headers=False):
         duration = (run['duration'] and run['duration'][:-7]) or "-"
         command = run['command'] or "-"
 
-        print " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((run_id, run_state, start_time, end_time, duration), ACTION_RUN_COLUMNS))
-        print " ".join(["COMMAND:", command])
+        action_color = "red" if run_state == "FAIL" else "white"
+        print color(action_color,
+                " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((run_id, run_state, start_time, end_time, duration), ACTION_RUN_COLUMNS)))
+        print color("gray", command)
 
         if options.warn:
-            view_action_run(options, run['id'], supress_headers=True)
+            view_action_run(options, run['id'], supress_preface=True)
 
         job_runs_displayed += 1
 
 
-def view_action_run(options, act_run_id, supress_headers=True):
+def view_action_run(options, act_run_id, supress_preface=False):
     url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'), options.num_displays)
     status, act_run_content = cmd.request(options.server, url)
 
@@ -202,40 +247,46 @@ def view_action_run(options, act_run_id, supress_headers=True):
         sys.exit(1)
 
     if options.stdout:
-        print "STDOUT: "
+        print "Stdout: "
         print "\n".join(act_run_content['stdout'])
         return
 
     if options.stderr or options.warn:
-        print "STDERR: "
+        print "Stderr: "
         print "\n".join(act_run_content['stderr'])
         return
 
-    if options.display_headers and not supress_headers:
+    if options.display_preface and not supress_preface:
         print "Action Run: %s" % act_run_content['id']
         print "State: %s" % act_run_content['state']
         print "Node: %s" % act_run_content['node']
         print
 
-    print "COMMAND: \n%s" % act_run_content['command']
+    # a raw command is without command context
+    if act_run_content['command'] != act_run_content['raw_command']:
+        print color("gray",
+                "%s" % act_run_content['command'])
+
+    print color("gray",
+            "%s" % act_run_content['raw_command'])
     print
-    print "REQUIREMENTS:"
+    print "Requirements:"
     for req in act_run_content['requirements']:
         print req
     print
-    print "STDOUT:"
+    print "Stdout:"
     print "\n".join(act_run_content['stdout'])
-    print "STDERR:"
+    print "Stderr:"
     print "\n".join(act_run_content['stderr'])
 
 def main():
     """run tronview"""
     options, args = parse_options()
     cmd.setup_logging(options)
-    
+
     cmd.load_config(options)
     status, content = cmd.request(options.server, "/")
-    
+
     if status != cmd.OK or not content:
         print >>sys.stderr, "Error connecting to tron server at %s" % options.server
         sys.exit(1)

@@ -249,8 +249,8 @@ class MasterControlProgram(object):
 
         if not now.job.enabled:
             return
-        
-        if not (now.is_running or now.is_failed or now.is_success):
+
+        if not (now.is_running or now.is_failure or now.is_success):
             log.debug("Running next scheduled job")
             now.scheduled_start()
         
