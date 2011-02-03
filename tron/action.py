@@ -12,16 +12,6 @@ from tron.utils import state
 
 log = logging.getLogger('tron.action')
 
-ACTION_RUN_SCHEDULED = 0
-ACTION_RUN_QUEUED = 1
-ACTION_RUN_CANCELLED = 2
-ACTION_RUN_UNKNOWN = 3
-ACTION_RUN_RUNNING = 4
-ACTION_RUN_FAILED = 10
-ACTION_RUN_SUCCEEDED = 11
-
-# States where we have executed the run.
-ACTION_RUN_EXECUTED_STATES = [ACTION_RUN_FAILED, ACTION_RUN_SUCCEEDED]
 
 class Error(Exception): pass
 
@@ -78,9 +68,29 @@ class ActionRunContext(object):
         else:
             raise KeyError(name)
 
+ACTION_RUN_SCHEDULED = 0
+ACTION_RUN_QUEUED = 1
+ACTION_RUN_CANCELLED = 2
+ACTION_RUN_UNKNOWN = 3
+ACTION_RUN_RUNNING = 4
+ACTION_RUN_FAILED = 10
+ACTION_RUN_SUCCEEDED = 11
+
+# States where we have executed the run.
+ACTION_RUN_EXECUTED_STATES = [ACTION_RUN_FAILED, ACTION_RUN_SUCCEEDED]
+
 
 class ActionRun(object):
     """An instance of running a action"""
+    STATE_CANCELLED = state.NamedEventState('cancelled')
+    STATE_UNKNOWN = state.NamedEventState('unknown')
+    STATE_FAILED = state.NamedEventState('failed')
+    STATE_SUCCEEDED = state.NamedEventState('succeeded')
+    STATE_RUNNING = state.NamedEventState('running', fail=STATE_FAILED, fail_unknown=STATE_UNKNOWN, succeed=STATE_SUCCEEDED)
+    STATE_STARTING = state.NamedEventState('starting', fail=STATE_FAILED, started=STATE_RUNNING)
+    STATE_QUEUED = state.NamedEventState('queued', start=STATE_STARTING)
+    STATE_SCHEDULED = state.NamedEventState('scheduled', ready=STATE_QUEUED)
+    
     def __init__(self, action, context=None, output_path=None):
         self.action = action
         self.id = None
@@ -89,7 +99,7 @@ class ActionRun(object):
         self.start_time = None  # What time did we start
         self.end_time = None    # What time did we end
         self.exit_status = None
-        self.state = ACTION_RUN_QUEUED if action.required_actions else ACTION_RUN_SCHEDULED
+        self.machine = state.StateMachine(ActionRun.STATE_SCHEDULED)
 
         self.node = None
         self.context = None
@@ -112,6 +122,13 @@ class ActionRun(object):
 
         self.required_runs = []
         self.waiting_runs = []
+
+        if not action.required_actions:
+            self.machine.transition('ready')
+
+    @property
+    def state(self):
+        return self.machine.state
 
     @property
     def stdout_path(self):
