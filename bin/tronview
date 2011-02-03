@@ -12,27 +12,27 @@ job_id_width = console_cols - 54 if console_cols > 54 + 5 else 5
 run_id_width = console_cols - 64 if console_cols > 64 + 5 else 5
 act_id_width = console_cols - 60 if console_cols > 60 + 5 else 5
 
-JOB_COLUMNS = (
+JOB_COLUMNS = [
     ['Name', job_id_width],
-    ('State', 10),
-    ('Scheduler', 20),
-    ('Last Success', 20),
-)
+    ['State', 10],
+    ['Scheduler', 20],
+    ['Last Success', 20],
+]
 
-RUN_COLUMNS = (
+RUN_COLUMNS = [
     ['Run ID', run_id_width],
-    ('State', 6),
-    ('Node', 20),
-    ('Scheduled Time', 20),
-)
+    ['State', 6],
+    ['Node', 20],
+    ['Scheduled Time', 20],
+]
 
-ACTION_RUN_COLUMNS = (
+ACTION_RUN_COLUMNS = [
     ['Action ID & Command', act_id_width],
-    ('State', 6),
-    ('Start Time', 20),
-    ('End Time', 20),
-    ('Duration', 10),
-)
+    ['State', 6],
+    ['Start Time', 20],
+    ['End Time', 20],
+    ['Duration', 10],
+]
 
 display_color = False
 colors = {
