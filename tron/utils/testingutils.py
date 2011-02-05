@@ -137,3 +137,21 @@ def run_reactor(timeout=DEFAULT_TIMEOUT, assert_raises=None):
             run_defer.func_name = method.func_name
         return run_defer
     return wrapper
+
+
+# A simple test pool that automatically starts any command
+class TestNode(turtle.Turtle):
+
+    def __init__(self, hostname=None):
+        self.name = hostname
+    
+    def run(self, runnable):
+        runnable.started()
+        return turtle.Turtle()
+
+class TestPool(object):
+    _node = None
+    def next(self):
+        if self._node is None:
+            self._node = TestNode()
+        return self._node

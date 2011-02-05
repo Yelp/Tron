@@ -68,16 +68,9 @@ class ActionRunContext(object):
         else:
             raise KeyError(name)
 
-ACTION_RUN_SCHEDULED = 0
-ACTION_RUN_QUEUED = 1
-ACTION_RUN_CANCELLED = 2
-ACTION_RUN_UNKNOWN = 3
-ACTION_RUN_RUNNING = 4
-ACTION_RUN_FAILED = 10
-ACTION_RUN_SUCCEEDED = 11
 
 # States where we have executed the run.
-ACTION_RUN_EXECUTED_STATES = [ACTION_RUN_FAILED, ACTION_RUN_SUCCEEDED]
+# ACTION_RUN_EXECUTED_STATES = [ACTION_RUN_FAILED, ACTION_RUN_SUCCEEDED]
 
 
 class ActionRun(object):
@@ -86,11 +79,32 @@ class ActionRun(object):
     STATE_UNKNOWN = state.NamedEventState('unknown')
     STATE_FAILED = state.NamedEventState('failed')
     STATE_SUCCEEDED = state.NamedEventState('succeeded')
-    STATE_RUNNING = state.NamedEventState('running', fail=STATE_FAILED, fail_unknown=STATE_UNKNOWN, succeed=STATE_SUCCEEDED)
-    STATE_STARTING = state.NamedEventState('starting', fail=STATE_FAILED, started=STATE_RUNNING)
-    STATE_QUEUED = state.NamedEventState('queued', start=STATE_STARTING)
-    STATE_SCHEDULED = state.NamedEventState('scheduled', ready=STATE_QUEUED)
+    STATE_RUNNING = state.NamedEventState('running')
+    STATE_STARTING = state.NamedEventState('starting')
+    STATE_QUEUED = state.NamedEventState('queued')
+    STATE_SCHEDULED = state.NamedEventState('scheduled')
+
+    STATE_SCHEDULED['ready'] = STATE_QUEUED
+    STATE_SCHEDULED['queue'] = STATE_QUEUED
+    STATE_SCHEDULED['cancel'] = STATE_CANCELLED
+
+    STATE_QUEUED['cancel'] = STATE_CANCELLED
+
+    # Lots of states can accept a start command
+    STATE_CANCELLED['start'] = STATE_STARTING
+    STATE_UNKNOWN['start'] = STATE_STARTING
+    STATE_FAILED['start'] = STATE_STARTING
+    STATE_QUEUED['start'] = STATE_STARTING
+    STATE_SCHEDULED['start'] = STATE_STARTING
     
+    STATE_STARTING['started'] = STATE_RUNNING
+    STATE_STARTING['fail'] = STATE_FAILED
+
+    STATE_RUNNING['fail'] = STATE_FAILED
+    STATE_RUNNING['fail_unknown'] = STATE_UNKNOWN
+    STATE_RUNNING['success'] = STATE_SUCCEEDED
+
+
     def __init__(self, action, context=None, output_path=None):
         self.action = action
         self.id = None
@@ -110,9 +124,6 @@ class ActionRun(object):
         else:
             self.context = new_context
             
-        self.state_callback = lambda:None
-        self.complete_callback = lambda:None
-
         # If we ran the command, we'll store it for posterity.
         self.rendered_command = None
 
@@ -122,9 +133,6 @@ class ActionRun(object):
 
         self.required_runs = []
         self.waiting_runs = []
-
-        if not action.required_actions:
-            self.machine.transition('ready')
 
     @property
     def state(self):
@@ -176,8 +184,11 @@ class ActionRun(object):
         out.close()
         return lines[-num_lines:]
 
+        
     def attempt_start(self):
-        if self.should_start:
+        self.machine.transition('ready')
+        
+        if all([r.is_success for r in self.required_runs]):
             self.start()
 
     def start(self):
@@ -185,7 +196,8 @@ class ActionRun(object):
         
         self.start_time = timeutils.current_time()
         self.end_time = None
-        self.state = ACTION_RUN_RUNNING
+        self.machine.transition('start')
+        assert self.state == self.STATE_STARTING, self.state
         self._open_output_file()
 
         if not self.is_valid_command:
@@ -201,22 +213,13 @@ class ActionRun(object):
         df.addErrback(self._handle_errback)
 
     def cancel(self):
-        if self.is_scheduled or self.is_queued:
-            self.state = ACTION_RUN_CANCELLED
-            self.state_callback()
+        self.machine.transition('cancel')
     
     def schedule(self):
-        if not self.required_runs:
-            self.state = ACTION_RUN_SCHEDULED
-        else:
-            self.state = ACTION_RUN_QUEUED
-        
-        self.state_callback()
+        self.machine.transition('schedule')
     
     def queue(self):
-        if self.is_scheduled or self.is_cancelled:
-            self.state = ACTION_RUN_QUEUED
-            self.state_callback()
+        self.machine.transition('queue')
 
     def _open_output_file(self):
         try:
@@ -260,8 +263,7 @@ class ActionRun(object):
         """
         log.debug("Action command state change: %s", self.action_command.state)
         if self.action_command.state == ActionCommand.RUNNING:
-            self.state = ACTION_RUN_RUNNING
-            self.state_callback()
+            self.machine.transition('started')
         elif self.action_command.state == ActionCommand.FAILSTART:
             self._close_output_file()
             self.fail(None)
@@ -288,27 +290,22 @@ class ActionRun(object):
     def fail(self, exit_status):
         """Mark the run as having failed, providing an exit status"""
         log.info("Action run %s failed with exit status %r", self.id, exit_status)
-        self.state = ACTION_RUN_FAILED
+        self.machine.transition('fail')
         self.exit_status = exit_status
         self.end_time = timeutils.current_time()
-        self.complete_callback()
-        self.state_callback()
 
     def fail_unknown(self):
         """Mark the run as having failed, but note that we don't actually know what result was"""
         log.info("Lost communication with action run %s", self.id)
 
-        self.state = ACTION_RUN_FAILED
+        self.machine.transition('fail_unknown')
         self.exit_status = None
         self.end_time = None
-        self.complete_callback()
-        self.state_callback()
 
     def mark_success(self):
         self.exit_status = 0
-        self.state = ACTION_RUN_SUCCEEDED
         self.end_time = timeutils.current_time()
-        self.complete_callback()
+        self.machine.transition('success')
 
     def succeed(self):
         """Mark the run as having succeeded"""
@@ -316,26 +313,26 @@ class ActionRun(object):
         
         self.mark_success()
         self.start_dependants()
-        self.state_callback()
 
-    def restore_state(self, state):
-        self.id = state['id']
-        self.state = state['state']
-        self.run_time = state['run_time']
-        self.start_time = state['start_time']
-        self.end_time = state['end_time']
-        self.rendered_command = state['command']
+    def restore_state(self, state_data):
+        self.id = state_data['id']
+        self.machine.state = state.named_event_by_name(state_data['state'])
+        self.run_time = state_data['run_time']
+        self.start_time = state_data['start_time']
+        self.end_time = state_data['end_time']
+        self.rendered_command = state_data['command']
 
         # We were running when the state file was built, so we have no idea
         # what happened now.
         if self.is_running:
-            self.state = ACTION_RUN_UNKNOWN
-        self.state_callback()
+            self.machine.transition('fail_unknown')
+        else:
+            self.machine._notify_listeners()
 
     @property
     def data(self):
         return {'id': self.id,
-                'state': self.state,
+                'state': str(self.state),
                 'run_time': self.run_time,
                 'start_time': self.start_time,
                 'end_time': self.end_time,
@@ -375,40 +372,39 @@ class ActionRun(object):
 
     @property
     def is_queued(self):
-        return self.state == ACTION_RUN_QUEUED
+        return self.state == self.STATE_QUEUED
     
     @property
     def is_cancelled(self):
-        return self.state == ACTION_RUN_CANCELLED
+        return self.state == self.STATE_CANCELLED
 
     @property
     def is_scheduled(self):
-        return self.state == ACTION_RUN_SCHEDULED
+        return self.state == self.STATE_SCHEDULED
 
     @property
     def is_done(self):
-        return self.state in (ACTION_RUN_FAILED, ACTION_RUN_SUCCEEDED, ACTION_RUN_CANCELLED)
+        return self.state in (self.STATE_FAILED, self.STATE_SUCCEEDED, self.STATE_CANCELLED)
 
     @property
     def is_unknown(self):
-        return self.state == ACTION_RUN_UNKNOWN
+        return self.state == self.STATE_UNKNOWN
 
     @property
     def is_running(self):
-        return self.state == ACTION_RUN_RUNNING
+        return self.state == self.STATE_RUNNING
+
+    @property
+    def is_starting(self):
+        return self.state == self.STATE_STARTING
 
     @property
     def is_failed(self):
-        return self.state == ACTION_RUN_FAILED
+        return self.state == self.STATE_FAILED
 
     @property
     def is_success(self):
-        return self.state == ACTION_RUN_SUCCEEDED
-
-    @property
-    def should_start(self):
-        return all([r.is_success for r in self.required_runs]) and \
-           not (self.is_running or self.is_success)
+        return self.state == self.STATE_SUCCEEDED
  
 
 class Action(object):
@@ -440,10 +436,10 @@ class Action(object):
         new_run.id = "%s.%s" % (job_run.id, self.name)
         new_run.output_path = job_run.output_path
         new_run.node = job_run.node
-
-        new_run.state_callback = job_run.state_callback
-        new_run.complete_callback = job_run.run_completed
-
+        
+        new_run.machine.listen(True, job_run.state_callback)
+        new_run.machine.listen(ActionRun.STATE_SUCCEEDED, job_run.run_completed)
+        new_run.machine.listen(ActionRun.STATE_FAILED, job_run.run_completed)
         return new_run
 
 

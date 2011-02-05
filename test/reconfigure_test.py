@@ -7,6 +7,7 @@ import shutil
 
 from testify import *
 from tron import config, mcp, scheduler
+from tron.utils import testingutils
 
 class ConfigTest(TestCase):
     config = """
@@ -134,7 +135,7 @@ jobs:
         self.test_config = config.load_config(StringIO.StringIO(self.config))
         self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')
         self.test_config.apply(self.my_mcp)
-
+        
     @teardown
     def teardown(self):
         shutil.rmtree(self.test_dir)
@@ -216,7 +217,7 @@ jobs:
         assert_equal(job2.topo_actions[0].command, 'command_changed')
 
         assert_equal(len(job2.runs), 2)
-        assert job2.runs[1].is_running
+        assert job2.runs[1].is_starting, job2.runs[1].action_runs[0].state
         assert job2.runs[0].is_scheduled
 
     def test_job_new(self):

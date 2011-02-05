@@ -131,6 +131,11 @@ class JobRun(object):
         return all([r.is_queued for r in self.action_runs])
 
     @property
+    def is_starting(self):
+        return any([r.is_starting for r in self.action_runs])
+
+
+    @property
     def is_running(self):
         return any([r.is_running for r in self.action_runs])
 
