@@ -1,3 +1,9 @@
+tron (0.2.0-1) unstable; urgency=low
+
+  * New services system (rhettg)
+
+ -- Rhett Garber <rhettg@gmail.com>  Mon, 06 Feb 2011 15:15:00 -0800
+
 tron (0.1.10-1) unstable; urgency=low
 
   * Remove use of deprecated twisted timeout calls. Fixes #9 (rhettg)
