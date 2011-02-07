@@ -90,13 +90,6 @@ class ActionRun(object):
 
     STATE_QUEUED['cancel'] = STATE_CANCELLED
 
-    # Lots of states can accept a start command
-    STATE_CANCELLED['start'] = STATE_STARTING
-    STATE_UNKNOWN['start'] = STATE_STARTING
-    STATE_FAILED['start'] = STATE_STARTING
-    STATE_QUEUED['start'] = STATE_STARTING
-    STATE_SCHEDULED['start'] = STATE_STARTING
-    
     STATE_STARTING['started'] = STATE_RUNNING
     STATE_STARTING['fail'] = STATE_FAILED
 
@@ -104,7 +97,21 @@ class ActionRun(object):
     STATE_RUNNING['fail_unknown'] = STATE_UNKNOWN
     STATE_RUNNING['success'] = STATE_SUCCEEDED
 
+    # Lots of states can accept a start command
+    for event_state in (STATE_CANCELLED, STATE_UNKNOWN, STATE_FAILED, STATE_QUEUED, STATE_SCHEDULED):
+        event_state['start'] = STATE_STARTING
 
+    # We can force many states to be success or failure
+    for event_state in (STATE_UNKNOWN, STATE_QUEUED, STATE_SCHEDULED):
+        event_state['success'] = STATE_SUCCEEDED
+        event_state['fail'] = STATE_FAILED
+    
+    for event_state in (STATE_UNKNOWN, STATE_SUCCEEDED, STATE_FAILED, STATE_CANCELLED):
+        event_state['schedule'] = STATE_SCHEDULED
+        event_state['queue'] = STATE_QUEUED
+    
+    STATE_QUEUED['schedule'] = STATE_SCHEDULED
+    
     def __init__(self, action, context=None, output_path=None):
         self.action = action
         self.id = None
@@ -316,7 +323,7 @@ class ActionRun(object):
 
     def restore_state(self, state_data):
         self.id = state_data['id']
-        self.machine.state = state.named_event_by_name(state_data['state'])
+        self.machine.state = state.named_event_by_name(self.STATE_SCHEDULED, state_data['state'])
         self.run_time = state_data['run_time']
         self.start_time = state_data['start_time']
         self.end_time = state_data['end_time']

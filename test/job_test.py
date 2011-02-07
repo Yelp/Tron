@@ -5,7 +5,7 @@ import datetime
 from testify import *
 from testify.utils import turtle
 from tron import job, action, scheduler
-from tron.utils import timeutils
+from tron.utils import timeutils, testingutils
 
 
 class TestJobRun(TestCase):
@@ -22,7 +22,7 @@ class TestJobRun(TestCase):
         self.job.output_path = self.test_dir
         self.job.topo_actions.append(self.action2)
         self.job.scheduler = scheduler.DailyScheduler()
-        self.job.node_pool = turtle.Turtle()
+        self.job.node_pool = testingutils.TestPool()
         self.action1.job = self.job
         self.action2.job = self.job
 
@@ -49,7 +49,7 @@ class TestJobRun(TestCase):
     def test_schedule(self):
         jr = self.job.next_runs()[0]
         assert jr.action_runs[0].is_scheduled
-        assert jr.action_runs[1].is_queued
+        assert jr.action_runs[1].is_scheduled
 
         jr.succeed()
 
@@ -58,8 +58,8 @@ class TestJobRun(TestCase):
 
         jr.schedule()
 
-        assert jr.action_runs[0].is_scheduled
-        assert jr.action_runs[1].is_queued
+        assert jr.action_runs[0].is_scheduled, jr.action_runs[0].sta
+        assert jr.action_runs[1].is_scheduled
 
     def test_scheduled_start(self):
         self.job.queueing = True
@@ -71,6 +71,7 @@ class TestJobRun(TestCase):
 
         self.job.queueing = False
         jr2.schedule()
+        assert jr2.is_scheduled
         jr2.scheduled_start()
         assert jr2.is_cancelled
 
@@ -112,7 +113,7 @@ class TestJob(TestCase):
 
         self.job = job.Job("Test Job", self.action)
         self.job.output_path = self.test_dir
-        self.job.node_pool = turtle.Turtle()
+        self.job.node_pool = testingutils.TestPool()
         self.job.scheduler = scheduler.DailyScheduler()
         self.action.job = self.job
 
@@ -137,7 +138,7 @@ class TestJob(TestCase):
         runs = []
         for i in range(6):
             runs.append(self.job.next_runs()[0])
-            runs[i].action_runs[0].node = turtle.Turtle()
+            runs[i].action_runs[0].node = testingutils.TestNode()
 
         self.job.remove_old_runs()
         assert_equals(len(self.job.runs), 6)
@@ -171,7 +172,6 @@ class TestJob(TestCase):
         runs = []
         for i in range(5):
             runs.append(self.job.next_runs()[0])
-            runs[i].action_runs[0].node = turtle.Turtle()
 
         assert_equals(self.job.next_to_finish(), runs[0])
         runs[0].succeed()
@@ -188,7 +188,6 @@ class TestJob(TestCase):
         runs = []
         for i in range(10):
             runs.append(self.job.next_runs()[0])
-            runs[i].action_runs[0].node = turtle.Turtle()
 
         runs[0].start()
         runs[4].start()
@@ -220,7 +219,6 @@ class TestJob(TestCase):
             assert_equals(self.job.get_run_by_num(runs[i].run_num), runs[i])
 
     def test_build_run(self):
-        self.job.node_pool = turtle.Turtle()
         act = action.Action("Action Test2")
         act.command = "test"
         act.job = self.job
@@ -304,13 +302,13 @@ class TestJob(TestCase):
                'id': act1_id,
                'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
                'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 128291),
-               'state': 11},
+               'state': 'scheduled'},
               {'command': act3.command,
                'end_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 234116),
                'id': act3_id,
                'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
                'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 133002),
-               'state': 11}],
+               'state': 'scheduled'}],
          'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 128152)}
 
 
