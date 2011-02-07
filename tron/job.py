@@ -12,24 +12,27 @@ RUN_LIMIT = 50
 
 class JobRun(object):
     def __init__(self, job, run_num=None):
-        self.run_num = job.next_num() if run_num is None else run_num
         self.job = job
+        self.run_num = job.next_num() if run_num is None else run_num
         self.state_callback = job.state_callback
         self.id = "%s.%s" % (job.name, self.run_num)
-        self.output_dir = os.path.join(job.output_dir, self.id)
 
         self.run_time = None
         self.start_time = None
         self.end_time = None
         self.node = None
-        self.runs = []
+        self.action_runs = []
         self.context = command_context.CommandContext(self, job.context)
+
+    @property
+    def output_path(self):
+        return os.path.join(self.job.output_path, self.id)
 
     def set_run_time(self, run_time):
         self.run_time = run_time
 
-        for r in self.runs:
-            r.run_time = run_time
+        for action in self.action_runs:
+            action.run_time = run_time
 
     def scheduled_start(self):
         self.attempt_start()
@@ -47,8 +50,8 @@ class JobRun(object):
         self.start_time = timeutils.current_time()
         self.end_time = None
 
-        for r in self.runs:
-            r.attempt_start()
+        for action in self.action_runs:
+            action.attempt_start()
 
     def manual_start(self):
         self.queue()
@@ -78,7 +81,7 @@ class JobRun(object):
 
     @property
     def data(self):
-        return {'runs':[r.data for r in self.runs],
+        return {'runs':[a.data for a in self.action_runs],
                 'run_num': self.run_num,
                 'run_time': self.run_time,
                 'start_time': self.start_time,
@@ -86,23 +89,23 @@ class JobRun(object):
         }
 
     def schedule(self):
-        for r in self.runs:
+        for r in self.action_runs:
             r.schedule()
 
     def queue(self):
-        for r in self.runs:
+        for r in self.action_runs:
             r.queue()
 
     def cancel(self):
-        for r in self.runs:
+        for r in self.action_runs:
             r.cancel()
 
     def succeed(self):
-        for r in self.runs:
+        for r in self.action_runs:
             r.mark_success()
 
     def fail(self):
-        for r in self.runs:
+        for r in self.action_runs:
             r.fail(0)
 
     @property
@@ -113,35 +116,40 @@ class JobRun(object):
 
     @property
     def is_failure(self):
-        return any([r.is_failure for r in self.runs])
+        return any([r.is_failure for r in self.action_runs])
 
     @property
     def is_success(self):
-        return all([r.is_success for r in self.runs])
+        return all([r.is_success for r in self.action_runs])
 
     @property
     def is_done(self):
-        return not any([r.is_running or r.is_queued or r.is_scheduled for r in self.runs])
+        return not any([r.is_running or r.is_queued or r.is_scheduled for r in self.action_runs])
 
     @property
     def is_queued(self):
-        return all([r.is_queued for r in self.runs])
+        return all([r.is_queued for r in self.action_runs])
+
+    @property
+    def is_starting(self):
+        return any([r.is_starting for r in self.action_runs])
+
 
     @property
     def is_running(self):
-        return any([r.is_running for r in self.runs])
+        return any([r.is_running for r in self.action_runs])
 
     @property
     def is_scheduled(self):
-        return any([r.is_scheduled for r in self.runs])
+        return any([r.is_scheduled for r in self.action_runs])
 
     @property
     def is_unknown(self):
-        return any([r.is_unknown for r in self.runs])
+        return any([r.is_unknown for r in self.action_runs])
 
     @property
     def is_cancelled(self):
-        return all([r.is_cancelled for r in self.runs])
+        return all([r.is_cancelled for r in self.action_runs])
 
 
 class Job(object):
@@ -164,45 +172,38 @@ class Job(object):
 
         self.run_limit = RUN_LIMIT
         self.node_pool = None
-        self.output_dir = None
+        self.output_path = None
         self.state_callback = lambda:None
         self.context = command_context.CommandContext(self)
-
-        # Service Data
-        self.enable_act = None
-        self.disable_act = None
-        self.enable_runs = deque()
-        self.disable_runs = deque()
 
     def _register_action(self, action):
         """Prepare an action to be *owned* by this job"""
         if action in self.topo_actions:
             raise Error("Action %s already in jobs %s" % (action.name, job.name))
 
+    def listen(self, spec, callback):
+        """Mimic the state machine interface for listening to events"""
+        assert spec is True
+        self.state_callback = callback
+
+    def _notify(self):
+        self.state_callback()
+
     def add_action(self, action):
         self._register_action(action)
         self.topo_actions.append(action)
 
-    def set_enable_action(self, action):
-        """Set the action to be run on enable"""
-        self._register_action(action)
-        self.enable_act = action
-
-    def set_disable_action(self, action):
-        """Set the action to be run on disable"""
-        self._register_action(action)
-        self.disable_act = action
-
     def __eq__(self, other):
-        if not isinstance(other, Job) or self.name != other.name or self.queueing != other.queueing \
-           or self.scheduler != other.scheduler or self.node_pool != other.node_pool \
-           or len(self.topo_actions) != len(other.topo_actions) or self.enable_act != other.enable_act \
-           or self.disable_act != other.disable_act or self.run_limit != other.run_limit \
-           or self.all_nodes != other.all_nodes:
+        if not isinstance(other, Job) or self.name != other.name \
+                or self.queueing != other.queueing \
+                or self.scheduler != other.scheduler \
+                or self.node_pool != other.node_pool \
+                or len(self.topo_actions) != len(other.topo_actions) \
+                or self.run_limit != other.run_limit \
+                or self.all_nodes != other.all_nodes:
             return False
 
-        return all([me == you for (me, you) in zip(self.topo_actions, other.topo_actions)]) and \
-               self.enable_act == other.enable_act and self.disable_act == other.disable_act
+        return all([me == you for (me, you) in zip(self.topo_actions, other.topo_actions)])
 
     def __ne__(self, other):
         return not self == other
@@ -211,30 +212,21 @@ class Job(object):
         self.context.next = context
 
     def enable(self):
-        if self.enable_act:
-            run = self.build_run(actions=[self.enable_act])
-            self.enable_runs.appendleft(run)
-            run.start()
-
         self.enabled = True
         next = self.next_to_finish()
+
         if next and next.is_queued:
             next.start()
 
     def remove_run(self, run):
         self.runs.remove(run)
 
-        if os.path.exists(run.output_dir):
-            shutil.rmtree(run.output_dir)
+        if os.path.exists(run.output_path):
+            shutil.rmtree(run.output_path)
 
         run.job = None
 
     def disable(self):
-        if self.disable_act:
-            run = self.build_run(actions=[self.disable_act])
-            self.disable_runs.appendleft(run)
-            run.start()
-
         self.enabled = False
 
         # We need to get rid of all future runs.
@@ -276,9 +268,7 @@ class Job(object):
         def choose(chosen, next):
             return next if next.run_num == num else chosen
 
-        return reduce(choose, self.enable_runs, None) or \
-               reduce(choose, self.disable_runs, None) or \
-               reduce(choose, self.runs, None)
+        return reduce(choose, self.runs, None)
 
     def remove_old_runs(self):
         """Remove old runs so the number left matches the run limit.
@@ -299,18 +289,25 @@ class Job(object):
 
         return self.scheduler.next_runs(self)
 
-    def build_action_dag(self, job_run, actions):
+    def build_action_dag(self, job_run, all_actions):
         """Build actions and setup requirements"""
-        runs = {}
-        for a in actions:
-            run = a.build_run(job_run)
-            runs[a.name] = run
+        action_runs_by_name = {}
+        for action_inst in all_actions:
+            action_run = action_inst.build_run(job_run)
+            
+            action_run.node = job_run.node
+            
+            action_run.machine.listen(True, self._notify)
+            action_run.machine.listen(action.ActionRun.STATE_SUCCEEDED, job_run.run_completed)
+            action_run.machine.listen(action.ActionRun.STATE_FAILED, job_run.run_completed)
 
-            job_run.runs.append(run)
+            action_runs_by_name[action_inst.name] = action_run
+            job_run.action_runs.append(action_run)
 
-            for req in a.required_actions:
-                runs[req.name].waiting_runs.append(run)
-                run.required_runs.append(runs[req.name])
+            for req_action in action_inst.required_actions:
+                # Two-way, waiting runs and required_runs
+                action_runs_by_name[req_action.name].waiting_runs.append(action_run)
+                action_run.required_runs.append(action_runs_by_name[req_action.name])
 
     def build_run(self, node=None, actions=None, run_num=None):
         job_run = JobRun(self, run_num=run_num)
@@ -319,8 +316,8 @@ class Job(object):
         log.info("Built run %s", job_run.id)
 
         # It would be great if this were abstracted out a bit
-        if os.path.exists(self.output_dir) and not os.path.exists(job_run.output_dir):
-            os.mkdir(job_run.output_dir)
+        if os.path.exists(self.output_path) and not os.path.exists(job_run.output_path):
+            os.mkdir(job_run.output_path)
 
         # If the actions aren't specified, then we know this is a normal run
         if not actions:
@@ -352,10 +349,8 @@ class Job(object):
 
     def absorb_old_job(self, old):
         self.runs = old.runs
-        self.enable_runs = old.enable_runs
-        self.disable_runs = old.disable_runs
 
-        self.output_dir = old.output_dir
+        self.output_path = old.output_path
         self.last_success = old.last_success
         self.run_num = old.run_num
         self.enabled = old.enabled
@@ -366,20 +361,8 @@ class Job(object):
     @property
     def data(self):
         return {'runs': [r.data for r in self.runs],
-                'enable_runs':[r.data for r in self.enable_runs],
-                'disable_runs':[r.data for r in self.disable_runs],
                 'enabled': self.enabled
         }
-
-    def restore_enable_run(self, data):
-        run = self.restore_run(data, [self.enable_act])
-        self.enable_runs.append(run)
-        return run
-
-    def restore_disable_run(self, data):
-        run = self.restore_run(data, [self.disable_act])
-        self.disable_runs.append(run)
-        return run
 
     def restore_main_run(self, data):
         action_names = []
@@ -402,7 +385,7 @@ class Job(object):
         run = self.build_run(run_num=data['run_num'], actions=actions)
         self.run_num = max([run.run_num + 1, self.run_num])
 
-        for r, state in zip(run.runs, data['runs']):
+        for r, state in zip(run.action_runs, data['runs']):
             r.restore_state(state)
 
         run.start_time = data['start_time']

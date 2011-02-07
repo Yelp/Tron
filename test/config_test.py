@@ -92,21 +92,10 @@ services:
     -
         name: "service0"
         node: *nodePool
-        enable:
-            command: "service_command0"
-        disable:
-            command: "service_command1"
-        monitor:
-            schedule: "interval 5 mins"
-            actions:
-                - &mon0
-                    name: "mon0"
-                    command: "service_command2"
-                -
-                    name: "mon1"
-                    command: "service_command3"
-                    requires: *mon0
-
+        command: "service_command0"
+        count: 2
+        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+        monitor_interval: 20
 """
     @setup
     def setup(self):
@@ -124,7 +113,7 @@ services:
         self.job3 = self.my_mcp.jobs['test_job3']
         self.job4 = self.my_mcp.jobs['test_job4']
 
-        self.serv = self.my_mcp.jobs['service0']
+        self.serv = self.my_mcp.services['service0']
 
         self.all_jobs = [self.job0, self.job1, self.job2, self.job3, self.job4]
 
@@ -237,25 +226,12 @@ services:
         assert_equal(self.job1.context['python'], "/usr/bin/python")
 
     def test_service_attributes(self):
-        assert_equals(self.serv.name, 'service0')
-
-        assert self.serv.enable_act
-        assert_equals(self.serv.enable_act.name, 'enable')
-        assert_equals(self.serv.enable_act.command, 'service_command0')
-
-        assert self.serv.disable_act
-        assert_equals(self.serv.disable_act.name, 'disable')
-        assert_equals(self.serv.disable_act.command, 'service_command1')
-
-        assert_equals(len(self.serv.topo_actions), 2)
-        assert_equals(self.serv.topo_actions[0].name, 'mon0')
-        assert_equals(self.serv.topo_actions[0].command, 'service_command2')
-        assert_equals(len(self.serv.topo_actions[0].required_actions), 0)
-
-        assert_equals(self.serv.topo_actions[1].name, 'mon1')
-        assert_equals(self.serv.topo_actions[1].command, 'service_command3')
-        assert_equals(len(self.serv.topo_actions[1].required_actions), 1)
-        assert_equals(self.serv.topo_actions[1].required_actions[0], self.serv.topo_actions[0])
+        assert_equal(self.serv.name, 'service0')
+        assert_equal(self.serv.monitor_interval, 20)
+        assert_equal(self.serv.count, 2)
+        assert self.serv.pid_file_template
+        assert self.serv.command
+        assert self.serv.context
         
 if __name__ == '__main__':
     run()

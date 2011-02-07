@@ -42,18 +42,6 @@ class StateHandler(object):
     def restore_job(self, job, data):
         job.enabled = data['enabled']
 
-        try:
-            for e_data in data['enable_runs']:
-                run = job.restore_enable_run(e_data)
-        except Exception, e:
-            log.error("Cannot restore enabling runs for job %s: %s" % (job.name, str(e))) 
-
-        try:
-            for d_data in data['disable_runs']:
-                run = job.restore_disable_run(d_data)
-        except Exception, e:
-            log.error("Cannot restore disabling runs for job %s: %s" % (job.name, str(e))) 
-
         for r_data in data['runs']:
             run = job.restore_main_run(r_data)
             if run.is_scheduled:
@@ -64,6 +52,10 @@ class StateHandler(object):
         next = job.next_to_finish()
         if job.enabled and next and next.is_queued:
             next.start()
+
+    def restore_service(self, service, data):
+        service.restore(data)
+        service.set_context(self.mcp.context)
 
     def delay_store(self):
         self.store_delayed = False
@@ -89,6 +81,8 @@ class StateHandler(object):
 
     def store_state(self):
         """Stores the state of tron"""
+        log.debug("store_state called: %r, %r", self.write_pid, self.writing_enabled)
+
         # If tron is already storing data, don't start again till it's done
         if self.write_pid or not self.writing_enabled:
             # If a child is writing, we don't want to ignore this change, so lets try it later
@@ -154,11 +148,15 @@ class StateHandler(object):
         data = {
             'version': tron.__version_info__,
             'create_time': int(time.time()),
-            'jobs': {}
+            'jobs': {},
+            'services': {},
         }
 
         for j in self.mcp.jobs.itervalues():
             data['jobs'][j.name] = j.data
+
+        for s in self.mcp.services.itervalues():
+            data['services'][s.name] = s.data
 
         return data
 
@@ -171,6 +169,7 @@ class MasterControlProgram(object):
     """
     def __init__(self, working_dir, config_file, context=None):
         self.jobs = {}
+        self.services = {}
         self.nodes = []
         self.state_handler = StateHandler(self, working_dir)
         self.config_file = config_file
@@ -218,11 +217,13 @@ class MasterControlProgram(object):
             log.error(str(e) + " - Cannot write to configuration file!")
 
     def setup_job_dir(self, job):
-        job.output_dir = os.path.join(self.state_handler.working_dir, job.name)
-        if not os.path.exists(job.output_dir):
-            os.mkdir(job.output_dir)
+        job.output_path = os.path.join(self.state_handler.working_dir, job.name)
+        if not os.path.exists(job.output_path):
+            os.mkdir(job.output_path)
 
     def add_job(self, job):
+        if job.name in self.services:
+            raise ValueError("Job %s is already a service", job.name)
         if job.name in self.jobs:
             # Jobs have a complex eq implementation that allows us to catch jobs that have not changed and thus
             # don't need to be updated during a reconfigure
@@ -240,7 +241,7 @@ class MasterControlProgram(object):
 
         job.set_context(self.context)
         self.setup_job_dir(job)
-        job.state_callback = self.state_handler.store_state
+        job.listen(True, self.state_handler.store_state)
 
     def remove_job(self, job_name):
         if job_name not in self.jobs:
@@ -249,6 +250,32 @@ class MasterControlProgram(object):
         job = self.jobs.pop(job_name)
 
         job.disable()
+
+    def add_service(self, service):
+        if service.name in self.jobs:
+            raise ValueError("Service %s is already a job", service.name)
+        
+        prev_service = self.services.get(service.name)
+        
+        if service == prev_service:
+            return
+            
+        service.set_context(self.context)
+
+        # Trigger storage on any state changes
+        service.listen(True, self.state_handler.store_state)
+
+        self.services[service.name] = service
+
+        if prev_service is not None:
+            service.absorb_previous(prev_service)
+
+    def remove_service(self, service_name):
+        if service_name not in self.services:
+            raise ValueError("Service %s unknown", service_name)
+
+        service = self.services.pop(service_name)
+        service.stop()
 
     def _schedule(self, run):
         sleep = sleep_time(run.run_time)
@@ -314,6 +341,15 @@ class MasterControlProgram(object):
             else:
                 log.warning("Job name %s from state file unknown", name)
 
+                self.state_handler.restore_job(self.jobs[name], data[name])
+
+        for name in data['services'].iterkeys():
+            if name in self.services:
+                state_load_count += 1
+                self.state_handler.restore_service(self.services[name], data['services'][name])
+            else:
+                log.warning("Service name %s from state file unknown", name)
+
         log.info("Loaded state for %d jobs", state_load_count)
 
     def run_jobs(self):
@@ -325,7 +361,8 @@ class MasterControlProgram(object):
                 else:
                     self.enable_job(tron_job)
         
-        self.state_handler.writing_enabled = True
-        self.state_handler.store_state()
-
+    def run_services(self):
+        for service in self.services.itervalues():
+            if not service.is_started:
+                service.start()
 

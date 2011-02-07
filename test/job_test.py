@@ -5,59 +5,8 @@ import datetime
 from testify import *
 from testify.utils import turtle
 from tron import job, action, scheduler
-from tron.utils import timeutils
+from tron.utils import timeutils, testingutils
 
-class TestEnableDisableRuns(TestCase):
-    @setup
-    def setup(self):
-        self.test_dir = tempfile.mkdtemp()
-        self.action1 = action.Action(name="Test Act1")
-        self.action1.command = "Test Command"
-
-        self.job = job.Job("Test Job", self.action1)
-        self.job.output_dir = self.test_dir
-        self.job.scheduler = scheduler.DailyScheduler()
-        self.job.node_pool = turtle.Turtle()
-        self.action1.job = self.job
-
-        self.job.enable_act = action.Action(name='Enable Act')
-        self.job.enable_act.command = 'Enable Command'
-        self.job.enable_act.job = self.job
-        self.job.disable_act = action.Action(name='Disable Act')
-        self.job.disable_act.command = 'Disable Command'
-        self.job.disable_act.job = self.job
-
-    @teardown
-    def teardown(self):
-        shutil.rmtree(self.test_dir)
-
-    def test_enable(self):
-        assert_equal(len(self.job.enable_runs), 0)
-        self.job.enable()
-
-        assert_equal(len(self.job.enable_runs), 1)
-        er = self.job.enable_runs[0]
-        assert er.is_running
-        assert_equal(len(er.runs), 1)
-        assert_equal(er.runs[0].action, self.job.enable_act)
-        assert er.runs[0].is_running
-
-        self.job.enable()
-        assert_equal(len(self.job.enable_runs), 2)
-
-    def test_disable(self):
-        assert_equal(len(self.job.disable_runs), 0)
-        self.job.disable()
-
-        assert_equal(len(self.job.disable_runs), 1)
-        assert self.job.disable_runs[0].is_running
-        dr = self.job.disable_runs[0]
-        assert_equal(len(dr.runs), 1)
-        assert_equal(dr.runs[0].action, self.job.disable_act)
-        assert dr.runs[0].is_running
-
-        self.job.disable()
-        assert_equal(len(self.job.disable_runs), 2)
 
 class TestJobRun(TestCase):
     @setup
@@ -70,10 +19,10 @@ class TestJobRun(TestCase):
         self.action2.command = "Test Command"
 
         self.job = job.Job("Test Job", self.action1)
-        self.job.output_dir = self.test_dir
+        self.job.output_path = self.test_dir
         self.job.topo_actions.append(self.action2)
         self.job.scheduler = scheduler.DailyScheduler()
-        self.job.node_pool = turtle.Turtle()
+        self.job.node_pool = testingutils.TestPool()
         self.action1.job = self.job
         self.action2.job = self.job
 
@@ -87,30 +36,30 @@ class TestJobRun(TestCase):
         jr.set_run_time(time)
 
         assert_equal(jr.run_time, time)
-        assert_equal(jr.runs[0].run_time, time)
-        assert_equal(jr.runs[1].run_time, time)
+        assert_equal(jr.action_runs[0].run_time, time)
+        assert_equal(jr.action_runs[1].run_time, time)
 
     def test_start(self):
         jr = self.job.next_runs()[0]
         jr.start()
 
-        assert jr.runs[0].is_running
-        assert not jr.runs[1].is_running
+        assert jr.action_runs[0].is_running
+        assert not jr.action_runs[1].is_running
 
     def test_schedule(self):
         jr = self.job.next_runs()[0]
-        assert jr.runs[0].is_scheduled
-        assert jr.runs[1].is_queued
+        assert jr.action_runs[0].is_scheduled
+        assert jr.action_runs[1].is_scheduled
 
         jr.succeed()
 
-        assert jr.runs[0].is_success
-        assert jr.runs[1].is_success
+        assert jr.action_runs[0].is_success
+        assert jr.action_runs[1].is_success
 
         jr.schedule()
 
-        assert jr.runs[0].is_scheduled
-        assert jr.runs[1].is_queued
+        assert jr.action_runs[0].is_scheduled, jr.action_runs[0].sta
+        assert jr.action_runs[1].is_scheduled
 
     def test_scheduled_start(self):
         self.job.queueing = True
@@ -122,6 +71,7 @@ class TestJobRun(TestCase):
 
         self.job.queueing = False
         jr2.schedule()
+        assert jr2.is_scheduled
         jr2.scheduled_start()
         assert jr2.is_cancelled
 
@@ -162,8 +112,8 @@ class TestJob(TestCase):
         self.action.command = "Test Command"
 
         self.job = job.Job("Test Job", self.action)
-        self.job.output_dir = self.test_dir
-        self.job.node_pool = turtle.Turtle()
+        self.job.output_path = self.test_dir
+        self.job.node_pool = testingutils.TestPool()
         self.job.scheduler = scheduler.DailyScheduler()
         self.action.job = self.job
 
@@ -188,7 +138,7 @@ class TestJob(TestCase):
         runs = []
         for i in range(6):
             runs.append(self.job.next_runs()[0])
-            runs[i].runs[0].node = turtle.Turtle()
+            runs[i].action_runs[0].node = testingutils.TestNode()
 
         self.job.remove_old_runs()
         assert_equals(len(self.job.runs), 6)
@@ -222,7 +172,7 @@ class TestJob(TestCase):
         runs = []
         for i in range(5):
             runs.append(self.job.next_runs()[0])
-            runs[i].runs[0].node = turtle.Turtle()
+            runs[i].action_runs[0].node = turtle.Turtle()
 
         assert_equals(self.job.newest(), runs[-1])
         runs[0].succeed()
@@ -236,7 +186,6 @@ class TestJob(TestCase):
         runs = []
         for i in range(5):
             runs.append(self.job.next_runs()[0])
-            runs[i].runs[0].node = turtle.Turtle()
 
         assert_equals(self.job.next_to_finish(), runs[0])
         runs[0].succeed()
@@ -253,7 +202,6 @@ class TestJob(TestCase):
         runs = []
         for i in range(10):
             runs.append(self.job.next_runs()[0])
-            runs[i].runs[0].node = turtle.Turtle()
 
         runs[0].start()
         runs[4].start()
@@ -285,21 +233,20 @@ class TestJob(TestCase):
             assert_equals(self.job.get_run_by_num(runs[i].run_num), runs[i])
 
     def test_build_run(self):
-        self.job.node_pool = turtle.Turtle()
         act = action.Action("Action Test2")
         act.command = "test"
         act.job = self.job
 
         self.job.topo_actions.append(act)
         run1 = self.job.next_runs()[0]
-        assert_equals(run1.runs[0].action, self.action)
-        assert_equals(run1.runs[1].action, act)
+        assert_equals(run1.action_runs[0].action, self.action)
+        assert_equals(run1.action_runs[1].action, act)
 
         run2 = self.job.next_runs()[0]
         assert_equals(self.job.runs[1], run1)
 
-        assert_equals(run2.runs[0].action, self.action)
-        assert_equals(run2.runs[1].action, act)
+        assert_equals(run2.action_runs[0].action, self.action)
+        assert_equals(run2.action_runs[1].action, act)
 
     def test_manual_start_no_scheduled(self):
         r1 = self.job.build_run()
@@ -369,22 +316,22 @@ class TestJob(TestCase):
                'id': act1_id,
                'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
                'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 128291),
-               'state': 11},
+               'state': 'scheduled'},
               {'command': act3.command,
                'end_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 234116),
                'id': act3_id,
                'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
                'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 133002),
-               'state': 11}],
+               'state': 'scheduled'}],
          'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 128152)}
 
 
         job_run = self.job.restore_main_run(state_data)
 
         # act2 was filtered
-        assert_equal(len(job_run.runs), 2)
-        assert_equal(job_run.runs[0].id, act1_id)
-        assert_equal(job_run.runs[1].id, act3_id)
+        assert_equal(len(job_run.action_runs), 2)
+        assert_equal(job_run.action_runs[0].id, act1_id)
+        assert_equal(job_run.action_runs[1].id, act3_id)
 
 
 

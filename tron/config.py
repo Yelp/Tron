@@ -8,7 +8,14 @@ import os
 import yaml
 from twisted.conch.client import options
 
-from tron import action, job, node, scheduler, monitor, emailer, command_context
+from tron import action
+from tron import job
+from tron import node
+from tron import scheduler
+from tron import monitor
+from tron import emailer
+from tron import command_context
+from tron import service
 
 log = logging.getLogger("tron.config")
 
@@ -62,16 +69,10 @@ services:
     # - &sample_service
     #     name: "sample_service"
     #     node: *node
-    #     enable:
-    #         command: "echo 'enabled'"
-    #     disable:
-    #         command: "echo 'disabled'"
-    #     monitor:
-    #         schedule: "interval 10 mins"
-    #         actions:
-    #             -
-    #                 name: "monitor"
-    #                 command: "uptime"
+    #     count: 2
+    #     pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+    #     command: "run_service --pid-file=%(pid_file)s start"
+    #     monitor_interval: 20
 
 """
 
@@ -157,9 +158,10 @@ class TronConfiguration(yaml.YAMLObject):
         """Handle our node/node pool configuration and make sure MCP knows about them all"""
         existing_nodes = mcp.nodes
         mcp.nodes = []
-        if not self.nodes:
-            return
 
+        if self.nodes is None:
+            return
+            
         try:
             for node_conf in self.nodes:
                 node = default_or_from_tag(node_conf, Node)
@@ -173,7 +175,7 @@ class TronConfiguration(yaml.YAMLObject):
             raise
 
     def _apply_jobs(self, mcp):
-        """Configure actions"""
+        """Configure jobs"""
         found_jobs = []
 
         # Check for duplicates before we start editing jobs
@@ -186,20 +188,39 @@ class TronConfiguration(yaml.YAMLObject):
         jobs = []
         if getattr(self, 'jobs', None):
             jobs = [default_or_from_tag(job_val, Job) for job_val in self.jobs]
-        if getattr(self, 'services', None):
-            jobs.extend([default_or_from_tag(job_val, Service) for job_val in self.services])
 
         found_jobs = reduce(check_dup, jobs, {})
         for job_config in jobs:
-            new_job = job_config.actualized
             log.debug("Building new job %s", job_config.name)
+            new_job = job_config.actualized
             mcp.add_job(new_job)
 
         for job_name in mcp.jobs.keys():
             if job_name not in found_jobs:
                 log.debug("Removing job %s", job_name)
-                
                 mcp.remove_job(job_name)
+
+    def _apply_services(self, mcp):
+        """Configure services"""
+        services = []
+        if getattr(self, 'services', None):
+            services.extend([default_or_from_tag(srv_val, Service) for srv_val in self.services])
+
+        found_srv_names = set()
+        for srv_config in services:
+            if srv_config.name in found_srv_names:
+                raise yaml.YAMLError("Duplicate service name %s" % srv_config.name)
+            found_srv_names.add(srv_config.name)
+
+            log.debug("Building new services %s", srv_config.name)
+            new_service = srv_config.actualized
+            mcp.add_service(new_service)
+
+        for srv_name in mcp.services.keys():
+            if srv_name not in found_srv_names:
+                log.debug("Removing service %s", srv_name)
+                mcp.remove_service(srv_name)
+
 
     def _get_working_dir(self, mcp):
         if mcp.state_handler.working_dir:
@@ -233,6 +254,7 @@ class TronConfiguration(yaml.YAMLObject):
             self.ssh_options._apply(mcp)
         
         self._apply_jobs(mcp)
+        self._apply_services(mcp)
 
         if hasattr(self, 'notification_options'):
             self.notification_options = default_or_from_tag(self.notification_options, NotificationOptions)
@@ -290,54 +312,56 @@ class NotificationOptions(yaml.YAMLObject, FromDictBuilderMixin):
         mcp.monitor = monitor.CrashReporter(em)
         mcp.monitor.start()
 
- 
+
+def _match_name(real, name):
+    real.name = name
+
+    if not re.match(r'[a-z_]\w*$', name, re.I):
+        raise yaml.YAMLError("Invalid job name '%s' - not a valid identifier" % name)
+
+def _match_node(real, node_conf):
+    node = default_or_from_tag(node_conf, Node)
+    if not isinstance(node, NodePool):
+        node_pool = NodePool()
+        node_pool.nodes.append(node)
+    else:
+        node_pool = node
+    
+    real.node_pool = node_pool.actualized
+
+def _match_schedule(real, schedule_conf):
+    if isinstance(schedule_conf, basestring):
+        # This is a short string
+        real.scheduler = Scheduler.from_string(schedule_conf)
+    else:
+        # This is a scheduler instance, which has more info
+        real.scheduler = schedule_conf.actualized
+
+    real.scheduler.job_setup(real)
+
+def _match_actions(real, action_conf_list):
+    for action_conf in action_conf_list:
+        action = default_or_from_tag(action_conf, Action)
+        real_action = action.actualized
+
+        if not real.node_pool and not real_action.node_pool:
+            raise yaml.YAMLError("Either job '%s' or its action '%s' must have a node" 
+               % (real.name, action_action.name))
+
+        real.add_action(real_action)
+
+                   
 class Job(_ConfiguredObject):
     yaml_tag = u'!Job'
     actual_class = job.Job
-
-    def _match_name(self, real, name):
-        real.name = name
-        
-        if not re.match(r'[a-z_]\w*$', name, re.I):
-            raise yaml.YAMLError("Invalid job name '%s' - not a valid identifier" % self.name)
-
-    def _match_schedule(self, real, schedule):
-        if isinstance(schedule, basestring):
-            # This is a short string
-            real.scheduler = Scheduler.from_string(schedule)
-        else:
-            # This is a scheduler instance, which has more info
-            real.scheduler = schedule.actualized
-        real.scheduler.job_setup(real)
-
-    def _match_actions(self, real_job, actions):
-        for action_conf in actions:
-            action = default_or_from_tag(action_conf, Action)
-            real_action = action.actualized
-
-            if not real_job.node_pool and not real_action.node_pool:
-                raise yaml.YAMLError("Either job '%s' or its action '%s' must have a node" 
-                   % (real_job.name, action_action.name))
-
-            real_job.add_action(real_action)
-    
-    def _match_node(self, real_job, node_conf):
-        node = default_or_from_tag(node_conf, Node)
-        if not isinstance(node, NodePool):
-            node_pool = NodePool()
-            node_pool.nodes.append(node)
-        else:
-            node_pool = node
-            
-        real_job.node_pool = node_pool.actualized
-                    
+                   
     def _apply(self):
         real_job = self._ref()
 
-        self._match_name(real_job, self.name)
-        self._match_node(real_job, self.node)
-        self._match_schedule(real_job, self.schedule)
-        self._match_actions(real_job, self.actions)
+        _match_name(real_job, self.name)
+        _match_node(real_job, self.node)
+        _match_schedule(real_job, self.schedule)
+        _match_actions(real_job, self.actions)
 
         if hasattr(self, "queueing"):
             real_job.queueing = self.queueing
@@ -349,27 +373,23 @@ class Job(_ConfiguredObject):
             real_job.all_nodes = self.all_nodes
 
 
-class Service(Job):
+class Service(_ConfiguredObject):
     yaml_tag = u'!Service'
-    actual_class = job.Job
+    actual_class = service.Service
 
     def _apply(self):
         real_service = self._ref()
 
-        self._match_name(real_service, self.name)
-        self._match_node(real_service, self.node)
-        self._match_schedule(real_service, self.monitor['schedule'])
-        self._match_actions(real_service, self.monitor['actions'])
-
-        if hasattr(self, "enable"):
-            enable = default_or_from_tag(self.enable, Action)
-            enable.name = enable.name or "enable"
-            real_service.set_enable_action(enable.actualized)
+        _match_name(real_service, self.name)
+        _match_node(real_service, self.node)
+        real_service.monitor_interval = int(self.monitor_interval)
         
-        if hasattr(self, "disable"):
-            disable = default_or_from_tag(self.disable, Action)
-            disable.name = disable.name or "disable"
-            real_service.set_disable_action(disable.actualized)
+        real_service.pid_file_template = self.pid_file
+        
+        real_service.command = self.command
+        
+        if hasattr(self, "count"):
+            real_service.count = self.count
 
 
 class Action(_ConfiguredObject):

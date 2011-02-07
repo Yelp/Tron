@@ -40,16 +40,18 @@ clean:
 devclean:
 		rm -rf env
 
+devinstall: env/.tron_install
+
 env:
-		mkdir -f env
+		virtualenv --no-site-packages env
 
-env/virtualenv.install: env
-		virtualenv env
-		touch $@
+env/.pip_install: env req.txt
+		pip -E env install -r req.txt
 
-devinstall: env env/lib/tron.install
-
-env/lib/tron.install :
+env/.tron_install : env/.pip_install setup.py
 		pip -E env install -e .
 		mkdir -p env/var/tron
 		touch $@
+
+req.txt:
+		pip -E env freeze > req.txt

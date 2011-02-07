@@ -3,6 +3,7 @@
 Got to know what's going on ?
 """
 import logging
+import urllib
 
 from twisted.internet import reactor
 from twisted.cred import checkers
@@ -12,6 +13,7 @@ import simplejson
 
 from tron.utils import timeutils
 from tron import config
+from tron import service
 
 log = logging.getLogger("tron.www")
 
@@ -120,7 +122,7 @@ class JobRunResource(resource.Resource):
         if act_name == '':
             return self
         
-        for act_run in self._run.runs:
+        for act_run in self._run.action_runs:
             if act_name == act_run.action.name:
                 return ActionRunResource(act_run)
 
@@ -130,7 +132,7 @@ class JobRunResource(resource.Resource):
         run_output = []
         state = job_run_state(self._run)
         
-        for action_run in self._run.runs:
+        for action_run in self._run.action_runs:
             action_state = job_run_state(action_run)
             
             last_time = action_run.end_time if action_run.end_time else timeutils.current_time()
@@ -257,22 +259,12 @@ class JobResource(resource.Resource):
         for job_run in self._job.runs:
             run_output.append(self.get_run_data(request, job_run))
 
-        enable_run_output = []
-        for e_run in self._job.enable_runs:
-            enable_run_output.append(self.get_run_data(request, e_run))
-
-        disable_run_output = []
-        for d_run in self._job.disable_runs:
-            disable_run_output.append(self.get_run_data(request, d_run))
-
         resources_output = []
         
         output = {
             'name': self._job.name,
             'scheduler': str(self._job.scheduler),
             'runs': run_output,
-            'enable_runs': enable_run_output,
-            'disable_runs': disable_run_output,
             'action_names': map(lambda t: t.name, self._job.topo_actions),
             'node_pool': map(lambda n: n.hostname, self._job.node_pool.nodes),
         }
@@ -314,22 +306,19 @@ class JobsResource(resource.Resource):
             return resource.NoResource("Cannot find job '%s'" % name)
         
         return JobResource(found, self._master_control)
-        
-    def render_GET(self, request):
-        request.setHeader("content-type", "text/json")
-        
+    
+    def get_data(self, request):
         serv_list = []
         job_list = []
         for current_job in self._master_control.jobs.itervalues():
             last_success = current_job.last_success.end_time.strftime("%Y-%m-%d %H:%M:%S") if current_job.last_success else None
             
             # We need to describe the current state of this job
-            is_service = current_job.enable_act or current_job.disable_act
             current_run = current_job.next_to_finish()
             status = "UNKNOWN"
 
             if current_run and current_run.is_running:
-                status = "MONITORING" if is_service else "RUNNING"
+                status = "RUNNING"
             elif current_run and current_run.is_scheduled:
                 status = "ENABLED"
             elif not current_run:
@@ -337,20 +326,22 @@ class JobsResource(resource.Resource):
                 
             job_desc = {
                 'name': current_job.name,
-                'href': request.childLink(current_job.name),
+                'href': "/jobs/%s" % urllib.quote(current_job.name),
                 'status': status,
                 'scheduler': str(current_job.scheduler),
                 'last_success': last_success,
             }
-            if is_service:
-                serv_list.append(job_desc)
-            else:
-                job_list.append(job_desc)
+            job_list.append(job_desc)
 
+        return job_list
+
+    def render_GET(self, request):
+        request.setHeader("content-type", "text/json")
+        
         output = {
-            'jobs': job_list,
-            'services': serv_list,
+            'jobs': self.get_data(request),
         }
+
         return respond(request, output)
     
     def render_POST(self, request):
@@ -367,6 +358,136 @@ class JobsResource(resource.Resource):
 
         log.warning("Unknown request command %s for all jobs", request.args['command'])
         return respond(request, None, code=http.NOT_IMPLEMENTED)
+
+class ServiceInstanceResource(resource.Resource):
+    isLeaf = True
+    def __init__(self, service_instance, master_control):
+        self._service_instance = service_instance
+        self._master_control = master_control
+        resource.Resource.__init__(self)
+ 
+    def render_POST(self, request):
+        cmd = request.args['command'][0]
+        log.info("Handling '%s' request on service %s", cmd, self._service_instance.id)
+
+        if cmd == 'stop':
+            self._service_instance.stop()
+
+            return respond(request, {'result': "Service instance stopping"})
+
+        if cmd == 'start':
+            try:
+                self._service_instance.start()
+            except service.InvalidStateError:
+                return respond(request, {'result': "Failed to start: Service is already %s" % self._service_instance.state})
+
+            return respond(request, {'result': "Service instance starting"})
+
+        log.warning("Unknown request command %s for service %s", request.args['command'], self._service_instance.id)
+        return respond(request, None, code=http.NOT_IMPLEMENTED)
+    
+
+class ServiceResource(resource.Resource):
+    """A resource that describes a particular service"""
+    def __init__(self, service, master_control):
+        self._service = service
+        self._master_control = master_control
+        resource.Resource.__init__(self)
+
+    def getChild(self, name, request):
+        if name == '':
+            return self
+
+        found = None
+        for instance in self._service.instances:
+            if str(instance.instance_number) == str(name):
+                return ServiceInstanceResource(instance, self._master_control)
+        else:
+            return resource.NoResource("Cannot find service '%s'" % name)
+
+    def get_instance_data(self, request, instance):
+        return {
+                'id': instance.id,
+                'node': instance.node.hostname if instance.node else None,
+                'state': instance.state.name,
+            }
+
+    def render_GET(self, request):
+        instance_output = []
+        for instance in self._service.instances:
+            instance_output.append(self.get_instance_data(request, instance))
+
+        resources_output = []
+        
+        output = {
+            'name': self._service.name,
+            'state': self._service.state.name.upper(),
+            'count': self._service.count,
+            'command': self._service.command,
+            'instances': instance_output,
+            'node_pool': map(lambda n: n.hostname, self._service.node_pool.nodes),
+        }
+        return respond(request, output)
+
+    def render_POST(self, request):
+        cmd = request.args['command'][0]
+        log.info("Handling '%s' request on service %s", cmd, self._service.name)
+
+        if cmd == 'stop':
+            self._service.stop()
+
+            return respond(request, {'result': "Service stopping"})
+       
+        if cmd == 'start':
+            try:
+                self._service.start()
+            except service.InvalidStateError:
+                return respond(request, {'result': "Failed to start: Service is already %s" % self._service.state})
+
+            return respond(request, {'result': "Service starting"})
+
+        log.warning("Unknown request command %s for service %s", request.args['command'], self._service.name)
+        return respond(request, None, code=http.NOT_IMPLEMENTED)
+
+class ServicesResource(resource.Resource):
+    """Resource for all our daemon's services"""
+    def __init__(self, master_control):
+        self._master_control = master_control
+        resource.Resource.__init__(self)
+
+    def getChild(self, name, request):
+        if name == '':
+            return self
+        
+        found = self._master_control.services.get(name)
+        if found is None:
+            return resource.NoResource("Cannot find service '%s'" % name)
+        
+        return ServiceResource(found, self._master_control)
+    
+    def get_data(self, request):
+        service_list = []
+        for current_service in self._master_control.services.itervalues():
+            status = current_service.state.name.upper()
+            service_desc = {
+                'name': current_service.name,
+                'count': current_service.count,
+                'href': "/services/%s" % urllib.quote(current_service.name),
+                'status': status,
+            }
+            service_list.append(service_desc)
+
+        return service_list
+
+    def render_GET(self, request):
+        request.setHeader("content-type", "text/json")
+        
+        service_list = self.get_data(request)
+
+        output = {
+            'services': service_list,
+        }
+        return respond(request, output)
 
 
 class ConfigResource(resource.Resource):
@@ -393,7 +514,15 @@ class ConfigResource(resource.Resource):
             response['error'] = str(e)
         
         return respond(request, response)
-        
+
+class StatusResource(resource.Resource):
+    isLeaf = True
+    def __init__(self, master_control):
+        self._master_control = master_control
+        resource.Resource.__init__(self)
+
+    def render_GET(self, request):
+        return respond(request, {'status': "I'm alive biatch"})
 
 class RootResource(resource.Resource):
     def __init__(self, master_control):
@@ -402,7 +531,9 @@ class RootResource(resource.Resource):
         
         # Setup children
         self.putChild('jobs', JobsResource(master_control))
+        self.putChild('services', ServicesResource(master_control))
         self.putChild('config', ConfigResource(master_control))
+        self.putChild('status', StatusResource(master_control))
 
     def getChild(self, name, request):
         if name == '':
@@ -410,7 +541,23 @@ class RootResource(resource.Resource):
         return resource.Resource.getChild(self, name, request)
 
     def render_GET(self, request):
-        return respond(request, {'status': "I'm alive biatch"})
+        request.setHeader("content-type", "text/json")
+        
+        # We're going to load a big response with a bunch of stuff we know about this tron instance
+        jobs_resource = self.children["jobs"]
+        services_resource = self.children["services"]
+        
+        response = dict()
+        response['jobs'] = jobs_resource.get_data(request)
+        response['jobs_href'] = request.uri + request.childLink('jobs')
+
+        response['services'] = services_resource.get_data(request)
+        response['services_href'] = request.uri + request.childLink('services')
+
+        response['config_href'] = request.uri + request.childLink('config')
+        response['status_href'] = request.uri + request.childLink('status')
+
+        return respond(request, response)
 
 
 if __name__ == '__main__':

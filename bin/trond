@@ -178,6 +178,8 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
         # Try to load up previous state
         master_control.try_restore()
 
+        master_control.state_handler.writing_enabled = True
+
         # Setup our reconfiguration signal handler
         def sighup_handler(signum, frame):
             logger.info("SIGHUP Caught!")
