@@ -1,4 +1,3 @@
-import datetime
 import os 
 import shutil
 import tempfile
@@ -7,7 +6,7 @@ from testify import *
 from testify.utils import turtle
 
 from twisted.internet import reactor
-from tron.utils import timeutils
+from tron.utils import timeutils, testingutils
 from tron import mcp, node, job, action, scheduler
 
 def equals_with_delta(val, check, delta):
@@ -90,7 +89,7 @@ class TestMasterControlProgram(TestCase):
         self.job = job.Job("Test Job", self.action)
         self.job.output_path = self.test_dir
         self.mcp = mcp.MasterControlProgram(self.test_dir, "config")
-        self.job.node_pool = node.NodePool('test hostname')
+        self.job.node_pool = testingutils.TestPool()
     
     @teardown
     def teardown(self):
@@ -100,7 +99,7 @@ class TestMasterControlProgram(TestCase):
         act = action.Action("Test Action")
         jo = job.Job("Test Job", act)
         jo.output_path = self.test_dir
-        jo.node_pool = turtle.Turtle()
+        jo.node_pool = testingutils.TestPool()
         jo.scheduler = scheduler.DailyScheduler()
 
         act.job = jo
