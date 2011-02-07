@@ -260,10 +260,12 @@ class ActionRunLogFileTest(TestCase):
  
     def test_no_logging(self):
         run = self.action.build_run(turtle.Turtle(output_path=self.test_dir))
+        run.node = testingutils.TestNode()
         run.start()
 
     def test_file_log(self):
         run = self.action.build_run(turtle.Turtle(output_path=self.test_dir))
+        run.node = testingutils.TestNode()
         run.start()
         assert os.path.isfile(run.stdout_path)
         assert os.path.isfile(run.stderr_path)

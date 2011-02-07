@@ -442,11 +442,7 @@ class Action(object):
 
         new_run.id = "%s.%s" % (job_run.id, self.name)
         new_run.output_path = job_run.output_path
-        new_run.node = job_run.node
         
-        new_run.machine.listen(True, job_run.state_callback)
-        new_run.machine.listen(ActionRun.STATE_SUCCEEDED, job_run.run_completed)
-        new_run.machine.listen(ActionRun.STATE_FAILED, job_run.run_completed)
         return new_run
 
 

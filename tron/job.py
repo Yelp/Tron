@@ -181,6 +181,14 @@ class Job(object):
         if action in self.topo_actions:
             raise Error("Action %s already in jobs %s" % (action.name, job.name))
 
+    def listen(self, spec, callback):
+        """Mimic the state machine interface for listening to events"""
+        assert spec is True
+        self.state_callback = callback
+
+    def _notify(self):
+        self.state_callback()
+
     def add_action(self, action):
         self._register_action(action)
         self.topo_actions.append(action)
@@ -265,13 +273,19 @@ class Job(object):
     def build_action_dag(self, job_run, all_actions):
         """Build actions and setup requirements"""
         action_runs_by_name = {}
-        for action in all_actions:
-            action_run = action.build_run(job_run)
-            action_runs_by_name[action.name] = action_run
+        for action_inst in all_actions:
+            action_run = action_inst.build_run(job_run)
+            
+            action_run.node = job_run.node
+            
+            action_run.machine.listen(True, self._notify)
+            action_run.machine.listen(action.ActionRun.STATE_SUCCEEDED, job_run.run_completed)
+            action_run.machine.listen(action.ActionRun.STATE_FAILED, job_run.run_completed)
 
+            action_runs_by_name[action_inst.name] = action_run
             job_run.action_runs.append(action_run)
 
-            for req_action in action.required_actions:
+            for req_action in action_inst.required_actions:
                 # Two-way, waiting runs and required_runs
                 action_runs_by_name[req_action.name].waiting_runs.append(action_run)
                 action_run.required_runs.append(action_runs_by_name[req_action.name])

@@ -216,7 +216,7 @@ class MasterControlProgram(object):
 
         job.set_context(self.context)
         self.setup_job_dir(job)
-        job.state_callback = self.state_handler.store_state
+        job.listen(True, self.state_handler.store_state)
 
     def remove_job(self, job_name):
         if job_name not in self.jobs:
