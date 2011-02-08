@@ -98,14 +98,11 @@ def view_all(options):
     else:
         # service width is dependent on the console width bounded by the title width and service-name max length
         SERVICE_COLUMNS[0][1] = min(job_id_width, max(len(SERVICE_COLUMNS[0][0]) + 1, max(len(service['name']) for service in content['services'])))
-        print color('hgray', " ".join((name.ljust(size) for name, size in SERVICE_COLUMNS))
+        print color('hgray', " ".join((name.ljust(size) for name, size in SERVICE_COLUMNS)))
 
         # Show service data
         for service in sorted(content['services'], key=lambda s: s['name']):
-
             print " ".join(trunc(str(val), size).ljust(size) for val, (_, size) in zip((service['name'], service['status'], service['count']), SERVICE_COLUMNS))
-
-
 
     status, content = cmd.request(options.server, "/jobs")
     assert status == cmd.OK

@@ -52,6 +52,13 @@ nodes:
     # - &all_nodes !NodePool
     #     nodes: [*node]
 
+command_context:
+    # Variable subsitution
+    # There are some built-in values such as 'node', 'runid', 'actionname' and 
+    # run-time based variables such as 'shortdate'
+    # You can specify whatever else you want similiar to environment variables:
+    # PYTHON: "/usr/bin/python"
+ 
 jobs:
     ## Configure your jobs here by specifing a name, node, schedule and the work flow that should executed.
     # - &sample_job

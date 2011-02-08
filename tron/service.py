@@ -128,7 +128,7 @@ class ServiceInstance(object):
 
         command = self.command
         if command is None:
-            self._start_failstart()
+            self._start_complete_failstart()
             return
 
         self.start_action = action.ActionCommand("%s.start" % self.id, command)

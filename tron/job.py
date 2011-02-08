@@ -6,6 +6,10 @@ from collections import deque
 from tron import action, command_context
 from tron.utils import timeutils
 
+class Error(Exception): pass
+
+class ConfigBuildMismatchError(Error): pass
+
 log = logging.getLogger('tron.job')
 
 RUN_LIMIT = 50
@@ -305,6 +309,9 @@ class Job(object):
             job_run.action_runs.append(action_run)
 
             for req_action in action_inst.required_actions:
+                if req_action.name not in action_runs_by_name:
+                    raise ConfigBuildMismatchError("Unknown action %s, configuration mismatch?" % req_action.name)
+
                 # Two-way, waiting runs and required_runs
                 action_runs_by_name[req_action.name].waiting_runs.append(action_run)
                 action_run.required_runs.append(action_runs_by_name[req_action.name])

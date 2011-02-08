@@ -43,18 +43,23 @@ class StateHandler(object):
         self.writing_enabled = writing
         self.store_delayed = False
 
-    def restore_job(self, job, data):
-        job.enabled = data['enabled']
+    def restore_job(self, job_inst, data):
+        job_inst.enabled = data['enabled']
 
         for r_data in data['runs']:
-            run = job.restore_main_run(r_data)
+            try:
+                run = job_inst.restore_main_run(r_data)
+            except job.Error, e:
+                log.warning("Failed to restore job: %r (%r)", r_data, e)
+                continue
+            
             if run.is_scheduled:
                 reactor.callLater(sleep_time(run.run_time), self.mcp.run_job, run)
 
-        job.set_context(self.mcp.context)
+        job_inst.set_context(self.mcp.context)
 
-        next = job.next_to_finish()
-        if job.enabled and next and next.is_queued:
+        next = job_inst.next_to_finish()
+        if job_inst.enabled and next and next.is_queued:
             next.start()
 
     def restore_service(self, service, data):
