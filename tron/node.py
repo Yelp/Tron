@@ -186,13 +186,15 @@ class Node(object):
         log.info("Service to %s stopped", self.hostname)
 
         for run_id, run in self.run_states.iteritems():
-            if run.state != RUN_STATE_CONNECTING:
+            if run.state == RUN_STATE_CONNECTING:
+                # Now we can trigger a reconnect and re-start any waiting runs.
+                self._connect_then_run(run)
+            elif run.state == RUN_STATE_RUNNING:
+                self._fail_run(run, None)
+            else:
                 # Service ended. The open channels should know how to handle this (and cleanup) themselves, so
                 # if there should not be any runs except those waiting to connect
                 raise Error("Run %s in state %s when service stopped", run_id, run.state)
-
-            # Now we can trigger a reconnect and re-start any waiting runs.
-            self._connect_then_run(run)
         
     def _connect(self):
         # This is complicated because we have to deal with a few different steps before our connection is really available for us:
