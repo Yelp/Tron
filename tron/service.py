@@ -247,11 +247,28 @@ class Service(object):
     def set_context(self, context):
         self.context = command_context.CommandContext(self, context)
 
+    def _clear_failed_instances(self):
+        """Remove and cleanup any instances that are no longer with us"""
+        self.instances = [inst for inst in self.instances if inst.state != ServiceInstance.STATE_FAILED]
+
     def start(self):
         self.machine.transition("start")
+
+        # Start can really mean restart any failed or down instances.
+        # So first off, clear out any old instances that are of no use to us
+        # anymore
+        self._clear_failed_instances()
+
+        # Build all the new instances well need
         while len(self.instances) < self.count:
             instance = self.build_instance()
-            instance.start()
+            
+        # Start (or restart) all our instances
+        for instance in self.instances:
+            try:
+                instance.start()
+            except InvalidStateError:
+                pass
 
     def stop(self):
         self.machine.transition("stop")
