@@ -22,7 +22,11 @@ STATE_FILE = 'tron_state.yaml'
 STATE_SLEEP = 1
 WRITE_DURATION_WARNING_SECS = 30
 
-class StateFileVersionError(Exception): pass
+class Error(Exception): pass
+
+class StateFileVersionError(Error): pass
+
+class UnsupportedVersionError(Error): pass
 
 def sleep_time(run_time):
     sleep = run_time - timeutils.current_time()
@@ -133,12 +137,13 @@ class StateHandler(object):
         
         # For properly comparing version, we need to convert this guy to a tuple
         data['version'] = tuple(data['version'])
-
         # By default we assume backwards compatability.
         if data['version'] == tron.__version_info__:
             return data
         elif data['version'] > tron.__version_info__:
             raise StateFileVersionError("State file has new version: %r", data['version'])
+        elif data['version'] < (0, 2, 0):
+            raise UnsupportedVersionError("State file has version %r" % (data['version'],))
         else:
             # Potential version conversions
             return data
