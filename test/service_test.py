@@ -2,11 +2,20 @@ from testify import *
 
 from tron import service
 from tron import node
+from tron.utils import testingutils
+
+def set_instance_up(service_instance):
+    service_instance.start_action.exit_status = 0
+    service_instance._start_complete_callback()
+
+    service_instance._run_monitor()
+    service_instance.monitor_action.exit_status = 0
+    service_instance._monitor_complete_callback()
 
 class SimpleTest(TestCase):
     @setup
     def build_service(self):
-        self.service = service.Service("Sample Service", "sleep 60 &", node_pool=turtle.Turtle())
+        self.service = service.Service("Sample Service", "sleep 60 &", node_pool=testingutils.TestPool())
         self.service.pid_file_template = "/var/run/service.pid"
         self.service.count = 2
         
@@ -18,7 +27,11 @@ class SimpleTest(TestCase):
         for instance in self.service.instances:
             assert_equal(instance.state, service.ServiceInstance.STATE_STARTING)
         
+            set_instance_up(instance)
     
+            assert_equal(instance.state, service.ServiceInstance.STATE_UP)
+        assert_equal(self.service.state, service.Service.STATE_UP)
+
     def test_instance_up(self):
         self.service.start()
         instance1, instance2 = self.service.instances
@@ -80,7 +93,7 @@ class SimpleTest(TestCase):
 class ReconfigTest(TestCase):
     @setup
     def build_service(self):
-        self.service = service.Service("Sample Service", "sleep 60 &", node_pool=turtle.Turtle())
+        self.service = service.Service("Sample Service", "sleep 60 &", node_pool=testingutils.TestPool())
         self.service.pid_file_template = "/tmp/pid"
         self.service.count = 2
     
@@ -101,6 +114,7 @@ class ReconfigTest(TestCase):
         
         new_service = service.Service("Sample Service", "sleep 60 &", node_pool=self.service.node_pool)
         new_service.count = 3
+        self.service.machine.state = service.Service.STATE_DEGRADED
         
         new_service.absorb_previous(self.service)
         assert_equal(len(new_service.instances), new_service.count)
@@ -123,7 +137,7 @@ class SimpleRestoreTest(TestCase):
     @setup
     def build_service(self):
         self.node_pool = node.NodePool()
-        test_node = turtle.Turtle(hostname="testnode")
+        test_node = testingutils.TestNode()
         self.node_pool.nodes.append(test_node)
 
         self.service = service.Service("Sample Service", "sleep 60 &", node_pool=self.node_pool)
@@ -154,7 +168,7 @@ class FailureRestoreTest(TestCase):
     @setup
     def build_service(self):
         self.node_pool = node.NodePool()
-        test_node = turtle.Turtle(hostname="testnode")
+        test_node = testingutils.TestNode()
         self.node_pool.nodes.append(test_node)
 
         self.service = service.Service("Sample Service", "sleep 60 &", node_pool=self.node_pool)
@@ -179,5 +193,5 @@ class FailureRestoreTest(TestCase):
         assert_equal(len(new_service.instances), 2)
         instance1, instance2 = new_service.instances
         assert_equal(instance1.state, service.ServiceInstance.STATE_MONITORING)
-        assert_equal(instance2.state, service.ServiceInstance.STATE_FAILED)
+        assert_equal(instance2.state, service.ServiceInstance.STATE_MONITORING)
     

@@ -80,6 +80,7 @@ services:
     #     pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
     #     command: "run_service --pid-file=%(pid_file)s start"
     #     monitor_interval: 20
+    #     restart_interval: 60s
 
 """
 
@@ -390,6 +391,8 @@ class Service(_ConfiguredObject):
         _match_name(real_service, self.name)
         _match_node(real_service, self.node)
         real_service.monitor_interval = int(self.monitor_interval)
+        if hasattr(self, 'restart_interval'):
+            real_service.restart_interval = int(self.restart_interval)
         
         real_service.pid_file_template = self.pid_file
         

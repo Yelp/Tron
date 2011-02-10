@@ -327,7 +327,7 @@ class ActionRun(object):
         if self.is_running:
             self.machine.transition('fail_unknown')
         else:
-            self.machine._notify_listeners()
+            self.machine.notify()
 
     @property
     def data(self):

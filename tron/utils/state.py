@@ -101,7 +101,7 @@ class StateMachine(object):
             raise CircularTransitionError()
 
         self.state = next_state
-        self._notify_listeners()
+        self.notify()
 
         # We always call recursivly after a state change incase there are multiple steps
         # to take. 
@@ -142,7 +142,7 @@ class StateMachine(object):
         
         return False
         
-    def _notify_listeners(self):
+    def notify(self):
         log.debug("Notifying listeners for new state %r", self.state)
         matched_listeners = [listener for spec, listener in self._listeners if self._listener_spec_match(spec)]
         for listener in matched_listeners:
