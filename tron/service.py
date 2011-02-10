@@ -185,28 +185,19 @@ class ServiceInstance(object):
         log.warning("Failed to start kill command for %s", self.id)
         self._queue_monitor()
 
-    @property
-    def data(self):
-        # We're going to need to keep track of stuff like pid_file
-        raise NotImplementedError()
-
-    def restore(self, data):
-        raise NotImplementedError()
-
 
 class Service(object):
     STATE_DOWN = state.NamedEventState("down")
     STATE_UP = state.NamedEventState("up")
     STATE_DEGRADED = state.NamedEventState("degraded")
     STATE_STOPPING = state.NamedEventState("stopping", all_down=STATE_DOWN)
-    STATE_FAILED = state.NamedEventState("failed", stop=STATE_STOPPING, up=STATE_DEGRADED)
+    STATE_FAILED = state.NamedEventState("failed")
     STATE_STARTING = state.NamedEventState("starting", all_up=STATE_UP, failed=STATE_DEGRADED, stop=STATE_STOPPING)
     
-    STATE_DEGRADED.update(dict(stop=STATE_STOPPING, all_up=STATE_UP, all_failed=STATE_FAILED)) 
     STATE_DOWN['start'] = STATE_STARTING
-    STATE_UP['stop'] = STATE_STOPPING
-    STATE_UP['failed'] = STATE_DEGRADED
-    STATE_UP['down'] = STATE_DEGRADED
+    STATE_DEGRADED.update(dict(stop=STATE_STOPPING, all_up=STATE_UP, all_failed=STATE_FAILED)) 
+    STATE_FAILED.update(dict(stop=STATE_STOPPING, up=STATE_DEGRADED, start=STATE_STARTING))
+    STATE_UP.update(dict(stop=STATE_STOPPING, failed=STATE_DEGRADED, down=STATE_DEGRADED))
     
     def __init__(self, name=None, command=None, node_pool=None, context=None):
         self.name = name
@@ -263,9 +254,7 @@ class Service(object):
             log.info("Restarting failed instances for service %s", self.name)
             self.start()
 
-    def start(self):
-        self.machine.transition("start")
-        
+    def start(self):    
         # Clear out the restart timer, just to make sure we don't get any extraneous starts
         self._restart_timer = None
         
@@ -278,13 +267,8 @@ class Service(object):
         while len(self.instances) < self.count:
             instance = self.build_instance()
             
-        # Start (or restart) all our instances
-        for instance in self.instances:
-            try:
-                instance.start()
-            except InvalidStateError:
-                pass
-
+        self.machine.transition("start")
+    
     def stop(self):
         self.machine.transition("stop")
 
@@ -304,10 +288,8 @@ class Service(object):
     def _create_instance(self, node, instance_number):
         service_instance = ServiceInstance(self, node, instance_number)
         self.instances.append(service_instance)
+        
         service_instance.listen(True, self._instance_change)
-        # service_instance.listen(ServiceInstance.STATE_UP, self._instance_up)
-        # service_instance.listen(ServiceInstance.STATE_DOWN, self._instance_down)
-        # service_instance.listen(ServiceInstance.STATE_FAILED, self._instance_failed)
 
         return service_instance
 
@@ -344,7 +326,7 @@ class Service(object):
             if all([instance.state == ServiceInstance.STATE_FAILED for instance in self.instances]):
                 self.machine.transition("all_failed")
 
-        if self.machine.state == Service.STATE_DEGRADED:
+        if self.machine.state in (Service.STATE_DEGRADED, Service.STATE_FAILED):
             # Start a restart timer if configure
             if self.restart_interval is not None and not self._restart_timer:
                 self._restart_timer = reactor.callLater(self.restart_interval, self._restart_after_failure)
