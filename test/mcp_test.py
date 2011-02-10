@@ -108,9 +108,7 @@ sample_job:
 
     def test(self):
         handler = mcp.StateHandler(turtle.Turtle(), "/tmp")
-        data = handler._load_data_file(self.data_file)
-        assert_equal(data['version'], (0, 1, 9))
-        assert_equal(len(data['jobs']), 1)
+        assert_raises(mcp.UnsupportedVersionError, handler._load_data_file, self.data_file)
 
 class FutureVersionTest(TestCase):
     @setup
