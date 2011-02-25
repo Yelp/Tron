@@ -155,3 +155,5 @@ class TestPool(object):
         if self._node is None:
             self._node = TestNode()
         return self._node
+    
+    next_round_robin = next

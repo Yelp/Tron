@@ -63,9 +63,13 @@ class NodePool(object):
         return not self == other
 
     def next(self):
-        #if not self.iter:
-        #    self.iter = itertools.cycle(self.nodes)
         return self.nodes[random.randrange(len(self.nodes))]
+
+    def next_round_robin(self):
+        if not self.iter:
+            self.iter = itertools.cycle(self.nodes)
+        
+        return self.iter.next()
 
     def __getitem__(self, value):
         for node in self.nodes:

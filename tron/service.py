@@ -294,7 +294,7 @@ class Service(object):
         return service_instance
 
     def build_instance(self):
-        node = self.node_pool.next()
+        node = self.node_pool.next_round_robin()
 
         if self._last_instance_number is None:
             self._last_instance_number = 0
