@@ -253,7 +253,9 @@ class Service(object):
         if self.state in (self.STATE_DEGRADED, self.STATE_FAILED):
             log.info("Restarting failed instances for service %s", self.name)
             self.start()
-
+        else:
+            self._restart_timer = None
+    
     def start(self):    
         # Clear out the restart timer, just to make sure we don't get any extraneous starts
         self._restart_timer = None
@@ -355,7 +357,9 @@ class Service(object):
         else:
             # Copy over all the old instances
             self.instances += prev_service.instances
-
+            for service_instance in prev_service.instances:
+                service_instance.listen(True, self._instance_change)
+            
             # Now make adjustments to how many there are
             if self.state in (self.STATE_DEGRADED, self.STATE_UP):
                 while len(self.instances) < self.count:
