@@ -1,3 +1,11 @@
+tron (0.2.1-1) unstable; urgency=low
+
+  * Resolve an issue where run_time wasn't set for manually started jobs (rhettg)
+  * Support for multiple arguments to tronctl (for starting things in bulk) (rhettg)
+  * Support for starting a job with a specific run_time (rhettg)
+  * Resolved an issue where services, after a reconfig, wouldn't cause state changes (rhettg)
+  * Updated man pages (rhettg)
+
 tron (0.2.0-1) unstable; urgency=low
 
   * New services system (rhettg)
