@@ -14,25 +14,23 @@ tronview \- view status of tron jobs
 .RI "[" "job_name" " | " "job_run_id" " | " "action_run_id" "]"
 .SH DESCRIPTION
 .B tronview
-displays the status of tron scheduled jobs in four tiers. 
+displays the status of tron scheduled jobs and services.
 
 .IP "tronview"
-all jobs: If no arguments passed, tronview displays all job names,
-their schedules, and the last time they completed successfully.
+Show all configured jobs and services
 
-.IP "tronview <job_name>"
-runs for a job: If a job name is specified, tronview displays run
-instances with the most recent at the top.  For each job run instance,
-the job run id, status, scheduled time, start time, and end time are shown.
+.IP "tronview <job_name|service_name>"
+Shows details for specied job or service.
+    Ex: tronview my_job
 
-.IP "tronview <job_run_id>"
-actions for a job run: If a job run id is specified, tronview displays all
-actions within the job run.  For each action, the action run id, status,
-scheduled time, start time and end time are shown.
+.IP "tronview <job_run_id|service_instance_id>"
+Show details for specific run or instance
+    Ex: tronview my_job.0
+
 
 .IP "tronview <action_run_id>"
-action information: If an action run id is specified, tronview displays the
-action run id, status, assigned node, and output.
+Show details for specific action run
+    Ex: tronview  my_job.0.my_action
 
 .SH OPTIONS
 .IP "-n numshown"
@@ -42,67 +40,59 @@ Does not affect the display of all jobs and the display of actions for given job
 The server the tron instance is running on. If no server is specified localhost is used.
 .IP --verbose
 Displays status messages along the way
-.SH EXAMPLES
-Here are a few examples that show each tier of tronview
+.IP --version
+Show version
+.IP "-z, --hide-preface"
+Don't display preface header information
+.IP "-c, --color"
+Display color highlights
+.IP "-o, --stdout"
+Show only stdout for specified action run
+.IP "-e, --stderr"
+Show only stderr for specified action run
+.IP "-w, --warn"
+Display warnings and errors for all jobs
 
- $ tronview
- Name                 State                Scheduler            Last Success
- job2                 DISABLED             CONSTANT             2010-08-06 10:40:06.903994
- job1                 ENABLED              DAILY                None
- job0                 RUNNING              INTERVAL:0:00:20     2010-08-06 10:40:00.070011
-
- ========================================================================================================
- 
- $ tronview job0
- Job: job0
- Scheduler: INTERVAL:0:00:20
-
- List of Actions (topological):
- actionStart
- actionFollow
-
- Node Pool:
- dev2sv
- dev3sv
-
- Run History: (4 total)
- Job Run ID                     State  Scheduled Time          Start Time              End Time
- job0.3                         SCHE   2010-08-06 10:43:38     -                       -
- job0.2                         RUNN   2010-08-06 10:43:18     2010-08-06 10:43:18     -
- job0.1                         SUCC   2010-08-06 10:42:58     2010-08-06 10:42:58     2010-08-06 10:43:05
- job0.0                         SUCC   2010-08-06 10:42:38     2010-08-06 10:42:38     2010-08-06 10:42:46
-
- ========================================================================================================
- 
- $ tronview job0.2
- Job Run: job0.2
- State: RUNN
- Node: machine0
-
- Action Run ID                            State  Scheduled Time          Start Time              End Time
- job0.2.actionStart                       SUCC   2010-08-06 10:43:18     2010-08-06 10:43:18     2010-08-06 10:43:21
- job0.2.actionFollow                      RUNN   -                       2010-08-06 10:43:21     -            
-
- ========================================================================================================
- 
- $ tronview job0.2.actionFollow
- Action Run: job0.2.actionFollow
- State: RUNN
- Node: machine0
-
- Requirements:
- actionStart
- 
- stdout:
- actionFollow is printing some stuff to stdout
- 
- stderr:
-  
+.SH "JOB STATES"
+Jobs will be described with the following states
+.IP ENABLED
+Scheduled and ready to go
+.IP DISABLED
+No job runs scheduled
+.IP RUNNING
+Job run currently in progress
+.SH "JOB RUN STATES"
+.IP SCHE
+The run is scheduled for a specific time
+.IP RUNN
+The run is currently running
+.IP SUCC
+The run completed successfully 
+.IP FAIL
+The run failed
+.IP QUE
+The run is queued behind another run(s) and will start when said runs finish
+.IP CANC
+The run is cancelled. Does not run at scheduled time and the job run queue ignores the run
+.IP UNKWN
+The run is in and unknown state.  This state occurs when tron restores a job that was
+running at the time of shutdown
+.SH "SERVICE STATES"
+.IP STARTING
+The service has been started. The service will remain in this state until the first monitor interval runs.
+.IP UP
+The service is running normally, all instances were available during the last monitor period
+.IP DEGRADED
+One or more instances of the service are unexpectedly not available.
+.IP FAILED
+All instances of the service are unexpectedly unavailable.
+.IP DOWN
+ Service has been stopped
 .SH DIAGNOSTICS
 .SH BUGS
 Email found bugs to yelplabs@yelp.com
 .SH AUTHOR
-Matthew Tytel
+Rhett Garber
 .SH "SEE ALSO"
 .BR trond (8),
 .BR tronctl (1),

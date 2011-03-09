@@ -19,24 +19,8 @@ cancel, succeed, and fail job runs and action runs.
 The server the tron instance is running on
 .IP --verbose
 Displays status messages along the way
-.SH STATES
-.IP SCHE
-the run is scheduled for a specific time
-.IP RUNN
-the run is currently running
-.IP SUCC
-the run completed successfully 
-.IP FAIL
-the run failed
-.IP QUE
-the run is queued behind another run(s) and will start when said runs finish
-.IP CANC
-the run is cancelled. Does not run at scheduled time and the job run queue ignores the run
-.IP UNKWN
-the run is in and unknown state.  This state occurs when tron restores a job that was
-running at the time of shutdown
 
-.SH COMMANDS
+.SH "JOB COMMANDS"
 
 .IP disableall
 Disables all jobs
@@ -85,6 +69,12 @@ This behaves the same as the job actually failing.
 Dependant actions are queued and following jobs are queued or cancelled
  Valid states that you can run "fail" on: SCHE, QUE, CANC, UNKWN
 
+.SH "SERVICE COMMANDS"
+.IP "start <service name>"
+Start instances the named service
+.IP "stop <service name>"
+Stop instances of the named service
+
 .SH EXAMPLES
 Here are a few examples that show the use of tronctl commands
 
@@ -112,7 +102,7 @@ Here are a few examples that show the use of tronctl commands
 .SH BUGS
 Email found bugs to yelplabs@yelp.com
 .SH AUTHOR
-Matthew Tytel
+Rhett Garber
 .SH "SEE ALSO"
 .BR trond (8),
 .BR tronview (1),
