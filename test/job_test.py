@@ -255,6 +255,7 @@ class TestJob(TestCase):
         mr1 = self.job.manual_start()[0]
         assert_equal(len(self.job.runs), 2)
         assert mr1.is_running
+        assert mr1.run_time
 
         mr2 = self.job.manual_start()[0]
         assert_equal(len(self.job.runs), 3)

@@ -178,7 +178,7 @@ class Job(object):
         self.node_pool = None
         self.output_path = None
         self.state_callback = lambda:None
-        self.context = command_context.CommandContext(self)
+        self.context = command_context.CommandContext(self, context)
 
     def _register_action(self, action):
         """Prepare an action to be *owned* by this job"""
@@ -340,7 +340,7 @@ class Job(object):
             return [self.build_run(node=node) for node in self.node_pool.nodes]
         return [self.build_run()]
 
-    def manual_start(self):
+    def manual_start(self, run_time=None):
         scheduled = deque()
         while self.runs and self.runs[0].is_scheduled:
             scheduled.appendleft(self.runs.popleft())
@@ -349,6 +349,7 @@ class Job(object):
         self.runs.extendleft(scheduled)
 
         for r in man_runs:
+            r.set_run_time(run_time or timeutils.current_time())
             r.queue()
             r.attempt_start()
 
