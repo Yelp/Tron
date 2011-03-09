@@ -2,6 +2,7 @@
 
 Got to know what's going on ?
 """
+import datetime
 import logging
 import urllib
 
@@ -284,7 +285,13 @@ class JobResource(resource.Resource):
             return respond(request, {'result': "Job %s is disabled" % self._job.name})
 
         if cmd == 'start':
-            runs = self._job.manual_start(run_time=timeutils.current_time())
+            if 'run_time' in request.args:
+                run_time_str = request.args['run_time'][0]
+                run_time = datetime.datetime.strptime(run_time_str, "%Y-%m-%d %H:%M:%S")
+            else:
+                run_time = timeutils.current_time()
+            
+            runs = self._job.manual_start(run_time=run_time)
             return respond(request, {'result': "New Job Runs %s created" % [r.id for r in runs]})
 
         log.warning("Unknown request job command %s", request.args['command'])
