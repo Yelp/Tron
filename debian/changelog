@@ -6,11 +6,14 @@ tron (0.2.1-1) unstable; urgency=low
   * Resolved an issue where services, after a reconfig, wouldn't cause state changes (rhettg)
   * Updated man pages (rhettg)
 
+ -- Rhett Garber <rhettg@gmail.com>  Wed, 09 Feb 2011 15:20:00 -0800
+
 tron (0.2.0-1) unstable; urgency=low
 
   * New services system (rhettg)
 
  -- Rhett Garber <rhettg@gmail.com>  Mon, 06 Feb 2011 15:15:00 -0800
+
 
 tron (0.1.10-1) unstable; urgency=low
 
