@@ -1,3 +1,10 @@
+tron (0.2.2-1) unstable; urgency=low
+
+  * Resolved an issue where certain service reconfigurations would 
+    cause the service to be stuck in the DOWN state (rhettg)
+  
+ -- Rhett Garber <rhettg@gmail.com>  Wed, 23 Mar 2011 18:26:00 -0800
+
 tron (0.2.1-1) unstable; urgency=low
 
   * Resolve an issue where run_time wasn't set for manually started jobs (rhettg)
