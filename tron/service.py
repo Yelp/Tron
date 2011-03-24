@@ -340,9 +340,7 @@ class Service(object):
         # * Changing the node pool
         # * Changes to the context ?
         # * Restart counts for downed services ?
-
-        # First just copy pieces of state that really matter
-        self.machine = prev_service.machine
+        
         self._last_instance_number = prev_service._last_instance_number
                 
         rebuild_all_instances = any([
@@ -350,11 +348,15 @@ class Service(object):
                                      self.command != prev_service.command,
                                      self.scheduler != prev_service.scheduler
                                     ])
-
+        
         if rebuild_all_instances:
             self.start()
             prev_service.stop()
         else:
+            # Since we are inheriting all the existing instances, 
+            # it's safe to also inherit the previous state machine as well.
+            self.machine = prev_service.machine           
+
             # Copy over all the old instances
             self.instances += prev_service.instances
             for service_instance in prev_service.instances:
