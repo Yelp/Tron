@@ -440,11 +440,12 @@ class Action(object):
 
 
 class ActionCommand(object):
-    COMPLETE = state.NamedEventState("complete")
-    FAILSTART = state.NamedEventState("failstart")
-    EXITING = state.NamedEventState("exiting", close=COMPLETE)
-    RUNNING = state.NamedEventState("running", exit=EXITING)
-    PENDING = state.NamedEventState("pending", start=RUNNING, exit=FAILSTART)
+    class ActionState(state.NamedEventState): pass
+    COMPLETE = ActionState("complete")
+    FAILSTART = ActionState("failstart")
+    EXITING = ActionState("exiting", close=COMPLETE)
+    RUNNING = ActionState("running", exit=EXITING)
+    PENDING = ActionState("pending", start=RUNNING, exit=FAILSTART)
 
     def __init__(self, id, command, stdout=None, stderr=None):
         """An Action Command is what a node actually executes

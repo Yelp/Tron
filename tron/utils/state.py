@@ -123,6 +123,9 @@ class StateMachine(object):
         """
         self._listeners.append((listen_spec, callback))
 
+    def clear_listeners(self, listen_spec=None):
+        self._listeners = [(l, c) for l, c in self._listeners if listen_spec is not None and listen_spec != l]
+
     def _listener_spec_match(self, listen_spec):
         """Does the specified listener specification match the current state
         

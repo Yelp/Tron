@@ -103,10 +103,11 @@ class ReconfigTest(TestCase):
         new_service = service.Service("Sample Service", "sleep 60 &", node_pool=self.service.node_pool)
         new_service.count = self.service.count
         
+
         new_service.absorb_previous(self.service)
         
-        assert_equal(new_service._last_instance_number, self.service._last_instance_number)
-        assert_equal(new_service.state, self.service.state)
+        assert_equal(len(new_service.instances), 2)
+        assert_equal(self.service.machine, None)
         
     
     def test_absorb_count_incr(self):
@@ -119,7 +120,7 @@ class ReconfigTest(TestCase):
         new_service.absorb_previous(self.service)
         assert_equal(len(new_service.instances), new_service.count)
         
-        assert_equal(len(set(new_service.instances) - set(self.service.instances)), 1)
+        assert_equal(len(new_service.instances), 3)
         
     def test_absorb_count_decr(self):
         self.service.start()
@@ -129,9 +130,26 @@ class ReconfigTest(TestCase):
         new_service.count = 1
 
         new_service.absorb_previous(self.service)
-        assert_equal(len(new_service.instances), new_service.count)
+        assert_equal(new_service.instances[-1].state, service.ServiceInstance.STATE_STOPPING)
 
-        assert_equal(len(set(new_service.instances) - set(self.service.instances)), 0)
+    def test_rapid_change(self):
+        self.service.start()
+
+        new_service = service.Service("Sample Service", "sleep 60 &", node_pool=self.service.node_pool)
+        new_service.pid_file_template = "/tmp/pid"
+        new_service.count = 1
+
+        new_service.absorb_previous(self.service)
+        assert_equal(new_service.instances[-1].state, service.ServiceInstance.STATE_STOPPING)
+
+        another_new_service = service.Service("Sample Service", "sleep 60 &", node_pool=self.service.node_pool)
+        another_new_service.pid_file_template = "/tmp/pid"
+        another_new_service.count = 3
+
+        another_new_service.absorb_previous(new_service)
+        assert_equal(len(another_new_service.instances), 3)
+        assert_equal(another_new_service.instances[-2].state, service.ServiceInstance.STATE_STOPPING)
+
 
 class SimpleRestoreTest(TestCase):
     @setup

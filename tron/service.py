@@ -15,14 +15,15 @@ class Error(Exception): pass
 class InvalidStateError(Error): pass
 
 class ServiceInstance(object):
-    STATE_DOWN = state.NamedEventState("down")
-    STATE_UP = state.NamedEventState("up")
-    STATE_FAILED = state.NamedEventState("failed", stop=STATE_DOWN, up=STATE_UP)
-    STATE_STOPPING = state.NamedEventState("stopping", down=STATE_DOWN)
-    STATE_MONITORING = state.NamedEventState("monitoring", down=STATE_FAILED, stop=STATE_STOPPING, up=STATE_UP)
-    STATE_STARTING = state.NamedEventState("starting", down=STATE_FAILED, monitor=STATE_MONITORING, stop=STATE_STOPPING)
+    class ServiceInstanceState(state.NamedEventState): pass
+    STATE_DOWN = ServiceInstanceState("down")
+    STATE_UP = ServiceInstanceState("up")
+    STATE_FAILED = ServiceInstanceState("failed", stop=STATE_DOWN, up=STATE_UP)
+    STATE_STOPPING = ServiceInstanceState("stopping", down=STATE_DOWN)
+    STATE_MONITORING = ServiceInstanceState("monitoring", down=STATE_FAILED, stop=STATE_STOPPING, up=STATE_UP)
+    STATE_STARTING = ServiceInstanceState("starting", down=STATE_FAILED, monitor=STATE_MONITORING, stop=STATE_STOPPING)
 
-    STATE_UNKNOWN = state.NamedEventState("unknown", monitor=STATE_MONITORING)
+    STATE_UNKNOWN = ServiceInstanceState("unknown", monitor=STATE_MONITORING)
     STATE_MONITORING['monitor_fail'] = STATE_UNKNOWN
 
     STATE_UP['stop'] = STATE_STOPPING
@@ -156,7 +157,7 @@ class ServiceInstance(object):
 
     def stop(self):
         if self.machine.state not in (self.STATE_UP, self.STATE_FAILED, self.STATE_STARTING):
-            raise InvalidStateError("Instance must be up or failed to stop")
+            raise InvalidStateError("Instance must be up or failed to stop: %r" % self.machine.state)
         
         self.machine.transition("stop")
         
@@ -187,12 +188,13 @@ class ServiceInstance(object):
 
 
 class Service(object):
-    STATE_DOWN = state.NamedEventState("down")
-    STATE_UP = state.NamedEventState("up")
-    STATE_DEGRADED = state.NamedEventState("degraded")
-    STATE_STOPPING = state.NamedEventState("stopping", all_down=STATE_DOWN)
-    STATE_FAILED = state.NamedEventState("failed")
-    STATE_STARTING = state.NamedEventState("starting", all_up=STATE_UP, failed=STATE_DEGRADED, stop=STATE_STOPPING)
+    class ServiceState(state.NamedEventState): pass
+    STATE_DOWN = ServiceState("down")
+    STATE_UP = ServiceState("up")
+    STATE_DEGRADED = ServiceState("degraded")
+    STATE_STOPPING = ServiceState("stopping", all_down=STATE_DOWN)
+    STATE_FAILED = ServiceState("failed")
+    STATE_STARTING = ServiceState("starting", all_up=STATE_UP, failed=STATE_DEGRADED, stop=STATE_STOPPING)
     
     STATE_DOWN['start'] = STATE_STARTING
     STATE_DEGRADED.update(dict(stop=STATE_STOPPING, all_up=STATE_UP, all_failed=STATE_FAILED)) 
@@ -210,9 +212,6 @@ class Service(object):
         self._restart_timer = None
         
         self.machine = state.StateMachine(Service.STATE_DOWN)
-
-        # Last instance number used
-        self._last_instance_number = None
 
         self.pid_file_template = None
 
@@ -267,20 +266,15 @@ class Service(object):
 
         # Build all the new instances well need
         while len(self.instances) < self.count:
-            instance = self.build_instance()
+            self.build_instance()
             
         self.machine.transition("start")
     
     def stop(self):
         self.machine.transition("stop")
 
-        while self.instances:
-            instance = self.instances.pop()
-            try:
-                instance.stop()
-            except InvalidStateError:
-                # We don't really care what they are doing as long as they arn't up
-                pass
+        for service_instance in self.instances:
+            service_instance.stop()
         
         # Just in case we somehow ended up stuck with no instances, double
         # check here for stop complete.
@@ -294,40 +288,50 @@ class Service(object):
         service_instance.listen(True, self._instance_change)
 
         return service_instance
+    
+    def _find_unused_instance_number(self):
+        available_instance_numbers = set(range(0, self.count)) - set(instance.instance_number for instance in self.instances)
+        if not available_instance_numbers:
+            return None
+        return min(available_instance_numbers)
 
     def build_instance(self):
         node = self.node_pool.next_round_robin()
 
-        if self._last_instance_number is None:
-            self._last_instance_number = 0
-        else:
-            self._last_instance_number += 1
-
-        instance_number = self._last_instance_number
+        instance_number = self._find_unused_instance_number()
+        if instance_number is None:
+            log.error("Can't build a new service instance for %r. %d instances in use. Maybe try again later ?", self.name, self.count)
+            return None
 
         service_instance = self._create_instance(node, instance_number)
 
-        # No reason to start this guy right away, we don't keep 'down' instances around
-        # really.
+        # No reason not to start this guy right away, we don't keep 'down' instances 
+        # around really.
         service_instance.start()
 
         return service_instance
     
     def _instance_change(self):
+        """Handle any changes to our service's instances
+
+        This is the state change callback handler for all our instances. 
+        Anytime an instance changes, we need to re-evaluate our own current state.
+        """
         # Remove any downed instances
         self.instances = [inst for inst in self.instances if inst.state != inst.STATE_DOWN]
         
         # Now we can make some inferences about state changes based on our instances
         if not self.instances:
             self.machine.transition("all_down")
-            self._last_instance_number = None
         elif all([instance.state == ServiceInstance.STATE_UP for instance in self.instances]):
             self.machine.transition("all_up")
         elif any([instance.state == ServiceInstance.STATE_FAILED for instance in self.instances]):
             self.machine.transition("failed")
             if all([instance.state == ServiceInstance.STATE_FAILED for instance in self.instances]):
                 self.machine.transition("all_failed")
-
+        elif len(self.instances) < self.count:
+            self.machine.transition("down")
+        
         if self.machine.state in (Service.STATE_DEGRADED, Service.STATE_FAILED):
             # Start a restart timer if configure
             if self.restart_interval is not None and not self._restart_timer:
@@ -340,8 +344,6 @@ class Service(object):
         # * Changing the node pool
         # * Changes to the context ?
         # * Restart counts for downed services ?
-        
-        self._last_instance_number = prev_service._last_instance_number
                 
         rebuild_all_instances = any([
                                      self.node_pool != prev_service.node_pool, 
@@ -349,43 +351,41 @@ class Service(object):
                                      self.scheduler != prev_service.scheduler
                                     ])
         
-        if rebuild_all_instances:
-            self.start()
-            prev_service.stop()
-        else:
-            # Since we are inheriting all the existing instances, 
-            # it's safe to also inherit the previous state machine as well.
-            self.machine = prev_service.machine           
+        # Since we are inheriting all the existing instances, 
+        # it's safe to also inherit the previous state machine as well.
+        self.machine = prev_service.machine
 
-            # Copy over all the old instances
-            self.instances += prev_service.instances
-            for service_instance in prev_service.instances:
-                service_instance.listen(True, self._instance_change)
-            
-            # Now make adjustments to how many there are
-            if self.state in (self.STATE_DEGRADED, self.STATE_UP):
-                while len(self.instances) < self.count:
-                    new_instance = self.build_instance()
+        # To permanently disable the older service, remove it's machine.
+        prev_service.machine = None
 
-            while self.count < len(self.instances):
-                # TODO: It might be easier to leave these guys attatched until they are actually down
-                # It's a little weird that they just disappear.
-                old_instance = self.instances.pop()
-
-                # This will fire off an action, we could do something with the result rather than just forget it ever existed.
-                # Also note that if this stop fails, we'll never know.
-                try:
-                    old_instance.stop()
-                except InvalidStateError:
-                    pass
+        # Copy over all the old instances
+        self.instances += prev_service.instances
+        for service_instance in prev_service.instances:
+            service_instance.machine.clear_listeners()
+            service_instance.machine.listen(True, self._instance_change)
         
+            if rebuild_all_instances:
+                # For some configuration changes, we'll just stop all the previous instances.
+                # When those services stop, we should be in a degraded mode, triggering a restart of
+                # the newer generation of instances.
+                service_instance.stop()
+
+        prev_service.instances = []
+
+        # Now make adjustments to how many there are
+        while len(self.instances) < self.count:
+            self.build_instance()
+
+        count_to_remove = len(self.instances) - self.count
+        if count_to_remove > 0:
+            instances_to_remove = self.instances[-count_to_remove:]
+            for service_instance in instances_to_remove:
+                service_instance.stop()        
         
     @property
     def data(self):
         data = {
-            'state': str(self.machine.state),
-            'last_instance_number': self._last_instance_number,
-            
+            'state': str(self.machine.state),     
         }
         data['instances'] = []
         for instance in self.instances:
@@ -407,7 +407,6 @@ class Service(object):
         
         # Start our machine from where it left off
         self.machine.state = state.named_event_by_name(Service.STATE_DOWN, data['state'])
-        self._last_instance_number = data['last_instance_number']
 
         if self.machine.state == Service.STATE_DOWN:
             return
