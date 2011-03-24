@@ -1,3 +1,4 @@
+import collections
 import logging
 
 from twisted.internet import reactor
@@ -155,12 +156,9 @@ class ServiceInstance(object):
         self.machine.transition("down")
         self.start_action = None
 
-    def stop(self):
-        if self.machine.state not in (self.STATE_UP, self.STATE_FAILED, self.STATE_STARTING):
-            raise InvalidStateError("Instance must be up or failed to stop: %r" % self.machine.state)
-        
+    def stop(self):       
         self.machine.transition("stop")
-        
+                
         if self.machine.state == self.STATE_STOPPING:
             self.kill_instance()
 
@@ -223,7 +221,10 @@ class Service(object):
 
     @property
     def state(self):
-        return self.machine.state
+        if self.machine:
+            return self.machine.state
+        else:
+            return None
 
     @property
     def listen(self):
@@ -265,8 +266,10 @@ class Service(object):
         self._clear_failed_instances()
 
         # Build all the new instances well need
-        while len(self.instances) < self.count:
-            self.build_instance()
+        needed_instances_count = self.count - len(self.instances)
+        if needed_instances_count > 0:
+            for _ in range(0, needed_instances_count):
+                self.build_instance()
             
         self.machine.transition("start")
     
@@ -284,6 +287,7 @@ class Service(object):
     def _create_instance(self, node, instance_number):
         service_instance = ServiceInstance(self, node, instance_number)
         self.instances.append(service_instance)
+        self.instances.sort(key=lambda i:i.instance_number)
         
         service_instance.listen(True, self._instance_change)
 
@@ -291,7 +295,7 @@ class Service(object):
     
     def _find_unused_instance_number(self):
         available_instance_numbers = set(range(0, self.count)) - set(instance.instance_number for instance in self.instances)
-        if not available_instance_numbers:
+        if len(available_instance_numbers) == 0:
             return None
         return min(available_instance_numbers)
 
@@ -323,14 +327,15 @@ class Service(object):
         # Now we can make some inferences about state changes based on our instances
         if not self.instances:
             self.machine.transition("all_down")
-        elif all([instance.state == ServiceInstance.STATE_UP for instance in self.instances]):
-            self.machine.transition("all_up")
         elif any([instance.state == ServiceInstance.STATE_FAILED for instance in self.instances]):
             self.machine.transition("failed")
             if all([instance.state == ServiceInstance.STATE_FAILED for instance in self.instances]):
                 self.machine.transition("all_failed")
         elif len(self.instances) < self.count:
+            log.info("Only found %d instances rather than %d", len(self.instances), self.count)
             self.machine.transition("down")
+        elif all([instance.state == ServiceInstance.STATE_UP for instance in self.instances]):
+            self.machine.transition("all_up")
         
         if self.machine.state in (Service.STATE_DEGRADED, Service.STATE_FAILED):
             # Start a restart timer if configure
@@ -346,7 +351,6 @@ class Service(object):
         # * Restart counts for downed services ?
                 
         rebuild_all_instances = any([
-                                     self.node_pool != prev_service.node_pool, 
                                      self.command != prev_service.command,
                                      self.scheduler != prev_service.scheduler
                                     ])
@@ -369,19 +373,56 @@ class Service(object):
                 # When those services stop, we should be in a degraded mode, triggering a restart of
                 # the newer generation of instances.
                 service_instance.stop()
+                removed_instances += 1
 
         prev_service.instances = []
+
+        self.instances.sort(key=lambda i:i.instance_number)
+
+        current_instances = [i for i in self.instances if i.state not in 
+            (ServiceInstance.STATE_STOPPING, ServiceInstance.STATE_DOWN, ServiceInstance.STATE_FAILED)]
+
+        # We have special handling for node pool changes.
+        # This would cover the case of removing (or subsituting) a node in a pool
+        # which would require rebalancing services.
+        removed_instances = 0
+        if self.node_pool != prev_service.node_pool:
+            # How many instances per node should we have ?
+            optimal_instances_per_node = self.count / len(self.node_pool.nodes)
+            instance_count_per_node = collections.defaultdict(int)
+
+            for service_instance in current_instances:
+                # First we'll stop any instances on nodes that are no longer part of our pool
+                try:
+                    service_instance.node = self.node_pool[service_instance.node.hostname]
+                except KeyError:
+                    log.info("Stopping instance %r because it's not on a current node (%r)", service_instance.id, service_instance.node.hostname)
+                    service_instance.stop()
+                    removed_instances += 1    
+                    continue
+                
+                instance_count_per_node[service_instance.node] += 1
+                if instance_count_per_node[service_instance.node] > optimal_instances_per_node:
+                    log.info("Stopping instance %r because node %s has too many instances", service_instance.id, service_instance.node.hostname)
+                    service_instance.stop()
+                    removed_instances += 1
+                    continue
+
+        
+        current_instances = [i for i in self.instances if i.state not in 
+            (ServiceInstance.STATE_STOPPING, ServiceInstance.STATE_DOWN, ServiceInstance.STATE_FAILED)]
+
+        count_to_remove = (len(self.instances) - removed_instances) - self.count
+        if count_to_remove > 0:
+            instances_to_remove = current_instances[-count_to_remove:]
+            for service_instance in instances_to_remove:                
+                service_instance.stop()
+                removed_instances += 1
 
         # Now make adjustments to how many there are
         while len(self.instances) < self.count:
             self.build_instance()
 
-        count_to_remove = len(self.instances) - self.count
-        if count_to_remove > 0:
-            instances_to_remove = self.instances[-count_to_remove:]
-            for service_instance in instances_to_remove:
-                service_instance.stop()        
-        
     @property
     def data(self):
         data = {
@@ -414,8 +455,14 @@ class Service(object):
         # Restore all the instances
         # We're going to just indicate they are up and start a monitor
         for instance in data['instances']:
-            node = self.node_pool[instance['node']]
+            try:
+                node = self.node_pool[instance['node']]
+            except KeyError:
+                log.error("Failed to find node %s in pool for %s", instance['node'], self.name)
+                continue
             service_instance = self._create_instance(node, instance['instance_number'])
             
             service_instance.machine.state = ServiceInstance.STATE_MONITORING
             service_instance._run_monitor()            
+        
+        self.instances.sort(key=lambda i:i.instance_number)

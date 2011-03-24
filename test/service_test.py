@@ -65,16 +65,20 @@ class SimpleTest(TestCase):
         
         assert_equal(instance2.state, service.ServiceInstance.STATE_FAILED)
         assert_equal(self.service.state, service.Service.STATE_DEGRADED)
-
-        instance2.stop()
-
-        # Bring it back up
-        instance2.start()
-        instance2._run_monitor()
-        instance2.monitor_action.exit_status = 0
-        instance2._monitor_complete_callback()
+        assert_equal(len(self.service.instances), 2)
         
-        assert_equal(instance2.state, service.ServiceInstance.STATE_UP)
+        instance2.stop()
+        assert_equal(len(self.service.instances), 1)
+        assert_equal(instance2.state, service.ServiceInstance.STATE_DOWN)
+        
+        # Bring a new instance back up
+        instance3 = self.service.build_instance()
+        
+        instance3._run_monitor()
+        instance3.monitor_action.exit_status = 0
+        instance3._monitor_complete_callback()
+        
+        assert_equal(instance3.state, service.ServiceInstance.STATE_UP)
         assert_equal(self.service.state, service.Service.STATE_UP)
 
         # Fail both
@@ -82,9 +86,9 @@ class SimpleTest(TestCase):
         instance1.monitor_action.exit_status = 1
         instance1._monitor_complete_callback()
 
-        instance2._run_monitor()
-        instance2.monitor_action.exit_status = 1
-        instance2._monitor_complete_callback()
+        instance3._run_monitor()
+        instance3.monitor_action.exit_status = 1
+        instance3._monitor_complete_callback()
 
 
         assert_equal(instance1.state, service.ServiceInstance.STATE_FAILED)
@@ -101,8 +105,7 @@ class ReconfigTest(TestCase):
         self.service.start()
 
         new_service = service.Service("Sample Service", "sleep 60 &", node_pool=self.service.node_pool)
-        new_service.count = self.service.count
-        
+        new_service.count = self.service.count     
 
         new_service.absorb_previous(self.service)
         
@@ -150,6 +153,29 @@ class ReconfigTest(TestCase):
         assert_equal(len(another_new_service.instances), 3)
         assert_equal(another_new_service.instances[-2].state, service.ServiceInstance.STATE_STOPPING)
 
+class ReconfigNodePoolTest(TestCase):
+    @setup
+    def build_current_service(self):
+        self.node_pool = testingutils.TestPool("node0", "node1")
+        self.service = service.Service("Sample Service", "sleep 60 &", node_pool=self.node_pool)
+        self.service.pid_file_template = "/tmp/pid"
+        self.service.count = 4
+
+    @setup
+    def build_new_service(self):
+        self.new_node_pool = testingutils.TestPool("node0")
+        self.new_service = service.Service("Sample Service", "sleep 60 &", node_pool=self.new_node_pool)
+        self.new_service.pid_file_template = "/tmp/pid"
+        self.new_service.count = 4
+    
+
+    def test_node_pool_rebalance(self):
+        self.service.start()
+
+        failing_node_instances = [i for i in self.service.instances if i.node.hostname == "node1"]
+        self.new_service.absorb_previous(self.service)
+
+        assert all(i.state == ServiceInstance.STATE_STOPPING for i in failing_node_instances)
 
 class SimpleRestoreTest(TestCase):
     @setup

@@ -1,5 +1,6 @@
 from types import FunctionType
 import functools
+import itertools
 import logging
 
 from testify import *
@@ -151,9 +152,30 @@ class TestNode(turtle.Turtle):
 
 class TestPool(object):
     _node = None
+
+    def __init__(self, *node_names):
+        self.nodes = []
+        self._ndx_cycle = None
+        for hostname in node_names:
+            self.nodes.append(TestNode(hostname=hostname))
+
+        if self.nodes:
+            self._ndx_cycle = itertools.cycle(range(0, len(self.nodes)))
+    
+    def __getitem__(self, value):
+        for node in self.nodes:
+            if node.hostname == value:
+                return node
+        else:
+            raise KeyError
+
     def next(self):
-        if self._node is None:
-            self._node = TestNode()
-        return self._node
+        if not self.nodes:
+            self.nodes.append(TestNode())
+        
+        if self._ndx_cycle:
+            return self.nodes[self._ndx_cycle.next()]
+        else:
+            return self.nodes[0]
     
     next_round_robin = next

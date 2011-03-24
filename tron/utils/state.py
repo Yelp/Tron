@@ -34,7 +34,10 @@ class NamedEventState(dict):
         super(NamedEventState, self).__init__(**kwargs)
     
     def __eq__(self, other):
-        return self.name == other.name
+        try:
+            return self.name == other.name
+        except AttributeError:
+            return False
 
     def __str__(self):
         return self.name
