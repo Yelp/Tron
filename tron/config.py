@@ -25,6 +25,7 @@ class Error(Exception):
 class ConfigError(Exception):
     pass
 
+
 # If a configuration is not provided when trond starts, here is what we begin with.
 # The user can then use tronfig command to customize their installation.
 DEFAULT_CONFIG = """--- !TronConfiguration
@@ -119,6 +120,29 @@ class _ConfiguredObject(yaml.YAMLObject, FromDictBuilderMixin):
     """Base class for common configured objects where the configuration generates one actualized 
     object in the app that may be referenced by other objects."""
     actual_class = None     # Redefined to indicate the type of object this configuration will build
+    line_number = None
+
+    @classmethod
+    def from_yaml(cls, loader, node):
+        line_number = node.start_mark.line
+
+        # These loader calls return generators for some reason I don't understand
+        # For our purposes, we can just assume a single object is being generated.
+        results = list(loader.construct_yaml_object(node, cls))
+        if len(results) > 1:
+            raise ConfigError("More than one object")
+        
+        result = results[0]
+        result.line_number = line_number
+        result._validate()    
+
+        return result
+
+    @classmethod
+    def from_dict(cls, obj_dict):
+        result = super(_ConfiguredObject, cls).from_dict(obj_dict)
+        result._validate()
+        return result
 
     def __init__(self, *args, **kwargs):
         # No arguments
@@ -134,6 +158,9 @@ class _ConfiguredObject(yaml.YAMLObject, FromDictBuilderMixin):
     def _build(self):
         return self.actual_class()
 
+    def _validate(self):
+        pass
+
     def __cmp__(self, other):
         if not isinstance(other, self.__class__):
             return -1
@@ -142,7 +169,6 @@ class _ConfiguredObject(yaml.YAMLObject, FromDictBuilderMixin):
         other_dict = [(key, value) for key, value in other.__dict__.iteritems() if not key.startswith('_')]
         
         c = cmp(our_dict, other_dict)
-        print c, our_dict, other_dict
         return c
 
     def __hash__(self):
@@ -185,7 +211,6 @@ class TronConfiguration(yaml.YAMLObject):
     def _apply_jobs(self, mcp):
         """Configure jobs"""
         found_jobs = []
-
         # Check for duplicates before we start editing jobs
         def check_dup(dic, nex):
             if nex.name in dic:
@@ -348,12 +373,22 @@ def _match_schedule(real, schedule_conf):
     real.scheduler.job_setup(real)
 
 def _match_actions(real, action_conf_list):
+    if not action_conf_list:
+        raise ConfigError("Empty action list")
+    
+    name_set = set()
     for action_conf in action_conf_list:
         action = default_or_from_tag(action_conf, Action)
+
+        if action.name in name_set:
+            raise ConfigError("Duplicate action name '%s'" % action.name, action.line_number)
+        else:
+            name_set.add(action.name)
+        
         real_action = action.actualized
 
         if not real.node_pool and not real_action.node_pool:
-            raise yaml.YAMLError("Either job '%s' or its action '%s' must have a node" 
+            raise ConfigError("Either job '%s' or its action '%s' must have a node" 
                % (real.name, action_action.name))
 
         real.add_action(real_action)
@@ -364,6 +399,10 @@ class Job(_ConfiguredObject):
     actual_class = job.Job
                    
     def _apply(self):
+        for key in ('name', 'node', 'schedule', 'actions'):
+            if not hasattr(self, key):
+                raise ConfigError("Missing config value for %s", key)
+        
         real_job = self._ref()
 
         _match_name(real_job, self.name)
@@ -384,6 +423,15 @@ class Job(_ConfiguredObject):
 class Service(_ConfiguredObject):
     yaml_tag = u'!Service'
     actual_class = service.Service
+
+    def _validate(self):
+        for key in ('name', 'command', 'monitor_interval', 'pid_file'):
+            if not getattr(self, key, None):
+                raise ConfigError("Missing value in service %s %r" % (key, self), self.line_number)
+
+        if not re.match(r'[a-z_]\w*$', self.name, re.I):
+            raise ConfigError("Invalid action name '%s' - not a valid identifier" % self.name, self.line_number)
+
 
     def _apply(self):
         real_service = self._ref()
@@ -411,6 +459,14 @@ class Action(_ConfiguredObject):
         self.name = None
         self.command = None
     
+    def _validate(self):
+        for key in ('name', 'command'):
+            if not getattr(self, key, None):
+                raise ConfigError("Missing value in action %s %r" % (key, self), self.line_number)
+
+        if not re.match(r'[a-z_]\w*$', self.name, re.I):
+            raise ConfigError("Invalid action name '%s' - not a valid identifier" % self.name, self.line_number)
+
     def _apply_requirements(self, real_action, requirements):
         if not isinstance(requirements, list):
             requirements = [requirements]
@@ -422,8 +478,6 @@ class Action(_ConfiguredObject):
     def _apply(self):
         """Configured the specific action instance"""
         real_action = self._ref()
-        if not re.match(r'[a-z_]\w*$', self.name, re.I):
-            raise yaml.YAMLError("Invalid action name '%s' - not a valid identifier" % self.name)
 
         real_action.name = self.name
         real_action.command = self.command
@@ -439,7 +493,6 @@ class Action(_ConfiguredObject):
 
         if hasattr(self, "requires"):
             self._apply_requirements(real_action, self.requires)
-
 
 class NodePool(_ConfiguredObject):
     yaml_tag = u'!NodePool'

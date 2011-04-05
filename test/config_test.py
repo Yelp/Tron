@@ -8,8 +8,7 @@ import tempfile
 from testify import *
 from tron import config, mcp, scheduler
 
-class ConfigTest(TestCase):
-    config = """
+BASE_CONFIG = """
 --- !TronConfiguration
 working_dir: "./config_test_dir"
 
@@ -18,10 +17,6 @@ ssh_options: !SSHOptions
     identities: 
         - test/test_id_rsa
 
-command_context:
-    batch_dir: /tron/batch/test/foo
-    python: /usr/bin/python
-    
 nodes:
     - &node0 !Node
         hostname: 'batch0'
@@ -29,6 +24,16 @@ nodes:
         hostname: 'batch1'
     - &nodePool !NodePool
         nodes: [*node0, *node1]
+"""
+
+
+class ConfigTest(TestCase):
+    config = BASE_CONFIG + """
+
+command_context:
+    batch_dir: /tron/batch/test/foo
+    python: /usr/bin/python
+    
 jobs:
     - &job0 !Job
         name: "test_job0"
@@ -232,6 +237,54 @@ services:
         assert self.serv.pid_file_template
         assert self.serv.command
         assert self.serv.context
+
+class BadJobConfigTest(TestCase):
+    @setup
+    def build_env(self):
+        self.test_dir = tempfile.mkdtemp()
+        self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')      
+    
+    def test_no_actions(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    - &job0
+        name: "test_job0"
+        node: *node0
+        schedule: "interval 20s"
+        """
+        test_config = config.load_config(StringIO.StringIO(test_config))
+        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+
+    def test_empty_actions(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    - &job0
+        name: "test_job0"
+        node: *node0
+        schedule: "interval 20s"
+        actions:
+        """
+        test_config = config.load_config(StringIO.StringIO(test_config))
+        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+
+    def test_dupe_names(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    - &job0
+        name: "test_job0"
+        node: *node0
+        schedule: "interval 20s"
+        actions:
+            -
+                name: "action0_0"
+                command: "test_command0.0"                
+            -
+                name: "action0_0"
+                command: "test_command0.0"                
+
+        """
+        test_config = config.load_config(StringIO.StringIO(test_config))
+        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
         
 if __name__ == '__main__':
     run()
