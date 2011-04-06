@@ -159,6 +159,10 @@ class _ConfiguredObject(yaml.YAMLObject, FromDictBuilderMixin):
         return self.actual_class()
 
     def _validate(self):
+        """Optional method for providing validation steps to the configuration settings
+
+        This will be called before we start constructing real actualized objects.
+        """
         pass
 
     def __cmp__(self, other):
@@ -397,12 +401,13 @@ def _match_actions(real, action_conf_list):
 class Job(_ConfiguredObject):
     yaml_tag = u'!Job'
     actual_class = job.Job
-                   
-    def _apply(self):
+    
+    def _validate(self):
         for key in ('name', 'node', 'schedule', 'actions'):
             if not hasattr(self, key):
                 raise ConfigError("Missing config value for %s", key)
-        
+                   
+    def _apply(self):        
         real_job = self._ref()
 
         _match_name(real_job, self.name)
@@ -541,7 +546,7 @@ class Scheduler(object):
         if scheduler_name == "interval":
             return IntervalScheduler(''.join(scheduler_args)).actualized
 
-        raise Error("Unknown scheduler %r" % scheduler_str)
+        raise ConfigError("Unknown scheduler %r" % scheduler_str)
 
 
 
