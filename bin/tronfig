@@ -36,13 +36,14 @@ def clean_config(load):
 
     return load
 
-def test_config(file_name):
+def test_config(contents):
     tmpdir = tempfile.mkdtemp()
     
     # Can the MCP handle the configuration?
     try:
         # The local MCP can't handle all the configuration, so clean it
-        edited_config = clean_config(yaml.load(file(file_name)))
+        edited_config = clean_config(yaml.load(contents))
+        
         edited_file = tempfile.NamedTemporaryFile()
         edited_file.write(yaml.dump(edited_config))
         edited_file.flush()
@@ -58,31 +59,34 @@ def test_config(file_name):
 
     return False
 
-def edit_config(options, contents):
+def edit_config(contents):
     fi = tempfile.NamedTemporaryFile(suffix='.yaml')
     fi.write(contents)
     fi.flush()
 
     editor = os.getenv('EDITOR') or os.getenv('VISUAL') or 'vim'
-    while not os.system("%s %s" % (editor, fi.name)) and not test_config(fi.name):
-        if raw_input("There are errors in your configuration. Continue editing? (y/n): ")[:1].lower() == 'n':
+    while os.system("%s %s" % (editor, fi.name)) != 0:
+        if raw_input("Editor returned an error. Continue editing? (y/n): ")[:1].lower() == 'n':
             return
     
     upload = open(fi.name)
-    upload_config(options, upload.read())
-    upload.close()
-    fi.close()
+    with open(fi.name) as upload_file:
+        return upload_file.read()
 
 if __name__ == '__main__':
     options = parse_options()
     cmd.setup_logging(options)
-
+    
+    # Load command options
     cmd.load_config(options)
+
+    is_a_tty = os.isatty(sys.stdout.fileno())
 
     if options.from_stdin:
         # We're taking config from stdin and uploading it directly
-        incoming_config = sys.stdin.read()
-        upload_config(options, incoming_config)
+        new_config = sys.stdin.read()
+        if not test_config(new_config):
+            sys.exit(1)        
     else:
         # We're going to need config from the server
         status, content = cmd.request(options.server, "/config")
@@ -90,11 +94,29 @@ if __name__ == '__main__':
             print >>sys.stderr, "Error from server at %s : %r" % (options.server, content)
             sys.exit(1)
 
-        if os.isatty(sys.stdout.fileno()):
-            edit_config(options, content['config'])
+        if is_a_tty:
+            new_config = content['config']
+            while True:
+                new_config = edit_config(new_config)
+                if not new_config:
+                    print >>sys.stderr, "Cancelling edit"
+                    sys.exit(1)
+
+                if not test_config(new_config):
+                    if raw_input("There are errors in your configuration. Continue editing? (y/n): ")[:1].lower() == 'n':
+                        sys.exit(1)
+                else:
+                    break            
+        
         else:
-            # Just dump it to stdout
-            print content['config']
+            # No editing possible, use the existing config
+            new_config = content['config']
     
+    if is_a_tty:
+        upload_config(options, new_config)
+    else:
+        print new_config
+
+    # Save our command options (NOT THE CONFIG FILE)
     cmd.save_config(options)
 
