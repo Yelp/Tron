@@ -1,3 +1,10 @@
+tron (0.2.3-1) unstable; urgency=low
+
+  * Resolved an issue where tronfig via stdin wouldn't catch all errors. (rhettg)
+  * Provided additional config time validation to catch bad configurations. (rhettg)
+  
+ -- Rhett Garber <rhettg@gmail.com>  Thu, 7 Apr 2011 10:50:00 -0800
+
 tron (0.2.2-1) unstable; urgency=low
 
   * Resolved an issue where certain service reconfigurations would 
