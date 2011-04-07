@@ -318,7 +318,9 @@ class JobsResource(resource.Resource):
         serv_list = []
         job_list = []
         for current_job in self._master_control.jobs.itervalues():
-            last_success = current_job.last_success.end_time.strftime("%Y-%m-%d %H:%M:%S") if current_job.last_success else None
+            last_success = None
+            if current_job.last_success and current_job.last_success.end_time:
+                last_success = current_job.last_success.end_time.strftime("%Y-%m-%d %H:%M:%S")
             
             # We need to describe the current state of this job
             current_run = current_job.next_to_finish()
