@@ -113,10 +113,7 @@ if __name__ == '__main__':
             # No editing possible, use the existing config
             new_config = content['config']
     
-    if is_a_tty:
-        upload_config(options, new_config)
-    else:
-        print new_config
+    upload_config(options, new_config)
 
     # Save our command options (NOT THE CONFIG FILE)
     cmd.save_config(options)
