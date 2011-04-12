@@ -13,6 +13,7 @@ from tron import mcp, cmd, config
 
 def parse_options():
     parser = optparse.OptionParser("usage: %prog [options] [-]", version="%%prog %s" % tron.__version__)
+    parser.add_option("--print", "-p", action="store_true", dest="print_config", help="Print config to stdout, rather than uploading", default=False)
     parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
     parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=None)
     (options, args) = parser.parse_args(sys.argv)
@@ -81,10 +82,8 @@ if __name__ == '__main__':
     # Load command options
     cmd.load_config(options)
 
-    is_a_tty = os.isatty(sys.stdout.fileno())
-
     if options.from_stdin:
-        # We're taking config from stdin and uploading it directly
+        # We're taking config from stdin
         new_config = sys.stdin.read()
         if not test_config(new_config):
             sys.exit(1)        
@@ -95,7 +94,7 @@ if __name__ == '__main__':
             print >>sys.stderr, "Error from server at %s : %r" % (options.server, content)
             sys.exit(1)
 
-        if is_a_tty:
+        if os.isatty(sys.stdout.fileno()):
             new_config = content['config']
             while True:
                 new_config = edit_config(new_config)
@@ -113,7 +112,10 @@ if __name__ == '__main__':
             # No editing possible, use the existing config
             new_config = content['config']
     
-    upload_config(options, new_config)
+    if options.print_config:
+        print new_config
+    else:
+        upload_config(options, new_config)
 
     # Save our command options (NOT THE CONFIG FILE)
     cmd.save_config(options)

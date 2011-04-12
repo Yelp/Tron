@@ -1,3 +1,9 @@
+tron (0.2.4-1) unstable; urgency=low
+
+  * Final tronfig fix for stdout/stdin behavior (rhettg)
+  
+ -- Rhett Garber <rhettg@gmail.com>  Tue, 12 Apr 2011 10:50:00 -0800
+
 tron (0.2.3-2) unstable; urgency=low
 
   * Made tronfig work with non-interactive uploads again. (jbrown)
