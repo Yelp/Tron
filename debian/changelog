@@ -1,3 +1,9 @@
+tron (0.2.3-2) unstable; urgency=low
+
+  * Made tronfig work with non-interactive uploads again. (jbrown)
+  
+ -- James Brown <jbrown@yelp.com>  Mon, 11 Apr 2011 22:06:56 -0700
+
 tron (0.2.3-1) unstable; urgency=low
 
   * Resolved an issue where tronfig via stdin wouldn't catch all errors. (rhettg)
