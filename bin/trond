@@ -152,20 +152,31 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
         
 
     def run(self):
+        logger.debug("init: preApplication")
         self.preApplication()
         
+        logger.debug("init: setup_logging")
         self.log_handler = setup_logging(self.options)
         
+        logger.debug("init: postApplication")
         self.postApplication()
 
 
     def startApplication(self, application):
-        self.setupEnvironment(self.config['chroot'],
+        logger.debug("init: about to setup environment")
+
+        try:
+            self.setupEnvironment(self.config['chroot'],
                               self.config['rundir'],
                               self.config['nodaemon'],
                               self.config['umask'],
                               self.config['pidfile'])
-
+        except Exception, e:
+            # We may have already forked/daemonized at this point, so lets hope that logging was setup properly
+            # otherwise, we may never know...
+            logger.exception("Error setting up environment")
+            print >>sys.stderr, "Error setting up environment: %r" % e
+            sys.exit(1)
         
         # Build and configure the mcp
         master_control = mcp.MasterControlProgram(self.options.working_dir, self.options.config_file)
@@ -176,6 +187,7 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
             sys.exit(1)
 
         # Try to load up previous state
+        logger.debug("attempt restore")
         master_control.try_restore()
 
         master_control.state_handler.writing_enabled = True
@@ -189,10 +201,13 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
         signal.signal(signal.SIGHUP, sighup_handler)
 
         # Start up our web management interface
+        logger.debug("listenTCP")
         reactor.listenTCP(self.options.listen_port, server.Site(www.RootResource(master_control)), interface=self.options.listen_host)
 
         # Setup the mcp timed callbacks
         reactor.callLater(0, master_control.run_jobs)
+
+        logger.debug("startApplication complete"
 
         
 def main():
