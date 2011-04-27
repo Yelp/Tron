@@ -33,6 +33,7 @@ class SimpleStoreTestCase(TestCase):
 		assert_in("test8", values)
 		assert_in("test9", values)
 
+
 class ParentEventRecorderTestCase(TestCase):
 	@setup
 	def build_recorders(self):
@@ -47,3 +48,21 @@ class ParentEventRecorderTestCase(TestCase):
 
 		assert_equal(len(self.recorder.list(min_level=event.ERROR)), 0)
 		assert_equal(len(self.recorder.list(min_level=event.INFO)), 2)
+
+
+class EntitySwapTestCase(TestCase):
+	"""Our recorder should be able to swap out the underlying entity, and all the associated events should be updated"""
+	@setup
+	def build_recorder(self):
+		self.entity = turtle.Turtle()
+		self.recorder = event.EventRecorder(self)
+	
+	@setup
+	def create_event(self):
+		self.recorder.emit_notice("hello")
+	
+	def test(self):
+		self.recorder.entity = self.entity
+		
+		evt = self.recorder.list()[0]
+		assert_equal(evt.entity, self.entity)

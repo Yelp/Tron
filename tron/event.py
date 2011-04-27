@@ -53,8 +53,10 @@ class FixedLimitStore(object):
 
 
 class Event(object):
-    def __init__(self, entity, level, name, **data):
-        self._entity = weakref.ref(entity)
+    __slots__ = ('_src', 'time', 'level', 'name', 'data')
+    
+    def __init__(self, src, level, name, **data):
+        self._src = weakref.ref(src)
         self.time = timeutils.current_time()
         self.level = level
         self.name = name
@@ -62,7 +64,7 @@ class Event(object):
 
     @property
     def entity(self):
-        return self._entity()
+        return self._src().entity
 
 
 class EventRecorder(object):
@@ -72,21 +74,32 @@ class EventRecorder(object):
         self._entity = weakref.ref(entity)
         
         if parent:
-            self._parent = weakref.ref(parent)
+            self.set_parent(parent)
     
+    def set_parent(self, parent):
+        self._parent = weakref.ref(parent)
+
+    def _get_entity(self):
+        return self._entity()
+    
+    def _set_entity(self, entity):
+        self._entity = weakref.ref(entity)
+    
+    entity = property(_get_entity, _set_entity)
+
     def record(self, event):
         self._store.append(event, event.level)
         if self._parent:
             self._parent().record(event)
 
     def emit_info(self, name, **data):
-        self.record(Event(self._entity(), INFO, name, **data))
+        self.record(Event(self, INFO, name, **data))
 
     def emit_notice(self, name, **data):
-        self.record(Event(self._entity(), NOTICE, name, **data))
+        self.record(Event(self, NOTICE, name, **data))
 
     def emit_error(self, name, **data):
-        self.record(Event(self._entity(), ERROR, name, **data))
+        self.record(Event(self, ERROR, name, **data))
 
     def list(self, min_level=None):
         # Level's are actually descriptive strings, but we provide a way to get the
