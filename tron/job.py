@@ -3,7 +3,7 @@ import os
 import shutil
 from collections import deque
 
-from tron import action, command_context
+from tron import action, command_context, event
 from tron.utils import timeutils
 
 class Error(Exception): pass
@@ -27,6 +27,7 @@ class JobRun(object):
         self.node = None
         self.action_runs = []
         self.context = command_context.CommandContext(self, job.context)
+        self.event_recorder = event.EventRecorder(self, parent=self.job.event_recorder)
 
     @property
     def output_path(self):
@@ -162,7 +163,7 @@ class Job(object):
         self.run_num += 1
         return self.run_num - 1
 
-    def __init__(self, name=None, action=None, context=None):
+    def __init__(self, name=None, action=None, context=None, event_recorder=None):
         self.name = name
         self.topo_actions = [action] if action else []
         self.scheduler = None
@@ -179,6 +180,7 @@ class Job(object):
         self.output_path = None
         self.state_callback = lambda:None
         self.context = command_context.CommandContext(self, context)
+        self.event_recorder = event.EventRecorder(self, parent=event_recorder)
 
     def _register_action(self, action):
         """Prepare an action to be *owned* by this job"""
@@ -364,6 +366,8 @@ class Job(object):
         self.enabled = old.enabled
 
         self.context = old.context
+        self.event_recorder = old.event_recorder
+        self.event_recorder.entity = self
         self.context.base = self
 
     @property

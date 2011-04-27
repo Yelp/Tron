@@ -10,7 +10,7 @@ import yaml
 import time
 
 import tron
-from tron import job, config, command_context
+from tron import job, config, command_context, event
 from twisted.internet import reactor
 from tron.utils import timeutils
 
@@ -181,10 +181,12 @@ class MasterControlProgram(object):
         self.jobs = {}
         self.services = {}
         self.nodes = []
-        self.state_handler = StateHandler(self, working_dir)
         self.config_file = config_file
         self.context = context
         self.monitor = None
+        self.state_handler = StateHandler(self, working_dir)
+        self.event_recorder = event.EventRecorder(self)
+
 
     def live_reconfig(self):
         try:
@@ -250,6 +252,7 @@ class MasterControlProgram(object):
         self.jobs[job.name] = job
 
         job.set_context(self.context)
+        job.event_recorder.set_parent(self.event_recorder)
         self.setup_job_dir(job)
         job.listen(True, self.state_handler.store_state)
 
