@@ -12,6 +12,28 @@ nodes:
     - &node_pool !NodePool
         nodes: [*node0, *node1]
 
+watcher:
+    - &watcherEmailSystems !EmailWatcher
+        address: systems@yelp.com
+        level: CRITICAL
+        jobs: ALL
+        services: ALL
+    
+    - &watcherEmailAds !EmailWatcher
+        address: ads@yelp.com
+        level: ERROR
+        jobs: [*business_ad, *business_ad_cache]
+        services: [*ad_worker]
+    
+    - &watcherIRC !IRCWatcher
+        host: irc.yelpcorp.com
+        port: 8089
+        password: thePassword
+        channel: yelp
+        level: ERROR
+        jobs: ALL
+        services: ALL
+
 jobs:
     -
         name: "interval_dag"
