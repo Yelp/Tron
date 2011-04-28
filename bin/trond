@@ -207,8 +207,6 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
         # Setup the mcp timed callbacks
         reactor.callLater(0, master_control.run_jobs)
 
-        logger.debug("startApplication complete"
-
         
 def main():
     options = parse_options()
