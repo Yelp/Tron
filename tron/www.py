@@ -122,6 +122,8 @@ class JobRunResource(resource.Resource):
     def getChild(self, act_name, request):
         if act_name == '':
             return self
+        elif act_name == '_events':
+            return EventResource(self._run)
         
         for act_run in self._run.action_runs:
             if act_name == act_run.action.name:
@@ -224,6 +226,8 @@ class JobResource(resource.Resource):
     def getChild(self, run_num, request):
         if run_num == '':
             return self
+        elif run_num == '_events':
+            return EventResource(self._job)
 
         run = None
 
@@ -524,6 +528,7 @@ class ConfigResource(resource.Resource):
         
         return respond(request, response)
 
+
 class StatusResource(resource.Resource):
     isLeaf = True
     def __init__(self, master_control):
@@ -532,6 +537,27 @@ class StatusResource(resource.Resource):
 
     def render_GET(self, request):
         return respond(request, {'status': "I'm alive biatch"})
+
+
+class EventResource(resource.Resource):
+    isLeaf = True
+    def __init__(self, recordable):
+        assert hasattr(recordable, 'event_recorder')
+        self._recordable = recordable
+    
+    def render_GET(self, request):
+        response = {}
+        response['data'] = []
+
+        for evt in self._recordable.event_recorder.list():
+            response['data'].append({
+                                'level': evt.level, 
+                                'name': evt.name, 
+                                'entity': str(evt.entity),
+                                'time': evt.time.strftime("%Y-%m-%d %H:%M:%S")})
+        
+        return respond(request, response)
+
 
 class RootResource(resource.Resource):
     def __init__(self, master_control):
@@ -543,6 +569,7 @@ class RootResource(resource.Resource):
         self.putChild('services', ServicesResource(master_control))
         self.putChild('config', ConfigResource(master_control))
         self.putChild('status', StatusResource(master_control))
+        self.putChild('events', EventResource(master_control))
 
     def getChild(self, name, request):
         if name == '':

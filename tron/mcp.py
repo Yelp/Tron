@@ -42,6 +42,7 @@ class StateHandler(object):
         self.write_start = None
         self.writing_enabled = writing
         self.store_delayed = False
+        self.event_recorder = event.EventRecorder(self, parent=mcp.event_recorder)
 
     def restore_job(self, job_inst, data):
         job_inst.enabled = data['enabled']
@@ -104,6 +105,8 @@ class StateHandler(object):
         file_path = os.path.join(self.working_dir, STATE_FILE)
         log.info("Storing state in %s", file_path)
         
+        self.event_recorder.emit_info("storing")        
+        
         self.write_start = timeutils.current_timestamp()
         pid = os.fork()
         if pid:
@@ -126,7 +129,7 @@ class StateHandler(object):
 
     def load_data(self):
         log.info('Restoring state from %s', self.get_state_file_path())
-        
+        self.event_recorder.emit_info("restoring")
         with open(self.get_state_file_path()) as data_file:
             return self._load_data_file(data_file)
 
@@ -170,6 +173,8 @@ class StateHandler(object):
 
         return data
 
+    def __str__(self):
+        return "STATE_HANDLER"
 
 class MasterControlProgram(object):
     """master of tron's domain
@@ -184,11 +189,11 @@ class MasterControlProgram(object):
         self.config_file = config_file
         self.context = context
         self.monitor = None
-        self.state_handler = StateHandler(self, working_dir)
         self.event_recorder = event.EventRecorder(self)
-
+        self.state_handler = StateHandler(self, working_dir)
 
     def live_reconfig(self):
+        self.event_recorder.emit_info("reconfig")
         try:
             # Temporarily disable state writing because reconfig can cause a lot of state changes
             old_state_writing = self.state_handler.writing_enabled
@@ -200,6 +205,7 @@ class MasterControlProgram(object):
             self.run_jobs()
         except Exception, e:
             log.exception("Reconfiguration failed")
+            self.event_recorder.emit_error("reconfig_failure")
         finally:
             self.state_handler.writing_enabled = old_state_writing
 
@@ -379,3 +385,6 @@ class MasterControlProgram(object):
             if not service.is_started:
                 service.start()
 
+
+    def __str__(self):
+        return "MCP"

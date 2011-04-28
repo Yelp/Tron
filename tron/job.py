@@ -28,6 +28,7 @@ class JobRun(object):
         self.action_runs = []
         self.context = command_context.CommandContext(self, job.context)
         self.event_recorder = event.EventRecorder(self, parent=self.job.event_recorder)
+        self.event_recorder.emit_info("created")
 
     @property
     def output_path(self):
@@ -40,6 +41,7 @@ class JobRun(object):
             action.run_time = run_time
 
     def scheduled_start(self):
+        self.event_recorder.emit_info("scheduled_start")
         self.attempt_start()
 
         if self.is_scheduled:
@@ -55,10 +57,14 @@ class JobRun(object):
         self.start_time = timeutils.current_time()
         self.end_time = None
 
+        self.event_recorder.emit_info("started")
+
         for action in self.action_runs:
             action.attempt_start()
 
     def manual_start(self):
+        self.event_recorder.emit_info("manual_start")
+        
         self.queue()
         self.attempt_start()
 
@@ -80,6 +86,11 @@ class JobRun(object):
         if self.is_done:
             self.end_time = timeutils.current_time()
 
+            if self.is_failure:
+                self.event_recorder.emit_error("failed")
+            else:
+                self.event_recorder.emit_info("succeeded")
+            
             next = self.job.next_to_finish()
             if next and next.is_queued:
                 next.attempt_start()
@@ -155,6 +166,9 @@ class JobRun(object):
     @property
     def is_cancelled(self):
         return all([r.is_cancelled for r in self.action_runs])
+
+    def __str__(self):
+        return "JOB_RUN:%s" % self.id
 
 
 class Job(object):
@@ -370,6 +384,8 @@ class Job(object):
         self.event_recorder.entity = self
         self.context.base = self
 
+        self.event_recorder.emit_info("reconfigured")
+
     @property
     def data(self):
         return {'runs': [r.data for r in self.runs],
@@ -391,6 +407,8 @@ class Job(object):
         if run.is_success and not self.last_success:
             self.last_success = run
 
+        self.event_recorder.emit_info("restored")
+
         return run
 
     def restore_run(self, data, actions):
@@ -406,3 +424,5 @@ class Job(object):
 
         return run
 
+    def __str__(self):
+        return "JOB:%s" % self.name
