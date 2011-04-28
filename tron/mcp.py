@@ -273,7 +273,8 @@ class MasterControlProgram(object):
             return
             
         service.set_context(self.context)
-
+        service.event_recorder.set_parent(self.event_recorder)
+        
         # Trigger storage on any state changes
         service.listen(True, self.state_handler.store_state)
 

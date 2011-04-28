@@ -6,6 +6,7 @@ from twisted.internet import reactor
 from tron import job
 from tron import action
 from tron import command_context
+from tron import event
 from tron.utils import state
 from tron.utils import timeutils
 
@@ -39,7 +40,7 @@ class ServiceInstance(object):
         self.id = "%s.%s" % (service.name, self.instance_number)
         
         self.machine = state.StateMachine(ServiceInstance.STATE_DOWN)
-        
+
         self.context = command_context.CommandContext(self, service.context)
         
         self.monitor_action = None
@@ -153,6 +154,7 @@ class ServiceInstance(object):
 
     def _start_complete_failstart(self):
         log.warning("Failed to start service %s (%s)", self.id, self.node.hostname)
+        self.event_recorder.emit_error("failstart")
         self.machine.transition("down")
         self.start_action = None
 
@@ -184,6 +186,9 @@ class ServiceInstance(object):
         log.warning("Failed to start kill command for %s", self.id)
         self._queue_monitor()
 
+    def __str__(self):
+        return "SERVICE:%s" % self.id
+
 
 class Service(object):
     class ServiceState(state.NamedEventState): pass
@@ -199,7 +204,7 @@ class Service(object):
     STATE_FAILED.update(dict(stop=STATE_STOPPING, up=STATE_DEGRADED, start=STATE_STARTING))
     STATE_UP.update(dict(stop=STATE_STOPPING, failed=STATE_DEGRADED, down=STATE_DEGRADED))
     
-    def __init__(self, name=None, command=None, node_pool=None, context=None):
+    def __init__(self, name=None, command=None, node_pool=None, context=None, event_recorder=None):
         self.name = name
         self.command = command
         self.scheduler = None
@@ -219,6 +224,9 @@ class Service(object):
 
         self.instances = []
 
+        self.event_recorder = event.EventRecorder(self, parent=event_recorder)
+        self.listen(True, self._record_state_changes)
+    
     @property
     def state(self):
         if self.machine:
@@ -241,6 +249,16 @@ class Service(object):
 
     def set_context(self, context):
         self.context = command_context.CommandContext(self, context)
+
+    def _record_state_changes(self):
+        func = None
+        if self.machine.state in (self.STATE_FAILED, self.STATE_DEGRADED):
+            func = self.event_recorder.emit_error
+        elif self.machine.state in (self.STATE_UP, self.STATE_DOWN):
+            func = self.event_recorder.emit_info    
+        
+        if func:
+            func(str(self.machine.state))
 
     def _clear_failed_instances(self):
         """Remove and cleanup any instances that are no longer with us"""
@@ -423,6 +441,8 @@ class Service(object):
         while len(self.instances) < self.count:
             self.build_instance()
 
+        self.event_recorder.emit_info("reconfigured")
+
     @property
     def data(self):
         data = {
@@ -449,7 +469,8 @@ class Service(object):
         # Start our machine from where it left off
         self.machine.state = state.named_event_by_name(Service.STATE_DOWN, data['state'])
 
-        if self.machine.state == Service.STATE_DOWN:
+        if self.machine.state in (Service.STATE_DOWN, Service.STATE_FAILED):
+            self.event_recorder.emit_info("restored")
             return
 
         # Restore all the instances
@@ -460,9 +481,13 @@ class Service(object):
             except KeyError:
                 log.error("Failed to find node %s in pool for %s", instance['node'], self.name)
                 continue
-            service_instance = self._create_instance(node, instance['instance_number'])
             
+            service_instance = self._create_instance(node, instance['instance_number'])
             service_instance.machine.state = ServiceInstance.STATE_MONITORING
             service_instance._run_monitor()            
         
         self.instances.sort(key=lambda i:i.instance_number)
+        self.event_recorder.emit_info("restored")
+    
+    def __str__(self):
+        return "SERVICE:%s" % self.name
