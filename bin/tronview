@@ -75,6 +75,7 @@ def parse_options():
     parser.add_option("--stdout", "-o", action="count", dest="stdout", help="Solely displays stdout", default=0)
     parser.add_option("--stderr", "-e", action="count", dest="stderr", help="Solely displays stderr", default=0)
     parser.add_option("--warn", "-w", action="count", dest="warn", help="Solely displays warnings and errors", default=0)
+    parser.add_option("--events", action="store_true", dest="show_events", help="Show events for the specified entity", default=False)
 
     (options, args) = parser.parse_args(sys.argv)
     global display_color
@@ -87,8 +88,17 @@ def trunc(value, length):
         return value[:length-3] + '...'
     return value
 
+def display_events(options, response):
+    for evt in response['data']:
+        print "\t".join((evt['time'], evt['level'], evt['entity'], evt['name']))
+
 def view_all(options):
     """docstring for view_jobs"""
+
+    if options.show_events:
+        status, content = cmd.request(options.server, "/events")
+        assert status == cmd.OK
+        return display_events(options, content)
 
     status, content = cmd.request(options.server, "/")
     assert status == cmd.OK
@@ -164,7 +174,13 @@ def print_job_runs(options, runs):
 
 def view_job(options, job_name, supress_preface=False):
     """Retrieve details of the specified job and display"""
-    status, job_content = cmd.request(options.server, "/jobs/%s" % job_name)
+    jobs_url = "/jobs/%s" % job_name
+    if options.show_events:
+        status, content = cmd.request(options.server, jobs_url + "/_events")
+        assert status == cmd.OK
+        return display_events(options, content)
+
+    status, job_content = cmd.request(options.server, jobs_url)
     if status == cmd.ERROR:
         print >>sys.stderr, "%s: Cannot find job %s" % (job_content, job_name)
         sys.exit(1)
@@ -187,7 +203,15 @@ def view_job(options, job_name, supress_preface=False):
         options.num_displays = len(job_content['runs'])
 
 def view_job_run(options, job_run_id, supress_preface=False):
-    status, job_run_content = cmd.request(options.server, "/jobs/%s" % job_run_id.replace('.', '/'))
+
+    job_run_url = "/jobs/%s" % job_run_id.replace('.', '/')
+    if options.show_events:
+        status, content = cmd.request(options.server, job_run_url + "/_events")
+        assert status == cmd.OK
+        return display_events(options, content)
+
+
+    status, job_run_content = cmd.request(options.server, job_run_url)
     if status == cmd.ERROR:
         print >>sys.stderr, "%s: Cannot find job run %s" % (job_run_content, job_run_id)
         sys.exit(1)
