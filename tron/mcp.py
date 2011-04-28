@@ -45,27 +45,20 @@ class StateHandler(object):
         self.event_recorder = event.EventRecorder(self, parent=mcp.event_recorder)
 
     def restore_job(self, job_inst, data):
-        job_inst.enabled = data['enabled']
-
-        for r_data in data['runs']:
-            try:
-                run = job_inst.restore_main_run(r_data)
-            except job.Error, e:
-                log.warning("Failed to restore job: %r (%r)", r_data, e)
-                continue
-            
-            if run.is_scheduled:
-                reactor.callLater(sleep_time(run.run_time), self.mcp.run_job, run)
-
         job_inst.set_context(self.mcp.context)
+        job_inst.restore(data)
+        
+        for run in job_inst.runs:
+            if run.is_scheduled:
+                reactor.callLater(sleep_time(run.run_time), self.mcp.run_job, run)     
 
         next = job_inst.next_to_finish()
         if job_inst.enabled and next and next.is_queued:
             next.start()
 
     def restore_service(self, service, data):
-        service.restore(data)
         service.set_context(self.mcp.context)
+        service.restore(data)
 
     def delay_store(self):
         self.store_delayed = False

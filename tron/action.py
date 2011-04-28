@@ -326,8 +326,6 @@ class ActionRun(object):
         # what happened now.
         if self.is_running:
             self.machine.transition('fail_unknown')
-        else:
-            self.machine.notify()
 
     @property
     def data(self):

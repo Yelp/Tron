@@ -282,7 +282,7 @@ class TestJob(TestCase):
 
         assert mr2.is_queued
 
-    def test_restore_main_run(self):
+    def test_restore_run(self):
         self.job.topo_actions = []
         run_num = 4
 
@@ -327,7 +327,7 @@ class TestJob(TestCase):
          'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 128152)}
 
 
-        job_run = self.job.restore_main_run(state_data)
+        job_run = self.job.restore_run(state_data)
 
         # act2 was filtered
         assert_equal(len(job_run.action_runs), 2)

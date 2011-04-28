@@ -57,11 +57,11 @@ class JobRun(object):
         self.start_time = timeutils.current_time()
         self.end_time = None
 
-        self.event_recorder.emit_info("started")
-
         for action in self.action_runs:
             action.attempt_start()
 
+        self.event_recorder.emit_info("started")
+    
     def manual_start(self):
         self.event_recorder.emit_info("manual_start")
         
@@ -85,7 +85,7 @@ class JobRun(object):
 
         if self.is_done:
             self.end_time = timeutils.current_time()
-
+            
             if self.is_failure:
                 self.event_recorder.emit_error("failed")
             else:
@@ -103,6 +103,16 @@ class JobRun(object):
                 'start_time': self.start_time,
                 'end_time': self.end_time
         }
+
+    def restore(self, data):
+        self.start_time = data['start_time']
+        self.end_time = data['end_time']
+        self.set_run_time(data['run_time'])
+
+        for r, state in zip(self.action_runs, data['runs']):
+            r.restore_state(state)
+
+        self.event_recorder.emit_info("restored")
 
     def schedule(self):
         for r in self.action_runs:
@@ -392,7 +402,19 @@ class Job(object):
                 'enabled': self.enabled
         }
 
-    def restore_main_run(self, data):
+    def restore(self, data):
+        self.enabled = data['enabled']
+        
+        for r_data in data['runs']:
+            try:
+                self.restore_run(r_data)
+            except job.Error, e:
+                log.warning("Failed to restore job: %r (%r)", r_data, e)
+                continue
+
+        self.event_recorder.emit_info("restored")
+
+    def restore_run(self, data):
         action_names = []
         for action in data['runs']:
             action_names.append(action['id'].split('.')[-1])
@@ -402,25 +424,14 @@ class Job(object):
 
         action_list = filter(action_filter, self.topo_actions)
 
-        run = self.restore_run(data, action_list)
-        self.runs.append(run)
-        if run.is_success and not self.last_success:
-            self.last_success = run
-
-        self.event_recorder.emit_info("restored")
-
-        return run
-
-    def restore_run(self, data, actions):
-        run = self.build_run(run_num=data['run_num'], actions=actions)
+        run = self.build_run(run_num=data['run_num'], actions=action_list)
         self.run_num = max([run.run_num + 1, self.run_num])
 
-        for r, state in zip(run.action_runs, data['runs']):
-            r.restore_state(state)
+        run.restore(data)
+        self.runs.append(run)
 
-        run.start_time = data['start_time']
-        run.end_time = data['end_time']
-        run.set_run_time(data['run_time'])
+        if run.is_success and not self.last_success:
+            self.last_success = run     
 
         return run
 
