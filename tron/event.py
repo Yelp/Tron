@@ -3,25 +3,29 @@ import weakref
 from tron.utils import timeutils
 
 # Event Levels
-INFO = "INFO"
-NOTICE = "NOTICE"
-ERROR = "ERROR"
+# INFO is for troubleshooting information. This may be verbose but shouldn't cause any
+# monitors to make any decisions.
+LEVEL_INFO = "INFO"
+
+# OK inidicates the entity is doing great and any monitors that considered the entity to be in
+# non-ok state can reset itself.
+LEVEL_OK = "OK"
+
+# NOTICE inidicates some troubling behavior, but not yet a complete failure. It would be
+# appropriate to highlight this event, but don't go waking up the president just yet.
+LEVEL_NOTICE = "NOTICE"
+
+# CRITICAL indicates the entity has had a major failure. Call in the troops.
+LEVEL_CRITICAL = "CRITICAL"
 
 # To allow our levels to be ordered, we provide this list
 # Use .index(level) to be able to compare levels
 ORDERED_LEVELS = [
-    INFO,
-    NOTICE,
-    ERROR,
+    LEVEL_INFO,
+    LEVEL_OK,
+    LEVEL_NOTICE,
+    LEVEL_CRITICAL,
 ]
-
-# Potential Event Names
-# "failure"
-# "delay"
-# "start"
-# "stop"
-# "schedule"
-# "config"
 
 class FixedLimitStore(object):
     """Simple data store that keeps a fixed number of elements based on their 'category'
@@ -93,13 +97,16 @@ class EventRecorder(object):
             self._parent().record(event)
 
     def emit_info(self, name, **data):
-        self.record(Event(self, INFO, name, **data))
+        self.record(Event(self, LEVEL_INFO, name, **data))
+
+    def emit_ok(self, name, **data):
+        self.record(Event(self, LEVEL_OK, name, **data))
 
     def emit_notice(self, name, **data):
-        self.record(Event(self, NOTICE, name, **data))
+        self.record(Event(self, LEVEL_NOTICE, name, **data))
 
-    def emit_error(self, name, **data):
-        self.record(Event(self, ERROR, name, **data))
+    def emit_critical(self, name, **data):
+        self.record(Event(self, LEVEL_CRITICAL, name, **data))
 
     def list(self, min_level=None):
         # Level's are actually descriptive strings, but we provide a way to get the

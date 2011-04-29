@@ -87,9 +87,9 @@ class JobRun(object):
             self.end_time = timeutils.current_time()
             
             if self.is_failure:
-                self.event_recorder.emit_error("failed")
+                self.event_recorder.emit_critical("failed")
             else:
-                self.event_recorder.emit_info("succeeded")
+                self.event_recorder.emit_ok("succeeded")
             
             next = self.job.next_to_finish()
             if next and next.is_queued:

@@ -253,8 +253,10 @@ class Service(object):
     def _record_state_changes(self):
         func = None
         if self.machine.state in (self.STATE_FAILED, self.STATE_DEGRADED):
-            func = self.event_recorder.emit_error
+            func = self.event_recorder.emit_critical
         elif self.machine.state in (self.STATE_UP, self.STATE_DOWN):
+            func = self.event_recorder.emit_ok
+        else:
             func = self.event_recorder.emit_info    
         
         if func:
