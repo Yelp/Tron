@@ -7,10 +7,13 @@ from tron import job
 from tron import action
 from tron import command_context
 from tron import event
+from tron import node
 from tron.utils import state
 from tron.utils import timeutils
 
 log = logging.getLogger(__name__)
+
+MIN_MONITOR_HANG_TIME = 10
 
 class Error(Exception): pass
 
@@ -81,6 +84,19 @@ class ServiceInstance(object):
         if self.service.monitor_interval > 0:
             reactor.callLater(self.service.monitor_interval, self._run_monitor)
 
+    def _queue_monitor_hang_check(self):
+        """Since our monitor cycle is controlled by monitors actually completing, we need a check to
+        ensure the monitor doesn't hang.
+
+        We arn't going to make this monitor interval configurable right now, but just peg it to a factor of
+        the interval.
+        """
+
+        current_action = self.monitor_action
+        hang_monitor_duration = max((self.service.monitor_interval or 0) * 0.8, MIN_MONITOR_HANG_TIME)
+        
+        reactor.callLater(hang_monitor_duration, lambda : self._monitor_hang_check(current_action))
+
     def _run_monitor(self):
         if self.monitor_action:
             log.warning("Monitor action already exists, old callLater ?")
@@ -99,9 +115,21 @@ class ServiceInstance(object):
         self.monitor_action = action.ActionCommand("%s.monitor" % self.id, monitor_command)
         self.monitor_action.machine.listen(action.ActionCommand.COMPLETE, self._monitor_complete_callback)
         self.monitor_action.machine.listen(action.ActionCommand.FAILSTART, self._monitor_complete_failstart)
+        
+        try:
+            self.node.run(self.monitor_action)
+        except node.NodeError, e:
+            log.error("Failed to run monitor: %r", e)
+            self._monitor_complete_failstart()
+            return
+        
+        self._queue_monitor_hang_check()    
 
-        self.node.run(self.monitor_action)
-        # TODO: Need a timer on this in case the monitor hangs
+    def _monitor_hang_check(self, action):
+        if self.monitor_action is action:
+            log.warning("Monitor for %s is still running", self.id)
+            self.machine.transition("monitor_fail")
+            self._queue_monitor_hang_check()
 
     def _monitor_complete_callback(self):
         """Callback when our monitor has completed"""
@@ -443,7 +471,7 @@ class Service(object):
         while len(self.instances) < self.count:
             self.build_instance()
 
-        self.event_recorder.emit_info("reconfigured")
+        self.event_recorder.emit_notice("reconfigured")
 
     @property
     def data(self):
