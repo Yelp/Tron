@@ -305,7 +305,14 @@ def view_action_run(options, act_run_id, supress_preface=False):
 
 def view_service(options, service_name):
     """Retrieve details of the specified job and display"""
-    status, service_content = cmd.request(options.server, "/services/%s" % service_name)
+    service_url = "/services/%s" % service_name
+    if options.show_events:
+        status, content = cmd.request(options.server, service_url + "/_events")
+        assert status == cmd.OK
+        return display_events(options, content)
+
+
+    status, service_content = cmd.request(options.server, service_url)
     if status == cmd.ERROR:
         print >>sys.stderr, "%s: Cannot find job %s" % (service_content, service_name)
         sys.exit(1)

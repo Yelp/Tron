@@ -410,6 +410,8 @@ class ServiceResource(resource.Resource):
     def getChild(self, name, request):
         if name == '':
             return self
+        elif name == '_events':
+            return EventResource(self._service)
 
         found = None
         for instance in self._service.instances:
