@@ -93,7 +93,9 @@ class EventRecorder(object):
 
     def record(self, event):
         self._store.append(event, event.level)
-        if self._parent:
+
+        # Propogate if we have a parent set (and the level is high enough to care)
+        if self._parent and ORDERED_LEVELS.index(event.level) > ORDERED_LEVELS.index(LEVEL_INFO):
             self._parent().record(event)
 
     def emit_info(self, name, **data):

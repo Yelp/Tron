@@ -44,10 +44,11 @@ class ParentEventRecorderTestCase(TestCase):
 		self.recorder.record(event.Event(self, event.LEVEL_INFO, "hello"))
 		self.recorder.emit_notice("hello again")
 		
-		assert_equal(self.recorder.list(), self.parent_recorder.list())
+		assert_equal(len(self.recorder.list()), 2)
+		assert_equal(len(self.parent_recorder.list()), 1)
 
 		assert_equal(len(self.recorder.list(min_level=event.LEVEL_CRITICAL)), 0)
-		assert_equal(len(self.recorder.list(min_level=event.LEVEL_INFO)), 2)
+		assert_equal(len(self.recorder.list(min_level=event.LEVEL_NOTICE)), 1)
 
 
 class EntitySwapTestCase(TestCase):
