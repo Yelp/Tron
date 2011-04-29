@@ -46,9 +46,11 @@ class JobRun(object):
 
         if self.is_scheduled:
             if self.job.queueing:
+                self.event_recorder.emit_notice("queued")
                 log.warning("A previous run for %s has not finished - placing in queue", self.id)
                 self.queue()
             else:
+                self.event_recorder.emit_notice("cancelled")
                 log.warning("A previous run for %s has not finished - cancelling", self.id)
                 self.cancel()
 
@@ -394,7 +396,7 @@ class Job(object):
         self.event_recorder.entity = self
         self.context.base = self
 
-        self.event_recorder.emit_info("reconfigured")
+        self.event_recorder.emit_notice("reconfigured")
 
     @property
     def data(self):

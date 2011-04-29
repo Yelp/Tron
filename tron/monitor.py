@@ -1,6 +1,9 @@
 import logging
+import weakref
 
 from twisted.python import log
+
+from tron import event
 
 logger = logging.getLogger("tron.monitor")
 
@@ -10,8 +13,9 @@ class CrashReporter(object):
     Based on twisted.log.PythonLoggingObserver
     """
 
-    def __init__(self, emailer):
+    def __init__(self, emailer, mcp):
         self.emailer = emailer
+        self.event_recorder = event.EventRecorder(self, parent=mcp.event_recorder)
 
     def emit(self, eventDict):
         if 'logLevel' in eventDict:
@@ -31,9 +35,14 @@ class CrashReporter(object):
 
         if level >= logging.ERROR:
             try:
+                if self._mcp:
+                    self.event_recorder.emit_critical("crash", msg=text)
+                
                 self.emailer.send(text)
             except Exception:
                 logger.exception("Error sending notification")
+                if self._mcp:
+                    self.event_recorder.emit_critical("email_failure", msg=text)
                 
         
     def start(self):
@@ -41,3 +50,6 @@ class CrashReporter(object):
 
     def stop(self):
         log.removeObserver(self.emit)
+    
+    def __str__(self):
+        return "CRASH"

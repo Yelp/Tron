@@ -13,7 +13,7 @@ class SimpleDeferredTestCase(TestCase):
     @setup
     def add_crash_observer(self):
         self.test_emailer = turtle.Turtle()
-        self.mon = monitor.CrashReporter(self.test_emailer)
+        self.mon = monitor.CrashReporter(self.test_emailer, turtle.Turtle())
         self.mon.start()
 
     @testingutils.run_reactor()

@@ -71,7 +71,9 @@ class StateHandler(object):
                 log.info("State writing completed in in %d seconds", timeutils.current_timestamp() - self.write_start)
                 if status != 0:
                     log.warning("State writing process failed with status %d", status)
-
+                    self.event_recorder.emit_critical("write_failed")
+                else:
+                    self.event_recorder.emit_ok("write_complete")
                 self.write_pid = None
                 self.write_start = None
             else:
@@ -79,7 +81,8 @@ class StateHandler(object):
                 write_duration = timeutils.current_timestamp() - self.write_start
                 if write_duration > WRITE_DURATION_WARNING_SECS:
                     log.warning("State writing hasn't completed in %d secs", write_duration)
-
+                    self.event_recorder.notice("write_delayed")
+                
                 reactor.callLater(STATE_SLEEP, self.check_write_child)
 
     def store_state(self):
@@ -122,7 +125,7 @@ class StateHandler(object):
 
     def load_data(self):
         log.info('Restoring state from %s', self.get_state_file_path())
-        self.event_recorder.emit_info("restoring")
+        self.event_recorder.emit_notice("restoring")
         with open(self.get_state_file_path()) as data_file:
             return self._load_data_file(data_file)
 
