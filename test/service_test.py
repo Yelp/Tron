@@ -175,7 +175,35 @@ class ReconfigNodePoolTest(TestCase):
         failing_node_instances = [i for i in self.service.instances if i.node.hostname == "node1"]
         self.new_service.absorb_previous(self.service)
 
-        assert all(i.state == ServiceInstance.STATE_STOPPING for i in failing_node_instances)
+        assert all(i.state == service.ServiceInstance.STATE_STOPPING for i in failing_node_instances)
+
+class ReconfigRebuildAllTest(TestCase):
+    @setup
+    def build_current_service(self):
+        self.node_pool = testingutils.TestPool("node0")
+        self.service = service.Service("Sample Service", "sleep 60 &", node_pool=self.node_pool)
+        self.service.pid_file_template = "/tmp/pid"
+        self.service.count = 4
+
+    @setup
+    def build_new_service(self):
+        self.new_service = service.Service("Sample Service", "sleep 120 &", node_pool=self.node_pool)
+        self.new_service.pid_file_template = "/tmp/pid"
+        self.new_service.count = 4
+    
+
+    def test(self):
+        self.service.start()
+
+        self.new_service.absorb_previous(self.service)
+        
+        assert all(i.state == service.ServiceInstance.STATE_STOPPING for i in self.new_service.instances)
+
+        for i in self.new_service.instances:
+            i.machine.transition("down")
+
+        assert all(i.state == service.ServiceInstance.STATE_STARTING for i in self.new_service.instances), [i.state for i in self.new_service.instances]
+
 
 class SimpleRestoreTest(TestCase):
     @setup

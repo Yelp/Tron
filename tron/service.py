@@ -397,7 +397,8 @@ class Service(object):
         # * Changing the node pool
         # * Changes to the context ?
         # * Restart counts for downed services ?
-                
+        removed_instances = 0        
+        
         rebuild_all_instances = any([
                                      self.command != prev_service.command,
                                      self.scheduler != prev_service.scheduler
@@ -433,7 +434,7 @@ class Service(object):
         # We have special handling for node pool changes.
         # This would cover the case of removing (or subsituting) a node in a pool
         # which would require rebalancing services.
-        removed_instances = 0
+
         if self.node_pool != prev_service.node_pool:
             # How many instances per node should we have ?
             optimal_instances_per_node = self.count / len(self.node_pool.nodes)
