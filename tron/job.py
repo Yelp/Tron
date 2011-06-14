@@ -222,6 +222,7 @@ class Job(object):
         self.state_callback()
 
     def add_action(self, action):
+        action.job = self
         self._register_action(action)
         self.topo_actions.append(action)
 

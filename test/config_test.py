@@ -285,6 +285,35 @@ jobs:
         """
         test_config = config.load_config(StringIO.StringIO(test_config))
         assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
-        
+    
+    def test_bad_requires(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    - &job0
+        name: "test_job0"
+        node: *node0
+        schedule: "interval 20s"
+        actions:
+            - &action0_0
+                name: "action0_0"
+                command: "test_command0.0"                
+            - &action0_1
+                name: "action0_1"
+                command: "test_command0.1"              
+
+    - &job1
+        name: "test_job1"
+        node: *node0
+        schedule: "interval 20s"
+        actions:
+            -
+                name: "action1_0"
+                command: "test_command1.0"
+                requires: *action0_0
+
+        """
+        test_config = config.load_config(StringIO.StringIO(test_config))
+        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+            
 if __name__ == '__main__':
     run()

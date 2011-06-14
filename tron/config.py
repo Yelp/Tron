@@ -187,7 +187,9 @@ class _ConfiguredObject(yaml.YAMLObject, FromDictBuilderMixin):
             actualized_obj = self._ref()
 
         return actualized_obj
-
+    
+    def is_actualized(self):
+        return hasattr(self, '_ref') and self._ref()
 
 class TronConfiguration(yaml.YAMLObject):
     yaml_tag = u'!TronConfiguration'
@@ -376,7 +378,7 @@ def _match_schedule(real, schedule_conf):
 
     real.scheduler.job_setup(real)
 
-def _match_actions(real, action_conf_list):
+def _match_actions(real_job, action_conf_list):
     if not action_conf_list:
         raise ConfigError("Empty action list")
     
@@ -388,16 +390,24 @@ def _match_actions(real, action_conf_list):
             raise ConfigError("Duplicate action name '%s'" % action.name, action.line_number)
         else:
             name_set.add(action.name)
-        
+
         real_action = action.actualized
 
-        if not real.node_pool and not real_action.node_pool:
+        if not real_job.node_pool and not real_action.node_pool:
             raise ConfigError("Either job '%s' or its action '%s' must have a node" 
-               % (real.name, action_action.name))
+               % (real_job.name, action_action.name))
 
-        real.add_action(real_action)
+        # Do all the dependent actions belong to the same job?
+        for dependent in real_action.required_actions:
+            if dependent.job != real_job:
+                raise ConfigError("Action dependency on invalid action: %s", dependent.name)
+        
+        real_job.add_action(real_action)
 
+        # Configuration is dependent on the job being set here so we can verify the dependencies make sense.
+        assert real_action.job
                    
+
 class Job(_ConfiguredObject):
     yaml_tag = u'!Job'
     actual_class = job.Job
@@ -409,7 +419,7 @@ class Job(_ConfiguredObject):
                    
     def _apply(self):        
         real_job = self._ref()
-
+        
         _match_name(real_job, self.name)
         _match_node(real_job, self.node)
         _match_schedule(real_job, self.schedule)
@@ -476,9 +486,13 @@ class Action(_ConfiguredObject):
         if not isinstance(requirements, list):
             requirements = [requirements]
 
-        requirements = [default_or_from_tag(req, Action) for req in requirements]
+        # All the requirement actions should already have been setup
         for req in requirements:
-            real_action.required_actions.append(req.actualized)
+            action_req = default_or_from_tag(req, Action)
+            if not action_req.is_actualized():                 
+                raise ConfigError("Action %s doesn't yet exist" % action_req.name, self.line_number)
+            
+            real_action.required_actions.append(action_req.actualized)
 
     def _apply(self):
         """Configured the specific action instance"""
