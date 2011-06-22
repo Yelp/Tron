@@ -397,6 +397,7 @@ class Service(object):
         # * Changing the node pool
         # * Changes to the context ?
         # * Restart counts for downed services ?
+        assert self.node_pool, "Missing node pool for %s" % self.name
         removed_instances = 0        
         
         rebuild_all_instances = any([

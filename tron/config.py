@@ -241,25 +241,39 @@ class TronConfiguration(yaml.YAMLObject):
 
     def _apply_services(self, mcp):
         """Configure services"""
-        services = []
+        service_configs = []
+        built_services = []
         if getattr(self, 'services', None):
-            services.extend([default_or_from_tag(srv_val, Service) for srv_val in self.services])
+            service_configs.extend([default_or_from_tag(srv_val, Service) for srv_val in self.services])
 
         found_srv_names = set()
-        for srv_config in services:
+        for srv_config in service_configs:
             if srv_config.name in found_srv_names:
                 raise yaml.YAMLError("Duplicate service name %s" % srv_config.name)
             found_srv_names.add(srv_config.name)
 
             log.debug("Building new services %s", srv_config.name)
             new_service = srv_config.actualized
-            mcp.add_service(new_service)
-
+            built_services.append(new_service)
+        
         for srv_name in mcp.services.keys():
             if srv_name not in found_srv_names:
                 log.debug("Removing service %s", srv_name)
                 mcp.remove_service(srv_name)
 
+        # Go through our constructed services and add them. We'll catch all the failures
+        # and throw an exception at the end if anything failed. This is a mitigation against
+        # a bug easily cause us to be in an inconsistent state
+        failure = False
+        for service in built_services:
+            try:
+                mcp.add_service(service)
+            except Exception, e:
+                log.exception("Failed adding new service")
+                failure = True
+        
+        if failure:
+            raise ConfigError("Failed adding services")
 
     def _get_working_dir(self, mcp):
         if mcp.state_handler.working_dir:
@@ -440,7 +454,7 @@ class Service(_ConfiguredObject):
     actual_class = service.Service
 
     def _validate(self):
-        for key in ('name', 'command', 'monitor_interval', 'pid_file'):
+        for key in ('name', 'command', 'monitor_interval', 'pid_file', 'node'):
             if not getattr(self, key, None):
                 raise ConfigError("Missing value in service %s %r" % (key, self), self.line_number)
 
@@ -463,6 +477,9 @@ class Service(_ConfiguredObject):
         
         if hasattr(self, "count"):
             real_service.count = self.count
+
+        if not real_service.node_pool:
+            raise ConfigError("Missing node pool for %s" % self.name)
 
 
 class Action(_ConfiguredObject):
