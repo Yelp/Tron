@@ -200,7 +200,7 @@ class MasterControlProgram(object):
             # Any new jobs will need to be scheduled
             self.run_jobs()
         except Exception, e:
-            self.event_recorder.emit_error("reconfig_failure")
+            self.event_recorder.emit_critical("reconfig_failure")
             raise
         finally:
             self.state_handler.writing_enabled = old_state_writing
@@ -244,12 +244,15 @@ class MasterControlProgram(object):
             if job == self.jobs[job.name]:
                 return
             
+            log.info("re-adding job %s", job.name)        
             # We're updating an existing job, we have to copy over run time information
             job.absorb_old_job(self.jobs[job.name])
 
             if job.enabled:
                 self.disable_job(job)
                 self.enable_job(job)
+        else:
+            log.info("adding job %s", job.name)
         
         self.jobs[job.name] = job
 
@@ -274,7 +277,8 @@ class MasterControlProgram(object):
         
         if service == prev_service:
             return
-            
+        
+        log.info("(re)adding service %s", service.name)    
         service.set_context(self.context)
         service.event_recorder.set_parent(self.event_recorder)
         
@@ -289,7 +293,8 @@ class MasterControlProgram(object):
     def remove_service(self, service_name):
         if service_name not in self.services:
             raise ValueError("Service %s unknown", service_name)
-
+        
+        log.info("Removing services %s", service_name)
         service = self.services.pop(service_name)
         service.stop()
 

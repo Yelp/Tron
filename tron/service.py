@@ -182,7 +182,7 @@ class ServiceInstance(object):
 
     def _start_complete_failstart(self):
         log.warning("Failed to start service %s (%s)", self.id, self.node.hostname)
-        self.event_recorder.emit_error("failstart")
+        self.event_recorder.emit_critical("failstart")
         self.machine.transition("down")
         self.start_action = None
 
@@ -219,6 +219,9 @@ class ServiceInstance(object):
 
 
 class Service(object):
+    # For compareing equality, we check these fields
+    COMPARE_ATTRIBUTES = ['name', 'command', 'node_pool', 'count', 'monitor_interval', 'pid_file_template']
+
     class ServiceState(state.NamedEventState): pass
     STATE_DOWN = ServiceState("down")
     STATE_UP = ServiceState("up")
@@ -279,6 +282,10 @@ class Service(object):
         self.context = command_context.CommandContext(self, context)
 
     def _record_state_changes(self):
+        # If we no longer have a state machine, that means we no longer matter
+        if self.machine is None:
+            return
+
         func = None
         if self.machine.state in (self.STATE_FAILED, self.STATE_DEGRADED):
             func = self.event_recorder.emit_critical
@@ -402,6 +409,7 @@ class Service(object):
         
         rebuild_all_instances = any([
                                      self.command != prev_service.command,
+                                     self.pid_file_template != prev_service.pid_file_template,
                                      self.scheduler != prev_service.scheduler
                                     ])
         
@@ -431,6 +439,9 @@ class Service(object):
 
         current_instances = [i for i in self.instances if i.state not in 
             (ServiceInstance.STATE_STOPPING, ServiceInstance.STATE_DOWN, ServiceInstance.STATE_FAILED)]
+
+        # Now that we've inherited some instances, let's trigger an update to our state machine.
+        self._instance_change()
 
         # We have special handling for node pool changes.
         # This would cover the case of removing (or subsituting) a node in a pool
@@ -521,5 +532,15 @@ class Service(object):
         self.instances.sort(key=lambda i:i.instance_number)
         self.event_recorder.emit_info("restored")
     
+    def __eq__(self, other):
+        if other is None or not isinstance(other, Service):
+            return False
+        
+        for attr_name in self.COMPARE_ATTRIBUTES:
+            if getattr(self, attr_name) != getattr(other, attr_name):
+                return False
+         
+        return True
+
     def __str__(self):
         return "SERVICE:%s" % self.name
