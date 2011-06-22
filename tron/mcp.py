@@ -200,8 +200,8 @@ class MasterControlProgram(object):
             # Any new jobs will need to be scheduled
             self.run_jobs()
         except Exception, e:
-            log.exception("Reconfiguration failed")
             self.event_recorder.emit_error("reconfig_failure")
+            raise
         finally:
             self.state_handler.writing_enabled = old_state_writing
 
