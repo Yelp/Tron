@@ -362,7 +362,7 @@ class NotificationOptions(yaml.YAMLObject, FromDictBuilderMixin):
             mcp.monitor.stop()
 
         em = emailer.Emailer(self.smtp_host, self.notification_addr)
-        mcp.monitor = monitor.CrashReporter(em, mcp)
+        mcp.monitor = monitor.CrashReporter(em)
         mcp.monitor.start()
 
 

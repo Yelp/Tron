@@ -13,7 +13,7 @@ class CrashReporter(object):
     Based on twisted.log.PythonLoggingObserver
     """
 
-    def __init__(self, emailer, mcp):
+    def __init__(self, emailer):
         self.emailer = emailer
         self.event_recorder = event.EventRecorder(self, parent=mcp.event_recorder)
 
@@ -35,14 +35,12 @@ class CrashReporter(object):
 
         if level >= logging.ERROR:
             try:
-                if self._mcp:
-                    self.event_recorder.emit_critical("crash", msg=text)
+                self.event_recorder.emit_critical("crash", msg=text)
                 
                 self.emailer.send(text)
             except Exception:
                 logger.exception("Error sending notification")
-                if self._mcp:
-                    self.event_recorder.emit_critical("email_failure", msg=text)
+                self.event_recorder.emit_critical("email_failure", msg=text)
                 
         
     def start(self):
