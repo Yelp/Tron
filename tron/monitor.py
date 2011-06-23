@@ -13,7 +13,7 @@ class CrashReporter(object):
     Based on twisted.log.PythonLoggingObserver
     """
 
-    def __init__(self, emailer):
+    def __init__(self, emailer, mcp):
         self.emailer = emailer
         self.event_recorder = event.EventRecorder(self, parent=mcp.event_recorder)
 
