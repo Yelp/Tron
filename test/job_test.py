@@ -301,9 +301,15 @@ class TestJob(TestCase):
         act3.job = self.job
         act3_id = ''.join([self.job.name, '.', str(run_num), '.', act3.name])
 
+        cact = action.Action(name="Test Cleanup Action")
+        cact.command = "Test Cleanup Command"
+        cact.job = self.job
+        cact_id = ''.join([self.job.name, '.', str(run_num), '.', cact.name])
+
         self.job.topo_actions.append(act1)
         self.job.topo_actions.append(act2)
         self.job.topo_actions.append(act3)
+        self.job.cleanup_action = cact
 
         # filter out Action Test2 from restored state. upon trond restart
         #   restore_main_run(state_data) should filter out actions for runs
@@ -324,6 +330,12 @@ class TestJob(TestCase):
                'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
                'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 133002),
                'state': 'scheduled'}],
+         'cleanup_run': {'command': cact.command,
+               'end_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 234116),
+               'id': cact_id,
+               'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
+               'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 133002),
+               'state': 'scheduled'},
          'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 128152)}
 
 
@@ -333,6 +345,7 @@ class TestJob(TestCase):
         assert_equal(len(job_run.action_runs), 2)
         assert_equal(job_run.action_runs[0].id, act1_id)
         assert_equal(job_run.action_runs[1].id, act3_id)
+        assert_equal(job_run.action_runs_with_cleanup[2].id, cact_id)
 
 
 
