@@ -19,7 +19,7 @@ from tron import service
 
 log = logging.getLogger("tron.config")
 
-CLEANUP_ACTION_NAME = "cleanup_action"
+CLEANUP_ACTION_NAME = "cleanup"
 
 class Error(Exception):
     pass
@@ -371,7 +371,7 @@ class NotificationOptions(yaml.YAMLObject, FromDictBuilderMixin):
 def _match_name(real, name):
     real.name = name
 
-    if not re.match(r'[a-z_]\w*$', name, re.I) or name == CLEANUP_ACTION_NAME:
+    if not re.match(r'[a-z_]\w*$', name, re.I):
         raise yaml.YAMLError("Invalid job name '%s' - not a valid identifier" % name)
 
 def _match_node(real, node_conf):
@@ -453,7 +453,6 @@ class Job(_ConfiguredObject):
         if hasattr(self, "cleanup_action"):
             if hasattr(self.cleanup_action, 'required'):
                 raise ConfigError("Cleanup actions cannot have dependencies")
-            self.cleanup_action.name = CLEANUP_ACTION_NAME
             action = default_or_from_tag(self.cleanup_action, CleanupAction)
             real_action = action.actualized
 
@@ -512,7 +511,7 @@ class Action(_ConfiguredObject):
             if not getattr(self, key, None):
                 raise ConfigError("Missing value in action %s %r" % (key, self), self.line_number)
 
-        if not re.match(r'[a-z_]\w*$', self.name, re.I):
+        if not re.match(r'[a-z_]\w*$', self.name, re.I) or self.name == CLEANUP_ACTION_NAME:
             raise ConfigError("Invalid action name '%s' - not a valid identifier" % self.name, self.line_number)
 
     def _apply_requirements(self, real_action, requirements):
@@ -553,9 +552,13 @@ class CleanupAction(Action):
 
     def __init__(self, *args, **kwargs):
         super(CleanupAction, self).__init__(*args, **kwargs)
-        self.name = CLEANUP_ACTION_NAME
 
     def _validate(self):
+        if hasattr(self, 'name') and self.name is not None:
+            raise ConfigError("Cleanup actions cannot have custom names")
+
+        self.name = CLEANUP_ACTION_NAME
+
         if not getattr(self, 'command', None):
             raise ConfigError("Missing value in action %s %r" % (key, self), self.line_number)
 
