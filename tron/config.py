@@ -72,6 +72,8 @@ jobs:
     #         -
     #             name: "uname"
     #             command: "uname -a"
+    #     cleanup_action:
+    #         command: "rm -rf /tmp/sample_job_scratch"
 
 services:
     ## Configure services here. Services differ from jobs in that they are expected to have an enable/disable and monitoring
