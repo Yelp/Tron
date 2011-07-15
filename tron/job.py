@@ -170,6 +170,10 @@ class JobRun(object):
         return any([r.is_failure for r in self.action_runs_with_cleanup])
 
     @property
+    def all_but_cleanup_success(self):
+        return all([r.is_success for r in self.action_runs])
+
+    @property
     def is_success(self):
         return all([r.is_success for r in self.action_runs_with_cleanup])
 
@@ -204,6 +208,18 @@ class JobRun(object):
     @property
     def is_cancelled(self):
         return all([r.is_cancelled for r in self.action_runs_with_cleanup])
+
+    @property
+    def JOB_STATUS(self):
+        """Provide 'SUCCESS' or 'FAILURE' to a cleanup action context based on
+        the status of the other steps
+        """
+        if self.is_failure:
+            return 'FAILED'
+        elif self.all_but_cleanup_success:
+            return 'SUCCESS'
+        else:
+            return 'UNKNOWN'
 
     def __str__(self):
         return "JOB_RUN:%s" % self.id
