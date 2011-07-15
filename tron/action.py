@@ -127,7 +127,8 @@ class ActionRun(object):
 
         if context is None:
             # Provide dummy values for context variables that JobRun provides
-            # but aren't available outside of a run
+            # but aren't available outside of a run. This is to avoid
+            # meaningless KeyErrors in the logs.
             context = dict(JOB_STATUS='UNKNOWN')
 
         new_context = ActionRunContext(self)
