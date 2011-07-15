@@ -42,16 +42,29 @@ class ActionRunContext(object):
 
         match = re.match(r'([\w]+)([+-]*)(\d*)', name)
         attr, op, value = match.groups()
-        if attr == "shortdate":
+        if attr in ("shortdate", "year", "month", "day"):
             if value:
-                delta = datetime.timedelta(days=int(value))
-                if op == "-":
-                    delta *= -1
+                int_value = int(value)
+                if op == '-':
+                    int_value = -int_value
+                if attr == "year":
+                    delta = timeutils.macro_timedelta(run_time, years=int_value)
+                elif attr == "month":
+                    delta = timeutils.macro_timedelta(run_time, months=int_value)
+                else:
+                    delta = timeutils.macro_timedelta(run_time, days=int_value)
                 run_date = run_time + delta
             else:
                 run_date = run_time
-            
-            return "%.4d-%.2d-%.2d" % (run_date.year, run_date.month, run_date.day)
+
+            if attr == "year":
+                return run_date.strftime("%Y")
+            elif attr == "month":
+                return run_date.strftime("%m")
+            elif attr == "day":
+                return run_date.strftime("%d")
+            else:
+                return run_date.strftime("%Y-%m-%d")
         elif attr == "unixtime":
             delta = 0
             if value:
