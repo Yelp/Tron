@@ -58,7 +58,7 @@ nodes:
 command_context:
     # Variable subsitution
     # There are some built-in values such as 'node', 'runid', 'actionname' and 
-    # run-time based variables such as 'shortdate'
+    # run-time based variables such as 'shortdate'. (See tronfig.1 for reference.)
     # You can specify whatever else you want similiar to environment variables:
     # PYTHON: "/usr/bin/python"
  

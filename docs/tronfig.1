@@ -83,6 +83,18 @@ A Service can be configured with the following options
     pid_file - Where the monitor will find the pid
     command - Command to be executed to start a new instance
 
+.SH BUILT-IN COMMAND CONTEXT VARIABLES
+.IP shortdate
+Current date in YYYY-MM-DD format. Supports simple arithmetic of the form %(shortdate+6)s, %(shortdate-2)s, etc.
+.IP actionname
+Name of the action as specified in the config file
+.IP runid
+Run ID (e.g. sample_job.23)
+.IP node
+Hostname of the node the action is being run on
+.IP cleanupjobstatus
+"SUCCESS" if all actions have succeeded when the cleanup action runs, "FAILURE" otherwise. "UNKNOWN" if used in an action other than the cleanup action.
+
 .SH EXAMPLE CONFIGURATION
 --- !TronConfiguration
 
