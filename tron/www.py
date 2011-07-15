@@ -125,7 +125,7 @@ class JobRunResource(resource.Resource):
         elif act_name == '_events':
             return EventResource(self._run)
         
-        for act_run in self._run.action_runs:
+        for act_run in self._run.action_runs_with_cleanup:
             if act_name == act_run.action.name:
                 return ActionRunResource(act_run)
 
@@ -153,9 +153,7 @@ class JobRunResource(resource.Resource):
                 'command': action_run.command,
             }
 
-        run_output = [action_output(action_run) for action_run in self._run.action_runs]
-        if self._run.cleanup_action_run is not None:
-            run_output.append(action_output(self._run.cleanup_action_run))
+        run_output = [action_output(action_run) for action_run in self._run.action_runs_with_cleanup]
 
         output = {
             'runs': run_output, 

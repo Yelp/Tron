@@ -556,8 +556,8 @@ class CleanupAction(Action):
         super(CleanupAction, self).__init__(*args, **kwargs)
 
     def _validate(self):
-        if hasattr(self, 'name') and self.name is not None:
-            raise ConfigError("Cleanup actions cannot have custom names")
+        if hasattr(self, 'name') and self.name is not None and self.name != CLEANUP_ACTION_NAME:
+            raise ConfigError("Cleanup actions cannot have custom names (you wanted %s)" % self.name)
 
         self.name = CLEANUP_ACTION_NAME
 

@@ -88,8 +88,10 @@ class JobRun(object):
 
         if self.all_but_cleanup_done:
             if self.cleanup_action_run is None:
+                log.info('No cleanup action for %s exists' % self.id)
                 self.cleanup_completed()
             else:
+                log.info('Running cleanup action for %s' % self.id)
                 self.cleanup_action_run.attempt_start()
 
     def cleanup_completed(self):
