@@ -25,6 +25,8 @@ jobs:
                 name: "actionStartEdit"
                 command: "sleep 3; echo asdfasdf"
                 node: *node
+        cleanup_action:
+            command: "echo 'cleaned up job0'"
 
     - &job1 !Job
         name: "job1"

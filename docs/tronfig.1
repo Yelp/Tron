@@ -60,6 +60,7 @@ Accepts a list of Job objects.
     node - The Node or NodePool object this job runs on
     schedule - The schedule the job follows
     actions - The list of actions within the job
+    cleanup_action (optional) - An action (not including name or requirements) to be run after the success or failure of the job
     all_nodes (optional) - boolean indicating job should run on all nodes in the NodePool
     queueing  (optional) - boolean indicating overlapping job runs should queue rather than cancel
     run_limit (optional) - Number of runs to store in history (default 50)
@@ -125,6 +126,9 @@ jobs:
             - &action
                 name: "echo"
                 command: "echo %(PYTHON)s"
+        cleanup_action:
+            command: "echo 'cleaning up job1'"
+
 services:
     -
         name: "testserv"
