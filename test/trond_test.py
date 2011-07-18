@@ -35,7 +35,6 @@ DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
 class BasicTronTestCase(TronTestCase):
 
     def test_end_to_end_basic(self):
-        return
         # start with a basic configuration
         self.save_config(SINGLE_ECHO_CONFIG)
         self.start_trond()
@@ -67,7 +66,6 @@ class BasicTronTestCase(TronTestCase):
         assert_equal(self.list_job_run('echo_job', 2)['state'], 'FAIL')
 
     def test_tronview_basic(self):
-        return
         self.save_config(SINGLE_ECHO_CONFIG)
         self.start_trond()
 

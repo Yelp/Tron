@@ -70,33 +70,13 @@ class TronTestCase(TestCase):
             self.stop_trond()
         shutil.rmtree(self.tmp_dir)
 
-    ### Configuration ###
-
     def save_config(self, config_text):
-        """Save a tron configuration to tron_config.yaml"""
+        """Save a tron configuration to tron_config.yaml. Mainly useful for
+        setting trond's initial configuration.
+        """
         with open(self.config_file, 'w') as f:
             f.write(config_text)
         return config_text
-
-    def upload_config(self, config_text):
-        """Upload a tron configuration to the server"""
-        cmd.load_config(self.config_obj)
-        status, content = cmd.request(self.tron_server_uri,
-                                      'config',
-                                      {'config': config_text})
-        if 'error' in content:
-            raise TronSandboxException(content['error'])
-        else:
-            return status, content
-
-    def get_config(self):
-        """Get the text of the current configuration"""
-        cmd.load_config(self.config_obj)
-        status, content = cmd.request(self.tron_server_uri, '/config')
-        if status != cmd.OK:
-            raise TronSandboxException(content)
-        else:
-            return content['config']
 
     ### trond control ###
 
@@ -132,6 +112,14 @@ class TronTestCase(TestCase):
             raise TronSandboxException("Error connecting to tron server at %s%s" % (self.tron_server_uri, uri))
 
         return content
+
+    def upload_config(self, config_text):
+        """Upload a tron configuration to the server"""
+        self._check_call_api('/config', {'config': config_text})
+
+    def get_config(self):
+        """Get the text of the current configuration"""
+        return self._check_call_api('/config')['config']
 
     def ctl(self, command, arg=None, run_time=None):
         """Call the www API like tronctl does. ``command`` can be one of
