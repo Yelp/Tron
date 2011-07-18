@@ -48,15 +48,14 @@ class TronTestCase(TestCase):
                                  '--log-file=%s' % self.log_file,
                                  '--pid-file=%s' % self.pid_file,
                                  '--port=%d' % self.port,
-                                 '--host=%s' % self.host,
-                                 '-v', '-v', '-v']
+                                 '--host=%s' % self.host]
 
         self.tron_server_address = '%s:%d' % (self.host, self.port)
         self.tron_server_uri = 'http://%s' % self.tron_server_address
         self.tron_server_arg = '--server=%s' % self.tron_server_address
 
         # mock a config object
-        self.config_obj = MockConfigOptions(self.tron_server_address)
+        self.config_obj = MockConfigOptions(self.tron_server_uri)
         cmd.save_config(self.config_obj)
 
         self._last_trond_launch_args = []
@@ -119,6 +118,16 @@ class TronTestCase(TestCase):
             args = self._last_trond_launch_args
         self.stop_tron()
         self.start_tron(args=args)
+
+    def send_command(self, command, arg):
+        cmd.load_config(self.config_obj)
+        status, content = cmd.request(options.server, "/")
+
+        if status != cmd.OK or not content:
+            raise TronSandboxException("Error connecting to tron server at %s" % options.server)
+
+        job_to_uri = dict([(job['name'], job['href']) for job in content['jobs']])
+        service_to_uri = dict([(service['name'], service['href']) for service in content['services']])
 
     ### Basic subprocesses ###
 

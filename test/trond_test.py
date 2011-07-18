@@ -1,3 +1,4 @@
+import os
 from testify import *
 import time
 import yaml
@@ -33,10 +34,9 @@ DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
 
 class BasicTronTestCase(TronTestCase):
 
-    def test_most_basic_thing_possible(self):
+    def test_end_to_end_basic(self):
         self.save_config(SINGLE_ECHO_CONFIG)
         self.start_trond()
-        time.sleep(0.1)
         assert_equal(self.get_config(), SINGLE_ECHO_CONFIG)
         self.upload_config(DOUBLE_ECHO_CONFIG)
         assert_equal(self.get_config(), DOUBLE_ECHO_CONFIG)
