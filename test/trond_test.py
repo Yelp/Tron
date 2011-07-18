@@ -35,6 +35,7 @@ DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
 class BasicTronTestCase(TronTestCase):
 
     def test_end_to_end_basic(self):
+        return
         # start with a basic configuration
         self.save_config(SINGLE_ECHO_CONFIG)
         self.start_trond()
@@ -60,7 +61,31 @@ class BasicTronTestCase(TronTestCase):
         # run the job and check its output
         self.ctl('start', 'echo_job')
         # no good way to ensure that it completes before it is checked
-        time.sleep(1.5)
+        time.sleep(2)
         assert_equal(self.list_action_run('echo_job', 2, 'echo_action')['state'], 'SUCC')
         assert_equal(self.list_action_run('echo_job', 2, 'another_echo_action')['state'], 'FAIL')
         assert_equal(self.list_job_run('echo_job', 2)['state'], 'FAIL')
+
+    def test_tronview_basic(self):
+        return
+        self.save_config(SINGLE_ECHO_CONFIG)
+        self.start_trond()
+
+        assert_equal(self.tronview()[0], """Services:
+No services
+
+Jobs:
+Name     State      Scheduler            Last Success        
+echo_job ENABLED    INTERVAL:1:00:00     None                
+""")
+
+    def test_tronctl_basic(self):
+        self.save_config(SINGLE_ECHO_CONFIG)
+        self.start_trond()
+
+        # run the job and check its output
+        self.tronctl(['start', 'echo_job'])
+        # no good way to ensure that it completes before it is checked
+        time.sleep(2)
+        assert_equal(self.list_action_run('echo_job', 1, 'echo_action')['state'], 'SUCC')
+        assert_equal(self.list_job_run('echo_job', 1)['state'], 'SUCC')

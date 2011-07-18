@@ -36,7 +36,7 @@ class TronTestCase(TestCase):
         self.tronctl_bin = os.path.join(self.tron_bin, 'tronctl')
         self.trond_bin = os.path.join(self.tron_bin, 'trond')
         self.tronfig_bin = os.path.join(self.tron_bin, 'tronfig')
-        self.troview_bin = os.path.join(self.tron_bin, 'tronview')
+        self.tronview_bin = os.path.join(self.tron_bin, 'tronview')
 
         self.log_file = os.path.join(self.tmp_dir, 'tron.log')
         self.pid_file = os.path.join(self.tmp_dir, 'tron.pid')
@@ -129,7 +129,7 @@ class TronTestCase(TestCase):
         status, content = cmd.request(self.tron_server_uri, uri, data=data)
 
         if status != cmd.OK or not content:
-            raise TronSandboxException("Error connecting to tron server at %s" % self.tron_server_uri)
+            raise TronSandboxException("Error connecting to tron server at %s%s" % (self.tron_server_uri, uri))
 
         return content
 
@@ -179,9 +179,9 @@ class TronTestCase(TestCase):
         """Call the www API to list all actions of one job run."""
         return self._check_call_api('/jobs/%s/%d/_events' % (job_name, run_number))
 
-    def list_action_run(self, job_name, run_number, action_name):
+    def list_action_run(self, job_name, run_number, action_name, num_lines=100):
         """Call the www API to display the results of an action."""
-        return self._check_call_api('/jobs/%s/%d/%s' % (job_name, run_number, action_name))
+        return self._check_call_api('/jobs/%s/%d/%s?num_lines=%d' % (job_name, run_number, action_name, num_lines))
 
     def list_service(self, service_name):
         return self._check_call_api('/services/%s' % service_name)
