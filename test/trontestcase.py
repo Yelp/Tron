@@ -124,8 +124,7 @@ class TronTestCase(TestCase):
     def ctl(self, command, arg=None, run_time=None):
         """Call the www API like tronctl does. ``command`` can be one of
         ``(start, cancel, disable, enable, disableall, enableall, fail, succeed)``.
-        ``run_time`` should be of the
-        form ``YYYY-MM-DD HH:MM:SS``.
+        ``run_time`` should be of the form ``YYYY-MM-DD HH:MM:SS``.
         """
         content = self._check_call_api('/')
 
