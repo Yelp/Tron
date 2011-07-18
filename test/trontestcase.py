@@ -134,7 +134,9 @@ class TronTestCase(TestCase):
         return content
 
     def ctl(self, command, arg='', run_time=None):
-        """Call the www API like tronctl does. ``run_time`` should be of the
+        """Call the www API like tronctl does. ``command`` can be one of
+        ``(start, cancel, disable, enable, disableall, enableall, fail, succeed)``.
+        ``run_time`` should be of the
         form ``YYYY-MM-DD HH:MM:SS``.
         """
         content = self._check_call_api('/')
@@ -181,16 +183,22 @@ class TronTestCase(TestCase):
         """Call the www API to display the results of an action."""
         return self._check_call_api('/jobs/%s/%d/%s' % (job_name, run_number, action_name))
 
+    def list_service(self, service_name):
+        return self._check_call_api('/services/%s' % service_name)
+
+    def list_service_events(self, service_name):
+        return self._check_call_api('/services/%s/_events' % service_name)
+
     ### Basic subprocesses ###
 
     def tronctl(self, args=None):
-        """Call tronctl with args"""
+        """Call tronctl with args and return ``(stdout, stderr)``"""
         args = args or []
         p = Popen([self.tronctl_bin] + args, stdout=PIPE, stderr=PIPE)
         return p.communicate()
 
     def tronview(self, args=None):
-        """Call tronview with args"""
+        """Call tronview with args and return ``(stdout, stderr)``"""
         args = args or []
         p = Popen([self.tronview_bin] + args, stdout=PIPE, stderr=PIPE)
         return p.communicate()

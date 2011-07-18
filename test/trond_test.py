@@ -45,7 +45,6 @@ class BasicTronTestCase(TronTestCase):
         self.upload_config(DOUBLE_ECHO_CONFIG)
         assert_equal(self.list_events()['data'][0]['name'], 'reconfig')
         assert_equal(self.get_config(), DOUBLE_ECHO_CONFIG)
-
         assert_equal(self.list_all(),
                      {'jobs': [{'status': 'ENABLED',
                                 'href': '/jobs/echo_job',
@@ -57,7 +56,10 @@ class BasicTronTestCase(TronTestCase):
                       'config_href': '/config',
                       'services': [],
                       'services_href': '/services'})
+
+        # run the job and check its output
         self.ctl('start', 'echo_job')
+        # no good way to ensure that it completes before it is checked
         time.sleep(1.5)
         assert_equal(self.list_action_run('echo_job', 2, 'echo_action')['state'], 'SUCC')
         assert_equal(self.list_action_run('echo_job', 2, 'another_echo_action')['state'], 'FAIL')
