@@ -133,7 +133,7 @@ class TronTestCase(TestCase):
 
         return content
 
-    def ctl(self, command, arg='', run_time=None):
+    def ctl(self, command, arg=None, run_time=None):
         """Call the www API like tronctl does. ``command`` can be one of
         ``(start, cancel, disable, enable, disableall, enableall, fail, succeed)``.
         ``run_time`` should be of the
@@ -146,7 +146,7 @@ class TronTestCase(TestCase):
         if run_time is not None:
             data['run_time'] = run_time
 
-        if arg:
+        if arg is not None:
             job_to_uri = make_job_to_uri(content)
             service_to_uri = make_service_to_uri(content)
             full_uri = obj_spec_to_uri(arg, job_to_uri, service_to_uri)
