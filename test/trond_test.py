@@ -1,4 +1,5 @@
 from testify import *
+import time
 import yaml
 
 from test.trontestcase import TronTestCase
@@ -22,8 +23,12 @@ jobs:
         actions:
             -
                 name: "echo_action"
-                command: "echo 'Echo!'"
-"""
+                command: "echo 'Echo!'" """
+
+DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
+            -
+                name: "another_echo_action"
+                command: "echo 'Echo again!'" """
 
 
 class BasicTronTestCase(TronTestCase):
@@ -31,4 +36,7 @@ class BasicTronTestCase(TronTestCase):
     def test_most_basic_thing_possible(self):
         self.save_config(SINGLE_ECHO_CONFIG)
         self.start_trond()
+        time.sleep(0.1)
         assert_equal(self.get_config(), SINGLE_ECHO_CONFIG)
+        self.upload_config(DOUBLE_ECHO_CONFIG)
+        assert_equal(self.get_config(), DOUBLE_ECHO_CONFIG)

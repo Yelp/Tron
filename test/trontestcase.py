@@ -64,7 +64,8 @@ class TronTestCase(TestCase):
     @teardown
     def delete_sandbox(self):
         """Delete the temp directory and its contents"""
-        return
+        if os.path.exists(self.pid_file):
+            self.stop_trond()
         shutil.rmtree(self.tmp_dir)
 
     ### Configuration ###
@@ -77,6 +78,7 @@ class TronTestCase(TestCase):
 
     def upload_config(self, config_text):
         """Upload a tron configuration to the server"""
+        cmd.load_config(self.config_obj)
         status, content = cmd.request(self.tron_server_uri,
                                       'config',
                                       {'config': config_text})
@@ -102,12 +104,14 @@ class TronTestCase(TestCase):
         self._last_trond_launch_args = args
         p = Popen([self.trond_bin] + self.trond_debug_args + args,
                   stdout=PIPE, stderr=PIPE)
-        return p.communicate()
+        retval = p.communicate()
+        time.sleep(0.1)
+        return retval
 
     def stop_trond(self):
         """Stop trond based on the tron.pid in the temp directory"""
         with open(self.pid_file, 'r') as f:
-            os.kill(int(f.read()), 0)
+            os.kill(int(f.read()), signal.SIGKILL)
 
     def restart_trond(self, args=None):
         """Stop and start trond"""
