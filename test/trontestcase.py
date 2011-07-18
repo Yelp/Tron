@@ -7,6 +7,7 @@ from testify import *
 import time
 
 from tron import cmd
+from tron.utils.binutils import make_job_to_uri, make_service_to_uri, obj_spec_to_uri
 
 
 # Used for getting the locations of the executables
@@ -43,6 +44,8 @@ class TronTestCase(TestCase):
 
         self.port = 8089
         self.host = 'localhost'
+
+        self.run_time = None
 
         self.trond_debug_args = ['--working-dir=%s' % self.tmp_dir,
                                  '--log-file=%s' % self.log_file,
@@ -119,15 +122,64 @@ class TronTestCase(TestCase):
         self.stop_tron()
         self.start_tron(args=args)
 
-    def send_command(self, command, arg):
+    ### www API ###
+
+    def _check_call_api(self, uri, data=None):
         cmd.load_config(self.config_obj)
-        status, content = cmd.request(options.server, "/")
+        status, content = cmd.request(self.tron_server_uri, uri, data=data)
 
         if status != cmd.OK or not content:
-            raise TronSandboxException("Error connecting to tron server at %s" % options.server)
+            raise TronSandboxException("Error connecting to tron server at %s" % self.tron_server_uri)
 
-        job_to_uri = dict([(job['name'], job['href']) for job in content['jobs']])
-        service_to_uri = dict([(service['name'], service['href']) for service in content['services']])
+        return content
+
+    def ctl(self, command, arg='', run_time=None):
+        """Call the www API like tronctl does. ``run_time`` should be of the
+        form ``YYYY-MM-DD HH:MM:SS``.
+        """
+        content = self._check_call_api('/')
+
+        data = {'command': command}
+
+        if run_time is not None:
+            data['run_time'] = run_time
+
+        if arg:
+            job_to_uri = make_job_to_uri(content)
+            service_to_uri = make_service_to_uri(content)
+            full_uri = obj_spec_to_uri(arg, job_to_uri, service_to_uri)
+        else:
+            full_uri = '/jobs'
+
+        self._check_call_api(full_uri, data=data)
+
+    def list_all(self):
+        """Call the www API to list jobs and services."""
+        return self._check_call_api('/')
+
+    def list_events(self):
+        """Call the www API to list all events."""
+        return self._check_call_api('/events')
+
+    def list_job(self, job_name):
+        """Call the www API to list all runs of one job."""
+        return self._check_call_api('/jobs/%s' % job_name)
+
+    def list_job_events(self, job_name):
+        """Call the www API to list all events of one job."""
+        return self._check_call_api('/jobs/%s/_events' % job_name)
+
+    def list_job_run(self, job_name, run_number):
+        """Call the www API to list all actions of one job run."""
+        return self._check_call_api('/jobs/%s/%d' % (job_name, run_number))
+
+    def list_job_run_events(self, job_name, run_number):
+        """Call the www API to list all actions of one job run."""
+        return self._check_call_api('/jobs/%s/%d/_events' % (job_name, run_number))
+
+    def list_action_run(self, job_name, run_number, action_name):
+        """Call the www API to display the results of an action."""
+        return self._check_call_api('/jobs/%s/%d/%s' % (job_name, run_number, action_name))
 
     ### Basic subprocesses ###
 
