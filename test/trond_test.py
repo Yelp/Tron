@@ -1,3 +1,4 @@
+import datetime
 import os
 from testify import *
 import time
@@ -29,7 +30,7 @@ jobs:
 DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
             -
                 name: "another_echo_action"
-                command: "echo 'Echo again!' && false" """
+                command: "echo 'Today is %(shortdate)s' && false" """
 
 
 class BasicTronTestCase(TronTestCase):
@@ -62,7 +63,10 @@ class BasicTronTestCase(TronTestCase):
         # no good way to ensure that it completes before it is checked
         time.sleep(2)
         assert_equal(self.list_action_run('echo_job', 2, 'echo_action')['state'], 'SUCC')
+        assert_equal(self.list_action_run('echo_job', 2, 'echo_action')['stdout'], ['Echo!'])
         assert_equal(self.list_action_run('echo_job', 2, 'another_echo_action')['state'], 'FAIL')
+        assert_equal(self.list_action_run('echo_job', 2, 'another_echo_action')['stdout'],
+                     [datetime.datetime.now().strftime('Today is %Y-%m-%d')])
         assert_equal(self.list_job_run('echo_job', 2)['state'], 'FAIL')
 
     def test_tronview_basic(self):
