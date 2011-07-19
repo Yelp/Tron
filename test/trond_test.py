@@ -30,7 +30,7 @@ jobs:
 DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
             -
                 name: "another_echo_action"
-                command: "echo 'Today is %(shortdate)s' && false" """
+                command: "echo 'Today is %(shortdate)s, which is the same as %(year)s-%(month)s-%(day)s' && false" """
 
 TOUCH_CLEANUP_FMT = """
         cleanup_action:
@@ -71,7 +71,7 @@ class BasicTronTestCase(TronTestCase):
         assert_equal(self.list_action_run('echo_job', 2, 'echo_action')['stdout'], ['Echo!'])
         assert_equal(self.list_action_run('echo_job', 2, 'another_echo_action')['state'], 'FAIL')
         assert_equal(self.list_action_run('echo_job', 2, 'another_echo_action')['stdout'],
-                     [datetime.datetime.now().strftime('Today is %Y-%m-%d')])
+                     [datetime.datetime.now().strftime('Today is %Y-%m-%d, which is the same as %Y-%m-%d')])
         assert_equal(self.list_job_run('echo_job', 2)['state'], 'FAIL')
 
     def test_tronview_basic(self):
