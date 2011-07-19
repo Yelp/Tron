@@ -47,7 +47,7 @@ class BasicTronTestCase(TronTestCase):
         assert_equal(self.get_config(), SINGLE_ECHO_CONFIG)
 
         # reconfigure and confirm results
-        canary = self.tmp_dir + '/end_to_end_done'
+        canary = os.path.join(self.tmp_dir, 'end_to_end_done')
         second_config = DOUBLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT % canary
         self.upload_config(second_config)
         assert_equal(self.list_events()['data'][0]['name'], 'reconfig')
@@ -87,7 +87,7 @@ echo_job ENABLED    INTERVAL:1:00:00     None
 """)
 
     def test_tronctl_basic(self):
-        canary = self.tmp_dir + '/tronctl_basic_done'
+        canary = os.path.join(self.tmp_dir, 'tronctl_basic_done')
         self.save_config(SINGLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT % canary)
         self.start_trond()
 
