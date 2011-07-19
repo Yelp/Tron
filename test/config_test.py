@@ -238,6 +238,138 @@ services:
         assert self.serv.command
         assert self.serv.context
 
+
+class MultiConfigTestCase(TestCase):
+
+    @setup
+    def setup(self):
+        self.test_dir = tempfile.mkdtemp()
+
+        include_str = '["%s", "%s"]' % (os.path.join(self.test_dir, 'more_config.yaml'),
+                                        os.path.join(self.test_dir, 'even_more_configs', '*'))
+
+        self.config = BASE_CONFIG + """
+
+command_context:
+    batch_dir: /tron/batch/test/foo
+    python: /usr/bin/python
+
+include: """ + include_str + """
+
+jobs:
+    -
+        name: "test_job0"
+        node: *node0
+        schedule: "interval 20s"
+        actions:
+            - &intAction !Action
+                name: "action0_0"
+                command: "test_command0.0"
+
+services:
+    -
+        name: "service0"
+        node: *nodePool
+        command: "service_command0"
+        count: 2
+        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+        monitor_interval: 20
+""" 
+        with open(os.path.join(self.test_dir, 'more_config.yaml'), 'w') as f:
+            f.write("""
+jobs:
+    - &job1
+        name: "test_job1"
+        node: *node0
+        schedule: "daily 00:30:00 MWF"
+        actions:
+            - &intAction2
+                name: "action1_0"
+                command: "test_command1.0"
+            - &actionBar
+                name: "action1_1"
+                command: "test_command1.1"
+                requires: *intAction2
+
+services:
+    -
+        name: "service1"
+        node: *nodePool
+        command: "service_command1"
+        count: 2
+        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+        monitor_interval: 20
+""")
+
+        os.mkdir(os.path.join(self.test_dir, 'even_more_configs'))
+
+        with open(os.path.join(self.test_dir, 'even_more_configs', '1.yaml'), 'w') as f:
+            f.write("""
+jobs:
+    - &job2
+        name: "test_job2"
+        node: *node1
+        schedule: "daily 16:30:00"
+        actions:
+            - &actionFail !Action
+                name: "action2_0"
+                command: "test_command2.0"
+""")
+
+        with open(os.path.join(self.test_dir, 'even_more_configs', '2.yaml'), 'w') as f:
+            f.write("""
+jobs:
+    - &job3
+        name: "test_job3"
+        node: *node1
+        schedule: "constant"
+        actions:
+            - &actionConstant0
+                name: "action3_0"
+                command: "test_command3.0"
+            - &actionConstant1
+                name: "action3_1"
+                command: "test_command3.1"
+            - &actionFollow
+                name: "action3_2"
+                node: *node0
+                command: "test_command3.2"
+                requires: [*actionConstant0, *actionConstant1]
+
+    - &job4
+        name: "test_job4"
+        node: *nodePool
+        all_nodes: True
+        schedule: "daily"
+        actions:
+            - &actionDaily
+                name: "action4_0"
+                command: "test_command4.0"
+""")
+
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)
+
+    def test_multiple_configs(self):
+        self.test_config = config.load_config(StringIO.StringIO(self.config))
+        self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')
+        self.test_config.apply(self.my_mcp)
+
+        self.node0 = self.my_mcp.nodes[0]
+        self.node1 = self.my_mcp.nodes[1]
+
+        self.job0 = self.my_mcp.jobs['test_job0']
+        self.job1 = self.my_mcp.jobs['test_job1']
+        self.job2 = self.my_mcp.jobs['test_job2']
+        self.job3 = self.my_mcp.jobs['test_job3']
+        self.job4 = self.my_mcp.jobs['test_job4']
+
+        self.serv = self.my_mcp.services['service0']
+
+        self.all_jobs = [self.job0, self.job1, self.job2, self.job3, self.job4]
+
+
 class BadJobConfigTest(TestCase):
     @setup
     def build_env(self):
