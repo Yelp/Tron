@@ -4,7 +4,7 @@ from testify import *
 import time
 import yaml
 
-from test.trontestcase import TronTestCase
+from test.trontestcase import TronTestCase, wait_for_file_to_exist
 
 
 BASIC_CONFIG = """
@@ -32,6 +32,10 @@ DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
                 name: "another_echo_action"
                 command: "echo 'Today is %(shortdate)s' && false" """
 
+TOUCH_CLEANUP_FMT = """
+        cleanup_action:
+            command: "touch %s" """
+
 
 class BasicTronTestCase(TronTestCase):
 
@@ -43,9 +47,11 @@ class BasicTronTestCase(TronTestCase):
         assert_equal(self.get_config(), SINGLE_ECHO_CONFIG)
 
         # reconfigure and confirm results
-        self.upload_config(DOUBLE_ECHO_CONFIG)
+        canary = self.tmp_dir + '/end_to_end_done'
+        second_config = DOUBLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT % canary
+        self.upload_config(second_config)
         assert_equal(self.list_events()['data'][0]['name'], 'reconfig')
-        assert_equal(self.get_config(), DOUBLE_ECHO_CONFIG)
+        assert_equal(self.get_config(), second_config)
         assert_equal(self.list_all(),
                      {'jobs': [{'status': 'ENABLED',
                                 'href': '/jobs/echo_job',
@@ -60,8 +66,7 @@ class BasicTronTestCase(TronTestCase):
 
         # run the job and check its output
         self.ctl('start', 'echo_job')
-        # no good way to ensure that it completes before it is checked
-        time.sleep(2)
+        wait_for_file_to_exist(canary)
         assert_equal(self.list_action_run('echo_job', 2, 'echo_action')['state'], 'SUCC')
         assert_equal(self.list_action_run('echo_job', 2, 'echo_action')['stdout'], ['Echo!'])
         assert_equal(self.list_action_run('echo_job', 2, 'another_echo_action')['state'], 'FAIL')
@@ -82,12 +87,12 @@ echo_job ENABLED    INTERVAL:1:00:00     None
 """)
 
     def test_tronctl_basic(self):
-        self.save_config(SINGLE_ECHO_CONFIG)
+        canary = self.tmp_dir + '/tronctl_basic_done'
+        self.save_config(SINGLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT % canary)
         self.start_trond()
 
         # run the job and check its output
         self.tronctl(['start', 'echo_job'])
-        # no good way to ensure that it completes before it is checked
-        time.sleep(2)
+        wait_for_file_to_exist(canary)
         assert_equal(self.list_action_run('echo_job', 1, 'echo_action')['state'], 'SUCC')
         assert_equal(self.list_job_run('echo_job', 1)['state'], 'SUCC')

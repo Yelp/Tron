@@ -15,6 +15,11 @@ _test_folder, _ = os.path.split(__file__)
 _repo_root, _ = os.path.split(_test_folder)
 
 
+def wait_for_file_to_exist(path, interval=0.1):
+    while not os.path.exists(path):
+        time.sleep(interval)
+
+
 class TronSandboxException(Exception):
     pass
 
