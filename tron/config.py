@@ -1,3 +1,4 @@
+import glob
 import sys
 import re
 import logging
@@ -312,7 +313,7 @@ class TronConfiguration(yaml.YAMLObject):
         if hasattr(self, 'notification_options'):
             self.notification_options = default_or_from_tag(self.notification_options, NotificationOptions)
             self.notification_options._apply(mcp)
-        
+
 
 class SSHOptions(yaml.YAMLObject, FromDictBuilderMixin):
     yaml_tag = u'!SSHOptions'
@@ -665,11 +666,81 @@ class DailyScheduler(_ConfiguredObject):
         if hasattr(self, 'days'):
             sched.wait_days = sched.get_daily_waits(self.days)
 
+
+def suck_top_level_yaml_list(iterable):
+    """Iterate over ``iterable`` until the first non-blank unindented line.
+    Return that line because we consumed it but the caller may need it.
+    """
+    lines = []
+
+    for line in iterable:
+        left_stripped = line.lstrip()
+        # stop at the first non-blank line that isn't indented
+        if left_stripped and left_stripped == line:
+            break
+        lines.append(line)
+
+    if lines:
+        return line, ''.join(lines)
+    else:
+        return line, ''
+
+
+def parse_jobs_and_services(path):
+    job_string = ''
+    service_string = ''
+    with open(path, 'r') as f:
+        for line in f:
+            # There may not be a line break between jobs and services, so
+            # we have to make sure we don't miss any lines.
+            last_line = None
+            while last_line != line:
+                last_line = line
+                if line.startswith('jobs:'):
+                    line, job_string = suck_top_level_yaml_list(f)
+                if line.startswith('services:'):
+                    line, service_string = suck_top_level_yaml_list(f)
+    return job_string, service_string
+
+
+def frankonfig(config, config_file):
+    new_job_strings = []
+    new_service_strings = []
+    for path_glob in config.include:
+        for path in glob.glob(path_glob):
+            jobs_string, services_string = parse_jobs_and_services(path)
+            new_job_strings.append(jobs_string)
+            new_service_strings.append(services_string)
+
+    if not (new_job_strings or new_service_strings):
+        return config
+
+    config_file.seek(0)
+    config_string = config_file.read()
+
+    if new_job_strings:
+        all_new_jobs = '\n'.join(new_job_strings)
+        config_string = config_string.replace("jobs:", "jobs:\n%s" % all_new_jobs)
+
+    if new_service_strings:
+        all_new_services = '\n'.join(new_service_strings)
+        config_string = config_string.replace("services:", "services:\n%s" % all_new_services)
+
+    new_config = yaml.load(config_string)
+    if not isinstance(new_config, TronConfiguration):
+        raise ConfigError("Failed to find a configuration document in specified file")
+
+    return new_config
+
+
 def load_config(config_file):
     """docstring for load_config"""
     config = yaml.load(config_file)
     if not isinstance(config, TronConfiguration):
         raise ConfigError("Failed to find a configuration document in specified file")
+
+    if hasattr(config, 'include'):
+        config = frankonfig(config, config_file)
     
     return config
 
