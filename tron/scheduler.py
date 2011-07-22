@@ -92,33 +92,32 @@ class ConstantScheduler(object):
         return not self == other
 
 
-def get_daily_waits(days):
-    """Computes how many days to wait till the next run from any day, starting with Monday.
-    Example: MF runner:  [4, 3, 2, 1, 3, 2, 1]
-    """
-    if isinstance(days, int):
-        return [days for i in range(7)]
-
-    week = [False for i in range(7)]
-    for day in days:
-        week[WEEK.index(CONVERT_DAYS[day[0:2].lower()])] = True
-
-    count = week.index(True) + 1
-    waits = deque()
-
-    for val in reversed(week):
-        waits.appendleft(count)
-        count = 1 if val else count + 1
-    return waits
-
-
 class DailyScheduler(object):
     """The daily scheduler schedules one run per day"""
     def __init__(self, start_time=None, days=1):
         # What time of day does this thing start ? Default to 1 second after midnight
         self.start_time = start_time or datetime.time(hour=0, minute=0, second=1)
-        self.wait_days = get_daily_waits(days)
-        
+        self.wait_days = self.get_daily_waits(days)
+
+    def get_daily_waits(self, days):
+        """Computes how many days to wait till the next run from any day, starting with Monday.
+        Example: MF runner:  [4, 3, 2, 1, 3, 2, 1]
+        """
+        if isinstance(days, int):
+            return [days for i in range(7)]
+
+        week = [False for i in range(7)]
+        for day in days:
+            week[WEEK.index(CONVERT_DAYS[day[0:2].lower()])] = True
+
+        count = week.index(True) + 1
+        waits = deque()
+
+        for val in reversed(week):
+            waits.appendleft(count)
+            count = 1 if val else count + 1
+        return waits
+
     def next_runs(self, job):
         # Find the next time to run
         if job.runs:
