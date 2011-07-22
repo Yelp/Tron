@@ -567,18 +567,20 @@ class Scheduler(object):
     @classmethod
     def from_string(self, scheduler_str):
         scheduler_args = scheduler_str.split()
-        
+
         scheduler_name = scheduler_args.pop(0)
-        
+
         if scheduler_name == "constant":
             return ConstantScheduler().actualized
         if scheduler_name == "daily":
             return DailyScheduler(*scheduler_args).actualized
         if scheduler_name == "interval":
             return IntervalScheduler(''.join(scheduler_args)).actualized
+        m = scheduler.GROC_SCHEDULE_RE.match(scheduler_str.lower())
+        if m:
+            return GrocScheduler(scheduler_str)
 
         raise ConfigError("Unknown scheduler %r" % scheduler_str)
-
 
 
 class ConstantScheduler(_ConfiguredObject):
@@ -664,6 +666,18 @@ class DailyScheduler(_ConfiguredObject):
 
         if hasattr(self, 'days'):
             sched.wait_days = sched.get_daily_waits(self.days)
+
+
+class GrocScheduler(_ConfiguredObject):
+    yaml_tag = u'!GrocScheduler'
+    actual_class = scheduler.GrocScheduler
+    def __init__(self, *args, **kwargs):
+        self.expr = args[0]
+        super(GrocScheduler, self).__init__(*args, **kwargs)
+
+    def _apply(self):
+        sched = self._ref()
+        sched.parse(self.expr)
 
 def load_config(config_file):
     """docstring for load_config"""
