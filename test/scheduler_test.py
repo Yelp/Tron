@@ -195,7 +195,7 @@ class GrocSchedulerTest(TestCase):
         assert_equal(calendar.weekday(next_run_date.year, next_run_date.month, next_run_date.day), 6)
 
     def test_weekly_in_month(self):
-        self.scheduler.parse('every monday in january at 00:01')
+        self.scheduler.parse('every monday of january at 00:01')
 
         next_run = self.scheduler.next_runs(self.job)[0]
 
