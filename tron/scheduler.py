@@ -53,7 +53,7 @@ DATE_SUFFIXES = 'st|nd|rd|th'
 MONTH_DAYS_EXPR = '(?P<month_days>every|((\d+(%s),?)+))?' % DATE_SUFFIXES
 DAYS_EXPR = r'((?P<days>((%s),?)+))?' % DAY_VALUES
 MONTHS_EXPR = r'((in|of) (?P<months>((%s),?)+))?' % MONTH_VALUES
-TIME_EXPR = r'(at (?P<time>\d\d:\d\d))?'
+TIME_EXPR = r'((at )?(?P<time>\d\d:\d\d))?'
 
 GROC_SCHEDULE_EXPR = ''.join([
     r'^',
