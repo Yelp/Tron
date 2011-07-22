@@ -190,7 +190,7 @@ class GrocScheduler(object):
         else:
             self.timestr = m.group('time')
 
-        if m.group('days') == 'day':
+        if m.group('days') in (None, 'day'):
             self.weekdays = None
         else:
             self.weekdays = set(CONVERT_DAYS_INT[d] for d in m.group('days').split(','))
@@ -204,7 +204,7 @@ class GrocScheduler(object):
             else:
                 self.ordinals = values
 
-        if m.group('months') is None:
+        if m.group('months') in (None, 'month'):
             self.months = None
         else:
             self.months = set(CONVERT_MONTHS[mo] for mo in m.group('months').split(','))
