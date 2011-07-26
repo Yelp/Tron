@@ -12,8 +12,8 @@ log = logging.getLogger('tron.scheduler')
 WEEK = 'mtwrfsu'
 
 # Also support Monday, Mon, mon, mo, Tuesday, Tue, tue, tu...
-CONVERT_DAYS = dict()
-CONVERT_DAYS_INT = dict()
+CONVERT_DAYS = dict()       # day name/abbrev => {mtwrfsu}
+CONVERT_DAYS_INT = dict()   # day name/abbrev => {0123456}
 for day_list in (calendar.day_name,
                  calendar.day_abbr,
                  WEEK,
@@ -25,16 +25,15 @@ for day_list in (calendar.day_name,
         CONVERT_DAYS[key.lower()] = WEEK[value]
 
 # Support January, Jan, january, jan, February, Feb...
-CONVERT_MONTHS = dict()
-# calendar stores month data with a useless element in front
-# map their values to int indices
+CONVERT_MONTHS = dict()     # month name/abbrev => {0 <= k <= 11}
+# calendar stores month data with a useless element in front. cut it off.
 for month_list in (calendar.month_name[1:], calendar.month_abbr[1:]):
     for key, value in zip(month_list, range(1, 13)):
         CONVERT_MONTHS[key] = value
         CONVERT_MONTHS[key.lower()] = value
 
 # Build a regular expression that matches this:
-# ("every"|ordinal) (days) ["of" (monthspec)] ("at" time)
+# ("every"|ordinal) (days) ["of|in" (monthspec)] (["at"] time)
 # Where:
 # ordinal specifies a comma separated list of "1st" and so forth
 # days specifies a comma separated list of days of the week (for example,
