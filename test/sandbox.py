@@ -109,6 +109,7 @@ class TronSandbox(object):
         handle_output(self.trond_bin, p.communicate())
                 
         time.sleep(0.1)
+        # (but p.communicate() already waits for the process to exit... -Steve)
         return p.wait()
 
     def stop_trond(self):

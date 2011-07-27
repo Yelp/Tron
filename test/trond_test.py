@@ -1,8 +1,9 @@
 import datetime
 import os
-from testify import *
 import time
 import yaml
+
+from testify import *
 
 from test.sandbox import TronSandbox
 
