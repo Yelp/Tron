@@ -16,7 +16,6 @@ import yaml
 
 import tron
 from tron import cmd
-from tron.utils.binutils import make_job_to_uri, make_service_to_uri, obj_spec_to_uri
 
 COMMAND_HELP = (
     ('start', 'Start the selected job, job run or action'),
@@ -92,14 +91,15 @@ def main():
         # direct those commands here
         ret = edit(options, command, '/jobs')
     else:
-        job_to_uri = make_job_to_uri(content)
-        service_to_uri = make_service_to_uri(content)
+        job_to_uri = cmd.make_job_to_uri(content)
+        service_to_uri = cmd.make_service_to_uri(content)
 
         for obj_spec in args:
             try:
-                full_uri = obj_spec_to_uri(obj_spec, job_to_uri, service_to_uri)
-            except:
+                full_uri = cmd.obj_spec_to_uri(obj_spec, job_to_uri, service_to_uri)
+            except Exception:
                 log.error('Unknown identifier: %s' % obj_spec)
+                sys.exit(1)
         
             ret = edit(options, command, full_uri)
     

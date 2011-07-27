@@ -5,7 +5,6 @@ import optparse
 
 import tron
 from tron import cmd
-from tron.utils.binutils import make_job_to_uri, make_service_to_uri, obj_spec_to_uri
 
 console_rows = int(os.popen('stty size', 'r').read().split()[0])
 console_cols = int(os.popen('stty size', 'r').read().split()[1])
@@ -344,8 +343,8 @@ def main():
         status, content = cmd.request(options.server, "/")
         assert status == cmd.OK
         
-        job_to_uri = make_job_to_uri(content)
-        service_to_uri = make_service_to_uri(content)
+        job_to_uri = cmd.make_job_to_uri(content)
+        service_to_uri = cmd.make_service_to_uri(content)
         
         level = args[0].count('.')
         object_name = args[0].split('.')[0]
