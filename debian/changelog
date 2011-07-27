@@ -1,3 +1,9 @@
+tron (0.2.6-1) unstable; urgency=low
+
+  * Support for functional testing. Fixes #49 (irskep)
+  
+ -- Rhett Garber <rhettg@gmail.com>  Wed, 22 June 2011 13:24:00 -0800
+
 tron (0.2.5-1) unstable; urgency=low
 
   * Introduce event collection system (rhettg)
