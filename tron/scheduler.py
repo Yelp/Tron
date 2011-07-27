@@ -226,18 +226,24 @@ class GrocScheduler(object):
         job_runs = job.build_runs()
         for job_run in job_runs:
             job_run.set_run_time(run_time)
- 
+
         return job_runs
-    
+
     def job_setup(self, job):
         job.queueing = True
-    
+
     def __str__(self):
         return self.string_repr
-    
+
     def __eq__(self, other):
         return isinstance(other, GrocScheduler) and \
-           True == True
+           all(getattr(self, attr) == getattr(other, attr)
+               for attr in ('ordinals',
+                            'weekdays',
+                            'months',
+                            'monthdays',
+                            'timestr',
+                            'timezone'))
 
     def __ne__(self, other):
         return not self == other

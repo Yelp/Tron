@@ -125,6 +125,9 @@ class GrocSchedulerTest(TestCase):
         assert_equal(self.scheduler.weekdays, set((0, 1)))
         assert_equal(self.scheduler.months, set((3, 4, 9)))
         assert_equal(self.scheduler.timestr, '00:00')
+        identical_scheduler = scheduler.GrocScheduler()
+        identical_scheduler.parse('1st,2nd,3rd,4th mon,tue of mar,apr,sep')
+        assert_equal(self.scheduler, identical_scheduler)
 
     def test_parse_no_weekday(self):
         self.scheduler.parse('1st,2nd,3rd,10th day of march,apr,September at 00:00')
