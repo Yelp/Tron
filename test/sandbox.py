@@ -2,7 +2,7 @@ import logging
 import os
 import shutil
 import signal
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, CalledProcessError
 import sys
 import tempfile
 import time
@@ -10,7 +10,6 @@ import time
 from testify import *
 
 from tron import cmd
-from tron.utils.binutils import make_job_to_uri, make_service_to_uri, obj_spec_to_uri
 
 
 # Used for getting the locations of the executables
@@ -18,6 +17,40 @@ _test_folder, _ = os.path.split(__file__)
 _repo_root, _ = os.path.split(_test_folder)
 
 log = logging.getLogger(__name__)
+
+
+def wait_for_sandbox_success(func, start_delay=0.1, stop_at=5.0):
+    """Call *func* repeatedly until it stops throwing TronSandboxException.
+    Wait increasing amounts from *start_delay* but wait no more than a total
+    of *stop_at* seconds
+    """
+    delay = 0.1
+    total_time = 0.0
+    last_exception = None
+    while total_time < 5.0:
+        time.sleep(delay)
+        total_time += delay
+        try:
+            func()
+            return
+        except TronSandboxException, e:
+            delay *= 2
+            last_exception = e
+    raise last_exception
+
+
+def handle_output(cmd, (stdout, stderr), returncode):
+    """Log process output before it is parsed. Raise exception if exit code
+    is nonzero.
+    """
+    if stdout:
+        log.info("%s: %r", cmd, stdout)
+    if stderr:
+        log.warning("%s: %r", cmd, stderr)
+    if returncode != 0:
+        raise CalledProcessError("Command '%s' returned non-zero exit status"
+                                 " %d" % (cmd, returncode))
+
 
 class TronSandboxException(Exception):
     pass
@@ -28,17 +61,12 @@ class MockConfigOptions(object):
     def __init__(self, server):
         self.server = server
 
-def handle_output(cmd, (stdout, stderr)):
-    if stdout:
-        log.info("%s: %r", cmd, stdout)
-    if stderr:
-        log.warning("%s: %r", cmd, stderr)
 
-class TronTestCase(TestCase):
+class TronSandbox(object):
 
-    @setup
-    def make_sandbox(self):
-        """Set up a temp directory and storepaths to relevant binaries"""
+    def __init__(self):
+        super(TronSandbox, self).__init__()
+        """Set up a temp directory and store paths to relevant binaries"""
         # I had a really hard time not calling this function make_sandwich()
         self.tmp_dir = tempfile.mkdtemp(prefix='tron-')
         self.tron_bin = os.path.join(_repo_root, 'bin')
@@ -72,12 +100,18 @@ class TronTestCase(TestCase):
 
         self._last_trond_launch_args = []
 
-    @teardown
-    def delete_sandbox(self):
+    def delete(self):
         """Delete the temp directory and its contents"""
         if os.path.exists(self.pid_file):
             self.stop_trond()
         shutil.rmtree(self.tmp_dir)
+        self.tmp_dir = None
+        self.tron_bin = None
+        self.tronctl_bin = None
+        self.trond_bin = None
+        self.tronfig_bin = None
+        self.tronview_bin = None
+        self.tron_server_uri = None
 
     def save_config(self, config_text):
         """Save a tron configuration to tron_config.yaml. Mainly useful for
@@ -95,10 +129,13 @@ class TronTestCase(TestCase):
         self._last_trond_launch_args = args
         p = Popen([sys.executable, self.trond_bin] + self.trond_debug_args + args,
                   stdout=PIPE, stderr=PIPE)
-        
-        handle_output(self.trond_bin, p.communicate())
-                
-        time.sleep(0.1)
+
+        handle_output(self.trond_bin, p.communicate(), p.returncode)
+
+        # make sure trond has actually launched
+        wait_for_sandbox_success(self.list_all)
+
+        # (but p.communicate() already waits for the process to exit... -Steve)
         return p.wait()
 
     def stop_trond(self):
@@ -145,9 +182,9 @@ class TronTestCase(TestCase):
             data['run_time'] = run_time
 
         if arg is not None:
-            job_to_uri = make_job_to_uri(content)
-            service_to_uri = make_service_to_uri(content)
-            full_uri = obj_spec_to_uri(arg, job_to_uri, service_to_uri)
+            job_to_uri = cmd.make_job_to_uri(content)
+            service_to_uri = cmd.make_service_to_uri(content)
+            full_uri = cmd.obj_spec_to_uri(arg, job_to_uri, service_to_uri)
         else:
             full_uri = '/jobs'
 
@@ -194,7 +231,7 @@ class TronTestCase(TestCase):
         args = args or []
         p = Popen([sys.executable, self.tronctl_bin] + args, stdout=PIPE, stderr=PIPE)
         retval = p.communicate()
-        handle_output(self.tronctl_bin, retval)
+        handle_output(self.tronctl_bin, retval, p.returncode)
         return retval
 
     def tronview(self, args=None):
@@ -202,7 +239,8 @@ class TronTestCase(TestCase):
         args = args or []
         p = Popen([sys.executable, self.tronview_bin] + args, stdout=PIPE, stderr=PIPE)
         retval = p.communicate()
-        handle_output(self.tronview_bin, retval)
+        handle_output(self.tronview_bin, retval, p.returncode)
         # TODO: Something with return value
-        #return p.wait()
+        # return p.wait()
+        # (but p.communicate() already waits for the process to exit... -Steve)
         return retval
