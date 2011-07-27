@@ -326,6 +326,48 @@ class ActionRunVariablesTest(TestCase):
         ystr = self.now - datetime.timedelta(days=1)
         assert_equal(self._cmd(), "somescript -d %.4d-%.2d-%.2d" % (ystr.year, ystr.month, ystr.day))
 
+    def test_day(self):
+        self.action.command = "somescript -d %(day)s"
+        assert_equal(self._cmd(), "somescript -d %.2d" % (self.now.day))
+
+    def test_day_plus(self):
+        self.action.command = "somescript -d %(day+1)s"
+        tmrw = self.now + datetime.timedelta(days=1)
+        assert_equal(self._cmd(), "somescript -d %.2d" % (tmrw.day))
+
+    def test_day_minus(self):
+        self.action.command = "somescript -d %(day-1)s"
+        ystr = self.now - datetime.timedelta(days=1)
+        assert_equal(self._cmd(), "somescript -d %.2d" % (ystr.day))
+
+    def test_month(self):
+        self.action.command = "somescript -d %(month)s"
+        assert_equal(self._cmd(), "somescript -d %.2d" % (self.now.month))
+
+    def test_month_plus(self):
+        self.action.command = "somescript -d %(month+1)s"
+        tmrw = self.now + timeutils.macro_timedelta(self.now, months=1)
+        assert_equal(self._cmd(), "somescript -d %.2d" % (tmrw.month))
+
+    def test_month_minus(self):
+        self.action.command = "somescript -d %(month-1)s"
+        ystr = self.now + timeutils.macro_timedelta(self.now, months=-1)
+        assert_equal(self._cmd(), "somescript -d %.2d" % (ystr.month))
+
+    def test_year(self):
+        self.action.command = "somescript -d %(year)s"
+        assert_equal(self._cmd(), "somescript -d %.4d" % (self.now.year))
+
+    def test_year_plus(self):
+        self.action.command = "somescript -d %(year+1)s"
+        tmrw = self.now + timeutils.macro_timedelta(self.now, years=1)
+        assert_equal(self._cmd(), "somescript -d %.4d" % (tmrw.year))
+
+    def test_year_minus(self):
+        self.action.command = "somescript -d %(year-1)s"
+        ystr = self.now + timeutils.macro_timedelta(self.now, years=-1)
+        assert_equal(self._cmd(), "somescript -d %.4d" % (ystr.year))
+
     def test_unixtime(self):
         self.action.command = "somescript -t %(unixtime)s"
         timestamp = int(timeutils.to_timestamp(self.now))
