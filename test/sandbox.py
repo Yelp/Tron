@@ -20,6 +20,26 @@ _repo_root, _ = os.path.split(_test_folder)
 log = logging.getLogger(__name__)
 
 
+def wait_for_sandbox_success(func, start_delay=0.1, stop_at=5.0):
+    """Call *func* repeatedly until it stops throwing TronSandboxException.
+    Wait increasing amounts from *start_delay* but wait no more than a total
+    of *stop_at* seconds
+    """
+    delay = 0.1
+    total_time = 0.0
+    last_exception = None
+    while total_time < 5.0:
+        time.sleep(delay)
+        total_time += delay
+        try:
+            func()
+            return
+        except TronSandboxException, e:
+            delay *= 2
+            last_exception = e
+    raise last_exception
+
+
 def handle_output(cmd, (stdout, stderr), returncode):
     """Log process output before it is parsed. Raise exception if exit code
     is nonzero.
@@ -113,8 +133,9 @@ class TronSandbox(object):
 
         handle_output(self.trond_bin, p.communicate(), p.returncode)
 
-        # TODO: some kind of polling to actually make sure the process launches
-        time.sleep(0.1)
+        # make sure trond has actually launched
+        wait_for_sandbox_success(self.list_all)
+
         # (but p.communicate() already waits for the process to exit... -Steve)
         return p.wait()
 
