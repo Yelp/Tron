@@ -1,10 +1,13 @@
+import logging
 import os
 import shutil
 import signal
 from subprocess import Popen, PIPE
+import sys
 import tempfile
-from testify import *
 import time
+
+from testify import *
 
 from tron import cmd
 from tron.utils.binutils import make_job_to_uri, make_service_to_uri, obj_spec_to_uri
@@ -14,6 +17,7 @@ from tron.utils.binutils import make_job_to_uri, make_service_to_uri, obj_spec_t
 _test_folder, _ = os.path.split(__file__)
 _repo_root, _ = os.path.split(_test_folder)
 
+log = logging.getLogger(__name__)
 
 class TronSandboxException(Exception):
     pass
@@ -24,6 +28,11 @@ class MockConfigOptions(object):
     def __init__(self, server):
         self.server = server
 
+def handle_output(cmd, (stdout, stderr)):
+    if stdout:
+        log.info("%s: %r", cmd, stdout)
+    if stderr:
+        log.warning("%s: %r", cmd, stderr)
 
 class TronTestCase(TestCase):
 
@@ -84,11 +93,13 @@ class TronTestCase(TestCase):
         """Start trond"""
         args = args or []
         self._last_trond_launch_args = args
-        p = Popen([self.trond_bin] + self.trond_debug_args + args,
+        p = Popen([sys.executable, self.trond_bin] + self.trond_debug_args + args,
                   stdout=PIPE, stderr=PIPE)
-        retval = p.communicate()
+        
+        handle_output(self.trond_bin, p.communicate())
+                
         time.sleep(0.1)
-        return retval
+        return p.wait()
 
     def stop_trond(self):
         """Stop trond based on the tron.pid in the temp directory"""
@@ -181,11 +192,17 @@ class TronTestCase(TestCase):
     def tronctl(self, args=None):
         """Call tronctl with args and return ``(stdout, stderr)``"""
         args = args or []
-        p = Popen([self.tronctl_bin] + args, stdout=PIPE, stderr=PIPE)
-        return p.communicate()
+        p = Popen([sys.executable, self.tronctl_bin] + args, stdout=PIPE, stderr=PIPE)
+        retval = p.communicate()
+        handle_output(self.tronctl_bin, retval)
+        return retval
 
     def tronview(self, args=None):
         """Call tronview with args and return ``(stdout, stderr)``"""
         args = args or []
-        p = Popen([self.tronview_bin] + args, stdout=PIPE, stderr=PIPE)
-        return p.communicate()
+        p = Popen([sys.executable, self.tronview_bin] + args, stdout=PIPE, stderr=PIPE)
+        retval = p.communicate()
+        handle_output(self.tronview_bin, retval)
+        # TODO: Something with return value
+        #return p.wait()
+        return retval
