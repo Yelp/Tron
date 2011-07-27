@@ -1,6 +1,7 @@
 tron (0.2.6-1) unstable; urgency=low
 
   * Support for functional testing. Fixes #49 (irskep)
+  * Context variables for year, month and day. Fixes #57 (irskep)
   
  -- Rhett Garber <rhettg@gmail.com>  Wed, 22 June 2011 13:24:00 -0800
 
