@@ -1,7 +1,10 @@
 dist
 build
+env
+run
 ssh.log
 tron.log
 MANIFEST
+tron.egg_info
 *.pyc
 *._*
