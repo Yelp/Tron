@@ -210,7 +210,7 @@ class JobRun(object):
         return all([r.is_cancelled for r in self.action_runs_with_cleanup])
 
     @property
-    def cleanupjobstatus(self):
+    def cleanup_job_status(self):
         """Provide 'SUCCESS' or 'FAILURE' to a cleanup action context based on
         the status of the other steps
         """

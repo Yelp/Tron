@@ -142,7 +142,7 @@ class ActionRun(object):
             # Provide dummy values for context variables that JobRun provides
             # but aren't available outside of a run. This is to avoid
             # meaningless KeyErrors in the logs.
-            context = dict(cleanupjobstatus='UNKNOWN')
+            context = dict(cleanup_job_status='UNKNOWN')
 
         new_context = ActionRunContext(self)
 
