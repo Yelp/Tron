@@ -10,7 +10,7 @@ import time
 from testify import *
 
 from tron import cmd
-from tron.utils.binutils import make_job_to_uri, make_service_to_uri, obj_spec_to_uri
+from tron.cmd import make_job_to_uri, make_service_to_uri, obj_spec_to_uri
 
 
 # Used for getting the locations of the executables
@@ -18,6 +18,15 @@ _test_folder, _ = os.path.split(__file__)
 _repo_root, _ = os.path.split(_test_folder)
 
 log = logging.getLogger(__name__)
+
+
+def handle_output(cmd, (stdout, stderr)):
+    """Log process output before it is parsed"""
+    if stdout:
+        log.info("%s: %r", cmd, stdout)
+    if stderr:
+        log.warning("%s: %r", cmd, stderr)
+
 
 class TronSandboxException(Exception):
     pass
@@ -28,17 +37,12 @@ class MockConfigOptions(object):
     def __init__(self, server):
         self.server = server
 
-def handle_output(cmd, (stdout, stderr)):
-    if stdout:
-        log.info("%s: %r", cmd, stdout)
-    if stderr:
-        log.warning("%s: %r", cmd, stderr)
 
-class TronTestCase(TestCase):
+class TronSandbox(object):
 
-    @setup
-    def make_sandbox(self):
-        """Set up a temp directory and storepaths to relevant binaries"""
+    def __init__(self):
+        super(TronSandbox, self).__init__()
+        """Set up a temp directory and store paths to relevant binaries"""
         # I had a really hard time not calling this function make_sandwich()
         self.tmp_dir = tempfile.mkdtemp(prefix='tron-')
         self.tron_bin = os.path.join(_repo_root, 'bin')
@@ -72,12 +76,18 @@ class TronTestCase(TestCase):
 
         self._last_trond_launch_args = []
 
-    @teardown
-    def delete_sandbox(self):
+    def delete(self):
         """Delete the temp directory and its contents"""
         if os.path.exists(self.pid_file):
             self.stop_trond()
         shutil.rmtree(self.tmp_dir)
+        self.tmp_dir = None
+        self.tron_bin = None
+        self.tronctl_bin = None
+        self.trond_bin = None
+        self.tronfig_bin = None
+        self.tronview_bin = None
+        self.tron_server_uri = None
 
     def save_config(self, config_text):
         """Save a tron configuration to tron_config.yaml. Mainly useful for
@@ -204,5 +214,6 @@ class TronTestCase(TestCase):
         retval = p.communicate()
         handle_output(self.tronview_bin, retval)
         # TODO: Something with return value
-        #return p.wait()
+        # return p.wait()
+        # (but p.communicate() already waits for the process to exit... -Steve)
         return retval
