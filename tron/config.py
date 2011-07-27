@@ -453,13 +453,12 @@ class Job(_ConfiguredObject):
             real_job.all_nodes = self.all_nodes
 
         if hasattr(self, "cleanup_action"):
-            if hasattr(self.cleanup_action, 'required'):
-                raise ConfigError("Cleanup actions cannot have dependencies")
+            # condensed, specialized version of _match_actions()
             action = default_or_from_tag(self.cleanup_action, CleanupAction)
             real_action = action.actualized
 
             if not real_job.node_pool and not real_action.node_pool:
-                raise ConfigError("Either job '%s' or its action '%s' must have a node" 
+                raise ConfigError("Either job '%s' or its action '%s' must have a node"
                    % (real_job.name, action_action.name))
             real_job.cleanup_action = real_action
             real_action.job = real_job
@@ -551,9 +550,6 @@ class Action(_ConfiguredObject):
 class CleanupAction(Action):
     yaml_tag = u'!CleanupAction'
     actual_class = action.Action
-
-    def __init__(self, *args, **kwargs):
-        super(CleanupAction, self).__init__(*args, **kwargs)
 
     def _validate(self):
         if hasattr(self, 'name') and self.name is not None and self.name != CLEANUP_ACTION_NAME:
