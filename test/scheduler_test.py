@@ -2,7 +2,6 @@ import calendar
 import datetime
 import tempfile
 import shutil
-import pytz
 
 from testify import *
 from testify.utils import turtle
@@ -105,7 +104,7 @@ class GrocSchedulerTest(TestCase):
         self.job.output_path = self.test_dir
         self.job.scheduler = self.scheduler
         self.action.job = self.job
-        self.today = datetime.datetime(2011, 6, 1, tzinfo=pytz.utc)
+        self.today = datetime.datetime(2011, 6, 1)
 
     @teardown
     def remove_tmp(self):
