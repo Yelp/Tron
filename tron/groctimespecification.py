@@ -2,6 +2,7 @@
 #
 # Copyright 2007 Google Inc.
 # Modified 2011 Yelp Inc.
+# from http://code.google.com/p/googleappengine/source/browse/trunk/python/google/appengine/cron/groctimespecification.py
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -53,22 +54,6 @@ except ImportError:
 
 class GrocException(Exception):
     pass
-
-"""
-  if parser.period_string:
-    return IntervalTimeSpecification(parser.interval_mins,
-                                     parser.period_string,
-                                     parser.synchronized,
-                                     parser.start_time_string,
-                                     parser.end_time_string,
-                                     timezone)
-  else:
-    return SpecificTimeSpecification(parser.ordinal_set, parser.weekday_set,
-                                     parser.month_set,
-                                     parser.monthday_set,
-                                     parser.time_string,
-                                     timezone)
-"""
 
 
 class TimeSpecification(object):
