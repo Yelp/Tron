@@ -2,7 +2,7 @@ import logging
 import os
 import shutil
 import signal
-from subprocess import Popen, PIPE
+from subprocess import Popen, PIPE, CalledProcessError
 import sys
 import tempfile
 import time
@@ -20,12 +20,17 @@ _repo_root, _ = os.path.split(_test_folder)
 log = logging.getLogger(__name__)
 
 
-def handle_output(cmd, (stdout, stderr)):
-    """Log process output before it is parsed"""
+def handle_output(cmd, (stdout, stderr), returncode):
+    """Log process output before it is parsed. Raise exception if exit code
+    is nonzero.
+    """
     if stdout:
         log.info("%s: %r", cmd, stdout)
     if stderr:
         log.warning("%s: %r", cmd, stderr)
+    if returncode != 0:
+        raise CalledProcessError("Command '%s' returned non-zero exit status"
+                                 " %d" % (cmd, returncode))
 
 
 class TronSandboxException(Exception):
@@ -105,9 +110,10 @@ class TronSandbox(object):
         self._last_trond_launch_args = args
         p = Popen([sys.executable, self.trond_bin] + self.trond_debug_args + args,
                   stdout=PIPE, stderr=PIPE)
-        
-        handle_output(self.trond_bin, p.communicate())
-                
+
+        handle_output(self.trond_bin, p.communicate(), p.returncode)
+
+        # TODO: some kind of polling to actually make sure the process launches
         time.sleep(0.1)
         # (but p.communicate() already waits for the process to exit... -Steve)
         return p.wait()
@@ -205,7 +211,7 @@ class TronSandbox(object):
         args = args or []
         p = Popen([sys.executable, self.tronctl_bin] + args, stdout=PIPE, stderr=PIPE)
         retval = p.communicate()
-        handle_output(self.tronctl_bin, retval)
+        handle_output(self.tronctl_bin, retval, p.returncode)
         return retval
 
     def tronview(self, args=None):
@@ -213,7 +219,7 @@ class TronSandbox(object):
         args = args or []
         p = Popen([sys.executable, self.tronview_bin] + args, stdout=PIPE, stderr=PIPE)
         retval = p.communicate()
-        handle_output(self.tronview_bin, retval)
+        handle_output(self.tronview_bin, retval, p.returncode)
         # TODO: Something with return value
         # return p.wait()
         # (but p.communicate() already waits for the process to exit... -Steve)
