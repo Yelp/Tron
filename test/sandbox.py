@@ -10,7 +10,6 @@ import time
 from testify import *
 
 from tron import cmd
-from tron.cmd import make_job_to_uri, make_service_to_uri, obj_spec_to_uri
 
 
 # Used for getting the locations of the executables
@@ -183,9 +182,9 @@ class TronSandbox(object):
             data['run_time'] = run_time
 
         if arg is not None:
-            job_to_uri = make_job_to_uri(content)
-            service_to_uri = make_service_to_uri(content)
-            full_uri = obj_spec_to_uri(arg, job_to_uri, service_to_uri)
+            job_to_uri = cmd.make_job_to_uri(content)
+            service_to_uri = cmd.make_service_to_uri(content)
+            full_uri = cmd.obj_spec_to_uri(arg, job_to_uri, service_to_uri)
         else:
             full_uri = '/jobs'
 
