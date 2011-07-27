@@ -26,3 +26,21 @@ def current_timestamp():
 def to_timestamp(time_val):
     """Generate a unix timestamp for the given datetime instance"""
     return time.mktime(time_val.timetuple())
+
+def macro_timedelta(start_date, years=0, months=0, days=0):
+    """Since datetime doesn't provide timedeltas at the year or month level,
+    this function generates timedeltas of the appropriate sizes.
+    """
+    delta = datetime.timedelta(days=days)
+
+    new_month = start_date.month + months
+    while new_month > 12:
+        new_month -= 12
+        years += 1
+    while new_month < 1:
+        new_month += 12
+        years -= 1
+
+    delta += datetime.datetime(start_date.year+years, new_month, start_date.day) - start_date
+
+    return delta
