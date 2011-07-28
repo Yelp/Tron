@@ -85,31 +85,22 @@ def main():
         sys.exit(1)
 
     command = args.pop(0)
-
-    job_to_uri = dict([(job['name'], job['href']) for job in content['jobs']])
-    service_to_uri = dict([(service['name'], service['href']) for service in content['services']])
     
     if not args:
         # our only non-object commands are for enabling and disabling jobs, so just
         # direct those commands here
         ret = edit(options, command, '/jobs')
     else:
+        job_to_uri = cmd.make_job_to_uri(content)
+        service_to_uri = cmd.make_service_to_uri(content)
+
         for obj_spec in args:
-            obj_name_elements = obj_spec.split('.')
-            obj_name = obj_name_elements[0]
-            obj_rel_path = "/".join(obj_name_elements[1:])
-
-            obj_uri = None
-            if obj_name in job_to_uri:
-                obj_uri = job_to_uri[obj_name]
-            elif obj_name in service_to_uri:
-                obj_uri = service_to_uri[obj_name]
-
-            if not obj_uri:
-                log.error("Unknown identifier: %s", args[1])
+            try:
+                full_uri = cmd.obj_spec_to_uri(obj_spec, job_to_uri, service_to_uri)
+            except Exception:
+                log.error('Unknown identifier: %s' % obj_spec)
                 sys.exit(1)
         
-            full_uri = '/'.join((obj_uri, obj_rel_path))
             ret = edit(options, command, full_uri)
     
     cmd.save_config(options)
