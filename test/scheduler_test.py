@@ -90,7 +90,14 @@ class DailySchedulerTimeTest(TestCase):
         
         assert_gt(next_run_date, today)
         assert_equal(next_run_date - today, datetime.timedelta(days=1))
-        assert_lte(datetime.datetime(year=tomorrow.year, month=tomorrow.month, day=tomorrow.day, hour=12), next_run.run_time)
+        # This test is failing now, but I'm not sure it should. It would pass
+        # if it were this instead:
+        # assert_lte(datetime.datetime(year=tomorrow.year, month=tomorrow.month,
+        #                              day=tomorrow.day, hour=0),
+        #            next_run.run_time)
+        assert_lte(datetime.datetime(year=tomorrow.year, month=tomorrow.month,
+                                     day=tomorrow.day, hour=12),
+                   next_run.run_time)
 
 
 class GrocSchedulerTest(TestCase):
