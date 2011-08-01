@@ -21,8 +21,10 @@ for day_list in (calendar.day_name,
     for key, value in zip(day_list, range(7)):
         CONVERT_DAYS_INT[key] = value
         CONVERT_DAYS_INT[key.lower()] = value
+        CONVERT_DAYS_INT[key.upper()] = value
         CONVERT_DAYS[key] = WEEK[value]
         CONVERT_DAYS[key.lower()] = WEEK[value]
+        CONVERT_DAYS[key.upper()] = value
 
 # Support January, Jan, january, jan, February, Feb...
 CONVERT_MONTHS = dict()     # month name/abbrev => {0 <= k <= 11}
@@ -91,71 +93,12 @@ class ConstantScheduler(object):
         return not self == other
 
 
-class DailyScheduler(object):
-    """The daily scheduler schedules one run per day"""
-    def __init__(self, start_time=None, days=1):
-        # What time of day does this thing start ? Default to 1 second after midnight
-        self.start_time = start_time or datetime.time(hour=0, minute=0, second=1)
-        self.wait_days = self.get_daily_waits(days)
-
-    def get_daily_waits(self, days):
-        """Computes how many days to wait till the next run from any day, starting with Monday.
-        Example: MF runner:  [4, 3, 2, 1, 3, 2, 1]
-        """
-        if isinstance(days, int):
-            return [days for i in range(7)]
-
-        week = [False for i in range(7)]
-        for day in days:
-            week[WEEK.index(CONVERT_DAYS[day[0:2].lower()])] = True
-
-        count = week.index(True) + 1
-        waits = deque()
-
-        for val in reversed(week):
-            waits.appendleft(count)
-            count = 1 if val else count + 1
-        return waits
-
-    def next_runs(self, job):
-        # Find the next time to run
-        if job.runs:
-            next_day = job.runs[0].run_time + datetime.timedelta(days=self.wait_days[job.runs[0].run_time.weekday()])
-        else:
-            next_day = timeutils.current_time() + datetime.timedelta(self.wait_days[timeutils.current_time().weekday()])
-
-        run_time = next_day.replace(
-                            hour=self.start_time.hour, 
-                            minute=self.start_time.minute, 
-                            second=self.start_time.second,
-                            microsecond=0)
-
-        job_runs = job.build_runs()
-        for job_run in job_runs:
-            job_run.set_run_time(run_time)
- 
-        return job_runs
-    
-    def job_setup(self, job):
-        job.queueing = True
-    
-    def __str__(self):
-        return "DAILY"
-    
-    def __eq__(self, other):
-        return isinstance(other, DailyScheduler) and \
-           self.wait_days == other.wait_days and self.start_time == other.start_time
-
-    def __ne__(self, other):
-        return not self == other
-
-
 class GrocScheduler(object):
     """Wrapper around SpecificTimeSpecification in the Google App Engine cron library"""
     def __init__(self, ordinals=None, weekdays=None, months=None, monthdays=None,
-                 timestr='00:00', timezone=None):
+                 timestr='00:00', timezone=None, start_time=None):
         """Parameters:
-          time      - the time of day to run, as 'HH:MM'
+          timestr   - the time of day to run, as 'HH:MM'
           ordinals  - first, second, third &c, as a set of integers in 1..5 to be
                       used with "1st <weekday>", etc.
           monthdays - set of integers to be used with "<month> 3rd", etc.
@@ -165,6 +108,7 @@ class GrocScheduler(object):
           timezone  - the optional timezone as a string for this specification.
                       Defaults to UTC - valid entries are things like Australia/Victoria
                       or PST8PDT.
+          start_time - Backward-compatible parameter for DailyScheduler
         """
         self.ordinals = ordinals
         self.weekdays = weekdays
@@ -172,11 +116,25 @@ class GrocScheduler(object):
         self.monthdays = monthdays
         self.timestr = timestr
         self.timezone = timezone
+        self._start_time = start_time
+        self.string_repr = 'every day of month'
 
-        self.time_spec = None
+        self._time_spec = None
+
+    @property
+    def time_spec(self):
+        if self._time_spec is None:
+            self._time_spec = SpecificTimeSpecification(ordinals=self.ordinals,
+                                                        weekdays=self.weekdays,
+                                                        months=self.months,
+                                                        monthdays=self.monthdays,
+                                                        timestr=self.timestr,
+                                                        timezone=self.timezone)
+        return self._time_spec
 
     def parse(self, scheduler_str):
-        self.string_epr = scheduler_str
+        """Parse a schedule string."""
+        self.string_repr = scheduler_str
 
         def parse_number(day):
             return int(''.join(c for c in day if c.isdigit()))
@@ -184,7 +142,11 @@ class GrocScheduler(object):
         m = GROC_SCHEDULE_RE.match(scheduler_str.lower())
 
         if m.group('time') is None:
-            self.timestr = '00:00'
+            if self._start_time is None:
+                self.timestr = '00:00'
+            else:
+                self.timestr = '%02d:%02d' % (self._start_time.hour,
+                                              self._start_time.minute)
         else:
             self.timestr = m.group('time')
 
@@ -207,12 +169,28 @@ class GrocScheduler(object):
         else:
             self.months = set(CONVERT_MONTHS[mo] for mo in m.group('months').split(','))
 
-        self.time_spec = SpecificTimeSpecification(ordinals=self.ordinals,
-                                                   weekdays=self.weekdays,
-                                                   months=self.months,
-                                                   monthdays=self.monthdays,
-                                                   timestr=self.timestr,
-                                                   timezone=self.timezone)
+    def parse_legacy_days(self, days):
+        """Parse a string that would have been passed to DailyScheduler"""
+        self.weekdays = set(CONVERT_DAYS_INT[d] for d in days)
+        if self.weekdays != set([0, 1, 2, 3, 4, 5, 6]):
+            self.string_repr = 'every %s of month' % ','.join(days)
+
+    def get_daily_waits(self, days):
+        """Backwards compatibility with DailyScheduler"""
+        self.parse_legacy_days(days)
+
+    def _get_start_time(self):
+        if self._start_time is None:
+            hms = [int(val) for val in self.timestr.strip().split(':')]
+            while len(hms) < 3:
+                hms.append(0)
+            hour, minute, second = hms
+            return datetime.time(hour=hour, minute=minute, second=second)
+
+    def _set_start_time(self, start_time):
+        self._start_time = start_time
+
+    start_time = property(_get_start_time, _set_start_time)
 
     def next_runs(self, job):
         # Find the next time to run
@@ -233,7 +211,12 @@ class GrocScheduler(object):
         job.queueing = True
 
     def __str__(self):
-        return self.string_repr
+        # Backward compatible string representation which also happens to be
+        # user-friendly
+        if self.string_repr == 'every day of month':
+            return 'DAILY'
+        else:
+            return self.string_repr
 
     def __eq__(self, other):
         return isinstance(other, GrocScheduler) and \
@@ -247,6 +230,11 @@ class GrocScheduler(object):
 
     def __ne__(self, other):
         return not self == other
+
+
+# GrocScheduler can pretend to be a DailyScheduler in order to be backdward-
+# compatible
+DailyScheduler = GrocScheduler
 
 
 class IntervalScheduler(object):

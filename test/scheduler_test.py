@@ -102,7 +102,6 @@ class GrocSchedulerTest(TestCase):
         self.job = job.Job("Test Job", self.action)
         self.job.node_pool = turtle.Turtle()
         self.job.output_path = self.test_dir
-        self.job.scheduler = self.scheduler
         self.action.job = self.job
         self.today = datetime.datetime(2011, 6, 1)
 

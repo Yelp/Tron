@@ -641,7 +641,7 @@ class IntervalScheduler(_ConfiguredObject):
 
 class DailyScheduler(_ConfiguredObject):
     yaml_tag = u'!DailyScheduler'
-    actual_class = scheduler.DailyScheduler
+    actual_class = scheduler.GrocScheduler
     def __init__(self, *args, **kwargs):
 
         if len(args) > 0:
@@ -657,15 +657,25 @@ class DailyScheduler(_ConfiguredObject):
     def _apply(self):
         sched = self._ref()
 
+        err_msg = ("Start time must be in string format HH:MM[:SS]. Seconds"
+                   " are ignored but parsed so as to be backward-compatible.")
+
         if hasattr(self, 'start_time'):
             if not isinstance(self.start_time, basestring):
-                raise ConfigError("Start time must be in string format HH:MM:SS")
+                raise ConfigError(err_msg)
 
-            hour, minute, second = [int(val) for val in self.start_time.strip().split(':')]
-            sched.start_time = datetime.time(hour=hour, minute=minute, second=second)
+            # GrocScheduler will parse the values from the string.
+            # However, it only accepts HH:MM, not HH:MM:SS, so we truncate
+            # here if necessary.
+            hms = self.start_time.strip().split(':')
+
+            if len(hms) < 2:
+                raise ConfigError(err_msg)
+
+            sched.timestr = ':'.join(hms)
 
         if hasattr(self, 'days'):
-            sched.wait_days = sched.get_daily_waits(self.days)
+            sched.parse_legacy_days(self.days)
 
 
 class GrocScheduler(_ConfiguredObject):
