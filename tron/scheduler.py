@@ -7,65 +7,88 @@ from collections import deque
 from tron.groctimespecification import IntervalTimeSpecification, SpecificTimeSpecification
 from tron.utils import timeutils
 
+
 log = logging.getLogger('tron.scheduler')
 
-WEEK = 'mtwrfsu'
 
-# Also support Monday, Mon, mon, mo, Tuesday, Tue, tue, tu...
-CONVERT_DAYS = dict()       # day name/abbrev => {mtwrfsu}
-CONVERT_DAYS_INT = dict()   # day name/abbrev => {0123456}
-for day_list in (calendar.day_name,
-                 calendar.day_abbr,
-                 WEEK,
-                 ('mo', 'tu', 'we', 'th', 'fr', 'sa', 'su')):
-    for key, value in zip(day_list, range(7)):
-        CONVERT_DAYS_INT[key] = value
-        CONVERT_DAYS_INT[key.lower()] = value
-        CONVERT_DAYS_INT[key.upper()] = value
-        CONVERT_DAYS[key] = WEEK[value]
-        CONVERT_DAYS[key.lower()] = WEEK[value]
-        CONVERT_DAYS[key.upper()] = value
+def day_canonicalization_map():
+    """Build a map of weekday synonym to int index 0-6 inclusive."""
+    canon_map = dict()
 
-# Support January, Jan, january, jan, February, Feb...
-CONVERT_MONTHS = dict()     # month name/abbrev => {0 <= k <= 11}
-# calendar stores month data with a useless element in front. cut it off.
-for month_list in (calendar.month_name[1:], calendar.month_abbr[1:]):
-    for key, value in zip(month_list, range(1, 13)):
-        CONVERT_MONTHS[key] = value
-        CONVERT_MONTHS[key.lower()] = value
+    # 7-element lists with weekday names in order
+    weekday_lists = (calendar.day_name,
+                     calendar.day_abbr,
+                     ('m', 't', 'w', 'r', 'f', 's', 'u'),
+                     ('mo', 'tu', 'we', 'th', 'fr', 'sa', 'su'))
+    for day_list in weekday_lists:
+        for day_name_synonym, day_index in zip(day_list, range(7)):
+            canon_map[day_name_synonym] = day_index
+            canon_map[day_name_synonym.lower()] = day_index
+            canon_map[day_name_synonym.upper()] = day_index
+    return canon_map
 
-# Build a regular expression that matches this:
-# ("every"|ordinal) (days) ["of|in" (monthspec)] (["at"] time)
-# Where:
-# ordinal specifies a comma separated list of "1st" and so forth
-# days specifies a comma separated list of days of the week (for example,
-#   "mon", "tuesday", with both short and long forms being accepted); "every
-#   day" is equivalent to "every mon,tue,wed,thu,fri,sat,sun"
-# monthspec specifies a comma separated list of month names (for example,
-#   "jan", "march", "sep"). If omitted, implies every month. You can also say
-#   "month" to mean every month, as in "1,8,15,22 of month 09:00".
-# time specifies the time of day, as HH:MM in 24 hour time.
-# from http://code.google.com/appengine/docs/python/config/cron.html#The_Schedule_Format
+# Canonicalize weekday names to integer indices
+CONVERT_DAYS_INT = day_canonicalization_map()   # day name/abbrev => {0123456}
 
-DAY_VALUES = '|'.join(CONVERT_DAYS.keys() + ['day'])
-MONTH_VALUES = '|'.join(CONVERT_MONTHS.keys() + ['month'])
-DATE_SUFFIXES = 'st|nd|rd|th'
 
-MONTH_DAYS_EXPR = '(?P<month_days>every|((\d+(%s),?)+))?' % DATE_SUFFIXES
-DAYS_EXPR = r'((?P<days>((%s),?)+))?' % DAY_VALUES
-MONTHS_EXPR = r'((in|of) (?P<months>((%s),?)+))?' % MONTH_VALUES
-TIME_EXPR = r'((at )?(?P<time>\d\d:\d\d))?'
+def month_canonicalization_map():
+    """Build a map of month synonym to int index 0-11 inclusive."""
+    canon_map = dict()
 
-GROC_SCHEDULE_EXPR = ''.join([
-    r'^',
-    MONTH_DAYS_EXPR, r' ?',
-    DAYS_EXPR, r' ?',
-    MONTHS_EXPR, r' ?',
-     TIME_EXPR, r' ?',
-    r'$'
-])
+    # calendar stores month data with a useless element in front. cut it off.
+    monthname_lists = (calendar.month_name[1:], calendar.month_abbr[1:])
+    for month_list in monthname_lists:
+        for key, value in zip(month_list, range(1, 13)):
+            canon_map[key] = value
+            canon_map[key.lower()] = value
+    return canon_map
 
-GROC_SCHEDULE_RE = re.compile(GROC_SCHEDULE_EXPR)
+# Canonicalize month names to integer indices
+CONVERT_MONTHS = month_canonicalization_map()   # month name/abbrev => {0 <= k <= 11}
+
+
+def groc_schedule_parser_re():
+    """Build a regular expression that matches this:
+
+        ("every"|ordinal) (days) ["of|in" (monthspec)] (["at"] HH:MM)
+
+    ordinal   - comma-separated list of "1st" and so forth
+    days      - comma-separated list of days of the week (for example,
+                "mon", "tuesday", with both short and long forms being
+                accepted); "every day" is equivalent to
+                "every mon,tue,wed,thu,fri,sat,sun"
+    monthspec - comma-separated list of month names (for example,
+                "jan", "march", "sep"). If omitted, implies every month.
+                You can also say "month" to mean every month, as in
+                "1,8th,15,22nd of month 09:00".
+    HH:MM     - time of day in 24 hour time.
+
+    This is a slightly more permissive version of Google App Engine's schedule
+    parser, documented here:
+    http://code.google.com/appengine/docs/python/config/cron.html#The_Schedule_Format
+    """
+
+    DAY_VALUES = '|'.join(CONVERT_DAYS_INT.keys() + ['day'])
+    MONTH_VALUES = '|'.join(CONVERT_MONTHS.keys() + ['month'])
+    DATE_SUFFIXES = 'st|nd|rd|th'
+
+    MONTH_DAYS_EXPR = '(?P<month_days>every|((\d+(%s),?)+))?' % DATE_SUFFIXES
+    DAYS_EXPR = r'((?P<days>((%s),?)+))?' % DAY_VALUES
+    MONTHS_EXPR = r'((in|of) (?P<months>((%s),?)+))?' % MONTH_VALUES
+    TIME_EXPR = r'((at )?(?P<time>\d\d:\d\d))?'
+
+    GROC_SCHEDULE_EXPR = ''.join([
+        r'^',
+        MONTH_DAYS_EXPR, r' ?',
+        DAYS_EXPR, r' ?',
+        MONTHS_EXPR, r' ?',
+         TIME_EXPR, r' ?',
+        r'$'
+    ])
+    return re.compile(GROC_SCHEDULE_EXPR)
+
+GROC_SCHEDULE_RE = groc_schedule_parser_re()
+
 
 class ConstantScheduler(object):
     """The constant scheduler only schedules the first one.  The job run starts then next when finished"""
