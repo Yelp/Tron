@@ -1,16 +1,94 @@
+import calendar
 import datetime
 import logging
+import re
 
 from collections import deque
+from tron.groctimespecification import IntervalTimeSpecification, SpecificTimeSpecification
 from tron.utils import timeutils
+
 
 log = logging.getLogger('tron.scheduler')
 
-WEEK = 'mtwrfsu'
-CONVERT = {
-    'mo': 'm', 'tu': 't', 'we': 'w', 'th': 'r', 'fr': 'f', 'sa': 's', 'su': 'u',
-    'm' : 'm', 't' : 't', 'w' : 'w', 'r' : 'r', 'f' : 'f', 's' : 's', 'u' : 'u',
-}
+
+def day_canonicalization_map():
+    """Build a map of weekday synonym to int index 0-6 inclusive."""
+    canon_map = dict()
+
+    # 7-element lists with weekday names in order
+    weekday_lists = (calendar.day_name,
+                     calendar.day_abbr,
+                     ('m', 't', 'w', 'r', 'f', 's', 'u'),
+                     ('mo', 'tu', 'we', 'th', 'fr', 'sa', 'su'))
+    for day_list in weekday_lists:
+        for day_name_synonym, day_index in zip(day_list, range(7)):
+            canon_map[day_name_synonym] = day_index
+            canon_map[day_name_synonym.lower()] = day_index
+            canon_map[day_name_synonym.upper()] = day_index
+    return canon_map
+
+# Canonicalize weekday names to integer indices
+CONVERT_DAYS_INT = day_canonicalization_map()   # day name/abbrev => {0123456}
+
+
+def month_canonicalization_map():
+    """Build a map of month synonym to int index 0-11 inclusive."""
+    canon_map = dict()
+
+    # calendar stores month data with a useless element in front. cut it off.
+    monthname_lists = (calendar.month_name[1:], calendar.month_abbr[1:])
+    for month_list in monthname_lists:
+        for key, value in zip(month_list, range(1, 13)):
+            canon_map[key] = value
+            canon_map[key.lower()] = value
+    return canon_map
+
+# Canonicalize month names to integer indices
+CONVERT_MONTHS = month_canonicalization_map()   # month name/abbrev => {0 <= k <= 11}
+
+
+def groc_schedule_parser_re():
+    """Build a regular expression that matches this:
+
+        ("every"|ordinal) (days) ["of|in" (monthspec)] (["at"] HH:MM)
+
+    ordinal   - comma-separated list of "1st" and so forth
+    days      - comma-separated list of days of the week (for example,
+                "mon", "tuesday", with both short and long forms being
+                accepted); "every day" is equivalent to
+                "every mon,tue,wed,thu,fri,sat,sun"
+    monthspec - comma-separated list of month names (for example,
+                "jan", "march", "sep"). If omitted, implies every month.
+                You can also say "month" to mean every month, as in
+                "1,8th,15,22nd of month 09:00".
+    HH:MM     - time of day in 24 hour time.
+
+    This is a slightly more permissive version of Google App Engine's schedule
+    parser, documented here:
+    http://code.google.com/appengine/docs/python/config/cron.html#The_Schedule_Format
+    """
+
+    DAY_VALUES = '|'.join(CONVERT_DAYS_INT.keys() + ['day'])
+    MONTH_VALUES = '|'.join(CONVERT_MONTHS.keys() + ['month'])
+    DATE_SUFFIXES = 'st|nd|rd|th'
+
+    MONTH_DAYS_EXPR = '(?P<month_days>every|((\d+(%s),?)+))?' % DATE_SUFFIXES
+    DAYS_EXPR = r'((?P<days>((%s),?)+))?' % DAY_VALUES
+    MONTHS_EXPR = r'((in|of) (?P<months>((%s),?)+))?' % MONTH_VALUES
+    TIME_EXPR = r'((at )?(?P<time>\d\d:\d\d))?'
+
+    GROC_SCHEDULE_EXPR = ''.join([
+        r'^',
+        MONTH_DAYS_EXPR, r' ?',
+        DAYS_EXPR, r' ?',
+        MONTHS_EXPR, r' ?',
+         TIME_EXPR, r' ?',
+        r'$'
+    ])
+    return re.compile(GROC_SCHEDULE_EXPR)
+
+GROC_SCHEDULE_RE = groc_schedule_parser_re()
+
 
 class ConstantScheduler(object):
     """The constant scheduler only schedules the first one.  The job run starts then next when finished"""
@@ -38,63 +116,148 @@ class ConstantScheduler(object):
         return not self == other
 
 
-class DailyScheduler(object):
-    """The daily scheduler schedules one run per day"""
-    def __init__(self, start_time=None, days=1):
-        # What time of day does this thing start ? Default to 1 second after midnight
-        self.start_time = start_time or datetime.time(hour=0, minute=0, second=1)
-        self.wait_days = self.get_daily_waits(days)
-        
-    def get_daily_waits(self, days):
-        """Computes how many days to wait till the next run from any day, starting with Monday.
-        Example: MF runner:  [4, 3, 2, 1, 3, 2, 1]
+class GrocScheduler(object):
+    """Wrapper around SpecificTimeSpecification in the Google App Engine cron library"""
+    def __init__(self, ordinals=None, weekdays=None, months=None, monthdays=None,
+                 timestr='00:00', timezone=None, start_time=None):
+        """Parameters:
+          timestr   - the time of day to run, as 'HH:MM'
+          ordinals  - first, second, third &c, as a set of integers in 1..5 to be
+                      used with "1st <weekday>", etc.
+          monthdays - set of integers to be used with "<month> 3rd", etc.
+          months    - the months that this should run, as a set of integers in 1..12
+          weekdays  - the days of the week that this should run, as a set of integers,
+                      0=Sunday, 6=Saturday
+          timezone  - the optional timezone as a string for this specification.
+                      Defaults to UTC - valid entries are things like Australia/Victoria
+                      or PST8PDT.
+          start_time - Backward-compatible parameter for DailyScheduler
         """
-        if isinstance(days, int):
-            return [days for i in range(7)]
+        self.ordinals = ordinals
+        self.weekdays = weekdays
+        self.months = months
+        self.monthdays = monthdays
+        self.timestr = timestr
+        self.timezone = timezone
+        self._start_time = start_time
+        self.string_repr = 'every day of month'
 
-        week = [False for i in range(7)]
-        for day in days:
-            week[WEEK.index(CONVERT[day[0:2].lower()])] = True
+        self._time_spec = None
 
-        count = week.index(True) + 1
-        waits = deque()
+    @property
+    def time_spec(self):
+        if self._time_spec is None:
+            self._time_spec = SpecificTimeSpecification(ordinals=self.ordinals,
+                                                        weekdays=self.weekdays,
+                                                        months=self.months,
+                                                        monthdays=self.monthdays,
+                                                        timestr=self.timestr,
+                                                        timezone=self.timezone)
+        return self._time_spec
 
-        for val in reversed(week):
-            waits.appendleft(count)
-            count = 1 if val else count + 1
-        return waits
-    
+    def parse(self, scheduler_str):
+        """Parse a schedule string."""
+        self.string_repr = scheduler_str
+
+        def parse_number(day):
+            return int(''.join(c for c in day if c.isdigit()))
+
+        m = GROC_SCHEDULE_RE.match(scheduler_str.lower())
+
+        if m.group('time') is None:
+            if self._start_time is None:
+                self.timestr = '00:00'
+            else:
+                self.timestr = '%02d:%02d' % (self._start_time.hour,
+                                              self._start_time.minute)
+        else:
+            self.timestr = m.group('time')
+
+        if m.group('days') in (None, 'day'):
+            self.weekdays = None
+        else:
+            self.weekdays = set(CONVERT_DAYS_INT[d] for d in m.group('days').split(','))
+
+        self.monthdays = None
+        self.ordinals = None
+        if m.group('month_days') != 'every':
+            values = set(parse_number(n) for n in m.group('month_days').split(','))
+            if self.weekdays is None:
+                self.monthdays = values
+            else:
+                self.ordinals = values
+
+        if m.group('months') in (None, 'month'):
+            self.months = None
+        else:
+            self.months = set(CONVERT_MONTHS[mo] for mo in m.group('months').split(','))
+
+    def parse_legacy_days(self, days):
+        """Parse a string that would have been passed to DailyScheduler"""
+        self.weekdays = set(CONVERT_DAYS_INT[d] for d in days)
+        if self.weekdays != set([0, 1, 2, 3, 4, 5, 6]):
+            self.string_repr = 'every %s of month' % ','.join(days)
+
+    def get_daily_waits(self, days):
+        """Backwards compatibility with DailyScheduler"""
+        self.parse_legacy_days(days)
+
+    def _get_start_time(self):
+        if self._start_time is None:
+            hms = [int(val) for val in self.timestr.strip().split(':')]
+            while len(hms) < 3:
+                hms.append(0)
+            hour, minute, second = hms
+            return datetime.time(hour=hour, minute=minute, second=second)
+
+    def _set_start_time(self, start_time):
+        self._start_time = start_time
+
+    start_time = property(_get_start_time, _set_start_time)
+
     def next_runs(self, job):
         # Find the next time to run
         if job.runs:
-            next_day = job.runs[0].run_time + datetime.timedelta(days=self.wait_days[job.runs[0].run_time.weekday()])
+            start_time = job.runs[0].run_time
         else:
-            next_day = timeutils.current_time() + datetime.timedelta(self.wait_days[timeutils.current_time().weekday()])
+            start_time = timeutils.current_time()
 
-        run_time = next_day.replace(
-                            hour=self.start_time.hour, 
-                            minute=self.start_time.minute, 
-                            second=self.start_time.second,
-                            microsecond=0)
+        run_time = self.time_spec.GetMatch(start_time)
 
         job_runs = job.build_runs()
         for job_run in job_runs:
             job_run.set_run_time(run_time)
- 
+
         return job_runs
-    
+
     def job_setup(self, job):
         job.queueing = True
-    
+
     def __str__(self):
-        return "DAILY"
-    
+        # Backward compatible string representation which also happens to be
+        # user-friendly
+        if self.string_repr == 'every day of month':
+            return 'DAILY'
+        else:
+            return self.string_repr
+
     def __eq__(self, other):
-        return isinstance(other, DailyScheduler) and \
-           self.wait_days == other.wait_days and self.start_time == other.start_time
+        return isinstance(other, GrocScheduler) and \
+           all(getattr(self, attr) == getattr(other, attr)
+               for attr in ('ordinals',
+                            'weekdays',
+                            'months',
+                            'monthdays',
+                            'timestr',
+                            'timezone'))
 
     def __ne__(self, other):
         return not self == other
+
+
+# GrocScheduler can pretend to be a DailyScheduler in order to be backdward-
+# compatible
+DailyScheduler = GrocScheduler
 
 
 class IntervalScheduler(object):
@@ -123,5 +286,3 @@ class IntervalScheduler(object):
     
     def __ne__(self, other):
         return not self == other
-
-

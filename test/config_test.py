@@ -177,7 +177,6 @@ services:
 
         assert isinstance(self.job1.scheduler, scheduler.DailyScheduler)
         assert_equal(self.job1.scheduler.start_time, datetime.time(hour=0, minute=30, second=0))
-        assert self.job1.scheduler.wait_days
 
         assert isinstance(self.job2.scheduler, scheduler.DailyScheduler)
         assert_equal(self.job2.scheduler.start_time, datetime.time(hour=16, minute=30, second=0))
