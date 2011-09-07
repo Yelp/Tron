@@ -567,18 +567,20 @@ class Scheduler(object):
     @classmethod
     def from_string(self, scheduler_str):
         scheduler_args = scheduler_str.split()
-        
+
         scheduler_name = scheduler_args.pop(0)
-        
+
         if scheduler_name == "constant":
             return ConstantScheduler().actualized
         if scheduler_name == "daily":
             return DailyScheduler(*scheduler_args).actualized
         if scheduler_name == "interval":
             return IntervalScheduler(''.join(scheduler_args)).actualized
+        m = scheduler.GROC_SCHEDULE_RE.match(scheduler_str.lower())
+        if m:
+            return GrocScheduler(scheduler_str)
 
         raise ConfigError("Unknown scheduler %r" % scheduler_str)
-
 
 
 class ConstantScheduler(_ConfiguredObject):
@@ -639,7 +641,7 @@ class IntervalScheduler(_ConfiguredObject):
 
 class DailyScheduler(_ConfiguredObject):
     yaml_tag = u'!DailyScheduler'
-    actual_class = scheduler.DailyScheduler
+    actual_class = scheduler.GrocScheduler
     def __init__(self, *args, **kwargs):
 
         if len(args) > 0:
@@ -655,15 +657,37 @@ class DailyScheduler(_ConfiguredObject):
     def _apply(self):
         sched = self._ref()
 
+        err_msg = ("Start time must be in string format HH:MM[:SS]. Seconds"
+                   " are ignored but parsed so as to be backward-compatible.")
+
         if hasattr(self, 'start_time'):
             if not isinstance(self.start_time, basestring):
-                raise ConfigError("Start time must be in string format HH:MM:SS")
+                raise ConfigError(err_msg)
 
-            hour, minute, second = [int(val) for val in self.start_time.strip().split(':')]
-            sched.start_time = datetime.time(hour=hour, minute=minute, second=second)
+            # GrocScheduler will parse the values from the string.
+            # However, it only accepts HH:MM, not HH:MM:SS, so we truncate
+            # here if necessary.
+            hms = self.start_time.strip().split(':')
+
+            if len(hms) < 2:
+                raise ConfigError(err_msg)
+
+            sched.timestr = ':'.join(hms)
 
         if hasattr(self, 'days'):
-            sched.wait_days = sched.get_daily_waits(self.days)
+            sched.parse_legacy_days(self.days)
+
+
+class GrocScheduler(_ConfiguredObject):
+    yaml_tag = u'!GrocScheduler'
+    actual_class = scheduler.GrocScheduler
+    def __init__(self, *args, **kwargs):
+        self.expr = args[0]
+        super(GrocScheduler, self).__init__(*args, **kwargs)
+
+    def _apply(self):
+        sched = self._ref()
+        sched.parse(self.expr)
 
 def load_config(config_file):
     """docstring for load_config"""
