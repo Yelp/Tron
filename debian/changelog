@@ -4,6 +4,7 @@ tron (0.2.6-1) unstable; urgency=low
   * Context variables for year, month and day. Fixes #57 (irskep)
   * Integrate Google App Engine Cron scheduling syntax. Fixes #71 (irskep)
   * Fix crash during service monitoring because of node connect failures. Fixes #77 (rhettg)
+  * Make action runs explicitly not re-startable. Fixes #78 (rhettg)
   
  -- Rhett Garber <rhettg@gmail.com>  Wed, 22 June 2011 13:24:00 -0800
 

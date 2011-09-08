@@ -208,7 +208,7 @@ class JobRunStartTest(TestCase):
         assert_equal(req.code, twisted.web.http.OK)
         # Check if a run would have been queued
         func = self.run.start
-        assert_equal(len(func.calls), 0)
+        assert_equal(len(func.calls), 1)
 
 
 class ServiceTest(TestCase):

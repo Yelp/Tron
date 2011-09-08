@@ -15,6 +15,7 @@ import simplejson
 from tron.utils import timeutils
 from tron import config
 from tron import service
+from tron import job
 
 log = logging.getLogger("tron.www")
 
@@ -88,7 +89,10 @@ class ActionRunResource(resource.Resource):
     def _start(self, request):
         if not self._act_run.is_success and not self._act_run.is_running:
             log.info("Starting job run %s", self._act_run.id)
-            self._act_run.start()
+            try:
+                self._act_run.start()
+            except action.Error, e:
+                log.info("Failed to start action run %r", e)
         else:
             log.warning("Request to start job run %s when it's already done", self._act_run.id)
 
@@ -188,11 +192,11 @@ class JobRunResource(resource.Resource):
         self._start(request)
 
     def _start(self, request):
-        if not self._run.is_success and not self._run.is_running:
+        try:
             log.info("Starting job run %s", self._run.id)
             self._run.start()
-        else:
-            log.warning("Request to start job run %s when it's already done", self._run.id)
+        except job.Error, e:
+            log.warning("Failed to start job run %r", e)
 
     def _succeed(self, request):
         if not self._run.is_running and not self._run.is_success:

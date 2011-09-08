@@ -126,7 +126,6 @@ class ActionRunState(TestCase):
 
         self.run.job_run = turtle.Turtle()
         self.run.node = testingutils.TestNode()
-        
 
     @teardown
     def teardown(self):
@@ -136,7 +135,7 @@ class ActionRunState(TestCase):
         assert not self.run.is_running
         assert not self.run.is_done
         
-        self.run.start()
+        self.run.attempt_start()
         
         assert self.run.is_running
         assert not self.run.is_done
@@ -150,13 +149,15 @@ class ActionRunState(TestCase):
         assert_equal(self.run.exit_status, 0)
 
     def test_failure(self):
-        self.run.start()
+        self.run.attempt_start()
 
         self.run.fail(1)
         assert not self.run.is_running
         assert self.run.is_done
         assert self.run.end_time
         assert_equal(self.run.exit_status, 1)
+
+        assert_raises(action.Error, self.run.start)
 
 class TestRunDependency(TestCase):
     @setup
@@ -261,12 +262,12 @@ class ActionRunLogFileTest(TestCase):
     def test_no_logging(self):
         run = self.action.build_run(turtle.Turtle(output_path=self.test_dir))
         run.node = testingutils.TestNode()
-        run.start()
+        run.attempt_start()
 
     def test_file_log(self):
         run = self.action.build_run(turtle.Turtle(output_path=self.test_dir))
         run.node = testingutils.TestNode()
-        run.start()
+        run.attempt_start()
         assert os.path.isfile(run.stdout_path)
         assert os.path.isfile(run.stderr_path)
         os.remove(run.stdout_path)

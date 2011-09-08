@@ -10,6 +10,8 @@ class Error(Exception): pass
 
 class ConfigBuildMismatchError(Error): pass
 
+class InvalidStartStateError(Error):  pass
+
 log = logging.getLogger('tron.job')
 
 RUN_LIMIT = 50
@@ -54,15 +56,21 @@ class JobRun(object):
                 log.warning("A previous run for %s has not finished - cancelling", self.id)
                 self.cancel()
 
-    def start(self):
+    def start(self):        
+        if not (self.is_scheduled or self.is_queued):
+            raise InvalidStartStateError("Not scheduled")
+        
         log.info("Starting action job %s", self.id)
         self.start_time = timeutils.current_time()
         self.end_time = None
 
-        for action in self.action_runs:
-            action.attempt_start()
-
-        self.event_recorder.emit_info("started")
+        try:
+            for action_run in self.action_runs:
+                action_run.attempt_start()
+            self.event_recorder.emit_info("started")    
+        except action.Error, e:
+            log.warning("Failed to start actions: %r", e)
+            raise Error("Failed to start job run")
     
     def manual_start(self):
         self.event_recorder.emit_info("manual_start")

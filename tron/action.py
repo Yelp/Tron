@@ -16,6 +16,10 @@ log = logging.getLogger('tron.action')
 
 class Error(Exception): pass
 
+class InvalidStartStateError(Error): 
+    """Indicates the action can't start in the state it's in"""
+    pass
+
 class ActionRunContext(object):
     """Context object that gives us access to data about the action run itself"""
     def __init__(self, action_run):
@@ -111,9 +115,9 @@ class ActionRun(object):
     STATE_RUNNING['fail_unknown'] = STATE_UNKNOWN
     STATE_RUNNING['success'] = STATE_SUCCEEDED
 
-    # Lots of states can accept a start command
-    for event_state in (STATE_CANCELLED, STATE_UNKNOWN, STATE_FAILED, STATE_QUEUED, STATE_SCHEDULED):
-        event_state['start'] = STATE_STARTING
+    # We only allowing starting from these two states.
+    STATE_QUEUED['start'] = STATE_STARTING
+    STATE_SCHEDULED['start'] = STATE_STARTING
 
     # We can force many states to be success or failure
     for event_state in (STATE_UNKNOWN, STATE_QUEUED, STATE_SCHEDULED):
@@ -205,8 +209,10 @@ class ActionRun(object):
             self.start()
 
     def start(self):
-        log.info("Starting action run %s", self.id)
+        if self.state not in (self.STATE_QUEUED, self.STATE_SCHEDULED):
+            raise InvalidStartStateError(self.state)
         
+        log.info("Starting action run %s", self.id)
         self.start_time = timeutils.current_time()
         self.end_time = None
         self.machine.transition('start')
