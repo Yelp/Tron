@@ -133,7 +133,13 @@ class ServiceInstance(object):
 
     def _monitor_complete_callback(self):
         """Callback when our monitor has completed"""
-        assert self.monitor_action
+        if not self.monitor_action:
+            # This actually happened. I suspect it was a cascading failure caused by a crash somewhere else 
+            # leaving us in a inconsistent state, but perhaps there is a reasonable explanation. Either way,
+            # we don't really care about this monitor anymore.
+            log.warning("Monitor for %s complete, but we don't see to care...", self.id)
+            return
+        
         self.last_check = timeutils.current_time()
         log.debug("Monitor callback with exit %r", self.monitor_action.exit_status)
         if self.monitor_action.exit_status != 0:

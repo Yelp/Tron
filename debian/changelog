@@ -7,7 +7,7 @@ tron (0.2.6-1) unstable; urgency=low
   * Make action runs explicitly not re-startable. Fixes #78 (rhettg)
   * Flush and fsync state file. Fixes #74 (rhettg)
   * Handle node disconnect while waiting for channel to start. Fixes #75 (rhettg)
-
+  * Replace an aggressive assert with a log message for monitor inconsistency. Fixes #73 (rhettg)
   
  -- Rhett Garber <rhettg@gmail.com>  Wed, 22 June 2011 13:24:00 -0800
 
