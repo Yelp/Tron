@@ -556,10 +556,13 @@ class EventResource(resource.Resource):
         response['data'] = []
 
         for evt in self._recordable.event_recorder.list():
+            entity_desc = "UNKNOWN"
+            if evt.entity:
+                entity_desc = str(evt.entity)
             response['data'].append({
                                 'level': evt.level, 
                                 'name': evt.name, 
-                                'entity': str(evt.entity),
+                                'entity': entity_desc,
                                 'time': evt.time.strftime("%Y-%m-%d %H:%M:%S")})
         
         return respond(request, response)

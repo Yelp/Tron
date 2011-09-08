@@ -8,6 +8,7 @@ tron (0.2.6-1) unstable; urgency=low
   * Flush and fsync state file. Fixes #74 (rhettg)
   * Handle node disconnect while waiting for channel to start. Fixes #75 (rhettg)
   * Replace an aggressive assert with a log message for monitor inconsistency. Fixes #73 (rhettg)
+  * Handle tronview event listing issue with garbage collected entites. Fixes #70 (rhettg)
   
  -- Rhett Garber <rhettg@gmail.com>  Wed, 22 June 2011 13:24:00 -0800
 
