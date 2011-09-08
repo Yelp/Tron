@@ -113,6 +113,8 @@ class StateHandler(object):
             try:
                 with open(tmp_path, 'w') as data_file:
                     yaml.dump(self.data, data_file, default_flow_style=False, indent=4)
+                    data_file.flush()
+                    os.fsync(data_file.fileno())
                 shutil.move(tmp_path, file_path)
                 exit_status = os.EX_OK
             except:
