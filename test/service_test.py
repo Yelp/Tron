@@ -266,4 +266,29 @@ class FailureRestoreTest(TestCase):
         instance1, instance2 = new_service.instances
         assert_equal(instance1.state, service.ServiceInstance.STATE_MONITORING)
         assert_equal(instance2.state, service.ServiceInstance.STATE_MONITORING)
+
+
+class MonitorFailureTest(TestCase):
+    @setup
+    def build_service(self):
+        self.service = service.Service("Sample Service", "sleep 60 &", node_pool=testingutils.TestPool())
+        self.service.pid_file_template = "/var/run/service.pid"
+        self.service.count = 2
+    
+    @setup
+    def start_service(self):
+        self.service.start()
+        instance1, instance2 = self.service.instances
+        
+        def run_fail(runnable):
+            raise node.ConnectError("Failed to connect")
+
+        instance1.node.run = run_fail
+
+    def test_instance_up(self):
+        self.service.start()
+        instance1, instance2 = self.service.instances
+        
+        instance1._run_monitor()
+        assert_equal(instance1.state, service.ServiceInstance.STATE_UNKNOWN)
     

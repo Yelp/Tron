@@ -118,7 +118,7 @@ class ServiceInstance(object):
         
         try:
             self.node.run(self.monitor_action)
-        except node.NodeError, e:
+        except node.Error, e:
             log.error("Failed to run monitor: %r", e)
             self._monitor_complete_failstart()
             return
