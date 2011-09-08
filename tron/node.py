@@ -195,6 +195,15 @@ class Node(object):
                 self._connect_then_run(run)
             elif run.state == RUN_STATE_RUNNING:
                 self._fail_run(run, None)
+            elif run.state == RUN_STATE_STARTING:
+                if run.channel and run.channel.start_defer is not None:
+                    # This means our run IS still waiting to start. There should be an outstanding timeout sitting on this guy as well.
+                    # We'll just short circut it.
+                    twistedutils.defer_timeout(run.channel.start_defer, 0)
+                else:
+                    # Doesn't seem like this should ever happen.
+                    log.warning("Run %r caught in starting state, but start_defer is over.", run_id)
+                    self._fail_run(run, None)
             else:
                 # Service ended. The open channels should know how to handle this (and cleanup) themselves, so
                 # if there should not be any runs except those waiting to connect
