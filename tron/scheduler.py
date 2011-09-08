@@ -119,7 +119,7 @@ class ConstantScheduler(object):
 class GrocScheduler(object):
     """Wrapper around SpecificTimeSpecification in the Google App Engine cron library"""
     def __init__(self, ordinals=None, weekdays=None, months=None, monthdays=None,
-                 timestr='00:00', timezone=None, start_time=None):
+                 timestr=None, timezone=None, start_time=None):
         """Parameters:
           timestr   - the time of day to run, as 'HH:MM'
           ordinals  - first, second, third &c, as a set of integers in 1..5 to be
@@ -137,9 +137,18 @@ class GrocScheduler(object):
         self.weekdays = weekdays
         self.months = months
         self.monthdays = monthdays
-        self.timestr = timestr
+        
+        self.timestr = None
+        if timestr is None:
+            if start_time:
+                # This is a fancy property
+                self.start_time = start_time
+            else:
+                self.timestr = "00:00"
+        else:
+            self.timestr = timestr
+        
         self.timezone = timezone
-        self._start_time = start_time
         self.string_repr = 'every day of month'
 
         self._time_spec = None
@@ -164,13 +173,7 @@ class GrocScheduler(object):
 
         m = GROC_SCHEDULE_RE.match(scheduler_str.lower())
 
-        if m.group('time') is None:
-            if self._start_time is None:
-                self.timestr = '00:00'
-            else:
-                self.timestr = '%02d:%02d' % (self._start_time.hour,
-                                              self._start_time.minute)
-        else:
+        if m.group('time') is not None:
             self.timestr = m.group('time')
 
         if m.group('days') in (None, 'day'):
@@ -203,15 +206,14 @@ class GrocScheduler(object):
         self.parse_legacy_days(days)
 
     def _get_start_time(self):
-        if self._start_time is None:
-            hms = [int(val) for val in self.timestr.strip().split(':')]
-            while len(hms) < 3:
-                hms.append(0)
-            hour, minute, second = hms
-            return datetime.time(hour=hour, minute=minute, second=second)
+        hms = [int(val) for val in self.timestr.strip().split(':')]
+        while len(hms) < 3:
+            hms.append(0)
+        hour, minute, second = hms
+        return datetime.time(hour=hour, minute=minute, second=second)
 
     def _set_start_time(self, start_time):
-        self._start_time = start_time
+        self.timestr = "%.2d:%.2d" % (start_time.hour, start_time.minute)
 
     start_time = property(_get_start_time, _set_start_time)
 
@@ -221,9 +223,8 @@ class GrocScheduler(object):
             start_time = job.runs[0].run_time
         else:
             start_time = timeutils.current_time()
-
+        
         run_time = self.time_spec.GetMatch(start_time)
-
         job_runs = job.build_runs()
         for job_run in job_runs:
             job_run.set_run_time(run_time)
