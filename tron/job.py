@@ -74,9 +74,15 @@ class JobRun(object):
     
     def manual_start(self):
         self.event_recorder.emit_info("manual_start")
-        
-        self.queue()
         self.attempt_start()
+
+        # Similiar to a scheduled start, if the attempt didn't take, that must be because something else
+        # is running. We'll assume the user meant to queue this job up without caring whether the job was
+        # configured for that. 
+        if self.is_scheduled:
+            self.event_recorder.emit_notice("queued")
+            log.warning("A previous run for %s has not finished - placing in queue", self.id)
+            self.queue()
 
     def attempt_start(self):
         if self.should_start:
@@ -148,7 +154,7 @@ class JobRun(object):
     def should_start(self):
         if not self.job.enabled or self.is_running:
             return False
-        return self.job.next_to_finish(self.node if self.job.all_nodes else None) == self
+        return self.job.next_to_finish(self.node if self.job.all_nodes else None) is self
 
     @property
     def is_failure(self):
@@ -387,8 +393,7 @@ class Job(object):
 
         for r in man_runs:
             r.set_run_time(run_time or timeutils.current_time())
-            r.queue()
-            r.attempt_start()
+            r.manual_start()
 
         return man_runs
 
