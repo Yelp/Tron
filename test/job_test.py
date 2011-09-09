@@ -56,10 +56,11 @@ class TestJobRun(TestCase):
         assert jr.action_runs[0].is_success
         assert jr.action_runs[1].is_success
 
+        # This shouldn't do anything
         jr.schedule()
 
-        assert jr.action_runs[0].is_scheduled, jr.action_runs[0].sta
-        assert jr.action_runs[1].is_scheduled
+        assert jr.action_runs[0].is_success
+        assert jr.action_runs[1].is_success
 
     def test_scheduled_start(self):
         self.job.queueing = True

@@ -124,10 +124,6 @@ class ActionRun(object):
         event_state['success'] = STATE_SUCCEEDED
         event_state['fail'] = STATE_FAILED
     
-    for event_state in (STATE_UNKNOWN, STATE_SUCCEEDED, STATE_FAILED, STATE_CANCELLED):
-        event_state['schedule'] = STATE_SCHEDULED
-        event_state['queue'] = STATE_QUEUED
-    
     STATE_QUEUED['schedule'] = STATE_SCHEDULED
     
     def __init__(self, action, context=None, output_path=None):
