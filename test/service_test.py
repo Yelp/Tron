@@ -281,6 +281,7 @@ class MonitorFailureTest(TestCase):
         instance1, instance2 = self.service.instances
         
         def run_fail(runnable):
+            instance1._monitor_complete_failstart()
             raise node.ConnectError("Failed to connect")
 
         instance1.node.run = run_fail

@@ -123,7 +123,6 @@ class ServiceInstance(object):
             self.node.run(self.monitor_action)
         except node.Error, e:
             log.error("Failed to run monitor: %r", e)
-            self._monitor_complete_failstart()
             return
         
         self._queue_monitor_hang_check()    
@@ -175,7 +174,10 @@ class ServiceInstance(object):
         self.start_action.machine.listen(action.ActionCommand.EXITING, self._start_complete_callback)
         self.start_action.machine.listen(action.ActionCommand.FAILSTART, self._start_complete_failstart)
 
-        self.node.run(self.start_action)
+        try:
+            self.node.run(self.start_action)
+        except node.Error, e:
+            log.warning("Failed to start %s: %r", self.id, e)
     
     def _start_complete_callback(self):
         if self.start_action.exit_status != 0:
@@ -216,8 +218,10 @@ class ServiceInstance(object):
         self.stop_action = action.ActionCommand("%s.stop" % self.id, kill_command)
         self.stop_action.machine.listen(action.ActionCommand.COMPLETE, self._stop_complete_callback)
         self.stop_action.machine.listen(action.ActionCommand.FAILSTART, self._stop_complete_failstart)
-
-        self.node.run(self.stop_action)
+        try:
+            self.node.run(self.stop_action)
+        except node.Error, e:
+            log.warning("Failed to kill instance %s: %r", self.id, e)
 
     def _stop_complete_callback(self):
         if self.stop_action.exit_status != 0:
