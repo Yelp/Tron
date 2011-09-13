@@ -113,7 +113,9 @@ class ServiceInstance(object):
         monitor_command = "cat %(pid_file)s | xargs kill -0" % self.context
 
         self.monitor_action = action.ActionCommand("%s.monitor" % self.id, monitor_command)
-        self.monitor_action.machine.listen(action.ActionCommand.COMPLETE, self._monitor_complete_callback)
+
+        # We use exiting instead of complete because all we really need is the exit status
+        self.monitor_action.machine.listen(action.ActionCommand.EXITING, self._monitor_complete_callback)
         self.monitor_action.machine.listen(action.ActionCommand.FAILSTART, self._monitor_complete_failstart)
         
         try:
@@ -169,7 +171,7 @@ class ServiceInstance(object):
             return
 
         self.start_action = action.ActionCommand("%s.start" % self.id, command)
-        self.start_action.machine.listen(action.ActionCommand.COMPLETE, self._start_complete_callback)
+        self.start_action.machine.listen(action.ActionCommand.EXITING, self._start_complete_callback)
         self.start_action.machine.listen(action.ActionCommand.FAILSTART, self._start_complete_failstart)
 
         self.node.run(self.start_action)
@@ -180,7 +182,10 @@ class ServiceInstance(object):
         elif self.machine.state == self.STATE_STOPPING:
             # Someone tried to stop us while we were just getting going. 
             # Go ahead and kick of the kill operation now that we're up.
-            self.kill_instance()
+            if self.stop_action:
+                log.warning("Stopping %s while stop already in progress", self.id)
+            else:
+                self.kill_instance()
         else:
             self._queue_monitor()
 
