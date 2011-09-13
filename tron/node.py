@@ -102,12 +102,23 @@ class Node(object):
         other_dict = dict((key, value) for key, value in other.__dict__.iteritems() if key in CMP_KEYS)
         return cmp(self_dict, other_dict)
 
+    def _determine_fudge_factor(self):
+        """We want to introduce some amount of delay to node exec commands
+
+        We see issues where a service may have many instances, and they all start at once, 
+        and their monitor steps are syncronized for ever. This is bad.
+        """
+        outstanding_runs = len(self.run_states)
+        fudge_factor = max(0.0, outstanding_runs - 4)
+        return random.random() * float(fudge_factor)
+
     def run(self, run):
         """Execute the specified run
         
         A run consists of a very specific set of interfaces which allow us to
         execute a command on this remote machine and return results.
         """
+        log.info("Running %s on %s", run.id, self.hostname)
         
         # When this run completes, for good or bad, we'll inform the caller by
         # calling 'succeed' or 'fail' on the run Since the definined interface
@@ -123,17 +134,31 @@ class Node(object):
             self.idle_timer.cancel()
             self.idle_timer = None
 
+        fudge_factor = self._determine_fudge_factor()
+
         self.run_states[run.id] = RunState(run)
-        # Now let's see if we need to start this off by establishing a connection or if we are already connected
-        if self.connection is None:
-            self._connect_then_run(run)
+
+        if fudge_factor == 0.0:
+            self._do_run(run)
         else:
-            self._open_channel(run)
-    
+            log.info("Delaying execution of %s for %.2f secs", run.id, fudge_factor)
+            reactor.callLater(fudge_factor, lambda : self._do_run(run))
+
         # We return the deferred here, but really we're trying to keep the rest of the world from getting too
         # involved with twisted. We will call back to mark the action success/fail directly, so using this deferred
         # isn't strictly necessary.
         return self.run_states[run.id].deferred
+
+    def _do_run(self, run):
+        """Finish starting to execute a run
+
+        This step may have been delayed.
+        """  
+        # Now let's see if we need to start this off by establishing a connection or if we are already connected
+        if self.connection is None:
+            self._connect_then_run(run)
+        else:
+            self._open_channel(run)   
 
     def _cleanup(self, run):
         self.run_states[run.id].channel = None
@@ -143,8 +168,10 @@ class Node(object):
             self.idle_timer = reactor.callLater(IDLE_CONNECTION_TIMEOUT, self._connection_idle_timeout)
 
     def _connection_idle_timeout(self):
-        log.info("Connection to %s idle for %d secs. Closing.", self.hostname, IDLE_CONNECTION_TIMEOUT)
-        self.connection.transport.loseConnection()
+        if self.connection:
+            log.info("Connection to %s idle for %d secs. Closing.", self.hostname, IDLE_CONNECTION_TIMEOUT)
+            self.connection.transport.loseConnection()
+        
         self.idle_timer = None
 
     def _fail_run(self, run, result):

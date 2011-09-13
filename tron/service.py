@@ -80,6 +80,7 @@ class ServiceInstance(object):
         return None
     
     def _queue_monitor(self):
+        log.info("Running _queue_monitor for %s", self.id)
         self.monitor_action = None
         if self.service.monitor_interval > 0:
             reactor.callLater(self.service.monitor_interval, self._run_monitor)
@@ -187,12 +188,16 @@ class ServiceInstance(object):
             else:
                 self.kill_instance()
         else:
-            self._queue_monitor()
+            log.info("Start for %s complete, checking monitor", self.id)
+            self._run_monitor()
 
         self.start_action = None
 
     def _start_complete_failstart(self):
         log.warning("Failed to start service %s (%s)", self.id, self.node.hostname)
+        if self.start_action is None:
+            return
+
         self.event_recorder.emit_critical("failstart")
         self.machine.transition("down")
         self.start_action = None

@@ -86,7 +86,10 @@ class JobRun(object):
 
     def attempt_start(self):
         if self.should_start:
-            self.start()
+            try:
+                self.start()
+            except Error, e:
+                log.warning("Attempt to start failed: %r", e)
 
     def last_success_check(self):
         if not self.job.last_success or self.run_num > self.job.last_success.run_num:
