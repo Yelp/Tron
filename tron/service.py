@@ -197,10 +197,11 @@ class ServiceInstance(object):
 
     def _start_complete_failstart(self):
         log.warning("Failed to start service %s (%s)", self.id, self.node.hostname)
-        if self.start_action is None:
+        
+        # We may have failed but long since not mattered
+        if None in (self.machine, self.start_action): 
             return
 
-        self.event_recorder.emit_critical("failstart")
         self.machine.transition("down")
         self.start_action = None
 
