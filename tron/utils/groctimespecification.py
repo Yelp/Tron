@@ -145,7 +145,7 @@ def _GetTime(time_string):
     a datetime.time object
   """
   try:
-    hourstr, minutestr = time_string.split(':')[0:1]
+    hourstr, minutestr = time_string.split(':')[0:2]
     return datetime.time(int(hourstr), int(minutestr))
   except ValueError:
     return None
