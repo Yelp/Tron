@@ -1,3 +1,11 @@
+tron (0.2.7-1) unstable; urgency=low
+
+  * Really fix date parsing (rhettg)
+  * Revert instant service monitor so we wait a while before checking our services (rhettg)
+  * Clean up some logging (rhettg)
+
+ -- Rhett Garber <rhettg@gmail.com>  Wed, 14 Sep 2011 16:23:00 -0700
+
 tron (0.2.6-2) unstable; urgency=low
 
   * Fix date parsing
