@@ -24,7 +24,7 @@ RUN_COLUMNS = [
     ['Run ID', run_id_width],
     ['State', 6],
     ['Node', 20],
-    ['Scheduled Time', 20],
+    ['Scheduled Time', 25],
 ]
 
 ACTION_RUN_COLUMNS = [
@@ -154,10 +154,11 @@ def print_job_runs(options, runs):
         if options.warn and run_state not in ['FAIL', 'UNKWN', 'QUE']:
             continue
 
-        run_time = (run['run_time'] and run['run_time'][:-7]) or "-"
-        start_time = (run['start_time'] and run['start_time'][:-7]) or "-"
-        end_time = (run['end_time'] and run['end_time'][:-7]) or "-"
-        duration = (run['duration'] and run['duration'][:-7]) or "-"
+        time_size = len("0000-00-00 00:00")
+        run_time = (run['run_time'] and run['run_time'][:time_size]) or "-"
+        start_time = (run['start_time'] and run['start_time'][:time_size]) or "-"
+        end_time = (run['end_time'] and run['end_time'][:time_size]) or "-"
+        duration = (run['duration'] and run['duration'].split('.')[0]) or "-"
 
         run_color = "red" if run_state == "FAIL" else "white"
         print color(run_color,

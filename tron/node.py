@@ -317,7 +317,7 @@ class Node(object):
         
         This is how we let our run know that we succeeded or failed.
         """
-        log.debug("Run %s has channel complete", run.id)
+        log.info("Run %s has completed with %r", run.id, channel.exit_status)
         if run.id not in self.run_states:
             log.warning("Run %s no longer tracked", run.id)
             return

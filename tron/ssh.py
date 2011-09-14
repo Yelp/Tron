@@ -139,7 +139,7 @@ class ExecChannel(channel.SSHChannel):
         # exit status is a 32-bit unsigned int in network byte format
         status = struct.unpack_from(">L", data, 0)[0]
 
-        log.info("Received exit status request: %d", status)
+        log.debug("Received exit status request: %d", status)
         self.exit_status = status
         self.exit_defer.callback(self)
         self.running = False
