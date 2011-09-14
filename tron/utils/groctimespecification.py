@@ -144,10 +144,10 @@ def _GetTime(time_string):
   Returns:
     a datetime.time object
   """
-  if ':' in time_string:
-    hourstr, minutestr = time_string.split(':')
+  try:
+    hourstr, minutestr = time_string.split(':')[0:1]
     return datetime.time(int(hourstr), int(minutestr))
-  else:
+  except ValueError:
     return None
 
 class IntervalTimeSpecification(TimeSpecification):
