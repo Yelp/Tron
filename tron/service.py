@@ -80,7 +80,6 @@ class ServiceInstance(object):
         return None
     
     def _queue_monitor(self):
-        log.info("Running _queue_monitor for %s", self.id)
         self.monitor_action = None
         if self.service.monitor_interval > 0:
             reactor.callLater(self.service.monitor_interval, self._run_monitor)
@@ -112,7 +111,7 @@ class ServiceInstance(object):
             return
         
         monitor_command = "cat %(pid_file)s | xargs kill -0" % self.context
-
+        log.debug("Executing '%s' on %s for %s", monitor_command, self.node.hostname, self.id)
         self.monitor_action = action.ActionCommand("%s.monitor" % self.id, monitor_command)
 
         # We use exiting instead of complete because all we really need is the exit status
