@@ -190,7 +190,7 @@ class ServiceInstance(object):
                 self.kill_instance()
         else:
             log.info("Start for %s complete, checking monitor", self.id)
-            self._run_monitor()
+            self._queue_monitor()
 
         self.start_action = None
 
