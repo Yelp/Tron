@@ -48,7 +48,7 @@ def handle_output(cmd, (stdout, stderr), returncode):
     if stderr:
         log.warning("%s: %r", cmd, stderr)
     if returncode != 0:
-        raise CalledProcessError("Command '%s' returned non-zero exit status"
+        raise CalledProcessError(returncode, "Command '%s' returned non-zero exit status"
                                  " %d" % (cmd, returncode))
 
 
