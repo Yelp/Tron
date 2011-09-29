@@ -60,6 +60,7 @@ Accepts a list of Job objects.
     node - The Node or NodePool object this job runs on
     schedule - The schedule the job follows
     actions - The list of actions within the job
+    cleanup_action (optional) - An action (not including name or requirements) to be run after the success or failure of the job
     all_nodes (optional) - boolean indicating job should run on all nodes in the NodePool
     queueing  (optional) - boolean indicating overlapping job runs should queue rather than cancel
     run_limit (optional) - Number of runs to store in history (default 50)
@@ -81,6 +82,18 @@ A Service can be configured with the following options
     restart_interval - Seconds to wait before restarting the service
     pid_file - Where the monitor will find the pid
     command - Command to be executed to start a new instance
+
+.SH BUILT-IN COMMAND CONTEXT VARIABLES
+.IP shortdate
+Current date in YYYY-MM-DD format. Supports simple arithmetic of the form %(shortdate+6)s, %(shortdate-2)s, etc.
+.IP actionname
+Name of the action as specified in the config file
+.IP runid
+Run ID (e.g. sample_job.23)
+.IP node
+Hostname of the node the action is being run on
+.IP cleanup_job_status
+"SUCCESS" if all actions have succeeded when the cleanup action runs, "FAILURE" otherwise. "UNKNOWN" if used in an action other than the cleanup action.
 
 .SH EXAMPLE CONFIGURATION
 --- !TronConfiguration
@@ -125,6 +138,9 @@ jobs:
             - &action
                 name: "echo"
                 command: "echo %(PYTHON)s"
+        cleanup_action:
+            command: "echo 'cleaning up job1'"
+
 services:
     -
         name: "testserv"

@@ -55,6 +55,8 @@ jobs:
                 name: "dag3"
                 command: "sleep 1; echo 3"
                 requires: [*dag1, *dag2]
+        cleanup_action:
+            command: "sleep 1; echo 'cleaned up interval_dag'"
 
     -
         name: "fail_dag"
@@ -76,6 +78,8 @@ jobs:
                 name: "end"
                 requires: [*succ1, *fail]
                 command: "sleep 5; echo done"
+        cleanup_action:
+            command: "sleep 1; echo 'cleaned up fail_dag'"
 
     -
         name: "constant"

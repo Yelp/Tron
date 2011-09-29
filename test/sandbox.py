@@ -39,6 +39,17 @@ def wait_for_sandbox_success(func, start_delay=0.1, stop_at=5.0):
     raise last_exception
 
 
+def make_file_existence_sandbox_exception_thrower(path):
+    def func():
+        if not os.path.exists(path):
+            raise TronSandboxException('File does not exist: %s' % path)
+    return func
+
+def wait_for_file_to_exist(path):
+    func = make_file_existence_sandbox_exception_thrower(path)
+    wait_for_sandbox_success(func)
+
+
 def handle_output(cmd, (stdout, stderr), returncode):
     """Log process output before it is parsed. Raise exception if exit code
     is nonzero.

@@ -125,7 +125,7 @@ class JobRunResource(resource.Resource):
         elif act_name == '_events':
             return EventResource(self._run)
         
-        for act_run in self._run.action_runs:
+        for act_run in self._run.action_runs_with_cleanup:
             if act_name == act_run.action.name:
                 return ActionRunResource(act_run)
 
@@ -134,14 +134,14 @@ class JobRunResource(resource.Resource):
     def render_GET(self, request):
         run_output = []
         state = job_run_state(self._run)
-        
-        for action_run in self._run.action_runs:
+
+        def action_output(action_run):
             action_state = job_run_state(action_run)
             
             last_time = action_run.end_time if action_run.end_time else timeutils.current_time()
             duration = str(last_time - action_run.start_time) if action_run.start_time else ""
            
-            run_output.append({
+            return {
                 'id': action_run.id,
                 'name': action_run.action.name,
                 'run_time': action_run.run_time and str(action_run.run_time),
@@ -151,7 +151,9 @@ class JobRunResource(resource.Resource):
                 'duration': duration,
                 'state': action_state,
                 'command': action_run.command,
-            })
+            }
+
+        run_output = [action_output(action_run) for action_run in self._run.action_runs_with_cleanup]
 
         output = {
             'runs': run_output, 

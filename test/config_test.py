@@ -43,6 +43,8 @@ jobs:
             - &intAction !Action
                 name: "action0_0"
                 command: "test_command0.0"
+        cleanup_action: !CleanupAction
+            command: "test_command0.1"
                 
     - &job1
         name: "test_job1"
@@ -193,6 +195,10 @@ services:
                 assert hasattr(a, "name")
                 assert_equal(a.name, "action%s_%s" % (job_count, act_count))
 
+            if j.cleanup_action is not None:
+                assert_equal(j.cleanup_action.name, config.CLEANUP_ACTION_NAME)
+
+
     def test_all_nodes_attribute(self):
         assert self.job4.all_nodes
         assert not self.job3.all_nodes
@@ -205,6 +211,7 @@ services:
                 a = j.topo_actions[act_count]
                 assert hasattr(a, "command")
                 assert_equal(a.command, "test_command%s.%s" % (job_count, act_count))
+        assert_equal(self.all_jobs[0].cleanup_action.command, "test_command0.1")
       
     def test_actions_requirements(self):
         dep0 = self.job1.topo_actions[1]
@@ -310,6 +317,58 @@ jobs:
                 command: "test_command1.0"
                 requires: *action0_0
 
+        """
+        test_config = config.load_config(StringIO.StringIO(test_config))
+        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+
+    def test_config_name_collision(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    - &job0
+        name: "test_job0"
+        node: *node0
+        schedule: "interval 20s"
+        actions:
+            -
+                name: "%s"
+                command: "test_command0.0"                
+
+        """ % config.CLEANUP_ACTION_NAME
+        test_config = config.load_config(StringIO.StringIO(test_config))
+        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+
+    def test_config_name(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    - &job0
+        name: "test_job0"
+        node: *node0
+        schedule: "interval 20s"
+        actions:
+            -
+                name: "action0_0"
+                command: "test_command0.0"                
+        cleanup_action:
+            name: "gerald"
+            command: "test_command0.1"
+        """
+        test_config = config.load_config(StringIO.StringIO(test_config))
+        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+
+    def test_config_requires(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    - &job0
+        name: "test_job0"
+        node: *node0
+        schedule: "interval 20s"
+        actions:
+            -   &action0_0
+                name: "action0_0"
+                command: "test_command0.0"                
+        cleanup_action:
+            command: "test_command0.1"
+            requires: *action0_0
         """
         test_config = config.load_config(StringIO.StringIO(test_config))
         assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
