@@ -68,7 +68,11 @@ class Event(object):
 
     @property
     def entity(self):
-        return self._src().entity
+        src = self._src()
+        if src:
+            return src.entity
+        else:
+            return None
 
 
 class EventRecorder(object):

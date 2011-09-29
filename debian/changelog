@@ -1,9 +1,32 @@
+tron (0.2.7-1) unstable; urgency=low
+
+  * Really fix date parsing (rhettg)
+  * Revert instant service monitor so we wait a while before checking our services (rhettg)
+  * Clean up some logging (rhettg)
+
+ -- Rhett Garber <rhettg@gmail.com>  Wed, 14 Sep 2011 16:23:00 -0700
+
+tron (0.2.6-2) unstable; urgency=low
+
+  * Fix date parsing
+
+ -- James Brown <jbrown@yelp.com>  Wed, 14 Sep 2011 15:36:30 -0700
+
 tron (0.2.6-1) unstable; urgency=low
 
   * Support for functional testing. Fixes #49 (irskep)
   * Context variables for year, month and day. Fixes #57 (irskep)
+  * Integrate Google App Engine Cron scheduling syntax. Fixes #71 (irskep)
+  * Fix crash during service monitoring because of node connect failures. Fixes #77 (rhettg)
+  * Make action runs explicitly not re-startable. Fixes #78 (rhettg)
+  * Flush and fsync state file. Fixes #74 (rhettg)
+  * Handle node disconnect while waiting for channel to start. Fixes #75 (rhettg)
+  * Replace an aggressive assert with a log message for monitor inconsistency. Fixes #73 (rhettg)
+  * Handle tronview event listing issue with garbage collected entites. Fixes #70 (rhettg)
+  * Prevent SSH stampedes by delaying some node EXEC calls (rhettg)
   
- -- Rhett Garber <rhettg@gmail.com>  Wed, 22 June 2011 13:24:00 -0800
+ -- Rhett Garber <rhettg@gmail.com>  Wed, 14 Sep 2011 14:30:15 -0700
+
 
 tron (0.2.5-1) unstable; urgency=low
 

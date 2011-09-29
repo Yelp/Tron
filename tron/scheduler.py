@@ -4,7 +4,7 @@ import logging
 import re
 
 from collections import deque
-from tron.groctimespecification import IntervalTimeSpecification, SpecificTimeSpecification
+from tron.utils import groctimespecification
 from tron.utils import timeutils
 
 
@@ -156,7 +156,7 @@ class GrocScheduler(object):
     @property
     def time_spec(self):
         if self._time_spec is None:
-            self._time_spec = SpecificTimeSpecification(ordinals=self.ordinals,
+            self._time_spec = groctimespecification.SpecificTimeSpecification(ordinals=self.ordinals,
                                                         weekdays=self.weekdays,
                                                         months=self.months,
                                                         monthdays=self.monthdays,

@@ -102,12 +102,23 @@ class Node(object):
         other_dict = dict((key, value) for key, value in other.__dict__.iteritems() if key in CMP_KEYS)
         return cmp(self_dict, other_dict)
 
+    def _determine_fudge_factor(self):
+        """We want to introduce some amount of delay to node exec commands
+
+        We see issues where a service may have many instances, and they all start at once, 
+        and their monitor steps are syncronized for ever. This is bad.
+        """
+        outstanding_runs = len(self.run_states)
+        fudge_factor = max(0.0, outstanding_runs - 4)
+        return random.random() * float(fudge_factor)
+
     def run(self, run):
         """Execute the specified run
         
         A run consists of a very specific set of interfaces which allow us to
         execute a command on this remote machine and return results.
         """
+        log.info("Running %s on %s", run.id, self.hostname)
         
         # When this run completes, for good or bad, we'll inform the caller by
         # calling 'succeed' or 'fail' on the run Since the definined interface
@@ -123,17 +134,31 @@ class Node(object):
             self.idle_timer.cancel()
             self.idle_timer = None
 
+        fudge_factor = self._determine_fudge_factor()
+
         self.run_states[run.id] = RunState(run)
-        # Now let's see if we need to start this off by establishing a connection or if we are already connected
-        if self.connection is None:
-            self._connect_then_run(run)
+
+        if fudge_factor == 0.0:
+            self._do_run(run)
         else:
-            self._open_channel(run)
-    
+            log.info("Delaying execution of %s for %.2f secs", run.id, fudge_factor)
+            reactor.callLater(fudge_factor, lambda : self._do_run(run))
+
         # We return the deferred here, but really we're trying to keep the rest of the world from getting too
         # involved with twisted. We will call back to mark the action success/fail directly, so using this deferred
         # isn't strictly necessary.
         return self.run_states[run.id].deferred
+
+    def _do_run(self, run):
+        """Finish starting to execute a run
+
+        This step may have been delayed.
+        """  
+        # Now let's see if we need to start this off by establishing a connection or if we are already connected
+        if self.connection is None:
+            self._connect_then_run(run)
+        else:
+            self._open_channel(run)   
 
     def _cleanup(self, run):
         self.run_states[run.id].channel = None
@@ -143,8 +168,10 @@ class Node(object):
             self.idle_timer = reactor.callLater(IDLE_CONNECTION_TIMEOUT, self._connection_idle_timeout)
 
     def _connection_idle_timeout(self):
-        log.info("Connection to %s idle for %d secs. Closing.", self.hostname, IDLE_CONNECTION_TIMEOUT)
-        self.connection.transport.loseConnection()
+        if self.connection:
+            log.info("Connection to %s idle for %d secs. Closing.", self.hostname, IDLE_CONNECTION_TIMEOUT)
+            self.connection.transport.loseConnection()
+        
         self.idle_timer = None
 
     def _fail_run(self, run, result):
@@ -154,10 +181,16 @@ class Node(object):
             log.warning("Run %s no longer tracked (_fail_run)", run.id)
             return
         
+        # Add a dummy errback handler to prevent Unhandled error messages.
+        # Unless somone is explicitly caring about this defer the error will have
+        # been reported elsewhere.
+        self.run_states[run.id].deferred.addErrback(lambda failure: None)
+
         cb = self.run_states[run.id].deferred.errback
 
         self._cleanup(run)
 
+        log.info("Calling fail_run callbacks")
         run.exited(None)
         cb(result)
 
@@ -195,6 +228,15 @@ class Node(object):
                 self._connect_then_run(run)
             elif run.state == RUN_STATE_RUNNING:
                 self._fail_run(run, None)
+            elif run.state == RUN_STATE_STARTING:
+                if run.channel and run.channel.start_defer is not None:
+                    # This means our run IS still waiting to start. There should be an outstanding timeout sitting on this guy as well.
+                    # We'll just short circut it.
+                    twistedutils.defer_timeout(run.channel.start_defer, 0)
+                else:
+                    # Doesn't seem like this should ever happen.
+                    log.warning("Run %r caught in starting state, but start_defer is over.", run_id)
+                    self._fail_run(run, None)
             else:
                 # Service ended. The open channels should know how to handle this (and cleanup) themselves, so
                 # if there should not be any runs except those waiting to connect
@@ -275,7 +317,7 @@ class Node(object):
         
         This is how we let our run know that we succeeded or failed.
         """
-        log.debug("Run %s has channel complete", run.id)
+        log.info("Run %s has completed with %r", run.id, channel.exit_status)
         if run.id not in self.run_states:
             log.warning("Run %s no longer tracked", run.id)
             return

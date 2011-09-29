@@ -111,16 +111,17 @@ class ServiceInstance(object):
             return
         
         monitor_command = "cat %(pid_file)s | xargs kill -0" % self.context
-
+        log.debug("Executing '%s' on %s for %s", monitor_command, self.node.hostname, self.id)
         self.monitor_action = action.ActionCommand("%s.monitor" % self.id, monitor_command)
-        self.monitor_action.machine.listen(action.ActionCommand.COMPLETE, self._monitor_complete_callback)
+
+        # We use exiting instead of complete because all we really need is the exit status
+        self.monitor_action.machine.listen(action.ActionCommand.EXITING, self._monitor_complete_callback)
         self.monitor_action.machine.listen(action.ActionCommand.FAILSTART, self._monitor_complete_failstart)
         
         try:
             self.node.run(self.monitor_action)
-        except node.NodeError, e:
+        except node.Error, e:
             log.error("Failed to run monitor: %r", e)
-            self._monitor_complete_failstart()
             return
         
         self._queue_monitor_hang_check()    
@@ -133,7 +134,13 @@ class ServiceInstance(object):
 
     def _monitor_complete_callback(self):
         """Callback when our monitor has completed"""
-        assert self.monitor_action
+        if not self.monitor_action:
+            # This actually happened. I suspect it was a cascading failure caused by a crash somewhere else 
+            # leaving us in a inconsistent state, but perhaps there is a reasonable explanation. Either way,
+            # we don't really care about this monitor anymore.
+            log.warning("Monitor for %s complete, but we don't see to care...", self.id)
+            return
+        
         self.last_check = timeutils.current_time()
         log.debug("Monitor callback with exit %r", self.monitor_action.exit_status)
         if self.monitor_action.exit_status != 0:
@@ -163,10 +170,13 @@ class ServiceInstance(object):
             return
 
         self.start_action = action.ActionCommand("%s.start" % self.id, command)
-        self.start_action.machine.listen(action.ActionCommand.COMPLETE, self._start_complete_callback)
+        self.start_action.machine.listen(action.ActionCommand.EXITING, self._start_complete_callback)
         self.start_action.machine.listen(action.ActionCommand.FAILSTART, self._start_complete_failstart)
 
-        self.node.run(self.start_action)
+        try:
+            self.node.run(self.start_action)
+        except node.Error, e:
+            log.warning("Failed to start %s: %r", self.id, e)
     
     def _start_complete_callback(self):
         if self.start_action.exit_status != 0:
@@ -174,15 +184,23 @@ class ServiceInstance(object):
         elif self.machine.state == self.STATE_STOPPING:
             # Someone tried to stop us while we were just getting going. 
             # Go ahead and kick of the kill operation now that we're up.
-            self.kill_instance()
+            if self.stop_action:
+                log.warning("Stopping %s while stop already in progress", self.id)
+            else:
+                self.kill_instance()
         else:
+            log.info("Start for %s complete, checking monitor", self.id)
             self._queue_monitor()
 
         self.start_action = None
 
     def _start_complete_failstart(self):
         log.warning("Failed to start service %s (%s)", self.id, self.node.hostname)
-        self.event_recorder.emit_critical("failstart")
+        
+        # We may have failed but long since not mattered
+        if None in (self.machine, self.start_action): 
+            return
+
         self.machine.transition("down")
         self.start_action = None
 
@@ -200,8 +218,10 @@ class ServiceInstance(object):
         self.stop_action = action.ActionCommand("%s.stop" % self.id, kill_command)
         self.stop_action.machine.listen(action.ActionCommand.COMPLETE, self._stop_complete_callback)
         self.stop_action.machine.listen(action.ActionCommand.FAILSTART, self._stop_complete_failstart)
-
-        self.node.run(self.stop_action)
+        try:
+            self.node.run(self.stop_action)
+        except node.Error, e:
+            log.warning("Failed to kill instance %s: %r", self.id, e)
 
     def _stop_complete_callback(self):
         if self.stop_action.exit_status != 0:

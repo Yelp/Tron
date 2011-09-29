@@ -10,6 +10,8 @@ class Error(Exception): pass
 
 class ConfigBuildMismatchError(Error): pass
 
+class InvalidStartStateError(Error):  pass
+
 log = logging.getLogger('tron.job')
 
 RUN_LIMIT = 50
@@ -55,25 +57,40 @@ class JobRun(object):
                 log.warning("A previous run for %s has not finished - cancelling", self.id)
                 self.cancel()
 
-    def start(self):
+    def start(self):        
+        if not (self.is_scheduled or self.is_queued):
+            raise InvalidStartStateError("Not scheduled")
+        
         log.info("Starting action job %s", self.id)
         self.start_time = timeutils.current_time()
         self.end_time = None
 
-        for action in self.action_runs:
-            action.attempt_start()
-
-        self.event_recorder.emit_info("started")
+        try:
+            for action_run in self.action_runs:
+                action_run.attempt_start()
+            self.event_recorder.emit_info("started")    
+        except action.Error, e:
+            log.warning("Failed to start actions: %r", e)
+            raise Error("Failed to start job run")
     
     def manual_start(self):
         self.event_recorder.emit_info("manual_start")
-        
-        self.queue()
         self.attempt_start()
+
+        # Similiar to a scheduled start, if the attempt didn't take, that must be because something else
+        # is running. We'll assume the user meant to queue this job up without caring whether the job was
+        # configured for that. 
+        if self.is_scheduled:
+            self.event_recorder.emit_notice("queued")
+            log.warning("A previous run for %s has not finished - placing in queue", self.id)
+            self.queue()
 
     def attempt_start(self):
         if self.should_start:
-            self.start()
+            try:
+                self.start()
+            except Error, e:
+                log.warning("Attempt to start failed: %r", e)
 
     def last_success_check(self):
         if not self.job.last_success or self.run_num > self.job.last_success.run_num:
@@ -163,7 +180,7 @@ class JobRun(object):
     def should_start(self):
         if not self.job.enabled or self.is_running:
             return False
-        return self.job.next_to_finish(self.node if self.job.all_nodes else None) == self
+        return self.job.next_to_finish(self.node if self.job.all_nodes else None) is self
 
     @property
     def is_failure(self):
@@ -437,8 +454,7 @@ class Job(object):
 
         for r in man_runs:
             r.set_run_time(run_time or timeutils.current_time())
-            r.queue()
-            r.attempt_start()
+            r.manual_start()
 
         return man_runs
 

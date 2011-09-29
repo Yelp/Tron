@@ -19,7 +19,7 @@ log = logging.getLogger('tron.mcp')
 SECS_PER_DAY = 86400
 MICRO_SEC = .000001
 STATE_FILE = 'tron_state.yaml'
-STATE_SLEEP = 1
+STATE_SLEEP_SECS = 1
 WRITE_DURATION_WARNING_SECS = 30
 
 class Error(Exception): pass
@@ -81,9 +81,9 @@ class StateHandler(object):
                 write_duration = timeutils.current_timestamp() - self.write_start
                 if write_duration > WRITE_DURATION_WARNING_SECS:
                     log.warning("State writing hasn't completed in %d secs", write_duration)
-                    self.event_recorder.notice("write_delayed")
+                    self.event_recorder.emit_notice("write_delayed")
                 
-                reactor.callLater(STATE_SLEEP, self.check_write_child)
+                reactor.callLater(STATE_SLEEP_SECS, self.check_write_child)
 
     def store_state(self):
         """Stores the state of tron"""
@@ -94,7 +94,7 @@ class StateHandler(object):
             # If a child is writing, we don't want to ignore this change, so lets try it later
             if not self.store_delayed:
                 self.store_delayed = True
-                reactor.callLater(STATE_SLEEP, self.delay_store)
+                reactor.callLater(STATE_SLEEP_SECS, self.delay_store)
             return
 
         tmp_path = os.path.join(self.working_dir, '.tmp.' + STATE_FILE)
@@ -107,12 +107,14 @@ class StateHandler(object):
         pid = os.fork()
         if pid:
             self.write_pid = pid
-            reactor.callLater(STATE_SLEEP, self.check_write_child)
+            reactor.callLater(STATE_SLEEP_SECS, self.check_write_child)
         else:
             exit_status = os.EX_SOFTWARE
             try:
                 with open(tmp_path, 'w') as data_file:
                     yaml.dump(self.data, data_file, default_flow_style=False, indent=4)
+                    data_file.flush()
+                    os.fsync(data_file.fileno())
                 shutil.move(tmp_path, file_path)
                 exit_status = os.EX_OK
             except:

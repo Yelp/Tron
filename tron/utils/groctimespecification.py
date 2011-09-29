@@ -144,9 +144,11 @@ def _GetTime(time_string):
   Returns:
     a datetime.time object
   """
-  hourstr, minutestr = time_string.split(':')
-  return datetime.time(int(hourstr), int(minutestr))
-
+  try:
+    hourstr, minutestr = time_string.split(':')[0:2]
+    return datetime.time(int(hourstr), int(minutestr))
+  except ValueError:
+    return None
 
 class IntervalTimeSpecification(TimeSpecification):
   """A time specification for a given interval.

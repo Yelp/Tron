@@ -610,9 +610,10 @@ class Scheduler(object):
             return DailyScheduler(*scheduler_args).actualized
         if scheduler_name == "interval":
             return IntervalScheduler(''.join(scheduler_args)).actualized
+        
         m = scheduler.GROC_SCHEDULE_RE.match(scheduler_str.lower())
         if m:
-            return GrocScheduler(scheduler_str)
+            return GrocScheduler(scheduler_str).actualized
 
         raise ConfigError("Unknown scheduler %r" % scheduler_str)
 
