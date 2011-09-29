@@ -137,14 +137,17 @@ class ActionRun(object):
         self.machine = state.StateMachine(ActionRun.STATE_SCHEDULED)
 
         self.node = None
-        self.context = None
+
+        if context is None:
+            # Provide dummy values for context variables that JobRun provides
+            # but aren't available outside of a run. This is to avoid
+            # meaningless KeyErrors in the logs.
+            context = dict(cleanup_job_status='UNKNOWN')
 
         new_context = ActionRunContext(self)
-        if context is not None:
-            self.context = command_context.CommandContext(new_context, context)
-        else:
-            self.context = new_context
-            
+
+        self.context = command_context.CommandContext(new_context, context)
+
         # If we ran the command, we'll store it for posterity.
         self.rendered_command = None
 

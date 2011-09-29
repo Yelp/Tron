@@ -19,6 +19,8 @@ from tron import service
 
 log = logging.getLogger("tron.config")
 
+CLEANUP_ACTION_NAME = "cleanup"
+
 class Error(Exception):
     pass
     
@@ -56,7 +58,7 @@ nodes:
 command_context:
     # Variable subsitution
     # There are some built-in values such as 'node', 'runid', 'actionname' and 
-    # run-time based variables such as 'shortdate'
+    # run-time based variables such as 'shortdate'. (See tronfig.1 for reference.)
     # You can specify whatever else you want similiar to environment variables:
     # PYTHON: "/usr/bin/python"
  
@@ -70,6 +72,8 @@ jobs:
     #         -
     #             name: "uname"
     #             command: "uname -a"
+    #     cleanup_action:
+    #         command: "rm -rf /tmp/sample_job_scratch"
 
 services:
     ## Configure services here. Services differ from jobs in that they are expected to have an enable/disable and monitoring
@@ -134,7 +138,7 @@ class _ConfiguredObject(yaml.YAMLObject, FromDictBuilderMixin):
         
         result = results[0]
         result.line_number = line_number
-        result._validate()    
+        result._validate()
 
         return result
 
@@ -448,6 +452,18 @@ class Job(_ConfiguredObject):
         if hasattr(self, "all_nodes"):
             real_job.all_nodes = self.all_nodes
 
+        if hasattr(self, "cleanup_action"):
+            # condensed, specialized version of _match_actions()
+            action = default_or_from_tag(self.cleanup_action, CleanupAction)
+            real_action = action.actualized
+
+            if not real_job.node_pool and not real_action.node_pool:
+                raise ConfigError("Either job '%s' or its action '%s' must have a node"
+                   % (real_job.name, action_action.name))
+            real_job.cleanup_action = real_action
+            real_action.job = real_job
+            real_job._register_action(real_action)
+
 
 class Service(_ConfiguredObject):
     yaml_tag = u'!Service'
@@ -496,7 +512,7 @@ class Action(_ConfiguredObject):
             if not getattr(self, key, None):
                 raise ConfigError("Missing value in action %s %r" % (key, self), self.line_number)
 
-        if not re.match(r'[a-z_]\w*$', self.name, re.I):
+        if not re.match(r'[a-z_]\w*$', self.name, re.I) or self.name == CLEANUP_ACTION_NAME:
             raise ConfigError("Invalid action name '%s' - not a valid identifier" % self.name, self.line_number)
 
     def _apply_requirements(self, real_action, requirements):
@@ -529,6 +545,24 @@ class Action(_ConfiguredObject):
 
         if hasattr(self, "requires"):
             self._apply_requirements(real_action, self.requires)
+
+
+class CleanupAction(Action):
+    yaml_tag = u'!CleanupAction'
+    actual_class = action.Action
+
+    def _validate(self):
+        if hasattr(self, 'name') and self.name is not None and self.name != CLEANUP_ACTION_NAME:
+            raise ConfigError("Cleanup actions cannot have custom names (you wanted %s)" % self.name)
+
+        self.name = CLEANUP_ACTION_NAME
+
+        if not getattr(self, 'command', None):
+            raise ConfigError("Missing value in action %s %r" % (key, self), self.line_number)
+
+        if hasattr(self, 'requires'):
+            raise ConfigError("Cleanup actions cannot have dependencies")
+
 
 class NodePool(_ConfiguredObject):
     yaml_tag = u'!NodePool'
