@@ -494,10 +494,17 @@ class ServicesResource(resource.Resource):
     def get_data(self, request):
         service_list = []
         for current_service in self._master_control.services.itervalues():
-            status = current_service.state.name.upper()
+            try:
+                status = current_service.state.name.upper()
+            except:
+                status = "BROKEN"
+            try:
+                count = current_service.count
+            except:
+                count = -1
             service_desc = {
                 'name': current_service.name,
-                'count': current_service.count,
+                'count': count,
                 'href': "/services/%s" % urllib.quote(current_service.name),
                 'status': status,
             }
