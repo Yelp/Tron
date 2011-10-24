@@ -252,6 +252,8 @@ class TronConfiguration(yaml.YAMLObject):
 
         found_srv_names = set()
         for srv_config in service_configs:
+            if not isinstance(srv_config, Service):
+                raise ConfigError("There is a !Job in the services list: %s" % srv_config)
             if srv_config.name in found_srv_names:
                 raise yaml.YAMLError("Duplicate service name %s" % srv_config.name)
             found_srv_names.add(srv_config.name)

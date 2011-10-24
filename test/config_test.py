@@ -104,6 +104,7 @@ services:
         pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
         monitor_interval: 20
 """
+
     @setup
     def setup(self):
         self.test_dir = tempfile.mkdtemp()
@@ -372,6 +373,23 @@ jobs:
         """
         test_config = config.load_config(StringIO.StringIO(test_config))
         assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
-            
+
+    def test_job_in_services(self):
+        test_config = BASE_CONFIG + """
+services:
+    - !Job
+        name: "test_job0"
+        node: *node0
+        schedule: "interval 20s"
+        actions:
+            - &intAction !Action
+                name: "action0_0"
+                command: "test_command0.0"
+        cleanup_action: !CleanupAction
+            command: "test_command0.1"
+"""
+        test_config = config.load_config(StringIO.StringIO(test_config))
+        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+
 if __name__ == '__main__':
     run()
