@@ -160,18 +160,21 @@ class SchedulerTestCase(SandboxTestCase):
         time.sleep(4)
         self.sandbox.upload_config(SchedulerTestCase.QUEUE_CONFIG)
 
-        print self.sandbox.list_job('delayed_echo_job')
+        runs = self.sandbox.list_job('delayed_echo_job')['runs']
+        complete_runs = sum(1 for j in runs if j['end_time'])
+        incomplete_runs = sum(1 for j in runs if not j['end_time'])
+
+        assert_lte(complete_runs, 2)
+        assert_gte(len(runs), 3)
 
         # at this point, up to 5 jobs have been queued up, but only
         # up to 2 should have output
 
-        output_dirs = sorted(os.listdir(job_output_dir))
-        for d in output_dirs:
-            print os.listdir(os.path.join(job_output_dir, d))
-
         time.sleep(5)
-        print '-----'
-        print self.sandbox.list_job('delayed_echo_job')
-        output_dirs = sorted(os.listdir(job_output_dir))
-        for d in output_dirs:
-            print os.listdir(os.path.join(job_output_dir, d))
+
+        runs = self.sandbox.list_job('delayed_echo_job')['runs']
+        complete_runs_2 = sum(1 for j in runs if j['end_time'])
+        incomplete_runs_2 = sum(1 for j in runs if not j['end_time'])
+
+        assert_lte(complete_runs, 4)
+        assert_gte(len(runs), 8)
