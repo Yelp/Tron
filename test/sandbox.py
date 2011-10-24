@@ -76,9 +76,9 @@ class MockConfigOptions(object):
 class TronSandbox(object):
 
     def __init__(self):
-        super(TronSandbox, self).__init__()
         """Set up a temp directory and store paths to relevant binaries"""
-        # I had a really hard time not calling this function make_sandwich()
+        super(TronSandbox, self).__init__()
+
         self.tmp_dir = tempfile.mkdtemp(prefix='tron-')
         self.tron_bin = os.path.join(_repo_root, 'bin')
         self.tronctl_bin = os.path.join(self.tron_bin, 'tronctl')

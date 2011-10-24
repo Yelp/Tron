@@ -1,5 +1,6 @@
 import datetime
 import os
+from textwrap import dedent
 import time
 import yaml
 
@@ -38,7 +39,7 @@ TOUCH_CLEANUP_FMT = """
             command: "touch %s" """
 
 
-class BasicTronTestCase(TestCase):
+class SandboxTestCase(TestCase):
 
     @setup
     def make_sandbox(self):
@@ -48,6 +49,9 @@ class BasicTronTestCase(TestCase):
     def delete_sandbox(self):
         self.sandbox.delete()
         self.sandbox = None
+
+
+class BasicTronTestCase(SandboxTestCase):
 
     def test_end_to_end_basic(self):
         # start with a basic configuration
@@ -106,3 +110,68 @@ echo_job ENABLED    INTERVAL:1:00:00     None
         wait_for_file_to_exist(canary)
         assert_equal(self.sandbox.list_action_run('echo_job', 1, 'echo_action')['state'], 'SUCC')
         assert_equal(self.sandbox.list_job_run('echo_job', 1)['state'], 'SUCC')
+
+
+class SchedulerTestCase(SandboxTestCase):
+
+
+    QUEUE_CONFIG = dedent("""
+        --- !TronConfiguration
+        ssh_options:
+                agent: true
+        nodes:
+            - &local
+                hostname: 'localhost'
+        jobs:
+            - &echo_job
+                name: "delayed_echo_job"
+                node: *local
+                queueing: true
+                schedule: "interval 1 second"
+                actions:
+                    -
+                        name: "delayed_echo_action"
+                        command: "sleep 2 && echo 'Echo'"
+        """)
+
+    EMPTY_CONFIG = dedent("""
+        --- !TronConfiguration
+        ssh_options:
+                agent: true
+        nodes:
+            - &local
+                hostname: 'localhost'
+        jobs:
+            - &echo_job
+                name: "delayed_echo_job"
+                node: *local
+                queueing: true
+                schedule: "interval 1 hour"
+                actions:
+                    -
+                        name: "delayed_echo_action"
+                        command: "sleep 2 && echo 'Echo'"
+        """)
+
+    def test_queue_on_overlap(self):
+        job_output_dir = os.path.join(self.sandbox.tmp_dir, 'delayed_echo_job')
+        self.sandbox.save_config(SchedulerTestCase.QUEUE_CONFIG)
+        self.sandbox.start_trond()
+        time.sleep(4)
+        self.sandbox.upload_config(SchedulerTestCase.QUEUE_CONFIG)
+
+        print self.sandbox.list_job('delayed_echo_job')
+
+        # at this point, up to 5 jobs have been queued up, but only
+        # up to 2 should have output
+
+        output_dirs = sorted(os.listdir(job_output_dir))
+        for d in output_dirs:
+            print os.listdir(os.path.join(job_output_dir, d))
+
+        time.sleep(5)
+        print '-----'
+        print self.sandbox.list_job('delayed_echo_job')
+        output_dirs = sorted(os.listdir(job_output_dir))
+        for d in output_dirs:
+            print os.listdir(os.path.join(job_output_dir, d))
