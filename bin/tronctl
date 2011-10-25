@@ -34,7 +34,7 @@ COMMAND_HELP = (
     ('fail', 'Mark an UNKNOWN job as having failed'),
     ('succeed', 'Mark an UNKNOWN job as having succeeded'),
     ('stop', 'Stop the selected service'),
-    ('zap', "Reset a service's status to STOPPED without taking any other action"),
+    ('zap', "Reset a service or service instance's status to STOPPED without taking any other action"),
 )
 
 
