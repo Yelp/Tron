@@ -77,6 +77,9 @@ class ServiceInstance(object):
         self.start_action = None
         self.kill_action = None
 
+        self._monitor_delayed_call = None
+        self._hanging_monitor_check_delayed_call = None
+
     @property
     def state(self):
         return self.machine.state
@@ -112,7 +115,8 @@ class ServiceInstance(object):
     def _queue_monitor(self):
         self.monitor_action = None
         if self.service.monitor_interval > 0:
-            reactor.callLater(self.service.monitor_interval, self._run_monitor)
+            self._monitor_delayed_call = reactor.callLater(
+                self.service.monitor_interval, self._run_monitor)
 
     def _queue_monitor_hang_check(self):
         """Since our monitor cycle is controlled by monitors actually
@@ -126,10 +130,13 @@ class ServiceInstance(object):
         hang_monitor_duration = max((self.service.monitor_interval or 0) * 0.8,
                                     MIN_MONITOR_HANG_TIME)
 
-        reactor.callLater(hang_monitor_duration,
-                          lambda : self._monitor_hang_check(current_action))
+        self._hanging_monitor_check_delayed_call = reactor.callLater(
+            hang_monitor_duration,
+            lambda : self._monitor_hang_check(current_action))
 
     def _run_monitor(self):
+        self._monitor_delayed_call = None
+
         if self.monitor_action:
             log.warning("Monitor action already exists, old callLater ?")
             return
@@ -138,15 +145,19 @@ class ServiceInstance(object):
         pid_file = self.pid_file
 
         if pid_file is None:
-            # If our pid file doesn't exist or failed to be generated, we can't really monitor
+            # If our pid file doesn't exist or failed to be generated, we
+            # can't really monitor
             self._monitor_complete_failstart()
             return
 
         monitor_command = "cat %(pid_file)s | xargs kill -0" % self.context
-        log.debug("Executing '%s' on %s for %s", monitor_command, self.node.hostname, self.id)
-        self.monitor_action = action.ActionCommand("%s.monitor" % self.id, monitor_command)
+        log.debug("Executing '%s' on %s for %s", monitor_command,
+                  self.node.hostname, self.id)
+        self.monitor_action = action.ActionCommand("%s.monitor" % self.id,
+                                                   monitor_command)
 
-        # We use exiting instead of complete because all we really need is the exit status
+        # We use exiting instead of complete because all we really need is the
+        # exit status
         self.monitor_action.machine.listen(action.ActionCommand.EXITING,
                                            self._monitor_complete_callback)
         self.monitor_action.machine.listen(action.ActionCommand.FAILSTART,
@@ -161,6 +172,7 @@ class ServiceInstance(object):
         self._queue_monitor_hang_check()
 
     def _monitor_hang_check(self, action):
+        self._hanging_monitor_check_delayed_call = None
         if self.monitor_action is action:
             log.warning("Monitor for %s is still running", self.id)
             self.machine.transition("monitor_fail")
@@ -279,6 +291,16 @@ class ServiceInstance(object):
 
     def zap(self):
         self.machine.transition("stop")
+        self.machine.transition("down")
+
+        # Kill the monitors so they don't put us back in the UP state
+        if self._monitor_delayed_call is not None:
+            self._monitor_delayed_call.cancel()
+            self._monitor_delayed_call = None
+
+        if self._hanging_monitor_check_delayed_call is not None:
+            self._hanging_monitor_check_delayed_call.cancel()
+            self._hanging_monitor_check_delayed_call = None
 
     def __str__(self):
         return "SERVICE:%s" % self.id
@@ -428,6 +450,8 @@ class Service(object):
             self.machine.transition("all_down")
 
     def zap(self):
+        self.machine.transition("stop")
+
         for service_instance in self.instances:
             service_instance.zap()
 
