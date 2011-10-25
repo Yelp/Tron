@@ -278,8 +278,6 @@ class ServiceInstance(object):
         self._queue_monitor()
 
     def zap(self):
-        log.info('Zapping instance. State machine listeners: %s',
-                 self.machine._listeners)
         self.machine.transition("stop")
 
     def __str__(self):
@@ -430,13 +428,11 @@ class Service(object):
             self.machine.transition("all_down")
 
     def zap(self):
-        log.info("Zapping service. State machine listeners: %s",
-                 self.machine._listeners)
-
         for service_instance in self.instances:
             service_instance.zap()
 
-        self.machine.transition("all_down")
+        if self.state == self.STATE_STOPPING and not self.instances:
+            self.machine.transition("all_down")
 
     def _create_instance(self, node, instance_number):
         service_instance = ServiceInstance(self, node, instance_number)
