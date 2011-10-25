@@ -8,3 +8,4 @@ MANIFEST
 tron.egg_info
 *.pyc
 *._*
+*.swp

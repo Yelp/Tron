@@ -39,17 +39,27 @@ def wait_for_sandbox_success(func, start_delay=0.1, stop_at=5.0):
     raise last_exception
 
 
+def make_file_existence_sandbox_exception_thrower(path):
+    def func():
+        if not os.path.exists(path):
+            raise TronSandboxException('File does not exist: %s' % path)
+    return func
+
+def wait_for_file_to_exist(path):
+    func = make_file_existence_sandbox_exception_thrower(path)
+    wait_for_sandbox_success(func)
+
+
 def handle_output(cmd, (stdout, stderr), returncode):
     """Log process output before it is parsed. Raise exception if exit code
     is nonzero.
     """
     if stdout:
-        log.info("%s: %r", cmd, stdout)
+        log.info("%s: %s", cmd, stdout)
     if stderr:
-        log.warning("%s: %r", cmd, stderr)
+        log.warning("%s: %s", cmd, stderr)
     if returncode != 0:
-        raise CalledProcessError(returncode, "Command '%s' returned non-zero exit status"
-                                 " %d" % (cmd, returncode))
+        raise CalledProcessError(returncode, cmd)
 
 
 class TronSandboxException(Exception):
@@ -65,9 +75,9 @@ class MockConfigOptions(object):
 class TronSandbox(object):
 
     def __init__(self):
-        super(TronSandbox, self).__init__()
         """Set up a temp directory and store paths to relevant binaries"""
-        # I had a really hard time not calling this function make_sandwich()
+        super(TronSandbox, self).__init__()
+
         self.tmp_dir = tempfile.mkdtemp(prefix='tron-')
         self.tron_bin = os.path.join(_repo_root, 'bin')
         self.tronctl_bin = os.path.join(self.tron_bin, 'tronctl')
@@ -127,10 +137,10 @@ class TronSandbox(object):
         """Start trond"""
         args = args or []
         self._last_trond_launch_args = args
-        p = Popen([sys.executable, self.trond_bin] + self.trond_debug_args + args,
-                  stdout=PIPE, stderr=PIPE)
+        command = [sys.executable, self.trond_bin] + self.trond_debug_args + args
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
 
-        handle_output(self.trond_bin, p.communicate(), p.returncode)
+        handle_output(command, p.communicate(), p.returncode)
 
         # make sure trond has actually launched
         wait_for_sandbox_success(self.list_all)
@@ -229,17 +239,19 @@ class TronSandbox(object):
     def tronctl(self, args=None):
         """Call tronctl with args and return ``(stdout, stderr)``"""
         args = args or []
-        p = Popen([sys.executable, self.tronctl_bin] + args, stdout=PIPE, stderr=PIPE)
+        command = [sys.executable, self.tronctl_bin] + args
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
         retval = p.communicate()
-        handle_output(self.tronctl_bin, retval, p.returncode)
+        handle_output(command, retval, p.returncode)
         return retval
 
     def tronview(self, args=None):
         """Call tronview with args and return ``(stdout, stderr)``"""
         args = args or []
-        p = Popen([sys.executable, self.tronview_bin] + args, stdout=PIPE, stderr=PIPE)
+        command = [sys.executable, self.tronview_bin] + args
+        p = Popen(command, stdout=PIPE, stderr=PIPE)
         retval = p.communicate()
-        handle_output(self.tronview_bin, retval, p.returncode)
+        handle_output(command, retval, p.returncode)
         # TODO: Something with return value
         # return p.wait()
         # (but p.communicate() already waits for the process to exit... -Steve)

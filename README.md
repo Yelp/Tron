@@ -27,3 +27,12 @@ Use Github. We're friendly I swear. Contributions welcome.
 
 Any issues should be either posted and discussed at http://github.com/Yelp/Tron/issues
 or emailed to yelplabs@yelp.com
+
+Running Tests
+-------------
+
+The easiest way to run tron's tests is to:
+
+* Make a virtualenv
+* Install testify in the virtualenv
+* Call ``python `which testify` test`` from the repository root. You need to do this instead of just calling ``testify`` in order to make it use the correct Python executable (the one from your virtualenv).

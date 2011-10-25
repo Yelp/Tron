@@ -6,8 +6,8 @@ import shutil
 from testify import *
 from testify.utils import turtle
 
-from tron import scheduler, action, job, groctimespecification
-from tron.utils import timeutils
+from tron import scheduler, action, job
+from tron.utils import groctimespecification, timeutils
 
 class ConstantSchedulerTest(TestCase):
     @setup
