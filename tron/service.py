@@ -77,6 +77,7 @@ class ServiceInstance(object):
         self.start_action = None
         self.kill_action = None
 
+        # Store the Twisted delayed call objects here for later cancellation
         self._monitor_delayed_call = None
         self._hanging_monitor_check_delayed_call = None
 
