@@ -111,9 +111,37 @@ echo_job ENABLED    INTERVAL:1:00:00     None
         assert_equal(self.sandbox.list_action_run('echo_job', 1, 'echo_action')['state'], 'SUCC')
         assert_equal(self.sandbox.list_job_run('echo_job', 1)['state'], 'SUCC')
 
+    def test_tronctl_service_zap(self):
+        SERVICE_CONFIG = dedent("""
+        --- !TronConfiguration
+        ssh_options:
+                agent: true
+        nodes:
+            - &local
+                hostname: 'localhost'
+        services:
+            -
+                name: "fake_service"
+                node: *local
+                count: 1
+                pid_file: "%%(name)s-%%(instance_number)s.pid"
+                command: "echo %(pid)s > %%(pid_file)s"
+                monitor_interval: 0.1
+        """ % {'pid': os.getpid()})
+
+        self.sandbox.start_trond()
+        self.sandbox.upload_config(SERVICE_CONFIG)
+        time.sleep(1)
+
+        self.sandbox.ctl('start', 'fake_service')
+        self.sandbox.tronctl(['start', 'fake_service'])
+
+        time.sleep(1)
+        self.sandbox.tronctl(['zap', 'fake_service'])
+        assert_equal('DOWN', self.sandbox.list_service('fake_service')['state'])
+
 
 class SchedulerTestCase(SandboxTestCase):
-
 
     QUEUE_CONFIG = dedent("""
         --- !TronConfiguration

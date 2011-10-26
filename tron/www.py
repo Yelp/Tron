@@ -2,6 +2,7 @@
 
 Got to know what's going on ?
 """
+
 import datetime
 import logging
 import urllib
@@ -11,9 +12,11 @@ try:
 except ImportError:
     import simplejson
 
+
 from twisted.cred import checkers
 from twisted.internet import reactor
 from twisted.web import http, resource, server
+
 
 from tron import action
 from tron import config
@@ -23,6 +26,7 @@ from tron.utils import timeutils
 
 
 log = logging.getLogger("tron.www")
+
 
 def respond(request, response_dict, code=http.OK, headers=None):
     """Helper to generate a json response"""
@@ -34,6 +38,7 @@ def respond(request, response_dict, code=http.OK, headers=None):
     if response_dict:
         return simplejson.dumps(response_dict)
     return ""
+
 
 def job_run_state(job_run):
     if job_run.is_success:
@@ -48,7 +53,7 @@ def job_run_state(job_run):
         return "SCHE"
     if job_run.is_queued:
         return "QUE"
-        
+
     return "UNKWN"
 
 class ActionRunResource(resource.Resource):
@@ -66,11 +71,11 @@ class ActionRunResource(resource.Resource):
             'raw_command': self._act_run.action.command,
             'requirements': [req.name for req in self._act_run.action.required_actions],
         }
-        
+
         if request.args and request.args['num_lines'][0].isdigit():
             output['stdout'] = self._act_run.tail_stdout(int(request.args['num_lines'][0]))
             output['stderr'] = self._act_run.tail_stderr(int(request.args['num_lines'][0]))
-            
+
         return respond(request, output)
 
     def render_POST(self, request):
@@ -90,7 +95,7 @@ class ActionRunResource(resource.Resource):
             return respond(request, None, code=http.NOT_IMPLEMENTED)
 
         return respond(request, {'result': "Action run now in state %s" % job_run_state(self._act_run)})
-    
+
     def _start(self, request):
         if not self._act_run.is_success and not self._act_run.is_running:
             log.info("Starting job run %s", self._act_run.id)
@@ -133,7 +138,7 @@ class JobRunResource(resource.Resource):
             return self
         elif act_name == '_events':
             return EventResource(self._run)
-        
+
         for act_run in self._run.action_runs_with_cleanup:
             if act_name == act_run.action.name:
                 return ActionRunResource(act_run)
@@ -146,10 +151,10 @@ class JobRunResource(resource.Resource):
 
         def action_output(action_run):
             action_state = job_run_state(action_run)
-            
+
             last_time = action_run.end_time if action_run.end_time else timeutils.current_time()
             duration = str(last_time - action_run.start_time) if action_run.start_time else ""
-           
+
             return {
                 'id': action_run.id,
                 'name': action_run.action.name,
@@ -170,7 +175,7 @@ class JobRunResource(resource.Resource):
             'state': state,
             'node': self._run.node.hostname,
         }
-        
+
         return respond(request, output)
 
     def render_POST(self, request):
@@ -190,7 +195,7 @@ class JobRunResource(resource.Resource):
         else:
             log.warning("Unknown request command %s", request.args['command'])
             return respond(request, None, code=http.NOT_IMPLEMENTED)
-        
+
         return respond(request, {'result': "Job run now in state %s" % job_run_state(self._run)})
 
     def _restart(self, request):
@@ -276,7 +281,7 @@ class JobResource(resource.Resource):
             run_output.append(self.get_run_data(request, job_run))
 
         resources_output = []
-        
+
         output = {
             'name': self._job.name,
             'scheduler': str(self._job.scheduler),
@@ -305,7 +310,7 @@ class JobResource(resource.Resource):
                 run_time = datetime.datetime.strptime(run_time_str, "%Y-%m-%d %H:%M:%S")
             else:
                 run_time = timeutils.current_time()
-            
+
             runs = self._job.manual_start(run_time=run_time)
             return respond(request, {'result': "New Job Runs %s created" % [r.id for r in runs]})
 
@@ -322,13 +327,13 @@ class JobsResource(resource.Resource):
     def getChild(self, name, request):
         if name == '':
             return self
-        
+
         found = self._master_control.jobs.get(name)
         if found is None:
             return resource.NoResource("Cannot find job '%s'" % name)
-        
+
         return JobResource(found, self._master_control)
-    
+
     def get_data(self, request):
         serv_list = []
         job_list = []
@@ -336,7 +341,7 @@ class JobsResource(resource.Resource):
             last_success = None
             if current_job.last_success and current_job.last_success.end_time:
                 last_success = current_job.last_success.end_time.strftime("%Y-%m-%d %H:%M:%S")
-            
+
             # We need to describe the current state of this job
             current_run = current_job.next_to_finish()
             status = "UNKNOWN"
@@ -347,7 +352,7 @@ class JobsResource(resource.Resource):
                 status = "ENABLED"
             elif not current_run:
                 status = "DISABLED"
-                
+
             job_desc = {
                 'name': current_job.name,
                 'href': "/jobs/%s" % urllib.quote(current_job.name),
@@ -361,13 +366,13 @@ class JobsResource(resource.Resource):
 
     def render_GET(self, request):
         request.setHeader("content-type", "text/json")
-        
+
         output = {
             'jobs': self.get_data(request),
         }
 
         return respond(request, output)
-    
+
     def render_POST(self, request):
         cmd = request.args['command'][0]
         log.info("Handling '%s' request on all jobs", cmd)
@@ -375,7 +380,7 @@ class JobsResource(resource.Resource):
         if cmd == 'disableall':
             self._master_control.disable_all()
             return respond(request, {'result': "All jobs are now disabled"})
-       
+
         if cmd == 'enableall':
             self._master_control.enable_all()
             return respond(request, {'result': "All jobs are now enabled"})
@@ -389,7 +394,7 @@ class ServiceInstanceResource(resource.Resource):
         self._service_instance = service_instance
         self._master_control = master_control
         resource.Resource.__init__(self)
- 
+
     def render_POST(self, request):
         cmd = request.args['command'][0]
         log.info("Handling '%s' request on service %s", cmd, self._service_instance.id)
@@ -398,6 +403,11 @@ class ServiceInstanceResource(resource.Resource):
             self._service_instance.stop()
 
             return respond(request, {'result': "Service instance stopping"})
+
+        if cmd == 'zap':
+            self._service_instance.zap()
+
+            return respond(request, {'result': "Service instance zapped"})
 
         if cmd == 'start':
             try:
@@ -409,7 +419,7 @@ class ServiceInstanceResource(resource.Resource):
 
         log.warning("Unknown request command %s for service %s", request.args['command'], self._service_instance.id)
         return respond(request, None, code=http.NOT_IMPLEMENTED)
-    
+
 
 class ServiceResource(resource.Resource):
     """A resource that describes a particular service"""
@@ -444,7 +454,7 @@ class ServiceResource(resource.Resource):
             instance_output.append(self.get_instance_data(request, instance))
 
         resources_output = []
-        
+
         output = {
             'name': self._service.name,
             'state': self._service.state.name.upper(),
@@ -463,7 +473,12 @@ class ServiceResource(resource.Resource):
             self._service.stop()
 
             return respond(request, {'result': "Service stopping"})
-       
+
+        if cmd == 'zap':
+            self._service.zap()
+
+            return respond(request, {'result': "Service zapped"})
+
         if cmd == 'start':
             try:
                 self._service.start()
@@ -484,13 +499,13 @@ class ServicesResource(resource.Resource):
     def getChild(self, name, request):
         if name == '':
             return self
-        
+
         found = self._master_control.services.get(name)
         if found is None:
             return resource.NoResource("Cannot find service '%s'" % name)
-        
+
         return ServiceResource(found, self._master_control)
-    
+
     def get_data(self, request):
         service_list = []
         for current_service in self._master_control.services.itervalues():
@@ -514,7 +529,7 @@ class ServicesResource(resource.Resource):
 
     def render_GET(self, request):
         request.setHeader("content-type", "text/json")
-        
+
         service_list = self.get_data(request)
 
         output = {
@@ -537,7 +552,7 @@ class ConfigResource(resource.Resource):
         log.info("Handling reconfig request")
         new_config = request.args['config'][0]
         self._master_control.rewrite_config(new_config)
-        
+
         # TODO: This should be a more informative reponse
         response = {'status': "I'm alive biatch"}
         try:
@@ -545,7 +560,7 @@ class ConfigResource(resource.Resource):
         except Exception, e:
             log.exception("Failure doing live reconfig")
             response['error'] = str(e)
-        
+
         return respond(request, response)
 
 
@@ -564,7 +579,7 @@ class EventResource(resource.Resource):
     def __init__(self, recordable):
         assert hasattr(recordable, 'event_recorder')
         self._recordable = recordable
-    
+
     def render_GET(self, request):
         response = {}
         response['data'] = []
@@ -578,7 +593,7 @@ class EventResource(resource.Resource):
                                 'name': evt.name, 
                                 'entity': entity_desc,
                                 'time': evt.time.strftime("%Y-%m-%d %H:%M:%S")})
-        
+
         return respond(request, response)
 
 
@@ -586,7 +601,7 @@ class RootResource(resource.Resource):
     def __init__(self, master_control):
         self._master_control = master_control
         resource.Resource.__init__(self)
-        
+
         # Setup children
         self.putChild('jobs', JobsResource(master_control))
         self.putChild('services', ServicesResource(master_control))
@@ -601,11 +616,11 @@ class RootResource(resource.Resource):
 
     def render_GET(self, request):
         request.setHeader("content-type", "text/json")
-        
+
         # We're going to load a big response with a bunch of stuff we know about this tron instance
         jobs_resource = self.children["jobs"]
         services_resource = self.children["services"]
-        
+
         response = dict()
         response['jobs'] = jobs_resource.get_data(request)
         response['jobs_href'] = request.uri + request.childLink('jobs')
@@ -628,5 +643,3 @@ if __name__ == '__main__':
     }
     reactor.listenTCP(8082, server.Site(RootResource(master_control)))
     reactor.run()
-    
-    
