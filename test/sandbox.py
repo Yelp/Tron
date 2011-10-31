@@ -173,7 +173,7 @@ class TronSandbox(object):
 
     def upload_config(self, config_text):
         """Upload a tron configuration to the server"""
-        self._check_call_api('/config', {'config': config_text})
+        return self._check_call_api('/config', {'config': config_text})
 
     def get_config(self):
         """Get the text of the current configuration"""
