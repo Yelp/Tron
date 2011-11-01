@@ -407,15 +407,17 @@ def _match_actions(real_job, action_conf_list):
 
         real_action = action.actualized
 
-        if not real_job.node_pool and not real_action.node_pool:
-            raise ConfigError("Either job '%s' or its action '%s' must have a node" 
+        # because of the ass-backwards way tron parses config, we need to
+        # use getattr here
+        if not getattr(real_job, 'node_pool') and not getattr(real_action, 'node_pool'):
+            raise ConfigError("Either job '%s' or its action '%s' must have a node"
                % (real_job.name, action_action.name))
 
         # Do all the dependent actions belong to the same job?
         for dependent in real_action.required_actions:
             if dependent.job != real_job:
                 raise ConfigError("Action dependency on invalid action: %s", dependent.name)
-        
+
         real_job.add_action(real_action)
 
         # Configuration is dependent on the job being set here so we can verify the dependencies make sense.
