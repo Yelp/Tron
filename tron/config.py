@@ -21,7 +21,7 @@ log = logging.getLogger("tron.config")
 
 class Error(Exception):
     pass
-    
+
 class ConfigError(Exception):
     pass
 
@@ -409,9 +409,9 @@ def _match_actions(real_job, action_conf_list):
 
         # because of the ass-backwards way tron parses config, we need to
         # use getattr here
-        if not getattr(real_job, 'node_pool') and not getattr(real_action, 'node_pool'):
+        if not getattr(real_job, 'node_pool', None) and not getattr(real_action, 'node_pool', None):
             raise ConfigError("Either job '%s' or its action '%s' must have a node"
-               % (real_job.name, action_action.name))
+               % (real_job.name, real_action.name))
 
         # Do all the dependent actions belong to the same job?
         for dependent in real_action.required_actions:
