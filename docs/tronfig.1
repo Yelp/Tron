@@ -41,8 +41,8 @@ These options are how we connect to the nodes we run commands on.
     identities - (optional) list of paths to SSH identity files
 
 .IP syslog_address
-Include this if you want to enable logging to syslog. Typical values for
-various platforms are:
+Include this if you want to enable logging to syslog. Accepts paths as strings
+and [address, port] lists for sockets. Typical values for various platforms are:
     Linux: "/dev/log"
     OS X: "/var/run/syslog"
     Windows: ["localhost", 514]

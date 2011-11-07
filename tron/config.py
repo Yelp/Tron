@@ -41,6 +41,12 @@ ssh_options:
     agent: true
     
 
+## Uncomment if you want logging to syslog. Typical values for different platforms:
+##    Linux: "/dev/log"
+##    OS X: "/var/run/syslog"
+##    Windows: ["localhost", 514]
+# syslog-address: /dev/log
+
 # notification_options:
       ## In case of trond failures, where should we send notifications to ?
       # smtp_host: localhost
