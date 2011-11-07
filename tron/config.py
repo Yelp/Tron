@@ -226,12 +226,16 @@ class TronConfiguration(yaml.YAMLObject):
 
         new_handlers = []
         if hasattr(self, 'syslog_address'):
+            if not isinstance(self.syslog_address, basestring):
+                self.syslog_address = tuple(self.syslog_address)
+
             already_exists = False
             for h in list(handlers_to_be_removed):
                 if (isinstance(h, handlers.SysLogHandler) and
                     h.address == self.syslog_address):
                     handlers_to_be_removed.remove(h)
                     already_exists = True
+
             if not already_exists:
                 new_handlers.append(handlers.SysLogHandler(self.syslog_address))
 
