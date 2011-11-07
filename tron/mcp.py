@@ -47,7 +47,7 @@ class StateHandler(object):
     def restore_job(self, job_inst, data):
         job_inst.set_context(self.mcp.context)
         job_inst.restore(data)
-        
+
         for run in job_inst.runs:
             if run.is_scheduled:
                 reactor.callLater(sleep_time(run.run_time), self.mcp.run_job, run)     
@@ -82,7 +82,7 @@ class StateHandler(object):
                 if write_duration > WRITE_DURATION_WARNING_SECS:
                     log.warning("State writing hasn't completed in %d secs", write_duration)
                     self.event_recorder.emit_notice("write_delayed")
-                
+
                 reactor.callLater(STATE_SLEEP_SECS, self.check_write_child)
 
     def store_state(self):
@@ -100,9 +100,9 @@ class StateHandler(object):
         tmp_path = os.path.join(self.working_dir, '.tmp.' + STATE_FILE)
         file_path = os.path.join(self.working_dir, STATE_FILE)
         log.info("Storing state in %s", file_path)
-        
+
         self.event_recorder.emit_info("storing")        
-        
+
         self.write_start = timeutils.current_timestamp()
         pid = os.fork()
         if pid:
@@ -140,7 +140,7 @@ class StateHandler(object):
                 'version': [0, 1, 9],
                 'jobs': data
             }
-        
+
         # For properly comparing version, we need to convert this guy to a tuple
         data['version'] = tuple(data['version'])
         # By default we assume backwards compatability.
@@ -153,7 +153,7 @@ class StateHandler(object):
         else:
             # Potential version conversions
             return data
-    
+
     @property
     def data(self):
         data = {
@@ -174,11 +174,12 @@ class StateHandler(object):
     def __str__(self):
         return "STATE_HANDLER"
 
+
 class MasterControlProgram(object):
     """master of tron's domain
-    
-    This object is responsible for figuring who needs to run and when. It will be the main entry point
-    where our daemon finds work to do
+
+    This object is responsible for figuring who needs to run and when. It is
+    the main entry point where our daemon finds work to do.
     """
     def __init__(self, working_dir, config_file, context=None):
         self.jobs = {}
@@ -189,6 +190,9 @@ class MasterControlProgram(object):
         self.monitor = None
         self.event_recorder = event.EventRecorder(self)
         self.state_handler = StateHandler(self, working_dir)
+
+        root = logging.getLogger('')
+        self.base_logging_handlers = list(root.handlers)
 
     def live_reconfig(self):
         self.event_recorder.emit_info("reconfig")
@@ -203,6 +207,7 @@ class MasterControlProgram(object):
             self.run_jobs()
         except Exception, e:
             self.event_recorder.emit_critical("reconfig_failure")
+            log.exception("Reconfig failure")
             raise
         finally:
             self.state_handler.writing_enabled = old_state_writing
