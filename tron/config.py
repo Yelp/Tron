@@ -228,15 +228,17 @@ class TronConfiguration(yaml.YAMLObject):
     def _apply_loggers(self, mcp):
         root = logging.getLogger('')
         handlers_to_be_removed = set(h for h in root.handlers
-                                    if h not in mcp.base_logging_handlers)
+                                     if h not in mcp.base_logging_handlers)
 
+        # Only change handlers if they will actually be different from the old
+        # handlers
         new_handlers = []
         if hasattr(self, 'syslog_address'):
             if not isinstance(self.syslog_address, basestring):
                 self.syslog_address = tuple(self.syslog_address)
 
             already_exists = False
-            for h in list(handlers_to_be_removed):
+            for h in set(handlers_to_be_removed):
                 if (isinstance(h, handlers.SysLogHandler) and
                     h.address == self.syslog_address):
                     handlers_to_be_removed.remove(h)
