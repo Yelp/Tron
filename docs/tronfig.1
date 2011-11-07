@@ -28,6 +28,7 @@ Field are described below:
 
 .IP "Top Level Sections of Configuration"
  ssh_options
+ syslog_address
  notification_options
  nodes
  command_context
@@ -38,6 +39,13 @@ Field are described below:
 These options are how we connect to the nodes we run commands on.
     agent - (optional) boolean to indicate we should use an SSH Agent
     identities - (optional) list of paths to SSH identity files
+
+.IP syslog_address
+Include this if you want to enable logging to syslog. Accepts paths as strings
+and [address, port] lists for sockets. Typical values for various platforms are:
+    Linux: "/dev/log"
+    OS X: "/var/run/syslog"
+    Windows: ["localhost", 514]
 
 .IP notification_options
 Who to email failures to.

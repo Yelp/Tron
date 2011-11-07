@@ -1,9 +1,11 @@
-import sys
-import re
-import logging
-import weakref
 import datetime
+import logging
+from logging import handlers
 import os
+import re
+import socket
+import sys
+import weakref
 
 import yaml
 from twisted.conch.client import options
@@ -39,6 +41,12 @@ ssh_options:
     #     - /home/tron/.ssh/id_dsa
     agent: true
     
+
+## Uncomment if you want logging to syslog. Typical values for different platforms:
+##    Linux: "/dev/log"
+##    OS X: "/var/run/syslog"
+##    Windows: ["localhost", 514]
+# syslog_address: /dev/log
 
 # notification_options:
       ## In case of trond failures, where should we send notifications to ?
@@ -218,6 +226,40 @@ class TronConfiguration(yaml.YAMLObject):
             mcp.nodes = existing_nodes
             raise
 
+    def _apply_loggers(self, mcp):
+        root = logging.getLogger('')
+        handlers_to_be_removed = set(h for h in root.handlers
+                                     if h not in mcp.base_logging_handlers)
+
+        # Only change handlers if they will actually be different from the old
+        # handlers
+        new_handlers = []
+        if hasattr(self, 'syslog_address'):
+            if not isinstance(self.syslog_address, basestring):
+                self.syslog_address = tuple(self.syslog_address)
+
+            already_exists = False
+            for h in set(handlers_to_be_removed):
+                if (isinstance(h, handlers.SysLogHandler) and
+                    h.address == self.syslog_address):
+                    handlers_to_be_removed.remove(h)
+                    already_exists = True
+
+            if not already_exists:
+                try:
+                    new_handlers.append(handlers.SysLogHandler(self.syslog_address))
+                except socket.error:
+                    raise ConfigError('%s is not a valid syslog address' %
+                                      self.syslog_address)
+
+        for h in handlers_to_be_removed:
+            log.info('Removing logging handler %s', h)
+            root.removeHandler(h)
+
+        for h in new_handlers:
+            log.info('Adding logging handler %s', h)
+            root.addHandler(h)
+
     def _apply_jobs(self, mcp):
         """Configure jobs"""
         found_jobs = []
@@ -299,6 +341,8 @@ class TronConfiguration(yaml.YAMLObject):
             raise ConfigError("Specified working directory \'%s\' is not writable" % working_dir)
         
         mcp.state_handler.working_dir = working_dir
+
+        self._apply_loggers(mcp)
 
         if hasattr(self, 'command_context'):
             if mcp.context:

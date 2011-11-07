@@ -8,6 +8,7 @@ import shutil
 from testify import *
 from tron import config, mcp, scheduler
 from tron.utils import testingutils
+from test.config_test import syslog_address_for_platform
 
 class ConfigTest(TestCase):
     config = """
@@ -80,6 +81,8 @@ ssh_options: !SSHOptions
     identities:
         - test/test_id_rsa
 
+syslog_address: %s
+
 nodes:
     - &node0 !Node
         hostname: 'batch0'
@@ -127,7 +130,7 @@ jobs:
                 command: "command_new"
 
 
-"""
+""" % syslog_address_for_platform()
 
     @setup
     def setup(self):
@@ -252,6 +255,7 @@ jobs:
         assert next_run is not run
         assert next_run.is_scheduled
         assert_equal(run.run_time, next_run.run_time)
+
 
 if __name__ == '__main__':
     run()
