@@ -25,7 +25,7 @@ setup(
     ],
     requires = [
         'twisted (>=10.0.0)',
-        'yaml (>=3.10)'
+        'PyYAML (>=3.10)'
     ],
     packages=["tron", "tron.utils"],
     scripts=[
