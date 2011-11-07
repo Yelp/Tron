@@ -1,12 +1,25 @@
 """Tests for our configuration system"""
-import StringIO
 import datetime
+import logging
+from logging import handlers
 import os
+import platform
 import shutil
+import StringIO
 import tempfile
 
 from testify import *
 from tron import config, mcp, scheduler
+
+
+def syslog_address_for_platform():
+    if platform.system() == 'Darwin':
+        return '/var/run/syslog'
+    elif platform.system() == 'Windows':
+        return ['localhost', 514]
+    else:
+        return '/dev/log'
+
 
 BASE_CONFIG = """
 --- !TronConfiguration
@@ -245,12 +258,43 @@ services:
         assert self.serv.command
         assert self.serv.context
 
+
+class LoggingConfigTest(TestCase):
+
+    config = BASE_CONFIG
+    reconfig = BASE_CONFIG + """
+syslog_address: %s""" % syslog_address_for_platform()
+
+    @setup
+    def setup(self):
+        self.test_dir = tempfile.mkdtemp()
+        self.test_config = config.load_config(StringIO.StringIO(self.config))
+        self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')
+        self.test_config.apply(self.my_mcp)
+
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)
+
+    def test_add_syslog(self):
+        root = logging.getLogger('')
+        test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
+        test_reconfig.apply(self.my_mcp)
+        assert_equal(len(root.handlers), 2)
+        assert_equal(type(root.handlers[-1]), handlers.SysLogHandler)
+
+        test_reconfig = config.load_config(StringIO.StringIO(self.config))
+        test_reconfig.apply(self.my_mcp)
+        assert_equal(len(root.handlers), 1)
+        assert_equal(type(root.handlers[0]), logging.StreamHandler)
+
+
 class BadJobConfigTest(TestCase):
     @setup
     def build_env(self):
         self.test_dir = tempfile.mkdtemp()
-        self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')      
-    
+        self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')
+
     def test_no_actions(self):
         test_config = BASE_CONFIG + """
 jobs:
