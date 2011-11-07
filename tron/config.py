@@ -3,6 +3,7 @@ import logging
 from logging import handlers
 import os
 import re
+import socket
 import sys
 import weakref
 
@@ -245,7 +246,11 @@ class TronConfiguration(yaml.YAMLObject):
                     already_exists = True
 
             if not already_exists:
-                new_handlers.append(handlers.SysLogHandler(self.syslog_address))
+                try:
+                    new_handlers.append(handlers.SysLogHandler(self.syslog_address))
+                except socket.error:
+                    raise ConfigError('%s is not a valid syslog address' %
+                                      self.syslog_address)
 
         for h in handlers_to_be_removed:
             log.info('Removing logging handler %s', h)
