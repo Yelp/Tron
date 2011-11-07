@@ -262,8 +262,12 @@ services:
 class LoggingConfigTest(TestCase):
 
     config = BASE_CONFIG
+
     reconfig = BASE_CONFIG + """
 syslog_address: %s""" % syslog_address_for_platform()
+
+    bad_config = BASE_CONFIG + """
+syslog_address: /does/not/exist"""
 
     @setup
     def setup(self):
@@ -287,6 +291,11 @@ syslog_address: %s""" % syslog_address_for_platform()
         test_reconfig.apply(self.my_mcp)
         assert_equal(len(root.handlers), 1)
         assert_equal(type(root.handlers[0]), logging.StreamHandler)
+
+    def test_bad_syslog(self):
+        root = logging.getLogger('')
+        test_reconfig = config.load_config(StringIO.StringIO(self.bad_config))
+        assert_raises(config.ConfigError, test_reconfig.apply, self.my_mcp)
 
 
 class BadJobConfigTest(TestCase):
