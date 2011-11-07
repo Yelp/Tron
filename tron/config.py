@@ -45,7 +45,7 @@ ssh_options:
 ##    Linux: "/dev/log"
 ##    OS X: "/var/run/syslog"
 ##    Windows: ["localhost", 514]
-# syslog-address: /dev/log
+# syslog_address: /dev/log
 
 # notification_options:
       ## In case of trond failures, where should we send notifications to ?
