@@ -37,21 +37,29 @@ deb:
 
 clean:
 		$(PYTHON) setup.py clean
-		fakeroot $(MAKE) -f $(CURDIR)/debian/rules clean
 		rm -rf build/ MANIFEST
 		find . -name '*.pyc' -delete
 		find . -name "._*" -delete
 		rm -rf $(DOCS_BUILDDIR)/*
+		fakeroot $(MAKE) -f $(CURDIR)/debian/rules clean
 
 html:
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(DOCS_BUILDDIR)/html."
 
-man:
-	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/trond $(DOCS_BUILDDIR)/man
-	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/tronctl $(DOCS_BUILDDIR)/man
-	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/tronfig $(DOCS_BUILDDIR)/man
-	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/tronview $(DOCS_BUILDDIR)/man
+man: $(DOCS_BUILDDIR)/man/trond.8 $(DOCS_BUILDDIR)/man/tronctl.1 $(DOCS_BUILDDIR)/man/tronview.1 $(DOCS_BUILDDIR)/man/tronfig.1 
 	@echo
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
+
+$(DOCS_BUILDDIR)/man/trond.8:
+	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/trond $(DOCS_BUILDDIR)/man
+
+$(DOCS_BUILDDIR)/man/tronctl.1:
+	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/tronctl $(DOCS_BUILDDIR)/man
+
+$(DOCS_BUILDDIR)/man/tronfig.1:
+	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/tronfig $(DOCS_BUILDDIR)/man
+
+$(DOCS_BUILDDIR)/man/tronview.1:
+	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/tronview $(DOCS_BUILDDIR)/man
