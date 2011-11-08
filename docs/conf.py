@@ -213,8 +213,14 @@ latex_documents = [
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
 man_pages = [
-    ('index', 'tron', u'Tron Documentation',
-     [u'Yelp, Inc.'], 1)
+    ('man_tronview', 'tronview', u'tronview documentation',
+     [u'Yelp, Inc.'], 1),
+    ('man_tronfig', 'tronfig', u'tronfig documentation',
+     [u'Yelp, Inc.'], 1),
+    ('man_tronctl', 'tronctl', u'send management commands to jobs and actions within tron',
+     [u'Yelp, Inc.'], 1),
+    ('man_trond', 'trond', u'trond documentation',
+     [u'Yelp, Inc.'], 8),
 ]
 
 # If true, show URL addresses after external links.
