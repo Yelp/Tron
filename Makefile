@@ -27,7 +27,7 @@ install:
 rpm:
 		$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall
 
-deb:
+deb: man
 		# build the source package in the parent directory
 		# then rename it to project_version.orig.tar.gz
 		$(PYTHON) setup.py sdist $(COMPILE) --dist-dir=../ --prune
@@ -52,19 +52,3 @@ man:
 	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_BUILDDIR)/man
 	@echo
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
-
-man2: $(DOCS_BUILDDIR)/man/trond.8 $(DOCS_BUILDDIR)/man/tronctl.1 $(DOCS_BUILDDIR)/man/tronview.1 $(DOCS_BUILDDIR)/man/tronfig.1 
-	@echo
-	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
-
-$(DOCS_BUILDDIR)/man/trond.8: $(DOCS_DIR)/trond/index.rst $(DOCS_DIR)/trond/conf.py
-	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/trond $(DOCS_BUILDDIR)/man
-
-$(DOCS_BUILDDIR)/man/tronctl.1: $(DOCS_DIR)/tronctl/index.rst $(DOCS_DIR)/tronctl/conf.py
-	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/tronctl $(DOCS_BUILDDIR)/man
-
-$(DOCS_BUILDDIR)/man/tronfig.1: $(DOCS_DIR)/tronfig/index.rst $(DOCS_DIR)/tronfig/conf.py
-	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/tronfig $(DOCS_BUILDDIR)/man
-
-$(DOCS_BUILDDIR)/man/tronview.1: $(DOCS_DIR)/tronview/index.rst $(DOCS_DIR)/tronview/conf.py
-	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/tronview $(DOCS_BUILDDIR)/man
