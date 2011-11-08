@@ -78,7 +78,7 @@ stop <service name>
     Stop instances of the named service
 
 zap <service_id | service_instance_id>
-    Marks the specified service or service instance as **STOPPED** without
+    Marks the specified service or service instance as **DOWN** without
     taking any other action (such as actually stopping the service)
 
 .SH EXAMPLES
@@ -102,3 +102,16 @@ zap <service_id | service_instance_id>
 
     $ tronctl succeed job0.5
     Job Run job0.5 now in state SUCC
+
+.SH FILES
+.SH ENVIRONMENT
+.SH DIAGNOSTICS
+.SH BUGS
+
+Post bugs to http://www.github.com/yelp/tron/issues.
+
+.SH "SEE ALSO"
+
+.BR trond (8),
+.BR tronfig (1),
+.BR tronview (1),

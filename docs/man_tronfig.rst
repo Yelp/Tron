@@ -1,4 +1,214 @@
-tronctl
-=======
+.. We are forced to use the .SH syntax for sections due to a bug in Sphinx.
 
-This is a page about tronctl.
+.SH SYNOPSIS
+
+**tronfig** [**--server** *server_name* ] [**--verbose** | **-v**]
+
+.SH DESCRIPTION
+
+**tronfig** edits the configuration for tron.  It retrieves the configuration
+file for local editing, verifies the configuration, loads it back to the tron
+server and makes the changes to tron.
+
+.SH OPTIONS
+
+--server <server_name>
+    The server the tron instance is running on
+
+--verbose
+    Displays status messages along the way
+
+--version
+    Displays version string
+
+.SH CONFIGURATION
+
+If you start tron without a configuration file, a template will be created for you.
+ 
+Field are described below:
+
+ssh_options
+    These options are how we connect to the nodes we run commands on.
+
+    agent (optional)
+        boolean to indicate we should use an SSH Agent
+
+    identities (optional)
+        list of paths to SSH identity files
+
+syslog_address
+    Include this if you want to enable logging to syslog. Accepts paths as strings
+    and [address, port] lists for sockets. Typical values for various platforms are::
+        Linux: "/dev/log"
+        OS X: "/var/run/syslog"
+        Windows: ["localhost", 514]
+
+notification_options
+    Who to email failures to.
+
+        smtp_host
+            SMTP server to use
+        notification_addr
+            Email address to send mail to
+
+nodes
+    List of Node and NodePool objects which tron connects to.
+
+    For node:
+        hostname - Host to connect to
+
+    For node pool:
+        nodes - List of pointers to nodes in the pool
+
+command_context
+    Dictionary of environment variables that can be used inside job and service
+    command strings.
+
+jobs
+    Accepts a list of Job objects. A Job objects accepts the following options:
+
+        name
+            The name of the job
+        node
+            Reference to the Node or NodePool object this job runs on
+        schedule
+            The schedule the job follows
+        actions
+            The list of action objects (see below) within the job
+        cleanup_action (optional)
+            An action (not including name or requirements) to be run after the
+            success or failure of the job
+        all_nodes (optional)
+            boolean indicating job should run on all nodes in the NodePool
+        queueing  (optional)
+            boolean indicating overlapping job runs should queue rather than cancel
+        run_limit (optional)
+            Number of runs to store in history (default 50)
+
+Action objects
+    These are the required options for action objects. **The exception is
+    cleanup actions, which only use the 'command' option.**
+
+    name
+        Name of the action. Must be unique within the job
+    command
+        Command line to execute
+    requires
+        (optional) list of actions that must have already completed
+
+services
+    Services are long running processes that we will periodically monitor. A
+    Service can be configured with the following options:
+
+    name
+        The name of the service (must be unique, and not conflict with jobs)
+    node
+        The Node or NodePool the service instances should run on
+    count
+        The number of instances of this service that should be created
+    monitor_interval
+        Seconds between monitoring the pid of this service
+    restart_interval
+        Seconds to wait before restarting the service
+    pid_file
+        Where the monitor will find the pid
+    command
+        Command to be executed to start a new instance
+
+.SH BUILT-IN COMMAND CONTEXT VARIABLES
+
+shortdate
+
+    Current date in YYYY-MM-DD format. Supports simple arithmetic of the form
+    %(shortdate+6)s, %(shortdate-2)s, etc.
+
+actionname
+    Name of the action as specified in the config file
+
+runid
+    Run ID (e.g. sample_job.23)
+
+node
+    Hostname of the node the action is being run on
+
+cleanup_job_status
+    "SUCCESS" if all actions have succeeded when the cleanup action runs,
+    "FAILURE" otherwise. "UNKNOWN" if used in an action other than the cleanup
+    action.
+
+.SH EXAMPLE CONFIGURATION
+
+::
+
+    --- !TronConfiguration
+
+    ssh_options: !SSHOptions
+        agent: true
+
+    nodes:
+        - &node1
+            hostname: 'machine1'
+        - &node2
+            hostname: 'machine2'
+        - &pool !NodePool
+            nodes: [*node1, *node2]
+
+    command_context:
+        PYTHON: /usr/bin/python
+
+    jobs:
+        - &job0
+            name: "job0"
+            node: *pool
+            all_nodes: True # Every time the Job is scheduled it runs on every node in its node pool
+            schedule: "interval 20s"
+            queueing: False
+            actions:
+                - &start
+                    name: "start"
+                    command: "echo number 9"
+                    node: *node1
+                - 
+                    name: "end"
+                    command: "echo love me do"
+                    requires: [*start]
+
+        - &job1
+            name: "job1"
+            node: *node1
+            schedule: "interval 20s"
+            queueing: False
+            actions:
+                - &action
+                    name: "echo"
+                    command: "echo %(PYTHON)s"
+            cleanup_action:
+                command: "echo 'cleaning up job1'"
+
+    services:
+        -
+            name: "testserv"
+            node: *pool
+            count: 8
+            monitor_interval: 60
+            restart_interval: 120
+            pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+            command: "/bin/myservice --pid-file=%(pid_file)s start"
+
+.SH FILES
+
+/var/lib/tron/tron.yaml
+    Default path to the config file. May be changed by passing the **-c**
+    option to **trond**.
+
+.SH BUGS
+
+Post bugs to http://www.github.com/yelp/tron/issues.
+
+.SH "SEE ALSO"
+
+.BR tronctl (1),
+.BR trond (8),
+.BR tronview (1),
+
+
