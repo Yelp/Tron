@@ -20,7 +20,7 @@ cancel, succeed, and fail job runs and action runs.
 --run-date=<YYYY-MM-DD>
     For starting a new job, specifies the run date that should be set. Defaults to today.
 
-.SH JOB COMMANDS
+.SH "JOB COMMANDS"
 
 disableall
     Disables all jobs
@@ -69,6 +69,36 @@ fail <job_run_id | action_run_id>
     jobs are queued or cancelled Valid states that you can run "fail" on: SCHE,
     QUE, CANC, UNKWN
 
+.SH "SERVICE COMMANDS"
+
+start <service name>
+    Start instances the named service
+
+stop <service name>
+    Stop instances of the named service
+
 zap <service_id | service_instance_id>
     Marks the specified service or service instance as **STOPPED** without
     taking any other action (such as actually stopping the service)
+
+.SH EXAMPLES
+
+::
+
+    $ tronctl start job0
+    New Job Run job0.2 created
+
+    $ tronctl start job0.3
+    Job Run job0.3 now in state RUNN
+
+    $ tronctl cancel job0.4
+    Job Run job0.4 now in state CANC
+
+    $ tronctl fail job0.4
+    Job Run job0.4 now in state FAIL
+
+    $ tronctl restart job0.4
+    Job Run job0.4 now in state RUNN
+
+    $ tronctl succeed job0.5
+    Job Run job0.5 now in state SUCC
