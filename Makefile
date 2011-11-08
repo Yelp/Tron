@@ -49,6 +49,9 @@ html:
 	@echo "Build finished. The HTML pages are in $(DOCS_BUILDDIR)/html."
 
 man:
+	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/trond $(DOCS_BUILDDIR)/man
 	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/tronctl $(DOCS_BUILDDIR)/man
+	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/tronfig $(DOCS_BUILDDIR)/man
+	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR)/tronview $(DOCS_BUILDDIR)/man
 	@echo
-	@echo "Build finished. The manual pages are in $(MAN_BUILDDIR)."
+	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
