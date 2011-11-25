@@ -1,7 +1,7 @@
 Overview
 ========
 
-.. warning::
+.. note::
 
     The configuration examples in this document are valid, but omit some YAML
     markup that is useful for validation. See :doc:`config` for examples of
@@ -79,9 +79,8 @@ to validate the document.
 See also:
 
 * :doc:`jobs`
-* :doc:`actions`
 * :doc:`services`
-* :doc:`configuration`
+* :doc:`config`
 
 Node Pools
 ----------
