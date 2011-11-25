@@ -98,6 +98,79 @@ of scheduler you are using.
 Scheduling
 ----------
 
+Tron supports three different kinds of schedules in config files.
+
+Interval
+^^^^^^^^
+
+Run the job every X seconds, minutes, hours, or days. The time expression
+is ``<int>[ ]months|days|hours|minutes|seconds``, where the units can be
+abbreviated.
+
+::
+
+    schedule: "interval 20s"
+
+::
+
+    schedule: !IntervalScheduler
+        interval: "5 mins"
+
+Daily
+^^^^^
+
+Run the job on specific weekdays at a specific time. The time expression is
+``HH:MM:SS[ [MTWRFSU]]``.
+
+::
+
+    schedule: "daily 04:00:00"
+
+::
+
+    schedule: "daily 04:00:00 MWF"
+
+::
+
+    schedule: !DailyScheduler
+        start_time: "07:00:00"
+        days: "MWF"
+
+Complex
+^^^^^^^
+
+More powerful version of the daily scheduler based on the one used by Google
+App Engine's cron library. To use this scheduler, use a string in this format
+as the schedule::
+
+    ("every"|ordinal) (days) ["of|in" (monthspec)] (["at"] HH:MM)
+
+**ordinal**
+    Comma-separated list of "1st" and so forth. Use "every" if you don't want
+    to limit by day of the month.
+
+**days**
+    Comma-separated list of days of the week (for example, "mon", "tuesday",
+    with both short and long forms being accepted); "every day" is equivalent
+    to "every mon,tue,wed,thu,fri,sat,sun"
+
+**monthspec**
+    Comma-separated list of month names (for example, "jan", "march", "sep").
+    If omitted, implies every month. You can also say "month" to mean every
+    month, as in "1,8th,15,22nd of month 09:00".
+
+**HH:MM**
+    Time of day in 24 hour time.
+
+Some examples::
+
+    every 12 hours
+    every 5 minutes from 10:00 to 14:00
+    2nd,third mon,wed,thu of march 17:00
+    every monday 09:00
+    1st monday of sep,oct,nov 17:00
+    every day 00:00
+
 .. _job_cleanup_actions:
 
 Cleanup Actions
