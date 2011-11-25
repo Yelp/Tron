@@ -34,10 +34,10 @@ validate.
 Nodes, Jobs and Actions
 -----------------------
 
-Tron's orders consist of *jobs* and *services*. :doc:`jobs <Jobs>` contain
-:doc:`actions <Actions>` which may depend on other actions in the same job and
-run on a schedule.  :doc:`services <Services>` are meant to be available
-continuously.
+Tron's orders consist of *jobs* and *services*. :doc:`Jobs <jobs>` contain
+:ref:`actions <job_actions>` which may depend on other actions in the same job
+and run on a schedule.  :ref:`Services <overview_services>` are meant to be
+available continuously.
 
 :command:`trond` is given access (via public key SSH) to one or more *nodes* on
 which to run jobs and services.  For example, this configuration has two nodes,
@@ -141,6 +141,8 @@ The ``start_email_worker`` script (written by you) starts the worker and writes
 its pid to ``%(pid_file)s``. Every 60 seconds, `trond` will see if that pid is
 still active on its node. If not, the service will be in a ``DEGRADED`` state
 and a new service instance will be started on the same node after 120 seconds.
+
+For more information, see :doc:`services`.
 
 Notifications
 -------------

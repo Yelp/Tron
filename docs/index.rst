@@ -23,7 +23,6 @@ Table of Contents
     
     tutorial.rst
     overview.rst
-    setup.rst
     jobs.rst
     services.rst
     reporting.rst
