@@ -8,9 +8,15 @@ Table of Contents
 -----------------
 
 .. toctree::
-   :maxdepth: 2
-
-   tools.rst
+    :maxdepth: 2
+    
+    tutorial.rst
+    setup.rst
+    jobs.rst
+    services.rst
+    reporting.rst
+    tools.rst
+    config-reference.rst
 
 Indices and tables
 ==================
