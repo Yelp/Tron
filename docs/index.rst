@@ -28,7 +28,7 @@ Table of Contents
     services.rst
     reporting.rst
     tools.rst
-    config-reference.rst
+    config.rst
     developing.rst
 
 Indices and tables

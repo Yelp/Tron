@@ -1,11 +1,11 @@
 Overview
 ========
 
-.. note::
+.. warning::
 
     The configuration examples in this document are valid, but omit some YAML
-    markup that is useful for validation. See :doc:`config-reference` for
-    examples of best practices.
+    markup that is useful for validation. See :doc:`config` for examples of
+    best practices.
 
 Batch process scheduling on single UNIX machines has historically been managed
 by :command:`cron` and its derivatives. But if you have many batches and many
@@ -31,12 +31,17 @@ The Tron system is split into four programs:
 The config file uses YAML syntax and relies on several YAML features to
 validate.
 
-Nodes
------
+Nodes, Jobs and Actions
+-----------------------
 
-:command:`trond` is given access (via public key SSH) to one or more *nodes*.
-For example, this configuration has two nodes, each of which is responsible for
-a single job::
+Tron's orders consist of *jobs* and *services*. :doc:`jobs <Jobs>` contain
+:doc:`actions <Actions>` which may depend on other actions in the same job and
+run on a schedule.  :doc:`services <Services>` are meant to be available
+continuously.
+
+:command:`trond` is given access (via public key SSH) to one or more *nodes* on
+which to run jobs and services.  For example, this configuration has two nodes,
+each of which is responsible for a single job::
 
     --- !TronConfiguration
 
@@ -71,6 +76,13 @@ privileges for the Tron user, etc.
 The line ``--- !TronConfiguration`` is mandatory. It tells the YAML parser how
 to validate the document.
 
+See also:
+
+* :doc:`jobs`
+* :doc:`actions`
+* :doc:`services`
+* :doc:`configuration`
+
 Node Pools
 ----------
 
@@ -91,15 +103,52 @@ Nodes can be grouped into *pools*. To continue the previous example::
                 -
                     name: "pool_action"
                     command: "ls /; sleep 1"
+            cleanup_action:
+                command: "echo 'all done'"
 
 ``job2``'s action will be run on a random node from ``pool`` every 5 seconds.
-(:doc:`services` behave slightly differently.)
+(:ref:`overview_services` behave slightly differently.) When ``pool_action`` is
+complete, ``cleanup_action`` will run on the same node.
 
 Note the ``!NodePool`` tag on the node pool. If you do not include this in your
 pool definition, ``tronfig`` will try to interpret it as a single node and
 reject your configuration.
 
-Actions
--------
+.. _overview_services:
 
+Services
+--------
 
+The job model is not appropriate for tasks that should be running continuously,
+perhaps with more than one instance at once. For example, you might have a
+set of worker processes that send emails::
+
+    # ...
+    services:
+        -
+            name: "email_worker"
+            node: *pool
+            count: 4
+            monitor_interval: 60
+            restart_interval: 120
+            pid_file: "/var/run/batch/%(name)s-%(instance_number)s.pid"
+            command: "/usr/local/bin/start_email_worker --pid_file=%(pid_file)s"
+
+This configuration will cause ``start_email_worker`` to be run on the nodes
+in the pool in the order ``node1``, ``node2``, ``node1``, ``node2`` (round
+robin scheduling).
+
+The ``start_email_worker`` script (written by you) starts the worker and writes
+its pid to ``%(pid_file)s``. Every 60 seconds, `trond` will see if that pid is
+still active on its node. If not, the service will be in a ``DEGRADED`` state
+and a new service instance will be started on the same node after 120 seconds.
+
+Notifications
+-------------
+
+If you configure notifications, `trond` will send you emails when something
+fails::
+
+    notification_options:
+        smtp_host: localhost
+        notification_addr: batch+live@example.com
