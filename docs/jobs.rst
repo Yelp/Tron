@@ -102,3 +102,20 @@ Scheduling
 
 Cleanup Actions
 ---------------
+
+Cleanup actions run after the job succeeds or fails. They are specified just
+like regular actions except that there is only one per job and it has no name
+or requirements list.
+
+If your job creates shared resources that should be destroyed after a run
+regardless of success or failure, such as intermedmiate files or Amazon Elastic
+MapReduce job flows, you can use cleanup actions to tear them down.
+
+The command context variable ``cleanup_job_status`` is provided to cleanup
+actions and has a value of ``SUCCESS`` or ``FAILURE`` depending on the job's
+final state. For example::
+
+    - !Job
+        # ...
+        cleanup_action:
+            command: "python -m mrjob.tools.emr.job_flow_pool --terminate MY_POOL"
