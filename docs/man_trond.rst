@@ -1,14 +1,18 @@
-.. We are forced to use the .SH syntax for sections due to a bug in Sphinx.
+trond
+=====
 
-.SH SYNOPSYS
+Synopsys
+--------
 
 **trond** [**--working-dir=<working dir>**] [**--verbose** | **-v**] [**--debug**]
 
-.SH DESCRIPTION
+Description
+-----------
 
 **trond** is the tron daemon that manages all jobs and actions.
 
-.SH OPTIONS
+Options
+-------
 
 --version
     show program's version number and exits
@@ -43,7 +47,8 @@
 -H LISTEN_HOST, --host=LISTEN_HOST
     What host to listen on defaults to localhost
 
-.SH FILES
+Files
+-----
 
 Working directory
     The directory where state and saved output of processes are stored.
@@ -60,15 +65,15 @@ State file
     trond saves state here when it terminates and reloads it when it starts
     up again.
 
-.SH ENVIRONMENT
-.SH DIAGNOSTICS
-.SH BUGS
+Bugs
+----
 
 trond has issues around daylight savings time and may run jobs an hour early
 at the boundary.
 
 Post further bugs to http://www.github.com/yelp/tron/issues.
 
-.SH "SEE ALSO"
+See Also
+--------
 
-**tronctl** (8), **tronfig** (1), **tronview** (1),
+**tronctl** (1), **tronfig** (1), **tronview** (1),

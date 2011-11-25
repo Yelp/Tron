@@ -1,16 +1,20 @@
-.. We are forced to use the .SH syntax for sections due to a bug in Sphinx.
+tronfig
+=======
 
-.SH SYNOPSIS
+Synopsys
+--------
 
 **tronfig** [**--server** *server_name* ] [**--verbose** | **-v**]
 
-.SH DESCRIPTION
+Description
+-----------
 
 **tronfig** edits the configuration for tron.  It retrieves the configuration
 file for local editing, verifies the configuration, loads it back to the tron
 server and makes the changes to tron.
 
-.SH OPTIONS
+Options
+-------
 
 --server <server_name>
     The server the tron instance is running on
@@ -21,7 +25,8 @@ server and makes the changes to tron.
 --version
     Displays version string
 
-.SH CONFIGURATION
+Configuration
+-------------
 
 If you start tron without a configuration file, a template will be created for you.
  
@@ -39,6 +44,7 @@ ssh_options
 syslog_address
     Include this if you want to enable logging to syslog. Accepts paths as strings
     and [address, port] lists for sockets. Typical values for various platforms are::
+
         Linux: "/dev/log"
         OS X: "/var/run/syslog"
         Windows: ["localhost", 514]
@@ -115,7 +121,8 @@ services
     command
         Command to be executed to start a new instance
 
-.SH BUILT-IN COMMAND CONTEXT VARIABLES
+Built-In Command Context Variables
+----------------------------------
 
 shortdate
 
@@ -136,7 +143,8 @@ cleanup_job_status
     "FAILURE" otherwise. "UNKNOWN" if used in an action other than the cleanup
     action.
 
-.SH EXAMPLE CONFIGURATION
+Example Configuration
+---------------------
 
 ::
 
@@ -195,16 +203,19 @@ cleanup_job_status
             pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
             command: "/bin/myservice --pid-file=%(pid_file)s start"
 
-.SH FILES
+Files
+-----
 
 /var/lib/tron/tron.yaml
     Default path to the config file. May be changed by passing the **-c**
     option to **trond**.
 
-.SH BUGS
+Bugs
+----
 
 Post bugs to http://www.github.com/yelp/tron/issues.
 
-.SH "SEE ALSO"
+See Also
+--------
 
 **trond** (8), **tronctl** (1), **tronview** (1),

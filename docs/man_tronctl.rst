@@ -1,26 +1,28 @@
-.. We are forced to use the .SH syntax for sections due to a bug in Sphinx.
+tronctl
+=======
 
-.SH SYNOPSYS
+Synopsys
+--------
 
 **tronctl** [**--server** *server_name*] [**--verbose** | **-v**] *command* *<job_name | job_run_id | action_run_id>*
 
-.SH DESCRIPTION
+Description
+-----------
 
 **tronctl** is the control interface for tron. Through tronctl you can start,
 cancel, succeed, and fail job runs and action runs.
 
-.SH OPTIONS
+Options
+-------
 
---server config-file
-    The server the tron instance is running on
+--server=<config-file>      Config file containing the address of the server the
+                            tron instance is running on
+--verbose                   Displays status messages along the way
+--run-date=<YYYY-MM-DD>     For starting a new job, specifies the run date that
+                            should be set. Defaults to today.
 
---verbose
-    Displays status messages along the way
-
---run-date=<YYYY-MM-DD>
-    For starting a new job, specifies the run date that should be set. Defaults to today.
-
-.SH "JOB COMMANDS"
+Job Commands
+------------
 
 disableall
     Disables all jobs
@@ -69,7 +71,8 @@ fail <job_run_id | action_run_id>
     jobs are queued or cancelled Valid states that you can run "fail" on: SCHE,
     QUE, CANC, UNKWN
 
-.SH "SERVICE COMMANDS"
+Service Commands
+----------------
 
 start <service name>
     Start instances the named service
@@ -81,7 +84,8 @@ zap <service_id | service_instance_id>
     Marks the specified service or service instance as **DOWN** without
     taking any other action (such as actually stopping the service)
 
-.SH EXAMPLES
+Examples
+--------
 
 ::
 
@@ -103,16 +107,12 @@ zap <service_id | service_instance_id>
     $ tronctl succeed job0.5
     Job Run job0.5 now in state SUCC
 
-.SH FILES
-
-.SH ENVIRONMENT
-
-.SH DIAGNOSTICS
-
-.SH BUGS
+Bugs
+----
 
 Post bugs to http://www.github.com/yelp/tron/issues.
 
-.SH "SEE ALSO"
+See Also
+--------
 
 **trond** (8), **tronfig** (1), **tronview** (1),

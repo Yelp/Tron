@@ -1,10 +1,13 @@
-.. We are forced to use the .SH syntax for sections due to a bug in Sphinx.
+tronview
+========
 
-.SH SYNOPSIS
+Synopsys
+--------
 
 **tronview** [**-n** *numshown*] [**--server** *server_name*] [**--verbose** | **-v**] [*job_name* | *job_run_id* | *action_run_id*]
 
-.SH DESCRIPTION
+Description
+-----------
 
 **tronview** displays the status of tron scheduled jobs and services.
 
@@ -26,7 +29,8 @@ tronview <action_run_id>
 
     tronview my_job.0.my_action
 
-.SH OPTIONS
+Options
+-------
 
 --version
     show program's version number and exit
@@ -63,7 +67,8 @@ tronview <action_run_id>
 --events
     Show events for the specified entity
 
-.SH "JOB STATES"
+Job States
+----------
 
 Jobs will be described with the following states:
 
@@ -74,7 +79,8 @@ DISABLED
 RUNNING
     Job run currently in progress
 
-.SH "JOB RUN STATES"
+Job Run States
+--------------
 
 SCHE
     The run is scheduled for a specific time
@@ -93,7 +99,8 @@ UNKWN
     The run is in and unknown state.  This state occurs when tron restores a
     job that was running at the time of shutdown
 
-.SH "SERVICE STATES"
+Service States
+--------------
 
 STARTING
     The service has been started. The service will remain in this state until
@@ -108,12 +115,12 @@ FAILED
 DOWN
     Service has been stopped
 
-.SH DIAGNOSTICS
-
-.SH BUGS
+Bugs
+----
 
 Post bugs to http://www.github.com/yelp/tron/issues.
 
-.SH "SEE ALSO"
+See Also
+--------
 
 **trond** (8), **tronctl** (1), **tronfig** (1),
