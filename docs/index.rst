@@ -4,6 +4,15 @@ Tron
 Tron is a centralized system for managing periodic batch processes and services
 across a cluster.
 
+.. note::
+
+    The HTML documentation is a work in progress, but is checked more closely
+    than other resources such as the Github wiki. When sources disagree,
+    the HTML documentation is considered canonical.
+
+    Please report bugs in the documentation at `our Github issue tracker
+    <http://www.github.com.com/yelp/Tron/issues>`_.
+
 Table of Contents
 -----------------
 
@@ -11,12 +20,14 @@ Table of Contents
     :maxdepth: 2
     
     tutorial.rst
+    overview.rst
     setup.rst
     jobs.rst
     services.rst
     reporting.rst
     tools.rst
     config-reference.rst
+    developing.rst
 
 Indices and tables
 ==================
