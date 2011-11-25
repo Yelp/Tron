@@ -171,6 +171,10 @@ Some examples::
     1st monday of sep,oct,nov 17:00
     every day 00:00
 
+In the config::
+
+    schedule: "every 12 hours"
+
 .. _job_cleanup_actions:
 
 Cleanup Actions
