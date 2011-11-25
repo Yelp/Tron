@@ -115,6 +115,4 @@ Post bugs to http://www.github.com/yelp/tron/issues.
 
 .SH "SEE ALSO"
 
-.BR trond (8),
-.BR tronfig (1),
-.BR tronview (1),
+**trond** (8), **tronfig** (1), **tronview** (1),

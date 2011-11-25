@@ -71,6 +71,4 @@ Post further bugs to http://www.github.com/yelp/tron/issues.
 
 .SH "SEE ALSO"
 
-.BR tronctl (8),
-.BR tronfig (1),
-.BR tronview (1),
+**tronctl** (8), **tronfig** (1), **tronview** (1),

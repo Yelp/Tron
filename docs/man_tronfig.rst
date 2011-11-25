@@ -207,8 +207,4 @@ Post bugs to http://www.github.com/yelp/tron/issues.
 
 .SH "SEE ALSO"
 
-.BR tronctl (1),
-.BR trond (8),
-.BR tronview (1),
-
-
+**trond** (8), **tronctl** (1), **tronview** (1),
