@@ -197,3 +197,46 @@ final state. For example::
         # ...
         cleanup_action:
             command: "python -m mrjob.tools.emr.job_flow_pool --terminate MY_POOL"
+
+.. Keep this up to date with man_tronview.rst
+
+States
+------
+
+Job States
+^^^^^^^^^^
+
+**ENABLED**
+    Scheduled and ready to go
+
+**DISABLED**
+    No job runs scheduled
+
+**RUNNING**
+    Job run currently in progress
+
+Job Run States
+^^^^^^^^^^^^^^
+
+**SCHE**
+    The run is scheduled for a specific time
+
+**RUNN**
+    The run is currently running
+
+**SUCC**
+    The run completed successfully 
+
+**FAIL**
+    The run failed
+
+**QUE**
+    The run is queued behind another run(s) and will start when said runs finish
+
+**CANC**
+    The run is cancelled. Does not run at scheduled time and the job run queue
+    ignores the run
+
+**UNKWN**
+    The run is in and unknown state.  This state occurs when tron restores a
+    job that was running at the time of shutdown

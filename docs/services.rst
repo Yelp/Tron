@@ -41,6 +41,29 @@ Optional Fields
     is used, the instances are spread across all nodes in the pool evenly by
     round robin scheduling.
 
+.. Keep this up to date with man_tronview.rst
+
+States
+------
+
+**STARTING**
+    The service has been started. The service will remain in this state until
+    the first monitor interval runs.
+
+**UP**
+    The service is running normally. All instances were available during the
+    last monitor period.
+
+**DEGRADED**
+    One or more instances of the service are unexpectedly not available. The
+    service will go back to **UP** when the instance is restarted.
+
+**FAILED**
+    All instances of the service are unexpectedly unavailable.
+
+**DOWN**
+    Service has been stopped
+
 Examples
 --------
 
