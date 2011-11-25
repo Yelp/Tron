@@ -2,8 +2,8 @@ Jobs
 ====
 
 A job consists of a name, a node/node pool, set of actions, schedule, and
-optional cleanup action.
-
+optional cleanup action. They are periodic events that do not interact with
+other jobs while running.
 
 .. Keep this up to date with man_tronfig.rst
 
@@ -14,7 +14,8 @@ Required Fields
     Name of the job. Used in :command:`tronview` and :command:`tronctl`.
 
 **node**
-    Reference to the node or pool to run the job in.
+    Reference to the node or pool to run the job in. If a pool, the job is
+    run in a random node in the pool.
 
 **schedule**
     When to run this job. Schedule fields can take multiple forms. See

@@ -113,6 +113,11 @@ Note the ``!NodePool`` tag on the node pool. If you do not include this in your
 pool definition, ``tronfig`` will try to interpret it as a single node and
 reject your configuration.
 
+You may include a node more than once in a node pool if you want it to have
+jobs and services sent to it more often. However, if you use the **all_nodes**
+option for a job, it will run on that node the number of times you put it in
+the pool.
+
 .. _overview_services:
 
 Services

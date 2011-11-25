@@ -133,11 +133,14 @@ shortdate
     Current date in YYYY-MM-DD format. Supports simple arithmetic of the form
     %(shortdate+6)s, %(shortdate-2)s, etc.
 
+name
+    Name of the job or service
+
 actionname
-    Name of the action as specified in the config file
+    Name of the action
 
 runid
-    Run ID (e.g. sample_job.23)
+    Run ID of the job or service (e.g. sample_job.23)
 
 node
     Hostname of the node the action is being run on
