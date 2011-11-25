@@ -10,8 +10,9 @@ To get Tron up and running, you need:
 * SSH keys and a user that will allow the tron daemon to login to all your
   working nodes
 
-Install Tron
--------------
+Installing Tron
+---------------
+
 The easiest way to install Tron is from PyPI::
 
     > sudo pip install tron
@@ -27,8 +28,8 @@ by hand, via :command:`pip` or your package manager. Some package managers
 may also require you to install :py:mod:`pyasn1` due to missing package
 dependencies.
 
-Start Tron
------------
+Starting Tron
+-------------
 
 Tron runs as a single daemon, :command:`trond`.
 
