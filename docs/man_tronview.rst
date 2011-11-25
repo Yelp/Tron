@@ -1,3 +1,5 @@
+.. _tronview:
+
 tronview
 ========
 
@@ -17,17 +19,17 @@ tronview
 tronview <job_name|service_name>
     Shows details for specied job or service. Ex::
 
-    tronview my_job
+    > tronview my_job
 
 tronview <job_run_id|service_instance_id>
     Show details for specific run or instance. Ex::
 
-    tronview my_job.0
+    > tronview my_job.0
 
 tronview <action_run_id>
     Show details for specific action run. Ex::
 
-    tronview my_job.0.my_action
+    > tronview my_job.0.my_action
 
 Options
 -------

@@ -1,3 +1,5 @@
+.. _tronfig:
+
 tronfig
 =======
 

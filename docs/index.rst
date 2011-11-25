@@ -2,7 +2,9 @@ Tron
 ====
 
 Tron is a centralized system for managing periodic batch processes and services
-across a cluster.
+across a cluster. If this is your first time using Tron, read :doc:`tutorial`
+and :doc:`overview` to get a better idea of what it is, how it works, and how
+to use it.
 
 .. note::
 
