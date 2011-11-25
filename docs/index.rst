@@ -23,10 +23,10 @@ Table of Contents
     
     tutorial.rst
     overview.rst
+    config.rst
     jobs.rst
     services.rst
     tools.rst
-    config.rst
     developing.rst
 
 Indices and tables

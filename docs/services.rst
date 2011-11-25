@@ -16,7 +16,8 @@ Required Fields
 
 **node**
     Reference to the node or pool to service the job in. If a pool, instances
-    are started by round robin scheduling of the nodes in the pool.
+    are started by round robin scheduling of the nodes in the pool. This is an
+    alias to an anchor specified in **nodes**.
 
 **pid_file**
     File to write one service instance's pid to. This will typically include
@@ -67,4 +68,16 @@ States
 Examples
 --------
 
-See :ref:`Overview: Services <overview_services>` for an example of a service.
+Here is the example from :ref:`Overview: Services <overview_services>`, but
+with the correct anchor and tag::
+
+    # ...
+    services:
+        - &email_worker !Service
+            name: "email_worker"
+            node: *pool
+            count: 4
+            monitor_interval: 60
+            restart_interval: 120
+            pid_file: "/var/run/batch/%(name)s-%(instance_number)s.pid"
+            command: "/usr/local/bin/start_email_worker --pid_file=%(pid_file)s"

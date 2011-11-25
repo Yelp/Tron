@@ -15,7 +15,8 @@ Required Fields
 
 **node**
     Reference to the node or pool to run the job in. If a pool, the job is
-    run in a random node in the pool.
+    run in a random node in the pool. This is an alias to an anchor specified
+    in **nodes**.
 
 **schedule**
     When to run this job. Schedule fields can take multiple forms. See
@@ -65,7 +66,7 @@ Optional Fields
 
 **node**
     Node or node pool to run the action on if different from the rest of the
-    job.
+    job. This is an alias to an anchor specified in **nodes**.
 
 Example Actions
 ^^^^^^^^^^^^^^^
@@ -77,22 +78,24 @@ of scheduler you are using.
 
 ::
 
-    - !Job
-        name: convert_logs
-        node: *node1
-        schedule: !DailyScheduler
-            start_time: 04:00:00
-        actions:
-            - &verify_logs_present !Action
-                name: verify_logs_present
-                command: >
-                    ls /var/log/app/log_%(shortdate-1).txt
-            - &convert_logs !Action
-                name: convert_logs
-                command: >
-                    convert_logs /var/log/app/log_%(shortdate-1).txt \
-                        /var/log/app_converted/log_%(shortdate-1).txt
-                requires: [*verify_logs_present]
+    # ...
+    jobs:
+        - !Job
+            name: convert_logs
+            node: *node1
+            schedule: !DailyScheduler
+                start_time: 04:00:00
+            actions:
+                - &verify_logs_present !Action
+                    name: verify_logs_present
+                    command: >
+                        ls /var/log/app/log_%(shortdate-1).txt
+                - &convert_logs !Action
+                    name: convert_logs
+                    command: >
+                        convert_logs /var/log/app/log_%(shortdate-1).txt \
+                            /var/log/app_converted/log_%(shortdate-1).txt
+                    requires: [*verify_logs_present]
 
 .. _job_scheduling:
 
@@ -198,7 +201,7 @@ final state. For example::
         cleanup_action:
             command: "python -m mrjob.tools.emr.job_flow_pool --terminate MY_POOL"
 
-.. Keep this up to date with man_tronview.rst
+.. Keep this up to date with man_tronfig.rst
 
 States
 ------

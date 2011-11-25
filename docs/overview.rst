@@ -82,6 +82,8 @@ See also:
 * :doc:`services`
 * :doc:`config`
 
+.. _overview_pools:
+
 Node Pools
 ----------
 
