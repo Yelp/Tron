@@ -104,8 +104,11 @@ zap <service_id | service_instance_id>
     Job Run job0.5 now in state SUCC
 
 .SH FILES
+
 .SH ENVIRONMENT
+
 .SH DIAGNOSTICS
+
 .SH BUGS
 
 Post bugs to http://www.github.com/yelp/tron/issues.
