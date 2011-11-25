@@ -1,5 +1,5 @@
-Tools
-=====
+Man Pages
+=========
 
 .. toctree::
     :maxdepth: 2
