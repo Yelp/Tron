@@ -68,8 +68,28 @@ ambiguity.
 
 The remaining examples in this file will all use the correct tags.
 
+.. _command_context_variables:
+
+Command Context Variables
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+All **command** attribute values are run through Python's string templating
+function, and some variables are provided. For example::
+
+    jobs:
+        - &command_context_demo !Job
+          name: "command_context_demo"
+          node: *node1
+          schedule: "1st monday in june"
+          actions:
+            - &print_run_id
+                name: "print_run_id"
+                # prints 'command_context_demo.1' on the first run,
+                # 'command_context_demo.2' on the second, etc.
+                command: "echo %(runid)"
+
 SSH
-^^^
+---
 
 **ssh_options** (optional)
     These options affect how Tron connects to the nodes.
@@ -87,8 +107,62 @@ Example::
         identities:
             - /home/batch/.ssh/id_dsa-nopasswd
 
+Notification Options
+--------------------
+
+**notification_options**
+    Email settings for sending failure notices.
+
+        notification_options: !NotificationOptions
+            smtp_host: localhost
+            notification_addr: batch+errors@example.com
+
+Command Context
+---------------
+
+**command_context**
+    Dictionary of custom :ref:`command context variables
+    <command_context_variables>`.
+
+    ::
+
+        command_context:
+            PYTHON: /usr/bin/python
+            TMPDIR: /tmp
+
+.. Keep this synchronized with man_tronfig
+
+Built-In Command Context Variables
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+.. warning::
+
+    This section is incomplete. If something is missing, don't hesitate to
+    `file an issue <http://www.github.com.com/yelp/Tron/issues/new>`_.
+
+**shortdate**
+    Current date in ``YYYY-MM-DD`` format. Supports simple arithmetic of the
+    form ``%(shortdate+6)s``, ``%(shortdate-2)s``, etc.
+
+**name**
+    Name of the job or service
+
+**actionname**
+    Name of the action
+
+**runid**
+    Run ID of the job or service (e.g. ``sample_job.23``)
+
+**node**
+    Hostname of the node the action is being run on
+
+**cleanup_job_status**
+    ``SUCCESS`` if all actions have succeeded when the cleanup action runs,
+    ``FAILURE`` otherwise. ``UNKNOWN`` if used in an action other than the
+    cleanup action.
+
 Logging
-^^^^^^^
+-------
 
 **syslog_address** (optional)
     Include this if you want to enable logging to syslog. Accepts paths as
@@ -123,9 +197,13 @@ Example::
 Jobs and Actions
 ----------------
 
-See :doc:`jobs` for the options available to jobs and their actions.
+**jobs**
+    List of jobs for Tron to manage. See :doc:`jobs` for the options available
+    to jobs and their actions.
 
 Services
 --------
 
-See :doc:`services` for the options available to services.
+**services**
+    List of services for Tron to manage.  See :doc:`services` for the options
+    available to services.
