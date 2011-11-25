@@ -86,12 +86,12 @@ jobs
         cleanup_action (optional)
             An action (not including name or requirements) to be run after the
             success or failure of the job
-        all_nodes (optional)
+        all_nodes (optional, default False)
             boolean indicating job should run on all nodes in the NodePool
-        queueing  (optional)
+        queueing  (optional, default True)
             boolean indicating overlapping job runs should queue rather than cancel
-        run_limit (optional)
-            Number of runs to store in history (default 50)
+        run_limit (optional, default 50)
+            Number of runs to store in history
 
 Action objects
     These are the required options for action objects. **The exception is
@@ -103,6 +103,8 @@ Action objects
         Command line to execute
     requires
         (optional) list of actions that must have already completed
+    node
+        (optional) node to run the action on (if different from the job)
 
 services
     Services are long running processes that we will periodically monitor. A
