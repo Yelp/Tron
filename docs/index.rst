@@ -25,7 +25,6 @@ Table of Contents
     overview.rst
     jobs.rst
     services.rst
-    reporting.rst
     tools.rst
     config.rst
     developing.rst
