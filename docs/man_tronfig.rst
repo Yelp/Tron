@@ -43,6 +43,11 @@ ssh_options
     identities (optional)
         list of paths to SSH identity files
 
+command_context
+    Dictionary mapping variable names to values that will be interpolated in
+    the command string. For example, if you include `animal: cat`, then the
+    command `cat %(animal)s` will become `cat cat`.
+
 syslog_address
     Include this if you want to enable logging to syslog. Accepts paths as strings
     and [address, port] lists for sockets. Typical values for various platforms are::
