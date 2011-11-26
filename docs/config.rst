@@ -82,7 +82,7 @@ function, and some variables are provided. For example::
           node: *node1
           schedule: "1st monday in june"
           actions:
-            - &print_run_id
+            - &print_run_id !Action
                 name: "print_run_id"
                 # prints 'command_context_demo.1' on the first run,
                 # 'command_context_demo.2' on the second, etc.
@@ -122,11 +122,11 @@ Command Context
 
 **command_context**
     Dictionary of custom :ref:`command context variables
-    <command_context_variables>`.
+    <command_context_variables>`. This attribute does *not* use a tag.
 
     ::
 
-        command_context:
+        command_context: # no tag
             PYTHON: /usr/bin/python
             TMPDIR: /tmp
 
