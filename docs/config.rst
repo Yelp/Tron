@@ -161,6 +161,8 @@ Built-In Command Context Variables
     ``FAILURE`` otherwise. ``UNKNOWN`` if used in an action other than the
     cleanup action.
 
+.. _config_logging:
+
 Logging
 -------
 
