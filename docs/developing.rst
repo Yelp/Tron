@@ -23,6 +23,9 @@ Although the code is not currently `PEP8
 comply as much as possible. The documentation must also be kept up to date with
 any changes in functionality, especially the man pages.
 
+If and when you come across non-PEP8-compliant code, avoid reformatting it in
+the same branch as functional changes so that code reviews are less confusing.
+
 Running Tron in a Sandbox
 -------------------------
 
