@@ -6,6 +6,7 @@ __author__ = 'Rhett Garber <rhettg@gmail.com>'
 __credits__ = [
     'Eugene Baumstein <eugene.baumstein@gmail>',
     'James Brown <jbrown@yelp.com>',
+    'Adam Derewecki <derewecki@gmail.com>',
     'Steve Johnson <sjohnson@yelp.com>',
     'Matthew Tytel <matthewtytel@gmail.com>',
 ]
