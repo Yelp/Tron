@@ -168,16 +168,14 @@ as the schedule::
 
 Some examples::
 
-    every 12 hours
-    every 5 minutes from 10:00 to 14:00
     2nd,third mon,wed,thu of march 17:00
-    every monday 09:00
-    1st monday of sep,oct,nov 17:00
-    every day 00:00
+    every monday at 09:00
+    1st monday of sep,oct,nov at 17:00
+    every day of oct at 00:00
 
 In the config::
 
-    schedule: "every 12 hours"
+    schedule: "every monday at 09:00"
 
 .. _job_cleanup_actions:
 
