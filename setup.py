@@ -36,8 +36,8 @@ setup(
     ],
     data_files=[
         ('share/doc/tron', [
-        'docs/sample_config_large.yaml',
-        'docs/sample_config_small.yaml']),
+            'docs/sample_config.yaml'
+        ]),
     ],
     long_description=open('README.md').read(),
 )

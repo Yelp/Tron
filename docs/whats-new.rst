@@ -12,6 +12,7 @@ Features
   :ref:`config_logging`.
 * "zap" command for services lets you force Tron to see a service or service
   instance as **DOWN**. See :doc:`man_tronctl`.
+* ``simplejson`` is no longer a dependency for Python 2.6 and up
 
 Bug Fixes
 ---------

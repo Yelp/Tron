@@ -4,6 +4,7 @@ tron (0.2.8-1) unstable; urgency=low
   * Cleanup actions: run a command after the success or failure of a job (irskep)
   * Logging to syslog with syslog_address config field (irskep)
   * "zap" command for services (irskep)
+  * simplejson is no longer a dependency for Python 2.6 and up
   * Fix weekday-specified jobs (mon, tues, ...) running a day late (irskep)
   * Fix services being allowed in jobs list and causing weird crashes (irskep)
   * Fix missing import in www.py

@@ -41,6 +41,15 @@ goes to ``tron.log``, so you're better off running ``tail -f wd/tron.log`` in a
 terminal. Kill ``trond`` when you're done with ``cat wd/tron.pid | xargs
 kill``.
 
+Running the Tests
+-----------------
+
+If you're working in a virtualenv and have installed Testify there (the
+recommended practice), you can run the tests with ``python `which testify`
+test`` from the repository root. You do this instead of just calling
+``testify`` in order for the correct Python executable and module search path
+to be used.
+
 Contributing
 ------------
 
