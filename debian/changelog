@@ -1,5 +1,6 @@
 tron (0.2.8-1) unstable; urgency=low
 
+  * Now on PyPI
   * New HTML documentation at http://packages.python.org/tron (irskep)
   * Cleanup actions: run a command after the success or failure of a job (irskep)
   * Logging to syslog with syslog_address config field (irskep)
