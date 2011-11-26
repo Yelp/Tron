@@ -10,7 +10,7 @@ tron (0.2.8-1) unstable; urgency=low
   * Fix missing import in www.py
   * Better resilience to subtlely bad tronfigs (jbrown)
 
- -- Steve Johnson <sjohnson@yelp.com> Fri, 25 Dec 2011 23:27:00 -0400
+ -- Steve Johnson <sjohnson@yelp.com> Fri, 25 Nov 2011 23:27:00 -0400
 
 tron (0.2.7-1) unstable; urgency=low
 
