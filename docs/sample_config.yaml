@@ -1,0 +1,72 @@
+--- !TronConfiguration
+
+# optional and settable from the command line
+working_dir: './working'
+
+# optional
+ssh_options: !SSHOptions
+    agent: true
+    identities:
+        - "/home/batch/.ssh/id_dsa-nopasswd"
+
+# optional
+notification_options: !NotificationOptions
+    smtp_host: localhost
+    notification_addr: batch+errors@example.com
+
+command_context:
+    PYTHON: /usr/bin/python
+    TMPDIR: /tmp
+
+# required
+nodes:
+    - &node1 !Node
+        hostname: 'batch1'
+    - &node2 !Node
+        hostname: 'batch2'
+
+    - &pool !NodePool
+        nodes: [*node1, *node2]
+
+jobs:
+    - &job0 !Job
+        name: "job0"
+        node: *pool
+        all_nodes: True
+        schedule: !DailyScheduler
+            start_time: 04:00:00
+        queueing: False
+        actions:
+            - &verify_logs_present !Action
+                name: verify_logs_present
+                command: >
+                    ls /var/log/app/log_%(shortdate-1).txt
+            - &convert_logs !Action
+                name: convert_logs
+                command: >
+                    convert_logs /var/log/app/log_%(shortdate-1).txt \
+                        /var/log/app_converted/log_%(shortdate-1).txt
+                requires: [*verify_logs_present]
+        # this will run when the job succeeds or fails
+        cleanup_action: !CleanupAction
+            command: "rm /%(TMPDIR)s/random_temp_file"
+
+    - &job1 !Job
+        name: "job1"
+        node: *node
+        schedule: "every monday at 09:00"
+        queueing: False
+        actions:
+            - &action !Action
+                name: "actionAlone"
+                command: "cat big.txt; sleep 10"
+
+services:
+    - &service0 !Service
+        name: "testserv"
+        node: *pool
+        count: 10
+        monitor_interval: 20
+        restart_interval: 60
+        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+        command: "sleep 10; echo %! > %(pid_file)s"

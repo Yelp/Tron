@@ -1,3 +1,18 @@
+tron (0.2.8-1) unstable; urgency=low
+
+  * Now on PyPI (irskep)
+  * New HTML documentation at http://packages.python.org/tron (irskep)
+  * Cleanup actions: run a command after the success or failure of a job (irskep)
+  * Logging to syslog with syslog_address config field (irskep)
+  * "zap" command for services (irskep)
+  * simplejson is no longer a dependency for Python 2.6 and up (irskep)
+  * Fix weekday-specified jobs (mon, tues, ...) running a day late (irskep)
+  * Fix services being allowed in jobs list and causing weird crashes (irskep)
+  * Fix missing import in www.py (irskep)
+  * Better resilience to subtlely bad tronfigs (jbrown)
+
+ -- Steve Johnson <sjohnson@yelp.com>  Fri, 25 Nov 2011 23:27:00 -0400
+
 tron (0.2.7-1) unstable; urgency=low
 
   * Really fix date parsing (rhettg)
