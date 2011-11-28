@@ -5,6 +5,9 @@ A job consists of a name, a node/node pool, set of actions, schedule, and
 optional cleanup action. They are periodic events that do not interact with
 other jobs while running.
 
+If all actions exit with status 0, the job has succeeded. If any action exists
+with a nonzero status, the job has failed.
+
 .. Keep this up to date with man_tronfig.rst
 
 Required Fields
@@ -32,12 +35,20 @@ Optional Fields
     If a job run is still running when the next job run is to be scheduled,
     add the next run to a queue if this is **True**. Otherwise, drop it.
 
-**run_limit** (default 50)
+**run_limit** (default **50**)
     Number of previous runs to store output and state for.
 
 **all_nodes** (default **False**)
-    If **True**, run on all nodes in the node pool if **node** is a node pool.
-    Otherwise, run on a single random node in the pool.
+    If **True** and **node** is a node pool, run this job on each node in the
+    node pool list. If a node appears more than once in the list, the job will
+    be run on that node once for each appearance.
+
+    If **False** and **node** is a node pool, run this job on a random node
+    from the node pool list. If a node appears more than once in the list, the
+    job will be more likely to run on that node, proportionate to the number of
+    appearances.
+
+    If **node** is not a node pool, this option has no effect.
 
 **cleanup_action**
     Action to run when either all actions have succeeded or the job has failed.
@@ -47,6 +58,15 @@ Optional Fields
 
 Actions
 -------
+
+Actions consist primarily of a **name** and **command**. An action's command is
+executed as soon as its dependencies (specified by **requires**) are satisfied.
+So if your job has 10 actions, 1 of which depends on the other 9, then Tron
+will launch the first 9 actions in parallel and run the last one when all have
+completed successfully.
+
+If any action exits with nonzero status, the job is aborted and no further
+actions are run.
 
 Required Fields
 ^^^^^^^^^^^^^^^
@@ -62,7 +82,8 @@ Optional Fields
 
 **requires**
     List of pointers to actions that must complete successfully before this
-    action is run.
+    action is run. These actions must have been specifid earlier in the config
+    file.
 
 **node**
     Node or node pool to run the action on if different from the rest of the
@@ -196,7 +217,7 @@ final state. For example::
 
     - !Job
         # ...
-        cleanup_action:
+        cleanup_action: !CleanupAction
             command: "python -m mrjob.tools.emr.job_flow_pool --terminate MY_POOL"
 
 .. Keep this up to date with man_tronfig.rst

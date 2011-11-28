@@ -1,10 +1,14 @@
 Services
 ========
 
-A major cluster use case that :command:`cron` doesn't cover is the maintenance
-of *services*. A service is composed of several *service instances* which are
-either on or off. Service instances are interacted with as processes, but those
-processes can represent daemons, third party web services, and more.
+A service is composed of several *service instances* which are either on or
+off. Service instances are interacted with as processes, but those processes
+can represent daemons, third party web services, and more.
+
+A service is started by invoking a command that writes a file containing the
+service's **pid** to **pid_file**. Tron checks for that pid's existence every
+**monitor_interval** seconds and restarts it after **restart_interval** seconds
+if it goes down.
 
 .. Keep this up to date with man_tronfig.rst
 
@@ -33,11 +37,11 @@ Required Fields
 Optional Fields
 ---------------
 
-**restart_interval**
+**restart_interval** (default **never**)
     Seconds to wait before restarting to the service when it appears to be
     down. If not specified, service instances will not be restarted when down.
 
-**count**
+**count** (default **1**)
     Number of instances of this service to keep running at once. If a node pool
     is used, the instances are spread across all nodes in the pool evenly by
     round robin scheduling.

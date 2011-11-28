@@ -1,12 +1,22 @@
 Configuration
 =============
 
+.. note::
+
+    **All nodes, jobs, actions, and services** should have a unique anchor and
+    a tag specifying the type (``!Node``, ``!Action``, etc). Doing so will
+    minimize runtime errors, improve error messages, and make future
+    configuration edits easier.
+
+.. _config_syntax:
+
 Syntax
 ------
 
 The Tron configuration file uses YAML syntax. In addition to simple key-value
-and list syntax, it uses tags and repeated nodes. This section outlines the
-subset of YAML used by Tron configuration files.
+and list syntax, it uses YAML-specific features such as tags and repeated
+nodes. This section outlines the subset of YAML used by Tron configuration
+files.
 
 Basic Syntax
 ^^^^^^^^^^^^
@@ -45,8 +55,7 @@ for jobs::
             node: *node1
 
 It is also used for specifying :ref:`action dependencies <job_actions>` and
-:ref:`node pools <overview_pools>`. In general, you should specify an anchor
-for all nodes, jobs, actions, and services.
+:ref:`node pools <overview_pools>`.
 
 Tags
 ^^^^
@@ -73,8 +82,10 @@ The remaining examples in this file will all use the correct tags.
 Command Context Variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^
 
-All **command** attribute values are run through Python's string templating
-function, and some variables are provided. For example::
+**command** attribute values may contain **command context variables** that are
+inserted at runtime. The **command context** is populated both by Tron (see
+:ref:`built_in_cc`) and by the config file (see :ref:`command_context`). For
+example::
 
     jobs:
         - &command_context_demo !Job
@@ -117,6 +128,8 @@ Notification Options
             smtp_host: localhost
             notification_addr: batch+errors@example.com
 
+.. _command_context:
+
 Command Context
 ---------------
 
@@ -131,6 +144,8 @@ Command Context
             TMPDIR: /tmp
 
 .. Keep this synchronized with man_tronfig
+
+.. _built_in_cc:
 
 Built-In Command Context Variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -189,9 +204,9 @@ Nodes
 Example::
 
     nodes:
-        - &node1
+        - &node1 !Node
             hostname: 'batch1'
-        - &node2
+        - &node2 !Node
             hostname: 'batch2'
         - &pool !NodePool
             nodes: [*node1, *node2]
