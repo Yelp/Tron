@@ -1,6 +1,7 @@
 include *.txt
 include *.md
+include *.rst
 include Makefile
 recursive-include debian *
 recursive-include test *.py *.yaml
-recursive-include docs *.txt *.yaml *.1 *.8
+recursive-include docs *.txt *.rst *.yaml *.1 *.8

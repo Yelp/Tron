@@ -4,7 +4,11 @@ Test cases for the web services interface to tron
 from testify import *
 from testify.utils import turtle
 
-import simplejson
+try:
+    import simplejson
+except ImportError:
+    import json as simplejson
+
 import twisted.web.resource
 import twisted.web.http
 import twisted.web.server
