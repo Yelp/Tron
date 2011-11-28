@@ -1,0 +1,12 @@
+Jinja2==2.6
+PyYAML==3.10
+Pygments==1.4
+Sphinx==1.1.2
+Sphinx-PyPI-upload==0.2.1
+Twisted==11.0.0
+docutils==0.8.1
+pyasn1==0.0.13
+pycrypto==2.4
+testify==0.1.12
+wsgiref==0.1.2
+zope.interface==3.8.0

@@ -4,13 +4,18 @@ PROJECT=tron
 BUILDIR=$(CURDIR)/debian/$PROJECT
 VERSION=`$(PYTHON) setup.py --version`
 
-.PHONY : all source install clean devinstall
+SPHINXBUILD=sphinx-build
+DOCS_DIR=docs
+DOCS_BUILDDIR=docs/_build
+ALLSPHINXOPTS=-d $(DOCS_BUILDDIR)/doctrees $(SPHINXOPTS)
+
+.PHONY : all source install clean
 
 all:
 		@echo "make source - Create source package"
 		@echo "make install - Install on local system"
-		@echo "make buildrpm - Generate a rpm package"
-		@echo "make builddeb - Generate a deb package"
+		@echo "make rpm - Generate a rpm package"
+		@echo "make deb - Generate a deb package"
 		@echo "make clean - Get rid of scratch and byte files"
 
 source:
@@ -19,39 +24,31 @@ source:
 install:
 		$(PYTHON) setup.py install --root $(DESTDIR) $(COMPILE)
 
-buildrpm:
+rpm:
 		$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall
 
-builddeb:
+deb: man
 		# build the source package in the parent directory
 		# then rename it to project_version.orig.tar.gz
-		$(PYTHON) setup.py sdist $(COMPILE) --dist-dir=../ --prune
+		$(PYTHON) setup.py sdist $(COMPILE) --dist-dir=../
 		rename -f 's/$(PROJECT)-(.*)\.tar\.gz/$(PROJECT)_$$1\.orig\.tar\.gz/' ../*
 		# build the package
 		dpkg-buildpackage -i -I -rfakeroot -uc -us
 
 clean:
 		$(PYTHON) setup.py clean
-		fakeroot $(MAKE) -f $(CURDIR)/debian/rules clean
 		rm -rf build/ MANIFEST
 		find . -name '*.pyc' -delete
 		find . -name "._*" -delete
+		rm -rf $(DOCS_BUILDDIR)/*
+		fakeroot $(MAKE) -f $(CURDIR)/debian/rules clean
 
-devclean:
-		rm -rf env
+html:
+	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_BUILDDIR)/html
+	@echo
+	@echo "Build finished. The HTML pages are in $(DOCS_BUILDDIR)/html."
 
-devinstall: env/.tron_install
-
-env:
-		virtualenv --no-site-packages env
-
-env/.pip_install: env req.txt
-		pip -E env install -r req.txt
-
-env/.tron_install : env/.pip_install setup.py
-		pip -E env install -e .
-		mkdir -p env/var/tron
-		touch $@
-
-req.txt:
-		pip -E env freeze > req.txt
+man: 
+	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_BUILDDIR)/man
+	@echo
+	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."

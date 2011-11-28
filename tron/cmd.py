@@ -1,15 +1,20 @@
 """
 Common code for command line utilities (see bin/)
 """
-import sys
+
+import logging
 import os
 import os.path
-import urllib2
 import urllib
+import urllib2
 import urlparse
-import logging
+import sys
 
-import simplejson
+try:
+    import simplejson
+except ImportError:
+    import json as simplejson
+
 import yaml
 
 USER_AGENT = "Tron Command/1.0 +http://github.com/Yelp/Tron"
@@ -25,7 +30,9 @@ OK = "OK"
 REDIRECT = "REDIRECT"
 ERROR = "ERROR"
 
+
 log = logging.getLogger("tron.cmd")
+
 
 def load_config(options):
     file_name = os.path.expanduser(CONFIG_FILE_NAME)
@@ -33,16 +40,17 @@ def load_config(options):
         log.debug("Config file %s doesn't yet exist", file_name)
         options.server = options.server or DEFAULT_SERVER
         return
-    
+
     try:
         config = yaml.load(open(file_name, "r"))
         options.server = options.server or config.get('server', DEFAULT_SERVER)
     except IOError, e:
         log.error("Failure loading config file: %r", e)
 
+
 def save_config(options):
     file_name = os.path.expanduser(CONFIG_FILE_NAME)
-    
+
     try:
         config_file = open(file_name, "r")
         config = yaml.load(config_file)
@@ -51,10 +59,11 @@ def save_config(options):
         config = {}
 
     config['server'] = options.server
-    
+
     config_file = open(file_name, "w")
     yaml.dump(config, config_file)
     config_file.close()
+
 
 def request(serv, path, data=None):
     enc_data = None
@@ -82,6 +91,7 @@ def request(serv, path, data=None):
     result = simplejson.load(output)
     return OK, result
 
+
 def setup_logging(options):
     if options.verbose:
         level = logging.INFO
@@ -92,17 +102,21 @@ def setup_logging(options):
                         format='%(name)s %(levelname)s %(message)s',
                         stream=sys.stdout)
 
+
 def make_job_to_uri(content):
     """Use ``content`` (the result of the '/' API call) to generate a dict
     mapping job names to URIs
     """
     return dict([(job['name'], job['href']) for job in content['jobs']])
 
+
 def make_service_to_uri(content):
     """Use ``content`` (the result of the '/' API call) to generate a dict
     mapping service names to URIs
     """
-    return dict([(service['name'], service['href']) for service in content['services']])
+    return dict([(service['name'], service['href'])
+                 for service in content['services']])
+
 
 def obj_spec_to_uri(obj_spec, job_to_uri, service_to_uri):
     """Convert a string of the form job_name[.run_number[.action]] to its

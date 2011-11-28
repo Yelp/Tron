@@ -5,7 +5,7 @@
 class CommandContext(object):
     def __init__(self, base, next=None):
         """Initialize
-        
+
         Args
           base   Object to look for attributes in
           next     Next place to look for more pieces of context
@@ -25,12 +25,12 @@ class CommandContext(object):
             return self.base[name]
         except (KeyError, TypeError):
             pass
-        
+
         try:
             return getattr(self.base, name)
         except AttributeError:
             pass
-        
+
         try:
             return self.next[name]
         except (TypeError, KeyError):

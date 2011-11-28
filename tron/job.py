@@ -28,6 +28,7 @@ class JobRun(object):
         self.end_time = None
         self.node = None
         self.action_runs = []
+        self.cleanup_action_run = None
         self.context = command_context.CommandContext(self, job.context)
         self.event_recorder = event.EventRecorder(self, parent=self.job.event_recorder)
         self.event_recorder.emit_info("created")
@@ -39,7 +40,7 @@ class JobRun(object):
     def set_run_time(self, run_time):
         self.run_time = run_time
 
-        for action in self.action_runs:
+        for action in self.action_runs_with_cleanup:
             action.run_time = run_time
 
     def scheduled_start(self):
@@ -102,26 +103,38 @@ class JobRun(object):
             if self.job.constant and self.job.enabled:
                 self.job.build_run().start()
 
-        if self.is_done:
-            self.end_time = timeutils.current_time()
-            
-            if self.is_failure:
-                self.event_recorder.emit_critical("failed")
+        if self.all_but_cleanup_done:
+            if self.cleanup_action_run is None:
+                log.info('No cleanup action for %s exists' % self.id)
+                self.cleanup_completed()
             else:
-                self.event_recorder.emit_ok("succeeded")
-            
-            next = self.job.next_to_finish()
-            if next and next.is_queued:
-                next.attempt_start()
+                log.info('Running cleanup action for %s' % self.id)
+                self.cleanup_action_run.attempt_start()
+
+    def cleanup_completed(self):
+        self.end_time = timeutils.current_time()
+        
+        if self.is_failure:
+            self.event_recorder.emit_critical("failed")
+        else:
+            self.event_recorder.emit_ok("succeeded")
+        
+        next = self.job.next_to_finish()
+        if next and next.is_queued:
+            next.attempt_start()
 
     @property
     def data(self):
-        return {'runs':[a.data for a in self.action_runs],
+        data = {'runs':[a.data for a in self.action_runs],
+                'cleanup_run': None,
                 'run_num': self.run_num,
                 'run_time': self.run_time,
                 'start_time': self.start_time,
                 'end_time': self.end_time
         }
+        if self.cleanup_action_run is not None:
+            data['cleanup_run'] = self.cleanup_action_run.data
+        return data
 
     def restore(self, data):
         self.start_time = data['start_time']
@@ -130,6 +143,9 @@ class JobRun(object):
 
         for r, state in zip(self.action_runs, data['runs']):
             r.restore_state(state)
+
+        if self.cleanup_action_run is not None:
+            self.cleanup_action_run.restore_state(data['cleanup_run'])
 
         self.event_recorder.emit_info("restored")
 
@@ -142,16 +158,23 @@ class JobRun(object):
             r.queue()
 
     def cancel(self):
-        for r in self.action_runs:
+        for r in self.action_runs_with_cleanup:
             r.cancel()
 
     def succeed(self):
-        for r in self.action_runs:
+        for r in self.action_runs_with_cleanup:
             r.mark_success()
 
     def fail(self):
-        for r in self.action_runs:
+        for r in self.action_runs_with_cleanup:
             r.fail(0)
+
+    @property
+    def action_runs_with_cleanup(self):
+        if self.cleanup_action_run is not None:
+            return [a for a in self.action_runs] + [self.cleanup_action_run]
+        else:
+            return self.action_runs
 
     @property
     def should_start(self):
@@ -161,40 +184,59 @@ class JobRun(object):
 
     @property
     def is_failure(self):
-        return any([r.is_failure for r in self.action_runs])
+        return any([r.is_failure for r in self.action_runs_with_cleanup])
 
     @property
-    def is_success(self):
+    def all_but_cleanup_success(self):
         return all([r.is_success for r in self.action_runs])
 
     @property
-    def is_done(self):
+    def is_success(self):
+        return all([r.is_success for r in self.action_runs_with_cleanup])
+
+    @property
+    def all_but_cleanup_done(self):
         return not any([r.is_running or r.is_queued or r.is_scheduled for r in self.action_runs])
 
     @property
+    def is_done(self):
+        return not any([r.is_running or r.is_queued or r.is_scheduled for r in self.action_runs_with_cleanup])
+
+    @property
     def is_queued(self):
-        return all([r.is_queued for r in self.action_runs])
+        return all([r.is_queued for r in self.action_runs_with_cleanup])
 
     @property
     def is_starting(self):
-        return any([r.is_starting for r in self.action_runs])
-
+        return any([r.is_starting for r in self.action_runs_with_cleanup])
 
     @property
     def is_running(self):
-        return any([r.is_running for r in self.action_runs])
+        return any([r.is_running for r in self.action_runs_with_cleanup])
 
     @property
     def is_scheduled(self):
-        return any([r.is_scheduled for r in self.action_runs])
+        return any([r.is_scheduled for r in self.action_runs_with_cleanup])
 
     @property
     def is_unknown(self):
-        return any([r.is_unknown for r in self.action_runs])
+        return any([r.is_unknown for r in self.action_runs_with_cleanup])
 
     @property
     def is_cancelled(self):
-        return all([r.is_cancelled for r in self.action_runs])
+        return all([r.is_cancelled for r in self.action_runs_with_cleanup])
+
+    @property
+    def cleanup_job_status(self):
+        """Provide 'SUCCESS' or 'FAILURE' to a cleanup action context based on
+        the status of the other steps
+        """
+        if self.is_failure:
+            return 'FAILED'
+        elif self.all_but_cleanup_success:
+            return 'SUCCESS'
+        else:
+            return 'UNKNOWN'
 
     def __str__(self):
         return "JOB_RUN:%s" % self.id
@@ -209,6 +251,7 @@ class Job(object):
     def __init__(self, name=None, action=None, context=None, event_recorder=None):
         self.name = name
         self.topo_actions = [action] if action else []
+        self.cleanup_action = None
         self.scheduler = None
         self.runs = deque()
 
@@ -250,7 +293,8 @@ class Job(object):
                 or self.node_pool != other.node_pool \
                 or len(self.topo_actions) != len(other.topo_actions) \
                 or self.run_limit != other.run_limit \
-                or self.all_nodes != other.all_nodes:
+                or self.all_nodes != other.all_nodes \
+                or self.cleanup_action != other.cleanup_action:
             return False
 
         return all([me == you for (me, you) in zip(self.topo_actions, other.topo_actions)])
@@ -339,17 +383,24 @@ class Job(object):
 
         return self.scheduler.next_runs(self)
 
-    def build_action_dag(self, job_run, all_actions):
-        """Build actions and setup requirements"""
-        action_runs_by_name = {}
-        for action_inst in all_actions:
+    def _make_action_run(self, job_run, action_inst, callback):
             action_run = action_inst.build_run(job_run)
             
             action_run.node = job_run.node
             
             action_run.machine.listen(True, self._notify)
-            action_run.machine.listen(action.ActionRun.STATE_SUCCEEDED, job_run.run_completed)
-            action_run.machine.listen(action.ActionRun.STATE_FAILED, job_run.run_completed)
+            action_run.machine.listen(action.ActionRun.STATE_SUCCEEDED, callback)
+            action_run.machine.listen(action.ActionRun.STATE_FAILED, callback)
+
+            return action_run
+
+    def build_action_dag(self, job_run, all_actions):
+        """Build actions and setup requirements"""
+        action_runs_by_name = {}
+        for action_inst in all_actions:
+            action_run = self._make_action_run(job_run,
+                                               action_inst,
+                                               job_run.run_completed)
 
             action_runs_by_name[action_inst.name] = action_run
             job_run.action_runs.append(action_run)
@@ -379,6 +430,13 @@ class Job(object):
             self.remove_old_runs()
 
         self.build_action_dag(job_run, actions)
+
+        if self.cleanup_action is not None:
+            cleanup_action_run = self._make_action_run(job_run,
+                                                       self.cleanup_action,
+                                                       job_run.cleanup_completed)
+            job_run.cleanup_action_run = cleanup_action_run
+
         return job_run
 
     def build_runs(self):

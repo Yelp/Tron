@@ -1,14 +1,14 @@
 Source: tron
 Section: admin
 Priority: optional
-Maintainer: Rhett Garber <rhettg@gmail.com>
+Maintainer: Steve Johnson <sjohnson@yelp.com>
 Build-Depends: debhelper (>= 6.0.4), python-support (>= 0.5.3), cdbs (>= 0.4.51), python-central (>= 0.5.6)
 XS-Python-Version: >=2.5
 Standards-Version: 3.7.2
 
 Package: tron
 Architecture: all
-Homepage: http://github.com/rhettg/Tron
+Homepage: http://github.com/yelp/Tron
 XB-Python-Version: ${python:Versions}
 Depends: ${misc:Depends}, ${python:Depends}, python-twisted (>=8.2.0), python-yaml
 Description: Tron is a job scheduling, running and monitoring package.

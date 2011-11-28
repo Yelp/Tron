@@ -1,12 +1,25 @@
 """Tests for our configuration system"""
-import StringIO
 import datetime
+import logging
+from logging import handlers
 import os
+import platform
 import shutil
+import StringIO
 import tempfile
 
 from testify import *
 from tron import config, mcp, scheduler
+
+
+def syslog_address_for_platform():
+    if platform.system() == 'Darwin':
+        return '/var/run/syslog'
+    elif platform.system() == 'Windows':
+        return ['localhost', 514]
+    else:
+        return '/dev/log'
+
 
 BASE_CONFIG = """
 --- !TronConfiguration
@@ -43,6 +56,8 @@ jobs:
             - &intAction !Action
                 name: "action0_0"
                 command: "test_command0.0"
+        cleanup_action: !CleanupAction
+            command: "test_command0.1"
                 
     - &job1
         name: "test_job1"
@@ -102,6 +117,7 @@ services:
         pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
         monitor_interval: 20
 """
+
     @setup
     def setup(self):
         self.test_dir = tempfile.mkdtemp()
@@ -193,6 +209,10 @@ services:
                 assert hasattr(a, "name")
                 assert_equal(a.name, "action%s_%s" % (job_count, act_count))
 
+            if j.cleanup_action is not None:
+                assert_equal(j.cleanup_action.name, config.CLEANUP_ACTION_NAME)
+
+
     def test_all_nodes_attribute(self):
         assert self.job4.all_nodes
         assert not self.job3.all_nodes
@@ -205,6 +225,7 @@ services:
                 a = j.topo_actions[act_count]
                 assert hasattr(a, "command")
                 assert_equal(a.command, "test_command%s.%s" % (job_count, act_count))
+        assert_equal(self.all_jobs[0].cleanup_action.command, "test_command0.1")
       
     def test_actions_requirements(self):
         dep0 = self.job1.topo_actions[1]
@@ -237,12 +258,52 @@ services:
         assert self.serv.command
         assert self.serv.context
 
+
+class LoggingConfigTest(TestCase):
+
+    config = BASE_CONFIG
+
+    reconfig = BASE_CONFIG + """
+syslog_address: %s""" % syslog_address_for_platform()
+
+    bad_config = BASE_CONFIG + """
+syslog_address: /does/not/exist"""
+
+    @setup
+    def setup(self):
+        self.test_dir = tempfile.mkdtemp()
+        self.test_config = config.load_config(StringIO.StringIO(self.config))
+        self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')
+        self.test_config.apply(self.my_mcp)
+
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)
+
+    def test_add_syslog(self):
+        root = logging.getLogger('')
+        test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
+        test_reconfig.apply(self.my_mcp)
+        assert_equal(len(root.handlers), 2)
+        assert_equal(type(root.handlers[-1]), handlers.SysLogHandler)
+
+        test_reconfig = config.load_config(StringIO.StringIO(self.config))
+        test_reconfig.apply(self.my_mcp)
+        assert_equal(len(root.handlers), 1)
+        assert_equal(type(root.handlers[0]), logging.StreamHandler)
+
+    def test_bad_syslog(self):
+        root = logging.getLogger('')
+        test_reconfig = config.load_config(StringIO.StringIO(self.bad_config))
+        assert_raises(config.ConfigError, test_reconfig.apply, self.my_mcp)
+
+
 class BadJobConfigTest(TestCase):
     @setup
     def build_env(self):
         self.test_dir = tempfile.mkdtemp()
-        self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')      
-    
+        self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')
+
     def test_no_actions(self):
         test_config = BASE_CONFIG + """
 jobs:
@@ -313,6 +374,75 @@ jobs:
         """
         test_config = config.load_config(StringIO.StringIO(test_config))
         assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
-            
+
+    def test_config_name_collision(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    - &job0
+        name: "test_job0"
+        node: *node0
+        schedule: "interval 20s"
+        actions:
+            -
+                name: "%s"
+                command: "test_command0.0"                
+
+        """ % config.CLEANUP_ACTION_NAME
+        test_config = config.load_config(StringIO.StringIO(test_config))
+        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+
+    def test_config_name(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    - &job0
+        name: "test_job0"
+        node: *node0
+        schedule: "interval 20s"
+        actions:
+            -
+                name: "action0_0"
+                command: "test_command0.0"                
+        cleanup_action:
+            name: "gerald"
+            command: "test_command0.1"
+        """
+        test_config = config.load_config(StringIO.StringIO(test_config))
+        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+
+    def test_config_requires(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    - &job0
+        name: "test_job0"
+        node: *node0
+        schedule: "interval 20s"
+        actions:
+            -   &action0_0
+                name: "action0_0"
+                command: "test_command0.0"                
+        cleanup_action:
+            command: "test_command0.1"
+            requires: *action0_0
+        """
+        test_config = config.load_config(StringIO.StringIO(test_config))
+        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+
+    def test_job_in_services(self):
+        test_config = BASE_CONFIG + """
+services:
+    - !Job
+        name: "test_job0"
+        node: *node0
+        schedule: "interval 20s"
+        actions:
+            - &intAction !Action
+                name: "action0_0"
+                command: "test_command0.0"
+        cleanup_action: !CleanupAction
+            command: "test_command0.1"
+"""
+        test_config = config.load_config(StringIO.StringIO(test_config))
+        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+
 if __name__ == '__main__':
     run()

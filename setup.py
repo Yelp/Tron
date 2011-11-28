@@ -1,9 +1,14 @@
-from distutils.core import setup
+try:
+    from setuptools import setup
+except ImportError:
+    from distutils.core import setup
+
+import tron
 
 setup(
     name="tron",
-    version='0.2.7',
-    provides="tron",
+    version=tron.__version__,
+    provides=["tron"],
     author="Yelp",
     author_email="yelplabs@yelp.com",
     url="http://github.com/Yelp/Tron",
@@ -16,16 +21,25 @@ setup(
         "Topic :: System :: Systems Administration",
         "Intended Audience :: Developers",
         "Intended Audience :: System Administrators",
-        "Development Status :: 3 - Alpha",
+        "Development Status :: 4 - Beta",
     ],
-    requires = ['twisted (>=10.0.0)',],
+    requires = [
+        'twisted (>=10.0.0)',
+        'PyYAML (>=3.10)'
+    ],
     packages=["tron", "tron.utils"],
-    scripts=['bin/trond', 'bin/tronview', 'bin/tronctl', 'bin/tronfig'],
-    data_files=[('share/doc/tron', ['docs/sample_config_large.yaml', 'docs/sample_config_small.yaml']),],
-    long_description="""\
-Tron is a job scheduling, running and monitoring package designed to replace Cron for complex job running requirements.
-  - Centralized configuration for running jobs across multiple machines
-  - Dependencies on jobs and resources
-  - Monitoring of jobs
-	"""
+    scripts=[
+        'bin/trond',
+        'bin/tronview',
+        'bin/tronctl',
+        'bin/tronfig'
+    ],
+    data_files=[
+        ('share/doc/tron', [
+            'docs/sample_config.yaml'
+        ]),
+    ],
+    long_description="""Tron is a centralized system for managing periodic batch processes and services across a cluster. If you find cron or fcron to be insufficient for managing complex work flows across multiple computers, Tron might be for you.
+
+For more information, look at the tutorial (http://packages.python.org/tron/tutorial.html) or the full documentation (http://packages.python.org/tron).""",
 )

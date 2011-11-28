@@ -6,24 +6,19 @@ across a cluster. If you find [cron](http://en.wikipedia.org/wiki/Cron) or
 [fcron](http://fcron.free.fr/) to be insufficient for managing complex work
 flows across multiple computers, Tron might be for you.
 
-Installation
-------------
+Install with:
 
-Tron ships with a `setup.py` file for installation as well as scripts for building a debian package.
+    > sudo pip install tron
 
-See [QuickStart](http://github.com/Yelp/Tron/wiki/QuickStart) for more details.
+Or look at the [tutorial](http://packages.python.org/tron/tutorial.html).
 
-Documentation
--------------
-
-Sample configuration files (and man pages) are in the docs/ directory.
-
-Full documentation can be found on the projects [Wiki](http://github.com/Yelp/Tron/wiki)
+The full documentation is available [on PyPI](http://packages.python.org/tron).
 
 Contributing
 ------------
 
-Use Github. We're friendly I swear. Contributions welcome.
+Read [Working on Tron](http://packages.python.org/tron/developing.html) and
+start sending pull requests!
 
-Any issues should be either posted and discussed at http://github.com/Yelp/Tron/issues
-or emailed to yelplabs@yelp.com
+Any issues should be either posted and discussed [on
+Github](http://github.com/Yelp/Tron/issues) or emailed to yelplabs@yelp.com.

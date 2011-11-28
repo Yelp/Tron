@@ -137,7 +137,7 @@ class GrocScheduler(object):
         self.weekdays = weekdays
         self.months = months
         self.monthdays = monthdays
-        
+
         self.timestr = None
         if timestr is None:
             if start_time:
@@ -147,7 +147,7 @@ class GrocScheduler(object):
                 self.timestr = "00:00"
         else:
             self.timestr = timestr
-        
+
         self.timezone = timezone
         self.string_repr = 'every day of month'
 
@@ -156,12 +156,19 @@ class GrocScheduler(object):
     @property
     def time_spec(self):
         if self._time_spec is None:
-            self._time_spec = groctimespecification.SpecificTimeSpecification(ordinals=self.ordinals,
-                                                        weekdays=self.weekdays,
-                                                        months=self.months,
-                                                        monthdays=self.monthdays,
-                                                        timestr=self.timestr,
-                                                        timezone=self.timezone)
+            # calendar module has 0=Monday
+            # groc has 0=Sunday
+            if self.weekdays:
+                groc_weekdays = set((x + 1) % 7 for x in self.weekdays)
+            else:
+                groc_weekdays = None
+            self._time_spec = groctimespecification.SpecificTimeSpecification(
+                ordinals=self.ordinals,
+                weekdays=groc_weekdays,
+                months=self.months,
+                monthdays=self.monthdays,
+                timestr=self.timestr,
+                timezone=self.timezone)
         return self._time_spec
 
     def parse(self, scheduler_str):
@@ -223,7 +230,7 @@ class GrocScheduler(object):
             start_time = job.runs[0].run_time
         else:
             start_time = timeutils.current_time()
-        
+
         run_time = self.time_spec.GetMatch(start_time)
         job_runs = job.build_runs()
         for job_run in job_runs:
@@ -266,24 +273,24 @@ class IntervalScheduler(object):
     """
     def __init__(self, interval=None):
         self.interval = interval
-    
+
     def next_runs(self, job):
         run_time = timeutils.current_time() + self.interval
-        
+
         job_runs = job.build_runs()
         for job_run in job_runs:
             job_run.set_run_time(run_time)
-        
+
         return job_runs
 
     def job_setup(self, job):
         job.queueing = False
-    
+
     def __str__(self):
         return "INTERVAL:%s" % self.interval
-        
+
     def __eq__(self, other):
         return isinstance(other, IntervalScheduler) and self.interval == other.interval
-    
+
     def __ne__(self, other):
         return not self == other

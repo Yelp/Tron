@@ -4,7 +4,11 @@ Test cases for the web services interface to tron
 from testify import *
 from testify.utils import turtle
 
-import simplejson
+try:
+    import simplejson
+except ImportError:
+    import json as simplejson
+
 import twisted.web.resource
 import twisted.web.http
 import twisted.web.server
@@ -26,18 +30,18 @@ REQUEST.childLink = lambda val : "/jobs/%s" % val
 #         self._job = job
 #     def childLink(self, child):
 #         return "/jobs/%s/%s" % (self._job.name, child)
-        
+
 class RootTest(TestCase):
     @class_setup
     def build_root(self):
         self.mc = turtle.Turtle()
         self.resource = www.RootResource(self.mc)
-    
+
     def test_status(self):
         """Verify that we return a status"""
         request = turtle.Turtle()
         resp = self.resource.getChildWithDefault("status", turtle.Turtle()).render_GET(request)
-        
+
         status = simplejson.loads(resp)
         assert status['status']
 
@@ -212,11 +216,12 @@ class JobRunStartTest(TestCase):
 
 
 class ServiceTest(TestCase):
+
     @class_setup
     def build_resource(self):
         self.mc = turtle.Turtle()
         self.service = turtle.Turtle(
-                            name="testname", 
+                            name="testname",
                             state=turtle.Turtle(name="up"),
                             command="run_service.py",
                             count=2,
@@ -228,7 +233,7 @@ class ServiceTest(TestCase):
                                     state=turtle.Turtle(name="up")
                                 )
                             ])
-        
+
         self.mc.services = {self.service.name: self.service}
 
         self.resource = www.ServicesResource(self.mc)
@@ -239,7 +244,7 @@ class ServiceTest(TestCase):
         result = simplejson.loads(resp)
         assert 'services' in result
         assert result['services'][0]['name'] == "testname"
- 
+
     def test_get_service(self):
         """Test that we can find a specific service"""
         child = self.resource.getChildWithDefault("testname", turtle.Turtle())
@@ -249,6 +254,7 @@ class ServiceTest(TestCase):
     def test_missing_service(self):
         child = self.resource.getChildWithDefault("bar", turtle.Turtle())
         assert isinstance(child, twisted.web.resource.NoResource)
-    
+
+
 if __name__ == '__main__':
     run()

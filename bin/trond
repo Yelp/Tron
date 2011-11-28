@@ -1,25 +1,34 @@
 #!/usr/bin/env python
 from __future__ import with_statement
 
-import logging
-import sys
 import datetime
-import optparse
-import signal
-import os
-import gc
-import re
 import errno
+import gc
+import logging
+import optparse
+import os
+import re
+import signal
+import sys
 
-from twisted.python import log
 from twisted.internet import reactor, defer
+from twisted.python import log
 from twisted.web import server
 
 # Annoying that we have to import twisted internal module here, but we don't really want to use 'twistd' to run our daemon.
 from twisted.scripts import _twistd_unix
 
 import tron
-from tron import mcp, cmd, job, resource, node, scheduler, www, monitor, emailer, config
+from tron import cmd
+from tron import config
+from tron import emailer
+from tron import job
+from tron import mcp
+from tron import monitor
+from tron import node
+from tron import resource
+from tron import scheduler
+from tron import www
 from tron.utils import log_handler
 
 logger = logging.getLogger('bin.trond')
@@ -44,16 +53,17 @@ def parse_options():
 
     parser.add_option("--port", "-P", action="store", dest="listen_port", help="What port to listen on, defaults %default", default=cmd.DEFAULT_PORT, type=int)
     parser.add_option("--host", "-H", action="store", dest="listen_host", help="What host to listen on defaults to %default", default=cmd.DEFAULT_HOST, type=str)
-    
+
     (options, args) = parser.parse_args(sys.argv)
-    
+
     if not options.working_dir:
         parser.error("Bad working-dir option")
 
     if options.config_file is None:
         options.config_file = os.path.join(options.working_dir, "tron_config.yaml")
-    
+
     return options
+
 
 
 def setup_logging(options):
@@ -71,10 +81,9 @@ def setup_logging(options):
         twist_level = logging.INFO
     if options.verbose > 2:
         twist_level = logging.DEBUG
-        
 
     root = logging.getLogger('')
-    
+
     try:
         handler = log_handler.ReOpeningFileHandler(options.log_file)
     except IOError, e:
@@ -87,7 +96,7 @@ def setup_logging(options):
     root.addHandler(handler)
     root.setLevel(level)
     logging.getLogger('twisted').setLevel(twist_level)
-    
+
     # Hookup twisted to standard logging
     observer = log.PythonLoggingObserver()
     observer.start()
@@ -98,9 +107,11 @@ def setup_logging(options):
 
     return handler
 
-# This is rather crazy thing to do, but I don't really like 'twistd', but it has all kinds of 
-# useful functions in it for daemonizing stuff. So rather than use twisted and build a tac file and
-# all that crap, we're going to hack out the parts we like. 
+
+# This is rather crazy thing to do, but I don't really like 'twistd', but it
+# has all kinds of useful functions in it for daemonizing stuff. So rather than
+# use twisted and build a tac file and all that crap, we're going to hack out
+# the parts we like. 
 class FakeConfig(dict):
     """Wrapper class to make a options object look like dictionary for twistd stuff"""
     def __init__(self, options):
@@ -108,19 +119,22 @@ class FakeConfig(dict):
     def __getitem__(self, key):
         return getattr(self.options, key)
 
+
 class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
     def __init__(self, options):
-        # We arn't supporting all the options that twistd has, so add some default values here.
+        # We arn't supporting all the options that twistd has, so add some
+        # default values here.
         options.profile = None
         options.chroot = None
         options.rundir = '.'
         options.umask = 022
-        
+
         self.options = options
 
         self.config = FakeConfig(options)
 
-        # The ApplicationRunner is suppose to have an actual application it runs, but that abstraction just confused me.
+        # The ApplicationRunner is suppose to have an actual application it
+        # runs, but that abstraction just confused me.
         self.application = None
         self.profiler = None
 
@@ -134,8 +148,10 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
             if e.errno != errno.EEXIST:
                 raise
 
-        if not os.path.isdir(self.options.working_dir) or not os.access(self.options.working_dir, os.R_OK|os.W_OK|os.X_OK):
-            print >>sys.stderr, "Error, working directory %s invalid" % (self.options.working_dir)
+        if (not os.path.isdir(self.options.working_dir) or
+            not os.access(self.options.working_dir, os.R_OK|os.W_OK|os.X_OK)):
+            print >>sys.stderr, "Error, working directory %s invalid" % (
+                self.options.working_dir)
             sys.exit(1)
 
         # See if we can access or create the config file
@@ -143,21 +159,23 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
             try:
                 create_default_config(self.options.config_file)
             except OSError, create_e:
-                print >>sys.stderr, "Error creating default configuration at %s: %r" % (self.options.config_file, create_e)
+                print >>sys.stderr, "Error creating default configuration at %s: %r" % (
+                    self.options.config_file, create_e)
                 sys.exit(1)
 
         if not os.access(self.options.config_file, os.R_OK|os.W_OK):
-            print >>sys.stderr, "Error opening configuration %s: Permissions" % (self.options.config_file)
+            print >>sys.stderr, "Error opening configuration %s: Permissions" % (
+                self.options.config_file)
             sys.exit(1)
-        
+
 
     def run(self):
         logger.debug("init: preApplication")
         self.preApplication()
-        
+
         logger.debug("init: setup_logging")
         self.log_handler = setup_logging(self.options)
-        
+
         logger.debug("init: postApplication")
         self.postApplication()
 
@@ -172,14 +190,15 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
                               self.config['umask'],
                               self.config['pidfile'])
         except Exception, e:
-            # We may have already forked/daemonized at this point, so lets hope that logging was setup properly
-            # otherwise, we may never know...
+            # We may have already forked/daemonized at this point, so lets hope
+            # that logging was setup properly otherwise, we may never know...
             logger.exception("Error setting up environment")
             print >>sys.stderr, "Error setting up environment: %r" % e
             sys.exit(1)
-        
+
         # Build and configure the mcp
-        master_control = mcp.MasterControlProgram(self.options.working_dir, self.options.config_file)
+        master_control = mcp.MasterControlProgram(self.options.working_dir,
+                                                  self.options.config_file)
         try:
             master_control.load_config()
         except Exception, e:
@@ -202,15 +221,17 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
 
         # Start up our web management interface
         logger.debug("listenTCP")
-        reactor.listenTCP(self.options.listen_port, server.Site(www.RootResource(master_control)), interface=self.options.listen_host)
+        reactor.listenTCP(self.options.listen_port, server.Site(
+            www.RootResource(master_control)),
+            interface=self.options.listen_host)
 
         # Setup the mcp timed callbacks
         reactor.callLater(0, master_control.run_jobs)
 
-        
+
 def main():
     options = parse_options()
-    
+
     app_runner = TronApplicationRunner(options)
     app_runner.run()
 

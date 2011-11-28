@@ -2,6 +2,7 @@
 # -*- makefile -*-
 
 DEB_PYTHON_SYSTEM=pycentral
+DEB_DH_INSTALLINIT_ARGS="-n"
 
 include /usr/share/cdbs/1/rules/debhelper.mk
 include /usr/share/cdbs/1/class/python-distutils.mk

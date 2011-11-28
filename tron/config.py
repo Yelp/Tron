@@ -1,9 +1,11 @@
-import sys
-import re
-import logging
-import weakref
 import datetime
+import logging
+from logging import handlers
 import os
+import re
+import socket
+import sys
+import weakref
 
 import yaml
 from twisted.conch.client import options
@@ -19,9 +21,11 @@ from tron import service
 
 log = logging.getLogger("tron.config")
 
+CLEANUP_ACTION_NAME = "cleanup"
+
 class Error(Exception):
     pass
-    
+
 class ConfigError(Exception):
     pass
 
@@ -37,6 +41,12 @@ ssh_options:
     #     - /home/tron/.ssh/id_dsa
     agent: true
     
+
+## Uncomment if you want logging to syslog. Typical values for different platforms:
+##    Linux: "/dev/log"
+##    OS X: "/var/run/syslog"
+##    Windows: ["localhost", 514]
+# syslog_address: /dev/log
 
 # notification_options:
       ## In case of trond failures, where should we send notifications to ?
@@ -56,7 +66,7 @@ nodes:
 command_context:
     # Variable subsitution
     # There are some built-in values such as 'node', 'runid', 'actionname' and 
-    # run-time based variables such as 'shortdate'
+    # run-time based variables such as 'shortdate'. (See tronfig.1 for reference.)
     # You can specify whatever else you want similiar to environment variables:
     # PYTHON: "/usr/bin/python"
  
@@ -70,6 +80,8 @@ jobs:
     #         -
     #             name: "uname"
     #             command: "uname -a"
+    #     cleanup_action:
+    #         command: "rm -rf /tmp/sample_job_scratch"
 
 services:
     ## Configure services here. Services differ from jobs in that they are expected to have an enable/disable and monitoring
@@ -134,7 +146,7 @@ class _ConfiguredObject(yaml.YAMLObject, FromDictBuilderMixin):
         
         result = results[0]
         result.line_number = line_number
-        result._validate()    
+        result._validate()
 
         return result
 
@@ -214,6 +226,40 @@ class TronConfiguration(yaml.YAMLObject):
             mcp.nodes = existing_nodes
             raise
 
+    def _apply_loggers(self, mcp):
+        root = logging.getLogger('')
+        handlers_to_be_removed = set(h for h in root.handlers
+                                     if h not in mcp.base_logging_handlers)
+
+        # Only change handlers if they will actually be different from the old
+        # handlers
+        new_handlers = []
+        if hasattr(self, 'syslog_address'):
+            if not isinstance(self.syslog_address, basestring):
+                self.syslog_address = tuple(self.syslog_address)
+
+            already_exists = False
+            for h in set(handlers_to_be_removed):
+                if (isinstance(h, handlers.SysLogHandler) and
+                    h.address == self.syslog_address):
+                    handlers_to_be_removed.remove(h)
+                    already_exists = True
+
+            if not already_exists:
+                try:
+                    new_handlers.append(handlers.SysLogHandler(self.syslog_address))
+                except socket.error:
+                    raise ConfigError('%s is not a valid syslog address' %
+                                      self.syslog_address)
+
+        for h in handlers_to_be_removed:
+            log.info('Removing logging handler %s', h)
+            root.removeHandler(h)
+
+        for h in new_handlers:
+            log.info('Adding logging handler %s', h)
+            root.addHandler(h)
+
     def _apply_jobs(self, mcp):
         """Configure jobs"""
         found_jobs = []
@@ -248,6 +294,8 @@ class TronConfiguration(yaml.YAMLObject):
 
         found_srv_names = set()
         for srv_config in service_configs:
+            if not isinstance(srv_config, Service):
+                raise ConfigError("There is a !Job in the services list: %s" % srv_config)
             if srv_config.name in found_srv_names:
                 raise yaml.YAMLError("Duplicate service name %s" % srv_config.name)
             found_srv_names.add(srv_config.name)
@@ -293,6 +341,8 @@ class TronConfiguration(yaml.YAMLObject):
             raise ConfigError("Specified working directory \'%s\' is not writable" % working_dir)
         
         mcp.state_handler.working_dir = working_dir
+
+        self._apply_loggers(mcp)
 
         if hasattr(self, 'command_context'):
             if mcp.context:
@@ -409,9 +459,9 @@ def _match_actions(real_job, action_conf_list):
 
         # because of the ass-backwards way tron parses config, we need to
         # use getattr here
-        if not getattr(real_job, 'node_pool') and not getattr(real_action, 'node_pool'):
+        if not getattr(real_job, 'node_pool', None) and not getattr(real_action, 'node_pool', None):
             raise ConfigError("Either job '%s' or its action '%s' must have a node"
-               % (real_job.name, action_action.name))
+               % (real_job.name, real_action.name))
 
         # Do all the dependent actions belong to the same job?
         for dependent in real_action.required_actions:
@@ -449,6 +499,18 @@ class Job(_ConfiguredObject):
 
         if hasattr(self, "all_nodes"):
             real_job.all_nodes = self.all_nodes
+
+        if hasattr(self, "cleanup_action"):
+            # condensed, specialized version of _match_actions()
+            action = default_or_from_tag(self.cleanup_action, CleanupAction)
+            real_action = action.actualized
+
+            if not real_job.node_pool and not real_action.node_pool:
+                raise ConfigError("Either job '%s' or its action '%s' must have a node"
+                   % (real_job.name, action_action.name))
+            real_job.cleanup_action = real_action
+            real_action.job = real_job
+            real_job._register_action(real_action)
 
 
 class Service(_ConfiguredObject):
@@ -498,7 +560,7 @@ class Action(_ConfiguredObject):
             if not getattr(self, key, None):
                 raise ConfigError("Missing value in action %s %r" % (key, self), self.line_number)
 
-        if not re.match(r'[a-z_]\w*$', self.name, re.I):
+        if not re.match(r'[a-z_]\w*$', self.name, re.I) or self.name == CLEANUP_ACTION_NAME:
             raise ConfigError("Invalid action name '%s' - not a valid identifier" % self.name, self.line_number)
 
     def _apply_requirements(self, real_action, requirements):
@@ -531,6 +593,24 @@ class Action(_ConfiguredObject):
 
         if hasattr(self, "requires"):
             self._apply_requirements(real_action, self.requires)
+
+
+class CleanupAction(Action):
+    yaml_tag = u'!CleanupAction'
+    actual_class = action.Action
+
+    def _validate(self):
+        if hasattr(self, 'name') and self.name is not None and self.name != CLEANUP_ACTION_NAME:
+            raise ConfigError("Cleanup actions cannot have custom names (you wanted %s)" % self.name)
+
+        self.name = CLEANUP_ACTION_NAME
+
+        if not getattr(self, 'command', None):
+            raise ConfigError("Missing value in action %s %r" % (key, self), self.line_number)
+
+        if hasattr(self, 'requires'):
+            raise ConfigError("Cleanup actions cannot have dependencies")
+
 
 class NodePool(_ConfiguredObject):
     yaml_tag = u'!NodePool'
