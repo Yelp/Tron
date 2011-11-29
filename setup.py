@@ -15,6 +15,8 @@ setup(
     description='Job scheduling and monitoring system',
     classifiers=[
         "Programming Language :: Python",
+        'Programming Language :: Python :: 2.5',
+        'Programming Language :: Python :: 2.6',
         "Operating System :: OS Independent",
         "License :: OSI Approved :: Apache Software License",
         "Topic :: System :: Monitoring",
