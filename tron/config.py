@@ -1,6 +1,6 @@
 import datetime
 import logging
-from logging import handlers
+import logging.handlers
 import os
 import re
 import socket
@@ -240,14 +240,16 @@ class TronConfiguration(yaml.YAMLObject):
 
             already_exists = False
             for h in set(handlers_to_be_removed):
-                if (isinstance(h, handlers.SysLogHandler) and
+                if (isinstance(h, logging.handlers.SysLogHandler) and
                     h.address == self.syslog_address):
                     handlers_to_be_removed.remove(h)
                     already_exists = True
 
             if not already_exists:
                 try:
-                    new_handlers.append(handlers.SysLogHandler(self.syslog_address))
+                    h = logging.handlers.SysLogHandler(self.syslog_address)
+                    h.setFormatter(logging.Formatter("tron[%(process)d]: %(message)s"))
+                    new_handlers.append(h)
                 except socket.error:
                     raise ConfigError('%s is not a valid syslog address' %
                                       self.syslog_address)
