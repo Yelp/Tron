@@ -56,4 +56,4 @@ class JobResource(object):
         return (self._is_ready and
                 (self.check_interval is None or
                  self.last_check >
-                    timeutils.current_time() - self.check_interva))
+                    timeutils.current_time() - self.check_interval))
