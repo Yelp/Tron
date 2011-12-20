@@ -1,6 +1,8 @@
 tron (0.2.8.1-1) unstable; urgency=low
 
   * Set a meaningful Formatter when logging to syslog (jbrown)
+  * Included prebuilt man pages in distribution so Sphinx isn't required to
+    have them
 
  -- James Brown <jbrown@yelp.com>  Mon, 12 Dec 2011 16:26:05 -0800
 
