@@ -164,10 +164,10 @@ class DailySchedulerDSTTest(TestCase):
         job_2 = self.make_job(self.scheduler)
 
         # Exact crossover time:
-        # datetime.datetime(2011, 11, 6, 9, 0, 0, tzinfo=pytz.utc)
+        # datetime.datetime(2011, 11, 6, 9, 0, 0)
         # This test will use times on either side of it.
 
-        # First schedule before:
+        # First schedule before, in PDT:
         now = datetime.datetime(2011, 11, 6, 8, 50, 0)
         timeutils.override_current_time(now)
 
@@ -176,15 +176,21 @@ class DailySchedulerDSTTest(TestCase):
         next_run = self.scheduler.next_runs(job_1)[0]
         pre_crossover_run_time = next_run.run_time
 
-        # Then schedule for the same time, but after the crossover.
-        # The system clock has moved itself back one hour, so the scheduler
-        # should schedule normally. The result should be one our 'less' than
-        # the pre-crossover scheduled time.
+        # Then schedule for the same time, but after the crossover. The time
+        # zone has changed to PST, so the scheduler should schedule normally.
+        # The result should be one hour 'less' than the pre-crossover scheduled
+        # time, which in absolute time is the same number of hours from "now"
+        # as the local time zone is different.
+        # The net result of this is that both job runs should now be scheduled
+        # to run at the same time.
+        # I'm going to go take some ibuprofen now.
         now = datetime.datetime(2011, 11, 6, 9, 10, 0)
         timeutils.override_current_time(now)
 
         next_run = self.scheduler.next_runs(job_2)[0]
         post_crossover_run_time = next_run.run_time
+
+        print pre_crossover_run_timem, post_crossover_run_time
 
         assert_equal(pre_crossover_run_time,
                      post_crossover_run_time - datetime.timedelta(hours=1))
