@@ -3,6 +3,7 @@ import datetime
 import tempfile
 import shutil
 
+import pytz
 from testify import *
 from testify.utils import turtle
 
@@ -108,6 +109,29 @@ class DailySchedulerTodayTest(DailySchedulerTimeTestBase):
 
 class DailySchedulerTomorrowTest(DailySchedulerTimeTestBase):
     @setup
+    def build_scheduler(self):
+        self.scheduler = scheduler.DailyScheduler(
+            start_time=datetime.time(hour=1, minute=0))
+
+    @setup
+    def build_job(self):
+        self.test_dir = tempfile.mkdtemp()
+        self.action = action.Action("Test Action - Beer Time")
+        self.job = job.Job("Test Job", self.action)
+        self.job.node_pool = turtle.Turtle()
+        self.job.output_path = self.test_dir
+        self.job.scheduler = self.scheduler
+        self.action.job = self.job
+
+    @teardown
+    def unset_time(self):
+        timeutils.override_current_time(None)
+
+    @teardown
+    def cleanup(self):
+        shutil.rmtree(self.test_dir)
+
+    @setup
     def set_time(self):
         self.now = datetime.datetime.now().replace(hour=15, minute=0)
         timeutils.override_current_time(self.now)
@@ -122,6 +146,28 @@ class DailySchedulerTomorrowTest(DailySchedulerTimeTestBase):
         assert_lte(datetime.datetime(year=tomorrow.year, month=tomorrow.month,
                                      day=tomorrow.day, hour=13),
                    next_run.run_time)
+
+
+class DailySchedulerDSTTest(DailySchedulerTimeTestBase):
+    @setup
+    def set_time(self):
+        self.now = datetime.datetime(year=2011, month=11, day=6, hour=0)
+        timeutils.override_current_time(self.now)
+
+    def test(self):
+        next_run = self.scheduler.next_runs(self.job)[0]
+        next_run_date = next_run.run_time.date()
+
+        fmt = '%Y-%m-%d %H:%M:%S %Z%z'
+        pacific = pytz.timezone('US/Pacific')
+        utc_dt = datetime.datetime(2011, 11, 6, 9, 0, 0, tzinfo=pytz.utc)
+        loc_dt = utc_dt.astimezone(pacific)
+
+        before = pacific.normalize(loc_dt - datetime.timedelta(minutes=10))
+        after = pacific.normalize(loc_dt + datetime.timedelta(minutes=10))
+        print 'PDT->PST crossover:', loc_dt.strftime(fmt)
+        print 'Before:', before.strftime(fmt)
+        print 'After:', after.strftime(fmt)
 
 
 class GrocSchedulerTest(TestCase):
