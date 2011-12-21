@@ -34,7 +34,8 @@ COMMAND_HELP = (
     ('fail', 'Mark an UNKNOWN job as having failed'),
     ('succeed', 'Mark an UNKNOWN job as having succeeded'),
     ('stop', 'Stop the selected service'),
-    ('zap', "Reset a service or service instance's status to DOWN without taking any other action"),
+    ('zap', "Reset a service or service instance's status to DOWN without"
+            " taking any other action"),
 )
 
 
@@ -48,7 +49,8 @@ class TronCtlOptionParser(optparse.OptionParser):
         result.append(formatter.format_heading("Commands"))
         formatter.indent()
         for cmd, desc in COMMAND_HELP:
-            result.append(formatter._format_text(''.join((cmd.ljust(20), desc.ljust(40)))))
+            text = ''.join((cmd.ljust(20), desc.ljust(40)))
+            result.append(formatter._format_text(text))
             result.append('\n')
 
         result.append('\n')
@@ -110,8 +112,9 @@ def main():
     command = args.pop(0)
 
     if not args:
-        # our only non-object commands are for enabling and disabling jobs, so just
-        # direct those commands here
+
+        # our only non-object commands are for enabling and disabling jobs, so
+        # just direct those commands here
         ret = edit(options, command, '/jobs')
     else:
         job_to_uri = cmd.make_job_to_uri(content)
@@ -119,7 +122,8 @@ def main():
 
         for obj_spec in args:
             try:
-                full_uri = cmd.obj_spec_to_uri(obj_spec, job_to_uri, service_to_uri)
+                full_uri = cmd.obj_spec_to_uri(obj_spec, job_to_uri,
+                                               service_to_uri)
             except Exception:
                 log.error('Unknown identifier: %s' % obj_spec)
                 sys.exit(1)
