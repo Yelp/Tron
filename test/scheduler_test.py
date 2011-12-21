@@ -108,28 +108,6 @@ class DailySchedulerTodayTest(DailySchedulerTimeTestBase):
 
 
 class DailySchedulerTomorrowTest(DailySchedulerTimeTestBase):
-    @setup
-    def build_scheduler(self):
-        self.scheduler = scheduler.DailyScheduler(
-            start_time=datetime.time(hour=1, minute=0))
-
-    @setup
-    def build_job(self):
-        self.test_dir = tempfile.mkdtemp()
-        self.action = action.Action("Test Action - Beer Time")
-        self.job = job.Job("Test Job", self.action)
-        self.job.node_pool = turtle.Turtle()
-        self.job.output_path = self.test_dir
-        self.job.scheduler = self.scheduler
-        self.action.job = self.job
-
-    @teardown
-    def unset_time(self):
-        timeutils.override_current_time(None)
-
-    @teardown
-    def cleanup(self):
-        shutil.rmtree(self.test_dir)
 
     @setup
     def set_time(self):
@@ -148,19 +126,72 @@ class DailySchedulerTomorrowTest(DailySchedulerTimeTestBase):
                    next_run.run_time)
 
 
-class DailySchedulerDSTTest(DailySchedulerTimeTestBase):
+class DailySchedulerDSTTest(TestCase):
+
     @setup
-    def set_time(self):
-        self.now = datetime.datetime(year=2011, month=11, day=6, hour=0)
-        timeutils.override_current_time(self.now)
+    def setup_tmp(self):
+        self.tmp_dirs = []
+
+    @teardown
+    def unset_time(self):
+        timeutils.override_current_time(None)
+
+    @teardown
+    def cleanup(self):
+        for tmp_dir in self.tmp_dirs:
+            shutil.rmtree(tmp_dir)
+
+    def make_job(self, sch):
+        tmp_dir = tempfile.mkdtemp()
+        self.tmp_dirs.append(tmp_dir)
+        a = action.Action("Test Action - Early Christmas Shopping")
+        j = job.Job("Test Job", a)
+        j.node_pool = turtle.Turtle()
+        j.output_path = tmp_dir
+        j.scheduler = sch
+        a.job = j
+        return j
 
     def test(self):
-        next_run = self.scheduler.next_runs(self.job)[0]
-        next_run_date = next_run.run_time.date()
+        """This test checks the behavior of the scheduler at the daylight
+        savings time 'fall back' point, when the system clock sets itself
+        back one hour.
+        """
+        self.scheduler = scheduler.DailyScheduler(
+            start_time=datetime.time(hour=1, minute=0))
 
+        job_1 = self.make_job(self.scheduler)
+        job_2 = self.make_job(self.scheduler)
+
+        # Exact crossover time:
+        # datetime.datetime(2011, 11, 6, 9, 0, 0, tzinfo=pytz.utc)
+        # This test will use times on either side of it.
+
+        # First schedule before:
+        now = datetime.datetime(2011, 11, 6, 8, 50, 0)
+        timeutils.override_current_time(now)
+
+        # We are at a time zone crossing, so the scheduler should add an extra
+        # hour (but it currently does not and so this test fails)
+        next_run = self.scheduler.next_runs(job_1)[0]
+        pre_crossover_run_time = next_run.run_time
+
+        # Then schedule for the same time, but after the crossover.
+        # The system clock has moved itself back one hour, so the scheduler
+        # should schedule normally. The result should be one our 'less' than
+        # the pre-crossover scheduled time.
+        now = datetime.datetime(2011, 11, 6, 9, 10, 0)
+        timeutils.override_current_time(now)
+
+        next_run = self.scheduler.next_runs(job_2)[0]
+        post_crossover_run_time = next_run.run_time
+
+        assert_equal(pre_crossover_run_time,
+                     post_crossover_run_time - datetime.timedelta(hours=1))
+
+    def _demonstrate_pytz(self):
         fmt = '%Y-%m-%d %H:%M:%S %Z%z'
         pacific = pytz.timezone('US/Pacific')
-        utc_dt = datetime.datetime(2011, 11, 6, 9, 0, 0, tzinfo=pytz.utc)
         loc_dt = utc_dt.astimezone(pacific)
 
         before = pacific.normalize(loc_dt - datetime.timedelta(minutes=10))
