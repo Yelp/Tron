@@ -1,8 +1,10 @@
-"""Command Context is how we construct the command line for a command which may have variables that need to be rendered.
-
+"""Command Context is how we construct the command line for a command which may
+have variables that need to be rendered.
 """
 
+
 class CommandContext(object):
+
     def __init__(self, base, next=None):
         """Initialize
 
@@ -42,4 +44,3 @@ class CommandContext(object):
             pass
 
         raise KeyError(name)
-

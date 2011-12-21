@@ -1,4 +1,5 @@
 """General email sending utilities"""
+
 import logging
 import smtplib
 from email.mime.text import MIMEText
@@ -6,6 +7,7 @@ import getpass
 import socket
 
 log = logging.getLogger("tron.emailer")
+
 
 class Error(Exception):
     pass
@@ -24,11 +26,9 @@ class Emailer(object):
         return "@".join((username, hostname))
 
     def send(self, content):
-    	msg = MIMEText(content)
-    	msg['Subject'] = "Tron Exception"
-    	msg['To'] = self.to_addr
-
-        
+        msg = MIMEText(content)
+        msg['Subject'] = "Tron Exception"
+        msg['To'] = self.to_addr
 
         port = 25
         host_parts = self.smtp_host.split(":")
@@ -37,12 +37,10 @@ class Emailer(object):
             port = int(host_parts.pop(0))
         if host_parts:
             raise Error("Invalid host name")
-        
+
         log.info("Connecting to SMTP host %r %r", self.smtp_host, (host, port))
-        
-    	s = smtplib.SMTP()
-    	s.connect(host, port)
-    	s.sendmail(self.from_addr, self.to_addr, msg.as_string())
-    	s.close()
-        
-        
+
+        s = smtplib.SMTP()
+        s.connect(host, port)
+        s.sendmail(self.from_addr, self.to_addr, msg.as_string())
+        s.close()

@@ -1,9 +1,7 @@
 import collections
 import logging
 
-
 from twisted.internet import reactor
-
 
 from tron import action
 from tron import command_context
@@ -16,15 +14,16 @@ from tron.utils import timeutils
 
 log = logging.getLogger(__name__)
 
-
 MIN_MONITOR_HANG_TIME = 10
 
 
 class Error(Exception):
     """Generic service error"""
 
+
 class InvalidStateError(Error):
     """Invalid state error"""
+
 
 class ServiceInstance(object):
     class ServiceInstanceState(state.NamedEventState):
@@ -133,7 +132,7 @@ class ServiceInstance(object):
 
         self._hanging_monitor_check_delayed_call = reactor.callLater(
             hang_monitor_duration,
-            lambda : self._monitor_hang_check(current_action))
+            lambda: self._monitor_hang_check(current_action))
 
     def _run_monitor(self):
         self._monitor_delayed_call = None
@@ -234,8 +233,8 @@ class ServiceInstance(object):
         if self.start_action.exit_status != 0:
             self.machine.transition("down")
         elif self.machine.state == self.STATE_STOPPING:
-            # Someone tried to stop us while we were just getting going. 
-            # Go ahead and kick of the kill operation now that we're up.
+            # Someone tried to stop us while we were just getting going. Go
+            # ahead and kick of the kill operation now that we're up.
             if self.stop_action:
                 log.warning("Stopping %s while stop already in progress",
                             self.id)
@@ -248,10 +247,11 @@ class ServiceInstance(object):
         self.start_action = None
 
     def _start_complete_failstart(self):
-        log.warning("Failed to start service %s (%s)", self.id, self.node.hostname)
+        log.warning("Failed to start service %s (%s)",
+                    self.id, self.node.hostname)
 
         # We may have failed but long since not mattered
-        if None in (self.machine, self.start_action): 
+        if None in (self.machine, self.start_action):
             return
 
         self.machine.transition("down")
@@ -268,7 +268,8 @@ class ServiceInstance(object):
 
         kill_command = "cat %(pid_file)s | xargs kill" % self.context
 
-        self.stop_action = action.ActionCommand("%s.stop" % self.id, kill_command)
+        self.stop_action = action.ActionCommand("%s.stop" % self.id,
+                                                kill_command)
         self.stop_action.machine.listen(action.ActionCommand.COMPLETE,
                                         self._stop_complete_callback)
         self.stop_action.machine.listen(action.ActionCommand.FAILSTART,
@@ -410,7 +411,8 @@ class Service(object):
 
     def _clear_failed_instances(self):
         """Remove and cleanup any instances that are no longer with us"""
-        self.instances = [inst for inst in self.instances if inst.state != ServiceInstance.STATE_FAILED]
+        self.instances = [inst for inst in self.instances
+                          if inst.state != ServiceInstance.STATE_FAILED]
 
     def _restart_after_failure(self):
         if self._restart_timer is None:
@@ -423,7 +425,8 @@ class Service(object):
             self._restart_timer = None
 
     def start(self):
-        # Clear out the restart timer, just to make sure we don't get any extraneous starts
+        # Clear out the restart timer, just to make sure we don't get any
+        # extraneous starts
         self._restart_timer = None
 
         # Start can really mean restart any failed or down instances.
@@ -462,7 +465,7 @@ class Service(object):
     def _create_instance(self, node, instance_number):
         service_instance = ServiceInstance(self, node, instance_number)
         self.instances.append(service_instance)
-        self.instances.sort(key=lambda i:i.instance_number)
+        self.instances.sort(key=lambda i: i.instance_number)
 
         service_instance.listen(True, self._instance_change)
 
@@ -491,8 +494,8 @@ class Service(object):
 
         service_instance = self._create_instance(node, instance_number)
 
-        # No reason not to start this guy right away, we don't keep 'down' instances 
-        # around really.
+        # No reason not to start this guy right away, we don't keep 'down'
+        # instances around really.
         service_instance.start()
 
         return service_instance
@@ -500,13 +503,16 @@ class Service(object):
     def _instance_change(self):
         """Handle any changes to our service's instances
 
-        This is the state change callback handler for all our instances. 
-        Anytime an instance changes, we need to re-evaluate our own current state.
+        This is the state change callback handler for all our instances.
+        Anytime an instance changes, we need to re-evaluate our own current
+        state.
         """
         # Remove any downed instances
-        self.instances = [inst for inst in self.instances if inst.state != inst.STATE_DOWN]
+        self.instances = [inst for inst in self.instances
+                          if inst.state != inst.STATE_DOWN]
 
-        # Now we can make some inferences about state changes based on our instances
+        # Now we can make some inferences about state changes based on our
+        # instances
         if not self.instances:
             self.machine.transition("all_down")
 
@@ -549,8 +555,8 @@ class Service(object):
             self.pid_file_template != prev_service.pid_file_template,
             self.scheduler != prev_service.scheduler])
 
-        # Since we are inheriting all the existing instances, 
-        # it's safe to also inherit the previous state machine as well.
+        # Since we are inheriting all the existing instances, it's safe to also
+        # inherit the previous state machine as well.
         self.machine = prev_service.machine
 
         # To permanently disable the older service, remove it's machine.
@@ -572,7 +578,7 @@ class Service(object):
 
         prev_service.instances = []
 
-        self.instances.sort(key=lambda i:i.instance_number)
+        self.instances.sort(key=lambda i: i.instance_number)
 
         current_instances = [i for i in self.instances if i.state not in
                              (ServiceInstance.STATE_STOPPING,
@@ -596,7 +602,8 @@ class Service(object):
                 # First we'll stop any instances on nodes that are no longer
                 # part of our pool
                 try:
-                    service_instance.node = self.node_pool[service_instance.node.hostname]
+                    hostname = service_instance.node.hostname
+                    service_instance.node = self.node_pool[hostname]
                 except KeyError:
                     log.info("Stopping instance %r because it's not on a"
                              " current node (%r)",
@@ -607,7 +614,8 @@ class Service(object):
                     continue
 
                 instance_count_per_node[service_instance.node] += 1
-                if instance_count_per_node[service_instance.node] > optimal_instances_per_node:
+                if (instance_count_per_node[service_instance.node] >
+                        optimal_instances_per_node):
                     log.info("Stopping instance %r because node %s has too"
                              " many instances",
                              service_instance.id,
@@ -621,7 +629,8 @@ class Service(object):
                               ServiceInstance.STATE_DOWN,
                               ServiceInstance.STATE_FAILED)]
 
-        count_to_remove = (len(self.instances) - removed_instances) - self.count
+        count_to_remove = ((len(self.instances) - removed_instances) -
+                           self.count)
         if count_to_remove > 0:
             instances_to_remove = current_instances[-count_to_remove:]
             for service_instance in instances_to_remove:
@@ -683,7 +692,7 @@ class Service(object):
             service_instance.machine.state = ServiceInstance.STATE_MONITORING
             service_instance._run_monitor()
 
-        self.instances.sort(key=lambda i:i.instance_number)
+        self.instances.sort(key=lambda i: i.instance_number)
         self.event_recorder.emit_info("restored")
 
     def __eq__(self, other):
