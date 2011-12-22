@@ -128,6 +128,18 @@ Notification Options
             smtp_host: localhost
             notification_addr: batch+errors@example.com
 
+Time Zone
+---------
+
+**time_zone** (optional)
+    Local time as observed by the system clock. If your system is obeying a
+    time zone with daylight savings time, then some of your jobs may run early
+    or late on the days bordering each mode.
+
+    ::
+
+        time_zone: US/Pacific
+
 .. _command_context:
 
 Command Context
@@ -135,7 +147,8 @@ Command Context
 
 **command_context**
     Dictionary of custom :ref:`command context variables
-    <command_context_variables>`. This attribute does *not* use a tag.
+    <command_context_variables>`. This attribute does *not* use a tag since it
+    is an arbitrary set of key-value pairs rather than an object with a schema.
 
     ::
 

@@ -1,4 +1,4 @@
-.TH "TRONFIG" "1" "December 15, 2011" "0.2" "Tron"
+.TH "TRONFIG" "1" "December 21, 2011" "0.2" "Tron"
 .SH NAME
 tronfig \- tronfig documentation
 .
@@ -99,6 +99,17 @@ Email address to send mail to
 .UNINDENT
 .UNINDENT
 .UNINDENT
+.TP
+.B time_zone (optional)
+Local time as observed by the system clock. If your system is obeying a
+time zone with daylight savings time, then some of your jobs may run early
+or late on the days bordering each mode.
+.sp
+.nf
+.ft C
+time_zone: US/Pacific
+.ft P
+.fi
 .TP
 .B nodes
 List of Node and NodePool objects which tron connects to.
