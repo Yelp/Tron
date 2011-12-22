@@ -4,8 +4,6 @@ import datetime
 import logging
 import re
 
-import pytz
-
 from tron.utils import groctimespecification
 from tron.utils import timeutils
 
@@ -175,7 +173,7 @@ class GrocScheduler(object):
         else:
             self.timestr = timestr
 
-        self.time_zone = pytz.timezone(time_zone) if time_zone else None
+        self.time_zone = time_zone
         self.string_repr = 'every day of month'
 
         self._time_spec = None

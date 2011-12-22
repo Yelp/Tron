@@ -7,6 +7,7 @@ import socket
 import sys
 import weakref
 
+import pytz
 import yaml
 from twisted.conch.client import options
 
@@ -278,6 +279,10 @@ class TronConfiguration(yaml.YAMLObject):
             log.info('Adding logging handler %s', h)
             root.addHandler(h)
 
+    def _apply_time_zone_name(self, mcp):
+        if hasattr(self, 'time_zone'):
+            mcp.time_zone = pytz.timezone(self.time_zone)
+
     def _apply_jobs(self, mcp):
         """Configure jobs"""
         found_jobs = []
@@ -384,6 +389,7 @@ class TronConfiguration(yaml.YAMLObject):
                                                    SSHOptions)
             self.ssh_options._apply(mcp)
 
+        self._apply_time_zone_name(mcp)
         self._apply_jobs(mcp)
         self._apply_services(mcp)
 

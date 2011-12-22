@@ -203,6 +203,7 @@ class MasterControlProgram(object):
         self.config_file = config_file
         self.context = context
         self.monitor = None
+        self.time_zone = None
         self.event_recorder = event.EventRecorder(self)
         self.state_handler = StateHandler(self, working_dir)
 
@@ -284,6 +285,10 @@ class MasterControlProgram(object):
             log.info("adding job %s", job.name)
 
         self.jobs[job.name] = job
+
+        # update time zone information in scheduler to match config
+        if job.scheduler is not None:
+            job.scheduler.time_zone = self.time_zone
 
         job.set_context(self.context)
         job.event_recorder.set_parent(self.event_recorder)

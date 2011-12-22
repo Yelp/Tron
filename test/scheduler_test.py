@@ -183,7 +183,7 @@ class DailySchedulerDSTTest(TestCase):
 
         sch = scheduler.DailyScheduler(
             start_time=datetime.time(hour=0, minute=0),
-            time_zone='US/Pacific')
+            time_zone=pytz.timezone('US/Pacific'))
 
         # Exact crossover time:
         # datetime.datetime(2011, 11, 6, 9, 0, 0, tzinfo=pytz.utc)
