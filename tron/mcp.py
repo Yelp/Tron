@@ -8,8 +8,6 @@ import time
 import weakref
 import yaml
 
-import pytz
-
 import tron
 from tron import job, config, command_context, event
 from twisted.internet import reactor
@@ -18,8 +16,6 @@ from tron.utils import timeutils
 
 log = logging.getLogger('tron.mcp')
 
-SECS_PER_DAY = 86400
-MICRO_SEC = .000001
 STATE_FILE = 'tron_state.yaml'
 STATE_SLEEP_SECS = 1
 WRITE_DURATION_WARNING_SECS = 30
@@ -35,19 +31,6 @@ class StateFileVersionError(Error):
 
 class UnsupportedVersionError(Error):
     pass
-
-
-def sleep_time(run_time):
-    fmt = '%Y-%m-%d %H:%M:%S %Z%z'
-    pacific = pytz.timezone('US/Pacific')
-    now = pacific.localize(timeutils.current_time())
-    print run_time.strftime(fmt)
-    print 'sleeping from', pacific.normalize(now).strftime(fmt)
-    print '           to', pacific.normalize(run_time).strftime(fmt)
-    sleep = run_time - now
-    seconds = (sleep.days * SECS_PER_DAY + sleep.seconds +
-               sleep.microseconds * MICRO_SEC)
-    return max(0, seconds)
 
 
 class StateHandler(object):
@@ -68,7 +51,7 @@ class StateHandler(object):
 
         for run in job_inst.runs:
             if run.is_scheduled:
-                reactor.callLater(sleep_time(run.run_time),
+                reactor.callLater(run.seconds_until_run_time(),
                                   self.mcp.run_job,
                                   run)
 
@@ -345,10 +328,10 @@ class MasterControlProgram(object):
         service.stop()
 
     def _schedule(self, run):
-        sleep = sleep_time(run.run_time)
-        if sleep == 0:
+        secs = run.seconds_until_run_time()
+        if secs == 0:
             run.set_run_time(timeutils.current_time())
-        reactor.callLater(sleep, self.run_job, run)
+        reactor.callLater(secs, self.run_job, run)
 
     def schedule_next_run(self, job):
         if job.runs and job.runs[0].is_scheduled:

@@ -45,6 +45,7 @@ def month_canonicalization_map():
             canon_map[key.lower()] = value
     return canon_map
 
+
 # Canonicalize month names to integer indices
 # month name/abbrev => {0 <= k <= 11}
 CONVERT_MONTHS = month_canonicalization_map()
@@ -71,31 +72,42 @@ def groc_schedule_parser_re():
     http://code.google.com/appengine/docs/python/config/cron.html#The_Schedule_Format
     """
 
+    # m|mon|monday|...|day
     DAY_VALUES = '|'.join(CONVERT_DAYS_INT.keys() + ['day'])
+
+    # jan|january|...|month
     MONTH_VALUES = '|'.join(CONVERT_MONTHS.keys() + ['month'])
+
     DATE_SUFFIXES = 'st|nd|rd|th'
 
+    # every|1st|2nd|3rd (also would accept 3nd, 1rd, 4st)
     MONTH_DAYS_EXPR = '(?P<month_days>every|((\d+(%s),?)+))?' % DATE_SUFFIXES
     DAYS_EXPR = r'((?P<days>((%s),?)+))?' % DAY_VALUES
-    MONTHS_EXPR = r'((in|of) (?P<months>((%s),?)+))?' % MONTH_VALUES
-    TIME_EXPR = r'((at )?(?P<time>\d\d:\d\d))?'
+    MONTHS_EXPR = r'((in|of)\s+(?P<months>((%s),?)+))?' % MONTH_VALUES
+
+    # [at] 00:00
+    TIME_EXPR = r'((at\s+)?(?P<time>\d\d:\d\d))?'
 
     GROC_SCHEDULE_EXPR = ''.join([
         r'^',
-        MONTH_DAYS_EXPR, r' ?',
-        DAYS_EXPR, r' ?',
-        MONTHS_EXPR, r' ?',
-         TIME_EXPR, r' ?',
+        MONTH_DAYS_EXPR, r'\s*',
+        DAYS_EXPR, r'\s*',
+        MONTHS_EXPR, r'\s*',
+         TIME_EXPR, r'\s*',
         r'$'
     ])
     return re.compile(GROC_SCHEDULE_EXPR)
 
+
+# Matches expressions of the form
+# ``("every"|ordinal) (days) ["of|in" (monthspec)] (["at"] HH:MM)``.
+# See :py:func:`groc_schedule_parser_re` for details.
 GROC_SCHEDULE_RE = groc_schedule_parser_re()
 
 
 class ConstantScheduler(object):
-    """The constant scheduler only schedules the first one. The job run starts
-    then next when finished.
+    """The constant scheduler schedules the first job run. The next job run
+    is scheduled when this first run is finished.
     """
 
     def next_runs(self, job):
@@ -128,7 +140,7 @@ class GrocScheduler(object):
     """
 
     def __init__(self, ordinals=None, weekdays=None, months=None,
-                 monthdays=None, timestr=None, timezone=None,
+                 monthdays=None, timestr=None, time_zone=None,
                  start_time=None):
         """Parameters:
           timestr   - the time of day to run, as 'HH:MM'
@@ -159,7 +171,7 @@ class GrocScheduler(object):
         else:
             self.timestr = timestr
 
-        self.timezone = timezone
+        self.time_zone = pytz.timezone(time_zone) if time_zone else None
         self.string_repr = 'every day of month'
 
         self._time_spec = None
@@ -179,7 +191,7 @@ class GrocScheduler(object):
                 months=self.months,
                 monthdays=self.monthdays,
                 timestr=self.timestr,
-                timezone=self.timezone)
+                timezone=None)  # We do the time zone conversion ourselves
         return self._time_spec
 
     def parse(self, scheduler_str):
@@ -239,19 +251,13 @@ class GrocScheduler(object):
     start_time = property(_get_start_time, _set_start_time)
 
     def next_runs(self, job):
-        pacific = pytz.timezone('US/Pacific')
-
         # Find the next time to run
         if job.runs:
             start_time = job.runs[0].run_time
         else:
             start_time = timeutils.current_time()
 
-        #start_time = pacific.localize(timeutils.current_time())
-
-        run_time = pacific.localize(self.time_spec.GetMatch(start_time))
-        #fmt = '%Y-%m-%d %H:%M:%S %Z%z'
-        #print 'rt:', run_time.strftime(fmt)
+        run_time = self.time_zone.localize(self.time_spec.GetMatch(start_time))
         job_runs = job.build_runs()
         for job_run in job_runs:
             job_run.set_run_time(run_time)

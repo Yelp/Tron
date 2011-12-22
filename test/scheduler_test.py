@@ -2,6 +2,7 @@ import calendar
 import datetime
 import tempfile
 import shutil
+import time
 
 import pytz
 from testify import *
@@ -12,6 +13,7 @@ from tron import job
 from tron import mcp
 from tron import scheduler
 from tron.utils import groctimespecification, timeutils
+
 
 class ConstantSchedulerTest(TestCase):
     @setup
@@ -135,6 +137,10 @@ class DailySchedulerDSTTest(TestCase):
     def setup_tmp(self):
         self.tmp_dirs = []
 
+    @setup
+    def setup_scheduler(self):
+        self.fmt = '%Y-%m-%d %H:%M:%S %Z%z'
+
     @teardown
     def unset_time(self):
         timeutils.override_current_time(None)
@@ -145,6 +151,9 @@ class DailySchedulerDSTTest(TestCase):
             shutil.rmtree(tmp_dir)
 
     def make_job(self, sch):
+        """Create a dummy job with the given scheduler that stores its data in
+        a temp folder that will be deleted on teardown
+        """
         tmp_dir = tempfile.mkdtemp()
         self.tmp_dirs.append(tmp_dir)
         a = action.Action("Test Action - Early Christmas Shopping")
@@ -155,45 +164,42 @@ class DailySchedulerDSTTest(TestCase):
         a.job = j
         return j
 
+    def hours_to_job_at_datetime(self, sch, *args, **kwargs):
+        # If you need to print a datetime with tz info, use this:
+        #   fmt = '%Y-%m-%d %H:%M:%S %Z%z'
+        #   my_datetime.strftime(fmt)
+
+        j = self.make_job(sch)
+        now = datetime.datetime(*args, **kwargs)
+        timeutils.override_current_time(now)
+        next_run = sch.next_runs(j)[0]
+        return round(next_run.seconds_until_run_time()/60/60, 1)
+
     def test(self):
         """This test checks the behavior of the scheduler at the daylight
         savings time 'fall back' point, when the system time zone changes
         from (e.g.) PDT to PST.
         """
 
-        pacific = pytz.timezone('US/Pacific')
-        fmt = '%Y-%m-%d %H:%M:%S %Z%z'
-
-        self.scheduler = scheduler.DailyScheduler(
-            start_time=datetime.time(hour=0, minute=0))
-
-        job_1 = self.make_job(self.scheduler)
-        job_2 = self.make_job(self.scheduler)
+        sch = scheduler.DailyScheduler(
+            start_time=datetime.time(hour=0, minute=0),
+            time_zone='US/Pacific')
 
         # Exact crossover time:
         # datetime.datetime(2011, 11, 6, 9, 0, 0, tzinfo=pytz.utc)
         # This test will use times on either side of it.
 
-        # First schedule before, in PDT:
-        now = datetime.datetime(2011, 11, 6, 0, 50, 0)
-        timeutils.override_current_time(now)
+        # From the PDT vantage point, the run time is 24.2 hours away:
+        sleep_time_1 = self.hours_to_job_at_datetime(sch, 2011, 11, 6, 0, 50, 0)
 
-        # Before time zone crossing, schedule things later (day has 25 hrs)
-        next_run = self.scheduler.next_runs(job_1)[0]
-        pre_crossover_run_time = next_run.run_time
+        # From the PST vantage point, the run time is 23.8 hours away:
+        # (this is measured from the point in absolute time 20 minutes after
+        # the other measurement)
+        sleep_time_2 = self.hours_to_job_at_datetime(sch, 2011, 11, 6, 1, 10, 0)
 
-        sleep_time_1 = mcp.sleep_time(pre_crossover_run_time)
-        print 'sleep time:', round(sleep_time_1/60/60, 1)
-
-        # After time zone crossing, schedule things sooner (day has 24 hrs)
-        now = datetime.datetime(2011, 11, 6, 1, 10, 0)
-        timeutils.override_current_time(now)
-
-        next_run = self.scheduler.next_runs(job_2)[0]
-        post_crossover_run_time = next_run.run_time
-
-        sleep_time_2 = mcp.sleep_time(post_crossover_run_time)
-        print 'sleep time:', round(sleep_time_2/60/60, 1)
+        difference = sleep_time_1 - sleep_time_2
+        assert_gt(difference, 1.39)
+        assert_lt(difference, 1.41)
 
 
 class GrocSchedulerTest(TestCase):
