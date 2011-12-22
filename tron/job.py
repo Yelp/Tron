@@ -57,7 +57,9 @@ class JobRun(object):
     def seconds_until_run_time(self):
         run_time = self.run_time
         tz = self.job.scheduler.time_zone
-        now = tz.localize(timeutils.current_time())
+        now = timeutils.current_time()
+        if tz is not None:
+            now = tz.localize(now)
         sleep = run_time - now
         seconds = (sleep.days * SECS_PER_DAY + sleep.seconds +
                    sleep.microseconds * MICRO_SEC)

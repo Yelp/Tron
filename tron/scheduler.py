@@ -257,7 +257,10 @@ class GrocScheduler(object):
         else:
             start_time = timeutils.current_time()
 
-        run_time = self.time_zone.localize(self.time_spec.GetMatch(start_time))
+        run_time = self.time_spec.GetMatch(start_time)
+        if self.time_zone is not None:
+            run_time = self.time_zone.localize(self.time_spec.GetMatch(start_time))
+
         job_runs = job.build_runs()
         for job_run in job_runs:
             job_run.set_run_time(run_time)
@@ -283,7 +286,7 @@ class GrocScheduler(object):
                             'months',
                             'monthdays',
                             'timestr',
-                            'timezone'))
+                            'time_zone'))
 
     def __ne__(self, other):
         return not self == other
