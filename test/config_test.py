@@ -329,6 +329,9 @@ jobs:
             shutil.rmtree(tmp_dir)
 
     def hours_to_job_at_datetime(self, *args, **kwargs):
+        """Return the number of hours until the next *two* runs of a job with
+        the given scheduler
+        """
         # if you need to print a datetime with tz info, use this:
         #   fmt = '%Y-%m-%d %H:%M:%S %Z%z'
         #   my_datetime.strftime(fmt)

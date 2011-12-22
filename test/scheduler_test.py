@@ -16,6 +16,7 @@ from tron.utils import groctimespecification, timeutils
 
 
 class ConstantSchedulerTest(TestCase):
+
     @setup
     def build_scheduler(self):
         self.test_dir = tempfile.mkdtemp()
@@ -43,6 +44,7 @@ class ConstantSchedulerTest(TestCase):
 
 
 class DailySchedulerTest(TestCase):
+
     @setup
     def build_scheduler(self):
         self.test_dir = tempfile.mkdtemp()
@@ -96,6 +98,7 @@ class DailySchedulerTimeTestBase(TestCase):
 
 
 class DailySchedulerTodayTest(DailySchedulerTimeTestBase):
+
     @setup
     def set_time(self):
         self.now = datetime.datetime.now().replace(hour=12, minute=0)
@@ -165,6 +168,9 @@ class DailySchedulerDSTTest(TestCase):
         return j
 
     def hours_to_job_at_datetime(self, sch, *args, **kwargs):
+        """Return the number of hours until the next *two* runs of a job with
+        the given scheduler
+        """
         # if you need to print a datetime with tz info, use this:
         #   fmt = '%Y-%m-%d %H:%M:%S %Z%z'
         #   my_datetime.strftime(fmt)
@@ -221,6 +227,7 @@ class DailySchedulerDSTTest(TestCase):
 
 
 class GrocSchedulerTest(TestCase):
+
     @setup
     def build_scheduler(self):
         self.test_dir = tempfile.mkdtemp()
@@ -352,6 +359,7 @@ class GrocSchedulerTest(TestCase):
 
 
 class IntervalSchedulerTest(TestCase):
+
     @setup
     def build_scheduler(self):
         self.test_dir = tempfile.mkdtemp()
@@ -374,6 +382,7 @@ class IntervalSchedulerTest(TestCase):
 
     def test__str__(self):
         assert_equal(str(self.scheduler), "INTERVAL:%s" % self.interval)
+
 
 if __name__ == '__main__':
     run()
