@@ -260,7 +260,11 @@ class GrocScheduler(object):
             start_time = timeutils.current_time()
 
         run_time = self.time_spec.GetMatch(start_time)
-        if self.time_zone is not None:
+
+        # Add time zone information if possible and none yet exists
+        # (groc will add time zone information if start_time has it,
+        # otherwise not.
+        if self.time_zone is not None and start_time.tzinfo is None:
             run_time = self.time_zone.localize(self.time_spec.GetMatch(start_time))
 
         job_runs = job.build_runs()

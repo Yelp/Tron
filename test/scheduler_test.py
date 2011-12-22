@@ -165,7 +165,7 @@ class DailySchedulerDSTTest(TestCase):
         return j
 
     def hours_to_job_at_datetime(self, sch, *args, **kwargs):
-        # If you need to print a datetime with tz info, use this:
+        # if you need to print a datetime with tz info, use this:
         #   fmt = '%Y-%m-%d %H:%M:%S %Z%z'
         #   my_datetime.strftime(fmt)
 

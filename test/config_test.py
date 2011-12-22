@@ -10,6 +10,7 @@ import tempfile
 
 from testify import *
 from tron import config, mcp, scheduler
+from tron.utils import timeutils
 
 
 def syslog_address_for_platform():
@@ -63,7 +64,7 @@ jobs:
         name: "test_job1"
         node: *node0
         schedule: "daily 00:30:00 MWF"
-        actions:
+        actions:"
             - &intAction2
                 name: "action1_0"
                 command: "test_command1.0"
@@ -296,6 +297,64 @@ syslog_address: /does/not/exist"""
         root = logging.getLogger('')
         test_reconfig = config.load_config(StringIO.StringIO(self.bad_config))
         assert_raises(config.ConfigError, test_reconfig.apply, self.my_mcp)
+
+
+class TimeZoneConfigTest(TestCase):
+    """This test is the sibling of scheduler_test.DailySchedulerDSTTest."""
+
+    config = BASE_CONFIG + """
+time_zone: US/Pacific
+jobs:
+    -
+        name: "tz_test_job"
+        node: *node0
+        schedule: "every day at 00:00"
+        actions:
+            -
+                name: "action1_0"
+                command: "test_command1.0"
+    """
+
+    @setup
+    def setup(self):
+        self.test_dir = tempfile.mkdtemp()
+        self.test_config = config.load_config(StringIO.StringIO(self.config))
+        self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')
+        self.test_config.apply(self.my_mcp)
+
+    @teardown
+    def unset_time(self):
+        timeutils.override_current_time(None)
+
+    @teardown
+    def teardown(self):
+        shutil.rmtree(self.test_dir)
+
+    def hours_to_job_at_datetime(self, *args, **kwargs):
+        # if you need to print a datetime with tz info, use this:
+        #   fmt = '%Y-%m-%d %H:%M:%S %Z%z'
+        #   my_datetime.strftime(fmt)
+        now = datetime.datetime(*args, **kwargs)
+        timeutils.override_current_time(now)
+        next_run = self.my_mcp.jobs['tz_test_job'].next_runs()[0]
+        return round(next_run.seconds_until_run_time()/60/60, 1)
+
+    def test_tz(self):
+        # Exact crossover time:
+        # datetime.datetime(2011, 11, 6, 9, 0, 0, tzinfo=pytz.utc)
+        # This test will use times on either side of it.
+
+        # From the PDT vantage point, the run time is 24.2 hours away:
+        sleep_time_1 = self.hours_to_job_at_datetime(2011, 11, 6, 0, 50, 0)
+
+        # From the PST vantage point, the run time is 23.8 hours away:
+        # (this is measured from the point in absolute time 20 minutes after
+        # the other measurement)
+        sleep_time_2 = self.hours_to_job_at_datetime(2011, 11, 6, 1, 10, 0)
+
+        difference = sleep_time_1 - sleep_time_2
+        assert_gt(difference, 1.39)
+        assert_lt(difference, 1.41)
 
 
 class BadJobConfigTest(TestCase):
