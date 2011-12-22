@@ -173,7 +173,14 @@ class DailySchedulerDSTTest(TestCase):
         now = datetime.datetime(*args, **kwargs)
         timeutils.override_current_time(now)
         next_run = sch.next_runs(j)[0]
-        return round(next_run.seconds_until_run_time()/60/60, 1)
+        t1 = round(next_run.seconds_until_run_time()/60/60, 1)
+        next_run = sch.next_runs(j)[0]
+        t2 = round(next_run.seconds_until_run_time()/60/60, 1)
+        return t1, t2
+
+    def _assert_range(self, x, lower, upper):
+        assert_gt(x, lower)
+        assert_lt(x, upper)
 
     def test(self):
         """This test checks the behavior of the scheduler at the daylight
@@ -190,16 +197,16 @@ class DailySchedulerDSTTest(TestCase):
         # This test will use times on either side of it.
 
         # From the PDT vantage point, the run time is 24.2 hours away:
-        sleep_time_1 = self.hours_to_job_at_datetime(sch, 2011, 11, 6, 0, 50, 0)
+        s1a, s1b = self.hours_to_job_at_datetime(sch, 2011, 11, 6, 0, 50, 0)
 
         # From the PST vantage point, the run time is 23.8 hours away:
         # (this is measured from the point in absolute time 20 minutes after
         # the other measurement)
-        sleep_time_2 = self.hours_to_job_at_datetime(sch, 2011, 11, 6, 1, 10, 0)
+        s2a, s2b = self.hours_to_job_at_datetime(sch, 2011, 11, 6, 1, 10, 0)
 
-        difference = sleep_time_1 - sleep_time_2
-        assert_gt(difference, 1.39)
-        assert_lt(difference, 1.41)
+        self._assert_range(s1a - s2a, 1.39, 1.41)
+        self._assert_range(s1b - s1a, 23.99, 24.11)
+        self._assert_range(s2b - s2a, 23.99, 24.11)
 
 
 class GrocSchedulerTest(TestCase):
