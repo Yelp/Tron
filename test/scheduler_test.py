@@ -188,7 +188,7 @@ class DailySchedulerDSTTest(TestCase):
         assert_gt(x, lower)
         assert_lt(x, upper)
 
-    def test_tz(self):
+    def test_fall_back(self):
         """This test checks the behavior of the scheduler at the daylight
         savings time 'fall back' point, when the system time zone changes
         from (e.g.) PDT to PST.
@@ -224,6 +224,9 @@ class DailySchedulerDSTTest(TestCase):
         timeutils.override_current_time(now)
         next_run_time = sch.next_runs(j)[0].run_time
         assert_equal(next_run_time.hour, 0)
+
+    def test_spring_forward(self):
+        pass    # TODO
 
 
 class GrocSchedulerTest(TestCase):

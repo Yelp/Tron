@@ -354,7 +354,7 @@ jobs:
         assert_gt(x, lower)
         assert_lt(x, upper)
 
-    def test_tz(self):
+    def test_fall_back(self):
         """This test checks the behavior of the scheduler at the daylight
         savings time 'fall back' point, when the system time zone changes
         from (e.g.) PDT to PST.
@@ -374,6 +374,9 @@ jobs:
         self._assert_range(s1b - s1a, 23.99, 24.11)
         self._assert_range(s2b - s2a, 23.99, 24.11)
         self._assert_range(s1a - s2a, 1.39, 1.41)
+
+    def test_spring_forward(self):
+        pass    # TODO
 
 
 class BadJobConfigTest(TestCase):
