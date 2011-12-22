@@ -110,6 +110,10 @@ class ConstantScheduler(object):
     is scheduled when this first run is finished.
     """
 
+    def __init__(self, *args, **kwargs):
+        super(ConstantScheduler, self).__init__(*args, **kwargs)
+        self.time_zone = None
+
     def next_runs(self, job):
         if job.next_to_finish():
             return []
@@ -304,6 +308,7 @@ class IntervalScheduler(object):
 
     def __init__(self, interval=None):
         self.interval = interval
+        self.time_zone = None
 
     def next_runs(self, job):
         run_time = timeutils.current_time() + self.interval
