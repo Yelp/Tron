@@ -261,22 +261,14 @@ class TronConfiguration(yaml.YAMLObject):
             if not isinstance(self.syslog_address, basestring):
                 self.syslog_address = tuple(self.syslog_address)
 
-            already_exists = False
-            for h in set(handlers_to_be_removed):
-                if (isinstance(h, logging.handlers.SysLogHandler) and
-                    h.address == self.syslog_address):
-                    handlers_to_be_removed.remove(h)
-                    already_exists = True
-
-            if not already_exists:
-                try:
-                    h = logging.handlers.SysLogHandler(self.syslog_address)
-                    fmt_str = "tron[%(process)d]: %(message)s"
-                    h.setFormatter(logging.Formatter(fmt_str))
-                    new_handlers.append(h)
-                except socket.error:
-                    raise ConfigError('%s is not a valid syslog address' %
-                                      self.syslog_address)
+            try:
+                h = logging.handlers.SysLogHandler(self.syslog_address)
+                fmt_str = "tron[%(process)d]: %(message)s"
+                h.setFormatter(logging.Formatter(fmt_str))
+                new_handlers.append(h)
+            except socket.error:
+                raise ConfigError('%s is not a valid syslog address' %
+                                  self.syslog_address)
 
         for h in handlers_to_be_removed:
             log.info('Removing logging handler %s', h)
