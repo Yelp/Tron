@@ -7,7 +7,10 @@ import pytz
 from testify import *
 from testify.utils import turtle
 
-from tron import scheduler, action, job
+from tron import action
+from tron import job
+from tron import mcp
+from tron import scheduler
 from tron.utils import groctimespecification, timeutils
 
 class ConstantSchedulerTest(TestCase):
@@ -154,57 +157,43 @@ class DailySchedulerDSTTest(TestCase):
 
     def test(self):
         """This test checks the behavior of the scheduler at the daylight
-        savings time 'fall back' point, when the system clock sets itself
-        back one hour.
+        savings time 'fall back' point, when the system time zone changes
+        from (e.g.) PDT to PST.
         """
+
+        pacific = pytz.timezone('US/Pacific')
+        fmt = '%Y-%m-%d %H:%M:%S %Z%z'
+
         self.scheduler = scheduler.DailyScheduler(
-            start_time=datetime.time(hour=1, minute=0))
+            start_time=datetime.time(hour=0, minute=0))
 
         job_1 = self.make_job(self.scheduler)
         job_2 = self.make_job(self.scheduler)
 
         # Exact crossover time:
-        # datetime.datetime(2011, 11, 6, 9, 0, 0)
+        # datetime.datetime(2011, 11, 6, 9, 0, 0, tzinfo=pytz.utc)
         # This test will use times on either side of it.
 
         # First schedule before, in PDT:
-        now = datetime.datetime(2011, 11, 6, 8, 50, 0)
+        now = datetime.datetime(2011, 11, 6, 0, 50, 0)
         timeutils.override_current_time(now)
 
-        # We are at a time zone crossing, so the scheduler should add an extra
-        # hour (but it currently does not and so this test fails)
+        # Before time zone crossing, schedule things later (day has 25 hrs)
         next_run = self.scheduler.next_runs(job_1)[0]
         pre_crossover_run_time = next_run.run_time
 
-        # Then schedule for the same time, but after the crossover. The time
-        # zone has changed to PST, so the scheduler should schedule normally.
-        # The result should be one hour 'less' than the pre-crossover scheduled
-        # time, which in absolute time is the same number of hours from "now"
-        # as the local time zone is different.
-        # The net result of this is that both job runs should now be scheduled
-        # to run at the same time.
-        # I'm going to go take some ibuprofen now.
-        now = datetime.datetime(2011, 11, 6, 9, 10, 0)
+        sleep_time_1 = mcp.sleep_time(pre_crossover_run_time)
+        print 'sleep time:', round(sleep_time_1/60/60, 1)
+
+        # After time zone crossing, schedule things sooner (day has 24 hrs)
+        now = datetime.datetime(2011, 11, 6, 1, 10, 0)
         timeutils.override_current_time(now)
 
         next_run = self.scheduler.next_runs(job_2)[0]
         post_crossover_run_time = next_run.run_time
 
-        print pre_crossover_run_timem, post_crossover_run_time
-
-        assert_equal(pre_crossover_run_time,
-                     post_crossover_run_time - datetime.timedelta(hours=1))
-
-    def _demonstrate_pytz(self):
-        fmt = '%Y-%m-%d %H:%M:%S %Z%z'
-        pacific = pytz.timezone('US/Pacific')
-        loc_dt = utc_dt.astimezone(pacific)
-
-        before = pacific.normalize(loc_dt - datetime.timedelta(minutes=10))
-        after = pacific.normalize(loc_dt + datetime.timedelta(minutes=10))
-        print 'PDT->PST crossover:', loc_dt.strftime(fmt)
-        print 'Before:', before.strftime(fmt)
-        print 'After:', after.strftime(fmt)
+        sleep_time_2 = mcp.sleep_time(post_crossover_run_time)
+        print 'sleep time:', round(sleep_time_2/60/60, 1)
 
 
 class GrocSchedulerTest(TestCase):

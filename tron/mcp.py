@@ -1,13 +1,14 @@
 from __future__ import with_statement
 import logging
-import weakref
-import yaml
 import os
 import shutil
-import sys
 import subprocess
-import yaml
+import sys
 import time
+import weakref
+import yaml
+
+import pytz
 
 import tron
 from tron import job, config, command_context, event
@@ -37,7 +38,13 @@ class UnsupportedVersionError(Error):
 
 
 def sleep_time(run_time):
-    sleep = run_time - timeutils.current_time()
+    fmt = '%Y-%m-%d %H:%M:%S %Z%z'
+    pacific = pytz.timezone('US/Pacific')
+    now = pacific.localize(timeutils.current_time())
+    print run_time.strftime(fmt)
+    print 'sleeping from', pacific.normalize(now).strftime(fmt)
+    print '           to', pacific.normalize(run_time).strftime(fmt)
+    sleep = run_time - now
     seconds = (sleep.days * SECS_PER_DAY + sleep.seconds +
                sleep.microseconds * MICRO_SEC)
     return max(0, seconds)

@@ -1,9 +1,11 @@
 import calendar
+from collections import deque
 import datetime
 import logging
 import re
 
-from collections import deque
+import pytz
+
 from tron.utils import groctimespecification
 from tron.utils import timeutils
 
@@ -237,13 +239,19 @@ class GrocScheduler(object):
     start_time = property(_get_start_time, _set_start_time)
 
     def next_runs(self, job):
+        pacific = pytz.timezone('US/Pacific')
+
         # Find the next time to run
         if job.runs:
             start_time = job.runs[0].run_time
         else:
             start_time = timeutils.current_time()
 
-        run_time = self.time_spec.GetMatch(start_time)
+        #start_time = pacific.localize(timeutils.current_time())
+
+        run_time = pacific.localize(self.time_spec.GetMatch(start_time))
+        #fmt = '%Y-%m-%d %H:%M:%S %Z%z'
+        #print 'rt:', run_time.strftime(fmt)
         job_runs = job.build_runs()
         for job_run in job_runs:
             job_run.set_run_time(run_time)
