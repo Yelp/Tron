@@ -366,7 +366,7 @@ jobs:
         # From the PDT vantage point, the run time is 24.2 hours away:
         s1a, s1b = self.hours_to_job_at_datetime(2011, 11, 6, 0, 50, 0)
 
-        # From the PST vantage point, the run time is 23.8 hours away:
+        # From the PST vantage point, the run time is 22.8 hours away:
         # (this is measured from the point in absolute time 20 minutes after
         # the other measurement)
         s2a, s2b = self.hours_to_job_at_datetime(2011, 11, 6, 1, 10, 0)
