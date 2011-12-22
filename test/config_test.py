@@ -317,10 +317,7 @@ jobs:
 
     @setup
     def setup(self):
-        self.test_dir = tempfile.mkdtemp()
-        self.test_config = config.load_config(StringIO.StringIO(self.config))
-        self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')
-        self.test_config.apply(self.my_mcp)
+        self.tmp_dirs = []
 
     @teardown
     def unset_time(self):
@@ -328,16 +325,31 @@ jobs:
 
     @teardown
     def teardown(self):
-        shutil.rmtree(self.test_dir)
+        for tmp_dir in self.tmp_dirs:
+            shutil.rmtree(tmp_dir)
 
     def hours_to_job_at_datetime(self, *args, **kwargs):
         # if you need to print a datetime with tz info, use this:
         #   fmt = '%Y-%m-%d %H:%M:%S %Z%z'
         #   my_datetime.strftime(fmt)
+
+        test_dir = tempfile.mkdtemp()
+        self.tmp_dirs.append(test_dir)
+        test_config = config.load_config(StringIO.StringIO(self.config))
+        my_mcp = mcp.MasterControlProgram(test_dir, 'config')
+
+        test_config.apply(my_mcp)
         now = datetime.datetime(*args, **kwargs)
         timeutils.override_current_time(now)
-        next_run = self.my_mcp.jobs['tz_test_job'].next_runs()[0]
-        return round(next_run.seconds_until_run_time()/60/60, 1)
+        next_run = my_mcp.jobs['tz_test_job'].next_runs()[0]
+        t1 = round(next_run.seconds_until_run_time()/60/60, 1)
+        next_run = my_mcp.jobs['tz_test_job'].next_runs()[0]
+        t2 = round(next_run.seconds_until_run_time()/60/60, 1)
+        return t1, t2
+
+    def _assert_range(self, x, lower, upper):
+        assert_gt(x, lower)
+        assert_lt(x, upper)
 
     def test_tz(self):
         # Exact crossover time:
@@ -345,16 +357,16 @@ jobs:
         # This test will use times on either side of it.
 
         # From the PDT vantage point, the run time is 24.2 hours away:
-        sleep_time_1 = self.hours_to_job_at_datetime(2011, 11, 6, 0, 50, 0)
+        s1a, s1b = self.hours_to_job_at_datetime(2011, 11, 6, 0, 50, 0)
 
         # From the PST vantage point, the run time is 23.8 hours away:
         # (this is measured from the point in absolute time 20 minutes after
         # the other measurement)
-        sleep_time_2 = self.hours_to_job_at_datetime(2011, 11, 6, 1, 10, 0)
+        s2a, s2b = self.hours_to_job_at_datetime(2011, 11, 6, 1, 10, 0)
 
-        difference = sleep_time_1 - sleep_time_2
-        assert_gt(difference, 1.39)
-        assert_lt(difference, 1.41)
+        self._assert_range(s1a - s2a, 1.39, 1.41)
+        self._assert_range(s1b - s1a, 23.99, 24.11)
+        self._assert_range(s2b - s2a, 23.99, 24.11)
 
 
 class BadJobConfigTest(TestCase):
