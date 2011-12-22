@@ -64,7 +64,7 @@ jobs:
         name: "test_job1"
         node: *node0
         schedule: "daily 00:30:00 MWF"
-        actions:"
+        actions:
             - &intAction2
                 name: "action1_0"
                 command: "test_command1.0"
@@ -352,6 +352,10 @@ jobs:
         assert_lt(x, upper)
 
     def test_tz(self):
+        """This test checks the behavior of the scheduler at the daylight
+        savings time 'fall back' point, when the system time zone changes
+        from (e.g.) PDT to PST.
+        """
         # Exact crossover time:
         # datetime.datetime(2011, 11, 6, 9, 0, 0, tzinfo=pytz.utc)
         # This test will use times on either side of it.
@@ -364,9 +368,9 @@ jobs:
         # the other measurement)
         s2a, s2b = self.hours_to_job_at_datetime(2011, 11, 6, 1, 10, 0)
 
-        self._assert_range(s1a - s2a, 1.39, 1.41)
         self._assert_range(s1b - s1a, 23.99, 24.11)
         self._assert_range(s2b - s2a, 23.99, 24.11)
+        self._assert_range(s1a - s2a, 1.39, 1.41)
 
 
 class BadJobConfigTest(TestCase):

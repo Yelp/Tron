@@ -193,7 +193,7 @@ class GrocScheduler(object):
                 months=self.months,
                 monthdays=self.monthdays,
                 timestr=self.timestr,
-                timezone=None)  # We do the time zone conversion ourselves
+                timezone=self.time_zone.zone if self.time_zone else None)
         return self._time_spec
 
     def parse(self, scheduler_str):
@@ -258,14 +258,10 @@ class GrocScheduler(object):
             start_time = job.runs[0].run_time
         else:
             start_time = timeutils.current_time()
+            if self.time_zone:
+                start_time = self.time_zone.localize(start_time)
 
         run_time = self.time_spec.GetMatch(start_time)
-
-        # Add time zone information if possible and none yet exists
-        # (groc will add time zone information if start_time has it,
-        # otherwise not.
-        if self.time_zone is not None and start_time.tzinfo is None:
-            run_time = self.time_zone.localize(self.time_spec.GetMatch(start_time))
 
         job_runs = job.build_runs()
         for job_run in job_runs:
