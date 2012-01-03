@@ -220,9 +220,14 @@ If a job is scheduled at a time that occurs twice, such as 1 AM on "fall back",
 it will be run on the *first* occurrence of that time.
 
 If a job is scheduled at a time that does not exists, such as 2 AM on "spring
-forward", it will be run an hour later in the "new" time, in this case 3 AM.
+forward", it will be run an hour later in the "new" time, in this case 3 AM. In
+the "old" time this is 2 AM, so from the perspective of previous jobs, it runs
+at the correct time.
 
 In general, Tron tries to schedule a job as soon as is correct, and no sooner.
+A job that is schedule for 2:30 AM will not run at 3 AM on "spring forward"
+because that would be half an hour too soon from a pre-switch perspective (2
+AM).
 
 .. note::
 
