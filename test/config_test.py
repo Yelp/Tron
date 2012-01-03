@@ -360,7 +360,7 @@ jobs:
         from (e.g.) PDT to PST.
         """
         # Exact crossover time:
-        # datetime.datetime(2011, 11, 6, 9, 0, 0, tzinfo=pytz.utc)
+        # datetime.datetime(2011, 11, 6, 2, 0, 0, tzinfo=pytz.utc)
         # This test will use times on either side of it.
 
         # From the PDT vantage point, the run time is 24.2 hours away:
@@ -376,7 +376,25 @@ jobs:
         self._assert_range(s1a - s2a, 1.39, 1.41)
 
     def test_spring_forward(self):
-        pass    # TODO
+        """This test checks the behavior of the scheduler at the daylight
+        savings time 'spring forward' point, when the system time zone changes
+        from (e.g.) PST to PDT.
+        """
+        # Exact crossover time:
+        # datetime.datetime(2011, 3, 13, 2, 0, 0, tzinfo=pytz.utc)
+        # This test will use times on either side of it.
+
+        # From the PST vantage point, the run time is 22.2 hours away:
+        s1a, s1b = self.hours_to_job_at_datetime(2011, 3, 13, 2, 50, 0)
+
+        # From the PDT vantage point, the run time is 23.8 hours away:
+        # (this is measured from the point in absolute time 20 minutes after
+        # the other measurement)
+        s2a, s2b = self.hours_to_job_at_datetime(2011, 3, 13, 3, 10, 0)
+
+        self._assert_range(s1b - s1a, 23.99, 24.11)
+        self._assert_range(s2b - s2a, 23.99, 24.11)
+        self._assert_range(s1a - s2a, -0.61, -0.59)
 
 
 class BadJobConfigTest(TestCase):
