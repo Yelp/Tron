@@ -1,9 +1,11 @@
 import calendar
+from collections import deque
 import datetime
 import logging
 import re
 
-from collections import deque
+from pytz import AmbiguousTimeError, NonExistentTimeError
+
 from tron.utils import groctimespecification
 from tron.utils import timeutils
 
@@ -43,8 +45,10 @@ def month_canonicalization_map():
             canon_map[key.lower()] = value
     return canon_map
 
+
 # Canonicalize month names to integer indices
-CONVERT_MONTHS = month_canonicalization_map()   # month name/abbrev => {0 <= k <= 11}
+# month name/abbrev => {0 <= k <= 11}
+CONVERT_MONTHS = month_canonicalization_map()
 
 
 def groc_schedule_parser_re():
@@ -68,38 +72,56 @@ def groc_schedule_parser_re():
     http://code.google.com/appengine/docs/python/config/cron.html#The_Schedule_Format
     """
 
+    # m|mon|monday|...|day
     DAY_VALUES = '|'.join(CONVERT_DAYS_INT.keys() + ['day'])
+
+    # jan|january|...|month
     MONTH_VALUES = '|'.join(CONVERT_MONTHS.keys() + ['month'])
+
     DATE_SUFFIXES = 'st|nd|rd|th'
 
+    # every|1st|2nd|3rd (also would accept 3nd, 1rd, 4st)
     MONTH_DAYS_EXPR = '(?P<month_days>every|((\d+(%s),?)+))?' % DATE_SUFFIXES
     DAYS_EXPR = r'((?P<days>((%s),?)+))?' % DAY_VALUES
-    MONTHS_EXPR = r'((in|of) (?P<months>((%s),?)+))?' % MONTH_VALUES
-    TIME_EXPR = r'((at )?(?P<time>\d\d:\d\d))?'
+    MONTHS_EXPR = r'((in|of)\s+(?P<months>((%s),?)+))?' % MONTH_VALUES
+
+    # [at] 00:00
+    TIME_EXPR = r'((at\s+)?(?P<time>\d\d:\d\d))?'
 
     GROC_SCHEDULE_EXPR = ''.join([
         r'^',
-        MONTH_DAYS_EXPR, r' ?',
-        DAYS_EXPR, r' ?',
-        MONTHS_EXPR, r' ?',
-         TIME_EXPR, r' ?',
+        MONTH_DAYS_EXPR, r'\s*',
+        DAYS_EXPR, r'\s*',
+        MONTHS_EXPR, r'\s*',
+         TIME_EXPR, r'\s*',
         r'$'
     ])
     return re.compile(GROC_SCHEDULE_EXPR)
 
+
+# Matches expressions of the form
+# ``("every"|ordinal) (days) ["of|in" (monthspec)] (["at"] HH:MM)``.
+# See :py:func:`groc_schedule_parser_re` for details.
 GROC_SCHEDULE_RE = groc_schedule_parser_re()
 
 
 class ConstantScheduler(object):
-    """The constant scheduler only schedules the first one.  The job run starts then next when finished"""
+    """The constant scheduler schedules the first job run. The next job run
+    is scheduled when this first run is finished.
+    """
+
+    def __init__(self, *args, **kwargs):
+        super(ConstantScheduler, self).__init__(*args, **kwargs)
+        self.time_zone = None
+
     def next_runs(self, job):
         if job.next_to_finish():
             return []
-        
+
         job_runs = job.build_runs()
         for job_run in job_runs:
             job_run.set_run_time(timeutils.current_time())
-        
+
         return job_runs
 
     def job_setup(self, job):
@@ -117,20 +139,25 @@ class ConstantScheduler(object):
 
 
 class GrocScheduler(object):
-    """Wrapper around SpecificTimeSpecification in the Google App Engine cron library"""
-    def __init__(self, ordinals=None, weekdays=None, months=None, monthdays=None,
-                 timestr=None, timezone=None, start_time=None):
+    """Wrapper around SpecificTimeSpecification in the Google App Engine cron
+    library
+    """
+
+    def __init__(self, ordinals=None, weekdays=None, months=None,
+                 monthdays=None, timestr=None, time_zone=None,
+                 start_time=None):
         """Parameters:
           timestr   - the time of day to run, as 'HH:MM'
-          ordinals  - first, second, third &c, as a set of integers in 1..5 to be
-                      used with "1st <weekday>", etc.
+          ordinals  - first, second, third &c, as a set of integers in 1..5 to
+                      be used with "1st <weekday>", etc.
           monthdays - set of integers to be used with "<month> 3rd", etc.
-          months    - the months that this should run, as a set of integers in 1..12
-          weekdays  - the days of the week that this should run, as a set of integers,
-                      0=Sunday, 6=Saturday
+          months    - the months that this should run, as a set of integers in
+                      1..12
+          weekdays  - the days of the week that this should run, as a set of
+                      integers, 0=Sunday, 6=Saturday
           timezone  - the optional timezone as a string for this specification.
-                      Defaults to UTC - valid entries are things like Australia/Victoria
-                      or PST8PDT.
+                      Defaults to UTC - valid entries are things like
+                      Australia/Victoria or PST8PDT.
           start_time - Backward-compatible parameter for DailyScheduler
         """
         self.ordinals = ordinals
@@ -148,7 +175,7 @@ class GrocScheduler(object):
         else:
             self.timestr = timestr
 
-        self.timezone = timezone
+        self.time_zone = time_zone
         self.string_repr = 'every day of month'
 
         self._time_spec = None
@@ -168,7 +195,7 @@ class GrocScheduler(object):
                 months=self.months,
                 monthdays=self.monthdays,
                 timestr=self.timestr,
-                timezone=self.timezone)
+                timezone=self.time_zone.zone if self.time_zone else None)
         return self._time_spec
 
     def parse(self, scheduler_str):
@@ -186,12 +213,14 @@ class GrocScheduler(object):
         if m.group('days') in (None, 'day'):
             self.weekdays = None
         else:
-            self.weekdays = set(CONVERT_DAYS_INT[d] for d in m.group('days').split(','))
+            self.weekdays = set(CONVERT_DAYS_INT[d]
+                                for d in m.group('days').split(','))
 
         self.monthdays = None
         self.ordinals = None
         if m.group('month_days') != 'every':
-            values = set(parse_number(n) for n in m.group('month_days').split(','))
+            values = set(parse_number(n)
+                         for n in m.group('month_days').split(','))
             if self.weekdays is None:
                 self.monthdays = values
             else:
@@ -200,7 +229,8 @@ class GrocScheduler(object):
         if m.group('months') in (None, 'month'):
             self.months = None
         else:
-            self.months = set(CONVERT_MONTHS[mo] for mo in m.group('months').split(','))
+            self.months = set(CONVERT_MONTHS[mo]
+                              for mo in m.group('months').split(','))
 
     def parse_legacy_days(self, days):
         """Parse a string that would have been passed to DailyScheduler"""
@@ -230,8 +260,18 @@ class GrocScheduler(object):
             start_time = job.runs[0].run_time
         else:
             start_time = timeutils.current_time()
+            if self.time_zone:
+                try:
+                    start_time = self.time_zone.localize(start_time,
+                                                         is_dst=None)
+                except AmbiguousTimeError:
+                    # We are in the infamous 1 AM block which happens twice on
+                    # fall-back. Pretend like it's the first time, every time.
+                    start_time = self.time_zone.localize(start_time,
+                                                         is_dst=True)
 
         run_time = self.time_spec.GetMatch(start_time)
+
         job_runs = job.build_runs()
         for job_run in job_runs:
             job_run.set_run_time(run_time)
@@ -257,7 +297,7 @@ class GrocScheduler(object):
                             'months',
                             'monthdays',
                             'timestr',
-                            'timezone'))
+                            'time_zone'))
 
     def __ne__(self, other):
         return not self == other
@@ -269,10 +309,13 @@ DailyScheduler = GrocScheduler
 
 
 class IntervalScheduler(object):
-    """The interval scheduler runs a job (to success) based on a configured interval
+    """The interval scheduler runs a job (to success) based on a configured
+    interval.
     """
+
     def __init__(self, interval=None):
         self.interval = interval
+        self.time_zone = None
 
     def next_runs(self, job):
         run_time = timeutils.current_time() + self.interval
@@ -290,7 +333,8 @@ class IntervalScheduler(object):
         return "INTERVAL:%s" % self.interval
 
     def __eq__(self, other):
-        return isinstance(other, IntervalScheduler) and self.interval == other.interval
+        return (isinstance(other, IntervalScheduler) and
+                self.interval == other.interval)
 
     def __ne__(self, other):
         return not self == other

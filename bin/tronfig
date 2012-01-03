@@ -11,11 +11,19 @@ import shutil
 import tron
 from tron import mcp, cmd, config
 
+
 def parse_options():
-    parser = optparse.OptionParser("usage: %prog [options] [-]", version="%%prog %s" % tron.__version__)
-    parser.add_option("--print", "-p", action="store_true", dest="print_config", help="Print config to stdout, rather than uploading", default=False)
-    parser.add_option("--verbose", "-v", action="count", dest="verbose", help="Verbose logging", default=0)
-    parser.add_option("--server", action="store", dest="server", help="Server URL to connect to", default=None)
+    parser = optparse.OptionParser("usage: %prog [options] [-]",
+                                   version="%%prog %s" % tron.__version__)
+
+    parser.add_option("--print", "-p", action="store_true",
+                      dest="print_config",
+                      help="Print config to stdout, rather than uploading",
+                      default=False)
+    parser.add_option("--verbose", "-v", action="count", dest="verbose",
+                      help="Verbose logging", default=0)
+    parser.add_option("--server", action="store", dest="server",
+                      help="Server URL to connect to", default=None)
     (options, args) = parser.parse_args(sys.argv)
 
     options.from_stdin = False
@@ -24,13 +32,17 @@ def parse_options():
 
     return options
 
+
 def upload_config(options, contents):
-    status, content = cmd.request(options.server, "/config", {'config': contents})
+    status, content = cmd.request(options.server, "/config",
+                                  {'config': contents})
     if 'error' in content:
-        print >>sys.stderr, "Configuration uploaded but errors occurred. Please fix: %s" % content['error']
+        print >>sys.stderr, ("Configuration uploaded but errors occurred."
+                             " Please fix: %s" % content['error'])
         sys.exit(1)
     else:
         print "Configuration uploaded successfully"
+
 
 def clean_config(load):
     if hasattr(load, 'ssh_options'):
@@ -38,14 +50,15 @@ def clean_config(load):
 
     return load
 
+
 def test_config(contents):
     tmpdir = tempfile.mkdtemp()
-    
+
     # Can the MCP handle the configuration?
     try:
         # The local MCP can't handle all the configuration, so clean it
         edited_config = clean_config(yaml.load(contents))
-        
+
         edited_file = tempfile.NamedTemporaryFile()
         edited_file.write(yaml.dump(edited_config))
         edited_file.flush()
@@ -55,11 +68,12 @@ def test_config(contents):
         return True
     except Exception, e:
         print >>sys.stderr, "Error in configuration: %s" % str(e)
-        
+
     finally:
         shutil.rmtree(tmpdir)
 
     return False
+
 
 def edit_config(contents):
     fi = tempfile.NamedTemporaryFile(suffix='.yaml')
@@ -68,17 +82,20 @@ def edit_config(contents):
 
     editor = os.getenv('EDITOR') or os.getenv('VISUAL') or 'vim'
     while os.system("%s %s" % (editor, fi.name)) != 0:
-        if raw_input("Editor returned an error. Continue editing? (y/n): ")[:1].lower() == 'n':
+        response = raw_input("Editor returned an error. Continue editing?"
+                             " (y/n): ")
+        if response[:1].lower() == 'n':
             return
-    
+
     upload = open(fi.name)
     with open(fi.name) as upload_file:
         return upload_file.read()
 
+
 if __name__ == '__main__':
     options = parse_options()
     cmd.setup_logging(options)
-    
+
     # Load command options
     cmd.load_config(options)
 
@@ -86,12 +103,13 @@ if __name__ == '__main__':
         # We're taking config from stdin
         new_config = sys.stdin.read()
         if not test_config(new_config):
-            sys.exit(1)        
+            sys.exit(1)
     else:
         # We're going to need config from the server
         status, content = cmd.request(options.server, "/config")
         if status != cmd.OK:
-            print >>sys.stderr, "Error from server at %s : %r" % (options.server, content)
+            print >>sys.stderr, ("Error from server at %s : %r" %
+                                 (options.server, content))
             sys.exit(1)
 
         if os.isatty(sys.stdout.fileno()):
@@ -103,15 +121,18 @@ if __name__ == '__main__':
                     sys.exit(1)
 
                 if not test_config(new_config):
-                    if raw_input("There are errors in your configuration. Continue editing? (y/n): ")[:1].lower() == 'n':
+                    response = raw_input("There are errors in your"
+                                         " configuration. Continue editing?"
+                                         " (y/n): ")
+                    if response[:1].lower() == 'n':
                         sys.exit(1)
                 else:
-                    break            
-        
+                    break
+
         else:
             # No editing possible, use the existing config
             new_config = content['config']
-    
+
     if options.print_config:
         print new_config
     else:
@@ -119,4 +140,3 @@ if __name__ == '__main__':
 
     # Save our command options (NOT THE CONFIG FILE)
     cmd.save_config(options)
-

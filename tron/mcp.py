@@ -1,40 +1,40 @@
 from __future__ import with_statement
 import logging
-import weakref
-import yaml
 import os
 import shutil
-import sys
 import subprocess
-import yaml
+import sys
 import time
+import weakref
+import yaml
 
 import tron
 from tron import job, config, command_context, event
 from twisted.internet import reactor
 from tron.utils import timeutils
 
+
 log = logging.getLogger('tron.mcp')
 
-SECS_PER_DAY = 86400
-MICRO_SEC = .000001
 STATE_FILE = 'tron_state.yaml'
 STATE_SLEEP_SECS = 1
 WRITE_DURATION_WARNING_SECS = 30
 
-class Error(Exception): pass
 
-class StateFileVersionError(Error): pass
+class Error(Exception):
+    pass
 
-class UnsupportedVersionError(Error): pass
 
-def sleep_time(run_time):
-    sleep = run_time - timeutils.current_time()
-    seconds = sleep.days * SECS_PER_DAY + sleep.seconds + sleep.microseconds * MICRO_SEC
-    return max(0, seconds)
+class StateFileVersionError(Error):
+    pass
+
+
+class UnsupportedVersionError(Error):
+    pass
 
 
 class StateHandler(object):
+
     def __init__(self, mcp, working_dir, writing=False):
         self.mcp = mcp
         self.working_dir = working_dir
@@ -42,7 +42,8 @@ class StateHandler(object):
         self.write_start = None
         self.writing_enabled = writing
         self.store_delayed = False
-        self.event_recorder = event.EventRecorder(self, parent=mcp.event_recorder)
+        self.event_recorder = event.EventRecorder(self,
+                                                  parent=mcp.event_recorder)
 
     def restore_job(self, job_inst, data):
         job_inst.set_context(self.mcp.context)
@@ -50,7 +51,9 @@ class StateHandler(object):
 
         for run in job_inst.runs:
             if run.is_scheduled:
-                reactor.callLater(sleep_time(run.run_time), self.mcp.run_job, run)     
+                reactor.callLater(run.seconds_until_run_time(),
+                                  self.mcp.run_job,
+                                  run)
 
         next = job_inst.next_to_finish()
         if job_inst.enabled and next and next.is_queued:
@@ -68,9 +71,11 @@ class StateHandler(object):
         if self.write_pid:
             pid, status = os.waitpid(self.write_pid, os.WNOHANG)
             if pid != 0:
-                log.info("State writing completed in in %d seconds", timeutils.current_timestamp() - self.write_start)
+                log.info("State writing completed in in %d seconds",
+                         timeutils.current_timestamp() - self.write_start)
                 if status != 0:
-                    log.warning("State writing process failed with status %d", status)
+                    log.warning("State writing process failed with status %d",
+                                status)
                     self.event_recorder.emit_critical("write_failed")
                 else:
                     self.event_recorder.emit_ok("write_complete")
@@ -78,20 +83,24 @@ class StateHandler(object):
                 self.write_start = None
             else:
                 # Process hasn't exited
-                write_duration = timeutils.current_timestamp() - self.write_start
+                write_duration = (timeutils.current_timestamp() -
+                                  self.write_start)
                 if write_duration > WRITE_DURATION_WARNING_SECS:
-                    log.warning("State writing hasn't completed in %d secs", write_duration)
+                    log.warning("State writing hasn't completed in %d secs",
+                                write_duration)
                     self.event_recorder.emit_notice("write_delayed")
 
                 reactor.callLater(STATE_SLEEP_SECS, self.check_write_child)
 
     def store_state(self):
         """Stores the state of tron"""
-        log.debug("store_state called: %r, %r", self.write_pid, self.writing_enabled)
+        log.debug("store_state called: %r, %r",
+                  self.write_pid, self.writing_enabled)
 
         # If tron is already storing data, don't start again till it's done
         if self.write_pid or not self.writing_enabled:
-            # If a child is writing, we don't want to ignore this change, so lets try it later
+            # If a child is writing, we don't want to ignore this change, so
+            # lets try it later
             if not self.store_delayed:
                 self.store_delayed = True
                 reactor.callLater(STATE_SLEEP_SECS, self.delay_store)
@@ -101,7 +110,7 @@ class StateHandler(object):
         file_path = os.path.join(self.working_dir, STATE_FILE)
         log.info("Storing state in %s", file_path)
 
-        self.event_recorder.emit_info("storing")        
+        self.event_recorder.emit_info("storing")
 
         self.write_start = timeutils.current_timestamp()
         pid = os.fork()
@@ -112,7 +121,8 @@ class StateHandler(object):
             exit_status = os.EX_SOFTWARE
             try:
                 with open(tmp_path, 'w') as data_file:
-                    yaml.dump(self.data, data_file, default_flow_style=False, indent=4)
+                    yaml.dump(self.data, data_file,
+                              default_flow_style=False, indent=4)
                     data_file.flush()
                     os.fsync(data_file.fileno())
                 shutil.move(tmp_path, file_path)
@@ -141,15 +151,19 @@ class StateHandler(object):
                 'jobs': data
             }
 
-        # For properly comparing version, we need to convert this guy to a tuple
+        # For properly comparing version, we need to convert this guy to a
+        # tuple
         data['version'] = tuple(data['version'])
+
         # By default we assume backwards compatability.
         if data['version'] == tron.__version_info__:
             return data
         elif data['version'] > tron.__version_info__:
-            raise StateFileVersionError("State file has new version: %r", data['version'])
+            raise StateFileVersionError("State file has new version: %r",
+                                        data['version'])
         elif data['version'] < (0, 2, 0):
-            raise UnsupportedVersionError("State file has version %r" % (data['version'],))
+            raise UnsupportedVersionError("State file has version %r" %
+                                          (data['version'],))
         else:
             # Potential version conversions
             return data
@@ -181,6 +195,7 @@ class MasterControlProgram(object):
     This object is responsible for figuring who needs to run and when. It is
     the main entry point where our daemon finds work to do.
     """
+
     def __init__(self, working_dir, config_file, context=None):
         self.jobs = {}
         self.services = {}
@@ -188,6 +203,7 @@ class MasterControlProgram(object):
         self.config_file = config_file
         self.context = context
         self.monitor = None
+        self.time_zone = None
         self.event_recorder = event.EventRecorder(self)
         self.state_handler = StateHandler(self, working_dir)
 
@@ -197,7 +213,9 @@ class MasterControlProgram(object):
     def live_reconfig(self):
         self.event_recorder.emit_info("reconfig")
         try:
-            # Temporarily disable state writing because reconfig can cause a lot of state changes
+
+            # Temporarily disable state writing because reconfig can cause a
+            # lot of state changes
             old_state_writing = self.state_handler.writing_enabled
             self.state_handler.writing_enabled = False
 
@@ -238,7 +256,8 @@ class MasterControlProgram(object):
             log.error(str(e) + " - Cannot write to configuration file!")
 
     def setup_job_dir(self, job):
-        job.output_path = os.path.join(self.state_handler.working_dir, job.name)
+        job.output_path = os.path.join(self.state_handler.working_dir,
+                                       job.name)
         if not os.path.exists(job.output_path):
             os.mkdir(job.output_path)
 
@@ -246,13 +265,17 @@ class MasterControlProgram(object):
         if job.name in self.services:
             raise ValueError("Job %s is already a service", job.name)
         if job.name in self.jobs:
-            # Jobs have a complex eq implementation that allows us to catch jobs that have not changed and thus
-            # don't need to be updated during a reconfigure
+
+            # Jobs have a complex eq implementation that allows us to catch
+            # jobs that have not changed and thus don't need to be updated
+            # during a reconfigure
             if job == self.jobs[job.name]:
                 return
-            
-            log.info("re-adding job %s", job.name)        
-            # We're updating an existing job, we have to copy over run time information
+
+            log.info("re-adding job %s", job.name)
+
+            # We're updating an existing job, we have to copy over run time
+            # information
             job.absorb_old_job(self.jobs[job.name])
 
             if job.enabled:
@@ -260,8 +283,12 @@ class MasterControlProgram(object):
                 self.enable_job(job)
         else:
             log.info("adding job %s", job.name)
-        
+
         self.jobs[job.name] = job
+
+        # update time zone information in scheduler to match config
+        if job.scheduler is not None:
+            job.scheduler.time_zone = self.time_zone
 
         job.set_context(self.context)
         job.event_recorder.set_parent(self.event_recorder)
@@ -279,16 +306,16 @@ class MasterControlProgram(object):
     def add_service(self, service):
         if service.name in self.jobs:
             raise ValueError("Service %s is already a job", service.name)
-        
+
         prev_service = self.services.get(service.name)
-        
+
         if service == prev_service:
             return
-        
-        log.info("(re)adding service %s", service.name)    
+
+        log.info("(re)adding service %s", service.name)
         service.set_context(self.context)
         service.event_recorder.set_parent(self.event_recorder)
-        
+
         # Trigger storage on any state changes
         service.listen(True, self.state_handler.store_state)
 
@@ -300,21 +327,21 @@ class MasterControlProgram(object):
     def remove_service(self, service_name):
         if service_name not in self.services:
             raise ValueError("Service %s unknown", service_name)
-        
+
         log.info("Removing services %s", service_name)
         service = self.services.pop(service_name)
         service.stop()
 
     def _schedule(self, run):
-        sleep = sleep_time(run.run_time)
-        if sleep == 0:
+        secs = run.seconds_until_run_time()
+        if secs == 0:
             run.set_run_time(timeutils.current_time())
-        reactor.callLater(sleep, self.run_job, run)
+        reactor.callLater(secs, self.run_job, run)
 
     def schedule_next_run(self, job):
         if job.runs and job.runs[0].is_scheduled:
             return
-        
+
         for next in job.next_runs():
             log.info("Scheduling next job for %s", next.job.name)
             self._schedule(next)
@@ -332,7 +359,7 @@ class MasterControlProgram(object):
         if not (now.is_running or now.is_failure or now.is_success):
             log.debug("Running next scheduled job")
             now.scheduled_start()
-        
+
         self.schedule_next_run(now.job)
 
     def enable_job(self, job):
@@ -346,7 +373,7 @@ class MasterControlProgram(object):
     def disable_all(self):
         for jo in self.jobs.itervalues():
             self.disable_job(jo)
-            
+
     def enable_all(self):
         for jo in self.jobs.itervalues():
             self.enable_job(jo)
@@ -354,8 +381,8 @@ class MasterControlProgram(object):
     def try_restore(self):
         if not os.path.isfile(self.state_handler.get_state_file_path()):
             log.info("No state data found")
-            return 
-        
+            return
+
         data = self.state_handler.load_data()
         if not data:
             log.warning("Failed to load state data")
@@ -364,7 +391,8 @@ class MasterControlProgram(object):
         state_load_count = 0
         for name in data['jobs'].iterkeys():
             if name in self.jobs:
-                self.state_handler.restore_job(self.jobs[name], data['jobs'][name])
+                self.state_handler.restore_job(self.jobs[name],
+                                               data['jobs'][name])
                 state_load_count += 1
             else:
                 log.warning("Job name %s from state file unknown", name)
@@ -374,7 +402,8 @@ class MasterControlProgram(object):
         for name in data['services'].iterkeys():
             if name in self.services:
                 state_load_count += 1
-                self.state_handler.restore_service(self.services[name], data['services'][name])
+                self.state_handler.restore_service(self.services[name],
+                                                   data['services'][name])
             else:
                 log.warning("Service name %s from state file unknown", name)
 
@@ -388,12 +417,11 @@ class MasterControlProgram(object):
                     self.schedule_next_run(tron_job)
                 else:
                     self.enable_job(tron_job)
-        
+
     def run_services(self):
         for service in self.services.itervalues():
             if not service.is_started:
                 service.start()
-
 
     def __str__(self):
         return "MCP"
