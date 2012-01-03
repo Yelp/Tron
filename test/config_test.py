@@ -416,7 +416,7 @@ jobs:
             'tz_config_test_job_fall_back', 2011, 11, 6, 1, 10, 0)
 
         # By this method, the first hour of the repeated 1 AM block is
-        # effectively ignord.
+        # effectively ignored.
 
         self._assert_range(s1b - s1a, 23.99, 24.01)
         self._assert_range(s2b - s2a, 23.99, 24.01)

@@ -128,13 +128,16 @@ Notification Options
             smtp_host: localhost
             notification_addr: batch+errors@example.com
 
+.. _time_zone:
+
 Time Zone
 ---------
 
 **time_zone** (optional)
     Local time as observed by the system clock. If your system is obeying a
     time zone with daylight savings time, then some of your jobs may run early
-    or late on the days bordering each mode.
+    or late on the days bordering each mode. See :ref:`dst_notes` for more
+    information.
 
     ::
 
