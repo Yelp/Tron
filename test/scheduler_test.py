@@ -239,10 +239,10 @@ class DailySchedulerDSTTest(TestCase):
         # datetime.datetime(2011, 3, 13, 2, 0, 0, tzinfo=pytz.utc)
         # This test will use times on either side of it.
 
-        # From the PST vantage point, the run time is 22.2 hours away:
+        # From the PST vantage point, the run time is 20.2 hours away:
         s1a, s1b = self.hours_to_job_at_datetime(sch, 2011, 3, 13, 2, 50, 0)
 
-        # From the PDT vantage point, the run time is 23.8 hours away:
+        # From the PDT vantage point, the run time is 20.8 hours away:
         # (this is measured from the point in absolute time 20 minutes after
         # the other measurement)
         s2a, s2b = self.hours_to_job_at_datetime(sch, 2011, 3, 13, 3, 10, 0)
