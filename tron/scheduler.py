@@ -265,6 +265,8 @@ class GrocScheduler(object):
                     start_time = self.time_zone.localize(start_time,
                                                          is_dst=None)
                 except AmbiguousTimeError:
+                    # We are in the infamous 1 AM block which happens twice on
+                    # fall-back. Pretend like it's the first time, every time.
                     start_time = self.time_zone.localize(start_time,
                                                          is_dst=True)
 
