@@ -4,6 +4,8 @@ import datetime
 import logging
 import re
 
+from pytz import AmbiguousTimeError, NonExistentTimeError
+
 from tron.utils import groctimespecification
 from tron.utils import timeutils
 
@@ -259,7 +261,12 @@ class GrocScheduler(object):
         else:
             start_time = timeutils.current_time()
             if self.time_zone:
-                start_time = self.time_zone.localize(start_time)
+                try:
+                    start_time = self.time_zone.localize(start_time,
+                                                         is_dst=None)
+                except AmbiguousTimeError:
+                    start_time = self.time_zone.localize(start_time,
+                                                         is_dst=True)
 
         run_time = self.time_spec.GetMatch(start_time)
 
