@@ -6,7 +6,7 @@ import urlparse
 
 from tron import cmd
 
-DEFAULT = "http://localhost:8082"
+DEFAULT = "http://localhost:8089"
 DATA = "http://localhost:8888/data/"
 
 class JobsHandler(tornado.web.RequestHandler):

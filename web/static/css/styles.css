@@ -1,0 +1,11 @@
+table.jobs th {
+  text-align:left;
+  padding-left: 20px;
+  background-color: LightCyan;
+}
+
+table.jobs td {
+  text-align:left;
+  padding-left: 20px;  
+  background-color: LightYellow;
+}

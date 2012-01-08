@@ -4,7 +4,7 @@ import tornado.web
 
 from tron import cmd
 
-DEFAULT = "http://localhost:8082"
+DEFAULT = "http://localhost:8089"
 
 class NodeHandler(tornado.web.RequestHandler):
     def get(self):

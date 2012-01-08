@@ -1,15 +1,21 @@
 {% extends "base.html" %}
 {% block body %}
     <h1>Jobs</h1>
-    <ul> 
-    {% for job in data['jobs'] %}
-        <li><a href='{{ job['name'] }}'>{{ job['name'] }}</a> 
-            <ul>
-                <li>Sheduler: {{ job['scheduler'] }}</li>
-                <li>Last Success: {{ job['last_success'] }}</li> 
-            </ul>
-        </li>
-    {% end %}
-    </ul>
+    <table class="jobs">
+      <tr>
+        <th>Job Name</th>
+        <th>Scheduler</th>
+        <th>State</th>
+        <th>Last Success</th>
+      </tr>
+      {% for job in sorted(data['jobs'], key=lambda j: j['name']) %}
+        <tr>
+          <td><a href='{{ job['name'] }}'>{{ job['name'] }}</a></td>
+          <td>{{ job['scheduler'] }}</td>
+          <td>{{ job['status'] }}</td>
+          <td>{{ job['last_success'] }}</td>
+        </tr>
+      {% end %}      
+    </table>
 {% end %}
 
