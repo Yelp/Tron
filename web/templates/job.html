@@ -16,21 +16,21 @@
     </ul>
     <table class="jobs">
       <tr>
-        <th class="jobs">ID</th>
-        <th class="jobs">Node</th>
-        <th class="jobs">State</th>
-        <th class="jobs">Duration</th>
-        <th class="jobs">Start Time</th>
-        <th class="jobs">End Time</th>        
+        <th>ID</th>
+        <th>Node</th>
+        <th>State</th>
+        <th>Duration</th>
+        <th>Start Time</th>
+        <th>End Time</th>        
       </tr>
       {% for run in sorted(data['runs'], key=lambda r: r['run_num'], reverse=True) %}
         <tr>
-          <td class="jobs"><a href='{{ run['run_num'] }}'>{{ run['id'] }}</a></td>
-          <td class="jobs">{{ run['node'] }}</td>
-          <td class="jobs">{{ run['state'] }}</td>
-          <td class="jobs">{{ run['duration'] }}</td>
-          <td class="jobs">{{ run['start_time'] }}</td>
-          <td class="jobs">{{ run['end_time'] }}</td>
+          <td><a href='{{ run['run_num'] }}'>{{ run['id'] }}</a></td>
+          <td>{{ run['node'] }}</td>
+          <td>{{ run['state'] }}</td>
+          <td>{{ run['duration'] }}</td>
+          <td>{{ run['start_time'] }}</td>
+          <td>{{ run['end_time'] }}</td>
         </tr>
       {% end %}      
     </table>
