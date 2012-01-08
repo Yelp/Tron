@@ -37,7 +37,6 @@ class JobRunHandler(tornado.web.RequestHandler):
     @tornado.web.addslash
     def get(self, job, run_id):
         data = self.get_data(job, run_id)
-        print data
         self.render("job_run.html", title=data['id'], data=data)
 
     def get_data(self, job, run_id):

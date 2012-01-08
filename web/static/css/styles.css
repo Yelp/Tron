@@ -1,9 +1,11 @@
-th.jobs {
+table.jobs th {
   text-align:left;
   padding-left: 20px;
+  background-color: LightCyan;
 }
 
-td.jobs {
+table.jobs td {
   text-align:left;
-  padding-left: 20px;
+  padding-left: 20px;  
+  background-color: LightYellow;
 }

@@ -3,17 +3,17 @@
     <h1>Jobs</h1>
     <table class="jobs">
       <tr>
-        <th class="jobs">Job Name</th>
-        <th class="jobs">Scheduler</th>
-        <th class="jobs">State</th>
-        <th class="jobs">Last Success</th>
+        <th>Job Name</th>
+        <th>Scheduler</th>
+        <th>State</th>
+        <th>Last Success</th>
       </tr>
       {% for job in sorted(data['jobs'], key=lambda j: j['name']) %}
         <tr>
-          <td class="jobs"><a href='{{ job['name'] }}'>{{ job['name'] }}</a></td>
-          <td class="jobs">{{ job['scheduler'] }}</td>
-          <td class="jobs">{{ job['status'] }}</td>
-          <td class="jobs">{{ job['last_success'] }}</td>
+          <td><a href='{{ job['name'] }}'>{{ job['name'] }}</a></td>
+          <td>{{ job['scheduler'] }}</td>
+          <td>{{ job['status'] }}</td>
+          <td>{{ job['last_success'] }}</td>
         </tr>
       {% end %}      
     </table>
