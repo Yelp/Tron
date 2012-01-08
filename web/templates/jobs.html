@@ -5,7 +5,7 @@
       <tr>
         <th class="jobs">Job Name</th>
         <th class="jobs">Scheduler</th>
-        <th class="jobs">Status</th>
+        <th class="jobs">State</th>
         <th class="jobs">Last Success</th>
       </tr>
       {% for job in sorted(data['jobs'], key=lambda j: j['name']) %}

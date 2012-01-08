@@ -1,87 +1,40 @@
 {% extends "base.html" %}
 {% block body %}
     <h1>{{ data['name'] }}</h1>
-    <h2>Scheduler: {{ data['scheduler'] }}</h2>
-    <h2>Actions</h2>
+    <h3>Scheduler: {{ data['scheduler'] }}</h3>
+    <h3>Actions</h3>
     <ul>
         {% for act in data['action_names'] %}
             <li>{{act}}</li>
         {% end %}
     </ul>
-    <h2>Nodes</h2>
+    <h3>Nodes</h3>
     <ul>
         {% for node in data['node_pool'] %}
             <li>{{node}}</li>
         {% end %}
     </ul>
-    <div id="placeholder" style="width:800px;height:300px"></div>
+    <table class="jobs">
+      <tr>
+        <th class="jobs">ID</th>
+        <th class="jobs">Node</th>
+        <th class="jobs">State</th>
+        <th class="jobs">Duration</th>
+        <th class="jobs">Start Time</th>
+        <th class="jobs">End Time</th>        
+      </tr>
+      {% for run in sorted(data['runs'], key=lambda r: r['run_num'], reverse=True) %}
+        <tr>
+          <td class="jobs"><a href='{{ run['id'] }}'>{{ run['id'] }}</a></td>
+          <td class="jobs">{{ run['node'] }}</td>
+          <td class="jobs">{{ run['state'] }}</td>
+          <td class="jobs">{{ run['duration'] }}</td>
+          <td class="jobs">{{ run['start_time'] }}</td>
+          <td class="jobs">{{ run['end_time'] }}</td>
+        </tr>
+      {% end %}      
+    </table>
 
 {% end %}
 
-{% block graph_script %}
-<script id="source" language="javascript" type="text/javascript">
-$(function () {
-    var data = []
-    {% for run in sorted(data['runs'], key=lambda run: run['run_num']) %}
-        data.push([{{ int(run['run_num']) }}, '{{ run['duration'] }}']);
-    {% end %}
-
-    var plot = $.plot($("#placeholder"),
-           [ { data: data, label: "{{ data['name'] }}" } ], {
-               series: {
-                   lines: { show: true },
-                   points: { show: true }
-               },
-               grid: { hoverable: true, clickable: true },
-               yaxis: { min: 0, max: 50 }
-             });
-
-    function showTooltip(x, y, contents) {
-        $('<div id="tooltip">' + contents + '</div>').css( {
-            position: 'absolute',
-            display: 'none',
-            top: y + 5,
-            left: x + 5,
-            border: '1px solid #fdd',
-            padding: '2px',
-            'background-color': '#fee',
-            opacity: 0.80
-        }).appendTo("body").fadeIn(0);
-    }
-
-    var previousPoint = null;
-    $("#placeholder").bind("plothover", function (event, pos, item) {
-        $("#x").text(pos.x.toFixed(2));
-        $("#y").text(pos.y.toFixed(2));
-
-        if (item) {
-            if (previousPoint != item.datapoint) {
-                previousPoint = item.datapoint;
-                  
-                $("#tooltip").remove();
-                var x = item.datapoint[0].toFixed(2),
-                    y = item.datapoint[1].toFixed(2);
-                  
-                showTooltip(item.pageX, item.pageY,
-                            item.series.label + "." + Math.round(x) + ": " + y + " secs");
-            }
-        }
-        else {
-            $("#tooltip").remove();
-            previousPoint = null;            
-        }
-    });
-
-    $("#placeholder").bind("plotclick", function (event, pos, item) {
-        if (item) {
-            var x = item.datapoint[0].toFixed(2);
-            window.location = Math.round(x) + "";
-        }
-    });
-
-    setTimeout("location.reload(true);", 2000);
-});
-</script>
-
-{% end %}
 

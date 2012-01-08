@@ -10,7 +10,6 @@ class RootHandler(tornado.web.RequestHandler):
     def get(self):
         content = self.get_jobs()
         job_names = [j['name'] for j in content['jobs']]
-        print job_names
         self.render("../templates/base.html", title="My title", items=job_names)
 
     def get_jobs(self):
