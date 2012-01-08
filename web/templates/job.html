@@ -23,7 +23,7 @@
 $(function () {
     var data = []
     {% for run in sorted(data['runs'], key=lambda run: run['run_num']) %}
-        data.push([{{ int(run['run_num']) }}, {{ run['duration'] }}]);
+        data.push([{{ int(run['run_num']) }}, '{{ run['duration'] }}']);
     {% end %}
 
     var plot = $.plot($("#placeholder"),

@@ -1,1 +1,211 @@
-debian/changelog
+tron (0.2.8-1) unstable; urgency=low
+
+  * Now on PyPI (irskep)
+  * New HTML documentation at http://packages.python.org/tron (irskep)
+  * Cleanup actions: run a command after the success or failure of a job (irskep)
+  * Logging to syslog with syslog_address config field (irskep)
+  * "zap" command for services (irskep)
+  * simplejson is no longer a dependency for Python 2.6 and up (irskep)
+  * Fix weekday-specified jobs (mon, tues, ...) running a day late (irskep)
+  * Fix services being allowed in jobs list and causing weird crashes (irskep)
+  * Fix missing import in www.py (irskep)
+  * Better resilience to subtlely bad tronfigs (jbrown)
+
+ -- Steve Johnson <sjohnson@yelp.com>  Fri, 25 Nov 2011 23:27:00 -0400
+
+tron (0.2.7-1) unstable; urgency=low
+
+  * Really fix date parsing (rhettg)
+  * Revert instant service monitor so we wait a while before checking our services (rhettg)
+  * Clean up some logging (rhettg)
+
+ -- Rhett Garber <rhettg@gmail.com>  Wed, 14 Sep 2011 16:23:00 -0700
+
+tron (0.2.6-2) unstable; urgency=low
+
+  * Fix date parsing
+
+ -- James Brown <jbrown@yelp.com>  Wed, 14 Sep 2011 15:36:30 -0700
+
+tron (0.2.6-1) unstable; urgency=low
+
+  * Support for functional testing. Fixes #49 (irskep)
+  * Context variables for year, month and day. Fixes #57 (irskep)
+  * Integrate Google App Engine Cron scheduling syntax. Fixes #71 (irskep)
+  * Fix crash during service monitoring because of node connect failures. Fixes #77 (rhettg)
+  * Make action runs explicitly not re-startable. Fixes #78 (rhettg)
+  * Flush and fsync state file. Fixes #74 (rhettg)
+  * Handle node disconnect while waiting for channel to start. Fixes #75 (rhettg)
+  * Replace an aggressive assert with a log message for monitor inconsistency. Fixes #73 (rhettg)
+  * Handle tronview event listing issue with garbage collected entites. Fixes #70 (rhettg)
+  * Prevent SSH stampedes by delaying some node EXEC calls (rhettg)
+  
+ -- Rhett Garber <rhettg@gmail.com>  Wed, 14 Sep 2011 14:30:15 -0700
+
+
+tron (0.2.5-1) unstable; urgency=low
+
+  * Introduce event collection system (rhettg)
+  * Fix a crash in rebuilding all services under certain reconfig scenarios. Fixes #67 (rhettg)
+  * Fix potential service situation where monitors would stop running after failures (rhettg)
+  * Additional logging around startup failures (rhettg)
+  
+ -- Rhett Garber <rhettg@gmail.com>  Wed, 22 June 2011 13:24:00 -0800
+
+tron (0.2.4-1) unstable; urgency=low
+
+  * Final tronfig fix for stdout/stdin behavior (rhettg)
+  
+ -- Rhett Garber <rhettg@gmail.com>  Tue, 12 Apr 2011 10:50:00 -0800
+
+tron (0.2.3-2) unstable; urgency=low
+
+  * Made tronfig work with non-interactive uploads again. (jbrown)
+  
+ -- James Brown <jbrown@yelp.com>  Mon, 11 Apr 2011 22:06:56 -0700
+
+tron (0.2.3-1) unstable; urgency=low
+
+  * Resolved an issue where tronfig via stdin wouldn't catch all errors. (rhettg)
+  * Provided additional config time validation to catch bad configurations. (rhettg)
+  
+ -- Rhett Garber <rhettg@gmail.com>  Thu, 7 Apr 2011 10:50:00 -0800
+
+tron (0.2.2-1) unstable; urgency=low
+
+  * Resolved an issue where certain service reconfigurations would 
+    cause the service to be stuck in the DOWN state (rhettg)
+  * Reworked service to keep consistant instance numbers across restarts 
+    and reconfigs (rhettg)
+  
+ -- Rhett Garber <rhettg@gmail.com>  Wed, 23 Mar 2011 18:26:00 -0800
+
+tron (0.2.1-1) unstable; urgency=low
+
+  * Resolve an issue where run_time wasn't set for manually started jobs (rhettg)
+  * Support for multiple arguments to tronctl (for starting things in bulk) (rhettg)
+  * Support for starting a job with a specific run_time (rhettg)
+  * Resolved an issue where services, after a reconfig, wouldn't cause state changes (rhettg)
+  * Updated man pages (rhettg)
+
+ -- Rhett Garber <rhettg@gmail.com>  Wed, 09 Feb 2011 15:20:00 -0800
+
+tron (0.2.0-1) unstable; urgency=low
+
+  * New services system (rhettg)
+
+ -- Rhett Garber <rhettg@gmail.com>  Mon, 06 Feb 2011 15:15:00 -0800
+
+
+tron (0.1.10-1) unstable; urgency=low
+
+  * Remove use of deprecated twisted timeout calls. Fixes #9 (rhettg)
+  * Handle newer versions of twisted (rhettg)
+  * Dynamic column widths in tronview and better overflow (ebaum)
+  * Command now displayed in tronview for an action Fixes #32 (ebaum)
+  * Respect tronview -n option for stdout/stderr output. Fixes #41 (ebaum)
+  * Show warnings option for tronview. Fixes #46 (ebaum)
+  * Suppress headers option for tronview. (ebaum)
+  * Fix an issue where default empty config failed to apply. (rhettg)
+  * Add versioning to both tron module, command and state file (rhettg)
+  * Set umask on daemon to allow proper pid-file control (rhettg)
+  * Fix issue with command context not propogating on live reconfigs. Fixes
+    #53 (rhettg)
+
+
+ -- Rhett Garber <rhettg@gmail.com>  Fri, 14 Jan 2011 13:10:00 -0800
+
+tron (0.1.9-1) unstable; urgency=low
+
+  * Fix issue with config changes causing previous job runs to be in an
+    unstable state. #42 (ebaum)
+
+ -- Rhett Garber <rhettg@gmail.com>  Mon, 14 Dec 2010 14:12:00 -0800
+
+tron (0.1.8-1) unstable; urgency=low
+
+  * Address issue with bad format strings in commands causing untold
+    disasters. #45 (rhettg)
+
+ -- Rhett Garber <rhettg@gmail.com>  Mon, 06 Dec 2010 17:38:00 -0800
+
+tron (0.1.7-1) unstable; urgency=low
+
+  * Improve log rotation scripts under Debian (jbrown)
+  * Fix an issue where removing a job with a live reconfig caused the job not to actually be removed. #44 (rhettg)
+  * Some logging changes to make debugging issues easier (rhettg)
+  * Some cleanup and better error/delay handling around process control for state writing. (rhettg)
+
+ -- Rhett Garber <rhettg@gmail.com>  Mon, 22 Nov 2010 15:52:00 -0800
+
+tron (0.1.6-1) unstable; urgency=low
+
+  * Fix issue with live reconfigs causing intervals to be skipped (rhettg)
+  * Added log file re-opening on SIGHUP (fixes #37) (rhettg)
+  * Fix some issues with cmp functions for jobs that caused incorrect
+    reconfigs (#38) (mtytel)
+  * Fix issue with manually starting all_node jobs/services (mtytel)
+  
+ -- Rhett Garber <rhettg@gmail.com>  Fri, 15 Oct 2010 15:05:00 -0700
+
+tron (0.1.5-1) unstable; urgency=low
+
+  * Fixed crash due to config bug where SSH options were sometimes missing (rhettg)
+  * Tweaks to command line interface (rhettg)
+  
+ -- Rhett Garber <rhettg@gmail.com>  Wed, 14 Sep 2010 10:14:00 -0700
+
+tron (0.1.4-1) UNRELEASED; urgency=low
+
+  * Simpler default options and config for trond (rhettg)
+  * Trond daemonizing for proper init.d start/stop behavior (rhettg)
+  * Fixes to reduce state file writing (matthewtytel)
+  * Better pre-validation for tronfig (matthewtytel)
+  * Updates to man pages (matthewtytel)
+
+ -- Rhett Garber <rhettg@gmail.com>  Tue, 7 Sep 2010 16:51:00 -0700
+
+tron (0.1.3-3) UNRELEASED; urgency=low
+
+  * Use /var/lib/tron/ for a working directory (roguelazer)
+  * Fix bug in Node configuration with services (rhettg)
+
+ -- James Brown <roguelazer@gmail.com>  Mon, 2 Sep 2010 11:35:00 -0700
+
+tron (0.1.3-2) UNRELEASED; urgency=low
+
+  * No longer depend on libyaml
+
+ -- James Brown <roguelazer@gmail.com>  Mon, 2 Sep 2010 11:00:46 -0700
+
+tron (0.1.3-1) UNRELEASED; urgency=low
+
+  * Better debian packaging (roguelazer)
+  * Cleaner configuration (rhettg)
+  * SIGHUP handling for reconfiguration (matthewtytel)
+  * Command Context (environment variables for command execution) (rhettg)
+  * Show job duration, alphabetize job list and direct stdout/stderr access (matthewtytel)
+
+ -- James Brown <roguelazer@gmail.com>  Mon, 30 Aug 2010 18:33:00 -0700
+
+tron (0.1.2) UNRELEASED; urgency=low
+
+  * Services (matthewtytel)
+  * Smarter node pools (run all nodes) (matthewtytel)
+  * Randomized node pool selection (matthewtytel)
+
+ -- Rhett Garber <rhettg@gmail.com>  Thu, 19 Aug 2010 11:05:00 -0700
+
+tron (0.1.1) UNRELEASED; urgency=low
+
+  * On the fly reconfiguration (matthewtytel)
+  * Saving state (matthewtytel)
+  * job enable/disable (matthewtytel)
+
+ -- Rhett Garber <rhettg@gmail.com>  Thu, 19 Aug 2010 11:05:00 -0700
+
+tron (0.1.0) UNRELEASED; urgency=low
+
+  * Initial release. (Closes: #XXXXXX)
+
+ -- Rhett Garber <rhett@yelp.com>  Tue, 23 Mar 2010 07:34:36 -0700
