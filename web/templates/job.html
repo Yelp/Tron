@@ -25,7 +25,7 @@
       </tr>
       {% for run in sorted(data['runs'], key=lambda r: r['run_num'], reverse=True) %}
         <tr>
-          <td class="jobs"><a href='{{ run['id'] }}'>{{ run['id'] }}</a></td>
+          <td class="jobs"><a href='{{data['name']}}/{{ run['id'] }}'>{{ run['id'] }}</a></td>
           <td class="jobs">{{ run['node'] }}</td>
           <td class="jobs">{{ run['state'] }}</td>
           <td class="jobs">{{ run['duration'] }}</td>
