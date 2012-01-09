@@ -9,3 +9,10 @@ table.jobs td {
   padding-left: 20px;  
   background-color: LightYellow;
 }
+
+table.jobs td.command {
+  text-align:left;
+  padding-left: 20px;  
+  background-color: White;
+  padding-bottom: 20px;
+}
