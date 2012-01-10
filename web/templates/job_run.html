@@ -22,7 +22,7 @@
     <tr>
       <td colspan="6" class="command">
         {{ run['command'] }}<br />
-        <a href="#">stdout</a>&nbsp;&nbsp;<a href="#">stderr</a>
+        <a href="{{output_url(job, data['id'], run['id'])}}.stdout">stdout</a>&nbsp;&nbsp;<a href="{{output_url(job, data['id'], run['id'])}}.stderr">stderr</a>
       </td>
     </tr>
   {% end %}
