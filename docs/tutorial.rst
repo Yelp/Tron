@@ -140,6 +140,9 @@ You can monitor this job run by using :command:`tronview`::
     Stdout:
     Linux dev05 2.6.24-24-server #1 SMP Wed Apr 15 15:41:09 UTC 2009 x86_64 GNU/Linux
     Stderr:
+
+Tron also provides a simple, optional web UI that can be used to get tronview data in a browser. See :doc:`tronweb` for setup
+instructions.
     
 That's it for the basics. You might want to look at :doc:`overview` for a more
 comprehensive description of how Tron works.
