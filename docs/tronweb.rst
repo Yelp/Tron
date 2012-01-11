@@ -34,7 +34,7 @@ to the path on disk where trond stores output files. For example, given run 10 o
 Once you have confg.py sorted, you simply start the server by running it::
 
   python tronweb.py # or
-  nohup tronweb.py &
+  nohup python tronweb.py &
 
 That's it.
 
