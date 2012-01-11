@@ -1,7 +1,7 @@
 tronweb
 ========
 Tron comes with a simple but functional web-based UI to tronview. You can use tronweb to view your jobs and drill down
-into individual job runs, actions and action output. Currently, tronweb.py lives in the web\ directory of the tron
+into individual job runs, actions and action output. Currently, tronweb.py lives in the web/ directory of the tron
 source distribution. 
 
 Installation
