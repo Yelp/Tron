@@ -31,7 +31,7 @@ to the path on disk where trond stores output files. For example, given run 10 o
   http://foo.bar.com/jobs/call_center_report/call_center_report.10/call_center_report.10.report.stdout
   http://foo.bar.com/jobs/call_center_report/call_center_report.10/call_center_report.10.report.stderr
 
-Once you have confg.py sorted, you simply start the server by running it:
+Once you have confg.py sorted, you simply start the server by running it::
 
   python tronweb.py # or
   nohup tronweb.py &
