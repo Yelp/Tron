@@ -198,6 +198,42 @@ In the config::
 
     schedule: "every monday at 09:00"
 
+.. _dst_notes:
+
+Notes on Daylight Saving Time
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Some system clocks are configured to track local time and may observe daylight
+savings time. For example, on November 6, 2011, 1 AM occurred twice.  Prior to
+version 0.2.9, this would cause Tron to schedule a daily midnight job to be run
+an hour early on November 7, at 11 PM. For some jobs this doesn't matter, but
+for jobs that depend on the availability of data for a day, it can cause a
+failure.
+
+Similarly, some jobs on March 14, 2011 were scheduled an hour late.
+
+To avoid this problem, set the :ref:`time_zone` config variable. For example::
+
+    time_zone: US/Pacific
+
+If a job is scheduled at a time that occurs twice, such as 1 AM on "fall back",
+it will be run on the *first* occurrence of that time.
+
+If a job is scheduled at a time that does not exists, such as 2 AM on "spring
+forward", it will be run an hour later in the "new" time, in this case 3 AM. In
+the "old" time this is 2 AM, so from the perspective of previous jobs, it runs
+at the correct time.
+
+In general, Tron tries to schedule a job as soon as is correct, and no sooner.
+A job that is schedule for 2:30 AM will not run at 3 AM on "spring forward"
+because that would be half an hour too soon from a pre-switch perspective (2
+AM).
+
+.. note::
+
+    If you experience unexpected scheduler behavior, `file an issue on Tron's
+    Github page <http://www.github.com/yelp/tron/issues/new>`_.
+
 .. _job_cleanup_actions:
 
 Cleanup Actions
