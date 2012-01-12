@@ -27,6 +27,7 @@ Table of Contents
     config.rst
     jobs.rst
     services.rst
+    tronweb.rst
     tools.rst
     developing.rst
 
