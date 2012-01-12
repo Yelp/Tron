@@ -1,0 +1,5 @@
+config={
+    'output_url': "http://localhost:8889/{job}/{run}/{action}",
+    'port': 8888,
+    'trond_url':'http://localhost:8089',
+}
