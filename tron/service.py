@@ -8,7 +8,6 @@ from twisted.internet import reactor
 from tron import action
 from tron import command_context
 from tron import event
-from tron import job
 from tron import node
 from tron.utils import state
 from tron.utils import timeutils

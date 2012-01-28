@@ -1,5 +1,4 @@
 import logging
-import weakref
 
 from twisted.python import log
 

@@ -4,7 +4,6 @@ import logging.handlers
 import os
 import re
 import socket
-import sys
 import weakref
 
 import yaml
@@ -181,6 +180,7 @@ class _ConfiguredObject(yaml.YAMLObject, FromDictBuilderMixin):
         if not isinstance(other, self.__class__):
             return -1
 
+        # TODO: 
         our_dict = [(key, value) for key, value in self.__dict__.iteritems() if not key.startswith('_')]
         other_dict = [(key, value) for key, value in other.__dict__.iteritems() if not key.startswith('_')]
         
@@ -318,7 +318,7 @@ class TronConfiguration(yaml.YAMLObject):
         for service in built_services:
             try:
                 mcp.add_service(service)
-            except Exception, e:
+            except Exception:
                 log.exception("Failed adding new service")
                 failure = True
         
@@ -509,7 +509,7 @@ class Job(_ConfiguredObject):
 
             if not real_job.node_pool and not real_action.node_pool:
                 raise ConfigError("Either job '%s' or its action '%s' must have a node"
-                   % (real_job.name, action_action.name))
+                   % (real_job.name, real_action.name))
             real_job.cleanup_action = real_action
             real_action.job = real_job
             real_job._register_action(real_action)
@@ -608,7 +608,7 @@ class CleanupAction(Action):
         self.name = CLEANUP_ACTION_NAME
 
         if not getattr(self, 'command', None):
-            raise ConfigError("Missing value in action %s %r" % (key, self), self.line_number)
+            raise ConfigError("Missing value in action command %r" % (self), self.line_number)
 
         if hasattr(self, 'requires'):
             raise ConfigError("Cleanup actions cannot have dependencies")
@@ -673,7 +673,7 @@ class ConstantScheduler(_ConfiguredObject):
     actual_class = scheduler.ConstantScheduler
     
     def _apply(self):
-        sched = self._ref()
+        self._ref()
 
 
 # Shortcut values for intervals

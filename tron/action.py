@@ -1,11 +1,8 @@
-import uuid
 import logging
 import re
-import datetime
 import os
+from subprocess import call, PIPE
 import sys
-
-from twisted.internet import defer
 
 from tron import node, command_context
 from tron.utils import timeutils
@@ -24,7 +21,7 @@ class ActionRunContext(object):
     """Context object that gives us access to data about the action run itself"""
     def __init__(self, action_run):
         self.action_run = action_run
-    
+
     @property
     def actionname(self):
         return self.action_run.action.name
@@ -123,13 +120,13 @@ class ActionRun(object):
     for event_state in (STATE_UNKNOWN, STATE_QUEUED, STATE_SCHEDULED):
         event_state['success'] = STATE_SUCCEEDED
         event_state['fail'] = STATE_FAILED
-    
+
     STATE_QUEUED['schedule'] = STATE_SCHEDULED
-    
+
     def __init__(self, action, context=None, output_path=None):
         self.action = action
         self.id = None
-        
+
         self.run_time = None    # What time are we supposed to start
         self.start_time = None  # What time did we start
         self.end_time = None    # What time did we end
@@ -166,14 +163,14 @@ class ActionRun(object):
     def stdout_path(self):
         if self.output_path is None:
             return None
-            
+
         return os.path.join(self.output_path, self.id + '.stdout')
 
     @property
     def stderr_path(self):
         if self.output_path is None:
             return None
-            
+
         return os.path.join(self.output_path, self.id + '.stderr')
 
     def tail_stdout(self, num_lines=0):
@@ -181,36 +178,36 @@ class ActionRun(object):
 
     def tail_stderr(self, num_lines=0):
         return self.tail_file(self.stderr_path, num_lines)
-    
-    def tail_file(self, path, num_lines):
-        try:
-            out = open(path, 'r')
-            out.close()
-        except IOError:
-            return []
 
+    def tail_file(self, path, num_lines):
+        if not path:
+            return []
         if not num_lines or num_lines <= 0:
             num_lines = sys.maxint
 
-        tail = os.popen("tail -n %s %s" % (num_lines + 1, path))
-        lines = tail.read().split('\n')[:-1]
+        try:
+            cmd = ('tail', '-n', num_lines, path)
+            tail_sub = call(*cmd , stdout=PIPE)
+            lines = [line for line in tail_sub.stdout]
+        except OSError:
+            log.error("Could not tail %s." % path)
+            return []
 
         if len(lines) > num_lines:
             lines[0] = "..."
 
         return lines
 
-        
     def attempt_start(self):
         self.machine.transition('ready')
-        
+
         if all([r.is_success for r in self.required_runs]):
             self.start()
 
     def start(self):
         if self.state not in (self.STATE_QUEUED, self.STATE_SCHEDULED):
             raise InvalidStartStateError(self.state)
-        
+
         log.info("Starting action run %s", self.id)
         self.start_time = timeutils.current_time()
         self.end_time = None
@@ -234,10 +231,10 @@ class ActionRun(object):
 
     def cancel(self):
         self.machine.transition('cancel')
-    
+
     def schedule(self):
         self.machine.transition('schedule')
-    
+
     def queue(self):
         self.machine.transition('queue')
 
@@ -256,12 +253,12 @@ class ActionRun(object):
             self.stdout_file.close()
         if self.stderr_file:
             self.stderr_file.close()
-        
+
         self.stdout_file = self.stderr_file = None
 
     def _handle_errback(self, result):
         """Handle an error on the action command deferred
-        
+
         This isn't the primary way we get notified of failures, as most expected ones will come through us
         being a listener to the action command. However, if something internally goes wrong we'll catch it
         here, as well as getting more details on the cause of any exception generated.
@@ -274,10 +271,10 @@ class ActionRun(object):
         else:
             log.warning("Unknown failure for run %s on host %s: %s", self.id, self.node.hostname, str(result))
             self.fail_unknown()
-            
+
     def _handle_action_command(self):
         """Our hook for being a listener to a running action command.
-        
+
         On any state change, the action command will call us back so we can evaluate if we
         need to change some state ourselves.
         """
@@ -330,7 +327,7 @@ class ActionRun(object):
     def succeed(self):
         """Mark the run as having succeeded"""
         log.info("Action run %s succeeded", self.id)
-        
+
         self.mark_success()
         self.start_dependants()
 
@@ -356,7 +353,7 @@ class ActionRun(object):
                 'end_time': self.end_time,
                 'command': self.command
         }
-        
+
 
     def render_command(self):
         """Render our configured command under the command context.
@@ -391,7 +388,7 @@ class ActionRun(object):
     @property
     def is_queued(self):
         return self.state == self.STATE_QUEUED
-    
+
     @property
     def is_cancelled(self):
         return self.state == self.STATE_CANCELLED
@@ -446,14 +443,14 @@ class Action(object):
 
     def build_run(self, job_run):
         """Build an instance of ActionRun for this action
-        
+
         This is used by the scheduler when scheduling a run
         """
         new_run = ActionRun(self, context=job_run.context)
 
         new_run.id = "%s.%s" % (job_run.id, self.name)
         new_run.output_path = job_run.output_path
-        
+
         return new_run
 
 
@@ -467,15 +464,15 @@ class ActionCommand(object):
 
     def __init__(self, id, command, stdout=None, stderr=None):
         """An Action Command is what a node actually executes
-        
+
         This object encapsulates everything necessary for a node to execute the command,
         collect results, and inform anyone who cares.
-        
+
         A Node will call:
           started (when the command starts)
           exited (when the command exits)
           write_<channel> (when output is received)
-        
+
         Clients should register as listeners for state changes by adding a callable to ActionCommand.listeners
         The callable will be exected with a single argument of 'self' for convinience.
         """
@@ -486,7 +483,7 @@ class ActionCommand(object):
         # This guy is pretty simple, as we're just going to have string based events
         # passed to it, and there is no other external interaction
         self.machine = state.StateMachine(initial_state=self.PENDING)
-        
+
         self.stdout_file = stdout
         self.stderr_file = stderr
         self.exit_status = None
@@ -496,7 +493,7 @@ class ActionCommand(object):
     @property
     def state(self):
         return self.machine.state
-    
+
     def started(self):
         self.start_time = timeutils.current_timestamp()
         self.machine.transition("start")
@@ -516,6 +513,6 @@ class ActionCommand(object):
 
     def write_done(self):
         self.machine.transition("close")
-            
+
     def __repr__(self):
         return "[ActionCommand %s] %s : %s" % (self.id, self.command, self.state)

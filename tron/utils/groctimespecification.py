@@ -36,6 +36,7 @@ import datetime
 
 try:
   import pytz
+  assert pytz
 except ImportError:
   pytz = None
 
@@ -44,7 +45,9 @@ MINUTES = 'minutes'
 
 try:
   from pytz import NonExistentTimeError
+  assert NonExistentTimeError
   from pytz import AmbiguousTimeError
+  assert AmbiguousTimeError
 except ImportError:
   class NonExistentTimeError(Exception):
     pass

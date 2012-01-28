@@ -34,6 +34,7 @@ def wait_for_sandbox_success(func, start_delay=0.1, stop_at=5.0):
             func()
             return
         except TronSandboxException, e:
+            raise
             delay *= 2
             last_exception = e
     raise last_exception

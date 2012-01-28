@@ -8,18 +8,15 @@ import logging
 import urllib
 
 try:
-    import json as simplejson
-except ImportError:
     import simplejson
+    # Pyflakes
+    assert simplejson
+except ImportError:
+    import json as simplejson
 
-
-from twisted.cred import checkers
-from twisted.internet import reactor
 from twisted.web import http, resource, server
 
-
 from tron import action
-from tron import config
 from tron import job
 from tron import service
 from tron.utils import timeutils
@@ -280,8 +277,6 @@ class JobResource(resource.Resource):
         for job_run in self._job.runs:
             run_output.append(self.get_run_data(request, job_run))
 
-        resources_output = []
-
         output = {
             'name': self._job.name,
             'scheduler': str(self._job.scheduler),
@@ -335,7 +330,6 @@ class JobsResource(resource.Resource):
         return JobResource(found, self._master_control)
 
     def get_data(self, request):
-        serv_list = []
         job_list = []
         for current_job in self._master_control.jobs.itervalues():
             last_success = None
@@ -434,7 +428,6 @@ class ServiceResource(resource.Resource):
         elif name == '_events':
             return EventResource(self._service)
 
-        found = None
         for instance in self._service.instances:
             if str(instance.instance_number) == str(name):
                 return ServiceInstanceResource(instance, self._master_control)
@@ -452,8 +445,6 @@ class ServiceResource(resource.Resource):
         instance_output = []
         for instance in self._service.instances:
             instance_output.append(self.get_instance_data(request, instance))
-
-        resources_output = []
 
         output = {
             'name': self._service.name,

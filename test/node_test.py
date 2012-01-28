@@ -9,6 +9,8 @@ from testify.utils import turtle
 from tron import node, action, job
 from tron.utils import testingutils
 
+# TODO: freezes ?
+
 class NodeTestCase(TestCase):
     class TestConnection(object):
         def openChannel(self, chan):

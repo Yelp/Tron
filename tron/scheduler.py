@@ -3,7 +3,6 @@ import datetime
 import logging
 import re
 
-from collections import deque
 from tron.utils import groctimespecification
 from tron.utils import timeutils
 
@@ -95,11 +94,11 @@ class ConstantScheduler(object):
     def next_runs(self, job):
         if job.next_to_finish():
             return []
-        
+
         job_runs = job.build_runs()
         for job_run in job_runs:
             job_run.set_run_time(timeutils.current_time())
-        
+
         return job_runs
 
     def job_setup(self, job):
