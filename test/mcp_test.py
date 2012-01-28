@@ -1,5 +1,4 @@
 import datetime
-import os 
 import shutil
 import StringIO
 import tempfile
@@ -9,7 +8,7 @@ from testify.utils import turtle
 
 from twisted.internet import reactor
 from tron.utils import timeutils, testingutils
-from tron import mcp, node, job, action, scheduler
+from tron import mcp, job, action, scheduler
 
 def equals_with_delta(val, check, delta):
     return val <= check + delta and val >= check - delta

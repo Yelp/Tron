@@ -2,8 +2,6 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 
-import urlparse
-
 from tron import cmd
 
 DEFAULT = "http://localhost:8082"

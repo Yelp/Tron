@@ -2,7 +2,6 @@ import datetime
 import os
 from textwrap import dedent
 import time
-import yaml
 
 from testify import *
 
@@ -182,7 +181,7 @@ class SchedulerTestCase(SandboxTestCase):
         """)
 
     def test_queue_on_overlap(self):
-        job_output_dir = os.path.join(self.sandbox.tmp_dir, 'delayed_echo_job')
+        os.path.join(self.sandbox.tmp_dir, 'delayed_echo_job')
         self.sandbox.save_config(SchedulerTestCase.QUEUE_CONFIG)
         self.sandbox.start_trond()
         time.sleep(4)
@@ -190,7 +189,7 @@ class SchedulerTestCase(SandboxTestCase):
 
         runs = self.sandbox.list_job('delayed_echo_job')['runs']
         complete_runs = sum(1 for j in runs if j['end_time'])
-        incomplete_runs = sum(1 for j in runs if not j['end_time'])
+        sum(1 for j in runs if not j['end_time'])
 
         assert_lte(complete_runs, 2)
         assert_gte(len(runs), 3)
@@ -201,8 +200,8 @@ class SchedulerTestCase(SandboxTestCase):
         time.sleep(5)
 
         runs = self.sandbox.list_job('delayed_echo_job')['runs']
-        complete_runs_2 = sum(1 for j in runs if j['end_time'])
-        incomplete_runs_2 = sum(1 for j in runs if not j['end_time'])
+        sum(1 for j in runs if j['end_time'])
+        sum(1 for j in runs if not j['end_time'])
 
         assert_lte(complete_runs, 4)
         assert_gte(len(runs), 8)

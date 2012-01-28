@@ -27,9 +27,6 @@ class Emailer(object):
     	msg = MIMEText(content)
     	msg['Subject'] = "Tron Exception"
     	msg['To'] = self.to_addr
-
-        
-
         port = 25
         host_parts = self.smtp_host.split(":")
         host = host_parts.pop(0)

@@ -9,7 +9,6 @@ from testify.utils import turtle
 from tron import node, action, job
 from tron.utils import testingutils
 
-# TODO: freezes ?
 
 class NodeTestCase(TestCase):
     class TestConnection(object):
@@ -38,6 +37,7 @@ class NodeTestCase(TestCase):
         assert_equal(self.stdout.read(4), "test")
 
 
+# TODO: This freezes when run, something with twisted
 class NodeTimeoutTest(TestCase):
     @setup
     def build_node(self):
@@ -50,7 +50,7 @@ class NodeTimeoutTest(TestCase):
     @setup
     def build_run(self):
         self.run = turtle.Turtle()
-        
+
     def test_connect_timeout(self):
         self.job_marked_failed = False
         def fail_job(*args):

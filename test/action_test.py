@@ -234,7 +234,7 @@ class ActionRunBuildingTest(TestCase):
         
     def test_build_run(self):
         run = self.job.build_run()
-        act_run = self.action.build_run(run)
+        self.action.build_run(run)
         assert run.id
 
     def test_no_schedule(self):

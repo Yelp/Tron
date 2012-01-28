@@ -2,7 +2,6 @@
 import datetime
 import logging
 from logging import handlers
-import os
 import platform
 import shutil
 import StringIO
@@ -293,7 +292,7 @@ syslog_address: /does/not/exist"""
         assert_equal(root.handlers[0].__class__, logging.StreamHandler)
 
     def test_bad_syslog(self):
-        root = logging.getLogger('')
+        logging.getLogger('')
         test_reconfig = config.load_config(StringIO.StringIO(self.bad_config))
         assert_raises(config.ConfigError, test_reconfig.apply, self.my_mcp)
 
