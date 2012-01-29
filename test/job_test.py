@@ -295,7 +295,6 @@ class TestJob(TestCase):
         act2 = action.Action("Action Test2")
         act2.command = "test2"
         act2.job = self.job
-        act2_id = ''.join([self.job.name, '.', str(run_num), '.', act2.name])
 
         act3 = action.Action("Action Test3")
         act3.command = "test3"

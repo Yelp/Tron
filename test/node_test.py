@@ -1,12 +1,9 @@
-import os
-import tempfile
-import shutil
 import StringIO
 
 from testify import setup, teardown, TestCase, assert_equal, run
 from testify.utils import turtle
 
-from tron import node, action, job
+from tron import node, action
 from tron.utils import testingutils
 
 

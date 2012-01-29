@@ -57,8 +57,8 @@ class TestStateHandler(TestCase):
         def callNow(sleep, func, run):
             raise NotImplementedError(sleep)
         
-        run = self.job.next_runs()[0]
-        callLate = reactor.callLater
+        self.job.next_runs()
+        #callLate = reactor.callLater
         #reactor.callLater = callNow
        
         #try:
@@ -137,7 +137,6 @@ jobs:
     def test(self):
         handler = mcp.StateHandler(turtle.Turtle(), "/tmp")
         assert_raises(mcp.StateFileVersionError, handler._load_data_file, self.data_file)
-        data = (self.data_file)
 
 class TestMasterControlProgram(TestCase):
     
