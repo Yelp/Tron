@@ -298,7 +298,6 @@ def view_job_run(options, job_run_id, supress_preface=False):
         start_time = (run['start_time'] and run['start_time'][:-7]) or "-"
         end_time = (run['end_time'] and run['end_time'][:-7]) or "-"
         duration = (run['duration'] and run['duration'][:-7]) or "-"
-        command = run['command'] or "-"
 
         action_color = "red" if run_state == "FAIL" else "white"
         print color(action_color,
