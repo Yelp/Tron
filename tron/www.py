@@ -1,6 +1,4 @@
 """Management Web Services Interface
-
-Got to know what's going on ?
 """
 
 import datetime
@@ -53,31 +51,37 @@ def job_run_state(job_run):
 
     return "UNKWN"
 
+
 class ActionRunResource(resource.Resource):
+
     isLeaf = True
+
     def __init__(self, act_run):
         self._act_run = act_run
         resource.Resource.__init__(self)
 
     def render_GET(self, request):
         output = {
-            'id': self._act_run.id, 
+            'id': self._act_run.id,
             'state': job_run_state(self._act_run),
             'node': self._act_run.node.hostname,
             'command': self._act_run.command,
             'raw_command': self._act_run.action.command,
-            'requirements': [req.name for req in self._act_run.action.required_actions],
+            'requirements': [req.name
+                             for req in self._act_run.action.required_actions],
         }
 
         if request.args and request.args['num_lines'][0].isdigit():
-            output['stdout'] = self._act_run.tail_stdout(int(request.args['num_lines'][0]))
-            output['stderr'] = self._act_run.tail_stderr(int(request.args['num_lines'][0]))
+            num_lines = int(request.args['num_lines'][0])
+            output['stdout'] = self._act_run.tail_stdout(num_lines)
+            output['stderr'] = self._act_run.tail_stderr(num_lines)
 
         return respond(request, output)
 
     def render_POST(self, request):
         cmd = request.args['command'][0]
-        log.info("Handling '%s' request for action run %s", cmd, self._act_run.id)
+        log.info("Handling '%s' request for action run %s",
+                 cmd, self._act_run.id)
 
         if cmd == 'start':
             self._start(request)
@@ -91,7 +95,8 @@ class ActionRunResource(resource.Resource):
             log.warning("Unknown request command %s", request.args['command'])
             return respond(request, None, code=http.NOT_IMPLEMENTED)
 
-        return respond(request, {'result': "Action run now in state %s" % job_run_state(self._act_run)})
+        return respond(request, {'result': "Action run now in state %s" %
+                                 job_run_state(self._act_run)})
 
     def _start(self, request):
         if not self._act_run.is_success and not self._act_run.is_running:
@@ -101,31 +106,40 @@ class ActionRunResource(resource.Resource):
             except action.Error, e:
                 log.info("Failed to start action run %r", e)
         else:
-            log.warning("Request to start job run %s when it's already done", self._act_run.id)
+            log.warning("Request to start job run %s when it's already done",
+                        self._act_run.id)
 
     def _succeed(self, request):
         if not self._act_run.is_running and not self._act_run.is_success:
             log.info("Marking job run %s for success", self._act_run.id)
             self._act_run.succeed()
         else:
-            log.warning("Request to mark job run %s succeeded when it's running or already succeeded", self._act_run.id)
+            log.warning("Request to mark job run %s succeeded when it's"
+                        " running or already succeeded", self._act_run.id)
 
     def _cancel(self, request):
         if self._act_run.is_scheduled or self._act_run.is_queued:
             log.info("Cancelling job %s", self._act_run.id)
             self._act_run.cancel()
         else:
-            log.warning("Request to cancel job run %s when it's not possible", self._act_run.id)
+            log.warning("Request to cancel job run %s when it's not possible",
+                        self._act_run.id)
 
     def _fail(self, request):
-        if not self._act_run.is_running and not self._act_run.is_success and not self._act_run.is_failure:
+        if (not self._act_run.is_running and
+            not self._act_run.is_success and
+            not self._act_run.is_failure):
             log.info("Marking job run %s as failed", self._act_run.id)
             self._act_run.fail(0)
         else:
-            log.warning("Request to fail job run %s when it's already running or done", self._act_run.id)
+            log.warning("Request to fail job run %s when it's already running"
+                        " or done", self._act_run.id)
+
 
 class JobRunResource(resource.Resource):
+
     isLeaf = False
+
     def __init__(self, run):
         self._run = run
         resource.Resource.__init__(self)
@@ -140,7 +154,8 @@ class JobRunResource(resource.Resource):
             if act_name == act_run.action.name:
                 return ActionRunResource(act_run)
 
-        return resource.NoResource("Cannot find action '%s' for job run '%s'" % (act_name, self._run.id)) 
+        return resource.NoResource("Cannot find action '%s' for job run '%s'" %
+                                   (act_name, self._run.id))
 
     def render_GET(self, request):
         run_output = []
@@ -149,14 +164,19 @@ class JobRunResource(resource.Resource):
         def action_output(action_run):
             action_state = job_run_state(action_run)
 
-            last_time = action_run.end_time if action_run.end_time else timeutils.current_time()
-            duration = str(last_time - action_run.start_time) if action_run.start_time else ""
+            last_time = (action_run.end_time
+                         if action_run.end_time
+                         else timeutils.current_time())
+            duration = (str(last_time - action_run.start_time)
+                        if action_run.start_time
+                        else "")
 
             return {
                 'id': action_run.id,
                 'name': action_run.action.name,
                 'run_time': action_run.run_time and str(action_run.run_time),
-                'start_time': action_run.start_time and str(action_run.start_time),
+                'start_time': (action_run.start_time and
+                               str(action_run.start_time)),
                 'end_time': action_run.end_time and str(action_run.end_time),
                 'exit_status': action_run.exit_status,
                 'duration': duration,
@@ -164,11 +184,12 @@ class JobRunResource(resource.Resource):
                 'command': action_run.command,
             }
 
-        run_output = [action_output(action_run) for action_run in self._run.action_runs_with_cleanup]
+        run_output = [action_output(action_run)
+                      for action_run in self._run.action_runs_with_cleanup]
 
         output = {
-            'runs': run_output, 
-            'id': self._run.id, 
+            'runs': run_output,
+            'id': self._run.id,
             'state': state,
             'node': self._run.node.hostname,
         }
@@ -193,7 +214,8 @@ class JobRunResource(resource.Resource):
             log.warning("Unknown request command %s", request.args['command'])
             return respond(request, None, code=http.NOT_IMPLEMENTED)
 
-        return respond(request, {'result': "Job run now in state %s" % job_run_state(self._run)})
+        return respond(request, {'result': "Job run now in state %s" %
+                                 job_run_state(self._run)})
 
     def _restart(self, request):
         log.info("Resetting all action runs to scheduled state")
@@ -212,25 +234,33 @@ class JobRunResource(resource.Resource):
             log.info("Marking job run %s for success", self._run.id)
             self._run.succeed()
         else:
-            log.warning("Request to mark job run %s succeed when it has already", self._run.id)
+            log.warning("Request to mark job run %s succeed when it has"
+                        " already", self._run.id)
 
     def _cancel(self, request):
         if self._run.is_scheduled or self._run.is_queued:
             log.info("Cancelling job %s", self._run.id)
             self._run.cancel()
         else:
-            log.warning("Request to cancel job run %s when it's already cancelled", self._run.id)
+            log.warning("Request to cancel job run %s when it's already"
+                        " cancelled", self._run.id)
 
     def _fail(self, request):
-        if not self._run.is_running and not self._run.is_success and not self._run.is_failure:
+        if (not self._run.is_running and
+            not self._run.is_success and
+            not self._run.is_failure):
             log.info("Marking job run %s as failed", self._run.id)
             self._run.fail()
         else:
-            log.warning("Request to fail job run %s when it's already running or done", self._run.id)
+            log.warning("Request to fail job run %s when it's already running"
+                        " or done", self._run.id)
+
 
 class JobResource(resource.Resource):
     """A resource that describes a particular job"""
+
     isLeaf = False
+
     def __init__(self, job, master_control):
         self._job = job
         self._master_control = master_control
@@ -246,14 +276,16 @@ class JobResource(resource.Resource):
 
         if run_num.upper() == 'HEAD':
             run = self._job.newest()
-        if run_num.upper() in ['SUCC', 'CANC', 'RUNN', 'FAIL', 'SCHE', 'QUE', 'UNKWN']:
+        if run_num.upper() in ['SUCC', 'CANC', 'RUNN', 'FAIL', 'SCHE', 'QUE',
+                               'UNKWN']:
             run = self._job.newest_run_by_state(run_num.upper())
         if run_num.isdigit():
             run = self._job.get_run_by_num(int(run_num))
 
         if run:
             return JobRunResource(run)
-        return resource.NoResource("Cannot run number '%s' for job '%s'" % (run_num, self._job.name))
+        return resource.NoResource("Cannot run number '%s' for job '%s'" %
+                                   (run_num, self._job.name))
 
     def get_run_data(self, request, run):
         state = job_run_state(run)
@@ -293,21 +325,25 @@ class JobResource(resource.Resource):
 
         if cmd == 'enable':
             self._master_control.enable_job(self._job)
-            return respond(request, {'result': "Job %s is enabled" % self._job.name})
+            return respond(request, {'result': "Job %s is enabled" %
+                                     self._job.name})
 
         if cmd == 'disable':
             self._master_control.disable_job(self._job)
-            return respond(request, {'result': "Job %s is disabled" % self._job.name})
+            return respond(request, {'result': "Job %s is disabled" %
+                                     self._job.name})
 
         if cmd == 'start':
             if 'run_time' in request.args:
                 run_time_str = request.args['run_time'][0]
-                run_time = datetime.datetime.strptime(run_time_str, "%Y-%m-%d %H:%M:%S")
+                run_time = datetime.datetime.strptime(run_time_str,
+                                                      "%Y-%m-%d %H:%M:%S")
             else:
                 run_time = timeutils.current_time()
 
             runs = self._job.manual_start(run_time=run_time)
-            return respond(request, {'result': "New Job Runs %s created" % [r.id for r in runs]})
+            return respond(request, {'result': "New Job Runs %s created" %
+                                     [r.id for r in runs]})
 
         log.warning("Unknown request job command %s", request.args['command'])
         return respond(request, None, code=http.NOT_IMPLEMENTED)
@@ -315,6 +351,7 @@ class JobResource(resource.Resource):
 
 class JobsResource(resource.Resource):
     """Resource for all our daemon's jobs"""
+
     def __init__(self, master_control):
         self._master_control = master_control
         resource.Resource.__init__(self)
@@ -334,7 +371,8 @@ class JobsResource(resource.Resource):
         for current_job in self._master_control.jobs.itervalues():
             last_success = None
             if current_job.last_success and current_job.last_success.end_time:
-                last_success = current_job.last_success.end_time.strftime("%Y-%m-%d %H:%M:%S")
+                fmt = "%Y-%m-%d %H:%M:%S"
+                last_success = current_job.last_success.end_time.strftime(fmt)
 
             # We need to describe the current state of this job
             current_run = current_job.next_to_finish()
@@ -379,11 +417,15 @@ class JobsResource(resource.Resource):
             self._master_control.enable_all()
             return respond(request, {'result': "All jobs are now enabled"})
 
-        log.warning("Unknown request command %s for all jobs", request.args['command'])
+        log.warning("Unknown request command %s for all jobs",
+                    request.args['command'])
         return respond(request, None, code=http.NOT_IMPLEMENTED)
 
+
 class ServiceInstanceResource(resource.Resource):
+
     isLeaf = True
+
     def __init__(self, service_instance, master_control):
         self._service_instance = service_instance
         self._master_control = master_control
@@ -391,7 +433,8 @@ class ServiceInstanceResource(resource.Resource):
 
     def render_POST(self, request):
         cmd = request.args['command'][0]
-        log.info("Handling '%s' request on service %s", cmd, self._service_instance.id)
+        log.info("Handling '%s' request on service %s",
+                 cmd, self._service_instance.id)
 
         if cmd == 'stop':
             self._service_instance.stop()
@@ -407,11 +450,15 @@ class ServiceInstanceResource(resource.Resource):
             try:
                 self._service_instance.start()
             except service.InvalidStateError:
-                return respond(request, {'result': "Failed to start: Service is already %s" % self._service_instance.state})
+                msg = ("Failed to start: Service is already %s" %
+                       self._service_instance.state)
+                return respond(request, {'result': msg})
 
             return respond(request, {'result': "Service instance starting"})
 
-        log.warning("Unknown request command %s for service %s", request.args['command'], self._service_instance.id)
+        log.warning("Unknown request command %s for service %s",
+                    request.args['command'],
+                    self._service_instance.id)
         return respond(request, None, code=http.NOT_IMPLEMENTED)
 
 
@@ -452,13 +499,15 @@ class ServiceResource(resource.Resource):
             'count': self._service.count,
             'command': self._service.command,
             'instances': instance_output,
-            'node_pool': map(lambda n: n.hostname, self._service.node_pool.nodes),
+            'node_pool': map(lambda n: n.hostname,
+                             self._service.node_pool.nodes),
         }
         return respond(request, output)
 
     def render_POST(self, request):
         cmd = request.args['command'][0]
-        log.info("Handling '%s' request on service %s", cmd, self._service.name)
+        log.info("Handling '%s' request on service %s",
+                 cmd, self._service.name)
 
         if cmd == 'stop':
             self._service.stop()
@@ -474,15 +523,20 @@ class ServiceResource(resource.Resource):
             try:
                 self._service.start()
             except service.InvalidStateError:
-                return respond(request, {'result': "Failed to start: Service is already %s" % self._service.state})
+                msg = ("Failed to start: Service is already %s" %
+                       self._service.state)
+                return respond(request, {'result': msg})
 
             return respond(request, {'result': "Service starting"})
 
-        log.warning("Unknown request command %s for service %s", request.args['command'], self._service.name)
+        log.warning("Unknown request command %s for service %s",
+                    request.args['command'], self._service.name)
         return respond(request, None, code=http.NOT_IMPLEMENTED)
+
 
 class ServicesResource(resource.Resource):
     """Resource for all our daemon's services"""
+
     def __init__(self, master_control):
         self._master_control = master_control
         resource.Resource.__init__(self)
@@ -531,13 +585,16 @@ class ServicesResource(resource.Resource):
 
 class ConfigResource(resource.Resource):
     """Resource for configuration changes"""
+
     isLeaf = True
+
     def __init__(self, master_control):
         self._master_control = master_control
         resource.Resource.__init__(self)
 
     def render_GET(self, request):
-        return respond(request, {'config':self._master_control.config_lines()})
+        return respond(request,
+                       {'config': self._master_control.config_lines()})
 
     def render_POST(self, request):
         log.info("Handling reconfig request")
@@ -556,7 +613,9 @@ class ConfigResource(resource.Resource):
 
 
 class StatusResource(resource.Resource):
+
     isLeaf = True
+
     def __init__(self, master_control):
         self._master_control = master_control
         resource.Resource.__init__(self)
@@ -566,7 +625,9 @@ class StatusResource(resource.Resource):
 
 
 class EventResource(resource.Resource):
+
     isLeaf = True
+
     def __init__(self, recordable):
         assert hasattr(recordable, 'event_recorder')
         self._recordable = recordable
@@ -580,10 +641,11 @@ class EventResource(resource.Resource):
             if evt.entity:
                 entity_desc = str(evt.entity)
             response['data'].append({
-                                'level': evt.level, 
-                                'name': evt.name, 
-                                'entity': entity_desc,
-                                'time': evt.time.strftime("%Y-%m-%d %H:%M:%S")})
+                'level': evt.level,
+                'name': evt.name,
+                'entity': entity_desc,
+                'time': evt.time.strftime("%Y-%m-%d %H:%M:%S")
+            })
 
         return respond(request, response)
 
@@ -608,7 +670,9 @@ class RootResource(resource.Resource):
     def render_GET(self, request):
         request.setHeader("content-type", "text/json")
 
-        # We're going to load a big response with a bunch of stuff we know about this tron instance
+        # We're going to load a big response with a bunch of stuff we know
+        # about this tron instance
+
         jobs_resource = self.children["jobs"]
         services_resource = self.children["services"]
 
@@ -630,7 +694,8 @@ if __name__ == '__main__':
     from testify.utils import turtle
     master_control = turtle.Turtle()
     master_control.jobs = {
-        'test_job': turtle.Turtle(name="test_job", node=turtle.Turtle(hostname="batch0")),
+        'test_job': turtle.Turtle(name="test_job",
+                                  node=turtle.Turtle(hostname="batch0")),
     }
     reactor.listenTCP(8082, server.Site(RootResource(master_control)))
     reactor.run()

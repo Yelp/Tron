@@ -11,14 +11,20 @@ from tron.utils import state
 log = logging.getLogger('tron.action')
 
 
-class Error(Exception): pass
+class Error(Exception):
+    pass
 
-class InvalidStartStateError(Error): 
+
+class InvalidStartStateError(Error):
     """Indicates the action can't start in the state it's in"""
     pass
 
+
 class ActionRunContext(object):
-    """Context object that gives us access to data about the action run itself"""
+    """Context object that gives us access to data about the action run
+    itself
+    """
+
     def __init__(self, action_run):
         self.action_run = action_run
 
@@ -35,9 +41,10 @@ class ActionRunContext(object):
         return self.action_run.node.hostname
 
     def __getitem__(self, name):
-        # We've got a complex getitem implementaiton because we want to suport crazy date arithmetic syntax for
-        # the run time of the action.
-        # This allows features like running a job with an argument that is the previous day by doing something like
+        # We've got a complex getitem implementaiton because we want to suport
+        # crazy date arithmetic syntax for the run time of the action.
+        # This allows features like running a job with an argument that is the
+        # previous day by doing something like
         #   ./my_job --run-date=%(shortdate-1)s
         run_time = self.action_run.run_time
 
@@ -49,11 +56,14 @@ class ActionRunContext(object):
                 if op == '-':
                     int_value = -int_value
                 if attr == "year":
-                    delta = timeutils.macro_timedelta(run_time, years=int_value)
+                    delta = timeutils.macro_timedelta(run_time,
+                                                      years=int_value)
                 elif attr == "month":
-                    delta = timeutils.macro_timedelta(run_time, months=int_value)
+                    delta = timeutils.macro_timedelta(run_time,
+                                                      months=int_value)
                 else:
-                    delta = timeutils.macro_timedelta(run_time, days=int_value)
+                    delta = timeutils.macro_timedelta(run_time,
+                                                      days=int_value)
                 run_date = run_time + delta
             else:
                 run_date = run_time
@@ -216,12 +226,16 @@ class ActionRun(object):
         self._open_output_file()
 
         if not self.is_valid_command:
-            log.error("Command for action run %s is invalid: %r", self.id, self.action.command)
+            log.error("Command for action run %s is invalid: %r",
+                      self.id, self.action.command)
             self.fail(-1)
             return
 
         # And now we try to actually start some work....
-        self.action_command = ActionCommand(self.id, self.command, stdout=self.stdout_file, stderr=self.stderr_file)
+        self.action_command = ActionCommand(self.id,
+                                            self.command,
+                                            stdout=self.stdout_file,
+                                            stderr=self.stderr_file)
         self.action_command.machine.listen(True, self._handle_action_command)
         try:
             df = self.node.run(self.action_command)
@@ -259,24 +273,29 @@ class ActionRun(object):
     def _handle_errback(self, result):
         """Handle an error on the action command deferred
 
-        This isn't the primary way we get notified of failures, as most expected ones will come through us
-        being a listener to the action command. However, if something internally goes wrong we'll catch it
-        here, as well as getting more details on the cause of any exception generated.
+        This isn't the primary way we get notified of failures, as most
+        expected ones will come through us being a listener to the action
+        command. However, if something internally goes wrong we'll catch it
+        here, as well as getting more details on the cause of any exception
+        generated.
         """
         log.info("Action error: %s", str(result))
         if isinstance(result.value, node.ConnectError):
-            log.warning("Failed to connect to host %s for run %s", self.node.hostname, self.id)
+            log.warning("Failed to connect to host %s for run %s",
+                        self.node.hostname, self.id)
         elif isinstance(result.value, node.ResultError):
-            log.warning("Failed to retrieve exit for run %s after executing command on host %s", self.id, self.node.hostname)
+            log.warning("Failed to retrieve exit for run %s after executing"
+                        " command on host %s", self.id, self.node.hostname)
         else:
-            log.warning("Unknown failure for run %s on host %s: %s", self.id, self.node.hostname, str(result))
+            log.warning("Unknown failure for run %s on host %s: %s",
+                        self.id, self.node.hostname, str(result))
             self.fail_unknown()
 
     def _handle_action_command(self):
         """Our hook for being a listener to a running action command.
 
-        On any state change, the action command will call us back so we can evaluate if we
-        need to change some state ourselves.
+        On any state change, the action command will call us back so we can
+        evaluate if we need to change some state ourselves.
         """
         log.debug("Action command state change: %s", self.action_command.state)
         if self.action_command.state == ActionCommand.RUNNING:
@@ -294,7 +313,8 @@ class ActionRun(object):
         elif self.action_command.state == ActionCommand.COMPLETE:
             self._close_output_file()
         else:
-            raise Error("Invalid state for action command : %r" % self.action_command)
+            raise Error("Invalid state for action command : %r" %
+                        self.action_command)
 
     def start_dependants(self):
         for run in self.waiting_runs:
@@ -302,17 +322,21 @@ class ActionRun(object):
 
     def ignore_dependants(self):
         for run in self.waiting_runs:
-            log.info("Not running waiting run %s, the dependant action failed", run.id)
+            log.info("Not running waiting run %s, the dependant action failed",
+                     run.id)
 
     def fail(self, exit_status):
         """Mark the run as having failed, providing an exit status"""
-        log.info("Action run %s failed with exit status %r", self.id, exit_status)
+        log.info("Action run %s failed with exit status %r",
+                 self.id, exit_status)
         self.machine.transition('fail')
         self.exit_status = exit_status
         self.end_time = timeutils.current_time()
 
     def fail_unknown(self):
-        """Mark the run as having failed, but note that we don't actually know what result was"""
+        """Mark the run as having failed, but note that we don't actually know
+        what result was
+        """
         log.info("Lost communication with action run %s", self.id)
 
         self.machine.transition('fail_unknown')
@@ -333,7 +357,8 @@ class ActionRun(object):
 
     def restore_state(self, state_data):
         self.id = state_data['id']
-        self.machine.state = state.named_event_by_name(self.STATE_SCHEDULED, state_data['state'])
+        self.machine.state = state.named_event_by_name(self.STATE_SCHEDULED,
+                                                       state_data['state'])
         self.run_time = state_data['run_time']
         self.start_time = state_data['start_time']
         self.end_time = state_data['end_time']
@@ -353,7 +378,6 @@ class ActionRun(object):
                 'end_time': self.end_time,
                 'command': self.command
         }
-
 
     def render_command(self):
         """Render our configured command under the command context.
@@ -399,7 +423,8 @@ class ActionRun(object):
 
     @property
     def is_done(self):
-        return self.state in (self.STATE_FAILED, self.STATE_SUCCEEDED, self.STATE_CANCELLED)
+        return self.state in (self.STATE_FAILED, self.STATE_SUCCEEDED,
+                              self.STATE_CANCELLED)
 
     @property
     def is_unknown(self):
@@ -420,7 +445,7 @@ class ActionRun(object):
     @property
     def is_success(self):
         return self.state == self.STATE_SUCCEEDED
- 
+
 
 class Action(object):
     def __init__(self, name=None):
@@ -436,7 +461,8 @@ class Action(object):
            or self.command != other.command:
             return False
 
-        return all([me == you for (me, you) in zip(self.required_actions, other.required_actions)]) 
+        return all([me == you for (me, you) in zip(self.required_actions,
+                                                   other.required_actions)])
 
     def __ne__(self, other):
         return not self == other
@@ -455,7 +481,10 @@ class Action(object):
 
 
 class ActionCommand(object):
-    class ActionState(state.NamedEventState): pass
+
+    class ActionState(state.NamedEventState):
+        pass
+
     COMPLETE = ActionState("complete")
     FAILSTART = ActionState("failstart")
     EXITING = ActionState("exiting", close=COMPLETE)
@@ -465,23 +494,24 @@ class ActionCommand(object):
     def __init__(self, id, command, stdout=None, stderr=None):
         """An Action Command is what a node actually executes
 
-        This object encapsulates everything necessary for a node to execute the command,
-        collect results, and inform anyone who cares.
+        This object encapsulates everything necessary for a node to execute the
+        command, collect results, and inform anyone who cares.
 
         A Node will call:
           started (when the command starts)
           exited (when the command exits)
           write_<channel> (when output is received)
 
-        Clients should register as listeners for state changes by adding a callable to ActionCommand.listeners
-        The callable will be exected with a single argument of 'self' for convinience.
+        Clients should register as listeners for state changes by adding a
+        callable to ActionCommand.listeners. The callable will be exected with
+        a single argument of 'self' for convenience.
         """
         self.id = id
         self.command = command
 
         # Create our state machine
-        # This guy is pretty simple, as we're just going to have string based events
-        # passed to it, and there is no other external interaction
+        # This guy is pretty simple, as we're just going to have string based
+        # events passed to it, and there is no other external interaction
         self.machine = state.StateMachine(initial_state=self.PENDING)
 
         self.stdout_file = stdout
@@ -515,4 +545,5 @@ class ActionCommand(object):
         self.machine.transition("close")
 
     def __repr__(self):
-        return "[ActionCommand %s] %s : %s" % (self.id, self.command, self.state)
+        return "[ActionCommand %s] %s : %s" % (self.id, self.command,
+                                               self.state)

@@ -8,6 +8,10 @@ import os.path
 from home.handlers import RootHandler
 from job.handlers import JobsHandler, JobHandler, JobRunHandler, ActionRunHandler
 from node.handlers import NodeHandler
+try:
+  from config import config
+except ImportError:
+  raise Exception("Missing config.py, or file poorly formed")
 
 loader = tornado.template.Loader(os.path.join(os.path.dirname(__file__), "templates"))
 
@@ -27,6 +31,6 @@ application = tornado.web.Application([
 
 if __name__ == "__main__":
     http_server = tornado.httpserver.HTTPServer(application)
-    http_server.listen(8888)
+    http_server.listen(config.get('port',8888))
     tornado.ioloop.IOLoop.instance().start()
 

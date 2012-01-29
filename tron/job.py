@@ -6,15 +6,23 @@ from collections import deque
 from tron import action, command_context, event
 from tron.utils import timeutils
 
-class Error(Exception): pass
 
-class ConfigBuildMismatchError(Error): pass
+class Error(Exception):
+    pass
 
-class InvalidStartStateError(Error):  pass
+
+class ConfigBuildMismatchError(Error):
+    pass
+
+
+class InvalidStartStateError(Error):
+    pass
+
 
 log = logging.getLogger('tron.job')
 
 RUN_LIMIT = 50
+
 
 class JobRun(object):
     def __init__(self, job, run_num=None):
@@ -30,7 +38,8 @@ class JobRun(object):
         self.action_runs = []
         self.cleanup_action_run = None
         self.context = command_context.CommandContext(self, job.context)
-        self.event_recorder = event.EventRecorder(self, parent=self.job.event_recorder)
+        self.event_recorder = event.EventRecorder(
+            self, parent=self.job.event_recorder)
         self.event_recorder.emit_info("created")
 
     @property
@@ -50,17 +59,19 @@ class JobRun(object):
         if self.is_scheduled:
             if self.job.queueing:
                 self.event_recorder.emit_notice("queued")
-                log.warning("A previous run for %s has not finished - placing in queue", self.id)
+                log.warning("A previous run for %s has not finished - placing"
+                            " in queue", self.id)
                 self.queue()
             else:
                 self.event_recorder.emit_notice("cancelled")
-                log.warning("A previous run for %s has not finished - cancelling", self.id)
+                log.warning("A previous run for %s has not finished"
+                            " - cancelling", self.id)
                 self.cancel()
 
-    def start(self):        
+    def start(self):
         if not (self.is_scheduled or self.is_queued):
             raise InvalidStartStateError("Not scheduled")
-        
+
         log.info("Starting action job %s", self.id)
         self.start_time = timeutils.current_time()
         self.end_time = None
@@ -68,21 +79,23 @@ class JobRun(object):
         try:
             for action_run in self.action_runs:
                 action_run.attempt_start()
-            self.event_recorder.emit_info("started")    
+            self.event_recorder.emit_info("started")
         except action.Error, e:
             log.warning("Failed to start actions: %r", e)
             raise Error("Failed to start job run")
-    
+
     def manual_start(self):
         self.event_recorder.emit_info("manual_start")
         self.attempt_start()
 
-        # Similiar to a scheduled start, if the attempt didn't take, that must be because something else
-        # is running. We'll assume the user meant to queue this job up without caring whether the job was
-        # configured for that. 
+        # Similiar to a scheduled start, if the attempt didn't take, that must
+        # be because something else is running. We'll assume the user meant to
+        # queue this job up without caring whether the job was configured for
+        # that.
         if self.is_scheduled:
             self.event_recorder.emit_notice("queued")
-            log.warning("A previous run for %s has not finished - placing in queue", self.id)
+            log.warning("A previous run for %s has not finished - placing in"
+                        " queue", self.id)
             self.queue()
 
     def attempt_start(self):
@@ -93,7 +106,8 @@ class JobRun(object):
                 log.warning("Attempt to start failed: %r", e)
 
     def last_success_check(self):
-        if not self.job.last_success or self.run_num > self.job.last_success.run_num:
+        if (not self.job.last_success or self.run_num >
+                self.job.last_success.run_num):
             self.job.last_success = self
 
     def run_completed(self):
@@ -113,19 +127,19 @@ class JobRun(object):
 
     def cleanup_completed(self):
         self.end_time = timeutils.current_time()
-        
+
         if self.is_failure:
             self.event_recorder.emit_critical("failed")
         else:
             self.event_recorder.emit_ok("succeeded")
-        
+
         next = self.job.next_to_finish()
         if next and next.is_queued:
             next.attempt_start()
 
     @property
     def data(self):
-        data = {'runs':[a.data for a in self.action_runs],
+        data = {'runs': [a.data for a in self.action_runs],
                 'cleanup_run': None,
                 'run_num': self.run_num,
                 'run_time': self.run_time,
@@ -180,7 +194,10 @@ class JobRun(object):
     def should_start(self):
         if not self.job.enabled or self.is_running:
             return False
-        return self.job.next_to_finish(self.node if self.job.all_nodes else None) is self
+        return (self.job.next_to_finish(self.node
+                                        if self.job.all_nodes
+                                        else None)
+                is self)
 
     @property
     def is_failure(self):
@@ -196,11 +213,13 @@ class JobRun(object):
 
     @property
     def all_but_cleanup_done(self):
-        return not any([r.is_running or r.is_queued or r.is_scheduled for r in self.action_runs])
+        return not any([r.is_running or r.is_queued or r.is_scheduled
+                        for r in self.action_runs])
 
     @property
     def is_done(self):
-        return not any([r.is_running or r.is_queued or r.is_scheduled for r in self.action_runs_with_cleanup])
+        return not any([r.is_running or r.is_queued or r.is_scheduled
+                        for r in self.action_runs_with_cleanup])
 
     @property
     def is_queued(self):
@@ -243,12 +262,15 @@ class JobRun(object):
 
 
 class Job(object):
+
     run_num = 0
+
     def next_num(self):
         self.run_num += 1
         return self.run_num - 1
 
-    def __init__(self, name=None, action=None, context=None, event_recorder=None):
+    def __init__(self, name=None, action=None, context=None,
+                 event_recorder=None):
         self.name = name
         self.topo_actions = [action] if action else []
         self.cleanup_action = None
@@ -264,14 +286,15 @@ class Job(object):
         self.run_limit = RUN_LIMIT
         self.node_pool = None
         self.output_path = None
-        self.state_callback = lambda:None
+        self.state_callback = lambda: None
         self.context = command_context.CommandContext(self, context)
         self.event_recorder = event.EventRecorder(self, parent=event_recorder)
 
     def _register_action(self, action):
         """Prepare an action to be *owned* by this job"""
         if action in self.topo_actions:
-            raise Error("Action %s already in jobs %s" % (action.name, self.name))
+            raise Error("Action %s already in jobs %s" % (
+                action.name, self.name))
 
     def listen(self, spec, callback):
         """Mimic the state machine interface for listening to events"""
@@ -287,17 +310,19 @@ class Job(object):
         self.topo_actions.append(action)
 
     def __eq__(self, other):
-        if not isinstance(other, Job) or self.name != other.name \
-                or self.queueing != other.queueing \
-                or self.scheduler != other.scheduler \
-                or self.node_pool != other.node_pool \
-                or len(self.topo_actions) != len(other.topo_actions) \
-                or self.run_limit != other.run_limit \
-                or self.all_nodes != other.all_nodes \
-                or self.cleanup_action != other.cleanup_action:
+        if (not isinstance(other, Job) or self.name != other.name or
+            self.queueing != other.queueing or
+            self.scheduler != other.scheduler or
+            self.node_pool != other.node_pool or
+            len(self.topo_actions) != len(other.topo_actions) or
+            self.run_limit != other.run_limit or
+            self.all_nodes != other.all_nodes or
+            self.cleanup_action != other.cleanup_action):
+
             return False
 
-        return all([me == you for (me, you) in zip(self.topo_actions, other.topo_actions)])
+        return all([me == you for (me, you) in zip(self.topo_actions,
+                                                   other.topo_actions)])
 
     def __ne__(self, other):
         return not self == other
@@ -324,7 +349,8 @@ class Job(object):
         self.enabled = False
 
         # We need to get rid of all future runs.
-        kill_runs = [run for run in self.runs if (run.is_scheduled or run.is_queued)]
+        kill_runs = [run for run in self.runs
+                     if (run.is_scheduled or run.is_queued)]
         for run in kill_runs:
             run.cancel()
             self.remove_run(run)
@@ -349,31 +375,41 @@ class Job(object):
         log.warning("No runs with state %s exist", state)
 
     def next_to_finish(self, node=None):
-        """Returns the next run to finish(optional node requirement). Useful for
-        getting the currently running job run or next queued/schedule job run.
+        """Returns the next run to finish(optional node requirement). Useful
+        for getting the currently running job run or next queued/schedule job
+        run.
         """
-        def choose(prev, next):
-            return prev if (prev and prev.is_running) or (node and next.node != node) \
-               or next.is_success or next.is_failure or next.is_cancelled or next.is_unknown else next
+        def choose(prev, nxt):
+            if ((prev and prev.is_running) or
+                (node and nxt.node != node) or
+                nxt.is_success or
+                nxt.is_failure or
+                nxt.is_cancelled or
+                nxt.is_unknown):
+                return prev
+            else:
+                return nxt
 
         return reduce(choose, self.runs, None)
 
     def get_run_by_num(self, num):
-        def choose(chosen, next):
-            return next if next.run_num == num else chosen
+        def choose(chosen, nxt):
+            return nxt if nxt.run_num == num else chosen
 
         return reduce(choose, self.runs, None)
 
     def remove_old_runs(self):
-        """Remove old runs so the number left matches the run limit.
-        However only removes runs up to the last success or up to the next to run
+        """Remove old runs so the number left matches the run limit. However
+        only removes runs up to the last success or up to the next to run.
         """
-        next = self.next_to_finish()
-        next_num = next.run_num if next else self.runs[0].run_num
+
+        nxt = self.next_to_finish()
+        next_num = nxt.run_num if nxt else self.runs[0].run_num
         succ_num = self.last_success.run_num if self.last_success else 0
         keep_num = min([next_num, succ_num])
 
-        while len(self.runs) > self.run_limit and keep_num > self.runs[-1].run_num:
+        while (len(self.runs) > self.run_limit and
+               keep_num > self.runs[-1].run_num):
             self.remove_run(self.runs[-1])
 
     def next_runs(self):
@@ -385,12 +421,14 @@ class Job(object):
 
     def _make_action_run(self, job_run, action_inst, callback):
             action_run = action_inst.build_run(job_run)
-            
+
             action_run.node = job_run.node
-            
+
             action_run.machine.listen(True, self._notify)
-            action_run.machine.listen(action.ActionRun.STATE_SUCCEEDED, callback)
-            action_run.machine.listen(action.ActionRun.STATE_FAILED, callback)
+            action_run.machine.listen(action.ActionRun.STATE_SUCCEEDED,
+                                      callback)
+            action_run.machine.listen(action.ActionRun.STATE_FAILED,
+                                      callback)
 
             return action_run
 
@@ -407,11 +445,14 @@ class Job(object):
 
             for req_action in action_inst.required_actions:
                 if req_action.name not in action_runs_by_name:
-                    raise ConfigBuildMismatchError("Unknown action %s, configuration mismatch?" % req_action.name)
+                    raise ConfigBuildMismatchError(
+                        "Unknown action %s, configuration mismatch?" %
+                        req_action.name)
 
                 # Two-way, waiting runs and required_runs
-                action_runs_by_name[req_action.name].waiting_runs.append(action_run)
-                action_run.required_runs.append(action_runs_by_name[req_action.name])
+                action = action_runs_by_name[req_action.name]
+                action.waiting_runs.append(action_run)
+                action_run.required_runs.append(action)
 
     def build_run(self, node=None, actions=None, run_num=None):
         job_run = JobRun(self, run_num=run_num)
@@ -420,7 +461,8 @@ class Job(object):
         log.info("Built run %s", job_run.id)
 
         # It would be great if this were abstracted out a bit
-        if os.path.exists(self.output_path) and not os.path.exists(job_run.output_path):
+        if (os.path.exists(self.output_path) and
+            not os.path.exists(job_run.output_path)):
             os.mkdir(job_run.output_path)
 
         # If the actions aren't specified, then we know this is a normal run
@@ -432,9 +474,8 @@ class Job(object):
         self.build_action_dag(job_run, actions)
 
         if self.cleanup_action is not None:
-            cleanup_action_run = self._make_action_run(job_run,
-                                                       self.cleanup_action,
-                                                       job_run.cleanup_completed)
+            cleanup_action_run = self._make_action_run(
+                job_run, self.cleanup_action, job_run.cleanup_completed)
             job_run.cleanup_action_run = cleanup_action_run
 
         return job_run
@@ -481,7 +522,7 @@ class Job(object):
 
     def restore(self, data):
         self.enabled = data['enabled']
-        
+
         for r_data in data['runs']:
             try:
                 self.restore_run(r_data)
@@ -508,7 +549,7 @@ class Job(object):
         self.runs.append(run)
 
         if run.is_success and not self.last_success:
-            self.last_success = run     
+            self.last_success = run
 
         return run
 
