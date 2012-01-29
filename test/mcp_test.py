@@ -10,17 +10,6 @@ from twisted.internet import reactor
 from tron.utils import timeutils, testingutils
 from tron import mcp, job, action, scheduler
 
-def equals_with_delta(val, check, delta):
-    return val <= check + delta and val >= check - delta
-
-class TestGlobalFunctions(TestCase):
-    def test_sleep_time(self):
-        assert_equal(mcp.sleep_time(timeutils.current_time()), 0)
-        assert_equal(mcp.sleep_time(timeutils.current_time() - datetime.timedelta(seconds=5)), 0)
-        
-        seconds = 5
-        time = mcp.sleep_time(timeutils.current_time() + datetime.timedelta(seconds=seconds)) 
-        assert equals_with_delta(time, seconds, .01)
 
 class TestStateHandler(TestCase):
     @class_setup

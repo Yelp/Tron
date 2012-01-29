@@ -1,3 +1,5 @@
+from __future__ import with_statement
+
 import logging
 import os
 import shutil
@@ -108,6 +110,10 @@ class TronSandbox(object):
         cmd.save_config(self.config_obj)
 
         self._last_trond_launch_args = []
+
+    def log_contents(self):
+        with open(self.log_file, 'r') as f:
+            return f.read()
 
     def delete(self):
         """Delete the temp directory and its contents"""

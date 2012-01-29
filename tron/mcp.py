@@ -13,8 +13,6 @@ from tron.utils import timeutils
 
 log = logging.getLogger('tron.mcp')
 
-SECS_PER_DAY = 86400
-MICRO_SEC = .000001
 STATE_FILE = 'tron_state.yaml'
 STATE_SLEEP_SECS = 1
 WRITE_DURATION_WARNING_SECS = 30
@@ -30,13 +28,6 @@ class StateFileVersionError(Error):
 
 class UnsupportedVersionError(Error):
     pass
-
-
-def sleep_time(run_time):
-    sleep = run_time - timeutils.current_time()
-    seconds = (sleep.days * SECS_PER_DAY + sleep.seconds +
-               sleep.microseconds * MICRO_SEC)
-    return max(0, seconds)
 
 
 class StateHandler(object):
@@ -57,7 +48,7 @@ class StateHandler(object):
 
         for run in job_inst.runs:
             if run.is_scheduled:
-                reactor.callLater(sleep_time(run.run_time),
+                reactor.callLater(run.seconds_until_run_time(),
                                   self.mcp.run_job,
                                   run)
 
@@ -209,6 +200,7 @@ class MasterControlProgram(object):
         self.config_file = config_file
         self.context = context
         self.monitor = None
+        self.time_zone = None
         self.event_recorder = event.EventRecorder(self)
         self.state_handler = StateHandler(self, working_dir)
 
@@ -291,6 +283,10 @@ class MasterControlProgram(object):
 
         self.jobs[job.name] = job
 
+        # update time zone information in scheduler to match config
+        if job.scheduler is not None:
+            job.scheduler.time_zone = self.time_zone
+
         job.set_context(self.context)
         job.event_recorder.set_parent(self.event_recorder)
         self.setup_job_dir(job)
@@ -334,10 +330,10 @@ class MasterControlProgram(object):
         service.stop()
 
     def _schedule(self, run):
-        sleep = sleep_time(run.run_time)
-        if sleep == 0:
+        secs = run.seconds_until_run_time()
+        if secs == 0:
             run.set_run_time(timeutils.current_time())
-        reactor.callLater(sleep, self.run_job, run)
+        reactor.callLater(secs, self.run_job, run)
 
     def schedule_next_run(self, job):
         if job.runs and job.runs[0].is_scheduled:

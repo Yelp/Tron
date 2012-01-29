@@ -6,6 +6,7 @@ import re
 import socket
 import weakref
 
+import pytz
 import yaml
 from twisted.conch.client import options
 
@@ -260,22 +261,14 @@ class TronConfiguration(yaml.YAMLObject):
             if not isinstance(self.syslog_address, basestring):
                 self.syslog_address = tuple(self.syslog_address)
 
-            already_exists = False
-            for h in set(handlers_to_be_removed):
-                if (isinstance(h, logging.handlers.SysLogHandler) and
-                    h.address == self.syslog_address):
-                    handlers_to_be_removed.remove(h)
-                    already_exists = True
-
-            if not already_exists:
-                try:
-                    h = logging.handlers.SysLogHandler(self.syslog_address)
-                    fmt_str = "tron[%(process)d]: %(message)s"
-                    h.setFormatter(logging.Formatter(fmt_str))
-                    new_handlers.append(h)
-                except socket.error:
-                    raise ConfigError('%s is not a valid syslog address' %
-                                      self.syslog_address)
+            try:
+                h = logging.handlers.SysLogHandler(self.syslog_address)
+                fmt_str = "tron[%(process)d]: %(message)s"
+                h.setFormatter(logging.Formatter(fmt_str))
+                new_handlers.append(h)
+            except socket.error:
+                raise ConfigError('%s is not a valid syslog address' %
+                                  self.syslog_address)
 
         for h in handlers_to_be_removed:
             log.info('Removing logging handler %s', h)
@@ -284,6 +277,10 @@ class TronConfiguration(yaml.YAMLObject):
         for h in new_handlers:
             log.info('Adding logging handler %s', h)
             root.addHandler(h)
+
+    def _apply_time_zone_name(self, mcp):
+        if hasattr(self, 'time_zone'):
+            mcp.time_zone = pytz.timezone(self.time_zone)
 
     def _apply_jobs(self, mcp):
         """Configure jobs"""
@@ -391,6 +388,7 @@ class TronConfiguration(yaml.YAMLObject):
                                                    SSHOptions)
             self.ssh_options._apply(mcp)
 
+        self._apply_time_zone_name(mcp)
         self._apply_jobs(mcp)
         self._apply_services(mcp)
 

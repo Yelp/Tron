@@ -22,6 +22,8 @@ class InvalidStartStateError(Error):
 log = logging.getLogger('tron.job')
 
 RUN_LIMIT = 50
+SECS_PER_DAY = 86400
+MICRO_SEC = .000001
 
 
 class JobRun(object):
@@ -51,6 +53,17 @@ class JobRun(object):
 
         for action_run in self.action_runs_with_cleanup:
             action_run.run_time = run_time
+
+    def seconds_until_run_time(self):
+        run_time = self.run_time
+        tz = self.job.scheduler.time_zone
+        now = timeutils.current_time()
+        if tz is not None:
+            now = tz.localize(now)
+        sleep = run_time - now
+        seconds = (sleep.days * SECS_PER_DAY + sleep.seconds +
+                   sleep.microseconds * MICRO_SEC)
+        return max(0, seconds)
 
     def scheduled_start(self):
         self.event_recorder.emit_info("scheduled_start")
