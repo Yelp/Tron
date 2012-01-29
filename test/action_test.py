@@ -16,8 +16,6 @@ def get_num_runs_by_state(job, state):
     return count
 
 
-
-
 class TestAction(TestCase):
     """Unit testing for Action class"""
     @setup
@@ -46,7 +44,6 @@ class TestAction(TestCase):
         self.job.scheduler = scheduler.ConstantScheduler()
         assert self.job.next_runs()[0]
         assert_equals(get_num_runs_by_state(self.job, action.ActionRun.STATE_SCHEDULED), 1)
-
 
 
 class TestActionRun(TestCase):

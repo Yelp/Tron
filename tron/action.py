@@ -188,7 +188,7 @@ class ActionRun(object):
         try:
             cmd = ('tail', '-n', num_lines, path)
             tail_sub = call(*cmd , stdout=PIPE)
-            lines = [line for line in tail_sub.stdout]
+            lines = [line + '\n' for line in tail_sub.stdout]
         except OSError:
             log.error("Could not tail %s." % path)
             return []

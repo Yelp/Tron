@@ -372,7 +372,7 @@ class SSHOptions(yaml.YAMLObject, FromDictBuilderMixin):
     def _build_conch_options(self):
         """Verify and construct the ssh (conch) option object
         
-        This is just a dictionary like object that options the twisted ssh implementation uses.
+        This is just a dictionary like object that the twisted ssh implementation uses.
         """
         ssh_options = options.ConchOptions()
         if not hasattr(self, 'agent'):
