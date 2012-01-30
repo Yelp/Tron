@@ -1,70 +1,12 @@
 #!/usr/bin/env python
 import os
-import sys
 import optparse
+import sys
 
 import tron
 from tron import cmd
-
-console_rows = int(os.popen('stty size', 'r').read().split()[0])
-console_cols = int(os.popen('stty size', 'r').read().split()[1])
-
-job_id_width = console_cols - 54 if console_cols > 54 + 5 else 5
-run_id_width = console_cols - 64 if console_cols > 64 + 5 else 5
-act_id_width = console_cols - 60 if console_cols > 60 + 5 else 5
-
-JOB_COLUMNS = [
-    ['Name', job_id_width],
-    ['State', 10],
-    ['Scheduler', 20],
-    ['Last Success', 20],
-]
-
-RUN_COLUMNS = [
-    ['Run ID', run_id_width],
-    ['State', 6],
-    ['Node', 20],
-    ['Scheduled Time', 25],
-]
-
-ACTION_RUN_COLUMNS = [
-    ['Action ID & Command', act_id_width],
-    ['State', 6],
-    ['Start Time', 20],
-    ['End Time', 20],
-    ['Duration', 10],
-]
-
-SERVICE_COLUMNS = [
-    ['Name', 30],
-    ['State', 10],
-    ['Instance Count', 10],
-]
-
-display_color = False
-colors = {
-        'gray': '\033[90m',
-        'cyan': '\033[91m',
-        'green': '\033[92m',
-        'yellow': '\033[93m',
-        'blue': '\033[94m',
-        'red': '\033[96m',
-        'white': '\033[99m',
-        # h is for highlighted
-        'hgray': '\033[100m',
-        'hcyan': '\033[101m',
-        'hgreen': '\033[102m',
-        'hyellow': '\033[103m',
-        'hblue': '\033[104m',
-        'hred': '\033[106m',
-        'end': '\033[0m',
-        }
-
-
-def color(color_name, text):
-    if not display_color:
-        return str(text)
-    return colors[color_name.lower()] + str(text) + colors['end']
+from tron.commands import display
+from tron.commands.client import Client
 
 
 def parse_options():
@@ -94,285 +36,78 @@ def parse_options():
                       default=False)
 
     (options, args) = parser.parse_args(sys.argv)
-    global display_color
-    display_color = options.display_color
+    display.Color.enabled = options.display_color
 
     return options, args[1:]
 
 
-def trunc(value, length):
-    if len(value) > length:
-        return value[:length - 3] + '...'
-    return value
+def console_width():
+    return int(os.popen('stty size', 'r').read().split()[1])
 
+def console_height():
+    return int(os.popen('stty size', 'r').read().split()[0])
 
-def display_events(options, response):
-    for evt in response['data']:
-        print "\t".join((evt['time'], evt['level'],
-                         evt['entity'], evt['name']))
+def display_events(response):
+    return "\n".join(
+        "\t".join((evt['time'], evt['level'], evt['entity'], evt['name']))
+        for evt in response['data']
+    )
 
-
-def view_all(options):
-    """docstring for view_jobs"""
-
+def view_all(options, client, width):
+    """Retreive jobs and services and display them."""
     if options.show_events:
-        status, content = cmd.request(options.server, "/events")
-        assert status == cmd.OK
-        return display_events(options, content)
+        print display_events(client.events())
+        return
 
-    status, content = cmd.request(options.server, "/")
-    assert status == cmd.OK
-    print "Services:"
-    if len(content.get('services', [])) == 0:
-        print "No services"
-    else:
-        # service width is dependent on the console width bounded by the title
-        # width and service-name max length
-        SERVICE_COLUMNS[0][1] = min(job_id_width,
-                                    max(len(SERVICE_COLUMNS[0][0]) + 1,
-                                        max(len(service['name'])
-                                            for service
-                                            in content['services'])))
-        print color('hgray', " ".join((name.ljust(size)
-                                       for name, size in SERVICE_COLUMNS)))
+    print display.DisplayServices(width).format(client.services())
 
-        # Show service data
-        for service in sorted(content['services'], key=lambda s: s['name']):
-            print " ".join(trunc(str(val), size).ljust(size)
-                           for val, (_, size) in
-                           zip((service['name'], service['status'],
-                                service['count']),
-                               SERVICE_COLUMNS))
-
-    status, content = cmd.request(options.server, "/jobs")
-    assert status == cmd.OK
-
-    print
-    print "Jobs:"
-    if len(content['jobs']) == 0:
-        print "No jobs"
-    else:
-        # job width is dependent on the console width bounded by the title
-        # width and job-name max length
-        JOB_COLUMNS[0][1] = min(job_id_width, max(len(job['name'])
-                                                  for job in content['jobs']))
-        print color("hgray", " ".join((name.ljust(size)
-                                       for name, size in JOB_COLUMNS)))
-
-        # Show job data
-        for job in sorted(content['jobs'], key=lambda j: j['name']):
-            print " ".join(trunc(str(val), size).ljust(size)
-                           for val, (_, size) in
-                           zip((job['name'], job['status'],
-                                job['scheduler'], job['last_success']),
-                               JOB_COLUMNS))
-            if options.warn:
-                print
-                view_job(options, job['name'], supress_preface=True)
-                print
+    jobs = client.jobs()
+    # load job details for each job
+    if options.warn:
+        for job in jobs:
+            job['details'] = client.job(job['name'])
+        
+    print display.DisplayJobs(width, options).format(jobs)
 
 
-def print_job_runs(options, runs):
-    # job run width is dependent on the console width bounded by the title
-    # width and job-run max length
-    RUN_COLUMNS[0][1] = max(len(RUN_COLUMNS[0][0]) + 1,
-                            min(run_id_width, len(str(runs[0]['run_num']))))
-    print color("hgray", " ".join(title.ljust(size)
-                                  for title, size in RUN_COLUMNS))
-
-    runs_displayed = 0
-
-    for run in runs:
-        if runs_displayed == options.num_displays:
-            break
-
-        run_id = '.'.join([''] + run['id'].split('.')[1:])
-        run_state = run['state']
-
-        if options.warn and run_state not in ['FAIL', 'UNKWN', 'QUE']:
-            continue
-
-        time_size = len("0000-00-00 00:00")
-        run_time = (run['run_time'] and run['run_time'][:time_size]) or "-"
-        start_time = ((run['start_time'] and run['start_time'][:time_size]) or
-                      "-")
-        end_time = (run['end_time'] and run['end_time'][:time_size]) or "-"
-        duration = (run['duration'] and run['duration'].split('.')[0]) or "-"
-
-        run_color = "red" if run_state == "FAIL" else "white"
-        print color(run_color,
-                " ".join(trunc(str(val), size).ljust(size)
-                         for val, (_, size) in
-                         zip((run_id, run_state, run['node'], run_time),
-                             RUN_COLUMNS)))
-        print color("gray", "%s Start: %s  End: %s  (%s)" %
-                    (' ' * RUN_COLUMNS[0][1], start_time, end_time, duration))
-
-        runs_displayed += 1
-
-        if options.warn:
-            print
-            view_job_run(options, run['id'], supress_preface=True)
-            print
-
-
-def view_job(options, job_name, supress_preface=False):
+def view_job(options, job_name, client, width):
     """Retrieve details of the specified job and display"""
-    jobs_url = "/jobs/%s" % job_name
     if options.show_events:
-        status, content = cmd.request(options.server,
-                                      jobs_url + "/_events")
-        assert status == cmd.OK
-        return display_events(options, content)
+        print display_events(client.job_events(job_name))
+        return
 
-    status, job_content = cmd.request(options.server, jobs_url)
-    if status == cmd.ERROR:
-        print >>sys.stderr, "%s: Cannot find job %s" % (job_content, job_name)
-        sys.exit(1)
-
-    if options.display_preface and not supress_preface:
-        print job_content['name'] + ":"
-        print "Scheduler: %s\n" % job_content['scheduler']
-
-        print "List of Actions (topological):"
-        print "\n".join(job_content['action_names'])
-        print
-        print "Node Pool:"
-        print "\n".join(job_content['node_pool'])
-        print
-        print "Run History: (%d total)" % len(job_content['runs'])
-
-    print_job_runs(options, job_content['runs'])
-
-    if not options.num_displays:
-        options.num_displays = len(job_content['runs'])
+    job_content = client.job(job_name)
+    print display.DisplayJobs(width, options).format_job(job_content)
 
 
-def view_job_run(options, job_run_id, supress_preface=False):
-    job_run_url = "/jobs/%s" % job_run_id.replace('.', '/')
+def view_job_run(options, job_run_id, client, width):
     if options.show_events:
-        status, content = cmd.request(options.server, job_run_url + "/_events")
-        assert status == cmd.OK
-        return display_events(options, content)
+        print display_events(client.action_events(job_run_id))
+        return
 
-    status, job_run_content = cmd.request(options.server, job_run_url)
-    if status == cmd.ERROR:
-        print >>sys.stderr, "%s: Cannot find job run %s" % (job_run_content,
-                                                            job_run_id)
-        sys.exit(1)
-
-    if options.display_preface and not supress_preface:
-        print "Job Run: %s" % job_run_content['id']
-        print "State: %s" % job_run_content['state']
-        print "Node: %s" % job_run_content['node']
+    actions = client.actions(job_run_id)
+    # TODO: Where to
+    if options.display_preface:
+        print "Job Run: %s" % actions['id']
+        print "State: %s" % actions['state']
+        print "Node: %s" % actions['node']
         print
-
-    # action run width is dependent on the console width bounded by the title
-    # width and action-name max length
-    ACTION_RUN_COLUMNS[0][1] = min(act_id_width,
-                                   max(len(ACTION_RUN_COLUMNS[0][0]) + 1,
-                                       max(len('.' + (run['name']))
-                                           for run in
-                                           job_run_content['runs'])))
-    print color("hgray",
-            " ".join(title.ljust(size) for title, size in ACTION_RUN_COLUMNS))
-
-    if (options.warn and
-        job_run_content['state'] not in ['FAIL', 'UNKWN', 'QUE']):
-        return
-
-    job_runs_displayed = 0
-
-    for run in job_run_content['runs']:
-        if job_runs_displayed == options.num_displays:
-            print "..."
-            break
-
-        # you need the dot. you just do.
-        run_id = '.'.join([''] + run['id'].split('.')[2:])
-        run_state = run['state']
-
-        if options.warn and run_state not in ['FAIL', 'UNKWN', 'QUE']:
-            continue
-
-        start_time = (run['start_time'] and run['start_time'][:-7]) or "-"
-        end_time = (run['end_time'] and run['end_time'][:-7]) or "-"
-        duration = (run['duration'] and run['duration'][:-7]) or "-"
-
-        action_color = "red" if run_state == "FAIL" else "white"
-        print color(action_color,
-                    " ".join(trunc(str(val), size).ljust(size)
-                             for val, (_, size) in
-                             zip((run_id, run_state, start_time,
-                                  end_time, duration),
-                                 ACTION_RUN_COLUMNS)))
-
-        if options.warn:
-            view_action_run(options, run['id'], supress_preface=True)
-
-        job_runs_displayed += 1
+    display_action = display.DisplayActions(width, options)
+    print display_action.format_action_run(actions['runs'])
 
 
-def view_action_run(options, act_run_id, supress_preface=False):
-    url = "/jobs/%s?num_lines=%s" % (act_run_id.replace('.', '/'),
-                                     options.num_displays)
-    status, act_run_content = cmd.request(options.server, url)
-
-    if status == cmd.ERROR:
-        print >>sys.stderr, ("%s: Cannot find action run %s" %
-                             (act_run_content, act_run_id))
-        sys.exit(1)
-
-    if options.stdout:
-        print "Stdout: "
-        print "\n".join(act_run_content['stdout'])
-        return
-
-    if options.stderr or options.warn:
-        print "Stderr: "
-        print "\n".join(act_run_content['stderr'])
-        return
-
-    if options.display_preface and not supress_preface:
-        print "Action Run: %s" % act_run_content['id']
-        print "State: %s" % act_run_content['state']
-        print "Node: %s" % act_run_content['node']
-        print
-
-    # a raw command is without command context
-    if act_run_content['command'] != act_run_content['raw_command']:
-        if act_run_content['command'] == 'false':
-            print color("red", "Bad Command")
-        else:
-            print color("gray", "%s" % act_run_content['command'])
-
-    print color("gray",
-            "%s" % act_run_content['raw_command'])
-    print
-    print "Requirements:"
-    for req in act_run_content['requirements']:
-        print req
-    print
-    print "Stdout:"
-    print "\n".join(act_run_content['stdout'])
-    print "Stderr:"
-    print "\n".join(act_run_content['stderr'])
+def view_action_run(options, act_run_id, client, width):
+    display_action = display.DisplayActions(width, options)
+    print display_action.format_action_run(client.action(act_run_id))
 
 
-def view_service(options, service_name):
+def view_service(options, service_name, client, width):
     """Retrieve details of the specified job and display"""
-    service_url = "/services/%s" % service_name
     if options.show_events:
-        status, content = cmd.request(options.server, service_url + "/_events")
-        assert status == cmd.OK
-        return display_events(options, content)
+        print display_events(client.service_events(service_name))
+        return
 
-    status, service_content = cmd.request(options.server, service_url)
-    if status == cmd.ERROR:
-        print >>sys.stderr, "%s: Cannot find job %s" % (service_content,
-                                                        service_name)
-        sys.exit(1)
-
+    service_content = client.service(service_name)
     print "Service: %s" % service_content['name']
     print "State: %s" % service_content['state']
     print "Instances: %r" % service_content['count']
@@ -386,46 +121,45 @@ def main():
     """run tronview"""
     options, args = parse_options()
     cmd.setup_logging(options)
-
     cmd.load_config(options)
-    status, content = cmd.request(options.server, "/status")
 
-    if status != cmd.OK or not content:
-        print >>sys.stderr, ("Error connecting to tron server at %s" %
-                             options.server)
-        sys.exit(1)
+    width = console_width()
+    client = Client(options)
+    client.status()
 
     if not args:
-        view_all(options, )
-    else:
-        # What are we dealing with ?
-        status, content = cmd.request(options.server, "/")
-        assert status == cmd.OK
+        view_all(options, width, client)
+        cmd.save_config(options)
+        return
 
-        job_to_uri = cmd.make_job_to_uri(content)
-        service_to_uri = cmd.make_service_to_uri(content)
+    content = client.index()
+    job_to_uri = cmd.make_job_to_uri(content)
+    service_to_uri = cmd.make_service_to_uri(content)
 
-        level = args[0].count('.')
-        object_name = args[0].split('.')[0]
+    level = args[0].count('.')
+    object_name = args[0].split('.')[0]
 
-        if object_name in job_to_uri:
-            if level == 0:
-                view_job(options, args[0])
-            elif level == 1:
-                view_job_run(options, args[0])
-            else:
-                view_action_run(options, args[0])
-        elif object_name in service_to_uri:
-            if level == 0:
-                view_service(options, args[0])
-            else:
-                print >>sys.stderr, "Too many .'s for a service"
-                sys.exit(1)
+    if object_name in job_to_uri:
+        if level == 0:
+            view_job(options, args[0], client, width)
+        elif level == 1:
+            view_job_run(options, args[0], client, width)
         else:
-            print >>sys.stderr, "What is a %s?" % args[0]
+            view_action_run(options, args[0], client, width)
+    elif object_name in service_to_uri:
+        if level == 0:
+            view_service(options, args[0], client, width)
+        else:
+            print >>sys.stderr, "Too many .'s for a service"
             sys.exit(1)
+    else:
+        print >>sys.stderr, "What is a %s?" % args[0]
+        sys.exit(1)
 
     cmd.save_config(options)
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception, e :
+        print >>sys.stderr, e
