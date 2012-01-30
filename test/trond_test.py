@@ -1,12 +1,13 @@
 import datetime
 import os
+import sys
 from textwrap import dedent
 import time
 import yaml
 
 from testify import *
 
-from test.sandbox import TronSandbox, wait_for_file_to_exist
+from test.sandbox import TronSandbox, TronSandboxException, wait_for_file_to_exist
 
 
 BASIC_CONFIG = """
@@ -80,7 +81,14 @@ class BasicTronTestCase(SandboxTestCase):
 
         # run the job and check its output
         self.sandbox.ctl('start', 'echo_job')
-        wait_for_file_to_exist(canary)
+
+        try:
+            wait_for_file_to_exist(canary)
+        except TronSandboxException:
+            print >> sys.stderr, "trond appears to have crashed. Log:"
+            print >> sys.stderr, self.sandbox.log_contents()
+            raise
+
         assert_equal(self.sandbox.list_action_run('echo_job', 2, 'echo_action')['state'], 'SUCC')
         assert_equal(self.sandbox.list_action_run('echo_job', 2, 'echo_action')['stdout'], ['Echo!'])
         assert_equal(self.sandbox.list_action_run('echo_job', 2, 'another_echo_action')['state'], 'FAIL')

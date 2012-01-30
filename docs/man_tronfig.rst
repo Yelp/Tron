@@ -64,6 +64,15 @@ notification_options
         notification_addr
             Email address to send mail to
 
+time_zone (optional)
+    Local time as observed by the system clock. If your system is obeying a
+    time zone with daylight savings time, then some of your jobs may run early
+    or late on the days bordering each mode.
+
+    ::
+
+        time_zone: US/Pacific
+
 nodes
     List of Node and NodePool objects which tron connects to.
 
