@@ -23,6 +23,9 @@ def wait_for_deferred(deferred, timeout=None):
     a test case.
     """
 
+    # There may come a time when you need to call reactor.crash() instead of
+    # reactor.stop() to shut everything down. But it is not this day.
+
     global _waiting
     if _waiting:
         raise RuntimeError("_wait is not reentrant")
@@ -43,14 +46,6 @@ def wait_for_deferred(deferred, timeout=None):
     def stop_after_defer(ign):
         reactor.stop()
 
-    def stop():
-        # Depending on context, sometimes you need to call stop() rather than
-        # crash.  I think there is some twisted bug where threads left open
-        # don't allow the process to exit
-
-        #reactor.stop()
-        reactor.crash()
-
     def on_failure(f):
         failures.append(f)
 
@@ -67,12 +62,7 @@ def wait_for_deferred(deferred, timeout=None):
             return
 
         deferred.addBoth(stop_after_defer)
-        reactor.stop = stop
-
-        try:
-            reactor.run()
-        finally:
-            del reactor.stop
+        reactor.run()
 
         if results or _timed_out:
             return
