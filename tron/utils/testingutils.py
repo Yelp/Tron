@@ -31,7 +31,7 @@ class ReactorTestCase(TestCase):
             ReactorTestCase._reactor_test_case_subclass_count = num_subclasses
             ReactorTestCase._initialized = True
 
-    @teardown
+    @class_teardown
     def kill_reactor(self):
         ReactorTestCase._reactor_test_case_subclass_count -= 1
         if ReactorTestCase._reactor_test_case_subclass_count <= 0:
