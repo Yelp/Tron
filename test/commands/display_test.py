@@ -10,9 +10,9 @@ class DisplayServicesTestCase(TestCase):
     def setup_data(self):
         Color.enabled = True
         self.data = [
-            dict(name="My Service", state="stopped", count="4"),
-            dict(name="Another Service", state="running", count="2"),
-            dict(name="Yet another", state="running", count="1")
+            dict(name="My Service", status="stopped", count="4"),
+            dict(name="Another Service", status="running", count="2"),
+            dict(name="Yet another", status="running", count="1")
         ]
 
     def test_format(self):
@@ -72,9 +72,9 @@ class DisplayJobsTestCase(TestCase):
         Color.enabled = True
         self.options = turtle.Turtle(warn=False, num_displays=4)
         self.data = [
-            dict(name='important_things', state='running', 
+            dict(name='important_things', status='running', 
                 scheduler='DailyJob', last_success='unknown'),
-            dict(name='other_thing', state='success', 
+            dict(name='other_thing', status='success', 
                 scheduler='DailyJob', last_success='2012-01-23 10:23:23'),
         ]
         self.details = {

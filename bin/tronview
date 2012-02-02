@@ -47,6 +47,7 @@ def console_width():
 def console_height():
     return int(os.popen('stty size', 'r').read().split()[0])
 
+# TODO: ljust to make tabular
 def display_events(response):
     return "\n".join(
         "\t".join((evt['time'], evt['level'], evt['entity'], evt['name']))
@@ -66,7 +67,7 @@ def view_all(options, client, width):
     if options.warn:
         for job in jobs:
             job['details'] = client.job(job['name'])
-        
+       
     print display.DisplayJobs(width, options).format(jobs)
 
 
@@ -93,7 +94,7 @@ def view_job_run(options, job_run_id, client, width):
         print "Node: %s" % actions['node']
         print
     display_action = display.DisplayActions(width, options)
-    print display_action.format_action_run(actions['runs'])
+    print display_action.format(actions['runs'])
 
 
 def view_action_run(options, act_run_id, client, width):
@@ -128,7 +129,7 @@ def main():
     client.status()
 
     if not args:
-        view_all(options, width, client)
+        view_all(options, client, width)
         cmd.save_config(options)
         return
 
@@ -162,4 +163,4 @@ if __name__ == '__main__':
     try:
         main()
     except Exception, e :
-        print >>sys.stderr, e
+        raise

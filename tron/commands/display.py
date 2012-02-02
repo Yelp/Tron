@@ -106,6 +106,7 @@ class FormatDisplay(object):
 
     def format_value(self, field, value):
         length = self.widths[field]
+        value = unicode(value)
         if len(value) > length:
             return (value[:length - 3] + '...').ljust(length)
         return value.ljust(length)
@@ -157,11 +158,13 @@ class FormatDisplay(object):
 class DisplayServices(FormatDisplay):
 
     columns = ['Name',  'State',    'Count' ]
-    fields  = ['name',  'state',    'count' ]
+    fields  = ['name',  'status',   'count' ]
     widths  = [None,    10,         10      ]
     title = 'services'
 
-    max_first_col_width = 30
+    @property
+    def max_first_col_width(self):
+        return max(self.num_cols - 20, 5)
 
 
 class DisplayJobRuns(FormatDisplay):
@@ -176,7 +179,7 @@ class DisplayJobRuns(FormatDisplay):
 
     @property
     def max_first_col_width(self):
-        return max(self.num_cols - 64, 5)
+        return 15
         
     def rows(self):
         data_rows = self.data
@@ -213,18 +216,17 @@ class DisplayJobRuns(FormatDisplay):
         self.out.append(Color.set('gray', row_data))
 
         if self.options.warn:
-            # view_job_run
             display_action = DisplayActions(self.num_cols, self.options)
-            self.out.append(display_action.format_action_run(row['action_runs']))
+            # TODO: this is broke
+            self.out.append(display_action.format(row['details']))
         
 
 class DisplayJobs(FormatDisplay):
 
     columns = ['Name',  'State',    'Scheduler',    'Last Success']
-    fields  = ['name',  'state',    'scheduler',    'last_success']
+    fields  = ['name',  'status',   'scheduler',    'last_success']
     widths  = [None,    10,         20,             20            ]
     title = 'jobs'
-
 
     @property
     def max_first_col_width(self):
@@ -239,7 +241,6 @@ class DisplayJobs(FormatDisplay):
         return self.output()
 
     def do_format_job(self, job_details, supress_preface=False):
-        # was view_job
         out = []
         if self.options.display_preface and not supress_preface:
             out.extend([
@@ -249,14 +250,13 @@ class DisplayJobs(FormatDisplay):
             ] + job_details['action_names'] + [
                 "\nNode Pool:"
             ] + job_details['node_pool'] + [
-                "Run History: (%d total)" % len(job_details['runs'])
+                "\nRun History: (%d total)" % len(job_details['runs'])
             ])
         job_runs = self.format_job_runs(job_details['runs'])
         out.append(job_runs)
         return out
 
     def format_job_runs(self, run_details):
-        # war print_job_run
         return DisplayJobRuns(self.num_cols, self.options).format(run_details)
 
 
@@ -304,7 +304,6 @@ class DisplayActions(FormatDisplay):
         return self.output()
 
     def do_format_action_run(self, content, supress_preface=False):
-        # was view_action_run
         out = []
         if self.options.stdout:
             out.extend(["Stdout: "] + content['stdout'])
