@@ -16,10 +16,56 @@ log = logging.getLogger(__name__)
 _waiting = False
 
 
+class ReactorTestCase(TestCase):
+    """Inherit from this subclass if any of your suite's tests use the Twisted
+    reactor, so that the reactor isn't stopped until your tests run.
+    """
+
+    _reactor_test_case_subclass_count = 0
+    _initialized = False
+
+    def __init__(self, *args, **kwargs):
+        super(ReactorTestCase, self).__init__(*args, **kwargs)
+        if not ReactorTestCase._initialized:
+            num_subclasses = len(list(itersubclasses(ReactorTestCase)))
+            ReactorTestCase._reactor_test_case_subclass_count = num_subclasses
+            ReactorTestCase._initialized = True
+
+    @class_teardown
+    def kill_reactor(self):
+        ReactorTestCase._reactor_test_case_subclass_count -= 1
+        if ReactorTestCase._reactor_test_case_subclass_count <= 0:
+            reactor.callLater(0, reactor.stop)
+            reactor.run()
+
+
+def itersubclasses(cls, _seen=None):
+    """Iterate over all subclasses of a given class, in depth first order.
+
+    Recipe from:
+    http://code.activestate.com/recipes/576949/
+    """
+
+    if not isinstance(cls, type):
+        raise TypeError('itersubclasses must be called with new-style classes, not %.100r' % cls)
+    if _seen is None:
+        _seen = set()
+    try:
+        subclasses = cls.__subclasses__()
+    except TypeError: # fails only when cls is type
+        subclasses = cls.__subclasses__(cls)
+    for subclass in subclasses:
+        if subclass not in _seen:
+            _seen.add(subclass)
+            yield subclass
+            for subclass in itersubclasses(subclass, _seen):
+                yield subclass
+
+
 def wait_for_deferred(deferred, timeout=None):
     """Wait for the deferred object to complete
 
-    Loosly based on twisted trial test case base, allows us to run reactors in
+    Loosely based on twisted trial test case base, allows us to run reactors in
     a test case.
     """
 
@@ -41,15 +87,10 @@ def wait_for_deferred(deferred, timeout=None):
         reactor.crash()
 
     def stop_after_defer(ign):
-        reactor.stop()
-
-    def stop():
-        # Depending on context, sometimes you need to call stop() rather than
-        # crash.  I think there is some twisted bug where threads left open
-        # don't allow the process to exit
-
-        #reactor.stop()
+        # actually crash. don't want to stop the reactor until the very end of
+        # the tests.
         reactor.crash()
+        #reactor.stop()
 
     def on_failure(f):
         failures.append(f)
@@ -67,12 +108,7 @@ def wait_for_deferred(deferred, timeout=None):
             return
 
         deferred.addBoth(stop_after_defer)
-        reactor.stop = stop
-
-        try:
-            reactor.run()
-        finally:
-            del reactor.stop
+        reactor.run()
 
         if results or _timed_out:
             return
