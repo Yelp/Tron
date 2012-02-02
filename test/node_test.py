@@ -38,7 +38,7 @@ class NodeTestCase(TestCase):
         assert_equal(self.stdout.read(4), "test")
 
 
-class NodeTimeoutTest(TestCase):
+class NodeTimeoutTest(testingutils.ReactorTestCase):
     @setup
     def build_node(self):
         self.node = node.Node(hostname="testnodedoesnotexist")
