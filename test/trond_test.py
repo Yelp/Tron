@@ -233,8 +233,6 @@ class SchedulerTestCase(SandboxTestCase):
             time.sleep(0.2)
             jerb = self.sandbox.list_job('random_failure_job')
 
-        from pprint import pprint
-        print pprint(jerb)
         assert_equal(jerb['runs'][0][u'state'], u'SCHE')
         assert_equal(jerb['runs'][-1][u'state'], u'FAIL')
         assert_equal(jerb['runs'][-2][u'state'], u'RUNN')
