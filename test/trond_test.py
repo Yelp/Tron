@@ -170,25 +170,6 @@ class SchedulerTestCase(SandboxTestCase):
                         command: "sleep 2 && echo 'Echo'"
         """)
 
-    EMPTY_CONFIG = dedent("""
-        --- !TronConfiguration
-        ssh_options:
-                agent: true
-        nodes:
-            - &local
-                hostname: 'localhost'
-        jobs:
-            - &echo_job
-                name: "delayed_echo_job"
-                node: *local
-                queueing: true
-                schedule: "interval 1 hour"
-                actions:
-                    -
-                        name: "delayed_echo_action"
-                        command: "sleep 2 && echo 'Echo'"
-        """)
-
     def test_queue_on_overlap(self):
         job_output_dir = os.path.join(self.sandbox.tmp_dir, 'delayed_echo_job')
         self.sandbox.save_config(SchedulerTestCase.QUEUE_CONFIG)
@@ -214,3 +195,46 @@ class SchedulerTestCase(SandboxTestCase):
 
         assert_lte(complete_runs, 4)
         assert_gte(len(runs), 8)
+
+    def test_failure_on_multi_step_job_doesnt_wedge_tron(self):
+        # WARNING: This test may be flaky.
+        FAIL_CONFIG = dedent("""
+            --- !TronConfiguration
+
+            ssh_options: !SSHOptions
+              agent: true
+
+            nodes:
+              - &local
+                  hostname: 'localhost'
+            jobs:
+              - &random_job
+                name: "random_failure_job"
+                node: *local
+                queueing: true
+                schedule: "interval 1 seconds"
+                actions:
+                  - &fa
+                    name: "fa"
+                    command: "sleep 1.1; failplz"
+                  - &sa
+                    name: "sa"
+                    command: "echo 'you will never see this'"
+                    requires: [*fa]
+        """)
+        self.sandbox.start_trond()
+        self.sandbox.upload_config(FAIL_CONFIG)
+
+        # Wait a little to give things time to explode
+        time.sleep(1)
+        jerb = self.sandbox.list_job('random_failure_job')
+        while (len(jerb['runs']) < 3 or
+               jerb['runs'][-1][u'state'] != u'FAIL'):
+            time.sleep(0.2)
+            jerb = self.sandbox.list_job('random_failure_job')
+
+        from pprint import pprint
+        print pprint(jerb)
+        assert_equal(jerb['runs'][0][u'state'], u'SCHE')
+        assert_equal(jerb['runs'][-1][u'state'], u'FAIL')
+        assert_equal(jerb['runs'][-2][u'state'], u'RUNN')
