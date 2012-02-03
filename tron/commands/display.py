@@ -2,6 +2,7 @@
 Format and color output for tron commands.
 """
 from operator import itemgetter
+import os
 
 
 class Color(object):
@@ -32,7 +33,7 @@ class Color(object):
         return cls.colors[color_name.lower()] + unicode(text) + cls.colors['end']
 
 
-class FormatDisplay(object):
+class TableDisplay(object):
     """Base class for displaying columns of data.  This class takes a list
     of dict objects and formats it so that it displays properly in fixed width
     columns.  Overlap is truncated.
@@ -65,17 +66,20 @@ class FormatDisplay(object):
     header_color = 'hgray'
     max_first_col_width = None
 
-    def __init__(self, num_cols, options=None):
+    def __init__(self, options=None):
         self.out = []
         self.options = options
-        self.num_cols = num_cols
+        self.num_cols = self.console_width()
+
+    def console_width(self):
+        return int(os.popen('stty size', 'r').read().split()[1])
 
     def banner(self):
         if not self.title:
             return
         title = self.title.capitalize()
         self.out.append("\n%s:" % title)
-        if not self.data:
+        if not self.rows():
             self.out.append("No %s" % title)
 
     def header(self):
@@ -138,12 +142,15 @@ class FormatDisplay(object):
     def rows(self):
         return sorted(self.data, key=itemgetter(self.fields[0]))
 
-    def format(self, data):
+    def store_data(self, data):
         self.data = data
+
+    def format(self, data):
+        self.store_data(data)
         self.banner()
 
         self.calculate_col_widths()
-        if not self.data:
+        if not self.rows():
             return self.output()
 
         self.header()
@@ -155,7 +162,7 @@ class FormatDisplay(object):
         return self.output()
 
 
-class DisplayServices(FormatDisplay):
+class DisplayServices(TableDisplay):
 
     columns = ['Name',  'State',    'Count' ]
     fields  = ['name',  'status',   'count' ]
@@ -166,8 +173,18 @@ class DisplayServices(FormatDisplay):
     def max_first_col_width(self):
         return max(self.num_cols - 20, 5)
 
+    def format_details(self, service_content):
+        self.out = [
+            "Service: %s" % service_content['name'],
+            "State: %s" % service_content['state'],
+            "Instances: %r" % service_content['count'],
+        ] + [
+            "  %s : %s %s" % (serv['id'], serv['node'], serv['state'])
+            for serv in service_content['instances']
+        ]
+        return self.output()
 
-class DisplayJobRuns(FormatDisplay):
+class DisplayJobRuns(TableDisplay):
     """Format Job runs."""
    
     columns = ['Run ID', 'State',    'Node', 'Scheduled Time']
@@ -216,12 +233,12 @@ class DisplayJobRuns(FormatDisplay):
         self.out.append(Color.set('gray', row_data))
 
         if self.options.warn:
-            display_action = DisplayActions(self.num_cols, self.options)
-            # TODO: this is broke
+            display_action = DisplayActions(self.options)
+            import ipdb; ipdb.set_trace()
             self.out.append(display_action.format(row['details']))
         
 
-class DisplayJobs(FormatDisplay):
+class DisplayJobs(TableDisplay):
 
     columns = ['Name',  'State',    'Scheduler',    'Last Success']
     fields  = ['name',  'status',   'scheduler',    'last_success']
@@ -256,11 +273,11 @@ class DisplayJobs(FormatDisplay):
         out.append(job_runs)
         return out
 
-    def format_job_runs(self, run_details):
-        return DisplayJobRuns(self.num_cols, self.options).format(run_details)
+    def format_job_runs(self, runs):
+        return DisplayJobRuns(self.options).format(runs)
 
 
-class DisplayActions(FormatDisplay):
+class DisplayActions(TableDisplay):
 
     columns = ['Action', 'State', 'Start Time', 'End Time', 'Duration']
     fields  = ['id',     'state', 'start_time', 'end_time', 'duration']
@@ -272,9 +289,17 @@ class DisplayActions(FormatDisplay):
     def max_first_col_width(self):
         return max(self.num_cols - 60, 5)
 
+    def banner(self):
+        if self.options.display_preface:
+            self.out.extend([
+                "Job Run: %s" % self.action['id'],
+                "State: %s" % self.action['state'],
+                "Node: %s" % self.action['node'],
+            ])
+        super(DisplayActions, self).banner()
+
     def footer(self):
-        # TODO: may display ... if filtering for warn only
-        if len(self.rows()) < len(self.data):
+        if len(self.rows()) < len(self.data) and not self.options.warn:
             self.out.append('...')
 
     def format_value(self, field, value):
@@ -288,6 +313,10 @@ class DisplayActions(FormatDisplay):
     def row_color(self, fields):
         return 'red' if fields['state'] == 'FAIL' else 'white'
 
+    def store_data(self, data):
+        self.data = data['runs']
+        self.action = data
+
     def rows(self):
         data_rows = self.data
         if self.options.warn:
@@ -297,6 +326,7 @@ class DisplayActions(FormatDisplay):
 
     def post_row(self, row):
         if self.options.warn:
+            import ipdb; ipdb.set_trace()
             self.out.extend(self.do_format_action_run(row['details'], True))
 
     def format_action_run(self, content):
@@ -320,7 +350,6 @@ class DisplayActions(FormatDisplay):
                 "Node: %s" % content['node'],
                 ''
             ])
-            return out
     
         # a raw command is without command context
         if content['command'] != content['raw_command']:
@@ -333,8 +362,19 @@ class DisplayActions(FormatDisplay):
             [Color.set("gray", content['raw_command'])] +
             ["\nRequirements:"] + content['requirements'] +
             ["\nStdout:"] + content['stdout'] + 
-            ["Stderr:"] + content['stderr']
+            ["\nStderr:"] + content['stderr']
         )
         return out
 
+
+class DisplayEvents(TableDisplay):
+
+    columns = ['Time', 'Level', 'Entity', 'Name']
+    fields  = ['time', 'level', 'entity', 'name']
+    widths  = [22,     12,       35,      20    ]
+    title = 'events'
+
+    def calculate_col_widths(self):
+        # No need to calculate, it's fixed width.
+        pass
 

@@ -14,7 +14,7 @@ class Client(object):
         return self.request('/status')
 
     def events(self):
-        return self.request('/events')
+        return self.request('/events')['data']
 
     def index(self):
         return self.request('/')
@@ -28,7 +28,7 @@ class Client(object):
 
     def service_events(self, service_id):
         service_url = "/services/%s/_events" % service_id
-        return self.request(service_url)
+        return self.request(service_url)['data']
 
     def jobs(self):
         return self.request('/jobs').get('jobs')
@@ -37,7 +37,7 @@ class Client(object):
         return self.request('/jobs/%s' % job_id)
 
     def job_events(self, job_id):
-        return self.request('/jobs/%s/_events' % job_id)
+        return self.request('/jobs/%s/_events' % job_id)['data']
 
     def actions(self, action_id):
         action_id = action_id.replace('.', '/')
@@ -50,7 +50,7 @@ class Client(object):
 
     def action_events(self, action_id):
         action_id = action_id.replace('.', '/')
-        return self.request('/jobs/%s/_events' % action_id)
+        return self.request('/jobs/%s/_events' % action_id)['data']
 
     def request(self, url):
         status, content = cmd.request(self.options.server, url)
