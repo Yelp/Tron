@@ -13,7 +13,6 @@ from tron import job
 from tron import mcp
 from tron import scheduler
 from tron.utils import groctimespecification
-from tron.utils import testingutils
 from tron.utils import timeutils
 
 
