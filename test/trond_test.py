@@ -89,12 +89,18 @@ class BasicTronTestCase(SandboxTestCase):
             print >> sys.stderr, self.sandbox.log_contents()
             raise
 
-        assert_equal(self.sandbox.list_action_run('echo_job', 2, 'echo_action')['state'], 'SUCC')
-        assert_equal(self.sandbox.list_action_run('echo_job', 2, 'echo_action')['stdout'], ['Echo!'])
-        assert_equal(self.sandbox.list_action_run('echo_job', 2, 'another_echo_action')['state'], 'FAIL')
-        assert_equal(self.sandbox.list_action_run('echo_job', 2, 'another_echo_action')['stdout'],
-                     [datetime.datetime.now().strftime('Today is %Y-%m-%d, which is the same as %Y-%m-%d')])
-        assert_equal(self.sandbox.list_job_run('echo_job', 2)['state'], 'FAIL')
+        echo_action_run = self.sandbox.list_action_run(
+            'echo_job', 2, 'echo_action')
+        another_echo_action_run = self.sandbox.list_action_run(
+            'echo_job', 2, 'another_echo_action')
+        assert_equal(echo_action_run['state'], 'SUCC')
+        assert_equal(echo_action_run['stdout'], ['Echo!'])
+        assert_equal(another_echo_action_run['state'], 'FAIL')
+        assert_equal(another_echo_action_run['stdout'],
+                     [datetime.datetime.now().strftime(
+                         'Today is %Y-%m-%d, which is the same as %Y-%m-%d')])
+        assert_equal(self.sandbox.list_job_run('echo_job', 2)['state'],
+                     'FAIL')
 
     def test_tronview_basic(self):
         self.sandbox.save_config(SINGLE_ECHO_CONFIG)
@@ -222,17 +228,19 @@ class SchedulerTestCase(SandboxTestCase):
                     command: "echo 'you will never see this'"
                     requires: [*fa]
         """)
+
+        with open(self.sandbox.config_file, 'w') as f:
+            f.write(FAIL_CONFIG)
         self.sandbox.start_trond()
-        self.sandbox.upload_config(FAIL_CONFIG)
 
         # Wait a little to give things time to explode
         time.sleep(1)
         jerb = self.sandbox.list_job('random_failure_job')
         while (len(jerb['runs']) < 3 or
-               jerb['runs'][-1][u'state'] != u'FAIL'):
+               jerb['runs'][-1][u'state'] not in [u'FAIL', u'SUCC']):
             time.sleep(0.2)
             jerb = self.sandbox.list_job('random_failure_job')
 
-        assert_equal(jerb['runs'][0][u'state'], u'SCHE')
         assert_equal(jerb['runs'][-1][u'state'], u'FAIL')
-        assert_equal(jerb['runs'][-2][u'state'], u'RUNN')
+        assert_in(jerb['runs'][-2][u'state'], [u'FAIL', u'RUNN'])
+        assert_equal(jerb['runs'][0][u'state'], u'SCHE')

@@ -100,7 +100,9 @@ class TronSandbox(object):
                                  '--log-file=%s' % self.log_file,
                                  '--pid-file=%s' % self.pid_file,
                                  '--port=%d' % self.port,
-                                 '--host=%s' % self.host]
+                                 '--host=%s' % self.host,
+                                 '--config=%s' % self.config_file,
+                                 '--verbose']#, '--verbose']
 
         self.tron_server_address = '%s:%d' % (self.host, self.port)
         self.tron_server_uri = 'http://%s' % self.tron_server_address

@@ -130,7 +130,7 @@ class JobRun(object):
             if self.job.constant and self.job.enabled:
                 self.job.build_run().start()
 
-        if self.all_but_cleanup_done:
+        if self.all_but_cleanup_done or self.is_failure:
             if self.cleanup_action_run is None:
                 log.info('No cleanup action for %s exists' % self.id)
                 self.cleanup_completed()
