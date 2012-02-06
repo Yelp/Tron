@@ -124,7 +124,9 @@ class TestJob(TestCase):
 
     def test_all_nodes_build_run(self):
         self.job.all_nodes = True
-        self.job.node_pool = turtle.Turtle(nodes=[turtle.Turtle(), turtle.Turtle(), turtle.Turtle()])
+        self.job.node_pool = turtle.Turtle(nodes=[turtle.Turtle(),
+                                                  turtle.Turtle(),
+                                                  turtle.Turtle()])
         runs = self.job.build_runs()
 
         assert_equals(len(runs), 3)

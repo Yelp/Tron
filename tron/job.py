@@ -226,8 +226,10 @@ class JobRun(object):
 
     @property
     def all_but_cleanup_done(self):
-        return not any([r.is_running or r.is_queued or r.is_scheduled
-                        for r in self.action_runs])
+        if self.is_failure:
+            return True
+        return not any(r.is_running or r.is_queued or r.is_scheduled
+                       for r in self.action_runs)
 
     @property
     def is_done(self):
