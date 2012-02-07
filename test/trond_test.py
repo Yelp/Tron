@@ -12,8 +12,6 @@ from test.sandbox import TronSandbox, TronSandboxException, wait_for_file_to_exi
 
 BASIC_CONFIG = """
 --- !TronConfiguration
-ssh_options:
-        agent: true
 nodes:
     - &local
         hostname: 'localhost'

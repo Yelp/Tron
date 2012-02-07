@@ -175,6 +175,8 @@ class TronSandbox(object):
         status, content = cmd.request(self.tron_server_uri, uri, data=data)
 
         if status != cmd.OK or not content:
+            print 'trond appears to have crashed. Log:'
+            print self.log_contents()
             raise TronSandboxException("Error connecting to tron server at %s%s" % (self.tron_server_uri, uri))
 
         return content
