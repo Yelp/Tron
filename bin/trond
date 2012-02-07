@@ -1,4 +1,10 @@
 #!/usr/bin/env python
+
+"""The core of trond is a hacked-up version of twistd. It mainly exists to set
+up command line-related logging options and invoke the MasterControlProgram.
+This file can probably be left alone as long as we continue to use Twisted.
+"""
+
 from __future__ import with_statement
 
 import datetime
