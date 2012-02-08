@@ -148,10 +148,10 @@ in the pool in the order ``node1``, ``node2``, ``node1``, ``node2`` (round
 robin scheduling).
 
 The ``start_email_worker`` script (written by you) starts the worker and writes
-its pid to ``%(pid_file)s``. Every 60 seconds, `trond` will see if pid in
-``%(pid_file)s`` is still running on its node. If not, the service will be in a
-``DEGRADED`` state and a new service instance will be started on the same node
-after 120 seconds.
+its pid to ``%(pid_file)s``. Every 60 seconds, :command:`trond` will see if pid
+in ``%(pid_file)s`` is still running on its node. If not, the service will be
+in a ``DEGRADED`` state and a new service instance will be started on the same
+node after 120 seconds.
 
 In a system containing this example, you might have yet another service
 representing the work queue itself.
@@ -161,9 +161,26 @@ For more information, see :doc:`services`.
 Notifications
 -------------
 
-If you configure notifications, `trond` will send you emails when something
-fails::
+If you configure notifications, :command:`trond` will send you emails when
+something fails::
 
     notification_options: !NotificationOptions
         smtp_host: localhost
         notification_addr: batch+live@example.com
+
+Caveats
+-------
+
+While Tron solves many scheduling-related problems, there are a few things to
+watch out for.
+
+**Tron keeps an SSH connection open for the entire lifespan of a process.**
+This means that to upgrade :command:`trond`, you have to either wait until no
+jobs are running, or accept an inconsistent state.
+
+**Tron stores state in a (potentially enormous) YAML file.** This file is
+susceptible to file system entropy and can be cumbersome to deal with.
+
+**Tron is about to undergo a major rewrite.** The configuration interface will
+remain backward compatible, but the rest of the system is getting an overhaul.
+If Tron currently works for you, this shouldn't be a problem.
