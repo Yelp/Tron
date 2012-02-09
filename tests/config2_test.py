@@ -123,6 +123,7 @@ services:
     def setup(self):
         self.test_dir = tempfile.mkdtemp()
         self.test_config = config2.load_config(StringIO.StringIO(self.config))
+        self.job4 = self.test_config.jobs['test_job4']
 
     @teardown
     def teardown(self):
@@ -143,19 +144,15 @@ services:
         assert_equal(len(self.test_config.nodes), 2)
         assert_equal(len(self.test_config.node_pools), 1)
 
-        from pprint import pprint
-        print pprint(self.test_config)
-
     def test_node_attribute(self):
-        assert_equal(len(self.my_mcp.nodes), 2)
-        assert_equal(self.my_mcp.nodes[0].hostname, "batch0")
-        assert_equal(self.my_mcp.nodes[1].hostname, "batch1")
+        assert_equal(len(self.test_config.nodes), 2)
+        assert_equal(self.test_config.nodes['batch0'].hostname, "batch0")
+        assert_equal(self.test_config.nodes['batch1'].hostname, "batch1")
 
-        assert_equal(self.my_mcp.nodes[0].conch_options['noagent'], False)
-        assert_equal(self.my_mcp.nodes[1].conch_options['noagent'], False)
-        
-        assert self.job4.node_pool.nodes[0] is self.my_mcp.nodes[0]
-    
+        assert_equal(self.test_config.ssh_options['noagent'], False)
+
+        assert_equal(self.job4.node, self.test_config.node_pools['batch0_batch1'].name)
+
     def test_job_name_attribute(self):
         for j in self.all_jobs:
             assert hasattr(j, "name")
