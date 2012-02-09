@@ -96,8 +96,8 @@ class FrozenDict(Mapping):
         self._d = dict(*args, **kwargs)
         self._hash = None
 
-    def __str__(self):
-        return 'FrozenDict(%s)' % self._d
+    def __repr__(self):
+        return 'FrozenDict(%r)' % self._d
 
     def __iter__(self):
         return iter(self._d)
@@ -381,7 +381,7 @@ def valid_notification_options(options):
         if sorted(options.keys()) != ['notification_addr', 'smtp_host']:
             raise ConfigError('notification_options must contain smtp_host,'
                               ' notification_addr, and nothing else.')
-    return NotificationOptions(options)
+    return NotificationOptions(**options)
 
 
 def valid_time_zone(tz):

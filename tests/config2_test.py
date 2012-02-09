@@ -143,6 +143,9 @@ services:
         assert_equal(len(self.test_config.nodes), 2)
         assert_equal(len(self.test_config.node_pools), 1)
 
+        from pprint import pprint
+        print pprint(self.test_config)
+
     def test_node_attribute(self):
         assert_equal(len(self.my_mcp.nodes), 2)
         assert_equal(self.my_mcp.nodes[0].hostname, "batch0")
