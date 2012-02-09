@@ -186,7 +186,8 @@ services:
                 'test_job0': ConfigJob(
                     name='test_job0',
                     node='batch0',
-                    schedule='interval 20s',
+                    schedule=ConfigIntervalScheduler(
+                        timedelta=datetime.timedelta(0, 20)),
                     actions=FrozenDict(**{
                         'action0_0': ConfigAction(
                             name='action0_0',
@@ -205,7 +206,8 @@ services:
                 'test_job1': ConfigJob(
                     name='test_job1',
                     node='batch0',
-                    schedule='daily 00:30:00 MWF',
+                    schedule=ConfigDailyScheduler(
+                        start_time='00:30:00', days='MWF'),
                     actions=FrozenDict(**{
                         'action1_1': ConfigAction(
                             name='action1_1',
@@ -225,7 +227,8 @@ services:
                 'test_job2': ConfigJob(
                     name='test_job2',
                     node='batch1',
-                    schedule='daily 16:30:00',
+                    schedule=ConfigDailyScheduler(
+                        start_time='16:30:00', days=None),
                     actions=FrozenDict(**{
                         'action2_0': ConfigAction(
                             name='action2_0',
@@ -240,7 +243,7 @@ services:
                 'test_job3': ConfigJob(
                     name='test_job3',
                     node='batch1',
-                    schedule='constant',
+                    schedule=ConfigConstantScheduler(),
                     actions=FrozenDict(**{
                         'action3_1': ConfigAction(
                             name='action3_1',
@@ -265,7 +268,7 @@ services:
                 'test_job4': ConfigJob(
                     name='test_job4',
                     node='batch0_batch1',
-                    schedule='daily',
+                    schedule=ConfigDailyScheduler(start_time=None, days=None),
                     actions=FrozenDict(**{
                         'action4_0': ConfigAction(
                             name='action4_0',

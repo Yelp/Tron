@@ -3,6 +3,7 @@ validation.
 """
 
 from collections import Mapping, namedtuple
+import datetime
 import logging
 import os
 import re
@@ -207,6 +208,29 @@ ConfigService = namedtuple(
         'restart_interval', # float
         'count',            # int
     ])
+
+
+ConfigConstantScheduler = namedtuple(
+    'ConfigConstantScheduler', []
+)
+
+
+ConfigIntervalScheduler = namedtuple(
+    'ConfigIntervalScheduler', [
+        'timedelta',    # datetime.timedelta
+    ])
+
+ConfigDailyScheduler = namedtuple(
+    'ConfigDailyScheduler', [
+        'start_time',   # str HH:MM[:SS]
+        'days',         # str MTWRF
+    ])
+
+ConfigGrocScheduler = namedtuple(
+    'ConfigGrocScheduler', [
+        'scheduler_string',    # str
+    ]
+)
 
 
 def normalize_node(node):
@@ -468,7 +492,104 @@ def valid_job(job):
 
 
 def valid_schedule(path, schedule):
-    return schedule
+    if isinstance(schedule, basestring):
+        schedule = schedule.strip()
+        scheduler_args = schedule.split()
+        scheduler_name = scheduler_args.pop(0).lower()
+
+        if schedule == 'constant':
+            return ConfigConstantScheduler()
+        elif scheduler_name == 'daily':
+            return valid_daily_scheduler(*scheduler_args)
+        elif scheduler_name == 'interval':
+            return valid_interval_scheduler(*scheduler_args)
+        else:
+            return valid_groc_scheduler(schedule)
+    else:
+        if 'interval' in schedule:
+            return valid_interval_scheduler(**schedule)
+        elif 'start_time' in schedule or 'days' in schedule:
+            return valid_daily_scheduler(**schedule)
+        else:
+            raise ConfigError("Unknown scheduler: %r" % schedule)
+
+
+def valid_daily_scheduler(start_time=None, days=None):
+    """Old style, will be converted to GrocScheduler with a compatibility
+    function
+
+    schedule: !DailyScheduler
+        start_time: "07:00:00"
+        days: "MWF"
+    """
+
+    err_msg = ("Start time must be in string format HH:MM[:SS]. Seconds"
+               " are ignored but parsed so as to be backward-compatible."
+               " You said: %r")
+
+    if start_time is not None:
+        if not isinstance(start_time, basestring):
+            raise ConfigError(err_msg % start_time)
+
+        # make sure at least hours and minutes are specified
+        hms = start_time.strip().split(':')
+
+        if len(hms) < 2:
+            raise ConfigError(err_msg % start_time)
+
+    return ConfigDailyScheduler(
+        start_time=start_time,
+        days=days,
+    )
+
+
+def valid_groc_scheduler(scheduler_string):
+    return ConfigGrocScheduler(
+        scheduler_string=scheduler_string,
+    )
+
+
+def valid_interval_scheduler(interval):
+    # Shortcut values for intervals
+    TIME_INTERVAL_SHORTCUTS = {
+        'hourly': dict(hours=1),
+    }
+
+    # Translations from possible configuration units to the argument to
+    # datetime.timedelta
+    TIME_INTERVAL_UNITS = {
+        'months': ['mo', 'month', 'months'],
+        'days': ['d', 'day', 'days'],
+        'hours': ['h', 'hr', 'hrs', 'hour', 'hours'],
+        'minutes': ['m', 'min', 'mins', 'minute', 'minutes'],
+        'seconds': ['s', 'sec', 'secs', 'second', 'seconds']
+    }
+
+
+    if interval in TIME_INTERVAL_SHORTCUTS:
+        kwargs = TIME_INTERVAL_SHORTCUTS[interval]
+    else:
+        # Split digits and characters into tokens
+        interval_re = re.compile(r"\d+|[a-zA-Z]+")
+        interval_tokens = interval_re.findall(interval)
+        if len(interval_tokens) != 2:
+            raise ConfigError("Invalid interval specification: %r",
+                              interval)
+
+        value, units = interval_tokens
+
+        kwargs = {}
+        for key, unit_set in TIME_INTERVAL_UNITS.iteritems():
+            if units in unit_set:
+                kwargs[key] = int(value)
+                break
+        else:
+            raise ConfigError("Invalid interval specification: %r",
+                              interval)
+
+    return ConfigIntervalScheduler(
+        timedelta=datetime.timedelta(**kwargs)
+    )
 
 
 def valid_action(path, action):
