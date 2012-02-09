@@ -21,13 +21,19 @@ def load_config(string_or_file):
     # Hackishly strip !Tags from the file so PyYAML doesn't try to make them
     # into Python objects
     if not isinstance(string_or_file, basestring):
-        s = string_or_file.read()
+        s_tags = string_or_file.read()
     else:
-        s = string_or_file
-    s = TAG_RE.sub('', s)
+        s_tags = string_or_file
+    s_notags = TAG_RE.sub('', s_tags)
 
-    config = yaml.safe_load(s)
-    return tron_config(config)
+    if len(s_tags) > len(s.notags):
+        log.warn('Tron no longer uses !Tags to parse config files. Please'
+                 ' remove them from yours.')
+
+    # safe_load disables python classes
+    config = yaml.safe_load(s_notags)
+
+    return valid_config(config)
 
 
 class ConfigError(Exception):
@@ -76,11 +82,25 @@ valid_dict = type_validator(
 ### LOADING THE SCHEMA ###
 
 
-def tron_config(config):
-    valid_config = {}
+def valid_config(config):
+    """Given a parsed config file (should be only basic literals and
+    containers), return a fully populated dictionary with all defaults filled
+    in, all valid values, and no unused values. Throws a ConfigError if any
+    part of the input dict is invalid.
+    """
+    final_config = {}
 
     def store(key, validate_function):
-        valid_config[key] = validate_function(config.get(key, None))
+        """If key is in config, pass it through validate_function(), store the
+        result in final_config, and delete the key from config. Otherwise, pass
+        None through validate_function() and store that result in final_config.
+        This way we can keep the defaults logic where it makes sense.
+        """
+        if key in config:
+            final_config[key] = validate_function(key)
+            del final_config[key]
+        else:
+            final_config[key] = validate_function(None)
 
     store('working_dir', valid_working_dir)
     store('syslog_address', valid_syslog)
@@ -88,11 +108,47 @@ def tron_config(config):
     store('ssh_options', valid_ssh_options)
     store('notification_options', valid_notification_options)
     store('time_zone', valid_time_zone)
-    store('nodes', valid_nodes)
-    store('jobs', valid_jobs)
-    store('services', valid_services)
 
-    return valid_config
+    final_config['nodes'] = []
+    final_config['node_pools'] = []
+
+    # If no nodes, use localhost
+    if 'nodes' not in config:
+        config['nodes'] = [{'hostname': 'localhost'}]
+
+    # 'nodes' may contain nodes or node pools (for now). Internally split them
+    # into 'nodes' and 'node_pools'.
+    for node in config['nodes']:
+        if isinstance(node, list):
+            log.warn('Node pools should be moved from "nodes" to "node_pools"'
+                     ' before upgrading to Tron 0.5.')
+            # this is actually a node pool, process it later
+            config['node_pools'].append(node)
+            continue
+        else:
+            final_config['nodes'].append(valid_node(node))
+    del config['nodes']
+
+    # process node pools
+    for node_pool in config['node_pools']:
+        final_config['node_pools'].append(valid_node_pool(node_pool))
+    del config['node_pools']
+
+    # process jobs
+    final_config['jobs'] = [valid_job(job)
+                            for job in config['jobs']]
+    del config['jobs']
+
+    # process services
+    final_config['services'] = [valid_service(service)
+                                for service in config['services']]
+    del config['services']
+
+    # Make sure we used everything
+    if len(config) > 0:
+        raise ConfigError("Unknown options: %s" % ', '.join(config.keys()))
+
+    return final_config
 
 
 def valid_working_dir(wd):
@@ -149,6 +205,11 @@ def valid_ssh_options(opts):
 
             ssh_options.opt_identity(file_name)
 
+    extra_keys = set(opts.keys()) - set(['agent', 'identities'])
+    if extra_keys:
+        raise ConfigError("Unknown SSH options: %s" %
+                          ', '.join(list(extra_keys)))
+
     return ssh_options
 
 
@@ -174,13 +235,13 @@ def valid_time_zone(tz):
             raise ConfigError('%s is not a valid time zone' % tz)
 
 
-def valid_nodes(nodes):
-    return nodes
+def valid_node(node):
+    return node
 
 
-def valid_jobs(jobs):
-    return jobs
+def valid_job(job):
+    return job
 
 
-def valid_services(services):
-    return services
+def valid_service(service):
+    return service
