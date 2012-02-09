@@ -10,20 +10,12 @@ import tempfile
 
 from testify import *
 from tron import config2, mcp, scheduler
+from tron.config2 import *
 from tron.utils import timeutils
 
 
-def syslog_address_for_platform():
-    if platform.system() == 'Darwin':
-        return '/var/run/syslog'
-    elif platform.system() == 'Windows':
-        return ['localhost', 514]
-    else:
-        return '/dev/log'
-
-
 BASE_CONFIG = """
---- !TronConfiguration
+---
 working_dir: "/tmp"
 
 ssh_options: !SSHOptions
@@ -41,13 +33,40 @@ nodes:
 """
 
 
-class ConfigTest(TestCase):
-    config = BASE_CONFIG + """
+def syslog_address_for_platform():
+    if platform.system() == 'Darwin':
+        return '/var/run/syslog'
+    elif platform.system() == 'Windows':
+        return ['localhost', 514]
+    else:
+        return '/dev/log'
+
+
+class OldConfigTest(TestCase):
+    OLD_BASE_CONFIG = """
+--- !TronConfiguration
+working_dir: "/tmp"
+
+ssh_options: !SSHOptions
+    agent: true
+    identities:
+        - tests/test_id_rsa
+
+nodes:
+    - &node0 !Node
+        hostname: 'batch0'
+    - &node1
+        hostname: 'batch1'
+    - &nodePool !NodePool
+        nodes: [*node0, *node1]
+    """
+
+    config = OLD_BASE_CONFIG + """
 
 command_context:
     batch_dir: /tron/batch/test/foo
     python: /usr/bin/python
-    
+
 jobs:
     - &job0 !Job
         name: "test_job0"
@@ -59,7 +78,7 @@ jobs:
                 command: "test_command0.0"
         cleanup_action: !CleanupAction
             command: "test_command0.1"
-                
+
     - &job1
         name: "test_job1"
         node: *node0
@@ -122,132 +141,156 @@ services:
     @setup
     def setup(self):
         self.test_dir = tempfile.mkdtemp()
-        self.test_config = config2.load_config(StringIO.StringIO(self.config))
-        self.job4 = self.test_config.jobs['test_job4']
 
     @teardown
     def teardown(self):
         shutil.rmtree(self.test_dir)
 
     def test_attributes(self):
-        assert hasattr(self.test_config, 'command_context')
-        assert hasattr(self.test_config, 'jobs')
-        assert hasattr(self.test_config, 'nodes')
-        assert hasattr(self.test_config, 'notification_options')
-        assert hasattr(self.test_config, 'ssh_options')
-        assert hasattr(self.test_config, 'syslog_address')
-        assert hasattr(self.test_config, 'time_zone')
-        assert hasattr(self.test_config, 'working_dir')
+        test_config = config2.load_config(StringIO.StringIO(self.config))
+        expected = TronConfig(
+            working_dir='/tmp',
+            syslog_address=None,
+            command_context=FrozenDict(**{
+                'python': '/usr/bin/python',
+                'batch_dir': '/tron/batch/test/foo'
+            }),
+            ssh_options={'ciphers': None,
+                         'macs': None,
+                         'option': None,
+                         'host-key-algorithms': None,
+                         'user-authentications': None,
+                         'noagent': 0,
+                         'compress': 0,
+                         'agent': True,
+                         'known-hosts': None,
+                         'user': None,
+                         'reconnect': 0,
+                         'logfile': None,
+                         'port': None,
+                         'identity': None,
+                         'log': 0,
+                         'nox11': 0,
+                         'version': 0},
+            notification_options=None,
+            time_zone=None,
+            nodes=FrozenDict(**{
+                'batch0': ConfigNode(name='batch0', hostname='batch0'),
+                'batch1': ConfigNode(name='batch1', hostname='batch1')
+            }),
+            node_pools=FrozenDict(**{
+                'batch0_batch1': ConfigNodePool(nodes=['batch0', 'batch1'],
+                                                name='batch0_batch1')
+            }),
+            jobs=FrozenDict(**{
+                'test_job0': ConfigJob(
+                    name='test_job0',
+                    node='batch0',
+                    schedule='interval 20s',
+                    actions=FrozenDict(**{
+                        'action0_0': ConfigAction(
+                            name='action0_0',
+                            command='test_command0.0',
+                            requires=(),
+                            node=None)
+                    }),
+                    queueing=True,
+                    run_limit=50,
+                    all_nodes=False,
+                    cleanup_action=ConfigAction(
+                        name='cleanup_action',
+                        command='test_command0.1',
+                        requires=(),
+                        node=None)),
+                'test_job1': ConfigJob(
+                    name='test_job1',
+                    node='batch0',
+                    schedule='daily 00:30:00 MWF',
+                    actions=FrozenDict(**{
+                        'action1_1': ConfigAction(
+                            name='action1_1',
+                            command='test_command1.1',
+                            requires=('command', 'name'),
+                            node=None),
+                        'action1_0': ConfigAction(
+                            name='action1_0',
+                            command='test_command1.0',
+                            requires=(),
+                            node=None)
+                    }),
+                    queueing=True,
+                    run_limit=50,
+                    all_nodes=False,
+                    cleanup_action=None),
+                'test_job2': ConfigJob(
+                    name='test_job2',
+                    node='batch1',
+                    schedule='daily 16:30:00',
+                    actions=FrozenDict(**{
+                        'action2_0': ConfigAction(
+                            name='action2_0',
+                            command='test_command2.0',
+                            requires=(),
+                            node=None)
+                    }),
+                    queueing=True,
+                    run_limit=50,
+                    all_nodes=False,
+                    cleanup_action=None),
+                'test_job3': ConfigJob(
+                    name='test_job3',
+                    node='batch1',
+                    schedule='constant',
+                    actions=FrozenDict(**{
+                        'action3_1': ConfigAction(
+                            name='action3_1',
+                            command='test_command3.1',
+                            requires=(),
+                            node=None),
+                        'action3_0': ConfigAction(
+                            name='action3_0',
+                            command='test_command3.0',
+                            requires=(),
+                            node=None),
+                        'action3_2': ConfigAction(
+                            name='action3_2',
+                            command='test_command3.2',
+                            requires=('action3_0', 'action3_1'),
+                            node='batch0')
+                    }),
+                    queueing=True,
+                    run_limit=50,
+                    all_nodes=False,
+                    cleanup_action=None),
+                'test_job4': ConfigJob(
+                    name='test_job4',
+                    node='batch0_batch1',
+                    schedule='daily',
+                    actions=FrozenDict(**{
+                        'action4_0': ConfigAction(
+                            name='action4_0',
+                            command='test_command4.0',
+                            requires=(),
+                            node=None)}),
+                    queueing=True,
+                    run_limit=50,
+                    all_nodes=True,
+                    cleanup_action=None)
+                }),
+                services=FrozenDict(**{
+                    'service0': ConfigService(
+                        name='service0',
+                        node='batch0_batch1',
+                        pid_file='/var/run/%(name)s-%(instance_number)s.pid',
+                        command='service_command0',
+                        monitor_interval=20,
+                        restart_interval=None,
+                        count=2)
+                }
+            )
+        )
 
-        assert_equal(len(self.test_config.jobs), 5)
-        assert_equal(len(self.test_config.services), 1)
-        assert_equal(len(self.test_config.nodes), 2)
-        assert_equal(len(self.test_config.node_pools), 1)
-
-    def test_node_attribute(self):
-        assert_equal(len(self.test_config.nodes), 2)
-        assert_equal(self.test_config.nodes['batch0'].hostname, "batch0")
-        assert_equal(self.test_config.nodes['batch1'].hostname, "batch1")
-
-        assert_equal(self.test_config.ssh_options['noagent'], False)
-
-        assert_equal(self.job4.node, self.test_config.node_pools['batch0_batch1'].name)
-
-    def test_job_name_attribute(self):
-        for j in self.all_jobs:
-            assert hasattr(j, "name")
-            
-        assert_equal(self.job0.name, "test_job0")
-        assert_equal(self.job1.name, "test_job1")
-        assert_equal(self.job2.name, "test_job2")
-        assert_equal(self.job3.name, "test_job3")
-        assert_equal(self.job4.name, "test_job4")
-    
-    def test_job_node_attribute(self):
-        for j in self.all_jobs:
-            assert hasattr(j, "node_pool")
-        
-        assert_equal(self.job0.node_pool.nodes[0], self.node0)
-        assert_equal(self.job1.node_pool.nodes[0], self.node0)
-        assert_equal(self.job2.node_pool.nodes[0], self.node1)
-        assert_equal(self.job3.node_pool.nodes[0], self.node1)
-
-        assert_equal(self.job4.node_pool.nodes[0], self.node0)
-        assert_equal(self.job4.node_pool.nodes[1], self.node1)
-
-    def test_job_schedule_attribute(self):
-        for j in self.all_jobs:
-            assert hasattr(j, "scheduler")
-
-        assert isinstance(self.job0.scheduler, scheduler.IntervalScheduler)
-        assert_equal(self.job0.scheduler.interval, datetime.timedelta(seconds=20))
-
-        assert isinstance(self.job1.scheduler, scheduler.DailyScheduler)
-        assert_equal(self.job1.scheduler.start_time, datetime.time(hour=0, minute=30, second=0))
-
-        assert isinstance(self.job2.scheduler, scheduler.DailyScheduler)
-        assert_equal(self.job2.scheduler.start_time, datetime.time(hour=16, minute=30, second=0))
-
-        assert isinstance(self.job3.scheduler, scheduler.ConstantScheduler)
-        assert isinstance(self.job4.scheduler, scheduler.DailyScheduler)
-
-    def test_actions_name_attribute(self): 
-        for job_count in range(len(self.all_jobs)):
-            j = self.all_jobs[job_count]
-
-            for act_count in range(len(j.topo_actions)):
-                a = j.topo_actions[act_count]
-                assert hasattr(a, "name")
-                assert_equal(a.name, "action%s_%s" % (job_count, act_count))
-
-            if j.cleanup_action is not None:
-                assert_equal(j.cleanup_action.name, config.CLEANUP_ACTION_NAME)
-
-
-    def test_all_nodes_attribute(self):
-        assert self.job4.all_nodes
-        assert not self.job3.all_nodes
-    
-    def test_actions_command_attribute(self): 
-        for job_count in range(len(self.all_jobs)):
-            j = self.all_jobs[job_count]
-
-            for act_count in range(len(j.topo_actions)):
-                a = j.topo_actions[act_count]
-                assert hasattr(a, "command")
-                assert_equal(a.command, "test_command%s.%s" % (job_count, act_count))
-        assert_equal(self.all_jobs[0].cleanup_action.command, "test_command0.1")
-      
-    def test_actions_requirements(self):
-        dep0 = self.job1.topo_actions[1]
-        dep1 = self.job3.topo_actions[2]
-        req0 = self.job1.topo_actions[0]
-        req1 = self.job3.topo_actions[0]
-
-        assert hasattr(dep0, 'required_actions')
-        assert hasattr(dep1, 'required_actions')
-        
-        assert_equals(len(dep0.required_actions), 1)
-        assert_equals(len(dep1.required_actions), 2)
-        assert_equals(len(req0.required_actions), 0)
-        assert_equals(len(req1.required_actions), 0)
-
-        assert dep0.required_actions[0] is req0
-        assert dep1.required_actions[0] is req1
-
-    def test_command_context(self):
-        assert hasattr(self.test_config, "command_context")
-        assert_equal(self.test_config.command_context['python'], "/usr/bin/python")
-        assert_equal(self.my_mcp.context['python'], "/usr/bin/python")
-        assert_equal(self.job1.context['python'], "/usr/bin/python")
-
-    def test_service_attributes(self):
-        assert_equal(self.serv.name, 'service0')
-        assert_equal(self.serv.monitor_interval, 20)
-        assert_equal(self.serv.count, 2)
-        assert self.serv.pid_file_template
-        assert self.serv.command
-        assert self.serv.context
+        assert_equal(test_config, expected)
 
 
 class LoggingConfigTest(TestCase):
