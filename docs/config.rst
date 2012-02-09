@@ -124,9 +124,17 @@ Notification Options
 **notification_options**
     Email settings for sending failure notices.
 
-        notification_options: !NotificationOptions
-            smtp_host: localhost
-            notification_addr: batch+errors@example.com
+    **smtp_host** (required)
+        SMTP host of the email server
+
+    **notification_addr** (required)
+        Email address to send mail to
+
+Example::
+
+    notification_options: !NotificationOptions
+        smtp_host: localhost
+        notification_addr: batch+errors@example.com
 
 .. _time_zone:
 
