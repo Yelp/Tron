@@ -7,7 +7,7 @@ import yaml
 
 from testify import *
 
-from test.sandbox import TronSandbox, TronSandboxException, wait_for_file_to_exist
+from tests.sandbox import TronSandbox, TronSandboxException, wait_for_file_to_exist
 
 
 BASIC_CONFIG = """

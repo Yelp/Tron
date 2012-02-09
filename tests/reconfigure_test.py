@@ -8,7 +8,7 @@ import shutil
 from testify import *
 from tron import config, mcp, scheduler
 from tron.utils import testingutils
-from test.config_test import syslog_address_for_platform
+from tests.config_test import syslog_address_for_platform
 
 class ConfigTest(TestCase):
     config = """
@@ -18,7 +18,7 @@ working_dir: "./config_test_dir"
 ssh_options: !SSHOptions
     agent: true
     identities:
-        - test/test_id_rsa
+        - tests/test_id_rsa
 
 nodes:
     - &node0 !Node
@@ -79,7 +79,7 @@ working_dir: "./config_test_dir"
 ssh_options: !SSHOptions
     agent: true
     identities:
-        - test/test_id_rsa
+        - tests/test_id_rsa
 
 syslog_address: %s
 
