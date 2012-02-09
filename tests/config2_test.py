@@ -129,18 +129,19 @@ services:
         shutil.rmtree(self.test_dir)
 
     def test_attributes(self):
-        assert_in('command_context', self.test_config)
-        assert_in('jobs', self.test_config)
-        assert_in('nodes', self.test_config)
-        assert_in('notification_options', self.test_config)
-        assert_in('ssh_options', self.test_config)
-        assert_in('syslog_address', self.test_config)
-        assert_in('time_zone', self.test_config)
-        assert_in('working_dir', self.test_config)
+        assert hasattr(self.test_config, 'command_context')
+        assert hasattr(self.test_config, 'jobs')
+        assert hasattr(self.test_config, 'nodes')
+        assert hasattr(self.test_config, 'notification_options')
+        assert hasattr(self.test_config, 'ssh_options')
+        assert hasattr(self.test_config, 'syslog_address')
+        assert hasattr(self.test_config, 'time_zone')
+        assert hasattr(self.test_config, 'working_dir')
 
-        assert_equal(len(self.test_config['jobs']), 5)
-        assert_equal(len(self.test_config['services']), 1)
-        assert_equal(len(self.test_config['nodes']), 3)
+        assert_equal(len(self.test_config.jobs), 5)
+        assert_equal(len(self.test_config.services), 1)
+        assert_equal(len(self.test_config.nodes), 2)
+        assert_equal(len(self.test_config.node_pools), 1)
 
     def test_node_attribute(self):
         assert_equal(len(self.my_mcp.nodes), 2)

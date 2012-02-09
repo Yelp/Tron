@@ -27,7 +27,7 @@ def load_config(string_or_file):
         s_tags = string_or_file
     s_notags = TAG_RE.sub('', s_tags)
 
-    if len(s_tags) > len(s.notags):
+    if len(s_tags) > len(s_notags):
         log.warn('Tron no longer uses !Tags to parse config files. Please'
                  ' remove them from yours.')
 
@@ -84,7 +84,7 @@ valid_bool = type_validator(
     'Value at %s is not a boolean: %s')
 
 
-class FrozenDict(collections.Mapping):
+class FrozenDict(Mapping):
     """Simple implementation of an immutable dictionary
 
     from http://stackoverflow.com/questions/2703599/what-would-be-a-frozen-dict
@@ -95,6 +95,9 @@ class FrozenDict(collections.Mapping):
             raise Exception("Can't call __init__ twice")
         self._d = dict(*args, **kwargs)
         self._hash = None
+
+    def __str__(self):
+        return 'FrozenDict(%s)' % self._d
 
     def __iter__(self):
         return iter(self._d)
@@ -188,7 +191,7 @@ ConfigAction = namedtuple(
     [
         'name',     # str
         'command',  # str
-        'requires', # list of str
+        'requires', # tuple of str
         'node',     # str
     ])
 
@@ -206,6 +209,21 @@ ConfigService = namedtuple(
     ])
 
 
+def normalize_node(node):
+    """Given a node value from a config, determine if it's the node's name or
+    the node's value. The former case is the "new style" of identifiers and the
+    latter case is the "old style" of anchors and aliases (*/&).
+    """
+    if isinstance(node, basestring):
+        return node
+    else:
+        # probably a reference back to an already validated node
+        try:
+            return valid_node(node).name
+        except ConfigError:
+            return valid_node_pool(node).name
+
+
 def valid_config(config):
     """Given a parsed config file (should be only basic literals and
     containers), return an immutable, fully populated series of namedtuples and
@@ -221,8 +239,8 @@ def valid_config(config):
         This way we can keep the defaults logic where it makes sense.
         """
         if key in config:
-            final_config[key] = validate_function(key)
-            del final_config[key]
+            final_config[key] = validate_function(config[key])
+            del config[key]
         else:
             final_config[key] = validate_function(None)
 
@@ -235,13 +253,18 @@ def valid_config(config):
 
     # If no nodes, use localhost
     if 'nodes' not in config:
-        config['nodes'] = dict(name='localhost', hostname='localhost')]
+        config['nodes'] = [dict(name='localhost', hostname='localhost')]
+
+    # If no node pools, use empty list
+    if 'node_pools' not in config:
+        config['node_pools'] = []
 
     # 'nodes' may contain nodes or node pools (for now). Internally split them
     # into 'nodes' and 'node_pools'.
     nodes = {}
     for node in config['nodes']:
-        if isinstance(node, list):
+        if (isinstance(node, list) or
+            (isinstance(node, dict) and 'nodes' in node)):
             log.warn('Node pools should be moved from "nodes" to "node_pools"'
                      ' before upgrading to Tron 0.5.')
             # this is actually a node pool, process it later
@@ -249,7 +272,7 @@ def valid_config(config):
             continue
         else:
             final_node = valid_node(node)
-            insert_nodup(nodes, final_node.name,
+            insert_nodup(nodes, final_node.name, final_node,
                          'Node name %r is used twice')
     del config['nodes']
     final_config['nodes'] = FrozenDict(**nodes)
@@ -258,16 +281,16 @@ def valid_config(config):
     node_pools = {}
     for node_pool in config['node_pools']:
         final_pool = valid_node_pool(node_pool)
-        insert_nodup(node_pools, final_poo.name,
+        insert_nodup(node_pools, final_pool.name, final_pool,
                      'Node pool name %r is used twice')
     del config['node_pools']
     final_config['node_pools'] = FrozenDict(**node_pools)
 
     # process jobs. output is a dict mapping name to values.
     jobs = {}
-    for config_job in config['jobs']:
-        job = valid_job(job)
-        insert_nodup(jobs, job.name,
+    for job in config['jobs']:
+        final_job = valid_job(job)
+        insert_nodup(jobs, final_job.name, final_job,
                      'Job name %r is used twice')
     del config['jobs']
     final_config['jobs'] = FrozenDict(**jobs)
@@ -276,7 +299,7 @@ def valid_config(config):
     services = {}
     for service in config['services']:
         final_service = valid_service(service)
-        insert_nodup(services, service.name,
+        insert_nodup(services, final_service.name, final_service,
                      'Service name %r is used twice')
     del config['services']
     final_config['services'] = FrozenDict(**services)
@@ -382,11 +405,25 @@ def valid_node(node):
         raise ConfigError('Nodes must be either a string representing the'
                           ' hostname or a dictionary with the key "hostname"'
                           ' and optionally "name", which defaults to the'
-                          ' hostname.')
+                          ' hostname. You said: %s' % node)
 
     final_node.setdefault('name', final_node['hostname'])
 
     return ConfigNode(**final_node)
+
+
+def valid_node_pool(node_pool):
+    if isinstance(node_pool, list):
+        node_pool = dict(nodes=node_pool)
+    final_node_pool = dict(
+        nodes=[normalize_node(node) for node in node_pool['nodes']],
+    )
+    if 'name' in node_pool:
+        final_node_pool['name'] = node_pool['name']
+    else:
+        final_node_pool['name'] = '_'.join(final_node_pool['nodes'])
+
+    return ConfigNodePool(**final_node_pool)
 
 
 def valid_job(job):
@@ -410,58 +447,106 @@ def valid_job(job):
     path = 'jobs.%s' % job['name']
     final_job = dict(
         name=valid_str('jobs', job['name']),
-        schedule=valid_schedule(path, job['schedule'])
-        actions={},
+        schedule=valid_schedule(path, job['schedule']),
         queueing=valid_bool(path, job.get('queueing', True)),
         run_limit=valid_int(path, job.get('run_limit', 50)),
         all_nodes=valid_bool(path, job.get('all_nodes', False)),
         cleanup_action=valid_cleanup_action(path,
                                             job.get('cleanup_action', None)),
+        node=normalize_node(job['node']),
     )
-
-    if isinstance(job['node'], basestring):
-        final_job['node'] = job['node']
-    else:
-        # probably a reference back to an already validated node
-        final_job['node'] = job['node']['name']
 
     actions = {}
     for action in job['actions']:
         final_action = valid_action(path, action)
-        insert_nodup(actions, final_action.name,
+        insert_nodup(actions, final_action.name, final_action,
                      'Action name %%r on job %r used twice' %
-                     final_job.name)
+                     final_job['name'])
     final_job['actions'] = FrozenDict(**actions)
 
     return ConfigJob(**final_job)
 
 
-def valid_schedule(schedule):
+def valid_schedule(path, schedule):
     return schedule
 
 
 def valid_action(path, action):
-    return action
+    required_keys = ['name', 'command']
+    optional_keys = ['requires', 'node']
+
+    missing_keys = set(required_keys) - set(action.keys())
+    if missing_keys:
+        if 'name' in job:
+            raise ConfigError("Action %s.%s is missing options: %s" %
+                              (path, action['name'],
+                               ', '.join(list(missing))))
+        else:
+            raise ConfigError("Nameless action in %s is missing options: %s" %
+                              (path, ', '.join(list(extra_keys))))
+
+    extra_keys = set(action.keys()) - set(required_keys + optional_keys)
+    if extra_keys:
+        raise ConfigError("Unknown options in %s.%s: %s" %
+                          (path, action['name'],
+                           ', '.join(list(extra_keys))))
+
+    my_path = '%s.%s' % (path, action['name'])
+    final_action = dict(
+        name=valid_str(path, action['name']),
+        command=valid_str(path, action['command']),
+    )
+
+    if 'node' in action and action['node'] is not None:
+        final_action['node'] = normalize_node(action['node'])
+    else:
+        final_action['node'] = None
+
+    requires = []
+    for r in action.get('requires', []):
+        if isinstance(r, basestring):
+            # new style, identifier
+            requires.append(r)
+        else:
+            # old style, alias
+            requires.append(r['name'])
+    final_action['requires'] = tuple(requires)
+
+    return ConfigAction(**final_action)
 
 
 def valid_cleanup_action(path, action):
-    return action
+    if action is None:
+        return None
+
+    if ('name' in action and
+        action['name'] not in (None, CLEANUP_ACTION_NAME)):
+        raise ConfigError("Cleanup actions cannot have custom names (you"
+                          " wanted %s.%s)" % (path, self.name))
+    if action.get('requires', []):
+        raise ConfigError("Cleanup actions cannot have dependencies (%r)" %
+                          path)
+
+    action['name'] = 'cleanup_action'
+    action['requires'] = []
+
+    return valid_action(path, action)
 
 
 def valid_service(service):
     required_keys = ['name', 'node', 'pid_file', 'command', 'monitor_interval']
     optional_keys = ['restart_interval', 'count']
 
-    missing_keys = set(required_keys) - set(job.keys())
+    missing_keys = set(required_keys) - set(service.keys())
     if missing_keys:
-        if 'name' in job:
+        if 'name' in service:
             raise ConfigError("Service %s is missing options: %s" %
                               (service['name'], ', '.join(list(missing))))
         else:
             raise ConfigError("Nameless service is missing options: %s" %
                               (', '.join(list(extra_keys))))
 
-    extra_keys = set(job.keys()) - set(required_keys + optional_keys)
+    extra_keys = set(service.keys()) - set(required_keys + optional_keys)
     if extra_keys:
         raise ConfigError("Unknown options in %s: %s" %
                           (service['name'], ', '.join(list(extra_keys))))
@@ -473,6 +558,7 @@ def valid_service(service):
         command=valid_str(path, service['command']),
         monitor_interval=valid_int(path, service['monitor_interval']),
         count=valid_int(path, service.get('count', 1)),
+        node=normalize_node(service['node']),
     )
 
     if 'restart_interval' in service:
@@ -482,10 +568,4 @@ def valid_service(service):
     else:
         final_service['restart_interval'] = None
 
-    if isinstance(service['node'], basestring):
-        final_service['node'] = service['node']
-    else:
-        # probably a reference back to an already validated node
-        final_service['node'] = service['node']['name']
-
-    return ConfigService(**service)
+    return ConfigService(**final_service)
