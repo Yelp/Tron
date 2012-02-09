@@ -2,6 +2,7 @@
 validation.
 """
 
+from collections import Mapping, namedtuple
 import logging
 import os
 import re
@@ -78,16 +79,139 @@ valid_dict = type_validator(
     lambda s: isinstance(s, dict),
     'Value at %s is not a dictionary: %s')
 
+valid_bool = type_validator(
+    lambda s: isinstance(s, bool),
+    'Value at %s is not a boolean: %s')
+
+
+class FrozenDict(collections.Mapping):
+    """Simple implementation of an immutable dictionary
+
+    from http://stackoverflow.com/questions/2703599/what-would-be-a-frozen-dict
+    """
+
+    def __init__(self, *args, **kwargs):
+        if hasattr(self, '_d'):
+            raise Exception("Can't call __init__ twice")
+        self._d = dict(*args, **kwargs)
+        self._hash = None
+
+    def __iter__(self):
+        return iter(self._d)
+
+    def __len__(self):
+        return len(self._d)
+
+    def __getitem__(self, key):
+        return self._d[key]
+
+    def __hash__(self):
+        # It would have been simpler and maybe more obvious to 
+        # use hash(tuple(sorted(self._d.iteritems()))) from this discussion
+        # so far, but this solution is O(n). I don't know what kind of 
+        # n we are going to run into, but sometimes it's hard to resist the 
+        # urge to optimize when it will gain improved algorithmic performance.
+        if self._hash is None:
+            self._hash = 0
+            for key, value in self.iteritems():
+                self._hash ^= hash(key)
+                self._hash ^= hash(value)
+        return self._hash
+
 
 ### LOADING THE SCHEMA ###
 
 
+def insert_nodup(d, key, item, error_fmt):
+    if key in d:
+        raise ConfigError(error_fmt, key)
+    else:
+        d[key] = item
+
+
+TronConfig = namedtuple(
+    'TronConfig',
+     [
+         'working_dir',          # str
+         'syslog_address',       # str
+         'command_context',      # FrozenDict of str
+         'ssh_options',          # ConchOptions
+         'notification_options', # NotificationOptions
+         'time_zone',            # str
+         'nodes',                # FrozenDict of ConfigNode
+         'node_pools',           # FrozenDict of ConfigNodePool
+         'jobs',                 # FrozenDict of ConfigJob
+         'services'              # FrozenDict of ConfigService
+     ])
+
+
+NotificationOptions = namedtuple(
+    'NotificationOptions',
+    [
+        'smtp_host',            # str
+        'notification_addr',    # str
+    ])
+
+
+ConfigNode = namedtuple(
+    'ConfigNode',
+    [
+        'name',     # str
+        'hostname', # str
+    ])
+
+
+ConfigNodePool = namedtuple(
+    'ConfigNodePool',
+    [
+        'nodes',    # str
+        'name',     # str
+    ])
+
+
+ConfigJob = namedtuple(
+    'ConfigJob',
+    [
+        'name',             # str
+        'node',             # str
+        'schedule',         # ConfigSchedule*
+        'actions',          # FrozenDict of ConfigAction
+        'queueing',         # bool
+        'run_limit',        # int
+        'all_nodes',        # bool
+        'cleanup_action',   # ConfigAction
+    ])
+
+
+ConfigAction = namedtuple(
+    'ConfigAction',
+    [
+        'name',     # str
+        'command',  # str
+        'requires', # list of str
+        'node',     # str
+    ])
+
+
+ConfigService = namedtuple(
+    'ConfigService',
+    [
+        'name',             # str
+        'node',             # str
+        'pid_file',         # str
+        'command',          # str
+        'monitor_interval', # float
+        'restart_interval', # float
+        'count',            # int
+    ])
+
+
 def valid_config(config):
     """Given a parsed config file (should be only basic literals and
-    containers), return a fully populated dictionary with all defaults filled
-    in, all valid values, and no unused values. Throws a ConfigError if any
-    part of the input dict is invalid.
-    """
+    containers), return an immutable, fully populated series of namedtuples and
+    FrozenDicts with all defaults filled in, all valid values, and no unused
+    values. Throws a ConfigError if any part of the input dict is invalid.  """
+
     final_config = {}
 
     def store(key, validate_function):
@@ -109,15 +233,13 @@ def valid_config(config):
     store('notification_options', valid_notification_options)
     store('time_zone', valid_time_zone)
 
-    final_config['nodes'] = []
-    final_config['node_pools'] = []
-
     # If no nodes, use localhost
     if 'nodes' not in config:
-        config['nodes'] = [{'hostname': 'localhost'}]
+        config['nodes'] = dict(name='localhost', hostname='localhost')]
 
     # 'nodes' may contain nodes or node pools (for now). Internally split them
     # into 'nodes' and 'node_pools'.
+    nodes = {}
     for node in config['nodes']:
         if isinstance(node, list):
             log.warn('Node pools should be moved from "nodes" to "node_pools"'
@@ -126,29 +248,44 @@ def valid_config(config):
             config['node_pools'].append(node)
             continue
         else:
-            final_config['nodes'].append(valid_node(node))
+            final_node = valid_node(node)
+            insert_nodup(nodes, final_node.name,
+                         'Node name %r is used twice')
     del config['nodes']
+    final_config['nodes'] = FrozenDict(**nodes)
 
     # process node pools
+    node_pools = {}
     for node_pool in config['node_pools']:
-        final_config['node_pools'].append(valid_node_pool(node_pool))
+        final_pool = valid_node_pool(node_pool)
+        insert_nodup(node_pools, final_poo.name,
+                     'Node pool name %r is used twice')
     del config['node_pools']
+    final_config['node_pools'] = FrozenDict(**node_pools)
 
-    # process jobs
-    final_config['jobs'] = [valid_job(job)
-                            for job in config['jobs']]
+    # process jobs. output is a dict mapping name to values.
+    jobs = {}
+    for config_job in config['jobs']:
+        job = valid_job(job)
+        insert_nodup(jobs, job.name,
+                     'Job name %r is used twice')
     del config['jobs']
+    final_config['jobs'] = FrozenDict(**jobs)
 
     # process services
-    final_config['services'] = [valid_service(service)
-                                for service in config['services']]
+    services = {}
+    for service in config['services']:
+        final_service = valid_service(service)
+        insert_nodup(services, service.name,
+                     'Service name %r is used twice')
     del config['services']
+    final_config['services'] = FrozenDict(**services)
 
     # Make sure we used everything
     if len(config) > 0:
         raise ConfigError("Unknown options: %s" % ', '.join(config.keys()))
 
-    return final_config
+    return TronConfig(**final_config)
 
 
 def valid_working_dir(wd):
@@ -180,7 +317,8 @@ def valid_syslog(syslog):
 
 
 def valid_command_context(context):
-    return valid_dict('command_context', context or {})
+    # context can be any dict.
+    return FrozenDict(**valid_dict('command_context', context or {}))
 
 
 def valid_ssh_options(opts):
@@ -217,12 +355,10 @@ def valid_notification_options(options):
     if options is None:
         return None
     else:
-        if 'smtp_host' not in options:
-            raise ConfigError("smtp_host required")
-        if 'notification_addr' not in options:
-            raise ConfigError("notification_addr required")
-
-    return options
+        if sorted(options.keys()) != ['notification_addr', 'smtp_host']:
+            raise ConfigError('notification_options must contain smtp_host,'
+                              ' notification_addr, and nothing else.')
+    return NotificationOptions(options)
 
 
 def valid_time_zone(tz):
@@ -236,12 +372,120 @@ def valid_time_zone(tz):
 
 
 def valid_node(node):
-    return node
+    # Sure, let's accept plain strings, why not.
+    if isinstance(node, basestring):
+        return ConfigNode(hostname=node, name=node)
+
+    final_node = valid_dict('nodes', node)
+    sorted_keys = sorted(final_node.keys())
+    if sorted_keys != ['hostname'] and sorted_keys != ['hostname', 'name']:
+        raise ConfigError('Nodes must be either a string representing the'
+                          ' hostname or a dictionary with the key "hostname"'
+                          ' and optionally "name", which defaults to the'
+                          ' hostname.')
+
+    final_node.setdefault('name', final_node['hostname'])
+
+    return ConfigNode(**final_node)
 
 
 def valid_job(job):
-    return job
+    required_keys = ['name', 'node', 'schedule', 'actions']
+    optional_keys = ['queueing', 'run_limit', 'all_nodes', 'cleanup_action']
+
+    missing_keys = set(required_keys) - set(job.keys())
+    if missing_keys:
+        if 'name' in job:
+            raise ConfigError("Job %s is missing options: %s" %
+                              (job['name'], ', '.join(list(missing))))
+        else:
+            raise ConfigError("Nameless job is missing options: %s" %
+                              (', '.join(list(extra_keys))))
+
+    extra_keys = set(job.keys()) - set(required_keys + optional_keys)
+    if extra_keys:
+        raise ConfigError("Unknown options in %s: %s" %
+                          (job['name'], ', '.join(list(extra_keys))))
+
+    path = 'jobs.%s' % job['name']
+    final_job = dict(
+        name=valid_str('jobs', job['name']),
+        schedule=valid_schedule(path, job['schedule'])
+        actions={},
+        queueing=valid_bool(path, job.get('queueing', True)),
+        run_limit=valid_int(path, job.get('run_limit', 50)),
+        all_nodes=valid_bool(path, job.get('all_nodes', False)),
+        cleanup_action=valid_cleanup_action(path,
+                                            job.get('cleanup_action', None)),
+    )
+
+    if isinstance(job['node'], basestring):
+        final_job['node'] = job['node']
+    else:
+        # probably a reference back to an already validated node
+        final_job['node'] = job['node']['name']
+
+    actions = {}
+    for action in job['actions']:
+        final_action = valid_action(path, action)
+        insert_nodup(actions, final_action.name,
+                     'Action name %%r on job %r used twice' %
+                     final_job.name)
+    final_job['actions'] = FrozenDict(**actions)
+
+    return ConfigJob(**final_job)
+
+
+def valid_schedule(schedule):
+    return schedule
+
+
+def valid_action(path, action):
+    return action
+
+
+def valid_cleanup_action(path, action):
+    return action
 
 
 def valid_service(service):
-    return service
+    required_keys = ['name', 'node', 'pid_file', 'command', 'monitor_interval']
+    optional_keys = ['restart_interval', 'count']
+
+    missing_keys = set(required_keys) - set(job.keys())
+    if missing_keys:
+        if 'name' in job:
+            raise ConfigError("Service %s is missing options: %s" %
+                              (service['name'], ', '.join(list(missing))))
+        else:
+            raise ConfigError("Nameless service is missing options: %s" %
+                              (', '.join(list(extra_keys))))
+
+    extra_keys = set(job.keys()) - set(required_keys + optional_keys)
+    if extra_keys:
+        raise ConfigError("Unknown options in %s: %s" %
+                          (service['name'], ', '.join(list(extra_keys))))
+
+    path = 'services.%s' % service['name']
+    final_service = dict(
+        name=valid_str(path, service['name']),
+        pid_file=valid_str(path, service['pid_file']),
+        command=valid_str(path, service['command']),
+        monitor_interval=valid_int(path, service['monitor_interval']),
+        count=valid_int(path, service.get('count', 1)),
+    )
+
+    if 'restart_interval' in service:
+        final_service['restart_interval'] = valid_int(
+                                                path,
+                                                service['restart_interval'])
+    else:
+        final_service['restart_interval'] = None
+
+    if isinstance(service['node'], basestring):
+        final_service['node'] = service['node']
+    else:
+        # probably a reference back to an already validated node
+        final_service['node'] = service['node']['name']
+
+    return ConfigService(**service)
