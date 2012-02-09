@@ -275,13 +275,10 @@ def valid_config(config):
     store('notification_options', valid_notification_options)
     store('time_zone', valid_time_zone)
 
-    # If no nodes, use localhost
-    if 'nodes' not in config:
-        config['nodes'] = [dict(name='localhost', hostname='localhost')]
-
-    # If no node pools, use empty list
-    if 'node_pools' not in config:
-        config['node_pools'] = []
+    config.setdefault('nodes', [dict(name='localhost', hostname='localhost')])
+    config.setdefault('node_pools', [])
+    config.setdefault('jobs', [])
+    config.setdefault('services', [])
 
     # 'nodes' may contain nodes or node pools (for now). Internally split them
     # into 'nodes' and 'node_pools'.
@@ -458,7 +455,7 @@ def valid_job(job):
     if missing_keys:
         if 'name' in job:
             raise ConfigError("Job %s is missing options: %s" %
-                              (job['name'], ', '.join(list(missing))))
+                              (job['name'], ', '.join(list(missing_keys))))
         else:
             raise ConfigError("Nameless job is missing options: %s" %
                               (', '.join(list(extra_keys))))
@@ -481,11 +478,14 @@ def valid_job(job):
     )
 
     actions = {}
-    for action in job['actions']:
+    for action in job['actions'] or []:
         final_action = valid_action(path, action)
         insert_nodup(actions, final_action.name, final_action,
                      'Action name %%r on job %r used twice' %
                      final_job['name'])
+    if len(actions) < 1:
+        raise ConfigError("Job %s must have at least one action" %
+                          final_job['name'])
     final_job['actions'] = FrozenDict(**actions)
 
     return ConfigJob(**final_job)
@@ -592,7 +592,8 @@ def valid_interval_scheduler(interval):
     )
 
 
-def valid_action(path, action):
+def valid_action(path, action, is_cleanup=False):
+    # check set of keys
     required_keys = ['name', 'command']
     optional_keys = ['requires', 'node']
 
@@ -601,7 +602,7 @@ def valid_action(path, action):
         if 'name' in job:
             raise ConfigError("Action %s.%s is missing options: %s" %
                               (path, action['name'],
-                               ', '.join(list(missing))))
+                               ', '.join(list(missing_keys))))
         else:
             raise ConfigError("Nameless action in %s is missing options: %s" %
                               (path, ', '.join(list(extra_keys))))
@@ -612,11 +613,18 @@ def valid_action(path, action):
                           (path, action['name'],
                            ', '.join(list(extra_keys))))
 
+    # basic values
     my_path = '%s.%s' % (path, action['name'])
     final_action = dict(
         name=valid_str(path, action['name']),
         command=valid_str(path, action['command']),
     )
+
+    # check name
+    if is_cleanup and final_action['name'] != CLEANUP_ACTION_NAME:
+        raise ConfigError("Bad action name at %s" % path)
+    elif not is_cleanup and final_action['name'] == CLEANUP_ACTION_NAME:
+        raise ConfigError("Bad action name at %s" % path)
 
     if 'node' in action and action['node'] is not None:
         final_action['node'] = normalize_node(action['node'])
@@ -624,7 +632,14 @@ def valid_action(path, action):
         final_action['node'] = None
 
     requires = []
-    for r in action.get('requires', []):
+
+    # accept a string or a list
+    old_requires = action.get('requires', [])
+    if isinstance(old_requires, basestring):
+        old_requires = [old_requires]
+    old_requires = valid_list(my_path, old_requires)
+
+    for r in old_requires:
         if isinstance(r, basestring):
             # new style, identifier
             requires.append(r)
@@ -643,7 +658,7 @@ def valid_cleanup_action(path, action):
     if ('name' in action and
         action['name'] not in (None, CLEANUP_ACTION_NAME)):
         raise ConfigError("Cleanup actions cannot have custom names (you"
-                          " wanted %s.%s)" % (path, self.name))
+                          " wanted %s.%s)" % (path, action['name']))
     if action.get('requires', []):
         raise ConfigError("Cleanup actions cannot have dependencies (%r)" %
                           path)
@@ -651,7 +666,7 @@ def valid_cleanup_action(path, action):
     action['name'] = 'cleanup_action'
     action['requires'] = []
 
-    return valid_action(path, action)
+    return valid_action(path, action, is_cleanup=True)
 
 
 def valid_service(service):
@@ -662,7 +677,7 @@ def valid_service(service):
     if missing_keys:
         if 'name' in service:
             raise ConfigError("Service %s is missing options: %s" %
-                              (service['name'], ', '.join(list(missing))))
+                              (service['name'], ', '.join(list(missing_keys))))
         else:
             raise ConfigError("Nameless service is missing options: %s" %
                               (', '.join(list(extra_keys))))

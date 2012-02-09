@@ -9,7 +9,6 @@ import StringIO
 import tempfile
 
 from testify import *
-from tron import config2, mcp, scheduler
 from tron.config2 import *
 from tron.utils import timeutils
 
@@ -17,18 +16,20 @@ from tron.utils import timeutils
 BASE_CONFIG = """
 working_dir: "/tmp"
 
-ssh_options: !SSHOptions
+ssh_options:
     agent: true
     identities:
         - tests/test_id_rsa
 
 nodes:
-    - &node0 !Node
-        hostname: 'batch0'
-    - &node1
-        hostname: 'batch1'
-    - &nodePool !NodePool
-        nodes: [*node0, *node1]
+    - name: node0
+      hostname: 'batch0'
+    - name: node1
+      hostname: 'batch1'
+
+node_pools:
+    - name: NodePool
+      nodes: [node0, node1]
 """
 
 
@@ -299,147 +300,138 @@ class BadJobConfigTest(TestCase):
     @setup
     def build_env(self):
         self.test_dir = tempfile.mkdtemp()
-        self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')
 
     def test_no_actions(self):
         test_config = BASE_CONFIG + """
 jobs:
-    - &job0
+    -
         name: "test_job0"
-        node: *node0
+        node: node0
         schedule: "interval 20s"
         """
-        test_config = config.load_config(StringIO.StringIO(test_config))
-        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+        assert_raises(ConfigError, load_config, test_config)
 
     def test_empty_actions(self):
         test_config = BASE_CONFIG + """
 jobs:
-    - &job0
+    -
         name: "test_job0"
-        node: *node0
+        node: node0
         schedule: "interval 20s"
         actions:
         """
-        test_config = config.load_config(StringIO.StringIO(test_config))
-        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+        assert_raises(ConfigError, load_config, test_config)
 
     def test_dupe_names(self):
         test_config = BASE_CONFIG + """
 jobs:
-    - &job0
+    -
         name: "test_job0"
-        node: *node0
+        node: node0
         schedule: "interval 20s"
         actions:
             -
                 name: "action0_0"
-                command: "test_command0.0"                
+                command: "test_command0.0"
             -
                 name: "action0_0"
-                command: "test_command0.0"                
+                command: "test_command0.0"
 
         """
-        test_config = config.load_config(StringIO.StringIO(test_config))
-        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
-    
+        assert_raises(ConfigError, load_config, test_config)
+
     def test_bad_requires(self):
         test_config = BASE_CONFIG + """
 jobs:
-    - &job0
+    -
         name: "test_job0"
-        node: *node0
+        node: node0
         schedule: "interval 20s"
         actions:
-            - &action0_0
+            -
                 name: "action0_0"
-                command: "test_command0.0"                
+                command: "test_command0.0"
             - &action0_1
                 name: "action0_1"
-                command: "test_command0.1"              
+                command: "test_command0.1"
 
-    - &job1
+    -
         name: "test_job1"
-        node: *node0
+        node: node0
         schedule: "interval 20s"
         actions:
             -
                 name: "action1_0"
                 command: "test_command1.0"
-                requires: *action0_0
+                requires: action0_0
 
         """
-        test_config = config.load_config(StringIO.StringIO(test_config))
-        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+        assert_raises(ConfigError, load_config, test_config)
 
-    def test_config_name_collision(self):
+    def test_config_cleanup_name_collision(self):
         test_config = BASE_CONFIG + """
 jobs:
-    - &job0
+    -
         name: "test_job0"
-        node: *node0
+        node: node0
         schedule: "interval 20s"
         actions:
             -
                 name: "%s"
-                command: "test_command0.0"                
+                command: "test_command0.0"
 
-        """ % config.CLEANUP_ACTION_NAME
-        test_config = config.load_config(StringIO.StringIO(test_config))
-        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+        """ % CLEANUP_ACTION_NAME
+        assert_raises(ConfigError, load_config, test_config)
 
-    def test_config_name(self):
+    def test_config_cleanup_name(self):
         test_config = BASE_CONFIG + """
 jobs:
-    - &job0
+    -
         name: "test_job0"
-        node: *node0
+        node: node0
         schedule: "interval 20s"
         actions:
             -
                 name: "action0_0"
-                command: "test_command0.0"                
+                command: "test_command0.0"
         cleanup_action:
             name: "gerald"
             command: "test_command0.1"
         """
-        test_config = config.load_config(StringIO.StringIO(test_config))
-        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+        assert_raises(ConfigError, load_config, test_config)
 
-    def test_config_requires(self):
+    def test_config_cleanup_requires(self):
         test_config = BASE_CONFIG + """
 jobs:
-    - &job0
+    -
         name: "test_job0"
-        node: *node0
+        node: node0
         schedule: "interval 20s"
         actions:
-            -   &action0_0
+            -
                 name: "action0_0"
-                command: "test_command0.0"                
+                command: "test_command0.0"
         cleanup_action:
             command: "test_command0.1"
-            requires: *action0_0
+            requires: [action0_0]
         """
-        test_config = config.load_config(StringIO.StringIO(test_config))
-        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+        assert_raises(ConfigError, load_config, test_config)
 
     def test_job_in_services(self):
         test_config = BASE_CONFIG + """
 services:
-    - !Job
+    -
         name: "test_job0"
-        node: *node0
+        node: node0
         schedule: "interval 20s"
         actions:
-            - &intAction !Action
+            -
                 name: "action0_0"
                 command: "test_command0.0"
-        cleanup_action: !CleanupAction
+        cleanup_action:
             command: "test_command0.1"
 """
-        test_config = config.load_config(StringIO.StringIO(test_config))
-        assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
+        assert_raises(ConfigError, load_config, test_config)
 
 if __name__ == '__main__':
     run()
