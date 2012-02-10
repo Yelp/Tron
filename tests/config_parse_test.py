@@ -198,7 +198,7 @@ services:
                     run_limit=50,
                     all_nodes=False,
                     cleanup_action=ConfigAction(
-                        name='cleanup_action',
+                        name='cleanup',
                         command='test_command0.1',
                         requires=(),
                         node=None)),
@@ -211,7 +211,7 @@ services:
                         'action1_1': ConfigAction(
                             name='action1_1',
                             command='test_command1.1',
-                            requires=('command', 'name'),
+                            requires=('action1_0',),
                             node=None),
                         'action1_0': ConfigAction(
                             name='action1_0',

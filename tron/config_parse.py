@@ -667,7 +667,7 @@ def valid_action(path, action, is_cleanup=False):
 
         if requires[-1] == CLEANUP_ACTION_NAME:
             raise ConfigError('Actions cannot depend on the cleanup action.'
-                              ' (%s.%s)' % (path, action))
+                              ' (%s)' % (my_path))
 
     final_action['requires'] = tuple(requires)
 
