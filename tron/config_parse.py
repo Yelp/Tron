@@ -183,6 +183,10 @@ ConfigGrocScheduler = namedtuple(
 
 def type_converter(convert, error_fmt):
     def f(path, value):
+        """Convert *value* at config path *path* into something else via the
+        *convert* function, raising ConfigError if *convert* raises a
+        TypeError. *error_fmt* will be interpolated with (path, value).
+        """
         try:
             return convert(value)
         except TypeError:
@@ -199,6 +203,8 @@ valid_int = type_converter(
 
 def type_validator(validator, error_fmt):
     def f(path, value):
+        """If *validator* does not return True for *value*, raise ConfigError
+        """
         if not validator(value):
             raise ConfigError(error_fmt, (path, value))
         return value
@@ -222,7 +228,8 @@ valid_bool = type_validator(
 
 
 class FrozenDict(Mapping):
-    """Simple implementation of an immutable dictionary
+    """Simple implementation of an immutable dictionary so we can freeze the
+    command context, set of jobs/services, actions, etc.
 
     from http://stackoverflow.com/questions/2703599/what-would-be-a-frozen-dict
     """
@@ -263,6 +270,9 @@ class FrozenDict(Mapping):
 
 
 def insert_nodup(d, key, item, error_fmt):
+    """If key is not yet in d, insert it. Otherwise, raise ConfigError.
+    *error_fmt* will be interpolated with (key,).
+    """
     if key in d:
         raise ConfigError(error_fmt, key)
     else:
@@ -270,9 +280,10 @@ def insert_nodup(d, key, item, error_fmt):
 
 
 def normalize_node(node):
-    """Given a node value from a config, determine if it's the node's name or
-    the node's value. The former case is the "new style" of identifiers and the
-    latter case is the "old style" of anchors and aliases (*/&).
+    """Given a node value from a config, determine if it's the node's name, the
+    node's value, or actually a node pool. The former case is the "new style"
+    of identifiers and the latter case is the "old style" of anchors and
+    aliases (*/&). Return the name.
     """
     if isinstance(node, basestring):
         return node
@@ -290,6 +301,9 @@ def valid_config(config):
     FrozenDicts with all defaults filled in, all valid values, and no unused
     values. Throws a ConfigError if any part of the input dict is invalid.  """
 
+    # This dictionary will be used as the kwargs to the TronConfig namedtuple.
+    # As keys are added to it, they are deleted from config so we can make sure
+    # the user didn't make any top-level typos.
     final_config = {}
 
     def store(key, validate_function):
@@ -304,6 +318,7 @@ def valid_config(config):
         else:
             final_config[key] = validate_function(None)
 
+    # Take care of the basics
     store('working_dir', valid_working_dir)
     store('syslog_address', valid_syslog)
     store('command_context', valid_command_context)
@@ -311,20 +326,22 @@ def valid_config(config):
     store('notification_options', valid_notification_options)
     store('time_zone', valid_time_zone)
 
+    # Prepopulate collections
     config.setdefault('nodes', [dict(name='localhost', hostname='localhost')])
     config.setdefault('node_pools', [])
     config.setdefault('jobs', [])
     config.setdefault('services', [])
 
     # 'nodes' may contain nodes or node pools (for now). Internally split them
-    # into 'nodes' and 'node_pools'.
+    # into 'nodes' and 'node_pools'. Process the nodes.
     nodes = {}
     for node in config['nodes']:
+        # A node pool is characterized by being a list, or a dictionary that
+        # contains a list of nodes
         if (isinstance(node, list) or
             (isinstance(node, dict) and 'nodes' in node)):
             log.warn('Node pools should be moved from "nodes" to "node_pools"'
                      ' before upgrading to Tron 0.5.')
-            # this is actually a node pool, process it later
             config['node_pools'].append(node)
             continue
         else:
@@ -525,13 +542,25 @@ def valid_job(job):
         raise ConfigError("Job %s must have at least one action" %
                           final_job['name'])
 
-    # make sure actions only depend on other actions within the same job
-    for action in actions.values():
-        for dep in action.requires:
-            if dep not in actions:
+    # make sure there are no circular or misspelled dependencies
+    def dfs_action(base_action, current_action, stack):
+        stack.append(current_action.name)
+        for dep in current_action.requires:
+            try:
+                if dep == base_action.name and len(stack) > 0:
+                    raise ConfigError('Circular dependency in %s: %s' %
+                                      (path, ' -> '.join(stack)))
+                dfs_action(base_action, actions[dep], stack)
+            except KeyError:
                 raise ConfigError('Action jobs.%s.%s has a dependency "%s"'
                                   ' that is not in the same job!' %
-                                  (final_job['name'], action.name, dep))
+                                  (final_job['name'],
+                                   current_action.name,
+                                   dep))
+        stack.pop()
+
+    for action in actions.values():
+        dfs_action(action, action, [])
 
     final_job['actions'] = FrozenDict(**actions)
 

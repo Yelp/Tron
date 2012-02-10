@@ -367,7 +367,7 @@ jobs:
             -
                 name: "action0_0"
                 command: "test_command0.0"
-            - &action0_1
+            -
                 name: "action0_1"
                 command: "test_command0.1"
 
@@ -381,6 +381,26 @@ jobs:
                 command: "test_command1.0"
                 requires: action0_0
 
+        """
+        assert_raises(ConfigError, load_config, test_config)
+
+
+    def test_circular_dependency(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    -
+        name: "test_job0"
+        node: node0
+        schedule: "interval 20s"
+        actions:
+            -
+                name: "action0_0"
+                command: "test_command0.0"
+                requires: action0_1
+            -
+                name: "action0_1"
+                command: "test_command0.1"
+                requires: action0_0
         """
         assert_raises(ConfigError, load_config, test_config)
 
