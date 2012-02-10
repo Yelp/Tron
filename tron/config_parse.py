@@ -294,7 +294,7 @@ def valid_config(config):
         else:
             final_node = valid_node(node)
             insert_nodup(nodes, final_node.name, final_node,
-                         'Node name %r is used twice')
+                         'Node name %s is used twice')
     del config['nodes']
     final_config['nodes'] = FrozenDict(**nodes)
 
@@ -303,7 +303,7 @@ def valid_config(config):
     for node_pool in config['node_pools']:
         final_pool = valid_node_pool(node_pool)
         insert_nodup(node_pools, final_pool.name, final_pool,
-                     'Node pool name %r is used twice')
+                     'Node pool name %s is used twice')
     del config['node_pools']
     final_config['node_pools'] = FrozenDict(**node_pools)
 
@@ -312,7 +312,7 @@ def valid_config(config):
     for job in config['jobs']:
         final_job = valid_job(job)
         insert_nodup(jobs, final_job.name, final_job,
-                     'Job name %r is used twice')
+                     'Job name %s is used twice')
     del config['jobs']
     final_config['jobs'] = FrozenDict(**jobs)
 
@@ -321,7 +321,7 @@ def valid_config(config):
     for service in config['services']:
         final_service = valid_service(service)
         insert_nodup(services, final_service.name, final_service,
-                     'Service name %r is used twice')
+                     'Service name %s is used twice')
     del config['services']
     final_config['services'] = FrozenDict(**services)
 
@@ -481,7 +481,7 @@ def valid_job(job):
     for action in job['actions'] or []:
         final_action = valid_action(path, action)
         insert_nodup(actions, final_action.name, final_action,
-                     'Action name %%r on job %r used twice' %
+                     'Action name %%s on job %s used twice' %
                      final_job['name'])
     if len(actions) < 1:
         raise ConfigError("Job %s must have at least one action" %
@@ -511,7 +511,7 @@ def valid_schedule(path, schedule):
         elif 'start_time' in schedule or 'days' in schedule:
             return valid_daily_scheduler(**schedule)
         else:
-            raise ConfigError("Unknown scheduler: %r" % schedule)
+            raise ConfigError("Unknown scheduler: %s" % schedule)
 
 
 def valid_daily_scheduler(start_time=None, days=None):
@@ -525,7 +525,7 @@ def valid_daily_scheduler(start_time=None, days=None):
 
     err_msg = ("Start time must be in string format HH:MM[:SS]. Seconds"
                " are ignored but parsed so as to be backward-compatible."
-               " You said: %r")
+               " You said: %s")
 
     if start_time is not None:
         if not isinstance(start_time, basestring):
@@ -573,7 +573,7 @@ def valid_interval_scheduler(interval):
         interval_re = re.compile(r"\d+|[a-zA-Z]+")
         interval_tokens = interval_re.findall(interval)
         if len(interval_tokens) != 2:
-            raise ConfigError("Invalid interval specification: %r",
+            raise ConfigError("Invalid interval specification: %s",
                               interval)
 
         value, units = interval_tokens
@@ -584,7 +584,7 @@ def valid_interval_scheduler(interval):
                 kwargs[key] = int(value)
                 break
         else:
-            raise ConfigError("Invalid interval specification: %r",
+            raise ConfigError("Invalid interval specification: %s",
                               interval)
 
     return ConfigIntervalScheduler(
@@ -660,7 +660,7 @@ def valid_cleanup_action(path, action):
         raise ConfigError("Cleanup actions cannot have custom names (you"
                           " wanted %s.%s)" % (path, action['name']))
     if action.get('requires', []):
-        raise ConfigError("Cleanup actions cannot have dependencies (%r)" %
+        raise ConfigError("Cleanup actions cannot have dependencies (%s)" %
                           path)
 
     action['name'] = CLEANUP_ACTION_NAME
