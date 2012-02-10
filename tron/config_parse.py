@@ -621,10 +621,10 @@ def valid_action(path, action, is_cleanup=False):
     )
 
     # check name
-    if is_cleanup and final_action['name'] != CLEANUP_ACTION_NAME:
-        raise ConfigError("Bad action name at %s" % path)
-    elif not is_cleanup and final_action['name'] == CLEANUP_ACTION_NAME:
-        raise ConfigError("Bad action name at %s" % path)
+    if ((is_cleanup and final_action['name'] != CLEANUP_ACTION_NAME) or
+        (not is_cleanup and final_action['name'] == CLEANUP_ACTION_NAME)):
+        raise ConfigError("Bad action name at %s: %s" %
+                          (path, final_action['name']))
 
     if 'node' in action and action['node'] is not None:
         final_action['node'] = normalize_node(action['node'])
@@ -663,7 +663,7 @@ def valid_cleanup_action(path, action):
         raise ConfigError("Cleanup actions cannot have dependencies (%r)" %
                           path)
 
-    action['name'] = 'cleanup_action'
+    action['name'] = CLEANUP_ACTION_NAME
     action['requires'] = []
 
     return valid_action(path, action, is_cleanup=True)

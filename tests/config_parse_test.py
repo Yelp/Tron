@@ -1,4 +1,3 @@
-"""Tests for our configuration system"""
 import datetime
 import logging
 from logging import handlers
@@ -9,7 +8,7 @@ import StringIO
 import tempfile
 
 from testify import *
-from tron.config2 import *
+from tron.config_parse import *
 from tron.utils import timeutils
 
 
@@ -147,7 +146,7 @@ services:
         shutil.rmtree(self.test_dir)
 
     def test_attributes(self):
-        test_config = config2.load_config(StringIO.StringIO(self.config))
+        test_config = load_config(StringIO.StringIO(self.config))
         expected = TronConfig(
             working_dir='/tmp',
             syslog_address=None,
