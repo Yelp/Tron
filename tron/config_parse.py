@@ -477,15 +477,26 @@ def valid_job(job):
         node=normalize_node(job['node']),
     )
 
+    # load actions
     actions = {}
     for action in job['actions'] or []:
         final_action = valid_action(path, action)
         insert_nodup(actions, final_action.name, final_action,
                      'Action name %%s on job %s used twice' %
                      final_job['name'])
+
     if len(actions) < 1:
         raise ConfigError("Job %s must have at least one action" %
                           final_job['name'])
+
+    # make sure actions only depend on other actions within the same job
+    for action in actions.values():
+        for dep in action.requires:
+            if dep not in actions:
+                raise ConfigError('Action jobs.%s.%s has a dependency "%s"'
+                                  ' that is not in the same job!' %
+                                  (final_job['name'], action.name, dep))
+
     final_job['actions'] = FrozenDict(**actions)
 
     return ConfigJob(**final_job)
@@ -633,10 +644,17 @@ def valid_action(path, action, is_cleanup=False):
 
     requires = []
 
-    # accept a string or a list
+    # accept a string, pointer, or list
     old_requires = action.get('requires', [])
+
+    # string identifier
     if isinstance(old_requires, basestring):
         old_requires = [old_requires]
+
+    # pointer
+    if isinstance(old_requires, dict):
+        old_requires = [old_requires['name']]
+
     old_requires = valid_list(my_path, old_requires)
 
     for r in old_requires:
@@ -646,6 +664,11 @@ def valid_action(path, action, is_cleanup=False):
         else:
             # old style, alias
             requires.append(r['name'])
+
+        if requires[-1] == CLEANUP_ACTION_NAME:
+            raise ConfigError('Actions cannot depend on the cleanup action.'
+                              ' (%s.%s)' % (path, action))
+
     final_action['requires'] = tuple(requires)
 
     return ConfigAction(**final_action)

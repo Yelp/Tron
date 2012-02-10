@@ -292,6 +292,23 @@ services:
             )
         )
 
+        # we could just do a big assert_equal here, but it would be hella hard
+        # to debug failures that way.
+        assert_equal(test_config.working_dir, expected.working_dir)
+        assert_equal(test_config.syslog_address, expected.syslog_address)
+        assert_equal(test_config.command_context, expected.command_context)
+        assert_equal(test_config.ssh_options, expected.ssh_options)
+        assert_equal(test_config.notification_options, expected.notification_options)
+        assert_equal(test_config.time_zone, expected.time_zone)
+        assert_equal(test_config.nodes, expected.nodes)
+        assert_equal(test_config.node_pools, expected.node_pools)
+        assert_equal(test_config.jobs['test_job0'], expected.jobs['test_job0'])
+        assert_equal(test_config.jobs['test_job1'], expected.jobs['test_job1'])
+        assert_equal(test_config.jobs['test_job2'], expected.jobs['test_job2'])
+        assert_equal(test_config.jobs['test_job3'], expected.jobs['test_job3'])
+        assert_equal(test_config.jobs['test_job4'], expected.jobs['test_job4'])
+        assert_equal(test_config.jobs, expected.jobs)
+        assert_equal(test_config.services, expected.services)
         assert_equal(test_config, expected)
 
 
