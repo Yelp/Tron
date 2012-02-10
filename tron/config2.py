@@ -178,7 +178,7 @@ ConfigJob = namedtuple(
     [
         'name',             # str
         'node',             # str
-        'schedule',         # ConfigSchedule*
+        'schedule',         # Config*Scheduler
         'actions',          # FrozenDict of ConfigAction
         'queueing',         # bool
         'run_limit',        # int
