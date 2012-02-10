@@ -17,29 +17,165 @@ log = logging.getLogger("tron.config")
 CLEANUP_ACTION_NAME = "cleanup"
 
 
-TAG_RE = re.compile(r'!\w+\b')
+YAML_TAG_RE = re.compile(r'!\w+\b')
 
 def load_config(string_or_file):
+    """Given a string or file object, load it with PyYAML and return an
+    immutable, validated representation of the configuration it specifies.
+    """
     # Hackishly strip !Tags from the file so PyYAML doesn't try to make them
     # into Python objects
     if not isinstance(string_or_file, basestring):
         s_tags = string_or_file.read()
     else:
         s_tags = string_or_file
-    s_notags = TAG_RE.sub('', s_tags)
+    s_notags = YAML_TAG_RE.sub('', s_tags)
 
     if len(s_tags) > len(s_notags):
         log.warn('Tron no longer uses !Tags to parse config files. Please'
                  ' remove them from yours.')
 
-    # safe_load disables python classes
+    # Load with YAML. safe_load() disables python classes
     config = yaml.safe_load(s_notags)
 
     return valid_config(config)
 
 
 class ConfigError(Exception):
+    """Generic exception class for errors with config validation"""
     pass
+
+
+### SCHEMA DEFINITION ###
+
+
+TronConfig = namedtuple(
+    'TronConfig',
+     [
+         'working_dir',          # str
+         'syslog_address',       # str
+         'command_context',      # FrozenDict of str
+         'ssh_options',          # ConchOptions
+         'notification_options', # NotificationOptions
+         'time_zone',            # str
+         'nodes',                # FrozenDict of ConfigNode
+         'node_pools',           # FrozenDict of ConfigNodePool
+         'jobs',                 # FrozenDict of ConfigJob
+         'services'              # FrozenDict of ConfigService
+     ])
+
+
+NotificationOptions = namedtuple(
+    'NotificationOptions',
+    [
+        'smtp_host',            # str
+        'notification_addr',    # str
+    ])
+
+
+ConfigNode = namedtuple(
+    'ConfigNode',
+    [
+        'name',     # str
+        'hostname', # str
+    ])
+
+
+ConfigNodePool = namedtuple(
+    'ConfigNodePool',
+    [
+        'nodes',    # str
+        'name',     # str
+    ])
+
+
+ConfigJob = namedtuple(
+    'ConfigJob',
+    [
+        'name',             # str
+        'node',             # str
+        'schedule',         # Config*Scheduler
+        'actions',          # FrozenDict of ConfigAction
+        'queueing',         # bool
+        'run_limit',        # int
+        'all_nodes',        # bool
+        'cleanup_action',   # ConfigAction
+    ])
+
+
+ConfigAction = namedtuple(
+    'ConfigAction',
+    [
+        'name',     # str
+        'command',  # str
+        'requires', # tuple of str
+        'node',     # str
+    ])
+
+
+ConfigService = namedtuple(
+    'ConfigService',
+    [
+        'name',             # str
+        'node',             # str
+        'pid_file',         # str
+        'command',          # str
+        'monitor_interval', # float
+        'restart_interval', # float
+        'count',            # int
+    ])
+
+
+# The internal representation of the scheduler configs should change in the
+# future. The current schema merely matches the old config's internal schema
+# so I could avoid rewriting too much scheduler initialization code. Parallel
+# to each definition below is what I would change it to. --sjohnson
+
+ConfigConstantScheduler = namedtuple(
+    'ConfigConstantScheduler', [])
+# Actually this can probably stay the same. Besides, who would use the
+# constant scheduler in a config? Come to think of it, this should probably
+# be removed.
+
+
+ConfigIntervalScheduler = namedtuple(
+    'ConfigIntervalScheduler', [
+        'timedelta',    # datetime.timedelta
+    ])
+# This can also probably stay the same, since you can't break down/parse a
+# timedelta any further.
+
+
+ConfigDailyScheduler = namedtuple(
+    'ConfigDailyScheduler', [
+        'start_time',   # str HH:MM[:SS]
+        'days',         # str MTWRF
+    ])
+# start_time should be changed to a time object, and days should be a list of
+# stdlib-style weekday indices.
+
+
+ConfigGrocScheduler = namedtuple(
+    'ConfigGrocScheduler', [
+        'scheduler_string',    # str
+    ]
+)
+# This one needs the most work. Parsing of the time string should be moved to a
+# separate module, e.g. tron.schedule_parser, and should output something like
+# this, to mirror the tron.scheduler.GrocScheduler initializer:
+# ConfigGrocScheduler = namedtuple(
+#     'ConfigGrocScheduler', [
+#         'timestr',    # Time of day to run as HH:MM, groctimespecification
+#                       #   requires this
+#         'ordinals',   # '1st <weekday> in <month>': the '1st'
+#         'monthdays',  # List of days in month, e.g. 3 in 'January 3rd'
+#         'months',     # List of month indices 1..12
+#         'weekdays',   # List of weekday indices, 0=Sunday, 6=Saturday
+#     ]
+# )
+
+# Final note about schedulers. All schedulers have a timezone attribute, but it
+# is assigned *after* the whole config has been parsed.
 
 
 ### VALIDATION ###
@@ -131,106 +267,6 @@ def insert_nodup(d, key, item, error_fmt):
         raise ConfigError(error_fmt, key)
     else:
         d[key] = item
-
-
-TronConfig = namedtuple(
-    'TronConfig',
-     [
-         'working_dir',          # str
-         'syslog_address',       # str
-         'command_context',      # FrozenDict of str
-         'ssh_options',          # ConchOptions
-         'notification_options', # NotificationOptions
-         'time_zone',            # str
-         'nodes',                # FrozenDict of ConfigNode
-         'node_pools',           # FrozenDict of ConfigNodePool
-         'jobs',                 # FrozenDict of ConfigJob
-         'services'              # FrozenDict of ConfigService
-     ])
-
-
-NotificationOptions = namedtuple(
-    'NotificationOptions',
-    [
-        'smtp_host',            # str
-        'notification_addr',    # str
-    ])
-
-
-ConfigNode = namedtuple(
-    'ConfigNode',
-    [
-        'name',     # str
-        'hostname', # str
-    ])
-
-
-ConfigNodePool = namedtuple(
-    'ConfigNodePool',
-    [
-        'nodes',    # str
-        'name',     # str
-    ])
-
-
-ConfigJob = namedtuple(
-    'ConfigJob',
-    [
-        'name',             # str
-        'node',             # str
-        'schedule',         # Config*Scheduler
-        'actions',          # FrozenDict of ConfigAction
-        'queueing',         # bool
-        'run_limit',        # int
-        'all_nodes',        # bool
-        'cleanup_action',   # ConfigAction
-    ])
-
-
-ConfigAction = namedtuple(
-    'ConfigAction',
-    [
-        'name',     # str
-        'command',  # str
-        'requires', # tuple of str
-        'node',     # str
-    ])
-
-
-ConfigService = namedtuple(
-    'ConfigService',
-    [
-        'name',             # str
-        'node',             # str
-        'pid_file',         # str
-        'command',          # str
-        'monitor_interval', # float
-        'restart_interval', # float
-        'count',            # int
-    ])
-
-
-ConfigConstantScheduler = namedtuple(
-    'ConfigConstantScheduler', []
-)
-
-
-ConfigIntervalScheduler = namedtuple(
-    'ConfigIntervalScheduler', [
-        'timedelta',    # datetime.timedelta
-    ])
-
-ConfigDailyScheduler = namedtuple(
-    'ConfigDailyScheduler', [
-        'start_time',   # str HH:MM[:SS]
-        'days',         # str MTWRF
-    ])
-
-ConfigGrocScheduler = namedtuple(
-    'ConfigGrocScheduler', [
-        'scheduler_string',    # str
-    ]
-)
 
 
 def normalize_node(node):
