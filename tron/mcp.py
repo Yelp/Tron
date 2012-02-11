@@ -297,9 +297,17 @@ class MasterControlProgram(object):
 
         self.nodes = {}
         for conf_node in conf.nodes.values():
-            node = Node(hostname=conf_node.hostname, name=conf_node.name)
-            node.conch_options = conf.ssh_options
+            node = Node(hostname=conf_node.hostname,
+                        name=conf_node.name,
+                        ssh_options=conf.ssh_options)
             self.nodes[conf_node.name] = node
+
+        self.node_pools = {}
+        for conf_pool in conf.node_pools.values():
+            p = NodePool()
+            p.name = conf_pool.name
+            p.nodes = [self.nodes[n] for n in conf_pool.nodes]
+            self.node_pools[p.name] = p
 
         self.time_zone = conf.time_zone
 
@@ -387,7 +395,7 @@ class MasterControlProgram(object):
             try:
                 return self.node_pools[identifier]
             except KeyError:
-                return NodePool([self.nodes[identifier]])
+                return NodePool(nodes=[self.nodes[identifier]])
 
     def _job_from_config(self, job_config):
         job = Job()

@@ -6,9 +6,9 @@ import logging
 import urllib
 
 try:
-    import json as simplejson
+    import simplejson as json
 except ImportError:
-    import simplejson
+    import json
 
 
 from twisted.cred import checkers
@@ -19,11 +19,28 @@ from twisted.web import http, resource, server
 from tron import action
 from tron import config
 from tron import job
+from tron import node
 from tron import service
 from tron.utils import timeutils
 
 
 log = logging.getLogger("tron.www")
+
+
+class JSONEncoder(json.JSONEncoder):
+    """Custom JSON for certain objects"""
+
+    def default(self, o):
+        if isinstance(o, node.Node):
+            return {
+                'name': o.name,
+                'hostname': o.hostname,
+            }
+        else:
+            return super(JSONEncoder, self).default(o)
+
+
+json_encoder = JSONEncoder()
 
 
 def respond(request, response_dict, code=http.OK, headers=None):
@@ -34,7 +51,7 @@ def respond(request, response_dict, code=http.OK, headers=None):
         for key, val in headers.iteritems():
             request.setHeader(key, val)
     if response_dict:
-        return simplejson.dumps(response_dict)
+        return json.dumps(response_dict, cls=JSONEncoder)
     return ""
 
 

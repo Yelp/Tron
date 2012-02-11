@@ -119,7 +119,10 @@ echo_job ENABLED    INTERVAL:1:00:00     None
 
         # run the job and check its output
         self.sandbox.tronctl(['start', 'echo_job'])
-        wait_for_file_to_exist(canary)
+        try:
+            wait_for_file_to_exist(canary)
+        except TronSandboxException:
+            assert False
         assert_equal(self.sandbox.list_action_run('echo_job', 1, 'echo_action')['state'], 'SUCC')
         assert_equal(self.sandbox.list_job_run('echo_job', 1)['state'], 'SUCC')
 
