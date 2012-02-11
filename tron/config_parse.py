@@ -56,8 +56,8 @@ TronConfig = namedtuple(
          'syslog_address',       # str
          'command_context',      # FrozenDict of str
          'ssh_options',          # ConchOptions
-         'notification_options', # NotificationOptions
-         'time_zone',            # str
+         'notification_options', # NotificationOptions or None
+         'time_zone',            # pytz time zone
          'nodes',                # FrozenDict of ConfigNode
          'node_pools',           # FrozenDict of ConfigNodePool
          'jobs',                 # FrozenDict of ConfigJob
@@ -214,6 +214,11 @@ valid_str = type_validator(
     lambda s: isinstance(s, basestring),
     'Value at %s is not a string: %s')
 
+IDENTIFIER_RE = re.compile(r'^[A-Za-z_]\w*$')
+valid_identifier = type_validator(
+    lambda s: IDENTIFIER_RE.match(s),
+    'Identifier at %s is not a valid identifier')
+
 valid_list = type_validator(
     lambda s: isinstance(s, list),
     'Value at %s is not a list: %s')
@@ -285,6 +290,8 @@ def normalize_node(node):
     of identifiers and the latter case is the "old style" of anchors and
     aliases (*/&). Return the name.
     """
+    if node is None:
+        return None
     if isinstance(node, basestring):
         return node
     else:
@@ -327,10 +334,17 @@ def valid_config(config):
     store('time_zone', valid_time_zone)
 
     # Prepopulate collections
-    config.setdefault('nodes', [dict(name='localhost', hostname='localhost')])
-    config.setdefault('node_pools', [])
-    config.setdefault('jobs', [])
-    config.setdefault('services', [])
+    def set_default(key, value):
+        """Make sure config has key and it is not None"""
+        if key in config:
+            config[key] = config[key] or value
+        else:
+            config[key] = value
+
+    set_default('nodes', [dict(name='localhost', hostname='localhost')])
+    set_default('node_pools', [])
+    set_default('jobs', [])
+    set_default('services', [])
 
     # 'nodes' may contain nodes or node pools (for now). Internally split them
     # into 'nodes' and 'node_pools'. Process the nodes.
@@ -389,21 +403,10 @@ def valid_working_dir(wd):
     """Given a working directory or None, return a valid working directory.
     If wd=None, try os.environ['TMPDIR']. If that doesn't exist, use /tmp.
     """
-    if not wd:
-        if 'TMPDIR' in os.environ:
-            wd = os.environ['TMPDIR']
-        else:
-            wd = '/tmp'
-
-    if not os.path.isdir(wd):
-        raise ConfigError("Specified working directory \'%s\' is not a"
-                          " directory" % wd)
-
-    if not os.access(wd, os.W_OK):
-        raise ConfigError("Specified working directory \'%s\' is not"
-                          " writable" % wd)
-
-    return wd
+    if wd is None:
+        return None
+    else:
+        return valid_str('working_dir', wd)
 
 
 def valid_syslog(syslog):
@@ -419,6 +422,7 @@ def valid_command_context(context):
 
 
 def valid_ssh_options(opts):
+    opts = opts or {}
     ssh_options = options.ConchOptions()
     if opts.get('agent', False):
         if 'SSH_AUTH_SOCK' in os.environ:
@@ -520,7 +524,7 @@ def valid_job(job):
 
     path = 'jobs.%s' % job['name']
     final_job = dict(
-        name=valid_str('jobs', job['name']),
+        name=valid_identifier('jobs', job['name']),
         schedule=valid_schedule(path, job['schedule']),
         queueing=valid_bool(path, job.get('queueing', True)),
         run_limit=valid_int(path, job.get('run_limit', 50)),
@@ -534,6 +538,9 @@ def valid_job(job):
     actions = {}
     for action in job['actions'] or []:
         final_action = valid_action(path, action)
+        if not (final_action.node or final_job['node']):
+            raise ConfigError('%s has no actions configured for %s' %
+                              (path, final_action.name))
         insert_nodup(actions, final_action.name, final_action,
                      'Action name %%s on job %s used twice' %
                      final_job['name'])
@@ -578,7 +585,7 @@ def valid_schedule(path, schedule):
         elif scheduler_name == 'daily':
             return valid_daily_scheduler(*scheduler_args)
         elif scheduler_name == 'interval':
-            return valid_interval_scheduler(*scheduler_args)
+            return valid_interval_scheduler(' '.join(scheduler_args))
         else:
             return valid_groc_scheduler(schedule)
     else:
@@ -626,6 +633,7 @@ def valid_groc_scheduler(scheduler_string):
 
 
 def valid_interval_scheduler(interval):
+    interval_no_spaces = ''.join(interval.split())
     # Shortcut values for intervals
     TIME_INTERVAL_SHORTCUTS = {
         'hourly': dict(hours=1),
@@ -692,7 +700,7 @@ def valid_action(path, action, is_cleanup=False):
     # basic values
     my_path = '%s.%s' % (path, action['name'])
     final_action = dict(
-        name=valid_str(path, action['name']),
+        name=valid_identifier(path, action['name']),
         command=valid_str(path, action['command']),
     )
 
@@ -777,7 +785,7 @@ def valid_service(service):
 
     path = 'services.%s' % service['name']
     final_service = dict(
-        name=valid_str(path, service['name']),
+        name=valid_identifier(path, service['name']),
         pid_file=valid_str(path, service['pid_file']),
         command=valid_str(path, service['command']),
         monitor_interval=valid_int(path, service['monitor_interval']),

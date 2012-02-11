@@ -63,8 +63,8 @@ class RunState(object):
 
 
 class NodePool(object):
-    def __init__(self, hostname=None):
-        self.nodes = []
+    def __init__(self, hostname=None, nodes=None):
+        self.nodes = nodes or []
         self.iter = None
         if hostname:
             self.nodes.append(Node(hostname))
@@ -95,9 +95,12 @@ class NodePool(object):
 class Node(object):
     """A node is tron's interface to communicating with an actual machine"""
 
-    def __init__(self, hostname=None):
+    def __init__(self, hostname=None, name=None):
         # Host we are to connect to
         self.hostname = hostname
+
+        # Identifier for UI
+        self.name = name
 
         # The SSH connection we use to open channels on. If present, means we
         # are connected.

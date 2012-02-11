@@ -8,9 +8,20 @@ import time
 import weakref
 import yaml
 
-import tron
-from tron import job, config, command_context, event
 from twisted.internet import reactor
+
+import tron
+from tron import command_context
+from tron import config_parse, event
+from tron import emailer
+from tron import event
+from tron import job
+from tron import monitor
+from tron import scheduler
+from tron.action import Action
+from tron.job import Job
+from tron.node import Node, NodePool
+from tron.service import Service
 from tron.utils import timeutils
 
 
@@ -30,6 +41,11 @@ class StateFileVersionError(Error):
 
 
 class UnsupportedVersionError(Error):
+    pass
+
+
+class ConfigApplyError(Exception):
+    """Errors during config application"""
     pass
 
 
@@ -200,14 +216,17 @@ class MasterControlProgram(object):
         self.jobs = {}
         self.services = {}
 
-        # This is a list of Nodes or NodePools
-        self.nodes = []
+        # Mapping of node name to node object
+        self.nodes = {}
+
+        # Mapping of node pool name to node pool object
+        self.node_pools = {}
 
         # Path to the config file
         self.config_file = config_file
 
         # Root command context
-        self.context = context
+        self.context = command_context.CommandContext()
 
         self.monitor = None
 
@@ -250,10 +269,8 @@ class MasterControlProgram(object):
 
     def load_config(self):
         log.info("Loading configuration from %s" % self.config_file)
-        opened_config = open(self.config_file, "r")
-        configuration = config.load_config(opened_config)
-        configuration.apply(self)
-        opened_config.close()
+        with open(self.config_file, 'r') as f:
+            self.apply_config(config_parse.load_config(f))
 
     def config_lines(self):
         try:
@@ -273,6 +290,196 @@ class MasterControlProgram(object):
         except IOError, e:
             log.error(str(e) + " - Cannot write to configuration file!")
 
+    def apply_config(self, conf):
+        self._apply_working_directory(conf.working_dir)
+        self._apply_loggers(conf.syslog_address)
+        self.context.base = conf.command_context
+
+        self.nodes = {}
+        for conf_node in conf.nodes.values():
+            node = Node(hostname=conf_node.hostname, name=conf_node.name)
+            node.conch_options = conf.ssh_options
+            self.nodes[conf_node.name] = node
+
+        self.time_zone = conf.time_zone
+
+        self._apply_jobs(conf.jobs)
+        self._apply_services(conf.services)
+
+        if conf.notification_options is not None:
+            if self.monitor:
+                self.monitor.stop()
+
+            em = emailer.Emailer(conf.notification_options.smtp_host,
+                                 conf.notification_options.notification_addr)
+            self.monitor = monitor.CrashReporter(em, self)
+            self.monitor.start()
+
+    def _apply_working_directory(self, wd):
+        if self.state_handler.working_dir:
+            if self.state_handler.working_dir != wd:
+                log.warn('trond must be restarted for changes to the working'
+                         ' directory to take effect.')
+            return
+
+        if not wd:
+            if 'TMPDIR' in os.environ:
+                wd = os.environ['TMPDIR']
+            else:
+                wd = '/tmp'
+
+        if not os.path.isdir(wd):
+            raise ConfigApplyError("Specified working directory \'%s\' is not"
+                                   " a directory" % wd)
+
+        if not os.access(wd, os.W_OK):
+            raise ConfigApplyError("Specified working directory \'%s\' is not"
+                                   " writable" % wd)
+
+        self.state_handler.working_dir = wd
+
+    def _apply_loggers(self, syslog_address):
+        root = logging.getLogger('')
+        handlers_to_be_removed = set(h for h in root.handlers
+                                     if h not in self.base_logging_handlers)
+
+        # Only change handlers if they will actually be different from the old
+        # handlers
+        new_handlers = []
+        if syslog_address:
+            if not isinstance(self.syslog_address, basestring):
+                self.syslog_address = tuple(self.syslog_address)
+
+            try:
+                h = logging.handlers.SysLogHandler(self.syslog_address)
+                fmt_str = "tron[%(process)d]: %(message)s"
+                h.setFormatter(logging.Formatter(fmt_str))
+                new_handlers.append(h)
+            except socket.error:
+                raise ConfigError('%s is not a valid syslog address' %
+                                  self.syslog_address)
+
+        for h in handlers_to_be_removed:
+            log.info('Removing logging handler %s', h)
+            root.removeHandler(h)
+
+        for h in new_handlers:
+            log.info('Adding logging handler %s', h)
+            root.addHandler(h)
+
+    def _apply_jobs(self, job_configs):
+        """Configure jobs"""
+        for job_config in job_configs.values():
+            log.debug("Building new job %s", job_config.name)
+            self.add_job(self._job_from_config(job_config))
+
+        for job_name in (set(self.jobs.keys()) - set(job_configs.keys())):
+            log.debug("Removing job %s", job_name)
+            self.remove_job(job_name)
+
+    def _node_pool_or_none(self, identifier):
+        """A node identifier can be none, a node, or a node pool. Return a
+        node pool or None.
+        """
+        if identifier is None:
+            return None
+        else:
+            try:
+                return self.node_pools[identifier]
+            except KeyError:
+                return NodePool([self.nodes[identifier]])
+
+    def _job_from_config(self, job_config):
+        job = Job()
+
+        # Basics
+        job.name = job_config.name
+        job.queueing = job_config.queueing
+        job.run_limit = job_config.run_limit
+        job.all_nodes = job_config.all_nodes
+
+        job.node_pool = self._node_pool_or_none(job_config.node)
+
+        # Set up scheduler
+        sch_conf = job_config.schedule
+
+        if isinstance(sch_conf, config_parse.ConfigConstantScheduler):
+            job.scheduler = scheduler.ConstantScheduler()
+
+        elif isinstance(sch_conf, config_parse.ConfigIntervalScheduler):
+            job.scheduler = scheduler.IntervalScheduler(interval=sch_conf.timedelta)
+
+        elif isinstance(sch_conf, config_parse.ConfigDailyScheduler):
+            job.scheduler = scheduler.GrocScheduler(time_zone=self.time_zone)
+            job.scheduler.timestr = sch_conf.start_time
+            job.scheduler.parse_legacy_days(sch_conf.days)
+
+        elif isinstance(sch_conf, config_parse.ConfigGrocScheduler):
+            job.scheduler = scheduler.GrocScheduler(time_zone=self.time_zone)
+            job.scheduler.parse(sch_conf.scheduler_string)
+
+        # Set up actions
+        new_actions = {}
+        for action_conf in job_config.actions.values():
+            action = Action(name=action_conf.name, command=action_conf.command)
+            action.node_pool = self._node_pool_or_none(action_conf.node)
+
+        for action in new_actions.values():
+            for dep in job_config.actions[action['name']].requirements:
+                action.required_actions.append(new_actions[dep])
+            job.add_action(action)
+
+        # Set up cleanup action. This should probably be rolled into a method
+        # on the Job class.
+        if job_config.cleanup_action:
+            ca_conf = job_config.cleanup_action
+            action = Action(name=ca_conf.name, command=ca_conf.command)
+            action.node_pool = self._node_pool_or_none(ca_conf.node)
+            job.cleanup_action = action
+            action.job = job
+            job._register_action(action)
+
+        return job
+
+    def _apply_services(self, srv_configs):
+        """Configure services"""
+
+        services_to_add = []
+        for srv_config in srv_configs.values():
+            log.debug("Building new services %s", srv_config.name)
+            services_to_add.append(self._service_from_config(srv_config))
+
+        for srv_name in (set(self.services.keys()) - set(srv_configs.keys())):
+            log.debug("Removing service %s", srv_name)
+            self.remove_service(srv_name)
+
+        # Go through our constructed services and add them. We'll catch all the
+        # failures and throw an exception at the end if anything failed. This
+        # is a mitigation against a bug easily cause us to be in an
+        # inconsistent state, probably due to bad code elsewhere.
+
+        failure = False
+        for service in services_to_add:
+            try:
+                self.add_service(service)
+            except Exception, e:
+                log.exception("Failed adding new service")
+                failure = True
+
+        if failure:
+            raise ConfigError("Failed adding services")
+
+    def _service_from_config(self, srv_config):
+        srv = Service()
+        srv.name = srv_config.name
+        srv.node_pool = self._node_pool_or_none(srv_config.node)
+        srv.monitor_interval = srv_config.monitor_interval
+        srv.restart_interval = srv_config.restart_interval
+        srv.pid_file_template = srv_config.pid_file
+        srv.command = srv_config.command
+        srv.count = srv_config.count
+        return srv
+
     ### JOBS ###
 
     def setup_job_dir(self, job):
@@ -284,6 +491,7 @@ class MasterControlProgram(object):
     def add_job(self, job):
         if job.name in self.services:
             raise ValueError("Job %s is already a service", job.name)
+
         if job.name in self.jobs:
 
             # Jobs have a complex eq implementation that allows us to catch

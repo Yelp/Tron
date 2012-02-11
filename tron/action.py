@@ -450,12 +450,12 @@ class ActionRun(object):
 
 
 class Action(object):
-    def __init__(self, name=None):
+    def __init__(self, name=None, command=None):
         self.name = name
+        self.command = command
 
         self.required_actions = []
         self.job = None
-        self.command = None
 
     def __eq__(self, other):
         if not isinstance(other, Action) \
