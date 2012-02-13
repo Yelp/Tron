@@ -8,6 +8,7 @@ from tron.utils import testingutils
 
 
 class NodeTestCase(TestCase):
+
     class TestConnection(object):
         def openChannel(self, chan):
             self.chan = chan
@@ -34,8 +35,7 @@ class NodeTestCase(TestCase):
         assert_equal(self.stdout.read(4), "test")
 
 
-# TODO: This freezes when run, something with twisted
-class NodeTimeoutTest(TestCase):
+class NodeTimeoutTest(testingutils.ReactorTestCase):
     @setup
     def build_node(self):
         self.node = node.Node(hostname="testnodedoesnotexist")
@@ -48,18 +48,14 @@ class NodeTimeoutTest(TestCase):
     def build_run(self):
         self.run = turtle.Turtle()
 
-    @teardown
-    def reset_timeout(self):
-        node.CONNECT_TIMEOUT = self.old_timeout
-
     def test_connect_timeout(self):
         self.job_marked_failed = False
         def fail_job(*args):
             self.job_marked_failed = True
-            
+
         df = self.node.run(self.run)
         df.addErrback(fail_job)
-        
+
         testingutils.wait_for_deferred(df)
         assert df.called
         assert self.job_marked_failed

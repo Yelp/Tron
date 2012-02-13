@@ -386,7 +386,9 @@ class TronConfiguration(yaml.YAMLObject):
         if hasattr(self, 'ssh_options'):
             self.ssh_options = default_or_from_tag(self.ssh_options,
                                                    SSHOptions)
-            self.ssh_options._apply(mcp)
+        else:
+            self.ssh_options = SSHOptions()
+        self.ssh_options._apply(mcp)
 
         self._apply_time_zone_name(mcp)
         self._apply_jobs(mcp)

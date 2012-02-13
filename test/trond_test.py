@@ -11,8 +11,6 @@ from test.sandbox import TronSandbox, TronSandboxException, wait_for_file_to_exi
 
 BASIC_CONFIG = """
 --- !TronConfiguration
-ssh_options:
-        agent: true
 nodes:
     - &local
         hostname: 'localhost'
@@ -88,12 +86,18 @@ class BasicTronTestCase(SandboxTestCase):
             print >> sys.stderr, self.sandbox.log_contents()
             raise
 
-        assert_equal(self.sandbox.list_action_run('echo_job', 2, 'echo_action')['state'], 'SUCC')
-        assert_equal(self.sandbox.list_action_run('echo_job', 2, 'echo_action')['stdout'], ['Echo!'])
-        assert_equal(self.sandbox.list_action_run('echo_job', 2, 'another_echo_action')['state'], 'FAIL')
-        assert_equal(self.sandbox.list_action_run('echo_job', 2, 'another_echo_action')['stdout'],
-                     [datetime.datetime.now().strftime('Today is %Y-%m-%d, which is the same as %Y-%m-%d')])
-        assert_equal(self.sandbox.list_job_run('echo_job', 2)['state'], 'FAIL')
+        echo_action_run = self.sandbox.list_action_run(
+            'echo_job', 2, 'echo_action')
+        another_echo_action_run = self.sandbox.list_action_run(
+            'echo_job', 2, 'another_echo_action')
+        assert_equal(echo_action_run['state'], 'SUCC')
+        assert_equal(echo_action_run['stdout'], ['Echo!'])
+        assert_equal(another_echo_action_run['state'], 'FAIL')
+        assert_equal(another_echo_action_run['stdout'],
+                     [datetime.datetime.now().strftime(
+                         'Today is %Y-%m-%d, which is the same as %Y-%m-%d')])
+        assert_equal(self.sandbox.list_job_run('echo_job', 2)['state'],
+                     'FAIL')
 
     def test_tronview_basic(self):
         self.sandbox.save_config(SINGLE_ECHO_CONFIG)
@@ -169,25 +173,6 @@ class SchedulerTestCase(SandboxTestCase):
                         command: "sleep 2 && echo 'Echo'"
         """)
 
-    EMPTY_CONFIG = dedent("""
-        --- !TronConfiguration
-        ssh_options:
-                agent: true
-        nodes:
-            - &local
-                hostname: 'localhost'
-        jobs:
-            - &echo_job
-                name: "delayed_echo_job"
-                node: *local
-                queueing: true
-                schedule: "interval 1 hour"
-                actions:
-                    -
-                        name: "delayed_echo_action"
-                        command: "sleep 2 && echo 'Echo'"
-        """)
-
     def test_queue_on_overlap(self):
         os.path.join(self.sandbox.tmp_dir, 'delayed_echo_job')
         self.sandbox.save_config(SchedulerTestCase.QUEUE_CONFIG)
@@ -213,3 +198,46 @@ class SchedulerTestCase(SandboxTestCase):
 
         assert_lte(complete_runs, 4)
         assert_gte(len(runs), 8)
+
+    def test_failure_on_multi_step_job_doesnt_wedge_tron(self):
+        # WARNING: This test may be flaky.
+        FAIL_CONFIG = dedent("""
+            --- !TronConfiguration
+
+            ssh_options: !SSHOptions
+              agent: true
+
+            nodes:
+              - &local
+                  hostname: 'localhost'
+            jobs:
+              - &random_job
+                name: "random_failure_job"
+                node: *local
+                queueing: true
+                schedule: "interval 1 seconds"
+                actions:
+                  - &fa
+                    name: "fa"
+                    command: "sleep 1.1; failplz"
+                  - &sa
+                    name: "sa"
+                    command: "echo 'you will never see this'"
+                    requires: [*fa]
+        """)
+
+        with open(self.sandbox.config_file, 'w') as f:
+            f.write(FAIL_CONFIG)
+        self.sandbox.start_trond()
+
+        # Wait a little to give things time to explode
+        time.sleep(1)
+        jerb = self.sandbox.list_job('random_failure_job')
+        while (len(jerb['runs']) < 3 or
+               jerb['runs'][-1][u'state'] not in [u'FAIL', u'SUCC']):
+            time.sleep(0.2)
+            jerb = self.sandbox.list_job('random_failure_job')
+
+        assert_equal(jerb['runs'][-1][u'state'], u'FAIL')
+        assert_in(jerb['runs'][-2][u'state'], [u'FAIL', u'RUNN'])
+        assert_equal(jerb['runs'][0][u'state'], u'SCHE')

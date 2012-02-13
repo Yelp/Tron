@@ -121,7 +121,7 @@ class DailySchedulerTomorrowTest(DailySchedulerTimeTestBase):
         timeutils.override_current_time(self.now)
 
     def test(self):
-        # If we schedule a job for later today, it shoudl run today
+        # If we schedule a job for later today, it should run today
         next_run = self.scheduler.next_runs(self.job)[0]
         next_run_date = next_run.run_time.date()
         tomorrow = self.now.date() + datetime.timedelta(days=1)
@@ -130,6 +130,29 @@ class DailySchedulerTomorrowTest(DailySchedulerTimeTestBase):
         assert_lte(datetime.datetime(year=tomorrow.year, month=tomorrow.month,
                                      day=tomorrow.day, hour=13),
                    next_run.run_time)
+
+
+class DailySchedulerLongJobRunTest(DailySchedulerTimeTestBase):
+
+    @setup
+    def set_time(self):
+        self.now = datetime.datetime.now().replace(hour=12, minute=0)
+        timeutils.override_current_time(self.now)
+
+    def test_long_jobs_dont_wedge_scheduler(self):
+        # Advance days twice as fast as they are scheduled, demonstrating
+        # that the scheduler will put things in the past if that's where
+        # they belong, and run them as fast as possible
+
+        last_run = self.scheduler.next_runs(self.job)[0].run_time
+        for i in range(10):
+            next_run = self.scheduler.next_runs(self.job)[0].run_time
+            assert_equal(next_run, last_run + datetime.timedelta(days=1))
+
+            self.now += datetime.timedelta(days=2)
+            timeutils.override_current_time(self.now)
+
+            last_run = next_run
 
 
 class DailySchedulerDSTTest(TestCase):
@@ -250,7 +273,7 @@ class DailySchedulerDSTTest(TestCase):
         self._assert_range(s1a - s2a, -0.61, -0.59)
 
 
-class GrocSchedulerTest(TestCase):
+class ComplexParserTest(TestCase):
 
     @setup
     def build_scheduler(self):

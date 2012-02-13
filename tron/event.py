@@ -80,6 +80,13 @@ class Event(object):
 
 
 class EventRecorder(object):
+    """Record events in a tree of listeners. Tron uses this class by having
+    one process-wide event recorder (in the MCP) with each job and service
+    having a child recorder, and each job run having a child recorder of the
+    job.
+
+    Events are propagated up the chain if they are of high enough severity.
+    """
 
     def __init__(self, entity, parent=None, limits=None):
         self._store = FixedLimitStore(limits)

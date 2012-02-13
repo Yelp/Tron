@@ -196,16 +196,34 @@ class MasterControlProgram(object):
     def __init__(self, working_dir, config_file, context=None):
         self.jobs = {}
         self.services = {}
+
+        # This is a list of Nodes or NodePools
         self.nodes = []
+
+        # Path to the config file
         self.config_file = config_file
+
+        # Root command context
         self.context = context
+
         self.monitor = None
+
+        # Time zone of the system clock
         self.time_zone = None
+
+        # Record events for the entire system. Child event recorders may record
+        # events for specific jobs, job runs, actions, action runs, etc. and
+        # these events will be propagated up but not down the event recorder
+        # tree.
         self.event_recorder = event.EventRecorder(self)
+
+        # Control writing of the state file
         self.state_handler = StateHandler(self, working_dir)
 
         root = logging.getLogger('')
         self.base_logging_handlers = list(root.handlers)
+
+    ### CONFIGURATION ###
 
     def live_reconfig(self):
         self.event_recorder.emit_info("reconfig")
@@ -252,6 +270,8 @@ class MasterControlProgram(object):
         except IOError, e:
             log.error(str(e) + " - Cannot write to configuration file!")
 
+    ### JOBS ###
+
     def setup_job_dir(self, job):
         job.output_path = os.path.join(self.state_handler.working_dir,
                                        job.name)
@@ -287,9 +307,17 @@ class MasterControlProgram(object):
         if job.scheduler is not None:
             job.scheduler.time_zone = self.time_zone
 
+        # add some command context variables
         job.set_context(self.context)
+
         job.event_recorder.set_parent(self.event_recorder)
+
+        # make the directory for output
         self.setup_job_dir(job)
+
+        # Tell the job to call store_state() whenever its state changes.
+        # job isn't actaully a StateMachine object, but its interface tries
+        # to look like one.
         job.listen(True, self.state_handler.store_state)
 
     def remove_job(self, job_name):
@@ -299,6 +327,8 @@ class MasterControlProgram(object):
         job = self.jobs.pop(job_name)
 
         job.disable()
+
+    ### SERVICES ###
 
     def add_service(self, service):
         if service.name in self.jobs:
@@ -328,6 +358,8 @@ class MasterControlProgram(object):
         log.info("Removing services %s", service_name)
         service = self.services.pop(service_name)
         service.stop()
+
+    ### OTHER ACTIONS ###
 
     def _schedule(self, run):
         secs = run.seconds_until_run_time()

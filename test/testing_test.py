@@ -38,7 +38,7 @@ class SimpleTestCase(TestCase):
         assert self.ran_setup
         assert_equal(self.ran_methods, 2)
 
-class SimpleDeferredTestCase(TestCase):
+class SimpleDeferredTestCase(testingutils.ReactorTestCase):
 
     @testingutils.run_reactor()
     def test_do_something_deferred(self):
@@ -56,7 +56,7 @@ class SimpleDeferredTestCase(TestCase):
         # This is a little weird since the teardown is checking that the test worked, but we are testing a test here.
         assert_equal(self.value, 42)
 
-class DeferredTimeoutTestCase(TestCase):
+class DeferredTimeoutTestCase(testingutils.ReactorTestCase):
     @testingutils.run_reactor(timeout=1, assert_raises=defer.TimeoutError)
     def test_deferred_never_finishes(self):
         df = defer.Deferred()

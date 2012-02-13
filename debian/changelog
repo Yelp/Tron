@@ -1,3 +1,16 @@
+tron (0.3.0-1) unstable; urgency=low
+
+  * ssh_options is actually optional (sjohnson)
+
+tron (0.2.9-1) unstable; urgency=low
+
+  * tronweb works and is documented (mowings-iseatz)
+  * Daylight Savings Time behavior is more well-defined (sjohnson)
+  * Jobs that fail after running over their next scheduled time are no longer forgotten (sjohnson)
+  * Reconfiguring syslog no longer requires restarting trond to take effect (jbrown)
+
+ -- James Brown <sjohnson@yelp.com>  Mon, 6 Feb 2012 16:26:05 -0800
+
 tron (0.2.8.1-1) unstable; urgency=low
 
   * Set a meaningful Formatter when logging to syslog (jbrown)

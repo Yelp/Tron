@@ -99,7 +99,9 @@ class TronSandbox(object):
                                  '--log-file=%s' % self.log_file,
                                  '--pid-file=%s' % self.pid_file,
                                  '--port=%d' % self.port,
-                                 '--host=%s' % self.host]
+                                 '--host=%s' % self.host,
+                                 '--config=%s' % self.config_file,
+                                 '--verbose']
 
         self.tron_server_address = '%s:%d' % (self.host, self.port)
         self.tron_server_uri = 'http://%s' % self.tron_server_address
@@ -172,6 +174,8 @@ class TronSandbox(object):
         status, content = cmd.request(self.tron_server_uri, uri, data=data)
 
         if status != cmd.OK or not content:
+            print 'trond appears to have crashed. Log:'
+            print self.log_contents()
             raise TronSandboxException("Error connecting to tron server at %s%s" % (self.tron_server_uri, uri))
 
         return content
