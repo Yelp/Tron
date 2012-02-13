@@ -3,7 +3,7 @@ import datetime
 import logging
 import re
 
-from pytz import AmbiguousTimeError 
+from pytz import AmbiguousTimeError, NonExistentTimeError
 
 from tron.utils import groctimespecification
 from tron.utils import timeutils
@@ -268,7 +268,7 @@ class GrocScheduler(object):
                     # fall-back. Pretend like it's the first time, every time.
                     start_time = self.time_zone.localize(start_time,
                                                          is_dst=True)
-                except groctimespecification.NonExistentTimeError:
+                except NonExistentTimeError:
                     # We are in the infamous 2:xx AM block which does not
                     # exist. Pretend like it's the later time, every time.
                     start_time = self.time_zone.localize(start_time,
