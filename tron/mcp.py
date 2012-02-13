@@ -12,6 +12,7 @@ from twisted.internet import reactor
 
 import tron
 from tron import command_context
+from tron import config     # DELETE ME
 from tron import config_parse, event
 from tron import emailer
 from tron import event
@@ -270,7 +271,11 @@ class MasterControlProgram(object):
     def load_config(self):
         log.info("Loading configuration from %s" % self.config_file)
         with open(self.config_file, 'r') as f:
-            self.apply_config(config_parse.load_config(f))
+            if False:
+                cfg = config.load_config(f)
+                cfg.apply(self)
+            else:
+                self.apply_config(config_parse.load_config(f))
 
     def config_lines(self):
         try:
@@ -426,14 +431,18 @@ class MasterControlProgram(object):
             job.scheduler = scheduler.GrocScheduler(time_zone=self.time_zone)
             job.scheduler.parse(sch_conf.scheduler_string)
 
+        job.scheduler.job_setup(job)
+
         # Set up actions
         new_actions = {}
         for action_conf in job_config.actions.values():
-            action = Action(name=action_conf.name, command=action_conf.command)
-            action.node_pool = self._node_pool_or_none(action_conf.node)
+            action = Action(name=action_conf.name,
+                            command=action_conf.command,
+                            node_pool=self._node_pool_or_none(action_conf.node))
+            new_actions[action.name] = action
 
         for action in new_actions.values():
-            for dep in job_config.actions[action['name']].requirements:
+            for dep in job_config.actions[action.name].requires:
                 action.required_actions.append(new_actions[dep])
             job.add_action(action)
 
@@ -441,8 +450,9 @@ class MasterControlProgram(object):
         # on the Job class.
         if job_config.cleanup_action:
             ca_conf = job_config.cleanup_action
-            action = Action(name=ca_conf.name, command=ca_conf.command)
-            action.node_pool = self._node_pool_or_none(ca_conf.node)
+            action = Action(name=ca_conf.name,
+                            command=ca_conf.command,
+                            node_pool=self._node_pool_or_none(ca_conf.node))
             job.cleanup_action = action
             action.job = job
             job._register_action(action)
@@ -588,6 +598,7 @@ class MasterControlProgram(object):
 
     def schedule_next_run(self, job):
         if job.runs and job.runs[0].is_scheduled:
+            log.info('Job is already scheduled')
             return
 
         for next in job.next_runs():

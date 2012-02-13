@@ -450,9 +450,10 @@ class ActionRun(object):
 
 
 class Action(object):
-    def __init__(self, name=None, command=None):
+    def __init__(self, name=None, command=None, node_pool=None):
         self.name = name
         self.command = command
+        self.node_pool = node_pool
 
         self.required_actions = []
         self.job = None

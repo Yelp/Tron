@@ -98,10 +98,11 @@ class Node(object):
         self.hostname = hostname
 
         # Identifier for UI
-        self.name = name
+        self.name = name or hostname
 
-        if not ssh_options:
-            raise ValueError
+        if not ssh_options or not hostname:
+            raise ValueError('Must specify hostname and ssh_options')
+
         self.conch_options = ssh_options
 
         # The SSH connection we use to open channels on. If present, means we
