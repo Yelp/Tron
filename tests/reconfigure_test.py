@@ -13,7 +13,7 @@ from tests.config_parse_test import syslog_address_for_platform
 
 class ConfigTest(TestCase):
 
-    def test_config_1(self, wd):
+    def config_1(self, wd):
         config = dict(
             working_dir=wd,
             ssh_options=dict(
@@ -62,7 +62,7 @@ class ConfigTest(TestCase):
             ])
         return yaml.dump(config)
 
-    def test_config_2(self, wd):
+    def config_2(self, wd):
         config = dict(
             working_dir=wd,
             ssh_options=dict(
@@ -113,7 +113,7 @@ class ConfigTest(TestCase):
     def setup(self):
         self.test_dir = tempfile.mkdtemp()
         self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')
-        config = self.test_config_1(self.test_dir)
+        config = self.config_1(self.test_dir)
         self.my_mcp.apply_config(config_parse.load_config(config))
 
     @teardown
@@ -121,7 +121,7 @@ class ConfigTest(TestCase):
         shutil.rmtree(self.test_dir)
 
     def reconfigure(self):
-        config = self.test_config_2(self.test_dir)
+        config = self.config_2(self.test_dir)
         self.my_mcp.apply_config(config_parse.load_config(config))
 
     def test_job_list(self):
