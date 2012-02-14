@@ -30,6 +30,9 @@ STATE_SLEEP_SECS = 1
 WRITE_DURATION_WARNING_SECS = 30
 
 
+USE_OLD_CONFIG = False
+
+
 class Error(Exception):
     pass
 
@@ -268,7 +271,7 @@ class MasterControlProgram(object):
     def load_config(self):
         log.info("Loading configuration from %s" % self.config_file)
         with open(self.config_file, 'r') as f:
-            if False:
+            if USE_OLD_CONFIG:
                 cfg = config.load_config(f)
                 cfg.apply(self)
             else:
