@@ -429,6 +429,7 @@ def valid_command_context(context):
 
 
 def valid_ssh_options(opts):
+    opts = opts or {}
     extra_keys = set(opts.keys()) - set(['agent', 'identities'])
     if extra_keys:
         raise ConfigError("Unknown SSH options: %s" %
