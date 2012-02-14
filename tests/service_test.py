@@ -225,6 +225,9 @@ class ReconfigRebuildAllTest(TestCase):
 
         assert all(i.state == service.ServiceInstance.STATE_STARTING
                    for i in self.new_service.instances)
+
+        # This is failing right now because the state class overrides __eq__
+        # and should be fixed.
         assert [i.state for i in self.new_service.instances]
 
 
