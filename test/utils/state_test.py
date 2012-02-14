@@ -24,7 +24,10 @@ class SimpleTestCase(TestCase):
         # Still traffic
         self.machine.transition(True)
         assert_equal(self.machine.state, self.state_green)
-        
+
+    def test_check(self):
+        # TODO:
+        pass
 
 class MultiOptionTestCase(TestCase):
     @setup
@@ -46,7 +49,6 @@ class MultiOptionTestCase(TestCase):
             'ignoring': self.state_angry,
             'talking': self.state_listening,
         })
-
         
         self.machine = state.StateMachine(self.state_listening)
         

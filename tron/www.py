@@ -48,6 +48,8 @@ def job_run_state(job_run):
         return "SCHE"
     if job_run.is_queued:
         return "QUE"
+    if job_run.is_skipped:
+        return "SKIP"
 
     return "UNKWN"
 
@@ -83,57 +85,24 @@ class ActionRunResource(resource.Resource):
         log.info("Handling '%s' request for action run %s",
                  cmd, self._act_run.id)
 
-        if cmd == 'start':
-            self._start(request)
-        elif cmd == 'succeed':
-            self._succeed(request)
-        elif cmd == 'cancel':
-            self._cancel(request)
-        elif cmd == 'fail':
-            self._fail(request)
-        else:
+        if cmd not in ('start', 'succeed', 'cancel', 'fail', 'skip'):
             log.warning("Unknown request command %s", request.args['command'])
             return respond(request, None, code=http.NOT_IMPLEMENTED)
 
+        try:
+            resp = getattr(self._act_run, '_%s' % cmd)()
+        except action.Error, e:
+            resp = None
+        if not resp:
+            log.info("Failed to %s action run %r." % (cmd, self._act_run))
+            return respond(request, {
+                'result': "Failed to %s. Action in state: " % (
+                    cmd,
+                    job_run_state(self._act_run))
+                })
+
         return respond(request, {'result': "Action run now in state %s" %
                                  job_run_state(self._act_run)})
-
-    def _start(self, request):
-        if not self._act_run.is_success and not self._act_run.is_running:
-            log.info("Starting job run %s", self._act_run.id)
-            try:
-                self._act_run.start()
-            except action.Error, e:
-                log.info("Failed to start action run %r", e)
-        else:
-            log.warning("Request to start job run %s when it's already done",
-                        self._act_run.id)
-
-    def _succeed(self, request):
-        if not self._act_run.is_running and not self._act_run.is_success:
-            log.info("Marking job run %s for success", self._act_run.id)
-            self._act_run.succeed()
-        else:
-            log.warning("Request to mark job run %s succeeded when it's"
-                        " running or already succeeded", self._act_run.id)
-
-    def _cancel(self, request):
-        if self._act_run.is_scheduled or self._act_run.is_queued:
-            log.info("Cancelling job %s", self._act_run.id)
-            self._act_run.cancel()
-        else:
-            log.warning("Request to cancel job run %s when it's not possible",
-                        self._act_run.id)
-
-    def _fail(self, request):
-        if (not self._act_run.is_running and
-            not self._act_run.is_success and
-            not self._act_run.is_failure):
-            log.info("Marking job run %s as failed", self._act_run.id)
-            self._act_run.fail(0)
-        else:
-            log.warning("Request to fail job run %s when it's already running"
-                        " or done", self._act_run.id)
 
 
 class JobRunResource(resource.Resource):

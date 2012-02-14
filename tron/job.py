@@ -233,32 +233,36 @@ class JobRun(object):
 
     @property
     def is_done(self):
-        return not any([r.is_running or r.is_queued or r.is_scheduled
-                        for r in self.action_runs_with_cleanup])
+        return not any(r.is_running or r.is_queued or r.is_scheduled
+                        for r in self.action_runs_with_cleanup)
 
     @property
     def is_queued(self):
-        return all([r.is_queued for r in self.action_runs_with_cleanup])
+        return all(r.is_queued for r in self.action_runs_with_cleanup)
 
     @property
     def is_starting(self):
-        return any([r.is_starting for r in self.action_runs_with_cleanup])
+        return any(r.is_starting for r in self.action_runs_with_cleanup)
 
     @property
     def is_running(self):
-        return any([r.is_running for r in self.action_runs_with_cleanup])
+        return any(r.is_running for r in self.action_runs_with_cleanup)
 
     @property
     def is_scheduled(self):
-        return any([r.is_scheduled for r in self.action_runs_with_cleanup])
+        return any(r.is_scheduled for r in self.action_runs_with_cleanup)
 
     @property
     def is_unknown(self):
-        return any([r.is_unknown for r in self.action_runs_with_cleanup])
+        return any(r.is_unknown for r in self.action_runs_with_cleanup)
 
     @property
     def is_cancelled(self):
-        return all([r.is_cancelled for r in self.action_runs_with_cleanup])
+        return all(r.is_cancelled for r in self.action_runs_with_cleanup)
+
+    @property
+    def is_skipped(self):
+        return all(r.is_skipped for r in self.action_runs_with_cleanup)
 
     @property
     def cleanup_job_status(self):
