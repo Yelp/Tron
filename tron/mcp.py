@@ -474,9 +474,7 @@ class MasterControlProgram(object):
             action = Action(name=ca_conf.name,
                             command=ca_conf.command,
                             node_pool=self._node_pool_or_none(ca_conf.node))
-            job.cleanup_action = action
-            action.job = job
-            job._register_action(action)
+            job.register_cleanup_action(action)
 
         return job
 
