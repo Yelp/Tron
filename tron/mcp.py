@@ -424,8 +424,10 @@ class MasterControlProgram(object):
             job.scheduler = scheduler.IntervalScheduler(interval=sch_conf.timedelta)
 
         elif isinstance(sch_conf, config_parse.ConfigDailyScheduler):
-            job.scheduler = scheduler.GrocScheduler(time_zone=self.time_zone)
-            job.scheduler.timestr = sch_conf.start_time
+            # Slightly bad interface: have to pass timestr in initializer to
+            # deal with None and default (00:00) properly.
+            job.scheduler = scheduler.GrocScheduler(time_zone=self.time_zone,
+                                                    timestr=sch_conf.start_time)
             job.scheduler.parse_legacy_days(sch_conf.days)
 
         elif isinstance(sch_conf, config_parse.ConfigGrocScheduler):
