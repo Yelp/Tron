@@ -19,9 +19,12 @@ class NodeTestCase(TestCase):
         self.stderr = StringIO.StringIO()
 
     def test_output_logging(self):
-        nod = node.Node(hostname="localhost")
+        nod = node.Node(hostname="localhost",
+                        ssh_options=turtle.Turtle())
 
-        action_cmd = action.ActionCommand("test", "false", stdout=self.stdout, stderr=self.stderr)
+        action_cmd = action.ActionCommand("test", "false",
+                                          stdout=self.stdout,
+                                          stderr=self.stderr)
 
         nod.connection = self.TestConnection()
         nod.run_states = {action_cmd.id: turtle.Turtle(state=0)}
@@ -38,7 +41,8 @@ class NodeTestCase(TestCase):
 class NodeTimeoutTest(testingutils.ReactorTestCase):
     @setup
     def build_node(self):
-        self.node = node.Node(hostname="testnodedoesnotexist")
+        self.node = node.Node(hostname="testnodedoesnotexist",
+                              ssh_options=turtle.Turtle())
 
         # Make this test faster
         node.CONNECT_TIMEOUT = 1
