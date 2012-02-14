@@ -112,7 +112,7 @@ class StateMachine(object):
 
     def listen(self, listen_spec, callback):
 
-        """Listen for the specific state of set of states and callback on the
+        """Listen for the specific state or set of states and callback on the
         function provided.
 
         The callback is called AFTER the state transition has been made.

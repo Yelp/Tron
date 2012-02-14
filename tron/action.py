@@ -1,7 +1,7 @@
 import logging
 import re
 import os
-from subprocess import call, PIPE
+from subprocess import Popen, PIPE
 import sys
 
 from tron import node, command_context
@@ -196,8 +196,8 @@ class ActionRun(object):
             num_lines = sys.maxint
 
         try:
-            cmd = ('tail', '-n', num_lines, path)
-            tail_sub = call(*cmd , stdout=PIPE)
+            cmd = ('tail', '-n', str(num_lines), path)
+            tail_sub = Popen(cmd, stdout=PIPE)
             lines = [line + '\n' for line in tail_sub.stdout]
         except OSError:
             log.error("Could not tail %s." % path)
