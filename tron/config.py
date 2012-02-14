@@ -706,22 +706,6 @@ class FileResource(yaml.YAMLObject):
     yaml_tag = u'!FileResource'
 
 
-# Shortcut values for intervals
-TIME_INTERVAL_SHORTCUTS = {
-    'hourly': dict(hours=1),
-}
-
-# Translations from possible configuration units to the argument to
-# datetime.timedelta
-TIME_INTERVAL_UNITS = {
-    'months': ['mo', 'month', 'months'],
-    'days': ['d', 'day', 'days'],
-    'hours': ['h', 'hr', 'hrs', 'hour', 'hours'],
-    'minutes': ['m', 'min', 'mins', 'minute', 'minutes'],
-    'seconds': ['s', 'sec', 'secs', 'second', 'seconds']
-}
-
-
 class Scheduler(object):
     @classmethod
     def from_string(self, scheduler_str):
@@ -750,6 +734,21 @@ class ConstantScheduler(_ConfiguredObject):
     def _apply(self):
         self._ref()
 
+
+# Shortcut values for intervals
+TIME_INTERVAL_SHORTCUTS = {
+    'hourly': dict(hours=1),
+}
+
+# Translations from possible configuration units to the argument to
+# datetime.timedelta
+TIME_INTERVAL_UNITS = {
+    'months': ['mo', 'month', 'months'],
+    'days': ['d', 'day', 'days'],
+    'hours': ['h', 'hr', 'hrs', 'hour', 'hours'],
+    'minutes': ['m', 'min', 'mins', 'minute', 'minutes'],
+    'seconds': ['s', 'sec', 'secs', 'second', 'seconds']
+}
 
 
 class IntervalScheduler(_ConfiguredObject):
