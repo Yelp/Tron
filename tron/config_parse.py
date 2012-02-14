@@ -636,7 +636,7 @@ def valid_daily_scheduler(start_time=None, days=None):
 
     return ConfigDailyScheduler(
         start_time=start_time,
-        days=days,
+        days=days or 'MTWRFSU',
     )
 
 

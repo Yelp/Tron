@@ -360,17 +360,17 @@ class MasterControlProgram(object):
         # handlers
         new_handlers = []
         if syslog_address:
-            if not isinstance(self.syslog_address, basestring):
+            if not isinstance(syslog_address, basestring):
                 self.syslog_address = tuple(self.syslog_address)
 
             try:
-                h = logging.handlers.SysLogHandler(self.syslog_address)
+                h = logging.handlers.SysLogHandler(syslog_address)
                 fmt_str = "tron[%(process)d]: %(message)s"
                 h.setFormatter(logging.Formatter(fmt_str))
                 new_handlers.append(h)
             except socket.error:
                 raise ConfigError('%s is not a valid syslog address' %
-                                  self.syslog_address)
+                                  syslog_address)
 
         for h in handlers_to_be_removed:
             log.info('Removing logging handler %s', h)
