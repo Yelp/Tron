@@ -5,6 +5,7 @@ import shutil
 import time
 import yaml
 
+from twisted.conch.client.options import ConchOptions
 from twisted.internet import reactor
 
 import tron
@@ -300,32 +301,14 @@ class MasterControlProgram(object):
         self._apply_loggers(conf.syslog_address)
         self.context.base = conf.command_context
 
-        self.nodes = {}
-        for conf_node in conf.nodes.values():
-            node = Node(hostname=conf_node.hostname,
-                        name=conf_node.name,
-                        ssh_options=conf.ssh_options)
-            self.nodes[conf_node.name] = node
-
-        self.node_pools = {}
-        for conf_pool in conf.node_pools.values():
-            p = NodePool(name=conf_pool.name,
-                         nodes=[self.nodes[n] for n in conf_pool.nodes])
-            self.node_pools[p.name] = p
+        ssh_options = self._ssh_options_from_config(conf.ssh_options)
+        self._apply_nodes(conf.nodes, ssh_options)
+        self._apply_node_pools(conf.node_pools)
 
         self.time_zone = conf.time_zone
-
         self._apply_jobs(conf.jobs)
         self._apply_services(conf.services)
-
-        if conf.notification_options is not None:
-            if self.monitor:
-                self.monitor.stop()
-
-            em = emailer.Emailer(conf.notification_options.smtp_host,
-                                 conf.notification_options.notification_addr)
-            self.monitor = monitor.CrashReporter(em, self)
-            self.monitor.start()
+        self._apply_notification_options(conf.notification_options)
 
     def _apply_working_directory(self, wd):
         if self.state_handler.working_dir:
@@ -378,6 +361,44 @@ class MasterControlProgram(object):
         for h in new_handlers:
             log.info('Adding logging handler %s', h)
             root.addHandler(h)
+
+    def _ssh_options_from_config(self, ssh_conf):
+        ssh_options = ConchOptions()
+        if ssh_conf.agent:
+            if 'SSH_AUTH_SOCK' in os.environ:
+                ssh_options['agent'] = True
+            else:
+                raise ConfigError("No SSH Agent available ($SSH_AUTH_SOCK)")
+        else:
+            ssh_options['noagent'] = True
+
+        for file_name in ssh_conf.identities:
+            file_path = os.path.expanduser(file_name)
+            if not os.path.exists(file_path):
+                raise ConfigError("Private key file '%s' doesn't exist" %
+                                  file_name)
+            if not os.path.exists(file_path + ".pub"):
+                raise ConfigError("Public key '%s' doesn't exist" %
+                                  (file_name + ".pub"))
+
+            ssh_options.opt_identity(file_name)
+
+        return ssh_options
+
+    def _apply_nodes(self, node_confs, ssh_options):
+        self.nodes = {}
+        for conf_node in node_confs.values():
+            node = Node(hostname=conf_node.hostname,
+                        name=conf_node.name,
+                        ssh_options=ssh_options)
+            self.nodes[conf_node.name] = node
+
+    def _apply_node_pools(self, pool_confs):
+        self.node_pools = {}
+        for conf_pool in pool_confs.values():
+            p = NodePool(name=conf_pool.name,
+                         nodes=[self.nodes[n] for n in conf_pool.nodes])
+            self.node_pools[p.name] = p
 
     def _apply_jobs(self, job_configs):
         """Configure jobs"""
@@ -497,6 +518,16 @@ class MasterControlProgram(object):
         srv.command = srv_config.command
         srv.count = srv_config.count
         return srv
+
+    def _apply_notification_options(self, notification_conf):
+        if notification_conf is not None:
+            if self.monitor:
+                self.monitor.stop()
+
+            em = emailer.Emailer(notification_conf.smtp_host,
+                                 notification_conf.notification_addr)
+            self.monitor = monitor.CrashReporter(em, self)
+            self.monitor.start()
 
     ### JOBS ###
 

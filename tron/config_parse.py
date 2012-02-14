@@ -9,7 +9,6 @@ import os
 import re
 
 import pytz
-from twisted.conch.client import options
 import yaml
 
 log = logging.getLogger("tron.config")
@@ -70,6 +69,14 @@ NotificationOptions = namedtuple(
     [
         'smtp_host',            # str
         'notification_addr',    # str
+    ])
+
+
+ConfigSSHOptions = namedtuple(
+    'NotificationOptions',
+    [
+        'agent',        # bool
+        'identities',   # list of str
     ])
 
 
@@ -422,34 +429,17 @@ def valid_command_context(context):
 
 
 def valid_ssh_options(opts):
-    opts = opts or {}
-    ssh_options = options.ConchOptions()
-    if opts.get('agent', False):
-        if 'SSH_AUTH_SOCK' in os.environ:
-            ssh_options['agent'] = True
-        else:
-            raise ConfigError("No SSH Agent available ($SSH_AUTH_SOCK)")
-    else:
-        ssh_options['noagent'] = True
-
-    if 'identities' in opts:
-        for file_name in opts['identities']:
-            file_path = os.path.expanduser(file_name)
-            if not os.path.exists(file_path):
-                raise ConfigError("Private key file '%s' doesn't exist" %
-                                  file_name)
-            if not os.path.exists(file_path + ".pub"):
-                raise ConfigError("Public key '%s' doesn't exist" %
-                                  (file_name + ".pub"))
-
-            ssh_options.opt_identity(file_name)
-
     extra_keys = set(opts.keys()) - set(['agent', 'identities'])
     if extra_keys:
         raise ConfigError("Unknown SSH options: %s" %
                           ', '.join(list(extra_keys)))
 
-    return ssh_options
+    return ConfigSSHOptions(
+        agent=valid_bool('ssh_options.agent',
+                         opts.get('agent', False)),
+        identities=valid_list('ssh_options.identities',
+                              opts.get('identities', []))
+    )
 
 
 def valid_notification_options(options):
