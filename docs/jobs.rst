@@ -31,7 +31,7 @@ Required Fields
 Optional Fields
 ---------------
 
-**queueing** (default **True**)
+**queueing** (default **True** for daily schedule, **False** otherwise)
     If a job run is still running when the next job run is to be scheduled,
     add the next run to a queue if this is **True**. Otherwise, drop it.
 
