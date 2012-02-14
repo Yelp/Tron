@@ -59,7 +59,8 @@ class NodeTimeoutTest(testingutils.ReactorTestCase):
         df = self.node.run(self.run)
         df.addErrback(fail_job)
 
-        testingutils.wait_for_deferred(df)
+        with testingutils.no_handlers_for_logger():
+            testingutils.wait_for_deferred(df)
         assert df.called
         assert self.job_marked_failed
 
