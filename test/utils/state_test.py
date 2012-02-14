@@ -26,8 +26,10 @@ class SimpleTestCase(TestCase):
         assert_equal(self.machine.state, self.state_green)
 
     def test_check(self):
-        # TODO:
-        pass
+        assert not self.machine.check(False)
+        assert_equal(self.machine.check(True), self.state_green)
+        assert_equal(self.machine.state, self.state_red)
+
 
 class MultiOptionTestCase(TestCase):
     @setup

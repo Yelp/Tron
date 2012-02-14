@@ -156,10 +156,14 @@ class ActionRunState(TestCase):
 
         assert_raises(action.Error, self.run.start)
 
-
     def test_skip(self):
-        # TODO
-        pass
+        assert not self.run.is_running
+        assert self.run.attempt_start()
+
+        assert self.run.fail(-1)
+        assert self.run.skip()
+        assert self.run.is_skipped
+
 
 class TestRunDependency(TestCase):
     @setup

@@ -254,7 +254,11 @@ class ActionRun(object):
         return self.machine.transition('queue')
 
     def skip(self):
-        return self.machine.transition('skip')
+        """Mark the run as having been skipped."""
+        if self.machine.transition('skip'):
+            self.start_dependants()
+            return True
+        return False
 
     def _open_output_file(self):
         try:
@@ -333,9 +337,10 @@ class ActionRun(object):
         """Mark the run as having failed, providing an exit status"""
         log.info("Action run %s failed with exit status %r",
                  self.id, exit_status)
-        self.machine.transition('fail')
-        self.exit_status = exit_status
-        self.end_time = timeutils.current_time()
+        if self.machine.transition('fail'):
+            self.exit_status = exit_status
+            self.end_time = timeutils.current_time()
+            return True
 
     def fail_unknown(self):
         """Mark the run as having failed, but note that we don't actually know
