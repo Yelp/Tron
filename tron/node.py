@@ -63,8 +63,9 @@ class RunState(object):
 
 
 class NodePool(object):
-    def __init__(self, hostname=None, nodes=None):
-        self.nodes = nodes or []
+    def __init__(self, nodes, name=None):
+        self.nodes = nodes
+        self.name = name or '_'.join(n.name for n in nodes)
         self.iter = None
 
     def __eq__(self, other):

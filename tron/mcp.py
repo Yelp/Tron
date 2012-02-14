@@ -309,9 +309,8 @@ class MasterControlProgram(object):
 
         self.node_pools = {}
         for conf_pool in conf.node_pools.values():
-            p = NodePool()
-            p.name = conf_pool.name
-            p.nodes = [self.nodes[n] for n in conf_pool.nodes]
+            p = NodePool(name=conf_pool.name,
+                         nodes=[self.nodes[n] for n in conf_pool.nodes])
             self.node_pools[p.name] = p
 
         self.time_zone = conf.time_zone
