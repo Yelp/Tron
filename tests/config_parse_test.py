@@ -194,7 +194,7 @@ services:
                             requires=(),
                             node=None)
                     }),
-                    queueing=True,
+                    queueing=False,
                     run_limit=50,
                     all_nodes=False,
                     cleanup_action=ConfigAction(
@@ -227,7 +227,7 @@ services:
                     name='test_job2',
                     node='batch1',
                     schedule=ConfigDailyScheduler(
-                        start_time='16:30:00', days=None),
+                        start_time='16:30:00', days='MTWRFSU'),
                     actions=FrozenDict(**{
                         'action2_0': ConfigAction(
                             name='action2_0',
@@ -260,14 +260,14 @@ services:
                             requires=('action3_0', 'action3_1'),
                             node='batch0')
                     }),
-                    queueing=True,
+                    queueing=False,
                     run_limit=50,
                     all_nodes=False,
                     cleanup_action=None),
                 'test_job4': ConfigJob(
                     name='test_job4',
                     node='batch0_batch1',
-                    schedule=ConfigDailyScheduler(start_time=None, days=None),
+                    schedule=ConfigDailyScheduler(start_time=None, days='MTWRFSU'),
                     actions=FrozenDict(**{
                         'action4_0': ConfigAction(
                             name='action4_0',
