@@ -198,7 +198,7 @@ class ActionRun(object):
         try:
             cmd = ('tail', '-n', str(num_lines), path)
             tail_sub = Popen(cmd, stdout=PIPE)
-            lines = [line + '\n' for line in tail_sub.stdout]
+            lines = [line.rstrip() for line in tail_sub.stdout]
         except OSError:
             log.error("Could not tail %s." % path)
             return []
