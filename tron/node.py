@@ -118,7 +118,6 @@ class Node(object):
 
         self.idle_timeout = None
         self.idle_timer = None
-        self.conch_options = {}
 
     def __cmp__(self, other):
         if not isinstance(other, self.__class__):
