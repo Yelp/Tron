@@ -3,15 +3,12 @@ import pwd
 import struct
 import logging
 
-from twisted.internet import protocol, reactor, defer
-from twisted.cred import credentials
-from twisted.conch import error
+from twisted.internet import defer
 from twisted.conch.ssh import channel, common
 from twisted.conch.ssh import connection
-from twisted.conch.ssh import keys, userauth, agent
 from twisted.conch.ssh import transport
-from twisted.conch.client import default, options
-from twisted.python import log, failure
+from twisted.conch.client import default
+from twisted.python import failure
 
 log = logging.getLogger('tron.ssh')
 

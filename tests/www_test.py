@@ -6,6 +6,7 @@ from testify.utils import turtle
 
 try:
     import simplejson
+    assert simplejson
 except ImportError:
     import json as simplejson
 
@@ -136,7 +137,7 @@ class JobQueueTest(TestCase):
         req = twisted.web.server.Request(turtle.Turtle(), None)
         req.args = {'command': ['disable']}
         req.childLink = lambda val : "/jobs/foo/%s" % val
-        resp = self.resource.render_POST(req)
+        self.resource.render_POST(req)
         
         # Verify the response
         assert_equal(req.code, twisted.web.http.OK)
@@ -171,7 +172,7 @@ class JobQueueDuplicateTest(TestCase):
         req = twisted.web.server.Request(turtle.Turtle(), None)
         req.args = {'command': ['disable']}
         req.childLink = lambda val : "/jobs/foo/%s" % val
-        resp = self.resource.render_POST(req)
+        self.resource.render_POST(req)
 
         # Verify the response
         assert_equal(req.code, twisted.web.http.OK)
@@ -206,7 +207,7 @@ class JobRunStartTest(TestCase):
         req.prePathURL = lambda : "/jobs/foo/1"
         req.args = {'command': ['start']}
         req.childLink = lambda val : "/jobs/foo/%s" % val
-        resp = self.resource.render_POST(req)
+        self.resource.render_POST(req)
 
         # Verify the response
         assert_equal(req.code, twisted.web.http.OK)

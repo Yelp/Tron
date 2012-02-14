@@ -8,17 +8,7 @@ to controlling jobs and runs.
 import datetime
 import logging
 import optparse
-import os.path
 import sys
-import urllib2
-import urlparse
-
-try:
-    import simplejson
-except ImportError:
-    import json as simplejson
-
-import yaml
 
 import tron
 from tron import cmd
@@ -48,8 +38,8 @@ class TronCtlOptionParser(optparse.OptionParser):
         result = []
         result.append(formatter.format_heading("Commands"))
         formatter.indent()
-        for cmd, desc in COMMAND_HELP:
-            text = ''.join((cmd.ljust(20), desc.ljust(40)))
+        for cmd_name, desc in COMMAND_HELP:
+            text = ''.join((cmd_name.ljust(20), desc.ljust(40)))
             result.append(formatter._format_text(text))
             result.append('\n')
 

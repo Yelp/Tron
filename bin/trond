@@ -7,13 +7,10 @@ This file can probably be left alone as long as we continue to use Twisted.
 
 from __future__ import with_statement
 
-import datetime
 import errno
-import gc
 import logging
 import optparse
 import os
-import re
 import signal
 import sys
 
@@ -28,13 +25,7 @@ from twisted.scripts import _twistd_unix
 import tron
 from tron import cmd
 from tron import config
-from tron import emailer
-from tron import job
 from tron import mcp
-from tron import monitor
-from tron import node
-from tron import resource
-from tron import scheduler
 from tron import www
 from tron.utils import log_handler
 
@@ -102,7 +93,6 @@ def setup_logging(options):
     # TODO: Some stderr logging during development might be a good idea
     #stream = sys.stderr
     if options.verbose > 0:
-        stream = sys.stdout
         level = logging.INFO
         twist_level = logging.WARNING
     if options.verbose > 1:

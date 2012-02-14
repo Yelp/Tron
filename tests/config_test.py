@@ -2,7 +2,6 @@
 import datetime
 import logging
 from logging import handlers
-import os
 import platform
 import shutil
 import StringIO
@@ -286,15 +285,15 @@ syslog_address: /does/not/exist"""
         test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
         test_reconfig.apply(self.my_mcp)
         assert_equal(len(root.handlers), 2)
-        assert_equal(type(root.handlers[-1]), handlers.SysLogHandler)
+        assert_equal(root.handlers[-1].__class__, handlers.SysLogHandler)
 
         test_reconfig = config.load_config(StringIO.StringIO(self.config))
         test_reconfig.apply(self.my_mcp)
         assert_equal(len(root.handlers), 1)
-        assert_equal(type(root.handlers[0]), logging.StreamHandler)
+        assert_equal(root.handlers[0].__class__, logging.StreamHandler)
 
     def test_bad_syslog(self):
-        root = logging.getLogger('')
+        logging.getLogger('')
         test_reconfig = config.load_config(StringIO.StringIO(self.bad_config))
         assert_raises(config.ConfigError, test_reconfig.apply, self.my_mcp)
 

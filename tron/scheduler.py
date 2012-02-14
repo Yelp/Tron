@@ -1,5 +1,4 @@
 import calendar
-from collections import deque
 import datetime
 import logging
 import re

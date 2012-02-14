@@ -1,5 +1,4 @@
 import datetime
-import os 
 import shutil
 import StringIO
 import tempfile
@@ -9,7 +8,7 @@ from testify.utils import turtle
 
 from twisted.internet import reactor
 from tron.utils import timeutils, testingutils
-from tron import mcp, node, job, action, scheduler
+from tron import mcp, job, action, scheduler
 
 
 class TestStateHandler(TestCase):
@@ -47,8 +46,8 @@ class TestStateHandler(TestCase):
         def callNow(sleep, func, run):
             raise NotImplementedError(sleep)
         
-        run = self.job.next_runs()[0]
-        callLate = reactor.callLater
+        self.job.next_runs()
+        #callLate = reactor.callLater
         #reactor.callLater = callNow
        
         #try:
@@ -127,7 +126,6 @@ jobs:
     def test(self):
         handler = mcp.StateHandler(turtle.Turtle(), "/tmp")
         assert_raises(mcp.StateFileVersionError, handler._load_data_file, self.data_file)
-        data = (self.data_file)
 
 class TestMasterControlProgram(TestCase):
     
