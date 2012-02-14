@@ -1,7 +1,7 @@
 """Tests for our configuration system"""
+import shutil
 import StringIO
 import tempfile
-import shutil
 
 import yaml
 
@@ -48,7 +48,7 @@ class ConfigTest(TestCase):
                         dict(name='action_change',
                              command='command_change'),
                         dict(name='action_remove2',
-                             command='comomaond_remove2',
+                             command='command_remove2',
                              requires=['action_change']),
                     ],
                 ),
@@ -64,7 +64,7 @@ class ConfigTest(TestCase):
 
     def test_config_2(self, wd):
         config = dict(
-            working_dir='./config_test_dir',
+            working_dir=wd,
             ssh_options=dict(
                 agent=True,
                 identities=['tests/test_id_rsa'],
@@ -84,19 +84,12 @@ class ConfigTest(TestCase):
                                   command='command_unchanged') ]
                 ),
                 dict(
-                    name='test_remove',
-                    node='node1',
-                    schedule=dict(interval='20s'),
-                    actions=[dict(name='action_remove',
-                                  command='command_remove')],
-                ),
-                dict(
                     name='test_change',
                     node='nodePool',
                     schedule='daily',
                     actions=[
                         dict(name='action_change',
-                             command='command_change'),
+                             command='command_changed'),
                     ],
                 ),
                 dict(
@@ -172,7 +165,7 @@ class ConfigTest(TestCase):
         assert_equal(len(job1.topo_actions), 1)
         assert_equal(job1.topo_actions[0].name, 'action_remove')
 
-        self.reconfig()
+        self.reconfigure()
 
         assert not 'test_remove' in self.my_mcp.jobs
         assert not job1.enabled
@@ -193,7 +186,7 @@ class ConfigTest(TestCase):
         assert_equal(job2.topo_actions[0].command, 'command_change')
         assert_equal(job2.topo_actions[1].command, 'command_remove2')
 
-        self.reconfig()
+        self.reconfigure()
         job2 = self.my_mcp.jobs['test_change']
 
         assert_equal(job2.name, "test_change")
@@ -207,7 +200,7 @@ class ConfigTest(TestCase):
 
     def test_job_new(self):
         assert not 'test_new' in self.my_mcp.jobs
-        self.reconfig()
+        self.reconfigure()
 
         assert 'test_new' in self.my_mcp.jobs
         job3 = self.my_mcp.jobs['test_new']
@@ -226,7 +219,7 @@ class ConfigTest(TestCase):
         run = job4.runs[0]
         assert run.is_scheduled
 
-        self.reconfig()
+        self.reconfigure()
 
         assert run.job is None
 
