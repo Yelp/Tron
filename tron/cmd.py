@@ -12,6 +12,8 @@ import sys
 
 try:
     import simplejson
+    # Pyflakes
+    assert simplejson
 except ImportError:
     import json as simplejson
 

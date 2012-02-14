@@ -51,8 +51,8 @@ class JobRun(object):
     def set_run_time(self, run_time):
         self.run_time = run_time
 
-        for action in self.action_runs_with_cleanup:
-            action.run_time = run_time
+        for action_run in self.action_runs_with_cleanup:
+            action_run.run_time = run_time
 
     def seconds_until_run_time(self):
         run_time = self.run_time
@@ -308,8 +308,8 @@ class Job(object):
     def _register_action(self, action):
         """Prepare an action to be *owned* by this job"""
         if action in self.topo_actions:
-            raise Error("Action %s already in jobs %s" %
-                        (action.name, job.name))
+            raise Error("Action %s already in jobs %s" % (
+                action.name, self.name))
 
     def listen(self, spec, callback):
         """Mimic the state machine interface for listening to events"""
@@ -541,7 +541,7 @@ class Job(object):
         for r_data in data['runs']:
             try:
                 self.restore_run(r_data)
-            except job.Error, e:
+            except Error, e:
                 log.warning("Failed to restore job: %r (%r)", r_data, e)
                 continue
 

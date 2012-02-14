@@ -1,13 +1,10 @@
 """Tests for our configuration system"""
 import StringIO
-import datetime
-import os
 import tempfile
 import shutil
 
 from testify import *
-from tron import config, mcp, scheduler
-from tron.utils import testingutils
+from tron import config, mcp
 from test.config_test import syslog_address_for_platform
 
 class ConfigTest(TestCase):
@@ -200,7 +197,7 @@ jobs:
         job2 = self.my_mcp.jobs['test_change']
         run0 = job2.next_runs()[0]
         run0.start()
-        run1 = job2.next_runs()[0]
+        job2.next_runs()
         assert_equal(len(job2.runs), 2)
 
         assert_equal(job2.name, "test_change")

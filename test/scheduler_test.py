@@ -2,7 +2,6 @@ import calendar
 import datetime
 import tempfile
 import shutil
-import time
 
 import pytz
 from testify import *
@@ -10,9 +9,7 @@ from testify.utils import turtle
 
 from tron import action
 from tron import job
-from tron import mcp
 from tron import scheduler
-from tron.utils import groctimespecification
 from tron.utils import timeutils
 
 
