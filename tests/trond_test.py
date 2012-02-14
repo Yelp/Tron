@@ -235,10 +235,13 @@ class SchedulerTestCase(SandboxTestCase):
         # Wait a little to give things time to explode
         time.sleep(1)
         jerb = self.sandbox.list_job('random_failure_job')
-        while (len(jerb['runs']) < 3 or
-               jerb['runs'][-1][u'state'] not in [u'FAIL', u'SUCC']):
+        total_tries = 0
+        while ((len(jerb['runs']) < 3 or
+                jerb['runs'][-1][u'state'] not in [u'FAIL', u'SUCC']) and
+                total_tries < 30):
             time.sleep(0.2)
             jerb = self.sandbox.list_job('random_failure_job')
+            total_tries += 1
 
         assert_equal(jerb['runs'][-1][u'state'], u'FAIL')
         assert_in(jerb['runs'][-2][u'state'], [u'FAIL', u'RUNN'])

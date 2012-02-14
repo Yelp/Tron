@@ -526,13 +526,27 @@ def valid_job(job):
     final_job = dict(
         name=valid_identifier('jobs', job['name']),
         schedule=valid_schedule(path, job['schedule']),
-        queueing=valid_bool(path, job.get('queueing', True)),
         run_limit=valid_int(path, job.get('run_limit', 50)),
         all_nodes=valid_bool(path, job.get('all_nodes', False)),
         cleanup_action=valid_cleanup_action(path,
                                             job.get('cleanup_action', None)),
         node=normalize_node(job['node']),
     )
+
+    queueing=valid_bool(path, job.get('queueing', True)),
+
+    if 'queueing' in job:
+        final_job['queueing'] = valid_bool(path, job['queueing'])
+    else:
+        # Set queueing default based on scheduler
+        if (isinstance(final_job['schedule'], ConfigIntervalScheduler) or
+            isinstance(final_job['schedule'], ConfigConstantScheduler)):
+            # Usually False
+            final_job['queueing'] = False
+        else:
+            # But daily jobs probably deal with daily data and should not be
+            # skipped
+            final_job['queueing'] = True
 
     # load actions
     actions = {}

@@ -13,7 +13,7 @@ from twisted.internet import reactor
 import tron
 from tron import command_context
 from tron import config     # DELETE ME
-from tron import config_parse, event
+from tron import config_parse
 from tron import emailer
 from tron import event
 from tron import job
@@ -227,7 +227,7 @@ class MasterControlProgram(object):
         self.config_file = config_file
 
         # Root command context
-        self.context = command_context.CommandContext()
+        self.context = context or command_context.CommandContext()
 
         self.monitor = None
 
@@ -418,6 +418,7 @@ class MasterControlProgram(object):
 
         if isinstance(sch_conf, config_parse.ConfigConstantScheduler):
             job.scheduler = scheduler.ConstantScheduler()
+            job.constant = True
 
         elif isinstance(sch_conf, config_parse.ConfigIntervalScheduler):
             job.scheduler = scheduler.IntervalScheduler(interval=sch_conf.timedelta)
@@ -430,8 +431,6 @@ class MasterControlProgram(object):
         elif isinstance(sch_conf, config_parse.ConfigGrocScheduler):
             job.scheduler = scheduler.GrocScheduler(time_zone=self.time_zone)
             job.scheduler.parse(sch_conf.scheduler_string)
-
-        job.scheduler.job_setup(job)
 
         # Set up actions
         new_actions = {}

@@ -124,10 +124,6 @@ class ConstantScheduler(object):
 
         return job_runs
 
-    def job_setup(self, job):
-        job.constant = True
-        job.queueing = False
-
     def __str__(self):
         return "CONSTANT"
 
@@ -283,9 +279,6 @@ class GrocScheduler(object):
 
         return job_runs
 
-    def job_setup(self, job):
-        job.queueing = True
-
     def __str__(self):
         # Backward compatible string representation which also happens to be
         # user-friendly
@@ -330,9 +323,6 @@ class IntervalScheduler(object):
             job_run.set_run_time(run_time)
 
         return job_runs
-
-    def job_setup(self, job):
-        job.queueing = False
 
     def __str__(self):
         return "INTERVAL:%s" % self.interval
