@@ -3,13 +3,10 @@ import functools
 import itertools
 import logging
 
-from testify import *
+from testify import assert_not_reached, turtle, TestCase, class_teardown
 from testify.test_case import TwistedFailureError
 from twisted.internet import reactor, defer
 from twisted.python import failure
-
-from tron.utils import twistedutils
-
 
 log = logging.getLogger(__name__)
 
@@ -98,7 +95,7 @@ def wait_for_deferred(deferred, timeout=None):
     deferred.addErrback(on_failure)
 
     if timeout is not None:
-        reactor.callLater(timeout, stop)
+        reactor.callLater(timeout, reactor.stop)
 
     try:
         deferred.addBoth(append)
@@ -119,14 +116,14 @@ def wait_for_deferred(deferred, timeout=None):
         _waiting = False
         results = None
         if failures:
-            failure = failures[0]
+            first_failure = failures[0]
 
             # By this point we've already lost too much of our exception
             # information (traceback, stack) to re-create the real exception.
             # So what we'll have to do is hope our test framework can handle
             # twisted failure objects so we can get some useful information out
             # of them.
-            raise TwistedFailureError(failure)
+            raise TwistedFailureError(first_failure)
             #raise failure.type, failure.value, failure.getTracebackObject()
             #failures[0].raiseException()
 
@@ -168,7 +165,7 @@ def run_reactor(timeout=DEFAULT_TIMEOUT, assert_raises=None):
 
             found_error = False
             try:
-                result = wait_for_deferred(deferred)
+                wait_for_deferred(deferred)
             except TwistedFailureError, e:
                 if assert_raises:
                     d_fail = e.args[0]

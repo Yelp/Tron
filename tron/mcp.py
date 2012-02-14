@@ -2,10 +2,7 @@ from __future__ import with_statement
 import logging
 import os
 import shutil
-import subprocess
-import sys
 import time
-import weakref
 import yaml
 
 from twisted.internet import reactor
@@ -261,7 +258,7 @@ class MasterControlProgram(object):
 
             # Any new jobs will need to be scheduled
             self.run_jobs()
-        except Exception, e:
+        except Exception:
             self.event_recorder.emit_critical("reconfig_failure")
             log.exception("Reconfig failure")
             raise

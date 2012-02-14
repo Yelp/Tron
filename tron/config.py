@@ -4,7 +4,6 @@ import logging.handlers
 import os
 import re
 import socket
-import sys
 import weakref
 
 import pytz
@@ -345,7 +344,7 @@ class TronConfiguration(yaml.YAMLObject):
         for service in built_services:
             try:
                 mcp.add_service(service)
-            except Exception, e:
+            except Exception:
                 log.exception("Failed adding new service")
                 failure = True
 
@@ -407,7 +406,7 @@ class SSHOptions(yaml.YAMLObject, FromDictBuilderMixin):
     def _build_conch_options(self):
         """Verify and construct the ssh (conch) option object
 
-        This is just a dictionary like object that options the twisted ssh
+        This is just a dictionary like object that the twisted ssh
         implementation uses.
         """
         ssh_options = options.ConchOptions()
@@ -557,7 +556,7 @@ class Job(_ConfiguredObject):
             if not real_job.node_pool and not real_action.node_pool:
                 raise ConfigError("Either job '%s' or its action '%s' must"
                                   " have a node" % (real_job.name,
-                                                    action_action.name))
+                                                    real_action.name))
             real_job.cleanup_action = real_action
             real_action.job = real_job
             real_job._register_action(real_action)
@@ -664,8 +663,8 @@ class CleanupAction(Action):
         self.name = CLEANUP_ACTION_NAME
 
         if not getattr(self, 'command', None):
-            raise ConfigError("Missing value in action %s %r" % (key, self),
-                              self.line_number)
+            raise ConfigError("Missing value in action command %r" % (self),
+                self.line_number)
 
         if hasattr(self, 'requires'):
             raise ConfigError("Cleanup actions cannot have dependencies")
@@ -749,7 +748,7 @@ class ConstantScheduler(_ConfiguredObject):
     actual_class = scheduler.ConstantScheduler
 
     def _apply(self):
-        sched = self._ref()
+        self._ref()
 
 
 

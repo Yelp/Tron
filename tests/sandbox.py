@@ -21,15 +21,14 @@ _repo_root, _ = os.path.split(_test_folder)
 log = logging.getLogger(__name__)
 
 
-def wait_for_sandbox_success(func, start_delay=0.1, stop_at=5.0):
+def wait_for_sandbox_success(func, delay=0.1, stop_at=5.0):
     """Call *func* repeatedly until it stops throwing TronSandboxException.
     Wait increasing amounts from *start_delay* but wait no more than a total
     of *stop_at* seconds
     """
-    delay = 0.1
     total_time = 0.0
     last_exception = None
-    while total_time < 5.0:
+    while total_time < stop_at:
         time.sleep(delay)
         total_time += delay
         try:
@@ -37,8 +36,7 @@ def wait_for_sandbox_success(func, start_delay=0.1, stop_at=5.0):
             return
         except TronSandboxException, e:
             delay *= 2
-            last_exception = e
-    raise last_exception
+    raise
 
 
 def make_file_existence_sandbox_exception_thrower(path):
@@ -175,8 +173,8 @@ class TronSandbox(object):
         status, content = cmd.request(self.tron_server_uri, uri, data=data)
 
         if status != cmd.OK or not content:
-            print 'trond appears to have crashed. Log:'
-            print self.log_contents()
+            log.warning('trond appears to have crashed. Log:')
+            log.warning(self.log_contents())
             raise TronSandboxException("Error connecting to tron server at %s%s" % (self.tron_server_uri, uri))
 
         return content
