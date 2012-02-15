@@ -91,7 +91,7 @@ class ActionRunResource(resource.Resource):
 
         try:
             resp = getattr(self._act_run, '%s' % cmd)()
-        except action.Error, e:
+        except action.Error:
             resp = None
         if not resp:
             log.info("Failed to %s action run %r." % (cmd, self._act_run))
