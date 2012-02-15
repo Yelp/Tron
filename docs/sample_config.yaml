@@ -25,7 +25,7 @@ nodes:
 
 node_pools:
   - name: pool
-    nodes: [*node1, *node2]
+    nodes: [node1, node2]
 
 jobs:
   - name: "job0"
