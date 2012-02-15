@@ -132,13 +132,13 @@ class ActionRunState(TestCase):
         assert not self.run.is_running
         assert not self.run.is_done
         
-        self.run.attempt_start()
+        assert self.run.attempt_start()
         
         assert self.run.is_running
         assert not self.run.is_done
         assert self.run.start_time
-        
-        self.run.succeed()
+
+        assert self.run.succeed()
         
         assert not self.run.is_running
         assert self.run.is_done
@@ -155,6 +155,15 @@ class ActionRunState(TestCase):
         assert_equal(self.run.exit_status, 1)
 
         assert_raises(action.Error, self.run.start)
+
+    def test_skip(self):
+        assert not self.run.is_running
+        assert self.run.attempt_start()
+
+        assert self.run.fail(-1)
+        assert self.run.skip()
+        assert self.run.is_skipped
+
 
 class TestRunDependency(TestCase):
     @setup

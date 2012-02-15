@@ -103,6 +103,20 @@ class TestJobRun(TestCase):
         jr1.manual_start()
         assert jr1.is_running
 
+    def test_skip_failed_runs_dependents(self):
+        jr = self.job.next_runs()[0]
+
+        jr.manual_start()
+        ar0, ar1 = jr.action_runs
+
+        assert ar0.is_running
+        assert ar1.is_queued, "State was %s" % ar0.machine.state
+        ar0.fail()
+        ar0.skip()
+        assert ar1.is_running
+        assert ar1.succeed()
+
+        assert jr.is_success
 
 class TestJob(TestCase):
     """Unit testing for Job class"""

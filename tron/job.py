@@ -219,15 +219,15 @@ class JobRun(object):
 
     @property
     def is_failure(self):
-        return any([r.is_failure for r in self.action_runs_with_cleanup])
+        return any(r.is_failure for r in self.action_runs_with_cleanup)
 
     @property
     def all_but_cleanup_success(self):
-        return all([r.is_success for r in self.action_runs])
+        return all(r.is_success or r.is_skipped for r in self.action_runs)
 
     @property
     def is_success(self):
-        return all([r.is_success for r in self.action_runs_with_cleanup])
+        return all(r.is_success or r.is_skipped for r in self.action_runs_with_cleanup)
 
     @property
     def all_but_cleanup_done(self):
@@ -238,32 +238,36 @@ class JobRun(object):
 
     @property
     def is_done(self):
-        return not any([r.is_running or r.is_queued or r.is_scheduled
-                        for r in self.action_runs_with_cleanup])
+        return not any(r.is_running or r.is_queued or r.is_scheduled
+                        for r in self.action_runs_with_cleanup)
 
     @property
     def is_queued(self):
-        return all([r.is_queued for r in self.action_runs_with_cleanup])
+        return all(r.is_queued for r in self.action_runs_with_cleanup)
 
     @property
     def is_starting(self):
-        return any([r.is_starting for r in self.action_runs_with_cleanup])
+        return any(r.is_starting for r in self.action_runs_with_cleanup)
 
     @property
     def is_running(self):
-        return any([r.is_running for r in self.action_runs_with_cleanup])
+        return any(r.is_running for r in self.action_runs_with_cleanup)
 
     @property
     def is_scheduled(self):
-        return any([r.is_scheduled for r in self.action_runs_with_cleanup])
+        return any(r.is_scheduled for r in self.action_runs_with_cleanup)
 
     @property
     def is_unknown(self):
-        return any([r.is_unknown for r in self.action_runs_with_cleanup])
+        return any(r.is_unknown for r in self.action_runs_with_cleanup)
 
     @property
     def is_cancelled(self):
-        return all([r.is_cancelled for r in self.action_runs_with_cleanup])
+        return all(r.is_cancelled for r in self.action_runs_with_cleanup)
+
+    @property
+    def is_skipped(self):
+        return all(r.is_skipped for r in self.action_runs_with_cleanup)
 
     @property
     def cleanup_job_status(self):
@@ -388,13 +392,14 @@ class Job(object):
 
     def newest_run_by_state(self, state):
         for run in self.runs:
-            if state == 'SUCC' and run.is_success or \
-                state == 'CANC' and run.is_cancelled or \
-                state == 'RUNN' and run.is_running or \
-                state == 'FAIL' and run.is_failure or \
-                state == 'SCHE' and run.is_scheduled or \
-                state == 'QUE' and run.is_queued or \
-                state == 'UNKWN' and run.is_unknown:
+            if (state == 'SUCC' and run.is_success or
+                state == 'CANC' and run.is_cancelled or
+                state == 'RUNN' and run.is_running or
+                state == 'FAIL' and run.is_failure or
+                state == 'SCHE' and run.is_scheduled or
+                state == 'QUE' and run.is_queued or
+                state == 'UNKWN' and run.is_unknown or
+                state == 'SKIP' and run.is_skipped):
                 return run
 
         log.warning("No runs with state %s exist", state)
