@@ -37,27 +37,26 @@ available continuously.
 which to run jobs and services.  For example, this configuration has two nodes,
 each of which is responsible for a single job::
 
-    ssh_options:
-      agent: true
-
-    notification_options:
-      smtp_host: localhost
-      notification_addr: <your email address>
-
     nodes:
-      - name: local
         hostname: 'localhost'
+      - name: node1
+        hostname: 'batch1'
+      - name: node2
+        hostname: 'batch2'
 
     jobs:
-      - name: "getting_node_info"
-        node: local
-        schedule: "interval 10 mins"
+      - name: "job0"
+        node: node1
+        schedule: "interval 20s"
         actions:
-          - name: "uname"
-            command: "uname -a"
-          - name: "cpu_info"
-            command: "cat /proc/cpuinfo"
-            requires: [uname]
+          - name: "batch1action"
+            command: "sleep 3; echo asdfasdf"
+      - name: "job1"
+        node: node2
+        schedule: "interval 20s"
+        actions:
+          - name: "batch2action"
+            command: "cat big.txt; sleep 10"
 
 
 How the nodes are set up and assigned to jobs is entirely up to you. They may
