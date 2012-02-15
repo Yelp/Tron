@@ -151,6 +151,42 @@ echo_job ENABLED    INTERVAL:1:00:00     None
         self.sandbox.tronctl(['zap', 'fake_service'])
         assert_equal('DOWN', self.sandbox.list_service('fake_service')['state'])
 
+    def test_skip_failed_actions(self):
+        CONFIG = dedent("""
+        --- !TronConfiguration
+        ssh_options:
+                agent: true
+        nodes:
+            - &local
+                hostname: 'localhost'
+        jobs:
+            - !Job
+                name: "multi_step_job"
+                node: *local
+                schedule: "interval 1 seconds"
+                actions:
+                    - &broken !Action
+                        name: "broken"
+                        command: "failingcommand"
+                    - !Action
+                        name: "works"
+                        command: "echo ok"
+                        requires: *broken
+        """)
+
+        self.sandbox.save_config(CONFIG)
+        self.sandbox.start_trond()
+        time.sleep(2)
+
+        self.sandbox.tronctl(['skip', 'multi_step_job.0.broken'])
+        action_run = self.sandbox.list_action_run('multi_step_job', 0, 'broken')
+        assert_equal(action_run['state'], 'SKIP')
+
+        action_run = self.sandbox.list_action_run('multi_step_job', 0, 'works')
+        assert_equal(action_run['state'], 'SUCC')
+        job_run = self.sandbox.list_job_run('multi_step_job', 0)
+        assert_equal(job_run['state'], 'SUCC')
+
 
 class SchedulerTestCase(SandboxTestCase):
 
