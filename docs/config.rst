@@ -3,79 +3,51 @@ Configuration
 
 .. note::
 
-    **All nodes, jobs, actions, and services** should have a unique anchor and
-    a tag specifying the type (``!Node``, ``!Action``, etc). Doing so will
-    minimize runtime errors, improve error messages, and make future
-    configuration edits easier.
+    **The configuration system has changed significantly since version 0.2.9.**
+    All existing configurations should still work, but new configurations
+    should follow the new conventions.
 
 .. _config_syntax:
 
 Syntax
 ------
 
-The Tron configuration file uses YAML syntax. In addition to simple key-value
-and list syntax, it uses YAML-specific features such as tags and repeated
-nodes. This section outlines the subset of YAML used by Tron configuration
-files.
+The Tron configuration file uses YAML syntax. The recommended configuration
+style requires only strings, decimal values, lists, and dictionaries: the
+subset of YAML that can be losslessly transformed into JSON. (In fact, your
+configuration can be entirely JSON, since YAML is mostly a strict superset
+of JSON.)
 
-Basic Syntax
-^^^^^^^^^^^^
+Past versions of Tron used additional YAML-specific features such as tags,
+anchors, and aliases. These features still work in version 0.3, but are not
+recommended.
 
-YAML is a (mostly) strict superset of JSON, so JSON syntax works, including
-integers, floating point numbers, strings with quotes, lists, and
-dictionaries::
+Basic Example
+-------------
 
-    {'key': [1, 2, "value"], 50: "hooray"}
+::
 
-It adds whitespace-sensitive syntax for these same structures and makes
-quotation marks optional for strings without whitespace::
+    ssh_options:
+      agent: true
 
-    key:
-        - 1
-        - 2
-        - "value"
-    50: hooray
-
-Repeated Nodes
-^^^^^^^^^^^^^^
-
-You can reference any object later in the document using *repeated nodes*. The
-original object (dictionary, list, etc.) is marked with an *anchor*, specified
-by an ampersand (``&``), and aliased later with an asterisk(``*``).
-
-Tron uses this syntax in several places. The simplest is when specifying nodes
-for jobs::
+    notification_options:
+      smtp_host: localhost
+      notification_addr: <your email address>
 
     nodes:
-        - &node1
-            hostname: 'batch1'
+      - name: local
+        hostname: 'localhost'
+
     jobs:
-        -
-            name: "job1"
-            node: *node1
-
-It is also used for specifying :ref:`action dependencies <job_actions>` and
-:ref:`node pools <overview_pools>`.
-
-Tags
-^^^^
-
-Tags begin with exclamation marks (``!``) and give the YAML parser additional
-information about the data type of the object it is next to.
-
-Tron uses *application-specific tags* to determine how to parse its config
-file. The most prominent example is the mandatory data type line at the top
-of the file::
-
-    --- !TronConfiguration
-
-While Tron is able to figure out basic data types such as ``!Node``, ``!Job``,
-``!Action``, and ``!Service``, you must always use a tag for ``!NodePool`` or
-Tron will try to interpret it as a ``!Node``. It is generally a good idea to
-always use the tag for whatever data type you are writing so as to avoid
-ambiguity.
-
-The remaining examples in this file will all use the correct tags.
+      - name: "getting_node_info"
+        node: local
+        schedule: "interval 10 mins"
+        actions:
+          - name: "uname"
+            command: "uname -a"
+          - name: "cpu_info"
+            command: "cat /proc/cpuinfo"
+            requires: [uname]
 
 .. _command_context_variables:
 
@@ -88,16 +60,14 @@ inserted at runtime. The **command context** is populated both by Tron (see
 example::
 
     jobs:
-        - &command_context_demo !Job
-          name: "command_context_demo"
-          node: *node1
+        - name: "command_context_demo"
+          node: local
           schedule: "1st monday in june"
           actions:
-            - &print_run_id !Action
-                name: "print_run_id"
-                # prints 'command_context_demo.1' on the first run,
-                # 'command_context_demo.2' on the second, etc.
-                command: "echo %(runid)"
+            - name: "print_run_id"
+              # prints 'command_context_demo.1' on the first run,
+              # 'command_context_demo.2' on the second, etc.
+              command: "echo %(runid)"
 
 SSH
 ---
@@ -113,7 +83,7 @@ SSH
 
 Example::
 
-    ssh_options: !SSHOptions
+    ssh_options:
         agent: false
         identities:
             - /home/batch/.ssh/id_dsa-nopasswd
@@ -132,7 +102,7 @@ Notification Options
 
 Example::
 
-    notification_options: !NotificationOptions
+    notification_options:
         smtp_host: localhost
         notification_addr: batch+errors@example.com
 
@@ -222,18 +192,31 @@ Nodes
 -----
 
 **nodes**
-    List of `Node` and `NodePool` objects. Each one should have an anchor or
-    it won't be able to be used by anything else in the file.
+    List of nodes, each with a ``name`` and a ``hostname``. (This section may
+    also contain node pools, but we recommend that you put those under
+    ``node_pools``.) ``name`` defaults to ``hostname``. If you do not specify
+    any nodes, Tron will create a node with name and hostname ``localhost``.
 
 Example::
 
     nodes:
-        - &node1 !Node
-            hostname: 'batch1'
-        - &node2 !Node
-            hostname: 'batch2'
-        - &pool !NodePool
-            nodes: [*node1, *node2]
+        - name: node1
+          hostname: 'batch1'
+        - hostname: 'batch2'    # name is 'batch2'
+
+Node Pools
+----------
+
+**node_pools**
+    List of node pools, each with a ``name`` and ``nodes`` list. ``name``
+    defaults to the names of each node joined by underscores.
+
+Example::
+
+    node_pools:
+        - name: pool 
+          nodes: [node1, batch1]
+        - nodes: [batch1, node1]    # name is 'batch1_node1'
 
 Jobs and Actions
 ----------------

@@ -92,31 +92,24 @@ Optional Fields
 Example Actions
 ^^^^^^^^^^^^^^^
 
-Here is a typical job setup. The configuration would work without the ``!Job``
-and ``!Action`` tags, but it would produce worse error messages if there were
-problems. The ``!DailyScheduler`` tag is necessary for Tron to know what kind
-of scheduler you are using.
-
 ::
 
     # ...
     jobs:
-        - !Job
-            name: convert_logs
-            node: *node1
-            schedule: !DailyScheduler
-                start_time: 04:00:00
-            actions:
-                - &verify_logs_present !Action
-                    name: verify_logs_present
-                    command: >
-                        ls /var/log/app/log_%(shortdate-1).txt
-                - &convert_logs !Action
-                    name: convert_logs
-                    command: >
-                        convert_logs /var/log/app/log_%(shortdate-1).txt \
-                            /var/log/app_converted/log_%(shortdate-1).txt
-                    requires: [*verify_logs_present]
+        - name: convert_logs
+          node: *node1
+          schedule:
+            start_time: 04:00:00
+          actions:
+            - name: verify_logs_present
+              command: >
+                ls /var/log/app/log_%(shortdate-1).txt
+            - name: convert_logs
+              command: >
+                convert_logs \
+                  /var/log/app/log_%(shortdate-1).txt \
+                  /var/log/app_converted/log_%(shortdate-1).txt
+              requires: [verify_logs_present]
 
 .. _job_scheduling:
 
@@ -134,11 +127,11 @@ abbreviated.
 
 ::
 
-    schedule: "interval 20s"
+    schedule: "interval 20s"    # short form, requires 'interval'
 
 ::
 
-    schedule: !IntervalScheduler
+    schedule:                   # long form
         interval: "5 mins"
 
 Daily
@@ -149,17 +142,17 @@ Run the job on specific weekdays at a specific time. The time expression is
 
 ::
 
-    schedule: "daily 04:00:00"
+    schedule: "daily 04:00:00"      # short form without days
 
 ::
 
-    schedule: "daily 04:00:00 MWF"
+    schedule: "daily 04:00:00 MWF"  # short form with days
 
 ::
 
-    schedule: !DailyScheduler
+    schedule:                       # long form
         start_time: "07:00:00"
-        days: "MWF"
+        days: "MWF"                 # this field is optional
 
 Complex
 ^^^^^^^
@@ -253,8 +246,8 @@ final state. For example::
 
     - !Job
         # ...
-        cleanup_action: !CleanupAction
-            command: "python -m mrjob.tools.emr.job_flow_pool --terminate MY_POOL"
+        cleanup_action:
+          command: "python -m mrjob.tools.emr.job_flow_pool --terminate MY_POOL"
 
 .. Keep this up to date with man_tronfig.rst
 
