@@ -114,7 +114,9 @@ class TestJobRun(TestCase):
         ar0.fail()
         ar0.skip()
         assert ar1.is_running
+        assert ar1.succeed()
 
+        assert jr.is_success
 
 class TestJob(TestCase):
     """Unit testing for Job class"""

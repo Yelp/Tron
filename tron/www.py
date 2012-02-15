@@ -90,13 +90,13 @@ class ActionRunResource(resource.Resource):
             return respond(request, None, code=http.NOT_IMPLEMENTED)
 
         try:
-            resp = getattr(self._act_run, '_%s' % cmd)()
+            resp = getattr(self._act_run, '%s' % cmd)()
         except action.Error, e:
             resp = None
         if not resp:
             log.info("Failed to %s action run %r." % (cmd, self._act_run))
             return respond(request, {
-                'result': "Failed to %s. Action in state: " % (
+                'result': "Failed to %s. Action in state: %s" % (
                     cmd,
                     job_run_state(self._act_run))
                 })
@@ -246,7 +246,7 @@ class JobResource(resource.Resource):
         if run_num.upper() == 'HEAD':
             run = self._job.newest()
         if run_num.upper() in ['SUCC', 'CANC', 'RUNN', 'FAIL', 'SCHE', 'QUE',
-                               'UNKWN']:
+                               'UNKWN', 'SKIP']:
             run = self._job.newest_run_by_state(run_num.upper())
         if run_num.isdigit():
             run = self._job.get_run_by_num(int(run_num))

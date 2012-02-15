@@ -214,15 +214,15 @@ class JobRun(object):
 
     @property
     def is_failure(self):
-        return any([r.is_failure for r in self.action_runs_with_cleanup])
+        return any(r.is_failure for r in self.action_runs_with_cleanup)
 
     @property
     def all_but_cleanup_success(self):
-        return all([r.is_success for r in self.action_runs])
+        return all(r.is_success or r.is_skipped for r in self.action_runs)
 
     @property
     def is_success(self):
-        return all([r.is_success for r in self.action_runs_with_cleanup])
+        return all(r.is_success or r.is_skipped for r in self.action_runs_with_cleanup)
 
     @property
     def all_but_cleanup_done(self):
@@ -382,13 +382,14 @@ class Job(object):
 
     def newest_run_by_state(self, state):
         for run in self.runs:
-            if state == 'SUCC' and run.is_success or \
-                state == 'CANC' and run.is_cancelled or \
-                state == 'RUNN' and run.is_running or \
-                state == 'FAIL' and run.is_failure or \
-                state == 'SCHE' and run.is_scheduled or \
-                state == 'QUE' and run.is_queued or \
-                state == 'UNKWN' and run.is_unknown:
+            if (state == 'SUCC' and run.is_success or
+                state == 'CANC' and run.is_cancelled or
+                state == 'RUNN' and run.is_running or
+                state == 'FAIL' and run.is_failure or
+                state == 'SCHE' and run.is_scheduled or
+                state == 'QUE' and run.is_queued or
+                state == 'UNKWN' and run.is_unknown or
+                state == 'SKIP' and run.is_skipped):
                 return run
 
         log.warning("No runs with state %s exist", state)

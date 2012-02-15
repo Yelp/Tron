@@ -10,3 +10,4 @@ tron.egg_info
 *._*
 *.swp
 *.swo
+docs/_build/
