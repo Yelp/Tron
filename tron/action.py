@@ -130,6 +130,7 @@ class ActionRun(object):
 
     # We can tell tron to skip a failed step
     STATE_FAILED['skip'] = STATE_SKIPPED
+    STATE_CANCELLED ['skip'] = STATE_SKIPPED
 
     STATE_QUEUED['schedule'] = STATE_SCHEDULED
 
