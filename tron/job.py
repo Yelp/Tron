@@ -92,6 +92,11 @@ class JobRun(object):
         try:
             for action_run in self.action_runs:
                 action_run.attempt_start()
+            if self.cleanup_action_run:
+                # Don't call attempt_start or it will just go. The JobRun
+                # object will kick this when it's actually time to run (any
+                # failure or total success).
+                self.cleanup_action_run.machine.transition('ready')
             self.event_recorder.emit_info("started")
         except action.Error, e:
             log.warning("Failed to start actions: %r", e)
@@ -315,6 +320,11 @@ class Job(object):
             raise Error("Action %s already in jobs %s" % (
                 action.name, self.name))
 
+    def register_cleanup_action(self, action):
+            self.cleanup_action = action
+            action.job = self
+            self._register_action(action)
+
     def listen(self, spec, callback):
         """Mimic the state machine interface for listening to events"""
         assert spec is True
@@ -474,7 +484,8 @@ class Job(object):
                 action.waiting_runs.append(action_run)
                 action_run.required_runs.append(action)
 
-    def build_run(self, node=None, actions=None, run_num=None):
+    def build_run(self, node=None, actions=None, run_num=None,
+                  cleanup_action=None):
         job_run = JobRun(self, run_num=run_num)
 
         job_run.node = node or self.node_pool.next()
@@ -493,7 +504,8 @@ class Job(object):
 
         self.build_action_dag(job_run, actions)
 
-        if self.cleanup_action is not None:
+        cleanup_action = cleanup_action or self.cleanup_action
+        if cleanup_action is not None:
             cleanup_action_run = self._make_action_run(
                 job_run, self.cleanup_action, job_run.cleanup_completed)
             job_run.cleanup_action_run = cleanup_action_run
@@ -562,7 +574,11 @@ class Job(object):
 
         action_list = filter(action_filter, self.topo_actions)
 
-        run = self.build_run(run_num=data['run_num'], actions=action_list)
+        ca = (self.cleanup_action
+              if self.cleanup_action and action_filter(self.cleanup_action)
+              else None)
+        run = self.build_run(run_num=data['run_num'], actions=action_list,
+                             cleanup_action=ca)
         self.run_num = max([run.run_num + 1, self.run_num])
 
         run.restore(data)
