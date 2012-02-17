@@ -6,6 +6,8 @@ tron (0.2.10-1) unstable; urgency=low
   * Tests have been moved from test/ to tests/ (sjohnson)
   * Everything under tron/ web/ and bin/ should now pass pyflakes
 
+ -- Daniel Nephin <dnephin@yelp.com>  Fri, 17 Feb 2012 11:35:05 -0800
+
 tron (0.2.9-1) unstable; urgency=low
 
   * tronweb works and is documented (mowings-iseatz)
