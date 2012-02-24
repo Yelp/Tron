@@ -1,12 +1,12 @@
-tron (0.3.0-1) unstable; urgency=low
+tron (0.2.10-1) unstable; urgency=low
 
   * ssh_options is actually optional (sjohnson)
-  * Config parser has been rewritten. Nodes, jobs, actions, etc. should be referred to by their names (string identifers) rather than anchors/aliases. (sjohnson)
-  * Cleanup actions no longer cause jobs to stop being scheduled if an action fails (sjohnson)
-  * Nodes and node pools are split into separate lists, but node pools may still exist in the node list for backward compatibility (sjohnson)
+  * Cleanup actions no longer cause jobs using an interval scheduler to stop being scheduled if an action fails (sjohnson)
   * Failed actions can be skipped, causing dependent actions to run (dnephin)
+  * Tests have been moved from test/ to tests/ (sjohnson)
+  * Everything under tron/ web/ and bin/ should now pass pyflakes
 
- -- Steve Johnson <sjohnson@yelp.com>  Wed, 15 Feb 2012 10:33:00 -0800
+ -- Daniel Nephin <dnephin@yelp.com>  Fri, 17 Feb 2012 11:35:05 -0800
 
 tron (0.2.9-1) unstable; urgency=low
 

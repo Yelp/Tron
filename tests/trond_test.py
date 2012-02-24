@@ -200,6 +200,33 @@ echo_job ENABLED    INTERVAL:1:00:00     None
         job_run = self.sandbox.list_job_run('multi_step_job', 0)
         assert_equal(job_run['state'], 'SUCC')
 
+    def test_cleanup_on_failure(self):
+        canary = os.path.join(self.sandbox.tmp_dir, 'end_to_end_done')
+
+        FAIL_CONFIG = dedent("""
+        --- !TronConfiguration
+        nodes:
+            - &local
+                hostname: 'localhost'
+        jobs:
+            - &failjob
+                name: "failjob"
+                node: *local
+                schedule: "interval 1 seconds"
+                actions:
+                    - name: "failaction"
+                      command: "failplz"
+        """) + TOUCH_CLEANUP_FMT % canary
+
+        # start with a basic configuration
+        self.sandbox.save_config(FAIL_CONFIG)
+        self.sandbox.start_trond()
+
+        time.sleep(3)
+
+        assert os.path.exists(canary)
+        assert_gt(len(self.sandbox.list_job('failjob')['runs']), 1)
+
 
 class SchedulerTestCase(SandboxTestCase):
 
