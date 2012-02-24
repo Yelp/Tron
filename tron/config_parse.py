@@ -11,6 +11,9 @@ import re
 import pytz
 import yaml
 
+from tron.schedule_parse import parse_groc_daily_expression
+
+
 log = logging.getLogger("tron.config")
 
 CLEANUP_ACTION_NAME = "cleanup"
@@ -73,7 +76,7 @@ NotificationOptions = namedtuple(
 
 
 ConfigSSHOptions = namedtuple(
-    'NotificationOptions',
+    'ConfigSSHOptions',
     [
         'agent',        # bool
         'identities',   # list of str
@@ -162,24 +165,8 @@ ConfigDailyScheduler = namedtuple(
 # stdlib-style weekday indices.
 
 
-ConfigGrocScheduler = namedtuple(
-    'ConfigGrocScheduler', [
-        'scheduler_string',    # str
-    ]
-)
-# This one needs the most work. Parsing of the time string should be moved to a
-# separate module, e.g. tron.schedule_parser, and should output something like
-# this, to mirror the tron.scheduler.GrocScheduler initializer:
-# ConfigGrocScheduler = namedtuple(
-#     'ConfigGrocScheduler', [
-#         'timestr',    # Time of day to run as HH:MM, groctimespecification
-#                       #   requires this
-#         'ordinals',   # '1st <weekday> in <month>': the '1st'
-#         'monthdays',  # List of days in month, e.g. 3 in 'January 3rd'
-#         'months',     # List of month indices 1..12
-#         'weekdays',   # List of weekday indices, 0=Sunday, 6=Saturday
-#     ]
-# )
+# ConfigGrocDailyScheduler has been moved to tron.schedule_parse.
+
 
 # Final note about schedulers. All schedulers have a timezone attribute, but it
 # is assigned *after* the whole config has been parsed.
@@ -592,7 +579,7 @@ def valid_schedule(path, schedule):
         elif scheduler_name == 'interval':
             return valid_interval_scheduler(' '.join(scheduler_args))
         else:
-            return valid_groc_scheduler(schedule)
+            return parse_groc_daily_expression(schedule)
     else:
         if 'interval' in schedule:
             return valid_interval_scheduler(**schedule)
@@ -628,12 +615,6 @@ def valid_daily_scheduler(start_time=None, days=None):
     return ConfigDailyScheduler(
         start_time=start_time,
         days=days or 'MTWRFSU',
-    )
-
-
-def valid_groc_scheduler(scheduler_string):
-    return ConfigGrocScheduler(
-        scheduler_string=scheduler_string,
     )
 
 
