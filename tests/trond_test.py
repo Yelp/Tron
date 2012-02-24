@@ -12,8 +12,8 @@ from tests.sandbox import TronSandbox, TronSandboxException, wait_for_file_to_ex
 BASIC_CONFIG = """
 --- !TronConfiguration
 nodes:
-    - name: local
-      hostname: 'localhost'
+  - name: local
+    hostname: 'localhost'
 """
 
 SINGLE_ECHO_CONFIG = BASIC_CONFIG + """
@@ -206,16 +206,15 @@ echo_job ENABLED    INTERVAL:1:00:00     None
         FAIL_CONFIG = dedent("""
         --- !TronConfiguration
         nodes:
-            - &local
-                hostname: 'localhost'
+          - &local
+            hostname: 'localhost'
         jobs:
-            - &failjob
-                name: "failjob"
-                node: *local
-                schedule: "interval 1 seconds"
-                actions:
-                    - name: "failaction"
-                      command: "failplz"
+          - name: "failjob"
+            node: *local
+            schedule: "interval 1 seconds"
+            actions:
+              - name: "failaction"
+                command: "failplz"
         """) + TOUCH_CLEANUP_FMT % canary
 
         # start with a basic configuration
