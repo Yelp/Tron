@@ -75,7 +75,7 @@ class DailySchedulerTest(TestCase):
 class DailySchedulerTimeTestBase(TestCase):
     @setup
     def build_scheduler(self):
-        self.scheduler = scheduler.DailyScheduler(start_time=datetime.time(hour=14, minute=30))
+        self.scheduler = scheduler.GrocScheduler(timestr='14:30')
 
     @setup
     def build_job(self):
