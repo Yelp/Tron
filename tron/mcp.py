@@ -16,6 +16,7 @@ from tron import emailer
 from tron import event
 from tron import job
 from tron import monitor
+from tron import schedule_parse
 from tron import scheduler
 from tron.action import Action
 from tron.job import Job
@@ -443,13 +444,13 @@ class MasterControlProgram(object):
         elif isinstance(sch_conf, config_parse.ConfigIntervalScheduler):
             job.scheduler = scheduler.IntervalScheduler(interval=sch_conf.timedelta)
 
-        elif isinstance(sch_conf, config_parse.ConfigGrocDailyScheduler):
+        elif isinstance(sch_conf, schedule_parse.ConfigGrocDailyScheduler):
             job.scheduler = scheduler.GrocScheduler(
                 time_zone=self.time_zone,
                 timestr=sch_conf.timestr,
                 ordinals=sch_conf.ordinals,
                 monthdays=sch_conf.monthdays,
-                monthdays=sch_conf.months,
+                months=sch_conf.months,
                 weekdays=sch_conf.weekdays,
             )
 
