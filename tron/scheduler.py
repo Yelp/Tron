@@ -1,4 +1,3 @@
-import calendar
 import datetime
 import logging
 import re
@@ -48,38 +47,30 @@ class GrocScheduler(object):
 
     def __init__(self, ordinals=None, weekdays=None, months=None,
                  monthdays=None, timestr=None, time_zone=None,
-                 start_time=None):
+                 start_time=None, string_repr=None):
         """Parameters:
-          timestr   - the time of day to run, as 'HH:MM'
-          ordinals  - first, second, third &c, as a set of integers in 1..5 to
-                      be used with "1st <weekday>", etc.
-          monthdays - set of integers to be used with "<month> 3rd", etc.
-          months    - the months that this should run, as a set of integers in
-                      1..12
-          weekdays  - the days of the week that this should run, as a set of
-                      integers, 0=Sunday, 6=Saturday
-          timezone  - the optional timezone as a string for this specification.
-                      Defaults to UTC - valid entries are things like
-                      Australia/Victoria or PST8PDT.
-          start_time - Backward-compatible parameter for DailyScheduler
+          timestr     - the time of day to run, as 'HH:MM'
+          ordinals    - first, second, third &c, as a set of integers in 1..5 to
+                        be used with "1st <weekday>", etc.
+          monthdays   - set of integers to be used with "<month> 3rd", etc.
+          months      - the months that this should run, as a set of integers in
+                        1..12
+          weekdays    - the days of the week that this should run, as a set of
+                        integers, 0=Sunday, 6=Saturday
+          timezone    - the optional timezone as a string for this specification.
+                        Defaults to UTC - valid entries are things like
+                        Australia/Victoria or PST8PDT.
+          start_time  - Backward-compatible parameter for DailyScheduler
+          string_repr - Original string representation this was parsed from,
+                        if applicable
         """
         self.ordinals = ordinals
         self.weekdays = weekdays
         self.months = months
         self.monthdays = monthdays
-
-        self.timestr = None
-        if timestr is None:
-            if start_time:
-                # This is a fancy property
-                self.start_time = start_time
-            else:
-                self.timestr = "00:00"
-        else:
-            self.timestr = timestr
-
+        self.timestr = timestr or '00:00'
         self.time_zone = time_zone
-        self.string_repr = 'every day of month'
+        self.string_repr = string_repr
 
         self._time_spec = None
 
@@ -100,62 +91,6 @@ class GrocScheduler(object):
                 timestr=self.timestr,
                 timezone=self.time_zone.zone if self.time_zone else None)
         return self._time_spec
-
-    def parse(self, scheduler_str):
-        """Parse a schedule string."""
-        self.string_repr = scheduler_str
-
-        def parse_number(day):
-            return int(''.join(c for c in day if c.isdigit()))
-
-        m = GROC_SCHEDULE_RE.match(scheduler_str.lower())
-
-        if m.group('time') is not None:
-            self.timestr = m.group('time')
-
-        if m.group('days') in (None, 'day'):
-            self.weekdays = None
-        else:
-            self.weekdays = set(CONVERT_DAYS_INT[d]
-                                for d in m.group('days').split(','))
-
-        self.monthdays = None
-        self.ordinals = None
-        if m.group('month_days') != 'every':
-            values = set(parse_number(n)
-                         for n in m.group('month_days').split(','))
-            if self.weekdays is None:
-                self.monthdays = values
-            else:
-                self.ordinals = values
-
-        if m.group('months') in (None, 'month'):
-            self.months = None
-        else:
-            self.months = set(CONVERT_MONTHS[mo]
-                              for mo in m.group('months').split(','))
-
-    def parse_legacy_days(self, days):
-        """Parse a string that would have been passed to DailyScheduler"""
-        self.weekdays = set(CONVERT_DAYS_INT[d] for d in days)
-        if self.weekdays != set([0, 1, 2, 3, 4, 5, 6]):
-            self.string_repr = 'every %s of month' % ','.join(days)
-
-    def get_daily_waits(self, days):
-        """Backwards compatibility with DailyScheduler"""
-        self.parse_legacy_days(days)
-
-    def _get_start_time(self):
-        hms = [int(val) for val in self.timestr.strip().split(':')]
-        while len(hms) < 3:
-            hms.append(0)
-        hour, minute, second = hms
-        return datetime.time(hour=hour, minute=minute, second=second)
-
-    def _set_start_time(self, start_time):
-        self.timestr = "%.2d:%.2d" % (start_time.hour, start_time.minute)
-
-    start_time = property(_get_start_time, _set_start_time)
 
     def next_runs(self, job):
         # Find the next time to run
@@ -189,7 +124,7 @@ class GrocScheduler(object):
     def __str__(self):
         # Backward compatible string representation which also happens to be
         # user-friendly
-        if self.string_repr == 'every day of month':
+        if self.string_repr is None:
             return 'DAILY'
         else:
             return self.string_repr

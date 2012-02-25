@@ -9,6 +9,7 @@ import tempfile
 
 from testify import *
 from tron.config_parse import *
+from tron.schedule_parse import ConfigGrocDailyScheduler
 from tron.utils import timeutils
 
 
@@ -192,8 +193,13 @@ services:
                 'test_job1': ConfigJob(
                     name='test_job1',
                     node='batch0',
-                    schedule=ConfigDailyScheduler(
-                        start_time='00:30:00', days='MWF'),
+                    schedule=ConfigGrocDailyScheduler(
+                        ordinals=None,
+                        weekdays=set([0, 2, 4]),
+                        monthdays=None,
+                        months=None,
+                        timestr='00:30',
+                    ),
                     actions=FrozenDict(**{
                         'action1_1': ConfigAction(
                             name='action1_1',
@@ -213,8 +219,13 @@ services:
                 'test_job2': ConfigJob(
                     name='test_job2',
                     node='batch1',
-                    schedule=ConfigDailyScheduler(
-                        start_time='16:30:00', days='MTWRFSU'),
+                    schedule=ConfigGrocDailyScheduler(
+                        ordinals=None,
+                        weekdays=None,
+                        monthdays=None,
+                        months=None,
+                        timestr='16:30',
+                    ),
                     actions=FrozenDict(**{
                         'action2_0': ConfigAction(
                             name='action2_0',
@@ -254,7 +265,13 @@ services:
                 'test_job4': ConfigJob(
                     name='test_job4',
                     node='batch0_batch1',
-                    schedule=ConfigDailyScheduler(start_time=None, days='MTWRFSU'),
+                    schedule=ConfigGrocDailyScheduler(
+                        ordinals=None,
+                        weekdays=None,
+                        monthdays=None,
+                        months=None,
+                        timestr='00:00',
+                    ),
                     actions=FrozenDict(**{
                         'action4_0': ConfigAction(
                             name='action4_0',

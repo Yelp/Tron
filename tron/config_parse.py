@@ -11,6 +11,7 @@ import re
 import pytz
 import yaml
 
+from tron.schedule_parse import CONVERT_DAYS_INT    # map day index to name
 from tron.schedule_parse import parse_groc_daily_expression
 
 
@@ -154,15 +155,6 @@ ConfigIntervalScheduler = namedtuple(
     ])
 # This can also probably stay the same, since you can't break down/parse a
 # timedelta any further.
-
-
-ConfigDailyScheduler = namedtuple(
-    'ConfigDailyScheduler', [
-        'start_time',   # str HH:MM[:SS]
-        'days',         # str MTWRF
-    ])
-# start_time should be changed to a time object, and days should be a list of
-# stdlib-style weekday indices.
 
 
 # ConfigGrocDailyScheduler has been moved to tron.schedule_parse.
@@ -593,7 +585,7 @@ def valid_daily_scheduler(start_time=None, days=None):
     """Old style, will be converted to GrocScheduler with a compatibility
     function
 
-    schedule: !DailyScheduler
+    schedule:
         start_time: "07:00:00"
         days: "MWF"
     """
@@ -602,7 +594,9 @@ def valid_daily_scheduler(start_time=None, days=None):
                " are ignored but parsed so as to be backward-compatible."
                " You said: %s")
 
-    if start_time is not None:
+    if start_time is None:
+        hms = ['00', '00']
+    else:
         if not isinstance(start_time, basestring):
             raise ConfigError(err_msg % start_time)
 
@@ -612,9 +606,15 @@ def valid_daily_scheduler(start_time=None, days=None):
         if len(hms) < 2:
             raise ConfigError(err_msg % start_time)
 
-    return ConfigDailyScheduler(
-        start_time=start_time,
-        days=days or 'MTWRFSU',
+    weekdays = set(CONVERT_DAYS_INT[d] for d in days or 'MTWRFSU')
+    if weekdays == set([0, 1, 2, 3, 4, 5, 6]):
+        days_str = 'day'
+    else:
+        # incoming string is MTWRF, we want M,T,W,R,F for the parser
+        days_str = ','.join(days)
+
+    return parse_groc_daily_expression(
+        'every %s of month at %s:%s' % (days_str, hms[0], hms[1])
     )
 
 

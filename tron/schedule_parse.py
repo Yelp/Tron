@@ -4,7 +4,7 @@ import re
 
 
 ConfigGrocDailyScheduler = namedtuple(
-    'GrocDailySchedule',
+    'ConfigGrocDailyScheduler',
     ['ordinals', 'weekdays', 'monthdays', 'months', 'timestr']
 )
 
@@ -115,7 +115,8 @@ def parse_groc_daily_expression(expression):
     """
     m = GROC_DAILY_SCHEDULE_RE.match(expression.lower())
     if not m:
-        raise ScheduleParseError('Expression %r is not a valid scheduler expression.')
+        raise ScheduleParseError('Expression %r is not a valid scheduler'
+                                 ' expression.' % expression)
 
     timestr = m.group('time')
     if timestr is None:

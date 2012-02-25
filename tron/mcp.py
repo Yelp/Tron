@@ -443,16 +443,15 @@ class MasterControlProgram(object):
         elif isinstance(sch_conf, config_parse.ConfigIntervalScheduler):
             job.scheduler = scheduler.IntervalScheduler(interval=sch_conf.timedelta)
 
-        elif isinstance(sch_conf, config_parse.ConfigDailyScheduler):
-            # Slightly bad interface: have to pass timestr in initializer to
-            # deal with None and default (00:00) properly.
-            job.scheduler = scheduler.GrocScheduler(time_zone=self.time_zone,
-                                                    timestr=sch_conf.start_time)
-            job.scheduler.parse_legacy_days(sch_conf.days)
-
-        elif isinstance(sch_conf, config_parse.ConfigGrocScheduler):
-            job.scheduler = scheduler.GrocScheduler(time_zone=self.time_zone)
-            job.scheduler.parse(sch_conf.scheduler_string)
+        elif isinstance(sch_conf, config_parse.ConfigGrocDailyScheduler):
+            job.scheduler = scheduler.GrocScheduler(
+                time_zone=self.time_zone,
+                timestr=sch_conf.timestr,
+                ordinals=sch_conf.ordinals,
+                monthdays=sch_conf.monthdays,
+                monthdays=sch_conf.months,
+                weekdays=sch_conf.weekdays,
+            )
 
         # Set up actions
         new_actions = {}
