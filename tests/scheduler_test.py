@@ -10,7 +10,7 @@ from testify.utils import turtle
 from tron import action
 from tron import job
 from tron import scheduler
-from tron.schedule_parse import parse_groc_daily_expression as parse_daily
+from tron.schedule_parse import parse_daily_expression as parse_daily
 from tron.utils import timeutils
 
 

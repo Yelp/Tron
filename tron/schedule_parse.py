@@ -51,7 +51,7 @@ def month_canonicalization_map():
 CONVERT_MONTHS = month_canonicalization_map()
 
 
-def groc_daily_schedule_parser_re():
+def daily_schedule_parser_re():
     """Build a regular expression that matches this:
 
         ("every"|ordinal) (day) ["of|in" (monthspec)] (["at"] HH:MM)
@@ -101,16 +101,16 @@ def groc_daily_schedule_parser_re():
 
 # Matches expressions of the form
 # ``("every"|ordinal) (days) ["of|in" (monthspec)] (["at"] HH:MM)``.
-# See :py:func:`groc_schedule_parser_re` for details.
-DAILY_SCHEDULE_RE = groc_daily_schedule_parser_re()
+# See :py:func:`daily_schedule_parser_re` for details.
+DAILY_SCHEDULE_RE = daily_schedule_parser_re()
 
 
 def _parse_number(day):
     return int(''.join(c for c in day if c.isdigit()))
 
-def parse_groc_daily_expression(expression):
+def parse_daily_expression(expression):
     """Given an expression of the form in the docstring of
-    groc_daily_schedule_parser_re(), return the parsed values in a
+    daily_schedule_parser_re(), return the parsed values in a
     ConfigDailyScheduler
     """
     m = DAILY_SCHEDULE_RE.match(expression.lower())

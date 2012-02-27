@@ -12,7 +12,7 @@ import pytz
 import yaml
 
 from tron.schedule_parse import CONVERT_DAYS_INT    # map day index to name
-from tron.schedule_parse import parse_groc_daily_expression
+from tron.schedule_parse import parse_daily_expression
 
 
 log = logging.getLogger("tron.config")
@@ -571,7 +571,7 @@ def valid_schedule(path, schedule):
         elif scheduler_name == 'interval':
             return valid_interval_scheduler(' '.join(scheduler_args))
         else:
-            return parse_groc_daily_expression(schedule)
+            return parse_daily_expression(schedule)
     else:
         if 'interval' in schedule:
             return valid_interval_scheduler(**schedule)
@@ -613,7 +613,7 @@ def valid_daily_scheduler(start_time=None, days=None):
         # incoming string is MTWRF, we want M,T,W,R,F for the parser
         days_str = ','.join(days)
 
-    return parse_groc_daily_expression(
+    return parse_daily_expression(
         'every %s of month at %s:%s' % (days_str, hms[0], hms[1])
     )
 
