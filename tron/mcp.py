@@ -10,7 +10,6 @@ from twisted.internet import reactor
 
 import tron
 from tron import command_context
-from tron import config     # DELETE ME
 from tron import config_parse
 from tron import emailer
 from tron import event
@@ -30,9 +29,6 @@ log = logging.getLogger('tron.mcp')
 STATE_FILE = 'tron_state.yaml'
 STATE_SLEEP_SECS = 1
 WRITE_DURATION_WARNING_SECS = 30
-
-
-USE_OLD_CONFIG = False
 
 
 class Error(Exception):
@@ -253,7 +249,6 @@ class MasterControlProgram(object):
     def live_reconfig(self):
         self.event_recorder.emit_info("reconfig")
         try:
-
             # Temporarily disable state writing because reconfig can cause a
             # lot of state changes
             old_state_writing = self.state_handler.writing_enabled
@@ -273,11 +268,7 @@ class MasterControlProgram(object):
     def load_config(self):
         log.info("Loading configuration from %s" % self.config_file)
         with open(self.config_file, 'r') as f:
-            if USE_OLD_CONFIG:
-                cfg = config.load_config(f)
-                cfg.apply(self)
-            else:
-                self.apply_config(config_parse.load_config(f))
+            self.apply_config(config_parse.load_config(f))
 
     def config_lines(self):
         try:
