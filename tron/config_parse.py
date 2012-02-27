@@ -137,27 +137,18 @@ ConfigService = namedtuple(
     ])
 
 
-# The internal representation of the scheduler configs should change in the
-# future. The current schema merely matches the old config's internal schema
-# so I could avoid rewriting too much scheduler initialization code. Parallel
-# to each definition below is what I would change it to. --sjohnson
-
 ConfigConstantScheduler = namedtuple(
     'ConfigConstantScheduler', [])
-# Actually this can probably stay the same. Besides, who would use the
-# constant scheduler in a config? Come to think of it, this should probably
-# be removed.
 
 
 ConfigIntervalScheduler = namedtuple(
     'ConfigIntervalScheduler', [
         'timedelta',    # datetime.timedelta
     ])
-# This can also probably stay the same, since you can't break down/parse a
-# timedelta any further.
 
 
-# ConfigDailyScheduler has been moved to tron.schedule_parse.
+# ConfigDailyScheduler lives in tron.schedule_parse, which contains its support
+# functions.
 
 
 # Final note about schedulers. All schedulers have a timezone attribute, but it
