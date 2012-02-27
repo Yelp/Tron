@@ -3,8 +3,8 @@ from collections import namedtuple
 import re
 
 
-ConfigGrocDailyScheduler = namedtuple(
-    'ConfigGrocDailyScheduler',
+ConfigDailyScheduler = namedtuple(
+    'ConfigDailyScheduler',
     ['ordinals', 'weekdays', 'monthdays', 'months', 'timestr']
 )
 
@@ -88,7 +88,7 @@ def groc_daily_schedule_parser_re():
     # [at] 00:00
     TIME_EXPR = r'((at\s+)?(?P<time>\d\d:\d\d))?'
 
-    GROC_SCHEDULE_EXPR = ''.join([
+    DAILY_SCHEDULE_EXPR = ''.join([
         r'^',
         MONTH_DAYS_EXPR, r'\s*',
         DAYS_EXPR, r'\s*',
@@ -96,13 +96,13 @@ def groc_daily_schedule_parser_re():
          TIME_EXPR, r'\s*',
         r'$'
     ])
-    return re.compile(GROC_SCHEDULE_EXPR)
+    return re.compile(DAILY_SCHEDULE_EXPR)
 
 
 # Matches expressions of the form
 # ``("every"|ordinal) (days) ["of|in" (monthspec)] (["at"] HH:MM)``.
 # See :py:func:`groc_schedule_parser_re` for details.
-GROC_DAILY_SCHEDULE_RE = groc_daily_schedule_parser_re()
+DAILY_SCHEDULE_RE = groc_daily_schedule_parser_re()
 
 
 def _parse_number(day):
@@ -111,9 +111,9 @@ def _parse_number(day):
 def parse_groc_daily_expression(expression):
     """Given an expression of the form in the docstring of
     groc_daily_schedule_parser_re(), return the parsed values in a
-    ConfigGrocDailyScheduler
+    ConfigDailyScheduler
     """
-    m = GROC_DAILY_SCHEDULE_RE.match(expression.lower())
+    m = DAILY_SCHEDULE_RE.match(expression.lower())
     if not m:
         raise ScheduleParseError('Expression %r is not a valid scheduler'
                                  ' expression.' % expression)
@@ -143,7 +143,7 @@ def parse_groc_daily_expression(expression):
     else:
         months = set(CONVERT_MONTHS[mo] for mo in m.group('months').split(','))
 
-    return ConfigGrocDailyScheduler(
+    return ConfigDailyScheduler(
         ordinals=ordinals,
         weekdays=weekdays,
         monthdays=monthdays,

@@ -9,7 +9,7 @@ import tempfile
 
 from testify import *
 from tron.config_parse import *
-from tron.schedule_parse import ConfigGrocDailyScheduler
+from tron.schedule_parse import ConfigDailyScheduler
 from tron.utils import timeutils
 
 
@@ -193,7 +193,7 @@ services:
                 'test_job1': ConfigJob(
                     name='test_job1',
                     node='batch0',
-                    schedule=ConfigGrocDailyScheduler(
+                    schedule=ConfigDailyScheduler(
                         ordinals=None,
                         weekdays=set([0, 2, 4]),
                         monthdays=None,
@@ -219,7 +219,7 @@ services:
                 'test_job2': ConfigJob(
                     name='test_job2',
                     node='batch1',
-                    schedule=ConfigGrocDailyScheduler(
+                    schedule=ConfigDailyScheduler(
                         ordinals=None,
                         weekdays=None,
                         monthdays=None,
@@ -265,7 +265,7 @@ services:
                 'test_job4': ConfigJob(
                     name='test_job4',
                     node='batch0_batch1',
-                    schedule=ConfigGrocDailyScheduler(
+                    schedule=ConfigDailyScheduler(
                         ordinals=None,
                         weekdays=None,
                         monthdays=None,

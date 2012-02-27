@@ -40,7 +40,7 @@ class ConstantScheduler(object):
         return not self == other
 
 
-class GrocScheduler(object):
+class DailyScheduler(object):
     """Wrapper around SpecificTimeSpecification in the Google App Engine cron
     library
     """
@@ -130,7 +130,7 @@ class GrocScheduler(object):
             return self.string_repr
 
     def __eq__(self, other):
-        return isinstance(other, GrocScheduler) and \
+        return isinstance(other, DailyScheduler) and \
            all(getattr(self, attr) == getattr(other, attr)
                for attr in ('ordinals',
                             'weekdays',
@@ -141,11 +141,6 @@ class GrocScheduler(object):
 
     def __ne__(self, other):
         return not self == other
-
-
-# GrocScheduler can pretend to be a DailyScheduler in order to be backdward-
-# compatible
-DailyScheduler = GrocScheduler
 
 
 class IntervalScheduler(object):

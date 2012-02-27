@@ -157,7 +157,7 @@ ConfigIntervalScheduler = namedtuple(
 # timedelta any further.
 
 
-# ConfigGrocDailyScheduler has been moved to tron.schedule_parse.
+# ConfigDailyScheduler has been moved to tron.schedule_parse.
 
 
 # Final note about schedulers. All schedulers have a timezone attribute, but it
@@ -582,7 +582,7 @@ def valid_schedule(path, schedule):
 
 
 def valid_daily_scheduler(start_time=None, days=None):
-    """Old style, will be converted to GrocScheduler with a compatibility
+    """Old style, will be converted to DailyScheduler with a compatibility
     function
 
     schedule:

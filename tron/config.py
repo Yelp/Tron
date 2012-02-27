@@ -722,7 +722,7 @@ class Scheduler(object):
 
         m = scheduler.GROC_SCHEDULE_RE.match(scheduler_str.lower())
         if m:
-            return GrocScheduler(scheduler_str).actualized
+            return DailyScheduler(scheduler_str).actualized
 
         raise ConfigError("Unknown scheduler %r" % scheduler_str)
 
@@ -791,7 +791,7 @@ class IntervalScheduler(_ConfiguredObject):
 
 class DailyScheduler(_ConfiguredObject):
     yaml_tag = u'!DailyScheduler'
-    actual_class = scheduler.GrocScheduler
+    actual_class = scheduler.DailyScheduler
 
     def __init__(self, *args, **kwargs):
 
@@ -831,7 +831,7 @@ class DailyScheduler(_ConfiguredObject):
 
 class GrocScheduler(_ConfiguredObject):
     yaml_tag = u'!GrocScheduler'
-    actual_class = scheduler.GrocScheduler
+    actual_class = scheduler.DailyScheduler
 
     def __init__(self, *args, **kwargs):
         self.expr = args[0]

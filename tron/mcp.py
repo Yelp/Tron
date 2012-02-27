@@ -444,8 +444,8 @@ class MasterControlProgram(object):
         elif isinstance(sch_conf, config_parse.ConfigIntervalScheduler):
             job.scheduler = scheduler.IntervalScheduler(interval=sch_conf.timedelta)
 
-        elif isinstance(sch_conf, schedule_parse.ConfigGrocDailyScheduler):
-            job.scheduler = scheduler.GrocScheduler(
+        elif isinstance(sch_conf, schedule_parse.ConfigDailyScheduler):
+            job.scheduler = scheduler.DailyScheduler(
                 time_zone=self.time_zone,
                 timestr=sch_conf.timestr,
                 ordinals=sch_conf.ordinals,

@@ -75,7 +75,7 @@ class DailySchedulerTest(TestCase):
 class DailySchedulerTimeTestBase(TestCase):
     @setup
     def build_scheduler(self):
-        self.scheduler = scheduler.GrocScheduler(timestr='14:30')
+        self.scheduler = scheduler.DailyScheduler(timestr='14:30')
 
     @setup
     def build_job(self):
@@ -305,8 +305,8 @@ class ComplexParserTest(TestCase):
         assert_equal(cfg.weekdays, set((0, 1)))
         assert_equal(cfg.months, set((3, 4, 9)))
         assert_equal(cfg.timestr, '00:00')
-        assert_equal(scheduler.GrocScheduler(**cfg._asdict()),
-                     scheduler.GrocScheduler(**cfg._asdict()))
+        assert_equal(scheduler.DailyScheduler(**cfg._asdict()),
+                     scheduler.DailyScheduler(**cfg._asdict()))
 
     def test_parse_no_weekday(self):
         cfg = parse_daily('1st,2nd,3rd,10th day of march,apr,September at 00:00')
@@ -343,7 +343,7 @@ class ComplexParserTest(TestCase):
 
     def test_daily(self):
         cfg = parse_daily('every day')
-        sch = scheduler.GrocScheduler(**cfg._asdict())
+        sch = scheduler.DailyScheduler(**cfg._asdict())
         next_run = sch.next_runs(self.job)[0]
 
         next_run_date = next_run.run_time
@@ -355,7 +355,7 @@ class ComplexParserTest(TestCase):
 
     def test_daily_with_time(self):
         cfg = parse_daily('every day at 02:00')
-        sch = scheduler.GrocScheduler(**cfg._asdict())
+        sch = scheduler.DailyScheduler(**cfg._asdict())
 
         next_run = sch.next_runs(self.job)[0]
 
@@ -370,7 +370,7 @@ class ComplexParserTest(TestCase):
 
     def test_weekly(self):
         cfg = parse_daily('every monday at 01:00')
-        sch = scheduler.GrocScheduler(**cfg._asdict())
+        sch = scheduler.DailyScheduler(**cfg._asdict())
 
         next_run = sch.next_runs(self.job)[0]
 
@@ -383,7 +383,7 @@ class ComplexParserTest(TestCase):
 
     def test_weekly_in_month(self):
         cfg = parse_daily('every monday of january at 00:01')
-        sch = scheduler.GrocScheduler(**cfg._asdict())
+        sch = scheduler.DailyScheduler(**cfg._asdict())
 
         next_run = sch.next_runs(self.job)[0]
 
@@ -400,7 +400,7 @@ class ComplexParserTest(TestCase):
 
     def test_monthly(self):
         cfg = parse_daily('1st day')
-        sch = scheduler.GrocScheduler(**cfg._asdict())
+        sch = scheduler.DailyScheduler(**cfg._asdict())
 
         next_run = sch.next_runs(self.job)[0]
 
