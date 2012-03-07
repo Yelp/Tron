@@ -24,7 +24,7 @@ from twisted.scripts import _twistd_unix
 
 import tron
 from tron import cmd
-from tron import config
+from tron.config_parse import DEFAULT_CONFIG
 from tron import mcp
 from tron import www
 from tron.utils import log_handler
@@ -35,7 +35,7 @@ logger = logging.getLogger('bin.trond')
 def create_default_config(config_path):
     """Create a default empty configuration for first time installs"""
     with open(config_path, "w") as config_file:
-        config_file.write(config.DEFAULT_CONFIG)
+        config_file.write(DEFAULT_CONFIG)
 
 
 def parse_options():

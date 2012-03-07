@@ -778,3 +778,69 @@ def valid_service(service):
         final_service['restart_interval'] = None
 
     return ConfigService(**final_service)
+
+
+DEFAULT_CONFIG = """
+ssh_options:
+    ## Tron needs SSH keys to allow the effective user to login to each of the
+    ## nodes specified in the "nodes" section. You can choose to use either an
+    ## SSH agent or list
+    # identities:
+    #     - /home/tron/.ssh/id_dsa
+    agent: true
+
+## Uncomment if you want logging to syslog. Typical values for different
+## platforms:
+##    Linux: "/dev/log"
+##    OS X: "/var/run/syslog"
+##    Windows: ["localhost", 514]
+# syslog_address: /dev/log
+
+# notification_options:
+      ## In case of trond failures, where should we send notifications to ?
+      # smtp_host: localhost
+      # notification_addr: nobody@localhost
+
+nodes:
+    ## You'll need to list out all the available nodes for doing work.
+    # - name: "node"
+    #   hostname: 'localhost'
+
+## Optionally you can list 'pools' of nodes where selection of a node will
+## be randomly determined or jobs can be configured to be run on all nodes
+## in the pool
+# node_pools:
+    # - name: NodePool
+    #   nodes: [node]
+
+command_context:
+    # Variable subsitution
+    # There are some built-in values such as 'node', 'runid', 'actionname' and
+    # run-time based variables such as 'shortdate'. (See tronfig.1 for
+    # reference.) You can specify whatever else you want similiar to
+    # environment variables:
+    # PYTHON: "/usr/bin/python"
+
+jobs:
+    ## Configure your jobs here by specifing a name, node, schedule and the
+    ## work flow that should executed.
+    # - name: "sample_job"
+    #   node: node
+    #   schedule: "daily"
+    #   actions:
+    #     - name: "uname"
+    #       command: "uname -a"
+    #   cleanup_action:
+    #     command: "rm -rf /tmp/sample_job_scratch"
+
+services:
+    ## Configure services here. Services differ from jobs in that they are
+    ## expected to have an enable/disable and monitoring phase.
+    # - name: "sample_service"
+    #   node: node
+    #   count: 2
+    #   pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+    #   command: "run_service --pid-file=%(pid_file)s start"
+    #   monitor_interval: 20
+    #   restart_interval: 60s
+"""

@@ -211,7 +211,7 @@ Example Configuration
 
     services:
         - name: "testserv"
-          node: *pool
+          node: pool
           count: 8
           monitor_interval: 60
           restart_interval: 120
