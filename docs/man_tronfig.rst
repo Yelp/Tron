@@ -169,60 +169,54 @@ Example Configuration
 
 ::
 
-    --- !TronConfiguration
-
-    ssh_options: !SSHOptions
-        agent: true
+    ssh_options:
+      agent: true
 
     nodes:
-        - &node1
-            hostname: 'machine1'
-        - &node2
-            hostname: 'machine2'
-        - &pool !NodePool
-            nodes: [*node1, *node2]
+        - name: node1
+          hostname: 'machine1'
+        - name: node2
+          hostname: 'machine2'
+
+    node_pools:
+        - name: pool
+          nodes: [node1, node2]
 
     command_context:
         PYTHON: /usr/bin/python
 
     jobs:
-        - &job0
-            name: "job0"
-            node: *pool
-            all_nodes: True # Every time the Job is scheduled it runs on every node in its node pool
-            schedule: "interval 20s"
-            queueing: False
-            actions:
-                - &start
-                    name: "start"
-                    command: "echo number 9"
-                    node: *node1
-                - 
-                    name: "end"
-                    command: "echo love me do"
-                    requires: [*start]
+        - name: "job0"
+          node: pool
+          all_nodes: True # Every time the Job is scheduled it runs on every node in its node pool
+          schedule: "daily 12:00 MWF"
+          queueing: False
+          actions:
+            - name: "start"
+              command: "echo number 9"
+              node: node1
+            - name: "end"
+              command: "echo love me do"
+              requires: [start]
 
-        - &job1
-            name: "job1"
-            node: *node1
-            schedule: "interval 20s"
-            queueing: False
-            actions:
-                - &action
-                    name: "echo"
-                    command: "echo %(PYTHON)s"
-            cleanup_action:
-                command: "echo 'cleaning up job1'"
+        - name: "job1"
+          node: node1
+          schedule: "interval 20s"
+          queueing: False
+          actions:
+            - name: "echo"
+              command: "echo %(PYTHON)s"
+          cleanup_action:
+            command: "echo 'cleaning up job1'"
 
     services:
-        -
-            name: "testserv"
-            node: *pool
-            count: 8
-            monitor_interval: 60
-            restart_interval: 120
-            pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
-            command: "/bin/myservice --pid-file=%(pid_file)s start"
+        - name: "testserv"
+          node: pool
+          count: 8
+          monitor_interval: 60
+          restart_interval: 120
+          pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+          command: "/bin/myservice --pid-file=%(pid_file)s start"
 
 Files
 -----

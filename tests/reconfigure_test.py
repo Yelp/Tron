@@ -1,152 +1,132 @@
 """Tests for our configuration system"""
+import shutil
 import StringIO
 import tempfile
-import shutil
+
+import yaml
 
 from testify import *
-from tron import config
+from tron import config_parse
 from tron import mcp
-from tests.config_test import syslog_address_for_platform
+from tron.utils.testingutils import no_handlers_for_logger
+from tests.config_parse_test import syslog_address_for_platform
 
 class ConfigTest(TestCase):
-    config = """
---- !TronConfiguration
-working_dir: "./config_test_dir"
 
-ssh_options: !SSHOptions
-    agent: true
-    identities:
-        - tests/test_id_rsa
+    def config_1(self, wd):
+        config = dict(
+            working_dir=wd,
+            ssh_options=dict(
+                agent=True,
+                identities=['tests/test_id_rsa'],
+            ),
+            nodes=[
+                dict(name='node0', hostname='batch0'),
+                dict(name='node1', hostname='batch1'),
+            ],
+            node_pools=[dict(name='nodePool', nodes=['node0', 'node1'])],
+            jobs=[
+                dict(
+                    name='test_unchanged',
+                    node='node0',
+                    schedule='daily',
+                    actions=[dict(name='action_unchanged',
+                                  command='command_unchanged') ]
+                ),
+                dict(
+                    name='test_remove',
+                    node='node1',
+                    schedule=dict(interval='20s'),
+                    actions=[dict(name='action_remove',
+                                  command='command_remove')],
+                ),
+                dict(
+                    name='test_change',
+                    node='nodePool',
+                    schedule=dict(interval='20s'),
+                    actions=[
+                        dict(name='action_change',
+                             command='command_change'),
+                        dict(name='action_remove2',
+                             command='command_remove2',
+                             requires=['action_change']),
+                    ],
+                ),
+                dict(
+                    name='test_daily_change',
+                    node='node0',
+                    schedule='daily',
+                            actions=[dict(name='action_daily_change',
+                                          command='command')],
+                ),
+            ])
+        return yaml.dump(config)
 
-nodes:
-    - &node0 !Node
-        hostname: 'batch0'
-    - &node1 !Node
-        hostname: 'batch1'
-    - &nodePool !NodePool
-        nodes: [*node0, *node1]
-jobs:
-    - &job0 !Job
-        name: "test_unchanged"
-        node: *node0
-        schedule: "daily"
-        actions:
-            - &action0 !Action
-                name: "action_unchanged"
-                command: "command_unchanged"
-
-    - &job1 !Job
-        name: "test_remove"
-        node: *node1
-        schedule: !IntervalScheduler
-            interval: 20s
-        actions:
-            - &action1 !Action
-                name: "action_remove"
-                command: "command_remove"
-
-    - &job2 !Job
-        name: "test_change"
-        node: *nodePool
-        schedule: !IntervalScheduler
-            interval: 20s
-        actions:
-            - &action2 !Action
-                name: "action_change"
-                command: "command_change"
-            - &action3 !Action
-                name: "action_remove2"
-                command: "command_remove2"
-                requires: *action2
-
-    - &job3 !Job
-        name: "test_daily_change"
-        node: *node0
-        schedule: "daily"
-        actions:
-            - &action4 !Action
-                name: "action_daily_change"
-                command: "command"
-
-"""
-    reconfig = """
-
---- !TronConfiguration
-working_dir: "./config_test_dir"
-
-ssh_options: !SSHOptions
-    agent: true
-    identities:
-        - tests/test_id_rsa
-
-syslog_address: %s
-
-nodes:
-    - &node0 !Node
-        hostname: 'batch0'
-    - &node1 !Node
-        hostname: 'batch1'
-
-    - &nodePool !NodePool
-        nodes: [*node0, *node1]
-jobs:
-    - &job0 !Job
-        name: "test_unchanged"
-        node: *node0
-        schedule: "daily"
-        actions:
-            - &action0 !Action
-                name: "action_unchanged"
-                command: "command_unchanged"
-
-    - &job2 !Job
-        name: "test_change"
-        node: *node0
-        schedule: "daily"
-        actions:
-            - &action2 !Action
-                name: "action_change"
-                command: "command_changed"
-
-    - &job3 !Job
-        name: "test_daily_change"
-        node: *node0
-        schedule: "daily"
-        actions:
-            - &action4 !Action
-                name: "action_daily_change"
-                command: "command_changed"
-
-    - &job4 !Job
-        name: "test_new"
-        node: *nodePool
-        schedule: !IntervalScheduler
-            interval: 20s
-        actions:
-            - &action1 !Action
-                name: "action_new"
-                command: "command_new"
-
-
-""" % syslog_address_for_platform()
+    def config_2(self, wd):
+        config = dict(
+            working_dir=wd,
+            ssh_options=dict(
+                agent=True,
+                identities=['tests/test_id_rsa'],
+            ),
+            syslog_address=syslog_address_for_platform(),
+            nodes=[
+                dict(name='node0', hostname='batch0'),
+                dict(name='node1', hostname='batch1'),
+            ],
+            node_pools=[dict(name='nodePool', nodes=['node0', 'node1'])],
+            jobs=[
+                dict(
+                    name='test_unchanged',
+                    node='node0',
+                    schedule='daily',
+                    actions=[dict(name='action_unchanged',
+                                  command='command_unchanged') ]
+                ),
+                dict(
+                    name='test_change',
+                    node='nodePool',
+                    schedule='daily',
+                    actions=[
+                        dict(name='action_change',
+                             command='command_changed'),
+                    ],
+                ),
+                dict(
+                    name='test_daily_change',
+                    node='node0',
+                    schedule='daily',
+                            actions=[dict(name='action_daily_change',
+                                          command='command_changed')],
+                ),
+                dict(
+                    name='test_new',
+                    node='nodePool',
+                    schedule=dict(interval='20s'),
+                    actions=[dict(name='action_new',
+                                  command='command_new')]
+                ),
+            ])
+        return yaml.dump(config)
 
     @setup
     def setup(self):
         self.test_dir = tempfile.mkdtemp()
-        self.test_config = config.load_config(StringIO.StringIO(self.config))
         self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')
-        self.test_config.apply(self.my_mcp)
-        
+        config = self.config_1(self.test_dir)
+        self.my_mcp.apply_config(config_parse.load_config(config))
+
     @teardown
     def teardown(self):
         shutil.rmtree(self.test_dir)
 
+    def reconfigure(self):
+        config = self.config_2(self.test_dir)
+        self.my_mcp.apply_config(config_parse.load_config(config))
+
     def test_job_list(self):
         assert_equal(len(self.my_mcp.jobs), 4)
-
-        test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
-        test_reconfig.apply(self.my_mcp)
-
+        self.reconfigure()
         assert_equal(len(self.my_mcp.jobs), 4)
 
     def test_job_unchanged(self):
@@ -161,8 +141,7 @@ jobs:
         assert_equal(job0.topo_actions[0].name, 'action_unchanged')
         assert_equal(str(job0.scheduler), "DAILY")
 
-        test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
-        test_reconfig.apply(self.my_mcp)
+        self.reconfigure()
         job0 = self.my_mcp.jobs['test_unchanged']
 
         assert_equal(job0.name, "test_unchanged")
@@ -186,8 +165,7 @@ jobs:
         assert_equal(len(job1.topo_actions), 1)
         assert_equal(job1.topo_actions[0].name, 'action_remove')
 
-        test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
-        test_reconfig.apply(self.my_mcp)
+        self.reconfigure()
 
         assert not 'test_remove' in self.my_mcp.jobs
         assert not job1.enabled
@@ -208,8 +186,7 @@ jobs:
         assert_equal(job2.topo_actions[0].command, 'command_change')
         assert_equal(job2.topo_actions[1].command, 'command_remove2')
 
-        test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
-        test_reconfig.apply(self.my_mcp)
+        self.reconfigure()
         job2 = self.my_mcp.jobs['test_change']
 
         assert_equal(job2.name, "test_change")
@@ -223,8 +200,7 @@ jobs:
 
     def test_job_new(self):
         assert not 'test_new' in self.my_mcp.jobs
-        test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
-        test_reconfig.apply(self.my_mcp)
+        self.reconfigure()
 
         assert 'test_new' in self.my_mcp.jobs
         job3 = self.my_mcp.jobs['test_new']
@@ -243,8 +219,7 @@ jobs:
         run = job4.runs[0]
         assert run.is_scheduled
 
-        test_reconfig = config.load_config(StringIO.StringIO(self.reconfig))
-        test_reconfig.apply(self.my_mcp)
+        self.reconfigure()
 
         assert run.job is None
 

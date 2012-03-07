@@ -77,11 +77,10 @@ with the correct anchor and tag::
 
     # ...
     services:
-        - &email_worker !Service
-            name: "email_worker"
-            node: *pool
-            count: 4
-            monitor_interval: 60
-            restart_interval: 120
-            pid_file: "/var/run/batch/%(name)s-%(instance_number)s.pid"
-            command: "/usr/local/bin/start_email_worker --pid_file=%(pid_file)s"
+      - name: "email_worker"
+        node: *pool
+        count: 4
+        monitor_interval: 60
+        restart_interval: 120
+        pid_file: "/var/run/batch/%(name)s-%(instance_number)s.pid"
+        command: "/usr/local/bin/start_email_worker --pid_file=%(pid_file)s"

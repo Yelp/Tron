@@ -12,29 +12,26 @@ from tests.sandbox import TronSandbox, TronSandboxException, wait_for_file_to_ex
 BASIC_CONFIG = """
 --- !TronConfiguration
 nodes:
-    - &local
-        hostname: 'localhost'
+  - name: local
+    hostname: 'localhost'
 """
 
 SINGLE_ECHO_CONFIG = BASIC_CONFIG + """
 jobs:
-    - &echo_job
-        name: "echo_job"
-        node: *local
-        schedule: "interval 1 hour"
-        actions:
-            -
-                name: "echo_action"
-                command: "echo 'Echo!'" """
+  - name: "echo_job"
+    node: local
+    schedule: "interval 1 hour"
+    actions:
+      - name: "echo_action"
+        command: "echo 'Echo!'" """
 
 DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
-            -
-                name: "another_echo_action"
-                command: "echo 'Today is %(shortdate)s, which is the same as %(year)s-%(month)s-%(day)s' && false" """
+      - name: "another_echo_action"
+        command: "echo 'Today is %(shortdate)s, which is the same as %(year)s-%(month)s-%(day)s' && false" """
 
 TOUCH_CLEANUP_FMT = """
-        cleanup_action:
-            command: "touch %s" """
+    cleanup_action:
+      command: "touch %s" """
 
 
 class SandboxTestCase(TestCase):
@@ -119,25 +116,22 @@ echo_job ENABLED    INTERVAL:1:00:00     None
         # run the job and check its output
         self.sandbox.tronctl(['start', 'echo_job'])
         wait_for_file_to_exist(canary)
+
         assert_equal(self.sandbox.list_action_run('echo_job', 1, 'echo_action')['state'], 'SUCC')
         assert_equal(self.sandbox.list_job_run('echo_job', 1)['state'], 'SUCC')
 
     def test_tronctl_service_zap(self):
         SERVICE_CONFIG = dedent("""
-        --- !TronConfiguration
-        ssh_options:
-                agent: true
         nodes:
-            - &local
-                hostname: 'localhost'
+          - name: local
+            hostname: 'localhost'
         services:
-            -
-                name: "fake_service"
-                node: *local
-                count: 1
-                pid_file: "%%(name)s-%%(instance_number)s.pid"
-                command: "echo %(pid)s > %%(pid_file)s"
-                monitor_interval: 0.1
+          - name: "fake_service"
+            node: local
+            count: 1
+            pid_file: "%%(name)s-%%(instance_number)s.pid"
+            command: "echo %(pid)s > %%(pid_file)s"
+            monitor_interval: 0.1
         """ % {'pid': os.getpid()})
 
         self.sandbox.start_trond()
@@ -151,27 +145,46 @@ echo_job ENABLED    INTERVAL:1:00:00     None
         self.sandbox.tronctl(['zap', 'fake_service'])
         assert_equal('DOWN', self.sandbox.list_service('fake_service')['state'])
 
+    def test_cleanup_on_failure(self):
+        canary = os.path.join(self.sandbox.tmp_dir, 'end_to_end_done')
+
+        FAIL_CONFIG = dedent("""
+        nodes:
+          - name: local
+            hostname: 'localhost'
+        jobs:
+          - name: "failjob"
+            node: local
+            schedule: "interval 1 seconds"
+            actions:
+              - name: "failaction"
+                command: "failplz"
+        """) + TOUCH_CLEANUP_FMT % canary
+
+        # start with a basic configuration
+        self.sandbox.save_config(FAIL_CONFIG)
+        self.sandbox.start_trond()
+
+        time.sleep(3)
+
+        assert os.path.exists(canary)
+        assert_gt(len(self.sandbox.list_job('failjob')['runs']), 1)
+
     def test_skip_failed_actions(self):
         CONFIG = dedent("""
-        --- !TronConfiguration
-        ssh_options:
-                agent: true
         nodes:
-            - &local
-                hostname: 'localhost'
+          - name: local
+            hostname: 'localhost'
         jobs:
-            - !Job
-                name: "multi_step_job"
-                node: *local
-                schedule: "interval 1 seconds"
-                actions:
-                    - &broken !Action
-                        name: "broken"
-                        command: "failingcommand"
-                    - !Action
-                        name: "works"
-                        command: "echo ok"
-                        requires: *broken
+          - name: "multi_step_job"
+            node: local
+            schedule: "interval 1 seconds"
+            actions:
+              - name: "broken"
+                command: "failingcommand"
+              - name: "works"
+                command: "echo ok"
+                requires: broken
         """)
 
         self.sandbox.save_config(CONFIG)
@@ -193,16 +206,15 @@ echo_job ENABLED    INTERVAL:1:00:00     None
         FAIL_CONFIG = dedent("""
         --- !TronConfiguration
         nodes:
-            - &local
-                hostname: 'localhost'
+          - &local
+            hostname: 'localhost'
         jobs:
-            - &failjob
-                name: "failjob"
-                node: *local
-                schedule: "interval 1 seconds"
-                actions:
-                    - name: "failaction"
-                      command: "failplz"
+          - name: "failjob"
+            node: *local
+            schedule: "interval 1 seconds"
+            actions:
+              - name: "failaction"
+                command: "failplz"
         """) + TOUCH_CLEANUP_FMT % canary
 
         # start with a basic configuration
@@ -292,10 +304,13 @@ class SchedulerTestCase(SandboxTestCase):
         # Wait a little to give things time to explode
         time.sleep(1)
         jerb = self.sandbox.list_job('random_failure_job')
-        while (len(jerb['runs']) < 3 or
-               jerb['runs'][-1][u'state'] not in [u'FAIL', u'SUCC']):
+        total_tries = 0
+        while ((len(jerb['runs']) < 3 or
+                jerb['runs'][-1][u'state'] not in [u'FAIL', u'SUCC']) and
+                total_tries < 30):
             time.sleep(0.2)
             jerb = self.sandbox.list_job('random_failure_job')
+            total_tries += 1
 
         assert_equal(jerb['runs'][-1][u'state'], u'FAIL')
         assert_in(jerb['runs'][-2][u'state'], [u'FAIL', u'RUNN'])

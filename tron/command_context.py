@@ -5,7 +5,7 @@ have variables that need to be rendered.
 
 class CommandContext(object):
 
-    def __init__(self, base, next=None):
+    def __init__(self, base=None, next=None):
         """Initialize
 
         Args
@@ -13,7 +13,7 @@ class CommandContext(object):
           next     Next place to look for more pieces of context
                     Generally this will be another instance of CommandContext
         """
-        self.base = base
+        self.base = base or {}
         self.next = next or dict()
 
     def get(self, name, default=None):

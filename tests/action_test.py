@@ -289,14 +289,15 @@ class ActionRunVariablesTest(TestCase):
     @class_teardown
     def unfreeze_time(self):
         timeutils.override_current_time(None)
-    
+
     @setup
     def build_job(self):
         self.test_dir = tempfile.mkdtemp()
         self.action = action.Action(name="Test Action")
         self.action.command = "Test Action Command"
         self.job = job.Job("Test Job", self.action)
-        self.job.node_pool = node.NodePool("host")
+        self.job.node_pool = node.NodePool(
+            nodes=[node.Node(hostname='host', ssh_options=turtle.Turtle())])
         self.job.output_path = self.test_dir
         self.action.job = self.job
         self.job.scheduler = scheduler.ConstantScheduler()
