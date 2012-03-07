@@ -5,7 +5,6 @@ validation.
 from collections import Mapping, namedtuple
 import datetime
 import logging
-import os
 import re
 
 import pytz
@@ -476,7 +475,7 @@ def valid_job(job):
                               (job['name'], ', '.join(list(missing_keys))))
         else:
             raise ConfigError("Nameless job is missing options: %s" %
-                              (', '.join(list(extra_keys))))
+                              (', '.join(list(missing_keys))))
 
     extra_keys = set(job.keys()) - set(required_keys + optional_keys)
     if extra_keys:
@@ -493,8 +492,6 @@ def valid_job(job):
                                             job.get('cleanup_action', None)),
         node=normalize_node(job['node']),
     )
-
-    queueing=valid_bool(path, job.get('queueing', True)),
 
     if 'queueing' in job:
         final_job['queueing'] = valid_bool(path, job['queueing'])
@@ -610,7 +607,9 @@ def valid_daily_scheduler(start_time=None, days=None):
 
 
 def valid_interval_scheduler(interval):
-    interval_no_spaces = ''.join(interval.split())
+    # remove spaces
+    interval = ''.join(interval.split())
+
     # Shortcut values for intervals
     TIME_INTERVAL_SHORTCUTS = {
         'hourly': dict(hours=1),
@@ -660,13 +659,13 @@ def valid_action(path, action, is_cleanup=False):
 
     missing_keys = set(required_keys) - set(action.keys())
     if missing_keys:
-        if 'name' in job:
+        if 'name' in action:
             raise ConfigError("Action %s.%s is missing options: %s" %
                               (path, action['name'],
                                ', '.join(list(missing_keys))))
         else:
             raise ConfigError("Nameless action in %s is missing options: %s" %
-                              (path, ', '.join(list(extra_keys))))
+                              (path, ', '.join(list(missing_keys))))
 
     extra_keys = set(action.keys()) - set(required_keys + optional_keys)
     if extra_keys:
@@ -753,7 +752,7 @@ def valid_service(service):
                               (service['name'], ', '.join(list(missing_keys))))
         else:
             raise ConfigError("Nameless service is missing options: %s" %
-                              (', '.join(list(extra_keys))))
+                              (', '.join(list(missing_keys))))
 
     extra_keys = set(service.keys()) - set(required_keys + optional_keys)
     if extra_keys:

@@ -7,9 +7,9 @@ import urllib
 
 try:
     import simplejson as json
+    assert json # pyflakes
 except ImportError:
     import json
-    assert json
 
 from twisted.web import http, resource, server
 

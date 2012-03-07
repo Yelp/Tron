@@ -2,6 +2,7 @@ from __future__ import with_statement
 import logging
 import os
 import shutil
+import socket
 import time
 import yaml
 
@@ -11,9 +12,9 @@ from twisted.internet import reactor
 import tron
 from tron import command_context
 from tron import config_parse
+from tron.config_parse import ConfigError
 from tron import emailer
 from tron import event
-from tron import job
 from tron import monitor
 from tron import schedule_parse
 from tron import scheduler
@@ -486,11 +487,13 @@ class MasterControlProgram(object):
         # is a mitigation against a bug easily cause us to be in an
         # inconsistent state, probably due to bad code elsewhere.
 
+        # THIS IS AWFUL. PLEASE FIX IT.
+
         failure = False
         for service in services_to_add:
             try:
                 self.add_service(service)
-            except Exception, e:
+            except Exception:
                 log.exception("Failed adding new service")
                 failure = True
 

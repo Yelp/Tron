@@ -1,6 +1,4 @@
-import datetime
 import logging
-import re
 
 from pytz import AmbiguousTimeError, NonExistentTimeError
 
