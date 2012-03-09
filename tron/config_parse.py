@@ -4,6 +4,7 @@ validation.
 
 from collections import Mapping, namedtuple
 import datetime
+from functools import partial
 import logging
 import re
 
@@ -50,10 +51,27 @@ class ConfigError(Exception):
 
 ### SCHEMA DEFINITION ###
 
+def config_object_factory(name, required=None, optional=None):
+    """
+    Creates a namedtuple which has two additional attributes:
+        required_keys:
+            all keys required to be set on this configuration object
+        optional keys:
+            optional keys for this configuration object
 
-TronConfig = namedtuple(
+    The tuple is created from required + optional
+    """
+    required = required or []
+    optional = optional or []
+    config_class = namedtuple(name, required + optional)
+    config_class.required_keys = required
+    config_class.optional_keys = optional
+    return config_class
+
+
+TronConfig = config_object_factory(
     'TronConfig',
-     [
+    optional=[
          'working_dir',          # str
          'syslog_address',       # str
          'command_context',      # FrozenDict of str
@@ -64,10 +82,10 @@ TronConfig = namedtuple(
          'node_pools',           # FrozenDict of ConfigNodePool
          'jobs',                 # FrozenDict of ConfigJob
          'services'              # FrozenDict of ConfigService
-     ])
+    ])
 
 
-NotificationOptions = namedtuple(
+NotificationOptions = config_object_factory(
     'NotificationOptions',
     [
         'smtp_host',            # str
@@ -75,37 +93,29 @@ NotificationOptions = namedtuple(
     ])
 
 
-ConfigSSHOptions = namedtuple(
+ConfigSSHOptions = config_object_factory(
     'ConfigSSHOptions',
-    [
+    optional=[
         'agent',        # bool
         'identities',   # list of str
     ])
 
 
-ConfigNode = namedtuple(
-    'ConfigNode',
-    [
-        'name',     # str
-        'hostname', # str
-    ])
+ConfigNode = config_object_factory('ConfigNode', ['hostname'], ['name'])
 
 
-ConfigNodePool = namedtuple(
-    'ConfigNodePool',
-    [
-        'nodes',    # str
-        'name',     # str
-    ])
+ConfigNodePool = config_object_factory('ConfigNodePool', ['nodes'], ['name'])
 
 
-ConfigJob = namedtuple(
+ConfigJob = config_object_factory(
     'ConfigJob',
     [
         'name',             # str
         'node',             # str
         'schedule',         # Config*Scheduler
         'actions',          # FrozenDict of ConfigAction
+    ],
+    [
         'queueing',         # bool
         'run_limit',        # int
         'all_nodes',        # bool
@@ -113,17 +123,28 @@ ConfigJob = namedtuple(
     ])
 
 
-ConfigAction = namedtuple(
+ConfigAction = config_object_factory(
     'ConfigAction',
     [
         'name',     # str
         'command',  # str
+    ],[
         'requires', # tuple of str
         'node',     # str
     ])
 
+ConfigCleanupAction = config_object_factory(
+    'ConfigAction',
+    [
+        'command',  # str
+    ],[
+        'requires', # tuple of str
+        'name',     # str
+        'node',     # str
+    ])
 
-ConfigService = namedtuple(
+
+ConfigService = config_object_factory(
     'ConfigService',
     [
         'name',             # str
@@ -131,6 +152,7 @@ ConfigService = namedtuple(
         'pid_file',         # str
         'command',          # str
         'monitor_interval', # float
+    ],[
         'restart_interval', # float
         'count',            # int
     ])
@@ -158,29 +180,31 @@ ConfigIntervalScheduler = namedtuple(
 
 
 def type_converter(convert, error_fmt):
-    def f(path, value):
+    def f(path, value, optional=False):
         """Convert *value* at config path *path* into something else via the
         *convert* function, raising ConfigError if *convert* raises a
         TypeError. *error_fmt* will be interpolated with (path, value).
+        If optional is True, None values will be returned without converting.
         """
+        if value is None and optional:
+            return None
         try:
             return convert(value)
         except TypeError:
             raise ConfigError(error_fmt % (path, value))
-        return value
     return f
 
-valid_float = type_converter(
-    float, 'Value at %s is not a number: %s')
+valid_float = type_converter(float, 'Value at %s is not a number: %s')
 
-valid_int = type_converter(
-    int, 'Value at %s is not an integer: %s')
+valid_int = type_converter(int, 'Value at %s is not an integer: %s')
 
 
 def type_validator(validator, error_fmt):
-    def f(path, value):
+    def f(path, value, optional=False):
         """If *validator* does not return True for *value*, raise ConfigError
         """
+        if value is None and optional:
+            return None
         if not validator(value):
             raise ConfigError(error_fmt, (path, value))
         return value
@@ -234,10 +258,10 @@ class FrozenDict(Mapping):
         return self._d[key]
 
     def __hash__(self):
-        # It would have been simpler and maybe more obvious to 
+        # It would have been simpler and maybe more obvious to
         # use hash(tuple(sorted(self._d.iteritems()))) from this discussion
-        # so far, but this solution is O(n). I don't know what kind of 
-        # n we are going to run into, but sometimes it's hard to resist the 
+        # so far, but this solution is O(n). I don't know what kind of
+        # n we are going to run into, but sometimes it's hard to resist the
         # urge to optimize when it will gain improved algorithmic performance.
         if self._hash is None:
             self._hash = 0
@@ -250,14 +274,20 @@ class FrozenDict(Mapping):
 ### LOADING THE SCHEMA ###
 
 
-def insert_nodup(d, key, item, error_fmt):
-    """If key is not yet in d, insert it. Otherwise, raise ConfigError.
-    *error_fmt* will be interpolated with (key,).
+class DictNoUpdate(dict):
+    """A dict like object that throws a ConfigError if a key exists and a set
+    is called to change the value of that key.
+     *fmt_string* will be interpolated with (key,)
     """
-    if key in d:
-        raise ConfigError(error_fmt, key)
-    else:
-        d[key] = item
+    def __init__(self, fmt_string, **kwargs):
+        super(dict, self).__init__(**kwargs)
+        self.fmt_string = fmt_string
+
+    # TODO: test
+    def __setitem__(self, key, value):
+        if key in self:
+            raise ConfigError(self.fmt_string, key)
+        super(DictNoUpdate, self).__setitem__(key, value)
 
 
 def normalize_node(node):
@@ -270,126 +300,136 @@ def normalize_node(node):
         return None
     if isinstance(node, basestring):
         return node
-    else:
-        # probably a reference back to an already validated node
-        try:
-            return valid_node(node).name
-        except ConfigError:
-            return valid_node_pool(node).name
+    # probably a reference back to an already validated node
+    try:
+        return valid_node(node).name
+    except ConfigError, e:
+        return valid_node_pool(node).name
 
 
-def valid_config(config):
-    """Given a parsed config file (should be only basic literals and
-    containers), return an immutable, fully populated series of namedtuples and
-    FrozenDicts with all defaults filled in, all valid values, and no unused
-    values. Throws a ConfigError if any part of the input dict is invalid.  """
+class Validator(object):
+    """Base class for validating a collection and creating a mutable
+    collection from the source.
+    """
+    config_class = None
+    defaults = {}
+    validators = {}
+    optional = False
 
-    # This dictionary will be used as the kwargs to the TronConfig namedtuple.
-    # As keys are added to it, they are deleted from config so we can make sure
-    # the user didn't make any top-level typos.
-    final_config = {}
+    def validate(self, input):
+        if self.optional and input is None:
+            return None
 
-    def store(key, validate_function):
-        """If key is in config, pass it through validate_function(), store the
-        result in final_config, and delete the key from config. Otherwise, pass
-        None through validate_function() and store that result in final_config.
-        This way we can keep the defaults logic where it makes sense.
+        shortcut_value = self.do_shortcut(input)
+        if shortcut_value:
+            return shortcut_value
+
+        input = self.cast(input)
+        self.validate_required_keys(input)
+        self.validate_extra_keys(input)
+        output_dict = self.build_dict(input)
+        self.set_defaults(output_dict)
+        return self.config_class(**output_dict)
+
+    __call__ = validate
+
+    @property
+    def type_name(self):
+        return self.config_class.__name__
+
+    def do_shortcut(self, input):
+        """Override if your validator can skip most of the validation by
+        checking this condition.  If this returns a truthy value, the
+        validation will end immediately and return that value.
         """
-        if key in config:
-            final_config[key] = validate_function(config[key])
-            del config[key]
-        else:
-            final_config[key] = validate_function(None)
+        pass
 
-    # Take care of the basics
-    store('working_dir', valid_working_dir)
-    store('syslog_address', valid_syslog)
-    store('command_context', valid_command_context)
-    store('ssh_options', valid_ssh_options)
-    store('notification_options', valid_notification_options)
-    store('time_zone', valid_time_zone)
+    def cast(self, input):
+        """If your validator accepts input in different formations, override
+        this method to cast your input into a common format.
+        """
+        return input
 
-    # Prepopulate collections
-    def set_default(key, value):
-        """Make sure config has key and it is not None"""
-        if key in config:
-            config[key] = config[key] or value
-        else:
-            config[key] = value
+    def validate_required_keys(self, input):
+        """Check that all required keys are present."""
+        missing_keys = set(self.config_class.required_keys) - set(input.keys())
+        if missing_keys:
+            if 'name' in self.config_class.required_keys and 'name' in input:
+                raise ConfigError("%s %s is missing options: %s" % (
+                        self.type_name.capitalize(),
+                        input['name'],
+                        ', '.join(missing_keys)
+                ))
+            else:
+                raise ConfigError("Nameless %s is missing options: %s" % (
+                        self.type_name,
+                        ', '.join(list(missing_keys))
+                ))
 
-    set_default('nodes', [dict(name='localhost', hostname='localhost')])
-    set_default('node_pools', [])
-    set_default('jobs', [])
-    set_default('services', [])
+    def validate_extra_keys(self, input):
+        """Check that no unexpected keys are present."""
+        extra_keys = set(input.keys()) - set(
+            self.config_class.required_keys + self.config_class.optional_keys)
+        if extra_keys:
+            raise ConfigError("Unknown options in %s %s: %s" % (
+                    self.type_name,
+                    input.get('name', ''),
+                    ', '.join(list(extra_keys))
+            ))
 
-    # 'nodes' may contain nodes or node pools (for now). Internally split them
-    # into 'nodes' and 'node_pools'. Process the nodes.
-    nodes = {}
-    for node in config['nodes']:
-        # A node pool is characterized by being a list, or a dictionary that
-        # contains a list of nodes
-        if (isinstance(node, list) or
-            (isinstance(node, dict) and 'nodes' in node)):
-            log.warn('Node pools should be moved from "nodes" to "node_pools"'
-                     ' before upgrading to Tron 0.5.')
-            config['node_pools'].append(node)
-            continue
-        else:
-            final_node = valid_node(node)
-            insert_nodup(nodes, final_node.name, final_node,
-                         'Node name %s is used twice')
-    del config['nodes']
-    final_config['nodes'] = FrozenDict(**nodes)
+    def set_defaults(self, output_dict):
+        """Set any default values for any optional values that were not
+        specified.
+        """
+        for key, value in self.defaults.iteritems():
+            if key not in output_dict:
+                output_dict[key] = value
 
-    # process node pools
-    node_pools = {}
-    for node_pool in config['node_pools']:
-        final_pool = valid_node_pool(node_pool)
-        insert_nodup(node_pools, final_pool.name, final_pool,
-                     'Node pool name %s is used twice')
-    del config['node_pools']
-    final_config['node_pools'] = FrozenDict(**node_pools)
+    def post_validation(self, valid_input):
+        """Perform additional validation."""
+        pass
 
-    # process jobs. output is a dict mapping name to values.
-    jobs = {}
-    for job in config['jobs']:
-        final_job = valid_job(job)
-        insert_nodup(jobs, final_job.name, final_job,
-                     'Job name %s is used twice')
-    del config['jobs']
-    final_config['jobs'] = FrozenDict(**jobs)
+    def build_dict(self, input):
+        """Override this to validate each value in the input."""
+        valid_input = {}
+        for key, value in input.iteritems():
+            if key in self.validators:
+                valid_input[key] = self.validators[key](value)
+            else:
+                valid_input[key] = value
+        self.post_validation(valid_input)
+        return valid_input
 
-    # process services
-    services = {}
-    for service in config['services']:
-        final_service = valid_service(service)
-        insert_nodup(services, final_service.name, final_service,
-                     'Service name %s is used twice')
-    del config['services']
-    final_config['services'] = FrozenDict(**services)
 
-    # Make sure we used everything
-    if len(config) > 0:
-        raise ConfigError("Unknown options: %s" % ', '.join(config.keys()))
+class ValidatorWithNamedPath(Validator):
+    """A validator that expects a name to use for validation failure messages
+    and calls a post_validation() method after building the dict."""
 
-    return TronConfig(**final_config)
+    def post_validation(self, valid_input, path_name):
+        pass
+
+    def build_dict(self, input):
+        path_name = '%s.%s' % (self.type_name, input.get('name'))
+        valid_input = {}
+        for key, value in input.iteritems():
+            if key in self.validators:
+                valid_input[key] = self.validators[key](path_name, value)
+            else:
+                valid_input[key] = value
+        self.post_validation(valid_input, path_name)
+        return valid_input
 
 
 def valid_working_dir(wd):
     """Given a working directory or None, return a valid working directory.
     If wd=None, try os.environ['TMPDIR']. If that doesn't exist, use /tmp.
     """
-    if wd is None:
-        return None
-    else:
-        return valid_str('working_dir', wd)
+    # TODO: should this do the lookups the docstring claims it does?
+    return valid_str('working_dir', wd, optional=True)
 
 
 def valid_syslog(syslog):
-    if syslog:
-        syslog = valid_str('syslog', syslog)
-
-    return syslog
+    return valid_str('syslog', syslog, optional=True)
 
 
 def valid_command_context(context):
@@ -397,156 +437,65 @@ def valid_command_context(context):
     return FrozenDict(**valid_dict('command_context', context or {}))
 
 
-def valid_ssh_options(opts):
-    opts = opts or {}
-    extra_keys = set(opts.keys()) - set(['agent', 'identities'])
-    if extra_keys:
-        raise ConfigError("Unknown SSH options: %s" %
-                          ', '.join(list(extra_keys)))
-
-    return ConfigSSHOptions(
-        agent=valid_bool('ssh_options.agent',
-                         opts.get('agent', False)),
-        identities=valid_list('ssh_options.identities',
-                              opts.get('identities', []))
-    )
-
-
-def valid_notification_options(options):
-    if options is None:
-        return None
-    else:
-        if sorted(options.keys()) != ['notification_addr', 'smtp_host']:
-            raise ConfigError('notification_options must contain smtp_host,'
-                              ' notification_addr, and nothing else.')
-    return NotificationOptions(**options)
-
-
 def valid_time_zone(tz):
     if tz is None:
         return None
-    else:
-        try:
-            return pytz.timezone(valid_str('time_zone', tz))
-        except pytz.exceptions.UnknownTimeZoneError:
-            raise ConfigError('%s is not a valid time zone' % tz)
+    try:
+        return pytz.timezone(valid_str('time_zone', tz))
+    except pytz.exceptions.UnknownTimeZoneError:
+        raise ConfigError('%s is not a valid time zone' % tz)
 
 
-def valid_node(node):
-    # Sure, let's accept plain strings, why not.
-    if isinstance(node, basestring):
-        return ConfigNode(hostname=node, name=node)
+class ValidateSSHOptions(Validator):
+    """ Validate SSH options."""
+    config_class = ConfigSSHOptions
+    defaults = {'agent': False, 'identities': ()}
+    validators = {
+        'agent': partial(valid_bool, 'ssh_options.agent'),
+        'identities': partial(valid_list, 'ssh_options.identities')
+    }
+    optional = True
 
-    final_node = valid_dict('nodes', node)
-    sorted_keys = sorted(final_node.keys())
-    if sorted_keys != ['hostname'] and sorted_keys != ['hostname', 'name']:
-        raise ConfigError('Nodes must be either a string representing the'
-                          ' hostname or a dictionary with the key "hostname"'
-                          ' and optionally "name", which defaults to the'
-                          ' hostname. You said: %s' % node)
-
-    final_node.setdefault('name', final_node['hostname'])
-
-    return ConfigNode(**final_node)
+valid_ssh_options = ValidateSSHOptions()
 
 
-def valid_node_pool(node_pool):
-    if isinstance(node_pool, list):
-        node_pool = dict(nodes=node_pool)
-    final_node_pool = dict(
-        nodes=[normalize_node(node) for node in node_pool['nodes']],
-    )
-    if 'name' in node_pool:
-        final_node_pool['name'] = node_pool['name']
-    else:
-        final_node_pool['name'] = '_'.join(final_node_pool['nodes'])
+class ValidateNotificationOptions(Validator):
+    """Validate notification options."""
+    config_class = NotificationOptions
+    optional = True
 
-    return ConfigNodePool(**final_node_pool)
+valid_notification_options = ValidateNotificationOptions()
 
 
-def valid_job(job):
-    required_keys = ['name', 'node', 'schedule', 'actions']
-    optional_keys = ['queueing', 'run_limit', 'all_nodes', 'cleanup_action']
+class ValidateNode(Validator):
+    config_class = ConfigNode
 
-    missing_keys = set(required_keys) - set(job.keys())
-    if missing_keys:
-        if 'name' in job:
-            raise ConfigError("Job %s is missing options: %s" %
-                              (job['name'], ', '.join(list(missing_keys))))
-        else:
-            raise ConfigError("Nameless job is missing options: %s" %
-                              (', '.join(list(missing_keys))))
+    def do_shortcut(self, node):
+        # Sure, let's accept plain strings, why not.
+        if isinstance(node, basestring):
+            return ConfigNode(hostname=node, name=node)
 
-    extra_keys = set(job.keys()) - set(required_keys + optional_keys)
-    if extra_keys:
-        raise ConfigError("Unknown options in %s: %s" %
-                          (job['name'], ', '.join(list(extra_keys))))
+    def set_defaults(self, output_dict):
+        output_dict.setdefault('name', output_dict['hostname'])
 
-    path = 'jobs.%s' % job['name']
-    final_job = dict(
-        name=valid_identifier('jobs', job['name']),
-        schedule=valid_schedule(path, job['schedule']),
-        run_limit=valid_int(path, job.get('run_limit', 50)),
-        all_nodes=valid_bool(path, job.get('all_nodes', False)),
-        cleanup_action=valid_cleanup_action(path,
-                                            job.get('cleanup_action', None)),
-        node=normalize_node(job['node']),
-    )
-
-    if 'queueing' in job:
-        final_job['queueing'] = valid_bool(path, job['queueing'])
-    else:
-        # Set queueing default based on scheduler
-        if (isinstance(final_job['schedule'], ConfigIntervalScheduler) or
-            isinstance(final_job['schedule'], ConfigConstantScheduler)):
-            # Usually False
-            final_job['queueing'] = False
-        else:
-            # But daily jobs probably deal with daily data and should not be
-            # skipped
-            final_job['queueing'] = True
-
-    # load actions
-    actions = {}
-    for action in job['actions'] or []:
-        final_action = valid_action(path, action)
-        if not (final_action.node or final_job['node']):
-            raise ConfigError('%s has no actions configured for %s' %
-                              (path, final_action.name))
-        insert_nodup(actions, final_action.name, final_action,
-                     'Action name %%s on job %s used twice' %
-                     final_job['name'])
-
-    if len(actions) < 1:
-        raise ConfigError("Job %s must have at least one action" %
-                          final_job['name'])
-
-    # make sure there are no circular or misspelled dependencies
-    def dfs_action(base_action, current_action, stack):
-        stack.append(current_action.name)
-        for dep in current_action.requires:
-            try:
-                if dep == base_action.name and len(stack) > 0:
-                    raise ConfigError('Circular dependency in %s: %s' %
-                                      (path, ' -> '.join(stack)))
-                dfs_action(base_action, actions[dep], stack)
-            except KeyError:
-                raise ConfigError('Action jobs.%s.%s has a dependency "%s"'
-                                  ' that is not in the same job!' %
-                                  (final_job['name'],
-                                   current_action.name,
-                                   dep))
-        stack.pop()
-
-    for action in actions.values():
-        dfs_action(action, action, [])
-
-    final_job['actions'] = FrozenDict(**actions)
-
-    return ConfigJob(**final_job)
+valid_node = ValidateNode()
 
 
-def valid_schedule(path, schedule):
+class ValidateNodePool(Validator):
+    config_class = ConfigNodePool
+
+    def cast(self, node_pool):
+        if isinstance(node_pool, list):
+            node_pool = dict(nodes=node_pool)
+        return dict(nodes=[normalize_node(node) for node in node_pool['nodes']])
+
+    def set_defaults(self, node_pool):
+        node_pool.setdefault('name', '_'.join(node_pool['nodes']))
+
+valid_node_pool = ValidateNodePool()
+
+
+def valid_schedule(_, schedule):
     if isinstance(schedule, basestring):
         schedule = schedule.strip()
         scheduler_args = schedule.split()
@@ -560,13 +509,13 @@ def valid_schedule(path, schedule):
             return valid_interval_scheduler(' '.join(scheduler_args))
         else:
             return parse_daily_expression(schedule)
+        
+    if 'interval' in schedule:
+        return valid_interval_scheduler(**schedule)
+    elif 'start_time' in schedule or 'days' in schedule:
+        return valid_daily_scheduler(**schedule)
     else:
-        if 'interval' in schedule:
-            return valid_interval_scheduler(**schedule)
-        elif 'start_time' in schedule or 'days' in schedule:
-            return valid_daily_scheduler(**schedule)
-        else:
-            raise ConfigError("Unknown scheduler: %s" % schedule)
+        raise ConfigError("Unknown scheduler: %s" % schedule)
 
 
 def valid_daily_scheduler(start_time=None, days=None):
@@ -625,7 +574,6 @@ def valid_interval_scheduler(interval):
         'seconds': ['s', 'sec', 'secs', 'second', 'seconds']
     }
 
-
     if interval in TIME_INTERVAL_SHORTCUTS:
         kwargs = TIME_INTERVAL_SHORTCUTS[interval]
     else:
@@ -633,8 +581,7 @@ def valid_interval_scheduler(interval):
         interval_re = re.compile(r"\d+|[a-zA-Z]+")
         interval_tokens = interval_re.findall(interval)
         if len(interval_tokens) != 2:
-            raise ConfigError("Invalid interval specification: %s",
-                              interval)
+            raise ConfigError("Invalid interval specification: %s", interval)
 
         value, units = interval_tokens
 
@@ -644,141 +591,255 @@ def valid_interval_scheduler(interval):
                 kwargs[key] = int(value)
                 break
         else:
-            raise ConfigError("Invalid interval specification: %s",
-                              interval)
+            raise ConfigError("Invalid interval specification: %s", interval)
 
-    return ConfigIntervalScheduler(
-        timedelta=datetime.timedelta(**kwargs)
-    )
+    return ConfigIntervalScheduler(timedelta=datetime.timedelta(**kwargs))
 
 
-def valid_action(path, action, is_cleanup=False):
-    # check set of keys
-    required_keys = ['name', 'command']
-    optional_keys = ['requires', 'node']
+class ValidateAction(ValidatorWithNamedPath):
+    """Validate an action."""
+    config_class = ConfigAction
+    defaults = {'node': None}
+    validators = {
+        'name': valid_identifier,
+        'command': valid_str,
+        # TODO: have all of these been updated to use a lambda?
+        'node': lambda _, v: normalize_node(v)
+    }
 
-    missing_keys = set(required_keys) - set(action.keys())
-    if missing_keys:
-        if 'name' in action:
-            raise ConfigError("Action %s.%s is missing options: %s" %
-                              (path, action['name'],
-                               ', '.join(list(missing_keys))))
-        else:
-            raise ConfigError("Nameless action in %s is missing options: %s" %
-                              (path, ', '.join(list(missing_keys))))
+    def post_validation(self, action, path_name):
+        # check name
+        if action['name'] == CLEANUP_ACTION_NAME:
+            raise ConfigError("Bad action name at %s: %s" %
+                              (path_name, action['name']))
 
-    extra_keys = set(action.keys()) - set(required_keys + optional_keys)
-    if extra_keys:
-        raise ConfigError("Unknown options in %s.%s: %s" %
-                          (path, action['name'],
-                           ', '.join(list(extra_keys))))
+        requires = []
 
-    # basic values
-    my_path = '%s.%s' % (path, action['name'])
-    final_action = dict(
-        name=valid_identifier(path, action['name']),
-        command=valid_str(path, action['command']),
-    )
+        # accept a string, pointer, or list
+        old_requires = action.get('requires', [])
 
-    # check name
-    if ((is_cleanup and final_action['name'] != CLEANUP_ACTION_NAME) or
-        (not is_cleanup and final_action['name'] == CLEANUP_ACTION_NAME)):
-        raise ConfigError("Bad action name at %s: %s" %
-                          (path, final_action['name']))
+        # string identifier
+        if isinstance(old_requires, basestring):
+            old_requires = [old_requires]
 
-    if 'node' in action and action['node'] is not None:
-        final_action['node'] = normalize_node(action['node'])
-    else:
-        final_action['node'] = None
+        # pointer
+        if isinstance(old_requires, dict):
+            old_requires = [old_requires['name']]
 
-    requires = []
+        old_requires = valid_list(path_name, old_requires)
 
-    # accept a string, pointer, or list
-    old_requires = action.get('requires', [])
+        for r in old_requires:
+            if isinstance(r, basestring):
+                # new style, identifier
+                requires.append(r)
+            else:
+                # old style, alias
+                requires.append(r['name'])
 
-    # string identifier
-    if isinstance(old_requires, basestring):
-        old_requires = [old_requires]
+            if requires[-1] == CLEANUP_ACTION_NAME:
+                raise ConfigError('Actions cannot depend on the cleanup action.'
+                                  ' (%s)' % path_name)
 
-    # pointer
-    if isinstance(old_requires, dict):
-        old_requires = [old_requires['name']]
+        action['requires'] = tuple(requires)
 
-    old_requires = valid_list(my_path, old_requires)
-
-    for r in old_requires:
-        if isinstance(r, basestring):
-            # new style, identifier
-            requires.append(r)
-        else:
-            # old style, alias
-            requires.append(r['name'])
-
-        if requires[-1] == CLEANUP_ACTION_NAME:
-            raise ConfigError('Actions cannot depend on the cleanup action.'
-                              ' (%s)' % (my_path))
-
-    final_action['requires'] = tuple(requires)
-
-    return ConfigAction(**final_action)
+valid_action = ValidateAction()
 
 
-def valid_cleanup_action(path, action):
-    if action is None:
-        return None
+class ValidateCleanupAction(ValidatorWithNamedPath):
+    config_class = ConfigCleanupAction
+    defaults = {
+        'node': None,
+        'name': CLEANUP_ACTION_NAME,
+    }
+    validators = {
+        'name': valid_identifier,
+        'command': valid_str,
+        # TODO: have all of these been updated to use a lambda?
+        'node': lambda _, v: normalize_node(v)
+    }
 
-    if ('name' in action and
-        action['name'] not in (None, CLEANUP_ACTION_NAME)):
-        raise ConfigError("Cleanup actions cannot have custom names (you"
-                          " wanted %s.%s)" % (path, action['name']))
-    if action.get('requires', []):
-        raise ConfigError("Cleanup actions cannot have dependencies (%s)" %
-                          path)
+    def post_validation(self, action, path_name):
+        if (
+            'name' in action
+            and action['name'] not in (None, CLEANUP_ACTION_NAME)
+        ):
+            raise ConfigError("Cleanup actions cannot have custom names (you"
+                              " wanted %s.%s)" % (path_name, action['name']))
 
-    action['name'] = CLEANUP_ACTION_NAME
-    action['requires'] = []
+        action['requires'] = tuple()
 
-    return valid_action(path, action, is_cleanup=True)
-
-
-def valid_service(service):
-    required_keys = ['name', 'node', 'pid_file', 'command', 'monitor_interval']
-    optional_keys = ['restart_interval', 'count']
-
-    missing_keys = set(required_keys) - set(service.keys())
-    if missing_keys:
-        if 'name' in service:
-            raise ConfigError("Service %s is missing options: %s" %
-                              (service['name'], ', '.join(list(missing_keys))))
-        else:
-            raise ConfigError("Nameless service is missing options: %s" %
-                              (', '.join(list(missing_keys))))
-
-    extra_keys = set(service.keys()) - set(required_keys + optional_keys)
-    if extra_keys:
-        raise ConfigError("Unknown options in %s: %s" %
-                          (service['name'], ', '.join(list(extra_keys))))
-
-    path = 'services.%s' % service['name']
-    final_service = dict(
-        name=valid_identifier(path, service['name']),
-        pid_file=valid_str(path, service['pid_file']),
-        command=valid_str(path, service['command']),
-        monitor_interval=valid_int(path, service['monitor_interval']),
-        count=valid_int(path, service.get('count', 1)),
-        node=normalize_node(service['node']),
-    )
-
-    if 'restart_interval' in service:
-        final_service['restart_interval'] = valid_int(
-                                                path,
-                                                service['restart_interval'])
-    else:
-        final_service['restart_interval'] = None
-
-    return ConfigService(**final_service)
+valid_cleanup_action = ValidateCleanupAction()
 
 
+class ValidateJob(ValidatorWithNamedPath):
+    """Validate jobs."""
+    config_class = ConfigJob
+    defaults = {
+        'run_limit': 50,
+        'all_nodes': False,
+        'cleanup_action': None
+    }
+
+    validators = {
+        'name': valid_identifier,
+        'schedule': valid_schedule,
+        'run_limit': valid_int,
+        'all_nodes': valid_bool,
+        'cleanup_action': lambda _, v: valid_cleanup_action(v),
+        'node': lambda _, v: normalize_node(v),
+        'queueing': valid_bool,
+    }
+
+    def set_defaults(self, job):
+        super(ValidateJob, self).set_defaults(job)
+        if 'queueing' not in job:
+            # TODO: this should be based on a field in the associated scheduler
+            # Set queueing default based on scheduler. Usually False, But daily
+            # jobs probably deal with daily data and should not be skipped
+            job['queueing'] = not (
+                isinstance(job['schedule'], ConfigIntervalScheduler) or
+                isinstance(job['schedule'], ConfigConstantScheduler)
+            )
+
+    def post_validation(self, job, path):
+        """Validate actions for the job."""
+        actions = DictNoUpdate('Action name %%s on job %s used twice' % job['name'])
+        for action in job['actions'] or []:
+            try:
+                final_action = valid_action(action)
+            except ConfigError, e:
+                raise ConfigError("Invalid action config for %s: %s" % (path, e))
+
+            if not (final_action.node or job['node']):
+                raise ConfigError('%s has no actions configured for %s' %
+                                  (path, final_action.name))
+            actions[final_action.name] = final_action
+
+        if len(actions) < 1:
+            raise ConfigError("Job %s must have at least one action" %
+                              job['name'])
+
+        # TODO: revisit this
+        # make sure there are no circular or misspelled dependencies
+        def dfs_action(base_action, current_action, stack):
+            stack.append(current_action.name)
+            for dep in current_action.requires:
+                try:
+                    if dep == base_action.name and len(stack) > 0:
+                        raise ConfigError('Circular dependency in %s: %s' %
+                                          (path, ' -> '.join(stack)))
+                    dfs_action(base_action, actions[dep], stack)
+                except KeyError:
+                    raise ConfigError('Action jobs.%s.%s has a dependency "%s"'
+                                      ' that is not in the same job!' %
+                                      (job['name'],
+                                       current_action.name,
+                                       dep))
+            stack.pop()
+
+        for action in actions.values():
+            dfs_action(action, action, [])
+
+        job['actions'] = FrozenDict(**actions)
+
+valid_job = ValidateJob()
+
+
+class ValidateService(ValidatorWithNamedPath):
+    """Validate a services configuration."""
+    config_class = ConfigService
+    defaults = {
+        'count': 1,
+        'restart_interval': None
+    }
+
+    validators = {
+        'name': valid_identifier,
+        'pid_file': valid_str,
+        'command': valid_str,
+        'monitor_interval': valid_int,
+        'count': valid_int,
+        'node': lambda _, v: normalize_node(v),
+        'restart_interval': valid_int,
+    }
+
+valid_service = ValidateService()
+
+
+class ValidateConfig(Validator):
+    """Given a parsed config file (should be only basic literals and
+    containers), return an immutable, fully populated series of namedtuples and
+    FrozenDicts with all defaults filled in, all valid values, and no unused
+    values. Throws a ConfigError if any part of the input dict is invalid.
+    """
+    config_class = TronConfig
+    defaults = {
+        'working_dir': None,
+        'syslog_address': None,
+        'command_context': None,
+        'ssh_options': None,
+        'notification_options': None,
+        'time_zone': None,
+        'nodes': (dict(name='localhost', hostname='localhost'),),
+        'node_pools': (),
+        'jobs': (),
+        'services': (),
+    }
+    validators = {
+        'working_dir': valid_working_dir,
+        'syslog_address': valid_syslog,
+        'command_context': valid_command_context,
+        'ssh_options': valid_ssh_options,
+        'notification_options': valid_notification_options,
+        'time_zone': valid_time_zone,
+    }
+    optional = False
+
+    def post_validation(self, config):
+        # We need to set this default here until 0.5, see comment below
+        config.setdefault('node_pools', [])
+
+        # 'nodes' may contain nodes or node pools (for now). Internally split them
+        # into 'nodes' and 'node_pools'. Process the nodes.
+        nodes = DictNoUpdate('Node name %s is used twice')
+        for node in config.get('nodes', []):
+            # A node pool is characterized by being a list, or a dictionary that
+            # contains a list of nodes
+            if (isinstance(node, list) or
+                (isinstance(node, dict) and 'nodes' in node)):
+                log.warn('Node pools should be moved from "nodes" to "node_pools"'
+                         ' before upgrading to Tron 0.5.')
+                config['node_pools'].append(node)
+                continue
+
+            final_node = valid_node(node)
+            nodes[final_node.name] = final_node
+        config['nodes'] = FrozenDict(**nodes)
+
+        # process node pools
+        node_pools = DictNoUpdate('Node pool name %s is used twice')
+        for node_pool in config.get('node_pools', []):
+            final_pool = valid_node_pool(node_pool)
+            node_pools[final_pool.name] = final_pool
+        config['node_pools'] = FrozenDict(**node_pools)
+
+        # process jobs. output is a dict mapping name to values.
+        jobs = DictNoUpdate('Job name %s is used twice')
+        for job in config.get('jobs', []):
+            final_job = valid_job(job)
+            jobs[final_job.name] = final_job
+        config['jobs'] = FrozenDict(**jobs)
+
+        # process services
+        services = DictNoUpdate('Service name %s is used twice')
+        for service in config.get('services', []):
+            final_service = valid_service(service)
+            services[final_service.name] = final_service
+        config['services'] = FrozenDict(**services)
+
+valid_config = ValidateConfig()
+
+# TODO: move to a file
 DEFAULT_CONFIG = """
 ssh_options:
     ## Tron needs SSH keys to allow the effective user to login to each of the
