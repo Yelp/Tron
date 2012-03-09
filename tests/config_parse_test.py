@@ -1,16 +1,19 @@
 import datetime
-import logging
-from logging import handlers
-import os
 import platform
 import shutil
 import StringIO
 import tempfile
 
-from testify import *
-from tron.config_parse import *
+from testify import assert_equal, assert_raises
+from testify import run, setup, teardown, TestCase
+from tron.config_parse import TronConfig, load_config, ConfigSSHOptions
+from tron.config_parse import ConfigNode, ConfigNodePool, ConfigJob
+from tron.config_parse import ConfigAction, ConfigCleanupAction
+from tron.config_parse import ConfigIntervalScheduler, ConfigConstantScheduler
+from tron.config_parse import ConfigService, ConfigError
+from tron.config_parse import CLEANUP_ACTION_NAME
 from tron.schedule_parse import ConfigDailyScheduler
-from tron.utils import timeutils
+from tron.utils.dicts import FrozenDict
 
 
 BASE_CONFIG = """
@@ -185,7 +188,7 @@ services:
                     queueing=False,
                     run_limit=50,
                     all_nodes=False,
-                    cleanup_action=ConfigAction(
+                    cleanup_action=ConfigCleanupAction(
                         name='cleanup',
                         command='test_command0.1',
                         requires=(),

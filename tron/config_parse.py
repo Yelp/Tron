@@ -2,7 +2,7 @@
 validation.
 """
 
-from collections import Mapping, namedtuple
+from collections import namedtuple
 import datetime
 from functools import partial
 import logging
@@ -13,6 +13,7 @@ import yaml
 
 from tron.schedule_parse import CONVERT_DAYS_INT    # map day index to name
 from tron.schedule_parse import parse_daily_expression
+from tron.utils.dicts import FrozenDict
 
 
 log = logging.getLogger("tron.config")
@@ -134,7 +135,7 @@ ConfigAction = config_object_factory(
     ])
 
 ConfigCleanupAction = config_object_factory(
-    'ConfigAction',
+    'ConfigCleanupAction',
     [
         'command',  # str
     ],[
@@ -177,6 +178,20 @@ ConfigIntervalScheduler = namedtuple(
 
 
 ### VALIDATION ###
+
+class DictNoUpdate(dict):
+    """A dict like object that throws a ConfigError if a key exists and a set
+    is called to change the value of that key.
+     *fmt_string* will be interpolated with (key,)
+    """
+    def __init__(self, fmt_string, **kwargs):
+        super(dict, self).__init__(**kwargs)
+        self.fmt_string = fmt_string
+
+    def __setitem__(self, key, value):
+        if key in self:
+            raise ConfigError(self.fmt_string, key)
+        super(DictNoUpdate, self).__setitem__(key, value)
 
 
 def type_converter(convert, error_fmt):
@@ -232,62 +247,9 @@ valid_bool = type_validator(
     'Value at %s is not a boolean: %s')
 
 
-class FrozenDict(Mapping):
-    """Simple implementation of an immutable dictionary so we can freeze the
-    command context, set of jobs/services, actions, etc.
-
-    from http://stackoverflow.com/questions/2703599/what-would-be-a-frozen-dict
-    """
-
-    def __init__(self, *args, **kwargs):
-        if hasattr(self, '_d'):
-            raise Exception("Can't call __init__ twice")
-        self._d = dict(*args, **kwargs)
-        self._hash = None
-
-    def __repr__(self):
-        return 'FrozenDict(%r)' % self._d
-
-    def __iter__(self):
-        return iter(self._d)
-
-    def __len__(self):
-        return len(self._d)
-
-    def __getitem__(self, key):
-        return self._d[key]
-
-    def __hash__(self):
-        # It would have been simpler and maybe more obvious to
-        # use hash(tuple(sorted(self._d.iteritems()))) from this discussion
-        # so far, but this solution is O(n). I don't know what kind of
-        # n we are going to run into, but sometimes it's hard to resist the
-        # urge to optimize when it will gain improved algorithmic performance.
-        if self._hash is None:
-            self._hash = 0
-            for key, value in self.iteritems():
-                self._hash ^= hash(key)
-                self._hash ^= hash(value)
-        return self._hash
-
-
 ### LOADING THE SCHEMA ###
 
 
-class DictNoUpdate(dict):
-    """A dict like object that throws a ConfigError if a key exists and a set
-    is called to change the value of that key.
-     *fmt_string* will be interpolated with (key,)
-    """
-    def __init__(self, fmt_string, **kwargs):
-        super(dict, self).__init__(**kwargs)
-        self.fmt_string = fmt_string
-
-    # TODO: test
-    def __setitem__(self, key, value):
-        if key in self:
-            raise ConfigError(self.fmt_string, key)
-        super(DictNoUpdate, self).__setitem__(key, value)
 
 
 def normalize_node(node):
@@ -303,7 +265,7 @@ def normalize_node(node):
     # probably a reference back to an already validated node
     try:
         return valid_node(node).name
-    except ConfigError, e:
+    except ConfigError:
         return valid_node_pool(node).name
 
 
@@ -665,6 +627,9 @@ class ValidateCleanupAction(ValidatorWithNamedPath):
         ):
             raise ConfigError("Cleanup actions cannot have custom names (you"
                               " wanted %s.%s)" % (path_name, action['name']))
+
+        if 'requires' in action:
+            raise ConfigError("Cleanup action %s can not have requires." % path_name)
 
         action['requires'] = tuple()
 
