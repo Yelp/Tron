@@ -37,16 +37,16 @@ class TableDisplay(object):
     """Base class for displaying columns of data.  This class takes a list
     of dict objects and formats it so that it displays properly in fixed width
     columns.  Overlap is truncated.
-    
+
     This class provides many hooks for contomizing the output, include:
         - sorting of rows
         - building composite values from more then one field
         - custom formatting of a columns values
         - adding additional data after each row
         - coloring of header, columns, or rows
-        
+
     The default output is:
-    
+
         Banner
         Header
         Row
@@ -186,7 +186,7 @@ class DisplayServices(TableDisplay):
 
 class DisplayJobRuns(TableDisplay):
     """Format Job runs."""
-   
+
     columns = ['Run ID', 'State',    'Node', 'Scheduled Time']
     fields  = ['id',     'state',    'node', 'scheduled_time']
     widths  = [None,     6,          20,     25              ]
@@ -197,14 +197,14 @@ class DisplayJobRuns(TableDisplay):
     @property
     def max_first_col_width(self):
         return 15
-        
+
     def rows(self):
         data_rows = self.data
         if self.options.warn:
             warn_only_func = lambda r: r['state'] in ['FAIL', 'UNKWN', 'QUE']
             data_rows = filter(warn_only_func, self.data)
         return data_rows[:self.options.num_displays]
-    
+
     def format_value(self, field, value):
         if self.fields[field] == 'id':
             value = '.' + '.'.join(value.split('.')[1:])
@@ -236,7 +236,7 @@ class DisplayJobRuns(TableDisplay):
             display_action = DisplayActions(self.options)
             import ipdb; ipdb.set_trace()
             self.out.append(display_action.format(row['details']))
-        
+
 
 class DisplayJobs(TableDisplay):
 
@@ -248,7 +248,7 @@ class DisplayJobs(TableDisplay):
     @property
     def max_first_col_width(self):
         return max(self.num_cols - 54, 5)
-        
+
     def post_row(self, row):
         if self.options.warn:
             self.out.extend(self.do_format_job(row['details'], True))
@@ -338,11 +338,11 @@ class DisplayActions(TableDisplay):
         if self.options.stdout:
             out.extend(["Stdout: "] + content['stdout'])
             return out
-    
+
         if self.options.stderr or self.options.warn:
             out.extend(["Stderr: "] + content['stderr'])
             return out
-    
+
         if self.options.display_preface and not supress_preface:
             out.extend([
                 "Action Run: %s" % content['id'],
@@ -350,18 +350,18 @@ class DisplayActions(TableDisplay):
                 "Node: %s" % content['node'],
                 ''
             ])
-    
+
         # a raw command is without command context
         if content['command'] != content['raw_command']:
             if content['command'] == 'false':
                 out.append(Color.set("red", "Bad Command"))
             else:
                 out.append(Color.set("gray", content['command']))
-   
+
         out.extend(
             [Color.set("gray", content['raw_command'])] +
             ["\nRequirements:"] + content['requirements'] +
-            ["\nStdout:"] + content['stdout'] + 
+            ["\nStdout:"] + content['stdout'] +
             ["\nStderr:"] + content['stderr']
         )
         return out
@@ -377,4 +377,3 @@ class DisplayEvents(TableDisplay):
     def calculate_col_widths(self):
         # No need to calculate, it's fixed width.
         pass
-

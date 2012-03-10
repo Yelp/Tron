@@ -275,7 +275,7 @@ class Node(object):
                             run_id, run.state)
 
     def _connect(self):
-        # This is complicated because we have to deal with a few different 
+        # This is complicated because we have to deal with a few different
         # steps before our connection is really available for us:
         #  1. Transport is created (our client creator does this)
         #  2. Our transport is secure, and we can create our connection

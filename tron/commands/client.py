@@ -6,7 +6,7 @@ from tron import cmd
 
 class Client(object):
     """A client used in commands to make requests to the tron.www """
-    
+
     def __init__(self, options):
         self.options = options
 
@@ -57,4 +57,3 @@ class Client(object):
         assert status == cmd.OK, "Failed to retrieve %s%s: %s" % (
             self.options.server, url, content)
         return content
-

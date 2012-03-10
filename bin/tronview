@@ -60,7 +60,7 @@ def view_all(options, client):
     if options.warn:
         for job in jobs:
             job['details'] = client.job(job['name'])
-       
+
     print display.DisplayJobs(options).format(jobs)
 
 
@@ -78,7 +78,7 @@ def view_job(options, job_name, client):
             for action_name in job_content['action_names']:
                 action_id = "%s.%s" % (job_run['id'], action_name)
                 job_run['runs'].append(client.action(action_id))
-    
+
     print display.DisplayJobs(options).format_job(job_content)
 
 

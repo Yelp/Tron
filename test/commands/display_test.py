@@ -33,7 +33,7 @@ class DisplayJobRunsTestCase(TestCase):
 
     run_data = [
         dict(
-            id='something.23.more', state='FAIL', node='machine4', 
+            id='something.23.more', state='FAIL', node='machine4',
             run_time='2012-01-20 23:11:23',
             start_time='2012-01-20 23:11:23',
             end_time='2012-02-21 23:10:10',
@@ -72,9 +72,9 @@ class DisplayJobsTestCase(TestCase):
         Color.enabled = True
         self.options = turtle.Turtle(warn=False, num_displays=4)
         self.data = [
-            dict(name='important_things', status='running', 
+            dict(name='important_things', status='running',
                 scheduler='DailyJob', last_success='unknown'),
-            dict(name='other_thing', status='success', 
+            dict(name='other_thing', status='success',
                 scheduler='DailyJob', last_success='2012-01-23 10:23:23'),
         ]
         self.details = {
@@ -163,7 +163,7 @@ class DisplayActionsTestCase(TestCase):
         out = display.format_action_run(self.details)
         lines = out.split('\n')
         assert_equal(len(lines), 14)
-        
+
 
     # TODO: test format_action_run with other options
 
