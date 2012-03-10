@@ -5,9 +5,10 @@ run
 ssh.log
 tron.log
 MANIFEST
-tron.egg_info
+tron.egg-info
 *.pyc
 *._*
 *.swp
 *.swo
 docs/_build/
+.idea

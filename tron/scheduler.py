@@ -1,7 +1,7 @@
 import logging
 
 from pytz import AmbiguousTimeError, NonExistentTimeError
-from tron import config_parse, schedule_parse
+from tron.config import config_parse, schedule_parse
 
 from tron.utils import groctimespecification
 from tron.utils import timeutils

@@ -4,10 +4,10 @@ import tempfile
 
 import yaml
 
-from testify import *
-from tron import config_parse
+from testify import TestCase, run, setup, assert_equal, teardown
 from tron import mcp
-from tests.config_parse_test import syslog_address_for_platform
+from tron.config import config_parse
+from tests.config.config_parse_test import syslog_address_for_platform
 
 class ConfigTest(TestCase):
 

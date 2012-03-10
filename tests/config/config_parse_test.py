@@ -6,14 +6,15 @@ import tempfile
 
 from testify import assert_equal, assert_raises
 from testify import run, setup, teardown, TestCase
-from tron.config_parse import TronConfig, load_config, ConfigSSHOptions
-from tron.config_parse import ConfigNode, ConfigNodePool, ConfigJob
-from tron.config_parse import ConfigAction, ConfigCleanupAction
-from tron.config_parse import ConfigIntervalScheduler, ConfigConstantScheduler
-from tron.config_parse import ConfigService, ConfigError
-from tron.config_parse import CLEANUP_ACTION_NAME
-from tron.config_parse import valid_node_pool, valid_config
-from tron.schedule_parse import ConfigDailyScheduler
+from tron.config.config_parse import TronConfig, load_config, ConfigSSHOptions, valid_job
+from tron.config.config_parse import ConfigNode, ConfigNodePool, ConfigJob
+from tron.config.config_parse import ConfigAction, ConfigCleanupAction
+from tron.config.config_parse import ConfigService, ConfigError
+from tron.config.config_parse import CLEANUP_ACTION_NAME
+from tron.config.config_parse import valid_node_pool, valid_config
+from tron.config.schedule_parse import ConfigConstantScheduler
+from tron.config.schedule_parse import ConfigDailyScheduler
+from tron.config.schedule_parse import ConfigIntervalScheduler
 from tron.utils.dicts import FrozenDict
 
 
@@ -516,6 +517,14 @@ services:
         )
         assert_raises(ConfigError, valid_config, tron_config)
 
+    def test_validate_job_no_actions(self):
+        job_config = dict(
+            name="job",
+            node="localhost",
+            schedule="constant",
+            actions=[]
+        )
+        assert_raises(ConfigError, valid_job, job_config)
 
 if __name__ == '__main__':
     run()
