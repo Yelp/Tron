@@ -32,6 +32,9 @@ class NamedEventState(dict):
         except AttributeError:
             return False
 
+    def __nonzero__(self):
+        return bool(self.name)
+
     def __str__(self):
         return self.name
 
@@ -75,6 +78,14 @@ class StateMachine(object):
         self._listeners = list()
         self._state_by_name = None
 
+
+    def check(self, target):
+        """Check if the state can be transitioned to target. Returns the
+        destination state if target is a valid state to transition to,
+        None otherwise.
+        """
+        return self.state.get(target, None)
+
     def transition(self, target, stop_item=None):
         """Check our current state for a transition based on the input 'target'
 
@@ -84,9 +95,8 @@ class StateMachine(object):
         """
         log.debug("Checking for transition from %r (%r)", self.state, target)
 
-        try:
-            next_state = self.state[target]
-        except KeyError:
+        next_state = self.check(target)
+        if next_state is None:
             return False
 
         prev_state = self.state
@@ -112,7 +122,7 @@ class StateMachine(object):
 
     def listen(self, listen_spec, callback):
 
-        """Listen for the specific state of set of states and callback on the
+        """Listen for the specific state or set of states and callback on the
         function provided.
 
         The callback is called AFTER the state transition has been made.

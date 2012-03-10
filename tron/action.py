@@ -1,7 +1,7 @@
 import logging
 import re
 import os
-from subprocess import call, PIPE
+from subprocess import Popen, PIPE
 import sys
 
 from tron import node, command_context
@@ -94,10 +94,6 @@ class ActionRunContext(object):
             raise KeyError(name)
 
 
-# States where we have executed the run.
-# ACTION_RUN_EXECUTED_STATES = [ACTION_RUN_FAILED, ACTION_RUN_SUCCEEDED]
-
-
 class ActionRun(object):
     """An instance of running a action"""
     STATE_CANCELLED = state.NamedEventState('cancelled')
@@ -108,6 +104,7 @@ class ActionRun(object):
     STATE_STARTING = state.NamedEventState('starting')
     STATE_QUEUED = state.NamedEventState('queued')
     STATE_SCHEDULED = state.NamedEventState('scheduled')
+    STATE_SKIPPED = state.NamedEventState('skipped')
 
     STATE_SCHEDULED['ready'] = STATE_QUEUED
     STATE_SCHEDULED['queue'] = STATE_QUEUED
@@ -130,6 +127,10 @@ class ActionRun(object):
     for event_state in (STATE_UNKNOWN, STATE_QUEUED, STATE_SCHEDULED):
         event_state['success'] = STATE_SUCCEEDED
         event_state['fail'] = STATE_FAILED
+
+    # We can tell tron to skip a failed step
+    STATE_FAILED['skip'] = STATE_SKIPPED
+    STATE_CANCELLED ['skip'] = STATE_SKIPPED
 
     STATE_QUEUED['schedule'] = STATE_SCHEDULED
 
@@ -196,9 +197,9 @@ class ActionRun(object):
             num_lines = sys.maxint
 
         try:
-            cmd = ('tail', '-n', num_lines, path)
-            tail_sub = call(*cmd , stdout=PIPE)
-            lines = [line + '\n' for line in tail_sub.stdout]
+            cmd = ('tail', '-n', str(num_lines), path)
+            tail_sub = Popen(cmd, stdout=PIPE)
+            lines = [line.rstrip() for line in tail_sub.stdout]
         except OSError:
             log.error("Could not tail %s." % path)
             return []
@@ -211,11 +212,11 @@ class ActionRun(object):
     def attempt_start(self):
         self.machine.transition('ready')
 
-        if all([r.is_success for r in self.required_runs]):
-            self.start()
+        if all(r.is_success or r.is_skipped for r in self.required_runs):
+            return self.start()
 
     def start(self):
-        if self.state not in (self.STATE_QUEUED, self.STATE_SCHEDULED):
+        if not self.machine.check('start'):
             raise InvalidStartStateError(self.state)
 
         log.info("Starting action run %s", self.id)
@@ -242,15 +243,23 @@ class ActionRun(object):
             df.addErrback(self._handle_errback)
         except node.Error, e:
             log.warning("Failed to start %s: %r", self.id, e)
+        return True
 
     def cancel(self):
-        self.machine.transition('cancel')
+        return self.machine.transition('cancel')
 
     def schedule(self):
-        self.machine.transition('schedule')
+        return self.machine.transition('schedule')
 
     def queue(self):
-        self.machine.transition('queue')
+        return self.machine.transition('queue')
+
+    def skip(self):
+        """Mark the run as having been skipped."""
+        if self.machine.transition('skip'):
+            self.start_dependants()
+            return True
+        return False
 
     def _open_output_file(self):
         try:
@@ -325,13 +334,14 @@ class ActionRun(object):
             log.info("Not running waiting run %s, the dependant action failed",
                      run.id)
 
-    def fail(self, exit_status):
+    def fail(self, exit_status=0):
         """Mark the run as having failed, providing an exit status"""
         log.info("Action run %s failed with exit status %r",
                  self.id, exit_status)
-        self.machine.transition('fail')
-        self.exit_status = exit_status
-        self.end_time = timeutils.current_time()
+        if self.machine.transition('fail'):
+            self.exit_status = exit_status
+            self.end_time = timeutils.current_time()
+            return True
 
     def fail_unknown(self):
         """Mark the run as having failed, but note that we don't actually know
@@ -346,14 +356,16 @@ class ActionRun(object):
     def mark_success(self):
         self.exit_status = 0
         self.end_time = timeutils.current_time()
-        self.machine.transition('success')
+        return self.machine.transition('success')
 
     def succeed(self):
         """Mark the run as having succeeded"""
         log.info("Action run %s succeeded", self.id)
 
-        self.mark_success()
-        self.start_dependants()
+        if self.mark_success():
+            self.start_dependants()
+            return True
+        return False
 
     def restore_state(self, state_data):
         self.id = state_data['id']
@@ -424,7 +436,7 @@ class ActionRun(object):
     @property
     def is_done(self):
         return self.state in (self.STATE_FAILED, self.STATE_SUCCEEDED,
-                              self.STATE_CANCELLED)
+                              self.STATE_CANCELLED, self.STATE_SKIPPED)
 
     @property
     def is_unknown(self):
@@ -446,6 +458,10 @@ class ActionRun(object):
     def is_success(self):
         return self.state == self.STATE_SUCCEEDED
 
+    @property
+    def is_skipped(self):
+        return self.state == self.STATE_SKIPPED
+
 
 class Action(object):
     def __init__(self, name=None):
@@ -456,13 +472,13 @@ class Action(object):
         self.command = None
 
     def __eq__(self, other):
-        if not isinstance(other, Action) \
-           or self.name != other.name \
-           or self.command != other.command:
+        if (not isinstance(other, Action)
+           or self.name != other.name
+           or self.command != other.command):
             return False
 
-        return all([me == you for (me, you) in zip(self.required_actions,
-                                                   other.required_actions)])
+        return all(me == you for (me, you) in zip(self.required_actions,
+                                                   other.required_actions))
 
     def __ne__(self, other):
         return not self == other

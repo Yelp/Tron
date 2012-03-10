@@ -3,7 +3,7 @@ import functools
 import itertools
 import logging
 
-from testify import assert_not_reached, turtle
+from testify import assert_not_reached, turtle, TestCase, class_teardown
 from testify.test_case import TwistedFailureError
 from twisted.internet import reactor, defer
 from twisted.python import failure
@@ -95,7 +95,7 @@ def wait_for_deferred(deferred, timeout=None):
     deferred.addErrback(on_failure)
 
     if timeout is not None:
-        reactor.callLater(timeout, stop)
+        reactor.callLater(timeout, reactor.stop)
 
     try:
         deferred.addBoth(append)
