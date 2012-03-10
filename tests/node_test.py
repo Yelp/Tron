@@ -41,7 +41,6 @@ class NodeTimeoutTest(testingutils.ReactorTestCase):
         self.node = node.Node(hostname="testnodedoesnotexist")
 
         # Make this test faster
-        self.old_timeout = node.CONNECT_TIMEOUT
         node.CONNECT_TIMEOUT = 1
 
     @setup

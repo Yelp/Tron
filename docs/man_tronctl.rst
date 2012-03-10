@@ -46,11 +46,11 @@ start <job_run_id>
     Tries to start the given job or action run. A Job run only starts if no
     other instance is running. If the job has already started, start continues
     by retrying failed runs Valid states that you can run "start" on: SCHE,
-    FAIL, QUE, CANC, UNKWN
+    QUE 
 
 start <action_run_id>
     Starts the action run regardless of anything else running.  Valid states
-    that you can run "start" on: SCHE, FAIL, QUE, CANC, UNKWN
+    that you can run "start" on: SCHE, QUE 
 
 restart <job_run_id>
     Resets the given Job Run and starts it over.  Valid states that you can run
@@ -64,14 +64,19 @@ cancel <job_run_id | action_run_id>
 succeed <job_run_id | action_run_id>
     Marks the specified job run or action run as succeeded.  This behaves the
     same as the run actually completing.  Dependant actions are ran and queued
-    runs start.  Valid states that you can run "succeed" on: SCHE, FAIL, QUE,
-    CANC, UNKWN
+    runs start.  Valid states that you can run "succeed" on: SCHE, QUE, UNKWN,
+    RUNN
+
+skip <action_run_id>
+    Marks the specified action run as skipped.  This allows dependant actions
+    to run. Valid states that you can "skip" on: FAIL
 
 fail <job_run_id | action_run_id>
     Marks the specified job run or action run as failed.  This behaves the same
     as the job actually failing.  Dependant actions are queued and following
     jobs are queued or cancelled Valid states that you can run "fail" on: SCHE,
-    QUE, CANC, UNKWN
+    QUE, UNKWN
+
 
 Service Commands
 ----------------

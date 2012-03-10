@@ -92,6 +92,11 @@ class JobRun(object):
         try:
             for action_run in self.action_runs:
                 action_run.attempt_start()
+            if self.cleanup_action_run:
+                # Don't call attempt_start or it will just go. The JobRun
+                # object will kick this when it's actually time to run (any
+                # failure or total success).
+                self.cleanup_action_run.machine.transition('ready')
             self.event_recorder.emit_info("started")
         except action.Error, e:
             log.warning("Failed to start actions: %r", e)
@@ -214,15 +219,15 @@ class JobRun(object):
 
     @property
     def is_failure(self):
-        return any([r.is_failure for r in self.action_runs_with_cleanup])
+        return any(r.is_failure for r in self.action_runs_with_cleanup)
 
     @property
     def all_but_cleanup_success(self):
-        return all([r.is_success for r in self.action_runs])
+        return all(r.is_success or r.is_skipped for r in self.action_runs)
 
     @property
     def is_success(self):
-        return all([r.is_success for r in self.action_runs_with_cleanup])
+        return all(r.is_success or r.is_skipped for r in self.action_runs_with_cleanup)
 
     @property
     def all_but_cleanup_done(self):
@@ -233,32 +238,36 @@ class JobRun(object):
 
     @property
     def is_done(self):
-        return not any([r.is_running or r.is_queued or r.is_scheduled
-                        for r in self.action_runs_with_cleanup])
+        return not any(r.is_running or r.is_queued or r.is_scheduled
+                        for r in self.action_runs_with_cleanup)
 
     @property
     def is_queued(self):
-        return all([r.is_queued for r in self.action_runs_with_cleanup])
+        return all(r.is_queued for r in self.action_runs_with_cleanup)
 
     @property
     def is_starting(self):
-        return any([r.is_starting for r in self.action_runs_with_cleanup])
+        return any(r.is_starting for r in self.action_runs_with_cleanup)
 
     @property
     def is_running(self):
-        return any([r.is_running for r in self.action_runs_with_cleanup])
+        return any(r.is_running for r in self.action_runs_with_cleanup)
 
     @property
     def is_scheduled(self):
-        return any([r.is_scheduled for r in self.action_runs_with_cleanup])
+        return any(r.is_scheduled for r in self.action_runs_with_cleanup)
 
     @property
     def is_unknown(self):
-        return any([r.is_unknown for r in self.action_runs_with_cleanup])
+        return any(r.is_unknown for r in self.action_runs_with_cleanup)
 
     @property
     def is_cancelled(self):
-        return all([r.is_cancelled for r in self.action_runs_with_cleanup])
+        return all(r.is_cancelled for r in self.action_runs_with_cleanup)
+
+    @property
+    def is_skipped(self):
+        return all(r.is_skipped for r in self.action_runs_with_cleanup)
 
     @property
     def cleanup_job_status(self):
@@ -310,6 +319,11 @@ class Job(object):
         if action in self.topo_actions:
             raise Error("Action %s already in jobs %s" % (
                 action.name, self.name))
+
+    def register_cleanup_action(self, action):
+            self.cleanup_action = action
+            action.job = self
+            self._register_action(action)
 
     def listen(self, spec, callback):
         """Mimic the state machine interface for listening to events"""
@@ -378,13 +392,14 @@ class Job(object):
 
     def newest_run_by_state(self, state):
         for run in self.runs:
-            if state == 'SUCC' and run.is_success or \
-                state == 'CANC' and run.is_cancelled or \
-                state == 'RUNN' and run.is_running or \
-                state == 'FAIL' and run.is_failure or \
-                state == 'SCHE' and run.is_scheduled or \
-                state == 'QUE' and run.is_queued or \
-                state == 'UNKWN' and run.is_unknown:
+            if (state == 'SUCC' and run.is_success or
+                state == 'CANC' and run.is_cancelled or
+                state == 'RUNN' and run.is_running or
+                state == 'FAIL' and run.is_failure or
+                state == 'SCHE' and run.is_scheduled or
+                state == 'QUE' and run.is_queued or
+                state == 'UNKWN' and run.is_unknown or
+                state == 'SKIP' and run.is_skipped):
                 return run
 
         log.warning("No runs with state %s exist", state)
@@ -469,7 +484,8 @@ class Job(object):
                 action.waiting_runs.append(action_run)
                 action_run.required_runs.append(action)
 
-    def build_run(self, node=None, actions=None, run_num=None):
+    def build_run(self, node=None, actions=None, run_num=None,
+                  cleanup_action=None):
         job_run = JobRun(self, run_num=run_num)
 
         job_run.node = node or self.node_pool.next()
@@ -488,7 +504,8 @@ class Job(object):
 
         self.build_action_dag(job_run, actions)
 
-        if self.cleanup_action is not None:
+        cleanup_action = cleanup_action or self.cleanup_action
+        if cleanup_action is not None:
             cleanup_action_run = self._make_action_run(
                 job_run, self.cleanup_action, job_run.cleanup_completed)
             job_run.cleanup_action_run = cleanup_action_run
@@ -557,7 +574,11 @@ class Job(object):
 
         action_list = filter(action_filter, self.topo_actions)
 
-        run = self.build_run(run_num=data['run_num'], actions=action_list)
+        ca = (self.cleanup_action
+              if self.cleanup_action and action_filter(self.cleanup_action)
+              else None)
+        run = self.build_run(run_num=data['run_num'], actions=action_list,
+                             cleanup_action=ca)
         self.run_num = max([run.run_num + 1, self.run_num])
 
         run.restore(data)

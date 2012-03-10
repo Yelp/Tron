@@ -27,8 +27,8 @@ working_dir: "./config_test_dir"
 
 ssh_options: !SSHOptions
     agent: true
-    identities: 
-        - test/test_id_rsa
+    identities:
+        - tests/test_id_rsa
 
 nodes:
     - &node0 !Node

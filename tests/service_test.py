@@ -292,4 +292,3 @@ class MonitorFailureTest(TestCase):
         
         instance1._run_monitor()
         assert_equal(instance1.state, service.ServiceInstance.STATE_UNKNOWN)
-    

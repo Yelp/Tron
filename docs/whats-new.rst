@@ -1,6 +1,14 @@
 What's New
 ==========
 
+0.2.10
+------
+
+* ssh_options is actually optional
+* Cleanup actions no longer cause jobs using an interval scheduler to stop being scheduled if an action fails
+* Failed actions can be skipped, causing dependent actions to run
+
+
 0.2.9
 -----
 
