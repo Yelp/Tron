@@ -73,12 +73,11 @@ def view_job(options, job_name, client):
     job_content = client.job(job_name)
     if options.warn:
         for job_run in job_content['runs'][-options.num_displays:]:
-            import ipdb; ipdb.set_trace()
             job_run['details'] = client.actions(job_run['id'])
-#            job_run['details']['runs'] = []
-#            for action_name in job_content['action_names']:
-#                action_id = "%s.%s" % (job_run['id'], action_name)
-#                job_run['runs'].append(client.action(action_id))
+            job_run['details']['runs'] = []
+            for action_name in job_content['action_names']:
+                action_id = "%s.%s" % (job_run['id'], action_name)
+                job_run['runs'].append(client.action(action_id))
     
     print display.DisplayJobs(options).format_job(job_content)
 
