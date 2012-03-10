@@ -12,12 +12,15 @@ import sys
 
 try:
     import simplejson
+    # Pyflakes
+    assert simplejson
 except ImportError:
     import json as simplejson
 
 import yaml
 
 USER_AGENT = "Tron Command/1.0 +http://github.com/Yelp/Tron"
+GLOBAL_CONFIG_FILE_NAME = os.environ.get('TRON_CONFIG') or "/etc/tron/tron.yaml"
 CONFIG_FILE_NAME = "~/.tron"
 
 DEFAULT_HOST = 'localhost'
@@ -35,9 +38,12 @@ log = logging.getLogger("tron.cmd")
 
 
 def load_config(options):
-    file_name = os.path.expanduser(CONFIG_FILE_NAME)
-    if not os.access(file_name, os.R_OK):
-        log.debug("Config file %s doesn't yet exist", file_name)
+    for config_file in [CONFIG_FILE_NAME, GLOBAL_CONFIG_FILE_NAME]:
+        file_name = os.path.expanduser(config_file)
+        if os.access(file_name, os.R_OK):
+            break
+    else:
+        log.debug("Could not find a config.")
         options.server = options.server or DEFAULT_SERVER
         return
 

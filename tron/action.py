@@ -1,11 +1,8 @@
-import uuid
 import logging
 import re
-import datetime
 import os
+from subprocess import call, PIPE
 import sys
-
-from twisted.internet import defer
 
 from tron import node, command_context
 from tron.utils import timeutils
@@ -193,17 +190,18 @@ class ActionRun(object):
         return self.tail_file(self.stderr_path, num_lines)
 
     def tail_file(self, path, num_lines):
-        try:
-            out = open(path, 'r')
-            out.close()
-        except IOError:
+        if not path:
             return []
-
         if not num_lines or num_lines <= 0:
             num_lines = sys.maxint
 
-        tail = os.popen("tail -n %s %s" % (num_lines + 1, path))
-        lines = tail.read().split('\n')[:-1]
+        try:
+            cmd = ('tail', '-n', num_lines, path)
+            tail_sub = call(*cmd , stdout=PIPE)
+            lines = [line + '\n' for line in tail_sub.stdout]
+        except OSError:
+            log.error("Could not tail %s." % path)
+            return []
 
         if len(lines) > num_lines:
             lines[0] = "..."

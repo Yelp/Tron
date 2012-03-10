@@ -21,15 +21,14 @@ _repo_root, _ = os.path.split(_test_folder)
 log = logging.getLogger(__name__)
 
 
-def wait_for_sandbox_success(func, start_delay=0.1, stop_at=5.0):
+def wait_for_sandbox_success(func, delay=0.1, stop_at=5.0):
     """Call *func* repeatedly until it stops throwing TronSandboxException.
     Wait increasing amounts from *start_delay* but wait no more than a total
     of *stop_at* seconds
     """
-    delay = 0.1
     total_time = 0.0
     last_exception = None
-    while total_time < 5.0:
+    while total_time < stop_at:
         time.sleep(delay)
         total_time += delay
         try:

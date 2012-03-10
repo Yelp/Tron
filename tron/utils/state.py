@@ -16,25 +16,6 @@ class CircularTransitionError(Error):
 log = logging.getLogger(__name__)
 
 
-class FunctionItemState(object):
-
-    # Rules should be a list of tuples in the form (next_state,
-    # validation_funtion) where if the function returns true, the next state is
-    # valid.
-
-    rules = list()
-
-    def __getitem__(self, key):
-        next_states = [state for state, func in self.rules if func(key)]
-        if len(next_state) > 1:
-            raise InvalidRuleError("Too many results")
-
-        if next_states:
-            return next_states[0]
-        else:
-            raise KeyError()
-
-
 class NamedEventState(dict):
     """Simple state type that allows you to easily use a dictionary for a state
     implementation. A raw dictionary works fine as well, but this might be more

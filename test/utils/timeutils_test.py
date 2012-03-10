@@ -1,5 +1,5 @@
-from datetime import *
-from testify import *
+import datetime
+from testify import TestCase, assert_equal, setup 
 
 from tron.utils.timeutils import *
 

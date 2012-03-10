@@ -111,19 +111,13 @@ class Node(object):
 
         self.idle_timeout = None
         self.idle_timer = None
+        self.conch_options = {}
 
     def __cmp__(self, other):
         if not isinstance(other, self.__class__):
             return -1
 
-        CMP_KEYS = ('hostname')
-        self_dict = dict((key, value)
-                         for key, value in self.__dict__.iteritems()
-                         if key in CMP_KEYS)
-        other_dict = dict((key, value)
-                          for key, value in other.__dict__.iteritems()
-                          if key in CMP_KEYS)
-        return cmp(self_dict, other_dict)
+        return cmp(self.hostname, other.hostname)
 
     def _determine_fudge_factor(self):
         """We want to introduce some amount of delay to node exec commands
@@ -281,7 +275,7 @@ class Node(object):
                             run_id, run.state)
 
     def _connect(self):
-        # This is complicated because we have to deal with a few different
+        # This is complicated because we have to deal with a few different 
         # steps before our connection is really available for us:
         #  1. Transport is created (our client creator does this)
         #  2. Our transport is secure, and we can create our connection

@@ -1,12 +1,9 @@
-import os
-import tempfile
-import shutil
 import StringIO
 
-from testify import *
+from testify import setup, teardown, TestCase, assert_equal, run
 from testify.utils import turtle
 
-from tron import node, action, job
+from tron import node, action
 from tron.utils import testingutils
 
 
@@ -27,11 +24,11 @@ class NodeTestCase(TestCase):
         action_cmd = action.ActionCommand("test", "false", stdout=self.stdout, stderr=self.stderr)
 
         nod.connection = self.TestConnection()
-        nod.run_states = {action_cmd.id:turtle.Turtle(state=0)}
+        nod.run_states = {action_cmd.id: turtle.Turtle(state=0)}
         nod.run_states[action_cmd.id].state = node.RUN_STATE_CONNECTING
 
         nod._open_channel(action_cmd)
-        assert not nod.connection.chan is None
+        assert nod.connection.chan is not None
         nod.connection.chan.dataReceived("test")
 
         self.stdout.seek(0)
@@ -42,9 +39,9 @@ class NodeTimeoutTest(testingutils.ReactorTestCase):
     @setup
     def build_node(self):
         self.node = node.Node(hostname="testnodedoesnotexist")
-        self.node.conch_options = turtle.Turtle()
 
         # Make this test faster
+        self.old_timeout = node.CONNECT_TIMEOUT
         node.CONNECT_TIMEOUT = 1
 
     @setup

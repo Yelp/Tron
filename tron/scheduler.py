@@ -1,10 +1,9 @@
 import calendar
-from collections import deque
 import datetime
 import logging
 import re
 
-from pytz import AmbiguousTimeError, NonExistentTimeError
+from pytz import AmbiguousTimeError 
 
 from tron.utils import groctimespecification
 from tron.utils import timeutils
