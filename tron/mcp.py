@@ -12,7 +12,6 @@ from twisted.internet import reactor
 
 import tron
 from tron import command_context
-from tron import emailer
 from tron import event
 from tron import monitor
 from tron.config import config_parse
@@ -20,7 +19,7 @@ from tron.config.config_parse import ConfigError
 from tron.job import Job
 from tron.node import Node, NodePool
 from tron.service import Service
-from tron.utils import timeutils
+from tron.utils import timeutils, emailer
 
 
 log = logging.getLogger('tron.mcp')

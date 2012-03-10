@@ -10,7 +10,7 @@ from testify.utils import turtle
 from tron import action
 from tron import job
 from tron import scheduler
-from tron.schedule_parse import parse_daily_expression as parse_daily
+from tron.config.schedule_parse import parse_daily_expression as parse_daily
 from tron.utils import timeutils
 
 
@@ -29,7 +29,7 @@ class ConstantSchedulerTest(TestCase):
         self.action.job = self.job
 
     @teardown
-    def teardown(self):
+    def teardown_scheduler(self):
         shutil.rmtree(self.test_dir)
 
     def test_next_runs(self):
@@ -56,7 +56,7 @@ class DailySchedulerTest(TestCase):
         self.action.job = self.job
 
     @teardown
-    def teardown(self):
+    def teardown_scheduler(self):
         shutil.rmtree(self.test_dir)
 
     def test_next_runs(self):
@@ -425,7 +425,7 @@ class IntervalSchedulerTest(TestCase):
         self.action.job = self.job
 
     @teardown
-    def teardown(self):
+    def teardown_scheduler(self):
         shutil.rmtree(self.test_dir)
 
     def test_next_runs(self):

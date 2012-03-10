@@ -139,10 +139,23 @@ class Node(object):
         )
 
     def next(self):
+        """Required to support the NodePool interface."""
         return self
 
     def next_round_robin(self):
+        """Required to support the NodePool interface."""
         return self
+
+    @property
+    def nodes(self):
+        """Required to support the NodePool interface."""
+        return [self]
+
+    def __getitem__(self, value):
+        """Required to support the NodePool interface."""
+        if self.hostname == value:
+            return self
+        raise KeyError(value)
 
     def __cmp__(self, other):
         if not isinstance(other, self.__class__):

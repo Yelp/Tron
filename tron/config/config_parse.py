@@ -671,7 +671,7 @@ class ValidateConfig(Validator):
                 "%s name %%s used twice" % cname.replace('_', ' '))
             for item in config.get(cname) or []:
                 final = valid(item)
-                target_dict[final.name] = item
+                target_dict[final.name] = final
                 name_dict[final.name] = True
             config[cname] = FrozenDict(**target_dict)
 
