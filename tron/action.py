@@ -464,12 +464,21 @@ class ActionRun(object):
 
 
 class Action(object):
-    def __init__(self, name=None):
+    def __init__(self, name=None, command=None, node_pool=None):
         self.name = name
+        self.command = command
+        self.node_pool = node_pool
 
         self.required_actions = []
         self.job = None
-        self.command = None
+
+    @classmethod
+    def from_config(cls, config, node_pools):
+        return cls(
+            name=config.name,
+            command=config.command,
+            node_pool=node_pools[config.node] if config.node else None
+        )
 
     def __eq__(self, other):
         if (not isinstance(other, Action)

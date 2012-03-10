@@ -51,8 +51,7 @@ class ClientTransport(transport.SSHClientTransport):
         # they're all old style classes
         # transport.SSHClientTransport.__init__(self, *args, **kwargs)
 
-        if 'options' in kwargs:
-            self.options = kwargs['options']
+        self.options = kwargs['options']
 
     def verifyHostKey(self, pubKey, fingerprint):
         return defer.succeed(1)

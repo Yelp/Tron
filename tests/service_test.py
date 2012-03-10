@@ -13,9 +13,11 @@ def set_instance_up(service_instance):
     service_instance._monitor_complete_callback()
 
 class SimpleTest(TestCase):
+
     @setup
     def build_service(self):
-        self.service = service.Service("Sample Service", "sleep 60 &", node_pool=testingutils.TestPool())
+        self.service = service.Service("Sample Service", "sleep 60 &",
+                                       node_pool=testingutils.TestPool())
         self.service.pid_file_template = "/var/run/service.pid"
         self.service.count = 2
 
@@ -94,17 +96,21 @@ class SimpleTest(TestCase):
         assert_equal(instance1.state, service.ServiceInstance.STATE_FAILED)
         assert_equal(self.service.state, service.Service.STATE_FAILED)
 
+
 class ReconfigTest(TestCase):
+
     @setup
     def build_service(self):
-        self.service = service.Service("Sample Service", "sleep 60 &", node_pool=testingutils.TestPool())
+        self.service = service.Service("Sample Service", "sleep 60 &",
+                                       node_pool=testingutils.TestPool())
         self.service.pid_file_template = "/tmp/pid"
         self.service.count = 2
 
     def test_absorb_state(self):
         self.service.start()
 
-        new_service = service.Service("Sample Service", "sleep 60 &", node_pool=self.service.node_pool)
+        new_service = service.Service("Sample Service", "sleep 60 &",
+                                      node_pool=self.service.node_pool)
         new_service.count = self.service.count
 
         new_service.absorb_previous(self.service)
@@ -112,11 +118,11 @@ class ReconfigTest(TestCase):
         assert_equal(len(new_service.instances), 2)
         assert_equal(self.service.machine, None)
 
-
     def test_absorb_count_incr(self):
         self.service.start()
 
-        new_service = service.Service("Sample Service", "sleep 60 &", node_pool=self.service.node_pool)
+        new_service = service.Service("Sample Service", "sleep 60 &",
+                                      node_pool=self.service.node_pool)
         new_service.count = 3
         self.service.machine.state = service.Service.STATE_DEGRADED
 
@@ -128,91 +134,110 @@ class ReconfigTest(TestCase):
     def test_absorb_count_decr(self):
         self.service.start()
 
-        new_service = service.Service("Sample Service", "sleep 60 &", node_pool=self.service.node_pool)
+        new_service = service.Service("Sample Service", "sleep 60 &",
+                                      node_pool=self.service.node_pool)
         new_service.pid_file_template = "/tmp/pid"
         new_service.count = 1
 
         new_service.absorb_previous(self.service)
-        assert_equal(new_service.instances[-1].state, service.ServiceInstance.STATE_STOPPING)
+        assert_equal(new_service.instances[-1].state,
+                     service.ServiceInstance.STATE_STOPPING)
 
     def test_rapid_change(self):
         self.service.start()
 
-        new_service = service.Service("Sample Service", "sleep 60 &", node_pool=self.service.node_pool)
+        new_service = service.Service("Sample Service", "sleep 60 &",
+                                      node_pool=self.service.node_pool)
         new_service.pid_file_template = "/tmp/pid"
         new_service.count = 1
 
         new_service.absorb_previous(self.service)
-        assert_equal(new_service.instances[-1].state, service.ServiceInstance.STATE_STOPPING)
+        assert_equal(new_service.instances[-1].state,
+                     service.ServiceInstance.STATE_STOPPING)
 
-        another_new_service = service.Service("Sample Service", "sleep 60 &", node_pool=self.service.node_pool)
+        another_new_service = service.Service("Sample Service", "sleep 60 &",
+                                              node_pool=self.service.node_pool)
         another_new_service.pid_file_template = "/tmp/pid"
         another_new_service.count = 3
 
         another_new_service.absorb_previous(new_service)
         assert_equal(len(another_new_service.instances), 3)
-        assert_equal(another_new_service.instances[-2].state, service.ServiceInstance.STATE_STOPPING)
+        assert_equal(another_new_service.instances[-2].state,
+                     service.ServiceInstance.STATE_STOPPING)
+
 
 class ReconfigNodePoolTest(TestCase):
+
     @setup
     def build_current_service(self):
         self.node_pool = testingutils.TestPool("node0", "node1")
-        self.service = service.Service("Sample Service", "sleep 60 &", node_pool=self.node_pool)
+        self.service = service.Service("Sample Service", "sleep 60 &",
+                                       node_pool=self.node_pool)
         self.service.pid_file_template = "/tmp/pid"
         self.service.count = 4
 
     @setup
     def build_new_service(self):
         self.new_node_pool = testingutils.TestPool("node0")
-        self.new_service = service.Service("Sample Service", "sleep 60 &", node_pool=self.new_node_pool)
+        self.new_service = service.Service("Sample Service", "sleep 60 &",
+                                           node_pool=self.new_node_pool)
         self.new_service.pid_file_template = "/tmp/pid"
         self.new_service.count = 4
-
 
     def test_node_pool_rebalance(self):
         self.service.start()
 
-        failing_node_instances = [i for i in self.service.instances if i.node.hostname == "node1"]
+        failing_node_instances = [i for i in self.service.instances
+                                  if i.node.hostname == "node1"]
         self.new_service.absorb_previous(self.service)
 
-        assert all(i.state == service.ServiceInstance.STATE_STOPPING for i in failing_node_instances)
+        assert all(i.state == service.ServiceInstance.STATE_STOPPING
+                   for i in failing_node_instances)
+
 
 class ReconfigRebuildAllTest(TestCase):
+
     @setup
     def build_current_service(self):
         self.node_pool = testingutils.TestPool("node0")
-        self.service = service.Service("Sample Service", "sleep 60 &", node_pool=self.node_pool)
+        self.service = service.Service("Sample Service", "sleep 60 &",
+                                       node_pool=self.node_pool)
         self.service.pid_file_template = "/tmp/pid"
         self.service.count = 4
 
     @setup
     def build_new_service(self):
-        self.new_service = service.Service("Sample Service", "sleep 120 &", node_pool=self.node_pool)
+        self.new_service = service.Service("Sample Service", "sleep 120 &",
+                                           node_pool=self.node_pool)
         self.new_service.pid_file_template = "/tmp/pid"
         self.new_service.count = 4
-
 
     def test(self):
         self.service.start()
 
         self.new_service.absorb_previous(self.service)
 
-        assert all(i.state == service.ServiceInstance.STATE_STOPPING for i in self.new_service.instances)
+        assert all(i.state == service.ServiceInstance.STATE_STOPPING
+                   for i in self.new_service.instances)
 
         for i in self.new_service.instances:
             i.machine.transition("down")
 
-        assert all(i.state == service.ServiceInstance.STATE_STARTING for i in self.new_service.instances), [i.state for i in self.new_service.instances]
+        # TODO: figure out what this was supposed to be testing
+        states = [i.state for i in self.new_service.instances]
+        assert all(i.state == service.ServiceInstance.STATE_STARTING
+                   for i in self.new_service.instances), states
 
 
 class SimpleRestoreTest(TestCase):
     @setup
     def build_service(self):
-        self.node_pool = node.NodePool()
-        test_node = testingutils.TestNode()
+        test_node = testingutils.TestNode('testnode')
+        self.node_pool = node.NodePool(nodes=[test_node])
         self.node_pool.nodes.append(test_node)
 
-        self.service = service.Service("Sample Service", "sleep 60 &", node_pool=self.node_pool)
+        self.service = service.Service("Sample Service", "sleep 60 &",
+                                       node_pool=self.node_pool)
         self.service.pid_file_template = "/tmp/pid"
         self.service.count = 2
 
@@ -225,7 +250,8 @@ class SimpleRestoreTest(TestCase):
     def test(self):
         data = self.service.data
 
-        new_service = service.Service("Sample Service", "sleep 60 &", node_pool=self.node_pool)
+        new_service = service.Service("Sample Service", "sleep 60 &",
+                                      node_pool=self.node_pool)
         new_service.pid_file_template = "/tmp/pid"
         new_service.count = 2
         new_service.restore(data)
@@ -233,17 +259,20 @@ class SimpleRestoreTest(TestCase):
         assert_equal(new_service.machine.state, service.Service.STATE_UP)
         assert_equal(len(new_service.instances), 2)
         for instance in new_service.instances:
-            assert_equal(instance.state, service.ServiceInstance.STATE_MONITORING)
+            assert_equal(instance.state,
+                         service.ServiceInstance.STATE_MONITORING)
 
 
 class FailureRestoreTest(TestCase):
+
     @setup
     def build_service(self):
-        self.node_pool = node.NodePool()
-        test_node = testingutils.TestNode()
+        test_node = testingutils.TestNode('testname')
+        self.node_pool = node.NodePool(nodes=[test_node])
         self.node_pool.nodes.append(test_node)
 
-        self.service = service.Service("Sample Service", "sleep 60 &", node_pool=self.node_pool)
+        self.service = service.Service("Sample Service", "sleep 60 &",
+                                       node_pool=self.node_pool)
         self.service.pid_file_template = "/tmp/pid"
         self.service.count = 2
 
@@ -256,7 +285,8 @@ class FailureRestoreTest(TestCase):
     def test(self):
         data = self.service.data
 
-        new_service = service.Service("Sample Service", "sleep 60 &", node_pool=self.node_pool)
+        new_service = service.Service("Sample Service", "sleep 60 &",
+                                      node_pool=self.node_pool)
         new_service.pid_file_template = "/tmp/pid"
         new_service.count = 2
         new_service.restore(data)
@@ -269,9 +299,11 @@ class FailureRestoreTest(TestCase):
 
 
 class MonitorFailureTest(TestCase):
+
     @setup
     def build_service(self):
-        self.service = service.Service("Sample Service", "sleep 60 &", node_pool=testingutils.TestPool())
+        self.service = service.Service("Sample Service", "sleep 60 &",
+                                       node_pool=testingutils.TestPool())
         self.service.pid_file_template = "/var/run/service.pid"
         self.service.count = 2
 

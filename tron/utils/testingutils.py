@@ -1,7 +1,8 @@
-from types import FunctionType
+from contextlib import contextmanager
 import functools
 import itertools
 import logging
+from types import FunctionType
 
 from testify import assert_not_reached, turtle, TestCase, class_teardown
 from testify.test_case import TwistedFailureError
@@ -11,6 +12,34 @@ from twisted.python import failure
 log = logging.getLogger(__name__)
 
 _waiting = False
+
+
+# this exists as logging.NullHandler as of Python 2.7
+class NullHandler(logging.Handler):
+    def emit(self, record):
+        pass
+
+
+@contextmanager
+def no_handlers_for_logger(name=None):
+    """Temporarily remove handlers all handlers from a logger.
+
+    Use this in a `with` block. For example::
+
+        with no_handlers_for_logger('tron.mcp'):
+            # do stuff with mcp
+
+    Any handlers you add inside the `with` block will be removed at the end.
+    """
+    log = logging.getLogger(name)
+    old_handlers = log.handlers
+
+    # add null handler so logging doesn't yell about there being no handlers
+    log.handlers = [NullHandler()]
+
+    yield
+
+    log.handlers = old_handlers
 
 
 class ReactorTestCase(TestCase):

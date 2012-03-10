@@ -1,17 +1,15 @@
---- !TronConfiguration
-ssh_options: !SSHOptions
-    agent: true
+ssh_options:
+  agent: true
 
 nodes:
-    - &node0
-        hostname: 'localhost'
+  - name: node0
+    hostname: 'localhost'
 
 jobs:
     -
        name: "uptime_job"
-       node: *node0
+       node: node0
        schedule: "interval 10m"
        actions:
-           -
-             name: "uptimer"
-             command: "uptime"
+         - name: "uptimer"
+           command: "uptime"

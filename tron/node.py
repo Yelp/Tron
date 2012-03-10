@@ -63,11 +63,18 @@ class RunState(object):
 
 
 class NodePool(object):
-    def __init__(self, hostname=None):
-        self.nodes = []
+    """A pool of Node objects."""
+    def __init__(self, nodes, name=None):
+        self.nodes = nodes
+        self.name = name or '_'.join(n.name for n in nodes)
         self.iter = None
-        if hostname:
-            self.nodes.append(Node(hostname))
+
+    @classmethod
+    def from_config(cls, node_pool_config, nodes):
+        return cls(
+            name=node_pool_config.name,
+            nodes=[nodes[n] for n in nodes]
+        )
 
     def __eq__(self, other):
         return isinstance(other, NodePool) and self.nodes == other.nodes
@@ -93,11 +100,22 @@ class NodePool(object):
 
 
 class Node(object):
-    """A node is tron's interface to communicating with an actual machine"""
+    """A node is tron's interface to communicating with an actual machine.
+    This class also supports the NodePool interface and can be used
+    directly as a NodePool of 1 Node.
+    """
 
-    def __init__(self, hostname=None):
+    def __init__(self, hostname=None, name=None, ssh_options=None):
         # Host we are to connect to
         self.hostname = hostname
+
+        # Identifier for UI
+        self.name = name or hostname
+
+        if not ssh_options or not hostname:
+            raise ValueError('Must specify hostname and ssh_options')
+
+        self.conch_options = ssh_options
 
         # The SSH connection we use to open channels on. If present, means we
         # are connected.
@@ -111,7 +129,33 @@ class Node(object):
 
         self.idle_timeout = None
         self.idle_timer = None
-        self.conch_options = {}
+
+    @classmethod
+    def from_config(cls, node_config, ssh_options):
+        return cls(
+            hostname=node_config.hostname,
+            name=node_config.name,
+            ssh_options=ssh_options
+        )
+
+    def next(self):
+        """Required to support the NodePool interface."""
+        return self
+
+    def next_round_robin(self):
+        """Required to support the NodePool interface."""
+        return self
+
+    @property
+    def nodes(self):
+        """Required to support the NodePool interface."""
+        return [self]
+
+    def __getitem__(self, value):
+        """Required to support the NodePool interface."""
+        if self.hostname == value:
+            return self
+        raise KeyError(value)
 
     def __cmp__(self, other):
         if not isinstance(other, self.__class__):

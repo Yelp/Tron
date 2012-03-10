@@ -1,14 +1,25 @@
 from __future__ import with_statement
 import logging
+import logging.handlers
 import os
 import shutil
+import socket
 import time
 import yaml
 
-import tron
-from tron import config, event
+from twisted.conch.client.options import ConchOptions
 from twisted.internet import reactor
-from tron.utils import timeutils
+
+import tron
+from tron import command_context
+from tron import event
+from tron import monitor
+from tron.config import config_parse
+from tron.config.config_parse import ConfigError
+from tron.job import Job
+from tron.node import Node, NodePool
+from tron.service import Service
+from tron.utils import timeutils, emailer
 
 
 log = logging.getLogger('tron.mcp')
@@ -27,6 +38,11 @@ class StateFileVersionError(Error):
 
 
 class UnsupportedVersionError(Error):
+    pass
+
+
+class ConfigApplyError(Exception):
+    """Errors during config application"""
     pass
 
 
@@ -197,14 +213,14 @@ class MasterControlProgram(object):
         self.jobs = {}
         self.services = {}
 
-        # This is a list of Nodes or NodePools
-        self.nodes = []
+        # Mapping of node name to node (or node pool) objects
+        self.nodes = {}
 
         # Path to the config file
         self.config_file = config_file
 
         # Root command context
-        self.context = context
+        self.context = context or command_context.CommandContext()
 
         self.monitor = None
 
@@ -228,7 +244,6 @@ class MasterControlProgram(object):
     def live_reconfig(self):
         self.event_recorder.emit_info("reconfig")
         try:
-
             # Temporarily disable state writing because reconfig can cause a
             # lot of state changes
             old_state_writing = self.state_handler.writing_enabled
@@ -247,10 +262,8 @@ class MasterControlProgram(object):
 
     def load_config(self):
         log.info("Loading configuration from %s" % self.config_file)
-        opened_config = open(self.config_file, "r")
-        configuration = config.load_config(opened_config)
-        configuration.apply(self)
-        opened_config.close()
+        with open(self.config_file, 'r') as f:
+            self.apply_config(config_parse.load_config(f))
 
     def config_lines(self):
         try:
@@ -270,17 +283,162 @@ class MasterControlProgram(object):
         except IOError, e:
             log.error(str(e) + " - Cannot write to configuration file!")
 
+    def apply_config(self, conf):
+        self._apply_working_directory(conf.working_dir)
+        self._apply_loggers(conf.syslog_address)
+        self.context.base = conf.command_context
+
+        ssh_options = self._ssh_options_from_config(conf.ssh_options)
+        self._apply_nodes(conf.nodes, ssh_options)
+        self._apply_node_pools(conf.node_pools)
+
+        self.time_zone = conf.time_zone
+        self._apply_jobs(conf.jobs)
+        self._apply_services(conf.services)
+        self._apply_notification_options(conf.notification_options)
+
+    def _apply_working_directory(self, wd):
+        if self.state_handler.working_dir:
+            if self.state_handler.working_dir != wd:
+                log.warn('trond must be restarted for changes to the working'
+                         ' directory to take effect.')
+            return
+
+        if not wd:
+            if 'TMPDIR' in os.environ:
+                wd = os.environ['TMPDIR']
+            else:
+                wd = '/tmp'
+
+        if not os.path.isdir(wd):
+            raise ConfigApplyError("Specified working directory '%s' is not"
+                                   " a directory" % wd)
+
+        if not os.access(wd, os.W_OK):
+            raise ConfigApplyError("Specified working directory '%s' is not"
+                                   " writable" % wd)
+
+        self.state_handler.working_dir = wd
+
+    def _apply_loggers(self, syslog_address):
+        root = logging.getLogger('')
+        handlers_to_be_removed = set(h for h in root.handlers
+                                     if h not in self.base_logging_handlers)
+
+        # Only change handlers if they will actually be different from the old
+        # handlers
+        new_handlers = []
+        if syslog_address:
+            if not isinstance(syslog_address, basestring):
+                self.syslog_address = tuple(self.syslog_address)
+
+            try:
+                h = logging.handlers.SysLogHandler(syslog_address)
+                fmt_str = "tron[%(process)d]: %(message)s"
+                h.setFormatter(logging.Formatter(fmt_str))
+                new_handlers.append(h)
+            except socket.error:
+                raise ConfigError('%s is not a valid syslog address' %
+                                  syslog_address)
+
+        for h in handlers_to_be_removed:
+            log.info('Removing logging handler %s', h)
+            root.removeHandler(h)
+
+        for h in new_handlers:
+            log.info('Adding logging handler %s', h)
+            root.addHandler(h)
+
+    def _ssh_options_from_config(self, ssh_conf):
+        ssh_options = ConchOptions()
+        if ssh_conf.agent:
+            if 'SSH_AUTH_SOCK' in os.environ:
+                ssh_options['agent'] = True
+            else:
+                raise ConfigError("No SSH Agent available ($SSH_AUTH_SOCK)")
+        else:
+            ssh_options['noagent'] = True
+
+        for file_name in ssh_conf.identities:
+            file_path = os.path.expanduser(file_name)
+            if not os.path.exists(file_path):
+                raise ConfigError("Private key file '%s' doesn't exist" %
+                                  file_name)
+            if not os.path.exists(file_path + ".pub"):
+                raise ConfigError("Public key '%s' doesn't exist" %
+                                  (file_name + ".pub"))
+
+            ssh_options.opt_identity(file_name)
+
+        return ssh_options
+
+    def _apply_nodes(self, node_confs, ssh_options):
+        self.nodes = dict(
+            (name, Node.from_config(config, ssh_options))
+            for name, config in node_confs.iteritems()
+        )
+
+    def _apply_node_pools(self, pool_confs):
+        self.nodes.update(
+            (name, NodePool.from_config(config, self.nodes))
+            for name, config in pool_confs.iteritems()
+        )
+
+    def _apply_jobs(self, job_configs):
+        """Add and remove jobs based on the configuration."""
+        for job_config in job_configs.values():
+            log.debug("Building new job %s", job_config.name)
+            job = Job.from_config(job_config, self.nodes, self.time_zone)
+            self.add_job(job)
+
+        for job_name in (set(self.jobs.keys()) - set(job_configs.keys())):
+            log.debug("Removing job %s", job_name)
+            self.remove_job(job_name)
+
+    def _apply_services(self, srv_configs):
+        """Add and remove services."""
+
+        services_to_add = []
+        for srv_config in srv_configs.values():
+            log.debug("Building new services %s", srv_config.name)
+            service = Service.from_config(srv_config, self.nodes)
+            services_to_add.append(service)
+
+        for srv_name in (set(self.services.keys()) - set(srv_configs.keys())):
+            log.debug("Removing service %s", srv_name)
+            self.remove_service(srv_name)
+
+        # Go through our constructed services and add them. We'll catch all the
+        # failures and throw an exception at the end if anything failed. This
+        # is a mitigation against a bug easily cause us to be in an
+        # inconsistent state, probably due to bad code elsewhere.
+        # TODO: what actually causes this
+        failure = False
+        for service in services_to_add:
+            try:
+                self.add_service(service)
+            except Exception, e:
+                log.exception("Failed adding new service.", e)
+                failure = e
+
+        if failure:
+            raise ConfigError("Failed adding services %s" % failure)
+
+    def _apply_notification_options(self, notification_conf):
+        if notification_conf is not None:
+            if self.monitor:
+                self.monitor.stop()
+
+            em = emailer.Emailer(notification_conf.smtp_host,
+                                 notification_conf.notification_addr)
+            self.monitor = monitor.CrashReporter(em, self)
+            self.monitor.start()
+
     ### JOBS ###
-
-    def setup_job_dir(self, job):
-        job.output_path = os.path.join(self.state_handler.working_dir,
-                                       job.name)
-        if not os.path.exists(job.output_path):
-            os.mkdir(job.output_path)
-
     def add_job(self, job):
         if job.name in self.services:
             raise ValueError("Job %s is already a service", job.name)
+
         if job.name in self.jobs:
 
             # Jobs have a complex eq implementation that allows us to catch
@@ -303,17 +461,13 @@ class MasterControlProgram(object):
 
         self.jobs[job.name] = job
 
-        # update time zone information in scheduler to match config
-        if job.scheduler is not None:
-            job.scheduler.time_zone = self.time_zone
-
         # add some command context variables
         job.set_context(self.context)
 
         job.event_recorder.set_parent(self.event_recorder)
 
         # make the directory for output
-        self.setup_job_dir(job)
+        job.setup_job_dir(self.state_handler.working_dir)
 
         # Tell the job to call store_state() whenever its state changes.
         # job isn't actaully a StateMachine object, but its interface tries
@@ -325,7 +479,6 @@ class MasterControlProgram(object):
             raise ValueError("Job %s unknown", job_name)
 
         job = self.jobs.pop(job_name)
-
         job.disable()
 
     ### SERVICES ###
@@ -369,6 +522,7 @@ class MasterControlProgram(object):
 
     def schedule_next_run(self, job):
         if job.runs and job.runs[0].is_scheduled:
+            log.info('Job is already scheduled')
             return
 
         for next in job.next_runs():

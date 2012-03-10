@@ -10,6 +10,7 @@ from testify.utils import turtle
 from tron import action
 from tron import job
 from tron import scheduler
+from tron.config.schedule_parse import parse_daily_expression as parse_daily
 from tron.utils import timeutils
 
 
@@ -28,7 +29,7 @@ class ConstantSchedulerTest(TestCase):
         self.action.job = self.job
 
     @teardown
-    def teardown(self):
+    def teardown_scheduler(self):
         shutil.rmtree(self.test_dir)
 
     def test_next_runs(self):
@@ -55,7 +56,7 @@ class DailySchedulerTest(TestCase):
         self.action.job = self.job
 
     @teardown
-    def teardown(self):
+    def teardown_scheduler(self):
         shutil.rmtree(self.test_dir)
 
     def test_next_runs(self):
@@ -74,7 +75,7 @@ class DailySchedulerTest(TestCase):
 class DailySchedulerTimeTestBase(TestCase):
     @setup
     def build_scheduler(self):
-        self.scheduler = scheduler.DailyScheduler(start_time=datetime.time(hour=14, minute=30))
+        self.scheduler = scheduler.DailyScheduler(timestr='14:30')
 
     @setup
     def build_job(self):
@@ -278,7 +279,6 @@ class ComplexParserTest(TestCase):
     @setup
     def build_scheduler(self):
         self.test_dir = tempfile.mkdtemp()
-        self.scheduler = scheduler.GrocScheduler()
         self.action = action.Action("Test Action")
         self.job = job.Job("Test Job", self.action)
         self.job.node_pool = turtle.Turtle()
@@ -299,52 +299,52 @@ class ComplexParserTest(TestCase):
         timeutils.override_current_time(None)
 
     def test_parse_all(self):
-        self.scheduler.parse('1st,2nd,3rd,4th monday,Tue of march,apr,September at 00:00')
-        assert_equal(self.scheduler.ordinals, set((1, 2, 3, 4)))
-        assert_equal(self.scheduler.monthdays, None)
-        assert_equal(self.scheduler.weekdays, set((0, 1)))
-        assert_equal(self.scheduler.months, set((3, 4, 9)))
-        assert_equal(self.scheduler.timestr, '00:00')
-        identical_scheduler = scheduler.GrocScheduler()
-        identical_scheduler.parse('1st,2nd,3rd,4th mon,tue of mar,apr,sep')
-        assert_equal(self.scheduler, identical_scheduler)
+        cfg = parse_daily('1st,2nd,3rd,4th monday,Tue of march,apr,September at 00:00')
+        assert_equal(cfg.ordinals, set((1, 2, 3, 4)))
+        assert_equal(cfg.monthdays, None)
+        assert_equal(cfg.weekdays, set((0, 1)))
+        assert_equal(cfg.months, set((3, 4, 9)))
+        assert_equal(cfg.timestr, '00:00')
+        assert_equal(scheduler.DailyScheduler(**cfg._asdict()),
+                     scheduler.DailyScheduler(**cfg._asdict()))
 
     def test_parse_no_weekday(self):
-        self.scheduler.parse('1st,2nd,3rd,10th day of march,apr,September at 00:00')
-        assert_equal(self.scheduler.ordinals, None)
-        assert_equal(self.scheduler.monthdays, set((1,2,3,10)))
-        assert_equal(self.scheduler.weekdays, None)
-        assert_equal(self.scheduler.months, set((3, 4, 9)))
-        assert_equal(self.scheduler.timestr, '00:00')
+        cfg = parse_daily('1st,2nd,3rd,10th day of march,apr,September at 00:00')
+        assert_equal(cfg.ordinals, None)
+        assert_equal(cfg.monthdays, set((1,2,3,10)))
+        assert_equal(cfg.weekdays, None)
+        assert_equal(cfg.months, set((3, 4, 9)))
+        assert_equal(cfg.timestr, '00:00')
 
     def test_parse_no_month(self):
-        self.scheduler.parse('1st,2nd,3rd,10th day at 00:00')
-        assert_equal(self.scheduler.ordinals, None)
-        assert_equal(self.scheduler.monthdays, set((1,2,3,10)))
-        assert_equal(self.scheduler.weekdays, None)
-        assert_equal(self.scheduler.months, None)
-        assert_equal(self.scheduler.timestr, '00:00')
+        cfg = parse_daily('1st,2nd,3rd,10th day at 00:00')
+        assert_equal(cfg.ordinals, None)
+        assert_equal(cfg.monthdays, set((1,2,3,10)))
+        assert_equal(cfg.weekdays, None)
+        assert_equal(cfg.months, None)
+        assert_equal(cfg.timestr, '00:00')
 
     def test_parse_monthly(self):
         for test_str in ('1st day', '1st day of month'):
-            self.scheduler.parse(test_str)
-            assert_equal(self.scheduler.ordinals, None)
-            assert_equal(self.scheduler.monthdays, set([1]))
-            assert_equal(self.scheduler.weekdays, None)
-            assert_equal(self.scheduler.months, None)
-            assert_equal(self.scheduler.timestr, '00:00')
+            cfg = parse_daily(test_str)
+            assert_equal(cfg.ordinals, None)
+            assert_equal(cfg.monthdays, set([1]))
+            assert_equal(cfg.weekdays, None)
+            assert_equal(cfg.months, None)
+            assert_equal(cfg.timestr, '00:00')
 
     def test_wildcards(self):
-        self.scheduler.parse('every day')
-        assert_equal(self.scheduler.ordinals, None)
-        assert_equal(self.scheduler.monthdays, None)
-        assert_equal(self.scheduler.weekdays, None)
-        assert_equal(self.scheduler.months, None)
-        assert_equal(self.scheduler.timestr, '00:00')
+        cfg = parse_daily('every day')
+        assert_equal(cfg.ordinals, None)
+        assert_equal(cfg.monthdays, None)
+        assert_equal(cfg.weekdays, None)
+        assert_equal(cfg.months, None)
+        assert_equal(cfg.timestr, '00:00')
 
     def test_daily(self):
-        self.scheduler.parse('every day')
-        next_run = self.scheduler.next_runs(self.job)[0]
+        cfg = parse_daily('every day')
+        sch = scheduler.DailyScheduler(**cfg._asdict())
+        next_run = sch.next_runs(self.job)[0]
 
         next_run_date = next_run.run_time
 
@@ -354,8 +354,10 @@ class ComplexParserTest(TestCase):
         assert_equal(next_run_date.hour, 0)
 
     def test_daily_with_time(self):
-        self.scheduler.parse('every day at 02:00')
-        next_run = self.scheduler.next_runs(self.job)[0]
+        cfg = parse_daily('every day at 02:00')
+        sch = scheduler.DailyScheduler(**cfg._asdict())
+
+        next_run = sch.next_runs(self.job)[0]
 
         next_run_date = next_run.run_time
 
@@ -367,9 +369,10 @@ class ComplexParserTest(TestCase):
         assert_equal(next_run_date.minute, 0)
 
     def test_weekly(self):
-        self.scheduler.parse('every monday at 01:00')
+        cfg = parse_daily('every monday at 01:00')
+        sch = scheduler.DailyScheduler(**cfg._asdict())
 
-        next_run = self.scheduler.next_runs(self.job)[0]
+        next_run = sch.next_runs(self.job)[0]
 
         next_run_date = next_run.run_time
 
@@ -379,9 +382,10 @@ class ComplexParserTest(TestCase):
                                       next_run_date.day), 0)
 
     def test_weekly_in_month(self):
-        self.scheduler.parse('every monday of january at 00:01')
+        cfg = parse_daily('every monday of january at 00:01')
+        sch = scheduler.DailyScheduler(**cfg._asdict())
 
-        next_run = self.scheduler.next_runs(self.job)[0]
+        next_run = sch.next_runs(self.job)[0]
 
         next_run_date = next_run.run_time
 
@@ -395,9 +399,10 @@ class ComplexParserTest(TestCase):
                                       next_run_date.day), 0)
 
     def test_monthly(self):
-        self.scheduler.parse('1st day')
+        cfg = parse_daily('1st day')
+        sch = scheduler.DailyScheduler(**cfg._asdict())
 
-        next_run = self.scheduler.next_runs(self.job)[0]
+        next_run = sch.next_runs(self.job)[0]
 
         next_run_date = next_run.run_time
 
@@ -420,7 +425,7 @@ class IntervalSchedulerTest(TestCase):
         self.action.job = self.job
 
     @teardown
-    def teardown(self):
+    def teardown_scheduler(self):
         shutil.rmtree(self.test_dir)
 
     def test_next_runs(self):
