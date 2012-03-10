@@ -46,7 +46,7 @@ class ConfigTest(TestCase):
 command_context:
     batch_dir: /tron/batch/test/foo
     python: /usr/bin/python
-    
+
 jobs:
     - &job0 !Job
         name: "test_job0"
@@ -58,7 +58,7 @@ jobs:
                 command: "test_command0.0"
         cleanup_action: !CleanupAction
             command: "test_command0.1"
-                
+
     - &job1
         name: "test_job1"
         node: *node0
@@ -127,7 +127,7 @@ services:
 
         self.node0 = self.my_mcp.nodes[0]
         self.node1 = self.my_mcp.nodes[1]
-        
+
         self.job0 = self.my_mcp.jobs['test_job0']
         self.job1 = self.my_mcp.jobs['test_job1']
         self.job2 = self.my_mcp.jobs['test_job2']
@@ -151,7 +151,7 @@ services:
         assert_equal(len(self.test_config.jobs), 5)
         assert_equal(len(self.test_config.services), 1)
         assert_equal(len(self.test_config.nodes), 3)
-        
+
     def test_node_attribute(self):
         assert_equal(len(self.my_mcp.nodes), 2)
         assert_equal(self.my_mcp.nodes[0].hostname, "batch0")
@@ -159,23 +159,23 @@ services:
 
         assert_equal(self.my_mcp.nodes[0].conch_options['noagent'], False)
         assert_equal(self.my_mcp.nodes[1].conch_options['noagent'], False)
-        
+
         assert self.job4.node_pool.nodes[0] is self.my_mcp.nodes[0]
-    
+
     def test_job_name_attribute(self):
         for j in self.all_jobs:
             assert hasattr(j, "name")
-            
+
         assert_equal(self.job0.name, "test_job0")
         assert_equal(self.job1.name, "test_job1")
         assert_equal(self.job2.name, "test_job2")
         assert_equal(self.job3.name, "test_job3")
         assert_equal(self.job4.name, "test_job4")
-    
+
     def test_job_node_attribute(self):
         for j in self.all_jobs:
             assert hasattr(j, "node_pool")
-        
+
         assert_equal(self.job0.node_pool.nodes[0], self.node0)
         assert_equal(self.job1.node_pool.nodes[0], self.node0)
         assert_equal(self.job2.node_pool.nodes[0], self.node1)
@@ -200,7 +200,7 @@ services:
         assert isinstance(self.job3.scheduler, scheduler.ConstantScheduler)
         assert isinstance(self.job4.scheduler, scheduler.DailyScheduler)
 
-    def test_actions_name_attribute(self): 
+    def test_actions_name_attribute(self):
         for job_count in range(len(self.all_jobs)):
             j = self.all_jobs[job_count]
 
@@ -216,8 +216,8 @@ services:
     def test_all_nodes_attribute(self):
         assert self.job4.all_nodes
         assert not self.job3.all_nodes
-    
-    def test_actions_command_attribute(self): 
+
+    def test_actions_command_attribute(self):
         for job_count in range(len(self.all_jobs)):
             j = self.all_jobs[job_count]
 
@@ -226,7 +226,7 @@ services:
                 assert hasattr(a, "command")
                 assert_equal(a.command, "test_command%s.%s" % (job_count, act_count))
         assert_equal(self.all_jobs[0].cleanup_action.command, "test_command0.1")
-      
+
     def test_actions_requirements(self):
         dep0 = self.job1.topo_actions[1]
         dep1 = self.job3.topo_actions[2]
@@ -235,7 +235,7 @@ services:
 
         assert hasattr(dep0, 'required_actions')
         assert hasattr(dep1, 'required_actions')
-        
+
         assert_equals(len(dep0.required_actions), 1)
         assert_equals(len(dep1.required_actions), 2)
         assert_equals(len(req0.required_actions), 0)
@@ -521,15 +521,15 @@ jobs:
         actions:
             -
                 name: "action0_0"
-                command: "test_command0.0"                
+                command: "test_command0.0"
             -
                 name: "action0_0"
-                command: "test_command0.0"                
+                command: "test_command0.0"
 
         """
         test_config = config.load_config(StringIO.StringIO(test_config))
         assert_raises(config.ConfigError, test_config.apply, self.my_mcp)
-    
+
     def test_bad_requires(self):
         test_config = BASE_CONFIG + """
 jobs:
@@ -540,10 +540,10 @@ jobs:
         actions:
             - &action0_0
                 name: "action0_0"
-                command: "test_command0.0"                
+                command: "test_command0.0"
             - &action0_1
                 name: "action0_1"
-                command: "test_command0.1"              
+                command: "test_command0.1"
 
     - &job1
         name: "test_job1"
@@ -569,7 +569,7 @@ jobs:
         actions:
             -
                 name: "%s"
-                command: "test_command0.0"                
+                command: "test_command0.0"
 
         """ % config.CLEANUP_ACTION_NAME
         test_config = config.load_config(StringIO.StringIO(test_config))
@@ -585,7 +585,7 @@ jobs:
         actions:
             -
                 name: "action0_0"
-                command: "test_command0.0"                
+                command: "test_command0.0"
         cleanup_action:
             name: "gerald"
             command: "test_command0.1"
@@ -603,7 +603,7 @@ jobs:
         actions:
             -   &action0_0
                 name: "action0_0"
-                command: "test_command0.0"                
+                command: "test_command0.0"
         cleanup_action:
             command: "test_command0.1"
             requires: *action0_0

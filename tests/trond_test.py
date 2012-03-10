@@ -107,8 +107,8 @@ class BasicTronTestCase(SandboxTestCase):
 No services
 
 Jobs:
-Name     State      Scheduler            Last Success        
-echo_job ENABLED    INTERVAL:1:00:00     None                
+Name     State      Scheduler            Last Success
+echo_job ENABLED    INTERVAL:1:00:00     None
 """)
 
     def test_tronctl_basic(self):

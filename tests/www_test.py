@@ -25,7 +25,7 @@ REQUEST.childLink = lambda val : "/jobs/%s" % val
 # class JobsResourceServer(turtle.Turtle):
 #     def childLink(self, child):
 #         return "/jobs/%s" % child
-# 
+#
 # class JobResourceServer(turtle.Turtle):
 #     def __init__(self, job):
 #         self._job = job
@@ -60,12 +60,12 @@ class JobsTest(TestCase):
     def build_resource(self):
         self.mc = turtle.Turtle()
         self.job = turtle.Turtle(
-                            name="testname", 
+                            name="testname",
                             last_success=None,
-                            runs=[], 
-                            scheduler_str="testsched", 
+                            runs=[],
+                            scheduler_str="testsched",
                             node_pool=TEST_POOL)
-        
+
         self.mc.jobs = {self.job.name: self.job}
 
         self.resource = www.JobsResource(self.mc)
@@ -76,7 +76,7 @@ class JobsTest(TestCase):
         job_result = simplejson.loads(resp)
         assert 'jobs' in job_result
         assert job_result['jobs'][0]['name'] == "testname"
- 
+
     def test_get_job(self):
         """Test that we can find a specific job"""
         child = self.resource.getChildWithDefault("testname", turtle.Turtle())
@@ -86,7 +86,7 @@ class JobsTest(TestCase):
     def test_missing_job(self):
         child = self.resource.getChildWithDefault("bar", turtle.Turtle())
         assert isinstance(child, twisted.web.resource.NoResource)
-        
+
 
 class JobDetailTest(TestCase):
     @class_setup
@@ -102,7 +102,7 @@ class JobDetailTest(TestCase):
                                                      end_time=None,
                                                      exit_status=None,
                                                      )
-                                                     
+
                                  ],
                                  scheduler_str="testsched",
                                  node_pool=TEST_POOL,
@@ -110,11 +110,11 @@ class JobDetailTest(TestCase):
                                 )
 
         self.resource = www.JobResource(self.job, turtle.Turtle())
-    
+
     def test_detail(self):
         resp = self.resource.render_GET(REQUEST)
         job_result = simplejson.loads(resp)
-        
+
         assert_equal(job_result['name'], self.job.name)
         assert_equal(len(job_result['runs']), 1)
         assert_equal(job_result['runs'][0]['id'], "1")
@@ -138,7 +138,7 @@ class JobQueueTest(TestCase):
         req.args = {'command': ['disable']}
         req.childLink = lambda val : "/jobs/foo/%s" % val
         self.resource.render_POST(req)
-        
+
         # Verify the response
         assert_equal(req.code, twisted.web.http.OK)
         # Check if a run would have been queued
@@ -167,7 +167,7 @@ class JobQueueDuplicateTest(TestCase):
                                 )
 
         self.resource = www.JobResource(self.job, turtle.Turtle())
-        
+
     def test(self):
         req = twisted.web.server.Request(turtle.Turtle(), None)
         req.args = {'command': ['disable']}

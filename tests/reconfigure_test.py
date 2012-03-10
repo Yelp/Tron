@@ -136,7 +136,7 @@ jobs:
         self.test_config = config.load_config(StringIO.StringIO(self.config))
         self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')
         self.test_config.apply(self.my_mcp)
-        
+
     @teardown
     def teardown(self):
         shutil.rmtree(self.test_dir)
