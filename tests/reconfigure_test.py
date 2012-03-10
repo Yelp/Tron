@@ -1,6 +1,5 @@
 """Tests for our configuration system"""
 import shutil
-import StringIO
 import tempfile
 
 import yaml
@@ -8,7 +7,6 @@ import yaml
 from testify import *
 from tron import config_parse
 from tron import mcp
-from tron.utils.testingutils import no_handlers_for_logger
 from tests.config_parse_test import syslog_address_for_platform
 
 class ConfigTest(TestCase):
@@ -60,6 +58,7 @@ class ConfigTest(TestCase):
                                           command='command')],
                 ),
             ])
+        # TODO: skip the yaml dump
         return yaml.dump(config)
 
     def config_2(self, wd):
@@ -110,14 +109,14 @@ class ConfigTest(TestCase):
         return yaml.dump(config)
 
     @setup
-    def setup(self):
+    def setup_mcp(self):
         self.test_dir = tempfile.mkdtemp()
         self.my_mcp = mcp.MasterControlProgram(self.test_dir, 'config')
         config = self.config_1(self.test_dir)
         self.my_mcp.apply_config(config_parse.load_config(config))
 
     @teardown
-    def teardown(self):
+    def teardown_mcp(self):
         shutil.rmtree(self.test_dir)
 
     def reconfigure(self):

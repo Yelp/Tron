@@ -1,12 +1,32 @@
 import logging
 
 from pytz import AmbiguousTimeError, NonExistentTimeError
+from tron import config_parse, schedule_parse
 
 from tron.utils import groctimespecification
 from tron.utils import timeutils
 
 
 log = logging.getLogger('tron.scheduler')
+
+
+def scheduler_from_config(config, time_zone):
+    """A factory for creating a scheduler from a configuration object."""
+    if isinstance(config, config_parse.ConfigConstantScheduler):
+        return ConstantScheduler()
+
+    if isinstance(config, config_parse.ConfigIntervalScheduler):
+        return IntervalScheduler(interval=config.timedelta)
+
+    if isinstance(config, schedule_parse.ConfigDailyScheduler):
+        return DailyScheduler(
+            time_zone=time_zone,
+            timestr=config.timestr,
+            ordinals=config.ordinals,
+            monthdays=config.monthdays,
+            months=config.months,
+            weekdays=config.weekdays
+        )
 
 
 class ConstantScheduler(object):

@@ -1,5 +1,15 @@
-"""Rewritten config system. Functionality is limited to parsing and schema
-validation.
+"""
+Parse a dictionary structure and return an immutable structure that
+represents a validated configuration.
+
+This module contains two sets of classes.
+
+Config objects: These are immutable structures (namedtuples, FrozenDict) that
+contain the configuration data. The top level structure (ConfigTron) is returned
+from valid_config().
+
+Validator objects: These are responsible for validating a dictionary structure
+and returning a valid immutable config object.
 """
 
 from collections import namedtuple
@@ -249,9 +259,6 @@ valid_bool = type_validator(
 
 ### LOADING THE SCHEMA ###
 
-
-
-
 def normalize_node(node):
     """Given a node value from a config, determine if it's the node's name, the
     node's value, or actually a node pool. The former case is the "new style"
@@ -416,7 +423,6 @@ class ValidateSSHOptions(Validator):
         'agent': partial(valid_bool, 'ssh_options.agent'),
         'identities': partial(valid_list, 'ssh_options.identities')
     }
-    optional = True
 
 valid_ssh_options = ValidateSSHOptions()
 
@@ -449,7 +455,8 @@ class ValidateNodePool(Validator):
     def cast(self, node_pool):
         if isinstance(node_pool, list):
             node_pool = dict(nodes=node_pool)
-        return dict(nodes=[normalize_node(node) for node in node_pool['nodes']])
+        node_pool['nodes'] = [normalize_node(node) for node in node_pool['nodes']]
+        return node_pool
 
     def set_defaults(self, node_pool):
         node_pool.setdefault('name', '_'.join(node_pool['nodes']))
@@ -457,7 +464,7 @@ class ValidateNodePool(Validator):
 valid_node_pool = ValidateNodePool()
 
 
-def valid_schedule(_, schedule):
+def valid_schedule(path, schedule):
     if isinstance(schedule, basestring):
         schedule = schedule.strip()
         scheduler_args = schedule.split()
@@ -477,7 +484,7 @@ def valid_schedule(_, schedule):
     elif 'start_time' in schedule or 'days' in schedule:
         return valid_daily_scheduler(**schedule)
     else:
-        raise ConfigError("Unknown scheduler: %s" % schedule)
+        raise ConfigError("Unknown scheduler at %s: %s" % (path, schedule))
 
 
 def valid_daily_scheduler(start_time=None, days=None):
@@ -565,7 +572,6 @@ class ValidateAction(ValidatorWithNamedPath):
     validators = {
         'name': valid_identifier,
         'command': valid_str,
-        # TODO: have all of these been updated to use a lambda?
         'node': lambda _, v: normalize_node(v)
     }
 
@@ -616,7 +622,6 @@ class ValidateCleanupAction(ValidatorWithNamedPath):
     validators = {
         'name': valid_identifier,
         'command': valid_str,
-        # TODO: have all of these been updated to use a lambda?
         'node': lambda _, v: normalize_node(v)
     }
 
@@ -658,7 +663,6 @@ class ValidateJob(ValidatorWithNamedPath):
     def set_defaults(self, job):
         super(ValidateJob, self).set_defaults(job)
         if 'queueing' not in job:
-            # TODO: this should be based on a field in the associated scheduler
             # Set queueing default based on scheduler. Usually False, But daily
             # jobs probably deal with daily data and should not be skipped
             job['queueing'] = not (
@@ -676,7 +680,7 @@ class ValidateJob(ValidatorWithNamedPath):
                 raise ConfigError("Invalid action config for %s: %s" % (path, e))
 
             if not (final_action.node or job['node']):
-                raise ConfigError('%s has no actions configured for %s' %
+                raise ConfigError('%s has no node configured for %s' %
                                   (path, final_action.name))
             actions[final_action.name] = final_action
 
@@ -684,7 +688,6 @@ class ValidateJob(ValidatorWithNamedPath):
             raise ConfigError("Job %s must have at least one action" %
                               job['name'])
 
-        # TODO: revisit this
         # make sure there are no circular or misspelled dependencies
         def dfs_action(base_action, current_action, stack):
             stack.append(current_action.name)
@@ -742,7 +745,7 @@ class ValidateConfig(Validator):
         'working_dir': None,
         'syslog_address': None,
         'command_context': None,
-        'ssh_options': None,
+        'ssh_options': valid_ssh_options({}),
         'notification_options': None,
         'time_zone': None,
         'nodes': (dict(name='localhost', hostname='localhost'),),
@@ -764,10 +767,13 @@ class ValidateConfig(Validator):
         # We need to set this default here until 0.5, see comment below
         config.setdefault('node_pools', [])
 
+        node_names = DictNoUpdate('Node and NodePool names must be unique')
+        job_service_names = DictNoUpdate('Job and Service names must be unique')
+
         # 'nodes' may contain nodes or node pools (for now). Internally split them
         # into 'nodes' and 'node_pools'. Process the nodes.
         nodes = DictNoUpdate('Node name %s is used twice')
-        for node in config.get('nodes', []):
+        for node in config.get('nodes') or []:
             # A node pool is characterized by being a list, or a dictionary that
             # contains a list of nodes
             if (isinstance(node, list) or
@@ -779,93 +785,31 @@ class ValidateConfig(Validator):
 
             final_node = valid_node(node)
             nodes[final_node.name] = final_node
+            node_names[final_node.name] = True
         config['nodes'] = FrozenDict(**nodes)
 
         # process node pools
         node_pools = DictNoUpdate('Node pool name %s is used twice')
-        for node_pool in config.get('node_pools', []):
+        for node_pool in config.get('node_pools') or []:
             final_pool = valid_node_pool(node_pool)
             node_pools[final_pool.name] = final_pool
+            node_names[final_pool.name] = True
         config['node_pools'] = FrozenDict(**node_pools)
 
         # process jobs. output is a dict mapping name to values.
         jobs = DictNoUpdate('Job name %s is used twice')
-        for job in config.get('jobs', []):
+        for job in config.get('jobs') or []:
             final_job = valid_job(job)
             jobs[final_job.name] = final_job
+            job_service_names[final_job.name] = True
         config['jobs'] = FrozenDict(**jobs)
 
         # process services
         services = DictNoUpdate('Service name %s is used twice')
-        for service in config.get('services', []):
+        for service in config.get('services') or []:
             final_service = valid_service(service)
             services[final_service.name] = final_service
+            job_service_names[final_service.name] = True
         config['services'] = FrozenDict(**services)
 
 valid_config = ValidateConfig()
-
-# TODO: move to a file
-DEFAULT_CONFIG = """
-ssh_options:
-    ## Tron needs SSH keys to allow the effective user to login to each of the
-    ## nodes specified in the "nodes" section. You can choose to use either an
-    ## SSH agent or list
-    # identities:
-    #     - /home/tron/.ssh/id_dsa
-    agent: true
-
-## Uncomment if you want logging to syslog. Typical values for different
-## platforms:
-##    Linux: "/dev/log"
-##    OS X: "/var/run/syslog"
-##    Windows: ["localhost", 514]
-# syslog_address: /dev/log
-
-# notification_options:
-      ## In case of trond failures, where should we send notifications to ?
-      # smtp_host: localhost
-      # notification_addr: nobody@localhost
-
-nodes:
-    ## You'll need to list out all the available nodes for doing work.
-    # - name: "node"
-    #   hostname: 'localhost'
-
-## Optionally you can list 'pools' of nodes where selection of a node will
-## be randomly determined or jobs can be configured to be run on all nodes
-## in the pool
-# node_pools:
-    # - name: NodePool
-    #   nodes: [node]
-
-command_context:
-    # Variable subsitution
-    # There are some built-in values such as 'node', 'runid', 'actionname' and
-    # run-time based variables such as 'shortdate'. (See tronfig.1 for
-    # reference.) You can specify whatever else you want similiar to
-    # environment variables:
-    # PYTHON: "/usr/bin/python"
-
-jobs:
-    ## Configure your jobs here by specifing a name, node, schedule and the
-    ## work flow that should executed.
-    # - name: "sample_job"
-    #   node: node
-    #   schedule: "daily"
-    #   actions:
-    #     - name: "uname"
-    #       command: "uname -a"
-    #   cleanup_action:
-    #     command: "rm -rf /tmp/sample_job_scratch"
-
-services:
-    ## Configure services here. Services differ from jobs in that they are
-    ## expected to have an enable/disable and monitoring phase.
-    # - name: "sample_service"
-    #   node: node
-    #   count: 2
-    #   pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
-    #   command: "run_service --pid-file=%(pid_file)s start"
-    #   monitor_interval: 20
-    #   restart_interval: 60s
-"""

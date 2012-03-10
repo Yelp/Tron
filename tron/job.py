@@ -4,6 +4,8 @@ import shutil
 from collections import deque
 
 from tron import action, command_context, event
+from tron.action import Action
+from tron.scheduler import scheduler_from_config, ConstantScheduler
 from tron.utils import timeutils
 
 
@@ -293,26 +295,62 @@ class Job(object):
         self.run_num += 1
         return self.run_num - 1
 
-    def __init__(self, name=None, action=None, context=None,
-                 event_recorder=None):
+    def __init__(self,
+        name=None,
+        action=None,
+        context=None,
+        event_recorder=None,
+        queueing=True,
+        run_limit=RUN_LIMIT,
+        all_nodes=False,
+        scheduler=None,
+        node_pool=None
+    ):
         self.name = name
         self.topo_actions = [action] if action else []
         self.cleanup_action = None
-        self.scheduler = None
+        self.scheduler = scheduler
         self.runs = deque()
 
-        self.queueing = True
-        self.all_nodes = False
+        self.queueing = queueing
+        self.all_nodes = all_nodes
         self.enabled = True
-        self.constant = False
         self.last_success = None
 
-        self.run_limit = RUN_LIMIT
-        self.node_pool = None
+        self.run_limit = run_limit
+        self.node_pool = node_pool
         self.output_path = None
         self.state_callback = lambda: None
         self.context = command_context.CommandContext(self, context)
         self.event_recorder = event.EventRecorder(self, parent=event_recorder)
+
+    @classmethod
+    def from_config(cls, job_config, node_pools, time_zone):
+        """Build a job from a ConfigJob."""
+        job = cls(
+            name=job_config.name,
+            queueing=job_config.queueing,
+            run_limit=job_config.run_limit,
+            all_nodes=job_config.all_nodes,
+            node_pool=node_pools[job_config.node] if job_config.node else None,
+            scheduler=scheduler_from_config(job_config.schedule, time_zone)
+        )
+
+        new_actions = dict(
+            (name, Action.from_config(action_conf, node_pools))
+            for name, action_conf in job_config.actions.iteritems()
+        )
+
+        for action in new_actions.values():
+            for dep in job_config.actions[action.name].requires:
+                action.required_actions.append(new_actions[dep])
+            job.add_action(action)
+
+        if job_config.cleanup_action:
+            action = Action.from_config(job_config.cleanup_action, node_pools)
+            job.register_cleanup_action(action)
+
+        return job
 
     def _register_action(self, action):
         """Prepare an action to be *owned* by this job"""
@@ -588,6 +626,16 @@ class Job(object):
             self.last_success = run
 
         return run
+
+    def setup_job_dir(self, working_dir):
+        """Setup a directory to store this jobs logs."""
+        self.output_path = os.path.join(working_dir, self.name)
+        if not os.path.exists(self.output_path):
+            os.mkdir(self.output_path)
+
+    @property
+    def constant(self):
+        return isinstance(self.scheduler, ConstantScheduler)
 
     def __str__(self):
         return "JOB:%s" % self.name
