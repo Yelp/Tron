@@ -50,27 +50,28 @@ def display_events(data):
 def view_all(options, client):
     """Retreive jobs and services and display them."""
     if options.show_events:
-        print display_events(client.events())
-        return
+        return display_events(client.events())
 
-    print display.DisplayServices().format(client.services())
+    output = [display.DisplayServices().format(client.services())]
 
     jobs = client.jobs()
+    # TODO: fix cmd to make this a param
     # load job details for each job
     if options.warn:
         for job in jobs:
             job['details'] = client.job(job['name'])
 
-    print display.DisplayJobs(options).format(jobs)
+    output.append(display.DisplayJobs(options).format(jobs))
+    return "".join(output)
 
 
 def view_job(options, job_name, client):
     """Retrieve details of the specified job and display"""
     if options.show_events:
-        print display_events(client.job_events(job_name))
-        return
+        return display_events(client.job_events(job_name))
 
     job_content = client.job(job_name)
+    # TODO: fix cmd to make this a param
     if options.warn:
         for job_run in job_content['runs'][-options.num_displays:]:
             job_run['details'] = client.actions(job_run['id'])
@@ -79,32 +80,53 @@ def view_job(options, job_name, client):
                 action_id = "%s.%s" % (job_run['id'], action_name)
                 job_run['runs'].append(client.action(action_id))
 
-    print display.DisplayJobs(options).format_job(job_content)
+    return display.DisplayJobs(options).format_job(job_content)
 
 
 def view_job_run(options, job_run_id, client):
     if options.show_events:
-        print display_events(client.action_events(job_run_id))
-        return
+        return display_events(client.action_events(job_run_id))
 
     actions = client.actions(job_run_id)
     display_action = display.DisplayActions(options)
-    print display_action.format(actions)
+    return display_action.format(actions)
 
 
 def view_action_run(options, act_run_id, client):
     display_action = display.DisplayActions(options)
-    print display_action.format_action_run(client.action(act_run_id))
+    return display_action.format_action_run(client.action(act_run_id))
 
 
 def view_service(options, service_name, client):
     """Retrieve details of the specified service and display"""
     if options.show_events:
-        print display_events(client.service_events(service_name))
-        return
+        return display_events(client.service_events(service_name))
 
     service_content = client.service(service_name)
-    print display.DisplayServices().format_details(service_content)
+    return display.DisplayServices().format_details(service_content)
+
+def get_view_output(name, options):
+    client = Client(options)
+    content = client.index()
+
+    job_to_uri = cmd.make_job_to_uri(content)
+    service_to_uri = cmd.make_service_to_uri(content)
+
+    level = name.count('.')
+    object_name = name.split('.')[0]
+
+    if object_name in job_to_uri:
+        if not level:
+            return view_job(options, name, client)
+        elif level == 1:
+            return view_job_run(options, name, client)
+        return view_action_run(options, name, client)
+
+    if object_name in service_to_uri:
+        if level:
+            return
+        return view_service(options, name, client)
+
 
 def main():
     """run tronview"""
@@ -116,39 +138,21 @@ def main():
     client.status()
 
     if not args:
-        view_all(options, client)
-        cmd.save_config(options)
-        return
-
-    content = client.index()
-    job_to_uri = cmd.make_job_to_uri(content)
-    service_to_uri = cmd.make_service_to_uri(content)
-
-    name = args[0]
-    level = name.count('.')
-    object_name = name.split('.')[0]
-
-    if object_name in job_to_uri:
-        if level == 0:
-            view_job(options, name, client)
-        elif level == 1:
-            view_job_run(options, name, client)
-        else:
-            view_action_run(options, name, client)
-    elif object_name in service_to_uri:
-        if level == 0:
-            view_service(options, name, client)
-        else:
-            print >>sys.stderr, "Too many .'s for a service"
-            sys.exit(1)
+        output = view_all(options, client)
     else:
+        output = get_view_output(args[0], options)
+
+    if not output:
         print >>sys.stderr, "What is a %s?" % args[0]
         sys.exit(1)
+
+    # TODO: test when output is piped somewhere else
+    if len(output.split('\n')) > console_height() and sys.stdout.isatty():
+        display.view_with_less(output, options.display_color)
+    else:
+        print output
 
     cmd.save_config(options)
 
 if __name__ == '__main__':
-    try:
-        main()
-    except Exception, e :
-        raise
+    main()

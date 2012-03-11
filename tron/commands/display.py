@@ -9,21 +9,21 @@ class Color(object):
 
     enabled = display_color = None
     colors = {
-        'gray': '\033[90m',
-        'cyan': '\033[91m',
-        'green': '\033[92m',
-        'yellow': '\033[93m',
-        'blue': '\033[94m',
-        'red': '\033[91m',
-        'white': '\033[99m',
+        'gray':                 '\033[90m',
+        'cyan':                 '\033[91m',
+        'green':                '\033[92m',
+        'yellow':               '\033[93m',
+        'blue':                 '\033[94m',
+        'red':                  '\033[91m',
+        'white':                '\033[99m',
         # h is for highlighted
-        'hgray': '\033[100m',
-        'hcyan': '\033[101m',
-        'hgreen': '\033[102m',
-        'hyellow': '\033[103m',
-        'hblue': '\033[104m',
-        'hred': '\033[106m',
-        'end': '\033[0m',
+        'hgray':                '\033[100m',
+        'hcyan':                '\033[101m',
+        'hgreen':               '\033[102m',
+        'hyellow':              '\033[103m',
+        'hblue':                '\033[104m',
+        'hred':                 '\033[106m',
+        'end':                  '\033[0m',
     }
 
     @classmethod
@@ -377,3 +377,16 @@ class DisplayEvents(TableDisplay):
     def calculate_col_widths(self):
         # No need to calculate, it's fixed width.
         pass
+
+
+def view_with_less(content, color=True):
+    """Send `content` through less."""
+    import subprocess
+    cmd = ['less']
+    if color:
+        cmd.append('-r')
+
+    less_proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
+    less_proc.stdin.write(content)
+    less_proc.stdin.close()
+    less_proc.wait()

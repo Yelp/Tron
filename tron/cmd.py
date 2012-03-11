@@ -79,9 +79,6 @@ def request(serv, path, data=None):
     uri = urlparse.urljoin(serv, path)
     request = urllib2.Request(uri, enc_data)
     log.info("Request to %r", uri)
-    # Which is the proper way to encode data ?
-    # if data:
-    #     request.add_data(urllib.urlencode(data))
 
     request.add_header("User-Agent", USER_AGENT)
     opener = urllib2.build_opener()
