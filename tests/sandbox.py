@@ -9,9 +9,10 @@ import sys
 import tempfile
 import time
 
-from testify import *
+from testify import turtle
 
-from tron import cmd
+from tron import commands
+from tron.commands import client
 
 
 # Used for getting the locations of the executables
@@ -27,7 +28,6 @@ def wait_for_sandbox_success(func, delay=0.1, stop_at=5.0):
     of *stop_at* seconds
     """
     total_time = 0.0
-    last_exception = None
     while total_time < stop_at:
         time.sleep(delay)
         total_time += delay
@@ -108,7 +108,7 @@ class TronSandbox(object):
 
         # mock a config object
         self.config_obj = MockConfigOptions(self.tron_server_uri)
-        cmd.save_config(self.config_obj)
+        commands.save_config(self.config_obj)
 
         self._last_trond_launch_args = []
 
@@ -169,10 +169,10 @@ class TronSandbox(object):
     ### www API ###
 
     def _check_call_api(self, uri, data=None):
-        cmd.load_config(self.config_obj)
-        status, content = cmd.request(self.tron_server_uri, uri, data=data)
+        commands.load_config(self.config_obj)
+        status, content = client.request(self.tron_server_uri, uri, data=data)
 
-        if status != cmd.OK or not content:
+        if status != client.OK or not content:
             log.warning('trond appears to have crashed. Log:')
             log.warning(self.log_contents())
             raise TronSandboxException("Error connecting to tron server at %s%s" % (self.tron_server_uri, uri))
@@ -192,17 +192,17 @@ class TronSandbox(object):
         ``(start, cancel, disable, enable, disableall, enableall, fail, succeed)``.
         ``run_time`` should be of the form ``YYYY-MM-DD HH:MM:SS``.
         """
-        content = self._check_call_api('/')
-
         data = {'command': command}
 
         if run_time is not None:
             data['run_time'] = run_time
 
         if arg is not None:
-            job_to_uri = cmd.make_job_to_uri(content)
-            service_to_uri = cmd.make_service_to_uri(content)
-            full_uri = cmd.obj_spec_to_uri(arg, job_to_uri, service_to_uri)
+            options = turtle.Turtle(server=self.tron_server_uri)
+            # TODO: wrap errors better like _check_call_api
+            cclient = client.Client(options)
+            full_uri = cclient.get_url_from_identifier(arg)
+
         else:
             full_uri = '/jobs'
 

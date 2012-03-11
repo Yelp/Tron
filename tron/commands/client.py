@@ -1,7 +1,47 @@
 """
-A command line http client used by tronview.
+A command line http client used by tronview, tronctl, and tronfig
 """
-from tron import cmd
+import logging
+import urllib
+import urllib2
+import urlparse
+
+try:
+    import simplejson
+    assert simplejson # Pyflakes
+except ImportError:
+    import json as simplejson
+
+log = logging.getLogger("tron.commands.client")
+
+USER_AGENT = "Tron Command/1.0 +http://github.com/Yelp/Tron"
+
+# Result Codes
+OK = "OK"
+REDIRECT = "REDIRECT"
+ERROR = "ERROR"
+
+
+def request(host, path, data=None):
+    enc_data = urllib.urlencode(data) if data else data
+
+    uri = urlparse.urljoin(host, path)
+    req = urllib2.Request(uri, enc_data)
+    log.info("Request to %r", uri)
+
+    req.add_header("User-Agent", USER_AGENT)
+    opener = urllib2.build_opener()
+    try:
+        output = opener.open(req)
+    except urllib2.HTTPError, e:
+        log.error("Recieved error response: %s" % e)
+        return ERROR, e.code
+    except urllib2.URLError, e:
+        log.error("Recieved error response: %s" % e)
+        return ERROR, e.reason
+
+    result = simplejson.load(output)
+    return OK, result
 
 
 class Client(object):
@@ -16,8 +56,38 @@ class Client(object):
     def events(self):
         return self.request('/events')['data']
 
+    def config(self, data=None):
+        return self.request('/config', data)['config']
+
     def index(self):
-        return self.request('/')
+        content = self.request('/')
+
+        def name_href_dict(source):
+            return dict((i['name'], i['href']) for i in source)
+
+        return {
+            'jobs':     name_href_dict(content['jobs']),
+            'services': name_href_dict(content['services'])
+        }
+
+    def get_url_from_identifier(self, iden):
+        """Convert a string of the form job_name[.run_number[.action]] to its
+        corresponding URL.
+        """
+        content = self.index()
+        obj_name_elements = iden.split('.')
+        obj_name = obj_name_elements[0]
+        obj_rel_path = "/".join(obj_name_elements[1:])
+
+        def full_url(obj_url):
+            return '/'.join((obj_url, obj_rel_path))
+
+        if obj_name in content['jobs']:
+            return full_url(content['jobs'][obj_name])
+        if obj_name in content['services']:
+            return full_url(content['services'][obj_name])
+
+        raise ValueError("Unknown identifier: %s" % iden)
 
     def services(self):
         return self.index().get('services')
@@ -52,8 +122,10 @@ class Client(object):
         action_id = action_id.replace('.', '/')
         return self.request('/jobs/%s/_events' % action_id)['data']
 
-    def request(self, url):
-        status, content = cmd.request(self.options.server, url)
-        assert status == cmd.OK, "Failed to retrieve %s%s: %s" % (
-            self.options.server, url, content)
+    def request(self, url, data=None):
+        status, content = request(self.options.server, url, data)
+        if not status == OK:
+            err_msg = "Failed to request %s%s: %s %s" % (
+                self.options.server, url, content, data or '')
+            raise ValueError(err_msg)
         return content

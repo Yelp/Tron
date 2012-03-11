@@ -51,7 +51,7 @@ def respond(request, response_dict, code=http.OK, headers=None):
     return ""
 
 
-# TODO: make this an enum and part of JobRun
+# TODO: make this part of the state
 def job_run_state(job_run):
     if job_run.is_success:
         return "SUCC"
@@ -144,7 +144,6 @@ class JobRunResource(resource.Resource):
                                    (act_name, self._run.id))
 
     def render_GET(self, request):
-        run_output = []
         state = job_run_state(self._run)
 
         def action_output(action_run):

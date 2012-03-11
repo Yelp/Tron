@@ -4,7 +4,7 @@ import optparse
 import sys
 
 import tron
-from tron import cmd
+from tron import commands
 from tron.commands import display
 from tron.commands.client import Client
 
@@ -109,20 +109,17 @@ def get_view_output(name, options):
     client = Client(options)
     content = client.index()
 
-    job_to_uri = cmd.make_job_to_uri(content)
-    service_to_uri = cmd.make_service_to_uri(content)
-
     level = name.count('.')
     object_name = name.split('.')[0]
 
-    if object_name in job_to_uri:
+    if object_name in content['jobs']:
         if not level:
             return view_job(options, name, client)
         elif level == 1:
             return view_job_run(options, name, client)
         return view_action_run(options, name, client)
 
-    if object_name in service_to_uri:
+    if object_name in content['services']:
         if level:
             return
         return view_service(options, name, client)
@@ -131,8 +128,8 @@ def get_view_output(name, options):
 def main():
     """run tronview"""
     options, args = parse_options()
-    cmd.setup_logging(options)
-    cmd.load_config(options)
+    commands.setup_logging(options)
+    commands.load_config(options)
 
     client = Client(options)
     client.status()
@@ -152,7 +149,7 @@ def main():
     else:
         print output
 
-    cmd.save_config(options)
+    commands.save_config(options)
 
 if __name__ == '__main__':
     main()

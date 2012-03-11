@@ -326,7 +326,6 @@ class DisplayActions(TableDisplay):
 
     def post_row(self, row):
         if self.options.warn:
-            import ipdb; ipdb.set_trace()
             self.out.extend(self.do_format_action_run(row['details'], True))
 
     def format_action_run(self, content):
