@@ -100,13 +100,18 @@ class BasicTronTestCase(SandboxTestCase):
         self.sandbox.save_config(SINGLE_ECHO_CONFIG)
         self.sandbox.start_trond()
 
-        assert_equal(self.sandbox.tronview()[0], """Services:
-No services
+        expected = """\nServices:\nNo Services\n\nJobs:
+            Name     State     Scheduler           Last Success
+            echo_job ENABLED   INTERVAL:1:00:00    None
+            """
 
-Jobs:
-Name     State      Scheduler            Last Success
-echo_job ENABLED    INTERVAL:1:00:00     None
-""")
+        def remove_line_space(s):
+            return [l.strip() for l in s.split('\n')]
+
+        assert_equal(
+            remove_line_space(self.sandbox.tronview()[0]),
+            remove_line_space(expected)
+        )
 
     def test_tronctl_basic(self):
         canary = os.path.join(self.sandbox.tmp_dir, 'tronctl_basic_done')

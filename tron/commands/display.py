@@ -80,7 +80,7 @@ class TableDisplay(object):
         title = self.title.capitalize()
         self.out.append("\n%s:" % title)
         if not self.rows():
-            self.out.append("No %s" % title)
+            self.out.append("No %s\n" % title)
 
     def header(self):
         row = [
