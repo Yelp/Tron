@@ -26,7 +26,8 @@ class DisplayServicesTestCase(TestCase):
         display = DisplayServices(80)
         out = display.format([])
         lines = out.split("\n")
-        assert_equal(len(lines), 3)
+        assert_equal(len(lines), 4)
+        assert_equal(lines[2], 'No Services')
 
 
 class DisplayJobRunsTestCase(TestCase):
@@ -55,7 +56,7 @@ class DisplayJobRunsTestCase(TestCase):
         self.data = self.run_data
 
     def test_format(self):
-        display = DisplayJobRuns(80, options=self.options)
+        display = DisplayJobRuns(options=self.options)
         out = display.format(self.data)
         lines = out.split('\n')
         assert_equal(len(lines), 7)
@@ -86,7 +87,7 @@ class DisplayJobsTestCase(TestCase):
         }
 
     def do_format(self):
-        display = DisplayJobs(80, self.options).format(self.data)
+        display = DisplayJobs(self.options).format(self.data)
         out = display.format(self.data)
         lines = out.split('\n')
         return lines
@@ -113,26 +114,34 @@ class DisplayActionsTestCase(TestCase):
     def setup_data(self):
         Color.enabled = True
         self.options = turtle.Turtle(warn=False, num_displays=6)
-        self.data = [
-            dict(
-                id='something.23.run_other_thing', state='UNKWN',
-                start_time='2012-01-23 10:10:10.123456',
-                end_time='',
-                duration=''
-            ),
-            dict(
-                id='something.1.run_foo', state='FAIL',
-                start_time='2012-01-23 10:10:10.123456',
-                end_time='2012-01-23 10:40:10.123456',
-                duration='1234.123456'
-            ),
-            dict(
-                id='something.23.run_other_thing', state='QUE',
-                start_time='2012-01-23 10:10:10.123456',
-                end_time='',
-                duration=''
-            ),
-        ]
+        self.data = {
+            'id': 'something.23',
+            'state': 'UNKWN',
+            'node': 'something',
+            'runs': [
+                dict(
+                    id='something.23.run_other_thing',
+                    state='UNKWN',
+                    start_time='2012-01-23 10:10:10.123456',
+                    end_time='',
+                    duration=''
+                ),
+                dict(
+                    id='something.1.run_foo',
+                    state='FAIL',
+                    start_time='2012-01-23 10:10:10.123456',
+                    end_time='2012-01-23 10:40:10.123456',
+                    duration='1234.123456'
+                ),
+                dict(
+                    id='something.23.run_other_thing',
+                    state='QUE',
+                    start_time='2012-01-23 10:10:10.123456',
+                    end_time='',
+                    duration=''
+                ),
+            ]
+        }
         self.details = {
             'stdout': ['Blah', 'blah', 'blah'],
             'stderr': ['Crash', 'and', 'burn'],
@@ -142,27 +151,27 @@ class DisplayActionsTestCase(TestCase):
         }
 
     def test_format(self):
-        display = DisplayActions(80, options=self.options)
+        display = DisplayActions(options=self.options)
         out = display.format(self.data)
         lines = out.split('\n')
-        assert_equal(len(lines), 6)
+        assert_equal(len(lines), 9)
 
     def test_format_warn(self):
-        data = self.data[2]
-        data['details'] = self.details
+        self.data['runs'] = [self.data['runs'][2]]
+        self.data['runs'][0]['details'] = self.details
         self.options.warn = True
-        display = DisplayActions(80, options=self.options)
-        out = display.format([data])
+        display = DisplayActions(options=self.options)
+        out = display.format(self.data)
         lines = out.split('\n')
-        assert_equal(len(lines), 8)
+        assert_equal(len(lines), 11)
 
     def test_format_action_run(self):
         options = self.options
         options.stdout = options.stderr = options.display_preface = False
-        display = DisplayActions(80, options=self.options)
+        display = DisplayActions(options=self.options)
         out = display.format_action_run(self.details)
         lines = out.split('\n')
-        assert_equal(len(lines), 14)
+        assert_equal(len(lines), 15)
 
 
     # TODO: test format_action_run with other options

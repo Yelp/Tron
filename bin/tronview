@@ -52,7 +52,7 @@ def view_all(options, client):
     if options.show_events:
         return display_events(client.events())
 
-    output = [display.DisplayServices().format(client.services())]
+    output = [display.DisplayServices().format(client.services()), '\n']
 
     jobs = client.jobs()
     # TODO: fix cmd to make this a param
