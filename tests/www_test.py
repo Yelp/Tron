@@ -1,7 +1,7 @@
 """
 Test cases for the web services interface to tron
 """
-from testify import *
+from testify import TestCase, class_setup, assert_equal, run
 from testify.utils import turtle
 
 try:
@@ -22,15 +22,6 @@ TEST_POOL = turtle.Turtle(nodes=TEST_NODES)
 REQUEST = twisted.web.server.Request(turtle.Turtle(), None)
 REQUEST.childLink = lambda val : "/jobs/%s" % val
 
-# class JobsResourceServer(turtle.Turtle):
-#     def childLink(self, child):
-#         return "/jobs/%s" % child
-#
-# class JobResourceServer(turtle.Turtle):
-#     def __init__(self, job):
-#         self._job = job
-#     def childLink(self, child):
-#         return "/jobs/%s/%s" % (self._job.name, child)
 
 class RootTest(TestCase):
     @class_setup
@@ -60,11 +51,13 @@ class JobsTest(TestCase):
     def build_resource(self):
         self.mc = turtle.Turtle()
         self.job = turtle.Turtle(
-                            name="testname",
-                            last_success=None,
-                            runs=[],
-                            scheduler_str="testsched",
-                            node_pool=TEST_POOL)
+            repr_data=lambda: {'name': 'testname'},
+            name="testname",
+            last_success=None,
+            runs=[],
+            scheduler_str="testsched",
+            node_pool=TEST_POOL
+        )
 
         self.mc.jobs = {self.job.name: self.job}
 
@@ -92,22 +85,24 @@ class JobDetailTest(TestCase):
     @class_setup
     def build_resource(self):
         self.job = turtle.Turtle(
-                                 name="foo",
-                                 runs=[
-                                       turtle.Turtle(
-                                                     id="1",
-                                                     node=TEST_NODES[0],
-                                                     run_num=1,
-                                                     start_time=None,
-                                                     end_time=None,
-                                                     exit_status=None,
-                                                     )
+             name="foo",
+             runs=[
+                   turtle.Turtle(
+                                 id="foo.1",
+                                 node=TEST_NODES[0],
+                                 run_num=1,
+                                 start_time=None,
+                                 end_time=None,
+                                 exit_status=None,
+                                 repr_data=lambda: {'id': "foo.1"}
+                    )
 
-                                 ],
-                                 scheduler_str="testsched",
-                                 node_pool=TEST_POOL,
-                                 topo_actions=[],
-                                )
+             ],
+             scheduler_str="testsched",
+             node_pool=TEST_POOL,
+             topo_actions=[],
+             repr_data=lambda: {'name': 'foo'}
+        )
 
         self.resource = www.JobResource(self.job, turtle.Turtle())
 
@@ -117,7 +112,7 @@ class JobDetailTest(TestCase):
 
         assert_equal(job_result['name'], self.job.name)
         assert_equal(len(job_result['runs']), 1)
-        assert_equal(job_result['runs'][0]['id'], "1")
+        assert_equal(job_result['runs'][0]['id'], "foo.1")
 
 
 class JobQueueTest(TestCase):
@@ -142,7 +137,7 @@ class JobQueueTest(TestCase):
         # Verify the response
         assert_equal(req.code, twisted.web.http.OK)
         # Check if a run would have been queued
-        func = self.job.build_run
+        # func = self.job.build_run
         # FIXME: failing
         # assert_equal(len(func.calls), 1)
 

@@ -1,7 +1,7 @@
 import datetime
 from testify import TestCase, assert_equal, setup
 
-from tron.utils.timeutils import *
+from tron.utils.timeutils import duration, macro_timedelta
 
 class TimeDeltaTestCase(TestCase):
 
@@ -77,3 +77,24 @@ class TimeDeltaTestCase(TestCase):
         self.check_delta(self.begin_feb_leap,
                          datetime.datetime(year=2016, month=2, day=1),
                          years=4)
+
+
+class DurationTestCase(TestCase):
+
+    @setup
+    def setup_times(self):
+        self.earliest = datetime.datetime(2012, 2, 1, 3, 0, 0)
+        self.latest =   datetime.datetime(2012, 2, 1, 3, 20, 0)
+
+    def test_duration(self):
+        assert_equal(
+            duration(self.earliest, self.latest),
+            datetime.timedelta(0, 60*20)
+        )
+
+    def test_duration_no_end(self):
+        delta = duration(self.earliest)
+        assert delta.days >= 40
+
+    def test_duration_no_start(self):
+        assert_equal(duration(None), None)

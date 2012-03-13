@@ -110,6 +110,7 @@ class Client(object):
     def job_events(self, job_id):
         return self.request('/jobs/%s/_events' % job_id)['data']
 
+    # TODO: change to JobRuns
     def actions(self, action_id):
         action_id = action_id.replace('.', '/')
         return self.request('/jobs/%s' % action_id)

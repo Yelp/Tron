@@ -97,11 +97,11 @@ class ActionRunContext(object):
 class ActionRun(object):
     """An instance of running a action"""
     STATE_CANCELLED = state.NamedEventState('cancelled')
-    STATE_UNKNOWN = state.NamedEventState('unknown')
+    STATE_UNKNOWN = state.NamedEventState('unknown', short_name='UNKWN')
     STATE_FAILED = state.NamedEventState('failed')
     STATE_SUCCEEDED = state.NamedEventState('succeeded')
     STATE_RUNNING = state.NamedEventState('running')
-    STATE_STARTING = state.NamedEventState('starting')
+    STATE_STARTING = state.NamedEventState('starting', short_chars=5)
     STATE_QUEUED = state.NamedEventState('queued')
     STATE_SCHEDULED = state.NamedEventState('scheduled')
     STATE_SKIPPED = state.NamedEventState('skipped')
@@ -214,6 +214,10 @@ class ActionRun(object):
 
         if all(r.is_success or r.is_skipped for r in self.required_runs):
             return self.start()
+
+    def check_state(self, state):
+        """Check if the state machine can be transitioned to state."""
+        return self.machine.check(state)
 
     def start(self):
         if not self.machine.check('start'):
@@ -383,13 +387,37 @@ class ActionRun(object):
 
     @property
     def data(self):
-        return {'id': self.id,
-                'state': str(self.state),
-                'run_time': self.run_time,
-                'start_time': self.start_time,
-                'end_time': self.end_time,
-                'command': self.command
+        """This data is used to serialize the state of this action run."""
+        return {
+            'id':           self.id,
+            'state':        str(self.state),
+            'run_time':     self.run_time,
+            'start_time':   self.start_time,
+            'end_time':     self.end_time,
+            'command':      self.command,
         }
+
+    def repr_data(self, max_lines=None):
+        """Return a dictionary that represents the external view of this
+        action run.
+        """
+        data = {
+            'id':           self.id,
+            'name':         self.action.name,
+            'state':        self.state.short_name,
+            'node':         self.node.hostname,
+            'command':      self.command,
+            'raw_command':  self.action.command,
+            'run_time':     self.run_time,
+            'start_time':   self.start_time,
+            'end_time':     self.end_time,
+            'exit_status':  self.exit_status,
+            'requirements': [req.name for req in self.action.required_actions],
+        }
+        if max_lines:
+            data['stdout'] = self.tail_stdout(max_lines)
+            data['stderr'] = self.tail_stderr(max_lines)
+        return data
 
     def render_command(self):
         """Render our configured command under the command context.
@@ -422,6 +450,11 @@ class ActionRun(object):
             return False
 
     @property
+    def is_done(self):
+        return self.state in (self.STATE_FAILED, self.STATE_SUCCEEDED,
+                              self.STATE_CANCELLED, self.STATE_SKIPPED)
+
+    @property
     def is_queued(self):
         return self.state == self.STATE_QUEUED
 
@@ -432,11 +465,6 @@ class ActionRun(object):
     @property
     def is_scheduled(self):
         return self.state == self.STATE_SCHEDULED
-
-    @property
-    def is_done(self):
-        return self.state in (self.STATE_FAILED, self.STATE_SUCCEEDED,
-                              self.STATE_CANCELLED, self.STATE_SKIPPED)
 
     @property
     def is_unknown(self):

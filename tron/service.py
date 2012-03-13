@@ -655,6 +655,7 @@ class Service(object):
 
     @property
     def data(self):
+        """This data is used to serialize the state of this service."""
         data = {
             'state': str(self.machine.state),
         }

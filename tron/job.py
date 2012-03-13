@@ -4,9 +4,10 @@ import shutil
 from collections import deque
 
 from tron import action, command_context, event
-from tron.action import Action
+from tron.action import Action, ActionRun
 from tron.scheduler import scheduler_from_config, ConstantScheduler
 from tron.utils import timeutils
+from tron.utils.proxy import CollectionProxy
 
 
 class Error(Exception):
@@ -46,6 +47,30 @@ class JobRun(object):
             self, parent=self.job.event_recorder)
         self.event_recorder.emit_info("created")
 
+        # Setup proxies
+        self.proxy_action_runs_with_cleanup = CollectionProxy(
+            self.action_runs_with_cleanup, [
+                ('is_failure',      any,    False),
+                ('is_starting',     any,    False),
+                ('is_running',      any,    False),
+                ('is_scheduled',    any,    False),
+                ('is_unknown',      any,    False),
+                ('is_queued',       all,    False),
+                ('is_cancelled',    all,    False),
+                ('is_skipped',      all,    False),
+                ('is_done',         all,    False),
+                ('check_state',     all,    True),
+                ('cancel',          all,    True),
+                ('succeed',         all,    True),
+                ('fail',            any,    True)
+        ])
+
+        self.proxy_action_runs = CollectionProxy(
+            self.action_runs, [
+                ('schedule',        all,    True),
+                ('queue',           all,    True),
+        ])
+
     @property
     def output_path(self):
         return os.path.join(self.job.output_path, self.id)
@@ -83,8 +108,28 @@ class JobRun(object):
                             " - cancelling", self.id)
                 self.cancel()
 
+    @property
+    def state(self):
+        """The overall state of this job run. Based on the state of its actions.
+        """
+        if self.is_success:
+            return ActionRun.STATE_SUCCEEDED
+        if self.is_cancelled:
+            return ActionRun.STATE_CANCELLED
+        if self.is_running:
+            return ActionRun.STATE_RUNNING
+        if self.is_failure:
+            return ActionRun.STATE_FAILED
+        if self.is_scheduled:
+            return ActionRun.STATE_SCHEDULED
+        if self.is_queued:
+            return ActionRun.STATE_QUEUED
+        if self.is_skipped:
+            return ActionRun.STATE_SKIPPED
+        return ActionRun.STATE_UNKNOWN
+
     def start(self):
-        if not (self.is_scheduled or self.is_queued):
+        if not self.proxy_action_runs_with_cleanup.perform('check_state', 'start'):
             raise InvalidStartStateError("Not scheduled")
 
         log.info("Starting action job %s", self.id)
@@ -126,8 +171,11 @@ class JobRun(object):
                 log.warning("Attempt to start failed: %r", e)
 
     def last_success_check(self):
-        if (not self.job.last_success or self.run_num >
-                self.job.last_success.run_num):
+        if (
+            not self.job.last_success or
+            self.run_num > self.job.last_success.run_num
+        ):
+            # TODO: this should be set by Job
             self.job.last_success = self
 
     def run_completed(self):
@@ -159,16 +207,31 @@ class JobRun(object):
 
     @property
     def data(self):
-        data = {'runs': [a.data for a in self.action_runs],
-                'cleanup_run': None,
-                'run_num': self.run_num,
-                'run_time': self.run_time,
-                'start_time': self.start_time,
-                'end_time': self.end_time
+        """This data is used to serialize the state of this job run."""
+        data = {
+            'id':           self.id,
+            'runs':         [a.data for a in self.action_runs],
+            'cleanup_run':  None,
+            'run_num':      self.run_num,
+            'run_time':     self.run_time,
+            'start_time':   self.start_time,
+            'end_time':     self.end_time
         }
         if self.cleanup_action_run is not None:
             data['cleanup_run'] = self.cleanup_action_run.data
         return data
+
+    def repr_data(self):
+        """A dict that represents the externally visible state."""
+        return {
+            'id':           self.id,
+            'state':        self.state.short_name,
+            'node':         self.node.hostname if self.node else None,
+            'run_num':      self.run_num,
+            'run_time':     self.run_time,
+            'start_time':   self.start_time,
+            'end_time':     self.end_time,
+        }
 
     def restore(self, data):
         self.start_time = data['start_time']
@@ -183,30 +246,27 @@ class JobRun(object):
 
         self.event_recorder.emit_info("restored")
 
-    def schedule(self):
-        for r in self.action_runs:
-            r.schedule()
+    def __getattr__(self, name):
+        # The order here is important.  We don't want to raise too many
+        # exceptions, so proxies should be ordered by those most likely
+        # to be used.
+        for proxy in [
+            self.proxy_action_runs_with_cleanup,
+            self.proxy_action_runs
+        ]:
+            try:
+                return proxy.perform(name)
+            except AttributeError:
+                pass
 
-    def queue(self):
-        for r in self.action_runs:
-            r.queue()
-
-    def cancel(self):
-        for r in self.action_runs_with_cleanup:
-            r.cancel()
-
-    def succeed(self):
-        for r in self.action_runs_with_cleanup:
-            r.mark_success()
-
-    def fail(self):
-        for r in self.action_runs_with_cleanup:
-            r.fail(0)
+        # We want to re-raise this exception because the proxy code
+        # will not be relevant in the stack trace
+        raise AttributeError(name)
 
     @property
     def action_runs_with_cleanup(self):
         if self.cleanup_action_run is not None:
-            return [a for a in self.action_runs] + [self.cleanup_action_run]
+            return self.action_runs + [self.cleanup_action_run]
         else:
             return self.action_runs
 
@@ -214,63 +274,31 @@ class JobRun(object):
     def should_start(self):
         if not self.job.enabled or self.is_running:
             return False
-        return (self.job.next_to_finish(self.node
-                                        if self.job.all_nodes
-                                        else None)
-                is self)
-
-    @property
-    def is_failure(self):
-        return any(r.is_failure for r in self.action_runs_with_cleanup)
+        node = self.node if self.job.all_nodes else None
+        return self.job.next_to_finish(node) is self
 
     @property
     def all_but_cleanup_success(self):
+        """Overloaded all_but_cleanup_success, because we can still succeed
+        if some actions were skipped.
+        """
         return all(r.is_success or r.is_skipped for r in self.action_runs)
 
     @property
     def is_success(self):
-        return all(r.is_success or r.is_skipped for r in self.action_runs_with_cleanup)
+        """Overloaded is_success, because we can still succeed if some
+        actions were skipped.
+        """
+        return all(
+            r.is_success or r.is_skipped for r in self.action_runs_with_cleanup)
 
     @property
     def all_but_cleanup_done(self):
         if self.is_failure:
             return True
-        return not any(r.is_running or r.is_queued or r.is_scheduled
-                       for r in self.action_runs)
+        return all(r.is_done for r in self.action_runs)
 
-    @property
-    def is_done(self):
-        return not any(r.is_running or r.is_queued or r.is_scheduled
-                        for r in self.action_runs_with_cleanup)
-
-    @property
-    def is_queued(self):
-        return all(r.is_queued for r in self.action_runs_with_cleanup)
-
-    @property
-    def is_starting(self):
-        return any(r.is_starting for r in self.action_runs_with_cleanup)
-
-    @property
-    def is_running(self):
-        return any(r.is_running for r in self.action_runs_with_cleanup)
-
-    @property
-    def is_scheduled(self):
-        return any(r.is_scheduled for r in self.action_runs_with_cleanup)
-
-    @property
-    def is_unknown(self):
-        return any(r.is_unknown for r in self.action_runs_with_cleanup)
-
-    @property
-    def is_cancelled(self):
-        return all(r.is_cancelled for r in self.action_runs_with_cleanup)
-
-    @property
-    def is_skipped(self):
-        return all(r.is_skipped for r in self.action_runs_with_cleanup)
-
+    # TODO: better repr abstraction
     @property
     def cleanup_job_status(self):
         """Provide 'SUCCESS' or 'FAILURE' to a cleanup action context based on
@@ -290,6 +318,12 @@ class JobRun(object):
 class Job(object):
 
     run_num = 0
+
+    # Constants for Job status
+    STATUS_DISABLED =   "DISABLED"
+    STATUS_ENABLED =    "ENABLED"
+    STATUS_UNKNOWN =    "UNKNOWN"
+    STATUS_RUNNING =    "RUNNING"
 
     def next_num(self):
         self.run_num += 1
@@ -428,6 +462,7 @@ class Job(object):
         else:
             return None
 
+    # TODO: clean this up
     def newest_run_by_state(self, state):
         for run in self.runs:
             if (state == 'SUCC' and run.is_success or
@@ -487,6 +522,7 @@ class Job(object):
 
         return self.scheduler.next_runs(self)
 
+    # TODO: this belongs in ActionRun
     def _make_action_run(self, job_run, action_inst, callback):
             action_run = action_inst.build_run(job_run)
 
@@ -586,9 +622,35 @@ class Job(object):
 
     @property
     def data(self):
-        return {'runs': [r.data for r in self.runs],
-                'enabled': self.enabled
+        """This data is used to serialize the state of this job."""
+        return {
+            'runs': [r.data for r in self.runs],
+            'enabled': self.enabled
         }
+
+    def repr_data(self):
+        """Returns a dict that is the external representation of this job."""
+        last_success = self.last_success.end_time if self.last_success else None
+        return {
+            'name':         self.name,
+            'scheduler':    str(self.scheduler),
+            'action_names': [a.name for a in self.topo_actions],
+            'node_pool':    [n.hostname for n in self.node_pool.nodes],
+            'status':       self.status,
+            'last_success': last_success,
+        }
+
+    @property
+    def status(self):
+        """The Jobs current status is determined by its last/next run."""
+        current_run = self.next_to_finish()
+        if not current_run:
+            return self.STATUS_DISABLED
+        if current_run.is_running:
+            return self.STATUS_RUNNING
+        if current_run.is_scheduled:
+            return self.STATUS_ENABLED
+        return self.STATUS_UNKNOWN
 
     def restore(self, data):
         self.enabled = data['enabled']

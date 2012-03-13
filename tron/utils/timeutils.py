@@ -52,3 +52,10 @@ def macro_timedelta(start_date, years=0, months=0, days=0):
     delta += end_date - start_date
 
     return delta
+
+
+def duration(start_time, end_time=None):
+    if not start_time:
+        return None
+    last_time = end_time if end_time else current_time()
+    return last_time - start_time
