@@ -44,6 +44,7 @@ def request(host, path, data=None):
     return OK, result
 
 
+# TODO: tests
 class Client(object):
     """A client used in commands to make requests to the tron.www """
 
@@ -90,7 +91,7 @@ class Client(object):
         raise ValueError("Unknown identifier: %s" % iden)
 
     def services(self):
-        return self.index().get('services')
+        return self.request('/services').get('services')
 
     def service(self, service_id):
         service_url = "/services/%s" % service_id
