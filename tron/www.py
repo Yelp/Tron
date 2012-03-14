@@ -40,8 +40,6 @@ class JSONEncoder(json.JSONEncoder):
 
         return super(JSONEncoder, self).default(o)
 
-json_encoder = JSONEncoder()
-
 
 def respond(request, response_dict, code=http.OK, headers=None):
     """Helper to generate a json response"""
