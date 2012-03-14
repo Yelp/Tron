@@ -65,31 +65,28 @@ is through tronfig::
 This will open your configured :envvar:`$EDITOR` with the current configuration
 file. Edit your file to be something like this::
 
-    --- !TronConfiguration
     ssh_options:
-        agent: true
+      agent: true
 
     notification_options:
-        smtp_host: localhost
-        notification_addr: <your email address>
+      smtp_host: localhost
+      notification_addr: <your email address>
 
     nodes:
-        - &node0
-            hostname: 'localhost'
+      - name: local
+        hostname: 'localhost'
 
     jobs:
-        - &node_info
-            name: "getting_node_info"
-            node: *node0
-            schedule: "interval 10 mins"
-            actions:
-                - &unameAction
-                    name: "uname"
-                    command: "uname -a"
-                - 
-                    name: "cpu_info"
-                    command: "cat /proc/cpuinfo"
-                    requires: [*unameAction]
+      - name: "getting_node_info"
+        node: local
+        schedule: "interval 10 mins"
+        actions:
+          - name: "uname"
+            command: "uname -a"
+          -
+            name: "cpu_info"
+            command: "cat /proc/cpuinfo"
+            requires: [uname]
 
 After you exit your editor, the configuration will be validated and uploaded to `trond`
 
