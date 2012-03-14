@@ -7,7 +7,7 @@ import os
 
 class Color(object):
 
-    enabled = display_color = None
+    enabled = None
     colors = {
         'gray':                 '\033[90m',
         'cyan':                 '\033[91m',
@@ -64,7 +64,10 @@ class TableDisplay(object):
     title = None
 
     header_color = 'hgray'
-    max_first_col_width = None
+
+    @property
+    def max_first_col_width(self):
+        return max(self.num_cols - sum(self.widths[1:]), 10)
 
     def __init__(self, options=None):
         self.out = []
@@ -118,11 +121,13 @@ class TableDisplay(object):
     format_header = format_value
 
     def calculate_col_widths(self):
+        padding = 3
         label_width = len(self.columns[0]) + 1
         if not self.data:
             max_name_width = 1
         else:
-            max_name_width = max(len(item[self.fields[0]]) for item in self.data) + 1
+            max_name_width = max(len(item[self.fields[0]]) for item in self.data)
+            max_name_width += padding
         self.widths[0] = min(
             self.max_first_col_width,
             max(label_width, max_name_width)
@@ -169,10 +174,6 @@ class DisplayServices(TableDisplay):
     widths  = [None,    10,         10      ]
     title = 'services'
 
-    @property
-    def max_first_col_width(self):
-        return max(self.num_cols - 20, 5)
-
     def format_details(self, service_content):
         self.out = [
             "Service: %s" % service_content['name'],
@@ -192,12 +193,6 @@ class DisplayJobRuns(TableDisplay):
     widths  = [None,     6,          20,     25              ]
     title = 'job runs'
 
-    time_size = len("0000-00-00 00:00")
-
-    @property
-    def max_first_col_width(self):
-        return 15
-
     def rows(self):
         data_rows = self.data
         if self.options.warn:
@@ -213,7 +208,7 @@ class DisplayJobRuns(TableDisplay):
 
     def sorted_fields(self, values):
         """Build constructed fields and return fields in order."""
-        run = (values['run_time'] and values['run_time'][:self.time_size]) or "-"
+        run = values['run_time'] or "-"
         values['scheduled_time'] = run
 
         return [values[name] for name in self.fields]
@@ -222,10 +217,9 @@ class DisplayJobRuns(TableDisplay):
         return 'red' if fields['state'] == 'FAIL' else 'white'
 
     def post_row(self, row):
-        time_size = self.time_size
-        start = (row['start_time'] and row['start_time'][:time_size]) or "-"
-        end = (row['end_time'] and row['end_time'][:time_size]) or "-"
-        duration = (row['duration'] and row['duration'].split('.')[0]) or "-"
+        start = row['start_time'] or "-"
+        end =   row['end_time']   or "-"
+        duration = row['duration'][:-7] if row['duration'] else "-"
 
         row_data = "%sStart: %s  End: %s  (%s)" % (
             ' ' * self.widths[0], start, end, duration
@@ -234,8 +228,7 @@ class DisplayJobRuns(TableDisplay):
 
         if self.options.warn:
             display_action = DisplayActions(self.options)
-            import ipdb; ipdb.set_trace()
-            self.out.append(display_action.format(row['details']))
+            self.out.append(display_action.format(row))
 
 
 class DisplayJobs(TableDisplay):
@@ -245,13 +238,9 @@ class DisplayJobs(TableDisplay):
     widths  = [None,    10,         20,             20            ]
     title = 'jobs'
 
-    @property
-    def max_first_col_width(self):
-        return max(self.num_cols - 54, 5)
-
     def post_row(self, row):
         if self.options.warn:
-            self.out.extend(self.do_format_job(row['details'], True))
+            self.out.extend(self.do_format_job(row, True))
 
     def format_job(self, job_details):
         self.out = self.do_format_job(job_details)
@@ -281,13 +270,8 @@ class DisplayActions(TableDisplay):
 
     columns = ['Action', 'State', 'Start Time', 'End Time', 'Duration']
     fields  = ['id',     'state', 'start_time', 'end_time', 'duration']
-    widths  = [None,     6,        20,          20,         10        ]
+    widths  = [None,     7,        22,          22,         10        ]
     title = 'actions'
-
-
-    @property
-    def max_first_col_width(self):
-        return max(self.num_cols - 60, 5)
 
     def banner(self):
         if self.options.display_preface:
@@ -305,8 +289,11 @@ class DisplayActions(TableDisplay):
     def format_value(self, field, value):
         if self.fields[field] == 'id':
             value = '.' + '.'.join(value.split('.')[2:])
-        if self.fields[field] in ('start_time', 'end_time', 'duration'):
-            value = (value and value[:-7]) or "-"
+        if self.fields[field] in ('start_time', 'end_time'):
+            value = value or "-"
+        if self.fields[field] == 'duration':
+            # Strip microseconds
+            value = value[:-7] if value else "-"
 
         return super(DisplayActions, self).format_value(field, value)
 
@@ -326,7 +313,7 @@ class DisplayActions(TableDisplay):
 
     def post_row(self, row):
         if self.options.warn:
-            self.out.extend(self.do_format_action_run(row['details'], True))
+            self.out.extend(self.do_format_action_run(row, True))
 
     def format_action_run(self, content):
         self.out = self.do_format_action_run(content)

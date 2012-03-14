@@ -4,12 +4,12 @@ import os
 import tempfile
 import optparse
 import sys
-import yaml
 import shutil
 
 import tron
 from tron import mcp, commands
 from tron.commands.client import Client
+from tron.config import config_parse
 
 
 def parse_options():
@@ -24,6 +24,9 @@ def parse_options():
                       help="Verbose logging", default=0)
     parser.add_option("--server", action="store", dest="server",
                       help="Server URL to connect to", default=None)
+    parser.add_option("--save", "-s", action="store_true", dest="save_config",
+                      help="Save options used on this job for next time.",
+                      default=False)
     (options, args) = parser.parse_args(sys.argv)
 
     options.from_stdin = False
@@ -38,26 +41,14 @@ def upload_config(client, contents):
     print "Configuration uploaded successfully"
 
 
-def clean_config(load):
-    if hasattr(load, 'ssh_options'):
-        del load.ssh_options
-    return load
-
-
 def test_config(contents):
     tmpdir = tempfile.mkdtemp()
 
     # Can the MCP handle the configuration?
     try:
-        # The local MCP can't handle all the configuration, so clean it
-        edited_config = clean_config(yaml.load(contents))
-
-        edited_file = tempfile.NamedTemporaryFile()
-        edited_file.write(yaml.dump(edited_config))
-        edited_file.flush()
-
-        master = mcp.MasterControlProgram(tmpdir, edited_file.name)
-        master.load_config()
+        config = config_parse.load_config(contents)
+        master = mcp.MasterControlProgram(tmpdir, None)
+        master.apply_config(config, skip_env_dependent=True)
         return True
     except Exception, e:
         print >>sys.stderr, "Error in configuration: %s" % str(e)
@@ -94,8 +85,9 @@ if __name__ == '__main__':
         else:
             upload_config(client, new_config)
 
-        # Save our command options (NOT THE CONFIG FILE)
-        commands.save_config(options)
+        if options.save_config:
+            # Save our command options (NOT THE CONFIG FILE)
+            commands.save_config(options)
         sys.exit(0)
 
     if options.from_stdin:

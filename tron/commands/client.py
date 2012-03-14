@@ -58,7 +58,10 @@ class Client(object):
         return self.request('/events')['data']
 
     def config(self, data=None):
-        return self.request('/config', data)['config']
+        """This may be a post or a get, depending on data."""
+        if data:
+            return self.request('/config', dict(config=data))
+        return self.request('/config', )['config']
 
     def index(self):
         content = self.request('/')
@@ -101,19 +104,26 @@ class Client(object):
         service_url = "/services/%s/_events" % service_id
         return self.request(service_url)['data']
 
+    def _get_job_params(self):
+        if self.options.warn:
+            return "?include_job_runs=1&include_action_runs=1"
+        return ''
+
     def jobs(self):
-        return self.request('/jobs').get('jobs')
+        params = self._get_job_params()
+        return self.request('/jobs' + params).get('jobs')
 
     def job(self, job_id):
-        return self.request('/jobs/%s' % job_id)
+        params = self._get_job_params()
+        return self.request('/jobs/%s%s' % (job_id, params))
 
     def job_events(self, job_id):
         return self.request('/jobs/%s/_events' % job_id)['data']
 
-    # TODO: change to JobRuns
-    def actions(self, action_id):
+    def job_runs(self, action_id):
+        params = self._get_job_params()
         action_id = action_id.replace('.', '/')
-        return self.request('/jobs/%s' % action_id)
+        return self.request('/jobs/%s%s' % (action_id, params))
 
     def action(self, action_id):
         url = "/jobs/%s?num_lines=%s" % (action_id.replace('.', '/'),

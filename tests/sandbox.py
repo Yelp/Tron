@@ -255,7 +255,7 @@ class TronSandbox(object):
 
     def tronview(self, args=None):
         """Call tronview with args and return ``(stdout, stderr)``"""
-        args = args or []
+        args = args or ['--nocolor']
         command = [sys.executable, self.tronview_bin] + args
         p = Popen(command, stdout=PIPE, stderr=PIPE)
         retval = p.communicate()

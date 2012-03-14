@@ -61,17 +61,26 @@ class BasicTronTestCase(SandboxTestCase):
         self.sandbox.upload_config(second_config)
         assert_equal(self.sandbox.list_events()['data'][0]['name'], 'reconfig')
         assert_equal(self.sandbox.get_config(), second_config)
-        assert_equal(self.sandbox.list_all(),
-                     {'jobs': [{'status': 'ENABLED',
-                                'href': '/jobs/echo_job',
-                                'last_success': None,
-                                'name': 'echo_job',
-                                'scheduler': 'INTERVAL:1:00:00'}],
-                      'status_href': '/status',
-                      'jobs_href': '/jobs',
-                      'config_href': '/config',
-                      'services': [],
-                      'services_href': '/services'})
+
+        expected = {'jobs': [
+                {
+                    'action_names': ['echo_action', 'another_echo_action'],
+                    'status': 'ENABLED',
+                    'href': '/jobs/echo_job',
+                    'last_success': None,
+                    'name': 'echo_job',
+                    'scheduler': 'INTERVAL:1:00:00',
+                    'node_pool': ['localhost'],
+                }
+            ],
+            'status_href': '/status',
+            'jobs_href': '/jobs',
+            'config_href': '/config',
+            'services': [],
+            'services_href': '/services'
+        }
+        result = self.sandbox.list_all()
+        assert_equal(result, expected)
 
         # run the job and check its output
         self.sandbox.ctl('start', 'echo_job')
@@ -100,13 +109,13 @@ class BasicTronTestCase(SandboxTestCase):
         self.sandbox.save_config(SINGLE_ECHO_CONFIG)
         self.sandbox.start_trond()
 
-        expected = """\nServices:\nNo Services\n\nJobs:
-            Name     State     Scheduler           Last Success
-            echo_job ENABLED   INTERVAL:1:00:00    None
+        expected = """\nServices:\nNo Services\n\n\nJobs:
+            Name       State       Scheduler           Last Success
+            echo_job   ENABLED     INTERVAL:1:00:00    None
             """
 
         def remove_line_space(s):
-            return [l.strip() for l in s.split('\n')]
+            return [l.replace(' ', '') for l in s.split('\n')]
 
         assert_equal(
             remove_line_space(self.sandbox.tronview()[0]),

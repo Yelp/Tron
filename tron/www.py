@@ -1,4 +1,6 @@
-"""Management Web Services Interface
+"""
+Web Services Interface used by command-line clients and web frontend to
+view current state, event history and send commands to trond.
 """
 
 import datetime
@@ -15,7 +17,6 @@ from twisted.web import http, resource, server
 
 from tron import action
 from tron import job
-from tron import node
 from tron import service
 from tron.utils import timeutils
 
@@ -27,17 +28,17 @@ class JSONEncoder(json.JSONEncoder):
     """Custom JSON for certain objects"""
 
     def default(self, o):
-        if isinstance(o, node.Node):
-            return {
-                'name': o.name,
-                'hostname': o.hostname,
-            }
-        if isinstance(o, (datetime.datetime, datetime.date)):
-            # TODO: should datetime be formatted differently
+        # This method is implemented by all of our core objects (Job, Node, etc)
+        if hasattr(o, 'repr_data') and callable(o.repr_data):
+            return o.repr_data()
+
+        if isinstance(o, datetime.datetime):
+            return o.strftime("%Y-%m-%d %H:%M:%S")
+
+        if isinstance(o, datetime.date):
             return o.isoformat()
 
         return super(JSONEncoder, self).default(o)
-
 
 json_encoder = JSONEncoder()
 
@@ -62,7 +63,7 @@ class ActionRunResource(resource.Resource):
         self._act_run = act_run
         resource.Resource.__init__(self)
 
-    def get_data(self, num_lines=None):
+    def get_data(self, num_lines=10):
         act_run = self._act_run
         duration = str(
             timeutils.duration(act_run.start_time, act_run.end_time) or ''
@@ -226,19 +227,23 @@ class JobResource(resource.Resource):
         return resource.NoResource("Cannot run number '%s' for job '%s'" %
                                    (run_num, self._job.name))
 
-    def get_data(self, include_run_data=False):
+    def get_data(self, include_job_run=False, include_action_runs=False):
         data = self._job.repr_data()
         data['href'] = '/jobs/%s' % urllib.quote(self._job.name)
 
-        if include_run_data:
+        if include_job_run:
             data['runs'] = [
-                JobRunResource(job_run).get_data()
+                JobRunResource(job_run).get_data(include_action_runs)
                 for job_run in self._job.runs
             ]
         return data
 
     def render_GET(self, request):
-        return respond(request, self.get_data(include_run_data=True))
+        include_action_runs = False
+        if request.args:
+            if 'include_action_runs' in request.args:
+                include_action_runs = True
+        return respond(request, self.get_data(True, include_action_runs))
 
     def render_POST(self, request):
         cmd = request.args['command'][0]
@@ -288,16 +293,23 @@ class JobsResource(resource.Resource):
 
         return JobResource(found, self._master_control)
 
-    def get_data(self, include_run_data=False):
+    def get_data(self, include_job_run=False, include_action_runs=False):
         mcp = self._master_control
         return [
-            JobResource(job, mcp).get_data(include_run_data)
+            JobResource(job, mcp).get_data(include_job_run, include_action_runs)
             for job in self._master_control.jobs.itervalues()
         ]
 
     def render_GET(self, request):
+        include_job_runs = include_action_runs = False
+        if request.args:
+            if 'include_job_runs' in request.args:
+                include_job_runs = True
+            if 'include_action_runs' in request.args:
+                include_action_runs = True
+
         output = {
-            'jobs': self.get_data(),
+            'jobs': self.get_data(include_job_runs, include_action_runs),
         }
         return respond(request, output)
 
@@ -377,26 +389,26 @@ class ServiceResource(resource.Resource):
         else:
             return resource.NoResource("Cannot find service '%s'" % name)
 
-    def get_instance_data(self, request, instance):
+    def get_instance_data(self, instance):
         return {
-                'id': instance.id,
-                'node': instance.node.hostname if instance.node else None,
-                'state': instance.state.name,
-            }
+            'id':           instance.id,
+            'node':         instance.node.hostname if instance.node else None,
+            'state':        instance.state.name,
+        }
 
     def render_GET(self, request):
-        instance_output = []
-        for instance in self._service.instances:
-            instance_output.append(self.get_instance_data(request, instance))
+        instance_output = [
+            self.get_instance_data(instance)
+            for instance in self._service.instances
+        ]
 
         output = {
-            'name': self._service.name,
-            'state': self._service.state.name.upper(),
-            'count': self._service.count,
-            'command': self._service.command,
-            'instances': instance_output,
-            'node_pool': map(lambda n: n.hostname,
-                             self._service.node_pool.nodes),
+            'name':         self._service.name,
+            'state':        self._service.state.name.upper(),
+            'count':        self._service.count,
+            'command':      self._service.command,
+            'instances':    instance_output,
+            'node_pool':    [n.hostname for n in self._service.node_pool.nodes]
         }
         return respond(request, output)
 
@@ -447,17 +459,20 @@ class ServicesResource(resource.Resource):
 
         return ServiceResource(found, self._master_control)
 
-    def get_data(self, request):
+    def get_data(self):
         service_list = []
         for current_service in self._master_control.services.itervalues():
             try:
                 status = current_service.state.name.upper()
-            except:
+            except Exception, e:
+                log.error("Unexpected service state: %s" % e)
                 status = "BROKEN"
             try:
                 count = current_service.count
-            except:
+            except Exception, e:
+                log.error("Unexpected service count: %s" % e)
                 count = -1
+
             service_desc = {
                 'name': current_service.name,
                 'count': count,
@@ -471,7 +486,7 @@ class ServicesResource(resource.Resource):
     def render_GET(self, request):
         request.setHeader("content-type", "text/json")
 
-        service_list = self.get_data(request)
+        service_list = self.get_data()
 
         output = {
             'services': service_list,
@@ -529,8 +544,7 @@ class EventResource(resource.Resource):
         self._recordable = recordable
 
     def render_GET(self, request):
-        response = {}
-        response['data'] = []
+        response = {'data': []}
 
         for evt in self._recordable.event_recorder.list():
             entity_desc = "UNKNOWN"
@@ -573,10 +587,10 @@ class RootResource(resource.Resource):
         services_resource = self.children["services"]
 
         response = dict()
-        response['jobs'] = jobs_resource.get_data(request)
+        response['jobs'] = jobs_resource.get_data()
         response['jobs_href'] = request.uri + request.childLink('jobs')
 
-        response['services'] = services_resource.get_data(request)
+        response['services'] = services_resource.get_data()
         response['services_href'] = request.uri + request.childLink('services')
 
         response['config_href'] = request.uri + request.childLink('config')

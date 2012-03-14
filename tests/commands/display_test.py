@@ -158,7 +158,7 @@ class DisplayActionsTestCase(TestCase):
 
     def test_format_warn(self):
         self.data['runs'] = [self.data['runs'][2]]
-        self.data['runs'][0]['details'] = self.details
+        self.data['runs'][0].update(self.details)
         self.options.warn = True
         display = DisplayActions(options=self.options)
         out = display.format(self.data)

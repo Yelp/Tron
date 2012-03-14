@@ -37,8 +37,7 @@ log = logging.getLogger('tronctl')
 class TronCtlOptionParser(optparse.OptionParser):
     def format_epilog(self, formatter):
         # We want to include some extra helpful info
-        result = []
-        result.append(formatter.format_heading("Commands"))
+        result = [formatter.format_heading("Commands")]
         formatter.indent()
         for cmd_name, desc in COMMAND_HELP:
             text = ''.join((cmd_name.ljust(20), desc.ljust(40)))
@@ -65,6 +64,9 @@ def parse_options():
     parser.add_option("--run-date", action="callback", callback=parse_date,
                       type="string", dest="run_date",
                       help="For job starts, what should run date be set to")
+    parser.add_option("--save", "-s", action="store_true", dest="save_config",
+                      help="Save options used on this job for next time.",
+                      default=False)
 
     options, args = parser.parse_args(sys.argv)
 
@@ -111,7 +113,8 @@ def main():
 
             ret = edit(options, command, full_uri)
 
-    commands.save_config(options)
+    if options.save_config:
+        commands.save_config(options)
     sys.exit(int(not ret))
 
 if __name__ == '__main__':

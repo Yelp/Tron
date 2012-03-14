@@ -414,7 +414,8 @@ class ActionRun(object):
             'exit_status':  self.exit_status,
             'requirements': [req.name for req in self.action.required_actions],
         }
-        if max_lines:
+        # Do not attempt to tail files if run is still queued/scheduled
+        if max_lines and not (self.is_queued or self.is_scheduled):
             data['stdout'] = self.tail_stdout(max_lines)
             data['stderr'] = self.tail_stderr(max_lines)
         return data
