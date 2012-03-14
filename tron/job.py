@@ -170,17 +170,10 @@ class JobRun(object):
             except Error, e:
                 log.warning("Attempt to start failed: %r", e)
 
-    def last_success_check(self):
-        if (
-            not self.job.last_success or
-            self.run_num > self.job.last_success.run_num
-        ):
-            # TODO: this should be set by Job
-            self.job.last_success = self
-
+    # TODO: move to Job
     def run_completed(self):
         if self.is_success:
-            self.last_success_check()
+            self.job.update_last_success(self)
 
             if self.job.constant and self.job.enabled:
                 self.job.build_run().start()
@@ -298,7 +291,6 @@ class JobRun(object):
             return True
         return all(r.is_done for r in self.action_runs)
 
-    # TODO: better repr abstraction
     @property
     def cleanup_job_status(self):
         """Provide 'SUCCESS' or 'FAILURE' to a cleanup action context based on
@@ -521,6 +513,13 @@ class Job(object):
             return []
 
         return self.scheduler.next_runs(self)
+
+    def update_last_success(self, run):
+        """Update the last_success run if the run number is greater then the
+        previous last_success."""
+        assert run.job == self
+        if not self.last_success or run.run_num > self.last_success.run_num:
+            self.last_success = run
 
     # TODO: this belongs in ActionRun
     def _make_action_run(self, job_run, action_inst, callback):

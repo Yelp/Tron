@@ -199,7 +199,6 @@ class TronSandbox(object):
 
         if arg is not None:
             options = turtle.Turtle(server=self.tron_server_uri)
-            # TODO: wrap errors better like _check_call_api
             cclient = client.Client(options)
             full_uri = cclient.get_url_from_identifier(arg)
 
@@ -260,7 +259,4 @@ class TronSandbox(object):
         p = Popen(command, stdout=PIPE, stderr=PIPE)
         retval = p.communicate()
         handle_output(command, retval, p.returncode)
-        # TODO: Something with return value
-        # return p.wait()
-        # (but p.communicate() already waits for the process to exit... -Steve)
         return retval

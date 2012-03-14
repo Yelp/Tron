@@ -2,7 +2,7 @@ import tempfile
 import shutil
 import datetime
 
-from testify import *
+from testify import setup, teardown, TestCase, run, assert_equal
 from testify.utils import turtle
 from tron import job, action, scheduler
 from tron.utils import timeutils, testingutils
@@ -10,7 +10,7 @@ from tron.utils import timeutils, testingutils
 
 class TestJobRun(TestCase):
     @setup
-    def setup(self):
+    def setup_job(self):
         self.test_dir = tempfile.mkdtemp()
         self.action1 = action.Action(name="Test Act1")
         self.action2 = action.Action(name="Test Act2")
@@ -27,7 +27,7 @@ class TestJobRun(TestCase):
         self.action2.job = self.job
 
     @teardown
-    def teardown(self):
+    def teardown_job(self):
         shutil.rmtree(self.test_dir)
 
     def test_set_run_time(self):
@@ -79,20 +79,6 @@ class TestJobRun(TestCase):
         jr1.scheduled_start()
         assert jr1.is_running
 
-    def test_last_success_check(self):
-        jr1 = self.job.next_runs()[0]
-        jr2 = self.job.next_runs()[0]
-        jr3 = self.job.next_runs()[0]
-
-        jr2.last_success_check()
-        assert_equal(self.job.last_success, jr2)
-
-        jr1.last_success_check()
-        assert_equal(self.job.last_success, jr2)
-
-        jr3.last_success_check()
-        assert_equal(self.job.last_success, jr3)
-
     def test_manual_start(self):
         jr1 = self.job.next_runs()[0]
         jr2 = self.job.next_runs()[0]
@@ -121,7 +107,7 @@ class TestJobRun(TestCase):
 class TestJob(TestCase):
     """Unit testing for Job class"""
     @setup
-    def setup(self):
+    def setup_job(self):
         self.test_dir = tempfile.mkdtemp()
         self.action = action.Action(name="Test Action")
         self.action.command = "Test Command"
@@ -133,7 +119,7 @@ class TestJob(TestCase):
         self.action.job = self.job
 
     @teardown
-    def teardown(self):
+    def teardown_job(self):
         shutil.rmtree(self.test_dir)
 
     def test_all_nodes_build_run(self):
@@ -143,11 +129,11 @@ class TestJob(TestCase):
                                                   turtle.Turtle()])
         runs = self.job.build_runs()
 
-        assert_equals(len(runs), 3)
+        assert_equal(len(runs), 3)
 
-        assert_equals(runs[0].node, self.job.node_pool.nodes[0])
-        assert_equals(runs[1].node, self.job.node_pool.nodes[1])
-        assert_equals(runs[2].node, self.job.node_pool.nodes[2])
+        assert_equal(runs[0].node, self.job.node_pool.nodes[0])
+        assert_equal(runs[1].node, self.job.node_pool.nodes[1])
+        assert_equal(runs[2].node, self.job.node_pool.nodes[2])
 
 
     def test_remove_old_runs(self):
@@ -158,32 +144,46 @@ class TestJob(TestCase):
             runs[i].action_runs[0].node = testingutils.TestNode()
 
         self.job.remove_old_runs()
-        assert_equals(len(self.job.runs), 6)
+        assert_equal(len(self.job.runs), 6)
 
         runs[0].queue()
         runs[1].cancel()
         runs[2].succeed()
         self.job.remove_old_runs()
-        assert_equals(len(self.job.runs), 6)
+        assert_equal(len(self.job.runs), 6)
 
         runs[0].succeed()
         self.job.remove_old_runs()
-        assert_equals(len(self.job.runs), 4)
+        assert_equal(len(self.job.runs), 4)
 
         runs[4].succeed()
         self.job.remove_old_runs()
-        assert_equals(len(self.job.runs), 3)
+        assert_equal(len(self.job.runs), 3)
 
         runs[5].succeed()
         self.job.remove_old_runs()
-        assert_equals(len(self.job.runs), 3)
+        assert_equal(len(self.job.runs), 3)
 
         runs[3].cancel()
         for i in range(5):
             self.job.next_runs()[0]
 
         self.job.remove_old_runs()
-        assert_equals(len(self.job.runs), 6)
+        assert_equal(len(self.job.runs), 6)
+
+    def test_update_last_success(self):
+        jr1 = self.job.next_runs()[0]
+        jr2 = self.job.next_runs()[0]
+        jr3 = self.job.next_runs()[0]
+
+        self.job.update_last_success(jr2)
+        assert_equal(self.job.last_success, jr2)
+
+        self.job.update_last_success(jr1)
+        assert_equal(self.job.last_success, jr2)
+
+        self.job.update_last_success(jr3)
+        assert_equal(self.job.last_success, jr3)
 
     def test_newest(self):
         runs = []
@@ -191,29 +191,29 @@ class TestJob(TestCase):
             runs.append(self.job.next_runs()[0])
             runs[i].action_runs[0].node = turtle.Turtle()
 
-        assert_equals(self.job.newest(), runs[-1])
+        assert_equal(self.job.newest(), runs[-1])
         runs[0].succeed()
 
-        assert_equals(self.job.newest(), runs[-1])
+        assert_equal(self.job.newest(), runs[-1])
         runs[1].queue()
 
-        assert_equals(self.job.newest(), runs[-1])
+        assert_equal(self.job.newest(), runs[-1])
 
     def test_next_to_finish(self):
         runs = []
         for i in range(5):
             runs.append(self.job.next_runs()[0])
 
-        assert_equals(self.job.next_to_finish(), runs[0])
+        assert_equal(self.job.next_to_finish(), runs[0])
         runs[0].succeed()
 
-        assert_equals(self.job.next_to_finish(), runs[1])
+        assert_equal(self.job.next_to_finish(), runs[1])
         runs[1].queue()
 
-        assert_equals(self.job.next_to_finish(), runs[1])
+        assert_equal(self.job.next_to_finish(), runs[1])
 
         runs[3].start()
-        assert_equals(self.job.next_to_finish(), runs[3])
+        assert_equal(self.job.next_to_finish(), runs[3])
 
     def test_disable(self):
         runs = []
@@ -237,8 +237,8 @@ class TestJob(TestCase):
         job2 = job.Job("New Job")
 
         for i in range(10):
-            assert_equals(self.job.next_num(), i)
-            assert_equals(job2.next_num(), i)
+            assert_equal(self.job.next_num(), i)
+            assert_equal(job2.next_num(), i)
 
     def test_get_run_by_num(self):
         runs = []
@@ -247,7 +247,7 @@ class TestJob(TestCase):
             runs.append(self.job.next_runs()[0])
 
         for i in range(10):
-            assert_equals(self.job.get_run_by_num(runs[i].run_num), runs[i])
+            assert_equal(self.job.get_run_by_num(runs[i].run_num), runs[i])
 
     def test_build_run(self):
         act = action.Action("Action Test2")
@@ -256,14 +256,14 @@ class TestJob(TestCase):
 
         self.job.topo_actions.append(act)
         run1 = self.job.next_runs()[0]
-        assert_equals(run1.action_runs[0].action, self.action)
-        assert_equals(run1.action_runs[1].action, act)
+        assert_equal(run1.action_runs[0].action, self.action)
+        assert_equal(run1.action_runs[1].action, act)
 
         run2 = self.job.next_runs()[0]
-        assert_equals(self.job.runs[1], run1)
+        assert_equal(self.job.runs[1], run1)
 
-        assert_equals(run2.action_runs[0].action, self.action)
-        assert_equals(run2.action_runs[1].action, act)
+        assert_equal(run2.action_runs[0].action, self.action)
+        assert_equal(run2.action_runs[1].action, act)
 
     def test_manual_start_no_scheduled(self):
         r1 = self.job.build_run()
