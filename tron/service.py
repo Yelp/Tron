@@ -380,7 +380,7 @@ class Service(object):
 
     @classmethod
     def from_config(cls, srv_config, node_pools):
-        service = cls(
+        return cls(
             name=srv_config.name,
             node_pool=node_pools[srv_config.node] if srv_config.node else None,
             monitor_interval=srv_config.monitor_interval,
@@ -389,7 +389,6 @@ class Service(object):
             command=srv_config.command,
             count=srv_config.count
         )
-        return service
 
     @property
     def state(self):

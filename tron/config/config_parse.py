@@ -206,6 +206,7 @@ valid_int = type_converter(int, 'Value at %s is not an integer: %s')
 def type_validator(validator, error_fmt):
     def f(path, value, optional=False):
         """If *validator* does not return True for *value*, raise ConfigError
+        If optional is True, None values will be returned without validation.
         """
         if value is None and optional:
             return None
@@ -264,6 +265,10 @@ class Validator(object):
 
     @property
     def type_name(self):
+        """Return a string that represents the config_class being validated.
+        This name is used for error messages, so we strip off the word
+        Config so the name better matches what the user sees in the config.
+        """
         return self.config_class.__name__.replace("Config", "")
 
     def do_shortcut(self, in_dict):
@@ -377,7 +382,7 @@ def valid_time_zone(tz):
 
 
 class ValidateSSHOptions(Validator):
-    """ Validate SSH options."""
+    """Validate SSH options."""
     config_class =              ConfigSSHOptions
     defaults = {
         'agent':                False,
@@ -419,7 +424,7 @@ class ValidateNode(Validator):
     config_class =              ConfigNode
 
     def do_shortcut(self, node):
-        # Sure, let's accept plain strings, why not.
+        """Nodes can be specified with just a hostname string."""
         if isinstance(node, basestring):
             return ConfigNode(hostname=node, name=node)
 
