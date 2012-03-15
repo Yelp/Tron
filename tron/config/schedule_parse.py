@@ -1,6 +1,12 @@
+"""
+Parse and validate scheduler configuration and return immutable structures.
+"""
 import calendar
 from collections import namedtuple
+import datetime
 import re
+
+from tron.config import ConfigError
 
 
 ConfigDailyScheduler = namedtuple(
@@ -9,8 +15,118 @@ ConfigDailyScheduler = namedtuple(
 )
 
 
+ConfigConstantScheduler = namedtuple('ConfigConstantScheduler', [])
+
+
+ConfigIntervalScheduler = namedtuple(
+    'ConfigIntervalScheduler', [
+        'timedelta',    # datetime.timedelta
+    ])
+
 class ScheduleParseError(Exception):
     pass
+
+
+
+def valid_schedule(path, schedule):
+    if isinstance(schedule, basestring):
+        schedule = schedule.strip()
+        scheduler_args = schedule.split()
+        scheduler_name = scheduler_args.pop(0).lower()
+
+        if schedule == 'constant':
+            return ConfigConstantScheduler()
+        elif scheduler_name == 'daily':
+            return valid_daily_scheduler(*scheduler_args)
+        elif scheduler_name == 'interval':
+            return valid_interval_scheduler(' '.join(scheduler_args))
+        else:
+            return parse_daily_expression(schedule)
+
+    if 'interval' in schedule:
+        return valid_interval_scheduler(**schedule)
+    elif 'start_time' in schedule or 'days' in schedule:
+        return valid_daily_scheduler(**schedule)
+    else:
+        raise ConfigError("Unknown scheduler at %s: %s" % (path, schedule))
+
+
+def valid_daily_scheduler(start_time=None, days=None):
+    """Old style, will be converted to DailyScheduler with a compatibility
+    function
+
+    schedule:
+        start_time: "07:00:00"
+        days: "MWF"
+    """
+
+    err_msg = ("Start time must be in string format HH:MM[:SS]. Seconds"
+               " are ignored but parsed so as to be backward-compatible."
+               " You said: %s")
+
+    if start_time is None:
+        hms = ['00', '00']
+    else:
+        if not isinstance(start_time, basestring):
+            raise ConfigError(err_msg % start_time)
+
+        # make sure at least hours and minutes are specified
+        hms = start_time.strip().split(':')
+
+        if len(hms) < 2:
+            raise ConfigError(err_msg % start_time)
+
+    weekdays = set(CONVERT_DAYS_INT[d] for d in days or 'MTWRFSU')
+    if weekdays == set([0, 1, 2, 3, 4, 5, 6]):
+        days_str = 'day'
+    else:
+        # incoming string is MTWRF, we want M,T,W,R,F for the parser
+        days_str = ','.join(days)
+
+    return parse_daily_expression(
+        'every %s of month at %s:%s' % (days_str, hms[0], hms[1])
+    )
+
+
+def valid_interval_scheduler(interval):
+    # remove spaces
+    interval = ''.join(interval.split())
+
+    # Shortcut values for intervals
+    TIME_INTERVAL_SHORTCUTS = {
+        'hourly': dict(hours=1),
+    }
+
+    # Translations from possible configuration units to the argument to
+    # datetime.timedelta
+    TIME_INTERVAL_UNITS = {
+        'months': ['mo', 'month', 'months'],
+        'days': ['d', 'day', 'days'],
+        'hours': ['h', 'hr', 'hrs', 'hour', 'hours'],
+        'minutes': ['m', 'min', 'mins', 'minute', 'minutes'],
+        'seconds': ['s', 'sec', 'secs', 'second', 'seconds']
+    }
+
+    if interval in TIME_INTERVAL_SHORTCUTS:
+        kwargs = TIME_INTERVAL_SHORTCUTS[interval]
+    else:
+        # Split digits and characters into tokens
+        interval_re = re.compile(r"\d+|[a-zA-Z]+")
+        interval_tokens = interval_re.findall(interval)
+        if len(interval_tokens) != 2:
+            raise ConfigError("Invalid interval specification: %s", interval)
+
+        value, units = interval_tokens
+
+        kwargs = {}
+        for key, unit_set in TIME_INTERVAL_UNITS.iteritems():
+            if units in unit_set:
+                kwargs[key] = int(value)
+                break
+        else:
+            raise ConfigError("Invalid interval specification: %s", interval)
+
+    return ConfigIntervalScheduler(timedelta=datetime.timedelta(**kwargs))
 
 
 def day_canonicalization_map():

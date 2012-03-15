@@ -223,12 +223,10 @@ class ReconfigRebuildAllTest(TestCase):
         for i in self.new_service.instances:
             i.machine.transition("down")
 
+        # TODO: figure out what this was supposed to be testing
+        states = [i.state for i in self.new_service.instances]
         assert all(i.state == service.ServiceInstance.STATE_STARTING
-                   for i in self.new_service.instances)
-
-        # This is failing right now because the state class overrides __eq__
-        # and should be fixed.
-        assert [i.state for i in self.new_service.instances]
+                   for i in self.new_service.instances), states
 
 
 class SimpleRestoreTest(TestCase):

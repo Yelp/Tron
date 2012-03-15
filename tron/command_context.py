@@ -14,7 +14,7 @@ class CommandContext(object):
                     Generally this will be another instance of CommandContext
         """
         self.base = base or {}
-        self.next = next or dict()
+        self.next = next or {}
 
     def get(self, name, default=None):
         try:

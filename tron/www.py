@@ -51,6 +51,7 @@ def respond(request, response_dict, code=http.OK, headers=None):
     return ""
 
 
+# TODO: make this an enum and part of JobRun
 def job_run_state(job_run):
     if job_run.is_success:
         return "SUCC"

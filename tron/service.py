@@ -345,19 +345,20 @@ class Service(object):
                          down=STATE_DEGRADED))
 
     def __init__(self, name=None, command=None, node_pool=None, context=None,
-                 event_recorder=None):
+                 event_recorder=None, monitor_interval=None,
+                 restart_interval=None, pid_file_template=None, count=0):
         self.name = name
         self.command = command
         self.scheduler = None
         self.node_pool = node_pool
-        self.count = 0
-        self.monitor_interval = None
-        self.restart_interval = None
+        self.count = count
+        self.monitor_interval = monitor_interval
+        self.restart_interval = restart_interval
         self._restart_timer = None
 
         self.machine = state.StateMachine(Service.STATE_DOWN)
 
-        self.pid_file_template = None
+        self.pid_file_template = pid_file_template
 
         self.context = None
         if context is not None:
@@ -368,12 +369,21 @@ class Service(object):
         self.event_recorder = event.EventRecorder(self, parent=event_recorder)
         self.listen(True, self._record_state_changes)
 
+    @classmethod
+    def from_config(cls, srv_config, node_pools):
+        return cls(
+            name=srv_config.name,
+            node_pool=node_pools[srv_config.node] if srv_config.node else None,
+            monitor_interval=srv_config.monitor_interval,
+            restart_interval=srv_config.restart_interval,
+            pid_file_template=srv_config.pid_file,
+            command=srv_config.command,
+            count=srv_config.count
+        )
+
     @property
     def state(self):
-        if self.machine:
-            return self.machine.state
-        else:
-            return None
+        return self.machine.state
 
     @property
     def listen(self):

@@ -1,5 +1,6 @@
 from __future__ import with_statement
 import logging
+import logging.handlers
 import os
 import shutil
 import socket
@@ -11,18 +12,14 @@ from twisted.internet import reactor
 
 import tron
 from tron import command_context
-from tron import config_parse
-from tron.config_parse import ConfigError
-from tron import emailer
 from tron import event
 from tron import monitor
-from tron import schedule_parse
-from tron import scheduler
-from tron.action import Action
+from tron.config import config_parse
+from tron.config.config_parse import ConfigError
 from tron.job import Job
 from tron.node import Node, NodePool
 from tron.service import Service
-from tron.utils import timeutils
+from tron.utils import timeutils, emailer
 
 
 log = logging.getLogger('tron.mcp')
@@ -216,11 +213,8 @@ class MasterControlProgram(object):
         self.jobs = {}
         self.services = {}
 
-        # Mapping of node name to node object
+        # Mapping of node name to node (or node pool) objects
         self.nodes = {}
-
-        # Mapping of node pool name to node pool object
-        self.node_pools = {}
 
         # Path to the config file
         self.config_file = config_file
@@ -317,11 +311,11 @@ class MasterControlProgram(object):
                 wd = '/tmp'
 
         if not os.path.isdir(wd):
-            raise ConfigApplyError("Specified working directory \'%s\' is not"
+            raise ConfigApplyError("Specified working directory '%s' is not"
                                    " a directory" % wd)
 
         if not os.access(wd, os.W_OK):
-            raise ConfigApplyError("Specified working directory \'%s\' is not"
+            raise ConfigApplyError("Specified working directory '%s' is not"
                                    " writable" % wd)
 
         self.state_handler.working_dir = wd
@@ -379,104 +373,36 @@ class MasterControlProgram(object):
         return ssh_options
 
     def _apply_nodes(self, node_confs, ssh_options):
-        self.nodes = {}
-        for conf_node in node_confs.values():
-            node = Node(hostname=conf_node.hostname,
-                        name=conf_node.name,
-                        ssh_options=ssh_options)
-            self.nodes[conf_node.name] = node
+        self.nodes = dict(
+            (name, Node.from_config(config, ssh_options))
+            for name, config in node_confs.iteritems()
+        )
 
     def _apply_node_pools(self, pool_confs):
-        self.node_pools = {}
-        for conf_pool in pool_confs.values():
-            p = NodePool(name=conf_pool.name,
-                         nodes=[self.nodes[n] for n in conf_pool.nodes])
-            self.node_pools[p.name] = p
+        self.nodes.update(
+            (name, NodePool.from_config(config, self.nodes))
+            for name, config in pool_confs.iteritems()
+        )
 
     def _apply_jobs(self, job_configs):
-        """Configure jobs"""
+        """Add and remove jobs based on the configuration."""
         for job_config in job_configs.values():
             log.debug("Building new job %s", job_config.name)
-            self.add_job(self._job_from_config(job_config))
+            job = Job.from_config(job_config, self.nodes, self.time_zone)
+            self.add_job(job)
 
         for job_name in (set(self.jobs.keys()) - set(job_configs.keys())):
             log.debug("Removing job %s", job_name)
             self.remove_job(job_name)
 
-    def _node_pool_or_none(self, identifier):
-        """A node identifier can be none, a node, or a node pool. Return a
-        node pool or None.
-        """
-        if identifier is None:
-            return None
-        else:
-            try:
-                return self.node_pools[identifier]
-            except KeyError:
-                return NodePool(nodes=[self.nodes[identifier]])
-
-    def _job_from_config(self, job_config):
-        job = Job()
-
-        # Basics
-        job.name = job_config.name
-        job.queueing = job_config.queueing
-        job.run_limit = job_config.run_limit
-        job.all_nodes = job_config.all_nodes
-
-        job.node_pool = self._node_pool_or_none(job_config.node)
-
-        # Set up scheduler
-        sch_conf = job_config.schedule
-
-        if isinstance(sch_conf, config_parse.ConfigConstantScheduler):
-            job.scheduler = scheduler.ConstantScheduler()
-            job.constant = True
-
-        elif isinstance(sch_conf, config_parse.ConfigIntervalScheduler):
-            job.scheduler = scheduler.IntervalScheduler(interval=sch_conf.timedelta)
-
-        elif isinstance(sch_conf, schedule_parse.ConfigDailyScheduler):
-            job.scheduler = scheduler.DailyScheduler(
-                time_zone=self.time_zone,
-                timestr=sch_conf.timestr,
-                ordinals=sch_conf.ordinals,
-                monthdays=sch_conf.monthdays,
-                months=sch_conf.months,
-                weekdays=sch_conf.weekdays,
-            )
-
-        # Set up actions
-        new_actions = {}
-        for action_conf in job_config.actions.values():
-            action = Action(name=action_conf.name,
-                            command=action_conf.command,
-                            node_pool=self._node_pool_or_none(action_conf.node))
-            new_actions[action.name] = action
-
-        for action in new_actions.values():
-            for dep in job_config.actions[action.name].requires:
-                action.required_actions.append(new_actions[dep])
-            job.add_action(action)
-
-        # Set up cleanup action. This should probably be rolled into a method
-        # on the Job class.
-        if job_config.cleanup_action:
-            ca_conf = job_config.cleanup_action
-            action = Action(name=ca_conf.name,
-                            command=ca_conf.command,
-                            node_pool=self._node_pool_or_none(ca_conf.node))
-            job.register_cleanup_action(action)
-
-        return job
-
     def _apply_services(self, srv_configs):
-        """Configure services"""
+        """Add and remove services."""
 
         services_to_add = []
         for srv_config in srv_configs.values():
             log.debug("Building new services %s", srv_config.name)
-            services_to_add.append(self._service_from_config(srv_config))
+            service = Service.from_config(srv_config, self.nodes)
+            services_to_add.append(service)
 
         for srv_name in (set(self.services.keys()) - set(srv_configs.keys())):
             log.debug("Removing service %s", srv_name)
@@ -486,30 +412,17 @@ class MasterControlProgram(object):
         # failures and throw an exception at the end if anything failed. This
         # is a mitigation against a bug easily cause us to be in an
         # inconsistent state, probably due to bad code elsewhere.
-
-        # THIS IS AWFUL. PLEASE FIX IT.
-
+        # TODO: what actually causes this
         failure = False
         for service in services_to_add:
             try:
                 self.add_service(service)
-            except Exception:
-                log.exception("Failed adding new service")
-                failure = True
+            except Exception, e:
+                log.exception("Failed adding new service.", e)
+                failure = e
 
         if failure:
-            raise ConfigError("Failed adding services")
-
-    def _service_from_config(self, srv_config):
-        srv = Service()
-        srv.name = srv_config.name
-        srv.node_pool = self._node_pool_or_none(srv_config.node)
-        srv.monitor_interval = srv_config.monitor_interval
-        srv.restart_interval = srv_config.restart_interval
-        srv.pid_file_template = srv_config.pid_file
-        srv.command = srv_config.command
-        srv.count = srv_config.count
-        return srv
+            raise ConfigError("Failed adding services %s" % failure)
 
     def _apply_notification_options(self, notification_conf):
         if notification_conf is not None:
@@ -522,13 +435,6 @@ class MasterControlProgram(object):
             self.monitor.start()
 
     ### JOBS ###
-
-    def setup_job_dir(self, job):
-        job.output_path = os.path.join(self.state_handler.working_dir,
-                                       job.name)
-        if not os.path.exists(job.output_path):
-            os.mkdir(job.output_path)
-
     def add_job(self, job):
         if job.name in self.services:
             raise ValueError("Job %s is already a service", job.name)
@@ -555,17 +461,13 @@ class MasterControlProgram(object):
 
         self.jobs[job.name] = job
 
-        # update time zone information in scheduler to match config
-        if job.scheduler is not None:
-            job.scheduler.time_zone = self.time_zone
-
         # add some command context variables
         job.set_context(self.context)
 
         job.event_recorder.set_parent(self.event_recorder)
 
         # make the directory for output
-        self.setup_job_dir(job)
+        job.setup_job_dir(self.state_handler.working_dir)
 
         # Tell the job to call store_state() whenever its state changes.
         # job isn't actaully a StateMachine object, but its interface tries
@@ -577,7 +479,6 @@ class MasterControlProgram(object):
             raise ValueError("Job %s unknown", job_name)
 
         job = self.jobs.pop(job_name)
-
         job.disable()
 
     ### SERVICES ###

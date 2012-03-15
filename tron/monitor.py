@@ -32,7 +32,6 @@ class CrashReporter(object):
             return
 
         if text == "Unhandled error in Deferred:":
-
             # This annoying error message is just a pre-cursor to an actual
             # error message, so filter it out.
             return None
