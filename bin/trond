@@ -11,6 +11,7 @@ import errno
 import logging
 import optparse
 import os
+from pkg_resources import resource_string
 import signal
 import sys
 
@@ -24,7 +25,6 @@ from twisted.scripts import _twistd_unix
 
 import tron
 from tron import cmd
-from tron.config_parse import DEFAULT_CONFIG
 from tron import mcp
 from tron import www
 from tron.utils import log_handler
@@ -34,8 +34,9 @@ logger = logging.getLogger('bin.trond')
 
 def create_default_config(config_path):
     """Create a default empty configuration for first time installs"""
+    default_config = resource_string('tron', 'default_config.yaml')
     with open(config_path, "w") as config_file:
-        config_file.write(DEFAULT_CONFIG)
+        config_file.write(default_config)
 
 
 def parse_options():

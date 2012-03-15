@@ -29,7 +29,7 @@ setup(
         'twisted>=10.0.0',
         'PyYAML>=3.10',
     ],
-    packages=["tron", "tron.utils"],
+    packages=["tron", "tron.utils", "tron.config"],
     scripts=[
         'bin/trond',
         'bin/tronview',
