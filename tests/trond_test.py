@@ -61,17 +61,26 @@ class BasicTronTestCase(SandboxTestCase):
         self.sandbox.upload_config(second_config)
         assert_equal(self.sandbox.list_events()['data'][0]['name'], 'reconfig')
         assert_equal(self.sandbox.get_config(), second_config)
-        assert_equal(self.sandbox.list_all(),
-                     {'jobs': [{'status': 'ENABLED',
-                                'href': '/jobs/echo_job',
-                                'last_success': None,
-                                'name': 'echo_job',
-                                'scheduler': 'INTERVAL:1:00:00'}],
-                      'status_href': '/status',
-                      'jobs_href': '/jobs',
-                      'config_href': '/config',
-                      'services': [],
-                      'services_href': '/services'})
+
+        expected = {'jobs': [
+                {
+                    'action_names': ['echo_action', 'another_echo_action'],
+                    'status': 'ENABLED',
+                    'href': '/jobs/echo_job',
+                    'last_success': None,
+                    'name': 'echo_job',
+                    'scheduler': 'INTERVAL:1:00:00',
+                    'node_pool': ['localhost'],
+                }
+            ],
+            'status_href': '/status',
+            'jobs_href': '/jobs',
+            'config_href': '/config',
+            'services': [],
+            'services_href': '/services'
+        }
+        result = self.sandbox.list_all()
+        assert_equal(result, expected)
 
         # run the job and check its output
         self.sandbox.ctl('start', 'echo_job')
@@ -100,13 +109,18 @@ class BasicTronTestCase(SandboxTestCase):
         self.sandbox.save_config(SINGLE_ECHO_CONFIG)
         self.sandbox.start_trond()
 
-        assert_equal(self.sandbox.tronview()[0], """Services:
-No services
+        expected = """\nServices:\nNo Services\n\n\nJobs:
+            Name       State       Scheduler           Last Success
+            echo_job   ENABLED     INTERVAL:1:00:00    None
+            """
 
-Jobs:
-Name     State      Scheduler            Last Success        
-echo_job ENABLED    INTERVAL:1:00:00     None                
-""")
+        def remove_line_space(s):
+            return [l.replace(' ', '') for l in s.split('\n')]
+
+        assert_equal(
+            remove_line_space(self.sandbox.tronview()[0]),
+            remove_line_space(expected)
+        )
 
     def test_tronctl_basic(self):
         canary = os.path.join(self.sandbox.tmp_dir, 'tronctl_basic_done')
@@ -199,32 +213,6 @@ echo_job ENABLED    INTERVAL:1:00:00     None
         assert_equal(action_run['state'], 'SUCC')
         job_run = self.sandbox.list_job_run('multi_step_job', 0)
         assert_equal(job_run['state'], 'SUCC')
-
-    def test_cleanup_on_failure(self):
-        canary = os.path.join(self.sandbox.tmp_dir, 'end_to_end_done')
-
-        FAIL_CONFIG = dedent("""
-        --- !TronConfiguration
-        nodes:
-          - &local
-            hostname: 'localhost'
-        jobs:
-          - name: "failjob"
-            node: *local
-            schedule: "interval 1 seconds"
-            actions:
-              - name: "failaction"
-                command: "failplz"
-        """) + TOUCH_CLEANUP_FMT % canary
-
-        # start with a basic configuration
-        self.sandbox.save_config(FAIL_CONFIG)
-        self.sandbox.start_trond()
-
-        time.sleep(3)
-
-        assert os.path.exists(canary)
-        assert_gt(len(self.sandbox.list_job('failjob')['runs']), 1)
 
 
 class SchedulerTestCase(SandboxTestCase):

@@ -214,7 +214,7 @@ Node Pools
 Example::
 
     node_pools:
-        - name: pool 
+        - name: pool
           nodes: [node1, batch1]
         - nodes: [batch1, node1]    # name is 'batch1_node1'
 

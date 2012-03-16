@@ -2,7 +2,7 @@ import tornado.httpserver
 import tornado.ioloop
 import tornado.web
 
-from tron import cmd
+from tron.commands import client
 
 try:
     from config import config
@@ -28,8 +28,8 @@ class JobsHandler(tornado.web.RequestHandler):
         self.render("jobs.html", title="Jobs", data=data)
 
     def get_data(self):
-        status, content = cmd.request(trond_url(), 'jobs')
-        if status == cmd.OK:
+        status, content = client.request(trond_url(), 'jobs')
+        if status == client.OK:
             return content
         return None
 
@@ -42,8 +42,8 @@ class JobHandler(tornado.web.RequestHandler):
         self.render("job.html", title=data['name'], data=data)
 
     def get_data(self, job):
-        status, content = cmd.request(trond_url(), 'jobs/%s/' % job)
-        if status == cmd.OK:
+        status, content = client.request(trond_url(), 'jobs/%s/' % job)
+        if status == client.OK:
             return content
         return None
 
@@ -57,14 +57,14 @@ class JobRunHandler(tornado.web.RequestHandler):
                     run_data=run_data, job=job, output_url=output_url)
 
     def get_data(self, job, run_id):
-        status, data = cmd.request(trond_url(), 'jobs/%s/%s/' % (job, run_id))
-        if status == cmd.OK:
+        status, data = client.request(trond_url(), 'jobs/%s/%s/' % (job, run_id))
+        if status == client.OK:
             run_data=[]
             for run in data['runs']:
-                status, run_info = cmd.request(trond_url(),
+                status, run_info = client.request(trond_url(),
                                                'jobs/%s/%s/%s' % (
                                                    job, run_id, run["name"]))
-                if status == cmd.OK:
+                if status == client.OK:
                     run_data.append(run_info)
             return (data, run_data)
         return (None, None)
@@ -81,8 +81,8 @@ class ActionRunHandler(tornado.web.RequestHandler):
         self.render("action_run.html", title=data['id'], data=data)
 
     def get_data(self, job, run_id, action):
-        status, content = cmd.request(trond_url(),
+        status, content = client.request(trond_url(),
                                       'jobs/%s/%s/%s/' % (job, run_id, action))
-        if status == cmd.OK:
+        if status == client.OK:
             return content
         return None

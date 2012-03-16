@@ -303,6 +303,15 @@ class ServiceInstance(object):
             self._hanging_monitor_check_delayed_call.cancel()
             self._hanging_monitor_check_delayed_call = None
 
+    @property
+    def data(self):
+        """This data is used to serialize the state of this service instance."""
+        return {
+            'node': self.node.hostname,
+            'instance_number': self.instance_number,
+            'state': str(self.state),
+        }
+
     def __str__(self):
         return "SERVICE:%s" % self.id
 
@@ -652,19 +661,11 @@ class Service(object):
 
     @property
     def data(self):
+        """This data is used to serialize the state of this service."""
         data = {
             'state': str(self.machine.state),
+            'instances': [instance.data for instance in self.instances]
         }
-        data['instances'] = []
-        for instance in self.instances:
-            service_data = {
-                'node': instance.node.hostname,
-                'instance_number': instance.instance_number,
-                'state': str(instance.state),
-            }
-
-            data['instances'].append(service_data)
-
         return data
 
     def restore(self, data):

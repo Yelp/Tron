@@ -1,6 +1,6 @@
 import StringIO
 
-from testify import setup, teardown, TestCase, assert_equal, run
+from testify import setup, TestCase, assert_equal, run
 from testify.utils import turtle
 
 from tron import node, action

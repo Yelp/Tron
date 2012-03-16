@@ -22,8 +22,10 @@ class NamedEventState(dict):
     clear, plus it gives you a name.
     """
 
-    def __init__(self, name, **kwargs):
+    def __init__(self, name, short_name=None, short_chars=4, **kwargs):
         self.name = name
+        self._short_name = short_name
+        self._short_chars = short_chars
         super(NamedEventState, self).__init__(**kwargs)
 
     def __eq__(self, other):
@@ -40,6 +42,15 @@ class NamedEventState(dict):
 
     def __repr__(self):
         return "<%r %s>" % (self.__class__.__name__, self.name)
+
+    @property
+    def short_name(self):
+        """If a short_name was given use that, otherwise return the first
+        self._short_letters letters of the name in caps.
+        """
+        if self._short_name:
+            return self._short_name
+        return self.name[:self._short_chars].upper()
 
 
 def named_event_by_name(starting_state, state_name):
