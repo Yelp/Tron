@@ -128,6 +128,7 @@ jobs:
         node: *nodePool
         all_nodes: True
         schedule: "daily"
+        enabled: False
         actions:
             - &actionDaily
                 name: "action4_0"
@@ -194,10 +195,12 @@ services:
                         name='cleanup',
                         command='test_command0.1',
                         requires=(),
-                        node=None)),
+                        node=None),
+                    enabled=True),
                 'test_job1': ConfigJob(
                     name='test_job1',
                     node='batch0',
+                    enabled=True,
                     schedule=ConfigDailyScheduler(
                         ordinals=None,
                         weekdays=set([0, 2, 4]),
@@ -224,6 +227,7 @@ services:
                 'test_job2': ConfigJob(
                     name='test_job2',
                     node='batch1',
+                    enabled=True,
                     schedule=ConfigDailyScheduler(
                         ordinals=None,
                         weekdays=None,
@@ -246,6 +250,7 @@ services:
                     name='test_job3',
                     node='batch1',
                     schedule=ConfigConstantScheduler(),
+                    enabled=True,
                     actions=FrozenDict(**{
                         'action3_1': ConfigAction(
                             name='action3_1',
@@ -286,7 +291,8 @@ services:
                     queueing=True,
                     run_limit=50,
                     all_nodes=True,
-                    cleanup_action=None)
+                    cleanup_action=None,
+                    enabled=False)
                 }),
                 services=FrozenDict(**{
                     'service0': ConfigService(
@@ -319,6 +325,7 @@ services:
         assert_equal(test_config.jobs, expected.jobs)
         assert_equal(test_config.services, expected.services)
         assert_equal(test_config, expected)
+        assert_equal(test_config.jobs['test_job4'].enabled, False)
 
 
 class BadJobConfigTest(TestCase):
