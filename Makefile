@@ -9,7 +9,7 @@ DOCS_DIR=docs
 DOCS_BUILDDIR=docs/_build
 ALLSPHINXOPTS=-d $(DOCS_BUILDDIR)/doctrees $(SPHINXOPTS)
 
-.PHONY : all source install clean
+.PHONY : all source install clean tests
 
 all:
 		@echo "make source - Create source package"
@@ -52,3 +52,6 @@ man:
 	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_DIR)/man
 	@echo
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
+
+tests:
+	PYTHONPATH=. testify tests

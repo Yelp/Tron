@@ -54,6 +54,9 @@ Optional Fields
     Action to run when either all actions have succeeded or the job has failed.
     See :ref:`job_cleanup_actions`.
 
+**enabled** (default **True**)
+    If **False** the job will not be queued to run.
+
 .. _job_actions:
 
 Actions
