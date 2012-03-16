@@ -304,7 +304,8 @@ class Job(object):
         run_limit=RUN_LIMIT,
         all_nodes=False,
         scheduler=None,
-        node_pool=None
+        node_pool=None,
+        enabled=True
     ):
         self.name = name
         self.topo_actions = [action] if action else []
@@ -314,7 +315,7 @@ class Job(object):
 
         self.queueing = queueing
         self.all_nodes = all_nodes
-        self.enabled = True
+        self.enabled = enabled
         self.last_success = None
 
         self.run_limit = run_limit
@@ -333,7 +334,8 @@ class Job(object):
             run_limit=job_config.run_limit,
             all_nodes=job_config.all_nodes,
             node_pool=node_pools[job_config.node] if job_config.node else None,
-            scheduler=scheduler_from_config(job_config.schedule, time_zone)
+            scheduler=scheduler_from_config(job_config.schedule, time_zone),
+            enabled=job_config.enabled
         )
 
         new_actions = dict(
