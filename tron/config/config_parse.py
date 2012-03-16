@@ -127,6 +127,7 @@ ConfigJob = config_object_factory(
         'run_limit',            # int
         'all_nodes',            # bool
         'cleanup_action',       # ConfigAction
+        'enabled',              # bool
     ])
 
 
@@ -531,7 +532,8 @@ class ValidateJob(ValidatorWithNamedPath):
     defaults = {
         'run_limit':            50,
         'all_nodes':            False,
-        'cleanup_action':       None
+        'cleanup_action':       None,
+        'enabled':              True,
     }
 
     validators = {
@@ -543,6 +545,7 @@ class ValidateJob(ValidatorWithNamedPath):
         'cleanup_action':       lambda _, v: valid_cleanup_action(v),
         'node':                 lambda _, v: normalize_node(v),
         'queueing':             valid_bool,
+        'enabled':              valid_bool,
     }
 
     def set_defaults(self, job):

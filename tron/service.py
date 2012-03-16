@@ -349,7 +349,6 @@ class Service(object):
                  restart_interval=None, pid_file_template=None, count=0):
         self.name = name
         self.command = command
-        self.scheduler = None
         self.node_pool = node_pool
         self.count = count
         self.monitor_interval = monitor_interval
@@ -561,8 +560,7 @@ class Service(object):
 
         rebuild_all_instances = any([
             self.command != prev_service.command,
-            self.pid_file_template != prev_service.pid_file_template,
-            self.scheduler != prev_service.scheduler])
+            self.pid_file_template != prev_service.pid_file_template])
 
         # Since we are inheriting all the existing instances, it's safe to also
         # inherit the previous state machine as well.
