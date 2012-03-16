@@ -170,7 +170,6 @@ class JobRun(object):
             except Error, e:
                 log.warning("Attempt to start failed: %r", e)
 
-    # TODO: move to Job
     def run_completed(self):
         if self.is_success:
             self.job.update_last_success(self)
@@ -394,7 +393,8 @@ class Job(object):
         assert spec is True
         self.state_callback = callback
 
-    def _notify(self):
+    def notify(self):
+        """Used as a callback for state machine state changes."""
         self.state_callback()
 
     def add_action(self, action):
@@ -454,17 +454,9 @@ class Job(object):
         else:
             return None
 
-    # TODO: clean this up
     def newest_run_by_state(self, state):
         for run in self.runs:
-            if (state == 'SUCC' and run.is_success or
-                state == 'CANC' and run.is_cancelled or
-                state == 'RUNN' and run.is_running or
-                state == 'FAIL' and run.is_failure or
-                state == 'SCHE' and run.is_scheduled or
-                state == 'QUE' and run.is_queued or
-                state == 'UNKWN' and run.is_unknown or
-                state == 'SKIP' and run.is_skipped):
+            if run.state.short_name == state:
                 return run
 
         log.warning("No runs with state %s exist", state)
@@ -521,27 +513,11 @@ class Job(object):
         if not self.last_success or run.run_num > self.last_success.run_num:
             self.last_success = run
 
-    # TODO: this belongs in ActionRun
-    def _make_action_run(self, job_run, action_inst, callback):
-            action_run = action_inst.build_run(job_run)
-
-            action_run.node = job_run.node
-
-            action_run.machine.listen(True, self._notify)
-            action_run.machine.listen(action.ActionRun.STATE_SUCCEEDED,
-                                      callback)
-            action_run.machine.listen(action.ActionRun.STATE_FAILED,
-                                      callback)
-
-            return action_run
-
     def build_action_dag(self, job_run, all_actions):
         """Build actions and setup requirements"""
         action_runs_by_name = {}
         for action_inst in all_actions:
-            action_run = self._make_action_run(job_run,
-                                               action_inst,
-                                               job_run.run_completed)
+            action_run = action_inst.build_run(job_run)
 
             action_runs_by_name[action_inst.name] = action_run
             job_run.action_runs.append(action_run)
@@ -579,8 +555,8 @@ class Job(object):
 
         cleanup_action = cleanup_action or self.cleanup_action
         if cleanup_action is not None:
-            cleanup_action_run = self._make_action_run(
-                job_run, self.cleanup_action, job_run.cleanup_completed)
+            cleanup_action_run = self.cleanup_action.build_run(
+                job_run, cleanup=True)
             job_run.cleanup_action_run = cleanup_action_run
 
         return job_run

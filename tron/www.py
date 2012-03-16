@@ -210,13 +210,15 @@ class JobResource(resource.Resource):
             return EventResource(self._job)
 
         run = None
+        run_num = run_num.upper()
 
-        # TODO: cleanup
-        if run_num.upper() == 'HEAD':
+        if run_num == 'HEAD':
             run = self._job.newest()
-        if run_num.upper() in ['SUCC', 'CANC', 'RUNN', 'FAIL', 'SCHE', 'QUE',
-                               'UNKWN', 'SKIP']:
-            run = self._job.newest_run_by_state(run_num.upper())
+
+        if not run:
+            # May be none if run_num is not a state.short_name
+            run = self._job.newest_run_by_state(run_num)
+
         if run_num.isdigit():
             run = self._job.get_run_by_num(int(run_num))
 
@@ -510,7 +512,7 @@ class ConfigResource(resource.Resource):
         new_config = request.args['config'][0]
         self._master_control.rewrite_config(new_config)
 
-        # TODO: This should be a more informative reponse
+        # TODO: This should be a more informative response
         response = {'status': "I'm alive biatch"}
         try:
             self._master_control.live_reconfig()

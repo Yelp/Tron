@@ -134,9 +134,15 @@ class ActionRun(object):
 
     STATE_QUEUED['schedule'] = STATE_SCHEDULED
 
-    def __init__(self, action, context=None, output_path=None):
+    def __init__(self,
+        action,
+        context=None,
+        output_path=None,
+        node=None,
+        id=None,
+    ):
         self.action = action
-        self.id = None
+        self.id = id
 
         self.run_time = None    # What time are we supposed to start
         self.start_time = None  # What time did we start
@@ -144,7 +150,7 @@ class ActionRun(object):
         self.exit_status = None
         self.machine = state.StateMachine(ActionRun.STATE_SCHEDULED)
 
-        self.node = None
+        self.node = node
 
         if context is None:
             # Provide dummy values for context variables that JobRun provides
@@ -521,17 +527,22 @@ class Action(object):
     def __ne__(self, other):
         return not self == other
 
-    def build_run(self, job_run):
-        """Build an instance of ActionRun for this action
-
-        This is used by the scheduler when scheduling a run
+    def build_run(self, job_run, cleanup=False):
+        """Build an instance of ActionRun for this action. If cleanup=True
+        we're building a cleanup action run.
         """
-        new_run = ActionRun(self, context=job_run.context)
+        callback = job_run.cleanup_action_run if cleanup else job_run.run_completed
 
-        new_run.id = "%s.%s" % (job_run.id, self.name)
-        new_run.output_path = job_run.output_path
-
-        return new_run
+        action_run = ActionRun(
+            self,
+            context=job_run.context,
+            node=job_run.node,
+            id="%s.%s" % (job_run.id, self.name),
+            output_path=job_run.output_path)
+        action_run.machine.listen(True, job_run.job.notify)
+        action_run.machine.listen(ActionRun.STATE_SUCCEEDED, callback)
+        action_run.machine.listen(ActionRun.STATE_FAILED,    callback)
+        return action_run
 
 
 class ActionCommand(object):
