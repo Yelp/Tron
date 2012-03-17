@@ -22,15 +22,13 @@ class FileHandleWrapper(object):
 
     def close(self):
         self.close_wrapped()
-        if self.manager:
-            self.manager.remove(self)
-            # Remove circular references
-            self.manager = None
+        self.manager.remove(self)
 
     def close_wrapped(self):
         """Close only the underlying file handle."""
         if self._fh and not self._fh.closed:
             self._fh.close()
+        self._fh = None
 
     def write(self, content):
         """Write content to the fh. Re-open if necessary."""
@@ -65,7 +63,7 @@ class FileHandleManager(object):
         """
         if self.__class__._instance:
             raise ValueError(
-                "FileHandleMananger is a singleton. Call get_instance()")
+                "FileHandleManager is a singleton. Call get_instance()")
         self.max_idle_time = max_idle_time
         self.cache = OrderedDict()
         self.__class__._instance = self
@@ -80,6 +78,13 @@ class FileHandleManager(object):
         if cls._instance is None:
             cls._instance = cls()
         return cls._instance
+
+    @classmethod
+    def reset(cls):
+        """Empty the cache and reset the instance to it's original state."""
+        inst = cls.get_instance()
+        for fh_wrapper in inst.cache.values():
+            inst.remove(fh_wrapper)
 
     def open(self, filename):
         """Retrieve a file handle from the cache based on name.  Returns a
@@ -120,6 +125,6 @@ class FileHandleManager(object):
         are still ordered by last access. Calls cleanup() to remove any file
         handles that have been idle for too long.
         """
-        del self.cache[fh_wrapper.name]
+        self.remove(fh_wrapper)
         self.cache[fh_wrapper.name] = fh_wrapper
         self.cleanup()

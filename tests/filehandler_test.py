@@ -30,8 +30,8 @@ class FileHandleWrapperTestCase(TestCase):
         # Test close with a write
         self.fh_wrapper.write("some things")
         self.fh_wrapper.close()
-        assert self.fh_wrapper._fh.closed
-        assert_equal(self.fh_wrapper.manager, None)
+        assert_equal(self.fh_wrapper._fh, None)
+        assert_equal(self.fh_wrapper.manager, self.manager)
         # This is somewhat coupled
         assert_not_in(self.fh_wrapper, self.manager.cache)
 
@@ -63,8 +63,7 @@ class FileHandleManagerTestCase(TestCase):
 
     @teardown
     def teardown_fh_manager(self):
-        for fh_wrapper in self.manager.cache.values():
-            fh_wrapper.close()
+        FileHandleManager.reset()
 
     def test_get_instance(self):
         assert_equal(self.manager, FileHandleManager.get_instance())
@@ -146,6 +145,11 @@ class FileHandleManagerTestCase(TestCase):
 
         assert_not_in(fh_wrapper1.name, self.manager.cache)
         assert_in(fh_wrapper2.name, self.manager.cache)
+
+        # Now that 1 is closed, try writing again
+        fh_wrapper1.write("Some things")
+        assert_in(fh_wrapper1.name, self.manager.cache)
+        assert not fh_wrapper1._fh.closed
 
     def test_remove(self):
         # In cache

@@ -5,6 +5,7 @@ from subprocess import Popen, PIPE
 import sys
 
 from tron import node, command_context
+from tron.filehandler import FileHandleManager
 from tron.utils import timeutils
 from tron.utils import state
 
@@ -234,26 +235,33 @@ class ActionRun(object):
         self.end_time = None
         self.machine.transition('start')
         assert self.state == self.STATE_STARTING, self.state
-        self._open_output_file()
 
         if not self.is_valid_command:
             log.error("Command for action run %s is invalid: %r",
                       self.id, self.action.command)
-            self.fail(-1)
-            return
+            return self.fail(-1)
 
         # And now we try to actually start some work....
-        self.action_command = ActionCommand(self.id,
-                                            self.command,
-                                            stdout=self.stdout_file,
-                                            stderr=self.stderr_file)
+        self._setup_output_files()
+        self.action_command = ActionCommand(
+            self.id,
+            self.command,
+            stdout=self.stdout_file,
+            stderr=self.stderr_file
+        )
         self.action_command.machine.listen(True, self._handle_action_command)
         try:
             df = self.node.run(self.action_command)
             df.addErrback(self._handle_errback)
         except node.Error, e:
             log.warning("Failed to start %s: %r", self.id, e)
+            return False
         return True
+
+    def _setup_output_files(self):
+        file_manager = FileHandleManager.get_instance()
+        self.stdout_file = file_manager.open(self.stdout_path)
+        self.stderr_file = file_manager.open(self.stderr_path)
 
     def cancel(self):
         return self.machine.transition('cancel')
@@ -271,17 +279,8 @@ class ActionRun(object):
             return True
         return False
 
-    def _open_output_file(self):
-        try:
-            log.info("Opening file %s for output", self.stdout_path)
-            if self.stdout_path:
-                self.stdout_file = open(self.stdout_path, 'a')
-            if self.stderr_path:
-                self.stderr_file = open(self.stderr_path, 'a')
-        except IOError, e:
-            log.error(str(e) + " - Not storing command output!")
-
     def _close_output_file(self):
+        """Attempt to close any open file handlers."""
         if self.stdout_file:
             self.stdout_file.close()
         if self.stderr_file:
@@ -299,6 +298,7 @@ class ActionRun(object):
         generated.
         """
         log.info("Action error: %s", str(result))
+        self._close_output_file()
         if isinstance(result.value, node.ConnectError):
             log.warning("Failed to connect to host %s for run %s",
                         self.node.hostname, self.id)
@@ -318,22 +318,25 @@ class ActionRun(object):
         """
         log.debug("Action command state change: %s", self.action_command.state)
         if self.action_command.state == ActionCommand.RUNNING:
-            self.machine.transition('started')
-        elif self.action_command.state == ActionCommand.FAILSTART:
+            return self.machine.transition('started')
+
+        if self.action_command.state == ActionCommand.FAILSTART:
             self._close_output_file()
-            self.fail(None)
-        elif self.action_command.state == ActionCommand.EXITING:
+            return self.fail(None)
+
+        if self.action_command.state == ActionCommand.EXITING:
             if self.action_command.exit_status is None:
-                self.fail_unknown()
-            elif self.action_command.exit_status == 0:
-                self.succeed()
-            else:
-                self.fail(self.action_command.exit_status)
-        elif self.action_command.state == ActionCommand.COMPLETE:
+                return self.fail_unknown()
+            if not self.action_command.exit_status:
+                return self.succeed()
+            return self.fail(self.action_command.exit_status)
+
+        if self.action_command.state == ActionCommand.COMPLETE:
             self._close_output_file()
-        else:
-            raise Error("Invalid state for action command : %r" %
-                        self.action_command)
+            return
+
+        raise Error(
+            "Invalid state for action command : %r" % self.action_command)
 
     def start_dependants(self):
         for run in self.waiting_runs:
@@ -359,9 +362,10 @@ class ActionRun(object):
         """
         log.info("Lost communication with action run %s", self.id)
 
-        self.machine.transition('fail_unknown')
-        self.exit_status = None
-        self.end_time = None
+        if self.machine.transition('fail_unknown'):
+            self.exit_status = None
+            self.end_time = None
+            return True
 
     def mark_success(self):
         self.exit_status = 0
@@ -389,7 +393,7 @@ class ActionRun(object):
         # We were running when the state file was built, so we have no idea
         # what happened now.
         if self.is_running:
-            self.machine.transition('fail_unknown')
+            return self.machine.transition('fail_unknown')
 
     @property
     def data(self):
@@ -591,12 +595,12 @@ class ActionCommand(object):
 
     def started(self):
         self.start_time = timeutils.current_timestamp()
-        self.machine.transition("start")
+        return self.machine.transition("start")
 
     def exited(self, exit_status):
         self.end_time = timeutils.current_timestamp()
         self.exit_status = exit_status
-        self.machine.transition("exit")
+        return self.machine.transition("exit")
 
     def write_stderr(self, value):
         if self.stderr_file:
@@ -607,7 +611,7 @@ class ActionCommand(object):
             self.stdout_file.write(value)
 
     def write_done(self):
-        self.machine.transition("close")
+        return self.machine.transition("close")
 
     def __repr__(self):
         return "[ActionCommand %s] %s : %s" % (self.id, self.command,
