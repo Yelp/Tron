@@ -283,12 +283,22 @@ class MasterControlProgram(object):
         except IOError, e:
             log.error(str(e) + " - Cannot write to configuration file!")
 
-    def apply_config(self, conf):
+    def apply_config(self, conf, skip_env_dependent=False):
+        """Apply a configuration. If skip_env_dependent is True we're
+        loading this locally to test the config as part of tronfig. We want to
+        skip applying some settings because the local machine we're using to
+        edit the config may not have the same environment as the live
+        trond machine.
+        """
         self._apply_working_directory(conf.working_dir)
         self._apply_loggers(conf.syslog_address)
-        self.context.base = conf.command_context
 
-        ssh_options = self._ssh_options_from_config(conf.ssh_options)
+        if not skip_env_dependent:
+            ssh_options = self._ssh_options_from_config(conf.ssh_options)
+        else:
+            ssh_options = config_parse.valid_ssh_options({})
+
+        self.context.base = conf.command_context
         self._apply_nodes(conf.nodes, ssh_options)
         self._apply_node_pools(conf.node_pools)
 
@@ -298,6 +308,9 @@ class MasterControlProgram(object):
         self._apply_notification_options(conf.notification_options)
 
     def _apply_working_directory(self, wd):
+        """Apply working directory.  If wd=None try os.environ['TMPDIR'].
+        If that doesn't exist, use /tmp.
+        """
         if self.state_handler.working_dir:
             if self.state_handler.working_dir != wd:
                 log.warn('trond must be restarted for changes to the working'

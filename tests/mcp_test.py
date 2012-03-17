@@ -27,7 +27,7 @@ class TestStateHandler(TestCase):
         self.mcp = mcp.MasterControlProgram(self.test_dir, "config")
         self.state_handler = self.mcp.state_handler
         self.action = action.Action("Test Action")
-        
+
         self.action.command = "Test command"
         self.action.queueing = True
         self.action.node = turtle.Turtle()
@@ -41,15 +41,15 @@ class TestStateHandler(TestCase):
     @teardown
     def teardown(self):
         shutil.rmtree(self.test_dir)
-        
+
     def test_reschedule(self):
         def callNow(sleep, func, run):
             raise NotImplementedError(sleep)
-        
+
         self.job.next_runs()
         #callLate = reactor.callLater
         #reactor.callLater = callNow
-       
+
         #try:
         #    self.state_handler._reschedule(run)
         #    assert False
@@ -128,7 +128,7 @@ jobs:
         assert_raises(mcp.StateFileVersionError, handler._load_data_file, self.data_file)
 
 class TestMasterControlProgram(TestCase):
-    
+
     @setup
     def build_actions(self):
         self.test_dir = tempfile.mkdtemp()
@@ -137,7 +137,7 @@ class TestMasterControlProgram(TestCase):
         self.job.output_path = self.test_dir
         self.mcp = mcp.MasterControlProgram(self.test_dir, "config")
         self.job.node_pool = testingutils.TestPool()
-    
+
     @teardown
     def teardown(self):
         shutil.rmtree(self.test_dir)
@@ -164,7 +164,7 @@ class TestMasterControlProgram(TestCase):
         finally:
             mcp.reactor.callLater = callLater
         next = jo.runs[0]
-        
+
         assert_equals(len(filter(lambda r:r.is_success, jo.runs)), 1)
         assert_equals(jo.topo_actions[0], next.action_runs[0].action)
         assert next.action_runs[0].is_success

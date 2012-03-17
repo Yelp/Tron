@@ -21,7 +21,7 @@ jobs:
                 name: "task0.0"
                 command: "test_command0.0"
                 output_dir: "output_dir0.0"
-                
+
     - &job1 !Job
         name: "job1"
         node: *node0
@@ -74,4 +74,3 @@ jobs:
                 name: "task4.0"
                 command: "test_command4.0"
                 output_dir: "output_dir4.0"
-

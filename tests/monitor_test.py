@@ -9,7 +9,7 @@ class TestError(Exception):
     pass
 
 class SimpleDeferredTestCase(TestCase):
-    
+
     @setup
     def add_crash_observer(self):
         self.test_emailer = turtle.Turtle()
