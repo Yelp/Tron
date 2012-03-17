@@ -105,15 +105,11 @@ class FileHandleManager(object):
             return
 
         cur_time = time_func()
-        idx = 0
-        keys = self.cache.keys()
-        oldest = self.cache[keys[0]]
-        while cur_time - oldest.last_accessed > self.max_idle_time:
-            oldest.close()
-            idx += 1
-            if idx >= len(keys):
+        for name, fh_wrapper in self.cache.items():
+            if cur_time - fh_wrapper.last_accessed > self.max_idle_time:
+                fh_wrapper.close()
+            else:
                 break
-            oldest = self.cache[keys[idx]]
 
     def remove(self, fh_wrapper):
         """Remove the fh_wrapper from the cache and access_order."""
