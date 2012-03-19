@@ -198,7 +198,7 @@ class ActionRun(object):
         return self.tail_file(self.stderr_path, num_lines)
 
     def tail_file(self, path, num_lines):
-        if not path:
+        if not path or not os.path.exists(path):
             return []
         if not num_lines or num_lines <= 0:
             num_lines = sys.maxint
@@ -423,9 +423,10 @@ class ActionRun(object):
             'end_time':     self.end_time,
             'exit_status':  self.exit_status,
             'requirements': [req.name for req in self.action.required_actions],
+            'stdout':       [],
+            'stderr':       []
         }
-        # Do not attempt to tail files if run is still queued/scheduled
-        if max_lines and not (self.is_queued or self.is_scheduled):
+        if max_lines:
             data['stdout'] = self.tail_stdout(max_lines)
             data['stderr'] = self.tail_stderr(max_lines)
         return data
