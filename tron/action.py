@@ -504,12 +504,13 @@ class ActionRun(object):
 
 
 class Action(object):
-    def __init__(self, name=None, command=None, node_pool=None):
+    def __init__(self, name=None, command=None, node_pool=None,
+                 required_actions=None):
         self.name = name
         self.command = command
         self.node_pool = node_pool
 
-        self.required_actions = []
+        self.required_actions = required_actions or []
         self.job = None
 
     @classmethod
