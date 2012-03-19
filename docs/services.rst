@@ -72,8 +72,7 @@ States
 Examples
 --------
 
-Here is the example from :ref:`Overview: Services <overview_services>`, but
-with the correct anchor and tag::
+Here is the example from :ref:`Overview: Services <overview_services>`::
 
     # ...
     services:

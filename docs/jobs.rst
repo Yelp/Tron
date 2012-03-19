@@ -84,9 +84,8 @@ Optional Fields
 ^^^^^^^^^^^^^^^
 
 **requires**
-    List of pointers to actions that must complete successfully before this
-    action is run. These actions must have been specifid earlier in the config
-    file.
+    List of action names that must complete successfully before this
+    action is run. Actions can only require actions in the same job.
 
 **node**
     Node or node pool to run the action on if different from the rest of the

@@ -1,6 +1,16 @@
 What's New
 ==========
 
+0.3.0
+-----
+
+* **!** (tags), **\*** (references), and **&** (anchors) are now deprecated in the trond
+  configuration file.  Support will be removed for them in 0.5.
+* Adding an enabled option for jobs, so they can be configured as disabled by default
+* tron commands (tronview, tronfig, tronctl) now support a global config (defaults to /etc/tron/tron.yaml)
+* tronview will now pipe its output through 'less' if appropriate
+
+
 0.2.10
 ------
 
