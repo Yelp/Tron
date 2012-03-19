@@ -557,6 +557,7 @@ class Service(object):
                 self._restart_timer = reactor.callLater(
                     self.restart_interval, self._restart_after_failure)
 
+    # TODO: clean this up
     def absorb_previous(self, prev_service):
         # Some changes we need to worry about:
         # * Changing instance counts

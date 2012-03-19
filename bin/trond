@@ -91,8 +91,6 @@ def setup_logging(options):
     level = logging.WARNING
     twist_level = logging.WARNING
 
-    # TODO: Some stderr logging during development might be a good idea
-    #stream = sys.stderr
     if options.verbose > 0:
         level = logging.INFO
         twist_level = logging.WARNING

@@ -58,7 +58,6 @@ class ConfigTest(TestCase):
                                           command='command')],
                 ),
             ])
-        # TODO: skip the yaml dump
         return yaml.dump(config)
 
     def config_2(self, wd):
