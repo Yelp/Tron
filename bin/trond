@@ -24,7 +24,7 @@ from twisted.web import server
 from twisted.scripts import _twistd_unix
 
 import tron
-from tron import cmd
+from tron import commands
 from tron import mcp
 from tron import www
 from tron.utils import log_handler
@@ -70,10 +70,10 @@ def parse_options():
 
     parser.add_option("--port", "-P", action="store", dest="listen_port",
                       help="What port to listen on, defaults %default",
-                      default=cmd.DEFAULT_PORT, type=int)
+                      default=commands.DEFAULT_PORT, type=int)
     parser.add_option("--host", "-H", action="store", dest="listen_host",
                       help="What host to listen on defaults to %default",
-                      default=cmd.DEFAULT_HOST, type=str)
+                      default=commands.DEFAULT_HOST, type=str)
 
     (options, args) = parser.parse_args(sys.argv)
 

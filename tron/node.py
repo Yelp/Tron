@@ -98,6 +98,12 @@ class NodePool(object):
         else:
             raise KeyError(value)
 
+    def repr_data(self):
+        """Returns a dict which is an external view of this object."""
+        return {
+            'name':         self.name,
+            'nodes':        [n.repr_data() for n in self.nodes]
+        }
 
 class Node(object):
     """A node is tron's interface to communicating with an actual machine.
@@ -446,3 +452,10 @@ class Node(object):
         # come back thanks to the magic of TCP, but something is up, best to
         # fail right now then limp along for and unknown amount of time.
         #self.connection.transport.connectionLost(failure.Failure())
+
+    def repr_data(self):
+        """Returns a dict which is an external view of this object."""
+        return {
+            'name':             self.name,
+            'hostname':         self.hostname
+        }

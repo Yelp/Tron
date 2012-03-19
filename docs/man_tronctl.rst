@@ -46,11 +46,11 @@ start <job_run_id>
     Tries to start the given job or action run. A Job run only starts if no
     other instance is running. If the job has already started, start continues
     by retrying failed runs Valid states that you can run "start" on: SCHE,
-    QUE 
+    QUE
 
 start <action_run_id>
     Starts the action run regardless of anything else running.  Valid states
-    that you can run "start" on: SCHE, QUE 
+    that you can run "start" on: SCHE, QUE
 
 restart <job_run_id>
     Resets the given Job Run and starts it over.  Valid states that you can run

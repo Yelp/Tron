@@ -38,6 +38,7 @@ def load_config(string_or_file):
     """Given a string or file object, load it with PyYAML and return an
     immutable, validated representation of the configuration it specifies.
     """
+    # TODO: 0.5 remove this
     # Hackishly strip !Tags from the file so PyYAML doesn't try to make them
     # into Python objects
     if not isinstance(string_or_file, basestring):
@@ -127,6 +128,7 @@ ConfigJob = config_object_factory(
         'run_limit',            # int
         'all_nodes',            # bool
         'cleanup_action',       # ConfigAction
+        'enabled',              # bool
     ])
 
 
@@ -178,7 +180,7 @@ class UniqueNameDict(dict):
 
     def __setitem__(self, key, value):
         if key in self:
-            raise ConfigError(self.fmt_string, key)
+            raise ConfigError(self.fmt_string % key)
         super(UniqueNameDict, self).__setitem__(key, value)
 
 
@@ -210,7 +212,7 @@ def type_validator(validator, error_fmt):
         if value is None and optional:
             return None
         if not validator(value):
-            raise ConfigError(error_fmt, (path, value))
+            raise ConfigError(error_fmt % (path, value))
         return value
     return f
 
@@ -357,9 +359,8 @@ class ValidatorWithNamedPath(Validator):
 
 def valid_working_dir(wd):
     """Given a working directory or None, return a valid working directory.
-    If wd=None, try os.environ['TMPDIR']. If that doesn't exist, use /tmp.
+    If wd=None the mcp will attempt to use a default.
     """
-    # TODO: should this do the lookups the docstring claims it does?
     return valid_str('working_dir', wd, optional=True)
 
 
@@ -531,7 +532,8 @@ class ValidateJob(ValidatorWithNamedPath):
     defaults = {
         'run_limit':            50,
         'all_nodes':            False,
-        'cleanup_action':       None
+        'cleanup_action':       None,
+        'enabled':              True,
     }
 
     validators = {
@@ -543,6 +545,7 @@ class ValidateJob(ValidatorWithNamedPath):
         'cleanup_action':       lambda _, v: valid_cleanup_action(v),
         'node':                 lambda _, v: normalize_node(v),
         'queueing':             valid_bool,
+        'enabled':              valid_bool,
     }
 
     def set_defaults(self, job):
@@ -651,8 +654,8 @@ class ValidateConfig(Validator):
     def post_validation(self, config):
         """Validate jobs, nodes, and services."""
 
-        node_names = UniqueNameDict('Node and NodePool names must be unique')
-        job_service_names = UniqueNameDict('Job and Service names must be unique')
+        node_names = UniqueNameDict('Node and NodePool names must be unique %s')
+        job_service_names = UniqueNameDict('Job and Service names must be unique %s')
 
         # We need to set this default here until 0.5, see comment below
         config.setdefault('node_pools', [])
