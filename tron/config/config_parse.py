@@ -14,6 +14,7 @@ and returning a valid immutable config object.
 
 from collections import namedtuple
 from functools import partial
+import itertools
 import logging
 import re
 
@@ -687,5 +688,27 @@ class ValidateConfig(Validator):
         parse_sub_config('node_pools',  valid_node_pool,    node_names)
         parse_sub_config('jobs',        valid_job ,         job_service_names)
         parse_sub_config('services',    valid_service,      job_service_names)
+
+        self.validate_node_names(config, node_names)
+
+    def validate_node_names(self, config, node_names):
+        """Validate that any node/node_pool name that were used are configured
+        as nodes/node_pools.
+        """
+        actions = itertools.chain.from_iterable(
+            job.actions.values()
+            for job in config['jobs'].values()
+        )
+        task_list = itertools.chain(
+            config['jobs'].values(),
+            config['services'].values(),
+            actions
+        )
+        for task in task_list:
+            if task.node and task.node not in node_names:
+                raise ConfigError("Unknown node %s configured for %s %s" % (
+                    task.node, task.__class__.__name__, task.name))
+
+
 
 valid_config = ValidateConfig()
