@@ -142,4 +142,7 @@ def main():
         commands.save_config(options)
 
 if __name__ == '__main__':
-    main()
+    try:
+        main()
+    except Exception, e:
+        print >>sys.stderr, e

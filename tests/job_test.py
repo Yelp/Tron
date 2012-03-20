@@ -363,6 +363,22 @@ class TestJob(TestCase):
         assert_equal(job_run.action_runs[1].id, act3_id)
         assert_equal(job_run.action_runs_with_cleanup[2].id, cact_id)
 
+    def test_build_action_dag(self):
+        """Test that a required action can appear after the action requiring it
+        in the all_actions list.  This is important because this input comes
+        from a dict (so order is undefined).
+        """
+        dependent_action = action.Action(name="dep_act")
+        required_action = action.Action(name="req_act",
+            required_actions=[dependent_action])
+
+        job_run = job.JobRun(self.job, run_num=1)
+        self.job.build_action_dag(job_run, [
+            required_action,
+            dependent_action
+        ])
+        assert_equal(len(job_run.action_runs), 2)
+
 
 
 if __name__ == '__main__':

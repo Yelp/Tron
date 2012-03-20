@@ -517,13 +517,18 @@ class Job(object):
 
     def build_action_dag(self, job_run, all_actions):
         """Build actions and setup requirements"""
-        action_runs_by_name = {}
-        for action_inst in all_actions:
+
+        def create_action_inst(action_inst):
             action_run = action_inst.build_run(job_run)
-
-            action_runs_by_name[action_inst.name] = action_run
             job_run.action_runs.append(action_run)
+            return action_run
 
+        action_runs_by_name = dict(
+            (action_inst.name, create_action_inst(action_inst))
+            for action_inst in all_actions
+        )
+
+        for action_inst in all_actions:
             for req_action in action_inst.required_actions:
                 if req_action.name not in action_runs_by_name:
                     raise ConfigBuildMismatchError(
@@ -531,9 +536,10 @@ class Job(object):
                         req_action.name)
 
                 # Two-way, waiting runs and required_runs
-                action = action_runs_by_name[req_action.name]
-                action.waiting_runs.append(action_run)
-                action_run.required_runs.append(action)
+                req_action_run = action_runs_by_name[req_action.name]
+                waiting_action_run = action_runs_by_name[action_inst.name]
+                req_action_run.waiting_runs.append(waiting_action_run)
+                waiting_action_run.required_runs.append(req_action_run)
 
     def build_run(self, node=None, actions=None, run_num=None,
                   cleanup_action=None):
