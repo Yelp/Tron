@@ -78,7 +78,10 @@ Required Fields
     Name of the action. Used in :command:`tronview` and :command:`tronctl`.
 
 **command**
-    Command to run on the specified node.
+    Command to run on the specified node. A common mistake here is to use
+    shell expansions or expressions in your command. Commands are run using
+    ``exec`` so bash (or other shell) expressions will not work, and could
+    cause the job to fail.
 
 Optional Fields
 ^^^^^^^^^^^^^^^
@@ -278,7 +281,7 @@ Job Run States
     The run is currently running
 
 **SUCC**
-    The run completed successfully 
+    The run completed successfully
 
 **FAIL**
     The run failed

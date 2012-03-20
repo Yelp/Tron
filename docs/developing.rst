@@ -22,8 +22,6 @@ All code should be `PEP8 <http://www.python.org/dev/peps/pep-0008/>`_ compliant,
 and should pass pyflakes without warnings. The documentation must also be kept
 up to date with any changes in functionality, especially the man pages.
 
-If and when you come across non-PEP8-compliant code, avoid reformatting it in
-the same branch as functional changes so that code reviews are less confusing.
 
 Running Tron in a Sandbox
 -------------------------

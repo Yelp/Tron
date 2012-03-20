@@ -177,19 +177,33 @@ Built-In Command Context Variables
 **name**
     Name of the job or service
 
-**actionname**
-    Name of the action
+**node**
+    Hostname of the node the action is being run on
+
+
+Context variables only available to Jobs:
 
 **runid**
     Run ID of the job or service (e.g. ``sample_job.23``)
 
-**node**
-    Hostname of the node the action is being run on
+**actionname**
+    Name of the action
 
 **cleanup_job_status**
     ``SUCCESS`` if all actions have succeeded when the cleanup action runs,
     ``FAILURE`` otherwise. ``UNKNOWN`` if used in an action other than the
     cleanup action.
+
+
+Context variables only available to Services:
+
+**pid_file**
+    The filename of the pid file.
+
+**instance_number**
+    The number identifying this instance (will be 0 to n-1 where n is the
+    total number of instances).
+
 
 .. _config_logging:
 
