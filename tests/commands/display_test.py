@@ -14,17 +14,16 @@ class DisplayServicesTestCase(TestCase):
             dict(name="Another Service", status="running", count="2"),
             dict(name="Yet another", status="running", count="1")
         ]
+        self.display = DisplayServices(80)
 
     def test_format(self):
-        display = DisplayServices(80)
-        out = display.format(self.data)
+        out = self.display.format(self.data)
         lines = out.split('\n')
         assert_equal(len(lines), 6)
         assert lines[3].startswith('Another')
 
     def test_format_no_data(self):
-        display = DisplayServices(80)
-        out = display.format([])
+        out = self.display.format([])
         lines = out.split("\n")
         assert_equal(len(lines), 4)
         assert_equal(lines[2], 'No Services')
@@ -32,28 +31,42 @@ class DisplayServicesTestCase(TestCase):
 
 class DisplayJobRunsTestCase(TestCase):
 
-    run_data = [
-        dict(
-            id='something.23.more', state='FAIL', node='machine4',
+    @setup
+    def setup_data(self):
+        self.data = [
+            dict(
+                id='something.23', state='FAIL', node='machine4',
+                run_time='2012-01-20 23:11:23',
+                start_time='2012-01-20 23:11:23',
+                end_time='2012-02-21 23:10:10',
+                duration='2 days'
+            ),
+            dict(
+                id='something.55', state='QUE', node='machine3',
+                run_time='2012-01-20 23:11:23',
+                start_time='2012-01-20 23:11:23',
+                end_time='',
+                duration=''
+            )
+        ]
+
+        self.action_run = dict(
+            id='something.23.other',
+            name='other',
+            state='FAIL',
+            node='machine4',
+            command='echo 123',
+            raw_command='echo 123',
             run_time='2012-01-20 23:11:23',
             start_time='2012-01-20 23:11:23',
             end_time='2012-02-21 23:10:10',
-            duration='2 days'
-        ),
-        dict(
-            id='something.55.other', state='QUE', node='machine3',
-            run_time='2012-01-20 23:11:23',
-            start_time='2012-01-20 23:11:23',
-            end_time='',
-            duration=''
+            duration='2 days',
+            stdout=[],
+            stderr=[]
         )
-    ]
 
-    @setup
-    def setup_data(self):
         Color.enabled = True
         self.options = turtle.Turtle(warn=False, num_displays=4)
-        self.data = self.run_data
 
     def test_format(self):
         display = DisplayJobRuns(options=self.options)
@@ -61,9 +74,16 @@ class DisplayJobRunsTestCase(TestCase):
         lines = out.split('\n')
         assert_equal(len(lines), 7)
 
-    # TODO: test for warn=True
     def test_format_with_warn(self):
-        pass
+        self.options.warn = True
+        self.data = self.data[:1]
+        self.data[0]['runs'] = [self.action_run]
+
+        display = DisplayJobRuns(options=self.options)
+        out = display.format(self.data)
+        lines = out.split('\n')
+        assert_equal(len(lines), 13)
+        assert lines[9].startswith('Actions:'), lines[9]
 
 
 class DisplayJobsTestCase(TestCase):
@@ -76,15 +96,41 @@ class DisplayJobsTestCase(TestCase):
             dict(name='important_things', status='running',
                 scheduler='DailyJob', last_success='unknown'),
             dict(name='other_thing', status='success',
-                scheduler='DailyJob', last_success='2012-01-23 10:23:23'),
+                scheduler='DailyJob', last_success='2012-01-23 10:23:23',
+                action_names=['other', 'first'],
+                node_pool=['blam']),
         ]
-        self.details = {
-            'name': '.foo',
-            'scheduler': 'DailyJob',
-            'action_names': ['one', 'two', 'three'],
-            'node_pool': ['machine1', 'machine2'],
-            'runs': DisplayJobRunsTestCase.run_data
-        }
+        self.run_data = [
+            dict(
+                id='something.23', state='FAIL', node='machine4',
+                run_time='2012-01-20 23:11:23',
+                start_time='2012-01-20 23:11:23',
+                end_time='2012-02-21 23:10:10',
+                duration='2 days',
+                runs=[dict(
+                    id='something.23.other',
+                    name='other',
+                    state='FAIL',
+                    node='machine4',
+                    command='echo 123',
+                    raw_command='echo 123',
+                    run_time='2012-01-20 23:11:23',
+                    start_time='2012-01-20 23:11:23',
+                    end_time='2012-02-21 23:10:10',
+                    duration='2 days',
+                    stdout=[],
+                    stderr=[]
+                )]
+            ),
+            dict(
+                id='something.55', state='QUE', node='machine3',
+                run_time='2012-01-20 23:11:23',
+                start_time='2012-01-20 23:11:23',
+                end_time='',
+                duration='',
+                runs=[]
+            )
+        ]
 
     def do_format(self):
         display = DisplayJobs(self.options).format(self.data)
@@ -96,24 +142,35 @@ class DisplayJobsTestCase(TestCase):
         lines = self.do_format()
         assert_equal(len(lines), 5)
 
-    # TODO: add action_run details
     def test_format_with_warn(self):
-        return
         self.options.warn = True
-        for data in self.data:
-            data['details'] = self.details
+        self.data = self.data[:1]
+        self.data[0]['runs'] = self.run_data
         lines = self.do_format()
-        assert_equal(len(lines), 19)
+        assert_equal(len(lines), 26)
+        assert lines[13] == lines[23] == 'Actions:'
 
     def test_format_job(self):
-        pass
+        self.options.display_preface = True
+        job = self.data[1]
+        job['runs'] = self.run_data
+        display = DisplayJobs(self.options)
+        out = display.format_job(job)
+        lines = out.split("\n")
+        assert_equal(len(lines), 18)
+        assert lines[4:6] == job['action_names']
 
 class DisplayActionsTestCase(TestCase):
 
     @setup
     def setup_data(self):
         Color.enabled = True
-        self.options = turtle.Turtle(warn=False, num_displays=6)
+        self.options = turtle.Turtle(
+            warn=False,
+            num_displays=6,
+            stdout=False,
+            stderr=False
+        )
         self.data = {
             'id': 'something.23',
             'state': 'UNKWN',
@@ -143,38 +200,58 @@ class DisplayActionsTestCase(TestCase):
             ]
         }
         self.details = {
-            'stdout': ['Blah', 'blah', 'blah'],
-            'stderr': ['Crash', 'and', 'burn'],
-            'command': '/bin/bash ./runme.sh now',
-            'raw_command': 'bash runme.sh now',
-            'requirements': ['.run_first_job']
+            'id':               'something.1.foo',
+            'state':            'FAIL',
+            'node':             'localhost',
+            'stdout':           ['Blah', 'blah', 'blah'],
+            'stderr':           ['Crash', 'and', 'burn'],
+            'command':          '/bin/bash ./runme.sh now',
+            'raw_command':      'bash runme.sh now',
+            'requirements':     ['.run_first_job']
         }
 
-    def test_format(self):
+    def format_lines(self):
         display = DisplayActions(options=self.options)
         out = display.format(self.data)
-        lines = out.split('\n')
+        return out.split('\n')
+
+    def format_action_run_lines(self):
+        display = DisplayActions(options=self.options)
+        out = display.format_action_run(self.details)
+        return out.split('\n')
+
+    def test_format(self):
+        lines = self.format_lines()
         assert_equal(len(lines), 9)
 
     def test_format_warn(self):
         self.data['runs'] = [self.data['runs'][2]]
         self.data['runs'][0].update(self.details)
         self.options.warn = True
-        display = DisplayActions(options=self.options)
-        out = display.format(self.data)
-        lines = out.split('\n')
+        lines = self.format_lines()
         assert_equal(len(lines), 11)
 
     def test_format_action_run(self):
         options = self.options
         options.stdout = options.stderr = options.display_preface = False
-        display = DisplayActions(options=self.options)
-        out = display.format_action_run(self.details)
-        lines = out.split('\n')
+        lines = self.format_action_run_lines()
         assert_equal(len(lines), 15)
 
+    def test_format_action_run_stdout(self):
+        self.options.stdout = True
+        lines = self.format_action_run_lines()
+        assert_equal(lines, ['Stdout: '] + self.details['stdout'])
 
-    # TODO: test format_action_run with other options
+    def test_format_action_run_stderr(self):
+        self.options.stderr = True
+        lines = self.format_action_run_lines()
+        assert_equal(lines, ['Stderr: '] + self.details['stderr'])
+
+    def test_format_action_run_display_preface(self):
+        self.options.display_preface = True
+        lines = self.format_action_run_lines()
+        assert_equal(len(lines), 19)
+        assert lines[2] == 'Node: localhost'
 
 
 if __name__ == "__main__":
