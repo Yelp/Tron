@@ -38,7 +38,7 @@ class TableDisplay(object):
     of dict objects and formats it so that it displays properly in fixed width
     columns.  Overlap is truncated.
 
-    This class provides many hooks for contomizing the output, include:
+    This class provides many hooks for customizing the output, including:
         - sorting of rows
         - building composite values from more then one field
         - custom formatting of a columns values

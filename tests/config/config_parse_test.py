@@ -3,6 +3,7 @@ import platform
 import shutil
 import StringIO
 import tempfile
+from textwrap import dedent
 
 from testify import assert_equal, assert_raises
 from testify import run, setup, teardown, TestCase
@@ -532,6 +533,21 @@ services:
             actions=[]
         )
         assert_raises(ConfigError, valid_job, job_config)
+
+    def test_invalid_node_name(self):
+        test_config = BASE_CONFIG + dedent("""
+            jobs:
+                -
+                    name: "test_job0"
+                    node: "some_unknown_node"
+                    schedule: "interval 20s"
+                    actions:
+                        -
+                            name: "action0_0"
+                            command: "test_command0.0"
+            """)
+        assert_raises(ConfigError, load_config, test_config)
+
 
 if __name__ == '__main__':
     run()
