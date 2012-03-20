@@ -370,7 +370,7 @@ class Service(object):
 
         self.context = None
         if context is not None:
-            self.set_context(None)
+            self.set_context(context)
 
         self.instances = []
 

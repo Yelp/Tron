@@ -1,4 +1,4 @@
-.TH "TRONFIG" "1" "February 14, 2012" "0.2" "Tron"
+.TH "TRONFIG" "1" "March 20, 2012" "0.3" "Tron"
 .SH NAME
 tronfig \- tronfig documentation
 .
@@ -156,6 +156,9 @@ boolean indicating overlapping job runs should queue rather than cancel
 .TP
 .B run_limit (optional, default 50)
 Number of runs to store in history
+.TP
+.B enabled
+If False the job will not be queued to run.
 .UNINDENT
 .UNINDENT
 .UNINDENT
@@ -237,60 +240,54 @@ action.
 .sp
 .nf
 .ft C
-\-\-\- !TronConfiguration
-
-ssh_options: !SSHOptions
-    agent: true
+ssh_options:
+  agent: true
 
 nodes:
-    \- &node1
-        hostname: \(aqmachine1\(aq
-    \- &node2
-        hostname: \(aqmachine2\(aq
-    \- &pool !NodePool
-        nodes: [*node1, *node2]
+    \- name: node1
+      hostname: \(aqmachine1\(aq
+    \- name: node2
+      hostname: \(aqmachine2\(aq
+
+node_pools:
+    \- name: pool
+      nodes: [node1, node2]
 
 command_context:
     PYTHON: /usr/bin/python
 
 jobs:
-    \- &job0
-        name: "job0"
-        node: *pool
-        all_nodes: True # Every time the Job is scheduled it runs on every node in its node pool
-        schedule: "interval 20s"
-        queueing: False
-        actions:
-            \- &start
-                name: "start"
-                command: "echo number 9"
-                node: *node1
-            \-
-                name: "end"
-                command: "echo love me do"
-                requires: [*start]
+    \- name: "job0"
+      node: pool
+      all_nodes: True # Every time the Job is scheduled it runs on every node in its node pool
+      schedule: "daily 12:00 MWF"
+      queueing: False
+      actions:
+        \- name: "start"
+          command: "echo number 9"
+          node: node1
+        \- name: "end"
+          command: "echo love me do"
+          requires: [start]
 
-    \- &job1
-        name: "job1"
-        node: *node1
-        schedule: "interval 20s"
-        queueing: False
-        actions:
-            \- &action
-                name: "echo"
-                command: "echo %(PYTHON)s"
-        cleanup_action:
-            command: "echo \(aqcleaning up job1\(aq"
+    \- name: "job1"
+      node: node1
+      schedule: "interval 20s"
+      queueing: False
+      actions:
+        \- name: "echo"
+          command: "echo %(PYTHON)s"
+      cleanup_action:
+        command: "echo \(aqcleaning up job1\(aq"
 
 services:
-    \-
-        name: "testserv"
-        node: *pool
-        count: 8
-        monitor_interval: 60
-        restart_interval: 120
-        pid_file: "/var/run/%(name)s\-%(instance_number)s.pid"
-        command: "/bin/myservice \-\-pid\-file=%(pid_file)s start"
+    \- name: "testserv"
+      node: pool
+      count: 8
+      monitor_interval: 60
+      restart_interval: 120
+      pid_file: "/var/run/%(name)s\-%(instance_number)s.pid"
+      command: "/bin/myservice \-\-pid\-file=%(pid_file)s start"
 .ft P
 .fi
 .SH FILES

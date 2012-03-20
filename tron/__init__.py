@@ -1,4 +1,4 @@
-__version_info__ = (0, 2, 10)
+__version_info__ = (0, 3, 0)
 __version__ = ".".join("%s" % v for v in __version_info__)
 
 __author__ = 'Rhett Garber <rhettg@gmail.com>'
@@ -8,5 +8,6 @@ __credits__ = [
     'James Brown <jbrown@yelp.com>',
     'Adam Derewecki <derewecki@gmail.com>',
     'Steve Johnson <sjohnson@yelp.com>',
+    'Daniel Nephin <dnephin@yelp.com>',
     'Matthew Tytel <matthewtytel@gmail.com>',
 ]
