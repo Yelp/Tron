@@ -57,6 +57,9 @@ Options
 -c, --color
     Display in color
 
+--nocolor
+    Display without color
+
 -o, --stdout
     Solely displays stdout
 

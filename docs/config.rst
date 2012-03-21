@@ -3,7 +3,7 @@ Configuration
 
 .. note::
 
-    **The configuration system has changed significantly since version 0.2.9.**
+    **The configuration system has changed significantly since version 0.2.10.**
     All existing configurations should still work, but new configurations
     should follow the new conventions.
 
@@ -19,8 +19,8 @@ configuration can be entirely JSON, since YAML is mostly a strict superset
 of JSON.)
 
 Past versions of Tron used additional YAML-specific features such as tags,
-anchors, and aliases. These features still work in version 0.3, but are not
-recommended.
+anchors, and aliases. These features still work in version 0.3, but are now
+deprecated.
 
 Basic Example
 -------------
@@ -128,12 +128,11 @@ Command Context
 
 **command_context**
     Dictionary of custom :ref:`command context variables
-    <command_context_variables>`. This attribute does *not* use a tag since it
-    is an arbitrary set of key-value pairs rather than an object with a schema.
+    <command_context_variables>`. It is an arbitrary set of key-value pairs.
 
     ::
 
-        command_context: # no tag
+        command_context:
             PYTHON: /usr/bin/python
             TMPDIR: /tmp
 
@@ -144,31 +143,67 @@ Command Context
 Built-In Command Context Variables
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-.. warning::
-
-    This section is incomplete. If something is missing, don't hesitate to
-    `file an issue <http://www.github.com.com/yelp/Tron/issues/new>`_.
 
 **shortdate**
     Current date in ``YYYY-MM-DD`` format. Supports simple arithmetic of the
-    form ``%(shortdate+6)s``, ``%(shortdate-2)s``, etc.
+    form ``%(shortdate+6)s`` which returns a date 6 days in the future,
+    ``%(shortdate-2)s`` which returns a date 2 days before the run date.
+
+**year**
+    Current year in ``YYYY`` format. Supports the same arithmetic operations
+    as `shortdate`. For example, ``%(year-1)s`` would return the year previous
+    to the run date.
+
+**month**
+    Current month in `MM` format. Supports the same arithmetic operations
+    as `shortdate`. For example, ``%(month+2)s`` would return 2 months in the
+    future.
+
+**day**
+    Current day in `DD` format. Supports the same arithmetic operations
+    as `shortdate`. For example, ``%(day+1)s`` would return the day after the
+    run date.
+
+**unixtime**
+    Current timestamp. Supports addition and subtraction of seconds. For
+    example ``%(unixtime+20)s`` would return the timestamp 20 seconds after
+    the jobs runtime.
+
+**daynumber**
+    Current day number as an ordinal (datetime.toordinal()). Supports addition
+    and subtraction of days. For example ``%(daynumber-3)s`` would be 3 days
+    before the run date.
 
 **name**
     Name of the job or service
 
-**actionname**
-    Name of the action
+**node**
+    Hostname of the node the action is being run on
+
+
+Context variables only available to Jobs:
 
 **runid**
     Run ID of the job or service (e.g. ``sample_job.23``)
 
-**node**
-    Hostname of the node the action is being run on
+**actionname**
+    Name of the action
 
 **cleanup_job_status**
     ``SUCCESS`` if all actions have succeeded when the cleanup action runs,
     ``FAILURE`` otherwise. ``UNKNOWN`` if used in an action other than the
     cleanup action.
+
+
+Context variables only available to Services:
+
+**pid_file**
+    The filename of the pid file.
+
+**instance_number**
+    The number identifying this instance (will be 0 to n-1 where n is the
+    total number of instances).
+
 
 .. _config_logging:
 
