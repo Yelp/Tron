@@ -3,10 +3,12 @@ DESTDIR=/
 PROJECT=tron
 BUILDIR=$(CURDIR)/debian/$PROJECT
 VERSION=`$(PYTHON) setup.py --version`
+DOT=dot -Tpng
 
 SPHINXBUILD=sphinx-build
 DOCS_DIR=docs
 DOCS_BUILDDIR=docs/_build
+DOCS_STATICSDIR=$(DOCS_DIR)/images
 ALLSPHINXOPTS=-d $(DOCS_BUILDDIR)/doctrees $(SPHINXOPTS)
 
 .PHONY : all source install clean tests
@@ -41,9 +43,14 @@ clean:
 		find . -name '*.pyc' -delete
 		find . -name "._*" -delete
 		rm -rf $(DOCS_BUILDDIR)/*
+		rm -rf $(DOCS_STATICSDIR)/*
 		fakeroot $(MAKE) -f $(CURDIR)/debian/rules clean
 
 html:
+	$(PYTHON) tools/state_diagram.py
+	mkdir -p $(DOCS_STATICSDIR)
+	$(DOT) -o$(DOCS_STATICSDIR)/action.png action.dot
+	$(DOT) -o$(DOCS_STATICSDIR)/service.png service.dot
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_BUILDDIR)/html
 	@echo
 	@echo "Build finished. The HTML pages are in $(DOCS_BUILDDIR)/html."
