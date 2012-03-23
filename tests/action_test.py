@@ -423,5 +423,36 @@ class ActionRunVariablesTest(TestCase):
         assert_equal(self._cmd(), "somescript -d host")
 
 
+class TestBuildingActionRun(TestCase):
+
+    @setup
+    def setup_action(self):
+        node = turtle.Turtle()
+        job = turtle.Turtle()
+        self.action = action.Action("name", "do things", node, job=job)
+
+    def test_build_action(self):
+        job_run = turtle.Turtle()
+        action_run = self.action.build_run(job_run)
+        assert_equal(action_run.state, action.ActionRun.STATE_SCHEDULED)
+
+        action_run.machine.transition('queue')
+        action_run.machine.transition('success')
+        assert_equal(len(job_run.run_completed.calls), 1)
+        assert_equal(len(job_run.job.notify.calls), 2)
+        assert not job_run.cleanup_completed.calls
+
+    def test_build_cleanup_action(self):
+        job_run = turtle.Turtle()
+        action_run = self.action.build_run(job_run, True)
+        assert_equal(action_run.state, action.ActionRun.STATE_SCHEDULED)
+
+        action_run.machine.transition('queue')
+        action_run.machine.transition('success')
+        assert_equal(len(job_run.job.notify.calls), 2)
+        assert_equal(len(job_run.cleanup_completed.calls), 1)
+        assert not job_run.run_completed.calls
+
+
 if __name__ == '__main__':
     run()
