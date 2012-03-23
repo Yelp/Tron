@@ -29,15 +29,21 @@ class DailySchedulerTest(TestCase):
 
     @setup
     def build_scheduler(self):
+        self.now = datetime.datetime.now().replace(hour=15, minute=0)
+        timeutils.override_current_time(self.now)
         self.scheduler = scheduler.DailyScheduler(timestr='14:30')
+
+    @teardown
+    def unset_time(self):
+        timeutils.override_current_time(None)
 
     def test_next_run_time(self):
         one_day = datetime.timedelta(days=1)
-        today = datetime.date.today()
-        yesterday = datetime.datetime.now() - one_day
+        today = self.now.date()
+        yesterday = self.now - one_day
         tomorrow = today + one_day
 
-        next_run = self.scheduler.next_run_time(None)
+        next_run = self.scheduler.next_run_time(timeutils.current_time())
         assert_equal(tomorrow, next_run.date())
 
         next_run = self.scheduler.next_run_time(yesterday)
