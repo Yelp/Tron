@@ -1,14 +1,10 @@
 import calendar
 import datetime
-import tempfile
-import shutil
 
 import pytz
-from testify import *
-from testify.utils import turtle
+from testify import setup, teardown, run, TestCase, assert_equal
+from testify import assert_gte, assert_lte, assert_gt, assert_lt
 
-from tron import action
-from tron import job
 from tron import scheduler
 from tron.config.schedule_parse import parse_daily_expression as parse_daily
 from tron.utils import timeutils
@@ -18,25 +14,12 @@ class ConstantSchedulerTest(TestCase):
 
     @setup
     def build_scheduler(self):
-        self.test_dir = tempfile.mkdtemp()
         self.scheduler = scheduler.ConstantScheduler()
-        self.action = action.Action("Test Action")
-        self.action.command = "Test Command"
-        self.job = job.Job("Test Job", self.action)
-        self.job.node_pool = turtle.Turtle()
-        self.job.output_path = self.test_dir
-        self.job.scheduler = self.scheduler
-        self.action.job = self.job
 
-    @teardown
-    def teardown_scheduler(self):
-        shutil.rmtree(self.test_dir)
-
-    def test_next_runs(self):
-        next_run = self.job.next_runs()[0]
-        assert_gte(datetime.datetime.now(), next_run.run_time)
-
-        assert_equal(self.scheduler.next_runs(self.job), [])
+    def test_next_run_time(self):
+        current_time = timeutils.current_time()
+        scheduled_time = self.scheduler.next_run_time(None)
+        assert current_time <= scheduled_time <= timeutils.current_time()
 
     def test__str__(self):
         assert_equal(str(self.scheduler), "CONSTANT")
@@ -46,27 +29,19 @@ class DailySchedulerTest(TestCase):
 
     @setup
     def build_scheduler(self):
-        self.test_dir = tempfile.mkdtemp()
-        self.scheduler = scheduler.DailyScheduler()
-        self.action = action.Action("Test Action")
-        self.job = job.Job("Test Job", self.action)
-        self.job.node_pool = turtle.Turtle()
-        self.job.output_path = self.test_dir
-        self.job.scheduler = self.scheduler
-        self.action.job = self.job
+        self.scheduler = scheduler.DailyScheduler(timestr='14:30')
 
-    @teardown
-    def teardown_scheduler(self):
-        shutil.rmtree(self.test_dir)
-
-    def test_next_runs(self):
-        next_run = self.scheduler.next_runs(self.job)[0]
-
-        next_run_date = next_run.run_time.date()
+    def test_next_run_time(self):
+        one_day = datetime.timedelta(days=1)
         today = datetime.date.today()
+        yesterday = datetime.datetime.now() - one_day
+        tomorrow = today + one_day
 
-        assert_gt(next_run_date, today)
-        assert_equal(next_run_date - today, datetime.timedelta(days=1))
+        next_run = self.scheduler.next_run_time(None)
+        assert_equal(tomorrow, next_run.date())
+
+        next_run = self.scheduler.next_run_time(yesterday)
+        assert_equal(today, next_run.date())
 
     def test__str__(self):
         assert_equal(str(self.scheduler), "DAILY")
@@ -77,23 +52,9 @@ class DailySchedulerTimeTestBase(TestCase):
     def build_scheduler(self):
         self.scheduler = scheduler.DailyScheduler(timestr='14:30')
 
-    @setup
-    def build_job(self):
-        self.test_dir = tempfile.mkdtemp()
-        self.action = action.Action("Test Action - Beer Time")
-        self.job = job.Job("Test Job", self.action)
-        self.job.node_pool = turtle.Turtle()
-        self.job.output_path = self.test_dir
-        self.job.scheduler = self.scheduler
-        self.action.job = self.job
-
     @teardown
     def unset_time(self):
         timeutils.override_current_time(None)
-
-    @teardown
-    def cleanup(self):
-        shutil.rmtree(self.test_dir)
 
 
 class DailySchedulerTodayTest(DailySchedulerTimeTestBase):
@@ -104,14 +65,14 @@ class DailySchedulerTodayTest(DailySchedulerTimeTestBase):
         timeutils.override_current_time(self.now)
 
     def test(self):
-        # If we schedule a job for later today, it shoudl run today
-        next_run = self.scheduler.next_runs(self.job)[0]
-        next_run_date = next_run.run_time.date()
+        # If we schedule a job for later today, it should run today
+        run_time = self.scheduler.next_run_time(self.now)
+        next_run_date = run_time.date()
 
         assert_equal(next_run_date, self.now.date())
-        assert_lte(datetime.datetime(year=self.now.year, month=self.now.month,
-                                     day=self.now.day, hour=13),
-                   next_run.run_time)
+        earlier_time = datetime.datetime(
+            self.now.year, self.now.month, self.now.day, hour=13)
+        assert_lte(earlier_time, run_time)
 
 
 class DailySchedulerTomorrowTest(DailySchedulerTimeTestBase):
@@ -123,14 +84,14 @@ class DailySchedulerTomorrowTest(DailySchedulerTimeTestBase):
 
     def test(self):
         # If we schedule a job for later today, it should run today
-        next_run = self.scheduler.next_runs(self.job)[0]
-        next_run_date = next_run.run_time.date()
+        run_time = self.scheduler.next_run_time(self.now)
+        next_run_date = run_time.date()
         tomorrow = self.now.date() + datetime.timedelta(days=1)
 
         assert_equal(next_run_date, tomorrow)
-        assert_lte(datetime.datetime(year=tomorrow.year, month=tomorrow.month,
-                                     day=tomorrow.day, hour=13),
-                   next_run.run_time)
+        earlier_time = datetime.datetime(year=tomorrow.year, month=tomorrow.month,
+            day=tomorrow.day, hour=13)
+        assert_lte(earlier_time, run_time)
 
 
 class DailySchedulerLongJobRunTest(DailySchedulerTimeTestBase):
@@ -145,9 +106,9 @@ class DailySchedulerLongJobRunTest(DailySchedulerTimeTestBase):
         # that the scheduler will put things in the past if that's where
         # they belong, and run them as fast as possible
 
-        last_run = self.scheduler.next_runs(self.job)[0].run_time
+        last_run = self.scheduler.next_run_time(None)
         for i in range(10):
-            next_run = self.scheduler.next_runs(self.job)[0].run_time
+            next_run = self.scheduler.next_run_time(last_run)
             assert_equal(next_run, last_run + datetime.timedelta(days=1))
 
             self.now += datetime.timedelta(days=2)
@@ -158,38 +119,20 @@ class DailySchedulerLongJobRunTest(DailySchedulerTimeTestBase):
 
 class DailySchedulerDSTTest(TestCase):
 
-    @setup
-    def setup_tmp(self):
-        self.tmp_dirs = []
-
-    @setup
-    def setup_scheduler(self):
-        self.fmt = '%Y-%m-%d %H:%M:%S %Z%z'
-
     @teardown
     def unset_time(self):
         timeutils.override_current_time(None)
 
-    @teardown
-    def cleanup(self):
-        for tmp_dir in self.tmp_dirs:
-            shutil.rmtree(tmp_dir)
+    def hours_until_time(self, run_time, sch):
+        tz = sch.time_zone
+        now = timeutils.current_time()
+        now = tz.localize(now) if tz else now
+        sleep = run_time - now
+        seconds = (sleep.days * 86400 + sleep.seconds +
+                   sleep.microseconds * .000001)
+        return round(max(0, seconds) / 60 / 60, 1)
 
-    def make_job(self, sch):
-        """Create a dummy job with the given scheduler that stores its data in
-        a temp folder that will be deleted on teardown
-        """
-        tmp_dir = tempfile.mkdtemp()
-        self.tmp_dirs.append(tmp_dir)
-        a = action.Action("Test Action - Early Christmas Shopping")
-        j = job.Job("Test Job", a)
-        j.node_pool = turtle.Turtle()
-        j.output_path = tmp_dir
-        j.scheduler = sch
-        a.job = j
-        return j
-
-    def hours_to_job_at_datetime(self, sch, *args, **kwargs):
+    def hours_diff_at_datetime(self, sch, *args, **kwargs):
         """Return the number of hours until the next *two* runs of a job with
         the given scheduler
         """
@@ -197,13 +140,12 @@ class DailySchedulerDSTTest(TestCase):
         #   fmt = '%Y-%m-%d %H:%M:%S %Z%z'
         #   my_datetime.strftime(fmt)
 
-        j = self.make_job(sch)
         now = datetime.datetime(*args, **kwargs)
         timeutils.override_current_time(now)
-        next_run = sch.next_runs(j)[0]
-        t1 = round(next_run.seconds_until_run_time()/60/60, 1)
-        next_run = sch.next_runs(j)[0]
-        t2 = round(next_run.seconds_until_run_time()/60/60, 1)
+        next_run = sch.next_run_time(now)
+        t1 = self.hours_until_time(next_run, sch)
+        next_run = sch.next_run_time(next_run.replace(tzinfo=None))
+        t2 = self.hours_until_time(next_run, sch)
         return t1, t2
 
     def _assert_range(self, x, lower, upper):
@@ -215,36 +157,30 @@ class DailySchedulerDSTTest(TestCase):
         savings time 'fall back' point, when the system time zone changes
         from (e.g.) PDT to PST.
         """
-
-        sch = scheduler.DailyScheduler(
-            start_time=datetime.time(hour=0, minute=0),
-            time_zone=pytz.timezone('US/Pacific'))
+        sch = scheduler.DailyScheduler(time_zone=pytz.timezone('US/Pacific'))
 
         # Exact crossover time:
         # datetime.datetime(2011, 11, 6, 9, 0, 0, tzinfo=pytz.utc)
         # This test will use times on either side of it.
 
         # From the PDT vantage point, the run time is 24.2 hours away:
-        s1a, s1b = self.hours_to_job_at_datetime(sch, 2011, 11, 6, 0, 50, 0)
+        s1a, s1b = self.hours_diff_at_datetime(sch, 2011, 11, 6, 0, 50, 0)
 
         # From the PST vantage point, the run time is 22.8 hours away:
         # (this is measured from the point in absolute time 20 minutes after
         # the other measurement)
-        s2a, s2b = self.hours_to_job_at_datetime(sch, 2011, 11, 6, 1, 10, 0)
+        s2a, s2b = self.hours_diff_at_datetime(sch, 2011, 11, 6, 1, 10, 0)
 
         self._assert_range(s1b - s1a, 23.99, 24.11)
         self._assert_range(s2b - s2a, 23.99, 24.11)
         self._assert_range(s1a - s2a, 1.39, 1.41)
 
     def test_correct_time(self):
-        sch = scheduler.DailyScheduler(
-            start_time=datetime.time(hour=0, minute=0),
-            time_zone=pytz.timezone('US/Pacific'))
+        sch = scheduler.DailyScheduler(time_zone=pytz.timezone('US/Pacific'))
 
-        j = self.make_job(sch)
         now = datetime.datetime(2011, 11, 6, 1, 10, 0)
         timeutils.override_current_time(now)
-        next_run_time = sch.next_runs(j)[0].run_time
+        next_run_time = sch.next_run_time(now)
         assert_equal(next_run_time.hour, 0)
 
     def test_spring_forward(self):
@@ -252,22 +188,19 @@ class DailySchedulerDSTTest(TestCase):
         savings time 'spring forward' point, when the system time zone changes
         from (e.g.) PST to PDT.
         """
-
-        sch = scheduler.DailyScheduler(
-            start_time=datetime.time(hour=0, minute=0),
-            time_zone=pytz.timezone('US/Pacific'))
+        sch = scheduler.DailyScheduler(time_zone=pytz.timezone('US/Pacific'))
 
         # Exact crossover time:
         # datetime.datetime(2011, 3, 13, 2, 0, 0, tzinfo=pytz.utc)
         # This test will use times on either side of it.
 
         # From the PST vantage point, the run time is 20.2 hours away:
-        s1a, s1b = self.hours_to_job_at_datetime(sch, 2011, 3, 13, 2, 50, 0)
+        s1a, s1b = self.hours_diff_at_datetime(sch, 2011, 3, 13, 2, 50, 0)
 
         # From the PDT vantage point, the run time is 20.8 hours away:
         # (this is measured from the point in absolute time 20 minutes after
         # the other measurement)
-        s2a, s2b = self.hours_to_job_at_datetime(sch, 2011, 3, 13, 3, 10, 0)
+        s2a, s2b = self.hours_diff_at_datetime(sch, 2011, 3, 13, 3, 10, 0)
 
         self._assert_range(s1b - s1a, 23.99, 24.11)
         self._assert_range(s2b - s2a, 23.99, 24.11)
@@ -278,20 +211,7 @@ class ComplexParserTest(TestCase):
 
     @setup
     def build_scheduler(self):
-        self.test_dir = tempfile.mkdtemp()
-        self.action = action.Action("Test Action")
-        self.job = job.Job("Test Job", self.action)
-        self.job.node_pool = turtle.Turtle()
-        self.job.output_path = self.test_dir
-        self.action.job = self.job
         self.today = datetime.datetime(2011, 6, 1)
-
-    @teardown
-    def remove_tmp(self):
-        shutil.rmtree(self.test_dir)
-
-    @setup
-    def set_time(self):
         timeutils.override_current_time(self.today)
 
     @teardown
@@ -344,9 +264,7 @@ class ComplexParserTest(TestCase):
     def test_daily(self):
         cfg = parse_daily('every day')
         sch = scheduler.DailyScheduler(**cfg._asdict())
-        next_run = sch.next_runs(self.job)[0]
-
-        next_run_date = next_run.run_time
+        next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.today)
         assert_equal(next_run_date.month, 6)
@@ -356,10 +274,7 @@ class ComplexParserTest(TestCase):
     def test_daily_with_time(self):
         cfg = parse_daily('every day at 02:00')
         sch = scheduler.DailyScheduler(**cfg._asdict())
-
-        next_run = sch.next_runs(self.job)[0]
-
-        next_run_date = next_run.run_time
+        next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.today)
         assert_equal(next_run_date.year, self.today.year)
@@ -371,10 +286,7 @@ class ComplexParserTest(TestCase):
     def test_weekly(self):
         cfg = parse_daily('every monday at 01:00')
         sch = scheduler.DailyScheduler(**cfg._asdict())
-
-        next_run = sch.next_runs(self.job)[0]
-
-        next_run_date = next_run.run_time
+        next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.today)
         assert_equal(calendar.weekday(next_run_date.year,
@@ -384,10 +296,7 @@ class ComplexParserTest(TestCase):
     def test_weekly_in_month(self):
         cfg = parse_daily('every monday of january at 00:01')
         sch = scheduler.DailyScheduler(**cfg._asdict())
-
-        next_run = sch.next_runs(self.job)[0]
-
-        next_run_date = next_run.run_time
+        next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.today)
         assert_equal(next_run_date.year, self.today.year+1)
@@ -401,10 +310,7 @@ class ComplexParserTest(TestCase):
     def test_monthly(self):
         cfg = parse_daily('1st day')
         sch = scheduler.DailyScheduler(**cfg._asdict())
-
-        next_run = sch.next_runs(self.job)[0]
-
-        next_run_date = next_run.run_time
+        next_run_date = sch.next_run_time(None)
 
         assert_gt(next_run_date, self.today)
         assert_equal(next_run_date.month, 7)
@@ -414,23 +320,13 @@ class IntervalSchedulerTest(TestCase):
 
     @setup
     def build_scheduler(self):
-        self.test_dir = tempfile.mkdtemp()
         self.interval = datetime.timedelta(seconds=1)
         self.scheduler = scheduler.IntervalScheduler(self.interval)
-        self.action = action.Action("Test Action")
-        self.job = job.Job("Test Job", self.action)
-        self.job.node_pool = turtle.Turtle()
-        self.job.output_path = self.test_dir
-        self.job.scheduler = self.scheduler
-        self.action.job = self.job
 
-    @teardown
-    def teardown_scheduler(self):
-        shutil.rmtree(self.test_dir)
-
-    def test_next_runs(self):
-        next_run = self.scheduler.next_runs(self.job)[0]
-        assert_gte(datetime.datetime.now() + self.interval, next_run.run_time)
+    def test_next_run_time(self):
+        current_time = timeutils.current_time()
+        run_time = self.scheduler.next_run_time(current_time)
+        assert_gte(current_time + self.interval, run_time)
 
     def test__str__(self):
         assert_equal(str(self.scheduler), "INTERVAL:%s" % self.interval)

@@ -542,21 +542,21 @@ class MasterControlProgram(object):
             log.info("Scheduling next job for %s", next.job.name)
             self._schedule(next)
 
-    def run_job(self, now):
+    def run_job(self, job_run):
         """This runs when a job was scheduled.
         Here we run the job and schedule the next time it should run
         """
-        if not now.job:
+        if not job_run.job:
             return
 
-        if not now.job.enabled:
+        if not job_run.job.enabled:
             return
 
-        if not (now.is_running or now.is_failure or now.is_success):
+        if not (job_run.is_running or job_run.is_failure or job_run.is_success):
             log.debug("Running next scheduled job")
-            now.scheduled_start()
+            job_run.scheduled_start()
 
-        self.schedule_next_run(now.job)
+        self.schedule_next_run(job_run.job)
 
     def enable_job(self, job):
         job.enable()
@@ -593,8 +593,6 @@ class MasterControlProgram(object):
             else:
                 log.warning("Job name %s from state file unknown", name)
 
-                self.state_handler.restore_job(self.jobs[name], data[name])
-
         for name in data['services'].iterkeys():
             if name in self.services:
                 state_load_count += 1
@@ -613,11 +611,6 @@ class MasterControlProgram(object):
                     self.schedule_next_run(tron_job)
                 else:
                     self.enable_job(tron_job)
-
-    def run_services(self):
-        for service in self.services.itervalues():
-            if not service.is_started:
-                service.start()
 
     def __str__(self):
         return "MCP"

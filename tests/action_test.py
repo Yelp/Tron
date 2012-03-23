@@ -247,7 +247,7 @@ class ActionRunBuildingTest(TestCase):
         FileHandleManager.reset()
 
     def test_build_run(self):
-        run = self.job.build_run()
+        run = self.job.build_run(None)
         self.action.build_run(run)
         assert run.id
 

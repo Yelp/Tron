@@ -30,13 +30,13 @@ MICRO_SEC = .000001
 
 
 class JobRun(object):
-    def __init__(self, job, run_num=None):
+    def __init__(self, job, run_num=None, run_time=None):
         self.job = job
         self.run_num = job.next_num() if run_num is None else run_num
         self.state_callback = job.state_callback
         self.id = "%s.%s" % (job.name, self.run_num)
 
-        self.run_time = None
+        self.run_time = run_time
         self.start_time = None
         self.end_time = None
         self.node = None
@@ -78,6 +78,8 @@ class JobRun(object):
     def set_run_time(self, run_time):
         self.run_time = run_time
 
+        # TODO: why do actions even have a run time if they're all the same
+        # as the job_run?
         for action_run in self.action_runs_with_cleanup:
             action_run.run_time = run_time
 
@@ -174,8 +176,8 @@ class JobRun(object):
         if self.is_success:
             self.job.update_last_success(self)
 
-            if self.job.constant and self.job.enabled:
-                self.job.build_run().start()
+#            if self.job.constant and self.job.enabled:
+#                self.job.build_run().start()
 
         if self.all_but_cleanup_done:
             if self.cleanup_action_run is None:
@@ -464,20 +466,22 @@ class Job(object):
         log.warning("No runs with state %s exist", state)
 
     def next_to_finish(self, node=None):
-        """Returns the next run to finish(optional node requirement). Useful
-        for getting the currently running job run or next queued/schedule job
-        run.
+        """This will return the most recent job if it is not yet running or
+        None if the job is complete. Useful for getting the currently running
+        job run or next queued/schedule job run.
+
+        Note that Jobs are stored in reverse chronological order.
+
+        Optionally only compare jobs for a given node.
         """
-        def choose(prev, nxt):
-            if ((prev and prev.is_running) or
-                (node and nxt.node != node) or
-                nxt.is_success or
-                nxt.is_failure or
-                nxt.is_cancelled or
-                nxt.is_unknown):
-                return prev
-            else:
-                return nxt
+        def choose(next, prev):
+            if ((next and next.is_running) or
+                (node and prev.node != node) or
+                prev.is_done or
+                prev.is_unknown
+            ):
+                return next
+            return prev
 
         return reduce(choose, self.runs, None)
 
@@ -506,7 +510,12 @@ class Job(object):
         if not self.scheduler:
             return []
 
-        return self.scheduler.next_runs(self)
+        last_run_time = None
+        if self.runs:
+            last_run_time = self.runs[0].run_time
+
+        next_run_time = self.scheduler.next_run_time(last_run_time)
+        return self.build_and_add_runs(next_run_time)
 
     def update_last_success(self, run):
         """Update the last_success run if the run number is greater then the
@@ -541,23 +550,22 @@ class Job(object):
                 req_action_run.waiting_runs.append(waiting_action_run)
                 waiting_action_run.required_runs.append(req_action_run)
 
-    def build_run(self, node=None, actions=None, run_num=None,
+    def build_run(self, run_time, node=None, actions=None, run_num=None,
                   cleanup_action=None):
-        job_run = JobRun(self, run_num=run_num)
+        """Create a JobRun with the specified run_time."""
+        job_run = JobRun(self, run_time=run_time, run_num=run_num)
 
         job_run.node = node or self.node_pool.next()
         log.info("Built run %s", job_run.id)
 
-        # It would be great if this were abstracted out a bit
+        # TODO: It would be great if this were abstracted out a bit
         if (os.path.exists(self.output_path) and
             not os.path.exists(job_run.output_path)):
             os.mkdir(job_run.output_path)
 
-        # If the actions aren't specified, then we know this is a normal run
+        # Actions can be specified when restored from serialized state
         if not actions:
-            self.runs.appendleft(job_run)
             actions = self.topo_actions
-            self.remove_old_runs()
 
         self.build_action_dag(job_run, actions)
 
@@ -569,24 +577,43 @@ class Job(object):
 
         return job_run
 
-    def build_runs(self):
+    def build_runs(self, run_time):
+        """Builds runs. If all_nodes is set, build a run for every node,
+        otherwise just builds a single run on a single node.
+        """
         if self.all_nodes:
-            return [self.build_run(node=node) for node in self.node_pool.nodes]
-        return [self.build_run()]
+            return [
+            self.build_run(run_time, node=node)
+            for node in self.node_pool.nodes
+            ]
+        return [self.build_run(run_time)]
+
+    def build_and_add_runs(self, run_time):
+        """Builds new runs and adds them to the run list. Also trims off old
+        runs.
+        """
+        runs = self.build_runs(run_time)
+        for job_run in runs:
+            self.runs.appendleft(job_run)
+        self.remove_old_runs()
+        return runs
 
     def manual_start(self, run_time=None):
+        """Trigger a job run manually (instead of from the scheduler)."""
+        run_time = run_time or timeutils.current_time()
+        manual_runs = self.build_runs(run_time)
+
+        # Insert this run before any scheduled runs
         scheduled = deque()
         while self.runs and self.runs[0].is_scheduled:
             scheduled.appendleft(self.runs.popleft())
 
-        man_runs = self.build_runs()
+        self.runs.extendleft(manual_runs)
         self.runs.extendleft(scheduled)
 
-        for r in man_runs:
-            r.set_run_time(run_time or timeutils.current_time())
+        for r in manual_runs:
             r.manual_start()
-
-        return man_runs
+        return manual_runs
 
     def absorb_old_job(self, old):
         self.runs = old.runs
@@ -660,7 +687,8 @@ class Job(object):
         ca = (self.cleanup_action
               if self.cleanup_action and action_filter(self.cleanup_action)
               else None)
-        run = self.build_run(run_num=data['run_num'], actions=action_list,
+        # TODO: this seems like it should be easier to restore a runs state
+        run = self.build_run(None, run_num=data['run_num'], actions=action_list,
                              cleanup_action=ca)
         self.run_num = max([run.run_num + 1, self.run_num])
 

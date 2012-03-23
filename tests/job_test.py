@@ -127,7 +127,7 @@ class TestJob(TestCase):
         self.job.node_pool = turtle.Turtle(nodes=[turtle.Turtle(),
                                                   turtle.Turtle(),
                                                   turtle.Turtle()])
-        runs = self.job.build_runs()
+        runs = self.job.build_runs(None)
 
         assert_equal(len(runs), 3)
 
@@ -266,7 +266,7 @@ class TestJob(TestCase):
         assert_equal(run2.action_runs[1].action, act)
 
     def test_manual_start_no_scheduled(self):
-        r1 = self.job.build_run()
+        r1 = self.job.build_and_add_runs(None)[0]
         r1.succeed()
 
         mr1 = self.job.manual_start()[0]

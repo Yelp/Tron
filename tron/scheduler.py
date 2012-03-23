@@ -1,3 +1,12 @@
+"""
+Tron schedulers
+
+ A scheduler has a simple interface.  It should implement a single method
+ next_run_time(last_run_time).  The last_run_time is the time the last job
+ ran.  It may be None. This method should return a datetime which is the
+ time the next job run will be run.
+
+"""
 import logging
 
 from pytz import AmbiguousTimeError, NonExistentTimeError
@@ -30,23 +39,14 @@ def scheduler_from_config(config, time_zone):
 
 
 class ConstantScheduler(object):
-    """The constant scheduler schedules the first job run. The next job run
-    is scheduled when this first run is finished.
-    """
+    """The constant scheduler schedules a new job immediately."""
 
     def __init__(self, *args, **kwargs):
         super(ConstantScheduler, self).__init__(*args, **kwargs)
         self.time_zone = None
 
-    def next_runs(self, job):
-        if job.next_to_finish():
-            return []
-
-        job_runs = job.build_runs()
-        for job_run in job_runs:
-            job_run.set_run_time(timeutils.current_time())
-
-        return job_runs
+    def next_run_time(self, _):
+        return timeutils.current_time()
 
     def __str__(self):
         return "CONSTANT"
@@ -65,7 +65,7 @@ class DailyScheduler(object):
 
     def __init__(self, ordinals=None, weekdays=None, months=None,
                  monthdays=None, timestr=None, time_zone=None,
-                 start_time=None, string_repr=None):
+                 string_repr=None):
         """Parameters:
           timestr     - the time of day to run, as 'HH:MM'
           ordinals    - first, second, third &c, as a set of integers in 1..5 to
@@ -78,7 +78,6 @@ class DailyScheduler(object):
           timezone    - the optional timezone as a string for this specification.
                         Defaults to UTC - valid entries are things like
                         Australia/Victoria or PST8PDT.
-          start_time  - Backward-compatible parameter for DailyScheduler
           string_repr - Original string representation this was parsed from,
                         if applicable
         """
@@ -107,37 +106,27 @@ class DailyScheduler(object):
                 months=self.months,
                 monthdays=self.monthdays,
                 timestr=self.timestr,
-                timezone=self.time_zone.zone if self.time_zone else None)
+                timezone=self.time_zone.zone if self.time_zone else None,
+            )
         return self._time_spec
 
-    def next_runs(self, job):
-        # Find the next time to run
-        if job.runs:
-            start_time = job.runs[0].run_time
-        else:
+    def next_run_time(self, start_time):
+        """Find the next time to run."""
+        if not start_time:
             start_time = timeutils.current_time()
-            if self.time_zone:
-                try:
-                    start_time = self.time_zone.localize(start_time,
-                                                         is_dst=None)
-                except AmbiguousTimeError:
-                    # We are in the infamous 1 AM block which happens twice on
-                    # fall-back. Pretend like it's the first time, every time.
-                    start_time = self.time_zone.localize(start_time,
-                                                         is_dst=True)
-                except NonExistentTimeError:
-                    # We are in the infamous 2:xx AM block which does not
-                    # exist. Pretend like it's the later time, every time.
-                    start_time = self.time_zone.localize(start_time,
-                                                         is_dst=True)
+        elif self.time_zone:
+            try:
+                start_time = self.time_zone.localize(start_time, is_dst=None)
+            except AmbiguousTimeError:
+                # We are in the infamous 1 AM block which happens twice on
+                # fall-back. Pretend like it's the first time, every time.
+                start_time = self.time_zone.localize(start_time, is_dst=True)
+            except NonExistentTimeError:
+                # We are in the infamous 2:xx AM block which does not
+                # exist. Pretend like it's the later time, every time.
+                start_time = self.time_zone.localize(start_time, is_dst=True)
 
-        run_time = self.time_spec.GetMatch(start_time)
-
-        job_runs = job.build_runs()
-        for job_run in job_runs:
-            job_run.set_run_time(run_time)
-
-        return job_runs
+        return self.time_spec.GetMatch(start_time)
 
     def __str__(self):
         # Backward compatible string representation which also happens to be
@@ -170,14 +159,9 @@ class IntervalScheduler(object):
         self.interval = interval
         self.time_zone = None
 
-    def next_runs(self, job):
-        run_time = timeutils.current_time() + self.interval
-
-        job_runs = job.build_runs()
-        for job_run in job_runs:
-            job_run.set_run_time(run_time)
-
-        return job_runs
+    def next_run_time(self, last_run_time):
+        last_run_time = last_run_time or timeutils.current_time()
+        return last_run_time + self.interval
 
     def __str__(self):
         return "INTERVAL:%s" % self.interval

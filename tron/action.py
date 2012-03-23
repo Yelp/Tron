@@ -141,13 +141,14 @@ class ActionRun(object):
         output_path=None,
         node=None,
         id=None,
+        run_time=None
     ):
         self.action = action
         self.id = id
 
-        self.run_time = None    # What time are we supposed to start
-        self.start_time = None  # What time did we start
-        self.end_time = None    # What time did we end
+        self.run_time = run_time # What time are we supposed to start
+        self.start_time = None   # What time did we start
+        self.end_time = None     # What time did we end
         self.exit_status = None
         self.machine = state.StateMachine(ActionRun.STATE_SCHEDULED)
 
@@ -446,6 +447,7 @@ class ActionRun(object):
                 self.rendered_command = self.render_command()
             return self.rendered_command
         except Exception:
+            # TODO: full stack trace
             log.exception("Failed generating rendering command. Bad format")
 
             # If we can't properly build our command, we at least want to
@@ -544,7 +546,8 @@ class Action(object):
             context=job_run.context,
             node=job_run.node,
             id="%s.%s" % (job_run.id, self.name),
-            output_path=job_run.output_path)
+            output_path=job_run.output_path,
+            run_time=job_run.run_time)
         action_run.machine.listen(True, job_run.job.notify)
         action_run.machine.listen(ActionRun.STATE_SUCCEEDED, callback)
         action_run.machine.listen(ActionRun.STATE_FAILED,    callback)
