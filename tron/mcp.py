@@ -474,14 +474,18 @@ class MasterControlProgram(object):
 
         self.jobs[job.name] = job
 
+        # TODO: this should be part of constructor/factory
         # add some command context variables
         job.set_context(self.context)
 
+        # TODO: this should be part of constructor/factory
         job.event_recorder.set_parent(self.event_recorder)
 
+        # TODO: this should be part of constructor/factory
         # make the directory for output
         job.setup_job_dir(self.state_handler.working_dir)
 
+        # TODO: this should be part of constructor/factory
         # Tell the job to call store_state() whenever its state changes.
         # job isn't actaully a StateMachine object, but its interface tries
         # to look like one.

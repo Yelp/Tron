@@ -5,7 +5,7 @@ from collections import deque
 
 from tron import action, command_context, event
 from tron.action import Action, ActionRun
-from tron.scheduler import scheduler_from_config, ConstantScheduler
+from tron.scheduler import scheduler_from_config
 from tron.utils import timeutils
 from tron.utils.proxy import CollectionProxy
 
@@ -166,6 +166,7 @@ class JobRun(object):
             self.queue()
 
     def attempt_start(self):
+        """Starts the JobRun if the JobRun is the next queued run."""
         if self.should_start:
             try:
                 self.start()
@@ -173,11 +174,9 @@ class JobRun(object):
                 log.warning("Attempt to start failed: %r", e)
 
     def run_completed(self):
+        """Callback which is called on action run state change."""
         if self.is_success:
             self.job.update_last_success(self)
-
-#            if self.job.constant and self.job.enabled:
-#                self.job.build_run().start()
 
         if self.all_but_cleanup_done:
             if self.cleanup_action_run is None:
@@ -188,6 +187,11 @@ class JobRun(object):
                 self.cleanup_action_run.attempt_start()
 
     def cleanup_completed(self):
+        """This is the last step of a JobRun.
+
+        Callback called when the cleanup action completes.  Also called when
+        a JobRun is complete and does not have a cleanup action.
+        """
         self.end_time = timeutils.current_time()
 
         if self.is_failure:
@@ -195,6 +199,7 @@ class JobRun(object):
         else:
             self.event_recorder.emit_ok("succeeded")
 
+        # Notify Job that this JobRun is complete
         next = self.job.next_to_finish()
         if next and next.is_queued:
             next.attempt_start()
@@ -266,9 +271,12 @@ class JobRun(object):
 
     @property
     def should_start(self):
-        if not self.job.enabled or self.is_running:
+        """Returns True if the Job is enabled and this is the next JobRun."""
+        if not self.job.enabled:
             return False
+
         node = self.node if self.job.all_nodes else None
+        # TODO: shouldn't this check the state of self ?
         return self.job.next_to_finish(node) is self
 
     @property
@@ -284,10 +292,13 @@ class JobRun(object):
         actions were skipped.
         """
         return all(
-            r.is_success or r.is_skipped for r in self.action_runs_with_cleanup)
+            r.is_success or r.is_skipped for r in self.action_runs_with_cleanup
+        )
 
     @property
     def all_but_cleanup_done(self):
+        """True when any ActionRun has failed, or when all ActionRuns are done.
+        """
         if self.is_failure:
             return True
         return all(r.is_done for r in self.action_runs)
@@ -705,10 +716,6 @@ class Job(object):
         self.output_path = os.path.join(working_dir, self.name)
         if not os.path.exists(self.output_path):
             os.mkdir(self.output_path)
-
-    @property
-    def constant(self):
-        return isinstance(self.scheduler, ConstantScheduler)
 
     def __str__(self):
         return "JOB:%s" % self.name

@@ -1,14 +1,13 @@
-from testify import *
+from testify import TestCase, setup, assert_equal, assert_raises
 
 from tron.utils import state
+from tron.utils.state import NamedEventState
 
 class SimpleTestCase(TestCase):
     @setup
     def build_machine(self):
-        self.state_green = {}
-        self.state_red = {
-            True: self.state_green,
-        }
+        self.state_green = NamedEventState('green')
+        self.state_red = NamedEventState('red', true=self.state_green)
 
         self.machine = state.StateMachine(self.state_red)
 
@@ -18,16 +17,16 @@ class SimpleTestCase(TestCase):
         assert_equal(self.machine.state, self.state_red)
 
         # Traffic has arrived
-        self.machine.transition(True)
+        self.machine.transition('true')
         assert_equal(self.machine.state, self.state_green)
 
         # Still traffic
-        self.machine.transition(True)
+        self.machine.transition('true')
         assert_equal(self.machine.state, self.state_green)
 
     def test_check(self):
         assert not self.machine.check(False)
-        assert_equal(self.machine.check(True), self.state_green)
+        assert_equal(self.machine.check('true'), self.state_green)
         assert_equal(self.machine.state, self.state_red)
 
 
@@ -39,13 +38,13 @@ class MultiOptionTestCase(TestCase):
         # If they are listening, we should talk
         # If they are ignoring us we should get angry
 
-        self.state_ignoring = dict()
-        self.state_talking = dict()
-        self.state_angry = dict()
+        self.state_ignoring = NamedEventState('ignoring')
+        self.state_talking = NamedEventState('talking')
+        self.state_angry = NamedEventState('angry')
 
-        self.state_listening = {
-            'listening': self.state_talking,
-        }
+        self.state_listening = NamedEventState('listening',
+            listening=self.state_talking
+        )
 
         self.state_talking.update({
             'ignoring': self.state_angry,
@@ -75,19 +74,20 @@ class TestCircular(TestCase):
     @setup
     def build_machine(self):
         # Going around and around in circles
-        self.state_telling_false = dict()
+        self.state_telling_false = NamedEventState('telling_false')
 
-        self.state_telling_truth = {
-            True: self.state_telling_false,
-        }
+        self.state_telling_truth = NamedEventState('telling_truth',
+            true=self.state_telling_false
+        )
         self.state_telling_false.update({
-            True: self.state_telling_truth,
+            'true': self.state_telling_truth,
         })
 
         self.machine = state.StateMachine(self.state_telling_truth)
 
     def test(self):
-        assert_raises(state.CircularTransitionError, self.machine.transition, True)
+        assert_raises(state.CircularTransitionError, self.machine.transition, 'true')
+
 
 class TestNamedSearch(TestCase):
     @setup
