@@ -505,13 +505,13 @@ class ActionRun(object):
 
 class Action(object):
     def __init__(self, name=None, command=None, node_pool=None,
-                 required_actions=None):
+                 required_actions=None, job=None):
         self.name = name
         self.command = command
         self.node_pool = node_pool
 
         self.required_actions = required_actions or []
-        self.job = None
+        self.job = job
 
     @classmethod
     def from_config(cls, config, node_pools):
@@ -537,7 +537,7 @@ class Action(object):
         """Build an instance of ActionRun for this action. If cleanup=True
         we're building a cleanup action run.
         """
-        callback = job_run.cleanup_action_run if cleanup else job_run.run_completed
+        callback = job_run.cleanup_completed if cleanup else job_run.run_completed
 
         action_run = ActionRun(
             self,
