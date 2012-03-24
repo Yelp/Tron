@@ -137,12 +137,12 @@ class ActionRun(object):
 
     # The set of states that are considered end states. Technically some of
     # these states can be manually transitioned to other states.
-    END_STATES = set((
+    END_STATES = set([
         STATE_FAILED,
         STATE_SUCCEEDED,
         STATE_CANCELLED,
         STATE_SKIPPED
-    ))
+    ])
 
     def __init__(self,
         action,
@@ -229,6 +229,7 @@ class ActionRun(object):
     def attempt_start(self):
         self.machine.transition('ready')
 
+        # TODO: should be checked in JobRun or ActionRunCollection?
         if all(r.is_success or r.is_skipped for r in self.required_runs):
             return self.start()
 
@@ -259,6 +260,7 @@ class ActionRun(object):
             stdout=self.stdout_file,
             stderr=self.stderr_file
         )
+        # TODO: observer
         self.action_command.machine.listen(True, self._handle_action_command)
         try:
             df = self.node.run(self.action_command)

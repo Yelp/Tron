@@ -2,6 +2,7 @@ import logging
 import os
 import shutil
 from collections import deque
+from twisted.internet import reactor
 
 from tron import action, command_context, event
 from tron.action import Action, ActionRun
@@ -148,7 +149,7 @@ class JobRun(Observable, Observer):
         if not self.proxy_action_runs_with_cleanup.perform('check_state', 'start'):
             raise InvalidStartStateError("Not scheduled")
 
-        log.info("Starting action job %s", self.id)
+        log.info("Starting JobRun %s", self.id)
         self.start_time = timeutils.current_time()
 
         try:
@@ -542,10 +543,16 @@ class Job(Observable, Observer):
             self.remove_run(self.runs[-1])
 
     def get_runs_to_schedule(self):
-        """If this job does not have any scheduled runs, then create the run
-        and return it to be scheduled.
+        """If the scheduler is just a 'best effort' scheduler and this job has
+        queued runs, we don't need to schedule any more yet. Otherwise schedule
+        the next run.
         """
-        if self.get_run_by_state(ActionRun.STATE_SCHEDULED):
+        best_effort = self.scheduler.is_best_effort
+
+        if best_effort and self.get_run_by_state(ActionRun.STATE_QUEUED):
+            return None
+
+        if best_effort and self.get_run_by_state(ActionRun.STATE_SCHEDULED):
             return None
 
         return self.next_runs()
@@ -638,6 +645,33 @@ class Job(Observable, Observer):
         next = self.next_to_finish()
         if next and next.is_queued:
             next.attempt_start()
+
+        # See if we need to scheduler another Run
+        self.schedule_next_run()
+
+    def _schedule(self, run):
+        secs = run.seconds_until_run_time()
+        reactor.callLater(secs, self.run_job, run)
+
+    def schedule_next_run(self):
+        runs = self.get_runs_to_schedule() or []
+        for next in runs:
+            log.info("Scheduling next job for %s", next.job.name)
+            self._schedule(next)
+
+    def run_job(self, job_run):
+        """This runs when a job was scheduled.
+        Here we run the job and schedule the next time it should run
+        """
+        if not job_run.job:
+            return
+
+        # TODO: do these belong here?
+        if not job_run.job.enabled:
+            return
+
+        job_run.scheduled_start()
+        self.schedule_next_run()
 
     def build_runs(self, run_time):
         """Builds runs. If all_nodes is set, build a run for every node,

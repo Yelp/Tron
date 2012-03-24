@@ -23,8 +23,6 @@ import yaml
 
 from tron.config import ConfigError
 from tron.config.schedule_parse import valid_schedule
-from tron.config.schedule_parse import ConfigConstantScheduler
-from tron.config.schedule_parse import ConfigIntervalScheduler
 from tron.utils.dicts import FrozenDict
 
 
@@ -535,6 +533,7 @@ class ValidateJob(ValidatorWithNamedPath):
         'all_nodes':            False,
         'cleanup_action':       None,
         'enabled':              True,
+        'queueing':             True
     }
 
     validators = {
@@ -548,15 +547,6 @@ class ValidateJob(ValidatorWithNamedPath):
         'queueing':             valid_bool,
         'enabled':              valid_bool,
     }
-
-    def set_defaults(self, job):
-        super(ValidateJob, self).set_defaults(job)
-        if 'queueing' not in job:
-            # Set queueing default based on scheduler. Usually False, But daily
-            # jobs probably deal with daily data and should not be skipped
-            job['queueing'] = not isinstance(job['schedule'],
-                    (ConfigConstantScheduler, ConfigIntervalScheduler)
-            )
 
     def _validate_dependencies(self, job, actions,
         base_action, current_action=None, stack=None):

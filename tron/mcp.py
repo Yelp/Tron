@@ -66,7 +66,7 @@ class StateHandler(Observer):
         for run in job_inst.runs:
             if run.is_scheduled:
                 reactor.callLater(run.seconds_until_run_time(),
-                                  self.mcp.run_job,
+                                  job_inst.run_job(run),
                                   run)
 
         next = job_inst.next_to_finish()
@@ -532,37 +532,10 @@ class MasterControlProgram(object):
 
     ### OTHER ACTIONS ###
 
-    def _schedule(self, run):
-        secs = run.seconds_until_run_time()
-        reactor.callLater(secs, self.run_job, run)
-
-    def schedule_next_run(self, job):
-        runs = job.get_runs_to_schedule() or []
-        for next in runs:
-            log.info("Scheduling next job for %s", next.job.name)
-            self._schedule(next)
-
-    def run_job(self, job_run):
-        """This runs when a job was scheduled.
-        Here we run the job and schedule the next time it should run
-        """
-        if not job_run.job:
-            return
-
-        if not job_run.job.enabled:
-            return
-
-        # TODO: This check does not belong here
-        if not any([job_run.is_done, job_run.is_running]):
-            log.debug("Running next scheduled job")
-            # TODO: this is broken
-            if job_run.scheduled_start():
-                self.schedule_next_run(job_run.job)
-
     def enable_job(self, job):
         job.enable()
         if not job.runs or not job.runs[0].is_scheduled:
-            self.schedule_next_run(job)
+            job.schedule_next_run()
 
     def disable_job(self, job):
         job.disable()
@@ -609,7 +582,7 @@ class MasterControlProgram(object):
         for tron_job in self.jobs.itervalues():
             if tron_job.enabled:
                 if tron_job.runs:
-                    self.schedule_next_run(tron_job)
+                    tron_job.schedule_next_run()
                 else:
                     self.enable_job(tron_job)
 

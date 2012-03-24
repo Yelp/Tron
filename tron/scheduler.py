@@ -1,10 +1,24 @@
 """
 Tron schedulers
 
- A scheduler has a simple interface.  It should implement a single method
- next_run_time(last_run_time).  The last_run_time is the time the last job
- ran.  It may be None. This method should return a datetime which is the
- time the next job run will be run.
+ A scheduler has a simple interface.
+
+ class Scheduler(object):
+
+    is_best_effort = <bool>
+
+    def next_run_time(self, last_run_time):
+        <returns datetime>
+
+
+
+ next_run_time() should return a datetime which is the time the next job run
+ will be run.
+
+ is_best_effort should be True if this scheduler should stop queueing
+ runs once there is a queued or scheduled run already waiting.  It should
+ return False if jobs should always be queued regardless of the current
+ state of other jobs.
 
 """
 import logging
@@ -41,6 +55,8 @@ def scheduler_from_config(config, time_zone):
 class ConstantScheduler(object):
     """The constant scheduler schedules a new job immediately."""
 
+    is_best_effort = True
+
     def __init__(self, *args, **kwargs):
         super(ConstantScheduler, self).__init__(*args, **kwargs)
         self.time_zone = None
@@ -62,6 +78,8 @@ class DailyScheduler(object):
     """Wrapper around SpecificTimeSpecification in the Google App Engine cron
     library
     """
+
+    is_best_effort = False
 
     def __init__(self, ordinals=None, weekdays=None, months=None,
                  monthdays=None, timestr=None, time_zone=None,
@@ -154,6 +172,9 @@ class IntervalScheduler(object):
     """The interval scheduler runs a job (to success) based on a configured
     interval.
     """
+
+    # TODO: make this configurable
+    is_best_effort = True
 
     def __init__(self, interval=None):
         self.interval = interval

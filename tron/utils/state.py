@@ -121,7 +121,7 @@ class StateMachine(Observable):
             raise CircularTransitionError()
 
         self.state = next_state
-        self.notify(self.state.name)
+        self.notify(self.state)
 
         # We always call recursively after a state change incase there are
         # multiple steps to take.
