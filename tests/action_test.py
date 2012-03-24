@@ -432,14 +432,14 @@ class TestBuildingActionRun(TestCase):
         self.action = action.Action("name", "do things", node, job=job)
 
     def test_build_action(self):
-        job_run = turtle.Turtle()
+        job_run = turtle.Turtle(notify_action_run_completed=turtle.Turtle())
         action_run = self.action.build_run(job_run)
         assert_equal(action_run.state, action.ActionRun.STATE_SCHEDULED)
 
         action_run.machine.transition('queue')
         action_run.machine.transition('success')
-        assert_equal(len(job_run.run_completed.calls), 1)
-        assert_equal(len(job_run.job.notify.calls), 2)
+        assert_equal(len(job_run.notify_action_run_completed.calls), 1)
+        assert_equal(len(job_run.job.notify_state_changed.calls), 2)
         assert not job_run.cleanup_completed.calls
 
     def test_build_cleanup_action(self):
@@ -449,8 +449,8 @@ class TestBuildingActionRun(TestCase):
 
         action_run.machine.transition('queue')
         action_run.machine.transition('success')
-        assert_equal(len(job_run.job.notify.calls), 2)
-        assert_equal(len(job_run.cleanup_completed.calls), 1)
+        assert_equal(len(job_run.job.notify_state_changed.calls), 2)
+        assert_equal(len(job_run.notify_cleanup_action_run_completed.calls), 1)
         assert not job_run.run_completed.calls
 
 

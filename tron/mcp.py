@@ -20,6 +20,7 @@ from tron.job import Job
 from tron.node import Node, NodePool
 from tron.service import Service
 from tron.utils import timeutils, emailer
+from tron.utils.observer import Observer
 
 
 log = logging.getLogger('tron.mcp')
@@ -46,7 +47,7 @@ class ConfigApplyError(Exception):
     pass
 
 
-class StateHandler(object):
+class StateHandler(Observer):
 
     def __init__(self, mcp, working_dir, writing=False):
         self.mcp = mcp
@@ -104,6 +105,9 @@ class StateHandler(object):
                     self.event_recorder.emit_notice("write_delayed")
 
                 reactor.callLater(STATE_SLEEP_SECS, self.check_write_child)
+
+    def watcher(self, _observable, _event):
+        self.store_state()
 
     def store_state(self):
         """Stores the state of tron"""
@@ -485,11 +489,7 @@ class MasterControlProgram(object):
         # make the directory for output
         job.setup_job_dir(self.state_handler.working_dir)
 
-        # TODO: this should be part of constructor/factory
-        # Tell the job to call store_state() whenever its state changes.
-        # job isn't actaully a StateMachine object, but its interface tries
-        # to look like one.
-        job.listen(True, self.state_handler.store_state)
+        self.state_handler.watch(job, Job.EVENT_STATE_CHANGE)
 
     def remove_job(self, job_name):
         if job_name not in self.jobs:
@@ -513,6 +513,7 @@ class MasterControlProgram(object):
         service.set_context(self.context)
         service.event_recorder.set_parent(self.event_recorder)
 
+        # TODO: replace with watch
         # Trigger storage on any state changes
         service.listen(True, self.state_handler.store_state)
 
@@ -533,16 +534,11 @@ class MasterControlProgram(object):
 
     def _schedule(self, run):
         secs = run.seconds_until_run_time()
-        if secs == 0:
-            run.set_run_time(timeutils.current_time())
         reactor.callLater(secs, self.run_job, run)
 
     def schedule_next_run(self, job):
-        if job.runs and job.runs[0].is_scheduled:
-            log.info('Job is already scheduled')
-            return
-
-        for next in job.next_runs():
+        runs = job.get_runs_to_schedule() or []
+        for next in runs:
             log.info("Scheduling next job for %s", next.job.name)
             self._schedule(next)
 
@@ -556,11 +552,12 @@ class MasterControlProgram(object):
         if not job_run.job.enabled:
             return
 
-        if not (job_run.is_running or job_run.is_failure or job_run.is_success):
+        # TODO: This check does not belong here
+        if not any([job_run.is_done, job_run.is_running]):
             log.debug("Running next scheduled job")
-            job_run.scheduled_start()
-
-        self.schedule_next_run(job_run.job)
+            # TODO: this is broken
+            if job_run.scheduled_start():
+                self.schedule_next_run(job_run.job)
 
     def enable_job(self, job):
         job.enable()

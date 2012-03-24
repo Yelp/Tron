@@ -1,5 +1,5 @@
 from testify import run, setup, assert_equal, TestCase, turtle
-from tron.utils.observer import Observable
+from tron.utils.observer import Observable, Observer
 
 
 class ObserverTestCase(TestCase):
@@ -48,6 +48,38 @@ class ObserverClearTestCase(TestCase):
         self.obs.clear_listeners('a')
         assert_equal(len(self.obs._listeners), 2)
         assert_equal(set(self.obs._listeners.keys()), set([True, 'b']))
+
+
+class MockObserver(Observer):
+
+    def __init__(self, obs, event):
+        self.obs = obs
+        self.event = event
+        self.watch(obs, event)
+        self.has_watched = 0
+
+    def watcher(self, obs, event):
+        assert_equal(obs, self.obs)
+        assert_equal(event, self.event)
+        self.has_watched += 1
+
+
+class ObserverTestCase(TestCase):
+
+    @setup
+    def setup_observer(self):
+        self.obs = Observable()
+
+    def test_watch(self):
+        event = "FIVE"
+        watcher = MockObserver(self.obs, event)
+
+        self.obs.notify(event)
+        assert_equal(watcher.has_watched, 1)
+        self.obs.notify("other event")
+        assert_equal(watcher.has_watched, 1)
+        self.obs.notify(event)
+        assert_equal(watcher.has_watched, 2)
 
 
 

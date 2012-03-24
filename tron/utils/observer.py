@@ -44,3 +44,26 @@ class Observable(object):
 
         for listener in listeners:
             listener()
+
+
+
+class Observer(object):
+    """An observer in the Observer/Observable pattern.  Given an observable
+    object will watch for notify calls.
+    """
+
+    def watch(self, observable, event):
+        observable.listen(event, lambda: self.watcher(observable, event))
+
+    def watcher(self, observable, event):
+        """Override this method to call a method to handle an event."""
+        pass
+
+
+
+# TODO: delete or implement
+class CollectionObserver(object):
+    """This Observer will watch for events from a collection of observables
+    and allows callbacks to be registered for each event.
+    """
+    pass

@@ -18,9 +18,8 @@ log = logging.getLogger(__name__)
 
 
 class NamedEventState(dict):
-    """Simple state type that allows you to easily use a dictionary for a state
-    implementation. A raw dictionary works fine as well, but this might be more
-    clear, plus it gives you a name.
+    """A dict like object with a name that acts as a state. The dict stores
+    valid transition actions and the destination state.
     """
 
     def __init__(self, name, short_name=None, short_chars=4, **kwargs):

@@ -7,6 +7,7 @@ from tron import action, command_context, event
 from tron.action import Action, ActionRun
 from tron.scheduler import scheduler_from_config
 from tron.utils import timeutils
+from tron.utils.observer import Observable, Observer
 from tron.utils.proxy import CollectionProxy
 
 
@@ -29,8 +30,14 @@ SECS_PER_DAY = 86400
 MICRO_SEC = .000001
 
 
-class JobRun(object):
+class JobRun(Observable, Observer):
+    """A JobRun is an execution of a Job.  It has a list of ActionRuns."""
+
+    EVENT_DONE = 'done'
+
     def __init__(self, job, run_num=None, run_time=None):
+        super(JobRun, self).__init__()
+        # TODO: remove this reference
         self.job = job
         self.run_num = job.next_num() if run_num is None else run_num
         self.state_callback = job.state_callback
@@ -95,20 +102,27 @@ class JobRun(object):
         return max(0, seconds)
 
     def scheduled_start(self):
+        """Called when this JobRun is triggered automatically because it was
+        scheduled to run (and wasn't created for a manual run).
+        """
         self.event_recorder.emit_info("scheduled_start")
-        self.attempt_start()
+        if self.attempt_start():
+            return True
 
+        # If its still scheduled it failed to run
         if self.is_scheduled:
             if self.job.queueing:
                 self.event_recorder.emit_notice("queued")
                 log.warning("A previous run for %s has not finished - placing"
                             " in queue", self.id)
                 self.queue()
-            else:
-                self.event_recorder.emit_notice("cancelled")
-                log.warning("A previous run for %s has not finished"
-                            " - cancelling", self.id)
-                self.cancel()
+                return True
+
+            self.event_recorder.emit_notice("cancelled")
+            log.warning("A previous run for %s has not finished"
+                        " - cancelling", self.id)
+            self.cancel()
+            return False
 
     @property
     def state(self):
@@ -136,7 +150,6 @@ class JobRun(object):
 
         log.info("Starting action job %s", self.id)
         self.start_time = timeutils.current_time()
-        self.end_time = None
 
         try:
             for action_run in self.action_runs:
@@ -155,7 +168,7 @@ class JobRun(object):
         self.event_recorder.emit_info("manual_start")
         self.attempt_start()
 
-        # Similiar to a scheduled start, if the attempt didn't take, that must
+        # Similar to a scheduled start, if the attempt didn't take, that must
         # be because something else is running. We'll assume the user meant to
         # queue this job up without caring whether the job was configured for
         # that.
@@ -170,27 +183,31 @@ class JobRun(object):
         if self.should_start:
             try:
                 self.start()
+                return True
             except Error, e:
                 log.warning("Attempt to start failed: %r", e)
 
-    def run_completed(self):
-        """Callback which is called on action run state change."""
-        if self.is_success:
-            self.job.update_last_success(self)
+    def notify_cleanup_action_run_completed(self):
+        """Called to notify this JobRun that it's cleanup action is done."""
+        self.finalize()
 
+    def notify_action_run_completed(self):
+        """Called to notify this JobRun that one of its ActionRuns is done."""
         if self.all_but_cleanup_done:
             if self.cleanup_action_run is None:
                 log.info('No cleanup action for %s exists' % self.id)
-                self.cleanup_completed()
-            else:
-                log.info('Running cleanup action for %s' % self.id)
-                self.cleanup_action_run.attempt_start()
+                self.finalize()
+                return
 
-    def cleanup_completed(self):
-        """This is the last step of a JobRun.
+            log.info('Running cleanup action for %s' % self.id)
+            self.cleanup_action_run.attempt_start()
 
-        Callback called when the cleanup action completes.  Also called when
-        a JobRun is complete and does not have a cleanup action.
+    def finalize(self):
+        """This is the last step of a JobRun. Called when the cleanup action
+        completes or if the job has no cleanup action, called once all action
+        runs have reached a 'done' state.
+
+        Sets end_time triggers an event and notifies the Job that is is done.
         """
         self.end_time = timeutils.current_time()
 
@@ -200,9 +217,7 @@ class JobRun(object):
             self.event_recorder.emit_ok("succeeded")
 
         # Notify Job that this JobRun is complete
-        next = self.job.next_to_finish()
-        if next and next.is_queued:
-            next.attempt_start()
+        self.notify(self.EVENT_DONE)
 
     @property
     def data(self):
@@ -319,8 +334,12 @@ class JobRun(object):
         return "JOB_RUN:%s" % self.id
 
 
-class Job(object):
+class Job(Observable, Observer):
+    """Job core object.
 
+    Responsibilities:
+        - JobRun collection
+    """
     run_num = 0
 
     # Constants for Job status
@@ -328,6 +347,8 @@ class Job(object):
     STATUS_ENABLED =    "ENABLED"
     STATUS_UNKNOWN =    "UNKNOWN"
     STATUS_RUNNING =    "RUNNING"
+
+    EVENT_STATE_CHANGE = 'state_change'
 
     def next_num(self):
         self.run_num += 1
@@ -345,6 +366,7 @@ class Job(object):
         node_pool=None,
         enabled=True
     ):
+        super(Job, self).__init__()
         self.name = name
         self.topo_actions = [action] if action else []
         self.cleanup_action = None
@@ -354,7 +376,6 @@ class Job(object):
         self.queueing = queueing
         self.all_nodes = all_nodes
         self.enabled = enabled
-        self.last_success = None
 
         self.run_limit = run_limit
         self.node_pool = node_pool
@@ -403,14 +424,11 @@ class Job(object):
             action.job = self
             self._register_action(action)
 
-    def listen(self, spec, callback):
-        """Mimic the state machine interface for listening to events"""
-        assert spec is True
-        self.state_callback = callback
-
-    def notify(self):
-        """Used as a callback for state machine state changes."""
-        self.state_callback()
+    def notify_state_changed(self):
+        """Called to notify this job that its state has changed due to an
+        action run state change.
+        """
+        self.notify(self.EVENT_STATE_CHANGE)
 
     def add_action(self, action):
         action.job = self
@@ -502,6 +520,13 @@ class Job(object):
 
         return reduce(choose, self.runs, None)
 
+    def get_run_by_state(self, state):
+        """Returns the most recent run which matches the state."""
+        for run in self.runs:
+            if run.state == state:
+                return run
+        return None
+
     def remove_old_runs(self):
         """Remove old runs so the number left matches the run limit. However
         only removes runs up to the last success or up to the next to run.
@@ -516,8 +541,19 @@ class Job(object):
                keep_num > self.runs[-1].run_num):
             self.remove_run(self.runs[-1])
 
+    def get_runs_to_schedule(self):
+        """If this job does not have any scheduled runs, then create the run
+        and return it to be scheduled.
+        """
+        if self.get_run_by_state(ActionRun.STATE_SCHEDULED):
+            return None
+
+        return self.next_runs()
+
+    # TODO: DELETE
     def next_runs(self):
-        """Use the configured scheduler to build the next job runs"""
+        """Use the configured scheduler to build the next job runs.  If there
+        are runs already scheduled, return those."""
         if not self.scheduler:
             return []
 
@@ -528,12 +564,10 @@ class Job(object):
         next_run_time = self.scheduler.next_run_time(last_run_time)
         return self.build_and_add_runs(next_run_time)
 
-    def update_last_success(self, run):
-        """Update the last_success run if the run number is greater then the
-        previous last_success."""
-        assert run.job == self
-        if not self.last_success or run.run_num > self.last_success.run_num:
-            self.last_success = run
+    @property
+    def last_success(self):
+        """Last successful JobRun."""
+        return self.get_run_by_state(ActionRun.STATE_SUCCEEDED)
 
     def build_action_dag(self, job_run, all_actions):
         """Build actions and setup requirements"""
@@ -586,7 +620,24 @@ class Job(object):
                 job_run, cleanup=True)
             job_run.cleanup_action_run = cleanup_action_run
 
+        self.watch(job_run, JobRun.EVENT_DONE)
         return job_run
+
+    def watcher(self, observable, event):
+        """Watch for events from JobRuns."""
+        if event == JobRun.EVENT_DONE:
+            self.notify_job_run_complete()
+
+    def notify_job_run_complete(self):
+        """Called to notify this Job that one of its JobRuns has completed.
+        This method will then check to see if a new job run needs to be
+        scheduled and if one is scheduled, attempt to start it.
+        """
+
+        # TODO: fix this logic
+        next = self.next_to_finish()
+        if next and next.is_queued:
+            next.attempt_start()
 
     def build_runs(self, run_time):
         """Builds runs. If all_nodes is set, build a run for every node,
@@ -630,7 +681,6 @@ class Job(object):
         self.runs = old.runs
 
         self.output_path = old.output_path
-        self.last_success = old.last_success
         self.run_num = old.run_num
         self.enabled = old.enabled
 
@@ -705,10 +755,6 @@ class Job(object):
 
         run.restore(data)
         self.runs.append(run)
-
-        if run.is_success and not self.last_success:
-            self.last_success = run
-
         return run
 
     def setup_job_dir(self, working_dir):

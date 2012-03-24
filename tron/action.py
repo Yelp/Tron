@@ -544,10 +544,11 @@ class Action(object):
         return not self == other
 
     def build_run(self, job_run, cleanup=False):
-        """Build an instance of ActionRun for this action. If cleanup=True
-        we're building a cleanup action run.
-        """
-        callback = job_run.cleanup_completed if cleanup else job_run.run_completed
+        """Build an instance of ActionRun for this action."""
+        if cleanup:
+            callback = job_run.notify_cleanup_action_run_completed
+        else:
+            callback = job_run.notify_action_run_completed
 
         action_run = ActionRun(
             self,
@@ -558,7 +559,7 @@ class Action(object):
             run_time=job_run.run_time)
 
         # Notify on any state change so state can be serialized
-        action_run.machine.listen(True, job_run.job.notify)
+        action_run.machine.listen(True, job_run.job.notify_state_changed)
         # Notify when we reach an end state so the next run can be scheduled
         action_run.machine.listen(ActionRun.END_STATES, callback)
         return action_run
