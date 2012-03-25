@@ -1,11 +1,12 @@
+import shutil
 import time
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, mktemp
 
 from testify import TestCase, run, assert_equal, assert_not_in, assert_in
 from testify import assert_not_equal
 from testify import setup, teardown
 
-from tron.filehandler import FileHandleManager
+from tron.serialize.filehandler import FileHandleManager, OutputStreamSerializer
 
 class FileHandleWrapperTestCase(TestCase):
 
@@ -169,6 +170,30 @@ class FileHandleManagerTestCase(TestCase):
 
         self.manager.update(fh_wrapper1)
         assert_equal(self.manager.cache.keys(), [fh_wrapper2.name, fh_wrapper1.name])
+
+
+class OutputStreamSerializerTestCase(TestCase):
+
+    @setup
+    def setup_serializer(self):
+        self.test_dir = mktemp()
+        self.serial = OutputStreamSerializer(self.test_dir)
+
+    @teardown
+    def teardown_test_dir(self):
+        shutil.rmtree(self.test_dir)
+
+    def test_open_and_tail(self):
+        filename = "STARS"
+        content = "123"
+        fh = self.serial.open(filename)
+        fh.write(content)
+        fh.close()
+
+        with open(self.serial.full_path(filename)) as f:
+            assert_equal(f.read(), content)
+
+        assert_equal(self.serial.tail(filename), content)
 
 
 if __name__ == "__main__":

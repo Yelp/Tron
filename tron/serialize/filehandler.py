@@ -2,11 +2,16 @@
 Tools for managing and properly closing file handles.
 """
 import logging
+import os
+import os.path
+import sys
+from subprocess import PIPE, Popen
 import time
+
 
 from tron.utils.dicts import OrderedDict
 
-log = logging.getLogger('tron.filehandler')
+log = logging.getLogger('tron.serialize.filehandler')
 
 
 class FileHandleWrapper(object):
@@ -124,3 +129,36 @@ class FileHandleManager(object):
         self.remove(fh_wrapper)
         self.cache[fh_wrapper.name] = fh_wrapper
         self.cleanup()
+
+
+class OutputStreamSerializer(object):
+    """Manage writing to and reading from files in a directory hierarchy."""
+
+    def __init__(self, *base_path):
+        self.base_path = os.path.join(*base_path)
+        if not os.path.exists(self.base_path):
+            os.makedirs(self.base_path)
+
+    def full_path(self, filename):
+        return os.path.join(self.base_path, filename)
+
+    def tail(self, filename, num_lines=None):
+        """Tail a file using `tail`."""
+        path = self.full_path(filename)
+        if not path or not os.path.exists(path):
+            return []
+        if not num_lines:
+            num_lines = sys.maxint
+
+        try:
+            cmd = ('tail', '-n', str(num_lines), path)
+            tail_sub = Popen(cmd, stdout=PIPE)
+            return '\n'.join(line.rstrip() for line in tail_sub.stdout)
+        except OSError, e:
+            log.error("Could not tail %s: %s" % (path, e))
+            return []
+
+    def open(self, filename):
+        """Return a FileHandleManager for the output path."""
+        path = self.full_path(filename)
+        return FileHandleManager.get_instance().open(path)

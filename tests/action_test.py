@@ -1,15 +1,14 @@
-import datetime
 import os
 import tempfile
 import shutil
 
-from testify import setup, teardown, run, class_setup, class_teardown
+from testify import setup, run, teardown
 from testify import TestCase, assert_equal, assert_raises
 from testify.utils import turtle
 
-from tron import node, action, job, scheduler
-from tron.filehandler import FileHandleManager
-from tron.utils import timeutils, testingutils
+from tron import  action, job, scheduler
+from tron.serialize.filehandler import FileHandleManager
+from tron.utils import  testingutils
 
 def get_num_runs_by_state(job, state):
     count = 0
@@ -288,137 +287,6 @@ class ActionRunLogFileTest(TestCase):
         assert os.path.isfile(run.stderr_path)
         os.remove(run.stdout_path)
         os.remove(run.stderr_path)
-
-
-class ActionRunVariablesTest(TestCase):
-    @class_setup
-    def freeze_time(self):
-        timeutils.override_current_time(datetime.datetime.now())
-        self.now = timeutils.current_time()
-
-    @class_teardown
-    def unfreeze_time(self):
-        timeutils.override_current_time(None)
-        FileHandleManager.reset()
-
-    @setup
-    def build_job(self):
-        self.test_dir = tempfile.mkdtemp()
-        self.action = action.Action(name="Test Action")
-        self.action.command = "Test Action Command"
-        self.job = job.Job("Test Job", self.action)
-        self.job.node_pool = node.NodePool(
-            nodes=[node.Node(hostname='host', ssh_options=turtle.Turtle())])
-        self.job.output_path = self.test_dir
-        self.action.job = self.job
-        self.job.scheduler = scheduler.ConstantScheduler()
-
-    @teardown
-    def teardown(self):
-        shutil.rmtree(self.test_dir)
-
-    def _cmd(self):
-        job_run = self.job.next_runs()[0]
-        return job_run.action_runs[0].command
-
-    def test_name(self):
-        self.action.command = "somescript --name=%(actionname)s"
-        assert_equal(self._cmd(), "somescript --name=%s" % self.action.name)
-
-    def test_runid(self):
-        self.action.command = "somescript --id=%(runid)s"
-        job_run = self.job.next_runs()[0]
-        action_run = job_run.action_runs[0]
-        assert_equal(action_run.command, "somescript --id=%s" % action_run.id)
-
-    def test_shortdate(self):
-        self.action.command = "somescript -d %(shortdate)s"
-        assert_equal(self._cmd(), "somescript -d %.4d-%.2d-%.2d" % (self.now.year, self.now.month, self.now.day))
-
-    def test_shortdate_plus(self):
-        self.action.command = "somescript -d %(shortdate+1)s"
-        tmrw = self.now + datetime.timedelta(days=1)
-        assert_equal(self._cmd(), "somescript -d %.4d-%.2d-%.2d" % (tmrw.year, tmrw.month, tmrw.day))
-
-    def test_shortdate_minus(self):
-        self.action.command = "somescript -d %(shortdate-1)s"
-        ystr = self.now - datetime.timedelta(days=1)
-        assert_equal(self._cmd(), "somescript -d %.4d-%.2d-%.2d" % (ystr.year, ystr.month, ystr.day))
-
-    def test_day(self):
-        self.action.command = "somescript -d %(day)s"
-        assert_equal(self._cmd(), "somescript -d %.2d" % (self.now.day))
-
-    def test_day_plus(self):
-        self.action.command = "somescript -d %(day+1)s"
-        tmrw = self.now + datetime.timedelta(days=1)
-        assert_equal(self._cmd(), "somescript -d %.2d" % (tmrw.day))
-
-    def test_day_minus(self):
-        self.action.command = "somescript -d %(day-1)s"
-        ystr = self.now - datetime.timedelta(days=1)
-        assert_equal(self._cmd(), "somescript -d %.2d" % (ystr.day))
-
-    def test_month(self):
-        self.action.command = "somescript -d %(month)s"
-        assert_equal(self._cmd(), "somescript -d %.2d" % (self.now.month))
-
-    def test_month_plus(self):
-        self.action.command = "somescript -d %(month+1)s"
-        tmrw = self.now + timeutils.macro_timedelta(self.now, months=1)
-        assert_equal(self._cmd(), "somescript -d %.2d" % (tmrw.month))
-
-    def test_month_minus(self):
-        self.action.command = "somescript -d %(month-1)s"
-        ystr = self.now + timeutils.macro_timedelta(self.now, months=-1)
-        assert_equal(self._cmd(), "somescript -d %.2d" % (ystr.month))
-
-    def test_year(self):
-        self.action.command = "somescript -d %(year)s"
-        assert_equal(self._cmd(), "somescript -d %.4d" % (self.now.year))
-
-    def test_year_plus(self):
-        self.action.command = "somescript -d %(year+1)s"
-        tmrw = self.now + timeutils.macro_timedelta(self.now, years=1)
-        assert_equal(self._cmd(), "somescript -d %.4d" % (tmrw.year))
-
-    def test_year_minus(self):
-        self.action.command = "somescript -d %(year-1)s"
-        ystr = self.now + timeutils.macro_timedelta(self.now, years=-1)
-        assert_equal(self._cmd(), "somescript -d %.4d" % (ystr.year))
-
-    def test_unixtime(self):
-        self.action.command = "somescript -t %(unixtime)s"
-        timestamp = int(timeutils.to_timestamp(self.now))
-        assert_equal(self._cmd(), "somescript -t %d" % timestamp)
-
-    def test_unixtime_plus(self):
-        self.action.command = "somescript -t %(unixtime+100)s"
-        timestamp = int(timeutils.to_timestamp(self.now)) + 100
-        assert_equal(self._cmd(), "somescript -t %d" % timestamp)
-
-    def test_unixtime_minus(self):
-        self.action.command = "somescript -t %(unixtime-100)s"
-        timestamp = int(timeutils.to_timestamp(self.now)) - 100
-        assert_equal(self._cmd(), "somescript -t %d" % timestamp)
-
-    def test_daynumber(self):
-        self.action.command = "somescript -d %(daynumber)s"
-        assert_equal(self._cmd(), "somescript -d %d" % (self.now.toordinal(),))
-
-    def test_daynumber_plus(self):
-        self.action.command = "somescript -d %(daynumber+1)s"
-        tmrw = self.now + datetime.timedelta(days=1)
-        assert_equal(self._cmd(), "somescript -d %d" % (tmrw.toordinal(),))
-
-    def test_daynumber_minus(self):
-        self.action.command = "somescript -d %(daynumber-1)s"
-        ystr = self.now - datetime.timedelta(days=1)
-        assert_equal(self._cmd(), "somescript -d %d" % (ystr.toordinal(),))
-
-    def test_node_hostname(self):
-        self.action.command = "somescript -d %(node)s"
-        assert_equal(self._cmd(), "somescript -d host")
 
 
 class TestBuildingActionRun(TestCase):

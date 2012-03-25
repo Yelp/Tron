@@ -667,5 +667,8 @@ class Job(Observable, Observer):
         if not os.path.exists(self.output_path):
             os.mkdir(self.output_path)
 
+    # TODO: moved to JobState class
+
+
     def __str__(self):
         return "JOB:%s" % self.name

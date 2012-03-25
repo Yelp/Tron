@@ -1,7 +1,9 @@
 import datetime
 from testify import TestCase, assert_equal, setup
+from testify.test_case import class_setup, class_teardown
 
-from tron.utils.timeutils import duration, macro_timedelta
+from tron.utils import timeutils
+from tron.utils.timeutils import duration, macro_timedelta, DateArithmetic
 
 class TimeDeltaTestCase(TestCase):
 
@@ -98,3 +100,106 @@ class DurationTestCase(TestCase):
 
     def test_duration_no_start(self):
         assert_equal(duration(None), None)
+
+
+class DateArithmeticTestCase(TestCase):
+
+    @class_setup
+    def freeze_time(self):
+        timeutils.override_current_time(datetime.datetime.now())
+        self.now = timeutils.current_time()
+
+    @class_teardown
+    def unfreeze_time(self):
+        timeutils.override_current_time(None)
+
+    def _cmp_date(self, item, dt):
+        assert_equal(DateArithmetic.parse(item), dt.strftime("%Y-%m-%d"))
+
+    def _cmp_day(self, item, dt):
+        assert_equal(DateArithmetic.parse(item), dt.strftime("%d"))
+
+    def _cmp_month(self, item, dt):
+        assert_equal(DateArithmetic.parse(item), dt.strftime("%m"))
+
+    def _cmp_year(self, item, dt):
+        assert_equal(DateArithmetic.parse(item), dt.strftime("%Y"))
+
+    def test_shortdate(self):
+        self._cmp_date('shortdate', self.now)
+
+    def test_shortdate_plus(self):
+        for i in xrange(50):
+            dt = self.now + datetime.timedelta(days=i)
+            self._cmp_date('shortdate+%s' % i, dt)
+
+    def test_shortdate_minus(self):
+        for i in xrange(50):
+            dt = self.now - datetime.timedelta(days=i)
+            self._cmp_date('shortdate-%s' % i, dt)
+
+    def test_day(self):
+        self._cmp_day('day', self.now)
+
+    def test_day_minus(self):
+        for i in xrange(50):
+            dt = self.now - datetime.timedelta(days=i)
+            self._cmp_day('day-%s' % i, dt)
+
+    def test_day_plus(self):
+        for i in xrange(50):
+            dt = self.now + datetime.timedelta(days=i)
+            self._cmp_day('day+%s' % i, dt)
+
+    def test_month(self):
+        self._cmp_month('month', self.now)
+
+    def test_month_plus(self):
+        for i in xrange(50):
+            dt = self.now + timeutils.macro_timedelta(self.now, months=i)
+            self._cmp_month('month+%s' % i, dt)
+
+    def test_month_minus(self):
+        for i in xrange(50):
+            dt = self.now - timeutils.macro_timedelta(self.now, months=i)
+            self._cmp_month('month-%s' % i, dt)
+
+    def test_year(self):
+        self._cmp_year('year', self.now)
+
+    def test_year_plus(self):
+        for i in xrange(50):
+            dt = self.now + timeutils.macro_timedelta(self.now, years=i)
+            self._cmp_year('year+%s' % i, dt)
+
+    def test_year_minus(self):
+        for i in xrange(50):
+            dt = self.now - timeutils.macro_timedelta(self.now, years=i)
+            self._cmp_year('year-%s' % i, dt)
+
+    def test_unixtime(self):
+        timestamp = int(timeutils.to_timestamp(self.now))
+        assert_equal(DateArithmetic.parse('unixtime'), timestamp)
+
+    def test_unixtime_plus(self):
+        timestamp = int(timeutils.to_timestamp(self.now)) + 100
+        assert_equal(DateArithmetic.parse('unixtime+100'), timestamp)
+
+    def test_unixtime_minus(self):
+        timestamp = int(timeutils.to_timestamp(self.now)) - 99
+        assert_equal(DateArithmetic.parse('unixtime-99'), timestamp)
+
+    def test_daynumber(self):
+        daynum = self.now.toordinal()
+        assert_equal(DateArithmetic.parse('daynumber'), daynum)
+
+    def test_daynumber_plus(self):
+        daynum = self.now.toordinal() + 1
+        assert_equal(DateArithmetic.parse('daynumber+1'), daynum)
+
+    def test_daynumber_minus(self):
+        daynum = self.now.toordinal() - 1
+        assert_equal(DateArithmetic.parse('daynumber-1'), daynum)
+
+    def test_bad_date_format(self):
+        assert DateArithmetic.parse('~~') is None
