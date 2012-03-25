@@ -24,7 +24,7 @@ Tron schedulers
 import logging
 
 from pytz import AmbiguousTimeError, NonExistentTimeError
-from tron.config import config_parse, schedule_parse
+from tron.config import schedule_parse
 
 from tron.utils import groctimespecification
 from tron.utils import timeutils
@@ -35,10 +35,10 @@ log = logging.getLogger('tron.scheduler')
 
 def scheduler_from_config(config, time_zone):
     """A factory for creating a scheduler from a configuration object."""
-    if isinstance(config, config_parse.ConfigConstantScheduler):
+    if isinstance(config, schedule_parse.ConfigConstantScheduler):
         return ConstantScheduler()
 
-    if isinstance(config, config_parse.ConfigIntervalScheduler):
+    if isinstance(config, schedule_parse.ConfigIntervalScheduler):
         return IntervalScheduler(interval=config.timedelta)
 
     if isinstance(config, schedule_parse.ConfigDailyScheduler):
@@ -52,6 +52,7 @@ def scheduler_from_config(config, time_zone):
         )
 
 
+# TODO: return a localized time from time_zone
 class ConstantScheduler(object):
     """The constant scheduler schedules a new job immediately."""
 
@@ -74,6 +75,7 @@ class ConstantScheduler(object):
         return not self == other
 
 
+# TODO: return a localized time from time_zone
 class DailyScheduler(object):
     """Wrapper around SpecificTimeSpecification in the Google App Engine cron
     library
@@ -168,6 +170,7 @@ class DailyScheduler(object):
         return not self == other
 
 
+# TODO: return a localized time from time_zone
 class IntervalScheduler(object):
     """The interval scheduler runs a job (to success) based on a configured
     interval.

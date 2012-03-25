@@ -517,13 +517,12 @@ class ActionRun(object):
 
 class Action(object):
     def __init__(self, name=None, command=None, node_pool=None,
-                 required_actions=None, job=None):
+                 required_actions=None):
         self.name = name
         self.command = command
         self.node_pool = node_pool
 
         self.required_actions = required_actions or []
-        self.job = job
 
     @classmethod
     def from_config(cls, config, node_pools):
@@ -559,6 +558,9 @@ class Action(object):
             id="%s.%s" % (job_run.id, self.name),
             output_path=job_run.output_path,
             run_time=job_run.run_time)
+
+        # TODO: these should now be setup using watch() on Jobrun.for_job
+        # but I need to add the watcher
 
         # Notify on any state change so state can be serialized
         action_run.machine.listen(True, job_run.job.notify_state_changed)

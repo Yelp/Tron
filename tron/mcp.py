@@ -65,9 +65,11 @@ class StateHandler(Observer):
 
         for run in job_inst.runs:
             if run.is_scheduled:
-                reactor.callLater(run.seconds_until_run_time(),
-                                  job_inst.run_job(run),
-                                  run)
+                reactor.callLater(
+                    run.seconds_until_run_time(),
+                    job_inst.run_job,
+                    run
+                )
 
         next = job_inst.next_to_finish()
         if job_inst.enabled and next and next.is_queued:

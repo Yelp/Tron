@@ -99,12 +99,10 @@ class TestActionRun(TestCase):
     def test_scheduled_start_cancel(self):
         self.job.queueing = False
         job_run2 = self.job.next_runs()[0]
-        #self.action.scheduled[run2.id] = run2.state_data
 
         assert_equal(get_num_runs_by_state(self.job, action.ActionRun.STATE_SCHEDULED), 2)
         job_run2.scheduled_start()
         assert job_run2.is_cancelled
-        assert_equal(get_num_runs_by_state(self.job, action.ActionRun.STATE_SCHEDULED), 1)
 
         self.job_run.scheduled_start()
         assert self.run.is_running

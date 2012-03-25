@@ -6,6 +6,8 @@ from twisted.internet import reactor
 
 from tron import action, command_context, event
 from tron.action import Action, ActionRun
+from tron.core.actiongraph import ActionGraph
+from tron.core.jobrun import JobRunCollection
 from tron.scheduler import scheduler_from_config
 from tron.utils import timeutils
 from tron.utils.observer import Observable, Observer
@@ -26,7 +28,6 @@ class InvalidStartStateError(Error):
 
 log = logging.getLogger('tron.job')
 
-RUN_LIMIT = 50
 SECS_PER_DAY = 86400
 MICRO_SEC = .000001
 
@@ -36,21 +37,23 @@ class JobRun(Observable, Observer):
 
     EVENT_DONE = 'done'
 
-    def __init__(self, job, run_num=None, run_time=None):
+    def __init__(self, id, run_num, run_time, node, base_path, context=None,
+        action_runs=None
+    ):
         super(JobRun, self).__init__()
-        # TODO: remove this reference
-        self.job = job
-        self.run_num = job.next_num() if run_num is None else run_num
-        self.state_callback = job.state_callback
-        self.id = "%s.%s" % (job.name, self.run_num)
+        self.run_num = run_num
+        self.id = id
 
         self.run_time = run_time
+        self.base_path = base_path
+        self.build_output_dir()
         self.start_time = None
         self.end_time = None
-        self.node = None
-        self.action_runs = []
+        self.node = node
+        self.action_runs = action_runs or []
         self.cleanup_action_run = None
-        self.context = command_context.CommandContext(self, job.context)
+        self.context = command_context.CommandContext(self, context or {})
+        # TODO: replace by events
         self.event_recorder = event.EventRecorder(
             self, parent=self.job.event_recorder)
         self.event_recorder.emit_info("created")
@@ -81,7 +84,12 @@ class JobRun(Observable, Observer):
 
     @property
     def output_path(self):
-        return os.path.join(self.job.output_path, self.id)
+        return os.path.join(self.base_path, self.id)
+
+    def build_output_dir(self):
+        # TODO: It would be great if this were abstracted out a bit
+        if not os.path.exists(self.output_path):
+            os.makedirs(self.output_path)
 
     def set_run_time(self, run_time):
         self.run_time = run_time
@@ -93,7 +101,7 @@ class JobRun(Observable, Observer):
 
     def seconds_until_run_time(self):
         run_time = self.run_time
-        tz = self.job.scheduler.time_zone
+        tz = run_time.tz
         now = timeutils.current_time()
         if tz is not None:
             now = tz.localize(now)
@@ -106,12 +114,16 @@ class JobRun(Observable, Observer):
         """Called when this JobRun is triggered automatically because it was
         scheduled to run (and wasn't created for a manual run).
         """
+        # TODO: a possible state is that this run was cancelled after being
+        # scheduled
         self.event_recorder.emit_info("scheduled_start")
         if self.attempt_start():
             return True
 
         # If its still scheduled it failed to run
         if self.is_scheduled:
+            # TODO: fix this reference, this should probably just be an event
+            # triggered to inform the Job that it failed to start
             if self.job.queueing:
                 self.event_recorder.emit_notice("queued")
                 log.warning("A previous run for %s has not finished - placing"
@@ -288,11 +300,8 @@ class JobRun(Observable, Observer):
     @property
     def should_start(self):
         """Returns True if the Job is enabled and this is the next JobRun."""
-        if not self.job.enabled:
-            return False
-
         node = self.node if self.job.all_nodes else None
-        # TODO: shouldn't this check the state of self ?
+        # TODO: remove this reference
         return self.job.next_to_finish(node) is self
 
     @property
@@ -331,6 +340,16 @@ class JobRun(Observable, Observer):
         else:
             return 'UNKNOWN'
 
+    def cleanup(self):
+        """Called to have this JobRun cleanup any resources it has.  This will
+         remove the reference to its job and remove its output directory.
+         """
+        if os.path.exists(self.output_path):
+            shutil.rmtree(self.output_path)
+
+        self.node = None
+        self.event_recorder = None
+
     def __str__(self):
         return "JOB_RUN:%s" % self.id
 
@@ -338,10 +357,13 @@ class JobRun(Observable, Observer):
 class Job(Observable, Observer):
     """Job core object.
 
-    Responsibilities:
-        - JobRun collection
+    A Job is responsible for scheduling and running runs based on its
+    configuration. It acts as an Observer for its runs and an observable to
+    propagate state changes back to the state serializer.
+
+    Job uses JobRunCollection to manage its run, and ActionGraph to manage its
+    actions and their dependency graph.
     """
-    run_num = 0
 
     # Constants for Job status
     STATUS_DISABLED =   "DISABLED"
@@ -351,90 +373,62 @@ class Job(Observable, Observer):
 
     EVENT_STATE_CHANGE = 'state_change'
 
-    def next_num(self):
-        self.run_num += 1
-        return self.run_num - 1
-
-    def __init__(self,
-        name=None,
-        action=None,
-        context=None,
-        event_recorder=None,
-        queueing=True,
-        run_limit=RUN_LIMIT,
-        all_nodes=False,
-        scheduler=None,
-        node_pool=None,
-        enabled=True
+    def __init__(self, name=None, context=None, event_recorder=None,
+        queueing=True, all_nodes=False, scheduler=None, node_pool=None,
+        enabled=True, run_collection=None, action_graph=None,
+        cleanup_action=None
     ):
         super(Job, self).__init__()
         self.name = name
-        self.topo_actions = [action] if action else []
-        self.cleanup_action = None
+        self.action_graph = action_graph
+        self.cleanup_action = cleanup_action
         self.scheduler = scheduler
-        self.runs = deque()
+        self.runs = run_collection
 
         self.queueing = queueing
         self.all_nodes = all_nodes
         self.enabled = enabled
 
-        self.run_limit = run_limit
         self.node_pool = node_pool
         self.output_path = None
-        self.state_callback = lambda: None
         self.context = command_context.CommandContext(self, context)
         self.event_recorder = event.EventRecorder(self, parent=event_recorder)
 
     @classmethod
     def from_config(cls, job_config, node_pools, time_zone):
         """Build a job from a ConfigJob."""
-        job = cls(
-            name=job_config.name,
-            queueing=job_config.queueing,
-            run_limit=job_config.run_limit,
-            all_nodes=job_config.all_nodes,
-            node_pool=node_pools[job_config.node] if job_config.node else None,
-            scheduler=scheduler_from_config(job_config.schedule, time_zone),
-            enabled=job_config.enabled
-        )
 
-        new_actions = dict(
-            (name, Action.from_config(action_conf, node_pools))
-            for name, action_conf in job_config.actions.iteritems()
-        )
-
-        for action in new_actions.values():
-            for dep in job_config.actions[action.name].requires:
-                action.required_actions.append(new_actions[dep])
-            job.add_action(action)
+        action_graph = ActionGraph.from_config(job_config.actions, node_pools)
+        runs = JobRunCollection.from_config(job_config)
 
         if job_config.cleanup_action:
-            action = Action.from_config(job_config.cleanup_action, node_pools)
-            job.register_cleanup_action(action)
+            cleanup_action = Action.from_config(
+                job_config.cleanup_action, node_pools)
+        else:
+            cleanup_action = None
 
-        return job
+        nodes = node_pools[job_config.node] if job_config.node else None
+        scheduler = scheduler_from_config(job_config.schedule, time_zone)
 
-    def _register_action(self, action):
-        """Prepare an action to be *owned* by this job"""
-        if action in self.topo_actions:
-            raise Error("Action %s already in jobs %s" % (
-                action.name, self.name))
+        return cls(
+            name=               job_config.name,
+            queueing=           job_config.queueing,
+            all_nodes=          job_config.all_nodes,
+            node_pool=          nodes,
+            scheduler=          scheduler,
+            enabled=            job_config.enabled,
+            run_collection=     runs,
+            action_graph=       action_graph,
+            cleanup_action=     cleanup_action
+        )
 
-    def register_cleanup_action(self, action):
-            self.cleanup_action = action
-            action.job = self
-            self._register_action(action)
-
-    def notify_state_changed(self):
-        """Called to notify this job that its state has changed due to an
-        action run state change.
-        """
-        self.notify(self.EVENT_STATE_CHANGE)
-
-    def add_action(self, action):
-        action.job = self
-        self._register_action(action)
-        self.topo_actions.append(action)
+    def update_from_config(self, job_config, nodes):
+        # TODO: test with __eq__
+        self.enabled    = job_config.enabled
+        self.all_nodes  = job_config.all_nodes
+        self.queueing   = job_config.queueing
+        self.node_pool  = nodes[job_config.node] if job_config.node else None
+        self.event_recorder.emit_notice("reconfigured")
 
     def __eq__(self, other):
         if (not isinstance(other, Job) or self.name != other.name or
@@ -454,93 +448,29 @@ class Job(Observable, Observer):
     def __ne__(self, other):
         return not self == other
 
+    def notify_state_changed(self):
+        """Called to notify this job that its state has changed due to an
+        action run state change.  It will propagate this notification to
+        any observers observing this Job.
+        """
+        self.notify(self.EVENT_STATE_CHANGE)
+
     def set_context(self, context):
         self.context.next = context
 
     def enable(self):
         self.enabled = True
-        next = self.next_to_finish()
+        self.run_or_schedule()
 
-        if next and next.is_queued:
-            next.start()
-
-    def remove_run(self, run):
-        self.runs.remove(run)
-
-        if os.path.exists(run.output_path):
-            shutil.rmtree(run.output_path)
-
-        run.job = None
+    def run_or_schedule(self):
+        """Called to either run a currently scheduled/queued job, or if none
+        are scheduled/queued, create a new scheduled run.
+        """
+        # TODO
 
     def disable(self):
         self.enabled = False
-
-        # We need to get rid of all future runs.
-        kill_runs = [run for run in self.runs
-                     if (run.is_scheduled or run.is_queued)]
-        for run in kill_runs:
-            run.cancel()
-            self.remove_run(run)
-
-    def newest(self):
-        if self.runs[0]:
-            return self.runs[0]
-        else:
-            return None
-
-    def newest_run_by_state(self, state):
-        for run in self.runs:
-            if run.state.short_name == state:
-                return run
-
-        log.warning("No runs with state %s exist", state)
-
-    def next_to_finish(self, node=None):
-        """This will return the most recent job if it is not yet running or
-        None if the job is complete. Useful for getting the currently running
-        job run or next queued/schedule job run.
-
-        Note that Jobs are stored in reverse chronological order.
-
-        Optionally only compare jobs for a given node.
-        """
-        def choose(next, prev):
-            if ((next and next.is_running) or
-                (node and prev.node != node) or
-                prev.is_done or
-                prev.is_unknown
-            ):
-                return next
-            return prev
-
-        return reduce(choose, self.runs, None)
-
-    def get_run_by_num(self, num):
-        def choose(chosen, nxt):
-            return nxt if nxt.run_num == num else chosen
-
-        return reduce(choose, self.runs, None)
-
-    def get_run_by_state(self, state):
-        """Returns the most recent run which matches the state."""
-        for run in self.runs:
-            if run.state == state:
-                return run
-        return None
-
-    def remove_old_runs(self):
-        """Remove old runs so the number left matches the run limit. However
-        only removes runs up to the last success or up to the next to run.
-        """
-
-        nxt = self.next_to_finish()
-        next_num = nxt.run_num if nxt else self.runs[0].run_num
-        succ_num = self.last_success.run_num if self.last_success else 0
-        keep_num = min([next_num, succ_num])
-
-        while (len(self.runs) > self.run_limit and
-               keep_num > self.runs[-1].run_num):
-            self.remove_run(self.runs[-1])
+        self.runs.cancel_pending()
 
     def get_runs_to_schedule(self):
         """If the scheduler is just a 'best effort' scheduler and this job has
@@ -549,10 +479,10 @@ class Job(Observable, Observer):
         """
         best_effort = self.scheduler.is_best_effort
 
-        if best_effort and self.get_run_by_state(ActionRun.STATE_QUEUED):
+        if best_effort and self.runs.get_run_by_state(ActionRun.STATE_QUEUED):
             return None
 
-        if best_effort and self.get_run_by_state(ActionRun.STATE_SCHEDULED):
+        if best_effort and self.runs.get_run_by_state(ActionRun.STATE_SCHEDULED):
             return None
 
         return self.next_runs()
@@ -574,33 +504,7 @@ class Job(Observable, Observer):
     @property
     def last_success(self):
         """Last successful JobRun."""
-        return self.get_run_by_state(ActionRun.STATE_SUCCEEDED)
-
-    def build_action_dag(self, job_run, all_actions):
-        """Build actions and setup requirements"""
-
-        def create_action_inst(action_inst):
-            action_run = action_inst.build_run(job_run)
-            job_run.action_runs.append(action_run)
-            return action_run
-
-        action_runs_by_name = dict(
-            (action_inst.name, create_action_inst(action_inst))
-            for action_inst in all_actions
-        )
-
-        for action_inst in all_actions:
-            for req_action in action_inst.required_actions:
-                if req_action.name not in action_runs_by_name:
-                    raise ConfigBuildMismatchError(
-                        "Unknown action %s, configuration mismatch?" %
-                        req_action.name)
-
-                # Two-way, waiting runs and required_runs
-                req_action_run = action_runs_by_name[req_action.name]
-                waiting_action_run = action_runs_by_name[action_inst.name]
-                req_action_run.waiting_runs.append(waiting_action_run)
-                waiting_action_run.required_runs.append(req_action_run)
+        return self.runs.get_run_by_state(ActionRun.STATE_SUCCEEDED)
 
     def build_run(self, run_time, node=None, actions=None, run_num=None,
                   cleanup_action=None):
@@ -609,11 +513,6 @@ class Job(Observable, Observer):
 
         job_run.node = node or self.node_pool.next()
         log.info("Built run %s", job_run.id)
-
-        # TODO: It would be great if this were abstracted out a bit
-        if (os.path.exists(self.output_path) and
-            not os.path.exists(job_run.output_path)):
-            os.mkdir(job_run.output_path)
 
         # Actions can be specified when restored from serialized state
         if not actions:
@@ -673,31 +572,21 @@ class Job(Observable, Observer):
         job_run.scheduled_start()
         self.schedule_next_run()
 
-    def build_runs(self, run_time):
+    def build_new_runs(self, run_time):
         """Builds runs. If all_nodes is set, build a run for every node,
         otherwise just builds a single run on a single node.
         """
         if self.all_nodes:
             return [
-            self.build_run(run_time, node=node)
-            for node in self.node_pool.nodes
+                self.runs.build_new_run(self, run_time, node)
+                for node in self.node_pool.nodes
             ]
-        return [self.build_run(run_time)]
-
-    def build_and_add_runs(self, run_time):
-        """Builds new runs and adds them to the run list. Also trims off old
-        runs.
-        """
-        runs = self.build_runs(run_time)
-        for job_run in runs:
-            self.runs.appendleft(job_run)
-        self.remove_old_runs()
-        return runs
+        return [self.runs.build_run(self, run_time, self.node_pool.next())]
 
     def manual_start(self, run_time=None):
         """Trigger a job run manually (instead of from the scheduler)."""
         run_time = run_time or timeutils.current_time()
-        manual_runs = self.build_runs(run_time)
+        manual_runs = self.build_new_runs(run_time)
 
         # Insert this run before any scheduled runs
         scheduled = deque()
@@ -711,44 +600,22 @@ class Job(Observable, Observer):
             r.manual_start()
         return manual_runs
 
-    def absorb_old_job(self, old):
-        self.runs = old.runs
-
-        self.output_path = old.output_path
-        self.run_num = old.run_num
-        self.enabled = old.enabled
-
-        self.context = old.context
-        self.event_recorder = old.event_recorder
-        self.event_recorder.entity = self
-        self.context.base = self
-
-        self.event_recorder.emit_notice("reconfigured")
-
-    @property
-    def data(self):
-        """This data is used to serialize the state of this job."""
-        return {
-            'runs': [r.data for r in self.runs],
-            'enabled': self.enabled
-        }
-
     def repr_data(self):
         """Returns a dict that is the external representation of this job."""
         last_success = self.last_success.end_time if self.last_success else None
         return {
-            'name':         self.name,
-            'scheduler':    str(self.scheduler),
-            'action_names': [a.name for a in self.topo_actions],
-            'node_pool':    [n.hostname for n in self.node_pool.nodes],
-            'status':       self.status,
-            'last_success': last_success,
+            'name':             self.name,
+            'scheduler':        str(self.scheduler),
+            'action_names':     self.action_graph.names,
+            'node_pool':        [n.hostname for n in self.node_pool.nodes],
+            'status':           self.status,
+            'last_success':     last_success,
         }
 
     @property
     def status(self):
         """The Jobs current status is determined by its last/next run."""
-        current_run = self.next_to_finish()
+        current_run = self.runs.get_next_to_finish()
         if not current_run:
             return self.STATUS_DISABLED
         if current_run.is_running:
@@ -757,39 +624,42 @@ class Job(Observable, Observer):
             return self.STATUS_ENABLED
         return self.STATUS_UNKNOWN
 
-    def restore(self, data):
+    @property
+    def state_data(self):
+        """This data is used to serialize the state of this job."""
+        return {
+            'runs':             self.runs.state_data,
+            'enabled':          self.enabled
+        }
+
+    def restore_state(self, data):
+        """Apply a previous state to this Job."""
         self.enabled = data['enabled']
-
-        for r_data in data['runs']:
-            try:
-                self.restore_run(r_data)
-            except Error, e:
-                log.warning("Failed to restore job: %r (%r)", r_data, e)
-                continue
-
+        self.runs.restore_state(data['runs'])
+        # TODO: can i change event_recorder to a single Observer?
         self.event_recorder.emit_info("restored")
 
-    def restore_run(self, data):
-        action_names = []
-        for action in data['runs']:
-            action_names.append(action['id'].split('.')[-1])
-
-        def action_filter(topo_action):
-            return topo_action.name in action_names
-
-        action_list = filter(action_filter, self.topo_actions)
-
-        ca = (self.cleanup_action
-              if self.cleanup_action and action_filter(self.cleanup_action)
-              else None)
-        # TODO: this seems like it should be easier to restore a runs state
-        run = self.build_run(None, run_num=data['run_num'], actions=action_list,
-                             cleanup_action=ca)
-        self.run_num = max([run.run_num + 1, self.run_num])
-
-        run.restore(data)
-        self.runs.append(run)
-        return run
+#    def restore_run(self, data):
+#        action_names = []
+#        for action in data['runs']:
+#            action_names.append(action['id'].split('.')[-1])
+#
+#        def action_filter(topo_action):
+#            return topo_action.name in action_names
+#
+#        action_list = filter(action_filter, self.topo_actions)
+#
+#        ca = (self.cleanup_action
+#              if self.cleanup_action and action_filter(self.cleanup_action)
+#              else None)
+#        # TODO: this seems like it should be easier to restore a runs state
+#        run = self.build_run(None, run_num=data['run_num'], actions=action_list,
+#                             cleanup_action=ca)
+#        self.run_num = max([run.run_num + 1, self.run_num])
+#
+#        run.restore(data)
+#        self.runs.append(run)
+#        return run
 
     def setup_job_dir(self, working_dir):
         """Setup a directory to store this jobs logs."""
