@@ -113,8 +113,7 @@ class ActionCommand(object):
 
 
 class ActionRunContext(object):
-    """Context object that gives us access to data about the action run.
-    """
+    """Context object that gives us access to data about the action run."""
 
     def __init__(self, action_run):
         self.action_run = action_run
@@ -236,7 +235,7 @@ class ActionRun(Observer):
 
     def build_action_command(self):
         """Create a new ActionCommand instance to send to the node."""
-        action_command = ActionCommand(
+        self.action_command = action_command = ActionCommand(
             self.id,
             self.command,
             filehandler.OutputStreamSerializer(self.output_path)
@@ -257,9 +256,9 @@ class ActionRun(Observer):
         """Mark the run as having been skipped."""
         return self.machine.transition('skip')
 
-    # TODO: many tests
-    def watcher(self, action_command, event):
+    def watcher(self, _, event):
         """Observe ActionCommand state changes."""
+        action_command = self.action_command
         log.debug("Action command state change: %s", action_command.state)
 
         if event == ActionCommand.RUNNING:
@@ -269,12 +268,11 @@ class ActionRun(Observer):
             return self.fail(None)
 
         if event == ActionCommand.EXITING:
-            # TODO: this is broken, we need action_command not state_machine
             if action_command.exit_status is None:
                 return self.fail_unknown()
 
             if not action_command.exit_status:
-                return self.succeed()
+                return self.success()
 
             return self.fail(action_command.exit_status)
 
@@ -347,9 +345,11 @@ class ActionRun(Observer):
 
     @property
     def command(self):
+        if self.rendered_command:
+            return self.rendered_command
+
         try:
-            if not self.rendered_command or not self.is_done:
-                self.rendered_command = self.render_command()
+            self.rendered_command = self.render_command()
             return self.rendered_command
         except Exception:
             log.error("Failed generating rendering command\n%s" %

@@ -108,10 +108,11 @@ class ActionRunTestCase(TestCase):
     def setup_action_run(self):
         anode = turtle.Turtle()
         output_path = "random_dir"
+        self.command = "do command"
         self.action_run = ActionRun(
             "id", anode,
             timeutils.current_time(),
-            "do command",
+            self.command,
             output_path=output_path)
 
     def test_init_state(self):
@@ -160,8 +161,46 @@ class ActionRunTestCase(TestCase):
         assert_equal(watcher.calls,
             [((action_command.machine, action_command.RUNNING), {})])
 
+    def test_watcher_running(self):
+        self.action_run.build_action_command()
+        self.action_run.machine.transition('start')
+        assert self.action_run.watcher(None, ActionCommand.RUNNING)
+        assert self.action_run.is_running
 
-    # TODO: work here
+    def test_watcher_failstart(self):
+        self.action_run.build_action_command()
+        assert self.action_run.watcher(None, ActionCommand.FAILSTART)
+        assert self.action_run.is_failed
+
+    def test_watcher_exiting_fail(self):
+        self.action_run.build_action_command()
+        self.action_run.action_command.exit_status = -1
+        self.action_run.machine.transition('start')
+        assert self.action_run.watcher(None, ActionCommand.EXITING)
+        assert self.action_run.is_failed
+        assert_equal(self.action_run.exit_status, -1)
+
+    def test_watcher_exiting_success(self):
+        self.action_run.build_action_command()
+        self.action_run.action_command.exit_status = 0
+        self.action_run.machine.transition('start')
+        self.action_run.machine.transition('started')
+        assert self.action_run.watcher(None, ActionCommand.EXITING)
+        assert self.action_run.is_succeeded
+        assert_equal(self.action_run.exit_status, 0)
+
+    def test_watcher_exiting_failunknown(self):
+        self.action_run.build_action_command()
+        self.action_run.machine.transition('start')
+        self.action_run.machine.transition('started')
+        assert self.action_run.watcher(None, ActionCommand.EXITING)
+        assert self.action_run.is_unknown
+        assert_equal(self.action_run.exit_status, None)
+
+    def test_watcher_unhandled(self):
+        self.action_run.build_action_command()
+        assert self.action_run.watcher(None, ActionCommand.PENDING) is None
+        assert self.action_run.is_scheduled
 
     def test_success(self):
         assert self.action_run.attempt_start()
@@ -200,6 +239,68 @@ class ActionRunTestCase(TestCase):
 
     def test_skip_bad_state(self):
         assert not self.action_run.skip()
+
+    def test_render_command(self):
+        self.action_run.context = {'stars': 'bright'}
+        self.action_run.bare_command = "%(stars)s"
+        assert_equal(self.action_run.render_command(), 'bright')
+
+    def test_command_not_yet_rendered(self):
+        assert_equal(self.action_run.command, self.command)
+
+    def test_command_already_rendered(self):
+        assert self.action_run.command
+        self.action_run.bare_command = "new command"
+        assert_equal(self.action_run.command, self.command)
+
+    def test_command_failed_render(self):
+        self.action_run.bare_command = "%(this_is_missing)s"
+        assert_equal(self.action_run.command, ActionRun.FAILED_RENDER)
+
+    def test__getattr__(self):
+        assert self.action_run.is_succeeded is not None
+
+    def test__getattr__missing_attribute(self):
+        assert_raises(AttributeError,
+            self.action_run.__getattr__, 'is_not_a_real_state')
+
+
+class ActionRunStateRestoreTestCase(TestCase):
+
+    @setup
+    def setup_action_run(self):
+        anode = turtle.Turtle()
+        output_path = "random_dir"
+        self.action_run = ActionRun(
+            "id", anode,
+            timeutils.current_time(),
+            "do command",
+            output_path=output_path)
+        self.state_data = {
+            'id':               "newid",
+            'state':            "running",
+            'run_time':         "now",
+            'start_time':       "now-1",
+            'end_time':         None,
+            'command':          "do this",
+            }
+
+    def test_restore_state_running(self):
+        self.action_run.restore_state(self.state_data)
+        assert self.action_run.is_unknown
+        for key, value in self.state_data.iteritems():
+            if key in ['state']:
+                continue
+            assert_equal(getattr(self.action_run, key), value)
+
+    def test_restore_state_complete(self):
+        self.state_data['end_time'] = "yesterday"
+        self.state_data['state'] = 'succeeded'
+        self.action_run.restore_state(self.state_data)
+        assert self.action_run.is_succeeded
+        assert_equal(self.action_run.end_time, "yesterday")
+
+
 
 if __name__ == "__main__":
     run()
