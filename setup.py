@@ -25,9 +25,12 @@ setup(
         "Intended Audience :: System Administrators",
         "Development Status :: 4 - Beta",
     ],
-    install_requires = [
-        'twisted>=10.0.0',
-        'PyYAML>=3.10',
+    install_requires=[
+        'Twisted>=10.0.0',
+        'PyYAML>=3.0',
+        'pyasn1>=0.0.13',
+        'pycrypto>=2.4',
+        'pytz>=2011n'
     ],
     packages=["tron", "tron.utils", "tron.config", "tron.commands"],
     scripts=[
