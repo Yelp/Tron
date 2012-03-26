@@ -2,11 +2,13 @@
  tron.core.actionrun
 """
 import logging
+import traceback
 from tron import command_context
 from tron.serialize import filehandler
 from tron import node
 
 from tron.utils import state, timeutils
+from tron.utils.observer import Observer
 
 log = logging.getLogger('tron.core.actionrun')
 
@@ -49,14 +51,19 @@ class ActionCommand(object):
         self.id             = id
         self.command        = command
         self.machine        = state.StateMachine(initial_state=self.PENDING)
-        self.serializer     = serializer
         self.exit_status    = None
         self.start_time     = None
         self.end_time       = None
+        self.stdout         = serializer.open(self.STDOUT)
+        self.stderr         = serializer.open(self.STDERR)
 
     @property
     def state(self):
         return self.machine.state
+
+    @property
+    def attach(self):
+        return self.machine.attach
 
     def started(self):
         if self.machine.transition("start"):
@@ -69,22 +76,36 @@ class ActionCommand(object):
             self.exit_status = exit_status
             return True
 
-    def _write(self, stream_name, value):
-        if not self.serializer:
+    def _write(self, stream, value):
+        if not stream:
             return
-        fh = self.serializer.open(stream_name)
-        fh.write(value)
+        stream.write(value)
 
     def write_stderr(self, value):
-        self._write(self.STDERR, value)
+        self._write(self.stderr, value)
 
     def write_stdout(self, value):
-        self._write(self.STDOUT, value)
+        self._write(self.stdout, value)
+
+    def _close(self, stream):
+        if stream:
+            stream.close()
 
     def done(self):
         if self.machine.transition("close"):
-            # TODO: close and test closed fh for stdout/stderr
-            pass
+            self._close(self.stdout)
+            self._close(self.stderr)
+            return True
+
+    def handle_errback(self, result):
+        """Handle an unexpected error while being run.  This will likely be
+        an interval error. Cleanup the state of this AcctionCommand and log
+        something useful for debugging.
+        """
+        log.error("Unknown failure for ActionCommand run %s: %s\n%s",
+            self.id, self.command, str(result))
+        self.exited(result)
+        self.done()
 
     def __repr__(self):
         return "ActionCommand %s %s: %s" % (
@@ -116,8 +137,12 @@ class ActionRunContext(object):
         raise KeyError(name)
 
 
-class ActionRun(object):
-    """Tracks the state of a single run of an Action."""
+class ActionRun(Observer):
+    """Tracks the state of a single run of an Action.
+
+    ActionRuns Observer ActionCommands they create and are observed by a
+    parent JobRun.
+    """
     STATE_CANCELLED     = state.NamedEventState('cancelled')
     STATE_UNKNOWN       = state.NamedEventState('unknown', short_name='UNKWN')
     STATE_FAILED        = state.NamedEventState('failed')
@@ -154,14 +179,11 @@ class ActionRun(object):
 
     # The set of states that are considered end states. Technically some of
     # these states can be manually transitioned to other states.
-    END_STATES = set((
-        STATE_FAILED,
-        STATE_SUCCEEDED,
-        STATE_CANCELLED,
-        STATE_SKIPPED
-    ))
+    END_STATES = set(
+        (STATE_FAILED, STATE_SUCCEEDED, STATE_CANCELLED, STATE_SKIPPED))
 
-    # TODO: work starts here
+    FAILED_RENDER = 'false'
+
     def __init__(self, id, node, run_time, bare_command,
         parent_context=None, output_path=None):
         self.id                 = id
@@ -186,42 +208,41 @@ class ActionRun(object):
         return self.machine.check(state)
 
     def attempt_start(self):
-        self.machine.transition('ready')
-
-        # TODO: should be checked in JobRun or ActionRunCollection?
-        if all(r.is_success or r.is_skipped for r in self.required_runs):
+        if self.machine.transition('ready'):
             return self.start()
 
     def start(self):
+        """Start this ActionRun."""
         if not self.machine.check('start'):
             raise InvalidStartStateError(self.state)
 
         log.info("Starting action run %s", self.id)
         self.start_time = timeutils.current_time()
-        self.end_time = None
         self.machine.transition('start')
-        assert self.state == self.STATE_STARTING, self.state
 
         if not self.is_valid_command:
             log.error("Command for action run %s is invalid: %r",
-                self.id, self.action.command)
+                self.id, self.bare_command)
             return self.fail(-1)
 
-        self.action_command = ActionCommand(
+        action_command = self.build_action_command()
+        try:
+            self.node.submit_command(action_command)
+        except node.Error, e:
+            log.warning("Failed to start %s: %r", self.id, e)
+            return self.fail(-2)
+
+        return True
+
+    def build_action_command(self):
+        """Create a new ActionCommand instance to send to the node."""
+        action_command = ActionCommand(
             self.id,
             self.command,
             filehandler.OutputStreamSerializer(self.output_path)
         )
-
-        # TODO: observer
-        self.action_command.machine.listen(True, self._handle_action_command)
-        try:
-            df = self.node.run(self.action_command)
-            df.addErrback(self._handle_errback)
-        except node.Error, e:
-            log.warning("Failed to start %s: %r", self.id, e)
-            return False
-        return True
+        self.watch(action_command, True)
+        return action_command
 
     def cancel(self):
         return self.machine.transition('cancel')
@@ -236,83 +257,48 @@ class ActionRun(object):
         """Mark the run as having been skipped."""
         return self.machine.transition('skip')
 
+    # TODO: many tests
+    def watcher(self, action_command, event):
+        """Observe ActionCommand state changes."""
+        log.debug("Action command state change: %s", action_command.state)
 
-    def _handle_errback(self, result):
-        """Handle an error on the action command deferred
-
-        This isn't the primary way we get notified of failures, as most
-        expected ones will come through us being a listener to the action
-        command. However, if something internally goes wrong we'll catch it
-        here, as well as getting more details on the cause of any exception
-        generated.
-        """
-        log.info("Action error: %s", str(result))
-        self._close_output_file()
-        if isinstance(result.value, node.ConnectError):
-            log.warning("Failed to connect to host %s for run %s",
-                self.node.hostname, self.id)
-        elif isinstance(result.value, node.ResultError):
-            log.warning("Failed to retrieve exit for run %s after executing"
-                        " command on host %s", self.id, self.node.hostname)
-        else:
-            log.warning("Unknown failure for run %s on host %s: %s",
-                self.id, self.node.hostname, str(result))
-            self.fail_unknown()
-
-    def _handle_action_command(self):
-        """Our hook for being a listener to a running action command.
-
-        On any state change, the action command will call us back so we can
-        evaluate if we need to change some state ourselves.
-        """
-        log.debug("Action command state change: %s", self.action_command.state)
-        if self.action_command.state == ActionCommand.RUNNING:
+        if event == ActionCommand.RUNNING:
             return self.machine.transition('started')
 
-        if self.action_command.state == ActionCommand.FAILSTART:
-            self._close_output_file()
+        if event == ActionCommand.FAILSTART:
             return self.fail(None)
 
-        if self.action_command.state == ActionCommand.EXITING:
-            if self.action_command.exit_status is None:
+        if event == ActionCommand.EXITING:
+            # TODO: this is broken, we need action_command not state_machine
+            if action_command.exit_status is None:
                 return self.fail_unknown()
-            if not self.action_command.exit_status:
+
+            if not action_command.exit_status:
                 return self.succeed()
-            return self.fail(self.action_command.exit_status)
 
-        if self.action_command.state == ActionCommand.COMPLETE:
-            self._close_output_file()
-            return
+            return self.fail(action_command.exit_status)
 
-        raise Error(
-            "Invalid state for action command : %r" % self.action_command)
-
-    def fail(self, exit_status=0):
-        """Mark the run as having failed, providing an exit status"""
-        log.info("Action run %s failed with exit status %r",
-            self.id, exit_status)
-        if self.machine.transition('fail'):
+    def _complete(self, target, exit_status=0):
+        log.info("Action run %s completed with %s and exit status %r",
+            self.id, target, exit_status)
+        if self.machine.transition(target):
             self.exit_status = exit_status
             self.end_time = timeutils.current_time()
             return True
 
-    def fail_unknown(self):
-        """Failed with unknown reason."""
-        log.info("Lost communication with action run %s", self.id)
-
-        if self.machine.transition('fail_unknown'):
-            self.exit_status = None
-            self.end_time = None
-            return True
+    def fail(self, exit_status=0):
+        return self._complete('fail', exit_status)
 
     def success(self):
-        if self.machine.transition('success'):
-            log.info("Action run %s succeeded", self.id)
-            self.exit_status = 0
-            self.end_time = timeutils.current_time()
-            return True
+        return self._complete('success')
+
+    def fail_unknown(self):
+        """Failed with unknown reason."""
+        log.warn("Lost communication with action run %s", self.id)
+        return self.machine.transition('fail_unknown')
 
     def restore_state(self, state_data):
+        """Restore the state of this ActionRun from a serialized state."""
         self.id                 = state_data['id']
         self.machine.state      = state.named_event_by_name(
             self.STATE_SCHEDULED, state_data['state'])
@@ -330,12 +316,12 @@ class ActionRun(object):
     def state_data(self):
         """This data is used to serialize the state of this action run."""
         return {
-            'id':           self.id,
-            'state':        str(self.state),
-            'run_time':     self.run_time,
-            'start_time':   self.start_time,
-            'end_time':     self.end_time,
-            'command':      self.command,
+            'id':               self.id,
+            'state':            str(self.state),
+            'run_time':         self.run_time,
+            'start_time':       self.start_time,
+            'end_time':         self.end_time,
+            'command':          self.command,
             }
 
     def repr_data(self, max_lines=None):
@@ -343,25 +329,20 @@ class ActionRun(object):
         action run.
         """
         data = {
-            'id':           self.id,
-            'state':        self.state.short_name,
-            'node':         self.node.hostname,
-            'command':      self.command,
-            'raw_command':  self.bare_command,
-            'run_time':     self.run_time,
-            'start_time':   self.start_time,
-            'end_time':     self.end_time,
-            'exit_status':  self.exit_status,
-            'requirements': [req.name for req in self.action.required_actions],
+            'id':               self.id,
+            'state':            self.state.short_name,
+            'node':             self.node.hostname,
+            'command':          self.command,
+            'raw_command':      self.bare_command,
+            'run_time':         self.run_time,
+            'start_time':       self.start_time,
+            'end_time':         self.end_time,
+            'exit_status':      self.exit_status,
         }
         return data
 
     def render_command(self):
-        """Render our configured command under the command context.
-
-        Note that this can fail in bad ways due to user input issues, so it's
-        recommend that 'command' or 'is_valid_command' be used.
-        """
+        """Render our configured command using the command context."""
         return self.bare_command % self.context
 
     @property
@@ -371,19 +352,17 @@ class ActionRun(object):
                 self.rendered_command = self.render_command()
             return self.rendered_command
         except Exception:
-            # TODO: full stack trace
-            log.exception("Failed generating rendering command. Bad format")
+            log.error("Failed generating rendering command\n%s" %
+                      traceback.format_exc())
 
-            # If we can't properly build our command, we at least want to
-            # ensure we run something that won't succeed. Ideally this will
-            # be caught earlier. See also is_valid_command
-            return "false"
+            # Return a command string that will always fail
+            return self.FAILED_RENDER
 
     @property
     def is_valid_command(self):
         try:
-            self.render_command()
-            return True
+            rendered = self.render_command()
+            return rendered != self.FAILED_RENDER
         except Exception:
             return False
 
@@ -392,6 +371,12 @@ class ActionRun(object):
         return self.state in self.END_STATES
 
     def __getattr__(self, name):
-        """Check the state."""
-        state_name = name.replace('in_', 'state_').upper()
-        return self.state == getattr(self, state_name)
+        """Support convenience properties for checking if this ActionRun is in
+        a specific state (Ex: self.is_running would check if self.state is
+        STATE_RUNNING).
+        """
+        state_name = name.replace('is_', 'state_').upper()
+        try:
+            return self.state == self.__getattribute__(state_name)
+        except AttributeError:
+            raise AttributeError(name)

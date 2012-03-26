@@ -1,16 +1,20 @@
 import datetime
 
 from testify import run, setup, TestCase, assert_equal, turtle
+from testify.assertions import assert_raises
 from testify.test_case import class_setup, class_teardown
 
-from tron.core.actionrun import ActionCommand, ActionRunContext
+from tron import node
+from tron.core.actionrun import ActionCommand, ActionRunContext, ActionRun
+from tron.core.actionrun import InvalidStartStateError
 from tron.utils import timeutils
 
 class ActionCommandTestCase(TestCase):
 
     @setup
     def setup_command(self):
-        self.ac = ActionCommand("action.1.do", "do", None)
+        self.serializer = turtle.Turtle(open=lambda fn: None)
+        self.ac = ActionCommand("action.1.do", "do", self.serializer)
 
     def test_init(self):
         assert_equal(self.ac.state, ActionCommand.PENDING)
@@ -39,23 +43,33 @@ class ActionCommandTestCase(TestCase):
         self.ac.exited(123)
         assert not self.ac.exited(1)
 
-    def test_write_stderr(self):
+    def test_write_stderr_no_fh(self):
         message = "this is the message"
         # Test without a stderr
         self.ac.write_stderr(message)
 
-        self.ac.serializer = turtle.Turtle()
-        self.ac.write_stderr(message)
-        assert_equal(len(self.ac.serializer.open.calls), 1)
+    def test_write_stderr(self):
+        message = "this is the message"
+        fh = turtle.Turtle()
+        serializer = turtle.Turtle(open=lambda fn: fh)
+        ac = ActionCommand("action.1.do", "do", serializer)
+
+        ac.write_stderr(message)
+        assert_equal(fh.write.calls, [((message,), {})])
 
     def test_done(self):
         self.ac.started()
         self.ac.exited(123)
         assert self.ac.done()
 
-    def test_bad_state(self):
+    def test_done_bad_state(self):
         assert not self.ac.done()
 
+    def test_handle_errback(self):
+        message = "something went wrong"
+        self.ac.handle_errback(message)
+        assert_equal(self.ac.state, ActionCommand.FAILSTART)
+        assert self.ac.end_time
 
 class ActionRunContextTestCase(TestCase):
 
@@ -87,6 +101,105 @@ class ActionRunContextTestCase(TestCase):
     def test_node_hostname(self):
         assert_equal(self.context.node, 'nodename')
 
+
+class ActionRunTestCase(TestCase):
+
+    @setup
+    def setup_action_run(self):
+        anode = turtle.Turtle()
+        output_path = "random_dir"
+        self.action_run = ActionRun(
+            "id", anode,
+            timeutils.current_time(),
+            "do command",
+            output_path=output_path)
+
+    def test_init_state(self):
+        assert_equal(self.action_run.state, ActionRun.STATE_SCHEDULED)
+
+    def test_attempt_start(self):
+        assert self.action_run.attempt_start()
+        assert_equal(self.action_run.state, ActionRun.STATE_STARTING)
+
+    def test_attempt_start_failed(self):
+        self.action_run.machine.transition('queue')
+        assert not self.action_run.attempt_start()
+        assert_equal(self.action_run.state, ActionRun.STATE_QUEUED)
+
+    def test_start(self):
+        self.action_run.machine.transition('ready')
+        assert self.action_run.start()
+        assert self.action_run.is_starting
+
+    def test_start_bad_state(self):
+        self.action_run.fail()
+        assert_raises(InvalidStartStateError, self.action_run.start)
+
+    def test_start_invalid_command(self):
+        self.action_run.bare_command = "%(notfound)s"
+        self.action_run.machine.transition('ready')
+        assert self.action_run.start()
+        assert self.action_run.is_failed
+        assert_equal(self.action_run.exit_status, -1)
+
+    def test_start_node_error(self):
+        def raise_error(c):
+            raise node.Error("The error")
+        self.action_run.node = turtle.Turtle(submit_command=raise_error)
+        self.action_run.machine.transition('ready')
+        assert self.action_run.start()
+        assert_equal(self.action_run.exit_status, -2)
+        assert self.action_run.is_failed
+
+    def test_build_action_command(self):
+        self.action_run.watcher = watcher = turtle.Turtle()
+        action_command = self.action_run.build_action_command()
+        assert_equal(action_command.id, self.action_run.id)
+        assert_equal(action_command.command, self.action_run.rendered_command)
+        action_command.started()
+        assert_equal(watcher.calls,
+            [((action_command.machine, action_command.RUNNING), {})])
+
+
+    # TODO: work here
+
+    def test_success(self):
+        assert self.action_run.attempt_start()
+        self.action_run.machine.transition('started')
+
+        assert self.action_run.is_running
+        assert self.action_run.success()
+        assert not self.action_run.is_running
+        assert self.action_run.is_done
+        assert self.action_run.end_time
+        assert_equal(self.action_run.exit_status, 0)
+
+    def test_success_bad_state(self):
+        self.action_run.cancel()
+        assert not self.action_run.success()
+
+    def test_failure(self):
+        self.action_run.fail(1)
+        assert not self.action_run.is_running
+        assert self.action_run.is_done
+        assert self.action_run.end_time
+        assert_equal(self.action_run.exit_status, 1)
+
+    def test_failure_bad_state(self):
+        self.action_run.fail(444)
+        assert not self.action_run.fail(123)
+        assert_equal(self.action_run.exit_status, 444)
+
+    def test_skip(self):
+        assert not self.action_run.is_running
+        assert self.action_run.attempt_start()
+
+        assert self.action_run.fail(-1)
+        assert self.action_run.skip()
+        assert self.action_run.is_skipped
+
+    def test_skip_bad_state(self):
+        assert not self.action_run.skip()
 
 if __name__ == "__main__":
     run()

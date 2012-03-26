@@ -9,41 +9,41 @@ class Observable(object):
     """
 
     def __init__(self):
-        self._listeners = dict()
+        self._observers = dict()
 
-    def listen(self, listen_spec, callback):
-        """Attach another callback to the listen_spec.
+    def attach(self, watch_spec, observer):
+        """Attach another observer to the listen_spec.
 
         Listener Spec matches on:
             True                    Matches everything
             <string>                Matches only that event
             <sequence of strings>   Matches any of the events in the sequence
         """
-        if isinstance(listen_spec, (basestring, bool)):
-            self._listeners.setdefault(listen_spec, []).append(callback)
+        if isinstance(watch_spec, (basestring, bool)):
+            self._observers.setdefault(watch_spec, []).append(observer)
             return
 
-        for spec in listen_spec:
-            self._listeners.setdefault(spec, []).append(callback)
+        for spec in watch_spec:
+            self._observers.setdefault(spec, []).append(observer)
 
-    def clear_listeners(self, listen_spec=None):
+    def clear_watchers(self, watch_spec=None):
         """Remove all listeners for a given listen_spec. Removes all
         listeners if listen_spec is None.
         """
-        if listen_spec is None or listen_spec is True:
-            self._listeners.clear()
+        if watch_spec is None or watch_spec is True:
+            self._observers.clear()
             return
 
-        del self._listeners[listen_spec]
+        del self._observers[watch_spec]
 
     def notify(self, event):
         """Notify all observers of the event."""
         log.debug("Notifying listeners for new event %r", event)
 
-        listeners = self._listeners.get(True, []) + self._listeners.get(event, [])
+        watchers = self._observers.get(True, []) + self._observers.get(event, [])
 
-        for listener in listeners:
-            listener()
+        for watcher in watchers:
+            watcher.watcher(self, event)
 
 
 
@@ -53,7 +53,7 @@ class Observer(object):
     """
 
     def watch(self, observable, event):
-        observable.listen(event, lambda: self.watcher(observable, event))
+        observable.attach(event, self)
 
     def watcher(self, observable, event):
         """Override this method to call a method to handle an event."""

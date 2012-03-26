@@ -1,4 +1,5 @@
 from testify import TestCase, setup, assert_equal, assert_raises
+from testify.utils import turtle
 
 from tron.utils import state
 from tron.utils.state import NamedEventState
@@ -11,9 +12,9 @@ class SimpleTestCase(TestCase):
 
         self.machine = state.StateMachine(self.state_red)
 
-    def test(self):
+    def test_transition_many(self):
         # Stay the same
-        self.machine.transition(False)
+        assert not self.machine.transition(False)
         assert_equal(self.machine.state, self.state_red)
 
         # Traffic has arrived
@@ -28,6 +29,13 @@ class SimpleTestCase(TestCase):
         assert not self.machine.check(False)
         assert_equal(self.machine.check('true'), self.state_green)
         assert_equal(self.machine.state, self.state_red)
+
+    def test_transition(self):
+        watcher = turtle.Turtle()
+        self.machine.attach(True, watcher)
+        self.machine.transition('true')
+        assert_equal(watcher.watcher.calls,
+            [((self.machine, self.state_green),{})])
 
 
 class MultiOptionTestCase(TestCase):

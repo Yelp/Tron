@@ -180,6 +180,15 @@ class Node(object):
         fudge_factor = max(0.0, outstanding_runs - 4)
         return random.random() * float(fudge_factor)
 
+    # TODO: Test
+    def submit_command(self, command):
+        """Submit an ActionCommand to be run on this node. Optionally provide
+        an error callback which will be called on error.
+        """
+        deferred = self.run(command)
+        deferred.addErrback(command.handle_errback)
+        return deferred
+
     def run(self, run):
         """Execute the specified run
 
@@ -214,9 +223,7 @@ class Node(object):
             reactor.callLater(fudge_factor, lambda: self._do_run(run))
 
         # We return the deferred here, but really we're trying to keep the rest
-        # of the world from getting too involved with twisted. We will call
-        # back to mark the action success/fail directly, so using this deferred
-        # isn't strictly necessary.
+        # of the world from getting too involved with twisted.
         return self.run_states[run.id].deferred
 
     def _do_run(self, run):
@@ -381,7 +388,7 @@ class Node(object):
 
         chan.addOutputCallback(run.write_stdout)
         chan.addErrorCallback(run.write_stderr)
-        chan.addEndCallback(run.write_done)
+        chan.addEndCallback(run.done)
 
         chan.command = run.command
         chan.start_defer = defer.Deferred()

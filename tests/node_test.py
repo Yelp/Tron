@@ -1,9 +1,8 @@
-import StringIO
-
 from testify import setup, TestCase, assert_equal, run
 from testify.utils import turtle
 
-from tron import node, action
+from tron import node
+from tron.core import actionrun
 from tron.utils import testingutils
 
 
@@ -13,18 +12,13 @@ class NodeTestCase(TestCase):
         def openChannel(self, chan):
             self.chan = chan
 
-    @setup
-    def setup(self):
-        self.stdout = StringIO.StringIO()
-        self.stderr = StringIO.StringIO()
-
     def test_output_logging(self):
         nod = node.Node(hostname="localhost",
                         ssh_options=turtle.Turtle())
 
-        action_cmd = action.ActionCommand("test", "false",
-                                          stdout=self.stdout,
-                                          stderr=self.stderr)
+        fh = turtle.Turtle()
+        serializer = turtle.Turtle(open=lambda fn: fh)
+        action_cmd = actionrun.ActionCommand("test", "false", serializer)
 
         nod.connection = self.TestConnection()
         nod.run_states = {action_cmd.id: turtle.Turtle(state=0)}
@@ -34,9 +28,7 @@ class NodeTestCase(TestCase):
         assert nod.connection.chan is not None
         nod.connection.chan.dataReceived("test")
 
-        self.stdout.seek(0)
-        assert_equal(self.stdout.read(4), "test")
-
+        assert_equal(fh.write.calls, [(("test",), {})])
 
 class NodeTimeoutTest(testingutils.ReactorTestCase):
     @setup
