@@ -8,4 +8,4 @@ PyYAML>=3.0
 Sphinx>=1.1.2
 Sphinx-PyPI-upload>=0.2.1
 testify>=0.1.12
-Twisted>=11.0.0
+Twisted>=10.0.0
