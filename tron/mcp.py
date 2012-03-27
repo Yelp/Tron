@@ -16,8 +16,9 @@ from tron import event
 from tron import monitor
 from tron.config import config_parse
 from tron.config.config_parse import ConfigError
-from tron.job import Job
+from tron.core.job import Job, JobScheduler
 from tron.node import Node, NodePool
+from tron.scheduler import scheduler_from_config
 from tron.service import Service
 from tron.utils import timeutils, emailer
 from tron.utils.observer import Observer
@@ -217,6 +218,7 @@ class MasterControlProgram(object):
 
     def __init__(self, working_dir, config_file, context=None):
         self.jobs = {}
+        self.job_scheduler = JobScheduler()
         self.services = {}
 
         # Mapping of node name to node (or node pool) objects
@@ -405,9 +407,11 @@ class MasterControlProgram(object):
 
     def _apply_jobs(self, job_configs):
         """Add and remove jobs based on the configuration."""
+        # TODO: attach observer for state changes and events
         for job_config in job_configs.values():
             log.debug("Building new job %s", job_config.name)
-            job = Job.from_config(job_config, self.nodes, self.time_zone)
+            scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
+            job = Job.from_config(job_config, self.nodes, scheduler)
             self.add_job(job)
 
         for job_name in (set(self.jobs.keys()) - set(job_configs.keys())):

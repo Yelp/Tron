@@ -5,9 +5,17 @@
 from collections import deque
 import logging
 from tron.core.action import ActionRun
+from tron.core.actiongraph import ActionRunFactory
 from tron.utils.observer import Observable, Observer
+from tron.utils.proxy import CollectionProxy
 
 log = logging.getLogger('tron.core.jobrun')
+
+
+class JobRunContext(object):
+    pass
+    # TODO
+
 
 class JobRun(Observable, Observer):
     """A JobRun is an execution of a Job.  It has a list of ActionRuns."""
@@ -71,8 +79,12 @@ class JobRun(Observable, Observer):
             job.output_path, job.context,
         )
 
-        run.register_cleanup_action(job.cleanup_action.build_run(run))
-        run.register_action_runs(job.action_graph.build_action_run(run))
+        action_run_graph = ActionRunFactory.build_action_run_graph(
+                job.action_graph, run)
+        run.register_cleanup_action(action_run_graph)
+        cleanup_action_run = ActionRunFactory.build_run_for_action(
+                job.cleanup_action, run)
+        run.register_action_runs(cleanup_action_run)
         return run
 
     def register_action_runs(self, action_runs):
@@ -290,7 +302,7 @@ class JobRun(Observable, Observer):
             'end_time':     self.end_time,
             }
 
-    def restore(self, data):
+    def restore_state(self, data):
         self.start_time = data['start_time']
         self.end_time = data['end_time']
         self.set_run_time(data['run_time'])
@@ -302,6 +314,28 @@ class JobRun(Observable, Observer):
             self.cleanup_action_run.restore_state(data['cleanup_run'])
 
         self.event_recorder.emit_info("restored")
+
+    #    def restore_state(self, data):
+    #        action_names = []
+    #        for action in data['runs']:
+    #            action_names.append(action['id'].split('.')[-1])
+    #
+    #        def action_filter(topo_action):
+    #            return topo_action.name in action_names
+    #
+    #        action_list = filter(action_filter, self.topo_actions)
+    #
+    #        ca = (self.cleanup_action
+    #              if self.cleanup_action and action_filter(self.cleanup_action)
+    #              else None)
+    #        # TODO: this seems like it should be easier to restore a runs state
+    #        run = self.build_run(None, run_num=data['run_num'], actions=action_list,
+    #                             cleanup_action=ca)
+    #        self.run_num = max([run.run_num + 1, self.run_num])
+    #
+    #        run.restore(data)
+    #        self.runs.append(run)
+    #        return run
 
     def __getattr__(self, name):
         # The order here is important.  We don't want to raise too many
@@ -354,8 +388,6 @@ class JobRun(Observable, Observer):
     def all_but_cleanup_done(self):
         """True when any ActionRun has failed, or when all ActionRuns are done.
         """
-        if self.is_failure:
-            return True
         return all(r.is_done for r in self.action_runs)
 
     @property
@@ -363,6 +395,7 @@ class JobRun(Observable, Observer):
         """Provide 'SUCCESS' or 'FAILURE' to a cleanup action context based on
         the status of the other steps
         """
+        # TODO: these strings from somewhere better
         if self.is_failure:
             return 'FAILED'
         elif self.all_but_cleanup_success:
@@ -374,6 +407,7 @@ class JobRun(Observable, Observer):
         """Called to have this JobRun cleanup any resources it has.  This will
          remove the reference to its job and remove its output directory.
          """
+        # TODO: use OutputStreamSerializer
         if os.path.exists(self.output_path):
             shutil.rmtree(self.output_path)
 
@@ -381,11 +415,10 @@ class JobRun(Observable, Observer):
         self.event_recorder = None
 
     def __str__(self):
-        return "JOB_RUN:%s" % self.id
+        return "JobRun:%s" % self.id
 
 
-
-
+# TODO: tests
 class JobRunCollection(object):
     """A JobRunCollection is a deque of JobRun objects. Responsible for
     ordering and logic related to a group of JobRuns which should all be runs
@@ -407,11 +440,14 @@ class JobRunCollection(object):
         """Factory method for creating a JobRunCollection from a config."""
         return cls(job_config.run_limit)
 
-    def restore_state(self, state, actions):
+    def restore_state(self, job_run_states, action_graph):
         """Apply state to all jobs from the state dict."""
-        for run_state in state:
-            # TODO: test this is added in the correct order
-            self.runs.appendleft(JobRun.from_state(run_state, actions))
+        restored_runs = [
+            JobRun.from_state(run_state, action_graph)
+            for run_state in job_run_states
+        ]
+        self.runs.appendleft(restored_runs)
+        return self.runs.appendleft()
 
     def build_new_run(self, job, run_time, node):
         """Create a new run for the job, add it to the runs list,
@@ -481,7 +517,7 @@ class JobRunCollection(object):
         """
         next = self.get_next_to_finish()
         next_num = next.run_num if next else self.runs[0].run_num
-        last_success = self.get_run_by_state(ActionRun.STATE_SUCCEEDED)
+        last_success = self.last_success
         succ_num = last_success.run_num if last_success else 0
         keep_num = min(next_num, succ_num)
 
@@ -496,3 +532,7 @@ class JobRunCollection(object):
     def state_data(self):
         """Return the state data to serialize."""
         return [r.state_data for r in self.runs]
+
+    @property
+    def last_success(self):
+        return self.get_run_by_state(ActionRun.STATE_SUCCEEDED)

@@ -89,7 +89,7 @@ class ActionRunFactory(object):
 #        return base
 
     @classmethod
-    def build_run_for_action(cls, job_run, action):
+    def build_run_for_action(cls, action, job_run):
         """Create an ActionRun for a JobRun and Action."""
         id = "%s.%s" % (job_run.id, action.name)
         node = action.node_pool.next() if action.node_pool else job_run.node

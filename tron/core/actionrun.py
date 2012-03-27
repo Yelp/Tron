@@ -188,7 +188,7 @@ class ActionRun(Observer):
         parent_context=None, output_path=None):
         self.id                 = id
         self.node               = node
-        self.output_path        = output_path
+        self.output_path        = output_path   # list of path parts
         self.bare_command       = bare_command
         self.run_time           = run_time      # parent JobRun start time
         self.start_time         = None          # ActionRun start time
@@ -198,7 +198,8 @@ class ActionRun(Observer):
         self.machine            = state.StateMachine(
                                     ActionRun.STATE_SCHEDULED, delegate=self)
         context                 = ActionRunContext(self)
-        self.context = command_context.CommandContext(context, parent_context)
+        self.context            = command_context.CommandContext(
+                                    context, parent_context)
 
     @property
     def state(self):
@@ -244,7 +245,7 @@ class ActionRun(Observer):
         self.action_command = action_command = ActionCommand(
             self.id,
             self.command,
-            filehandler.OutputStreamSerializer(self.output_path)
+            filehandler.OutputStreamSerializer(*self.output_path)
         )
         self.watch(action_command, True)
         return action_command

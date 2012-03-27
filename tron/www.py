@@ -6,7 +6,7 @@ view current state, event history and send commands to trond.
 import datetime
 import logging
 import urllib
-from tron.core import action
+from tron.core import action, job
 
 try:
     import simplejson as json
@@ -16,7 +16,6 @@ except ImportError:
 
 from twisted.web import http, resource, server
 
-from tron import job
 from tron import service
 from tron.utils import timeutils
 
