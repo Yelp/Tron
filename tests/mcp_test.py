@@ -6,9 +6,9 @@ import tempfile
 from testify import *
 from testify.utils import turtle
 
-from twisted.internet import reactor
+from tron.core import action
 from tron.utils import timeutils, testingutils
-from tron import mcp, job, action, scheduler
+from tron import mcp, job, scheduler
 
 
 class TestStateHandler(TestCase):

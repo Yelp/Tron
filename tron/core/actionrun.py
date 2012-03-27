@@ -204,6 +204,10 @@ class ActionRun(Observer):
     def state(self):
         return self.machine.state
 
+    @property
+    def attach(self):
+        return self.machine.attach
+
     def check_state(self, state):
         """Check if the state machine can be transitioned to state."""
         return self.machine.check(state)

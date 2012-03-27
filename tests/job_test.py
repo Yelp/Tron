@@ -4,7 +4,8 @@ import datetime
 
 from testify import setup, teardown, TestCase, run, assert_equal
 from testify.utils import turtle
-from tron import job, action, scheduler
+from tron import job, scheduler
+from tron.core import action
 from tron.utils import timeutils, testingutils
 
 
