@@ -286,8 +286,6 @@ class JobRun(object):
 
     @property
     def all_but_cleanup_done(self):
-        if self.is_failure:
-            return True
         return all(r.is_done for r in self.action_runs)
 
     @property
@@ -471,9 +469,7 @@ class Job(object):
         def choose(prev, nxt):
             if ((prev and prev.is_running) or
                 (node and nxt.node != node) or
-                nxt.is_success or
-                nxt.is_failure or
-                nxt.is_cancelled or
+                nxt.is_done or
                 nxt.is_unknown):
                 return prev
             else:
