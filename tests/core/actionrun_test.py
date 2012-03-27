@@ -159,24 +159,25 @@ class ActionRunTestCase(TestCase):
         assert_equal(action_command.command, self.action_run.rendered_command)
         action_command.started()
         assert_equal(watcher.calls,
-            [((action_command.machine, action_command.RUNNING), {})])
+            [((action_command, action_command.RUNNING), {})])
 
     def test_watcher_running(self):
         self.action_run.build_action_command()
         self.action_run.machine.transition('start')
-        assert self.action_run.watcher(None, ActionCommand.RUNNING)
+        assert self.action_run.watcher(self.action_run.action_command, ActionCommand.RUNNING)
         assert self.action_run.is_running
 
     def test_watcher_failstart(self):
         self.action_run.build_action_command()
-        assert self.action_run.watcher(None, ActionCommand.FAILSTART)
+        assert self.action_run.watcher(self.action_run.action_command, ActionCommand.FAILSTART)
         assert self.action_run.is_failed
 
     def test_watcher_exiting_fail(self):
         self.action_run.build_action_command()
         self.action_run.action_command.exit_status = -1
         self.action_run.machine.transition('start')
-        assert self.action_run.watcher(None, ActionCommand.EXITING)
+        assert self.action_run.watcher(
+            self.action_run.action_command, ActionCommand.EXITING)
         assert self.action_run.is_failed
         assert_equal(self.action_run.exit_status, -1)
 
@@ -185,7 +186,8 @@ class ActionRunTestCase(TestCase):
         self.action_run.action_command.exit_status = 0
         self.action_run.machine.transition('start')
         self.action_run.machine.transition('started')
-        assert self.action_run.watcher(None, ActionCommand.EXITING)
+        assert self.action_run.watcher(
+            self.action_run.action_command, ActionCommand.EXITING)
         assert self.action_run.is_succeeded
         assert_equal(self.action_run.exit_status, 0)
 
@@ -193,13 +195,15 @@ class ActionRunTestCase(TestCase):
         self.action_run.build_action_command()
         self.action_run.machine.transition('start')
         self.action_run.machine.transition('started')
-        assert self.action_run.watcher(None, ActionCommand.EXITING)
+        assert self.action_run.watcher(
+            self.action_run.action_command, ActionCommand.EXITING)
         assert self.action_run.is_unknown
         assert_equal(self.action_run.exit_status, None)
 
     def test_watcher_unhandled(self):
         self.action_run.build_action_command()
-        assert self.action_run.watcher(None, ActionCommand.PENDING) is None
+        assert self.action_run.watcher(
+            self.action_run.action_command, ActionCommand.PENDING) is None
         assert self.action_run.is_scheduled
 
     def test_success(self):

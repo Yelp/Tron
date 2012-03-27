@@ -86,11 +86,12 @@ class StateMachine(Observable):
     transitioning to other states based on the target.
     """
 
-    def __init__(self, initial_state):
+    def __init__(self, initial_state, delegate=None):
         super(StateMachine, self).__init__()
         self.initial_state = initial_state
         self.state = self.initial_state
         self._state_by_name = None
+        self.delegate = delegate
 
 
     def check(self, target):
@@ -127,3 +128,9 @@ class StateMachine(Observable):
         # multiple steps to take.
         self.transition(target, stop_item=(stop_item or prev_state))
         return True
+
+    def notify(self, event):
+        """Notify observers."""
+        watched = self.delegate if self.delegate else self
+        for watcher in self._get_watchers_for_event(event):
+            watcher.watcher(watched, event)

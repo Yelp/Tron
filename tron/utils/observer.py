@@ -36,15 +36,15 @@ class Observable(object):
 
         del self._observers[watch_spec]
 
+    def _get_watchers_for_event(self, event):
+        """Returns the complete list of watchers for the event."""
+        return self._observers.get(True, []) + self._observers.get(event, [])
+
     def notify(self, event):
         """Notify all observers of the event."""
         log.debug("Notifying listeners for new event %r", event)
-
-        watchers = self._observers.get(True, []) + self._observers.get(event, [])
-
-        for watcher in watchers:
+        for watcher in self._get_watchers_for_event(event):
             watcher.watcher(self, event)
-
 
 
 class Observer(object):
@@ -58,7 +58,6 @@ class Observer(object):
     def watcher(self, observable, event):
         """Override this method to call a method to handle an event."""
         pass
-
 
 
 # TODO: delete or implement

@@ -50,7 +50,8 @@ class ActionCommand(object):
     def __init__(self, id, command, serializer):
         self.id             = id
         self.command        = command
-        self.machine        = state.StateMachine(initial_state=self.PENDING)
+        self.machine        = state.StateMachine(
+                                initial_state=self.PENDING, delegate=self)
         self.exit_status    = None
         self.start_time     = None
         self.end_time       = None
@@ -194,7 +195,8 @@ class ActionRun(Observer):
         self.end_time           = None
         self.exit_status        = None
         self.rendered_command   = None
-        self.machine            = state.StateMachine(ActionRun.STATE_SCHEDULED)
+        self.machine            = state.StateMachine(
+                                    ActionRun.STATE_SCHEDULED, delegate=self)
         context                 = ActionRunContext(self)
         self.context = command_context.CommandContext(context, parent_context)
 
@@ -256,9 +258,8 @@ class ActionRun(Observer):
         """Mark the run as having been skipped."""
         return self.machine.transition('skip')
 
-    def watcher(self, _, event):
+    def watcher(self, action_command, event):
         """Observe ActionCommand state changes."""
-        action_command = self.action_command
         log.debug("Action command state change: %s", action_command.state)
 
         if event == ActionCommand.RUNNING:

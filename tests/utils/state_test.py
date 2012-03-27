@@ -37,6 +37,15 @@ class SimpleTestCase(TestCase):
         assert_equal(watcher.watcher.calls,
             [((self.machine, self.state_green),{})])
 
+    def test_notify_delegate(self):
+        delegate = turtle.Turtle()
+        watcher = turtle.Turtle()
+        self.machine = state.StateMachine(self.state_red, delegate=delegate)
+        self.machine.attach(True, watcher)
+        self.machine.transition('true')
+        assert_equal(watcher.watcher.calls,
+            [((delegate, self.state_green),{})])
+
 
 class MultiOptionTestCase(TestCase):
     @setup
