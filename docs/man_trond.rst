@@ -71,7 +71,7 @@ State file
 Logging
 -------
 
-Tron uses pythons standing logging and by default uses a rotating log file
+Tron uses Python's standard logging and by default uses a rotating log file
 handler that rotates files each day. Logs go to /var/log/tron/tron.log.
 
 To configure logging pass -l <logging.conf> to trond. You can modify the

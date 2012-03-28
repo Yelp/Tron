@@ -84,6 +84,9 @@ def parse_options():
     if not options.working_dir:
         parser.error("Bad working-dir option")
 
+    if options.log_conf and not os.path.exists(options.log_conf):
+        parser.error("Logging config file not found: %s" % options.log_conf)
+
     if options.config_file is None:
         options.config_file = os.path.join(
                 options.working_dir, DEFAULT_WORKING_CONF)
