@@ -252,6 +252,9 @@ class Validator(object):
         if self.optional and in_dict is None:
             return None
 
+        if in_dict is None:
+            raise ConfigError("A %s is required." % self.type_name)
+
         shortcut_value = self.do_shortcut(in_dict)
         if shortcut_value:
             return shortcut_value
@@ -387,6 +390,7 @@ def valid_time_zone(tz):
 class ValidateSSHOptions(Validator):
     """Validate SSH options."""
     config_class =              ConfigSSHOptions
+    optional =                  True
     defaults = {
         'agent':                False,
         'identities':           ()

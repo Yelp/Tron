@@ -7,6 +7,7 @@ from textwrap import dedent
 
 from testify import assert_equal, assert_in
 from testify import run, setup, teardown, TestCase
+from tron.config import config_parse
 from tron.config.config_parse import TronConfig, load_config, ConfigSSHOptions, valid_job
 from tron.config.config_parse import ConfigNode, ConfigNodePool, ConfigJob
 from tron.config.config_parse import ConfigAction, ConfigCleanupAction
@@ -330,10 +331,7 @@ services:
         assert_equal(test_config.jobs['test_job4'].enabled, False)
 
 
-class BadJobConfigTest(TestCase):
-    @setup
-    def build_env(self):
-        self.test_dir = tempfile.mkdtemp()
+class JobConfigTestCase(TestCase):
 
     def test_no_actions(self):
         test_config = BASE_CONFIG + """
@@ -343,8 +341,9 @@ jobs:
         node: node0
         schedule: "interval 20s"
         """
-        # TODO: assert message is correct
-        assert_raises(ConfigError, load_config, test_config)
+        expected_message = "Job test_job0 is missing options: actions"
+        exception = assert_raises(ConfigError, load_config, test_config)
+        assert_in(expected_message, str(exception))
 
     def test_empty_actions(self):
         test_config = BASE_CONFIG + """
@@ -355,8 +354,9 @@ jobs:
         schedule: "interval 20s"
         actions:
         """
-        # TODO: assert message is correct
-        assert_raises(ConfigError, load_config, test_config)
+        expected_message = "Value at Job.test_job0 is not a list with items"
+        exception = assert_raises(ConfigError, load_config, test_config)
+        assert_in(expected_message, str(exception))
 
     def test_dupe_names(self):
         test_config = BASE_CONFIG + """
@@ -374,8 +374,9 @@ jobs:
                 command: "test_command0.0"
 
         """
-        # TODO: assert message is correct
-        assert_raises(ConfigError, load_config, test_config)
+        expected_message = "Action name action0_0 on job test_job0 used twice"
+        exception = assert_raises(ConfigError, load_config, test_config)
+        assert_in(expected_message, str(exception))
 
     def test_bad_requires(self):
         test_config = BASE_CONFIG + """
@@ -403,8 +404,10 @@ jobs:
                 requires: action0_0
 
         """
-        # TODO: assert message is correct
-        assert_raises(ConfigError, load_config, test_config)
+        expected_message = ('jobs.test_job1.action1_0 has a dependency '
+                '"action0_0" that is not in the same job!')
+        exception = assert_raises(ConfigError, load_config, test_config)
+        assert_in(expected_message, str(exception))
 
 
     def test_circular_dependency(self):
@@ -424,8 +427,9 @@ jobs:
                 command: "test_command0.1"
                 requires: action0_0
         """
-        # TODO: assert message is correct
-        assert_raises(ConfigError, load_config, test_config)
+        expect = "Circular dependency in job.test_job0: action0_0 -> action0_1"
+        exception = assert_raises(ConfigError, load_config, test_config)
+        assert_in(expect, exception)
 
     def test_config_cleanup_name_collision(self):
         test_config = BASE_CONFIG + """
@@ -440,10 +444,11 @@ jobs:
                 command: "test_command0.0"
 
         """ % CLEANUP_ACTION_NAME
-        # TODO: assert message is correct
-        assert_raises(ConfigError, load_config, test_config)
+        expected_message = "Bad action name at Action.cleanup: cleanup"
+        exception = assert_raises(ConfigError, load_config, test_config)
+        assert_in(expected_message, str(exception))
 
-    def test_config_cleanup_name(self):
+    def test_config_cleanup_action_name(self):
         test_config = BASE_CONFIG + """
 jobs:
     -
@@ -458,8 +463,9 @@ jobs:
             name: "gerald"
             command: "test_command0.1"
         """
-        # TODO: assert message is correct
-        assert_raises(ConfigError, load_config, test_config)
+        expected_msg = "Cleanup actions cannot have custom names"
+        exception = assert_raises(ConfigError, load_config, test_config)
+        assert_in(expected_msg, str(exception))
 
     def test_config_cleanup_requires(self):
         test_config = BASE_CONFIG + """
@@ -476,8 +482,9 @@ jobs:
             command: "test_command0.1"
             requires: [action0_0]
         """
-        # TODO: assert message is correct
-        assert_raises(ConfigError, load_config, test_config)
+        expected_msg = "can not have requires"
+        exception = assert_raises(ConfigError, load_config, test_config)
+        assert_in(expected_msg, str(exception))
 
     def test_job_in_services(self):
         test_config = BASE_CONFIG + """
@@ -493,14 +500,9 @@ services:
         cleanup_action:
             command: "test_command0.1"
 """
-        # TODO: assert message is correct
-        assert_raises(ConfigError, load_config, test_config)
-
-    def test_validate_node_pool(self):
-        config_node_pool = valid_node_pool(
-            dict(name="theName", nodes=["node1", "node2"]))
-        assert_equal(config_node_pool.name, "theName")
-        assert_equal(len(config_node_pool.nodes), 2)
+        expected_msg = "Service test_job0 is missing options:"
+        exception = assert_raises(ConfigError, load_config, test_config)
+        assert_in(expected_msg, str(exception))
 
     def test_overlap_job_service_names(self):
         tron_config = dict(
@@ -522,20 +524,9 @@ services:
                 )
             ]
         )
-        # TODO: assert message is correct
-        assert_raises(ConfigError, valid_config, tron_config)
-
-    def test_overlap_node_and_node_pools(self):
-        tron_config = dict(
-            nodes=[
-                dict(name="sameName", hostname="localhost")
-            ],
-            node_pools=[
-                dict(name="sameName", nodes=["sameNode"])
-            ]
-        )
-        # TODO: assert message is correct
-        assert_raises(ConfigError, valid_config, tron_config)
+        expected_message = "Job and Service names must be unique sameName"
+        exception = assert_raises(ConfigError, valid_config, tron_config)
+        assert_in(expected_message, str(exception))
 
     def test_validate_job_no_actions(self):
         job_config = dict(
@@ -546,7 +537,30 @@ services:
         )
         expected_msg = "Value at Job.job_name is not a list with items"
         exception = assert_raises(ConfigError, valid_job, job_config)
-        assert_in(expected_msg, exception.message)
+        assert_in(expected_msg, str(exception))
+
+
+class NodeConfigTestCase(TestCase):
+
+    def test_validate_node_pool(self):
+        config_node_pool = valid_node_pool(
+            dict(name="theName", nodes=["node1", "node2"])
+        )
+        assert_equal(config_node_pool.name, "theName")
+        assert_equal(len(config_node_pool.nodes), 2)
+
+    def test_overlap_node_and_node_pools(self):
+        tron_config = dict(
+            nodes=[
+                dict(name="sameName", hostname="localhost")
+            ],
+            node_pools=[
+                dict(name="sameName", nodes=["sameNode"])
+            ]
+        )
+        expected_msg = "Node and NodePool names must be unique sameName"
+        exception = assert_raises(ConfigError, valid_config, tron_config)
+        assert_in(expected_msg, str(exception))
 
     def test_invalid_node_name(self):
         test_config = BASE_CONFIG + dedent("""
@@ -562,7 +576,7 @@ services:
             """)
         expected_msg = "some_unknown_node configured for ConfigJob test_job0"
         exception = assert_raises(ConfigError, load_config, test_config)
-        assert_in(expected_msg, exception.message)
+        assert_in(expected_msg, str(exception))
 
     def test_invalid_nested_node_pools(self):
         test_config = dedent("""
@@ -587,7 +601,7 @@ services:
         """)
         expected_msg = "NodePool pool1 contains another NodePool pool0"
         exception = assert_raises(ConfigError, load_config, test_config)
-        assert_in(expected_msg, exception.message)
+        assert_in(expected_msg, str(exception))
 
     def test_invalid_node_pool_config(self):
         test_config = dedent("""
@@ -612,8 +626,32 @@ services:
         """)
         expected_msg = "NodePool pool0 is missing options"
         exception = assert_raises(ConfigError, load_config, test_config)
-        assert_in(expected_msg, exception.message)
+        assert_in(expected_msg, str(exception))
 
+
+StubConfigObject = config_parse.config_object_factory(
+    'StubConfigObject',
+    ['req1', 'req2'],
+    ['opt1', 'opt2']
+)
+
+class StubValidator(config_parse.Validator):
+    config_class = StubConfigObject
+
+class ValidatorTestCase(TestCase):
+
+    @setup
+    def setup_validator(self):
+        self.validator = StubValidator()
+
+    def test_validate_with_none(self):
+        expected_msg = "A StubObject is required"
+        exception = assert_raises(ConfigError, self.validator.validate, None)
+        assert_in(expected_msg, str(exception))
+
+    def test_validate_optional_with_none(self):
+        self.validator.optional = True
+        assert_equal(self.validator.validate(None), None)
 
 if __name__ == '__main__':
     run()
