@@ -3,13 +3,15 @@ import os
 import tempfile
 import shutil
 
-from testify import setup, teardown, run, class_setup, class_teardown
+from testify import setup, run, class_setup, class_teardown
 from testify import TestCase, assert_equal, assert_raises
+from testify import teardown
 from testify.utils import turtle
+from tests import testingutils
 
 from tron import node, action, job, scheduler
 from tron.filehandler import FileHandleManager
-from tron.utils import timeutils, testingutils
+from tron.utils import timeutils
 
 def get_num_runs_by_state(job, state):
     count = 0

@@ -5,7 +5,7 @@ import StringIO
 import tempfile
 from textwrap import dedent
 
-from testify import assert_equal, assert_raises
+from testify import assert_equal, assert_in
 from testify import run, setup, teardown, TestCase
 from tron.config.config_parse import TronConfig, load_config, ConfigSSHOptions, valid_job
 from tron.config.config_parse import ConfigNode, ConfigNodePool, ConfigJob
@@ -16,6 +16,7 @@ from tron.config.config_parse import valid_node_pool, valid_config
 from tron.config.schedule_parse import ConfigConstantScheduler
 from tron.config.schedule_parse import ConfigDailyScheduler
 from tron.config.schedule_parse import ConfigIntervalScheduler
+from tests.testingutils import assert_raises
 from tron.utils.dicts import FrozenDict
 
 
@@ -342,6 +343,7 @@ jobs:
         node: node0
         schedule: "interval 20s"
         """
+        # TODO: assert message is correct
         assert_raises(ConfigError, load_config, test_config)
 
     def test_empty_actions(self):
@@ -353,6 +355,7 @@ jobs:
         schedule: "interval 20s"
         actions:
         """
+        # TODO: assert message is correct
         assert_raises(ConfigError, load_config, test_config)
 
     def test_dupe_names(self):
@@ -371,6 +374,7 @@ jobs:
                 command: "test_command0.0"
 
         """
+        # TODO: assert message is correct
         assert_raises(ConfigError, load_config, test_config)
 
     def test_bad_requires(self):
@@ -399,6 +403,7 @@ jobs:
                 requires: action0_0
 
         """
+        # TODO: assert message is correct
         assert_raises(ConfigError, load_config, test_config)
 
 
@@ -419,6 +424,7 @@ jobs:
                 command: "test_command0.1"
                 requires: action0_0
         """
+        # TODO: assert message is correct
         assert_raises(ConfigError, load_config, test_config)
 
     def test_config_cleanup_name_collision(self):
@@ -434,6 +440,7 @@ jobs:
                 command: "test_command0.0"
 
         """ % CLEANUP_ACTION_NAME
+        # TODO: assert message is correct
         assert_raises(ConfigError, load_config, test_config)
 
     def test_config_cleanup_name(self):
@@ -451,6 +458,7 @@ jobs:
             name: "gerald"
             command: "test_command0.1"
         """
+        # TODO: assert message is correct
         assert_raises(ConfigError, load_config, test_config)
 
     def test_config_cleanup_requires(self):
@@ -468,6 +476,7 @@ jobs:
             command: "test_command0.1"
             requires: [action0_0]
         """
+        # TODO: assert message is correct
         assert_raises(ConfigError, load_config, test_config)
 
     def test_job_in_services(self):
@@ -484,6 +493,7 @@ services:
         cleanup_action:
             command: "test_command0.1"
 """
+        # TODO: assert message is correct
         assert_raises(ConfigError, load_config, test_config)
 
     def test_validate_node_pool(self):
@@ -512,6 +522,7 @@ services:
                 )
             ]
         )
+        # TODO: assert message is correct
         assert_raises(ConfigError, valid_config, tron_config)
 
     def test_overlap_node_and_node_pools(self):
@@ -523,16 +534,19 @@ services:
                 dict(name="sameName", nodes=["sameNode"])
             ]
         )
+        # TODO: assert message is correct
         assert_raises(ConfigError, valid_config, tron_config)
 
     def test_validate_job_no_actions(self):
         job_config = dict(
-            name="job",
+            name="job_name",
             node="localhost",
             schedule="constant",
             actions=[]
         )
-        assert_raises(ConfigError, valid_job, job_config)
+        expected_msg = "Value at Job.job_name is not a list with items"
+        exception = assert_raises(ConfigError, valid_job, job_config)
+        assert_in(expected_msg, exception.message)
 
     def test_invalid_node_name(self):
         test_config = BASE_CONFIG + dedent("""
@@ -546,7 +560,59 @@ services:
                             name: "action0_0"
                             command: "test_command0.0"
             """)
-        assert_raises(ConfigError, load_config, test_config)
+        expected_msg = "some_unknown_node configured for ConfigJob test_job0"
+        exception = assert_raises(ConfigError, load_config, test_config)
+        assert_in(expected_msg, exception.message)
+
+    def test_invalid_nested_node_pools(self):
+        test_config = dedent("""
+            working_dir: "/tmp"
+
+            nodes:
+                - name: node0
+                  hostname: batch0
+
+            node_pools:
+                - name: pool0
+                  nodes: [batch1]
+                - name: pool1
+                  nodes: [node0, pool0]
+            jobs:
+                - name: somejob
+                  node: pool1
+                  schedule: "interval 30s"
+                  actions:
+                    - name: first
+                      command: "echo 1"
+        """)
+        expected_msg = "NodePool pool1 contains another NodePool pool0"
+        exception = assert_raises(ConfigError, load_config, test_config)
+        assert_in(expected_msg, exception.message)
+
+    def test_invalid_node_pool_config(self):
+        test_config = dedent("""
+            working_dir: "/tmp"
+
+            nodes:
+                - name: node0
+                  hostname: batch0
+
+            node_pools:
+                - name: pool0
+                  hostname: batch1
+                - name: pool1
+                  nodes: [node0, pool0]
+            jobs:
+                - name: somejob
+                  node: pool1
+                  schedule: "interval 30s"
+                  actions:
+                    - name: first
+                      command: "echo 1"
+        """)
+        expected_msg = "NodePool pool0 is missing options"
+        exception = assert_raises(ConfigError, load_config, test_config)
+        assert_in(expected_msg, exception.message)
 
 
 if __name__ == '__main__':

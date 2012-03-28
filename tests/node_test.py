@@ -2,9 +2,9 @@ import StringIO
 
 from testify import setup, TestCase, assert_equal, run
 from testify.utils import turtle
+from tests import testingutils
 
 from tron import node, action
-from tron.utils import testingutils
 
 
 class NodeTestCase(TestCase):

@@ -1,8 +1,8 @@
 from testify import *
+from tests import testingutils
 
 from tron import service
 from tron import node
-from tron.utils import testingutils
 
 def set_instance_up(service_instance):
     service_instance.start_action.exit_status = 0
