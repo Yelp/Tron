@@ -31,10 +31,10 @@ directory structure with your test jobs and configs. To put everything in one
 directory, launch `trond` like this::
 
     > mkdir wd
-    > bin/trond --working-dir=wd --log-file=wd/tron.log --pid-file=wd/tron.pid --verbose
+    > bin/trond --working-dir=wd --pid-file=wd/tron.pid --verbose
 
 You may be tempted to run with ``--nodaemon``, but all the interesting output
-goes to ``tron.log``, so you're better off running ``tail -f wd/tron.log`` in a
+goes to ``tron.log``, so you're better off running ``tail -f tron.log`` in a
 terminal. Kill ``trond`` when you're done with ``cat wd/tron.pid | xargs
 kill``.
 

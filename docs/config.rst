@@ -205,23 +205,6 @@ Context variables only available to Services:
     total number of instances).
 
 
-.. _config_logging:
-
-Logging
--------
-
-**syslog_address** (optional)
-    Include this if you want to enable logging to syslog. Accepts paths as
-    strings and ``[address, port]`` lists for sockets. Typical values for
-    various platforms are::
-
-        Linux: "/dev/log"
-        OS X: "/var/run/syslog"
-        Windows: ["localhost", 514]
-
-Example::
-
-    syslog_address: "/dev/log"
 
 Nodes
 -----
