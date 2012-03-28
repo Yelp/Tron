@@ -25,8 +25,8 @@ Options
 --working-dir=WORKING_DIR
     Directory where tron's state and output is stored (default /var/lib/tron/)
 
--l LOG_FILE, --log-file=LOG_FILE
-    Where the logs are stored (default /var/log/tron/tron.log)
+-l LOG_CONF, --log-conf=LOG_CONF
+    Logging configuration file to setup python logger
 
 -c CONFIG_FILE, --config-file=CONFIG_FILE
     Configuration file to load (default in working dir)
@@ -66,6 +66,18 @@ Log file
 State file
     trond saves state here when it terminates and reloads it when it starts
     up again.
+
+
+Logging
+-------
+
+Tron uses pythons standing logging and by default uses a rotating log file
+handler that rotates files each day. Logs go to /var/log/tron/tron.log.
+
+To configure logging pass -l <logging.conf> to trond. You can modify the
+default logging.conf by coping it from tron/logging.conf. See
+http://docs.python.org/howto/logging.html#configuring-logging
+
 
 Bugs
 ----

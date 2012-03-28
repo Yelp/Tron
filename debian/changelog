@@ -1,3 +1,10 @@
+tron (0.3.1) unstable; urgency=low
+
+  * Bug fix release
+  * Adding state diagrams to documentation
+
+ -- Daniel Nephin <dnephin@yelp.com>  Tue, 27 Mar 2012 11:35:05 -0800
+
 tron (0.3.0) unstable; urgency=low
 
   * !Tags, *references, and &anchors are now deprecated in the trond

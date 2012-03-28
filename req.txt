@@ -1,8 +1,0 @@
-PyYAML>=3.0
-Twisted>=10.0.0
-pyasn1>=0.0.13
-pycrypto>=2.4
-pytz>=2011n
-testify>=0.1.12
-wsgiref>=0.1.2
-zope.interface>=3.8.0

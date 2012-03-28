@@ -297,3 +297,13 @@ Job Run States
 **UNKWN**
     The run is in and unknown state.  This state occurs when tron restores a
     job that was running at the time of shutdown
+
+
+Action States
+^^^^^^^^^^^^^
+
+Job states are derived from the aggregate state of their actions.  The following
+is a state diagram for an action.
+
+.. image:: images/action.png
+    :width: 680px

@@ -84,8 +84,9 @@ class TronSandbox(object):
         self.trond_bin = os.path.join(self.tron_bin, 'trond')
         self.tronfig_bin = os.path.join(self.tron_bin, 'tronfig')
         self.tronview_bin = os.path.join(self.tron_bin, 'tronview')
-
         self.log_file = os.path.join(self.tmp_dir, 'tron.log')
+        self.log_conf = 'tests/logging.conf'
+
         self.pid_file = os.path.join(self.tmp_dir, 'tron.pid')
         self.config_file = os.path.join(self.tmp_dir, 'tron_config.yaml')
 
@@ -95,11 +96,11 @@ class TronSandbox(object):
         self.run_time = None
 
         self.trond_debug_args = ['--working-dir=%s' % self.tmp_dir,
-                                 '--log-file=%s' % self.log_file,
                                  '--pid-file=%s' % self.pid_file,
                                  '--port=%d' % self.port,
                                  '--host=%s' % self.host,
                                  '--config=%s' % self.config_file,
+                                 '--log-conf=%s' % self.log_conf,
                                  '--verbose', '--verbose']
 
         self.tron_server_address = '%s:%d' % (self.host, self.port)

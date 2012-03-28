@@ -9,9 +9,10 @@ from __future__ import with_statement
 
 import errno
 import logging
+import logging.config
 import optparse
 import os
-from pkg_resources import resource_string
+import pkg_resources
 import signal
 import sys
 
@@ -27,16 +28,20 @@ import tron
 from tron import commands
 from tron import mcp
 from tron import www
-from tron.utils import log_handler
 
-logger = logging.getLogger('bin.trond')
+logger = logging.getLogger('trond')
 
+
+TRON                    = 'tron'
+DEFAULT_CONF            = 'default_config.yaml'
+DEFAULT_WORKING_CONF    = 'tron_config.yaml'
+DEFAULT_LOGGING_CONF    = 'logging.conf'
 
 def create_default_config(config_path):
     """Create a default empty configuration for first time installs"""
-    default_config = resource_string('tron', 'default_config.yaml')
+    default = pkg_resources.resource_string(TRON, DEFAULT_CONF)
     with open(config_path, "w") as config_file:
-        config_file.write(default_config)
+        config_file.write(default)
 
 
 def parse_options():
@@ -46,9 +51,8 @@ def parse_options():
                       help="Directory where tron's state and output is stored"
                            " (default %default)",
                       default="/var/lib/tron/")
-    parser.add_option("--log-file", "-l", action="store", dest="log_file",
-                      help="Where the logs are stored (default %default)",
-                      default="/var/log/tron/tron.log")
+    parser.add_option("--log-conf", "-l", action="store", dest="log_conf",
+                      help="Custom logging.conf file to use")
     parser.add_option("--config-file", "-c", action="store",
                       dest="config_file", default=None,
                       help="Configuration file to load (default in working"
@@ -81,16 +85,17 @@ def parse_options():
         parser.error("Bad working-dir option")
 
     if options.config_file is None:
-        options.config_file = os.path.join(options.working_dir,
-                                           "tron_config.yaml")
+        options.config_file = os.path.join(
+                options.working_dir, DEFAULT_WORKING_CONF)
 
     return options
 
 
 def setup_logging(options):
-    level = logging.WARNING
-    twist_level = logging.WARNING
+    default = pkg_resources.resource_filename(TRON, DEFAULT_LOGGING_CONF)
+    logfile = options.log_conf or default
 
+    level = twist_level = None
     if options.verbose > 0:
         level = logging.INFO
         twist_level = logging.WARNING
@@ -100,31 +105,21 @@ def setup_logging(options):
     if options.verbose > 2:
         twist_level = logging.DEBUG
 
-    root = logging.getLogger('')
+    tron_logger = logging.getLogger('tron')
+    twisted_logger = logging.getLogger('twisted')
 
-    try:
-        handler = log_handler.ReOpeningFileHandler(options.log_file)
-    except IOError, e:
-        print >>sys.stderr, e
-        sys.exit()
-
-    fmt_str = '%(asctime)s %(name)s %(levelname)s %(message)s'
-    formatter = logging.Formatter(fmt_str)
-    handler.setFormatter(formatter)
-
-    root.addHandler(handler)
-    root.setLevel(level)
-    logging.getLogger('twisted').setLevel(twist_level)
+    logging.config.fileConfig(logfile)
+    if level is not None:
+        tron_logger.setLevel(level)
+    if twist_level is not None:
+        twisted_logger.setLevel(twist_level)
 
     # Hookup twisted to standard logging
-    observer = log.PythonLoggingObserver()
-    observer.start()
+    log.PythonLoggingObserver().start()
 
     # Show stack traces for errors in twisted deferreds.
     if options.debug:
         defer.setDebugging(True)
-
-    return handler
 
 
 # This is rather crazy thing to do, but I don't really like 'twistd', but it
@@ -199,7 +194,7 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
         self.preApplication()
 
         logger.debug("init: setup_logging")
-        self.log_handler = setup_logging(self.options)
+        setup_logging(self.options)
 
         logger.debug("init: postApplication")
         self.postApplication()
@@ -240,7 +235,7 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
         def sighup_handler(signum, frame):
             logger.info("SIGHUP Caught!")
             reactor.callLater(0, master_control.live_reconfig)
-            reactor.callLater(0, self.log_handler.reopen)
+            reactor.callLater(0, setup_logging, self.options)
 
         signal.signal(signal.SIGHUP, sighup_handler)
 
