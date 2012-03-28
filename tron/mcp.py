@@ -3,7 +3,6 @@ import logging
 import logging.handlers
 import os
 import shutil
-import socket
 import time
 import yaml
 
@@ -236,9 +235,6 @@ class MasterControlProgram(object):
         # Control writing of the state file
         self.state_handler = StateHandler(self, working_dir)
 
-        root = logging.getLogger('')
-        self.base_logging_handlers = list(root.handlers)
-
     ### CONFIGURATION ###
 
     def live_reconfig(self):
@@ -291,7 +287,6 @@ class MasterControlProgram(object):
         trond machine.
         """
         self._apply_working_directory(conf.working_dir)
-        self._apply_loggers(conf.syslog_address)
 
         if not skip_env_dependent:
             ssh_options = self._ssh_options_from_config(conf.ssh_options)
@@ -332,35 +327,6 @@ class MasterControlProgram(object):
                                    " writable" % wd)
 
         self.state_handler.working_dir = wd
-
-    def _apply_loggers(self, syslog_address):
-        root = logging.getLogger('')
-        handlers_to_be_removed = set(h for h in root.handlers
-                                     if h not in self.base_logging_handlers)
-
-        # Only change handlers if they will actually be different from the old
-        # handlers
-        new_handlers = []
-        if syslog_address:
-            if not isinstance(syslog_address, basestring):
-                self.syslog_address = tuple(self.syslog_address)
-
-            try:
-                h = logging.handlers.SysLogHandler(syslog_address)
-                fmt_str = "tron[%(process)d]: %(message)s"
-                h.setFormatter(logging.Formatter(fmt_str))
-                new_handlers.append(h)
-            except socket.error:
-                raise ConfigError('%s is not a valid syslog address' %
-                                  syslog_address)
-
-        for h in handlers_to_be_removed:
-            log.info('Removing logging handler %s', h)
-            root.removeHandler(h)
-
-        for h in new_handlers:
-            log.info('Adding logging handler %s', h)
-            root.addHandler(h)
 
     def _ssh_options_from_config(self, ssh_conf):
         ssh_options = ConchOptions()

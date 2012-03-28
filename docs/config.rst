@@ -205,23 +205,6 @@ Context variables only available to Services:
     total number of instances).
 
 
-.. _config_logging:
-
-Logging
--------
-
-**syslog_address** (optional)
-    Include this if you want to enable logging to syslog. Accepts paths as
-    strings and ``[address, port]`` lists for sockets. Typical values for
-    various platforms are::
-
-        Linux: "/dev/log"
-        OS X: "/var/run/syslog"
-        Windows: ["localhost", 514]
-
-Example::
-
-    syslog_address: "/dev/log"
 
 Nodes
 -----
@@ -266,3 +249,16 @@ Services
 **services**
     List of services for Tron to manage.  See :doc:`services` for the options
     available to services.
+
+
+Logging
+-------
+
+As of v0.3.2 Logging is no longer configured in the tron configuration file.
+
+Tron uses Python's standard logging and by default uses a rotating log file
+handler that rotates files each day. Logs go to /var/log/tron/tron.log.
+
+To configure logging pass -l <logging.conf> to trond. You can modify the
+default logging.conf by coping it from tron/logging.conf. See
+http://docs.python.org/howto/logging.html#configuring-logging

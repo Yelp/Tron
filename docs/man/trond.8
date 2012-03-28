@@ -1,4 +1,4 @@
-.TH "TROND" "8" "March 20, 2012" "0.3" "Tron"
+.TH "TROND" "8" "March 27, 2012" "0.3" "Tron"
 .SH NAME
 trond \- trond documentation
 .
@@ -48,8 +48,8 @@ show this help message and exit
 .BI \-\-working\-dir\fB= WORKING_DIR
 Directory where tron\(aqs state and output is stored (default /var/lib/tron/)
 .TP
-.BI \-l \ LOG_FILE, \ \-\-log\-file\fB= LOG_FILE
-Where the logs are stored (default /var/log/tron/tron.log)
+.BI \-l \ LOG_CONF, \ \-\-log\-conf\fB= LOG_CONF
+Logging configuration file to setup python logger
 .TP
 .BI \-c \ CONFIG_FILE, \ \-\-config\-file\fB= CONFIG_FILE
 Configuration file to load (default in working dir)
@@ -90,6 +90,14 @@ trond logs messages here in addition to other logging you have set up.
 trond saves state here when it terminates and reloads it when it starts
 up again.
 .UNINDENT
+.SH LOGGING
+.sp
+Tron uses pythons standing logging and by default uses a rotating log file
+handler that rotates files each day. Logs go to /var/log/tron/tron.log.
+.sp
+To configure logging pass \-l <logging.conf> to trond. You can modify the
+default logging.conf by coping it from tron/logging.conf. See
+\fI\%http://docs.python.org/howto/logging.html#configuring-logging\fP
 .SH BUGS
 .sp
 trond has issues around daylight savings time and may run jobs an hour early

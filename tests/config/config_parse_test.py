@@ -1,5 +1,4 @@
 import datetime
-import platform
 import shutil
 import StringIO
 import tempfile
@@ -37,15 +36,6 @@ node_pools:
     - name: NodePool
       nodes: [node0, node1]
 """
-
-
-def syslog_address_for_platform():
-    if platform.system() == 'Darwin':
-        return '/var/run/syslog'
-    elif platform.system() == 'Windows':
-        return ['localhost', 514]
-    else:
-        return '/dev/log'
 
 
 class OldConfigTest(TestCase):
@@ -157,7 +147,6 @@ services:
         test_config = load_config(StringIO.StringIO(self.config))
         expected = TronConfig(
             working_dir='/tmp',
-            syslog_address=None,
             command_context=FrozenDict(**{
                 'python': '/usr/bin/python',
                 'batch_dir': '/tron/batch/test/foo'
@@ -311,7 +300,6 @@ services:
         # we could just do a big assert_equal here, but it would be hella hard
         # to debug failures that way.
         assert_equal(test_config.working_dir, expected.working_dir)
-        assert_equal(test_config.syslog_address, expected.syslog_address)
         assert_equal(test_config.command_context, expected.command_context)
         assert_equal(test_config.ssh_options, expected.ssh_options)
         assert_equal(test_config.notification_options, expected.notification_options)

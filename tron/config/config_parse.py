@@ -82,7 +82,6 @@ TronConfig = config_object_factory(
     'TronConfig',
     optional=[
          'working_dir',         # str
-         'syslog_address',      # str
          'command_context',     # FrozenDict of str
          'ssh_options',         # ConchOptions
          'notification_options',# NotificationOptions or None
@@ -365,10 +364,6 @@ def valid_working_dir(wd):
     return valid_str('working_dir', wd, optional=True)
 
 
-def valid_syslog(syslog):
-    return valid_str('syslog', syslog, optional=True)
-
-
 def valid_command_context(context):
     # context can be any dict.
     return FrozenDict(**valid_dict('command_context', context or {}))
@@ -632,7 +627,6 @@ class ValidateConfig(Validator):
     config_class =              TronConfig
     defaults = {
         'working_dir':          None,
-        'syslog_address':       None,
         'command_context':      None,
         'ssh_options':          valid_ssh_options({}),
         'notification_options': None,
@@ -644,7 +638,6 @@ class ValidateConfig(Validator):
     }
     validators = {
         'working_dir':          valid_working_dir,
-        'syslog_address':       valid_syslog,
         'command_context':      valid_command_context,
         'ssh_options':          valid_ssh_options,
         'notification_options': valid_notification_options,
