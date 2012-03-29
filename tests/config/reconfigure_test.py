@@ -7,7 +7,6 @@ import yaml
 from testify import TestCase, run, setup, assert_equal, teardown
 from tron import mcp
 from tron.config import config_parse
-from tests.config.config_parse_test import syslog_address_for_platform
 
 class ConfigTest(TestCase):
 
@@ -67,7 +66,6 @@ class ConfigTest(TestCase):
                 agent=True,
                 identities=['tests/test_id_rsa'],
             ),
-            syslog_address=syslog_address_for_platform(),
             nodes=[
                 dict(name='node0', hostname='batch0'),
                 dict(name='node1', hostname='batch1'),

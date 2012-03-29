@@ -48,13 +48,6 @@ command_context
     the command string. For example, if you include `animal: cat`, then the
     command `cat %(animal)s` will become `cat cat`.
 
-syslog_address
-    Include this if you want to enable logging to syslog. Accepts paths as strings
-    and [address, port] lists for sockets. Typical values for various platforms are::
-
-        Linux: "/dev/log"
-        OS X: "/var/run/syslog"
-        Windows: ["localhost", 514]
 
 notification_options
     Who to email failures to.
