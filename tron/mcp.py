@@ -18,9 +18,10 @@ from tron.config.config_parse import ConfigError
 from tron.core.job import Job, JobScheduler
 from tron.node import Node, NodePool
 from tron.scheduler import scheduler_from_config
+from tron.serialize import filehandler
 from tron.service import Service
 from tron.utils import timeutils, emailer
-from tron.utils.observer import Observer
+from tron.utils.observer import Observer, Observable
 
 
 log = logging.getLogger('tron.mcp')
@@ -208,7 +209,7 @@ class StateHandler(Observer):
         return "STATE_HANDLER"
 
 
-class MasterControlProgram(object):
+class MasterControlProgram(Observable):
     """master of tron's domain
 
     This object is responsible for figuring who needs to run and when. It is
@@ -216,6 +217,7 @@ class MasterControlProgram(object):
     """
 
     def __init__(self, working_dir, config_file, context=None):
+        super(MasterControlProgram, self).__init__()
         self.jobs = {}
         self.job_scheduler = JobScheduler()
         self.services = {}
@@ -238,7 +240,8 @@ class MasterControlProgram(object):
         # events for specific jobs, job runs, actions, action runs, etc. and
         # these events will be propagated up but not down the event recorder
         # tree.
-        self.event_recorder = event.EventRecorder(self)
+        self.event_manager = event.EventManager.get_instance()
+        self.event_recorder = self.event_manager.add(self)
 
         # Control writing of the state file
         self.state_handler = StateHandler(self, working_dir)
@@ -423,8 +426,10 @@ class MasterControlProgram(object):
     ### JOBS ###
     def add_job(self, job_config):
         log.debug("Building new job %s", job_config.name)
+        output_path = filehandler.OutputPath(self.state_handler.working_dir)
         scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
-        job = Job.from_config(job_config, self.nodes, scheduler, self.context)
+        job = Job.from_config(
+                job_config, self.nodes, scheduler, self.context, output_path)
 
         if job.name in self.jobs:
             # Jobs have a complex eq implementation that allows us to catch
@@ -434,25 +439,14 @@ class MasterControlProgram(object):
                 return
 
             log.info("re-adding job %s", job.name)
-            self.jobs[job.name].update_from_job(job)
+            self.jobs[job.name].update_from_job(job, self.nodes)
             self.job_scheduler.schedule_reconfigured(self.jobs[job.name])
-            # TODO: work here, can this return without the junk below?
             return
 
-        log.info("adding job %s", job.name)
+        log.info("adding new job %s", job.name)
         self.jobs[job.name] = job
-
-        # TODO: this should be part of constructor/factory
-        # add some command context variables
-        job.set_context(self.context)
-
-        # TODO: this should be part of constructor/factory
-        job.event_recorder.set_parent(self.event_recorder)
-
-        # TODO: this should be part of constructor/factory
-        # make the directory for output
-        job.setup_job_dir(self.state_handler.working_dir)
-
+        self.job_scheduler.schedule(job)
+        event.EventManager.get_instance().add(job, parent=self)
         self.state_handler.watch(job, Job.EVENT_STATE_CHANGE)
 
     def remove_job(self, job_name):
@@ -460,7 +454,7 @@ class MasterControlProgram(object):
             raise ValueError("Job %s unknown", job_name)
 
         job = self.jobs.pop(job_name)
-        job.disable()
+        self.job_scheduler.disable(job)
 
     ### SERVICES ###
 

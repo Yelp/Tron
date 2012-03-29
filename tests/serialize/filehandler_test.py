@@ -4,9 +4,9 @@ from tempfile import NamedTemporaryFile, mktemp
 
 from testify import TestCase, run, assert_equal, assert_not_in, assert_in
 from testify import assert_not_equal
-from testify import setup, teardown
+from testify import setup, teardown, suite
 
-from tron.serialize.filehandler import FileHandleManager, OutputStreamSerializer
+from tron.serialize.filehandler import FileHandleManager, OutputStreamSerializer, OutputPath
 
 class FileHandleWrapperTestCase(TestCase):
 
@@ -177,7 +177,7 @@ class OutputStreamSerializerTestCase(TestCase):
     @setup
     def setup_serializer(self):
         self.test_dir = mktemp()
-        self.serial = OutputStreamSerializer(self.test_dir)
+        self.serial = OutputStreamSerializer([self.test_dir])
 
     @teardown
     def teardown_test_dir(self):
@@ -194,6 +194,40 @@ class OutputStreamSerializerTestCase(TestCase):
             assert_equal(f.read(), content)
 
         assert_equal(self.serial.tail(filename), content)
+
+    @suite('integration')
+    def test_init_with_output_path(self):
+        path = OutputPath('tmp', 'one', 'two', 'three')
+        stream = OutputStreamSerializer(path)
+        assert_equal(stream.base_path, str(path))
+
+
+class OutputPathTestCase(TestCase):
+
+    @setup
+    def setup_path(self):
+        self.path = OutputPath('one', 'two', 'three')
+
+    def test__init__(self):
+        assert_equal(self.path.base, 'one')
+        assert_equal(self.path.parts, ['two', 'three'])
+
+        path = OutputPath('base')
+        assert_equal(path.base, 'base')
+        assert_equal(path.parts, [])
+
+    def test__iter__(self):
+        assert_equal(list(self.path), ['one', 'two', 'three'])
+
+    def test__str__(self):
+        # Breaks in windows probably,
+        assert_equal('one/two/three', str(self.path))
+
+    def test_append(self):
+        self.path.append('four')
+        assert_equal(self.path.parts, ['two', 'three', 'four'])
+
+
 
 
 if __name__ == "__main__":

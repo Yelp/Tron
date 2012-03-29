@@ -134,7 +134,7 @@ class FileHandleManager(object):
 class OutputStreamSerializer(object):
     """Manage writing to and reading from files in a directory hierarchy."""
 
-    def __init__(self, *base_path):
+    def __init__(self, base_path):
         self.base_path = os.path.join(*base_path)
         if not os.path.exists(self.base_path):
             os.makedirs(self.base_path)
@@ -162,3 +162,25 @@ class OutputStreamSerializer(object):
         """Return a FileHandleManager for the output path."""
         path = self.full_path(filename)
         return FileHandleManager.get_instance().open(path)
+
+
+class OutputPath(object):
+    """A list like object which used to construct a file path for output. The
+    file path is constructed by joining the base path with any additional
+    path elements.
+    """
+
+    def __init__(self, base, *path_parts):
+        self.base = base
+        self.parts = list(path_parts or [])
+
+    def append(self, part):
+        self.parts.append(part)
+
+    def __iter__(self):
+        yield self.base
+        for p in self.parts:
+            yield p
+
+    def __str__(self):
+        return os.path.join(*self)

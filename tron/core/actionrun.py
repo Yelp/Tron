@@ -248,7 +248,7 @@ class ActionRun(Observer):
         self.action_command = action_command = ActionCommand(
             self.id,
             self.command,
-            filehandler.OutputStreamSerializer(*self.output_path)
+            filehandler.OutputStreamSerializer(self.output_path)
         )
         self.watch(action_command, True)
         return action_command

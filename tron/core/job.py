@@ -2,7 +2,7 @@ import logging
 from collections import deque
 from twisted.internet import reactor
 
-from tron import command_context
+from tron import command_context, event
 from tron.core import action, jobrun
 from tron.core import actiongraph
 from tron.core.actionrun import ActionRun
@@ -55,14 +55,14 @@ class Job(Observable, Observer):
     actions and their dependency graph.
     """
 
-    STATUS_DISABLED             = "DISABLED"
-    STATUS_ENABLED              = "ENABLED"
-    STATUS_UNKNOWN              = "UNKNOWN"
-    STATUS_RUNNING              = "RUNNING"
+    STATUS_DISABLED         = "DISABLED"
+    STATUS_ENABLED          = "ENABLED"
+    STATUS_UNKNOWN          = "UNKNOWN"
+    STATUS_RUNNING          = "RUNNING"
 
-    EVENT_STATE_CHANGE          = 'event_state_change'
-    EVENT_RECONFIGURED          = 'event_reconfigured'
-    EVENT_STATE_RESTORED        = 'event_state_restored'
+    EVENT_STATE_CHANGE      = 'event_state_change'
+    EVENT_RECONFIGURED      = event.EventType(event.LEVEL_INFO, 'reconfigured')
+    EVENT_STATE_RESTORED    = 'event_state_restored'
 
     def __init__(self, name, scheduler, queueing=True, all_nodes=False,
             node_pool=None, enabled=True, action_graph=None,
@@ -80,11 +80,12 @@ class Job(Observable, Observer):
         self.node_pool          = node_pool
         self.context            = command_context.CommandContext(
                                     JobContext(self), parent_context)
-        self.output_path        = list(output_path or [])
+        self.output_path        = output_path
         self.output_path.append(name)
 
     @classmethod
-    def from_config(cls, job_config, node_pools, scheduler, parent_context):
+    def from_config(cls,
+                job_config, node_pools, scheduler, parent_context, output_path):
         """Factory method to create a new Job instance from configuration."""
         action_graph = actiongraph.ActionGraph.from_config(
                 job_config.actions, node_pools)
@@ -107,7 +108,8 @@ class Job(Observable, Observer):
             run_collection      = runs,
             action_graph        = action_graph,
             cleanup_action      = cleanup_action,
-            parent_context      = parent_context
+            parent_context      = parent_context,
+            output_path         = output_path
         )
 
     def update_from_job(self, job, nodes):
@@ -116,12 +118,13 @@ class Job(Observable, Observer):
         configuration data.
         """
         # TODO: test with __eq__
-        self.enabled    = job_config.enabled
-        self.all_nodes  = job_config.all_nodes
-        self.queueing   = job_config.queueing
-        self.node_pool  = nodes[job_config.node] if job_config.node else None
+        self.enabled    = job.enabled
+        self.all_nodes  = job.all_nodes
+        self.queueing   = job.queueing
+        self.node_pool  = nodes[job.node] if job.node else None
         # TODO: copy parent_context
         # TODO: update action_graph
+        # TODO: copy output_path
         # TODO: update JobRunCollection
         self.notify(self.EVENT_RECONFIGURED)
 
@@ -197,6 +200,9 @@ class Job(Observable, Observer):
             self.node_pool != other.node_pool or
             self.all_nodes != other.all_nodes or
             self.cleanup_action != other.cleanup_action):
+            # TODO: compare base dir
+            # TODO: compare context
+            # TODO: EVERYTHING
 
             return False
 
@@ -219,11 +225,11 @@ class JobScheduler(Observer):
     def __init__(self):
         pass
 
-    def enable(self):
+    def enable(self, job):
         self.enabled = True
         self.run_or_schedule()
 
-    def disable(self):
+    def disable(self, job):
         self.enabled = False
         self.runs.cancel_pending()
 
@@ -304,25 +310,9 @@ class JobScheduler(Observer):
             r.manual_start()
         return manual_runs
 
+    # TODO:
     def schedule_reconfigured(self, job):
         """Called after a job has been reconfigured by reloading the config.
         If the job is enabled and the schedule has changed, cancel the
         pending run and create a new run with the correct schedule.
         """
-        # TODO:
-
-#
-#class JobCollection(object):
-#    """A dict of jobs. Manages loading from config and restoring state."""
-#
-#    def __init__(self, jobs, time_zone):
-#        self.time_zone          = time_zone
-#        self.job_scheduler      = JobScheduler()
-#        self.jobs               = jobs
-#
-#    @classmethod
-#    def from_config(cls, job_configs, time_zone):
-#        pass
-#
-#    def update_from_config(self, job_configs):
-#        pass

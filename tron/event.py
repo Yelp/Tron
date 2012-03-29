@@ -1,17 +1,19 @@
+import heapq
+from collections import deque, namedtuple
 import weakref
 
 from tron.utils import timeutils
+from tron.utils import observer
 
 # Event Levels INFO is for troubleshooting information. This may be verbose but
 # shouldn't cause any monitors to make any decisions.
-
 LEVEL_INFO = "INFO"
 
-# OK inidicates the entity is doing great and any monitors that considered the
+# OK indicates the entity is doing great and any monitors that considered the
 # entity to be in non-ok state can reset itself.
 LEVEL_OK = "OK"
 
-# NOTICE inidicates some troubling behavior, but not yet a complete failure. It
+# NOTICE indicates some troubling behavior, but not yet a complete failure. It
 # would be appropriate to highlight this event, but don't go waking up the
 # president just yet.
 LEVEL_NOTICE = "NOTICE"
@@ -28,39 +30,36 @@ ORDERED_LEVELS = [
     LEVEL_CRITICAL,
 ]
 
+EventType = namedtuple('EventType', ['level', 'name'])
+
 
 class FixedLimitStore(object):
     """Simple data store that keeps a fixed number of elements based on their
-    'category'. Acts like a list, but see our special version of 'append'.
+    'category'. Also known as a circular buffer or ring buffer.
     """
-
     DEFAULT_LIMIT = 10
 
     def __init__(self, limits):
         self._limits = limits or dict()
-        self._values = []
+        self._values = {}
+        self.counter = 0
 
-    def append(self, item, category):
-        self._values.append((category, item))
+    def _build_deque(self, category):
+        limit = self._limits.get(category, self.DEFAULT_LIMIT)
+        return deque(maxlen=limit)
 
-        # Do we need to remove a value?
-        current_count = sum((1 for cat, val in self._values
-                             if cat == category))
-        if current_count > self._limits.get(category, self.DEFAULT_LIMIT):
-            for ndx, val in enumerate(self._values):
-                if val[0] == category:
-                    break
-            else:
-                assert False, "Didn't find category %r in %r" % (category,
-                                                                 self._values)
-
-            del self._values[ndx]
+    def append(self, category, item):
+        if category not in self._values:
+            self._values[category] = self._build_deque(category)
+        self._values[category].append((self.counter, item))
 
     def __iter__(self):
-        return (val for cat, val in self._values)
+        events = heapq.merge(*self._values.itervalues())
+        return (val for _, val in events)
 
 
 class Event(object):
+    """Data object for storing details of an event."""
     __slots__ = ('_src', 'time', 'level', 'name', 'data')
 
     def __init__(self, src, level, name, **data):
@@ -73,13 +72,10 @@ class Event(object):
     @property
     def entity(self):
         src = self._src()
-        if src:
-            return src.entity
-        else:
-            return None
+        return src.entity if src else None
 
 
-class EventRecorder(object):
+class EventRecorder(observer.Observer):
     """Record events in a tree of listeners. Tron uses this class by having
     one process-wide event recorder (in the MCP) with each job and service
     having a child recorder, and each job run having a child recorder of the
@@ -92,6 +88,7 @@ class EventRecorder(object):
         self._store = FixedLimitStore(limits)
         self._parent = None
         self._entity = weakref.ref(entity)
+        self.watch(entity, True)
 
         if parent:
             self.set_parent(parent)
@@ -108,9 +105,9 @@ class EventRecorder(object):
     entity = property(_get_entity, _set_entity)
 
     def record(self, event):
-        self._store.append(event, event.level)
+        self._store.append(event.level, event)
 
-        # Propogate if we have a parent set (and the level is high enough to
+        # Propagate if we have a parent set (and the level is high enough to
         # care)
         if (self._parent and
             ORDERED_LEVELS.index(event.level) >
@@ -130,15 +127,73 @@ class EventRecorder(object):
         self.record(Event(self, LEVEL_CRITICAL, name, **data))
 
     def list(self, min_level=None):
-        # Level's are actually descriptive strings, but we provide a way to get
+        # Levels are actually descriptive strings, but we provide a way to get
         # the order via ORDERED_LEVELS constant
         min_level_ndx = None
         if min_level is not None:
             min_level_ndx = ORDERED_LEVELS.index(min_level)
 
+        # TODO: this should go into FixedLimitStore
         return [event for event in self
                 if (min_level is None or
                     ORDERED_LEVELS.index(event.level) >= min_level_ndx)]
 
     def __iter__(self):
         return self._store.__iter__()
+
+    def watcher(self, observable, event):
+        """Watch for events and create and store Event objects."""
+        if not isinstance(event, EventType):
+            return
+
+        self.record(Event(self, event.level, event.name))
+
+
+
+class EventManager(object):
+    """Create and store EventRecorder objects for observable objects.
+    This class is a singleton.
+    """
+
+    _instance = None
+
+    def __init__(self):
+        if self._instance is not None:
+            raise ValueError(
+                    "EventManager already instantiated. Use get_instance().")
+
+        self.recorders = {}
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    def _build_key(self, observable):
+        """Create a unique key for this observable object.
+        EventManager makes the assumption that objects str values will be
+        unique.
+        """
+        return str(observable)
+
+    def add(self, observable, parent=None):
+        """Create an EventRecorder for the observable and store it."""
+        key = self._build_key(observable)
+        if key in self.recorders:
+            raise ValueError("%s is already being managed." % observable)
+
+        parent_recorder = None
+        if parent:
+            parent_recorder = self.get(parent)
+            if not parent_recorder:
+                raise ValueError("Parent %s is not being managed." % parent)
+
+        event_recorder = EventRecorder(observable, parent_recorder)
+        self.recorders[key] = event_recorder
+        return event_recorder
+
+    def get(self, observable):
+        """Return an EventRecorder given an observable."""
+        key = self._build_key(observable)
+        return self.recorders.get(key, None)
