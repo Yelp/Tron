@@ -57,8 +57,8 @@ class NodeTestCase(TestCase):
         assert_equal(self.node.nodes, [self.node])
 
     def test__getitem__(self):
-        assert_equal(self.node['thename'], self.node)
-        assert_raises(KeyError, lambda: self.node['notthename'])
+        assert_equal(self.node['localhost'], self.node)
+        assert_raises(KeyError, lambda: self.node['thename'])
 
     def test__cmp__(self):
         other_node = node.Node('mocalhost', 'mocal', self.ssh_options)
@@ -145,10 +145,10 @@ class NodePoolTestCase(TestCase):
         assert_equal(node_order, self.nodes + self.nodes)
 
     def test__getitem__(self):
-        assert_equal(self.node_pool['node0'], self.nodes[0])
-        assert_equal(self.node_pool['node3'], self.nodes[3])
+        assert_equal(self.node_pool['0'], self.nodes[0])
+        assert_equal(self.node_pool['3'], self.nodes[3])
 
-        assert_raises(KeyError, lambda: self.node_pool['node7'])
+        assert_raises(KeyError, lambda: self.node_pool['node0'])
 
     def test_repr_data(self):
         repr_data = self.node_pool.repr_data()

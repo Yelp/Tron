@@ -95,7 +95,7 @@ class NodePool(object):
 
     def __getitem__(self, value):
         for node in self.nodes:
-            if node.name == value:
+            if node.hostname == value:
                 return node
         raise KeyError(value)
 
@@ -160,7 +160,7 @@ class Node(object):
 
     def __getitem__(self, value):
         """Required to support the NodePool interface."""
-        if self.name == value:
+        if self.hostname == value:
             return self
         raise KeyError(value)
 

@@ -1,4 +1,4 @@
-from testify import *
+from testify import setup, assert_equal, TestCase
 from tests import testingutils
 
 from tron import service
@@ -285,8 +285,8 @@ class FailureRestoreTest(TestCase):
     def test(self):
         data = self.service.data
 
-        new_service = service.Service("Sample Service", "sleep 60 &",
-                                      node_pool=self.node_pool)
+        new_service = service.Service(
+                "Sample Service", "sleep 60 &", node_pool=self.node_pool)
         new_service.pid_file_template = "/tmp/pid"
         new_service.count = 2
         new_service.restore(data)
