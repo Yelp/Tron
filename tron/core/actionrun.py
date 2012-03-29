@@ -121,7 +121,10 @@ class ActionRunContext(object):
 
     @property
     def runid(self):
+        # TODO: is this correct?
         return self.action_run.id
+
+    # TODO: actionname
 
     @property
     def node(self):

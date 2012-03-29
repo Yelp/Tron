@@ -26,10 +26,26 @@ log = logging.getLogger('tron.core.job')
 
 class JobContext(object):
     """A class which exposes properties for rendering commands."""
-    # TODO
 
     def __init__(self, job):
         self.job = job
+
+    @property
+    def name(self):
+        return self.job.name
+
+    # TODO: test
+    def __getitem__(self, item):
+        if ':' not in  item:
+            raise KeyError(item)
+
+        date_name, date_spec = item.split(':', 1)
+        if date_name == 'last_success':
+            time_value = timeutils.DateArithmetic.parse(date_spec)
+            if time_value:
+                return time_value
+
+        raise KeyError(item)
 
 
 class Job(Observable, Observer):
@@ -68,7 +84,7 @@ class Job(Observable, Observer):
         self.output_path.append(name)
 
     @classmethod
-    def from_config(cls, job_config, node_pools, scheduler):
+    def from_config(cls, job_config, node_pools, scheduler, parent_context):
         """Factory method to create a new Job instance from configuration."""
         action_graph = actiongraph.ActionGraph.from_config(
                 job_config.actions, node_pools)
@@ -90,16 +106,23 @@ class Job(Observable, Observer):
             enabled             = job_config.enabled,
             run_collection      = runs,
             action_graph        = action_graph,
-            cleanup_action      = cleanup_action
+            cleanup_action      = cleanup_action,
+            parent_context      = parent_context
         )
 
-    def update_from_config(self, job_config, nodes):
-        """Update this Jobs configuration from a new config."""
+    def update_from_job(self, job, nodes):
+        """Update this Jobs configuration for a new config. This method
+        actually takes an already constructed job and copies out its
+        configuration data.
+        """
         # TODO: test with __eq__
         self.enabled    = job_config.enabled
         self.all_nodes  = job_config.all_nodes
         self.queueing   = job_config.queueing
         self.node_pool  = nodes[job_config.node] if job_config.node else None
+        # TODO: copy parent_context
+        # TODO: update action_graph
+        # TODO: update JobRunCollection
         self.notify(self.EVENT_RECONFIGURED)
 
     @property
@@ -113,6 +136,8 @@ class Job(Observable, Observer):
         if (self.runs.get_run_by_state(ActionRun.STATE_SCHEDULED) or
                 self.runs.get_run_by_state(ActionRun.STATE_QUEUED)):
             return self.STATUS_ENABLED
+
+        # TODO: log what unknown state
         return self.STATUS_UNKNOWN
 
     def repr_data(self):
@@ -278,3 +303,26 @@ class JobScheduler(Observer):
         for r in manual_runs:
             r.manual_start()
         return manual_runs
+
+    def schedule_reconfigured(self, job):
+        """Called after a job has been reconfigured by reloading the config.
+        If the job is enabled and the schedule has changed, cancel the
+        pending run and create a new run with the correct schedule.
+        """
+        # TODO:
+
+#
+#class JobCollection(object):
+#    """A dict of jobs. Manages loading from config and restoring state."""
+#
+#    def __init__(self, jobs, time_zone):
+#        self.time_zone          = time_zone
+#        self.job_scheduler      = JobScheduler()
+#        self.jobs               = jobs
+#
+#    @classmethod
+#    def from_config(cls, job_configs, time_zone):
+#        pass
+#
+#    def update_from_config(self, job_configs):
+#        pass

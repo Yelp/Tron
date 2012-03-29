@@ -16,6 +16,8 @@ class JobRunContext(object):
     pass
     # TODO
 
+    # TODO: cleanup_job_status
+
 
 class JobRun(Observable, Observer):
     """A JobRun is an execution of a Job.  It has a list of ActionRuns."""

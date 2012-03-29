@@ -375,10 +375,7 @@ class MasterControlProgram(object):
         """Add and remove jobs based on the configuration."""
         # TODO: attach observer for state changes and events
         for job_config in job_configs.values():
-            log.debug("Building new job %s", job_config.name)
-            scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
-            job = Job.from_config(job_config, self.nodes, scheduler)
-            self.add_job(job)
+            self.add_job(job_config)
 
         for job_name in (set(self.jobs.keys()) - set(job_configs.keys())):
             log.debug("Removing job %s", job_name)
@@ -424,12 +421,12 @@ class MasterControlProgram(object):
             self.monitor.start()
 
     ### JOBS ###
-    def add_job(self, job):
-        if job.name in self.services:
-            raise ValueError("Job %s is already a service", job.name)
+    def add_job(self, job_config):
+        log.debug("Building new job %s", job_config.name)
+        scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
+        job = Job.from_config(job_config, self.nodes, scheduler, self.context)
 
         if job.name in self.jobs:
-
             # Jobs have a complex eq implementation that allows us to catch
             # jobs that have not changed and thus don't need to be updated
             # during a reconfigure
@@ -437,17 +434,12 @@ class MasterControlProgram(object):
                 return
 
             log.info("re-adding job %s", job.name)
+            self.jobs[job.name].update_from_job(job)
+            self.job_scheduler.schedule_reconfigured(self.jobs[job.name])
+            # TODO: work here, can this return without the junk below?
+            return
 
-            # We're updating an existing job, we have to copy over run time
-            # information
-            job.absorb_old_job(self.jobs[job.name])
-
-            if job.enabled:
-                self.disable_job(job)
-                self.enable_job(job)
-        else:
-            log.info("adding job %s", job.name)
-
+        log.info("adding job %s", job.name)
         self.jobs[job.name] = job
 
         # TODO: this should be part of constructor/factory
