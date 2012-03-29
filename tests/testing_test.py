@@ -1,7 +1,7 @@
 """Some basic utilization of our testing utilities"""
 
 from testify import *
-from tron.utils import testingutils
+from tests import testingutils
 from twisted.internet import reactor, defer
 
 class SimpleTestCase(TestCase):
