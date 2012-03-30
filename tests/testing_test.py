@@ -1,8 +1,8 @@
 """Some basic utilization of our testing utilities"""
 
 from testify import TestCase, assert_equal, class_setup, setup
-from testify import class_teardown, teardown, suite
-from tron.utils import testingutils
+from testify import class_teardown, teardown, suite, run
+from tests import testingutils
 from twisted.internet import reactor, defer
 
 class SimpleTestCase(TestCase):

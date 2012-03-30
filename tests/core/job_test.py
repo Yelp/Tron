@@ -6,7 +6,8 @@ from testify import setup, teardown, TestCase, run, assert_equal
 from testify.utils import turtle
 from tron import  scheduler
 from tron.core import action, job
-from tron.utils import timeutils, testingutils
+from tests import testingutils
+from tron.utils import timeutils
 
 
 class TestJobRun(TestCase):

@@ -114,9 +114,11 @@ class NodePool(object):
         return not self == other
 
     def next(self):
-        return self.nodes[random.randrange(len(self.nodes))]
+        """Return a random node from the pool."""
+        return random.choice(self.nodes)
 
     def next_round_robin(self):
+        """Return the next node cycling in a consistent order."""
         if not self.iter:
             self.iter = itertools.cycle(self.nodes)
 
@@ -126,8 +128,7 @@ class NodePool(object):
         for node in self.nodes:
             if node.hostname == value:
                 return node
-        else:
-            raise KeyError(value)
+        raise KeyError(value)
 
     def repr_data(self):
         """Returns a dict which is an external view of this object."""
@@ -204,7 +205,7 @@ class Node(object):
         """We want to introduce some amount of delay to node exec commands
 
         We see issues where a service may have many instances, and they all
-        start at once, and their monitor steps are syncronized for ever. This
+        start at once, and their monitor steps are blocked for ever. This
         is bad.
         """
         outstanding_runs = len(self.run_states)

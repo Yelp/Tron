@@ -4,12 +4,13 @@ import StringIO
 import tempfile
 
 from testify import TestCase, class_setup, class_teardown, setup, teardown
-from testify import assert_raises, assert_equal, suite
+from testify import assert_raises, assert_equal, suite, run
 from testify.utils import turtle
 
 from tron.core import action, job
-from tron.utils import timeutils, testingutils
 from tron import mcp, scheduler, event
+from tests import testingutils
+from tron.utils import timeutils
 
 
 class TestStateHandler(TestCase):

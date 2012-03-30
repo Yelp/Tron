@@ -247,6 +247,9 @@ class Validator(object):
         if self.optional and in_dict is None:
             return None
 
+        if in_dict is None:
+            raise ConfigError("A %s is required." % self.type_name)
+
         shortcut_value = self.do_shortcut(in_dict)
         if shortcut_value:
             return shortcut_value
@@ -287,8 +290,9 @@ class Validator(object):
         if not missing_keys:
             return
 
+        keys = self.config_class.required_keys + self.config_class.optional_keys
         missing_key_str = ', '.join(missing_keys)
-        if 'name' in self.config_class.required_keys and 'name' in in_dict:
+        if 'name' in keys and 'name' in in_dict:
             raise ConfigError("%s %s is missing options: %s" % (
                     self.type_name, in_dict['name'], missing_key_str)
             )
@@ -377,6 +381,7 @@ def valid_time_zone(tz):
 class ValidateSSHOptions(Validator):
     """Validate SSH options."""
     config_class =              ConfigSSHOptions
+    optional =                  True
     defaults = {
         'agent':                False,
         'identities':           ()
@@ -397,6 +402,7 @@ class ValidateNotificationOptions(Validator):
 valid_notification_options = ValidateNotificationOptions()
 
 
+# TODO: remove in 0.5
 def normalize_node(node):
     """Given a node value from a config, determine if it's the node's name, the
     node's value, or actually a node pool. The former case is the "new style"
@@ -433,7 +439,10 @@ class ValidateNodePool(Validator):
     def cast(self, node_pool):
         if isinstance(node_pool, list):
             node_pool = dict(nodes=node_pool)
-        node_pool['nodes'] = [normalize_node(node) for node in node_pool['nodes']]
+        if 'nodes' in node_pool:
+            node_pool['nodes'] = [
+                normalize_node(node) for node in node_pool['nodes']
+            ]
         return node_pool
 
     def set_defaults(self, node_pool):
@@ -671,6 +680,7 @@ class ValidateConfig(Validator):
         parse_sub_config('services',    valid_service,      job_service_names)
 
         self.validate_node_names(config, node_names)
+        self.validate_node_pool_nodes(config)
 
     def validate_node_names(self, config, node_names):
         """Validate that any node/node_pool name that were used are configured
@@ -690,6 +700,22 @@ class ValidateConfig(Validator):
                 raise ConfigError("Unknown node %s configured for %s %s" % (
                     task.node, task.__class__.__name__, task.name))
 
+    def validate_node_pool_nodes(self, config):
+        """Validate that each node in a node_pool is in fact a node, and not
+        another pool.
+        """
+        # TODO: this can be cleaned up after 0.5
+        for node_pool in config['node_pools'].itervalues():
+            for node_name in node_pool.nodes:
+                node = config['nodes'].get(node_name)
+                if node:
+                    continue
+                raise ConfigError(
+                    "NodePool %s contains another NodePool %s. " % (
+                        node_pool.name,
+                        node_name
+                    )
+                )
 
 
 valid_config = ValidateConfig()
