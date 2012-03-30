@@ -1,7 +1,9 @@
 """Time utilites"""
+from __future__ import division
 import datetime
 import re
 import time
+
 
 
 # Global time override
@@ -33,6 +35,11 @@ def to_timestamp(time_val):
     """Generate a unix timestamp for the given datetime instance"""
     return time.mktime(time_val.timetuple())
 
+def delta_total_seconds(td):
+    """Equivalent to timedelta.total_seconds() which is only available in 2.7.
+    """
+    return (
+       td.microseconds + (td.seconds + td.days * 24 * 3600) * 10**6) / 10**6
 
 def macro_timedelta(start_date, years=0, months=0, days=0):
     """Since datetime doesn't provide timedeltas at the year or month level,

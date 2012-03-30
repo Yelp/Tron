@@ -24,12 +24,10 @@ import yaml
 from tron.config import ConfigError
 from tron.config.schedule_parse import valid_schedule
 from tron.utils.dicts import FrozenDict
+from tron.core.action import CLEANUP_ACTION_NAME
 
 
 log = logging.getLogger("tron.config")
-
-CLEANUP_ACTION_NAME = "cleanup"
-
 
 YAML_TAG_RE = re.compile(r'!\w+\b')
 

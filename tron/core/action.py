@@ -2,17 +2,20 @@ import logging
 
 log = logging.getLogger('tron.action')
 
+CLEANUP_ACTION_NAME = 'cleanup'
+
 
 class Action(object):
     """A configurable data object for an Action."""
 
-    def __init__(self, name, command, node_pool,
-                required_actions=None, dependent_actions=None):
+    def __init__(self, name, command, node_pool, required_actions=None,
+                dependent_actions=None, cleanup=False):
         self.name               = name
         self.command            = command
         self.node_pool          = node_pool
         self.required_actions   = required_actions or []
         self.dependent_actions  = dependent_actions or []
+        self.is_cleanup         = cleanup
 
     @classmethod
     def from_config(cls, config, node_pools):
@@ -25,9 +28,10 @@ class Action(object):
 
     def __eq__(self, other):
         if (not isinstance(other, Action) or
-                self.name != other.name or
-                self.command != other.command or
-                self.node_pool != other.node_pool):
+                self.name       != other.name or
+                self.command    != other.command or
+                self.node_pool  != other.node_pool or
+                self.is_cleanup != other.is_cleanup):
             return False
 
         return all(

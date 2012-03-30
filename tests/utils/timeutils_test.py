@@ -101,6 +101,13 @@ class DurationTestCase(TestCase):
     def test_duration_no_start(self):
         assert_equal(duration(None), None)
 
+class DeltaTotalSecondsTestCase(TestCase):
+
+    def test(self):
+        expected = 86702.004002999995
+        delta_seconds = timeutils.delta_total_seconds(*range(6))
+        assert_equal(delta_seconds, expected)
+
 
 class DateArithmeticTestCase(TestCase):
 

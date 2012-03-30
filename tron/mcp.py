@@ -13,6 +13,7 @@ import tron
 from tron import command_context
 from tron import event
 from tron import monitor
+from tron import node
 from tron.config import config_parse
 from tron.config.config_parse import ConfigError
 from tron.core.job import Job, JobScheduler
@@ -222,8 +223,7 @@ class MasterControlProgram(Observable):
         self.job_scheduler = JobScheduler()
         self.services = {}
 
-        # Mapping of node name to node (or node pool) objects
-        self.nodes = {}
+        self.nodes = node.NodePoolStore.get_instance()
 
         # Path to the config file
         self.config_file = config_file
@@ -363,15 +363,15 @@ class MasterControlProgram(Observable):
         return ssh_options
 
     def _apply_nodes(self, node_confs, ssh_options):
-        self.nodes = dict(
-            (name, Node.from_config(config, ssh_options))
-            for name, config in node_confs.iteritems()
+        self.nodes.update(
+            Node.from_config(config, ssh_options)
+            for config in node_confs.itervalues()
         )
 
     def _apply_node_pools(self, pool_confs):
         self.nodes.update(
-            (name, NodePool.from_config(config, self.nodes))
-            for name, config in pool_confs.iteritems()
+            NodePool.from_config(config)
+            for config in pool_confs.itervalues()
         )
 
     def _apply_jobs(self, job_configs):
@@ -428,8 +428,7 @@ class MasterControlProgram(Observable):
         log.debug("Building new job %s", job_config.name)
         output_path = filehandler.OutputPath(self.state_handler.working_dir)
         scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
-        job = Job.from_config(
-                job_config, self.nodes, scheduler, self.context, output_path)
+        job = Job.from_config(job_config, scheduler, self.context, output_path)
 
         if job.name in self.jobs:
             # Jobs have a complex eq implementation that allows us to catch
@@ -439,7 +438,7 @@ class MasterControlProgram(Observable):
                 return
 
             log.info("re-adding job %s", job.name)
-            self.jobs[job.name].update_from_job(job, self.nodes)
+            self.jobs[job.name].update_from_job(job)
             self.job_scheduler.schedule_reconfigured(self.jobs[job.name])
             return
 

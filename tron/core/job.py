@@ -2,7 +2,7 @@ import logging
 from collections import deque
 from twisted.internet import reactor
 
-from tron import command_context, event
+from tron import command_context, event, node
 from tron.core import action, jobrun
 from tron.core import actiongraph
 from tron.core.actionrun import ActionRun
@@ -55,23 +55,22 @@ class Job(Observable, Observer):
     actions and their dependency graph.
     """
 
-    STATUS_DISABLED         = "DISABLED"
-    STATUS_ENABLED          = "ENABLED"
-    STATUS_UNKNOWN          = "UNKNOWN"
-    STATUS_RUNNING          = "RUNNING"
+    STATUS_DISABLED             = "DISABLED"
+    STATUS_ENABLED              = "ENABLED"
+    STATUS_UNKNOWN              = "UNKNOWN"
+    STATUS_RUNNING              = "RUNNING"
 
-    EVENT_STATE_CHANGE      = 'event_state_change'
-    EVENT_RECONFIGURED      = event.EventType(event.LEVEL_INFO, 'reconfigured')
-    EVENT_STATE_RESTORED    = 'event_state_restored'
+    EVENT_STATE_CHANGE    = 'event_state_change'
+    EVENT_RECONFIGURED    = event.EventType(event.LEVEL_NOTICE, 'reconfigured')
+    EVENT_STATE_RESTORED  = event.EventType(event.LEVEL_INFO, 'restored')
+    EVENT_RUN_QUEUED      = event.EventType(event.LEVEL_NOTICE, "queued")
 
     def __init__(self, name, scheduler, queueing=True, all_nodes=False,
             node_pool=None, enabled=True, action_graph=None,
-            cleanup_action=None, run_collection=None, parent_context=None,
-            output_path=None):
+            run_collection=None, parent_context=None, output_path=None):
         super(Job, self).__init__()
         self.name               = name
         self.action_graph       = action_graph
-        self.cleanup_action     = cleanup_action
         self.scheduler          = scheduler
         self.runs               = run_collection
         self.queueing           = queueing
@@ -84,18 +83,12 @@ class Job(Observable, Observer):
         self.output_path.append(name)
 
     @classmethod
-    def from_config(cls,
-                job_config, node_pools, scheduler, parent_context, output_path):
+    def from_config(cls, job_config, scheduler, parent_context, output_path):
         """Factory method to create a new Job instance from configuration."""
+        node_pools = node.NodePoolStore.get_instance()
         action_graph = actiongraph.ActionGraph.from_config(
-                job_config.actions, node_pools)
+                job_config.actions, node_pools, job_config.cleanup_action)
         runs = jobrun.JobRunCollection.from_config(job_config)
-
-        cleanup_action = None
-        if job_config.cleanup_action:
-            cleanup_action = action.Action.from_config(
-                    job_config.cleanup_action, node_pools)
-
         nodes = node_pools[job_config.node] if job_config.node else None
 
         return cls(
@@ -107,21 +100,21 @@ class Job(Observable, Observer):
             enabled             = job_config.enabled,
             run_collection      = runs,
             action_graph        = action_graph,
-            cleanup_action      = cleanup_action,
             parent_context      = parent_context,
             output_path         = output_path
         )
 
-    def update_from_job(self, job, nodes):
+    def update_from_job(self, job):
         """Update this Jobs configuration for a new config. This method
         actually takes an already constructed job and copies out its
         configuration data.
         """
+        node_pools = node.NodePoolStore.get_instance()
         # TODO: test with __eq__
         self.enabled    = job.enabled
         self.all_nodes  = job.all_nodes
         self.queueing   = job.queueing
-        self.node_pool  = nodes[job.node] if job.node else None
+        self.node_pool  = node_pools[job.node] if job.node else None
         # TODO: copy parent_context
         # TODO: update action_graph
         # TODO: copy output_path
@@ -192,14 +185,23 @@ class Job(Observable, Observer):
         # TODO: propagate state change for serialization
         # TODO: propagate finished JobRun notifications to JobScheduler
 
+        if event == jobrun.JobRun.NOTIFY_START_FAILED:
+            # If there is a previous job scheduled then we might want to queue
+            if self.runs.get_run_by_state(ActionRun.STATE_SCHEDULED):
+                if self.queueing:
+                    self.notify(self.EVENT_RUN_QUEUED)
+                    return job_run.queue()
+
+                self.notify(self.EVENT_RUN_CANCELLED)
+                return job_run.cancel()
+
     def __eq__(self, other):
         # TODO: add runs and action_graph
         if (not isinstance(other, Job) or self.name != other.name or
             self.queueing != other.queueing or
             self.scheduler != other.scheduler or
             self.node_pool != other.node_pool or
-            self.all_nodes != other.all_nodes or
-            self.cleanup_action != other.cleanup_action):
+            self.all_nodes != other.all_nodes):
             # TODO: compare base dir
             # TODO: compare context
             # TODO: EVERYTHING

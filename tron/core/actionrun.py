@@ -4,10 +4,11 @@
 import logging
 import traceback
 from tron import command_context
+from tron.core import action
 from tron.serialize import filehandler
 from tron import node
 
-from tron.utils import state, timeutils
+from tron.utils import state, timeutils, proxy
 from tron.utils.observer import Observer
 
 log = logging.getLogger('tron.core.actionrun')
@@ -188,7 +189,7 @@ class ActionRun(Observer):
     FAILED_RENDER = 'false'
 
     def __init__(self, id, node, run_time, bare_command,
-        parent_context=None, output_path=None):
+        parent_context=None, output_path=None, cleanup=False):
         self.id                 = id
         self.node               = node
         self.output_path        = output_path   # list of path parts
@@ -203,6 +204,7 @@ class ActionRun(Observer):
         context                 = ActionRunContext(self)
         self.context            = command_context.CommandContext(
                                     context, parent_context)
+        self.is_cleanup         = cleanup
 
     @property
     def state(self):
@@ -216,9 +218,22 @@ class ActionRun(Observer):
         """Check if the state machine can be transitioned to state."""
         return self.machine.check(state)
 
-    def attempt_start(self):
-        if self.machine.transition('ready'):
-            return self.start()
+    @classmethod
+    def from_state(cls, state_data):
+        """Restore the state of this ActionRun from a serialized state."""
+        # TODO:
+        cls.id                 = state_data['id']
+        cls.machine.state      = state.named_event_by_name(
+            cls.STATE_SCHEDULED, state_data['state'])
+        cls.run_time           = state_data['run_time']
+        cls.start_time         = state_data['start_time']
+        cls.end_time           = state_data['end_time']
+        cls.rendered_command   = state_data['command']
+
+        # We were running when the state file was built, so we have no idea
+        # what happened now.
+        if cls.is_running:
+            cls.machine.transition('fail_unknown')
 
     def start(self):
         """Start this ActionRun."""
@@ -266,6 +281,9 @@ class ActionRun(Observer):
         """Mark the run as having been skipped."""
         return self.machine.transition('skip')
 
+    def ready(self):
+        return self.machine.transition('ready')
+
     def watcher(self, action_command, event):
         """Observe ActionCommand state changes."""
         log.debug("Action command state change: %s", action_command.state)
@@ -303,21 +321,6 @@ class ActionRun(Observer):
         """Failed with unknown reason."""
         log.warn("Lost communication with action run %s", self.id)
         return self.machine.transition('fail_unknown')
-
-    def restore_state(self, state_data):
-        """Restore the state of this ActionRun from a serialized state."""
-        self.id                 = state_data['id']
-        self.machine.state      = state.named_event_by_name(
-            self.STATE_SCHEDULED, state_data['state'])
-        self.run_time           = state_data['run_time']
-        self.start_time         = state_data['start_time']
-        self.end_time           = state_data['end_time']
-        self.rendered_command   = state_data['command']
-
-        # We were running when the state file was built, so we have no idea
-        # what happened now.
-        if self.is_running:
-            self.machine.transition('fail_unknown')
 
     @property
     def state_data(self):
@@ -389,3 +392,106 @@ class ActionRun(Observer):
             return self.state == self.__getattribute__(state_name)
         except AttributeError:
             raise AttributeError(name)
+
+
+class ActionRunCollection(object):
+    """A collection of ActionRuns used by a JobRun."""
+
+    def __init__(self, run_map):
+        self.run_map = run_map
+        self.cleanup_action_run = self.run_map.get(action.CLEANUP_ACTION_NAME)
+
+        # Setup proxies
+        self.proxy_action_runs_with_cleanup = proxy.CollectionProxy(
+            self.action_runs_with_cleanup, [
+                ('is_failure',      any,    False),
+                ('is_starting',     any,    False),
+                ('is_running',      any,    False),
+                ('is_scheduled',    any,    False),
+                ('is_unknown',      any,    False),
+                ('is_queued',       all,    False),
+                ('is_cancelled',    all,    False),
+                ('is_skipped',      all,    False),
+                ('is_done',         all,    False),
+                ('check_state',     all,    True),
+                ('cancel',          all,    True),
+                ('succeed',         all,    True),
+                ('fail',            any,    True)
+            ])
+
+        self.proxy_action_runs = proxy.CollectionProxy(
+            self.action_runs, [
+                ('schedule',        all,    True),
+                ('queue',           all,    True),
+            ])
+
+    def action_runs_for_names(self, names):
+        return (self.run_map[name] for name in names)
+
+    @property
+    def action_runs_with_cleanup(self):
+        return self.run_map.values()
+
+    @property
+    def action_runs(self):
+        return [run for run in self.run_map.itervalues() if not run.is_cleanup]
+
+    @property
+    def state_data(self):
+        return [run.state_data for run in self.action_runs]
+
+    @property
+    def cleanup_action_state_data(self):
+        if self.cleanup_action_run:
+            return self.cleanup_action_run.state_data
+
+    def get_startable_actions(self):
+        """Returns if there are any actions that are scheduled or queued
+        that can be run. Otherwise returns false if all actions are done or
+        are blocked on fail.
+        """
+
+
+    # TODO: is this needed?
+    @property
+    def all_but_cleanup_success(self):
+        """Overloaded all_but_cleanup_success, because we can still succeed
+        if some actions were skipped.
+        """
+        return all(r.is_success or r.is_skipped for r in self.action_runs)
+
+    @property
+    def is_success(self):
+        """Overloaded is_success, because we can still succeed if some
+        actions were skipped.
+        """
+        return all(
+            r.is_success or r.is_skipped for r in self.action_runs_with_cleanup
+        )
+
+    @property
+    def all_but_cleanup_done(self):
+        """True when any ActionRun has failed, or when all ActionRuns are done.
+        """
+        return all(r.is_done for r in self.action_runs)
+
+    def __iter__(self):
+        """Return all actions that are not cleanup actions."""
+        return iter(self.action_runs)
+
+    def __getattr__(self, name):
+        # The order here is important.  We don't want to raise too many
+        # exceptions, so proxies should be ordered by those most likely
+        # to be used.
+        for proxy in [
+            self.proxy_action_runs_with_cleanup,
+            self.proxy_action_runs
+        ]:
+            try:
+                return proxy.perform(name)
+            except AttributeError:
+                pass
+
+        # We want to re-raise this exception because the proxy code
+        # will not be relevant in the stack trace
+        raise AttributeError(name)

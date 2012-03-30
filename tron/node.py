@@ -62,6 +62,36 @@ class RunState(object):
         self.channel = None
 
 
+# TODO: some tests
+class NodePoolStore(object):
+    """A Singleton to store Node and NodePool bojects."""
+
+    _instance = None
+
+    def __init__(self):
+        if self._instance is not None:
+            raise ValueError("NodePoolStore is already instantiated.")
+        self.store = {}
+
+    @classmethod
+    def get_instance(cls):
+        if not cls._instance:
+            cls._instance = cls()
+        return cls._instance
+
+    def put(self, node):
+        self.store[node.name] = node
+
+    def update(self, nodes):
+        self.store.update((node.name, node) for node in nodes)
+
+    def __getitem__(self, name):
+        return self.store[name]
+
+    def get(self, name, default=None):
+        return self.store.get(name, default)
+
+
 class NodePool(object):
     """A pool of Node objects."""
     def __init__(self, nodes, name=None):
@@ -70,10 +100,11 @@ class NodePool(object):
         self.iter = None
 
     @classmethod
-    def from_config(cls, node_pool_config, nodes):
+    def from_config(cls, node_pool_config):
+        nodes = NodePoolStore.get_instance()
         return cls(
             name=node_pool_config.name,
-            nodes=[nodes[n] for n in nodes]
+            nodes=[nodes[n] for n in node_pool_config.nodes]
         )
 
     def __eq__(self, other):

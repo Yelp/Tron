@@ -13,12 +13,17 @@ class ActionGraph(object):
         self.action_map         = action_map
 
     @classmethod
-    def from_config(cls, actions_config, nodes):
+    def from_config(cls, actions_config, nodes, cleanup_action_config=None):
         """Create this graph from a job config."""
         actions = dict(
             (name, action.Action.from_config(conf, nodes))
             for name, conf in actions_config.iteritems()
         )
+        if cleanup_action_config:
+            cleanup_action = action.Action.from_config(
+                    cleanup_action_config, nodes)
+            actions[cleanup_action.name] = cleanup_action
+
         graph = cls._build_dag(actions, actions_config)
         return cls(graph, actions)
 
@@ -42,29 +47,29 @@ class ActionGraph(object):
         return (self.action_map[name] for name in names)
 
 
-class ActionRunCollection(object):
-    """A graph of ActionRuns used by a JobRun."""
-
-    def __init__(self, run_map):
-        self.run_map = run_map
-
-    def action_runs_for_names(self, names):
-        return (self.run_map[name] for name in names)
-
-
+# TODO: this is a strange place for this class
 class ActionRunFactory(object):
     """Construct ActionRuns and ActionRunCollections for a JobRun and
     ActionGraph.
     """
 
     @classmethod
-    def build_action_run_graph(cls, action_graph, job_run):
+    def build_action_run_collection(cls, job_run):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
         action_run_map = dict(
             (name, cls.build_run_for_action(job_run, action))
-            for name, action in action_graph.action_map
+            for name, action in job_run.action_graph.action_map
         )
-        return ActionRunCollection(action_run_map)
+        return actionrun.ActionRunCollection(action_run_map)
+
+    @classmethod
+    def action_run_collection_from_state(cls, job_run, state_data):
+        action_run_map = dict(
+            (name, cls.action_run_from_state(job_run, state_data))
+            for name, action in job_run.action_graph.action_map
+        )
+        return actionrun.ActionRunCollection(action_run_map)
+
 
 #    @classmethod
 #    def build_graph(cls, action_graph, action_run_map):
@@ -100,7 +105,12 @@ class ActionRunFactory(object):
             job_run.run_time,
             action.command,
             parent_context=job_run.context,
-            output_path=job_run.output_path
+            output_path=job_run.output_path,
+            cleanup=action.is_cleanup
         )
         action_run.attach(True, job_run)
         return action_run
+
+    @classmethod
+    def action_run_from_state(cls, job_run, state_data):
+        pass
