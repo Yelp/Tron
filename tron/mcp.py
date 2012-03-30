@@ -49,17 +49,26 @@ class ConfigApplyError(Exception):
     pass
 
 
-class StateHandler(Observer):
+class StateHandler(Observer, Observable):
+    """StateHandler is responsible for serializing state changes to disk.
+    It is an Observer of Jobs and Services and an Observable for an
+    EventRecorder.
+    """
+
+    EVENT_WRITE_FAILED   = event.EventType(event.LEVEL_CRITICAL, "write_failed")
+    EVENT_WRITE_COMPLETE = event.EventType(event.LEVEL_OK, "write_complete")
+    EVENT_WRITE_DELAYED  = event.EventType(event.LEVEL_NOTICE, "write_delayed")
+    EVENT_RESTORING      = event.EventType(event.LEVEL_NOTICE, "restoring")
+    EVENT_STORING        = event.EventType(event.LEVEL_INFO, "storing")
 
     def __init__(self, mcp, working_dir, writing=False):
+        super(StateHandler, self).__init__()
         self.mcp = mcp
         self.working_dir = working_dir
         self.write_pid = None
         self.write_start = None
         self.writing_enabled = writing
         self.store_delayed = False
-        self.event_recorder = event.EventRecorder(self,
-                                                  parent=mcp.event_recorder)
 
     def restore_job(self, job_inst, data):
         job_inst.set_context(self.mcp.context)
@@ -94,9 +103,9 @@ class StateHandler(Observer):
                 if status != 0:
                     log.warning("State writing process failed with status %d",
                                 status)
-                    self.event_recorder.emit_critical("write_failed")
+                    self.notify(self.EVENT_WRITE_FAILED)
                 else:
-                    self.event_recorder.emit_ok("write_complete")
+                    self.notify(self.EVENT_WRITE_COMPLETE)
                 self.write_pid = None
                 self.write_start = None
             else:
@@ -106,7 +115,7 @@ class StateHandler(Observer):
                 if write_duration > WRITE_DURATION_WARNING_SECS:
                     log.warning("State writing hasn't completed in %d secs",
                                 write_duration)
-                    self.event_recorder.emit_notice("write_delayed")
+                    self.notify(self.EVENT_WRITE_DELAYED)
 
                 reactor.callLater(STATE_SLEEP_SECS, self.check_write_child)
 
@@ -131,7 +140,7 @@ class StateHandler(Observer):
         file_path = os.path.join(self.working_dir, STATE_FILE)
         log.info("Storing state in %s", file_path)
 
-        self.event_recorder.emit_info("storing")
+        self.notify(self.EVENT_STORING)
 
         self.write_start = timeutils.current_timestamp()
         pid = os.fork()
@@ -158,7 +167,7 @@ class StateHandler(Observer):
 
     def load_data(self):
         log.info('Restoring state from %s', self.get_state_file_path())
-        self.event_recorder.emit_notice("restoring")
+        self.notify(self.EVENT_RESTORING)
         with open(self.get_state_file_path()) as data_file:
             return self._load_data_file(data_file)
 
@@ -245,6 +254,7 @@ class MasterControlProgram(Observable):
 
         # Control writing of the state file
         self.state_handler = StateHandler(self, working_dir)
+        self.event_manager.add(self.state_handler, parent=self)
 
     ### CONFIGURATION ###
 

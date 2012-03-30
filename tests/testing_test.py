@@ -1,6 +1,7 @@
 """Some basic utilization of our testing utilities"""
 
-from testify import *
+from testify import TestCase, assert_equal, class_setup, setup
+from testify import class_teardown, teardown, suite
 from tron.utils import testingutils
 from twisted.internet import reactor, defer
 
@@ -40,6 +41,7 @@ class SimpleTestCase(TestCase):
 
 class SimpleDeferredTestCase(testingutils.ReactorTestCase):
 
+    @suite('reactor')
     @testingutils.run_reactor()
     def test_do_something_deferred(self):
         df = defer.Deferred()
@@ -57,6 +59,8 @@ class SimpleDeferredTestCase(testingutils.ReactorTestCase):
         assert_equal(self.value, 42)
 
 class DeferredTimeoutTestCase(testingutils.ReactorTestCase):
+
+    @suite('reactor')
     @testingutils.run_reactor(timeout=1, assert_raises=defer.TimeoutError)
     def test_deferred_never_finishes(self):
         df = defer.Deferred()

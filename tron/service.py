@@ -7,7 +7,7 @@ from tron import command_context
 from tron import event
 from tron import node
 from tron.core import action
-from tron.utils import state
+from tron.utils import state, observer
 from tron.utils import timeutils
 
 
@@ -84,8 +84,8 @@ class ServiceInstance(object):
         return self.machine.state
 
     @property
-    def listen(self):
-        return self.machine.listen
+    def attach(self):
+        return self.machine.attach
 
     @property
     def pid_file(self):
@@ -157,9 +157,9 @@ class ServiceInstance(object):
 
         # We use exiting instead of complete because all we really need is the
         # exit status
-        self.monitor_action.machine.listen(action.ActionCommand.EXITING,
+        self.monitor_action.machine.attach(action.ActionCommand.EXITING,
                                            self._monitor_complete_callback)
-        self.monitor_action.machine.listen(action.ActionCommand.FAILSTART,
+        self.monitor_action.machine.attach(action.ActionCommand.FAILSTART,
                                            self._monitor_complete_failstart)
 
         try:
@@ -218,9 +218,9 @@ class ServiceInstance(object):
             return
 
         self.start_action = action.ActionCommand("%s.start" % self.id, command)
-        self.start_action.machine.listen(action.ActionCommand.EXITING,
+        self.start_action.machine.attach(action.ActionCommand.EXITING,
                                          self._start_complete_callback)
-        self.start_action.machine.listen(action.ActionCommand.FAILSTART,
+        self.start_action.machine.attach(action.ActionCommand.FAILSTART,
                                          self._start_complete_failstart)
 
         try:
@@ -269,9 +269,9 @@ class ServiceInstance(object):
 
         self.stop_action = action.ActionCommand("%s.stop" % self.id,
                                                 kill_command)
-        self.stop_action.machine.listen(action.ActionCommand.COMPLETE,
+        self.stop_action.machine.attach(action.ActionCommand.COMPLETE,
                                         self._stop_complete_callback)
-        self.stop_action.machine.listen(action.ActionCommand.FAILSTART,
+        self.stop_action.machine.attach(action.ActionCommand.FAILSTART,
                                         self._stop_complete_failstart)
         try:
             self.node.run(self.stop_action)
@@ -316,7 +316,7 @@ class ServiceInstance(object):
         return "SERVICE:%s" % self.id
 
 
-class Service(object):
+class Service(observer.Observable):
     # For compareing equality, we check these fields
     COMPARE_ATTRIBUTES = ['name', 'command', 'node_pool', 'count',
                           'monitor_interval', 'pid_file_template']
@@ -356,6 +356,7 @@ class Service(object):
     def __init__(self, name=None, command=None, node_pool=None, context=None,
                  event_recorder=None, monitor_interval=None,
                  restart_interval=None, pid_file_template=None, count=0):
+        super(Service, self).__init__()
         self.name = name
         self.command = command
         self.node_pool = node_pool
@@ -395,7 +396,7 @@ class Service(object):
 
     @property
     def listen(self):
-        return self.machine.listen
+        return self.machine.attach
 
     @property
     def is_started(self):
@@ -484,7 +485,7 @@ class Service(object):
         self.instances.append(service_instance)
         self.instances.sort(key=lambda i: i.instance_number)
 
-        service_instance.listen(True, self._instance_change)
+        service_instance.attach(True, self._instance_change)
 
         return service_instance
 
@@ -582,8 +583,8 @@ class Service(object):
         # Copy over all the old instances
         self.instances += prev_service.instances
         for service_instance in prev_service.instances:
-            service_instance.machine.clear_listeners()
-            service_instance.machine.listen(True, self._instance_change)
+            service_instance.machine.clear_watchers()
+            service_instance.machine.attach(True, self._instance_change)
 
             if rebuild_all_instances:
                 # For some configuration changes, we'll just stop all the

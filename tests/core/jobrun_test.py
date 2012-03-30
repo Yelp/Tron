@@ -1,3 +1,7 @@
+import shutil
+from testify import TestCase, setup, teardown
+from tron.serialize.filehandler import FileHandleManager
+
 
 class TestRunDependency(TestCase):
     @setup
@@ -23,7 +27,7 @@ class TestRunDependency(TestCase):
         self.dep_run = self.job_run.action_runs[1]
 
     @teardown
-    def teardown(self):
+    def teardown_job(self):
         shutil.rmtree(self.test_dir)
         FileHandleManager.reset()
 

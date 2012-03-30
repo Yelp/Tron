@@ -55,7 +55,7 @@ class JobRun(Observable, Observer):
 
     def __init__(self, job_name, run_num, run_time, node, output_path=None,
                 base_context=None, action_runs=None, start_time=None,
-                end_time=None, action_graph=action_graph):
+                end_time=None, action_graph=None):
         super(JobRun, self).__init__()
         self.job_name           = job_name
         self.run_num            = run_num

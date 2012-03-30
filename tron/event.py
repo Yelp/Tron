@@ -1,5 +1,7 @@
 import heapq
 from collections import deque, namedtuple
+import itertools
+import sys
 import weakref
 
 from tron.utils import timeutils
@@ -35,14 +37,16 @@ EventType = namedtuple('EventType', ['level', 'name'])
 
 class FixedLimitStore(object):
     """Simple data store that keeps a fixed number of elements based on their
-    'category'. Also known as a circular buffer or ring buffer.
+    'category'. Also known as a circular buffer or ring buffer. After
+    sys.maxint events an internal counter will wrap back to 0. Some events
+    may be out during that period.
     """
     DEFAULT_LIMIT = 10
 
     def __init__(self, limits):
         self._limits = limits or dict()
         self._values = {}
-        self.counter = 0
+        self.counter = itertools.cycle(xrange(sys.maxint))
 
     def _build_deque(self, category):
         limit = self._limits.get(category, self.DEFAULT_LIMIT)
@@ -51,7 +55,7 @@ class FixedLimitStore(object):
     def append(self, category, item):
         if category not in self._values:
             self._values[category] = self._build_deque(category)
-        self._values[category].append((self.counter, item))
+        self._values[category].append((self.counter.next(), item))
 
     def __iter__(self):
         events = heapq.merge(*self._values.itervalues())
@@ -197,3 +201,6 @@ class EventManager(object):
         """Return an EventRecorder given an observable."""
         key = self._build_key(observable)
         return self.recorders.get(key, None)
+
+    def clear(self):
+        self.recorders.clear()

@@ -9,7 +9,7 @@ class FixedLimitStoreTestCase(TestCase):
     def build_store(self):
         self.limits = {
             event.LEVEL_INFO:       2,
-            event.LEVEL_CRITICAL:   4
+            event.LEVEL_CRITICAL:   3
         }
         self.store = event.FixedLimitStore(self.limits)
 
@@ -18,8 +18,10 @@ class FixedLimitStoreTestCase(TestCase):
         for i in xrange(1,5):
             self.store.append(event.LEVEL_INFO, "test%s" % i)
 
-        for i in xrange(5,11):
+        for i in xrange(5,10):
             self.store.append(event.LEVEL_CRITICAL, "test%s" % i)
+
+        self.store.append(event.LEVEL_OK, "alpha")
 
     def test_build_deque(self):
         deq = self.store._build_deque('stars')
@@ -27,13 +29,13 @@ class FixedLimitStoreTestCase(TestCase):
         assert_equal(len(deq), event.FixedLimitStore.DEFAULT_LIMIT)
 
     def test_append(self):
-        assert_equal(len(self.store._values), 2)
+        assert_equal(len(self.store._values), 3)
         for level, limit in self.limits.iteritems():
             assert_equal(len(self.store._values[level]), limit)
 
     def test__iter__(self):
         values = list(self.store)
-        expected = ['test3', 'test4', 'test7', 'test8', 'test9', 'test10']
+        expected = ['test3', 'test4', 'test7', 'test8', 'test9', 'alpha']
         assert_equal(values, expected)
 
 
@@ -108,7 +110,7 @@ class EventManagerTestCase(TestCase):
 
     @teardown
     def teardown_manager(self):
-        self.manager.recorders = {}
+        self.manager.clear()
 
     def test_get_instance(self):
         assert_equal(self.manager, event.EventManager.get_instance())

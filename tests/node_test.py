@@ -1,4 +1,4 @@
-from testify import setup, TestCase, assert_equal, run
+from testify import setup, TestCase, assert_equal, run, suite
 from testify.utils import turtle
 
 from tron import node
@@ -43,6 +43,7 @@ class NodeTimeoutTest(testingutils.ReactorTestCase):
     def build_run(self):
         self.run = turtle.Turtle()
 
+    @suite('reactor')
     def test_connect_timeout(self):
         self.job_marked_failed = False
         def fail_job(*args):

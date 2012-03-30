@@ -3,26 +3,27 @@ import shutil
 import StringIO
 import tempfile
 
-from testify import *
+from testify import TestCase, class_setup, class_teardown, setup, teardown
+from testify import assert_raises, assert_equal, suite
 from testify.utils import turtle
 
 from tron.core import action, job
 from tron.utils import timeutils, testingutils
-from tron import mcp, scheduler
+from tron import mcp, scheduler, event
 
 
 class TestStateHandler(TestCase):
     @class_setup
-    def class_setup(self):
+    def class_setup_time(self):
         timeutils.override_current_time(datetime.datetime.now())
         self.now = timeutils.current_time()
 
     @class_teardown
-    def class_teardown(self):
+    def class_teardown_time(self):
         timeutils.override_current_time(None)
 
     @setup
-    def setup(self):
+    def setup_mcp(self):
         self.test_dir = tempfile.mkdtemp()
         self.mcp = mcp.MasterControlProgram(self.test_dir, "config")
         self.state_handler = self.mcp.state_handler
@@ -39,9 +40,11 @@ class TestStateHandler(TestCase):
         self.action.job = self.job
 
     @teardown
-    def teardown(self):
+    def teardown_mcp(self):
         shutil.rmtree(self.test_dir)
+        event.EventManager.get_instance().clear()
 
+    @suite('integration')
     def test_reschedule(self):
         def callNow(sleep, func, run):
             raise NotImplementedError(sleep)
@@ -94,6 +97,10 @@ sample_job:
 """
         self.data_file = StringIO.StringIO(self.state_data)
 
+    @teardown
+    def teardown_mcp(self):
+        event.EventManager.get_instance().clear()
+
     def test(self):
         handler = mcp.StateHandler(turtle.Turtle(), "/tmp")
         assert_raises(mcp.UnsupportedVersionError, handler._load_data_file, self.data_file)
@@ -123,9 +130,14 @@ jobs:
 """
         self.data_file = StringIO.StringIO(self.state_data)
 
+    @teardown
+    def teardown_mcp(self):
+        event.EventManager.get_instance().clear()
+
     def test(self):
         handler = mcp.StateHandler(turtle.Turtle(), "/tmp")
         assert_raises(mcp.StateFileVersionError, handler._load_data_file, self.data_file)
+
 
 class TestMasterControlProgram(TestCase):
 
@@ -139,8 +151,9 @@ class TestMasterControlProgram(TestCase):
         self.job.node_pool = testingutils.TestPool()
 
     @teardown
-    def teardown(self):
+    def teardown_actions(self):
         shutil.rmtree(self.test_dir)
+        event.EventManager.get_instance().clear()
 
     def test_schedule_next_run(self):
         act = action.Action("Test Action")
@@ -165,8 +178,8 @@ class TestMasterControlProgram(TestCase):
             mcp.reactor.callLater = callLater
         next = jo.runs[0]
 
-        assert_equals(len(filter(lambda r:r.is_success, jo.runs)), 1)
-        assert_equals(jo.topo_actions[0], next.action_runs[0].action)
+        assert_equal(len(filter(lambda r:r.is_success, jo.runs)), 1)
+        assert_equal(jo.topo_actions[0], next.action_runs[0].action)
         assert next.action_runs[0].is_success
         assert next.is_success
 
