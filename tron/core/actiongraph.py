@@ -2,7 +2,7 @@ import logging
 from tron.core import actionrun
 from tron.core import action
 
-log = logging.getLogger('tron.core.actiongraph')
+log = logging.getLogger(__name__)
 
 
 class ActionGraph(object):

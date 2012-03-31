@@ -52,7 +52,7 @@ class Observer(object):
     object will watch for notify calls.
     """
 
-    def watch(self, observable, event):
+    def watch(self, observable, event=True):
         observable.attach(event, self)
 
     def watcher(self, observable, event):

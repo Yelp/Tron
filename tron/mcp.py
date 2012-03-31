@@ -229,7 +229,6 @@ class MasterControlProgram(Observable):
     def __init__(self, working_dir, config_file, context=None):
         super(MasterControlProgram, self).__init__()
         self.jobs = {}
-        self.job_scheduler = JobScheduler()
         self.services = {}
 
         self.nodes = node.NodePoolStore.get_instance()
@@ -265,11 +264,8 @@ class MasterControlProgram(Observable):
             # lot of state changes
             old_state_writing = self.state_handler.writing_enabled
             self.state_handler.writing_enabled = False
-
             self.load_config()
 
-            # Any new jobs will need to be scheduled
-            self.run_jobs()
         except Exception:
             self.event_recorder.emit_critical("reconfig_failure")
             log.exception("Reconfig failure")
@@ -444,17 +440,19 @@ class MasterControlProgram(Observable):
             # Jobs have a complex eq implementation that allows us to catch
             # jobs that have not changed and thus don't need to be updated
             # during a reconfigure
-            if job == self.jobs[job.name]:
+            if job == self.jobs[job.name].job:
                 return
 
             log.info("re-adding job %s", job.name)
-            self.jobs[job.name].update_from_job(job)
-            self.job_scheduler.schedule_reconfigured(self.jobs[job.name])
+            self.jobs[job.name].job.update_from_job(job)
+            self.jobs[job.name].schedule_reconfigured()
             return
 
         log.info("adding new job %s", job.name)
-        self.jobs[job.name] = job
-        self.job_scheduler.schedule(job)
+        job_scheduler = JobScheduler(job)
+        self.jobs[job.name] = job_scheduler
+        job_scheduler.schedule()
+
         event.EventManager.get_instance().add(job, parent=self)
         self.state_handler.watch(job, Job.EVENT_STATE_CHANGE)
 
@@ -462,11 +460,18 @@ class MasterControlProgram(Observable):
         if job_name not in self.jobs:
             raise ValueError("Job %s unknown", job_name)
 
-        job = self.jobs.pop(job_name)
-        self.job_scheduler.disable(job)
+        job_scheduler = self.jobs.pop(job_name)
+        job_scheduler.disable()
+
+    def disable_all(self):
+        for job_scheduler in self.jobs.itervalues():
+            job_scheduler.disable()
+
+    def enable_all(self):
+        for job_scheduler in self.jobs.itervalues():
+            job_scheduler.enable()
 
     ### SERVICES ###
-
     def add_service(self, service):
         if service.name in self.jobs:
             raise ValueError("Service %s is already a job", service.name)
@@ -498,23 +503,6 @@ class MasterControlProgram(Observable):
         service.stop()
 
     ### OTHER ACTIONS ###
-
-    def enable_job(self, job):
-        job.enable()
-        if not job.runs or not job.runs[0].is_scheduled:
-            job.schedule_next_run()
-
-    def disable_job(self, job):
-        job.disable()
-
-    def disable_all(self):
-        for jo in self.jobs.itervalues():
-            self.disable_job(jo)
-
-    def enable_all(self):
-        for jo in self.jobs.itervalues():
-            self.enable_job(jo)
-
     def try_restore(self):
         if not os.path.isfile(self.state_handler.get_state_file_path()):
             log.info("No state data found")
@@ -543,15 +531,6 @@ class MasterControlProgram(Observable):
                 log.warning("Service name %s from state file unknown", name)
 
         log.info("Loaded state for %d jobs", state_load_count)
-
-    def run_jobs(self):
-        """This schedules the first time each job runs"""
-        for tron_job in self.jobs.itervalues():
-            if tron_job.enabled:
-                if tron_job.runs:
-                    tron_job.schedule_next_run()
-                else:
-                    self.enable_job(tron_job)
 
     def __str__(self):
         return "MCP"

@@ -6,7 +6,7 @@ from twisted.internet import reactor
 from tron import command_context
 from tron import event
 from tron import node
-from tron.core import action
+from tron.actioncommand import ActionCommand
 from tron.utils import state, observer
 from tron.utils import timeutils
 
@@ -24,7 +24,7 @@ class InvalidStateError(Error):
     """Invalid state error"""
 
 
-class ServiceInstance(object):
+class ServiceInstance(observer.Observer):
     class ServiceInstanceState(state.NamedEventState):
         """Event state subclass for service instances"""
 
@@ -67,13 +67,14 @@ class ServiceInstance(object):
 
         self.id = "%s.%s" % (service.name, self.instance_number)
 
-        self.machine = state.StateMachine(ServiceInstance.STATE_DOWN)
+        self.machine = state.StateMachine(
+                ServiceInstance.STATE_DOWN, delegate=self)
 
         self.context = command_context.CommandContext(self, service.context)
 
         self.monitor_action = None
-        self.start_action = None
-        self.kill_action = None
+        self.start_action   = None
+        self.stop_action    = None
 
         # Store the Twisted delayed call objects here for later cancellation
         self._monitor_delayed_call = None
@@ -152,15 +153,9 @@ class ServiceInstance(object):
         monitor_command = "cat %(pid_file)s | xargs kill -0" % self.context
         log.debug("Executing '%s' on %s for %s", monitor_command,
                   self.node.hostname, self.id)
-        self.monitor_action = action.ActionCommand("%s.monitor" % self.id,
+        self.monitor_action = ActionCommand("%s.monitor" % self.id,
                                                    monitor_command)
-
-        # We use exiting instead of complete because all we really need is the
-        # exit status
-        self.monitor_action.machine.attach(action.ActionCommand.EXITING,
-                                           self._monitor_complete_callback)
-        self.monitor_action.machine.attach(action.ActionCommand.FAILSTART,
-                                           self._monitor_complete_failstart)
+        self.watch(self.monitor_action)
 
         try:
             self.node.run(self.monitor_action)
@@ -217,16 +212,40 @@ class ServiceInstance(object):
             self._start_complete_failstart()
             return
 
-        self.start_action = action.ActionCommand("%s.start" % self.id, command)
-        self.start_action.machine.attach(action.ActionCommand.EXITING,
-                                         self._start_complete_callback)
-        self.start_action.machine.attach(action.ActionCommand.FAILSTART,
-                                         self._start_complete_failstart)
+        self.start_action = ActionCommand("%s.start" % self.id, command)
+        self.watch(self.start_action)
 
         try:
             self.node.run(self.start_action)
         except node.Error, e:
             log.warning("Failed to start %s: %r", self.id, e)
+
+    def watcher(self, observable, event):
+        # TODO: this no longer requires setting the start action as a field
+        # TODO: This can be easily cleaned up
+
+        if observable == self.monitor_action:
+            # We use exiting instead of complete because all we really need is
+            # the exit status
+            if event == ActionCommand.EXITING:
+                return self._monitor_complete_callback()
+            if event == ActionCommand.FAILSTART:
+                return self._monitor_complete_failstart()
+
+        elif observable == self.start_action:
+            if event == ActionCommand.EXITING:
+                return self._start_complete_callback()
+            if event == ActionCommand.FAILSTART:
+                return self._start_complete_failstart()
+
+        elif observable == self.stop_action:
+            if event == ActionCommand.COMPLETE:
+                return self._stop_complete_callback()
+            if event == ActionCommand.FAILSTART:
+                return self._stop_complete_failstart()
+
+        else:
+            raise ValueError("Unexpected observable %s" % observable)
 
     def _start_complete_callback(self):
         if self.start_action.exit_status != 0:
@@ -267,12 +286,9 @@ class ServiceInstance(object):
 
         kill_command = "cat %(pid_file)s | xargs kill" % self.context
 
-        self.stop_action = action.ActionCommand("%s.stop" % self.id,
+        self.stop_action = ActionCommand("%s.stop" % self.id,
                                                 kill_command)
-        self.stop_action.machine.attach(action.ActionCommand.COMPLETE,
-                                        self._stop_complete_callback)
-        self.stop_action.machine.attach(action.ActionCommand.FAILSTART,
-                                        self._stop_complete_failstart)
+        self.watch(self.stop_action)
         try:
             self.node.run(self.stop_action)
         except node.Error, e:
@@ -316,8 +332,8 @@ class ServiceInstance(object):
         return "SERVICE:%s" % self.id
 
 
-class Service(observer.Observable):
-    # For compareing equality, we check these fields
+class Service(observer.Observable, observer.Observer):
+    # For comparing equality, we check these fields
     COMPARE_ATTRIBUTES = ['name', 'command', 'node_pool', 'count',
                           'monitor_interval', 'pid_file_template']
 
@@ -365,7 +381,7 @@ class Service(observer.Observable):
         self.restart_interval = restart_interval
         self._restart_timer = None
 
-        self.machine = state.StateMachine(Service.STATE_DOWN)
+        self.machine = state.StateMachine(Service.STATE_DOWN, delegate=self)
 
         self.pid_file_template = pid_file_template
 
@@ -376,7 +392,8 @@ class Service(observer.Observable):
         self.instances = []
 
         self.event_recorder = event.EventRecorder(self, parent=event_recorder)
-        self.listen(True, self._record_state_changes)
+        # TODO: this is a little weird, should get cleaned up
+        self.listen(True, self)
 
     @classmethod
     def from_config(cls, srv_config, node_pools):
@@ -416,7 +433,6 @@ class Service(observer.Observable):
         if self.machine is None:
             return
 
-        func = None
         if self.machine.state in (self.STATE_FAILED, self.STATE_DEGRADED):
             func = self.event_recorder.emit_critical
         elif self.machine.state in (self.STATE_UP, self.STATE_DOWN):
@@ -484,9 +500,7 @@ class Service(observer.Observable):
         service_instance = ServiceInstance(self, node, instance_number)
         self.instances.append(service_instance)
         self.instances.sort(key=lambda i: i.instance_number)
-
-        service_instance.attach(True, self._instance_change)
-
+        self.watch(service_instance)
         return service_instance
 
     def _find_unused_instance_number(self):
@@ -525,6 +539,9 @@ class Service(observer.Observable):
         Anytime an instance changes, we need to re-evaluate our own current
         state.
         """
+        #TODO: this can be improved now that we have a reference to
+        # the instance that changed
+
         # Remove any downed instances
         self.instances = [inst for inst in self.instances
                           if inst.state != inst.STATE_DOWN]
@@ -558,6 +575,12 @@ class Service(observer.Observable):
                 self._restart_timer = reactor.callLater(
                     self.restart_interval, self._restart_after_failure)
 
+    def watcher(self, observable, _event):
+        if observable == self:
+            return self._record_state_changes()
+
+        self._instance_change()
+
     # TODO: clean this up
     def absorb_previous(self, prev_service):
         # Some changes we need to worry about:
@@ -584,7 +607,7 @@ class Service(observer.Observable):
         self.instances += prev_service.instances
         for service_instance in prev_service.instances:
             service_instance.machine.clear_watchers()
-            service_instance.machine.attach(True, self._instance_change)
+            self.watch(service_instance)
 
             if rebuild_all_instances:
                 # For some configuration changes, we'll just stop all the

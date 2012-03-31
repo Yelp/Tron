@@ -7,11 +7,12 @@ from tron import command_context
 from tron.core import action
 from tron.serialize import filehandler
 from tron import node
+from tron.actioncommand import ActionCommand
 
 from tron.utils import state, timeutils, proxy
 from tron.utils.observer import Observer
 
-log = logging.getLogger('tron.core.actionrun')
+log = logging.getLogger(__name__)
 
 
 class Error(Exception):
@@ -21,97 +22,6 @@ class Error(Exception):
 class InvalidStartStateError(Error):
     """Indicates the action can't start in the state it's in"""
     pass
-
-
-# TODO: this appears to actually be more coupled with Node then its name
-# suggested. Consider moving to tron.node
-class ActionCommand(object):
-    """An ActionCommand encapsulates a runnable task that is passed to a node
-    for execution.
-
-    A Node calls:
-      started   (when the command starts)
-      exited    (when the command exits)
-      write_<channel> (when output is received)
-      done      (when the command is finished)
-    """
-
-    class ActionState(state.NamedEventState):
-        pass
-
-    COMPLETE    = ActionState('complete')
-    FAILSTART   = ActionState('failstart')
-    EXITING     = ActionState('exiting', close=COMPLETE)
-    RUNNING     = ActionState('running', exit=EXITING)
-    PENDING     = ActionState('pending', start=RUNNING, exit=FAILSTART)
-
-    STDOUT      = '.stdout'
-    STDERR      = '.stderr'
-
-    def __init__(self, id, command, serializer):
-        self.id             = id
-        self.command        = command
-        self.machine        = state.StateMachine(
-                                initial_state=self.PENDING, delegate=self)
-        self.exit_status    = None
-        self.start_time     = None
-        self.end_time       = None
-        self.stdout         = serializer.open(self.STDOUT)
-        self.stderr         = serializer.open(self.STDERR)
-
-    @property
-    def state(self):
-        return self.machine.state
-
-    @property
-    def attach(self):
-        return self.machine.attach
-
-    def started(self):
-        if self.machine.transition("start"):
-            self.start_time = timeutils.current_timestamp()
-            return True
-
-    def exited(self, exit_status):
-        if self.machine.transition("exit"):
-            self.end_time    = timeutils.current_timestamp()
-            self.exit_status = exit_status
-            return True
-
-    def _write(self, stream, value):
-        if not stream:
-            return
-        stream.write(value)
-
-    def write_stderr(self, value):
-        self._write(self.stderr, value)
-
-    def write_stdout(self, value):
-        self._write(self.stdout, value)
-
-    def _close(self, stream):
-        if stream:
-            stream.close()
-
-    def done(self):
-        if self.machine.transition("close"):
-            self._close(self.stdout)
-            self._close(self.stderr)
-            return True
-
-    def handle_errback(self, result):
-        """Handle an unexpected error while being run.  This will likely be
-        an interval error. Cleanup the state of this AcctionCommand and log
-        something useful for debugging.
-        """
-        log.error("Unknown failure for ActionCommand run %s: %s\n%s",
-            self.id, self.command, str(result))
-        self.exited(result)
-        self.done()
-
-    def __repr__(self):
-        return "ActionCommand %s %s: %s" % (
-            self.id, self.command, self.state)
 
 
 class ActionRunContext(object):

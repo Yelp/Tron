@@ -3,7 +3,7 @@ from collections import deque
 from twisted.internet import reactor
 
 from tron import command_context, event, node
-from tron.core import action, jobrun
+from tron.core import jobrun
 from tron.core import actiongraph
 from tron.core.actionrun import ActionRun
 from tron.utils import timeutils
@@ -21,7 +21,7 @@ class InvalidStartStateError(Error):
     pass
 
 
-log = logging.getLogger('tron.core.job')
+log = logging.getLogger(__name__)
 
 
 class JobContext(object):
@@ -60,10 +60,12 @@ class Job(Observable, Observer):
     STATUS_UNKNOWN              = "UNKNOWN"
     STATUS_RUNNING              = "RUNNING"
 
+    # TODO: notify on state change
     EVENT_STATE_CHANGE    = 'event_state_change'
     EVENT_RECONFIGURED    = event.EventType(event.LEVEL_NOTICE, 'reconfigured')
     EVENT_STATE_RESTORED  = event.EventType(event.LEVEL_INFO, 'restored')
     EVENT_RUN_QUEUED      = event.EventType(event.LEVEL_NOTICE, "queued")
+    EVENT_RUN_CANCELLED   = event.EventType(event.LEVEL_NOTICE, "cancelled")
 
     def __init__(self, name, scheduler, queueing=True, all_nodes=False,
             node_pool=None, enabled=True, action_graph=None,
@@ -79,7 +81,7 @@ class Job(Observable, Observer):
         self.node_pool          = node_pool
         self.context            = command_context.CommandContext(
                                     JobContext(self), parent_context)
-        self.output_path        = output_path
+        self.output_path        = output_path or []
         self.output_path.append(name)
 
     @classmethod
@@ -162,7 +164,7 @@ class Job(Observable, Observer):
         job_runs = self.runs.restore_state(
                 state_data['runs'], self.action_graph)
         for run in job_runs:
-            self.watch(run, True)
+            self.watch(run)
 
         self.notify(self.EVENT_STATE_RESTORED)
 
@@ -175,7 +177,7 @@ class Job(Observable, Observer):
         nodes = pool.nodes if self.all_nodes else [pool.next()]
         for node in nodes:
             run = self.runs.build_new_run(self, run_time, node)
-            self.watch(run, True)
+            self.watch(run)
             yield run
 
     def watcher(self, job_run, event):
@@ -224,35 +226,33 @@ class JobScheduler(Observer):
     based on a Jobs configuration.
     """
 
-    def __init__(self):
-        pass
+    def __init__(self, job):
+        self.job = job
 
-    def enable(self, job):
-        self.enabled = True
-        self.run_or_schedule()
+    def enable(self):
+        """Enable the job and start its scheduling cycle."""
+        self.job.enabled = True
+        self.job.run_or_schedule()
 
-    def disable(self, job):
-        self.enabled = False
-        self.runs.cancel_pending()
+    def disable(self):
+        """Disable the job and cancel and pending scheduled jobs."""
+        self.job.enabled = False
+        self.job.runs.cancel_pending()
 
-    def run_or_schedule(self):
+    def run_or_schedule(self, job):
         """Called to either run a currently scheduled/queued job, or if none
         are scheduled/queued, create a new scheduled run.
         """
         # TODO
 
-
     def get_runs_to_schedule(self):
-        """If the scheduler is just a 'best effort' scheduler and this job has
-        queued runs, we don't need to schedule any more yet. Otherwise schedule
+        """If the scheduler does not support queuing overlapping and this job
+        has queued runs, do not schedule any more yet. Otherwise schedule
         the next run.
         """
-        best_effort = self.scheduler.is_best_effort
+        queue_overlapping = self.job.scheduler.queue_overlapping
 
-        if best_effort and self.runs.get_run_by_state(ActionRun.STATE_QUEUED):
-            return None
-
-        if best_effort and self.runs.get_run_by_state(ActionRun.STATE_SCHEDULED):
+        if not queue_overlapping and self.job.runs.get_pending():
             return None
 
         return self.next_runs()
@@ -261,14 +261,14 @@ class JobScheduler(Observer):
     def next_runs(self):
         """Use the configured scheduler to build the next job runs.  If there
         are runs already scheduled, return those."""
-        if not self.scheduler:
+        if not self.job.scheduler:
             return []
 
         last_run_time = None
-        if self.runs:
-            last_run_time = self.runs[0].run_time
+        if self.job.runs:
+            last_run_time = self.job.runs[0].run_time
 
-        next_run_time = self.scheduler.next_run_time(last_run_time)
+        next_run_time = self.job.scheduler.next_run_time(last_run_time)
         return self.build_and_add_runs(next_run_time)
 
     def _schedule(self, run):
@@ -314,7 +314,9 @@ class JobScheduler(Observer):
 
     # TODO:
     def schedule_reconfigured(self, job):
-        """Called after a job has been reconfigured by reloading the config.
-        If the job is enabled and the schedule has changed, cancel the
+        """If the job is enabled and the schedule has changed, cancel the
         pending run and create a new run with the correct schedule.
         """
+
+    def schedule(self):
+        """Schedule the next run for this job."""

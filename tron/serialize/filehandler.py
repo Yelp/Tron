@@ -11,7 +11,17 @@ import time
 
 from tron.utils.dicts import OrderedDict
 
-log = logging.getLogger('tron.serialize.filehandler')
+log = logging.getLogger(__name__)
+
+
+class NullFileHandle(object):
+    """A No-Op object that supports a File interface."""
+    @classmethod
+    def write(cls, _):
+        pass
+    @classmethod
+    def close(cls):
+        pass
 
 
 class FileHandleWrapper(object):
@@ -23,7 +33,7 @@ class FileHandleWrapper(object):
         self.manager = manager
         self.name = name
         self.last_accessed = time.time()
-        self._fh = None
+        self._fh = NullFileHandle
 
     def close(self):
         self.close_wrapped()
@@ -31,18 +41,16 @@ class FileHandleWrapper(object):
 
     def close_wrapped(self):
         """Close only the underlying file handle."""
-        if self._fh and not self._fh.closed:
-            self._fh.close()
-        self._fh = None
+        self._fh.close()
+        self._fh = NullFileHandle
 
     def write(self, content):
         """Write content to the fh. Re-open if necessary."""
-        if not self._fh or self._fh.closed:
-            try:
-                self._fh = open(self.name, 'a')
-            except IOError, e:
-                log.error("Failed to open %s: %s", (self.name, e))
-                return
+        try:
+            self._fh = open(self.name, 'a')
+        except IOError, e:
+            log.error("Failed to open %s: %s", (self.name, e))
+            return
 
         self.last_accessed = time.time()
         self._fh.write(content)

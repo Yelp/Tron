@@ -5,7 +5,7 @@ Tron schedulers
 
  class Scheduler(object):
 
-    is_best_effort = <bool>
+    queue_overlapping = <bool>
 
     def next_run_time(self, last_run_time):
         <returns datetime>
@@ -15,9 +15,9 @@ Tron schedulers
  next_run_time() should return a datetime which is the time the next job run
  will be run.
 
- is_best_effort should be True if this scheduler should stop queueing
+ queue_overlapping should be False if this scheduler should stop queueing
  runs once there is a queued or scheduled run already waiting.  It should
- return False if jobs should always be queued regardless of the current
+ be True if jobs should always be queued regardless of the current
  state of other jobs.
 
 """
@@ -56,7 +56,7 @@ def scheduler_from_config(config, time_zone):
 class ConstantScheduler(object):
     """The constant scheduler schedules a new job immediately."""
 
-    is_best_effort = True
+    queue_overlapping = False
 
     def __init__(self, *args, **kwargs):
         super(ConstantScheduler, self).__init__(*args, **kwargs)
@@ -81,7 +81,7 @@ class DailyScheduler(object):
     library
     """
 
-    is_best_effort = False
+    queue_overlapping = True
 
     def __init__(self, ordinals=None, weekdays=None, months=None,
                  monthdays=None, timestr=None, time_zone=None,
@@ -177,7 +177,7 @@ class IntervalScheduler(object):
     """
 
     # TODO: make this configurable
-    is_best_effort = True
+    queue_overlapping = False
 
     def __init__(self, interval=None):
         self.interval = interval

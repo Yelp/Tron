@@ -25,10 +25,11 @@ class TestStateHandler(TestCase):
 
     @setup
     def setup_mcp(self):
+        nodes = turtle.Turtle()
         self.test_dir = tempfile.mkdtemp()
         self.mcp = mcp.MasterControlProgram(self.test_dir, "config")
         self.state_handler = self.mcp.state_handler
-        self.action = action.Action("Test Action")
+        self.action = action.Action("Test Action", "doit", nodes)
 
         self.action.command = "Test command"
         self.action.queueing = True
@@ -50,7 +51,7 @@ class TestStateHandler(TestCase):
         def callNow(sleep, func, run):
             raise NotImplementedError(sleep)
 
-        self.job.next_runs()
+        self.mcp.job_scheduler.next_runs(self.job)
         #callLate = reactor.callLater
         #reactor.callLater = callNow
 
@@ -144,8 +145,9 @@ class TestMasterControlProgram(TestCase):
 
     @setup
     def build_actions(self):
+        self.nodes = turtle.Turtle()
         self.test_dir = tempfile.mkdtemp()
-        self.action = action.Action("Test Action")
+        self.action = action.Action("Test Action", "doit", self.nodes)
         self.job = job.Job("Test Job", self.action)
         self.job.output_path = self.test_dir
         self.mcp = mcp.MasterControlProgram(self.test_dir, "config")
@@ -157,7 +159,7 @@ class TestMasterControlProgram(TestCase):
         event.EventManager.get_instance().clear()
 
     def test_schedule_next_run(self):
-        act = action.Action("Test Action")
+        act = action.Action("Test Action", "doit", self.nodes)
         jo = job.Job("Test Job", act)
         jo.output_path = self.test_dir
         jo.node_pool = testingutils.TestPool()
@@ -174,7 +176,7 @@ class TestMasterControlProgram(TestCase):
         callLater = mcp.reactor.callLater
         mcp.reactor.callLater = call_now
         try:
-            self.mcp.schedule_next_run(jo)
+            self.mcp.job_scheduler.schedule(jo)
         finally:
             mcp.reactor.callLater = callLater
         next = jo.runs[0]

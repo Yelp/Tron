@@ -1,6 +1,6 @@
 import logging
 
-log = logging.getLogger('tron.action')
+log = logging.getLogger(__name__)
 
 CLEANUP_ACTION_NAME = 'cleanup'
 

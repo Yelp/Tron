@@ -180,7 +180,7 @@ services:
                             requires=(),
                             node=None)
                     }),
-                    queueing=False,
+                    queueing=True,
                     run_limit=50,
                     all_nodes=False,
                     cleanup_action=ConfigCleanupAction(
@@ -260,7 +260,7 @@ services:
                             requires=('action3_0', 'action3_1'),
                             node='batch0')
                     }),
-                    queueing=False,
+                    queueing=True,
                     run_limit=50,
                     all_nodes=False,
                     cleanup_action=None),

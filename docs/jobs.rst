@@ -34,7 +34,9 @@ Optional Fields
 **queueing** (default **True**)
     If a job run is still running when the next job run is to be scheduled,
     add the next run to a queue if this is **True**. Otherwise, cancel
-    the job run.
+    the job run. Note that if the scheduler used for this job is
+    not defined to queue overlapping then this setting is ignored.
+    IntervalScheduler and ConstantScheduler will not queue overlapping.
 
 **run_limit** (default **50**)
     Number of previous runs to store output and state for.

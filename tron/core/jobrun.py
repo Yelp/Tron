@@ -4,6 +4,7 @@
 
 from collections import deque
 import logging
+import itertools
 from tron import node, command_context, event
 from tron.core import actionrun
 from tron.core.actionrun import ActionRun
@@ -11,7 +12,7 @@ from tron.core.actiongraph import ActionRunFactory
 from tron.utils import timeutils
 from tron.utils.observer import Observable, Observer
 
-log = logging.getLogger('tron.core.jobrun')
+log = logging.getLogger(__name__)
 
 class Error(Exception):
     pass
@@ -300,21 +301,22 @@ class JobRunCollection(object):
 
     def cancel_pending(self):
         """Find any queued or scheduled runs and cancel them."""
-        pending_func = lambda r: r.is_scheduled or r.is_queued
-        pending = self._get_run_using(pending_func)
-        while pending:
+        for pending in self.get_pending():
             pending.cancel()
-            pending = self._get_run_using(pending_func)
+
+    def _get_runs_using(self, func):
+        """Filter runs using func()."""
+        return itertools.ifilter(func, self.runs)
 
     def _get_run_using(self, func):
         """Find the first run (from most recent to least recent), where func()
-        returns true.  func() should be a callable which tables a single
+        returns true.  func() should be a callable which takes a single
         argument (a JobRun), and return True or False.
         """
-        for run in self.runs:
-            if func(run):
-                return run
-        return None
+        try:
+            return self._get_runs_using(func)
+        except StopIteration:
+            return None
 
     def get_run_by_state(self, state):
         """Returns the most recent run which matches the state."""
@@ -331,6 +333,10 @@ class JobRunCollection(object):
     def get_newest(self):
         """Returns the most recently created JobRun."""
         return self.runs[0] if self.runs else None
+
+    def get_pending(self):
+        """Return the job runs that are queued or scheduled."""
+        return self._get_runs_using(lambda r: r.is_scheduled or r.is_queued)
 
     def get_next_to_finish(self, node=None):
         """Return the most recent run which is either running or scheduled. If

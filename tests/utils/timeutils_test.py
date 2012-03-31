@@ -105,7 +105,8 @@ class DeltaTotalSecondsTestCase(TestCase):
 
     def test(self):
         expected = 86702.004002999995
-        delta_seconds = timeutils.delta_total_seconds(*range(6))
+        delta = datetime.timedelta(*range(1,6))
+        delta_seconds = timeutils.delta_total_seconds(delta)
         assert_equal(delta_seconds, expected)
 
 
@@ -113,7 +114,10 @@ class DateArithmeticTestCase(TestCase):
 
     @class_setup
     def freeze_time(self):
-        timeutils.override_current_time(datetime.datetime.now())
+        # Set a date with days less then 28, otherwise some tests will fail
+        # when run on days > 28.
+        dt = datetime.datetime(2012, 3, 20)
+        timeutils.override_current_time(dt)
         self.now = timeutils.current_time()
 
     @class_teardown

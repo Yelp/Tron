@@ -6,7 +6,8 @@ from testify import TestCase, run, assert_equal, assert_not_in, assert_in
 from testify import assert_not_equal
 from testify import setup, teardown, suite
 
-from tron.serialize.filehandler import FileHandleManager, OutputStreamSerializer, OutputPath
+from tron.serialize.filehandler import FileHandleManager, OutputStreamSerializer
+from tron.serialize.filehandler import OutputPath, NullFileHandle
 
 class FileHandleWrapperTestCase(TestCase):
 
@@ -18,20 +19,22 @@ class FileHandleWrapperTestCase(TestCase):
 
     @teardown
     def teardown_fh_wrapper(self):
-         self.fh_wrapper.close()
+        self.fh_wrapper.close()
 
     def test_init(self):
-        assert_equal(self.fh_wrapper._fh, None)
+        assert_equal(self.fh_wrapper._fh, NullFileHandle)
 
     def test_close(self):
         # Test close without a write, no exception is good
+        self.fh_wrapper.close()
+        # Test close again, after already closed
         self.fh_wrapper.close()
 
     def test_close_with_write(self):
         # Test close with a write
         self.fh_wrapper.write("some things")
         self.fh_wrapper.close()
-        assert_equal(self.fh_wrapper._fh, None)
+        assert_equal(self.fh_wrapper._fh, NullFileHandle)
         assert_equal(self.fh_wrapper.manager, self.manager)
         # This is somewhat coupled
         assert_not_in(self.fh_wrapper, self.manager.cache)
@@ -51,6 +54,11 @@ class FileHandleWrapperTestCase(TestCase):
         self.fh_wrapper.write("\nmore things")
         after_time = time.time()
         assert before_time <= self.fh_wrapper.last_accessed <= after_time
+
+    def test_close_many(self):
+        self.fh_wrapper.write("some things")
+        self.fh_wrapper.close()
+        self.fh_wrapper.close()
 
 
 class FileHandleManagerTestCase(TestCase):

@@ -4,11 +4,11 @@ import tempfile
 
 import yaml
 
-from testify import TestCase, run, setup, assert_equal, teardown
-from tron import mcp
+from testify import TestCase, run, setup, assert_equal, teardown, suite
+from tron import mcp, event
 from tron.config import config_parse
 
-class ConfigTest(TestCase):
+class MCPReconfigureTest(TestCase):
 
     def config_1(self, wd):
         config = dict(
@@ -114,6 +114,7 @@ class ConfigTest(TestCase):
 
     @teardown
     def teardown_mcp(self):
+        event.EventManager.get_instance().clear()
         shutil.rmtree(self.test_dir)
 
     def reconfigure(self):
@@ -125,12 +126,13 @@ class ConfigTest(TestCase):
         self.reconfigure()
         assert_equal(len(self.my_mcp.jobs), 4)
 
+    @suite('integration')
     def test_job_unchanged(self):
         assert 'test_unchanged' in self.my_mcp.jobs
         job0 = self.my_mcp.jobs['test_unchanged']
-        run0 = job0.next_runs()[0]
+        run0 = self.my_mcp.job_scheduler.next_runs(job0)[0]
         run0.start()
-        run1 = job0.next_runs()[0]
+        run1 = self.my_mcp.job_scheduler.next_runs(job0)[0]
 
         assert_equal(job0.name, "test_unchanged")
         assert_equal(len(job0.topo_actions), 1)
@@ -150,12 +152,13 @@ class ConfigTest(TestCase):
         assert_equal(job0.runs[0], run1)
         assert run1.is_scheduled
 
+    @suite('integration')
     def test_job_removed(self):
         assert 'test_remove' in self.my_mcp.jobs
         job1 = self.my_mcp.jobs['test_remove']
-        run0 = job1.next_runs()[0]
+        run0 = self.my_mcp.job_scheduler.next_runs(job1)[0]
         run0.start()
-        run1 = job1.next_runs()[0]
+        run1 = self.my_mcp.job_scheduler.next_runs(job1)[0]
 
         assert_equal(job1.name, "test_remove")
         assert_equal(len(job1.topo_actions), 1)
@@ -167,12 +170,13 @@ class ConfigTest(TestCase):
         assert not job1.enabled
         assert not run1.is_scheduled
 
+    @suite('integration')
     def test_job_changed(self):
         assert 'test_change' in self.my_mcp.jobs
         job2 = self.my_mcp.jobs['test_change']
-        run0 = job2.next_runs()[0]
+        run0 = self.my_mcp.job_scheduler.next_runs(job2)[0]
         run0.start()
-        job2.next_runs()
+        self.my_mcp.job_scheduler.next_runs(job2)
         assert_equal(len(job2.runs), 2)
 
         assert_equal(job2.name, "test_change")
@@ -194,6 +198,7 @@ class ConfigTest(TestCase):
         assert job2.runs[1].is_starting, job2.runs[1].action_runs[0].state
         assert job2.runs[0].is_scheduled
 
+    @suite('integration')
     def test_job_new(self):
         assert not 'test_new' in self.my_mcp.jobs
         self.reconfigure()
@@ -206,10 +211,11 @@ class ConfigTest(TestCase):
         assert_equal(job3.topo_actions[0].name, 'action_new')
         assert_equal(job3.topo_actions[0].command, 'command_new')
 
+    @suite('integration')
     def test_daily_reschedule(self):
         job4 = self.my_mcp.jobs['test_daily_change']
 
-        job4.next_runs()
+        self.my_mcp.job_scheduler.next_runs(job4)
 
         assert_equal(len(job4.runs), 1)
         run = job4.runs[0]
