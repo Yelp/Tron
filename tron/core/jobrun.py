@@ -9,6 +9,7 @@ from tron import node, command_context, event
 from tron.core import actionrun
 from tron.core.actionrun import ActionRun
 from tron.core.actiongraph import ActionRunFactory
+from tron.serialize import filehandler
 from tron.utils import timeutils
 from tron.utils.observer import Observable, Observer
 
@@ -62,7 +63,7 @@ class JobRun(Observable, Observer):
         self.run_num            = run_num
         self.run_time           = run_time
         self.node               = node
-        self.output_path        = output_path or []
+        self.output_path        = output_path or filehandler.OutputPath()
         self.output_path.append(self.id)
         self.start_time         = start_time
         self.end_time           = end_time
@@ -82,7 +83,7 @@ class JobRun(Observable, Observer):
     @classmethod
     def for_job(cls, job, run_num, run_time, node):
         """Create a JobRun for a job."""
-        run = cls(job.name, run_num, run_time, node, job.output_path,
+        run = cls(job.name, run_num, run_time, node, job.output_path.clone(),
                 job.context, action_graph=job.action_graph)
 
         action_runs = ActionRunFactory.build_action_run_collection(run)
@@ -133,7 +134,7 @@ class JobRun(Observable, Observer):
         """Store action runs and register callbacks."""
         self.action_runs = action_runs
         for action_run in action_runs:
-            self.watch(action_run, True)
+            self.watch(action_run)
 
     def seconds_until_run_time(self):
         run_time = self.run_time
@@ -154,14 +155,10 @@ class JobRun(Observable, Observer):
         self.start_time = timeutils.current_time()
 
         try:
-            for action_run in self.action_runs:
-                action_run.ready()
+            self.action_runs.ready()
 
             for action_run in self.action_runs.get_startable_actions():
                 action_run.start()
-
-            if self.action_runs.cleanup_action_run:
-                self.action_runs.cleanup_action_run.ready()
 
             self.notify(self.EVENT_STARTED)
             return True

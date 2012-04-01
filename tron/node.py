@@ -91,6 +91,9 @@ class NodePoolStore(object):
     def get(self, name, default=None):
         return self.store.get(name, default)
 
+    def clear(self):
+        self.store.clear()
+
 
 class NodePool(object):
     """A pool of Node objects."""

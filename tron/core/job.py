@@ -6,6 +6,7 @@ from tron import command_context, event, node
 from tron.core import jobrun
 from tron.core import actiongraph
 from tron.core.actionrun import ActionRun
+from tron.serialize import filehandler
 from tron.utils import timeutils
 from tron.utils.observer import Observable, Observer
 
@@ -81,7 +82,7 @@ class Job(Observable, Observer):
         self.node_pool          = node_pool
         self.context            = command_context.CommandContext(
                                     JobContext(self), parent_context)
-        self.output_path        = output_path or []
+        self.output_path        = output_path or filehandler.OutputPath()
         self.output_path.append(name)
 
     @classmethod

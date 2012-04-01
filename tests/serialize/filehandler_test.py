@@ -235,8 +235,19 @@ class OutputPathTestCase(TestCase):
         self.path.append('four')
         assert_equal(self.path.parts, ['two', 'three', 'four'])
 
+    def test_clone(self):
+        new_path = self.path.clone()
+        assert_equal(str(new_path), str(self.path))
 
+        self.path.append('alpha')
+        assert_equal(str(new_path), 'one/two/three')
 
+        new_path.append('beta')
+        assert_equal(str(self.path), 'one/two/three/alpha')
+
+    def test_clone_with_parts(self):
+        new_path = self.path.clone('seven', 'ten')
+        assert_equal(list(new_path), ['one/two/three', 'seven', 'ten'])
 
 if __name__ == "__main__":
     run()

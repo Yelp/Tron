@@ -173,12 +173,12 @@ class OutputStreamSerializer(object):
 
 
 class OutputPath(object):
-    """A list like object which used to construct a file path for output. The
+    """A list like object used to construct a file path for output. The
     file path is constructed by joining the base path with any additional
     path elements.
     """
 
-    def __init__(self, base, *path_parts):
+    def __init__(self, base='.', *path_parts):
         self.base = base
         self.parts = list(path_parts or [])
 
@@ -192,3 +192,9 @@ class OutputPath(object):
 
     def __str__(self):
         return os.path.join(*self)
+
+    def clone(self, *parts):
+        """Return a new OutputPath object which has a base of the str value
+        of this object.
+        """
+        return type(self)(str(self), *parts)

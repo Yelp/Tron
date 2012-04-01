@@ -5,6 +5,7 @@ from tron.core import action
 log = logging.getLogger(__name__)
 
 
+# TODO: Move to tron.core.action
 class ActionGraph(object):
     """A directed graph of actions and their requirements."""
 
@@ -46,8 +47,11 @@ class ActionGraph(object):
     def actions_for_names(self, names):
         return (self.action_map[name] for name in names)
 
+    def __getitem__(self, name):
+        return self.action_map[name]
 
-# TODO: this is a strange place for this class
+
+# TODO: this is a strange place for this class, move to actionrun
 class ActionRunFactory(object):
     """Construct ActionRuns and ActionRunCollections for a JobRun and
     ActionGraph.
@@ -96,21 +100,26 @@ class ActionRunFactory(object):
     @classmethod
     def build_run_for_action(cls, action, job_run):
         """Create an ActionRun for a JobRun and Action."""
-        id = "%s.%s" % (job_run.id, action.name)
         node = action.node_pool.next() if action.node_pool else job_run.node
 
         action_run = actionrun.ActionRun(
-            id,
+            job_run.id,
+            action.name,
             node,
             job_run.run_time,
             action.command,
             parent_context=job_run.context,
-            output_path=job_run.output_path,
+            output_path=job_run.output_path.clone(),
             cleanup=action.is_cleanup
         )
-        action_run.attach(True, job_run)
+        job_run.watch(action_run)
         return action_run
 
     @classmethod
     def action_run_from_state(cls, job_run, state_data):
-        pass
+        """Restore an ActionRun for this JobRun from the state data."""
+        return actionrun.ActionRun.from_state(
+                state_data,
+                job_run.context,
+                job_run.output_path.clone()
+        )

@@ -8,11 +8,12 @@ from testify import assert_raises, assert_equal, suite, run
 from testify.utils import turtle
 
 from tron.core import action, job
-from tron import mcp, scheduler, event
+from tron import mcp, scheduler, event, node
 from tests import testingutils
 from tron.utils import timeutils
 
 
+# TODO: This does not test anything
 class TestStateHandler(TestCase):
     @class_setup
     def class_setup_time(self):
@@ -46,12 +47,13 @@ class TestStateHandler(TestCase):
         shutil.rmtree(self.test_dir)
         event.EventManager.get_instance().clear()
 
+
     @suite('integration')
     def test_reschedule(self):
         def callNow(sleep, func, run):
             raise NotImplementedError(sleep)
 
-        self.mcp.job_scheduler.next_runs(self.job)
+        #self.mcp.job_scheduler.next_runs(self.job)
         #callLate = reactor.callLater
         #reactor.callLater = callNow
 
@@ -141,50 +143,69 @@ jobs:
         assert_raises(mcp.StateFileVersionError, handler._load_data_file, self.data_file)
 
 
-class TestMasterControlProgram(TestCase):
+class MasterControlProgramTestCase(TestCase):
 
     @setup
-    def build_actions(self):
-        self.nodes = turtle.Turtle()
-        self.test_dir = tempfile.mkdtemp()
-        self.action = action.Action("Test Action", "doit", self.nodes)
-        self.job = job.Job("Test Job", self.action)
-        self.job.output_path = self.test_dir
-        self.mcp = mcp.MasterControlProgram(self.test_dir, "config")
-        self.job.node_pool = testingutils.TestPool()
+    def setup_mcp(self):
+        self.working_dir = tempfile.mkdtemp()
+        config_file = tempfile.NamedTemporaryFile(dir=self.working_dir)
+        self.mcp = mcp.MasterControlProgram(self.working_dir, config_file.name)
 
     @teardown
-    def teardown_actions(self):
-        shutil.rmtree(self.test_dir)
-        event.EventManager.get_instance().clear()
+    def teardown_mcp(self):
+        self.mcp.nodes.clear()
+        self.mcp.event_manager.clear()
 
-    def test_schedule_next_run(self):
-        act = action.Action("Test Action", "doit", self.nodes)
-        jo = job.Job("Test Job", act)
-        jo.output_path = self.test_dir
-        jo.node_pool = testingutils.TestPool()
-        jo.scheduler = scheduler.DailyScheduler()
+    def test_live_reconfig(self):
+        pass
+        # TODO: some of these tests are in tests.config.reconfig_test
 
-        act.job = jo
-        act.command = "Test command"
-        act.node = turtle.Turtle()
+    def test_load_config(self):
+        pass
+        # TODO
 
-        def call_now(time, func, next):
-            next.start()
-            next.action_runs[0].succeed()
+    def config_lines(self):
+        # TODO:
+        pass
 
-        callLater = mcp.reactor.callLater
-        mcp.reactor.callLater = call_now
-        try:
-            self.mcp.job_scheduler.schedule(jo)
-        finally:
-            mcp.reactor.callLater = callLater
-        next = jo.runs[0]
+    def test_rewrite_config(self):
+        pass
+        # TODO:
 
-        assert_equal(len(filter(lambda r:r.is_success, jo.runs)), 1)
-        assert_equal(jo.topo_actions[0], next.action_runs[0].action)
-        assert next.action_runs[0].is_success
-        assert next.is_success
+    def test_apply_config(self):
+        pass
+        # TODO:
+
+    def test_apply_working_directory(self):
+        pass
+        # TODO
+
+    def test_ssh_options_from_config(self):
+        ssh_conf = turtle.Turtle(agent=False, identities=[])
+        ssh_options = self.mcp._ssh_options_from_config(ssh_conf)
+
+        assert_equal(ssh_options['agent'], False)
+        assert_equal(ssh_options.identitys, [])
+        # TODO: tests with agent and identities
+
+    def test_add_job(self):
+        job_conf = {
+
+        }
+        pass
+
+    def test_add_job_already_exists(self):
+        pass
+
+    def test_remove_job(self):
+        pass
+
+    def test_disable_all(self):
+        pass
+
+    def test_enable_all(self):
+        pass
+
 
 
 

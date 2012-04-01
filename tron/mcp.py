@@ -25,7 +25,7 @@ from tron.utils import timeutils, emailer
 from tron.utils.observer import Observer, Observable
 
 
-log = logging.getLogger('tron.mcp')
+log = logging.getLogger(__name__)
 
 STATE_FILE = 'tron_state.yaml'
 STATE_SLEEP_SECS = 1

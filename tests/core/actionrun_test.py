@@ -5,7 +5,7 @@ from testify.assertions import assert_raises
 from testify.test_case import class_setup, class_teardown
 
 from tron import node
-from tron.core.actionrun import ActionCommand, ActionRunContext, ActionRun
+from tron.core.actionrun import ActionCommand, ActionRunContext, ActionRun, ActionRunCollection
 from tron.core.actionrun import InvalidStartStateError
 from tron.utils import timeutils
 
@@ -45,30 +45,24 @@ class ActionRunTestCase(TestCase):
     @setup
     def setup_action_run(self):
         anode = turtle.Turtle()
-        output_path = "random_dir"
+        output_path = ["random_dir"]
         self.command = "do command"
         self.action_run = ActionRun(
-            "id", anode,
-            timeutils.current_time(),
-            self.command,
-            output_path=output_path)
+                "id",
+                "action_name",
+                anode,
+                timeutils.current_time(),
+                self.command,
+                output_path=output_path)
 
     def test_init_state(self):
         assert_equal(self.action_run.state, ActionRun.STATE_SCHEDULED)
-
-    def test_attempt_start(self):
-        assert self.action_run.attempt_start()
-        assert_equal(self.action_run.state, ActionRun.STATE_STARTING)
-
-    def test_attempt_start_failed(self):
-        self.action_run.machine.transition('queue')
-        assert not self.action_run.attempt_start()
-        assert_equal(self.action_run.state, ActionRun.STATE_QUEUED)
 
     def test_start(self):
         self.action_run.machine.transition('ready')
         assert self.action_run.start()
         assert self.action_run.is_starting
+        assert self.action_run.start_time
 
     def test_start_bad_state(self):
         self.action_run.fail()
@@ -102,12 +96,14 @@ class ActionRunTestCase(TestCase):
     def test_watcher_running(self):
         self.action_run.build_action_command()
         self.action_run.machine.transition('start')
-        assert self.action_run.watcher(self.action_run.action_command, ActionCommand.RUNNING)
+        assert self.action_run.watcher(
+                self.action_run.action_command, ActionCommand.RUNNING)
         assert self.action_run.is_running
 
     def test_watcher_failstart(self):
         self.action_run.build_action_command()
-        assert self.action_run.watcher(self.action_run.action_command, ActionCommand.FAILSTART)
+        assert self.action_run.watcher(
+                self.action_run.action_command, ActionCommand.FAILSTART)
         assert self.action_run.is_failed
 
     def test_watcher_exiting_fail(self):
@@ -145,7 +141,8 @@ class ActionRunTestCase(TestCase):
         assert self.action_run.is_scheduled
 
     def test_success(self):
-        assert self.action_run.attempt_start()
+        assert self.action_run.ready()
+        self.action_run.machine.transition('start')
         self.action_run.machine.transition('started')
 
         assert self.action_run.is_running
@@ -173,7 +170,8 @@ class ActionRunTestCase(TestCase):
 
     def test_skip(self):
         assert not self.action_run.is_running
-        assert self.action_run.attempt_start()
+        self.action_run.ready()
+        assert self.action_run.start()
 
         assert self.action_run.fail(-1)
         assert self.action_run.skip()
@@ -201,6 +199,7 @@ class ActionRunTestCase(TestCase):
 
     def test__getattr__(self):
         assert self.action_run.is_succeeded is not None
+        assert self.action_run.cancel()
 
     def test__getattr__missing_attribute(self):
         assert_raises(AttributeError,
@@ -211,38 +210,62 @@ class ActionRunStateRestoreTestCase(TestCase):
 
     @setup
     def setup_action_run(self):
-        anode = turtle.Turtle()
-        output_path = "random_dir"
-        self.action_run = ActionRun(
-            "id", anode,
-            timeutils.current_time(),
-            "do command",
-            output_path=output_path)
+        self.parent_context = {}
+        self.output_path = ['one', 'two']
         self.state_data = {
-            'id':               "newid",
-            'state':            "running",
-            'run_time':         "now",
-            'start_time':       "now-1",
-            'end_time':         None,
-            'command':          "do this",
-            }
+            'job_run_id':       'theid',
+            'action_name':      'theaction',
+            'node_name':        'anode',
+            'run_time':         'run_time',
+            'command':          'do things',
+            'start_time':       'start_time',
+            'end_time':         'end_time',
+            'state':            'succeeded'
+        }
 
-    def test_restore_state_running(self):
-        self.action_run.restore_state(self.state_data)
-        assert self.action_run.is_unknown
+    def test_from_state(self):
+        state_data = self.state_data
+        action_run = ActionRun.from_state(
+            state_data, self.parent_context, self.output_path)
+
         for key, value in self.state_data.iteritems():
-            if key in ['state']:
+            if key in ['state', 'node_name']:
                 continue
-            assert_equal(getattr(self.action_run, key), value)
+            assert_equal(getattr(action_run, key), value)
 
-    def test_restore_state_complete(self):
-        self.state_data['end_time'] = "yesterday"
-        self.state_data['state'] = 'succeeded'
-        self.action_run.restore_state(self.state_data)
-        assert self.action_run.is_succeeded
-        assert_equal(self.action_run.end_time, "yesterday")
+        assert action_run.is_succeeded
+        assert not action_run.is_cleanup
+
+    def test_from_state_running(self):
+        self.state_data['state'] = 'running'
+        action_run = ActionRun.from_state(
+            self.state_data, self.parent_context, self.output_path)
+        assert action_run.is_unknown
+
+    def test_from_state_no_node_name(self):
+        del self.state_data['node_name']
+        action_run = ActionRun.from_state(
+            self.state_data, self.parent_context, self.output_path)
+        assert action_run.node is None
+
+    def test_from_state_with_node_exists(self):
+        anode = turtle.Turtle(name="anode", hostname="box")
+        node_store = node.NodePoolStore.get_instance()
+        node_store.put(anode)
+
+        action_run = ActionRun.from_state(
+            self.state_data, self.parent_context, self.output_path)
+
+        assert_equal(action_run.node, anode)
+        node_store.clear()
 
 
+class ActionRunCollectionTestCase(TestCase):
+
+    @setup
+    def setup_runs(self):
+        self.run_map = {}
+        self.collection = ActionRunCollection(self.run_map)
 
 if __name__ == "__main__":
     run()

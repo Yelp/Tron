@@ -32,7 +32,7 @@ class ActionCommand(object):
         self.id             = id
         self.command        = command
         self.machine        = state.StateMachine(
-            initial_state=self.PENDING, delegate=self)
+                                initial_state=self.PENDING, delegate=self)
         self.exit_status    = None
         self.start_time     = None
         self.end_time       = None
@@ -51,15 +51,17 @@ class ActionCommand(object):
         return self.machine.attach
 
     def started(self):
-        if self.machine.transition("start"):
-            self.start_time = timeutils.current_timestamp()
-            return True
+        if not self.machine.check('start'):
+            return False
+        self.start_time = timeutils.current_timestamp()
+        return self.machine.transition('start')
 
     def exited(self, exit_status):
-        if self.machine.transition("exit"):
-            self.end_time    = timeutils.current_timestamp()
-            self.exit_status = exit_status
-            return True
+        if not self.machine.check('exit'):
+            return False
+        self.end_time    = timeutils.current_timestamp()
+        self.exit_status = exit_status
+        return self.machine.transition('exit')
 
     def write_stderr(self, value):
         self.stderr.write(value)
@@ -68,10 +70,11 @@ class ActionCommand(object):
         self.stdout.write(value)
 
     def done(self):
-        if self.machine.transition("close"):
-            self.stdout.close()
-            self.stderr.close()
-            return True
+        if not self.machine.check('close'):
+            return False
+        self.stdout.close()
+        self.stderr.close()
+        return self.machine.transition('close')
 
     def handle_errback(self, result):
         """Handle an unexpected error while being run.  This will likely be
@@ -79,7 +82,7 @@ class ActionCommand(object):
         something useful for debugging.
         """
         log.error("Unknown failure for ActionCommand run %s: %s\n%s",
-            self.id, self.command, str(result))
+                self.id, self.command, str(result))
         self.exited(result)
         self.done()
 

@@ -130,6 +130,7 @@ class DailySchedulerDSTTest(TestCase):
         timeutils.override_current_time(None)
 
     def hours_until_time(self, run_time, sch):
+        # TODO: use timeutils
         tz = sch.time_zone
         now = timeutils.current_time()
         now = tz.localize(now) if tz else now
