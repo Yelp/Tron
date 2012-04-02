@@ -24,9 +24,6 @@ def assert_length(sequence, expected, msg=None):
 
 def assert_call(turtle, call_idx, *args, **kwargs):
     """Assert that a function was called on turtle with the correct args."""
-    if not turtle.calls:
-        actual = None
-    else:
-        actual = turtle.calls[call_idx]
+    actual = turtle.calls[call_idx] if turtle.calls else None
     msg = "Call %s expected %s, was %s" % (call_idx, (args, kwargs), actual)
     assert actual == (args, kwargs), msg
