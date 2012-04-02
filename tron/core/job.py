@@ -1,5 +1,4 @@
 import logging
-from collections import deque
 from twisted.internet import reactor
 
 from tron import command_context, event, node
@@ -61,8 +60,10 @@ class Job(Observable, Observer):
     STATUS_UNKNOWN              = "UNKNOWN"
     STATUS_RUNNING              = "RUNNING"
 
+    # TODO: can these be all eventTypes ?
     # TODO: notify on state change
     EVENT_STATE_CHANGE    = 'event_state_change'
+    NOTIFY_RUN_DONE       = 'notify_run_done'
     EVENT_RECONFIGURED    = event.EventType(event.LEVEL_NOTICE, 'reconfigured')
     EVENT_STATE_RESTORED  = event.EventType(event.LEVEL_INFO, 'restored')
     EVENT_RUN_QUEUED      = event.EventType(event.LEVEL_NOTICE, "queued")
@@ -124,6 +125,7 @@ class Job(Observable, Observer):
         # TODO: update JobRunCollection
         self.notify(self.EVENT_RECONFIGURED)
 
+    # TODO: should this be the schedulers status?
     @property
     def status(self):
         """The Jobs current status is determined by its last/next run."""
@@ -186,7 +188,9 @@ class Job(Observable, Observer):
         observers.
         """
         # TODO: propagate state change for serialization
-        # TODO: propagate finished JobRun notifications to JobScheduler
+        # Propagate DONE JobRun notifications to JobScheduler
+        if event == jobrun.JobRun.NOTIFY_DONE:
+            self.notify(self.NOTIFY_RUN_DONE)
 
         if event == jobrun.JobRun.NOTIFY_START_FAILED:
             # If there is a previous job scheduled then we might want to queue
@@ -224,7 +228,8 @@ class Job(Observable, Observer):
 
 class JobScheduler(Observer):
     """A JobScheduler is responsible for scheduling Jobs and running JobRuns
-    based on a Jobs configuration.
+    based on a Jobs configuration. Runs jobs by setting a callback to fire
+    x seconds into the future.
     """
 
     def __init__(self, job):
@@ -233,18 +238,77 @@ class JobScheduler(Observer):
     def enable(self):
         """Enable the job and start its scheduling cycle."""
         self.job.enabled = True
-        self.job.run_or_schedule()
+        self.schedule()
 
     def disable(self):
         """Disable the job and cancel and pending scheduled jobs."""
         self.job.enabled = False
         self.job.runs.cancel_pending()
 
-    def run_or_schedule(self, job):
-        """Called to either run a currently scheduled/queued job, or if none
-        are scheduled/queued, create a new scheduled run.
+    def manual_start(self, run_time=None):
+        """Trigger a job run manually (instead of from the scheduler)."""
+        # TODO: Jobrun should have a scheduled flag set to false for these
+        run_time = run_time or timeutils.current_time()
+        manual_runs = self.job.build_new_runs(run_time)
+        for r in manual_runs:
+            r.start()
+        return manual_runs
+
+    def schedule_reconfigured(self):
+        """Cancel the pending run and create new runs with the new JobScheduler.
         """
-        # TODO
+        self.job.runs.cancel_pending()
+        self.schedule()
+
+    def schedule(self):
+        """Schedule the next run for this job by setting a callback to fire
+        at the appropriate time.
+        """
+        runs = self.get_runs_to_schedule()
+        for run in runs:
+            log.info("Scheduling next Jobrun for %s", self.job.name)
+            secs = run.seconds_until_run_time()
+            reactor.callLater(secs, self.run_job, run)
+
+    def run_job(self, job_run):
+        """Triggered by a callback to actually start the JobRun. Also
+        schedules the next JobRun.
+        """
+        # If the Job has been disabled after this run was scheduled, then cancel
+        # the Jobrun and do not schedule another
+        if not self.job.enabled:
+            log.info("%s cancelled because job has been disabled." % job_run)
+            job_run.cancel()
+            return
+
+        # If the JobRun was cancelled we won't run it.  A JobRun may be
+        # cancelled if the job was disabled, or manually by a user.
+        if job_run.is_cancelled:
+            log.info("%s not run, was cancelled after scheduling." % job_run)
+            self.schedule()
+            return
+
+        # If there is another job run still running, queue this one
+        if self.job.runs.get_run_by_state(ActionRun.STATE_RUNNING):
+            log.info("%s still running, queueing %s." % (self.job, job_run))
+            job_run.queue()
+            return
+
+        job_run.start()
+        self.schedule()
+
+    def watcher(self, observable, event):
+        """Handle notifications from observables. If a JobRun has completed
+        look for queued JobRuns that may need to start now.
+        """
+        if event != Job.NOTIFY_RUN_DONE:
+            return
+
+        # Triggered when a JobRun completes. May need to start a queued run
+        queued_runs = self.job.runs.get_runs_by_state(ActionRun.STATE_QUEUED)
+        if queued_runs:
+            for run in queued_runs:
+                self.run_job(run)
 
     def get_runs_to_schedule(self):
         """If the scheduler does not support queuing overlapping and this job
@@ -254,70 +318,11 @@ class JobScheduler(Observer):
         queue_overlapping = self.job.scheduler.queue_overlapping
 
         if not queue_overlapping and self.job.runs.get_pending():
-            return None
-
-        return self.next_runs()
-
-    # TODO: DELETE
-    def next_runs(self):
-        """Use the configured scheduler to build the next job runs.  If there
-        are runs already scheduled, return those."""
-        if not self.job.scheduler:
+            log.info("%s has pending runs, can't schedule more." % self.job)
             return []
 
-        last_run_time = None
-        if self.job.runs:
-            last_run_time = self.job.runs[0].run_time
-
+        # TODO: this should ignore manual runs, because their run time can be anything
+        last_run = self.job.runs.get_newest()
+        last_run_time = last_run.run_time if last_run else None
         next_run_time = self.job.scheduler.next_run_time(last_run_time)
-        return self.build_and_add_runs(next_run_time)
-
-    def _schedule(self, run):
-        secs = run.seconds_until_run_time()
-        reactor.callLater(secs, self.run_job, run)
-
-    def schedule_next_run(self):
-        runs = self.get_runs_to_schedule() or []
-        for next in runs:
-            log.info("Scheduling next job for %s", next.job.name)
-            self._schedule(next)
-
-    def run_job(self, job_run):
-        """This runs when a job was scheduled.
-        Here we run the job and schedule the next time it should run
-        """
-        if not job_run.job:
-            return
-
-        # TODO: do these belong here?
-        if not job_run.job.enabled:
-            return
-
-        job_run.scheduled_start()
-        self.schedule_next_run()
-
-    def manual_start(self, run_time=None):
-        """Trigger a job run manually (instead of from the scheduler)."""
-        run_time = run_time or timeutils.current_time()
-        manual_runs = self.build_new_runs(run_time)
-
-        # Insert this run before any scheduled runs
-        scheduled = deque()
-        while self.runs and self.runs[0].is_scheduled:
-            scheduled.appendleft(self.runs.popleft())
-
-        self.runs.extendleft(manual_runs)
-        self.runs.extendleft(scheduled)
-
-        for r in manual_runs:
-            r.manual_start()
-        return manual_runs
-
-    # TODO:
-    def schedule_reconfigured(self, job):
-        """If the job is enabled and the schedule has changed, cancel the
-        pending run and create a new run with the correct schedule.
-        """
-
-    def schedule(self):
-        """Schedule the next run for this job."""
+        return self.job.build_new_runs(next_run_time)

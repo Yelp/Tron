@@ -311,13 +311,20 @@ class JobRunCollection(object):
         argument (a JobRun), and return True or False.
         """
         try:
-            return self._get_runs_using(func)
+            return self._get_runs_using(func).next()
         except StopIteration:
             return None
 
+    def _filter_by_state(self, state):
+        return lambda r: r.state == state
+
     def get_run_by_state(self, state):
         """Returns the most recent run which matches the state."""
-        return self._get_run_using(lambda r: r.state == state)
+        return self._get_run_using(self._filter_by_state(state))
+
+    def get_runs_by_state(self, state):
+        """Returns runs which match the state."""
+        return self._get_runs_using(self._filter_by_state(state))
 
     def get_run_by_num(self, num):
         """Return a the run with run number which matches num."""

@@ -1,128 +1,20 @@
-import tempfile
-import shutil
 import datetime
 
 from testify import setup, teardown, TestCase, run, assert_equal
 from testify.utils import turtle
-from tron import  scheduler
 from tron.core import action, job
 from tests import testingutils
-from tron.utils import timeutils
 
 
-class TestJobRun(TestCase):
+class JobTestCase(TestCase):
+
     @setup
     def setup_job(self):
-        self.test_dir = tempfile.mkdtemp()
-        self.action1 = action.Action(name="Test Act1")
-        self.action2 = action.Action(name="Test Act2")
-        self.action2.required_actions.append(self.action1)
-        self.action1.command = "Test Command"
-        self.action2.command = "Test Command"
-
-        self.job = job.Job("Test Job", self.action1)
-        self.job.output_path = self.test_dir
-        self.job.topo_actions.append(self.action2)
-        self.job.scheduler = scheduler.DailyScheduler()
-        self.job.node_pool = testingutils.TestPool()
-        self.action1.job = self.job
-        self.action2.job = self.job
+        pass
 
     @teardown
     def teardown_job(self):
-        shutil.rmtree(self.test_dir)
-
-    def test_set_run_time(self):
-        jr = self.job.next_runs()[0]
-        time = timeutils.current_time()
-        jr.set_run_time(time)
-
-        assert_equal(jr.run_time, time)
-        assert_equal(jr.action_runs[0].run_time, time)
-        assert_equal(jr.action_runs[1].run_time, time)
-
-    def test_start(self):
-        jr = self.job.next_runs()[0]
-        jr.start()
-
-        assert jr.action_runs[0].is_running
-        assert not jr.action_runs[1].is_running
-
-    def test_schedule(self):
-        jr = self.job.next_runs()[0]
-        assert jr.action_runs[0].is_scheduled
-        assert jr.action_runs[1].is_scheduled
-
-        jr.succeed()
-
-        assert jr.action_runs[0].is_success
-        assert jr.action_runs[1].is_success
-
-        # This shouldn't do anything
-        jr.schedule()
-
-        assert jr.action_runs[0].is_success
-        assert jr.action_runs[1].is_success
-
-    def test_scheduled_start(self):
-        self.job.queueing = True
-        jr1 = self.job.next_runs()[0]
-        jr2 = self.job.next_runs()[0]
-
-        jr2.scheduled_start()
-        assert jr2.is_queued
-
-        self.job.queueing = False
-        jr2.schedule()
-        assert jr2.is_scheduled
-        jr2.scheduled_start()
-        assert jr2.is_cancelled
-
-        jr1.scheduled_start()
-        assert jr1.is_running
-
-    def test_manual_start(self):
-        jr1 = self.job.next_runs()[0]
-        jr2 = self.job.next_runs()[0]
-
-        jr2.manual_start()
-        assert jr2.is_queued
-
-        jr1.manual_start()
-        assert jr1.is_running
-
-    def test_skip_failed_runs_dependents(self):
-        jr = self.job.next_runs()[0]
-
-        jr.manual_start()
-        ar0, ar1 = jr.action_runs
-
-        assert ar0.is_running
-        assert ar1.is_queued, "State was %s" % ar0.machine.state
-        ar0.fail()
-        ar0.skip()
-        assert ar1.is_running
-        assert ar1.succeed()
-
-        assert jr.is_success
-
-class TestJob(TestCase):
-    """Unit testing for Job class"""
-    @setup
-    def setup_job(self):
-        self.test_dir = tempfile.mkdtemp()
-        self.action = action.Action(name="Test Action")
-        self.action.command = "Test Command"
-
-        self.job = job.Job("Test Job", self.action)
-        self.job.output_path = self.test_dir
-        self.job.node_pool = testingutils.TestPool()
-        self.job.scheduler = scheduler.DailyScheduler()
-        self.action.job = self.job
-
-    @teardown
-    def teardown_job(self):
-        shutil.rmtree(self.test_dir)
+        pass
 
     def test_all_nodes_build_run(self):
         self.job.all_nodes = True
@@ -380,6 +272,23 @@ class TestJob(TestCase):
             dependent_action
         ])
         assert_equal(len(job_run.action_runs), 2)
+
+
+class JobSchedulerTestCase(TestCase):
+
+    @setup
+    def setup_job(self):
+        self.scheduler = turtle.Turtle()
+        self.job = job.Job(
+                "jobname",
+                self.scheduler,
+        )
+        self.job_scheduler = job.JobScheduler(self.job)
+
+    def test_enable(self):
+        self.job_scheduler.enable()
+        assert self.job.enabled
+        # TODO:
 
 
 

@@ -516,7 +516,7 @@ class MasterControlProgram(Observable):
         state_load_count = 0
         for name in data['jobs'].iterkeys():
             if name in self.jobs:
-                self.state_handler.restore_job(self.jobs[name],
+                self.state_handler.restore_job(self.jobs[name].job,
                                                data['jobs'][name])
                 state_load_count += 1
             else:
