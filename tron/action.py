@@ -342,11 +342,6 @@ class ActionRun(object):
         for run in self.waiting_runs:
             run.attempt_start()
 
-    def ignore_dependants(self):
-        for run in self.waiting_runs:
-            log.info("Not running waiting run %s, the dependant action failed",
-                     run.id)
-
     def fail(self, exit_status=0):
         """Mark the run as having failed, providing an exit status"""
         log.info("Action run %s failed with exit status %r",
