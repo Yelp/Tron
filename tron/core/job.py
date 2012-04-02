@@ -171,7 +171,7 @@ class Job(Observable, Observer):
 
         self.notify(self.EVENT_STATE_RESTORED)
 
-    def build_new_runs(self, run_time):
+    def build_new_runs(self, run_time, manual=False):
         """Uses its JobCollection to build new JobRuns.. If all_nodes is set,
         build a run for every node, otherwise just builds a single run on a
         single node.
@@ -179,7 +179,7 @@ class Job(Observable, Observer):
         pool = self.node_pool
         nodes = pool.nodes if self.all_nodes else [pool.next()]
         for node in nodes:
-            run = self.runs.build_new_run(self, run_time, node)
+            run = self.runs.build_new_run(self, run_time, node, manual=manual)
             self.watch(run)
             yield run
 
@@ -247,9 +247,8 @@ class JobScheduler(Observer):
 
     def manual_start(self, run_time=None):
         """Trigger a job run manually (instead of from the scheduler)."""
-        # TODO: Jobrun should have a scheduled flag set to false for these
         run_time = run_time or timeutils.current_time()
-        manual_runs = self.job.build_new_runs(run_time)
+        manual_runs = self.job.build_new_runs(run_time, manual=True)
         for r in manual_runs:
             r.start()
         return manual_runs
@@ -321,8 +320,7 @@ class JobScheduler(Observer):
             log.info("%s has pending runs, can't schedule more." % self.job)
             return []
 
-        # TODO: this should ignore manual runs, because their run time can be anything
-        last_run = self.job.runs.get_newest()
+        last_run = self.job.runs.get_newest(include_manual=False)
         last_run_time = last_run.run_time if last_run else None
         next_run_time = self.job.scheduler.next_run_time(last_run_time)
         return self.job.build_new_runs(next_run_time)

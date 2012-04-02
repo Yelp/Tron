@@ -46,14 +46,18 @@ class JobRunTestCase(TestCase):
 
 class JobRunCollectionTestCase(TestCase):
 
+    def _mock_run(self, **kwargs):
+        kwargs.setdefault('manual', False)
+        return turtle.Turtle(**kwargs)
+
     @setup
     def setup_runs(self):
         self.run_collection = jobrun.JobRunCollection(5)
         self.job_runs = [
-            turtle.Turtle(state=actionrun.ActionRun.STATE_QUEUED, run_num=4),
-            turtle.Turtle(state=actionrun.ActionRun.STATE_RUNNING, run_num=3)
+            self._mock_run(state=actionrun.ActionRun.STATE_QUEUED, run_num=4),
+            self._mock_run(state=actionrun.ActionRun.STATE_RUNNING, run_num=3)
         ] + [
-            turtle.Turtle(state=actionrun.ActionRun.STATE_SUCCEEDED, run_num=i)
+            self._mock_run(state=actionrun.ActionRun.STATE_SUCCEEDED, run_num=i)
             for i in xrange(2,0,-1)
         ]
         self.run_collection.runs.extend(self.job_runs)
@@ -99,6 +103,13 @@ class JobRunCollectionTestCase(TestCase):
     def test_get_newest(self):
         run = self.run_collection.get_newest()
         assert_equal(run, self.job_runs[0])
+
+    def test_get_newest_exclude_manual(self):
+        run = self._mock_run(
+                state=actionrun.ActionRun.STATE_RUNNING, run_num=5, manual=True)
+        self.job_runs.insert(0, run)
+        newest_run = self.run_collection.get_newest(include_manual=False)
+        assert_equal(newest_run, self.job_runs[1])
 
     def test_get_newest_no_runs(self):
         run_collection = jobrun.JobRunCollection(5)

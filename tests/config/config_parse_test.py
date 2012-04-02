@@ -16,7 +16,7 @@ from tron.config.config_parse import valid_node_pool, valid_config
 from tron.config.schedule_parse import ConfigConstantScheduler
 from tron.config.schedule_parse import ConfigDailyScheduler
 from tron.config.schedule_parse import ConfigIntervalScheduler
-from tests.testingutils import assert_raises
+from tests.assertions import assert_raises
 from tron.utils.dicts import FrozenDict
 
 

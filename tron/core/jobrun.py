@@ -57,7 +57,7 @@ class JobRun(Observable, Observer):
 
     def __init__(self, job_name, run_num, run_time, node, output_path=None,
                 base_context=None, action_runs=None, start_time=None,
-                end_time=None, action_graph=None):
+                end_time=None, action_graph=None, manual=None):
         super(JobRun, self).__init__()
         self.job_name           = job_name
         self.run_num            = run_num
@@ -69,6 +69,8 @@ class JobRun(Observable, Observer):
         self.end_time           = end_time
         self.action_runs        = None
         self.action_graph       = action_graph
+        # TODO: expose this to the api/tronview
+        self.manual             = manual
 
         if action_runs:
             self.register_action_runs(action_runs)
@@ -81,10 +83,10 @@ class JobRun(Observable, Observer):
         return '%s.%s' % (self.job_name, self.run_num)
 
     @classmethod
-    def for_job(cls, job, run_num, run_time, node):
+    def for_job(cls, job, run_num, run_time, node, manual):
         """Create a JobRun for a job."""
         run = cls(job.name, run_num, run_time, node, job.output_path.clone(),
-                job.context, action_graph=job.action_graph)
+                job.context, action_graph=job.action_graph, manual=manual)
 
         action_runs = ActionRunFactory.build_action_run_collection(run)
         run.register_action_runs(action_runs)
@@ -283,7 +285,7 @@ class JobRunCollection(object):
         self.runs.extendleft(restored_runs)
         return restored_runs
 
-    def build_new_run(self, job, run_time, node):
+    def build_new_run(self, job, run_time, node, manual=False):
         """Create a new run for the job, add it to the runs list,
         and return it.
         """
@@ -291,7 +293,7 @@ class JobRunCollection(object):
         log.info("Building JobRun %s for %s on %s at %s" %
              (run_num, job, node, run_time))
 
-        run = JobRun.for_job(job, run_num, run_time, node)
+        run = JobRun.for_job(job, run_num, run_time, node, manual)
         self.runs.appendleft(run)
         self.remove_old_runs()
         return run
@@ -334,9 +336,10 @@ class JobRunCollection(object):
         """Returns the most recent run which matches the state short name."""
         return self._get_run_using(lambda r: r.state.short_name == short_name)
 
-    def get_newest(self):
+    def get_newest(self, include_manual=True):
         """Returns the most recently created JobRun."""
-        return self.runs[0] if self.runs else None
+        func = lambda r: True if include_manual else not r.manual
+        return self._get_run_using(func)
 
     def get_pending(self):
         """Return the job runs that are queued or scheduled."""

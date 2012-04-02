@@ -4,7 +4,8 @@ import itertools
 import logging
 from types import FunctionType
 
-from testify import assert_not_reached, turtle, TestCase, class_teardown
+from testify import assert_not_reached, turtle, TestCase, setup
+from testify import class_setup, class_teardown
 from testify.test_case import TwistedFailureError
 from twisted.internet import reactor, defer
 from twisted.python import failure
@@ -216,6 +217,47 @@ def run_reactor(timeout=DEFAULT_TIMEOUT, assert_raises=None):
     return wrapper
 
 
+class MockReactorTestCase(TestCase):
+    """Patch the reactor to a MockReactor."""
+
+    # Override this in subclasses
+    module_to_mock = None
+
+    @class_setup
+    def setup_patched_reactor(self):
+        msg = "subclassses of %s must set reactor_to_mock" % self.__class__
+        assert self.module_to_mock, msg
+
+        self.old_module = self.module_to_mock
+
+    @class_teardown
+    def teardown_patched_reactor(self):
+        setattr(self.module_to_mock, 'reactor', self.old_module)
+
+    @setup
+    def teardown_mock_reactor_calls(self):
+        self.reactor = Turtle()
+        setattr(self.module_to_mock, 'reactor', self.reactor)
+
+
+class Turtle(object):
+    """A more complete Mock implementation."""
+    def __init__(self, *args, **kwargs):
+        self.__dict__.update(kwargs)
+        self.calls = []
+        self.returns = []
+
+    def __getattr__(self, name):
+        self.__dict__[name] = Turtle()
+        return self.__dict__[name]
+
+    def __call__(self, *args, **kwargs):
+        self.calls.append((args, kwargs))
+        new_turtle = type(self)()
+        self.returns.append(new_turtle)
+        return new_turtle
+
+
 # A simple test pool that automatically starts any command
 class TestNode(turtle.Turtle):
 
@@ -256,13 +298,3 @@ class TestPool(object):
             return self.nodes[0]
 
     next_round_robin = next
-
-
-def assert_raises(expected_exception_class, callable_obj, *args, **kwargs):
-    """Returns the exception if the callable raises expected_exception_class"""
-    try:
-        callable_obj(*args, **kwargs)
-    except expected_exception_class, e:
-        # we got the expected exception
-        return e
-    assert_not_reached("No exception was raised (expected %s)" % expected_exception_class)
