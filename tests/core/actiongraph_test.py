@@ -43,7 +43,7 @@ class ActionGraphTestCase(TestCase):
         assert_equal(am['base_one'].dependent_actions, [am['dep_one']])
         assert_equal(am['dep_one'].dependent_actions, [am['dep_one_one']])
 
-
+    # TODO: test from_config with a cleanup, that it sets cleanup=True on the action
 
 if __name__ == "__main__":
     run()

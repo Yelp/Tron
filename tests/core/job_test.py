@@ -1,202 +1,96 @@
 import datetime
 
-from testify import setup, teardown, TestCase, run, assert_equal
+from testify import setup, teardown, TestCase, run, assert_equal, assert_raises
 from tests.assertions import assert_length, assert_call
 from tests.testingutils import MockReactorTestCase, Turtle
+from tron import node
 from tron.core import action, job
-from tests import testingutils
 from tron.core.actionrun import ActionRun
 from tron.utils import timeutils
+
+
+class JobContextTestCase(TestCase):
+
+    @setup
+    def setup_job(self):
+        self.last_success = datetime.datetime(2012, 3, 14)
+        scheduler = Turtle()
+        run_collection = Turtle(last_success=self.last_success)
+        self.job = job.Job("jobname", scheduler, run_collection=run_collection)
+        self.context = job.JobContext(self.job)
+
+    def test_name(self):
+        assert_equal(self.context.name, self.job.name)
+
+    def test__getitem__last_success(self):
+        item = self.context["last_success:day-1"]
+        expected = (self.last_success - datetime.timedelta(days=1)).day
+        assert_equal(item, str(expected))
+
+        item = self.context["last_success:shortdate"]
+        assert_equal(item, "2012-03-14")
+
+    def test__getitem__last_success_bad_date_spec(self):
+        name = "last_success:beers-3"
+        assert_raises(KeyError, lambda: self.context[name])
+
+    def test__getitem__last_success_bad_date_name(self):
+        name = "first_success:shortdate-1"
+        assert_raises(KeyError, lambda: self.context[name])
+
+    def test__getitem__last_success_no_date_spec(self):
+        name = "last_success"
+        assert_raises(KeyError, lambda: self.context[name])
+
+    def test__getitem__missing(self):
+        assert_raises(KeyError, lambda: self.context['bogus'])
 
 
 class JobTestCase(TestCase):
 
     @setup
     def setup_job(self):
-        pass
+        scheduler = Turtle()
+        run_collection = Turtle()
+        self.job = job.Job("jobname", scheduler, run_collection=run_collection)
+        nodes = node.NodePoolStore.get_instance()
+        nodes.put(Turtle(name="thenodepool", nodes=["box1", "box0"]))
 
     @teardown
     def teardown_job(self):
-        pass
+        node.NodePoolStore.get_instance().clear()
 
-    def test_all_nodes_build_run(self):
-        self.job.all_nodes = True
-        self.job.node_pool = Turtle(nodes=[Turtle(),
-                                                  Turtle(),
-                                                  Turtle()])
-        runs = self.job.build_runs(None)
+    def test__init__(self):
+        assert str(self.job.output_path).endswith(self.job.name)
 
-        assert_length(runs, 3)
+    def test_from_config(self):
+        job_config = Turtle(
+            name='ajob',
+            node='thenodepool',
+            all_nodes=False,
+            queueing=True,
+            enabled=True,
+            run_limit=20,
+            actions={
+                'first': Turtle(
+                    name='first', command='doit', node=None, requires=[])
+            },
+            cleanup_action=None,
+        )
+        scheduler = 'scheduler_token'
+        parent_context = 'parent_context_token'
+        output_path = ["base_path"]
+        new_job = job.Job.from_config(
+                job_config, scheduler, parent_context, output_path)
 
-        assert_equal(runs[0].node, self.job.node_pool.nodes[0])
-        assert_equal(runs[1].node, self.job.node_pool.nodes[1])
-        assert_equal(runs[2].node, self.job.node_pool.nodes[2])
+        assert_equal(new_job.scheduler, scheduler)
+        assert_equal(new_job.context.next, parent_context)
+        assert_equal(new_job.node_pool.nodes, ["box1", "box0"])
+        assert_equal(new_job.enabled, True)
+        assert new_job.action_graph
 
-
-    def test_remove_old_runs(self):
-        self.job.run_limit = 3
-        runs = []
-        for i in range(6):
-            runs.append(self.job.next_runs()[0])
-            runs[i].action_runs[0].node = testingutils.TestNode()
-
-        self.job.remove_old_runs()
-        assert_length(self.job.runs, 6)
-
-        runs[0].queue()
-        runs[1].cancel()
-        runs[2].succeed()
-        self.job.remove_old_runs()
-        assert_length(self.job.runs, 6)
-
-        runs[0].succeed()
-        self.job.remove_old_runs()
-        assert_length(self.job.runs, 4)
-
-        runs[4].succeed()
-        self.job.remove_old_runs()
-        assert_length(self.job.runs, 3)
-
-        runs[5].succeed()
-        self.job.remove_old_runs()
-        assert_length(self.job.runs, 3)
-
-        runs[3].cancel()
-        for i in range(5):
-            self.job.next_runs()[0]
-
-        self.job.remove_old_runs()
-        assert_length(self.job.runs, 6)
-
-    def test_update_last_success(self):
-        jr1 = self.job.next_runs()[0]
-        jr2 = self.job.next_runs()[0]
-        jr3 = self.job.next_runs()[0]
-
-        self.job.update_last_success(jr2)
-        assert_equal(self.job.last_success, jr2)
-
-        self.job.update_last_success(jr1)
-        assert_equal(self.job.last_success, jr2)
-
-        self.job.update_last_success(jr3)
-        assert_equal(self.job.last_success, jr3)
-
-    def test_newest(self):
-        runs = []
-        for i in range(5):
-            runs.append(self.job.next_runs()[0])
-            runs[i].action_runs[0].node = Turtle()
-
-        assert_equal(self.job.newest(), runs[-1])
-        runs[0].succeed()
-
-        assert_equal(self.job.newest(), runs[-1])
-        runs[1].queue()
-
-        assert_equal(self.job.newest(), runs[-1])
-
-    def test_next_to_finish(self):
-        runs = []
-        for i in range(5):
-            runs.append(self.job.next_runs()[0])
-
-        assert_equal(self.job.next_to_finish(), runs[0])
-        runs[0].succeed()
-
-        assert_equal(self.job.next_to_finish(), runs[1])
-        runs[1].queue()
-
-        assert_equal(self.job.next_to_finish(), runs[1])
-
-        runs[3].start()
-        assert_equal(self.job.next_to_finish(), runs[3])
-
-    def test_disable(self):
-        runs = []
-        for i in range(10):
-            runs.append(self.job.next_runs()[0])
-
-        runs[0].start()
-        runs[4].start()
-
-        self.job.disable()
-        assert not self.job.enabled
-
-        for r in runs:
-            assert r.is_running or r.job is None
-
-    def test_enable(self):
-        self.job.enable()
-        assert self.job.enabled
-
-    def test_next_num(self):
-        job2 = job.Job("New Job")
-
-        for i in range(10):
-            assert_equal(self.job.next_num(), i)
-            assert_equal(job2.next_num(), i)
-
-    def test_get_run_by_num(self):
-        runs = []
-
-        for i in range(10):
-            runs.append(self.job.next_runs()[0])
-
-        for i in range(10):
-            assert_equal(self.job.get_run_by_num(runs[i].run_num), runs[i])
-
-    def test_build_run(self):
-        act = action.Action("Action Test2")
-        act.command = "test"
-        act.job = self.job
-
-        self.job.topo_actions.append(act)
-        run1 = self.job.next_runs()[0]
-        assert_equal(run1.action_runs[0].action, self.action)
-        assert_equal(run1.action_runs[1].action, act)
-
-        run2 = self.job.next_runs()[0]
-        assert_equal(self.job.runs[1], run1)
-
-        assert_equal(run2.action_runs[0].action, self.action)
-        assert_equal(run2.action_runs[1].action, act)
-
-    def test_manual_start_no_scheduled(self):
-        r1 = self.job.build_and_add_runs(None)[0]
-        r1.succeed()
-
-        mr1 = self.job.manual_start()[0]
-        assert_length(self.job.runs, 2)
-        assert mr1.is_running
-        assert mr1.run_time
-
-        mr2 = self.job.manual_start()[0]
-        assert_length(self.job.runs, 3)
-        assert mr2.is_queued
-
-    def test_manual_start_scheduled_run(self):
-        r1 = self.job.next_runs()[0]
-        r1.succeed()
-        r2 = self.job.next_runs()[0]
-
-        mr1 = self.job.manual_start()[0]
-        assert_length(self.job.runs, 3)
-
-        assert_equal(self.job.runs[0], r2)
-        assert_equal(self.job.runs[1], mr1)
-        assert_equal(self.job.runs[2], r1)
-
-        assert mr1.is_running
-
-        mr2 = self.job.manual_start()[0]
-        assert_length(self.job.runs, 4)
-        assert_equal(self.job.runs[1], mr2)
-        assert_equal(self.job.runs[2], mr1)
-
-        assert mr2.is_queued
-
-    def test_restore_run(self):
+    def test_update_from_job(self):
+        # TODO:
         self.job.topo_actions = []
         run_num = 4
 
@@ -260,21 +154,19 @@ class JobTestCase(TestCase):
         assert_equal(job_run.action_runs[1].id, act3_id)
         assert_equal(job_run.action_runs_with_cleanup[2].id, cact_id)
 
-    def test_build_action_dag(self):
-        """Test that a required action can appear after the action requiring it
-        in the all_actions list.  This is important because this input comes
-        from a dict (so order is undefined).
-        """
-        dependent_action = action.Action(name="dep_act")
-        required_action = action.Action(name="req_act",
-            required_actions=[dependent_action])
+    def test_build_new_runs_all_nodes(self):
+        # TODO
+        self.job.all_nodes = True
+        self.job.node_pool = Turtle(nodes=[Turtle(),
+                                           Turtle(),
+                                           Turtle()])
+        runs = self.job.build_runs(None)
 
-        job_run = job.JobRun(self.job, run_num=1)
-        self.job.build_action_dag(job_run, [
-            required_action,
-            dependent_action
-        ])
-        assert_length(job_run.action_runs, 2)
+        assert_length(runs, 3)
+
+        assert_equal(runs[0].node, self.job.node_pool.nodes[0])
+        assert_equal(runs[1].node, self.job.node_pool.nodes[1])
+        assert_equal(runs[2].node, self.job.node_pool.nodes[2])
 
 
 class JobSchedulerTestCase(TestCase):
@@ -328,7 +220,7 @@ class JobSchedulerTestCase(TestCase):
 
     def test_run_job_cancelled(self):
         self.job_scheduler.schedule = Turtle()
-        job_run = Turtle(is_cancelled=True)
+        job_run = Turtle(is_scheduled=False)
         self.job_scheduler.run_job(job_run)
         assert_length(job_run.start.calls, 0)
         assert_length(self.job_scheduler.schedule.calls, 1)

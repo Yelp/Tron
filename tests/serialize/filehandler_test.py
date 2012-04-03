@@ -3,7 +3,7 @@ import time
 from tempfile import NamedTemporaryFile, mktemp
 
 from testify import TestCase, run, assert_equal, assert_not_in, assert_in
-from testify import assert_not_equal
+from testify import assert_not_equal, turtle
 from testify import setup, teardown, suite
 
 from tron.serialize.filehandler import FileHandleManager, OutputStreamSerializer
@@ -248,6 +248,14 @@ class OutputPathTestCase(TestCase):
     def test_clone_with_parts(self):
         new_path = self.path.clone('seven', 'ten')
         assert_equal(list(new_path), ['one/two/three', 'seven', 'ten'])
+
+    def test__eq__(self):
+        other = turtle.Turtle(base='one', parts=['two', 'three'])
+        assert_equal(self.path, other)
+
+    def test__ne__(self):
+        other = turtle.Turtle(base='one/two', parts=['three'])
+        assert_not_equal(self.path, other)
 
 if __name__ == "__main__":
     run()

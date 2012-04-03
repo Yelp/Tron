@@ -18,12 +18,13 @@ class Action(object):
         self.is_cleanup         = cleanup
 
     @classmethod
-    def from_config(cls, config, node_pools):
+    def from_config(cls, config, node_pools, cleanup=False):
         """Factory method for creating a new Action."""
         return cls(
-            name=config.name,
-            command=config.command,
-            node_pool=node_pools[config.node] if config.node else None
+            name=       config.name,
+            command=    config.command,
+            node_pool=  node_pools[config.node] if config.node else None,
+            cleanup=    cleanup
         )
 
     def __eq__(self, other):

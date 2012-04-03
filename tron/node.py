@@ -64,7 +64,7 @@ class RunState(object):
 
 # TODO: some tests
 class NodePoolStore(object):
-    """A Singleton to store Node and NodePool bojects."""
+    """A Singleton to store Node and NodePool objects."""
 
     _instance = None
 

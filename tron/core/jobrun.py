@@ -249,6 +249,8 @@ class JobRun(Observable, Observer):
             'end_time':         self.end_time,
         }
 
+    # TODO: is_<state> shortcuts
+
     def __str__(self):
         return "JobRun:%s" % self.id
 

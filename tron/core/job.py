@@ -34,18 +34,25 @@ class JobContext(object):
     def name(self):
         return self.job.name
 
-    # TODO: test
     def __getitem__(self, item):
-        if ':' not in  item:
+        date_name, date_spec = self._get_date_spec_parts(item)
+        if not date_spec:
             raise KeyError(item)
 
-        date_name, date_spec = item.split(':', 1)
         if date_name == 'last_success':
-            time_value = timeutils.DateArithmetic.parse(date_spec)
+            last_success = self.job.runs.last_success
+            time_value = timeutils.DateArithmetic.parse(date_spec, last_success)
             if time_value:
                 return time_value
 
         raise KeyError(item)
+
+    def _get_date_spec_parts(self, name):
+        parts = name.rsplit(':', 1)
+        if len(parts) != 2:
+            return [name, None]
+        return parts
+
 
 
 class Job(Observable, Observer):
@@ -55,19 +62,20 @@ class Job(Observable, Observer):
     actions and their dependency graph.
     """
 
-    STATUS_DISABLED             = "DISABLED"
-    STATUS_ENABLED              = "ENABLED"
-    STATUS_UNKNOWN              = "UNKNOWN"
-    STATUS_RUNNING              = "RUNNING"
+    STATUS_DISABLED       = "DISABLED"
+    STATUS_ENABLED        = "ENABLED"
+    STATUS_UNKNOWN        = "UNKNOWN"
+    STATUS_RUNNING        = "RUNNING"
 
     # TODO: can these be all eventTypes ?
     # TODO: notify on state change
-    EVENT_STATE_CHANGE    = 'event_state_change'
+    NOTIFY_STATE_CHANGE   = 'notify_state_change'
     NOTIFY_RUN_DONE       = 'notify_run_done'
+
     EVENT_RECONFIGURED    = event.EventType(event.LEVEL_NOTICE, 'reconfigured')
+    EVENT_RUN_QUEUED      = event.EventType(event.LEVEL_NOTICE, 'queued')
+    EVENT_RUN_CANCELLED   = event.EventType(event.LEVEL_NOTICE, 'cancelled')
     EVENT_STATE_RESTORED  = event.EventType(event.LEVEL_INFO, 'restored')
-    EVENT_RUN_QUEUED      = event.EventType(event.LEVEL_NOTICE, "queued")
-    EVENT_RUN_CANCELLED   = event.EventType(event.LEVEL_NOTICE, "cancelled")
 
     def __init__(self, name, scheduler, queueing=True, all_nodes=False,
             node_pool=None, enabled=True, action_graph=None,
@@ -109,20 +117,19 @@ class Job(Observable, Observer):
         )
 
     def update_from_job(self, job):
-        """Update this Jobs configuration for a new config. This method
+        """Update this Jobs configuration from a new config. This method
         actually takes an already constructed job and copies out its
         configuration data.
         """
-        node_pools = node.NodePoolStore.get_instance()
-        # TODO: test with __eq__
-        self.enabled    = job.enabled
-        self.all_nodes  = job.all_nodes
-        self.queueing   = job.queueing
-        self.node_pool  = node_pools[job.node] if job.node else None
-        # TODO: copy parent_context
-        # TODO: update action_graph
-        # TODO: copy output_path
-        # TODO: update JobRunCollection
+        self.name           = job.name
+        self.queueing       = job.queueing
+        self.scheduler      = job.scheduler
+        self.node_pool      = job.node_pool
+        self.all_nodes      = job.all_nodes
+        self.action_graph   = job.action_graph
+        self.enabled        = job.enabled
+        self.output_path    = job.output_path
+        self.context        = job.context
         self.notify(self.EVENT_RECONFIGURED)
 
     # TODO: should this be the schedulers status?
@@ -203,21 +210,21 @@ class Job(Observable, Observer):
                 return job_run.cancel()
 
     def __eq__(self, other):
-        # TODO: add runs and action_graph
-        if (not isinstance(other, Job) or self.name != other.name or
-            self.queueing != other.queueing or
-            self.scheduler != other.scheduler or
-            self.node_pool != other.node_pool or
-            self.all_nodes != other.all_nodes):
-            # TODO: compare base dir
-            # TODO: compare context
-            # TODO: EVERYTHING
-
-            return False
-
-        # TODO: replace with action graph
-        return all([me == you for (me, you) in zip(self.topo_actions,
-            other.topo_actions)])
+        attrs = [
+                'name',
+                'queueing',
+                'scheduler',
+                'node_pool',
+                'all_nodes',
+                'action_graph',
+                'enabled',
+                'output_path',
+                'context'
+        ]
+        return all(
+            getattr(other, attr, None) == getattr(self, attr, None)
+            for attr in attrs
+        )
 
     def __ne__(self, other):
         return not self == other
@@ -281,9 +288,11 @@ class JobScheduler(Observer):
             return
 
         # If the JobRun was cancelled we won't run it.  A JobRun may be
-        # cancelled if the job was disabled, or manually by a user.
-        if job_run.is_cancelled:
-            log.info("%s not run, was cancelled after scheduling." % job_run)
+        # cancelled if the job was disabled, or manually by a user. It's
+        # also possible this job was run (or is running) manually by a user.
+        if not job_run.is_scheduled:
+            log.info("%s in state %s already out of scheduled state." % (
+                    job_run, job_run.state))
             self.schedule()
             return
 

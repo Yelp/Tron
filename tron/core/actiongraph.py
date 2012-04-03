@@ -22,7 +22,7 @@ class ActionGraph(object):
         )
         if cleanup_action_config:
             cleanup_action = action.Action.from_config(
-                    cleanup_action_config, nodes)
+                    cleanup_action_config, nodes, cleanup=True)
             actions[cleanup_action.name] = cleanup_action
 
         graph = cls._build_dag(actions, actions_config)
@@ -49,6 +49,13 @@ class ActionGraph(object):
 
     def __getitem__(self, name):
         return self.action_map[name]
+
+    # TODO: test
+    def __eq__(self, other):
+        return self.graph == other.graph and self.action_map == other.action_map
+
+    def __ne__(self, other):
+        return not self == other
 
 
 # TODO: this is a strange place for this class, move to actionrun

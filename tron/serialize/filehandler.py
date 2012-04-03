@@ -198,3 +198,9 @@ class OutputPath(object):
         of this object.
         """
         return type(self)(str(self), *parts)
+
+    def __eq__(self, other):
+        return self.base == other.base and self.parts == other.parts
+
+    def __ne__(self, other):
+        return not self == other
