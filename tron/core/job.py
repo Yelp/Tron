@@ -67,8 +67,6 @@ class Job(Observable, Observer):
     STATUS_UNKNOWN        = "UNKNOWN"
     STATUS_RUNNING        = "RUNNING"
 
-    # TODO: can these be all eventTypes ?
-    # TODO: notify on state change
     NOTIFY_STATE_CHANGE   = 'notify_state_change'
     NOTIFY_RUN_DONE       = 'notify_run_done'
 
@@ -132,10 +130,9 @@ class Job(Observable, Observer):
         self.context        = job.context
         self.notify(self.EVENT_RECONFIGURED)
 
-    # TODO: should this be the schedulers status?
     @property
     def status(self):
-        """The Jobs current status is determined by its last/next run."""
+        """Current status."""
         if not self.enabled:
             return self.STATUS_DISABLED
         if self.runs.get_run_by_state(ActionRun.STATE_RUNNING):
@@ -145,7 +142,7 @@ class Job(Observable, Observer):
                 self.runs.get_run_by_state(ActionRun.STATE_QUEUED)):
             return self.STATUS_ENABLED
 
-        # TODO: log what unknown state
+        log.warn("%s in an unknown state: %s" % (self, self.runs))
         return self.STATUS_UNKNOWN
 
     def repr_data(self):
@@ -194,20 +191,19 @@ class Job(Observable, Observer):
         """Handle state changes from JobRuns and propagate changes to any
         observers.
         """
-        # TODO: propagate state change for serialization
+        # Propagate state change for serialization
+        if event == jobrun.JobRun.NOTIFY_STATE_CHANGED:
+            self.notify(self.NOTIFY_STATE_CHANGE)
+            return
+
         # Propagate DONE JobRun notifications to JobScheduler
         if event == jobrun.JobRun.NOTIFY_DONE:
             self.notify(self.NOTIFY_RUN_DONE)
+            return
 
+        # JobRun failed to start for some reason, maybe a bad command?
         if event == jobrun.JobRun.NOTIFY_START_FAILED:
-            # If there is a previous job scheduled then we might want to queue
-            if self.runs.get_run_by_state(ActionRun.STATE_SCHEDULED):
-                if self.queueing:
-                    self.notify(self.EVENT_RUN_QUEUED)
-                    return job_run.queue()
-
-                self.notify(self.EVENT_RUN_CANCELLED)
-                return job_run.cancel()
+            self.notify(self.NOTIFY_RUN_DONE)
 
     def __eq__(self, other):
         attrs = [
@@ -284,8 +280,7 @@ class JobScheduler(Observer):
         # the Jobrun and do not schedule another
         if not self.job.enabled:
             log.info("%s cancelled because job has been disabled." % job_run)
-            job_run.cancel()
-            return
+            return job_run.cancel()
 
         # If the JobRun was cancelled we won't run it.  A JobRun may be
         # cancelled if the job was disabled, or manually by a user. It's
@@ -293,14 +288,16 @@ class JobScheduler(Observer):
         if not job_run.is_scheduled:
             log.info("%s in state %s already out of scheduled state." % (
                     job_run, job_run.state))
-            self.schedule()
-            return
+            return self.schedule()
 
-        # If there is another job run still running, queue this one
+        # If there is another job run still running, queue or cancel this one
         if self.job.runs.get_run_by_state(ActionRun.STATE_RUNNING):
-            log.info("%s still running, queueing %s." % (self.job, job_run))
-            job_run.queue()
-            return
+            if self.job.queueing:
+                log.info("%s still running, queueing %s." % (self.job, job_run))
+                return job_run.queue()
+
+            log.info("%s still running, cancelling %s." % (self.job, job_run))
+            return job_run.cancel()
 
         job_run.start()
         self.schedule()

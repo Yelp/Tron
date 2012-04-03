@@ -259,10 +259,11 @@ class Turtle(object):
 
 
 # A simple test pool that automatically starts any command
-class TestNode(turtle.Turtle):
+class TestNode(Turtle):
 
     def __init__(self, hostname=None):
-        self.name = hostname
+        super(TestNode, self).__init__()
+        self.name = self.hostname = hostname
 
     def run(self, runnable):
         runnable.started()

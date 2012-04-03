@@ -2,9 +2,9 @@ import datetime
 
 from testify import setup, teardown, TestCase, run, assert_equal, assert_raises
 from tests.assertions import assert_length, assert_call
-from tests.testingutils import MockReactorTestCase, Turtle
+from tests.testingutils import MockReactorTestCase, Turtle, TestNode
 from tron import node
-from tron.core import action, job
+from tron.core import job, jobrun
 from tron.core.actionrun import ActionRun
 from tron.utils import timeutils
 
@@ -50,11 +50,19 @@ class JobTestCase(TestCase):
 
     @setup
     def setup_job(self):
+        action_graph = Turtle(names=lambda: ['one', 'two'])
         scheduler = Turtle()
         run_collection = Turtle()
-        self.job = job.Job("jobname", scheduler, run_collection=run_collection)
-        nodes = node.NodePoolStore.get_instance()
-        nodes.put(Turtle(name="thenodepool", nodes=["box1", "box0"]))
+        self.nodes = [TestNode("box1"), TestNode("box0")]
+        node_store = node.NodePoolStore.get_instance()
+        node_store.put(Turtle(name="thenodepool",
+                nodes=self.nodes))
+
+        self.job = job.Job("jobname", scheduler,
+                run_collection=run_collection, action_graph=action_graph,
+                node_pool=node_store.get('thenodepool'))
+        self.job.notify = Turtle()
+        self.job.watch = Turtle()
 
     @teardown
     def teardown_job(self):
@@ -85,88 +93,116 @@ class JobTestCase(TestCase):
 
         assert_equal(new_job.scheduler, scheduler)
         assert_equal(new_job.context.next, parent_context)
-        assert_equal(new_job.node_pool.nodes, ["box1", "box0"])
+        assert_equal(new_job.node_pool.nodes, self.nodes)
         assert_equal(new_job.enabled, True)
         assert new_job.action_graph
 
     def test_update_from_job(self):
-        # TODO:
-        self.job.topo_actions = []
-        run_num = 4
+        other_job = job.Job('otherjob', 'scheduler')
+        self.job.update_from_job(other_job)
+        assert_equal(self.job.name, 'otherjob')
+        assert_equal(self.job.scheduler, 'scheduler')
+        assert_call(self.job.notify, 0, self.job.EVENT_RECONFIGURED)
 
-        act1 = action.Action("Action Test1")
-        act1.command = "test1"
-        act1.job = self.job
-        act1_id = ''.join([self.job.name, '.', str(run_num), '.', act1.name])
+    def test_status_disabled(self):
+        self.job.enabled = False
+        assert_equal(self.job.status, self.job.STATUS_DISABLED)
 
-        act2 = action.Action("Action Test2")
-        act2.command = "test2"
-        act2.job = self.job
+    def test_status_enabled(self):
+        def state_in(state):
+            return state in [ActionRun.STATE_SCHEDULED, ActionRun.STATE_QUEUED]
 
-        act3 = action.Action("Action Test3")
-        act3.command = "test3"
-        act3.job = self.job
-        act3_id = ''.join([self.job.name, '.', str(run_num), '.', act3.name])
+        self.job.runs.get_run_by_state = state_in
+        assert_equal(self.job.status, self.job.STATUS_ENABLED)
 
-        cact = action.Action(name="Test Cleanup Action")
-        cact.command = "Test Cleanup Command"
-        cact.job = self.job
-        cact_id = ''.join([self.job.name, '.', str(run_num), '.', cact.name])
+    def test_status_running(self):
+        self.job.runs.get_run_by_state = lambda s: Turtle()
+        assert_equal(self.job.status, self.job.STATUS_RUNNING)
 
-        self.job.topo_actions.append(act1)
-        self.job.topo_actions.append(act2)
-        self.job.topo_actions.append(act3)
-        self.job.cleanup_action = cact
+    def test_status_unknown(self):
+        self.job.runs.get_run_by_state = lambda s: None
+        assert_equal(self.job.status, self.job.STATUS_UNKNOWN)
 
-        # filter out Action Test2 from restored state. upon trond restart
-        #   restore_main_run(state_data) should filter out actions for runs
-        #   before the new action was introduced
-        state_data = \
-        {'end_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 234159),
-         'run_num': run_num,
-         'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
-         'runs': [{'command': act1.command,
-               'end_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 232693),
-               'id': act1_id,
-               'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
-               'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 128291),
-               'state': 'scheduled'},
-              {'command': act3.command,
-               'end_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 234116),
-               'id': act3_id,
-               'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
-               'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 133002),
-               'state': 'scheduled'}],
-         'cleanup_run': {'command': cact.command,
-               'end_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 234116),
-               'id': cact_id,
-               'run_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 125149),
-               'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 133002),
-               'state': 'scheduled'},
-         'start_time': datetime.datetime(2010, 12, 13, 15, 32, 3, 128152)}
+    def test_repr_data(self):
+        repr_data = self.job.repr_data()
+        assert_equal(repr_data['name'], self.job.name)
+        assert_equal(repr_data['scheduler'], str(self.job.scheduler))
+        assert_equal(repr_data['node_pool'], ["box1", "box0"])
+        assert_equal(repr_data['status'], self.job.STATUS_RUNNING)
 
+    def test_state_data(self):
+        state_data = self.job.state_data
+        assert_equal(state_data['runs'], self.job.runs.state_data)
+        assert state_data['enabled']
 
-        job_run = self.job.restore_run(state_data)
+    def test_restore_state(self):
+        run_data = ['one', 'two']
+        job_runs = [Turtle(), Turtle()]
+        self.job.runs.restore_state = lambda r, a: job_runs
+        state_data = {'enabled': False, 'runs': run_data}
 
-        # act2 was filtered
-        assert_length(job_run.action_runs, 2)
-        assert_equal(job_run.action_runs[0].id, act1_id)
-        assert_equal(job_run.action_runs[1].id, act3_id)
-        assert_equal(job_run.action_runs_with_cleanup[2].id, cact_id)
+        self.job.restore_state(state_data)
+
+        assert not self.job.enabled
+        for i in xrange(len(job_runs)):
+            assert_call(self.job.watch, i, job_runs[i])
+        assert_call(self.job.notify, 0, self.job.EVENT_STATE_RESTORED)
+
+    def test_build_new_runs(self):
+        run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
+        runs = list(self.job.build_new_runs(run_time))
+
+        assert_call(self.job.node_pool.next, 0)
+        node = self.job.node_pool.next.returns[0]
+        assert_call(self.job.runs.build_new_run,
+                0, self.job, run_time, node, manual=False)
+        assert_length(runs, 1)
+        assert_call(self.job.watch, 0, runs[0])
 
     def test_build_new_runs_all_nodes(self):
-        # TODO
         self.job.all_nodes = True
-        self.job.node_pool = Turtle(nodes=[Turtle(),
-                                           Turtle(),
-                                           Turtle()])
-        runs = self.job.build_runs(None)
+        run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
+        runs = list(self.job.build_new_runs(run_time))
 
-        assert_length(runs, 3)
+        assert_length(runs, 2)
+        for i in xrange(len(runs)):
+            node = self.job.node_pool.nodes[i]
+            assert_call(self.job.runs.build_new_run,
+                    i, self.job, run_time, node, manual=False)
+            assert_call(self.job.watch, 1, runs[1])
 
-        assert_equal(runs[0].node, self.job.node_pool.nodes[0])
-        assert_equal(runs[1].node, self.job.node_pool.nodes[1])
-        assert_equal(runs[2].node, self.job.node_pool.nodes[2])
+    def test_build_new_runs_manual(self):
+        run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
+        runs = list(self.job.build_new_runs(run_time, manual=True))
+
+        assert_call(self.job.node_pool.next, 0)
+        node = self.job.node_pool.next.returns[0]
+        assert_length(runs, 1)
+        assert_call(self.job.runs.build_new_run,
+                0, self.job, run_time, node, manual=True)
+        assert_call(self.job.watch, 0, runs[0])
+
+    def test_watcher(self):
+        self.job.watcher(None, jobrun.JobRun.NOTIFY_STATE_CHANGED)
+        assert_call(self.job.notify, 0, self.job.NOTIFY_STATE_CHANGE)
+
+        self.job.watcher(None, jobrun.JobRun.NOTIFY_DONE)
+        assert_call(self.job.notify, 1, self.job.NOTIFY_RUN_DONE)
+
+        self.job.watcher(None, jobrun.JobRun.NOTIFY_START_FAILED)
+        assert_call(self.job.notify, 2, self.job.NOTIFY_RUN_DONE)
+
+    def test__eq__(self):
+        other_job = job.Job("jobname", 'scheduler')
+        assert not self.job == other_job
+        other_job.update_from_job(self.job)
+        assert_equal(self.job, other_job)
+
+    def test__ne__(self):
+        other_job = job.Job("jobname", 'scheduler')
+        assert self.job != other_job
+        other_job.update_from_job(self.job)
+        assert not self.job != other_job
 
 
 class JobSchedulerTestCase(TestCase):
@@ -225,13 +261,23 @@ class JobSchedulerTestCase(TestCase):
         assert_length(job_run.start.calls, 0)
         assert_length(self.job_scheduler.schedule.calls, 1)
 
-    def test_run_job_already_running(self):
+    def test_run_job_already_running_queuing(self):
         self.job_scheduler.schedule = Turtle()
         self.job.runs.get_run_by_state = lambda s: Turtle()
         job_run = Turtle(is_cancelled=False)
         self.job_scheduler.run_job(job_run)
         assert_length(job_run.start.calls, 0)
         assert_length(job_run.queue.calls, 1)
+        assert_length(self.job_scheduler.schedule.calls, 0)
+
+    def test_run_job_already_running_cancel(self):
+        self.job_scheduler.schedule = Turtle()
+        self.job.runs.get_run_by_state = lambda s: Turtle()
+        self.job.queueing = False
+        job_run = Turtle(is_cancelled=False)
+        self.job_scheduler.run_job(job_run)
+        assert_length(job_run.start.calls, 0)
+        assert_length(job_run.cancel.calls, 1)
         assert_length(self.job_scheduler.schedule.calls, 0)
 
     def test_watcher(self):

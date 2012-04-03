@@ -387,3 +387,9 @@ class JobRunCollection(object):
     @property
     def last_success(self):
         return self.get_run_by_state(ActionRun.STATE_SUCCEEDED)
+
+    def __str__(self):
+        return "%s[%s]" % (
+                type(self).__name__,
+                ', '.join("%s(%s)" % (r.run_num, r.state) for r in self.runs)
+        )
