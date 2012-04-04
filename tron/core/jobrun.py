@@ -110,8 +110,9 @@ class JobRun(Observable, Observer):
             state_data['run_num'],
             state_data['run_time'],
             stored_node,
-            end_time            = state_data['end_time'],
-            start_time          = state_data['start_time'],
+            end_time=state_data['end_time'],
+            start_time=state_data['start_time'],
+            action_graph=action_graph,
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
                 job_run, state_data['runs'], state_data['cleanup_run'])
@@ -130,6 +131,7 @@ class JobRun(Observable, Observer):
             'start_time':       self.start_time,
             'end_time':         self.end_time,
             'cleanup_run':      self.action_runs.cleanup_action_state_data,
+            'manual':           self.manual,
         }
 
     def register_action_runs(self, action_runs):

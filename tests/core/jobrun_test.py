@@ -1,5 +1,5 @@
 import datetime
-from testify import TestCase, setup, teardown, assert_equal
+from testify import TestCase, setup, assert_equal
 from testify.assertions import assert_in
 from tests.assertions import assert_length, assert_raises, assert_call
 from tron.core import jobrun, actionrun
@@ -23,11 +23,59 @@ class JobRunTestCase(TestCase):
 
     @setup
     def setup_jobrun(self):
-        pass
+        self.action_graph = Turtle(action_map=dict(anaction=Turtle()))
+        self.job = Turtle(name="aname", action_graph=self.action_graph)
+        self.run_time = datetime.datetime(2012, 3, 14, 15, 9 ,26)
+        node = TestNode('thenode')
+        self.job_run = jobrun.JobRun('jobname', 7, self.run_time, node)
+        self.job_run.watch = Turtle()
 
-    @teardown
-    def teardown_job(self):
+    def test__init__(self):
+        assert_equal(self.job_run.job_name, 'jobname')
+        assert_equal(self.job_run.run_time, self.run_time)
+        assert str(self.job_run.output_path).endswith(self.job_run.id)
+
+    def test_for_job(self):
+        run_num = 6
+        node = TestNode('anode')
+        run = jobrun.JobRun.for_job(
+                self.job, run_num, self.run_time, node, False)
+
+        assert run.action_runs
+        assert_equal(run.job_name, self.job.name)
+        assert_equal(run.run_num, run_num)
+        assert_equal(run.node, node)
+        assert not run.manual
+
+    def test_for_job_manual(self):
+        run_num = 6
+        node = TestNode('anode')
+        run = jobrun.JobRun.for_job(
+                self.job, run_num, self.run_time, node, True)
+        assert run.action_runs
+        assert run.manual
+
+    def test_from_state(self):
+        action_run_state_data = [Turtle(), Turtle()]
+        state_data = {
+            'job_name':         'thejobname',
+            'run_num':          22,
+            'run_time':         self.run_time,
+            'node_name':        'thebox',
+            'end_time':         'the_end',
+            'start_time':       'start_time',
+            'runs':             action_run_state_data,
+            'cleanup_run':      Turtle()
+        }
+
+        run = jobrun.JobRun.from_state(state_data, self.action_graph)
+        # TODO:
+
+
+    def test_from_state_old_state_data(self):
         pass
+        # No stored_node and id instead of job_name/run_num
+        # No manual
 
     def test_success(self):
         pass

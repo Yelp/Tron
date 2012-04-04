@@ -69,7 +69,7 @@ class ActionRunFactory(object):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
         action_run_map = dict(
             (name, cls.build_run_for_action(job_run, action))
-            for name, action in job_run.action_graph.action_map
+            for name, action in job_run.action_graph.action_map.iteritems()
         )
         return actionrun.ActionRunCollection(
                 job_run.action_graph, action_run_map)
@@ -114,7 +114,7 @@ class ActionRunFactory(object):
 #        return base
 
     @classmethod
-    def build_run_for_action(cls, action, job_run):
+    def build_run_for_action(cls, job_run, action):
         """Create an ActionRun for a JobRun and Action."""
         node = action.node_pool.next() if action.node_pool else job_run.node
 
