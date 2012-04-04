@@ -1,11 +1,28 @@
-from testify import TestCase, setup, teardown, assert_equal, turtle
+import datetime
+from testify import TestCase, setup, teardown, assert_equal
+from testify.assertions import assert_in
+from tests.assertions import assert_length, assert_raises, assert_call
 from tron.core import jobrun, actionrun
+from tests.testingutils import Turtle, TestNode
 
-# TODO
+
+class JobRunContextTestCase(TestCase):
+
+    @setup
+    def setup_context(self):
+        self.jobrun = Turtle()
+        self.context = jobrun.JobRunContext(self.jobrun)
+
+    def test_cleanup_job_status(self):
+        self.jobrun.action_runs.is_failure = False
+        self.jobrun.action_runs.all_but_cleanup_success = True
+        assert_equal(self.context.cleanup_job_status, 'SUCCESS')
+
+
 class JobRunTestCase(TestCase):
 
     @setup
-    def build_job(self):
+    def setup_jobrun(self):
         pass
 
     @teardown
@@ -44,11 +61,30 @@ class JobRunTestCase(TestCase):
 #        assert self.dep_run.is_queued, self.dep_run.state
 
 
+class MockJobRun(Turtle):
+
+    manual = False
+
+    @property
+    def is_scheduled(self):
+        return self.state == actionrun.ActionRun.STATE_SCHEDULED
+
+    @property
+    def is_queued(self):
+        return self.state == actionrun.ActionRun.STATE_QUEUED
+
+    @property
+    def is_running(self):
+        return self.state == actionrun.ActionRun.STATE_RUNNING
+
+    def __repr__(self):
+        return str(self.__dict__)
+
+
 class JobRunCollectionTestCase(TestCase):
 
     def _mock_run(self, **kwargs):
-        kwargs.setdefault('manual', False)
-        return turtle.Turtle(**kwargs)
+        return MockJobRun(**kwargs)
 
     @setup
     def setup_runs(self):
@@ -62,7 +98,71 @@ class JobRunCollectionTestCase(TestCase):
         ]
         self.run_collection.runs.extend(self.job_runs)
 
-    # TODO: some other tests
+    def test__init__(self):
+        assert_equal(self.run_collection.run_limit, 5)
+
+    def test_from_config(self):
+        job_config = Turtle(run_limit=20)
+        runs = jobrun.JobRunCollection.from_config(job_config)
+        assert_equal(runs.run_limit, 20)
+
+    def test_restore_state(self):
+        run_collection = jobrun.JobRunCollection(20)
+        state_data = [
+            dict(
+                run_num=i,
+                job_name="thename",
+                run_time="sometime",
+                start_time="start_time",
+                end_time="sometime",
+                cleanup_run=None,
+                runs=[]
+            ) for i in xrange(3,-1,-1)
+        ]
+        action_graph = [Turtle()]
+
+        restored_runs = run_collection.restore_state(state_data, action_graph)
+        assert_equal(run_collection.runs[0].run_num, 3)
+        assert_equal(run_collection.runs[3].run_num, 0)
+        assert_length(restored_runs, 4)
+
+    def test_restore_state_with_runs(self):
+        assert_raises(ValueError, self.run_collection.restore_state, None, None)
+
+    def test_build_new_run(self):
+        self.run_collection.remove_old_runs = Turtle()
+        run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
+        job = Turtle(name="thejob")
+        job.action_graph.action_map = {}
+        node = TestNode("thenode")
+        job_run = self.run_collection.build_new_run(job, run_time, node)
+        assert_in(job_run, self.run_collection.runs)
+        assert_call(self.run_collection.remove_old_runs, 0)
+        assert_equal(job_run.run_num, 5)
+        assert_equal(job_run.job_name, "thejob")
+
+    def test_build_new_run_manual(self):
+        self.run_collection.remove_old_runs = Turtle()
+        run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
+        job = Turtle(name="thejob")
+        job.action_graph.action_map = {}
+        node = TestNode("thenode")
+        job_run = self.run_collection.build_new_run(job, run_time, node, True)
+        assert_in(job_run, self.run_collection.runs)
+        assert_call(self.run_collection.remove_old_runs, 0)
+        assert_equal(job_run.run_num, 5)
+        assert job_run.manual
+
+    def test_cancel_pending(self):
+        pending_runs = [Turtle(), Turtle()]
+        self.run_collection.get_pending = lambda: pending_runs
+        self.run_collection.cancel_pending()
+        for i in xrange(len(pending_runs)):
+            assert_call(pending_runs[i].cancel, 0)
+
+    def test_cancel_pending_no_pending(self):
+        self.run_collection.get_pending = lambda: []
+        self.run_collection.cancel_pending()
 
     def test_get_run_by_state(self):
         state = actionrun.ActionRun.STATE_SUCCEEDED
@@ -115,4 +215,70 @@ class JobRunCollectionTestCase(TestCase):
         run_collection = jobrun.JobRunCollection(5)
         assert_equal(run_collection.get_newest(), None)
 
-    # TODO: some other tests
+    def test_pending(self):
+        run_num = self.run_collection.next_run_num()
+        scheduled_run = self._mock_run(
+                run_num=run_num,
+                state=actionrun.ActionRun.STATE_SCHEDULED)
+        self.run_collection.runs.appendleft(scheduled_run)
+        pending = list(self.run_collection.get_pending())
+        assert_length(pending, 2)
+        assert_equal(pending, [scheduled_run, self.job_runs[0]])
+
+    def test_get_next_to_finish(self):
+        next_run = self.run_collection.get_next_to_finish()
+        assert_equal(next_run, self.job_runs[1])
+
+    def test_get_next_to_finish_by_node(self):
+        self.job_runs[1].node = "seven"
+        scheduled_run = self._mock_run(
+            run_num=self.run_collection.next_run_num(),
+            state=actionrun.ActionRun.STATE_SCHEDULED,
+            node="nine")
+        self.run_collection.runs.appendleft(scheduled_run)
+
+        next_run = self.run_collection.get_next_to_finish(node="seven")
+        assert_equal(next_run, self.job_runs[1])
+
+    def test_get_next_to_finish_none(self):
+        next_run = self.run_collection.get_next_to_finish(node="seven")
+        assert_equal(next_run, None)
+
+        self.job_runs[1].state = None
+        next_run = self.run_collection.get_next_to_finish()
+        assert_equal(next_run, None)
+
+    def test_get_next_run_num(self):
+        assert_equal(self.run_collection.next_run_num(), 5)
+
+    def test_get_next_run_num_first(self):
+        run_collection = jobrun.JobRunCollection(5)
+        assert_equal(run_collection.next_run_num(), 0)
+
+    def test_remove_old_runs(self):
+        self.run_collection.run_limit = 1
+        self.run_collection.remove_old_runs()
+
+        assert_length(self.run_collection.runs, 3)
+        assert_call(self.job_runs[-1].cleanup, 0)
+        for job_run in self.run_collection.runs:
+            assert_length(job_run.cancel.calls, 0)
+
+    def test_remove_old_runs_none(self):
+        self.run_collection.remove_old_runs()
+        for job_run in self.job_runs:
+            assert_length(job_run.cancel.calls, 0)
+
+    def test_remove_old_runs_no_runs(self):
+        run_collection = jobrun.JobRunCollection(4)
+        run_collection.remove_old_runs()
+
+    def test_state_data(self):
+        assert_length(self.run_collection.state_data, len(self.job_runs))
+
+    def test_last_success(self):
+        assert_equal(self.run_collection.last_success, self.job_runs[2])
+
+    def test__str__(self):
+        expected = "JobRunCollection[4(queued), 3(running), 2(succeeded), 1(succeeded)]"
+        assert_equal(str(self.run_collection), expected)

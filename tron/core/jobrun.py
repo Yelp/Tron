@@ -5,6 +5,7 @@
 from collections import deque
 import logging
 import itertools
+import operator
 from tron import node, command_context, event
 from tron.core import actionrun
 from tron.core.actionrun import ActionRun
@@ -29,9 +30,8 @@ class JobRunContext(object):
         """Provide 'SUCCESS' or 'FAILURE' to a cleanup action context based on
         the status of the other steps
         """
-        # TODO: these strings from somewhere better
         if self.job_run.action_runs.is_failure:
-            return 'FAILED'
+            return 'FAILURE'
         elif self.job_run.action_runs.all_but_cleanup_success:
             return 'SUCCESS'
         else:
@@ -69,7 +69,7 @@ class JobRun(Observable, Observer):
         self.end_time           = end_time
         self.action_runs        = None
         self.action_graph       = action_graph
-        # TODO: expose this to the api/tronview
+        # TODO: expose this through the api
         self.manual             = manual
 
         if action_runs:
@@ -110,13 +110,13 @@ class JobRun(Observable, Observer):
             state_data['run_num'],
             state_data['run_time'],
             stored_node,
-            end_time            = state_data['end_date'],
+            end_time            = state_data['end_time'],
             start_time          = state_data['start_time'],
-            cleanup_action_run  = state_data['cleanup_run'],
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
-                job_run, state_data['runs'])
+                job_run, state_data['runs'], state_data['cleanup_run'])
         job_run.register_action_runs(action_runs)
+        return job_run
 
     @property
     def state_data(self):
@@ -255,7 +255,6 @@ class JobRun(Observable, Observer):
         return "JobRun:%s" % self.id
 
 
-# TODO: tests
 class JobRunCollection(object):
     """A JobRunCollection is a deque of JobRun objects. Responsible for
     ordering and logic related to a group of JobRuns which should all be runs
@@ -277,14 +276,17 @@ class JobRunCollection(object):
         """Factory method for creating a JobRunCollection from a config."""
         return cls(job_config.run_limit)
 
-    def restore_state(self, job_run_states, action_graph):
+    def restore_state(self, state_data, action_graph):
         """Apply state to all jobs from the state dict."""
+        if self.runs:
+            msg = "State can not be restored to a collection with runs."
+            raise ValueError(msg)
+
         restored_runs = [
             JobRun.from_state(run_state, action_graph)
-            for run_state in job_run_states
+            for run_state in state_data
         ]
-        # TODO: test this order is correct
-        self.runs.extendleft(restored_runs)
+        self.runs.extend(restored_runs)
         return restored_runs
 
     def build_new_run(self, job, run_time, node, manual=False):
@@ -360,21 +362,24 @@ class JobRunCollection(object):
 
     def next_run_num(self):
         """Return the next run number to use."""
+        if not self.runs:
+            return 0
         return max(r.run_num for r in self.runs) + 1
 
     def remove_old_runs(self):
         """Remove old runs to attempt to reduce the number of completed runs
         to within RUN_LIMIT.
         """
-        next = self.get_next_to_finish()
-        next_num = next.run_num if next else self.runs[0].run_num
-        last_success = self.last_success
-        succ_num = last_success.run_num if last_success else 0
-        keep_num = min(next_num, succ_num)
+        if not self.last_success or not self.runs:
+            return
+
+        next_run = self.get_next_to_finish() or self.get_newest()
+        keep_run = min(next_run, self.last_success,
+                key=operator.attrgetter('run_num'))
 
         while (
             len(self.runs) > self.run_limit and
-            keep_num > self.runs[-1].run_num
+            keep_run.run_num > self.runs[-1].run_num
         ):
             run = self.runs.pop()
             run.cleanup()

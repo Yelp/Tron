@@ -2,7 +2,7 @@ import datetime
 
 from testify import run, setup, TestCase, assert_equal, turtle
 from testify.assertions import assert_raises
-from testify.test_case import class_setup, class_teardown
+from testify.test_case import class_setup, class_teardown, teardown
 
 from tron import node
 from tron.core.actionrun import ActionCommand, ActionRunContext, ActionRun, ActionRunCollection
@@ -54,6 +54,11 @@ class ActionRunTestCase(TestCase):
                 timeutils.current_time(),
                 self.command,
                 output_path=output_path)
+
+    @teardown
+    def teardown_action_run(self):
+        # TODO: cleanup random_dir
+        pass
 
     def test_init_state(self):
         assert_equal(self.action_run.state, ActionRun.STATE_SCHEDULED)

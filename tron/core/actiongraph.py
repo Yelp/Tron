@@ -71,15 +71,24 @@ class ActionRunFactory(object):
             (name, cls.build_run_for_action(job_run, action))
             for name, action in job_run.action_graph.action_map
         )
-        return actionrun.ActionRunCollection(action_run_map)
+        return actionrun.ActionRunCollection(
+                job_run.action_graph, action_run_map)
 
     @classmethod
-    def action_run_collection_from_state(cls, job_run, state_data):
+    def action_run_collection_from_state(cls,
+                job_run, runs_state_data, cleanup_action_state_data):
+        action_runs = [
+            cls.action_run_from_state(job_run, state_data)
+            for state_data in runs_state_data
+        ]
+        if cleanup_action_state_data:
+            action_runs.append(cls.action_run_from_state(
+                    job_run, cleanup_action_state_data, cleanup=True))
+
         action_run_map = dict(
-            (name, cls.action_run_from_state(job_run, state_data))
-            for name, action in job_run.action_graph.action_map
-        )
-        return actionrun.ActionRunCollection(action_run_map)
+                (action_run.name, action_run) for action_run in action_runs)
+        return actionrun.ActionRunCollection(
+            job_run.action_graph, action_run_map)
 
 
 #    @classmethod
@@ -123,10 +132,11 @@ class ActionRunFactory(object):
         return action_run
 
     @classmethod
-    def action_run_from_state(cls, job_run, state_data):
+    def action_run_from_state(cls, job_run, state_data, cleanup=False):
         """Restore an ActionRun for this JobRun from the state data."""
         return actionrun.ActionRun.from_state(
                 state_data,
                 job_run.context,
-                job_run.output_path.clone()
+                job_run.output_path.clone(),
+                cleanup=cleanup
         )
