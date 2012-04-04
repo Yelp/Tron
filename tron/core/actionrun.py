@@ -323,6 +323,10 @@ class ActionRun(Observer):
 class ActionRunCollection(object):
     """A collection of ActionRuns used by a JobRun."""
 
+    # An ActionRunCollection is blocked when it has runs running which
+    # are required for other blocked runs to start.
+    STATE_BLOCKED       = state.NamedEventState('blocked')
+
     def __init__(self, action_graph, run_map):
         self.action_graph       = action_graph
         self.run_map            = run_map
@@ -331,6 +335,10 @@ class ActionRunCollection(object):
         # Setup proxies
         self.proxy_action_runs_with_cleanup = proxy.CollectionProxy(
             self.action_runs_with_cleanup, [
+
+                # TODO: these should account for actions in many states, and only
+                # look at non-blocked actions
+
 #                ('is_failure',      any,    False),
 #                ('is_starting',     any,    False),
 #                ('is_running',      any,    False),
@@ -393,7 +401,7 @@ class ActionRunCollection(object):
         def startable(action_run):
             return (
                 (action_run.is_scheduled or action_run.is_queued) and
-                not self._is_blocked(action_run)
+                not self._is_run_blocked(action_run)
             )
         return self._get_runs_using(startable)
 
@@ -404,7 +412,22 @@ class ActionRunCollection(object):
 #    def get_blocked_actions(self):
 #        return self._get_runs_using(self._is_blocked)
 
-    def _is_blocked(self, action_run):
+    @property
+    def is_blocked(self):
+        """Return True if this collection contains ActionRuns that are blocked
+        on running actions.
+        """
+        # TODO
+
+    @property
+    def is_done(self):
+        """Returns True if this collection contains no running ActionRuns and
+        there are no startable action runs.
+        """
+        return not self.is_running
+        # TODO
+
+    def _is_run_blocked(self, action_run):
         """Returns True if this ActionRun is waiting on a required run to
         finish before it can run.
         """
@@ -418,7 +441,7 @@ class ActionRunCollection(object):
 
         required_runs = self.action_runs_for_actions(required_actions)
         return any(
-            self._is_blocked(run) or not run.is_done
+            self._is_run_blocked(run) or not run.is_done
             for run in required_runs
         )
 
@@ -444,6 +467,8 @@ class ActionRunCollection(object):
         """True when any ActionRun has failed, or when all ActionRuns are done.
         """
         return all(r.is_done for r in self.action_runs)
+
+    # TODO: a __str__ that exposes states of actions (including blocked)
 
     def __iter__(self):
         """Return all actions that are not cleanup actions."""

@@ -11,7 +11,7 @@ from tron.core import actionrun
 from tron.core.actionrun import ActionRun
 from tron.core.actiongraph import ActionRunFactory
 from tron.serialize import filehandler
-from tron.utils import timeutils
+from tron.utils import timeutils, proxy
 from tron.utils.observer import Observable, Observer
 
 log = logging.getLogger(__name__)
@@ -68,6 +68,7 @@ class JobRun(Observable, Observer):
         self.start_time         = start_time
         self.end_time           = end_time
         self.action_runs        = None
+        self.action_runs_proxy  = None
         self.action_graph       = action_graph
         # TODO: expose this through the api
         self.manual             = manual
@@ -113,6 +114,7 @@ class JobRun(Observable, Observer):
             end_time=state_data['end_time'],
             start_time=state_data['start_time'],
             action_graph=action_graph,
+            manual=state_data.get('manual', False)
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
                 job_run, state_data['runs'], state_data['cleanup_run'])
@@ -134,17 +136,35 @@ class JobRun(Observable, Observer):
             'manual':           self.manual,
         }
 
-    def register_action_runs(self, action_runs):
+    def register_action_runs(self, run_collection):
         """Store action runs and register callbacks."""
-        self.action_runs = action_runs
-        for action_run in action_runs:
+        if self.action_runs:
+            raise ValueError("ActionRunCollection already set on %s" % self)
+        self.action_runs = run_collection
+        for action_run in run_collection.action_runs_with_cleanup:
             self.watch(action_run)
+
+        self.action_runs_proxy = proxy.AttributeProxy(
+            self.action_runs,
+            [
+                'queue',
+                'cancel',
+                'is_cancelled',
+                'is_unknown',
+                'is_failed',
+                'is_succeeded',
+                'is_running',
+                'is_starting',
+                'is_queued',
+                'is_scheduled',
+                'is_skipped',
+            ])
 
     def seconds_until_run_time(self):
         run_time = self.run_time
         now = timeutils.current_time()
-        if run_time.tz is not None:
-            now = run_time.tz.localize(now)
+        if run_time.tzinfo:
+            now = run_time.tzinfo.localize(now)
         return max(0, timeutils.delta_total_seconds(run_time - now))
 
     def start(self):
@@ -152,62 +172,65 @@ class JobRun(Observable, Observer):
         self.notify(self.EVENT_START)
         if self.action_runs.has_startable_actions and self._do_start():
             return True
+        # TODO: re-evaluate if this is needed
         self.notify(self.NOTIFY_START_FAILED)
 
     def _do_start(self):
         log.info("Starting JobRun %s", self.id)
         self.start_time = timeutils.current_time()
 
-        try:
-            self.action_runs.ready()
-
-            for action_run in self.action_runs.get_startable_actions():
-                action_run.start()
-
+        self.action_runs.ready()
+        started_runs = self._start_action_runs()
+        if any(started_runs):
             self.notify(self.EVENT_STARTED)
             return True
-        except actionrun.Error, e:
-            log.warning("Failed to start actions: %r", e)
 
-    def queue(self):
-        """Update the state to queued."""
-        return self.action_runs.queue()
+    def _start_action_runs(self):
+        """Start all startable action runs, and return any that were
+        successfully started.
+        """
+        started_actions = []
+        for action_run in self.action_runs.get_startable_actions():
+            try:
+                action_run.start()
+                started_actions.append(action_run)
+            except actionrun.Error, e:
+                log.warning("Failed to start actions: %r", e)
 
-    def cancel(self):
-        """Update the state to cancelled."""
-        return self.action_runs.cancel()
+        return started_actions
 
     def watcher(self, action_run, event):
+        """Handle events triggered by JobRuns."""
         # propagate all state changes (from action runs) up to state serializer
         self.notify(self.NOTIFY_STATE_CHANGED)
 
-        startable_actions = self.action_runs.get_startable_actions()
-        if startable_actions:
-            for action_run in startable_actions:
-                action_run.start()
+        started_actions = self._start_action_runs()
+        if any(started_actions):
+            log.info("Action runs started for %s." % self)
             return
-        else:
-            # If we can't make any progress, we're done
-            cleanup_run = self.action_runs.cleanup_action_run
-            if not cleanup_run or cleanup_run.is_done():
-                self.finalize()
-            else:
-                cleanup_run.start()
+
+        # If we still have running actions
+        if not self.action_runs.is_done:
+            log.info("%s still has blocked actions." % self)
             return
+
+        # If we can't make any progress, we're done
+        cleanup_run = self.action_runs.cleanup_action_run
+        if not cleanup_run or cleanup_run.is_done:
+            return self.finalize()
+        cleanup_run.start()
 
     @property
     def state(self):
         """The overall state of this job run. Based on the state of its actions.
         """
-        # TODO: these should account for actions in many states, and only
-        # look at non-blocked actions
         if self.action_runs.is_success:
             return ActionRun.STATE_SUCCEEDED
         if self.action_runs.is_cancelled:
             return ActionRun.STATE_CANCELLED
         if self.action_runs.is_running:
             return ActionRun.STATE_RUNNING
-        if self.action_runs.is_failure:
+        if self.action_runs.is_failed:
             return ActionRun.STATE_FAILED
         if self.action_runs.is_scheduled:
             return ActionRun.STATE_SCHEDULED
@@ -215,17 +238,21 @@ class JobRun(Observable, Observer):
             return ActionRun.STATE_QUEUED
         if self.action_runs.is_skipped:
             return ActionRun.STATE_SKIPPED
+        if self.action_runs.is_blocked:
+            return actionrun.ActionRunCollection.STATE_BLOCKED
+
+        log.warn("%s in an unknown state: %s" % (self, self.action_runs))
         return ActionRun.STATE_UNKNOWN
 
     def finalize(self):
-        """This is the last step of a JobRun. Called when the cleanup action
+        """The last step of a JobRun. Called when the cleanup action
         completes or if the job has no cleanup action, called once all action
         runs have reached a 'done' state.
 
         Sets end_time and triggers an event to notifies the Job that is is done.
         """
         self.end_time = timeutils.current_time()
-        failure = self.action_runs.is_failure
+        failure = self.action_runs.is_failed
         event = self.EVENT_FAILED if failure else self.EVENT_SUCCEEDED
         self.notify(event)
 
@@ -233,10 +260,12 @@ class JobRun(Observable, Observer):
         self.notify(self.NOTIFY_DONE)
 
     def cleanup(self):
-        """Called to have this JobRun cleanup any resources it has."""
+        """Cleanup any resources used by this JobRun."""
         self.node = None
         self.action_graph = None
+        self.action_runs = None
         self.clear_watchers()
+        self.output_path.delete()
         # TODO: do cleanup actions need to be cleaned up?
 
     def repr_data(self):
@@ -251,7 +280,10 @@ class JobRun(Observable, Observer):
             'end_time':         self.end_time,
         }
 
-    # TODO: is_<state> shortcuts
+    def __getattr__(self, name):
+        if self.action_runs_proxy:
+            return self.action_runs_proxy.perform(name)
+        raise AttributeError(name)
 
     def __str__(self):
         return "JobRun:%s" % self.id

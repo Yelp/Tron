@@ -1,9 +1,11 @@
 import datetime
-from testify import TestCase, setup, assert_equal
+import pytz
+from testify import TestCase, setup, assert_equal, teardown
 from testify.assertions import assert_in
 from tests.assertions import assert_length, assert_raises, assert_call
 from tron.core import jobrun, actionrun
 from tests.testingutils import Turtle, TestNode
+from tron.utils import timeutils
 
 
 class JobRunContextTestCase(TestCase):
@@ -27,8 +29,17 @@ class JobRunTestCase(TestCase):
         self.job = Turtle(name="aname", action_graph=self.action_graph)
         self.run_time = datetime.datetime(2012, 3, 14, 15, 9 ,26)
         node = TestNode('thenode')
-        self.job_run = jobrun.JobRun('jobname', 7, self.run_time, node)
+        self.job_run = jobrun.JobRun('jobname', 7, self.run_time, node,
+                action_runs=Turtle(
+                    action_runs_with_cleanup=[],
+                    get_startable_actions=lambda: []
+                ))
         self.job_run.watch = Turtle()
+        self.job_run.notify = Turtle()
+
+    @teardown
+    def teardown_jobrun(self):
+        timeutils.override_current_time(None)
 
     def test__init__(self):
         assert_equal(self.job_run.job_name, 'jobname')
@@ -41,7 +52,7 @@ class JobRunTestCase(TestCase):
         run = jobrun.JobRun.for_job(
                 self.job, run_num, self.run_time, node, False)
 
-        assert run.action_runs
+        assert run.action_runs.run_map
         assert_equal(run.job_name, self.job.name)
         assert_equal(run.run_num, run_num)
         assert_equal(run.node, node)
@@ -52,61 +63,267 @@ class JobRunTestCase(TestCase):
         node = TestNode('anode')
         run = jobrun.JobRun.for_job(
                 self.job, run_num, self.run_time, node, True)
-        assert run.action_runs
+        assert run.action_runs.run_map
         assert run.manual
 
-    def test_from_state(self):
-        action_run_state_data = [Turtle(), Turtle()]
-        state_data = {
+    def test_state_data(self):
+        state_data = self.job_run.state_data
+        assert_equal(state_data['run_num'], 7)
+        assert not state_data['manual']
+        assert_equal(state_data['run_time'], self.run_time)
+
+    def test_register_action_runs(self):
+        self.job_run.action_runs = None
+        action_runs = [Turtle(), Turtle()]
+        run_collection = Turtle(action_runs_with_cleanup=action_runs)
+        self.job_run.register_action_runs(run_collection)
+        assert_length(self.job_run.watch.calls, 2)
+        for i in xrange(2):
+            assert_call(self.job_run.watch, i, action_runs[i])
+        assert_equal(self.job_run.action_runs, run_collection)
+        assert self.job_run.action_runs_proxy
+
+    def test_register_action_runs_none(self):
+        self.job_run.action_runs = None
+        run_collection = Turtle(action_runs_with_cleanup=[])
+        self.job_run.register_action_runs(run_collection)
+        assert_length(self.job_run.watch.calls, 0)
+        assert_equal(self.job_run.action_runs, run_collection)
+
+    def test_register_action_duplicate(self):
+        run_collection = Turtle(action_runs_with_cleanup=[])
+        assert_raises(ValueError,
+                self.job_run.register_action_runs, run_collection)
+
+    def test_seconds_until_run_time(self):
+        now = datetime.datetime(2012, 3, 14, 15, 9, 20)
+        timeutils.override_current_time(now)
+        seconds = self.job_run.seconds_until_run_time()
+        assert_equal(seconds, 6)
+
+    def test_seconds_until_run_time_with_tz(self):
+        self.job_run.run_time = self.run_time.replace(tzinfo=pytz.utc)
+        now = datetime.datetime(2012, 3, 14, 15, 9, 20)
+        timeutils.override_current_time(now)
+        seconds = self.job_run.seconds_until_run_time()
+        assert_equal(seconds, 6)
+
+    def test_start(self):
+        self.job_run._do_start = Turtle()
+
+        assert self.job_run.start()
+        assert_call(self.job_run.notify, 0, self.job_run.EVENT_START)
+        assert_call(self.job_run._do_start, 0)
+        assert_length(self.job_run.notify.calls, 1)
+
+    def test_start_failed(self):
+        self.job_run._do_start = lambda: False
+
+        assert not self.job_run.start()
+        assert_call(self.job_run.notify, 0, self.job_run.EVENT_START)
+        assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_START_FAILED)
+        assert_length(self.job_run.notify.calls, 2)
+
+    def test_start_no_startable_actions(self):
+        self.job_run._do_start = Turtle()
+        self.job_run.action_runs.has_startable_actions = False
+
+        assert not self.job_run.start()
+        assert_call(self.job_run.notify, 0, self.job_run.EVENT_START)
+        assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_START_FAILED)
+        assert_length(self.job_run.notify.calls, 2)
+
+    def test_do_start(self):
+        timeutils.override_current_time(self.run_time)
+        startable_runs = [Turtle(), Turtle(), Turtle()]
+        self.job_run.action_runs.get_startable_actions = lambda: startable_runs
+
+        assert self.job_run._do_start()
+        assert_equal(self.job_run.start_time, self.run_time)
+        assert_call(self.job_run.action_runs.ready, 0)
+        for i, startable_run in enumerate(startable_runs):
+            assert_call(startable_run.start, 0)
+
+        assert_length(self.job_run.notify.calls, 1)
+        assert_call(self.job_run.notify, 0, self.job_run.EVENT_STARTED)
+
+    def test_do_start_all_failed(self):
+        timeutils.override_current_time(self.run_time)
+        self.job_run._start_action_runs = lambda: [None]
+
+        assert not self.job_run._do_start()
+        assert_equal(self.job_run.start_time, self.run_time)
+        assert_length(self.job_run.notify.calls, 0)
+
+    def test_do_start_some_failed(self):
+        timeutils.override_current_time(self.run_time)
+        self.job_run._start_action_runs = lambda: [True, None]
+
+        assert self.job_run._do_start()
+        assert_equal(self.job_run.start_time, self.run_time)
+        assert_length(self.job_run.notify.calls, 1)
+        assert_call(self.job_run.notify, 0, self.job_run.EVENT_STARTED)
+
+    def test_do_start_no_runs(self):
+        assert not self.job_run._do_start()
+
+    def test_start_action_runs(self):
+        startable_runs = [Turtle(), Turtle(), Turtle()]
+        self.job_run.action_runs.get_startable_actions = lambda: startable_runs
+
+        started_runs = self.job_run._start_action_runs()
+        assert_equal(started_runs, startable_runs)
+
+    def test_start_action_runs_failed(self):
+        def failing():
+            raise actionrun.Error()
+        startable_runs = [Turtle(start=failing), Turtle(), Turtle()]
+        self.job_run.action_runs.get_startable_actions = lambda: startable_runs
+
+        started_runs = self.job_run._start_action_runs()
+        assert_equal(started_runs, startable_runs[1:])
+
+    def test_start_action_runs_all_failed(self):
+        def failing():
+            raise actionrun.Error()
+        startable_runs = [Turtle(start=failing), Turtle(start=failing)]
+        self.job_run.action_runs.get_startable_actions = lambda: startable_runs
+
+        started_runs = self.job_run._start_action_runs()
+        assert_equal(started_runs, [])
+
+    def test_watcher_with_startable(self):
+        self.job_run.action_runs.get_startable_actions = lambda: True
+        startable_run = Turtle()
+        self.job_run.action_runs.get_startable_actions = lambda: [startable_run]
+        self.job_run.finalize = Turtle()
+
+        self.job_run.watcher(None, None)
+        assert_call(self.job_run.notify, 0, self.job_run.NOTIFY_STATE_CHANGED)
+        assert_call(startable_run.start, 0)
+        assert_length(self.job_run.finalize.calls, 0)
+
+    def test_watcher_not_done(self):
+        self.job_run.action_runs.is_done = False
+        self.job_run._start_action_runs = lambda: []
+        self.job_run.finalize = Turtle()
+
+        self.job_run.watcher(None, None)
+        assert_length(self.job_run.finalize.calls, 0)
+
+    def test_watcher_finished_without_cleanup(self):
+        self.job_run.action_runs.cleanup_action_run = None
+        self.job_run.finalize = Turtle()
+
+        self.job_run.watcher(None, None)
+        assert_call(self.job_run.finalize, 0)
+
+    def test_watcher_finished_with_cleanup_done(self):
+        self.job_run.action_runs.cleanup_action_run = Turtle(is_done=True)
+        self.job_run.finalize = Turtle()
+
+        self.job_run.watcher(None, None)
+        assert_call(self.job_run.finalize, 0)
+
+    def test_watcher_finished_with_cleanup(self):
+        self.job_run.action_runs.cleanup_action_run = Turtle(is_done=False)
+        self.job_run.finalize = Turtle()
+
+        self.job_run.watcher(None, None)
+        assert_length(self.job_run.finalize.calls, 0)
+        assert_call(self.job_run.action_runs.cleanup_action_run.start, 0)
+
+    def test_state(self):
+        assert_equal(self.job_run.state, actionrun.ActionRun.STATE_SUCCEEDED)
+
+    def test_finalize(self):
+        timeutils.override_current_time(self.run_time)
+        self.job_run.action_runs.is_failed = False
+        self.job_run.finalize()
+        assert_call(self.job_run.notify, 0, self.job_run.EVENT_SUCCEEDED)
+        assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_DONE)
+        assert_equal(self.job_run.end_time, self.run_time)
+
+    def test_finalize_failure(self):
+        timeutils.override_current_time(self.run_time)
+        self.job_run.finalize()
+        assert_call(self.job_run.notify, 0, self.job_run.EVENT_FAILED)
+        assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_DONE)
+        assert_equal(self.job_run.end_time, self.run_time)
+
+    def test_cleanup(self):
+        self.job_run.clear_watchers = Turtle()
+        self.job_run.output_path = Turtle()
+        self.job_run.cleanup()
+
+        assert_call(self.job_run.clear_watchers, 0)
+        assert_call(self.job_run.output_path.delete, 0)
+        assert not self.job_run.node
+        assert not self.job_run.action_graph
+        assert not self.job_run.action_runs
+
+    def test_repr_data(self):
+        repr_data = self.job_run.repr_data()
+        assert_equal(repr_data['id'], self.job_run.id)
+        assert_equal(repr_data['node'], self.job_run.node.hostname)
+        assert_equal(repr_data['run_time'], self.run_time)
+
+    def test__getattr__(self):
+        assert self.job_run.cancel
+        assert self.job_run.is_queued
+        assert self.job_run.is_succeeded
+
+    def test__getattr__miss(self):
+        assert_raises(AttributeError, lambda: self.job_run.bogus)
+
+
+class JobRunFromStateTestCase(TestCase):
+
+    @setup
+    def setup_jobrun(self):
+        self.action_graph = Turtle(action_map=dict(anaction=Turtle()))
+        self.run_time = datetime.datetime(2012, 3, 14, 15, 9 ,26)
+        self.action_run_state_data = [{
+            'job_run_id':       'thejobname.22',
+            'action_name':      'blingaction',
+            'state':            'succeeded',
+            'run_time':         'sometime',
+            'start_time':       'sometime',
+            'end_time':         'sometime',
+            'command':          'doit',
+            'node_name':        'thenode'
+        }]
+        self.state_data = {
             'job_name':         'thejobname',
             'run_num':          22,
             'run_time':         self.run_time,
             'node_name':        'thebox',
             'end_time':         'the_end',
             'start_time':       'start_time',
-            'runs':             action_run_state_data,
-            'cleanup_run':      Turtle()
+            'runs':             self.action_run_state_data,
+            'cleanup_run':      None,
+            'manual':           True
         }
 
-        run = jobrun.JobRun.from_state(state_data, self.action_graph)
-        # TODO:
-
+    def test_from_state(self):
+        run = jobrun.JobRun.from_state(self.state_data, self.action_graph)
+        assert_length(run.action_runs.run_map, 1)
+        assert_equal(run.job_name, self.state_data['job_name'])
+        assert_equal(run.run_time, self.run_time)
+        assert run.manual
 
     def test_from_state_old_state_data(self):
-        pass
-        # No stored_node and id instead of job_name/run_num
-        # No manual
+        del self.state_data['manual']
+        del self.state_data['job_name']
+        del self.state_data['node_name']
+        self.state_data['id'] = 'thejobname.22'
 
-    def test_success(self):
-        pass
-#        assert self.run.is_scheduled
-#        assert self.dep_run.is_scheduled, self.dep_run.state
-#        self.job_run.start()
-#
-#        assert self.dep_run.is_queued
-#        self.run.succeed()
-#
-#        # Make it look like we started successfully
-#        #self.dep_run.action_command.machine.transition('start')
-#
-#        assert self.dep_run.is_running
-#        assert not self.dep_run.is_done
-#        assert self.dep_run.start_time
-#        assert not self.dep_run.end_time
-#
-#        self.dep_run.succeed()
-#
-#        assert not self.dep_run.is_running
-#        assert self.dep_run.is_done
-#        assert self.dep_run.start_time
-#        assert self.dep_run.end_time
-
-    def test_fail(self):
-        pass
-#        self.job_run.start()
-#        self.run.fail(1)
-#
-#        assert self.dep_run.is_queued, self.dep_run.state
+        run = jobrun.JobRun.from_state(self.state_data, self.action_graph)
+        assert_length(run.action_runs.run_map, 1)
+        assert_equal(run.job_name, 'thejobname')
+        assert_equal(run.run_time, self.run_time)
+        assert not run.manual
+        assert not run.node
 
 
 class MockJobRun(Turtle):

@@ -564,8 +564,8 @@ class Service(observer.Observable, observer.Observer):
                      len(self.instances), self.count)
             self.machine.transition("down")
 
-        elif all([instance.state == ServiceInstance.STATE_UP
-                  for instance in self.instances]):
+        elif all(instance.state == ServiceInstance.STATE_UP
+                  for instance in self.instances):
             self.machine.transition("all_up")
 
         if self.machine.state in (Service.STATE_DEGRADED,

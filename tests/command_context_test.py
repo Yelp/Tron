@@ -1,4 +1,4 @@
-from testify import *
+from testify import TestCase, setup, assert_raises, assert_equal, run
 
 from tron import command_context
 
@@ -10,6 +10,9 @@ class EmptyContextTestCase(TestCase):
     def test(self):
         assert_raises(KeyError, self.context.__getitem__, 'foo')
 
+    def test_get(self):
+        assert not self.context.get('foo')
+
 
 class SimpleContextTestCaseBase(TestCase):
     __test__ = False
@@ -19,6 +22,12 @@ class SimpleContextTestCaseBase(TestCase):
 
     def test_miss(self):
         assert_raises(KeyError, self.context.__getitem__, 'your_mom')
+
+    def test_get_hit(self):
+        assert_equal(self.context.get('foo'), 'bar')
+
+    def test_get_miss(self):
+        assert not self.context.get('your_mom')
 
 
 class SimpleDictContextTestCase(SimpleContextTestCaseBase):

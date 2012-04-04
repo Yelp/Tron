@@ -1,6 +1,7 @@
+import os
 import shutil
 import time
-from tempfile import NamedTemporaryFile, mktemp
+from tempfile import NamedTemporaryFile, mkdtemp
 
 from testify import TestCase, run, assert_equal, assert_not_in, assert_in
 from testify import assert_not_equal, turtle
@@ -184,7 +185,7 @@ class OutputStreamSerializerTestCase(TestCase):
 
     @setup
     def setup_serializer(self):
-        self.test_dir = mktemp()
+        self.test_dir = mkdtemp()
         self.serial = OutputStreamSerializer([self.test_dir])
 
     @teardown
@@ -248,6 +249,12 @@ class OutputPathTestCase(TestCase):
     def test_clone_with_parts(self):
         new_path = self.path.clone('seven', 'ten')
         assert_equal(list(new_path), ['one/two/three', 'seven', 'ten'])
+
+    def test_delete(self):
+        tmp_dir = mkdtemp()
+        path = OutputPath(tmp_dir)
+        path.delete()
+        assert not os.path.exists(tmp_dir)
 
     def test__eq__(self):
         other = turtle.Turtle(base='one', parts=['two', 'three'])

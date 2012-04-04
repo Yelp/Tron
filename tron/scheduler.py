@@ -52,15 +52,10 @@ def scheduler_from_config(config, time_zone):
         )
 
 
-# TODO: return a localized time from time_zone
 class ConstantScheduler(object):
     """The constant scheduler schedules a new job immediately."""
 
     queue_overlapping = False
-
-    def __init__(self, *args, **kwargs):
-        super(ConstantScheduler, self).__init__(*args, **kwargs)
-        self.time_zone = None
 
     def next_run_time(self, _):
         return timeutils.current_time()
@@ -170,7 +165,6 @@ class DailyScheduler(object):
         return not self == other
 
 
-# TODO: return a localized time from time_zone
 class IntervalScheduler(object):
     """The interval scheduler runs a job (to success) based on a configured
     interval.
@@ -181,7 +175,6 @@ class IntervalScheduler(object):
 
     def __init__(self, interval=None):
         self.interval = interval
-        self.time_zone = None
 
     def next_run_time(self, last_run_time):
         last_run_time = last_run_time or timeutils.current_time()

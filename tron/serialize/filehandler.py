@@ -4,6 +4,7 @@ Tools for managing and properly closing file handles.
 import logging
 import os
 import os.path
+import shutil
 import sys
 from subprocess import PIPE, Popen
 import time
@@ -198,6 +199,10 @@ class OutputPath(object):
         of this object.
         """
         return type(self)(str(self), *parts)
+
+    def delete(self):
+        """Remove the directory and its contents."""
+        shutil.rmtree(str(self))
 
     def __eq__(self, other):
         return self.base == other.base and self.parts == other.parts

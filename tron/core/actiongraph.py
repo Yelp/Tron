@@ -86,7 +86,9 @@ class ActionRunFactory(object):
                     job_run, cleanup_action_state_data, cleanup=True))
 
         action_run_map = dict(
-                (action_run.name, action_run) for action_run in action_runs)
+                (action_run.action_name, action_run)
+                for action_run in action_runs
+        )
         return actionrun.ActionRunCollection(
             job_run.action_graph, action_run_map)
 
