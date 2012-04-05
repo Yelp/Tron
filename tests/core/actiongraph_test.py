@@ -1,4 +1,4 @@
-from testify import setup, run, TestCase, assert_equal, turtle
+from testify import setup, run, TestCase, assert_equal, turtle, assert_raises
 
 from tron.core import actiongraph
 
@@ -43,7 +43,30 @@ class ActionGraphTestCase(TestCase):
         assert_equal(am['base_one'].dependent_actions, [am['dep_one']])
         assert_equal(am['dep_one'].dependent_actions, [am['dep_one_one']])
 
-    # TODO: test from_config with a cleanup, that it sets cleanup=True on the action
+    def test_actions_for_names(self):
+        actions = list(
+                self.action_graph.actions_for_names(['base_one', 'dep_multi']))
+        expected_actions = [
+                self.action_map['base_one'], self.action_map['dep_multi']]
+        assert_equal(actions, expected_actions)
+
+    def test__getitem__(self):
+        assert_equal(self.action_graph['base_one'], self.action_map['base_one'])
+
+    def test__getitem__miss(self):
+        assert_raises(KeyError, lambda: self.action_graph['unknown'])
+
+    def test__eq__(self):
+        other_graph = turtle.Turtle(
+                graph=self.graph, action_map=self.action_map)
+        assert_equal(self.action_graph, other_graph)
+
+        other_graph.graph = None
+        assert not self.action_graph == other_graph
+
+    def test__ne__(self):
+        other_graph = turtle.Turtle
+        assert self.graph != other_graph
 
 if __name__ == "__main__":
     run()

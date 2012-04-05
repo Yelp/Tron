@@ -54,7 +54,6 @@ class JobContext(object):
         return parts
 
 
-
 class Job(Observable, Observer):
     """A configurable data object.
 
@@ -215,7 +214,6 @@ class Job(Observable, Observer):
                 'action_graph',
                 'enabled',
                 'output_path',
-                'context'
         ]
         return all(
             getattr(other, attr, None) == getattr(self, attr, None)
@@ -266,6 +264,9 @@ class JobScheduler(Observer):
         """Schedule the next run for this job by setting a callback to fire
         at the appropriate time.
         """
+        if not self.job.enabled:
+            return
+
         runs = self.get_runs_to_schedule()
         for run in runs:
             log.info("Scheduling next Jobrun for %s", self.job.name)
@@ -322,7 +323,7 @@ class JobScheduler(Observer):
         """
         queue_overlapping = self.job.scheduler.queue_overlapping
 
-        if not queue_overlapping and self.job.runs.get_pending():
+        if not queue_overlapping and self.job.runs.has_pending:
             log.info("%s has pending runs, can't schedule more." % self.job)
             return []
 

@@ -53,6 +53,68 @@ class ActionRunContext(object):
         raise KeyError(name)
 
 
+class ActionRunFactory(object):
+    """Construct ActionRuns and ActionRunCollections for a JobRun and
+    ActionGraph.
+    """
+
+    @classmethod
+    def build_action_run_collection(cls, job_run):
+        """Create an ActionRunGraph from an ActionGraph and JobRun."""
+        action_run_map = dict(
+            (name, cls.build_run_for_action(job_run, action))
+            for name, action in job_run.action_graph.action_map.iteritems()
+        )
+        return ActionRunCollection(
+            job_run.action_graph, action_run_map)
+
+    @classmethod
+    def action_run_collection_from_state(cls,
+             job_run, runs_state_data, cleanup_action_state_data):
+        action_runs = [
+            cls.action_run_from_state(job_run, state_data)
+            for state_data in runs_state_data
+        ]
+        if cleanup_action_state_data:
+            action_runs.append(cls.action_run_from_state(
+                job_run, cleanup_action_state_data, cleanup=True))
+
+        action_run_map = dict(
+            (action_run.action_name, action_run)
+            for action_run in action_runs
+        )
+        return ActionRunCollection(
+            job_run.action_graph, action_run_map)
+
+    @classmethod
+    def build_run_for_action(cls, job_run, action):
+        """Create an ActionRun for a JobRun and Action."""
+        node = action.node_pool.next() if action.node_pool else job_run.node
+
+        action_run = ActionRun(
+            job_run.id,
+            action.name,
+            node,
+            job_run.run_time,
+            action.command,
+            parent_context=job_run.context,
+            output_path=job_run.output_path.clone(),
+            cleanup=action.is_cleanup
+        )
+        job_run.watch(action_run)
+        return action_run
+
+    @classmethod
+    def action_run_from_state(cls, job_run, state_data, cleanup=False):
+        """Restore an ActionRun for this JobRun from the state data."""
+        return ActionRun.from_state(
+            state_data,
+            job_run.context,
+            job_run.output_path.clone(),
+            cleanup=cleanup
+        )
+
+
 class ActionRun(Observer):
     """Tracks the state of a single run of an Action.
 
@@ -334,29 +396,30 @@ class ActionRunCollection(object):
 
         # Setup proxies
         self.proxy_action_runs_with_cleanup = proxy.CollectionProxy(
-            self.action_runs_with_cleanup, [
+            self.get_action_runs_with_cleanup, [
 
                 # TODO: these should account for actions in many states, and only
                 # look at non-blocked actions
 
-#                ('is_failure',      any,    False),
+                # TODO: not correct
+                ('is_failed',      any,    False),
 #                ('is_starting',     any,    False),
-#                ('is_running',      any,    False),
-#                ('is_scheduled',    any,    False),
+                ('is_running',      any,    False),
+                ('is_scheduled',    any,    False),
 #                ('is_unknown',      any,    False),
-#                ('is_queued',       all,    False),
-#                ('is_cancelled',    all,    False),
+                ('is_queued',       all,    False),
+                ('is_cancelled',    all,    False),
 #                ('is_skipped',      all,    False),
 #                ('is_done',         all,    False),
 #                ('check_state',     all,    True),
-#                ('cancel',          all,    True),
+                ('cancel',          all,    True),
 #                ('succeed',         all,    True),
 #                ('fail',            any,    True),
                 ('ready',           all,    True),
             ])
 
         self.proxy_action_runs = proxy.CollectionProxy(
-            self.action_runs, [
+            self.get_action_runs, [
 #                ('schedule',        all,    True),
 #                ('queue',           all,    True),
             ])
@@ -367,13 +430,13 @@ class ActionRunCollection(object):
     def action_runs_for_actions(self, actions):
         return (self.run_map[a.name] for a in actions)
 
-    @property
-    def action_runs_with_cleanup(self):
+    def get_action_runs_with_cleanup(self):
         return self.run_map.itervalues()
+    action_runs_with_cleanup = property(get_action_runs_with_cleanup)
 
-    @property
-    def action_runs(self):
+    def get_action_runs(self):
         return (run for run in self.run_map.itervalues() if not run.is_cleanup)
+    action_runs = property(get_action_runs)
 
     @property
     def state_data(self):
@@ -405,6 +468,9 @@ class ActionRunCollection(object):
             )
         return self._get_runs_using(startable)
 
+    @property
+    def has_startable_actions(self):
+        return any(self.get_startable_actions())
 
 #    def get_unblocked_actions(self):
 #        return self._get_runs_using(lambda ar: not self._is_blocked(ar))
@@ -435,7 +501,8 @@ class ActionRunCollection(object):
                 action_run.is_running or action_run.is_starting):
             return False
 
-        required_actions = self.action_graph[action_run.name].required
+        action_for_run = self.action_graph[action_run.action_name]
+        required_actions = action_for_run.required_actions
         if not required_actions:
             return False
 
@@ -459,7 +526,7 @@ class ActionRunCollection(object):
         actions were skipped.
         """
         return all(
-            r.is_success or r.is_skipped for r in self.action_runs_with_cleanup
+            r.is_succeeded or r.is_skipped for r in self.action_runs_with_cleanup
         )
 
     @property

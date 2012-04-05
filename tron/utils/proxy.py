@@ -7,9 +7,9 @@ import functools
 class CollectionProxy(object):
     """Proxy attribute lookups to a sequence of objects."""
 
-    def __init__(self, obj_list, definition_list=None):
+    def __init__(self, obj_list_getter, definition_list=None):
         """See add() for a description of proxy definitions."""
-        self.obj_list = obj_list
+        self.obj_list_getter = obj_list_getter
         self._defs = {}
         for definition in definition_list or []:
             self.add(*definition)
@@ -32,14 +32,15 @@ class CollectionProxy(object):
         if attribute_name not in self._defs:
             raise AttributeError(attribute_name)
 
+        obj_list = self.obj_list_getter()
         aggregate_func, callable = self._defs[attribute_name]
         if callable:
             return functools.partial(
                 aggregate_func,
-                (getattr(i, attribute_name)(*args, **kwargs) for i in self.obj_list)
+                (getattr(i, attribute_name)(*args, **kwargs) for i in obj_list)
             )
 
-        return aggregate_func(getattr(i, attribute_name) for i in self.obj_list)
+        return aggregate_func(getattr(i, attribute_name) for i in obj_list)
 
 
 class AttributeProxy(object):

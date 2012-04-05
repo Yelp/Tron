@@ -226,7 +226,7 @@ class MasterControlProgram(Observable):
     the main entry point where our daemon finds work to do.
     """
 
-    def __init__(self, working_dir, config_file, context=None):
+    def __init__(self, working_dir, config_file):
         super(MasterControlProgram, self).__init__()
         self.jobs = {}
         self.services = {}
@@ -237,7 +237,7 @@ class MasterControlProgram(Observable):
         self.config_file = config_file
 
         # Root command context
-        self.context = context or command_context.CommandContext()
+        self.context = command_context.CommandContext()
 
         self.monitor = None
 
@@ -272,6 +272,11 @@ class MasterControlProgram(Observable):
             raise
         finally:
             self.state_handler.writing_enabled = old_state_writing
+
+    def load_initial_config(self):
+        """Apply the first configuration to this MCP."""
+        self.load_config()
+        self.schedule_jobs()
 
     def load_config(self):
         log.info("Loading configuration from %s" % self.config_file)
@@ -449,12 +454,10 @@ class MasterControlProgram(Observable):
             return
 
         log.info("adding new job %s", job.name)
-        job_scheduler = JobScheduler(job)
-        self.jobs[job.name] = job_scheduler
-        job_scheduler.schedule()
+        self.jobs[job.name] = JobScheduler(job)
 
         event.EventManager.get_instance().add(job, parent=self)
-        self.state_handler.watch(job, Job.EVENT_STATE_CHANGE)
+        self.state_handler.watch(job, Job.NOTIFY_STATE_CHANGE)
 
     def remove_job(self, job_name):
         if job_name not in self.jobs:
@@ -470,6 +473,10 @@ class MasterControlProgram(Observable):
     def enable_all(self):
         for job_scheduler in self.jobs.itervalues():
             job_scheduler.enable()
+
+    def schedule_jobs(self):
+        for job_scheduler in self.jobs.itervalues():
+            job_scheduler.schedule()
 
     ### SERVICES ###
     def add_service(self, service):

@@ -421,6 +421,11 @@ class JobSchedulerScheduleTestCase(MockReactorTestCase):
         # Assert that we use the seconds we get from the run to schedule
         assert_equal(run.seconds_until_run_time.returns[0], secs)
 
+    def test_schedule_disabled_job(self):
+        self.job.enabled = False
+        self.job_scheduler.schedule()
+        assert_length(self.reactor.callLater.calls, 0)
+
 
 if __name__ == '__main__':
     run()

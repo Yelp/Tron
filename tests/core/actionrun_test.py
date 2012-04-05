@@ -3,6 +3,7 @@ import datetime
 from testify import run, setup, TestCase, assert_equal, turtle
 from testify.assertions import assert_raises
 from testify.test_case import class_setup, class_teardown, teardown
+from tests.testingutils import Turtle
 
 from tron import node
 from tron.core.actionrun import ActionCommand, ActionRunContext, ActionRun, ActionRunCollection
@@ -39,6 +40,24 @@ class ActionRunContextTestCase(TestCase):
     def test_node_hostname(self):
         assert_equal(self.context.node, 'nodename')
 
+
+class ActionRunFactoryTestCase(TestCase):
+
+    @setup
+    def setup_action_runs(self):
+        pass
+
+    def test_build_action_run_collection(self):
+        pass
+
+    def test_action_run_collection_from_state(self):
+        pass
+
+    def test_build_run_for_action(self):
+        pass
+
+    def test_action_run_from_state(self):
+        pass
 
 class ActionRunTestCase(TestCase):
 
@@ -203,8 +222,12 @@ class ActionRunTestCase(TestCase):
         assert_equal(self.action_run.command, ActionRun.FAILED_RENDER)
 
     def test__getattr__(self):
-        assert self.action_run.is_succeeded is not None
+        assert not self.action_run.is_succeeded
+        assert not self.action_run.is_failed
+        assert not self.action_run.is_queued
+        assert self.action_run.is_scheduled
         assert self.action_run.cancel()
+        assert self.action_run.is_cancelled
 
     def test__getattr__missing_attribute(self):
         assert_raises(AttributeError,
@@ -269,8 +292,19 @@ class ActionRunCollectionTestCase(TestCase):
 
     @setup
     def setup_runs(self):
-        self.run_map = {}
-        self.collection = ActionRunCollection(self.run_map)
+        anode = Turtle()
+        action_graph = Turtle()
+        output_path = ["random_dir"]
+        self.command = "do command"
+        self.action_run = ActionRun("id", "action_name", anode,
+            timeutils.current_time(), self.command, output_path=output_path)
+        self.run_map = {'action_name': self.action_run}
+        self.collection = ActionRunCollection(action_graph, self.run_map)
+
+    def test__getattr__(self):
+        assert self.collection.is_scheduled
+        assert not self.collection.is_cancelled
+        assert not self.collection.is_failed
 
 if __name__ == "__main__":
     run()

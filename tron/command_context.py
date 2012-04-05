@@ -45,7 +45,6 @@ class CommandContext(object):
 
         raise KeyError(name)
 
-    # TODO: Test
     def __eq__(self, other):
         return self.base == other.base and self.next == other.next
 

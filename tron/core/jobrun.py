@@ -8,8 +8,7 @@ import itertools
 import operator
 from tron import node, command_context, event
 from tron.core import actionrun
-from tron.core.actionrun import ActionRun
-from tron.core.actiongraph import ActionRunFactory
+from tron.core.actionrun import ActionRun, ActionRunFactory
 from tron.serialize import filehandler
 from tron.utils import timeutils, proxy
 from tron.utils.observer import Observable, Observer
@@ -220,30 +219,6 @@ class JobRun(Observable, Observer):
             return self.finalize()
         cleanup_run.start()
 
-    @property
-    def state(self):
-        """The overall state of this job run. Based on the state of its actions.
-        """
-        if self.action_runs.is_success:
-            return ActionRun.STATE_SUCCEEDED
-        if self.action_runs.is_cancelled:
-            return ActionRun.STATE_CANCELLED
-        if self.action_runs.is_running:
-            return ActionRun.STATE_RUNNING
-        if self.action_runs.is_failed:
-            return ActionRun.STATE_FAILED
-        if self.action_runs.is_scheduled:
-            return ActionRun.STATE_SCHEDULED
-        if self.action_runs.is_queued:
-            return ActionRun.STATE_QUEUED
-        if self.action_runs.is_skipped:
-            return ActionRun.STATE_SKIPPED
-        if self.action_runs.is_blocked:
-            return actionrun.ActionRunCollection.STATE_BLOCKED
-
-        log.warn("%s in an unknown state: %s" % (self, self.action_runs))
-        return ActionRun.STATE_UNKNOWN
-
     def finalize(self):
         """The last step of a JobRun. Called when the cleanup action
         completes or if the job has no cleanup action, called once all action
@@ -279,6 +254,26 @@ class JobRun(Observable, Observer):
             'start_time':       self.start_time,
             'end_time':         self.end_time,
         }
+
+    @property
+    def state(self):
+        """The overall state of this job run. Based on the state of its actions.
+        """
+        if self.action_runs.is_success:
+            return ActionRun.STATE_SUCCEEDED
+        if self.action_runs.is_cancelled:
+            return ActionRun.STATE_CANCELLED
+        if self.action_runs.is_running:
+            return ActionRun.STATE_RUNNING
+        if self.action_runs.is_failed:
+            return ActionRun.STATE_FAILED
+        if self.action_runs.is_scheduled:
+            return ActionRun.STATE_SCHEDULED
+        if self.action_runs.is_queued:
+            return ActionRun.STATE_QUEUED
+
+        log.warn("%s in an unknown state: %s" % (self, self.action_runs))
+        return ActionRun.STATE_UNKNOWN
 
     def __getattr__(self, name):
         if self.action_runs_proxy:
@@ -382,6 +377,10 @@ class JobRunCollection(object):
     def get_pending(self):
         """Return the job runs that are queued or scheduled."""
         return self._get_runs_using(lambda r: r.is_scheduled or r.is_queued)
+
+    @property
+    def has_pending(self):
+        return any(self.get_pending())
 
     def get_next_to_finish(self, node=None):
         """Return the most recent run which is either running or scheduled. If

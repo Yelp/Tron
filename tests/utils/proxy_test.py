@@ -35,7 +35,7 @@ class CollectionProxyTestCase(TestCase):
     @setup
     def setup_proxy(self):
         self.target_list = [DummyTarget(1), DummyTarget(2), DummyTarget(0)]
-        self.proxy = CollectionProxy(self.target_list, [
+        self.proxy = CollectionProxy(lambda: self.target_list, [
             ('foo', any, True),
             ('not_foo', all, False),
             ('equals', lambda a: list(a), True)

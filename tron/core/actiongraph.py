@@ -1,11 +1,9 @@
 import logging
-from tron.core import actionrun
 from tron.core import action
 
 log = logging.getLogger(__name__)
 
 
-# TODO: Move to tron.core.action
 class ActionGraph(object):
     """A directed graph of actions and their requirements."""
 
@@ -22,7 +20,7 @@ class ActionGraph(object):
         )
         if cleanup_action_config:
             cleanup_action = action.Action.from_config(
-                    cleanup_action_config, nodes, cleanup=True)
+                    cleanup_action_config, nodes)
             actions[cleanup_action.name] = cleanup_action
 
         graph = cls._build_dag(actions, actions_config)
@@ -50,95 +48,8 @@ class ActionGraph(object):
     def __getitem__(self, name):
         return self.action_map[name]
 
-    # TODO: test
     def __eq__(self, other):
         return self.graph == other.graph and self.action_map == other.action_map
 
     def __ne__(self, other):
         return not self == other
-
-
-# TODO: this is a strange place for this class, move to actionrun
-class ActionRunFactory(object):
-    """Construct ActionRuns and ActionRunCollections for a JobRun and
-    ActionGraph.
-    """
-
-    @classmethod
-    def build_action_run_collection(cls, job_run):
-        """Create an ActionRunGraph from an ActionGraph and JobRun."""
-        action_run_map = dict(
-            (name, cls.build_run_for_action(job_run, action))
-            for name, action in job_run.action_graph.action_map.iteritems()
-        )
-        return actionrun.ActionRunCollection(
-                job_run.action_graph, action_run_map)
-
-    @classmethod
-    def action_run_collection_from_state(cls,
-                job_run, runs_state_data, cleanup_action_state_data):
-        action_runs = [
-            cls.action_run_from_state(job_run, state_data)
-            for state_data in runs_state_data
-        ]
-        if cleanup_action_state_data:
-            action_runs.append(cls.action_run_from_state(
-                    job_run, cleanup_action_state_data, cleanup=True))
-
-        action_run_map = dict(
-                (action_run.action_name, action_run)
-                for action_run in action_runs
-        )
-        return actionrun.ActionRunCollection(
-            job_run.action_graph, action_run_map)
-
-
-#    @classmethod
-#    def build_graph(cls, action_graph, action_run_map):
-#        """Given an ActionGraph and a mapping of ActionRun.name to ActionRun
-#        create a graph with the same structure as ActionGraph with the
-#        ActionRun objects.
-#        """
-#        graph = []
-#        action_map = action_graph.action_map
-#
-#        for name, action in action_map.iteritems():
-#            action_run = action_run_map[name]
-#            dependencies = action.required_actions
-#            if not dependencies:
-#                graph.append(action_run)
-#                continue
-#
-#            for dependency in dependencies:
-#                dependency_run = action_run_map[dependency.name]
-#
-#                action_run.required_actions.append(actions[dependency])
-#        return base
-
-    @classmethod
-    def build_run_for_action(cls, job_run, action):
-        """Create an ActionRun for a JobRun and Action."""
-        node = action.node_pool.next() if action.node_pool else job_run.node
-
-        action_run = actionrun.ActionRun(
-            job_run.id,
-            action.name,
-            node,
-            job_run.run_time,
-            action.command,
-            parent_context=job_run.context,
-            output_path=job_run.output_path.clone(),
-            cleanup=action.is_cleanup
-        )
-        job_run.watch(action_run)
-        return action_run
-
-    @classmethod
-    def action_run_from_state(cls, job_run, state_data, cleanup=False):
-        """Restore an ActionRun for this JobRun from the state data."""
-        return actionrun.ActionRun.from_state(
-                state_data,
-                job_run.context,
-                job_run.output_path.clone(),
-                cleanup=cleanup
-        )
