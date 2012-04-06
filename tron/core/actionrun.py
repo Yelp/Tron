@@ -386,6 +386,9 @@ class ActionRun(Observer):
         except AttributeError:
             raise AttributeError(name)
 
+    def __str__(self):
+        return "ActionRun: %s" % self.id
+
 
 class ActionRunCollection(object):
     """A collection of ActionRuns used by a JobRun."""
@@ -464,8 +467,8 @@ class ActionRunCollection(object):
         if action_run.is_done or action_run.is_running or action_run.is_starting:
             return False
 
-        action_for_run = self.action_graph[action_run.action_name]
-        required_actions = action_for_run.required_actions
+        required_actions = self.action_graph.get_required_actions(
+                action_run.action_name)
         if not required_actions:
             return False
 

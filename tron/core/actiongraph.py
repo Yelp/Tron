@@ -45,6 +45,12 @@ class ActionGraph(object):
     def actions_for_names(self, names):
         return (self.action_map[name] for name in names)
 
+    def get_required_actions(self, name):
+        """Given an Action's name return the Actions required to run
+        before that Action.
+        """
+        return self.action_map[name].required_actions
+
     def __getitem__(self, name):
         return self.action_map[name]
 

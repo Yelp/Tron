@@ -55,8 +55,8 @@ class ActionRunFactoryTestCase(TestCase):
         self.action_graph = actiongraph.ActionGraph(
                 actions, dict((a.name, a) for a in actions))
 
-        node = TestNode('anode')
-        self.job_run = jobrun.JobRun('jobname', 7, self.run_time, node,
+        anode = TestNode('anode')
+        self.job_run = jobrun.JobRun('jobname', 7, self.run_time, anode,
                 action_graph=self.action_graph)
 
         self.action_state_data = {
@@ -380,32 +380,26 @@ class ActionRunStateRestoreTestCase(TestCase):
 
 class ActionRunCollectionTestCase(TestCase):
 
+    def _build_run(self, name):
+        anode = Turtle()
+        return ActionRun("id", name, anode, timeutils.current_time(),
+            self.command, output_path=self.output_path)
+
     @setup
     def setup_runs(self):
-        anode = Turtle()
+        action_names = ['action_name', 'second_name', 'cleanup']
 
         action_graph = [
             Turtle(name=name, required_actions=[])
-            for name in ['action_name', 'second_name', 'cleanup']
+            for name in action_names
         ]
         self.action_graph = actiongraph.ActionGraph(
-            action_graph, dict((a.name, a) for a in action_graph)
-        )
+            action_graph, dict((a.name, a) for a in action_graph))
         self.output_path = filehandler.OutputPath("random_dir")
         self.command = "do command"
-        self.action_runs = [
-            ActionRun("id", "action_name", anode, timeutils.current_time(),
-                    self.command, output_path=self.output_path),
-            ActionRun("id", "second_name", anode, timeutils.current_time(),
-                self.command, output_path=self.output_path),
-            ActionRun("id", "cleanup", anode, timeutils.current_time(),
-                self.command, output_path=self.output_path, cleanup=True)
-        ]
-        self.run_map = {
-            'action_name': self.action_runs[0],
-            'second_name': self.action_runs[1],
-            'cleanup':     self.action_runs[2]
-        }
+        self.action_runs = [self._build_run(name) for name in action_names]
+        self.run_map = dict((a.action_name, a) for a in self.action_runs)
+        self.run_map['cleanup'].is_cleanup = True
         self.collection = ActionRunCollection(self.action_graph, self.run_map)
 
     def test__init__(self):
@@ -473,9 +467,15 @@ class ActionRunCollectionTestCase(TestCase):
         action_run.machine.state = ActionRun.STATE_RUNNING
         assert not self.collection.is_done
 
-    def test_is_done_true_because_with_blocked(self):
-        # TODO:
-        pass
+    def test_is_done_true_because_blocked(self):
+        graph = self.collection.action_graph.graph
+        second_act = graph.pop(1)
+        second_act.required_actions.append(graph[0])
+        self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
+        self.run_map['second_name'].machine.state = ActionRun.STATE_QUEUED
+        assert self.collection.is_done
+        # Also tests is_failed here
+        assert self.collection.is_failed
 
     def test_is_done_true(self):
         for action_run in self.collection.action_runs_with_cleanup:
@@ -483,16 +483,18 @@ class ActionRunCollectionTestCase(TestCase):
         assert self.collection.is_done
 
     def test_is_failed_false_not_done(self):
-        # TODO:
-        pass
+        self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
+        assert not self.collection.is_failed
 
     def test_is_failed_false_no_failed(self):
-        # TODO:
-        pass
+        for action_run in self.collection.action_runs_with_cleanup:
+            action_run.machine.state = ActionRun.STATE_SUCCEEDED
+        assert not self.collection.is_failed
 
     def test_is_failed_true(self):
-        # TODO:
-        pass
+        for action_run in self.collection.action_runs_with_cleanup:
+            action_run.machine.state = ActionRun.STATE_FAILED
+        assert self.collection.is_failed
 
     def test__getattr__(self):
         assert self.collection.is_scheduled
@@ -512,23 +514,59 @@ class ActionRunCollectionTestCase(TestCase):
             assert_in(expectation, str(self.collection))
 
 
-# TODO:
 class ActionRunCollectionIsRunBlockedTestCase(TestCase):
 
+    def _build_run(self, name):
+        anode = Turtle()
+        return ActionRun("id", name, anode, timeutils.current_time(),
+            self.command, output_path=self.output_path)
+
+    @setup
+    def setup_collection(self):
+        action_names = ['action_name', 'second_name', 'cleanup']
+
+        action_graph = [
+            Turtle(name=name, required_actions=[])
+            for name in action_names
+        ]
+        self.second_act = second_act = action_graph.pop(1)
+        second_act.required_actions.append(action_graph[0])
+        action_map = dict((a.name, a) for a in action_graph)
+        action_map['second_name'] = second_act
+        self.action_graph = actiongraph.ActionGraph(action_graph, action_map)
+
+        self.output_path = filehandler.OutputPath("random_dir")
+        self.command = "do command"
+        self.action_runs = [self._build_run(name) for name in action_names]
+        self.run_map = dict((a.action_name, a) for a in self.action_runs)
+        self.run_map['cleanup'].is_cleanup = True
+        self.collection = ActionRunCollection(self.action_graph, self.run_map)
+
     def test_is_run_blocked_no_required_actions(self):
-        pass
+        assert not self.collection._is_run_blocked(self.run_map['action_name'])
 
     def test_is_run_blocked_completed_run(self):
-        pass
+        self.run_map['second_name'].machine.state = ActionRun.STATE_FAILED
+        assert not self.collection._is_run_blocked(self.run_map['second_name'])
+
+        self.run_map['second_name'].machine.state = ActionRun.STATE_RUNNING
+        assert not self.collection._is_run_blocked(self.run_map['second_name'])
 
     def test_is_run_blocked_required_actions_completed(self):
-        pass
+        self.run_map['action_name'].machine.state = ActionRun.STATE_SKIPPED
+        assert not self.collection._is_run_blocked(self.run_map['second_name'])
 
     def test_is_run_blocked_required_actions_blocked(self):
-        pass
+        third_act = Turtle(name='third_act', required_actions=[self.second_act])
+        self.action_graph.action_map['third_act'] = third_act
+        self.run_map['third_act'] = self._build_run('third_act')
+
+        self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
+        assert self.collection._is_run_blocked(self.run_map['third_act'])
 
     def test_is_run_blocked_required_actions_failed(self):
-        pass
+        self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
+        assert self.collection._is_run_blocked(self.run_map['second_name'])
 
 
 if __name__ == "__main__":
