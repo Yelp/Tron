@@ -92,7 +92,7 @@ class EventRecorder(observer.Observer):
         self._store = FixedLimitStore(limits)
         self._parent = None
         self._entity = weakref.ref(entity)
-        self.watch(entity, True)
+        self.watch(entity)
 
         if parent:
             self.set_parent(parent)

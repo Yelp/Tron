@@ -71,6 +71,9 @@ class MCPReconfigureTest(TestCase):
                 dict(name='node1', hostname='batch1'),
             ],
             node_pools=[dict(name='nodePool', nodes=['node0', 'node1'])],
+            command_context={
+                'a_variable': 'is_constant'
+            },
             jobs=[
                 dict(
                     name='test_unchanged',
@@ -150,6 +153,7 @@ class MCPReconfigureTest(TestCase):
         assert_equal(job_sched.job.runs.runs[1], run0)
         assert_equal(job_sched.job.runs.runs[0], run1)
         assert run1.is_scheduled
+        assert_equal(job_sched.job.context['a_variable'], 'is_constant')
 
     @suite('integration')
     def test_job_removed(self):
@@ -173,29 +177,28 @@ class MCPReconfigureTest(TestCase):
     def test_job_changed(self):
         assert 'test_change' in self.my_mcp.jobs
         job_sched = self.my_mcp.jobs['test_change']
-        run0 = self.my_mcp.job_scheduler.next_runs(job2)[0]
+        run0 = job_sched.get_runs_to_schedule().next()
         run0.start()
-        self.my_mcp.job_scheduler.next_runs(job2)
-        assert_equal(len(job2.runs), 2)
+        job_sched.get_runs_to_schedule().next()
+        assert_equal(len(job_sched.job.runs.runs), 2)
 
-        assert_equal(job2.name, "test_change")
-        assert_equal(len(job2.topo_actions), 2)
-        assert_equal(job2.topo_actions[0].name, 'action_change')
-        assert_equal(job2.topo_actions[1].name, 'action_remove2')
-        assert_equal(job2.topo_actions[0].command, 'command_change')
-        assert_equal(job2.topo_actions[1].command, 'command_remove2')
+        assert_equal(job_sched.job.name, "test_change")
+        action_map = job_sched.job.action_graph.action_map
+        assert_equal(len(action_map), 2)
 
         self.reconfigure()
-        job2 = self.my_mcp.jobs['test_change']
+        new_job_sched = self.my_mcp.jobs['test_change']
+        assert new_job_sched is job_sched
+        assert new_job_sched.job is job_sched.job
 
-        assert_equal(job2.name, "test_change")
-        assert_equal(len(job2.topo_actions), 1)
-        assert_equal(job2.topo_actions[0].name, 'action_change')
-        assert_equal(job2.topo_actions[0].command, 'command_changed')
+        assert_equal(new_job_sched.job.name, "test_change")
+        action_map = job_sched.job.action_graph.action_map
+        assert_equal(len(action_map), 1)
 
-        assert_equal(len(job2.runs), 2)
-        assert job2.runs[1].is_starting, job2.runs[1].action_runs[0].state
-        assert job2.runs[0].is_scheduled
+        assert_equal(len(new_job_sched.job.runs.runs), 3)
+        assert new_job_sched.job.runs.runs[1].is_cancelled
+        assert new_job_sched.job.runs.runs[0].is_scheduled
+        assert_equal(job_sched.job.context['a_variable'], 'is_constant')
 
     @suite('integration')
     def test_job_new(self):
@@ -203,12 +206,15 @@ class MCPReconfigureTest(TestCase):
         self.reconfigure()
 
         assert 'test_new' in self.my_mcp.jobs
-        job3 = self.my_mcp.jobs['test_new']
+        job_sched = self.my_mcp.jobs['test_new']
 
-        assert_equal(job3.name, "test_new")
-        assert_equal(len(job3.topo_actions), 1)
-        assert_equal(job3.topo_actions[0].name, 'action_new')
-        assert_equal(job3.topo_actions[0].command, 'command_new')
+        assert_equal(job_sched.job.name, "test_new")
+        action_map = job_sched.job.action_graph.action_map
+        assert_equal(len(action_map), 1)
+        assert_equal(action_map['action_new'].name, 'action_new')
+        assert_equal(action_map['action_new'].command, 'command_new')
+        assert_equal(len(job_sched.job.runs.runs), 1)
+        assert job_sched.job.runs.runs[0].is_scheduled
 
     @suite('integration')
     def test_daily_reschedule(self):

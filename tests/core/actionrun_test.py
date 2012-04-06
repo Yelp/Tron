@@ -1,13 +1,18 @@
 import datetime
 
 from testify import run, setup, TestCase, assert_equal, turtle
-from testify.assertions import assert_raises
+from testify.assertions import assert_raises, assert_in
 from testify.test_case import class_setup, class_teardown, teardown
-from tests.testingutils import Turtle
+from tests import testingutils
+from tests.assertions import assert_length
+from tests.testingutils import Turtle, TestNode
 
 from tron import node
-from tron.core.actionrun import ActionCommand, ActionRunContext, ActionRun, ActionRunCollection
+from tron.core import jobrun, actiongraph
+from tron.core.actionrun import ActionCommand, ActionRunContext, ActionRun
+from tron.core.actionrun import ActionRunCollection, ActionRunFactory
 from tron.core.actionrun import InvalidStartStateError
+from tron.serialize import filehandler
 from tron.utils import timeutils
 
 class ActionRunContextTestCase(TestCase):
@@ -45,26 +50,95 @@ class ActionRunFactoryTestCase(TestCase):
 
     @setup
     def setup_action_runs(self):
-        pass
+        self.run_time = datetime.datetime(2012, 3, 14, 15, 9 ,26)
+        actions = [Turtle(name='act1'), Turtle(name='act2')]
+        self.action_graph = actiongraph.ActionGraph(
+                actions, dict((a.name, a) for a in actions))
+
+        node = TestNode('anode')
+        self.job_run = jobrun.JobRun('jobname', 7, self.run_time, node,
+                action_graph=self.action_graph)
+
+        self.action_state_data = {
+            'job_run_id':       'job_run_id',
+            'action_name':      'act1',
+            'state':            'succeeded',
+            'run_time':         'the_run_time',
+            'start_time':       None,
+            'end_time':         None,
+            'command':          'do action1',
+            'node_name':        'anode'
+        }
 
     def test_build_action_run_collection(self):
-        pass
+        collection = ActionRunFactory.build_action_run_collection(self.job_run)
+        assert_equal(collection.action_graph, self.action_graph)
+        assert_in('act1', collection.run_map)
+        assert_in('act2', collection.run_map)
+        assert_length(collection.run_map, 2)
+        assert_equal(collection.run_map['act1'].action_name, 'act1')
 
     def test_action_run_collection_from_state(self):
-        pass
+        state_data = [self.action_state_data]
+        cleanup_action_state_data = {
+            'job_run_id':       'job_run_id',
+            'action_name':      'cleanup',
+            'state':            'succeeded',
+            'run_time':         self.run_time,
+            'start_time':       None,
+            'end_time':         None,
+            'command':          'do cleanup',
+            'node_name':        'anode'
+        }
+        collection = ActionRunFactory.action_run_collection_from_state(
+            self.job_run, state_data, cleanup_action_state_data)
+
+        assert_equal(collection.action_graph, self.action_graph)
+        assert_length(collection.run_map, 2)
+        assert_equal(collection.run_map['act1'].action_name, 'act1')
+        assert_equal(collection.run_map['cleanup'].action_name, 'cleanup')
+        assert_equal(collection.run_map['act1'].run_time,
+                self.action_state_data['run_time'])
 
     def test_build_run_for_action(self):
-        pass
+        action = Turtle(
+            name='theaction', node_pool=None, is_cleanup=False, command="doit")
+        action_run = ActionRunFactory.build_run_for_action(self.job_run, action)
+
+        assert_equal(action_run.job_run_id, self.job_run.id)
+        assert_equal(action_run.run_time, self.run_time)
+        assert_equal(action_run.node, self.job_run.node)
+        assert_equal(action_run.action_name, action.name)
+        assert not action_run.is_cleanup
+        assert_equal(action_run.command, action.command)
+
+    def test_build_run_for_action_with_node(self):
+        action = Turtle(name='theaction', is_cleanup=True, command="doit")
+        action_run = ActionRunFactory.build_run_for_action(self.job_run, action)
+
+        assert_equal(action_run.job_run_id, self.job_run.id)
+        assert_equal(action_run.run_time, self.run_time)
+        assert_equal(action_run.node, action.node_pool.next.returns[0])
+        assert action_run.is_cleanup
+        assert_equal(action_run.action_name, action.name)
+        assert_equal(action_run.command, action.command)
 
     def test_action_run_from_state(self):
-        pass
+        state_data = self.action_state_data
+        action_run = ActionRunFactory.action_run_from_state(
+                self.job_run, state_data)
+
+        assert_equal(action_run.job_run_id, state_data['job_run_id'])
+        assert_equal(action_run.run_time, state_data['run_time'])
+        assert not action_run.is_cleanup
+
 
 class ActionRunTestCase(TestCase):
 
     @setup
     def setup_action_run(self):
         anode = turtle.Turtle()
-        output_path = ["random_dir"]
+        self.output_path = filehandler.OutputPath("random_dir")
         self.command = "do command"
         self.action_run = ActionRun(
                 "id",
@@ -72,12 +146,12 @@ class ActionRunTestCase(TestCase):
                 anode,
                 timeutils.current_time(),
                 self.command,
-                output_path=output_path)
+                output_path=self.output_path)
 
     @teardown
     def teardown_action_run(self):
-        # TODO: cleanup random_dir
-        pass
+        with testingutils.no_handlers_for_logger():
+            self.output_path.delete()
 
     def test_init_state(self):
         assert_equal(self.action_run.state, ActionRun.STATE_SCHEDULED)
@@ -221,6 +295,22 @@ class ActionRunTestCase(TestCase):
         self.action_run.bare_command = "%(this_is_missing)s"
         assert_equal(self.action_run.command, ActionRun.FAILED_RENDER)
 
+    def test_is_complete(self):
+        self.action_run.machine.state = ActionRun.STATE_SUCCEEDED
+        assert self.action_run.is_complete
+        self.action_run.machine.state = ActionRun.STATE_SKIPPED
+        assert self.action_run.is_complete
+        self.action_run.machine.state = ActionRun.STATE_RUNNING
+        assert not self.action_run.is_complete
+
+    def test_is_broken(self):
+        self.action_run.machine.state = ActionRun.STATE_UNKNOWN
+        assert self.action_run.is_broken
+        self.action_run.machine.state = ActionRun.STATE_FAILED
+        assert self.action_run.is_broken
+        self.action_run.machine.state = ActionRun.STATE_QUEUED
+        assert not self.action_run.is_broken
+
     def test__getattr__(self):
         assert not self.action_run.is_succeeded
         assert not self.action_run.is_failed
@@ -293,18 +383,153 @@ class ActionRunCollectionTestCase(TestCase):
     @setup
     def setup_runs(self):
         anode = Turtle()
-        action_graph = Turtle()
-        output_path = ["random_dir"]
+
+        action_graph = [
+            Turtle(name=name, required_actions=[])
+            for name in ['action_name', 'second_name', 'cleanup']
+        ]
+        self.action_graph = actiongraph.ActionGraph(
+            action_graph, dict((a.name, a) for a in action_graph)
+        )
+        self.output_path = filehandler.OutputPath("random_dir")
         self.command = "do command"
-        self.action_run = ActionRun("id", "action_name", anode,
-            timeutils.current_time(), self.command, output_path=output_path)
-        self.run_map = {'action_name': self.action_run}
-        self.collection = ActionRunCollection(action_graph, self.run_map)
+        self.action_runs = [
+            ActionRun("id", "action_name", anode, timeutils.current_time(),
+                    self.command, output_path=self.output_path),
+            ActionRun("id", "second_name", anode, timeutils.current_time(),
+                self.command, output_path=self.output_path),
+            ActionRun("id", "cleanup", anode, timeutils.current_time(),
+                self.command, output_path=self.output_path, cleanup=True)
+        ]
+        self.run_map = {
+            'action_name': self.action_runs[0],
+            'second_name': self.action_runs[1],
+            'cleanup':     self.action_runs[2]
+        }
+        self.collection = ActionRunCollection(self.action_graph, self.run_map)
+
+    def test__init__(self):
+        assert_equal(self.collection.action_graph, self.action_graph)
+        assert_equal(self.collection.run_map, self.run_map)
+        assert self.collection.proxy_action_runs_with_cleanup
+
+    def test_action_runs_for_actions(self):
+        actions = [Turtle(name='action_name')]
+        action_runs = self.collection.action_runs_for_actions(actions)
+        assert_equal(list(action_runs), self.action_runs[:1])
+
+    def test_get_action_runs_with_cleanup(self):
+        runs = self.collection.get_action_runs_with_cleanup()
+        assert_equal(set(runs), set(self.action_runs))
+
+    def test_get_action_runs(self):
+        runs = self.collection.get_action_runs()
+        assert_equal(set(runs), set(self.action_runs[:2]))
+
+    def test_cleanup_action_run(self):
+        assert_equal(self.action_runs[2], self.collection.cleanup_action_run)
+
+    def test_state_data(self):
+        state_data = self.collection.state_data
+        assert_length(state_data, len(self.action_runs[:2]))
+
+    def test_cleanup_action_state_data(self):
+        state_data = self.collection.cleanup_action_state_data
+        assert_equal(state_data['action_name'], 'cleanup')
+
+    def test_cleanup_action_state_data_no_cleanup_action(self):
+        del self.collection.run_map['cleanup']
+        assert not self.collection.cleanup_action_state_data
+
+    def test_get_startable_action_runs(self):
+        action_runs = self.collection.get_startable_action_runs()
+        assert_equal(set(action_runs), set(self.action_runs[:2]))
+
+    def test_get_startable_action_runs_none(self):
+        self.collection.run_map.clear()
+        action_runs = self.collection.get_startable_action_runs()
+        assert_equal(set(action_runs), set())
+
+    def test_has_startable_action_runs(self):
+        assert self.collection.has_startable_action_runs
+
+    def test_has_startable_action_runs_false(self):
+        self.collection.run_map.clear()
+        assert not self.collection.has_startable_action_runs
+
+    def test_is_success_false(self):
+        assert not self.collection.is_success
+
+    def test_is_success_true(self):
+        for action_run in self.collection.action_runs_with_cleanup:
+            action_run.machine.state = ActionRun.STATE_SKIPPED
+        assert self.collection.is_success
+
+    def test_is_done_false(self):
+        assert not self.collection.is_done
+
+    def test_is_done_false_because_of_running(self):
+        action_run = self.collection.run_map['action_name']
+        action_run.machine.state = ActionRun.STATE_RUNNING
+        assert not self.collection.is_done
+
+    def test_is_done_true_because_with_blocked(self):
+        # TODO:
+        pass
+
+    def test_is_done_true(self):
+        for action_run in self.collection.action_runs_with_cleanup:
+            action_run.machine.state = ActionRun.STATE_FAILED
+        assert self.collection.is_done
+
+    def test_is_failed_false_not_done(self):
+        # TODO:
+        pass
+
+    def test_is_failed_false_no_failed(self):
+        # TODO:
+        pass
+
+    def test_is_failed_true(self):
+        # TODO:
+        pass
 
     def test__getattr__(self):
         assert self.collection.is_scheduled
         assert not self.collection.is_cancelled
-        assert not self.collection.is_failed
+        assert not self.collection.is_running
+        assert self.collection.ready()
+
+    def test__str__(self):
+        self.collection._is_run_blocked = lambda r: r.action_name != 'cleanup'
+        expected = [
+            "ActionRunCollection",
+            "second_name(scheduled:blocked)",
+            "action_name(scheduled:blocked)",
+            "cleanup(scheduled)"
+        ]
+        for expectation in expected:
+            assert_in(expectation, str(self.collection))
+
+
+# TODO:
+class ActionRunCollectionIsRunBlockedTestCase(TestCase):
+
+    def test_is_run_blocked_no_required_actions(self):
+        pass
+
+    def test_is_run_blocked_completed_run(self):
+        pass
+
+    def test_is_run_blocked_required_actions_completed(self):
+        pass
+
+    def test_is_run_blocked_required_actions_blocked(self):
+        pass
+
+    def test_is_run_blocked_required_actions_failed(self):
+        pass
+
 
 if __name__ == "__main__":
     run()

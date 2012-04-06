@@ -202,7 +202,10 @@ class OutputPath(object):
 
     def delete(self):
         """Remove the directory and its contents."""
-        shutil.rmtree(str(self))
+        try:
+            shutil.rmtree(str(self))
+        except OSError, e:
+            log.warn("Failed to delete %s: %s" % (self, e))
 
     def __eq__(self, other):
         return self.base == other.base and self.parts == other.parts

@@ -222,7 +222,7 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
         master_control = mcp.MasterControlProgram(self.options.working_dir,
                                                   self.options.config_file)
         try:
-            master_control.load_initial_config()
+            master_control.load_config()
         except Exception, e:
             logger.exception("Error in configuration file %s" %
                              self.options.config_file)

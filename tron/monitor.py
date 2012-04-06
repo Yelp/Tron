@@ -45,6 +45,10 @@ class CrashReporter(object):
                 logger.exception("Error sending notification")
                 self.event_recorder.emit_critical("email_failure", msg=text)
 
+    def attach(self, _ob, _spec):
+        pass
+        # TODO:
+
     def start(self):
         log.addObserver(self.emit)
 

@@ -31,7 +31,7 @@ class JobRunContext(object):
         """
         if self.job_run.action_runs.is_failure:
             return 'FAILURE'
-        elif self.job_run.action_runs.all_but_cleanup_success:
+        elif self.job_run.action_runs.is_success:
             return 'SUCCESS'
         else:
             return 'UNKNOWN'
@@ -169,7 +169,7 @@ class JobRun(Observable, Observer):
     def start(self):
         """Start this JobRun as a scheduled run (not a manual run)."""
         self.notify(self.EVENT_START)
-        if self.action_runs.has_startable_actions and self._do_start():
+        if self.action_runs.has_startable_action_runs and self._do_start():
             return True
         # TODO: re-evaluate if this is needed
         self.notify(self.NOTIFY_START_FAILED)
@@ -189,7 +189,7 @@ class JobRun(Observable, Observer):
         successfully started.
         """
         started_actions = []
-        for action_run in self.action_runs.get_startable_actions():
+        for action_run in self.action_runs.get_startable_action_runs():
             try:
                 action_run.start()
                 started_actions.append(action_run)
@@ -208,9 +208,8 @@ class JobRun(Observable, Observer):
             log.info("Action runs started for %s." % self)
             return
 
-        # If we still have running actions
-        if not self.action_runs.is_done:
-            log.info("%s still has blocked actions." % self)
+        if self.action_runs.is_running:
+            log.info("%s still has running actions." % self)
             return
 
         # If we can't make any progress, we're done
@@ -255,6 +254,7 @@ class JobRun(Observable, Observer):
             'end_time':         self.end_time,
         }
 
+    # TODO: cancelled job in unknown state, see mcp_reconfigure_test.test_job_changed
     @property
     def state(self):
         """The overall state of this job run. Based on the state of its actions.

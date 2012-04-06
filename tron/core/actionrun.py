@@ -65,12 +65,11 @@ class ActionRunFactory(object):
             (name, cls.build_run_for_action(job_run, action))
             for name, action in job_run.action_graph.action_map.iteritems()
         )
-        return ActionRunCollection(
-            job_run.action_graph, action_run_map)
+        return ActionRunCollection(job_run.action_graph, action_run_map)
 
     @classmethod
-    def action_run_collection_from_state(cls,
-             job_run, runs_state_data, cleanup_action_state_data):
+    def action_run_collection_from_state(cls, job_run, runs_state_data,
+                cleanup_action_state_data):
         action_runs = [
             cls.action_run_from_state(job_run, state_data)
             for state_data in runs_state_data
@@ -80,11 +79,8 @@ class ActionRunFactory(object):
                 job_run, cleanup_action_state_data, cleanup=True))
 
         action_run_map = dict(
-            (action_run.action_name, action_run)
-            for action_run in action_runs
-        )
-        return ActionRunCollection(
-            job_run.action_graph, action_run_map)
+            (action_run.action_name, action_run) for action_run in action_runs)
+        return ActionRunCollection(job_run.action_graph, action_run_map)
 
     @classmethod
     def build_run_for_action(cls, job_run, action):
@@ -367,6 +363,15 @@ class ActionRun(Observer):
     def is_done(self):
         return self.state in self.END_STATES
 
+    # TODO: tests
+    @property
+    def is_complete(self):
+        return self.is_succeeded or self.is_skipped
+
+    @property
+    def is_broken(self):
+        return self.is_failed or self.is_cancelled or self.is_unknown
+
     def __getattr__(self, name):
         """Support convenience properties for checking if this ActionRun is in
         a specific state (Ex: self.is_running would check if self.state is
@@ -392,40 +397,19 @@ class ActionRunCollection(object):
     def __init__(self, action_graph, run_map):
         self.action_graph       = action_graph
         self.run_map            = run_map
-        self.cleanup_action_run = self.run_map.get(action.CLEANUP_ACTION_NAME)
 
         # Setup proxies
         self.proxy_action_runs_with_cleanup = proxy.CollectionProxy(
             self.get_action_runs_with_cleanup, [
-
-                # TODO: these should account for actions in many states, and only
-                # look at non-blocked actions
-
-                # TODO: not correct
-                ('is_failed',      any,    False),
-#                ('is_starting',     any,    False),
                 ('is_running',      any,    False),
                 ('is_scheduled',    any,    False),
-#                ('is_unknown',      any,    False),
                 ('is_queued',       all,    False),
                 ('is_cancelled',    all,    False),
-#                ('is_skipped',      all,    False),
-#                ('is_done',         all,    False),
-#                ('check_state',     all,    True),
                 ('cancel',          all,    True),
-#                ('succeed',         all,    True),
-#                ('fail',            any,    True),
+                ('succeed',         all,    True),
+                ('fail',            all,    True),
                 ('ready',           all,    True),
             ])
-
-        self.proxy_action_runs = proxy.CollectionProxy(
-            self.get_action_runs, [
-#                ('schedule',        all,    True),
-#                ('queue',           all,    True),
-            ])
-
-    def action_runs_for_names(self, names):
-        return (self.run_map[name] for name in names)
 
     def action_runs_for_actions(self, actions):
         return (self.run_map[a.name] for a in actions)
@@ -437,6 +421,10 @@ class ActionRunCollection(object):
     def get_action_runs(self):
         return (run for run in self.run_map.itervalues() if not run.is_cleanup)
     action_runs = property(get_action_runs)
+
+    @property
+    def cleanup_action_run(self):
+        return self.run_map.get(action.CLEANUP_ACTION_NAME)
 
     @property
     def state_data(self):
@@ -458,47 +446,22 @@ class ActionRunCollection(object):
             action_runs = self.action_runs
         return itertools.ifilter(func, action_runs)
 
-    def get_startable_actions(self):
-        """Returns any actions that are scheduled or queued that can be run.
-        """
+    def get_startable_action_runs(self):
+        """Returns any actions that are scheduled or queued that can be run."""
         def startable(action_run):
-            return (
-                (action_run.is_scheduled or action_run.is_queued) and
-                not self._is_run_blocked(action_run)
-            )
+            return (action_run.check_state('start') and
+                    not self._is_run_blocked(action_run))
         return self._get_runs_using(startable)
 
     @property
-    def has_startable_actions(self):
-        return any(self.get_startable_actions())
-
-#    def get_unblocked_actions(self):
-#        return self._get_runs_using(lambda ar: not self._is_blocked(ar))
-#
-#    def get_blocked_actions(self):
-#        return self._get_runs_using(self._is_blocked)
-
-    @property
-    def is_blocked(self):
-        """Return True if this collection contains ActionRuns that are blocked
-        on running actions.
-        """
-        # TODO
-
-    @property
-    def is_done(self):
-        """Returns True if this collection contains no running ActionRuns and
-        there are no startable action runs.
-        """
-        return not self.is_running
-        # TODO
+    def has_startable_action_runs(self):
+        return any(self.get_startable_action_runs())
 
     def _is_run_blocked(self, action_run):
-        """Returns True if this ActionRun is waiting on a required run to
+        """Returns True if the ActionRun is waiting on a required run to
         finish before it can run.
         """
-        if (action_run.is_done or
-                action_run.is_running or action_run.is_starting):
+        if action_run.is_done or action_run.is_running or action_run.is_starting:
             return False
 
         action_for_run = self.action_graph[action_run.action_name]
@@ -507,53 +470,50 @@ class ActionRunCollection(object):
             return False
 
         required_runs = self.action_runs_for_actions(required_actions)
-        return any(
-            self._is_run_blocked(run) or not run.is_done
-            for run in required_runs
-        )
 
-    # TODO: is this needed?
-    @property
-    def all_but_cleanup_success(self):
-        """Overloaded all_but_cleanup_success, because we can still succeed
-        if some actions were skipped.
-        """
-        return all(r.is_success or r.is_skipped for r in self.action_runs)
+        def is_required_run_blocking(required_run):
+            if required_run.is_complete:
+                return False
+            if required_run.is_broken:
+                return True
+            return self._is_run_blocked(required_run)
+
+        return any(is_required_run_blocking(run) for run in required_runs)
 
     @property
     def is_success(self):
-        """Overloaded is_success, because we can still succeed if some
-        actions were skipped.
+        """Return True if all ActionRuns completed successfully or were skipped.
         """
-        return all(
-            r.is_succeeded or r.is_skipped for r in self.action_runs_with_cleanup
-        )
+        return all(r.is_complete for r in self.action_runs_with_cleanup)
 
     @property
-    def all_but_cleanup_done(self):
-        """True when any ActionRun has failed, or when all ActionRuns are done.
+    def is_done(self):
+        """Returns True when there are no running ActionRuns and all
+        non-blocked ActionRuns are done.
         """
-        return all(r.is_done for r in self.action_runs)
+        if self.is_running:
+            return False
 
-    # TODO: a __str__ that exposes states of actions (including blocked)
+        def done_or_blocked(action_run):
+            return action_run.is_done or self._is_run_blocked(action_run)
+        return all(done_or_blocked(run) for run in self.action_runs)
 
-    def __iter__(self):
-        """Return all actions that are not cleanup actions."""
-        return iter(self.action_runs)
+    @property
+    def is_failed(self):
+        """Return True if there are failed actions and all ActionRuns are
+        done or blocked.
+        """
+        return self.is_done and any(run.is_failed for run in self.action_runs)
+
+    def __str__(self):
+        def blocked_state(action_run):
+            return ":blocked" if self._is_run_blocked(action_run) else ""
+
+        run_states = ', '.join(
+            "%s(%s%s)" % (a.action_name, a.state, blocked_state(a))
+            for a in self.run_map.itervalues()
+        )
+        return "%s[%s]" % (self.__class__.__name__, run_states)
 
     def __getattr__(self, name):
-        # The order here is important.  We don't want to raise too many
-        # exceptions, so proxies should be ordered by those most likely
-        # to be used.
-        for proxy in [
-            self.proxy_action_runs_with_cleanup,
-            self.proxy_action_runs
-        ]:
-            try:
-                return proxy.perform(name)
-            except AttributeError:
-                pass
-
-        # We want to re-raise this exception because the proxy code
-        # will not be relevant in the stack trace
-        raise AttributeError(name)
+        return self.proxy_action_runs_with_cleanup.perform(name)

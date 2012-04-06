@@ -32,7 +32,8 @@ class JobRunTestCase(TestCase):
         self.job_run = jobrun.JobRun('jobname', 7, self.run_time, node,
                 action_runs=Turtle(
                     action_runs_with_cleanup=[],
-                    get_startable_actions=lambda: []
+                    get_startable_action_runs=lambda: [],
+                    is_running=False
                 ))
         self.job_run.watch = Turtle()
         self.job_run.notify = Turtle()
@@ -124,9 +125,9 @@ class JobRunTestCase(TestCase):
         assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_START_FAILED)
         assert_length(self.job_run.notify.calls, 2)
 
-    def test_start_no_startable_actions(self):
+    def test_start_no_startable_action_runs(self):
         self.job_run._do_start = Turtle()
-        self.job_run.action_runs.has_startable_actions = False
+        self.job_run.action_runs.has_startable_action_runs = False
 
         assert not self.job_run.start()
         assert_call(self.job_run.notify, 0, self.job_run.EVENT_START)
@@ -136,7 +137,7 @@ class JobRunTestCase(TestCase):
     def test_do_start(self):
         timeutils.override_current_time(self.run_time)
         startable_runs = [Turtle(), Turtle(), Turtle()]
-        self.job_run.action_runs.get_startable_actions = lambda: startable_runs
+        self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
         assert self.job_run._do_start()
         assert_equal(self.job_run.start_time, self.run_time)
@@ -169,7 +170,7 @@ class JobRunTestCase(TestCase):
 
     def test_start_action_runs(self):
         startable_runs = [Turtle(), Turtle(), Turtle()]
-        self.job_run.action_runs.get_startable_actions = lambda: startable_runs
+        self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
         started_runs = self.job_run._start_action_runs()
         assert_equal(started_runs, startable_runs)
@@ -178,7 +179,7 @@ class JobRunTestCase(TestCase):
         def failing():
             raise actionrun.Error()
         startable_runs = [Turtle(start=failing), Turtle(), Turtle()]
-        self.job_run.action_runs.get_startable_actions = lambda: startable_runs
+        self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
         started_runs = self.job_run._start_action_runs()
         assert_equal(started_runs, startable_runs[1:])
@@ -187,15 +188,15 @@ class JobRunTestCase(TestCase):
         def failing():
             raise actionrun.Error()
         startable_runs = [Turtle(start=failing), Turtle(start=failing)]
-        self.job_run.action_runs.get_startable_actions = lambda: startable_runs
+        self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
         started_runs = self.job_run._start_action_runs()
         assert_equal(started_runs, [])
 
     def test_watcher_with_startable(self):
-        self.job_run.action_runs.get_startable_actions = lambda: True
+        self.job_run.action_runs.get_startable_action_runs = lambda: True
         startable_run = Turtle()
-        self.job_run.action_runs.get_startable_actions = lambda: [startable_run]
+        self.job_run.action_runs.get_startable_action_runs = lambda: [startable_run]
         self.job_run.finalize = Turtle()
 
         self.job_run.watcher(None, None)
@@ -204,7 +205,7 @@ class JobRunTestCase(TestCase):
         assert_length(self.job_run.finalize.calls, 0)
 
     def test_watcher_not_done(self):
-        self.job_run.action_runs.is_done = False
+        self.job_run.action_runs.is_running = True
         self.job_run._start_action_runs = lambda: []
         self.job_run.finalize = Turtle()
 

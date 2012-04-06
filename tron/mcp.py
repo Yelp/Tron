@@ -273,11 +273,6 @@ class MasterControlProgram(Observable):
         finally:
             self.state_handler.writing_enabled = old_state_writing
 
-    def load_initial_config(self):
-        """Apply the first configuration to this MCP."""
-        self.load_config()
-        self.schedule_jobs()
-
     def load_config(self):
         log.info("Loading configuration from %s" % self.config_file)
         with open(self.config_file, 'r') as f:
@@ -455,6 +450,7 @@ class MasterControlProgram(Observable):
 
         log.info("adding new job %s", job.name)
         self.jobs[job.name] = JobScheduler(job)
+        self.jobs[job.name].schedule()
 
         event.EventManager.get_instance().add(job, parent=self)
         self.state_handler.watch(job, Job.NOTIFY_STATE_CHANGE)
