@@ -27,7 +27,7 @@ from twisted.scripts import _twistd_unix
 import tron
 from tron import commands
 from tron import mcp
-from tron import www
+from tron.api import www
 
 logger = logging.getLogger()
 

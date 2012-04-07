@@ -3,6 +3,7 @@ Test cases for the web services interface to tron
 """
 from testify import TestCase, class_setup, assert_equal, run
 from testify.utils import turtle
+from tron.api import www
 
 try:
     import simplejson
@@ -13,8 +14,6 @@ except ImportError:
 import twisted.web.resource
 import twisted.web.http
 import twisted.web.server
-
-from tron import www
 
 TEST_NODES = [turtle.Turtle(hostname="host")]
 TEST_POOL = turtle.Turtle(nodes=TEST_NODES)

@@ -6,7 +6,6 @@ view current state, event history and send commands to trond.
 import datetime
 import logging
 import urllib
-from tron.core import job, actionrun
 
 try:
     import simplejson as json
@@ -17,6 +16,8 @@ except ImportError:
 from twisted.web import http, resource, server
 
 from tron import service
+from tron.api import adapter
+from tron.core import job, actionrun
 from tron.utils import timeutils
 
 
@@ -52,34 +53,32 @@ def respond(request, response_dict, code=http.OK, headers=None):
     return ""
 
 
+def get_integer(request, key):
+    """Returns the first value in the request args for the given key, if that
+    value is an integer. Otherwise returns None.
+    """
+    if not request.args or key not in request.args:
+        return None
+
+    value = request.args[key][0]
+    if not value.isdigit():
+        return None
+    return int(value)
+
 class ActionRunResource(resource.Resource):
 
     isLeaf = True
 
-    def __init__(self, act_run):
-        self._act_run = act_run
+    def __init__(self, job_run, action_name):
         resource.Resource.__init__(self)
-
-    def get_data(self, num_lines=10):
-        act_run = self._act_run
-        duration = str(
-                timeutils.duration(act_run.start_time, act_run.end_time) or '')
-
-        data = act_run.repr_data(num_lines)
-        data['duration'] = duration
-        # TODO: this now comes from the job_run.action_graph
-        data['requirements'] = []
-        # TODO: implement in ActionRun
-        data['stdout'] = []
-        data['stderr'] = []
-        return data
+        self._job_run           = job_run
+        self._action_name       = action_name
 
     def render_GET(self, request):
-        num_lines = None
-        if request.args and request.args['num_lines'][0].isdigit():
-            num_lines = int(request.args['num_lines'][0])
-
-        return respond(request, self.get_data(num_lines))
+        num_lines = get_integer(request, 'num_lines')
+        run_adapter = adapter.ActionRunAdapter(
+                self._job_run, self._action_name, num_lines)
+        return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):
         cmd = request.args['command'][0]
@@ -111,8 +110,8 @@ class JobRunResource(resource.Resource):
     isLeaf = False
 
     def __init__(self, run):
-        self._run = run
         resource.Resource.__init__(self)
+        self._run = run
 
     def getChild(self, act_name, request):
         if act_name == '':
@@ -120,29 +119,15 @@ class JobRunResource(resource.Resource):
         elif act_name == '_events':
             return EventResource(self._run)
 
-        action_run = self._run.action_runs.get(act_name)
-        if action_run:
-            return ActionRunResource(action_run)
+        if act_name in self._run.action_runs:
+            return ActionRunResource(self._run, act_name)
 
         return resource.NoResource("Cannot find action '%s' for job run '%s'" %
                                    (act_name, self._run.id))
 
-    def get_data(self, include_action_runs=False):
-        run = self._run
-        data = run.repr_data()
-        if include_action_runs:
-            data['runs'] = [
-                ActionRunResource(action_run).get_data()
-                for action_run in run.action_runs.action_runs_with_cleanup
-            ]
-
-        duration = str(timeutils.duration(run.start_time, run.end_time) or '')
-        data['duration'] = duration
-        data['href'] = '/jobs/%s/%s' % (run.job_name, run.run_num)
-        return data
-
     def render_GET(self, request):
-        return respond(request, self.get_data(include_action_runs=True))
+        run_adapter = adapter.JobRunAdapter(self._run, include_action_runs=True)
+        return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):
         cmd = request.args['command'][0]
@@ -229,15 +214,16 @@ class JobResource(resource.Resource):
         if run:
             return JobRunResource(run)
         return resource.NoResource(
-                "Cannot run number '%s' for job '%s'" % (run_id, job.name))
+                "Cannot find run number '%s' for job '%s'" % (run_id, job.name))
 
     def get_data(self, include_job_run=False, include_action_runs=False):
         data = self._job_sched.job.repr_data()
         data['href'] = '/jobs/%s' % urllib.quote(self._job_sched.job.name)
 
         if include_job_run:
+            run_adapter = adapter.JobRunAdapter
             data['runs'] = [
-                JobRunResource(job_run).get_data(include_action_runs)
+                run_adapter(job_run, include_action_runs)
                 for job_run in self._job_sched.job.runs
             ]
         return data

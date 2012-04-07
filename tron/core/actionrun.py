@@ -316,23 +316,6 @@ class ActionRun(Observer):
             'node_name':        self.node.name if self.node else None
         }
 
-    # TODO: remove max_lines if stdout/stderr does not come back through here
-    def repr_data(self, max_lines=None):
-        """Return a dictionary that represents the external view of this
-        action run.
-        """
-        return {
-            'id':               self.id,
-            'state':            self.state.short_name,
-            'node':             self.node.hostname,
-            'command':          self.command,
-            'raw_command':      self.bare_command,
-            'run_time':         self.run_time,
-            'start_time':       self.start_time,
-            'end_time':         self.end_time,
-            'exit_status':      self.exit_status,
-        }
-
     def render_command(self):
         """Render our configured command using the command context."""
         return self.bare_command % self.context
@@ -509,6 +492,10 @@ class ActionRunCollection(object):
         done or blocked.
         """
         return self.is_done and any(run.is_failed for run in self.action_runs)
+
+    @property
+    def names(self):
+        return self.run_map.keys()
 
     def __str__(self):
         def blocked_state(action_run):

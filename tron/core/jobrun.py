@@ -246,18 +246,6 @@ class JobRun(Observable, Observer):
         self.output_path.delete()
         # TODO: do cleanup actions need to be cleaned up?
 
-    def repr_data(self):
-        """A dict that represents the externally visible state."""
-        return {
-            'id':               self.id,
-            'state':            self.state.short_name,
-            'node':             self.node.hostname if self.node else None,
-            'run_num':          self.run_num,
-            'run_time':         self.run_time,
-            'start_time':       self.start_time,
-            'end_time':         self.end_time,
-        }
-
     @property
     def state(self):
         """The overall state of this job run. Based on the state of its actions.
