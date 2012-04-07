@@ -59,7 +59,7 @@ class JobsTest(TestCase):
             node_pool=TEST_POOL
         )
 
-        self.mc.jobs = {self.job.name: self.job}
+        self.mc.jobs = {self.job.name: turtle.Turtle(job=self.job)}
 
         self.resource = www.JobsResource(self.mc)
 
@@ -74,7 +74,7 @@ class JobsTest(TestCase):
         """Test that we can find a specific job"""
         child = self.resource.getChildWithDefault("testname", turtle.Turtle())
         assert isinstance(child, www.JobResource)
-        assert child._job is self.job
+        assert child._job_sched.job is self.job
 
     def test_missing_job(self):
         child = self.resource.getChildWithDefault("bar", turtle.Turtle())
@@ -104,7 +104,8 @@ class JobDetailTest(TestCase):
              repr_data=lambda: {'name': 'foo'}
         )
 
-        self.resource = www.JobResource(self.job, turtle.Turtle())
+        job_sched = turtle.Turtle(job=self.job)
+        self.resource = www.JobResource(job_sched, turtle.Turtle())
 
     def test_detail(self):
         resp = self.resource.render_GET(REQUEST)

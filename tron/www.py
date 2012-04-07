@@ -6,7 +6,7 @@ view current state, event history and send commands to trond.
 import datetime
 import logging
 import urllib
-from tron.core import action, job
+from tron.core import job, actionrun
 
 try:
     import simplejson as json
@@ -63,11 +63,15 @@ class ActionRunResource(resource.Resource):
     def get_data(self, num_lines=10):
         act_run = self._act_run
         duration = str(
-            timeutils.duration(act_run.start_time, act_run.end_time) or ''
-        )
+                timeutils.duration(act_run.start_time, act_run.end_time) or '')
 
         data = act_run.repr_data(num_lines)
         data['duration'] = duration
+        # TODO: this now comes from the job_run.action_graph
+        data['requirements'] = []
+        # TODO: implement in ActionRun
+        data['stdout'] = []
+        data['stderr'] = []
         return data
 
     def render_GET(self, request):
@@ -88,7 +92,7 @@ class ActionRunResource(resource.Resource):
 
         try:
             resp = getattr(self._act_run, '%s' % cmd)()
-        except action.Error:
+        except actionrun.Error:
             resp = None
         if not resp:
             log.info("Failed to %s action run %r." % (cmd, self._act_run))
@@ -116,9 +120,9 @@ class JobRunResource(resource.Resource):
         elif act_name == '_events':
             return EventResource(self._run)
 
-        for act_run in self._run.action_runs_with_cleanup:
-            if act_name == act_run.action.name:
-                return ActionRunResource(act_run)
+        action_run = self._run.action_runs.get(act_name)
+        if action_run:
+            return ActionRunResource(action_run)
 
         return resource.NoResource("Cannot find action '%s' for job run '%s'" %
                                    (act_name, self._run.id))
@@ -129,12 +133,12 @@ class JobRunResource(resource.Resource):
         if include_action_runs:
             data['runs'] = [
                 ActionRunResource(action_run).get_data()
-                for action_run in run.action_runs_with_cleanup
+                for action_run in run.action_runs.action_runs_with_cleanup
             ]
 
         duration = str(timeutils.duration(run.start_time, run.end_time) or '')
         data['duration'] = duration
-        data['href'] = '/jobs/%s/%s' % (run.job.name, run.run_num)
+        data['href'] = '/jobs/%s/%s' % (run.job_name, run.run_num)
         return data
 
     def render_GET(self, request):
@@ -197,43 +201,44 @@ class JobResource(resource.Resource):
 
     isLeaf = False
 
-    def __init__(self, job, master_control):
-        self._job = job
+    def __init__(self, job_sched, master_control):
+        self._job_sched = job_sched
         self._master_control = master_control
         resource.Resource.__init__(self)
 
-    def getChild(self, run_num, request):
-        if run_num == '':
+    def getChild(self, run_id, request):
+        job = self._job_sched.job
+        if run_id == '':
             return self
-        elif run_num == '_events':
-            return EventResource(self._job)
+        elif run_id == '_events':
+            return EventResource(self._job_sched)
 
         run = None
-        run_num = run_num.upper()
+        run_id = run_id.upper()
 
-        if run_num == 'HEAD':
-            run = self._job.newest()
+        if run_id == 'HEAD':
+            run = job.runs.get_newest()
 
         if not run:
-            # May be none if run_num is not a state.short_name
-            run = self._job.newest_run_by_state(run_num)
+            # May return None if run_num is not a state.short_name
+            run = job.runs.get_run_by_state_short_name(run_id)
 
-        if run_num.isdigit():
-            run = self._job.get_run_by_num(int(run_num))
+        if run_id.isdigit():
+            run = job.runs.get_run_by_num(int(run_id))
 
         if run:
             return JobRunResource(run)
-        return resource.NoResource("Cannot run number '%s' for job '%s'" %
-                                   (run_num, self._job.name))
+        return resource.NoResource(
+                "Cannot run number '%s' for job '%s'" % (run_id, job.name))
 
     def get_data(self, include_job_run=False, include_action_runs=False):
-        data = self._job.repr_data()
-        data['href'] = '/jobs/%s' % urllib.quote(self._job.name)
+        data = self._job_sched.job.repr_data()
+        data['href'] = '/jobs/%s' % urllib.quote(self._job_sched.job.name)
 
         if include_job_run:
             data['runs'] = [
                 JobRunResource(job_run).get_data(include_action_runs)
-                for job_run in self._job.runs
+                for job_run in self._job_sched.job.runs
             ]
         return data
 
@@ -247,17 +252,17 @@ class JobResource(resource.Resource):
     def render_POST(self, request):
         cmd = request.args['command'][0]
 
-        log.info("Handling '%s' request for job run %s", cmd, self._job.name)
+        log.info("Handling '%s' request for job run %s", cmd, self._job_sched.name)
 
         if cmd == 'enable':
-            self._master_control.enable_job(self._job)
+            self._job_sched.enable()
             return respond(request, {'result': "Job %s is enabled" %
-                                     self._job.name})
+                                     self._job_sched.name})
 
         if cmd == 'disable':
-            self._master_control.disable_job(self._job)
+            self._job_sched.disable()
             return respond(request, {'result': "Job %s is disabled" %
-                                     self._job.name})
+                                     self._job_sched.name})
 
         if cmd == 'start':
             if 'run_time' in request.args:
@@ -267,7 +272,7 @@ class JobResource(resource.Resource):
             else:
                 run_time = timeutils.current_time()
 
-            runs = self._job.manual_start(run_time=run_time)
+            runs = self._job_sched.manual_start(run_time=run_time)
             return respond(request, {'result': "New Job Runs %s created" %
                                      [r.id for r in runs]})
 
@@ -286,11 +291,11 @@ class JobsResource(resource.Resource):
         if name == '':
             return self
 
-        found = self._master_control.jobs.get(name)
-        if found is None:
+        job_sched = self._master_control.jobs.get(name)
+        if job_sched is None:
             return resource.NoResource("Cannot find job '%s'" % name)
 
-        return JobResource(found, self._master_control)
+        return JobResource(job_sched, self._master_control)
 
     def get_data(self, include_job_run=False, include_action_runs=False):
         mcp = self._master_control
@@ -539,6 +544,7 @@ class EventResource(resource.Resource):
     isLeaf = True
 
     def __init__(self, recordable):
+        resource.Resource.__init__(self)
         assert hasattr(recordable, 'event_recorder')
         self._recordable = recordable
 
@@ -565,11 +571,11 @@ class RootResource(resource.Resource):
         resource.Resource.__init__(self)
 
         # Setup children
-        self.putChild('jobs', JobsResource(master_control))
-        self.putChild('services', ServicesResource(master_control))
-        self.putChild('config', ConfigResource(master_control))
-        self.putChild('status', StatusResource(master_control))
-        self.putChild('events', EventResource(master_control))
+        self.putChild('jobs',       JobsResource(master_control))
+        self.putChild('services',   ServicesResource(master_control))
+        self.putChild('config',     ConfigResource(master_control))
+        self.putChild('status',     StatusResource(master_control))
+        self.putChild('events',     EventResource(master_control))
 
     def getChild(self, name, request):
         if name == '':

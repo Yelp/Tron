@@ -31,7 +31,7 @@ class ActionGraph(object):
         """Return a directed graph from a dict of actions keyed by name."""
         base = []
         for action in actions.itervalues():
-            dependencies = actions_config[action.name].requires
+            dependencies = cls._get_dependencies(actions_config, action.name)
             if not dependencies:
                 base.append(action)
                 continue
@@ -42,6 +42,12 @@ class ActionGraph(object):
                 dependency_action.dependent_actions.append(action)
         return base
 
+    @classmethod
+    def _get_dependencies(cls, actions_config, action_name):
+        if action_name == action.CLEANUP_ACTION_NAME:
+            return []
+        return actions_config[action_name].requires
+
     def actions_for_names(self, names):
         return (self.action_map[name] for name in names)
 
@@ -50,6 +56,10 @@ class ActionGraph(object):
         before that Action.
         """
         return self.action_map[name].required_actions
+
+    @property
+    def names(self):
+        return self.action_map.keys()
 
     def __getitem__(self, name):
         return self.action_map[name]

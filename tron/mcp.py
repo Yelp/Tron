@@ -70,22 +70,6 @@ class StateHandler(Observer, Observable):
         self.writing_enabled = writing
         self.store_delayed = False
 
-    def restore_job(self, job_inst, data):
-        job_inst.set_context(self.mcp.context)
-        job_inst.restore(data)
-
-        for run in job_inst.runs:
-            if run.is_scheduled:
-                reactor.callLater(
-                    run.seconds_until_run_time(),
-                    job_inst.run_job,
-                    run
-                )
-
-        next = job_inst.next_to_finish()
-        if job_inst.enabled and next and next.is_queued:
-            next.start()
-
     def restore_service(self, service, data):
         service.set_context(self.mcp.context)
         service.restore(data)
@@ -207,11 +191,11 @@ class StateHandler(Observer, Observable):
             'services': {},
         }
 
-        for j in self.mcp.jobs.itervalues():
-            data['jobs'][j.name] = j.data
+        for name, job_sched in self.mcp.jobs.iteritems():
+            data['jobs'][name] = job_sched.job.state_data
 
         for s in self.mcp.services.itervalues():
-            data['services'][s.name] = s.data
+            data['services'][s.name] = s.state_data
 
         return data
 
@@ -264,7 +248,7 @@ class MasterControlProgram(Observable):
             # lot of state changes
             old_state_writing = self.state_handler.writing_enabled
             self.state_handler.writing_enabled = False
-            self.load_config()
+            self.load_config(reconfigure=True)
 
         except Exception:
             self.event_recorder.emit_critical("reconfig_failure")
@@ -273,30 +257,36 @@ class MasterControlProgram(Observable):
         finally:
             self.state_handler.writing_enabled = old_state_writing
 
-    def load_config(self):
+    def load_config(self, reconfigure=False):
         log.info("Loading configuration from %s" % self.config_file)
         with open(self.config_file, 'r') as f:
-            self.apply_config(config_parse.load_config(f))
+            config = config_parse.load_config(f)
+        self.apply_config(config, reconfigure=reconfigure)
+
+    def initial_setup(self):
+        """When the MCP is initialized the config is applied before the state.
+        In this case jobs shouldn't be scheduled until the state is applied.
+        """
+        self.load_config()
+        self.try_restore()
+        self.schedule_jobs()
 
     def config_lines(self):
         try:
-            conf = open(self.config_file, 'r')
-            data = conf.read()
-            conf.close()
-            return data
+            with open(self.config_file, 'r') as config:
+                return config.read()
         except IOError, e:
             log.error(str(e) + " - Cannot open configuration file!")
             return ""
 
     def rewrite_config(self, lines):
         try:
-            conf = open(self.config_file, 'w')
-            conf.write(lines)
-            conf.close()
+            with open(self.config_file, 'w') as config:
+                config.write(lines)
         except IOError, e:
             log.error(str(e) + " - Cannot write to configuration file!")
 
-    def apply_config(self, conf, skip_env_dependent=False):
+    def apply_config(self, conf, skip_env_dependent=False, reconfigure=False):
         """Apply a configuration. If skip_env_dependent is True we're
         loading this locally to test the config as part of tronfig. We want to
         skip applying some settings because the local machine we're using to
@@ -315,7 +305,7 @@ class MasterControlProgram(Observable):
         self._apply_node_pools(conf.node_pools)
 
         self.time_zone = conf.time_zone
-        self._apply_jobs(conf.jobs)
+        self._apply_jobs(conf.jobs, reconfigure=reconfigure)
         self._apply_services(conf.services)
         self._apply_notification_options(conf.notification_options)
 
@@ -380,11 +370,11 @@ class MasterControlProgram(Observable):
             for config in pool_confs.itervalues()
         )
 
-    def _apply_jobs(self, job_configs):
+    def _apply_jobs(self, job_configs, reconfigure=False):
         """Add and remove jobs based on the configuration."""
         # TODO: attach observer for state changes and events
         for job_config in job_configs.values():
-            self.add_job(job_config)
+            self.add_job(job_config, reconfigure=reconfigure)
 
         for job_name in (set(self.jobs.keys()) - set(job_configs.keys())):
             log.debug("Removing job %s", job_name)
@@ -430,7 +420,7 @@ class MasterControlProgram(Observable):
             self.monitor.start()
 
     ### JOBS ###
-    def add_job(self, job_config):
+    def add_job(self, job_config, reconfigure=False):
         log.debug("Building new job %s", job_config.name)
         output_path = filehandler.OutputPath(self.state_handler.working_dir)
         scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
@@ -450,7 +440,10 @@ class MasterControlProgram(Observable):
 
         log.info("adding new job %s", job.name)
         self.jobs[job.name] = JobScheduler(job)
-        self.jobs[job.name].schedule()
+        # If this is not a reconfigure, wait for state to be restored before
+        # scheduling job runs.
+        if reconfigure:
+            self.jobs[job.name].schedule()
 
         event.EventManager.get_instance().add(job, parent=self)
         self.state_handler.watch(job, Job.NOTIFY_STATE_CHANGE)
@@ -517,13 +510,12 @@ class MasterControlProgram(Observable):
             return
 
         state_load_count = 0
-        for name in data['jobs'].iterkeys():
-            if name in self.jobs:
-                self.state_handler.restore_job(self.jobs[name].job,
-                                               data['jobs'][name])
-                state_load_count += 1
-            else:
+        for name, job_state_data in data['jobs'].iteritems():
+            if name not in self.jobs:
                 log.warning("Job name %s from state file unknown", name)
+                continue
+            self.jobs[name].restore_job_state(job_state_data)
+            state_load_count += 1
 
         for name in data['services'].iterkeys():
             if name in self.services:

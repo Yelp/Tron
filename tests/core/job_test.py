@@ -234,7 +234,7 @@ class JobSchedulerTestCase(TestCase):
     def test_schedule_reconfigured(self):
         self.job_scheduler.schedule = Turtle()
         self.job_scheduler.schedule_reconfigured()
-        assert_length(self.job.runs.cancel_pending.calls, 1)
+        assert_length(self.job.runs.remove_pending.calls, 1)
         assert_length(self.job_scheduler.schedule.calls, 1)
 
     def test_run_job(self):
@@ -425,6 +425,9 @@ class JobSchedulerScheduleTestCase(MockReactorTestCase):
         self.job.enabled = False
         self.job_scheduler.schedule()
         assert_length(self.reactor.callLater.calls, 0)
+
+    def test_schedule_already_scheduled(self):
+        pass
 
 
 if __name__ == '__main__':

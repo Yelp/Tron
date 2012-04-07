@@ -29,7 +29,7 @@ from tron import commands
 from tron import mcp
 from tron import www
 
-logger = logging.getLogger('trond')
+logger = logging.getLogger()
 
 
 TRON                    = 'tron'
@@ -222,15 +222,11 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
         master_control = mcp.MasterControlProgram(self.options.working_dir,
                                                   self.options.config_file)
         try:
-            master_control.load_config()
+            master_control.initial_setup()
         except Exception, e:
             logger.exception("Error in configuration file %s" %
                              self.options.config_file)
             sys.exit(1)
-
-        # Try to load up previous state
-        logger.debug("attempt restore")
-        master_control.try_restore()
 
         master_control.state_handler.writing_enabled = True
 
@@ -247,9 +243,6 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
         reactor.listenTCP(self.options.listen_port, server.Site(
             www.RootResource(master_control)),
             interface=self.options.listen_host)
-
-        # Setup the mcp timed callbacks
-        reactor.callLater(0, master_control.run_jobs)
 
 
 def main():

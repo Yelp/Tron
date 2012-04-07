@@ -62,8 +62,8 @@ class ActionRunFactory(object):
     def build_action_run_collection(cls, job_run):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
         action_run_map = dict(
-            (name, cls.build_run_for_action(job_run, action))
-            for name, action in job_run.action_graph.action_map.iteritems()
+            (name, cls.build_run_for_action(job_run, action_inst))
+            for name, action_inst in job_run.action_graph.action_map.iteritems()
         )
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
@@ -85,12 +85,12 @@ class ActionRunFactory(object):
     @classmethod
     def build_run_for_action(cls, job_run, action):
         """Create an ActionRun for a JobRun and Action."""
-        node = action.node_pool.next() if action.node_pool else job_run.node
+        run_node = action.node_pool.next() if action.node_pool else job_run.node
 
         action_run = ActionRun(
             job_run.id,
             action.name,
-            node,
+            run_node,
             job_run.run_time,
             action.command,
             parent_context=job_run.context,
@@ -316,6 +316,7 @@ class ActionRun(Observer):
             'node_name':        self.node.name if self.node else None
         }
 
+    # TODO: remove max_lines if stdout/stderr does not come back through here
     def repr_data(self, max_lines=None):
         """Return a dictionary that represents the external view of this
         action run.
@@ -405,6 +406,7 @@ class ActionRunCollection(object):
         self.proxy_action_runs_with_cleanup = proxy.CollectionProxy(
             self.get_action_runs_with_cleanup, [
                 ('is_running',      any,    False),
+                ('is_starting',     any,    False),
                 ('is_scheduled',    any,    False),
                 ('is_queued',       all,    False),
                 ('is_cancelled',    all,    False),
@@ -520,3 +522,9 @@ class ActionRunCollection(object):
 
     def __getattr__(self, name):
         return self.proxy_action_runs_with_cleanup.perform(name)
+
+    def __getitem__(self, name):
+        return self.run_map[name]
+
+    def get(self, name):
+        return self.run_map.get(name)

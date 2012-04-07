@@ -22,12 +22,14 @@ class SimpleTestCase(TestCase):
     def per_method_setup(self):
         self.ran_setup = True
 
+    @suite('reactor')
     @testingutils.run_reactor()
     def test_method_one(self):
         assert_equal(self.ran_class_setup, 1)
         assert self.ran_setup
         self.ran_methods += 1
 
+    @suite('reactor')
     @testingutils.run_reactor()
     def test_method_two(self):
         assert_equal(self.ran_class_setup, 1)

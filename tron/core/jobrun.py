@@ -157,6 +157,7 @@ class JobRun(Observable, Observer):
                 'is_queued',
                 'is_scheduled',
                 'is_skipped',
+                'is_starting',
             ])
 
     def seconds_until_run_time(self):
@@ -202,6 +203,9 @@ class JobRun(Observable, Observer):
         """Handle events triggered by JobRuns."""
         # propagate all state changes (from action runs) up to state serializer
         self.notify(self.NOTIFY_STATE_CHANGED)
+
+        if event not in ActionRun.END_STATES:
+            return
 
         started_actions = self._start_action_runs()
         if any(started_actions):
@@ -254,7 +258,6 @@ class JobRun(Observable, Observer):
             'end_time':         self.end_time,
         }
 
-    # TODO: cancelled job in unknown state, see mcp_reconfigure_test.test_job_changed
     @property
     def state(self):
         """The overall state of this job run. Based on the state of its actions.
@@ -265,6 +268,8 @@ class JobRun(Observable, Observer):
             return ActionRun.STATE_CANCELLED
         if self.action_runs.is_running:
             return ActionRun.STATE_RUNNING
+        if self.action_runs.is_starting:
+            return ActionRun.STATE_STARTING
         if self.action_runs.is_failed:
             return ActionRun.STATE_FAILED
         if self.action_runs.is_scheduled:
@@ -335,6 +340,13 @@ class JobRunCollection(object):
         """Find any queued or scheduled runs and cancel them."""
         for pending in self.get_pending():
             pending.cancel()
+
+    def remove_pending(self):
+        """Remove pending runs from the run list."""
+        for pending in list(self.get_pending()):
+            pending.cancel()
+            pending.cleanup()
+            self.runs.remove(pending)
 
     def _get_runs_using(self, func):
         """Filter runs using func()."""
@@ -425,6 +437,9 @@ class JobRunCollection(object):
     @property
     def last_success(self):
         return self.get_run_by_state(ActionRun.STATE_SUCCEEDED)
+
+    def __iter__(self):
+        return iter(self.runs)
 
     def __str__(self):
         return "%s[%s]" % (

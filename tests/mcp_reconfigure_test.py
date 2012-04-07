@@ -36,6 +36,7 @@ class MCPReconfigureTest(TestCase):
                     schedule=dict(interval='20s'),
                     actions=[dict(name='action_remove',
                                   command='command_remove')],
+                    cleanup_action=dict(name='cleanup', command='doit')
                 ),
                 dict(
                     name='test_change',
@@ -122,7 +123,8 @@ class MCPReconfigureTest(TestCase):
 
     def reconfigure(self):
         config = self.config_2(self.test_dir)
-        self.my_mcp.apply_config(config_parse.load_config(config))
+        contents = config_parse.load_config(config)
+        self.my_mcp.apply_config(contents, reconfigure=True)
 
     @suite('integration')
     def test_job_list(self):
@@ -165,7 +167,7 @@ class MCPReconfigureTest(TestCase):
 
         assert_equal(job_sched.job.name, "test_remove")
         action_map = job_sched.job.action_graph.action_map
-        assert_equal(len(action_map), 1)
+        assert_equal(len(action_map), 2)
         assert_equal(action_map['action_remove'].name, 'action_remove')
 
         self.reconfigure()
@@ -195,8 +197,8 @@ class MCPReconfigureTest(TestCase):
         action_map = job_sched.job.action_graph.action_map
         assert_equal(len(action_map), 1)
 
-        assert_equal(len(new_job_sched.job.runs.runs), 3)
-        assert new_job_sched.job.runs.runs[1].is_cancelled
+        assert_equal(len(new_job_sched.job.runs.runs), 2)
+        assert new_job_sched.job.runs.runs[1].is_starting
         assert new_job_sched.job.runs.runs[0].is_scheduled
         assert_equal(job_sched.job.context['a_variable'], 'is_constant')
 
@@ -218,25 +220,22 @@ class MCPReconfigureTest(TestCase):
 
     @suite('integration')
     def test_daily_reschedule(self):
-        job4 = self.my_mcp.jobs['test_daily_change']
+        job_sched = self.my_mcp.jobs['test_daily_change']
 
-        self.my_mcp.job_scheduler.next_runs(job4)
+        job_sched.get_runs_to_schedule().next()
 
-        assert_equal(len(job4.runs), 1)
-        run = job4.runs[0]
+        assert_equal(len(job_sched.job.runs.runs), 1)
+        run = job_sched.job.runs.runs[0]
         assert run.is_scheduled
 
         self.reconfigure()
+        assert run.is_cancelled
 
-        assert run.job is None
-
-        assert_equal(len(job4.runs), 1)
-        next_run = job4.runs[0]
-        assert next_run is not run
-        assert next_run.is_scheduled
-        assert_equal(run.run_time, next_run.run_time)
-
-    # TODO: test that global context change works for a jobs context
+        assert_equal(len(job_sched.job.runs.runs), 1)
+        new_run = job_sched.job.runs.runs[0]
+        assert new_run is not run
+        assert new_run.is_scheduled
+        assert_equal(run.run_time, new_run.run_time)
 
 
 if __name__ == '__main__':

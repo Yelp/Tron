@@ -236,9 +236,19 @@ class JobScheduler(Observer):
     def __init__(self, job):
         self.job = job
 
+    # TODO: test
+    def restore_job_state(self, job_state_data):
+        """Restore the job state and schedule any JobRuns."""
+        self.job.restore_state(job_state_data)
+        scheduled = self.job.runs.get_runs_by_state(ActionRun.STATE_SCHEDULED)
+        for job_run in scheduled:
+            self._set_callback(job_run)
+
     def enable(self):
         """Enable the job and start its scheduling cycle."""
         self.job.enabled = True
+        # TODO: should this skip all missed runs and just schedule the next one
+        # using current time? Github Issue #36
         self.schedule()
 
     def disable(self):
@@ -255,9 +265,9 @@ class JobScheduler(Observer):
         return manual_runs
 
     def schedule_reconfigured(self):
-        """Cancel the pending run and create new runs with the new JobScheduler.
+        """Remove the pending run and create new runs with the new JobScheduler.
         """
-        self.job.runs.cancel_pending()
+        self.job.runs.remove_pending()
         self.schedule()
 
     def schedule(self):
@@ -268,10 +278,14 @@ class JobScheduler(Observer):
             return
 
         runs = self.get_runs_to_schedule()
-        for run in runs:
-            log.info("Scheduling next Jobrun for %s", self.job.name)
-            secs = run.seconds_until_run_time()
-            reactor.callLater(secs, self.run_job, run)
+        for job_run in runs:
+            self._set_callback(job_run)
+
+    def _set_callback(self, job_run):
+        """Set a callback for JobRun to fire at the appropriate time."""
+        log.info("Scheduling next Jobrun for %s", self.job.name)
+        secs = job_run.seconds_until_run_time()
+        reactor.callLater(secs, self.run_job, job_run)
 
     def run_job(self, job_run):
         """Triggered by a callback to actually start the JobRun. Also
