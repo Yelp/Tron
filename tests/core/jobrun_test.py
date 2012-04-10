@@ -268,12 +268,6 @@ class JobRunTestCase(TestCase):
         assert not self.job_run.action_graph
         assert not self.job_run.action_runs
 
-    def test_repr_data(self):
-        repr_data = self.job_run.repr_data()
-        assert_equal(repr_data['id'], self.job_run.id)
-        assert_equal(repr_data['node'], self.job_run.node.hostname)
-        assert_equal(repr_data['run_time'], self.run_time)
-
     def test__getattr__(self):
         assert self.job_run.cancel
         assert self.job_run.is_queued

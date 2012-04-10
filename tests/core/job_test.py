@@ -123,13 +123,6 @@ class JobTestCase(TestCase):
         self.job.runs.get_run_by_state = lambda s: None
         assert_equal(self.job.status, self.job.STATUS_UNKNOWN)
 
-    def test_repr_data(self):
-        repr_data = self.job.repr_data()
-        assert_equal(repr_data['name'], self.job.name)
-        assert_equal(repr_data['scheduler'], str(self.job.scheduler))
-        assert_equal(repr_data['node_pool'], ["box1", "box0"])
-        assert_equal(repr_data['status'], self.job.STATUS_RUNNING)
-
     def test_state_data(self):
         state_data = self.job.state_data
         assert_equal(state_data['runs'], self.job.runs.state_data)

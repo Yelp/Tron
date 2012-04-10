@@ -17,6 +17,7 @@ log = logging.getLogger(__name__)
 
 class NullFileHandle(object):
     """A No-Op object that supports a File interface."""
+    closed = True
     @classmethod
     def write(cls, _):
         pass
@@ -56,6 +57,12 @@ class FileHandleWrapper(object):
         self.last_accessed = time.time()
         self._fh.write(content)
         self.manager.update(self)
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, _exc_type, _exc_val, _exc_tb):
+        self.close()
 
 
 class FileHandleManager(object):

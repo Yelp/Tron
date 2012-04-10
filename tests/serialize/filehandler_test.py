@@ -55,11 +55,21 @@ class FileHandleWrapperTestCase(TestCase):
         self.fh_wrapper.write("\nmore things")
         after_time = time.time()
         assert before_time <= self.fh_wrapper.last_accessed <= after_time
+        self.fh_wrapper.close()
+        with open(self.file.name) as fh:
+            assert_equal(fh.read(), "some things\nmore things")
 
     def test_close_many(self):
         self.fh_wrapper.write("some things")
         self.fh_wrapper.close()
         self.fh_wrapper.close()
+
+    def test_context_manager(self):
+        with self.fh_wrapper as fh:
+            fh.write("123")
+        assert fh._fh.closed
+        with open(self.file.name) as fh:
+            assert_equal(fh.read(), "123")
 
 
 class FileHandleManagerTestCase(TestCase):
@@ -187,22 +197,24 @@ class OutputStreamSerializerTestCase(TestCase):
     def setup_serializer(self):
         self.test_dir = mkdtemp()
         self.serial = OutputStreamSerializer([self.test_dir])
+        self.filename = "STARS"
+        self.content = "123\n456\n789"
+        self.expected = self.content.split('\n')
 
     @teardown
     def teardown_test_dir(self):
         shutil.rmtree(self.test_dir)
 
-    def test_open_and_tail(self):
-        filename = "STARS"
-        content = "123"
-        fh = self.serial.open(filename)
-        fh.write(content)
-        fh.close()
+    def _write_contents(self):
+        with open(self.serial.full_path(self.filename), 'w') as f:
+            f.write(self.content)
 
-        with open(self.serial.full_path(filename)) as f:
-            assert_equal(f.read(), content)
+    def test_open(self):
+        with self.serial.open(self.filename) as fh:
+            fh.write(self.content)
 
-        assert_equal(self.serial.tail(filename), content)
+        with open(self.serial.full_path(self.filename)) as f:
+            assert_equal(f.read(), self.content)
 
     @suite('integration')
     def test_init_with_output_path(self):
@@ -212,12 +224,16 @@ class OutputStreamSerializerTestCase(TestCase):
         assert_equal(stream.base_path, str(path))
 
     def test_tail(self):
-        pass
-        # TODO
+        self._write_contents()
+        assert_equal(self.serial.tail(self.filename), self.expected)
+
+    def test_tail_num_lines(self):
+        self._write_contents()
+        assert_equal(self.serial.tail(self.filename, 1), self.expected[-1:])
 
     def test_tail_file_does_not_exist(self):
-        # TODO
-        pass
+        file_dne = 'bogusfile123'
+        assert_equal(self.serial.tail(file_dne), [])
 
 
 class OutputPathTestCase(TestCase):
