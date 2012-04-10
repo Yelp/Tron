@@ -513,5 +513,8 @@ class ActionRunCollection(object):
     def __getitem__(self, name):
         return self.run_map[name]
 
+    def __contains__(self, name):
+        return name in self.run_map
+
     def get(self, name):
         return self.run_map.get(name)

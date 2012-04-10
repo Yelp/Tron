@@ -216,24 +216,14 @@ class JobResource(resource.Resource):
         return resource.NoResource(
                 "Cannot find run number '%s' for job '%s'" % (run_id, job.name))
 
-    def get_data(self, include_job_run=False, include_action_runs=False):
-        data = self._job_sched.job.repr_data()
-        data['href'] = '/jobs/%s' % urllib.quote(self._job_sched.job.name)
-
-        if include_job_run:
-            run_adapter = adapter.JobRunAdapter
-            data['runs'] = [
-                run_adapter(job_run, include_action_runs)
-                for job_run in self._job_sched.job.runs
-            ]
-        return data
-
     def render_GET(self, request):
         include_action_runs = False
         if request.args:
             if 'include_action_runs' in request.args:
                 include_action_runs = True
-        return respond(request, self.get_data(True, include_action_runs))
+        job_adapter = adapter.JobAdapter(
+                self._job_sched.job, True, include_action_runs)
+        return respond(request, job_adapter.get_repr())
 
     def render_POST(self, request):
         cmd = request.args['command'][0]
@@ -284,23 +274,19 @@ class JobsResource(resource.Resource):
         return JobResource(job_sched, self._master_control)
 
     def get_data(self, include_job_run=False, include_action_runs=False):
-        mcp = self._master_control
+        job_adapter = adapter.JobAdapter
         return [
-            JobResource(job, mcp).get_data(include_job_run, include_action_runs)
+            job_adapter(job.job, include_job_run, include_action_runs).get_repr()
             for job in self._master_control.jobs.itervalues()
         ]
 
     def render_GET(self, request):
         include_job_runs = include_action_runs = False
         if request.args:
-            if 'include_job_runs' in request.args:
-                include_job_runs = True
-            if 'include_action_runs' in request.args:
-                include_action_runs = True
+            include_job_runs    = 'include_job_runs' in request.args
+            include_action_runs = 'include_action_runs' in request.args
 
-        output = {
-            'jobs': self.get_data(include_job_runs, include_action_runs),
-        }
+        output = dict(jobs=self.get_data(include_job_runs, include_action_runs))
         return respond(request, output)
 
     def render_POST(self, request):

@@ -4,6 +4,7 @@
  act as an adapter between the data format api clients expect, and the internal
  data of an object.
 """
+import urllib
 from tron import actioncommand
 from tron.serialize import filehandler
 from tron.utils import timeutils
@@ -28,8 +29,10 @@ class ReprAdapter(object):
             for field_name in self.translated_field_names)
 
     def get_repr(self):
-        repr_data = dict(getattr(self._obj, field) for field in self.fields)
-        translated = dict((field, func()) for field, func in self.translators)
+        repr_data = dict(
+                (field, getattr(self._obj, field)) for field in self.fields)
+        translated = dict(
+                (field, func()) for field, func in self.translators.iteritems())
         repr_data.update(translated)
         return repr_data
 
@@ -58,7 +61,7 @@ class ActionRunAdapter(RunAdapter):
             'id',
             'command',
             'run_time',
-            'state_time',
+            'start_time',
             'end_time',
             'exit_status'
     ]
@@ -100,7 +103,7 @@ class ActionRunAdapter(RunAdapter):
 class JobRunAdapter(RunAdapter):
 
     field_names = ['id', 'run_num', 'run_time', 'start_time', 'end_time']
-    translated_field_names = ['state', 'node', 'duration', 'href']
+    translated_field_names = ['state', 'node', 'duration', 'href', 'runs']
 
     def __init__(self, job_run, include_action_runs=False):
         super(JobRunAdapter, self).__init__(job_run)
@@ -116,4 +119,46 @@ class JobRunAdapter(RunAdapter):
         return [
             ActionRunAdapter(self._obj, action_name).get_repr()
             for action_name in self._obj.action_runs.names
+        ]
+
+class JobAdapter(ReprAdapter):
+
+    field_names = ['name', 'status']
+    translated_field_names = [
+        'scheduler',
+        'action_names',
+        'node_pool',
+        'last_success',
+        'href',
+        'runs'
+    ]
+
+    def __init__(self, job, include_job_runs=False, include_action_runs=False):
+        super(JobAdapter, self).__init__(job)
+        self.include_job_runs    = include_job_runs
+        self.include_action_runs = include_action_runs
+
+    def get_scheduler(self):
+        return str(self._obj.scheduler)
+
+    def get_action_names(self):
+        return self._obj.action_graph.names
+
+    def get_node_pool(self):
+        return [n.hostname for n in self._obj.node_pool.nodes]
+
+    def get_last_success(self):
+        last_success = self._obj.runs.last_success
+        return last_success.end_time if last_success else None
+
+    def get_href(self):
+        return '/jobs/%s' % urllib.quote(self._obj.name)
+
+    def get_runs(self):
+        if not self.include_job_runs:
+            return
+
+        return [
+            JobRunAdapter(job_run, self.include_action_runs).get_repr()
+            for job_run in self._obj.runs
         ]

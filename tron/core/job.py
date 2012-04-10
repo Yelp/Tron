@@ -144,18 +144,6 @@ class Job(Observable, Observer):
         log.warn("%s in an unknown state: %s" % (self, self.runs))
         return self.STATUS_UNKNOWN
 
-    def repr_data(self):
-        """Returns a dict that is the external representation of this job."""
-        last_success = self.runs.last_success
-        return {
-            'name':             self.name,
-            'scheduler':        str(self.scheduler),
-            'action_names':     self.action_graph.names,
-            'node_pool':        [n.hostname for n in self.node_pool.nodes],
-            'status':           self.status,
-            'last_success':     last_success.end_time if last_success else None,
-        }
-
     @property
     def state_data(self):
         """This data is used to serialize the state of this job."""

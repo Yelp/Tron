@@ -206,9 +206,18 @@ class OutputStreamSerializerTestCase(TestCase):
 
     @suite('integration')
     def test_init_with_output_path(self):
-        path = OutputPath('tmp', 'one', 'two', 'three')
+        self.test_dir = 'tmp'
+        path = OutputPath(self.test_dir, 'one', 'two', 'three')
         stream = OutputStreamSerializer(path)
         assert_equal(stream.base_path, str(path))
+
+    def test_tail(self):
+        pass
+        # TODO
+
+    def test_tail_file_does_not_exist(self):
+        # TODO
+        pass
 
 
 class OutputPathTestCase(TestCase):

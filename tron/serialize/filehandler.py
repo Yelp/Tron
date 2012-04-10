@@ -151,6 +151,7 @@ class OutputStreamSerializer(object):
     def full_path(self, filename):
         return os.path.join(self.base_path, filename)
 
+    # TODO: do not use subprocess
     def tail(self, filename, num_lines=None):
         """Tail a file using `tail`."""
         path = self.full_path(filename)
@@ -162,7 +163,7 @@ class OutputStreamSerializer(object):
         try:
             cmd = ('tail', '-n', str(num_lines), path)
             tail_sub = Popen(cmd, stdout=PIPE)
-            return '\n'.join(line.rstrip() for line in tail_sub.stdout)
+            return list(line.rstrip() for line in tail_sub.stdout)
         except OSError, e:
             log.error("Could not tail %s: %s" % (path, e))
             return []
