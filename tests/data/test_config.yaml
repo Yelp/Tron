@@ -43,7 +43,7 @@ jobs:
                 command: "%(ECHO)s %(actionname)s"
                 requires: [task0]
             -   name: task0
-                command: "%(ECHO)s %(actionname)s"
+                command: "sleep 3 && %(ECHO)s %(actionname)s"
 
 
     # IntervalScheduler dependent failure Actions

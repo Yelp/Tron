@@ -232,7 +232,7 @@ class JobSchedulerTestCase(TestCase):
 
     def test_run_job(self):
         self.job_scheduler.schedule = Turtle()
-        self.job.runs.get_run_by_state = lambda s: not ActionRun.STATE_RUNNING
+        self.job.runs.has_starting_or_running = False
         job_run = Turtle(is_cancelled=False)
         self.job_scheduler.run_job(job_run)
         assert_length(job_run.start.calls, 1)
@@ -273,6 +273,15 @@ class JobSchedulerTestCase(TestCase):
         assert_length(job_run.cancel.calls, 1)
         assert_length(self.job_scheduler.schedule.calls, 0)
 
+    def test_run_job_has_starting_queueing(self):
+        self.job_scheduler.schedule = Turtle()
+        self.job.runs.get_run_by_state = lambda s: s == ActionRun.STATE_STARTING
+        job_run = Turtle(is_cancelled=False)
+        self.job_scheduler.run_job(job_run)
+        assert_length(job_run.start.calls, 0)
+        assert_length(job_run.queue.calls, 1)
+        assert_length(self.job_scheduler.schedule.calls, 0)
+
     def test_watcher(self):
         self.job_scheduler.run_job = Turtle()
         queued_job_run = Turtle()
@@ -306,7 +315,7 @@ class JobSchedulerTestCase(TestCase):
 
     def test_get_runs_to_schedule_queue_with_pending(self):
         self.scheduler.queue_overlapping = True
-        self.job.runs.get_pending = lambda: True
+        self.job.runs.has_pending = True
 
         job_runs = list(self.job_scheduler.get_runs_to_schedule())
 

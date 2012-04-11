@@ -337,17 +337,18 @@ class JobRunCollection(object):
             pending.cleanup()
             self.runs.remove(pending)
 
-    def _get_runs_using(self, func):
+    def _get_runs_using(self, func, reverse=False):
         """Filter runs using func()."""
-        return itertools.ifilter(func, self.runs)
+        job_runs = self.runs if not reverse else reversed(self.runs)
+        return itertools.ifilter(func, job_runs)
 
-    def _get_run_using(self, func):
+    def _get_run_using(self, func, reverse=False):
         """Find the first run (from most recent to least recent), where func()
         returns true.  func() should be a callable which takes a single
         argument (a JobRun), and return True or False.
         """
         try:
-            return self._get_runs_using(func).next()
+            return self._get_runs_using(func, reverse).next()
         except StopIteration:
             return None
 
@@ -357,10 +358,6 @@ class JobRunCollection(object):
     def get_run_by_state(self, state):
         """Returns the most recent run which matches the state."""
         return self._get_run_using(self._filter_by_state(state))
-
-    def get_runs_by_state(self, state):
-        """Returns runs which match the state."""
-        return self._get_runs_using(self._filter_by_state(state))
 
     def get_run_by_num(self, num):
         """Return a the run with run number which matches num."""
@@ -382,6 +379,21 @@ class JobRunCollection(object):
     @property
     def has_pending(self):
         return any(self.get_pending())
+
+    def get_starting_or_running(self):
+        return self._get_runs_using(lambda r: r.is_starting or r.is_running)
+
+    @property
+    def has_starting_or_running(self):
+        return any(self.get_starting_or_running())
+
+    def get_first_queued(self):
+        queued_func = self._filter_by_state(ActionRun.STATE_QUEUED)
+        return self._get_run_using(queued_func, reverse=True)
+
+    def get_scheduled(self):
+        state = ActionRun.STATE_SCHEDULED
+        return self._get_runs_using(self._filter_by_state(state))
 
     def get_next_to_finish(self, node=None):
         """Return the most recent run which is either running or scheduled. If

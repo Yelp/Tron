@@ -454,16 +454,6 @@ class JobRunCollectionTestCase(TestCase):
         run = self.run_collection.get_run_by_state(state)
         assert_equal(run, None)
 
-    def test_get_runs_by_state(self):
-        state = actionrun.ActionRun.STATE_QUEUED
-        runs = self.run_collection.get_runs_by_state(state)
-        assert_equal(list(runs), self.job_runs[:1])
-
-    def test_get_runs_by_state_no_match(self):
-        state = actionrun.ActionRun.STATE_UNKNOWN
-        runs = self.run_collection.get_runs_by_state(state)
-        assert_equal(list(runs), [])
-
     def test_get_run_by_num(self):
         run = self.run_collection.get_run_by_num(1)
         assert_equal(run.run_num, 1)
@@ -504,6 +494,22 @@ class JobRunCollectionTestCase(TestCase):
         pending = list(self.run_collection.get_pending())
         assert_length(pending, 2)
         assert_equal(pending, [scheduled_run, self.job_runs[0]])
+
+    # TODO: get_starting_or_running
+
+    def test_get_first_queued(self):
+        run_num = self.run_collection.next_run_num()
+        second_queued = self._mock_run(
+            run_num=run_num, state=actionrun.ActionRun.STATE_QUEUED)
+        self.run_collection.runs.appendleft(second_queued)
+
+        first_queued = self.run_collection.get_first_queued()
+        assert_equal(first_queued, self.job_runs[0])
+
+    def test_get_first_queued_no_match(self):
+        self.job_runs[0].state = actionrun.ActionRun.STATE_CANCELLED
+        first_queued = self.run_collection.get_first_queued()
+        assert not first_queued
 
     def test_get_next_to_finish(self):
         next_run = self.run_collection.get_next_to_finish()

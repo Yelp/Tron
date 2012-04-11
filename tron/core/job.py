@@ -223,12 +223,13 @@ class JobScheduler(Observer):
 
     def __init__(self, job):
         self.job = job
+        self.watch(job)
 
     # TODO: test
     def restore_job_state(self, job_state_data):
         """Restore the job state and schedule any JobRuns."""
         self.job.restore_state(job_state_data)
-        scheduled = self.job.runs.get_runs_by_state(ActionRun.STATE_SCHEDULED)
+        scheduled = self.job.runs.get_scheduled()
         for job_run in scheduled:
             self._set_callback(job_run)
 
@@ -272,15 +273,15 @@ class JobScheduler(Observer):
     def _set_callback(self, job_run):
         """Set a callback for JobRun to fire at the appropriate time."""
         log.info("Scheduling next Jobrun for %s", self.job.name)
-        secs = job_run.seconds_until_run_time()
-        reactor.callLater(secs, self.run_job, job_run)
+        seconds = job_run.seconds_until_run_time()
+        reactor.callLater(seconds, self.run_job, job_run)
 
-    def run_job(self, job_run):
+    def run_job(self, job_run, run_queued=False):
         """Triggered by a callback to actually start the JobRun. Also
         schedules the next JobRun.
         """
         # If the Job has been disabled after this run was scheduled, then cancel
-        # the Jobrun and do not schedule another
+        # the JobRun and do not schedule another
         if not self.job.enabled:
             log.info("%s cancelled because job has been disabled." % job_run)
             return job_run.cancel()
@@ -288,13 +289,17 @@ class JobScheduler(Observer):
         # If the JobRun was cancelled we won't run it.  A JobRun may be
         # cancelled if the job was disabled, or manually by a user. It's
         # also possible this job was run (or is running) manually by a user.
-        if not job_run.is_scheduled:
+        # Alternatively, if run_queued is True, this job_run is already queued.
+        if not run_queued and not job_run.is_scheduled:
             log.info("%s in state %s already out of scheduled state." % (
                     job_run, job_run.state))
             return self.schedule()
 
+        # TODO: if this is an all_nodes job, then enforce that the node is
+        # the same as any pending jobs
+
         # If there is another job run still running, queue or cancel this one
-        if self.job.runs.get_run_by_state(ActionRun.STATE_RUNNING):
+        if self.job.runs.has_starting_or_running:
             if self.job.queueing:
                 log.info("%s still running, queueing %s." % (self.job, job_run))
                 return job_run.queue()
@@ -312,11 +317,11 @@ class JobScheduler(Observer):
         if event != Job.NOTIFY_RUN_DONE:
             return
 
-        # Triggered when a JobRun completes. May need to start a queued run
-        queued_runs = self.job.runs.get_runs_by_state(ActionRun.STATE_QUEUED)
-        if queued_runs:
-            for run in queued_runs:
-                self.run_job(run)
+        queued_run = self.job.runs.get_first_queued()
+        # TODO: if this is an all_nodes job, then we may need to start more
+        # then a single queued job
+        if queued_run:
+            reactor.callLater(0, self.run_job, queued_run, run_queued=True)
 
     def get_runs_to_schedule(self):
         """If the scheduler does not support queuing overlapping and this job

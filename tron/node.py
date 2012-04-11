@@ -501,3 +501,6 @@ class Node(object):
             'name':             self.name,
             'hostname':         self.hostname
         }
+
+    def __str__(self):
+        return "Node:%s" % self.hostname
