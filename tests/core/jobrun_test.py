@@ -283,6 +283,8 @@ class JobRunFromStateTestCase(TestCase):
     def setup_jobrun(self):
         self.action_graph = Turtle(action_map=dict(anaction=Turtle()))
         self.run_time = datetime.datetime(2012, 3, 14, 15, 9 ,26)
+        self.path = ['base', 'path']
+        self.output_path = Turtle(clone=lambda: self.path)
         self.action_run_state_data = [{
             'job_run_id':       'thejobname.22',
             'action_name':      'blingaction',
@@ -306,11 +308,13 @@ class JobRunFromStateTestCase(TestCase):
         }
 
     def test_from_state(self):
-        run = jobrun.JobRun.from_state(self.state_data, self.action_graph)
+        run = jobrun.JobRun.from_state(
+                self.state_data, self.action_graph, self.output_path)
         assert_length(run.action_runs.run_map, 1)
         assert_equal(run.job_name, self.state_data['job_name'])
         assert_equal(run.run_time, self.run_time)
         assert run.manual
+        assert_equal(run.output_path, self.output_path)
 
     def test_from_state_old_state_data(self):
         del self.state_data['manual']
@@ -318,7 +322,8 @@ class JobRunFromStateTestCase(TestCase):
         del self.state_data['node_name']
         self.state_data['id'] = 'thejobname.22'
 
-        run = jobrun.JobRun.from_state(self.state_data, self.action_graph)
+        run = jobrun.JobRun.from_state(
+                self.state_data, self.action_graph, self.output_path)
         assert_length(run.action_runs.run_map, 1)
         assert_equal(run.job_name, 'thejobname')
         assert_equal(run.run_time, self.run_time)
@@ -385,14 +390,17 @@ class JobRunCollectionTestCase(TestCase):
             ) for i in xrange(3,-1,-1)
         ]
         action_graph = [Turtle()]
+        output_path = Turtle()
 
-        restored_runs = run_collection.restore_state(state_data, action_graph)
+        restored_runs = run_collection.restore_state(
+                state_data, action_graph, output_path)
         assert_equal(run_collection.runs[0].run_num, 3)
         assert_equal(run_collection.runs[3].run_num, 0)
         assert_length(restored_runs, 4)
 
     def test_restore_state_with_runs(self):
-        assert_raises(ValueError, self.run_collection.restore_state, None, None)
+        assert_raises(ValueError,
+                self.run_collection.restore_state, None, None, None)
 
     def test_build_new_run(self):
         self.run_collection.remove_old_runs = Turtle()

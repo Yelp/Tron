@@ -78,7 +78,11 @@ class JobRunAdapterTestCase(TestCase):
 
     class MockCollection(Turtle):
         def __getitem__(self, item):
-            return Turtle(output_path=['/tmp', 'two'], start_time=None)
+            return Turtle(
+                output_path=['/tmp', 'two'],
+                start_time=None,
+                required_actions=[Turtle()]
+            )
 
     @setup
     def setup_adapter(self):

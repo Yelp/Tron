@@ -131,7 +131,7 @@ class JobTestCase(TestCase):
     def test_restore_state(self):
         run_data = ['one', 'two']
         job_runs = [Turtle(), Turtle()]
-        self.job.runs.restore_state = lambda r, a: job_runs
+        self.job.runs.restore_state = lambda r, a, o: job_runs
         state_data = {'enabled': False, 'runs': run_data}
 
         self.job.restore_state(state_data)

@@ -93,7 +93,7 @@ class JobRun(Observable, Observer):
         return run
 
     @classmethod
-    def from_state(cls, state_data, action_graph):
+    def from_state(cls, state_data, action_graph, output_path):
         """Restore a JobRun from a serialized state."""
         node_pools = node.NodePoolStore.get_instance()
         stored_node = node_pools.get(state_data.get('node_name'))
@@ -113,7 +113,8 @@ class JobRun(Observable, Observer):
             end_time=state_data['end_time'],
             start_time=state_data['start_time'],
             action_graph=action_graph,
-            manual=state_data.get('manual', False)
+            manual=state_data.get('manual', False),
+            output_path=output_path
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
                 job_run, state_data['runs'], state_data['cleanup_run'])
@@ -298,14 +299,14 @@ class JobRunCollection(object):
         """Factory method for creating a JobRunCollection from a config."""
         return cls(job_config.run_limit)
 
-    def restore_state(self, state_data, action_graph):
+    def restore_state(self, state_data, action_graph, output_path):
         """Apply state to all jobs from the state dict."""
         if self.runs:
             msg = "State can not be restored to a collection with runs."
             raise ValueError(msg)
 
         restored_runs = [
-            JobRun.from_state(run_state, action_graph)
+            JobRun.from_state(run_state, action_graph, output_path.clone())
             for run_state in state_data
         ]
         self.runs.extend(restored_runs)

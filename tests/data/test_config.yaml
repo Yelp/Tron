@@ -127,7 +127,7 @@ jobs:
         schedule: "constant"
         actions:
             -   name: task0
-                command: "%(ECHO)s %(actionname)s && sleep && false"
+                command: "%(ECHO)s %(actionname)s && sleep 7 && false"
             -   name: task1
                 command: "%(ECHO)s %(actionname)s"
                 requires: [task0]
@@ -153,5 +153,5 @@ services:
     -   name: service_0
         node: pool1
         pid_file: "services/%(name)s-%(instance_number)s.pid"
-        command: "bash -c 'echo $BASHPID > %(pid_file)s && sleep 500 && echo done &'"
+        command: "bash -c 'echo $BASHPID > %(pid_file)s && sleep 5 && echo done &'"
         monitor_interval: 30

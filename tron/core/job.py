@@ -156,7 +156,7 @@ class Job(Observable, Observer):
         """Apply a previous state to this Job."""
         self.enabled = state_data['enabled']
         job_runs = self.runs.restore_state(
-                state_data['runs'], self.action_graph)
+                state_data['runs'], self.action_graph, self.output_path.clone())
         for run in job_runs:
             self.watch(run)
 

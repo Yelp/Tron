@@ -217,8 +217,8 @@ class ActionRun(Observer):
             action_name,
             node_pools.get(state_data.get('node_name')),
             state_data['run_time'],
-            parent_context,
-            output_path,
+            parent_context=parent_context,
+            output_path=output_path,
             rendered_command=state_data['command'],
             cleanup=cleanup,
             start_time=state_data['start_time'],
@@ -230,6 +230,8 @@ class ActionRun(Observer):
         # Transition running to fail unknown because exit status was missed
         if run.is_running:
             run.machine.transition('fail_unknown')
+        if run.is_queued or run.is_starting:
+            run.fail(None)
         return run
 
     def start(self):
@@ -284,7 +286,7 @@ class ActionRun(Observer):
 
             return self.fail(action_command.exit_status)
 
-    def _complete(self, target, exit_status=0):
+    def _done(self, target, exit_status=0):
         log.info("Action run %s completed with %s and exit status %r",
             self.id, target, exit_status)
         if self.machine.transition(target):
@@ -293,10 +295,10 @@ class ActionRun(Observer):
             return True
 
     def fail(self, exit_status=0):
-        return self._complete('fail', exit_status)
+        return self._done('fail', exit_status)
 
     def success(self):
-        return self._complete('success')
+        return self._done('success')
 
     def fail_unknown(self):
         """Failed with unknown reason."""

@@ -344,7 +344,7 @@ class ActionRunStateRestoreTestCase(TestCase):
     def test_from_state(self):
         state_data = self.state_data
         action_run = ActionRun.from_state(
-            state_data, self.parent_context, self.output_path)
+            state_data, self.parent_context, list(self.output_path))
 
         for key, value in self.state_data.iteritems():
             if key in ['state', 'node_name']:
@@ -353,12 +353,22 @@ class ActionRunStateRestoreTestCase(TestCase):
 
         assert action_run.is_succeeded
         assert not action_run.is_cleanup
+        command = self.state_data['command']
+        assert_equal(action_run.bare_command, command)
+        assert_equal(action_run.rendered_command, command)
+        assert_equal(action_run.output_path[:2], self.output_path)
 
     def test_from_state_running(self):
         self.state_data['state'] = 'running'
         action_run = ActionRun.from_state(
             self.state_data, self.parent_context, self.output_path)
         assert action_run.is_unknown
+
+    def test_from_state_queued(self):
+        self.state_data['state'] = 'queued'
+        action_run = ActionRun.from_state(
+            self.state_data, self.parent_context, self.output_path)
+        assert action_run.is_failed
 
     def test_from_state_no_node_name(self):
         del self.state_data['node_name']
