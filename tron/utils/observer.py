@@ -58,11 +58,3 @@ class Observer(object):
     def watcher(self, observable, event):
         """Override this method to call a method to handle an event."""
         pass
-
-
-# TODO: delete or implement
-class CollectionObserver(object):
-    """This Observer will watch for events from a collection of observables
-    and allows callbacks to be registered for each event.
-    """
-    pass

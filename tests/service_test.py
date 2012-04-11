@@ -248,7 +248,7 @@ class SimpleRestoreTest(TestCase):
         self.service.machine.state = service.Service.STATE_UP
 
     def test(self):
-        data = self.service.data
+        data = self.service.state_data
 
         new_service = service.Service("Sample Service", "sleep 60 &",
                                       node_pool=self.node_pool)
@@ -283,7 +283,7 @@ class FailureRestoreTest(TestCase):
         self.service.machine.state = service.Service.STATE_DEGRADED
 
     def test(self):
-        data = self.service.data
+        data = self.service.state_data
 
         new_service = service.Service(
                 "Sample Service", "sleep 60 &", node_pool=self.node_pool)

@@ -244,9 +244,6 @@ class ServiceInstance(observer.Observer):
             if event == ActionCommand.FAILSTART:
                 return self._stop_complete_failstart()
 
-        else:
-            raise ValueError("Unexpected observable %s" % observable)
-
     def _start_complete_callback(self):
         if self.start_action.exit_status != 0:
             self.machine.transition("down")
@@ -320,7 +317,7 @@ class ServiceInstance(observer.Observer):
             self._hanging_monitor_check_delayed_call = None
 
     @property
-    def data(self):
+    def state_data(self):
         """This data is used to serialize the state of this service instance."""
         return {
             'node': self.node.hostname,
@@ -685,11 +682,11 @@ class Service(observer.Observable, observer.Observer):
         self.event_recorder.emit_notice("reconfigured")
 
     @property
-    def data(self):
+    def state_data(self):
         """This data is used to serialize the state of this service."""
         data = {
             'state': str(self.machine.state),
-            'instances': [instance.data for instance in self.instances]
+            'instances': [instance.state_data for instance in self.instances]
         }
         return data
 

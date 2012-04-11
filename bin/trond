@@ -240,9 +240,9 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
 
         # Start up our web management interface
         logger.debug("listenTCP")
-        reactor.listenTCP(self.options.listen_port, server.Site(
-            www.RootResource(master_control)),
-            interface=self.options.listen_host)
+        site = server.Site(www.RootResource(master_control))
+        reactor.listenTCP(self.options.listen_port, site,
+                interface=self.options.listen_host)
 
 
 def main():

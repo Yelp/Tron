@@ -142,6 +142,7 @@ class JobRunResource(resource.Resource):
         return respond(request, {'result': "Job run now in state %s" %
                                  self._run.state.short_name})
 
+    # TODO: !
     def _restart(self, request):
         log.info("Resetting all action runs to scheduled state")
         self._run.schedule()
@@ -155,9 +156,8 @@ class JobRunResource(resource.Resource):
             log.warning("Failed to start job run %r", e)
 
     def _succeed(self, request):
-        if not self._run.is_running and not self._run.is_success:
+        if self._run.succeed():
             log.info("Marking job run %s for success", self._run.id)
-            self._run.succeed()
         else:
             log.warning("Request to mark job run %s succeed when it has"
                         " already", self._run.id)
@@ -171,11 +171,8 @@ class JobRunResource(resource.Resource):
                         " cancelled", self._run.id)
 
     def _fail(self, request):
-        if (not self._run.is_running and
-            not self._run.is_success and
-            not self._run.is_failure):
+        if self._run.fail():
             log.info("Marking job run %s as failed", self._run.id)
-            self._run.fail()
         else:
             log.warning("Request to fail job run %s when it's already running"
                         " or done", self._run.id)

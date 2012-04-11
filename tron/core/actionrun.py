@@ -170,7 +170,6 @@ class ActionRun(Observer):
         self.job_run_id         = job_run_id
         self.action_name        = name
         self.node               = node
-        self.output_path        = output_path or filehandler.OutputPath()
         self.bare_command       = bare_command or rendered_command
         self.run_time           = run_time      # parent JobRun start time
         self.start_time         = start_time    # ActionRun start time
@@ -182,6 +181,8 @@ class ActionRun(Observer):
         self.context            = command_context.CommandContext(
                                     context, parent_context)
         self.is_cleanup         = cleanup
+        self.output_path        = output_path or filehandler.OutputPath()
+        self.output_path.append(self.id)
 
     @property
     def state(self):
@@ -393,6 +394,7 @@ class ActionRunCollection(object):
                 ('is_scheduled',    any,    False),
                 ('is_queued',       all,    False),
                 ('is_cancelled',    all,    False),
+                ('queue',           all,    True),
                 ('cancel',          all,    True),
                 ('succeed',         all,    True),
                 ('fail',            all,    True),
@@ -462,14 +464,12 @@ class ActionRunCollection(object):
         def is_required_run_blocking(required_run):
             if required_run.is_complete:
                 return False
-            if required_run.is_broken:
-                return True
-            return self._is_run_blocked(required_run)
+            return True
 
         return any(is_required_run_blocking(run) for run in required_runs)
 
     @property
-    def is_success(self):
+    def is_complete(self):
         """Return True if all ActionRuns completed successfully or were skipped.
         """
         return all(r.is_complete for r in self.action_runs_with_cleanup)
@@ -515,6 +515,9 @@ class ActionRunCollection(object):
 
     def __contains__(self, name):
         return name in self.run_map
+
+    def __iter__(self):
+        return self.run_map.itervalues()
 
     def get(self, name):
         return self.run_map.get(name)

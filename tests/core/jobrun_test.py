@@ -16,8 +16,8 @@ class JobRunContextTestCase(TestCase):
         self.context = jobrun.JobRunContext(self.jobrun)
 
     def test_cleanup_job_status(self):
-        self.jobrun.action_runs.is_failure = False
-        self.jobrun.action_runs.all_but_cleanup_success = True
+        self.jobrun.action_runs.is_failed = False
+        self.jobrun.action_runs.is_complete = True
         assert_equal(self.context.cleanup_job_status, 'SUCCESS')
 
 

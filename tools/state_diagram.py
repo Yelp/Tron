@@ -6,7 +6,7 @@
     service.dot
 
 """
-from tron.action import ActionRun
+from tron.core.actionrun import ActionRun
 from tron.service import Service
 
 def traverse_graph(starting_state, func=lambda f, a, t: None, seen_states=None):

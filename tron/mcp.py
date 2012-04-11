@@ -135,7 +135,7 @@ class StateHandler(Observer, Observable):
             exit_status = os.EX_SOFTWARE
             try:
                 with open(tmp_path, 'w') as data_file:
-                    yaml.dump(self.data, data_file,
+                    yaml.dump(self.state_data, data_file,
                               default_flow_style=False, indent=4)
                     data_file.flush()
                     os.fsync(data_file.fileno())
@@ -183,7 +183,7 @@ class StateHandler(Observer, Observable):
             return data
 
     @property
-    def data(self):
+    def state_data(self):
         data = {
             'version': tron.__version_info__,
             'create_time': int(time.time()),
@@ -206,8 +206,7 @@ class StateHandler(Observer, Observable):
 class MasterControlProgram(Observable):
     """master of tron's domain
 
-    This object is responsible for figuring who needs to run and when. It is
-    the main entry point where our daemon finds work to do.
+    Central state object for the Tron daemon. Stores all jobs and services.
     """
 
     def __init__(self, working_dir, config_file):
@@ -269,6 +268,8 @@ class MasterControlProgram(Observable):
         """
         self.load_config()
         self.try_restore()
+        # Any job with existing state would have been scheduled already. Jobs
+        # without any state will be scheduled here.
         self.schedule_jobs()
 
     def config_lines(self):
@@ -481,10 +482,8 @@ class MasterControlProgram(Observable):
         service.set_context(self.context)
         service.event_recorder.set_parent(self.event_recorder)
 
-        # TODO: replace with watch
         # Trigger storage on any state changes
-        service.listen(True, self.state_handler.store_state)
-
+        self.state_handler.watch(service)
         self.services[service.name] = service
 
         if prev_service is not None:

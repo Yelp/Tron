@@ -451,13 +451,13 @@ class ActionRunCollectionTestCase(TestCase):
         self.collection.run_map.clear()
         assert not self.collection.has_startable_action_runs
 
-    def test_is_success_false(self):
-        assert not self.collection.is_success
+    def test_is_complete_false(self):
+        assert not self.collection.is_complete
 
-    def test_is_success_true(self):
+    def test_is_complete_true(self):
         for action_run in self.collection.action_runs_with_cleanup:
             action_run.machine.state = ActionRun.STATE_SKIPPED
-        assert self.collection.is_success
+        assert self.collection.is_complete
 
     def test_is_done_false(self):
         assert not self.collection.is_done
@@ -563,6 +563,18 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
 
         self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
         assert self.collection._is_run_blocked(self.run_map['third_act'])
+
+    def test_is_run_blocked_required_actions_scheduled(self):
+        self.run_map['action_name'].machine.state = ActionRun.STATE_SCHEDULED
+        assert self.collection._is_run_blocked(self.run_map['second_name'])
+
+    def test_is_run_blocked_required_actions_starting(self):
+        self.run_map['action_name'].machine.state = ActionRun.STATE_STARTING
+        assert self.collection._is_run_blocked(self.run_map['second_name'])
+
+    def test_is_run_blocked_required_actions_queued(self):
+        self.run_map['action_name'].machine.state = ActionRun.STATE_QUEUED
+        assert self.collection._is_run_blocked(self.run_map['second_name'])
 
     def test_is_run_blocked_required_actions_failed(self):
         self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED

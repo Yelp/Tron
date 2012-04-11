@@ -29,9 +29,9 @@ class JobRunContext(object):
         """Provide 'SUCCESS' or 'FAILURE' to a cleanup action context based on
         the status of the other steps
         """
-        if self.job_run.action_runs.is_failure:
+        if self.job_run.action_runs.is_failed:
             return 'FAILURE'
-        elif self.job_run.action_runs.is_success:
+        elif self.job_run.action_runs.is_complete:
             return 'SUCCESS'
         else:
             return 'UNKNOWN'
@@ -250,7 +250,7 @@ class JobRun(Observable, Observer):
     def state(self):
         """The overall state of this job run. Based on the state of its actions.
         """
-        if self.action_runs.is_success:
+        if self.action_runs.is_complete:
             return ActionRun.STATE_SUCCEEDED
         if self.action_runs.is_cancelled:
             return ActionRun.STATE_CANCELLED

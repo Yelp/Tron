@@ -6,15 +6,16 @@ import tempfile
 from testify import TestCase, class_setup, class_teardown, setup, teardown
 from testify import assert_raises, assert_equal, suite, run
 from testify.utils import turtle
+from tron.config import config_parse
 
-from tron.core import action, job
-from tron import mcp, scheduler, event, node
-from tests import testingutils
+from tron.core import job, actionrun
+from tron import mcp, scheduler, event, node, service
 from tron.utils import timeutils
+from tests.testingutils import Turtle
 
 
-# TODO: This does not test anything
-class TestStateHandler(TestCase):
+@suite('integration')
+class StateHandlerIntegrationTestCase(TestCase):
     @class_setup
     def class_setup_time(self):
         timeutils.override_current_time(datetime.datetime.now())
@@ -24,58 +25,71 @@ class TestStateHandler(TestCase):
     def class_teardown_time(self):
         timeutils.override_current_time(None)
 
+    def _advance_run(self, job_run, state):
+        for action_run in job_run.action_runs:
+            action_run.machine.state = state
+
+    def _create_runs(self, job_sched):
+        # Advance first run to succeeded
+        run0 = job_sched.get_runs_to_schedule().next()
+        self._advance_run(run0, actionrun.ActionRun.STATE_SUCCEEDED)
+
+        # Advance second run to failure
+        run1 = job_sched.get_runs_to_schedule().next()
+        self._advance_run(run1, actionrun.ActionRun.STATE_FAILED)
+
+        job_sched.get_runs_to_schedule().next()
+
+    def _build_job_sched(self, name):
+        """Create a JobScheduler with a name."""
+        sched = scheduler.IntervalScheduler(interval=datetime.timedelta(30))
+        config = {
+            'name': name,
+            'node': 'localhost',
+            'schedule': 'interval 13s',
+            'actions': [
+                {
+                    'name': 'task0',
+                    'command': "echo do",
+                },
+            ]
+        }
+        job0 = job.Job.from_config(config_parse.valid_job(config), sched, {}, [])
+        job_sched = job.JobScheduler(job0)
+        return job_sched
+
+    def _build_service(self, name):
+        return service.Service(name)
+
     @setup
     def setup_mcp(self):
-        nodes = turtle.Turtle()
         self.test_dir = tempfile.mkdtemp()
+        node.NodePoolStore.get_instance().put(Turtle(name="localhost"))
         self.mcp = mcp.MasterControlProgram(self.test_dir, "config")
         self.state_handler = self.mcp.state_handler
-        self.action = action.Action("Test Action", "doit", nodes)
-
-        self.action.command = "Test command"
-        self.action.queueing = True
-        self.action.node = turtle.Turtle()
-        self.job = job.Job("Test Job", self.action)
-        self.job.output_path = self.test_dir
-
-        self.job.node_pool = turtle.Turtle()
-        self.job.scheduler = scheduler.IntervalScheduler(datetime.timedelta(seconds=5))
-        self.action.job = self.job
+        for job_name in ['job1', 'job2']:
+            self.mcp.jobs[job_name] = self._build_job_sched(job_name)
+        self.mcp.services['service1'] = self._build_service('service1')
 
     @teardown
     def teardown_mcp(self):
         shutil.rmtree(self.test_dir)
         event.EventManager.get_instance().clear()
 
-
-    @suite('integration')
-    def test_reschedule(self):
-        def callNow(sleep, func, run):
-            raise NotImplementedError(sleep)
-
-        #self.mcp.job_scheduler.next_runs(self.job)
-        #callLate = reactor.callLater
-        #reactor.callLater = callNow
-
-        #try:
-        #    self.state_handler._reschedule(run)
-        #    assert False
-        #except NotImplementedError as sleep:
-        #    assert_equals(sleep, 0)
-#
-        #try:
-        #    self.state_handler._reschedule(run)
-        #    assert False
-        #except NotImplementedError as sleep:
-        #    assert_equals(sleep, 5)
-#
-        #reactor.callLater = callLate
-
+    @suite('integration', 'reactor')
     def test_store_data(self):
-        pass
+        self._create_runs(self.mcp.jobs['job1'])
+        self._create_runs(self.mcp.jobs['job2'])
+        self.mcp.state_handler.store_state()
+        # TODO
 
-    def test_load_data(self):
+    def test_restore_data_no_state_file(self):
         pass
+        # TODO
+
+    def test_restore_data(self):
+        pass
+        # TODO
 
 
 class TestNoVersionState(TestCase):
@@ -189,9 +203,6 @@ class MasterControlProgramTestCase(TestCase):
         # TODO: tests with agent and identities
 
     def test_add_job(self):
-        job_conf = {
-
-        }
         pass
 
     def test_add_job_already_exists(self):
