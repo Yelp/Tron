@@ -1,9 +1,15 @@
 """
 Test cases for the web services interface to tron
 """
-from testify import TestCase, class_setup, assert_equal, run
+import twisted.web.resource
+import twisted.web.http
+import twisted.web.server
+
+from testify import TestCase, class_setup, assert_equal, run, setup
+from testify import class_teardown
 from testify.utils import turtle
 from tron.api import www
+from tests.testingutils import Turtle
 
 try:
     import simplejson
@@ -11,15 +17,43 @@ try:
 except ImportError:
     import json as simplejson
 
-import twisted.web.resource
-import twisted.web.http
-import twisted.web.server
 
+# TODO: still used?
 TEST_NODES = [turtle.Turtle(hostname="host")]
 TEST_POOL = turtle.Turtle(nodes=TEST_NODES)
 
 REQUEST = twisted.web.server.Request(turtle.Turtle(), None)
 REQUEST.childLink = lambda val : "/jobs/%s" % val
+
+
+class WWWTestCase(TestCase):
+
+    @class_setup
+    def mock_respond(self):
+        self.orig_respond = www.respond
+        www.respond = Turtle()
+
+    @class_teardown
+    def teardown_respond(self):
+        www.respond = self.orig_respond
+
+    @setup
+    def setup_request(self):
+        self.request = Turtle(args=[])
+
+class ActionRunResourceTestCase(WWWTestCase):
+
+    @setup
+    def setup_resource(self):
+        # TODO: MockJobRun
+        self.job_run = Turtle()
+        self.action_name = 'theactionname'
+        self.res = www.ActionRunResource(self.job_run, self.action_name)
+
+    def test_render_GET(self):
+        resp = self.res.render_GET(self.request)
+        import ipdb; ipdb.set_trace()
+
 
 
 class RootTest(TestCase):

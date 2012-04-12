@@ -153,7 +153,6 @@ class EventRecorder(observer.Observer):
         self.record(Event(self, event.level, event.name))
 
 
-
 class EventManager(object):
     """Create and store EventRecorder objects for observable objects.
     This class is a singleton.

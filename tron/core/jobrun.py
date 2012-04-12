@@ -149,6 +149,8 @@ class JobRun(Observable, Observer):
             [
                 'queue',
                 'cancel',
+                'success',
+                'fail',
                 'is_cancelled',
                 'is_unknown',
                 'is_failed',
@@ -266,7 +268,7 @@ class JobRun(Observable, Observer):
         if self.action_runs.is_queued:
             return ActionRun.STATE_QUEUED
 
-        log.warn("%s in an unknown state: %s" % (self, self.action_runs))
+        log.info("%s in an unknown state: %s" % (self, self.action_runs))
         return ActionRun.STATE_UNKNOWN
 
     def __getattr__(self, name):

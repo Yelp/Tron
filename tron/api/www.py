@@ -15,10 +15,10 @@ except ImportError:
 
 from twisted.web import http, resource, server
 
-from tron import service
+from tron import service, event
 from tron.api import adapter
-from tron.core import job, actionrun
-from tron.utils import timeutils
+from tron.core import actionrun
+from tron.api import requestargs
 
 
 log = logging.getLogger("tron.www")
@@ -28,10 +28,6 @@ class JSONEncoder(json.JSONEncoder):
     """Custom JSON for certain objects"""
 
     def default(self, o):
-        # This method is implemented by all of our core objects (Job, Node, etc)
-        if hasattr(o, 'repr_data') and callable(o.repr_data):
-            return o.repr_data()
-
         if isinstance(o, datetime.datetime):
             return o.strftime("%Y-%m-%d %H:%M:%S")
 
@@ -53,18 +49,6 @@ def respond(request, response_dict, code=http.OK, headers=None):
     return ""
 
 
-def get_integer(request, key):
-    """Returns the first value in the request args for the given key, if that
-    value is an integer. Otherwise returns None.
-    """
-    if not request.args or key not in request.args:
-        return None
-
-    value = request.args[key][0]
-    if not value.isdigit():
-        return None
-    return int(value)
-
 class ActionRunResource(resource.Resource):
 
     isLeaf = True
@@ -75,50 +59,47 @@ class ActionRunResource(resource.Resource):
         self._action_name       = action_name
 
     def render_GET(self, request):
-        num_lines = get_integer(request, 'num_lines')
+        num_lines = requestargs.get_integer(request, 'num_lines')
         run_adapter = adapter.ActionRunAdapter(
                 self._job_run, self._action_name, num_lines)
         return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):
-        cmd = request.args['command'][0]
+        cmd = requestargs.get_string(request, 'command')
         log.info("Handling '%s' request for action run %s",
-                 cmd, self._act_run.id)
+                 cmd, self._job_run.id, self._action_name)
 
-        if cmd not in ('start', 'succeed', 'cancel', 'fail', 'skip'):
-            log.warning("Unknown request command %s", request.args['command'])
+        if cmd not in ('start', 'success', 'cancel', 'fail', 'skip'):
+            log.warning("Unknown request command %s", cmd)
             return respond(request, None, code=http.NOT_IMPLEMENTED)
 
+        action_run = self._job_run.action_runs[self._action_name]
         try:
-            resp = getattr(self._act_run, '%s' % cmd)()
+            resp = getattr(action_run, cmd)()
         except actionrun.Error:
             resp = None
-        if not resp:
-            log.info("Failed to %s action run %r." % (cmd, self._act_run))
-            return respond(request, {
-                'result': "Failed to %s. Action in state: %s" % (
-                    cmd,
-                    self._act_run.state.short_name)
-                })
 
-        return respond(request, {'result': "Action run now in state %s" %
-                                 self._act_run.state.short_name})
+        if not resp:
+            msg = "Failed to %s action run %r." % (cmd, action_run)
+        else:
+            msg = "Action run now in state %s" % action_run.state.short_name
+        return respond(request, {'result': msg})
 
 
 class JobRunResource(resource.Resource):
 
     isLeaf = False
 
-    def __init__(self, run):
+    def __init__(self, run, master_control):
         resource.Resource.__init__(self)
         self._run = run
+        self._master_control = master_control
 
     def getChild(self, act_name, request):
         if act_name == '':
             return self
-        elif act_name == '_events':
+        if act_name == '_events':
             return EventResource(self._run)
-
         if act_name in self._run.action_runs:
             return ActionRunResource(self._run, act_name)
 
@@ -130,47 +111,45 @@ class JobRunResource(resource.Resource):
         return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):
-        cmd = request.args['command'][0]
+        cmd = requestargs.get_string(request, 'command')
         log.info("Handling '%s' request for job run %s", cmd, self._run.id)
 
-        if cmd in ['start', 'restart', 'succeed', 'fail', 'cancel']:
-            getattr(self, '_%s' % cmd)(request)
-        else:
+        if cmd not in ['start', 'restart', 'success', 'fail', 'cancel']:
             log.warning("Unknown request command %s", request.args['command'])
             return respond(request, None, code=http.NOT_IMPLEMENTED)
 
+        getattr(self, '_%s' % cmd)()
         return respond(request, {'result': "Job run now in state %s" %
                                  self._run.state.short_name})
 
-    # TODO: !
-    def _restart(self, request):
+    def _restart(self):
         log.info("Resetting all action runs to scheduled state")
-        self._run.schedule()
-        self._start(request)
+        job_name = self._run.job_name
+        job_sched = self._master_control.jobs[job_name]
+        job_sched.manual_start(self._run.run_time)
 
-    def _start(self, request):
-        try:
+    def _start(self):
+        if self._run.start():
             log.info("Starting job run %s", self._run.id)
-            self._run.start()
-        except job.Error, e:
-            log.warning("Failed to start job run %r", e)
+        else:
+            log.warning("Failed to start job run %s" % self._run)
 
-    def _succeed(self, request):
-        if self._run.succeed():
+    def _success(self):
+        if self._run.success():
             log.info("Marking job run %s for success", self._run.id)
         else:
             log.warning("Request to mark job run %s succeed when it has"
                         " already", self._run.id)
 
-    def _cancel(self, request):
-        if self._run.is_scheduled or self._run.is_queued:
+    def _cancel(self):
+        if self._run.cancel():
             log.info("Cancelling job %s", self._run.id)
             self._run.cancel()
         else:
             log.warning("Request to cancel job run %s when it's already"
                         " cancelled", self._run.id)
 
-    def _fail(self, request):
+    def _fail(self):
         if self._run.fail():
             log.info("Marking job run %s as failed", self._run.id)
         else:
@@ -192,65 +171,49 @@ class JobResource(resource.Resource):
         job = self._job_sched.job
         if run_id == '':
             return self
-        elif run_id == '_events':
+        if run_id == '_events':
             return EventResource(self._job_sched)
 
-        run = None
         run_id = run_id.upper()
-
         if run_id == 'HEAD':
             run = job.runs.get_newest()
-
-        if not run:
-            # May return None if run_num is not a state.short_name
+        elif run_id.isdigit():
+            run = job.runs.get_run_by_num(int(run_id))
+        else:
             run = job.runs.get_run_by_state_short_name(run_id)
 
-        if run_id.isdigit():
-            run = job.runs.get_run_by_num(int(run_id))
-
         if run:
-            return JobRunResource(run)
+            return JobRunResource(run, master_control)
         return resource.NoResource(
                 "Cannot find run number '%s' for job '%s'" % (run_id, job.name))
 
     def render_GET(self, request):
-        include_action_runs = False
-        if request.args:
-            if 'include_action_runs' in request.args:
-                include_action_runs = True
+        include_action_runs = requestargs.get_bool(request, 'include_action_runs')
         job_adapter = adapter.JobAdapter(
                 self._job_sched.job, True, include_action_runs)
         return respond(request, job_adapter.get_repr())
 
     def render_POST(self, request):
-        cmd = request.args['command'][0]
-
+        cmd = requestargs.get_string(request, 'command')
         log.info("Handling '%s' request for job run %s", cmd, self._job_sched.name)
 
         if cmd == 'enable':
             self._job_sched.enable()
-            return respond(request, {'result': "Job %s is enabled" %
-                                     self._job_sched.name})
+            msg = "Job %s is enabled" % self._job_sched.job.name
 
-        if cmd == 'disable':
+        elif cmd == 'disable':
             self._job_sched.disable()
-            return respond(request, {'result': "Job %s is disabled" %
-                                     self._job_sched.name})
+            msg = "Job %s is disabled" % self._job_sched.job.name
 
-        if cmd == 'start':
-            if 'run_time' in request.args:
-                run_time_str = request.args['run_time'][0]
-                run_time = datetime.datetime.strptime(run_time_str,
-                                                      "%Y-%m-%d %H:%M:%S")
-            else:
-                run_time = timeutils.current_time()
-
+        elif cmd == 'start':
+            run_time = requestargs.get_datetime(request, 'run_time')
             runs = self._job_sched.manual_start(run_time=run_time)
-            return respond(request, {'result': "New Job Runs %s created" %
-                                     [r.id for r in runs]})
+            msg = "New Job Runs %s created" % ([r.id for r in runs])
 
-        log.warning("Unknown request job command %s", request.args['command'])
-        return respond(request, None, code=http.NOT_IMPLEMENTED)
+        else:
+            return respond(request, None, code=http.NOT_IMPLEMENTED)
+
+        return respond(request, {'result': msg})
 
 
 class JobsResource(resource.Resource):
@@ -278,16 +241,13 @@ class JobsResource(resource.Resource):
         ]
 
     def render_GET(self, request):
-        include_job_runs = include_action_runs = False
-        if request.args:
-            include_job_runs    = 'include_job_runs' in request.args
-            include_action_runs = 'include_action_runs' in request.args
-
+        include_job_runs = requestargs.get_bool(request, 'include_job_runs')
+        include_action_runs = requestargs.get_bool(request, 'include_action_runs')
         output = dict(jobs=self.get_data(include_job_runs, include_action_runs))
         return respond(request, output)
 
     def render_POST(self, request):
-        cmd = request.args['command'][0]
+        cmd = requestargs.get_string(request, 'command')
         log.info("Handling '%s' request on all jobs", cmd)
 
         if cmd == 'disableall':
@@ -313,18 +273,16 @@ class ServiceInstanceResource(resource.Resource):
         resource.Resource.__init__(self)
 
     def render_POST(self, request):
-        cmd = request.args['command'][0]
+        cmd = requestargs.get_string(request, 'command')
         log.info("Handling '%s' request on service %s",
                  cmd, self._service_instance.id)
 
         if cmd == 'stop':
             self._service_instance.stop()
-
             return respond(request, {'result': "Service instance stopping"})
 
         if cmd == 'zap':
             self._service_instance.zap()
-
             return respond(request, {'result': "Service instance zapped"})
 
         if cmd == 'start':
@@ -353,7 +311,7 @@ class ServiceResource(resource.Resource):
     def getChild(self, name, request):
         if name == '':
             return self
-        elif name == '_events':
+        if name == '_events':
             return EventResource(self._service)
 
         for instance in self._service.instances:
@@ -369,6 +327,7 @@ class ServiceResource(resource.Resource):
             'state':        instance.state.name,
         }
 
+    # TODO: create an adapter
     def render_GET(self, request):
         instance_output = [
             self.get_instance_data(instance)
@@ -386,18 +345,16 @@ class ServiceResource(resource.Resource):
         return respond(request, output)
 
     def render_POST(self, request):
-        cmd = request.args['command'][0]
+        cmd = requestargs.get_string(request, 'command')
         log.info("Handling '%s' request on service %s",
                  cmd, self._service.name)
 
         if cmd == 'stop':
             self._service.stop()
-
             return respond(request, {'result': "Service stopping"})
 
         if cmd == 'zap':
             self._service.zap()
-
             return respond(request, {'result': "Service zapped"})
 
         if cmd == 'start':
@@ -458,13 +415,7 @@ class ServicesResource(resource.Resource):
 
     def render_GET(self, request):
         request.setHeader("content-type", "text/json")
-
-        service_list = self.get_data()
-
-        output = {
-            'services': service_list,
-        }
-        return respond(request, output)
+        return respond(request, dict(services=self.get_data()))
 
 
 class ConfigResource(resource.Resource):
@@ -482,7 +433,7 @@ class ConfigResource(resource.Resource):
 
     def render_POST(self, request):
         log.info("Handling reconfig request")
-        new_config = request.args['config'][0]
+        new_config = requestargs.get_string(request, 'config')
         self._master_control.rewrite_config(new_config)
 
         # TODO: This should be a more informative response
@@ -518,20 +469,18 @@ class EventResource(resource.Resource):
         self._recordable = recordable
 
     def render_GET(self, request):
-        response = {'data': []}
+        response_data = []
 
-        for evt in self._recordable.event_recorder.list():
-            entity_desc = "UNKNOWN"
-            if evt.entity:
-                entity_desc = str(evt.entity)
-            response['data'].append({
-                'level': evt.level,
-                'name': evt.name,
-                'entity': entity_desc,
-                'time': evt.time.strftime("%Y-%m-%d %H:%M:%S")
+        recorder = event.EventManager.get_instance().get(self._recordable)
+        for evt in recorder.list():
+            entity_desc = "UNKNOWN" if not evt.entity else str(evt.entity)
+            response_data.append({
+                'level':        evt.level,
+                'name':         evt.name,
+                'entity':       entity_desc,
+                'time':         evt.time
             })
-
-        return respond(request, response)
+        return respond(request, dict(data=response_data))
 
 
 class RootResource(resource.Resource):
@@ -560,16 +509,14 @@ class RootResource(resource.Resource):
         jobs_resource = self.children["jobs"]
         services_resource = self.children["services"]
 
-        response = dict()
-        response['jobs'] = jobs_resource.get_data()
-        response['jobs_href'] = request.uri + request.childLink('jobs')
-
-        response['services'] = services_resource.get_data()
-        response['services_href'] = request.uri + request.childLink('services')
-
-        response['config_href'] = request.uri + request.childLink('config')
-        response['status_href'] = request.uri + request.childLink('status')
-
+        response = {
+            'jobs':             jobs_resource.get_data(),
+            'jobs_href':        request.uri + request.childLink('jobs'),
+            'services':         services_resource.get_data(),
+            'services_href':    request.uri + request.childLink('services'),
+            'config_href':      request.uri + request.childLink('config'),
+            'status_href':      request.uri + request.childLink('status'),
+        }
         return respond(request, response)
 
 

@@ -282,31 +282,6 @@ class JobSchedulerTestCase(TestCase):
         assert_length(job_run.queue.calls, 1)
         assert_length(self.job_scheduler.schedule.calls, 0)
 
-    def test_watcher(self):
-        self.job_scheduler.run_job = Turtle()
-        queued_job_run = Turtle()
-        def get_queued(state):
-            if state == ActionRun.STATE_QUEUED:
-                return [queued_job_run, queued_job_run]
-
-        self.job.runs.get_runs_by_state = get_queued
-        self.job_scheduler.watcher(self.job, job.Job.NOTIFY_RUN_DONE)
-        assert_length(self.job_scheduler.run_job.calls, 2)
-
-    def test_watcher_unknown_event(self):
-        self.job.runs.get_runs_by_state = Turtle()
-        self.job_scheduler.watcher(self.job, 'some_other_event')
-        assert_length(self.job.runs.get_runs_by_state.calls, 0)
-
-    def test_watcher_no_queued(self):
-        self.job_scheduler.run_job = Turtle()
-        def get_queued(state):
-            if state == ActionRun.STATE_QUEUED:
-                return []
-        self.job.runs.get_runs_by_state = get_queued
-        self.job_scheduler.watcher(self.job, job.Job.NOTIFY_RUN_DONE)
-        assert_length(self.job_scheduler.run_job.calls, 0)
-
     def test_get_runs_to_schedule_no_queue_with_pending(self):
         self.scheduler.queue_overlapping = False
         self.job.runs.get_pending = lambda: True
@@ -428,8 +403,27 @@ class JobSchedulerScheduleTestCase(MockReactorTestCase):
         self.job_scheduler.schedule()
         assert_length(self.reactor.callLater.calls, 0)
 
-    def test_schedule_already_scheduled(self):
-        pass
+    def test_watcher(self):
+        self.job_scheduler.run_job = Turtle()
+        queued_job_run = Turtle()
+        self.job.runs.get_first_queued = lambda: queued_job_run
+        self.job_scheduler.watcher(self.job, job.Job.NOTIFY_RUN_DONE)
+        assert_length(self.reactor.callLater.calls, 1)
+
+    def test_watcher_unknown_event(self):
+        self.job.runs.get_runs_by_state = Turtle()
+        self.job_scheduler.watcher(self.job, 'some_other_event')
+        assert_length(self.job.runs.get_runs_by_state.calls, 0)
+
+    def test_watcher_no_queued(self):
+        self.job_scheduler.run_job = Turtle()
+        def get_queued(state):
+            if state == ActionRun.STATE_QUEUED:
+                return []
+        self.job.runs.get_runs_by_state = get_queued
+        self.job_scheduler.watcher(self.job, job.Job.NOTIFY_RUN_DONE)
+        assert_length(self.job_scheduler.run_job.calls, 0)
+
 
 
 if __name__ == '__main__':

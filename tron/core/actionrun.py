@@ -289,10 +289,10 @@ class ActionRun(Observer):
     def _done(self, target, exit_status=0):
         log.info("Action run %s completed with %s and exit status %r",
             self.id, target, exit_status)
-        if self.machine.transition(target):
+        if self.machine.check(target):
             self.exit_status = exit_status
             self.end_time = timeutils.current_time()
-            return True
+            return self.machine.transition(target)
 
     def fail(self, exit_status=0):
         return self._done('fail', exit_status)
@@ -350,7 +350,6 @@ class ActionRun(Observer):
     def is_done(self):
         return self.state in self.END_STATES
 
-    # TODO: tests
     @property
     def is_complete(self):
         return self.is_succeeded or self.is_skipped
@@ -364,7 +363,7 @@ class ActionRun(Observer):
         a specific state (Ex: self.is_running would check if self.state is
         STATE_RUNNING) or for transitioning to a new state (ex: ready).
         """
-        if name in ['cancel', 'schedule', 'queue', 'skip', 'ready']:
+        if name in ['cancel', 'schedule', 'queue', 'skip', 'ready', 'success']:
             return lambda: self.machine.transition(name)
 
         state_name = name.replace('is_', 'state_').upper()
@@ -396,9 +395,10 @@ class ActionRunCollection(object):
                 ('is_scheduled',    any,    False),
                 ('is_queued',       all,    False),
                 ('is_cancelled',    all,    False),
+                ('is_complete',     all,    False),
                 ('queue',           all,    True),
                 ('cancel',          all,    True),
-                ('succeed',         all,    True),
+                ('success',         all,    True),
                 ('fail',            all,    True),
                 ('ready',           all,    True),
             ])
@@ -469,12 +469,6 @@ class ActionRunCollection(object):
             return True
 
         return any(is_required_run_blocking(run) for run in required_runs)
-
-    @property
-    def is_complete(self):
-        """Return True if all ActionRuns completed successfully or were skipped.
-        """
-        return all(r.is_complete for r in self.action_runs_with_cleanup)
 
     @property
     def is_done(self):
