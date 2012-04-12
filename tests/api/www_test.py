@@ -8,6 +8,7 @@ import twisted.web.server
 from testify import TestCase, class_setup, assert_equal, run, setup
 from testify import class_teardown
 from testify.utils import turtle
+from tests import mocks
 from tron.api import www
 from tests.testingutils import Turtle
 
@@ -31,7 +32,7 @@ class WWWTestCase(TestCase):
     @class_setup
     def mock_respond(self):
         self.orig_respond = www.respond
-        www.respond = Turtle()
+        www.respond = lambda _req, data: data
 
     @class_teardown
     def teardown_respond(self):
@@ -45,15 +46,13 @@ class ActionRunResourceTestCase(WWWTestCase):
 
     @setup
     def setup_resource(self):
-        # TODO: MockJobRun
-        self.job_run = Turtle()
+        self.job_run = mocks.MockJobRun()
         self.action_name = 'theactionname'
         self.res = www.ActionRunResource(self.job_run, self.action_name)
 
     def test_render_GET(self):
         resp = self.res.render_GET(self.request)
-        import ipdb; ipdb.set_trace()
-
+        assert_equal(resp['id'], self.job_run.action_runs[self.action_name].id)
 
 
 class RootTest(TestCase):
@@ -230,7 +229,7 @@ class JobRunStartTest(TestCase):
                                  node_pool=TEST_POOL,
                                 )
 
-        self.resource = www.JobRunResource(self.run)
+        self.resource = www.JobRunResource(self.run, Turtle())
 
     def test(self):
         req = twisted.web.server.Request(turtle.Turtle(), None)

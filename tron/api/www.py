@@ -80,7 +80,7 @@ class ActionRunResource(resource.Resource):
             resp = None
 
         if not resp:
-            msg = "Failed to %s action run %r." % (cmd, action_run)
+            msg = "Failed to %s action run %s." % (cmd, action_run)
         else:
             msg = "Action run now in state %s" % action_run.state.short_name
         return respond(request, {'result': msg})
@@ -115,7 +115,7 @@ class JobRunResource(resource.Resource):
         log.info("Handling '%s' request for job run %s", cmd, self._run.id)
 
         if cmd not in ['start', 'restart', 'success', 'fail', 'cancel']:
-            log.warning("Unknown request command %s", request.args['command'])
+            log.warning("Unknown request command %s", cmd)
             return respond(request, None, code=http.NOT_IMPLEMENTED)
 
         getattr(self, '_%s' % cmd)()
@@ -209,7 +209,7 @@ class JobResource(resource.Resource):
         elif cmd == 'start':
             run_time = requestargs.get_datetime(request, 'run_time')
             runs = self._job_sched.manual_start(run_time=run_time)
-            msg = "New Job Runs %s created" % ([r.id for r in runs])
+            msg = "New Job Runs %s created" % ",".join([r.id for r in runs])
 
         else:
             return respond(request, None, code=http.NOT_IMPLEMENTED)
@@ -259,8 +259,7 @@ class JobsResource(resource.Resource):
             self._master_control.enable_all()
             return respond(request, {'result': "All jobs are now enabled"})
 
-        log.warning("Unknown request command %s for all jobs",
-                    request.args['command'])
+        log.warning("Unknown request command %s for all jobs", cmd)
         return respond(request, None, code=http.NOT_IMPLEMENTED)
 
 
@@ -296,8 +295,7 @@ class ServiceInstanceResource(resource.Resource):
 
             return respond(request, {'result': "Service instance starting"})
 
-        log.warning("Unknown request command %s for service %s",
-                    request.args['command'],
+        log.warning("Unknown request command %s for service %s", cmd,
                     self._service_instance.id)
         return respond(request, None, code=http.NOT_IMPLEMENTED)
 
@@ -369,7 +367,7 @@ class ServiceResource(resource.Resource):
             return respond(request, {'result': "Service starting"})
 
         log.warning("Unknown request command %s for service %s",
-                    request.args['command'], self._service.name)
+                    cmd, self._service.name)
         return respond(request, None, code=http.NOT_IMPLEMENTED)
 
 

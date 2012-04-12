@@ -248,7 +248,7 @@ class Turtle(object):
         self.returns = []
 
     def __getattr__(self, name):
-        self.__dict__[name] = Turtle()
+        self.__dict__[name] = type(self)()
         return self.__dict__[name]
 
     def __call__(self, *args, **kwargs):

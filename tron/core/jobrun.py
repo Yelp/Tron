@@ -223,7 +223,12 @@ class JobRun(Observable, Observer):
         cleanup_run = self.action_runs.cleanup_action_run
         if not cleanup_run or cleanup_run.is_done:
             return self.finalize()
-        cleanup_run.start()
+
+        # When a job is being disabled, or the daemon is being shut down a bunch
+        # of ActionRuns will be cancelled/failed all. This would cause cleanup
+        # action to be triggered more then once. Guard against that.
+        if cleanup_run.check_state('start'):
+            cleanup_run.start()
 
     def finalize(self):
         """The last step of a JobRun. Called when the cleanup action

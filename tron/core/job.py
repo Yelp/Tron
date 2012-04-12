@@ -248,7 +248,7 @@ class JobScheduler(Observer):
     def manual_start(self, run_time=None):
         """Trigger a job run manually (instead of from the scheduler)."""
         run_time = run_time or timeutils.current_time()
-        manual_runs = self.job.build_new_runs(run_time, manual=True)
+        manual_runs = list(self.job.build_new_runs(run_time, manual=True))
         for r in manual_runs:
             r.start()
         return manual_runs
