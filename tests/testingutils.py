@@ -256,3 +256,13 @@ class TestPool(object):
             return self.nodes[0]
 
     next_round_robin = next
+
+
+def assert_raises(expected_exception_class, callable_obj, *args, **kwargs):
+    """Returns the exception if the callable raises expected_exception_class"""
+    try:
+        callable_obj(*args, **kwargs)
+    except expected_exception_class, e:
+        # we got the expected exception
+        return e
+    assert_not_reached("No exception was raised (expected %s)" % expected_exception_class)

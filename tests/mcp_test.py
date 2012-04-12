@@ -6,8 +6,8 @@ import tempfile
 from testify import *
 from testify.utils import turtle
 
-from twisted.internet import reactor
-from tron.utils import timeutils, testingutils
+from tests import testingutils
+from tron.utils import timeutils
 from tron import mcp, job, action, scheduler
 
 
