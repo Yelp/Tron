@@ -1,0 +1,57 @@
+import datetime
+from tests.testingutils import Turtle
+
+
+class MockAction(Turtle):
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('name', 'action_name')
+        kwargs.setdefault('required_actions', [])
+        kwargs.setdefault('dependent_actions', [])
+        super(MockAction, self).__init__(*args, **kwargs)
+
+
+class MockActionGraph(Turtle):
+
+    def __init__(self, *args, **kwargs):
+        action = MockAction()
+        kwargs.setdefault('graph', [action])
+        kwargs.setdefault('action_map', {action.name: action})
+        super(MockActionGraph, self).__init__(*args, **kwargs)
+
+    def __getitem__(self, item):
+        action = MockAction(name=item)
+        self.action_map.setdefault(item, action)
+        return self.action_map[item]
+
+
+class MockActionRun(Turtle):
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('output_path', ['path'])
+        kwargs.setdefault('start_time', datetime.datetime.now())
+        kwargs.setdefault('end_time', datetime.datetime.now())
+        super(MockActionRun, self).__init__(*args, **kwargs)
+
+
+class MockActionRunCollection(Turtle):
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('action_graph', MockActionGraph())
+        kwargs.setdefault('run_map', {})
+        super(MockActionRunCollection, self).__init__(*args, **kwargs)
+
+    def __getitem__(self, item):
+        action_run = MockActionRun(name=item)
+        self.run_map.setdefault(item, action_run)
+        return self.run_map[item]
+
+
+class MockJobRun(Turtle):
+
+    def __init__(self, *args, **kwargs):
+        kwargs.setdefault('output_path', ['path'])
+        kwargs.setdefault('action_graph', MockActionGraph())
+        action_runs = MockActionRunCollection(action_graph=kwargs['action_graph'])
+        kwargs.setdefault('action_runs', action_runs)
+        super(MockJobRun, self).__init__(*args, **kwargs)
