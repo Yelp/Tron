@@ -172,7 +172,7 @@ class JobResource(resource.Resource):
         if run_id == '':
             return self
         if run_id == '_events':
-            return EventResource(self._job_sched)
+            return EventResource(self._job_sched.job)
 
         run_id = run_id.upper()
         if run_id == 'HEAD':
@@ -183,7 +183,7 @@ class JobResource(resource.Resource):
             run = job.runs.get_run_by_state_short_name(run_id)
 
         if run:
-            return JobRunResource(run, master_control)
+            return JobRunResource(run, self._master_control)
         return resource.NoResource(
                 "Cannot find run number '%s' for job '%s'" % (run_id, job.name))
 
@@ -195,7 +195,8 @@ class JobResource(resource.Resource):
 
     def render_POST(self, request):
         cmd = requestargs.get_string(request, 'command')
-        log.info("Handling '%s' request for job run %s", cmd, self._job_sched.name)
+        log.info("Handling '%s' request for job run %s",
+                cmd, self._job_sched.job.name)
 
         if cmd == 'enable':
             self._job_sched.enable()
@@ -465,13 +466,15 @@ class EventResource(resource.Resource):
 
     def __init__(self, recordable):
         resource.Resource.__init__(self)
-        assert hasattr(recordable, 'event_recorder')
         self._recordable = recordable
 
     def render_GET(self, request):
         response_data = []
 
         recorder = event.EventManager.get_instance().get(self._recordable)
+        if not recorder:
+            return respond(request, dict(data=[]))
+
         for evt in recorder.list():
             entity_desc = "UNKNOWN" if not evt.entity else str(evt.entity)
             response_data.append({

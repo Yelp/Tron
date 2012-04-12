@@ -103,7 +103,8 @@ class ActionRunAdapter(RunAdapter):
 
 class JobRunAdapter(RunAdapter):
 
-    field_names = ['id', 'run_num', 'run_time', 'start_time', 'end_time']
+    field_names = [
+            'id', 'run_num', 'run_time', 'start_time', 'end_time', 'manual']
     translated_field_names = ['state', 'node', 'duration', 'href', 'runs']
 
     def __init__(self, job_run, include_action_runs=False):
