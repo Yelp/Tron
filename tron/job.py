@@ -58,7 +58,6 @@ class JobRun(object):
                 ('is_queued',       all,    False),
                 ('is_cancelled',    all,    False),
                 ('is_skipped',      all,    False),
-                ('is_done',         all,    False),
                 ('check_state',     all,    True),
                 ('cancel',          all,    True),
                 ('succeed',         all,    True),
@@ -286,7 +285,15 @@ class JobRun(object):
 
     @property
     def all_but_cleanup_done(self):
+        if self.is_failure:
+            return True
         return all(r.is_done for r in self.action_runs)
+
+    @property
+    def is_done(self):
+        if self.is_failure:
+            return True
+        return all(r.is_done for r in self.action_runs_with_cleanup)
 
     @property
     def cleanup_job_status(self):
