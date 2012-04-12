@@ -139,7 +139,8 @@ class ActionRunTestCase(TestCase):
     def setup_action_run(self):
         anode = turtle.Turtle()
         self.output_path = filehandler.OutputPath("random_dir")
-        self.command = "do command"
+        self.command = "do command %(actionname)s"
+        self.rendered_command = "do command action_name"
         self.action_run = ActionRun(
                 "id",
                 "action_name",
@@ -278,18 +279,30 @@ class ActionRunTestCase(TestCase):
     def test_skip_bad_state(self):
         assert not self.action_run.skip()
 
+    def test_state_data(self):
+        state_data = self.action_run.state_data
+        assert_equal(state_data['command'], self.action_run.bare_command)
+        assert not self.action_run.rendered_command
+        assert not state_data['rendered_command']
+
+    def test_state_data_after_rendered(self):
+        command = self.action_run.command
+        state_data = self.action_run.state_data
+        assert_equal(state_data['command'], command)
+        assert_equal(state_data['rendered_command'], command)
+
     def test_render_command(self):
         self.action_run.context = {'stars': 'bright'}
         self.action_run.bare_command = "%(stars)s"
         assert_equal(self.action_run.render_command(), 'bright')
 
     def test_command_not_yet_rendered(self):
-        assert_equal(self.action_run.command, self.command)
+        assert_equal(self.action_run.command, self.rendered_command)
 
     def test_command_already_rendered(self):
         assert self.action_run.command
         self.action_run.bare_command = "new command"
-        assert_equal(self.action_run.command, self.command)
+        assert_equal(self.action_run.command, self.rendered_command)
 
     def test_command_failed_render(self):
         self.action_run.bare_command = "%(this_is_missing)s"
@@ -353,9 +366,6 @@ class ActionRunStateRestoreTestCase(TestCase):
 
         assert action_run.is_succeeded
         assert not action_run.is_cleanup
-        command = self.state_data['command']
-        assert_equal(action_run.bare_command, command)
-        assert_equal(action_run.rendered_command, command)
         assert_equal(action_run.output_path[:2], self.output_path)
 
     def test_from_state_running(self):
@@ -386,6 +396,29 @@ class ActionRunStateRestoreTestCase(TestCase):
 
         assert_equal(action_run.node, anode)
         node_store.clear()
+
+    def test_from_state_before_rendered_command(self):
+        self.state_data['command'] = 'do things %(actionname)s'
+        self.state_data['rendered_command'] = None
+        action_run = ActionRun.from_state(
+            self.state_data, self.parent_context, self.output_path)
+        assert_equal(action_run.bare_command, self.state_data['command'])
+        assert not action_run.rendered_command
+
+    def test_from_state_old_state(self):
+        self.state_data['command'] = 'do things %(actionname)s'
+        action_run = ActionRun.from_state(
+            self.state_data, self.parent_context, self.output_path)
+        assert_equal(action_run.bare_command, self.state_data['command'])
+        assert not action_run.rendered_command
+
+    def test_from_state_after_rendered_command(self):
+        self.state_data['command'] = 'do things theaction'
+        self.state_data['rendered_command'] = self.state_data['command']
+        action_run = ActionRun.from_state(
+            self.state_data, self.parent_context, self.output_path)
+        assert_equal(action_run.bare_command, self.state_data['command'])
+        assert_equal(action_run.rendered_command, self.state_data['command'])
 
 
 class ActionRunCollectionTestCase(TestCase):

@@ -31,10 +31,9 @@ class JobRunContext(object):
         """
         if self.job_run.action_runs.is_failed:
             return 'FAILURE'
-        elif self.job_run.action_runs.is_complete:
+        elif self.job_run.action_runs.is_complete_without_cleanup:
             return 'SUCCESS'
-        else:
-            return 'UNKNOWN'
+        return 'UNKNOWN'
 
 
 class JobRun(Observable, Observer):
@@ -215,7 +214,7 @@ class JobRun(Observable, Observer):
             log.info("Action runs started for %s." % self)
             return
 
-        if self.action_runs.is_running:
+        if self.action_runs.is_active:
             log.info("%s still has running actions." % self)
             return
 
@@ -225,7 +224,7 @@ class JobRun(Observable, Observer):
             return self.finalize()
 
         # When a job is being disabled, or the daemon is being shut down a bunch
-        # of ActionRuns will be cancelled/failed all. This would cause cleanup
+        # of ActionRuns will be cancelled/failed. This would cause cleanup
         # action to be triggered more then once. Guard against that.
         if cleanup_run.check_state('start'):
             cleanup_run.start()
@@ -387,12 +386,12 @@ class JobRunCollection(object):
     def has_pending(self):
         return any(self.get_pending())
 
-    def get_starting_or_running(self):
-        return self._get_runs_using(lambda r: r.is_starting or r.is_running)
+    def get_active(self):
+        return self._get_runs_using(lambda r: r.is_running or r.is_starting)
 
     @property
-    def has_starting_or_running(self):
-        return any(self.get_starting_or_running())
+    def has_active(self):
+        return any(self.get_active())
 
     def get_first_queued(self):
         queued_func = self._filter_by_state(ActionRun.STATE_QUEUED)

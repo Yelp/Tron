@@ -17,8 +17,13 @@ class JobRunContextTestCase(TestCase):
 
     def test_cleanup_job_status(self):
         self.jobrun.action_runs.is_failed = False
-        self.jobrun.action_runs.is_complete = True
+        self.jobrun.action_runs.is_complete_without_cleanup = True
         assert_equal(self.context.cleanup_job_status, 'SUCCESS')
+
+    def test_cleanup_job_status_failure(self):
+        self.jobrun.action_runs.is_failed = True
+        assert_equal(self.context.cleanup_job_status, 'FAILURE')
+
 
 
 class JobRunTestCase(TestCase):
@@ -33,7 +38,7 @@ class JobRunTestCase(TestCase):
                 action_runs=Turtle(
                     action_runs_with_cleanup=[],
                     get_startable_action_runs=lambda: [],
-                    is_running=False
+                    is_active=False
                 ))
         self.job_run.watch = Turtle()
         self.job_run.notify = Turtle()
@@ -210,7 +215,7 @@ class JobRunTestCase(TestCase):
         assert_length(self.job_run.finalize.calls, 0)
 
     def test_watcher_not_done(self):
-        self.job_run.action_runs.is_running = True
+        self.job_run.action_runs.is_active = True
         self.job_run._start_action_runs = lambda: []
         self.job_run.finalize = Turtle()
 
@@ -495,7 +500,7 @@ class JobRunCollectionTestCase(TestCase):
         assert_length(pending, 2)
         assert_equal(pending, [scheduled_run, self.job_runs[0]])
 
-    # TODO: get_starting_or_running
+    # TODO: get_active
 
     def test_get_first_queued(self):
         run_num = self.run_collection.next_run_num()

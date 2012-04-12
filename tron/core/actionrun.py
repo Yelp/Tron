@@ -170,11 +170,11 @@ class ActionRun(Observer):
         self.job_run_id         = job_run_id
         self.action_name        = name
         self.node               = node
-        self.bare_command       = bare_command or rendered_command
         self.run_time           = run_time      # parent JobRun start time
         self.start_time         = start_time    # ActionRun start time
         self.end_time           = end_time
         self.exit_status        = None
+        self.bare_command       = bare_command
         self.rendered_command   = rendered_command
         self.machine            = state.StateMachine(run_state, delegate=self)
         context                 = ActionRunContext(self)
@@ -211,6 +211,7 @@ class ActionRun(Observer):
         else:
             job_run_id = state_data['job_run_id']
             action_name = state_data['action_name']
+        rendered_command = state_data.get('rendered_command')
 
         run = cls(
             job_run_id,
@@ -219,7 +220,8 @@ class ActionRun(Observer):
             state_data['run_time'],
             parent_context=parent_context,
             output_path=output_path,
-            rendered_command=state_data['command'],
+            rendered_command=rendered_command,
+            bare_command=state_data['command'],
             cleanup=cleanup,
             start_time=state_data['start_time'],
             end_time=state_data['end_time'],
@@ -308,6 +310,9 @@ class ActionRun(Observer):
     @property
     def state_data(self):
         """This data is used to serialize the state of this action run."""
+        rendered_command = self.rendered_command
+        # Freeze command after it's run
+        command = rendered_command if rendered_command else self.bare_command
         return {
             'job_run_id':       self.job_run_id,
             'action_name':      self.action_name,
@@ -315,7 +320,8 @@ class ActionRun(Observer):
             'run_time':         self.run_time,
             'start_time':       self.start_time,
             'end_time':         self.end_time,
-            'command':          self.command,
+            'command':          command,
+            'rendered_command': self.rendered_command,
             'node_name':        self.node.name if self.node else None
         }
 
@@ -340,11 +346,10 @@ class ActionRun(Observer):
 
     @property
     def is_valid_command(self):
-        try:
-            rendered = self.render_command()
-            return rendered != self.FAILED_RENDER
-        except Exception:
-            return False
+        """Returns True if the bare_command was rendered without any errors.
+        This has the side effect of actually rendering the bare_command.
+        """
+        return self.command != self.FAILED_RENDER
 
     @property
     def is_done(self):
@@ -357,6 +362,10 @@ class ActionRun(Observer):
     @property
     def is_broken(self):
         return self.is_failed or self.is_cancelled or self.is_unknown
+
+    @property
+    def is_active(self):
+        return self.is_starting or self.is_running
 
     def __getattr__(self, name):
         """Support convenience properties for checking if this ActionRun is in
@@ -393,8 +402,9 @@ class ActionRunCollection(object):
                 ('is_running',      any,    False),
                 ('is_starting',     any,    False),
                 ('is_scheduled',    any,    False),
+                ('is_cancelled',    any,    False),
+                ('is_active',       any,    False),
                 ('is_queued',       all,    False),
-                ('is_cancelled',    all,    False),
                 ('is_complete',     all,    False),
                 ('queue',           all,    True),
                 ('cancel',          all,    True),
@@ -453,7 +463,7 @@ class ActionRunCollection(object):
         """Returns True if the ActionRun is waiting on a required run to
         finish before it can run.
         """
-        if action_run.is_done or action_run.is_running or action_run.is_starting:
+        if action_run.is_done or action_run.is_active:
             return False
 
         required_actions = self.action_graph.get_required_actions(
@@ -488,6 +498,10 @@ class ActionRunCollection(object):
         done or blocked.
         """
         return self.is_done and any(run.is_failed for run in self.action_runs)
+
+    @property
+    def is_complete_without_cleanup(self):
+        return all(run.is_complete for run in self.action_runs)
 
     @property
     def names(self):

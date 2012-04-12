@@ -59,7 +59,6 @@ class ActionRunAdapter(RunAdapter):
 
     field_names = [
             'id',
-            'command',
             'run_time',
             'start_time',
             'end_time',
@@ -69,6 +68,7 @@ class ActionRunAdapter(RunAdapter):
     translated_field_names = [
             'state',
             'node',
+            'command',
             'raw_command',
             'requirements',
             'stdout',
@@ -86,6 +86,9 @@ class ActionRunAdapter(RunAdapter):
 
     def get_raw_command(self):
         return self._obj.bare_command
+
+    def get_command(self):
+        return self._obj.rendered_command or self._obj.bare_command
 
     def get_requirements(self):
         action_name = self._obj.action_name

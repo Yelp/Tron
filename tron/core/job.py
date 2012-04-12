@@ -299,7 +299,7 @@ class JobScheduler(Observer):
         # the same as any pending jobs
 
         # If there is another job run still running, queue or cancel this one
-        if self.job.runs.has_starting_or_running:
+        if self.job.runs.has_active:
             if self.job.queueing:
                 log.info("%s still running, queueing %s." % (self.job, job_run))
                 return job_run.queue()

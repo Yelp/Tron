@@ -232,7 +232,7 @@ class JobSchedulerTestCase(TestCase):
 
     def test_run_job(self):
         self.job_scheduler.schedule = Turtle()
-        self.job.runs.has_starting_or_running = False
+        self.job.runs.has_active = False
         job_run = Turtle(is_cancelled=False)
         self.job_scheduler.run_job(job_run)
         assert_length(job_run.start.calls, 1)

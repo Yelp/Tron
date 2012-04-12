@@ -87,7 +87,7 @@ jobs:
             -   name: task2
                 command: "%(ECHO)s %(actionname)s && sleep 10"
             -   name: task3
-                command: "%(ECHO)s %(actionname)s"
+                command: "%(ECHO)s %(actionname)s && sleep 3"
                 requires: [task2]
         cleanup_action:
             command: "%(ECHO)s %(actionname)s %(cleanup_job_status)s"
