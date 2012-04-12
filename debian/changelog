@@ -1,3 +1,10 @@
+tron (0.3.2) unstable; urgency=low
+
+  * Fixes a bug when there are multiple node pools
+  * Adds more unit tests
+
+ -- Daniel Nephin <dnephin@yelp.com>  Wed, 11 Apr 2012 11:35:05 -0800
+
 tron (0.3.1) unstable; urgency=low
 
   * Bug fix release

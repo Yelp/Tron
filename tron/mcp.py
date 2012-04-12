@@ -593,8 +593,6 @@ class MasterControlProgram(object):
             else:
                 log.warning("Job name %s from state file unknown", name)
 
-                self.state_handler.restore_job(self.jobs[name], data[name])
-
         for name in data['services'].iterkeys():
             if name in self.services:
                 state_load_count += 1
