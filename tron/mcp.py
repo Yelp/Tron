@@ -447,7 +447,7 @@ class MasterControlProgram(Observable):
         if reconfigure:
             self.jobs[job.name].schedule()
 
-        event.EventManager.get_instance().add(job, parent=self)
+        self.event_manager.add(job, parent=self)
         self.state_handler.watch(job, Job.NOTIFY_STATE_CHANGE)
 
     def remove_job(self, job_name):

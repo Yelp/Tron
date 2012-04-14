@@ -70,8 +70,7 @@ class Job(Observable, Observer):
     NOTIFY_RUN_DONE       = 'notify_run_done'
 
     EVENT_RECONFIGURED    = event.EventType(event.LEVEL_NOTICE, 'reconfigured')
-    EVENT_RUN_QUEUED      = event.EventType(event.LEVEL_NOTICE, 'queued')
-    EVENT_RUN_CANCELLED   = event.EventType(event.LEVEL_NOTICE, 'cancelled')
+    EVENT_RUN_CREATED     = event.EventType(event.LEVEL_NOTICE, 'run_created')
     EVENT_STATE_RESTORED  = event.EventType(event.LEVEL_INFO, 'restored')
 
     def __init__(self, name, scheduler, queueing=True, all_nodes=False,
@@ -176,6 +175,8 @@ class Job(Observable, Observer):
         for node in nodes:
             run = self.runs.build_new_run(self, run_time, node, manual=manual)
             self.watch(run)
+            event.EventManager.get_instance().add(run, parent=self)
+            self.notify(self.EVENT_RUN_CREATED)
             yield run
 
     def handle_job_run_state_change(self, job_run, event):

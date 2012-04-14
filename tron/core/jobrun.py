@@ -48,8 +48,6 @@ class JobRun(Observable, Observer):
 
     EVENT_START           = event.EventType(event.LEVEL_INFO, "start")
     EVENT_STARTED         = event.EventType(event.LEVEL_INFO, "started")
-    EVENT_RESTORED        = event.EventType(event.LEVEL_INFO, "restored")
-    EVENT_CANCELLED       = event.EventType(event.LEVEL_NOTICE, "cancelled")
     EVENT_FAILED          = event.EventType(event.LEVEL_CRITICAL, "failed")
     EVENT_SUCCEEDED       = event.EventType(event.LEVEL_OK, "succeeded")
 

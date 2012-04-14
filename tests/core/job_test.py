@@ -3,7 +3,7 @@ import datetime
 from testify import setup, teardown, TestCase, run, assert_equal, assert_raises
 from tests.assertions import assert_length, assert_call
 from tests.testingutils import MockReactorTestCase, Turtle, TestNode
-from tron import node
+from tron import node, event
 from tron.core import job, jobrun
 from tron.core.actionrun import ActionRun
 from tron.utils import timeutils
@@ -395,6 +395,10 @@ class JobSchedulerScheduleTestCase(MockReactorTestCase):
             node_pool=node_pool,
         )
         self.job_scheduler = job.JobScheduler(self.job)
+
+    @teardown
+    def teardown_job(self):
+        event.EventManager.get_instance().clear()
 
     def test_enable(self):
         self.job_scheduler.schedule = Turtle()

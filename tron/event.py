@@ -1,11 +1,14 @@
 import heapq
 from collections import deque, namedtuple
 import itertools
+import logging
 import sys
 import weakref
 
 from tron.utils import timeutils
 from tron.utils import observer
+
+log = logging.getLogger(__name__)
 
 # Event Levels INFO is for troubleshooting information. This may be verbose but
 # shouldn't cause any monitors to make any decisions.
@@ -190,7 +193,7 @@ class EventManager(object):
         if parent:
             parent_recorder = self.get(parent)
             if not parent_recorder:
-                raise ValueError("Parent %s is not being managed." % parent)
+                log.warn("Parent %s is not being managed." % parent)
 
         event_recorder = EventRecorder(observable, parent_recorder)
         self.recorders[key] = event_recorder

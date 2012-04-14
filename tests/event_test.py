@@ -99,7 +99,6 @@ class EntitySwapTestCase(TestCase):
 class EventManagerTestCase(TestCase):
 
     class MockObservable(turtle.Turtle):
-
         def __str__(self):
             return 'thisid'
 
@@ -136,7 +135,8 @@ class EventManagerTestCase(TestCase):
 
     def test_add_missing_parent(self):
         parent = turtle.Turtle()
-        assert_raises(ValueError, self.manager.add, self.observable, parent)
+        recorder = self.manager.add(self.observable, parent)
+        assert_equal(recorder._parent, None)
 
     def test_get(self):
         recorder = self.manager.add(self.observable)
