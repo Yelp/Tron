@@ -184,58 +184,58 @@ class ActionRunTestCase(TestCase):
         assert self.action_run.is_failed
 
     def test_build_action_command(self):
-        self.action_run.watcher = watcher = turtle.Turtle()
+        self.action_run.handler = handler = turtle.Turtle()
         action_command = self.action_run.build_action_command()
         assert_equal(action_command.id, self.action_run.id)
         assert_equal(action_command.command, self.action_run.rendered_command)
         action_command.started()
-        assert_equal(watcher.calls,
+        assert_equal(handler.calls,
             [((action_command, action_command.RUNNING), {})])
 
-    def test_watcher_running(self):
+    def test_handler_running(self):
         self.action_run.build_action_command()
         self.action_run.machine.transition('start')
-        assert self.action_run.watcher(
+        assert self.action_run.handler(
                 self.action_run.action_command, ActionCommand.RUNNING)
         assert self.action_run.is_running
 
-    def test_watcher_failstart(self):
+    def test_handler_failstart(self):
         self.action_run.build_action_command()
-        assert self.action_run.watcher(
+        assert self.action_run.handler(
                 self.action_run.action_command, ActionCommand.FAILSTART)
         assert self.action_run.is_failed
 
-    def test_watcher_exiting_fail(self):
+    def test_handler_exiting_fail(self):
         self.action_run.build_action_command()
         self.action_run.action_command.exit_status = -1
         self.action_run.machine.transition('start')
-        assert self.action_run.watcher(
+        assert self.action_run.handler(
             self.action_run.action_command, ActionCommand.EXITING)
         assert self.action_run.is_failed
         assert_equal(self.action_run.exit_status, -1)
 
-    def test_watcher_exiting_success(self):
+    def test_handler_exiting_success(self):
         self.action_run.build_action_command()
         self.action_run.action_command.exit_status = 0
         self.action_run.machine.transition('start')
         self.action_run.machine.transition('started')
-        assert self.action_run.watcher(
+        assert self.action_run.handler(
             self.action_run.action_command, ActionCommand.EXITING)
         assert self.action_run.is_succeeded
         assert_equal(self.action_run.exit_status, 0)
 
-    def test_watcher_exiting_failunknown(self):
+    def test_handler_exiting_failunknown(self):
         self.action_run.build_action_command()
         self.action_run.machine.transition('start')
         self.action_run.machine.transition('started')
-        assert self.action_run.watcher(
+        assert self.action_run.handler(
             self.action_run.action_command, ActionCommand.EXITING)
         assert self.action_run.is_unknown
         assert_equal(self.action_run.exit_status, None)
 
-    def test_watcher_unhandled(self):
+    def test_handler_unhandled(self):
         self.action_run.build_action_command()
-        assert self.action_run.watcher(
+        assert self.action_run.handler(
             self.action_run.action_command, ActionCommand.PENDING) is None
         assert self.action_run.is_scheduled
 

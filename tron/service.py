@@ -220,7 +220,7 @@ class ServiceInstance(observer.Observer):
         except node.Error, e:
             log.warning("Failed to start %s: %r", self.id, e)
 
-    def watcher(self, observable, event):
+    def handler(self, observable, event):
         # TODO: this no longer requires setting the start action as a field
         # TODO: This can be easily cleaned up
 
@@ -572,7 +572,7 @@ class Service(observer.Observable, observer.Observer):
                 self._restart_timer = reactor.callLater(
                     self.restart_interval, self._restart_after_failure)
 
-    def watcher(self, observable, _event):
+    def handler(self, observable, _event):
         if observable == self:
             return self._record_state_changes()
 
@@ -603,7 +603,7 @@ class Service(observer.Observable, observer.Observer):
         # Copy over all the old instances
         self.instances += prev_service.instances
         for service_instance in prev_service.instances:
-            service_instance.machine.clear_watchers()
+            service_instance.machine.clear_observers()
             self.watch(service_instance)
 
             if rebuild_all_instances:

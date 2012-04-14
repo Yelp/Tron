@@ -59,17 +59,17 @@ class EventRecorderTestCase(TestCase):
         assert_equal(len(self.recorder.list(min_level=event.LEVEL_CRITICAL)), 0)
         assert_equal(len(self.recorder.list(min_level=event.LEVEL_NOTICE)), 1)
 
-    def test_watcher(self):
+    def test_handler(self):
         cat_event = event.EventType(event.LEVEL_OK, "a cat happened")
-        self.recorder.watcher(self.observable, cat_event)
+        self.recorder.handler(self.observable, cat_event)
         assert_equal(len(self.recorder.list()), 1)
         first_event = self.recorder.list()[0]
         assert_equal(first_event.level, cat_event.level)
         assert_equal(first_event.name,  cat_event.name)
 
-    def test_watcher_non_event_type_event(self):
+    def test_handler_non_event_type_event(self):
         non_event = ('bogus', 'thing')
-        self.recorder.watcher(self.observable, non_event)
+        self.recorder.handler(self.observable, non_event)
         assert_equal(len(self.recorder.list()), 0)
 
 

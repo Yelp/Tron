@@ -178,7 +178,7 @@ class Job(Observable, Observer):
             self.watch(run)
             yield run
 
-    def watcher(self, job_run, event):
+    def handler(self, job_run, event):
         """Handle state changes from JobRuns and propagate changes to any
         observers.
         """
@@ -310,7 +310,7 @@ class JobScheduler(Observer):
         job_run.start()
         self.schedule()
 
-    def watcher(self, observable, event):
+    def handler(self, observable, event):
         """Handle notifications from observables. If a JobRun has completed
         look for queued JobRuns that may need to start now.
         """

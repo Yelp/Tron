@@ -22,12 +22,12 @@ class ObservableTestCase(TestCase):
         assert_equal(self.obs._observers['b'], [func])
 
     def test_notify(self):
-        watcher = turtle.Turtle()
-        self.obs.attach(['a', 'b'], watcher)
+        handler = turtle.Turtle()
+        self.obs.attach(['a', 'b'], handler)
         self.obs.notify('a')
-        assert_equal(len(watcher.watcher.calls), 1)
+        assert_equal(len(handler.handler.calls), 1)
         self.obs.notify('b')
-        assert_equal(len(watcher.watcher.calls), 2)
+        assert_equal(len(handler.handler.calls), 2)
 
 class ObserverClearTestCase(TestCase):
 
@@ -41,11 +41,11 @@ class ObserverClearTestCase(TestCase):
         self.obs.attach(['a', 'b'], func)
 
     def test_clear_listeners_all(self):
-        self.obs.clear_watchers()
+        self.obs.clear_observers()
         assert_equal(len(self.obs._observers), 0)
 
     def test_clear_listeners_some(self):
-        self.obs.clear_watchers('a')
+        self.obs.clear_observers('a')
         assert_equal(len(self.obs._observers), 2)
         assert_equal(set(self.obs._observers.keys()), set([True, 'b']))
 
@@ -58,7 +58,7 @@ class MockObserver(Observer):
         self.watch(obs, event)
         self.has_watched = 0
 
-    def watcher(self, obs, event):
+    def handler(self, obs, event):
         assert_equal(obs, self.obs)
         assert_equal(event, self.event)
         self.has_watched += 1
@@ -72,14 +72,14 @@ class ObserverTestCase(TestCase):
 
     def test_watch(self):
         event = "FIVE"
-        watcher = MockObserver(self.obs, event)
+        handler = MockObserver(self.obs, event)
 
         self.obs.notify(event)
-        assert_equal(watcher.has_watched, 1)
+        assert_equal(handler.has_watched, 1)
         self.obs.notify("other event")
-        assert_equal(watcher.has_watched, 1)
+        assert_equal(handler.has_watched, 1)
         self.obs.notify(event)
-        assert_equal(watcher.has_watched, 2)
+        assert_equal(handler.has_watched, 2)
 
 
 

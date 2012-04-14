@@ -103,7 +103,7 @@ class StateHandler(Observer, Observable):
 
                 reactor.callLater(STATE_SLEEP_SECS, self.check_write_child)
 
-    def watcher(self, _observable, _event):
+    def handler(self, _observable, _event):
         self.store_state()
 
     def store_state(self):

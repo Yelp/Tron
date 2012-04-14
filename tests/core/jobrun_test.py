@@ -198,49 +198,49 @@ class JobRunTestCase(TestCase):
         started_runs = self.job_run._start_action_runs()
         assert_equal(started_runs, [])
 
-    def test_watcher_not_end_state_event(self):
+    def test_handler_not_end_state_event(self):
         self.job_run.finalize = Turtle()
-        self.job_run.watcher(None, actionrun.ActionRun.STATE_STARTING)
+        self.job_run.handler(None, actionrun.ActionRun.STATE_STARTING)
         assert_length(self.job_run.finalize.calls, 0)
 
-    def test_watcher_with_startable(self):
+    def test_handler_with_startable(self):
         self.job_run.action_runs.get_startable_action_runs = lambda: True
         startable_run = Turtle()
         self.job_run.action_runs.get_startable_action_runs = lambda: [startable_run]
         self.job_run.finalize = Turtle()
 
-        self.job_run.watcher(None, actionrun.ActionRun.STATE_SUCCEEDED)
+        self.job_run.handler(None, actionrun.ActionRun.STATE_SUCCEEDED)
         assert_call(self.job_run.notify, 0, self.job_run.NOTIFY_STATE_CHANGED)
         assert_call(startable_run.start, 0)
         assert_length(self.job_run.finalize.calls, 0)
 
-    def test_watcher_not_done(self):
+    def test_handler_not_done(self):
         self.job_run.action_runs.is_active = True
         self.job_run._start_action_runs = lambda: []
         self.job_run.finalize = Turtle()
 
-        self.job_run.watcher(None, actionrun.ActionRun.STATE_SUCCEEDED)
+        self.job_run.handler(None, actionrun.ActionRun.STATE_SUCCEEDED)
         assert_length(self.job_run.finalize.calls, 0)
 
-    def test_watcher_finished_without_cleanup(self):
+    def test_handler_finished_without_cleanup(self):
         self.job_run.action_runs.cleanup_action_run = None
         self.job_run.finalize = Turtle()
 
-        self.job_run.watcher(None, actionrun.ActionRun.STATE_SUCCEEDED)
+        self.job_run.handler(None, actionrun.ActionRun.STATE_SUCCEEDED)
         assert_call(self.job_run.finalize, 0)
 
-    def test_watcher_finished_with_cleanup_done(self):
+    def test_handler_finished_with_cleanup_done(self):
         self.job_run.action_runs.cleanup_action_run = Turtle(is_done=True)
         self.job_run.finalize = Turtle()
 
-        self.job_run.watcher(None, actionrun.ActionRun.STATE_SUCCEEDED)
+        self.job_run.handler(None, actionrun.ActionRun.STATE_SUCCEEDED)
         assert_call(self.job_run.finalize, 0)
 
-    def test_watcher_finished_with_cleanup(self):
+    def test_handler_finished_with_cleanup(self):
         self.job_run.action_runs.cleanup_action_run = Turtle(is_done=False)
         self.job_run.finalize = Turtle()
 
-        self.job_run.watcher(None, actionrun.ActionRun.STATE_SUCCEEDED)
+        self.job_run.handler(None, actionrun.ActionRun.STATE_SUCCEEDED)
         assert_length(self.job_run.finalize.calls, 0)
         assert_call(self.job_run.action_runs.cleanup_action_run.start, 0)
 
@@ -263,11 +263,11 @@ class JobRunTestCase(TestCase):
         assert_equal(self.job_run.end_time, self.run_time)
 
     def test_cleanup(self):
-        self.job_run.clear_watchers = Turtle()
+        self.job_run.clear_observers = Turtle()
         self.job_run.output_path = Turtle()
         self.job_run.cleanup()
 
-        assert_call(self.job_run.clear_watchers, 0)
+        assert_call(self.job_run.clear_observers, 0)
         assert_call(self.job_run.output_path.delete, 0)
         assert not self.job_run.node
         assert not self.job_run.action_graph

@@ -31,19 +31,19 @@ class SimpleTestCase(TestCase):
         assert_equal(self.machine.state, self.state_red)
 
     def test_transition(self):
-        watcher = turtle.Turtle()
-        self.machine.attach(True, watcher)
+        handler = turtle.Turtle()
+        self.machine.attach(True, handler)
         self.machine.transition('true')
-        assert_equal(watcher.watcher.calls,
+        assert_equal(handler.handler.calls,
             [((self.machine, self.state_green),{})])
 
     def test_notify_delegate(self):
         delegate = turtle.Turtle()
-        watcher = turtle.Turtle()
+        handler = turtle.Turtle()
         self.machine = state.StateMachine(self.state_red, delegate=delegate)
-        self.machine.attach(True, watcher)
+        self.machine.attach(True, handler)
         self.machine.transition('true')
-        assert_equal(watcher.watcher.calls,
+        assert_equal(handler.handler.calls,
             [((delegate, self.state_green),{})])
 
 

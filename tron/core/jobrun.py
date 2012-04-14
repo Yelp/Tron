@@ -202,7 +202,7 @@ class JobRun(Observable, Observer):
 
         return started_actions
 
-    def watcher(self, action_run, event):
+    def handler(self, action_run, event):
         """Handle events triggered by JobRuns."""
         # propagate all state changes (from action runs) up to state serializer
         self.notify(self.NOTIFY_STATE_CHANGED)
@@ -250,7 +250,7 @@ class JobRun(Observable, Observer):
         self.node = None
         self.action_graph = None
         self.action_runs = None
-        self.clear_watchers()
+        self.clear_observers()
         self.output_path.delete()
         # TODO: do cleanup actions need to be cleaned up?
 

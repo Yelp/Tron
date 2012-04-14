@@ -54,8 +54,9 @@ class CollectionProxyTestCase(TestCase):
         assert_raises(AttributeError, self.dummy.proxy.perform, 'bar')
 
     def test_perform_with_params(self):
-        assert_equal(self.proxy.perform('equals', 2)(), [False, True, False])
-        assert_equal(self.proxy.perform('equals', 3, sometimes=True)(), ['sometimes'] * 3)
+        assert_equal(self.proxy.perform('equals')(2), [False, True, False])
+        sometimes = ['sometimes'] * 3
+        assert_equal(self.proxy.perform('equals')(3, sometimes=True), sometimes)
 
 
 class AttributeProxyTestCase(TestCase):

@@ -1,7 +1,4 @@
-"""
- Utilities for creating classes that proxy function calls.
-"""
-import functools
+"""Utilities for creating classes that proxy function calls."""
 
 
 class CollectionProxy(object):
@@ -9,38 +6,40 @@ class CollectionProxy(object):
 
     def __init__(self, obj_list_getter, definition_list=None):
         """See add() for a description of proxy definitions."""
-        self.obj_list_getter = obj_list_getter
-        self._defs = {}
+        self.obj_list_getter    = obj_list_getter
+        self._defs              = {}
         for definition in definition_list or []:
             self.add(*definition)
 
-    def add(self, attribute_name, aggregate_func, callable):
-        """Add calls and their destination.
+    def add(self, attribute_name, aggregate_func, is_callable):
+        """Add attributes to proxy, the aggregate function to use on the
+        sequence of returned values, and a boolean identifying if this
+        attribute is a callable or not.
 
             attribute_name - the name of the attribute to proxy
             aggregate_func - a function that takes a sequence as its only argument
-            obj_list       - the list of objects to pass to aggregate_func
             callable       - if this attribute is a callable on every object in
-                             the obj_list
+                             the obj_list (boolean)
         """
-        self._defs[attribute_name] = (aggregate_func, callable)
+        self._defs[attribute_name] = (aggregate_func, is_callable)
 
-    def perform(self, attribute_name, *args, **kwargs):
+    def perform(self, name):
         """Attempt to perform the proxied lookup.  Raises AttributeError if
-        the attribute_name is not defined.
+        the name is not defined.
         """
-        if attribute_name not in self._defs:
-            raise AttributeError(attribute_name)
+        if name not in self._defs:
+            raise AttributeError(name)
 
-        obj_list = self.obj_list_getter()
-        aggregate_func, callable = self._defs[attribute_name]
-        if callable:
-            return functools.partial(
-                aggregate_func,
-                (getattr(i, attribute_name)(*args, **kwargs) for i in obj_list)
-            )
+        obj_list = self.obj_list_getter
+        aggregate_func, is_callable = self._defs[name]
 
-        return aggregate_func(getattr(i, attribute_name) for i in obj_list)
+        if not is_callable:
+            return aggregate_func(getattr(i, name) for i in obj_list())
+
+        def func(*args, **kwargs):
+            return aggregate_func(
+                getattr(item, name)(*args, **kwargs) for item in obj_list())
+        return func
 
 
 class AttributeProxy(object):

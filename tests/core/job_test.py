@@ -175,14 +175,14 @@ class JobTestCase(TestCase):
                 0, self.job, run_time, node, manual=True)
         assert_call(self.job.watch, 0, runs[0])
 
-    def test_watcher(self):
-        self.job.watcher(None, jobrun.JobRun.NOTIFY_STATE_CHANGED)
+    def test_handler(self):
+        self.job.handler(None, jobrun.JobRun.NOTIFY_STATE_CHANGED)
         assert_call(self.job.notify, 0, self.job.NOTIFY_STATE_CHANGE)
 
-        self.job.watcher(None, jobrun.JobRun.NOTIFY_DONE)
+        self.job.handler(None, jobrun.JobRun.NOTIFY_DONE)
         assert_call(self.job.notify, 1, self.job.NOTIFY_RUN_DONE)
 
-        self.job.watcher(None, jobrun.JobRun.NOTIFY_START_FAILED)
+        self.job.handler(None, jobrun.JobRun.NOTIFY_START_FAILED)
         assert_call(self.job.notify, 2, self.job.NOTIFY_RUN_DONE)
 
     def test__eq__(self):
@@ -421,25 +421,25 @@ class JobSchedulerScheduleTestCase(MockReactorTestCase):
         self.job_scheduler.schedule()
         assert_length(self.reactor.callLater.calls, 0)
 
-    def test_watcher(self):
+    def test_handler(self):
         self.job_scheduler.run_job = Turtle()
         queued_job_run = Turtle()
         self.job.runs.get_first_queued = lambda: queued_job_run
-        self.job_scheduler.watcher(self.job, job.Job.NOTIFY_RUN_DONE)
+        self.job_scheduler.handler(self.job, job.Job.NOTIFY_RUN_DONE)
         assert_length(self.reactor.callLater.calls, 1)
 
-    def test_watcher_unknown_event(self):
+    def test_handler_unknown_event(self):
         self.job.runs.get_runs_by_state = Turtle()
-        self.job_scheduler.watcher(self.job, 'some_other_event')
+        self.job_scheduler.handler(self.job, 'some_other_event')
         assert_length(self.job.runs.get_runs_by_state.calls, 0)
 
-    def test_watcher_no_queued(self):
+    def test_handler_no_queued(self):
         self.job_scheduler.run_job = Turtle()
         def get_queued(state):
             if state == ActionRun.STATE_QUEUED:
                 return []
         self.job.runs.get_runs_by_state = get_queued
-        self.job_scheduler.watcher(self.job, job.Job.NOTIFY_RUN_DONE)
+        self.job_scheduler.handler(self.job, job.Job.NOTIFY_RUN_DONE)
         assert_length(self.job_scheduler.run_job.calls, 0)
 
 

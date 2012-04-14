@@ -145,7 +145,7 @@ class EventRecorder(observer.Observer):
     def __iter__(self):
         return self._store.__iter__()
 
-    def watcher(self, observable, event):
+    def handler(self, observable, event):
         """Watch for events and create and store Event objects."""
         if not isinstance(event, EventType):
             return

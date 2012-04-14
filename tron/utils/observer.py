@@ -1,11 +1,12 @@
-
+"""Implements the Observer/Observable pattern,"""
 import logging
 
-log = logging.getLogger('tron.utils.observer')
+log = logging.getLogger(__name__)
 
 class Observable(object):
-    """This class is an Observable in the Observer/Observable pattern. It stores
-    specifications and callbacks which can be triggered by calling notify.
+    """An Observable in the Observer/Observable pattern. It stores
+    specifications and Observers which can be notified of changes by calling
+    notify.
     """
 
     def __init__(self):
@@ -26,9 +27,9 @@ class Observable(object):
         for spec in watch_spec:
             self._observers.setdefault(spec, []).append(observer)
 
-    def clear_watchers(self, watch_spec=None):
-        """Remove all listeners for a given listen_spec. Removes all
-        listeners if listen_spec is None.
+    def clear_observers(self, watch_spec=None):
+        """Remove all observers for a given watch_spec. Removes all
+        observers if listen_spec is None.
         """
         if watch_spec is None or watch_spec is True:
             self._observers.clear()
@@ -36,25 +37,27 @@ class Observable(object):
 
         del self._observers[watch_spec]
 
-    def _get_watchers_for_event(self, event):
-        """Returns the complete list of watchers for the event."""
+    def _get_handlers_for_event(self, event):
+        """Returns the complete list of handlers for the event."""
         return self._observers.get(True, []) + self._observers.get(event, [])
 
     def notify(self, event):
         """Notify all observers of the event."""
         log.debug("Notifying listeners for new event %r", event)
-        for watcher in self._get_watchers_for_event(event):
-            watcher.watcher(self, event)
+        for handler in self._get_handlers_for_event(event):
+            handler.handler(self, event)
 
 
 class Observer(object):
     """An observer in the Observer/Observable pattern.  Given an observable
-    object will watch for notify calls.
+    object will watch for notify calls.  Override handler to act on those
+    notifications.
     """
 
     def watch(self, observable, event=True):
+        """Adds this Observer as a watcher of the observable."""
         observable.attach(event, self)
 
-    def watcher(self, observable, event):
-        """Override this method to call a method to handle an event."""
+    def handler(self, observable, event):
+        """Override this method to call a method to handle events."""
         pass

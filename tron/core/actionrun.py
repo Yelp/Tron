@@ -269,7 +269,7 @@ class ActionRun(Observer):
         self.watch(action_command)
         return action_command
 
-    def watcher(self, action_command, event):
+    def handler(self, action_command, event):
         """Observe ActionCommand state changes."""
         log.debug("Action command state change: %s", action_command.state)
 

@@ -132,5 +132,5 @@ class StateMachine(Observable):
     def notify(self, event):
         """Notify observers."""
         watched = self.delegate if self.delegate else self
-        for watcher in self._get_watchers_for_event(event):
-            watcher.watcher(watched, event)
+        for handler in self._get_handlers_for_event(event):
+            handler.handler(watched, event)
