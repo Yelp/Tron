@@ -103,8 +103,9 @@ class StateHandler(Observer, Observable):
 
                 reactor.callLater(STATE_SLEEP_SECS, self.check_write_child)
 
-    def handler(self, _observable, _event):
+    def handle_state_changes(self, _observable, _event):
         self.store_state()
+    handler = handle_state_changes
 
     def store_state(self):
         """Stores the state of tron"""

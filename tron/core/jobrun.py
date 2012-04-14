@@ -202,7 +202,7 @@ class JobRun(Observable, Observer):
 
         return started_actions
 
-    def handler(self, action_run, event):
+    def handle_action_run_state_change(self, _action_run, event):
         """Handle events triggered by JobRuns."""
         # propagate all state changes (from action runs) up to state serializer
         self.notify(self.NOTIFY_STATE_CHANGED)
@@ -229,6 +229,7 @@ class JobRun(Observable, Observer):
         # action to be triggered more then once. Guard against that.
         if cleanup_run.check_state('start'):
             cleanup_run.start()
+    handler = handle_action_run_state_change
 
     def finalize(self):
         """The last step of a JobRun. Called when the cleanup action

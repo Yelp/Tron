@@ -178,7 +178,7 @@ class Job(Observable, Observer):
             self.watch(run)
             yield run
 
-    def handler(self, job_run, event):
+    def handle_job_run_state_change(self, job_run, event):
         """Handle state changes from JobRuns and propagate changes to any
         observers.
         """
@@ -195,6 +195,7 @@ class Job(Observable, Observer):
         # JobRun failed to start for some reason, maybe a bad command?
         if event == jobrun.JobRun.NOTIFY_START_FAILED:
             self.notify(self.NOTIFY_RUN_DONE)
+    handler = handle_job_run_state_change
 
     def __eq__(self, other):
         attrs = [
@@ -310,7 +311,7 @@ class JobScheduler(Observer):
         job_run.start()
         self.schedule()
 
-    def handler(self, observable, event):
+    def handle_job_events(self, _observable, event):
         """Handle notifications from observables. If a JobRun has completed
         look for queued JobRuns that may need to start now.
         """
@@ -322,6 +323,7 @@ class JobScheduler(Observer):
         queued_run = self.job.runs.get_first_queued()
         if queued_run:
             reactor.callLater(0, self.run_job, queued_run, run_queued=True)
+    handler = handle_job_events
 
     def get_runs_to_schedule(self, ignore_last_run_time=False):
         """If the scheduler does not support queuing overlapping and this job

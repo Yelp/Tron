@@ -269,7 +269,7 @@ class ActionRun(Observer):
         self.watch(action_command)
         return action_command
 
-    def handler(self, action_command, event):
+    def handle_action_command_state_change(self, action_command, event):
         """Observe ActionCommand state changes."""
         log.debug("Action command state change: %s", action_command.state)
 
@@ -287,6 +287,7 @@ class ActionRun(Observer):
                 return self.success()
 
             return self.fail(action_command.exit_status)
+    handler = handle_action_command_state_change
 
     def _done(self, target, exit_status=0):
         log.info("Action run %s completed with %s and exit status %r",
