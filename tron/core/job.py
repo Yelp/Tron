@@ -240,9 +240,8 @@ class JobScheduler(Observer):
     def enable(self):
         """Enable the job and start its scheduling cycle."""
         self.job.enabled = True
-        # TODO: should this skip all missed runs and just schedule the next one
-        # using current time? Github Issue #36
-        self.schedule()
+        for job_run in self.get_runs_to_schedule(ignore_last_run_time=True):
+            self._set_callback(job_run)
 
     def disable(self):
         """Disable the job and cancel and pending scheduled jobs."""
@@ -270,8 +269,7 @@ class JobScheduler(Observer):
         if not self.job.enabled:
             return
 
-        runs = self.get_runs_to_schedule()
-        for job_run in runs:
+        for job_run in self.get_runs_to_schedule():
             self._set_callback(job_run)
 
     def _set_callback(self, job_run):
@@ -325,7 +323,7 @@ class JobScheduler(Observer):
         if queued_run:
             reactor.callLater(0, self.run_job, queued_run, run_queued=True)
 
-    def get_runs_to_schedule(self):
+    def get_runs_to_schedule(self, ignore_last_run_time=False):
         """If the scheduler does not support queuing overlapping and this job
         has queued runs, do not schedule any more yet. Otherwise schedule
         the next run.
@@ -336,7 +334,10 @@ class JobScheduler(Observer):
             log.info("%s has pending runs, can't schedule more." % self.job)
             return []
 
-        last_run = self.job.runs.get_newest(include_manual=False)
-        last_run_time = last_run.run_time if last_run else None
+        if ignore_last_run_time:
+            last_run_time = None
+        else:
+            last_run = self.job.runs.get_newest(include_manual=False)
+            last_run_time = last_run.run_time if last_run else None
         next_run_time = self.job.scheduler.next_run_time(last_run_time)
         return self.job.build_new_runs(next_run_time)

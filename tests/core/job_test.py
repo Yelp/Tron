@@ -213,12 +213,6 @@ class JobSchedulerTestCase(TestCase):
         )
         self.job_scheduler = job.JobScheduler(self.job)
 
-    def test_enable(self):
-        self.job_scheduler.schedule = Turtle()
-        self.job_scheduler.enable()
-        assert self.job.enabled
-        assert_length(self.job_scheduler.schedule.calls, 1)
-
     def test_disable(self):
         self.job_scheduler.disable()
         assert not self.job.enabled
@@ -282,6 +276,23 @@ class JobSchedulerTestCase(TestCase):
         assert_length(job_run.queue.calls, 1)
         assert_length(self.job_scheduler.schedule.calls, 0)
 
+class JobSchedulerGetRunsToScheduleTestCase(TestCase):
+
+    @setup
+    def setup_job(self):
+        self.scheduler = Turtle()
+        run_collection = Turtle()
+        node_pool = Turtle()
+        self.job = job.Job(
+            "jobname",
+            self.scheduler,
+            run_collection=run_collection,
+            node_pool=node_pool,
+        )
+        self.job_scheduler = job.JobScheduler(self.job)
+        self.job.runs.get_pending = lambda: False
+        self.scheduler.queue_overlapping = True
+
     def test_get_runs_to_schedule_no_queue_with_pending(self):
         self.scheduler.queue_overlapping = False
         self.job.runs.get_pending = lambda: True
@@ -289,9 +300,6 @@ class JobSchedulerTestCase(TestCase):
         assert_length(job_runs, 0)
 
     def test_get_runs_to_schedule_queue_with_pending(self):
-        self.scheduler.queue_overlapping = True
-        self.job.runs.has_pending = True
-
         job_runs = list(self.job_scheduler.get_runs_to_schedule())
 
         assert_call(self.job.runs.get_newest, 0, include_manual=False)
@@ -301,7 +309,6 @@ class JobSchedulerTestCase(TestCase):
         assert_call(job_runs[0].attach, 0, True, self.job)
 
     def test_get_runs_to_schedule_no_pending(self):
-        self.job.runs.get_pending = lambda: False
         job_runs = list(self.job_scheduler.get_runs_to_schedule())
 
         assert_call(self.job.runs.get_newest, 0, include_manual=False)
@@ -311,7 +318,6 @@ class JobSchedulerTestCase(TestCase):
         assert_call(job_runs[0].attach, 0, True, self.job)
 
     def test_get_runs_to_schedule_no_last_run(self):
-        self.job.runs.get_pending = lambda: False
         self.job.runs.get_newest = lambda **kwargs: None
 
         job_runs = list(self.job_scheduler.get_runs_to_schedule())
@@ -319,6 +325,12 @@ class JobSchedulerTestCase(TestCase):
         assert_length(job_runs, 1)
         # This should return a JobRun which has the job attached as an observer
         assert_call(job_runs[0].attach, 0, True, self.job)
+
+    def test_get_runs_to_schedule_ignore_last(self):
+        job_runs = list(self.job_scheduler.get_runs_to_schedule(True))
+        assert_length(self.job.scheduler.next_run_time.calls, 1)
+        assert_length(job_runs, 1)
+        assert_call(self.scheduler.next_run_time, 0, None)
 
 
 class MockRunBuilder(Turtle):
@@ -383,6 +395,12 @@ class JobSchedulerScheduleTestCase(MockReactorTestCase):
             node_pool=node_pool,
         )
         self.job_scheduler = job.JobScheduler(self.job)
+
+    def test_enable(self):
+        self.job_scheduler.schedule = Turtle()
+        self.job_scheduler.enable()
+        assert self.job.enabled
+        assert_length(self.reactor.callLater.calls, 1)
 
     def test_schedule(self):
         self.job_scheduler.schedule()
