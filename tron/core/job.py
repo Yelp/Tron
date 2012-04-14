@@ -156,14 +156,18 @@ class Job(Observable, Observer):
         """Apply a previous state to this Job."""
         self.enabled = state_data['enabled']
         job_runs = self.runs.restore_state(
-                state_data['runs'], self.action_graph, self.output_path.clone())
+                state_data['runs'],
+                self.action_graph,
+                self.output_path.clone(),
+                self.context
+        )
         for run in job_runs:
             self.watch(run)
 
         self.notify(self.EVENT_STATE_RESTORED)
 
     def build_new_runs(self, run_time, manual=False):
-        """Uses its JobCollection to build new JobRuns.. If all_nodes is set,
+        """Uses its JobCollection to build new JobRuns. If all_nodes is set,
         build a run for every node, otherwise just builds a single run on a
         single node.
         """
@@ -295,11 +299,9 @@ class JobScheduler(Observer):
                     job_run, job_run.state))
             return self.schedule()
 
-        # TODO: if this is an all_nodes job, then enforce that the node is
-        # the same as any pending jobs
-
+        node = job_run.node if self.job.all_nodes else None
         # If there is another job run still running, queue or cancel this one
-        if self.job.runs.has_active:
+        if any(self.job.runs.get_active(node)):
             if self.job.queueing:
                 log.info("%s still running, queueing %s." % (self.job, job_run))
                 return job_run.queue()
@@ -317,9 +319,9 @@ class JobScheduler(Observer):
         if event != Job.NOTIFY_RUN_DONE:
             return
 
+        # TODO: this should only start runs on the same node if this is an
+        # all_nodes job, but that is currently not possible
         queued_run = self.job.runs.get_first_queued()
-        # TODO: if this is an all_nodes job, then we may need to start more
-        # then a single queued job
         if queued_run:
             reactor.callLater(0, self.run_job, queued_run, run_queued=True)
 

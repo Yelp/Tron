@@ -92,7 +92,7 @@ class JobRun(Observable, Observer):
         return run
 
     @classmethod
-    def from_state(cls, state_data, action_graph, output_path):
+    def from_state(cls, state_data, action_graph, output_path, context):
         """Restore a JobRun from a serialized state."""
         node_pools = node.NodePoolStore.get_instance()
         stored_node = node_pools.get(state_data.get('node_name'))
@@ -113,7 +113,8 @@ class JobRun(Observable, Observer):
             start_time=state_data['start_time'],
             action_graph=action_graph,
             manual=state_data.get('manual', False),
-            output_path=output_path
+            output_path=output_path,
+            base_context=context
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
                 job_run, state_data['runs'], state_data['cleanup_run'])
@@ -305,14 +306,15 @@ class JobRunCollection(object):
         """Factory method for creating a JobRunCollection from a config."""
         return cls(job_config.run_limit)
 
-    def restore_state(self, state_data, action_graph, output_path):
+    def restore_state(self, state_data, action_graph, output_path, context):
         """Apply state to all jobs from the state dict."""
         if self.runs:
             msg = "State can not be restored to a collection with runs."
             raise ValueError(msg)
 
         restored_runs = [
-            JobRun.from_state(run_state, action_graph, output_path.clone())
+            JobRun.from_state(
+                    run_state, action_graph, output_path.clone(), context)
             for run_state in state_data
         ]
         self.runs.extend(restored_runs)
@@ -386,15 +388,19 @@ class JobRunCollection(object):
     def has_pending(self):
         return any(self.get_pending())
 
-    def get_active(self):
-        return self._get_runs_using(lambda r: r.is_running or r.is_starting)
+    def get_active(self, node=None):
+        if node:
+            func = lambda r: (r.is_running or r.is_starting) and r.node == node
+        else:
+            func = lambda r: r.is_running or r.is_starting
+        return self._get_runs_using(func)
 
-    @property
-    def has_active(self):
-        return any(self.get_active())
-
-    def get_first_queued(self):
-        queued_func = self._filter_by_state(ActionRun.STATE_QUEUED)
+    def get_first_queued(self, node=None):
+        state = ActionRun.STATE_QUEUED
+        if node:
+            queued_func = lambda r: r.state == state and r.node == node
+        else:
+            queued_func = self._filter_by_state(state)
         return self._get_run_using(queued_func, reverse=True)
 
     def get_scheduled(self):

@@ -9,6 +9,10 @@ nodes:
       hostname: localhost
     - name: box2
       hostname: localhost
+    - name: box3
+      hostname: localhost
+    - name: box4
+      hostname: 127.0.0.1
 
 node_pools:
     - name: pool0
@@ -16,6 +20,8 @@ node_pools:
     - name: pool1
       nodes: [box1]
     - nodes: [box1, box2]
+    - name: pool2
+      nodes: [box3, box4]
 
 command_context:
     THE_JOB_DIR: "testconfig/jobs/"
@@ -135,7 +141,7 @@ jobs:
 
     # all_nodes Job
     -   name: allnodes_job8
-        node: pool0
+        node: pool2
         schedule: "interval 15s"
         all_nodes: true
         actions:

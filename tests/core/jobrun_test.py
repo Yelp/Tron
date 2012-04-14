@@ -311,15 +311,18 @@ class JobRunFromStateTestCase(TestCase):
             'cleanup_run':      None,
             'manual':           True
         }
+        self.context = Turtle()
 
     def test_from_state(self):
         run = jobrun.JobRun.from_state(
-                self.state_data, self.action_graph, self.output_path)
+            self.state_data, self.action_graph, self.output_path, self.context)
         assert_length(run.action_runs.run_map, 1)
         assert_equal(run.job_name, self.state_data['job_name'])
         assert_equal(run.run_time, self.run_time)
         assert run.manual
         assert_equal(run.output_path, self.output_path)
+        assert run.context.next
+        assert run.action_graph
 
     def test_from_state_old_state_data(self):
         del self.state_data['manual']
@@ -328,7 +331,7 @@ class JobRunFromStateTestCase(TestCase):
         self.state_data['id'] = 'thejobname.22'
 
         run = jobrun.JobRun.from_state(
-                self.state_data, self.action_graph, self.output_path)
+            self.state_data, self.action_graph, self.output_path, self.context)
         assert_length(run.action_runs.run_map, 1)
         assert_equal(run.job_name, 'thejobname')
         assert_equal(run.run_time, self.run_time)
@@ -396,16 +399,17 @@ class JobRunCollectionTestCase(TestCase):
         ]
         action_graph = [Turtle()]
         output_path = Turtle()
+        context = Turtle()
 
         restored_runs = run_collection.restore_state(
-                state_data, action_graph, output_path)
+                state_data, action_graph, output_path, context)
         assert_equal(run_collection.runs[0].run_num, 3)
         assert_equal(run_collection.runs[3].run_num, 0)
         assert_length(restored_runs, 4)
 
     def test_restore_state_with_runs(self):
         assert_raises(ValueError,
-                self.run_collection.restore_state, None, None, None)
+                self.run_collection.restore_state, None, None, None, None)
 
     def test_build_new_run(self):
         self.run_collection.remove_old_runs = Turtle()

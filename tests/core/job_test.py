@@ -131,7 +131,7 @@ class JobTestCase(TestCase):
     def test_restore_state(self):
         run_data = ['one', 'two']
         job_runs = [Turtle(), Turtle()]
-        self.job.runs.restore_state = lambda r, a, o: job_runs
+        self.job.runs.restore_state = lambda r, a, o, c: job_runs
         state_data = {'enabled': False, 'runs': run_data}
 
         self.job.restore_state(state_data)
@@ -232,7 +232,7 @@ class JobSchedulerTestCase(TestCase):
 
     def test_run_job(self):
         self.job_scheduler.schedule = Turtle()
-        self.job.runs.has_active = False
+        self.job.runs.get_active = lambda n: []
         job_run = Turtle(is_cancelled=False)
         self.job_scheduler.run_job(job_run)
         assert_length(job_run.start.calls, 1)
@@ -256,7 +256,7 @@ class JobSchedulerTestCase(TestCase):
 
     def test_run_job_already_running_queuing(self):
         self.job_scheduler.schedule = Turtle()
-        self.job.runs.get_run_by_state = lambda s: Turtle()
+        self.job.runs.get_active = lambda s: [Turtle()]
         job_run = Turtle(is_cancelled=False)
         self.job_scheduler.run_job(job_run)
         assert_length(job_run.start.calls, 0)
@@ -265,7 +265,7 @@ class JobSchedulerTestCase(TestCase):
 
     def test_run_job_already_running_cancel(self):
         self.job_scheduler.schedule = Turtle()
-        self.job.runs.get_run_by_state = lambda s: Turtle()
+        self.job.runs.get_active = lambda s: [Turtle()]
         self.job.queueing = False
         job_run = Turtle(is_cancelled=False)
         self.job_scheduler.run_job(job_run)
@@ -275,7 +275,7 @@ class JobSchedulerTestCase(TestCase):
 
     def test_run_job_has_starting_queueing(self):
         self.job_scheduler.schedule = Turtle()
-        self.job.runs.get_run_by_state = lambda s: s == ActionRun.STATE_STARTING
+        self.job.runs.get_active = lambda s: [Turtle()]
         job_run = Turtle(is_cancelled=False)
         self.job_scheduler.run_job(job_run)
         assert_length(job_run.start.calls, 0)
