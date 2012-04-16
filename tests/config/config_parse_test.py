@@ -1,13 +1,16 @@
 import datetime
+import os
 import shutil
 import StringIO
+import stat
 import tempfile
 from textwrap import dedent
 
 from testify import assert_equal, assert_in
 from testify import run, setup, teardown, TestCase
 from tron.config import config_parse
-from tron.config.config_parse import TronConfig, load_config, ConfigSSHOptions, valid_job
+from tron.config.config_parse import TronConfig, load_config, ConfigSSHOptions
+from tron.config.config_parse import valid_job, valid_output_stream_dir
 from tron.config.config_parse import ConfigNode, ConfigNodePool, ConfigJob
 from tron.config.config_parse import ConfigAction, ConfigCleanupAction
 from tron.config.config_parse import ConfigService, ConfigError
@@ -21,8 +24,6 @@ from tron.utils.dicts import FrozenDict
 
 
 BASE_CONFIG = """
-working_dir: "/tmp"
-
 ssh_options:
     agent: true
     identities:
@@ -43,7 +44,7 @@ node_pools:
 class OldConfigTest(TestCase):
     OLD_BASE_CONFIG = """
 --- !TronConfiguration
-working_dir: "/tmp"
+output_stream_dir: "/tmp"
 
 ssh_options: !SSHOptions
     agent: true
@@ -148,7 +149,8 @@ services:
     def test_attributes(self):
         test_config = load_config(StringIO.StringIO(self.config))
         expected = TronConfig(
-            working_dir='/tmp',
+            working_dir=None,
+            output_stream_dir='/tmp',
             command_context=FrozenDict(**{
                 'python': '/usr/bin/python',
                 'batch_dir': '/tron/batch/test/foo'
@@ -301,7 +303,6 @@ services:
 
         # we could just do a big assert_equal here, but it would be hella hard
         # to debug failures that way.
-        assert_equal(test_config.working_dir, expected.working_dir)
         assert_equal(test_config.command_context, expected.command_context)
         assert_equal(test_config.ssh_options, expected.ssh_options)
         assert_equal(test_config.notification_options, expected.notification_options)
@@ -568,8 +569,6 @@ class NodeConfigTestCase(TestCase):
 
     def test_invalid_nested_node_pools(self):
         test_config = dedent("""
-            working_dir: "/tmp"
-
             nodes:
                 - name: node0
                   hostname: batch0
@@ -593,8 +592,6 @@ class NodeConfigTestCase(TestCase):
 
     def test_invalid_node_pool_config(self):
         test_config = dedent("""
-            working_dir: "/tmp"
-
             nodes:
                 - name: node0
                   hostname: batch0
@@ -640,6 +637,31 @@ class ValidatorTestCase(TestCase):
     def test_validate_optional_with_none(self):
         self.validator.optional = True
         assert_equal(self.validator.validate(None), None)
+
+
+class ValidOutputStreamDirTestCase(TestCase):
+
+    @setup
+    def setup_dir(self):
+        self.dir = tempfile.mkdtemp()
+
+    @teardown
+    def teardown_dir(self):
+        shutil.rmtree(self.dir)
+
+    def test_valid_dir(self):
+        assert_equal(self.dir, valid_output_stream_dir(self.dir))
+
+    def test_missing_dir(self):
+        exception = assert_raises(ConfigError, valid_output_stream_dir, 'bogus-dir')
+        assert_in("is not a directory", str(exception))
+
+    def test_no_ro_dir(self):
+        os.chmod(self.dir, stat.S_IRUSR)
+        exception = assert_raises(ConfigError, valid_output_stream_dir, self.dir)
+        assert_in("is not writable", str(exception))
+
+
 
 if __name__ == '__main__':
     run()
