@@ -202,6 +202,12 @@ Context variables only available to Services:
     total number of instances).
 
 
+Output Stream Directory
+-----------------------
+**output_stream_dir** allows you to specific the directory used to store the
+stdout/stderr logs from jobs.  It defaults to the `working_dir` option passed
+to :ref:`trond`.
+
 
 Nodes
 -----

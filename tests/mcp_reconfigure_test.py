@@ -12,7 +12,7 @@ class MCPReconfigureTest(TestCase):
 
     def config_1(self, wd):
         config = dict(
-            working_dir=wd,
+            output_stream_dir=wd,
             ssh_options=dict(
                 agent=True,
                 identities=['tests/test_id_rsa'],
@@ -62,7 +62,7 @@ class MCPReconfigureTest(TestCase):
 
     def config_2(self, wd):
         config = dict(
-            working_dir=wd,
+            output_stream_dir=wd,
             ssh_options=dict(
                 agent=True,
                 identities=['tests/test_id_rsa'],

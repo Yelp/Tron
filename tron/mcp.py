@@ -223,6 +223,8 @@ class MasterControlProgram(Observable):
         # Root command context
         self.context = command_context.CommandContext()
 
+        self.output_stream_dir = None
+        self.working_dir = working_dir
         self.monitor = None
 
         # Time zone of the system clock
@@ -295,7 +297,7 @@ class MasterControlProgram(Observable):
         edit the config may not have the same environment as the live
         trond machine.
         """
-        self._apply_working_directory(conf.working_dir)
+        self._apply_output_stream_directory(conf.output_stream_dir)
 
         if not skip_env_dependent:
             ssh_options = self._ssh_options_from_config(conf.ssh_options)
@@ -311,31 +313,9 @@ class MasterControlProgram(Observable):
         self._apply_services(conf.services)
         self._apply_notification_options(conf.notification_options)
 
-    def _apply_working_directory(self, wd):
-        """Apply working directory.  If wd=None try os.environ['TMPDIR'].
-        If that doesn't exist, use /tmp.
-        """
-        if self.state_handler.working_dir:
-            if self.state_handler.working_dir != wd:
-                log.warn('trond must be restarted for changes to the working'
-                         ' directory to take effect.')
-            return
-
-        if not wd:
-            if 'TMPDIR' in os.environ:
-                wd = os.environ['TMPDIR']
-            else:
-                wd = '/tmp'
-
-        if not os.path.isdir(wd):
-            raise ConfigApplyError("Specified working directory '%s' is not"
-                                   " a directory" % wd)
-
-        if not os.access(wd, os.W_OK):
-            raise ConfigApplyError("Specified working directory '%s' is not"
-                                   " writable" % wd)
-
-        self.state_handler.working_dir = wd
+    def _apply_output_stream_directory(self, output_stream_dir):
+        """Apply the output stream directory."""
+        self.output_stream_dir = output_stream_dir or self.working_dir
 
     def _ssh_options_from_config(self, ssh_conf):
         ssh_options = ConchOptions()
@@ -424,7 +404,7 @@ class MasterControlProgram(Observable):
     ### JOBS ###
     def add_job(self, job_config, reconfigure=False):
         log.debug("Building new job %s", job_config.name)
-        output_path = filehandler.OutputPath(self.state_handler.working_dir)
+        output_path = filehandler.OutputPath(self.output_stream_dir)
         scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
         job = Job.from_config(job_config, scheduler, self.context, output_path)
 
