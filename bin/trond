@@ -29,7 +29,7 @@ from tron import commands
 from tron import mcp
 from tron import www
 
-logger = logging.getLogger('trond')
+logger = logging.getLogger('tron.trond')
 
 
 TRON                    = 'tron'
