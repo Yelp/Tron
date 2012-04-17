@@ -9,7 +9,7 @@ from tron import ssh
 from tron.utils import twistedutils
 
 
-log = logging.getLogger('tron.node')
+log = logging.getLogger(__name__)
 
 # We should also only wait a certain amount of time for a connection to be
 # established.

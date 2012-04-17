@@ -97,7 +97,6 @@ class ActionRunFactory(object):
             output_path=job_run.output_path.clone(),
             cleanup=action.is_cleanup
         )
-        job_run.watch(action_run)
         return action_run
 
     @classmethod

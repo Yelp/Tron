@@ -1,9 +1,8 @@
 import heapq
 from collections import deque, namedtuple
-import itertools
 import logging
-import sys
 import weakref
+import time
 
 from tron.utils import timeutils
 from tron.utils import observer
@@ -40,16 +39,13 @@ EventType = namedtuple('EventType', ['level', 'name'])
 
 class FixedLimitStore(object):
     """Simple data store that keeps a fixed number of elements based on their
-    'category'. Also known as a circular buffer or ring buffer. After
-    sys.maxint events an internal counter will wrap back to 0. Some events
-    may be out during that period.
+    'category'. Also known as a circular buffer or ring buffer.
     """
     DEFAULT_LIMIT = 10
 
     def __init__(self, limits):
         self._limits = limits or dict()
         self._values = {}
-        self.counter = itertools.cycle(xrange(sys.maxint))
 
     def _build_deque(self, category):
         limit = self._limits.get(category, self.DEFAULT_LIMIT)
@@ -58,11 +54,17 @@ class FixedLimitStore(object):
     def append(self, category, item):
         if category not in self._values:
             self._values[category] = self._build_deque(category)
-        self._values[category].append((self.counter.next(), item))
+        self._values[category].append((time.time(), item))
+
+    def _build_iter(self, categories):
+        event_groups = [self._values.get(cat, []) for cat in categories]
+        return (val for _, val in heapq.merge(*event_groups))
 
     def __iter__(self):
-        events = heapq.merge(*self._values.itervalues())
-        return (val for _, val in events)
+        return self._build_iter(self._values.keys())
+
+    def list(self, categories):
+        return list(self._build_iter(categories))
 
 
 class Event(object):
@@ -134,19 +136,13 @@ class EventRecorder(observer.Observer):
         self.record(Event(self, LEVEL_CRITICAL, name, **data))
 
     def list(self, min_level=None):
-        # Levels are actually descriptive strings, but we provide a way to get
-        # the order via ORDERED_LEVELS constant
-        min_level_ndx = None
+        """Return a list of Events. If min_level is set, then only events
+        with equal or higher priority will be returned.
+        """
+        levels = ORDERED_LEVELS
         if min_level is not None:
-            min_level_ndx = ORDERED_LEVELS.index(min_level)
-
-        # TODO: this should go into FixedLimitStore
-        return [event for event in self
-                if (min_level is None or
-                    ORDERED_LEVELS.index(event.level) >= min_level_ndx)]
-
-    def __iter__(self):
-        return self._store.__iter__()
+            levels = levels[levels.index(min_level):]
+        return self._store.list(levels)
 
     def handler(self, observable, event):
         """Watch for events and create and store Event objects."""

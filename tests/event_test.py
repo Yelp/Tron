@@ -38,13 +38,19 @@ class FixedLimitStoreTestCase(TestCase):
         expected = ['test3', 'test4', 'test7', 'test8', 'test9', 'alpha']
         assert_equal(values, expected)
 
+    def test_list(self):
+        values = self.store.list([event.LEVEL_OK, event.LEVEL_INFO, 'BOGUS'])
+        expected = ['test3', 'test4', 'alpha']
+        assert_equal(values, expected)
+
 
 class EventRecorderTestCase(TestCase):
 
     @setup
     def build_recorders(self):
         self.observable = turtle.Turtle()
-        self.parent_recorder = event.EventRecorder(self.observable)
+        self.parent_observable = turtle.Turtle()
+        self.parent_recorder = event.EventRecorder(self.parent_observable)
         self.recorder = event.EventRecorder(
                 self.observable, parent=self.parent_recorder)
 

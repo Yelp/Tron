@@ -21,7 +21,7 @@ from tron.core import actionrun
 from tron.api import requestargs
 
 
-log = logging.getLogger("tron.www")
+log = logging.getLogger(__name__)
 
 
 class JSONEncoder(json.JSONEncoder):
