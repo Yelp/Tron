@@ -501,6 +501,9 @@ class ValidateAction(ValidatorWithNamedPath):
 
         # string identifier
         if isinstance(old_requires, basestring):
+            log.warn("Require without a list is deprecated. "
+                "You should update requires for %s %s" %
+                (path_name, action['name']))
             old_requires = [old_requires]
 
         # pointer
