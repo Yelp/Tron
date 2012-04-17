@@ -2,9 +2,8 @@
  Convert a 0.2.x Tron configuration file to the 0.3 format.
 
  Removes YAML anchors, references, and tags.
-
- Does not move node pools out of 'nodes' section.
- Does not enforce a list for action requires.
+ Display warnings for NodePools under the nodes section.
+ Display warnings for action requires sections that are not lists.
 
 """
 import optparse
@@ -45,14 +44,10 @@ def name_from_doc(doc):
 
 
 def warn_node_pools(content):
-    """Update references for node pools and split nodes from node pools."""
-    node_pools = []
     doc = yaml.safe_load(content)
 
-    for node_doc in doc['nodes']:
-        if 'nodes' not in node_doc:
-            continue
-        node_pools.append(node_doc)
+    node_pools = [
+        node_doc for node_doc in doc['nodes'] if 'nodes' in node_doc]
 
     if not node_pools:
         return
@@ -98,12 +93,10 @@ def build_anchor_mapping(content):
     """Return a map of anchors to the new name to use."""
     loader = create_loader(content)
 
-    mapping = {}
-    for anchor_name, yaml_node in loader.anchors.iteritems():
-        doc = loader.construct_document(yaml_node)
-        mapping[anchor_name] = name_from_doc(doc)
-
-    return mapping
+    return dict(
+        (anchor_name, name_from_doc(loader.construct_document(yaml_node)))
+        for anchor_name, yaml_node in loader.anchors.iteritems()
+    )
 
 
 def update_references(content):
