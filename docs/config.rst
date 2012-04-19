@@ -257,14 +257,16 @@ Services
     available to services.
 
 
+.. _config_logging:
+
 Logging
 -------
 
-As of v0.3.2 Logging is no longer configured in the tron configuration file.
+As of v0.3.3 Logging is no longer configured in the tron configuration file.
 
 Tron uses Python's standard logging and by default uses a rotating log file
 handler that rotates files each day. Logs go to /var/log/tron/tron.log.
 
 To configure logging pass -l <logging.conf> to trond. You can modify the
-default logging.conf by coping it from tron/logging.conf. See
+default logging.conf by copying it from tron/logging.conf. See
 http://docs.python.org/howto/logging.html#configuring-logging

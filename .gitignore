@@ -12,3 +12,5 @@ tron.egg-info
 *.swo
 docs/_build/
 .idea
+docs/images/
+*.dot
