@@ -82,10 +82,7 @@ def warn_requires_list(content):
 def create_loader(content):
     """Create a loader, and have it create the document from content."""
     loader = Loader(content)
-    try:
-        loader.get_single_node()
-    finally:
-        loader.dispose()
+    loader.get_single_node()
     return loader
 
 
@@ -109,7 +106,7 @@ def update_references(content):
         # Remove the anchors
         content = re.sub(r'\s*&%s ?' % anchor_name, '', content)
         # Update the reference to use the string identifier
-        content = re.sub(r'\*%s\b' % anchor_name, string_name, content)
+        content = re.sub(r'\*%s\b' % anchor_name, '"%s"' % string_name, content)
 
     return content
 
