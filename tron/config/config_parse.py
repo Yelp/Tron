@@ -16,6 +16,7 @@ from collections import namedtuple
 from functools import partial
 import itertools
 import logging
+import os
 import re
 
 import pytz
@@ -82,6 +83,7 @@ TronConfig = config_object_factory(
     'TronConfig',
     optional=[
          'working_dir',         # str
+         'output_stream_dir',   # str
          'command_context',     # FrozenDict of str
          'ssh_options',         # ConchOptions
          'notification_options',# NotificationOptions or None
@@ -122,8 +124,7 @@ ConfigJob = config_object_factory(
         'node',                 # str
         'schedule',             # Config*Scheduler
         'actions',              # FrozenDict of ConfigAction
-    ],
-    [
+    ],[
         'queueing',             # bool
         'run_limit',            # int
         'all_nodes',            # bool
@@ -361,11 +362,31 @@ class ValidatorWithNamedPath(Validator):
         return valid_input
 
 
+# TODO: remove in 0.5
 def valid_working_dir(wd):
     """Given a working directory or None, return a valid working directory.
     If wd=None the mcp will attempt to use a default.
     """
-    return valid_str('working_dir', wd, optional=True)
+    log.warning("working_dir is no longer supported. "
+        "Use output_stream_dir to set the directory for stdout/stderr files.")
+
+
+def valid_output_stream_dir(output_dir):
+    """Returns a valid string for the output directory, or raises ConfigError
+    if the output_dir is not valid.
+    """
+    output_dir = valid_str('output_stream_dir', output_dir, optional=True)
+    if not output_dir:
+        return
+
+    if not os.path.isdir(output_dir):
+        msg = "output_stream_dir '%s' is not a directory"
+        raise ConfigError(msg % output_dir)
+
+    if not os.access(output_dir, os.W_OK):
+        raise ConfigError("output_stream_dir '%s' is not writable" % output_dir)
+
+    return output_dir
 
 
 def valid_command_context(context):
@@ -480,6 +501,9 @@ class ValidateAction(ValidatorWithNamedPath):
 
         # string identifier
         if isinstance(old_requires, basestring):
+            log.warn("Require without a list is deprecated. "
+                "You should update requires for %s %s" %
+                (path_name, action['name']))
             old_requires = [old_requires]
 
         # pointer
@@ -636,6 +660,7 @@ class ValidateConfig(Validator):
     config_class =              TronConfig
     defaults = {
         'working_dir':          None,
+        'output_stream_dir':    None,
         'command_context':      None,
         'ssh_options':          valid_ssh_options({}),
         'notification_options': None,
@@ -646,6 +671,7 @@ class ValidateConfig(Validator):
         'services':             (),
     }
     validators = {
+        'output_stream_dir':    valid_output_stream_dir,
         'working_dir':          valid_working_dir,
         'command_context':      valid_command_context,
         'ssh_options':          valid_ssh_options,
