@@ -1,5 +1,6 @@
 try:
     from setuptools import setup
+    assert setup
 except ImportError:
     from distutils.core import setup
 
@@ -34,10 +35,11 @@ setup(
     ],
     packages=[
         "tron",
+        "tron.api",
         "tron.commands",
         "tron.config",
         "tron.core",
-        "tron.serialize"
+        "tron.serialize",
         "tron.utils",
     ],
     scripts=[
