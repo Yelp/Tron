@@ -70,7 +70,6 @@ class ConstantScheduler(object):
         return not self == other
 
 
-# TODO: return a localized time from time_zone
 class DailyScheduler(object):
     """Wrapper around SpecificTimeSpecification in the Google App Engine cron
     library

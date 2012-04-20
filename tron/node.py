@@ -62,7 +62,6 @@ class RunState(object):
         self.channel = None
 
 
-# TODO: some tests
 class NodePoolStore(object):
     """A Singleton to store Node and NodePool objects."""
 
@@ -91,6 +90,9 @@ class NodePoolStore(object):
     def get(self, name, default=None):
         return self.store.get(name, default)
 
+    def __contains__(self, name):
+        return name in self.store
+
     def clear(self):
         self.store.clear()
 
@@ -100,7 +102,7 @@ class NodePool(object):
     def __init__(self, nodes, name=None):
         self.nodes = nodes
         self.name = name or '_'.join(n.name for n in nodes)
-        self.iter = None
+        self.iter = itertools.cycle(self.nodes)
 
     @classmethod
     def from_config(cls, node_pool_config):
@@ -122,9 +124,6 @@ class NodePool(object):
 
     def next_round_robin(self):
         """Return the next node cycling in a consistent order."""
-        if not self.iter:
-            self.iter = itertools.cycle(self.nodes)
-
         return self.iter.next()
 
     def __getitem__(self, value):

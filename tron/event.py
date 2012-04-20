@@ -183,7 +183,7 @@ class EventManager(object):
         """Create an EventRecorder for the observable and store it."""
         key = self._build_key(observable)
         if key in self.recorders:
-            raise ValueError("%s is already being managed." % observable)
+            log.warn("%s is already being managed." % observable)
 
         parent_recorder = None
         if parent:
