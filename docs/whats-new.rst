@@ -1,6 +1,13 @@
 What's New
 ==========
 
+0.3.3
+-----
+
+* Logging is now configured from logging.conf, see :ref:`config_logging`
+* Old style configuration files can be converted using `tools/migration/migrate_config_0.2_to_0.3.py`
+* working_dir in the configuration has been replaced by output_stream_dir
+
 
 0.3.0
 -----

@@ -1,3 +1,18 @@
+tron (0.3.3-1) unstable; urgency=low
+
+  * Remove logrotate script from debian packaging
+  * Add logging.conf to debian packaging
+
+ -- James Brown <jbrown@yelp.com>  Thu, 19 Apr 2012 14:33:17 -0700
+
+tron (0.3.3) unstable; urgency=low
+
+  * Adding a configuration migration script for porting 0.2.x configs to the new 0.3.x
+  * Remove working_dir from the configuration and replace with output_stream_dir
+  * Remove logging confiruation from the general config.  Logging is now configured using python standaring logging
+
+ -- Daniel Nephin <dnephin@yelp.com>  Wed, 18 Apr 2012 18:00:00 -0800
+
 tron (0.3.2) unstable; urgency=low
 
   * Fixes a bug when there are multiple node pools
