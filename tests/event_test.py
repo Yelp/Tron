@@ -131,7 +131,8 @@ class EventManagerTestCase(TestCase):
 
     def test_add_duplicate(self):
         self.manager.add(self.observable)
-        assert_raises(ValueError, self.manager.add, self.observable)
+        recorder = self.manager.add(self.observable)
+        assert_in(recorder, self.manager.recorders.values())
 
     def test_add_parent(self):
         parent = turtle.Turtle()
