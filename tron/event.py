@@ -67,6 +67,7 @@ class FixedLimitStore(object):
         return list(self._build_iter(categories))
 
 
+# TODO: src should just be the entity, not an EventRecorder
 class Event(object):
     """Data object for storing details of an event."""
     __slots__ = ('_src', 'time', 'level', 'name', 'data')
@@ -144,6 +145,7 @@ class EventRecorder(observer.Observer):
             levels = levels[levels.index(min_level):]
         return self._store.list(levels)
 
+    # TODO: once Event is fixed, accept Event objects as well
     def handler(self, observable, event):
         """Watch for events and create and store Event objects."""
         if not isinstance(event, EventType):

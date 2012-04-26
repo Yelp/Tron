@@ -105,35 +105,6 @@ class NodeTestCase(TestCase):
         assert 0 < self.node._determine_fudge_factor() < 20
 
 
-#   TODO: this is broken
-#class NodeTimeoutTest(testingutils.ReactorTestCase):
-#    @setup
-#    def build_node(self):
-#        self.node = node.Node(hostname="testnodedoesnotexist",
-#                              ssh_options=turtle.Turtle())
-#
-#        # Make this test faster
-#        node.CONNECT_TIMEOUT = 1
-#
-#    @setup
-#    def build_run(self):
-#        self.run = turtle.Turtle()
-#
-#    @suite('reactor')
-#    def test_connect_timeout(self):
-#        self.job_marked_failed = False
-#        def fail_job(*args):
-#            self.job_marked_failed = True
-#
-#        df = self.node.run(self.run)
-#        df.addErrback(fail_job)
-#
-#        with testingutils.no_handlers_for_logger():
-#            testingutils.wait_for_deferred(df)
-#        assert df.called
-#        assert self.job_marked_failed
-
-
 class NodePoolTestCase(TestCase):
 
     @setup

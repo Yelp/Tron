@@ -3,8 +3,9 @@ import pytz
 from testify import TestCase, setup, assert_equal, teardown
 from testify.assertions import assert_in
 from tests.assertions import assert_length, assert_raises, assert_call
+from tests.mocks import MockNode
 from tron.core import jobrun, actionrun
-from tests.testingutils import Turtle, TestNode
+from tests.testingutils import Turtle
 from tron.utils import timeutils
 
 
@@ -33,7 +34,7 @@ class JobRunTestCase(TestCase):
         self.action_graph = Turtle(action_map=dict(anaction=Turtle()))
         self.job = Turtle(name="aname", action_graph=self.action_graph)
         self.run_time = datetime.datetime(2012, 3, 14, 15, 9 ,26)
-        node = TestNode('thenode')
+        node = MockNode('thenode')
         self.job_run = jobrun.JobRun('jobname', 7, self.run_time, node,
                 action_runs=Turtle(
                     action_runs_with_cleanup=[],
@@ -54,7 +55,7 @@ class JobRunTestCase(TestCase):
 
     def test_for_job(self):
         run_num = 6
-        node = TestNode('anode')
+        node = MockNode('anode')
         run = jobrun.JobRun.for_job(
                 self.job, run_num, self.run_time, node, False)
 
@@ -66,7 +67,7 @@ class JobRunTestCase(TestCase):
 
     def test_for_job_manual(self):
         run_num = 6
-        node = TestNode('anode')
+        node = MockNode('anode')
         run = jobrun.JobRun.for_job(
                 self.job, run_num, self.run_time, node, True)
         assert run.action_runs.run_map
@@ -416,7 +417,7 @@ class JobRunCollectionTestCase(TestCase):
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         job = Turtle(name="thejob")
         job.action_graph.action_map = {}
-        node = TestNode("thenode")
+        node = MockNode("thenode")
         job_run = self.run_collection.build_new_run(job, run_time, node)
         assert_in(job_run, self.run_collection.runs)
         assert_call(self.run_collection.remove_old_runs, 0)
@@ -428,7 +429,7 @@ class JobRunCollectionTestCase(TestCase):
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         job = Turtle(name="thejob")
         job.action_graph.action_map = {}
-        node = TestNode("thenode")
+        node = MockNode("thenode")
         job_run = self.run_collection.build_new_run(job, run_time, node, True)
         assert_in(job_run, self.run_collection.runs)
         assert_call(self.run_collection.remove_old_runs, 0)

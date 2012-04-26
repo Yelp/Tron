@@ -2,7 +2,8 @@ import datetime
 
 from testify import setup, teardown, TestCase, run, assert_equal, assert_raises
 from tests.assertions import assert_length, assert_call
-from tests.testingutils import MockReactorTestCase, Turtle, TestNode
+from tests.mocks import MockNode
+from tests.testingutils import MockReactorTestCase, Turtle
 from tron import node, event
 from tron.core import job, jobrun
 from tron.core.actionrun import ActionRun
@@ -53,7 +54,7 @@ class JobTestCase(TestCase):
         action_graph = Turtle(names=lambda: ['one', 'two'])
         scheduler = Turtle()
         run_collection = Turtle()
-        self.nodes = [TestNode("box1"), TestNode("box0")]
+        self.nodes = [MockNode("box1"), MockNode("box0")]
         node_store = node.NodePoolStore.get_instance()
         node_store.put(Turtle(name="thenodepool",
                 nodes=self.nodes))

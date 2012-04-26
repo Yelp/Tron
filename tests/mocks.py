@@ -1,4 +1,6 @@
 import datetime
+from exceptions import KeyError
+import itertools
 from tests.testingutils import Turtle
 
 
@@ -55,3 +57,45 @@ class MockJobRun(Turtle):
         action_runs = MockActionRunCollection(action_graph=kwargs['action_graph'])
         kwargs.setdefault('action_runs', action_runs)
         super(MockJobRun, self).__init__(*args, **kwargs)
+
+
+class MockNode(Turtle):
+
+    def __init__(self, hostname=None):
+        super(MockNode, self).__init__()
+        self.name = self.hostname = hostname
+
+    def run(self, runnable):
+        runnable.started()
+        return type(self)()
+
+
+class MockNodePool(object):
+    _node = None
+
+    def __init__(self, *node_names):
+        self.nodes = []
+        self._ndx_cycle = None
+        for hostname in node_names:
+            self.nodes.append(MockNode(hostname=hostname))
+
+        if self.nodes:
+            self._ndx_cycle = itertools.cycle(range(0, len(self.nodes)))
+
+    def __getitem__(self, value):
+        for node in self.nodes:
+            if node.hostname == value:
+                return node
+        else:
+            raise KeyError
+
+    def next(self):
+        if not self.nodes:
+            self.nodes.append(MockNode())
+
+        if self._ndx_cycle:
+            return self.nodes[self._ndx_cycle.next()]
+        else:
+            return self.nodes[0]
+
+    next_round_robin = next

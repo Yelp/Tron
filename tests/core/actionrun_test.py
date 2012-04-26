@@ -5,7 +5,8 @@ from testify.assertions import assert_raises, assert_in
 from testify.test_case import class_setup, class_teardown, teardown
 from tests import testingutils
 from tests.assertions import assert_length
-from tests.testingutils import Turtle, TestNode
+from tests.mocks import MockNode
+from tests.testingutils import Turtle
 
 from tron import node
 from tron.core import jobrun, actiongraph
@@ -55,7 +56,7 @@ class ActionRunFactoryTestCase(TestCase):
         self.action_graph = actiongraph.ActionGraph(
                 actions, dict((a.name, a) for a in actions))
 
-        anode = TestNode('anode')
+        anode = MockNode('anode')
         self.job_run = jobrun.JobRun('jobname', 7, self.run_time, anode,
                 action_graph=self.action_graph)
 

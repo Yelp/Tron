@@ -1,6 +1,5 @@
 from __future__ import with_statement
 import logging
-import logging.handlers
 import os
 import shutil
 import time
@@ -12,7 +11,7 @@ from twisted.internet import reactor
 import tron
 from tron import command_context
 from tron import event
-from tron import monitor
+from tron import crash_reporter
 from tron import node
 from tron.config import config_parse
 from tron.config.config_parse import ConfigError
@@ -398,7 +397,7 @@ class MasterControlProgram(Observable):
 
             em = emailer.Emailer(notification_conf.smtp_host,
                                  notification_conf.notification_addr)
-            self.monitor = monitor.CrashReporter(em, self)
+            self.monitor = crash_reporter.CrashReporter(em, self)
             self.monitor.start()
 
     ### JOBS ###
