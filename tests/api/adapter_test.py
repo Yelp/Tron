@@ -1,4 +1,5 @@
 from testify import TestCase, assert_equal, run, setup
+from tests import mocks
 from tests.assertions import assert_length
 from tests.testingutils import Turtle
 from tron.api.adapter import ReprAdapter, RunAdapter, ActionRunAdapter, JobRunAdapter
@@ -76,19 +77,11 @@ class ActionRunAdapterTestCase(TestCase):
 
 class JobRunAdapterTestCase(TestCase):
 
-    class MockCollection(Turtle):
-        def __getitem__(self, item):
-            return Turtle(
-                output_path=['/tmp', 'two'],
-                start_time=None,
-                required_actions=[Turtle()]
-            )
-
     @setup
     def setup_adapter(self):
-        action_runs = self.MockCollection(names=['one', 'two'])
+        action_runs = mocks.MockActionRunCollection(names=['one', 'two'])
         self.job_run = Turtle(
-                action_runs=action_runs, action_graph=self.MockCollection())
+                action_runs=action_runs, action_graph=mocks.MockActionGraph())
         self.adapter = JobRunAdapter(self.job_run, include_action_runs=True)
 
     def test__init__(self):
@@ -101,9 +94,6 @@ class JobRunAdapterTestCase(TestCase):
     def test_get_runs_without_action_runs(self):
         self.adapter.include_action_runs = False
         assert_equal(self.adapter.get_runs(), None)
-
-
-
 
 
 if __name__ == "__main__":

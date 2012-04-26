@@ -1,4 +1,5 @@
 import datetime
+import os
 import shutil
 import StringIO
 import tempfile
@@ -6,15 +7,18 @@ import tempfile
 from testify import TestCase, class_setup, class_teardown, setup, teardown
 from testify import assert_raises, assert_equal, suite, run
 from testify.utils import turtle
+import time
+import yaml
+from tests.assertions import assert_length
+from tests.mocks import MockNode
+import tron
 from tron.config import config_parse
 
 from tron.core import job, actionrun
 from tron import mcp, scheduler, event, node, service
 from tron.utils import timeutils
-from tests.testingutils import Turtle
 
 
-@suite('integration')
 class StateHandlerIntegrationTestCase(TestCase):
     @class_setup
     def class_setup_time(self):
@@ -61,35 +65,62 @@ class StateHandlerIntegrationTestCase(TestCase):
     def _build_service(self, name):
         return service.Service(name)
 
+    def _load_state(self):
+        # This is sloppy, but necessary for now, until state writing is fixed
+        time.sleep(1)
+        with open(self.state_handler.get_state_file_path(), 'r') as fh:
+            return yaml.load(fh)
+
     @setup
     def setup_mcp(self):
         self.test_dir = tempfile.mkdtemp()
-        node.NodePoolStore.get_instance().put(Turtle(name="localhost"))
+        node.NodePoolStore.get_instance().put(MockNode("localhost"))
         self.mcp = mcp.MasterControlProgram(self.test_dir, "config")
         self.state_handler = self.mcp.state_handler
         for job_name in ['job1', 'job2']:
             self.mcp.jobs[job_name] = self._build_job_sched(job_name)
         self.mcp.services['service1'] = self._build_service('service1')
+        self.state_handler.writing_enabled = True
 
     @teardown
     def teardown_mcp(self):
         shutil.rmtree(self.test_dir)
         event.EventManager.get_instance().clear()
 
-    @suite('integration', 'reactor')
+    @suite('integration')
     def test_store_data(self):
         self._create_runs(self.mcp.jobs['job1'])
         self._create_runs(self.mcp.jobs['job2'])
         self.mcp.state_handler.store_state()
-        # TODO
 
-    def test_restore_data_no_state_file(self):
-        pass
-        # TODO
+        state_data = self._load_state()
+        tstamp = time.mktime(self.now.timetuple())
+        assert_equal(state_data['create_time'], tstamp)
 
-    def test_restore_data(self):
-        pass
-        # TODO
+        assert_length(state_data['jobs'], 2)
+        assert_length(state_data['jobs']['job2']['runs'], 3)
+        run_states = [
+            r['runs'][0]['state'] for r in state_data['jobs']['job2']['runs']]
+        assert_equal(run_states, ['scheduled', 'failed', 'succeeded'])
+
+    @suite('integration')
+    def test_load_data_no_state_file(self):
+        assert not os.path.exists(self.state_handler.get_state_file_path())
+        assert not self.state_handler.load_data()
+
+    @suite('integration')
+    def test_load_data(self):
+        state_data = {
+            'version': tron.__version_info__,
+            'jobs': {'one': 1, 'two': 2},
+            'services': {'one': 'ONE', 'two': 'TWO'}
+        }
+
+        with open(self.state_handler.get_state_file_path(), 'w') as fh:
+            fh.write(yaml.dump(state_data))
+
+        loaded_data = self.state_handler.load_data()
+        assert_equal(loaded_data, state_data)
 
 
 class TestNoVersionState(TestCase):
@@ -170,30 +201,6 @@ class MasterControlProgramTestCase(TestCase):
         self.mcp.nodes.clear()
         self.mcp.event_manager.clear()
 
-    def test_live_reconfig(self):
-        pass
-        # TODO: some of these tests are in tests.config.reconfig_test
-
-    def test_load_config(self):
-        pass
-        # TODO
-
-    def config_lines(self):
-        # TODO:
-        pass
-
-    def test_rewrite_config(self):
-        pass
-        # TODO:
-
-    def test_apply_config(self):
-        pass
-        # TODO:
-
-    def test_apply_working_directory(self):
-        pass
-        # TODO
-
     def test_ssh_options_from_config(self):
         ssh_conf = turtle.Turtle(agent=False, identities=[])
         ssh_options = self.mcp._ssh_options_from_config(ssh_conf)
@@ -201,24 +208,6 @@ class MasterControlProgramTestCase(TestCase):
         assert_equal(ssh_options['agent'], False)
         assert_equal(ssh_options.identitys, [])
         # TODO: tests with agent and identities
-
-    def test_add_job(self):
-        pass
-
-    def test_add_job_already_exists(self):
-        pass
-
-    def test_remove_job(self):
-        pass
-
-    def test_disable_all(self):
-        pass
-
-    def test_enable_all(self):
-        pass
-
-
-
 
 if __name__ == '__main__':
     run()

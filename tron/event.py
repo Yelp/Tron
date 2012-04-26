@@ -191,7 +191,8 @@ class EventManager(object):
         if parent:
             parent_recorder = self.get(parent)
             if not parent_recorder:
-                log.warn("Parent %s is not being managed." % parent)
+                log.warn("Parent %s of %s is not being managed." % (
+                        parent, observable))
 
         event_recorder = EventRecorder(observable, parent_recorder)
         self.recorders[key] = event_recorder
@@ -204,3 +205,8 @@ class EventManager(object):
 
     def clear(self):
         self.recorders.clear()
+
+    def remove(self, observable):
+        key = self._build_key(observable)
+        if key in self.recorders:
+            del self.recorders[key]

@@ -26,6 +26,9 @@ class MockActionGraph(Turtle):
         self.action_map.setdefault(item, action)
         return self.action_map[item]
 
+    def get_required_actions(self, name):
+        return []
+
 
 class MockActionRun(Turtle):
 

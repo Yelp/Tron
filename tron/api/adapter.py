@@ -92,7 +92,7 @@ class ActionRunAdapter(RunAdapter):
 
     def get_requirements(self):
         action_name = self._obj.action_name
-        required = self.job_run.action_graph[action_name].required_actions
+        required = self.job_run.action_graph.get_required_actions(action_name)
         return [act.name for act in required]
 
     def get_stdout(self):

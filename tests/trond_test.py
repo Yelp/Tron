@@ -61,8 +61,8 @@ class BasicTronTestCase(SandboxTestCase):
         canary = os.path.join(self.sandbox.tmp_dir, 'end_to_end_done')
         second_config = DOUBLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT % canary
         self.sandbox.upload_config(second_config)
-        assert_equal(self.sandbox.list_events()['data'][0]['name'], 'run_created')
-        assert_equal(self.sandbox.list_events()['data'][1]['name'], 'reconfig')
+        assert_equal(self.sandbox.list_events()['data'][0]['name'], 'restoring')
+        assert_equal(self.sandbox.list_events()['data'][1]['name'], 'run_created')
         assert_equal(self.sandbox.get_config(), second_config)
 
         expected = {'jobs': [

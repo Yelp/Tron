@@ -246,12 +246,12 @@ class JobRun(Observable, Observer):
 
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
+        event.EventManager.get_instance().remove(self)
         self.node = None
         self.action_graph = None
         self.action_runs = None
         self.clear_observers()
         self.output_path.delete()
-        # TODO: do cleanup actions need to be cleaned up?
 
     @property
     def state(self):

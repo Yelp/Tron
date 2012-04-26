@@ -1,5 +1,6 @@
 from testify import setup, TestCase, assert_equal, teardown, assert_raises
 from testify import turtle, assert_in
+from tests.assertions import assert_length
 
 from tron import event
 
@@ -152,3 +153,12 @@ class EventManagerTestCase(TestCase):
 
     def test_get_missing(self):
         assert self.manager.get(self.observable) is None
+
+    def test_remove(self):
+        self.manager.add(self.observable)
+        self.manager.remove(self.observable)
+        assert_length(self.manager.recorders, 0)
+
+    def test_remove_missing(self):
+        self.manager.remove('bogus thing')
+        assert_length(self.manager.recorders, 0)

@@ -152,6 +152,11 @@ class StateHandler(Observer, Observable):
     def load_data(self):
         log.info('Restoring state from %s', self.get_state_file_path())
         self.notify(self.EVENT_RESTORING)
+
+        if not os.path.isfile(self.get_state_file_path()):
+            log.info("No state data found")
+            return
+
         with open(self.get_state_file_path()) as data_file:
             return self._load_data_file(data_file)
 
@@ -353,7 +358,6 @@ class MasterControlProgram(Observable):
 
     def _apply_jobs(self, job_configs, reconfigure=False):
         """Add and remove jobs based on the configuration."""
-        # TODO: attach observer for state changes and events
         for job_config in job_configs.values():
             self.add_job(job_config, reconfigure=reconfigure)
 
@@ -421,13 +425,13 @@ class MasterControlProgram(Observable):
 
         log.info("adding new job %s", job.name)
         self.jobs[job.name] = JobScheduler(job)
+        self.event_manager.add(job, parent=self)
+        self.state_handler.watch(job, Job.NOTIFY_STATE_CHANGE)
+
         # If this is not a reconfigure, wait for state to be restored before
         # scheduling job runs.
         if reconfigure:
             self.jobs[job.name].schedule()
-
-        self.event_manager.add(job, parent=self)
-        self.state_handler.watch(job, Job.NOTIFY_STATE_CHANGE)
 
     def remove_job(self, job_name):
         if job_name not in self.jobs:
@@ -479,10 +483,6 @@ class MasterControlProgram(Observable):
 
     ### OTHER ACTIONS ###
     def try_restore(self):
-        if not os.path.isfile(self.state_handler.get_state_file_path()):
-            log.info("No state data found")
-            return
-
         data = self.state_handler.load_data()
         if not data:
             log.warning("Failed to load state data")

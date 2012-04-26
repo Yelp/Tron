@@ -55,6 +55,8 @@ class ActionGraph(object):
         """Given an Action's name return the Actions required to run
         before that Action.
         """
+        if name not in self.action_map:
+            return []
         return self.action_map[name].required_actions
 
     @property
