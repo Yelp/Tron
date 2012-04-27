@@ -36,53 +36,41 @@ class MasterControlProgram(Observable):
 
     def __init__(self, working_dir, config_file):
         super(MasterControlProgram, self).__init__()
-        self.jobs = {}
-        self.services = {}
-
-        self.nodes = node.NodePoolStore.get_instance()
-
-        # Path to the config file
-        self.config_file = config_file
-
-        # Root command context
-        self.context = command_context.CommandContext()
-
-        self.output_stream_dir = None
-        self.working_dir = working_dir
-        self.monitor = None
+        self.jobs               = {}
+        self.services           = {}
+        self.nodes              = node.NodePoolStore.get_instance()
+        self.output_stream_dir  = None
+        self.working_dir        = working_dir
+        self.crash_reporter     = None
+        self.config_filepath    = config_file
+        self.context            = command_context.CommandContext()
 
         # Time zone of the system clock
-        self.time_zone = None
+        self.time_zone          = None
 
         # Record events for the entire system. Child event recorders may record
         # events for specific jobs, job runs, actions, action runs, etc. and
         # these events will be propagated up but not down the event recorder
         # tree.
-        self.event_manager = event.EventManager.get_instance()
-        self.event_recorder = self.event_manager.add(self)
-        self.state_manager = None
+        self.event_manager      = event.EventManager.get_instance()
+        self.event_recorder     = self.event_manager.add(self)
+        self.state_manager      = None
 
-    ### CONFIGURATION ###
-
-    def live_reconfig(self):
+    def reconfigure(self):
+        """Reconfigure MCP while Tron is already running."""
         self.event_recorder.emit_info("reconfig")
-        try:
-            # Temporarily disable state writing because reconfig can cause a
-            # lot of state changes
-            old_state_writing = self.state_manager.writing_enabled
-            self.state_manager.writing_enabled = False
-            self.load_config(reconfigure=True)
+        with self.state_manager.disabled():
+            try:
+                self._load_config(reconfigure=True)
+            except Exception:
+                self.event_recorder.emit_critical("reconfig_failure")
+                log.exception("Reconfig failure")
+                raise
 
-        except Exception:
-            self.event_recorder.emit_critical("reconfig_failure")
-            log.exception("Reconfig failure")
-            raise
-        finally:
-            self.state_manager.writing_enabled = old_state_writing
-
-    def load_config(self, reconfigure=False):
-        log.info("Loading configuration from %s" % self.config_file)
-        with open(self.config_file, 'r') as f:
+    def _load_config(self, reconfigure=False):
+        """Read config data and apply it."""
+        log.info("Loading configuration from %s" % self.config_filepath)
+        with open(self.config_filepath, 'r') as f:
             config = config_parse.load_config(f)
         self.apply_config(config, reconfigure=reconfigure)
 
@@ -90,26 +78,28 @@ class MasterControlProgram(Observable):
         """When the MCP is initialized the config is applied before the state.
         In this case jobs shouldn't be scheduled until the state is applied.
         """
-        self.load_config()
-        self.try_restore()
+        self._load_config()
+        self.restore_state()
         # Any job with existing state would have been scheduled already. Jobs
         # without any state will be scheduled here.
         self.schedule_jobs()
 
+    # TODO: Move to ConfigController
     def config_lines(self):
         try:
-            with open(self.config_file, 'r') as config:
+            with open(self.config_filepath, 'r') as config:
                 return config.read()
         except IOError, e:
-            log.error(str(e) + " - Cannot open configuration file!")
+            log.error("Failed to open configuration file: %s" % e)
             return ""
 
-    def rewrite_config(self, lines):
+    # TODO: Move to ConfigController
+    def rewrite_config(self, content):
         try:
-            with open(self.config_file, 'w') as config:
-                config.write(lines)
+            with open(self.config_filepath, 'w') as config:
+                config.write(content)
         except IOError, e:
-            log.error(str(e) + " - Cannot write to configuration file!")
+            log.error("Failed to write to configuration file: %s" % e)
 
     def apply_config(self, conf, skip_env_dependent=False, reconfigure=False):
         """Apply a configuration. If skip_env_dependent is True we're
@@ -118,29 +108,25 @@ class MasterControlProgram(Observable):
         edit the config may not have the same environment as the live
         trond machine.
         """
-        self._apply_output_stream_directory(conf.output_stream_dir)
+        self.output_stream_dir = conf.output_stream_dir or self.working_dir
 
         if not skip_env_dependent:
             ssh_options = self._ssh_options_from_config(conf.ssh_options)
-            self.state_manager = PersistenceManagerFactory.from_config(
-                conf.state_persistence)
+            state_persistence = conf.state_persistence
         else:
             ssh_options = config_parse.valid_ssh_options({})
-            # TODO: set to a default shelve
-            self.state_manager = None
+            state_persistence = config_parse.DEFAULT_STATE_PERSISTENCE
 
+        self.state_manager = PersistenceManagerFactory.from_config(
+                state_persistence)
         self.context.base = conf.command_context
+        self.time_zone = conf.time_zone
+
         self._apply_nodes(conf.nodes, ssh_options)
         self._apply_node_pools(conf.node_pools)
-
-        self.time_zone = conf.time_zone
         self._apply_jobs(conf.jobs, reconfigure=reconfigure)
         self._apply_services(conf.services)
         self._apply_notification_options(conf.notification_options)
-
-    def _apply_output_stream_directory(self, output_stream_dir):
-        """Apply the output stream directory."""
-        self.output_stream_dir = output_stream_dir or self.working_dir
 
     def _ssh_options_from_config(self, ssh_conf):
         ssh_options = ConchOptions()
@@ -217,13 +203,13 @@ class MasterControlProgram(Observable):
 
     def _apply_notification_options(self, notification_conf):
         if notification_conf is not None:
-            if self.monitor:
-                self.monitor.stop()
+            if self.crash_reporter:
+                self.crash_reporter.stop()
 
             em = emailer.Emailer(notification_conf.smtp_host,
                                  notification_conf.notification_addr)
-            self.monitor = crash_reporter.CrashReporter(em, self)
-            self.monitor.start()
+            self.crash_reporter = crash_reporter.CrashReporter(em, self)
+            self.crash_reporter.start()
 
     ### JOBS ###
     def add_job(self, job_config, reconfigure=False):
@@ -259,11 +245,11 @@ class MasterControlProgram(Observable):
             raise ValueError("Job %s unknown", job_name)
 
         job_scheduler = self.jobs.pop(job_name)
-        job_scheduler.disable()
+        job_scheduler.disabled()
 
     def disable_all(self):
         for job_scheduler in self.jobs.itervalues():
-            job_scheduler.disable()
+            job_scheduler.disabled()
 
     def enable_all(self):
         for job_scheduler in self.jobs.itervalues():
@@ -288,7 +274,7 @@ class MasterControlProgram(Observable):
         service.event_recorder.set_parent(self.event_recorder)
 
         # Trigger storage on any state changes
-        self.state_manager.watch(service)
+        self.state_manager.watch(service.machine)
         self.services[service.name] = service
 
         if prev_service is not None:
@@ -302,30 +288,20 @@ class MasterControlProgram(Observable):
         service = self.services.pop(service_name)
         service.stop()
 
-    ### OTHER ACTIONS ###
-    def try_restore(self):
-        data = self.state_manager.load_data()
-        if not data:
-            log.warning("Failed to load state data")
-            return
+    def restore_state(self):
+        """Use the state manager to retrieve to persisted state and apply it
+        to the configured Jobs and Services.
+        """
+        job_states, service_states = self.state_manager.restore(
+                self.jobs.values(), self.services.values())
 
-        state_load_count = 0
-        for name, job_state_data in data['jobs'].iteritems():
-            if name not in self.jobs:
-                log.warning("Job name %s from state file unknown", name)
-                continue
+        for name, job_state_data in job_states.iteritems():
             self.jobs[name].restore_job_state(job_state_data)
-            state_load_count += 1
+        log.info("Loaded state for %d jobs", len(job_states))
 
-        for name in data['services'].iterkeys():
-            if name in self.services:
-                state_load_count += 1
-                self.state_manager.restore_service(self.services[name],
-                                                   data['services'][name])
-            else:
-                log.warning("Service name %s from state file unknown", name)
-
-        log.info("Loaded state for %d jobs", state_load_count)
+        for name, service_state_data in service_states.iteritems():
+            self.services[name].restore_service_state(service_state_data)
+        log.info("Loaded state for %d services", len(service_states))
 
     def __str__(self):
         return "MCP"

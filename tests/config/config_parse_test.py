@@ -161,6 +161,7 @@ services:
             ),
             notification_options=None,
             time_zone=None,
+            state_persistence=config_parse.DEFAULT_STATE_PERSISTENCE,
             nodes=FrozenDict(**{
                 'batch0': ConfigNode(name='batch0', hostname='batch0'),
                 'batch1': ConfigNode(name='batch1', hostname='batch1')

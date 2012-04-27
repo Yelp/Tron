@@ -233,7 +233,7 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
         # Setup our reconfiguration signal handler
         def sighup_handler(signum, frame):
             logger.info("SIGHUP Caught!")
-            reactor.callLater(0, master_control.live_reconfig)
+            reactor.callLater(0, master_control.reconfigure)
             reactor.callLater(0, setup_logging, self.options)
 
         signal.signal(signal.SIGHUP, sighup_handler)

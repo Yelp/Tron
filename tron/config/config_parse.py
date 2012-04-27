@@ -80,6 +80,7 @@ TronConfig = config_object_factory(
     optional=[
          'working_dir',         # str
          'output_stream_dir',   # str
+         'state_persistence',   # ConfigState
          'command_context',     # FrozenDict of str
          'ssh_options',         # ConchOptions
          'notification_options',# NotificationOptions or None
@@ -111,6 +112,17 @@ ConfigNode = config_object_factory('ConfigNode', ['hostname'], ['name'])
 
 
 ConfigNodePool = config_object_factory('ConfigNodePool', ['nodes'], ['name'])
+
+
+ConfigState = config_object_factory(
+    'ConfigState',
+    [
+        'name',
+        'store_type',
+    ],[
+        'connection_details',
+        'buffer_size'
+    ])
 
 
 ConfigJob = config_object_factory(
@@ -639,6 +651,23 @@ class ValidateService(ValidatorWithNamedPath):
 valid_service = ValidateService()
 
 
+class ValidateStatePersistence(Validator):
+    config_class                = ConfigState
+    defaults = {
+        'buffer_size':          0
+    }
+    validators = {
+        'name':                 valid_str,
+        'store_type':           valid_str,
+        'connection_details':   valid_str,
+        'buffer_size':          valid_int,
+    }
+
+valid_state_persistence = ValidateStatePersistence()
+
+DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, None)
+
+
 class ValidateConfig(Validator):
     """Given a parsed config file (should be only basic literals and
     containers), return an immutable, fully populated series of namedtuples and
@@ -653,6 +682,7 @@ class ValidateConfig(Validator):
         'ssh_options':          valid_ssh_options({}),
         'notification_options': None,
         'time_zone':            None,
+        'state_persistence':    DEFAULT_STATE_PERSISTENCE,
         'nodes':                (dict(name='localhost', hostname='localhost'),),
         'node_pools':           (),
         'jobs':                 (),
@@ -665,6 +695,7 @@ class ValidateConfig(Validator):
         'ssh_options':          valid_ssh_options,
         'notification_options': valid_notification_options,
         'time_zone':            valid_time_zone,
+        'state_persistence':    valid_state_persistence
     }
     optional = False
 

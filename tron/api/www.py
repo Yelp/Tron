@@ -203,7 +203,7 @@ class JobResource(resource.Resource):
             msg = "Job %s is enabled" % self._job_sched.job.name
 
         elif cmd == 'disable':
-            self._job_sched.disable()
+            self._job_sched.disabled()
             msg = "Job %s is disabled" % self._job_sched.job.name
 
         elif cmd == 'start':
@@ -438,7 +438,7 @@ class ConfigResource(resource.Resource):
         # TODO: This should be a more informative response
         response = {'status': "I'm alive biatch"}
         try:
-            self._master_control.live_reconfig()
+            self._master_control.reconfigure()
         except Exception, e:
             log.exception("Failure doing live reconfig")
             response['error'] = str(e)

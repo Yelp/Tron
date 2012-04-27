@@ -34,7 +34,7 @@ class TestRunner(object):
 
     def get_test_filename(self, filename):
         # Strip basepath
-        test_name = filename[len(self.basepath):]
+        test_name = filename[len(self.basepath)+1:]
         test_path = test_name.split('/')
         if not test_path[0] == 'tests':
             test_path[0] = 'tests'
@@ -59,12 +59,6 @@ class FileModifiedHandler(FileSystemEventHandler):
         self.test_runner.start(event.src_path)
 
 
-def make_full_path(path):
-    if path.startswith('./') or path == '.':
-        return os.path.join(os.getcwd(), path[1:])
-    return path
-
-
 def parse_args():
     parser = optparse.OptionParser()
     parser.add_option('-p', '--path',
@@ -74,8 +68,9 @@ def parse_args():
     parser.add_option('--no-recursive', default=False, action='store_true')
     opts, args = parser.parse_args()
 
-    opts.path = make_full_path(opts.path)
-    opts.basepath = make_full_path(opts.basepath or opts.path)
+    opts.path = os.path.abspath(opts.path)
+    opts.basepath = os.path.abspath(opts.basepath or opts.path)
+    print opts.path
     return opts, args
 
 

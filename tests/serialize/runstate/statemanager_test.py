@@ -1,6 +1,6 @@
 from testify import TestCase, assert_equal, setup, run
 
-from tests.assertions import assert_raises, assert_call
+from tests.assertions import assert_raises, assert_call, assert_length
 from tests.testingutils import Turtle
 from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
@@ -100,6 +100,11 @@ class PersistentStateManagerTestCase(TestCase):
             raise PersistenceStoreError("blah")
         self.store.save = err
         assert_raises(PersistenceStoreError, self.manager._save, None, Turtle())
+
+    def test_save_while_disabled(self):
+        with self.manager.disabled():
+            self.manager._save("something", StateMetadata({}))
+        assert_length(self.store.save.calls, 0)
 
     def test_cleanup(self):
         self.manager.cleanup()

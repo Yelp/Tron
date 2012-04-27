@@ -1,3 +1,4 @@
+from contextlib import contextmanager
 import logging
 import time
 import tron
@@ -51,17 +52,16 @@ class StateMetadata(object):
         self.state_data = state_data
 
 
-class PersistentStateManager(observer.Observer, observer.Observable):
+# TODO: add timing logging
+class PersistentStateManager(observer.Observer):
     """Provides an interface to persist the state of Tron."""
 
-    # TODO: pause state serialization
-
-    def __init__(self, persistance_impl):
-        super(PersistentStateManager, self).__init__()
-        self._impl = persistance_impl
-        self.metadata_key = self._impl.build_key(
-                runstate.MCP_STATE, StateMetadata)
-        self.version = tron.__version_info__
+    def __init__(self, persistence_impl):
+        self.enabled        = True
+        self._impl          = persistence_impl
+        self.version        = tron.__version_info__
+        self.metadata_key   = self._impl.build_key(
+                                runstate.MCP_STATE, StateMetadata)
 
     def restore(self, jobs, services):
         """Return the most recent serialized state."""
@@ -72,10 +72,13 @@ class PersistentStateManager(observer.Observer, observer.Observable):
         return self._restore_dict(job_keys), self._restore_dict(service_keys)
 
     def _keys_for_items(self, item_type, items):
+        """Returns a generator which yields the keys for items."""
         make_key = self._impl.build_key
         return (make_key(item_type, item.name) for item in items)
 
     def _validate_version(self):
+        """Raises an exception if the state version is newer then tron.version.
+        """
         metadata, = self._impl.restore([self.metadata_key])
         if metadata['version'] > self.version:
             msg = "State for version %s, expected %s"
@@ -83,10 +86,14 @@ class PersistentStateManager(observer.Observer, observer.Observable):
                 msg % (metadata['version'] , self.version))
 
     def _restore_dict(self, keys):
+        """Helper which builds and returns a dict from a list of keys."""
         items = self._impl.restore(keys)
         return dict((item.name, item) for item in items)
 
     def _save(self, type_enum, item):
+        """Persist an items state."""
+        if not self.enabled:
+            return
         key = self._impl.build_key(type_enum, item.name)
         try:
             self._impl.save(key, item.state_data)
@@ -112,7 +119,19 @@ class PersistentStateManager(observer.Observer, observer.Observable):
         self._impl.cleanup()
 
     def handler(self, observable, _event):
+        """Handle a state change in an observable by saving its state."""
         if isinstance(observable, job.Job):
             self.save_job(observable)
         if isinstance(observable, service.Service):
             self.save_service(observable)
+
+    @contextmanager
+    def disabled(self):
+        """Temporarily disable the state manager."""
+        self.enabled = False
+        try:
+            yield
+        except:
+            raise
+        finally:
+            self.enabled = True
