@@ -1,8 +1,11 @@
 import logging
 import time
 import tron
+from tron.core import job
 from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
+from tron.utils import observer
+from tron import service
 
 log = logging.getLogger(__name__)
 
@@ -18,8 +21,8 @@ class PersistenceManagerFactory(object):
 
     @classmethod
     def from_config(cls, persistence_config):
-        store_type          =  persistence_config.store_type
-        name                = persistence_config.store_name
+        store_type          = persistence_config.store_type
+        name                = persistence_config.name
         connection_details  = persistence_config.connection_details
         buffer_size         = persistence_config.buffer_size
         store               = None
@@ -36,61 +39,80 @@ class PersistenceManagerFactory(object):
         if not store:
             raise PersistenceStoreError("Unknown store type: %s" % store_type)
 
-        missing_imports = store.check_missing_imports()
-        if missing_imports:
-            raise PersistenceStoreError("Missing modules %s" % (
-                    ','.join(missing_imports)))
-
         return PersistentStateManager(store)
 
-class PersistentStateManager(object):
+
+class StateMetadata(object):
+    """A data object for saving state metadata. Conforms to the same
+    RunState interface as Jobs and Services."""
+    name = 'StateMetadata'
+
+    def __init__(self, state_data):
+        self.state_data = state_data
+
+
+class PersistentStateManager(observer.Observer, observer.Observable):
     """Provides an interface to persist the state of Tron."""
 
-    MCP_IDEN = 'theoneandonly'
+    # TODO: pause state serialization
 
     def __init__(self, persistance_impl):
+        super(PersistentStateManager, self).__init__()
         self._impl = persistance_impl
         self.metadata_key = self._impl.build_key(
-                runstate.MCP_STATE, self.MCP_IDEN)
-        self.version = tron.__version__
+                runstate.MCP_STATE, StateMetadata)
+        self.version = tron.__version_info__
 
     def restore(self, jobs, services):
         """Return the most recent serialized state."""
         self._validate_version()
 
-        make_key = self._impl.build_key
-        job_keys = (make_key(runstate.JOB_STATE, job.name) for job in jobs)
-        service_keys = (make_key(runstate.SERVICE_STATE, service.name)
-                for service in services)
+        job_keys = self._keys_for_items(runstate.JOB_STATE, jobs)
+        service_keys = self._keys_for_items(runstate.SERVICE_STATE, services)
         return self._restore_dict(job_keys), self._restore_dict(service_keys)
+
+    def _keys_for_items(self, item_type, items):
+        make_key = self._impl.build_key
+        return (make_key(item_type, item.name) for item in items)
 
     def _validate_version(self):
         metadata, = self._impl.restore([self.metadata_key])
         if metadata['version'] > self.version:
+            msg = "State for version %s, expected %s"
             raise VersionMismatchError(
-                "State for version %s, expected %s" % (
-                    '.'.join(metadata['version']) ,
-                    '.'.join(self.version)))
+                msg % (metadata['version'] , self.version))
 
     def _restore_dict(self, keys):
         items = self._impl.restore(keys)
         return dict((item.name, item) for item in items)
 
+    def _save(self, type_enum, item):
+        key = self._impl.build_key(type_enum, item.name)
+        try:
+            self._impl.save(key, item.state_data)
+        except Exception, e:
+            msg = "Failed to save state for %s: %s" % (key, e)
+            log.warn(msg)
+            raise PersistenceStoreError(msg)
+
     def save_job(self, job):
-        key = self._impl.build_key(runstate.JOB_STATE, job.name)
-        self._impl.save(key, job.state_data)
+        self._save(runstate.JOB_STATE, job)
 
     def save_service(self, service):
-        key = self._impl.build_key(runstate.SERVICE_STATE, service.name)
-        self._impl.save(key, service.state_data)
+        self._save(runstate.SERVICE_STATE, service)
 
     def save_metadata(self):
-        state_data = {
+        state_data = StateMetadata({
             'version':              self.version,
             'create_time':          time.time(),
-        }
-        key = self._impl.build_key(runstate.MCP_STATE, self.MCP_IDEN)
-        self._impl.save(key, state_data)
+        })
+        self._save(runstate.MCP_STATE, state_data)
 
     def cleanup(self):
         self._impl.cleanup()
+
+    def handler(self, observable, _event):
+        if isinstance(observable, job.Job):
+            self.save_job(observable)
+        if isinstance(observable, service.Service):
+            self.save_service(observable)

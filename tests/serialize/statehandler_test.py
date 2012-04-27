@@ -73,7 +73,7 @@ class StateHandlerIntegrationTestCase(TestCase):
         self.test_dir = tempfile.mkdtemp()
         node.NodePoolStore.get_instance().put(MockNode("localhost"))
         self.mcp = mcp.MasterControlProgram(self.test_dir, "config")
-        self.state_handler = self.mcp.state_handler
+        self.state_handler = self.mcp.state_manager
         for job_name in ['job1', 'job2']:
             self.mcp.jobs[job_name] = self._build_job_sched(job_name)
         self.mcp.services['service1'] = self._build_service('service1')
@@ -88,7 +88,7 @@ class StateHandlerIntegrationTestCase(TestCase):
     def test_store_data(self):
         self._create_runs(self.mcp.jobs['job1'])
         self._create_runs(self.mcp.jobs['job2'])
-        self.mcp.state_handler.store_state()
+        self.mcp.state_manager.store_state()
 
         state_data = self._load_state()
         tstamp = time.mktime(self.now.timetuple())

@@ -14,7 +14,7 @@ from tron.core.job import Job, JobScheduler
 from tron.node import Node, NodePool
 from tron.scheduler import scheduler_from_config
 from tron.serialize import filehandler
-from tron.serialize.statehandler import StateHandler
+from tron.serialize.runstate.statemanager import PersistenceManagerFactory
 from tron.service import Service
 from tron.utils import emailer
 from tron.utils.observer import Observable
@@ -60,10 +60,7 @@ class MasterControlProgram(Observable):
         # tree.
         self.event_manager = event.EventManager.get_instance()
         self.event_recorder = self.event_manager.add(self)
-
-        # Control writing of the state file
-        self.state_handler = StateHandler(self, working_dir)
-        self.event_manager.add(self.state_handler, parent=self)
+        self.state_manager = None
 
     ### CONFIGURATION ###
 
@@ -72,8 +69,8 @@ class MasterControlProgram(Observable):
         try:
             # Temporarily disable state writing because reconfig can cause a
             # lot of state changes
-            old_state_writing = self.state_handler.writing_enabled
-            self.state_handler.writing_enabled = False
+            old_state_writing = self.state_manager.writing_enabled
+            self.state_manager.writing_enabled = False
             self.load_config(reconfigure=True)
 
         except Exception:
@@ -81,7 +78,7 @@ class MasterControlProgram(Observable):
             log.exception("Reconfig failure")
             raise
         finally:
-            self.state_handler.writing_enabled = old_state_writing
+            self.state_manager.writing_enabled = old_state_writing
 
     def load_config(self, reconfigure=False):
         log.info("Loading configuration from %s" % self.config_file)
@@ -125,8 +122,12 @@ class MasterControlProgram(Observable):
 
         if not skip_env_dependent:
             ssh_options = self._ssh_options_from_config(conf.ssh_options)
+            self.state_manager = PersistenceManagerFactory.from_config(
+                conf.state_persistence)
         else:
             ssh_options = config_parse.valid_ssh_options({})
+            # TODO: set to a default shelve
+            self.state_manager = None
 
         self.context.base = conf.command_context
         self._apply_nodes(conf.nodes, ssh_options)
@@ -246,7 +247,7 @@ class MasterControlProgram(Observable):
         log.info("adding new job %s", job.name)
         self.jobs[job.name] = JobScheduler(job)
         self.event_manager.add(job, parent=self)
-        self.state_handler.watch(job, Job.NOTIFY_STATE_CHANGE)
+        self.state_manager.watch(job, Job.NOTIFY_STATE_CHANGE)
 
         # If this is not a reconfigure, wait for state to be restored before
         # scheduling job runs.
@@ -287,7 +288,7 @@ class MasterControlProgram(Observable):
         service.event_recorder.set_parent(self.event_recorder)
 
         # Trigger storage on any state changes
-        self.state_handler.watch(service)
+        self.state_manager.watch(service)
         self.services[service.name] = service
 
         if prev_service is not None:
@@ -303,7 +304,7 @@ class MasterControlProgram(Observable):
 
     ### OTHER ACTIONS ###
     def try_restore(self):
-        data = self.state_handler.load_data()
+        data = self.state_manager.load_data()
         if not data:
             log.warning("Failed to load state data")
             return
@@ -319,7 +320,7 @@ class MasterControlProgram(Observable):
         for name in data['services'].iterkeys():
             if name in self.services:
                 state_load_count += 1
-                self.state_handler.restore_service(self.services[name],
+                self.state_manager.restore_service(self.services[name],
                                                    data['services'][name])
             else:
                 log.warning("Service name %s from state file unknown", name)

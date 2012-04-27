@@ -1,14 +1,13 @@
 import shutil
 import time
+import yaml
 import logging
 import os
-
-import yaml
+from tron import event
+from tron.utils import observer, timeutils
 from twisted.internet import reactor
 
 import tron
-from tron import event
-from tron.utils import observer, timeutils
 
 
 log = logging.getLogger(__name__)

@@ -7,6 +7,7 @@ log = logging.getLogger(__name__)
 
 ShelveKey = namedtuple('ShelveKey', ['type', 'iden'])
 
+# TODO: test
 class ShelveStateStore(object):
     """Persist state using `shelve`."""
 
@@ -16,9 +17,6 @@ class ShelveStateStore(object):
         self.shelve.setdefault(runstate.JOB_STATE, {})
         self.shelve.setdefault(runstate.SERVICE_STATE, {})
         self.shelve.setdefault(runstate.MCP_STATE, {})
-
-    def check_missing_imports(self):
-        return None
 
     def build_key(self, type, iden):
         return ShelveKey(type, iden)
