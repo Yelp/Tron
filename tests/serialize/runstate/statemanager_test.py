@@ -1,3 +1,4 @@
+import os
 from testify import TestCase, assert_equal, setup, run
 
 from tests.assertions import assert_raises, assert_call, assert_length
@@ -14,62 +15,56 @@ from tron.serialize.runstate.statemanager import PersistenceManagerFactory
 class PersistenceManagerFactoryTestCase(TestCase):
 
     def test_from_config_shelve(self):
-        config = Turtle(store_type='shelve', name='thefilename')
+        thefilename = 'thefilename'
+        config = Turtle(store_type='shelve', name=thefilename)
         manager = PersistenceManagerFactory.from_config(config)
         store = manager._impl
         assert_equal(store.filename, config.name)
         assert isinstance(store, ShelveStateStore)
-
-
-class MockStateData(dict):
-    name = 'mockstatedata'
+        os.unlink(thefilename)
 
 
 class PersistentStateManagerTestCase(TestCase):
 
     @setup
     def setup_manager(self):
-        self.restored = [MockStateData()]
-        self.store = Turtle(restore=lambda k:  self.restored)
+        self.store = Turtle()
         self.manager = PersistentStateManager(self.store)
 
     def test__init__(self):
         assert_equal(self.manager._impl, self.store)
         assert_equal(self.manager.metadata_key, self.store.build_key.returns[0])
 
-    def test_restore(self):
-        def restore(k):
-            return [MockStateData({'version': (0, 1), 'key': list(k)})]
-        self.store.restore = restore
-
-        jobs = [Turtle(name='job0'), Turtle(name='job1')]
-        services = [Turtle(name='serv0'), Turtle(name='serv1')]
-
-        job_data, service_data = self.manager.restore(jobs, services)
-        assert_equal(job_data['mockstatedata']['key'],
-                self.store.build_key.returns[1:3])
-        assert_equal(service_data['mockstatedata']['key'],
-            self.store.build_key.returns[3:5])
-
     def test_keys_for_items(self):
         items = [Turtle(), Turtle()]
-        keys = list(self.manager._keys_for_items('type', items))
+        pairs = self.manager._keys_for_items('type', items)
 
         # Skip first return, its from the constructor
-        assert_equal(keys, self.store.build_key.returns[1:])
+        assert_equal(pairs, dict(zip(self.store.build_key.returns[1:], items)))
 
     def test_validate_version(self):
         self.store.restore = lambda k: [{'version': (0, 1, 1)}]
+        self.manager._validate_version()
+
+    def test_validate_version_no_state_data(self):
+        self.store.restore = lambda k: []
         self.manager._validate_version()
 
     def test_validate_version_mismatch(self):
         self.store.restore = lambda k: [{'version': (200, 1, 1)}]
         assert_raises(VersionMismatchError, self.manager._validate_version)
 
-    def test_restore_dict(self):
-        keys = ['one', 'two']
-        state_data = self.manager._restore_dict(keys)
-        expected = dict((t.name, t) for t in self.restored)
+    def test_restore_dicts(self):
+        items = [Turtle(), Turtle()]
+        self.manager._keys_for_items = lambda t, i: {'1': items[0], '2': items[1]}
+        self.store.restore = lambda keys: [
+            ('1', {'state': 'data'}), ('2', {'state': '2data'})
+        ]
+        state_data = self.manager._restore_dicts('type', items)
+        expected = {
+            items[0].name: {'state': 'data'},
+            items[1].name: {'state': '2data'}
+        }
         assert_equal(expected, state_data)
 
     def test_save_job(self):

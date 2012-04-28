@@ -293,7 +293,8 @@ class MasterControlProgram(Observable):
         to the configured Jobs and Services.
         """
         job_states, service_states = self.state_manager.restore(
-                self.jobs.values(), self.services.values())
+                [job_sched.job for job_sched in self.jobs.values()],
+                self.services.values())
 
         for name, job_state_data in job_states.iteritems():
             self.jobs[name].restore_job_state(job_state_data)

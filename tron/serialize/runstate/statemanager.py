@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 import logging
 import time
+import itertools
 import tron
 from tron.core import job
 from tron.serialize import runstate
@@ -65,36 +66,41 @@ class PersistentStateManager(observer.Observer):
 
     def restore(self, jobs, services):
         """Return the most recent serialized state."""
+        log.debug("Restoring state.")
         self._validate_version()
 
-        job_keys = self._keys_for_items(runstate.JOB_STATE, jobs)
-        service_keys = self._keys_for_items(runstate.SERVICE_STATE, services)
-        return self._restore_dict(job_keys), self._restore_dict(service_keys)
+        return (self._restore_dicts(runstate.JOB_STATE, jobs),
+                self._restore_dicts(runstate.SERVICE_STATE, services))
 
     def _keys_for_items(self, item_type, items):
-        """Returns a generator which yields the keys for items."""
+        """Returns a dict of item to the key for that item."""
         make_key = self._impl.build_key
-        return (make_key(item_type, item.name) for item in items)
+        keys = (make_key(item_type, item.name) for item in items)
+        return dict(itertools.izip(keys, items))
+
+    def _restore_dicts(self, item_type, items):
+        """Return a dict mapping of the items name to its state data."""
+        item_keys = self._keys_for_items(item_type, items)
+        key_states = self._impl.restore(key for key, _ in item_keys.iteritems())
+        return dict(
+            (item_keys[key].name, state_data) for key, state_data in key_states)
 
     def _validate_version(self):
         """Raises an exception if the state version is newer then tron.version.
         """
-        metadata, = self._impl.restore([self.metadata_key])
-        if metadata['version'] > self.version:
+        metadata = self._impl.restore([self.metadata_key])
+        if metadata and metadata[0]['version'] > self.version:
             msg = "State for version %s, expected %s"
             raise VersionMismatchError(
-                msg % (metadata['version'] , self.version))
-
-    def _restore_dict(self, keys):
-        """Helper which builds and returns a dict from a list of keys."""
-        items = self._impl.restore(keys)
-        return dict((item.name, item) for item in items)
+                msg % (metadata[0]['version'] , self.version))
 
     def _save(self, type_enum, item):
         """Persist an items state."""
         if not self.enabled:
             return
         key = self._impl.build_key(type_enum, item.name)
+        log.debug("Saving state for %s" % (key,))
+
         try:
             self._impl.save(key, item.state_data)
         except Exception, e:
