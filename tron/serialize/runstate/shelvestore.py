@@ -34,7 +34,10 @@ class ShelveStateStore(object):
 
     def restore(self, keys):
         items = itertools.izip(keys, (self.shelve.get(key.key) for key in keys))
-        return filter(operator.itemgetter(1), items)
+        return dict(itertools.ifilter(operator.itemgetter(1), items))
 
     def cleanup(self):
         self.shelve.close()
+
+    def __str__(self):
+        return "ShelveStateStore(%s)" % self.filename

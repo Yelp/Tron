@@ -3,6 +3,7 @@ from testify import TestCase, assert_equal, setup, run
 
 from tests.assertions import assert_raises, assert_call, assert_length
 from tests.testingutils import Turtle
+import tron
 from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 from tron.serialize.runstate.statemanager import PersistentStateManager
@@ -24,6 +25,22 @@ class PersistenceManagerFactoryTestCase(TestCase):
         os.unlink(thefilename)
 
 
+class StateMetadataTestCase(TestCase):
+
+    def test_validate_metadata(self):
+        metadata = [{'version': (0, 1, 1)}]
+        StateMetadata.validate_metadata(metadata)
+
+    def test_validate_metadata_no_state_data(self):
+        metadata = []
+        StateMetadata.validate_metadata(metadata)
+
+    def test_validate_metadata_mismatch(self):
+        metadata = [{'version': (200, 1, 1)}]
+        assert_raises(
+                VersionMismatchError, StateMetadata.validate_metadata, metadata)
+
+
 class PersistentStateManagerTestCase(TestCase):
 
     @setup
@@ -37,29 +54,18 @@ class PersistentStateManagerTestCase(TestCase):
 
     def test_keys_for_items(self):
         items = [Turtle(), Turtle()]
-        pairs = self.manager._keys_for_items('type', items)
+        key_to_item_map = self.manager._keys_for_items('type', items)
 
         # Skip first return, its from the constructor
-        assert_equal(pairs, dict(zip(self.store.build_key.returns[1:], items)))
-
-    def test_validate_version(self):
-        self.store.restore = lambda k: [{'version': (0, 1, 1)}]
-        self.manager._validate_version()
-
-    def test_validate_version_no_state_data(self):
-        self.store.restore = lambda k: []
-        self.manager._validate_version()
-
-    def test_validate_version_mismatch(self):
-        self.store.restore = lambda k: [{'version': (200, 1, 1)}]
-        assert_raises(VersionMismatchError, self.manager._validate_version)
+        assert_equal(key_to_item_map,
+                dict(zip(self.store.build_key.returns[1:], items)))
 
     def test_restore_dicts(self):
         items = [Turtle(), Turtle()]
         self.manager._keys_for_items = lambda t, i: {'1': items[0], '2': items[1]}
-        self.store.restore = lambda keys: [
-            ('1', {'state': 'data'}), ('2', {'state': '2data'})
-        ]
+        self.store.restore = lambda keys: {
+            '1': {'state': 'data'}, '2': {'state': '2data'}
+        }
         state_data = self.manager._restore_dicts('type', items)
         expected = {
             items[0].name: {'state': 'data'},
@@ -88,7 +94,7 @@ class PersistentStateManagerTestCase(TestCase):
 
         key, state_data = self.store.save.calls[0][0]
         assert_equal(key, self.store.build_key.returns[1])
-        assert_equal(state_data['version'], self.manager.version)
+        assert_equal(state_data['version'], tron.__version_info__)
 
     def test_save_failed(self):
         def err(_k, _d):
@@ -98,12 +104,25 @@ class PersistentStateManagerTestCase(TestCase):
 
     def test_save_while_disabled(self):
         with self.manager.disabled():
-            self.manager._save("something", StateMetadata({}))
+            self.manager._save("something", StateMetadata())
         assert_length(self.store.save.calls, 0)
 
     def test_cleanup(self):
         self.manager.cleanup()
         assert_call(self.store.cleanup, 0)
+
+    def test_disabled(self):
+        with self.manager.disabled():
+            assert not self.manager.enabled
+        assert self.manager.enabled
+
+    def test_disabled_with_exception(self):
+        def testfunc():
+            with self.manager.disabled():
+                raise ValueError()
+        assert_raises(ValueError, testfunc)
+        assert self.manager.enabled
+
 
 
 if __name__ == "__main__":

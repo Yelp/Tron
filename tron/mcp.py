@@ -304,5 +304,8 @@ class MasterControlProgram(Observable):
             self.services[name].restore_service_state(service_state_data)
         log.info("Loaded state for %d services", len(service_states))
 
+        self.state_manager.save_metadata()
+
+
     def __str__(self):
         return "MCP"

@@ -25,8 +25,8 @@ class PersistenceManagerFactory(object):
     def from_config(cls, persistence_config):
         store_type          = persistence_config.store_type
         name                = persistence_config.name
-        connection_details  = persistence_config.connection_details
-        buffer_size         = persistence_config.buffer_size
+        #connection_details  = persistence_config.connection_details
+        #buffer_size         = persistence_config.buffer_size
         store               = None
 
         if store_type == 'shelve':
@@ -46,28 +46,47 @@ class PersistenceManagerFactory(object):
 
 class StateMetadata(object):
     """A data object for saving state metadata. Conforms to the same
-    RunState interface as Jobs and Services."""
-    name = 'StateMetadata'
+    RunState interface as Jobs and Services.
+    """
+    name                    = 'StateMetadata'
+    version                 = tron.__version_info__
 
-    def __init__(self, state_data):
-        self.state_data = state_data
+    def __init__(self):
+        self.state_data     = {
+            'version':              self.version,
+            'create_time':          time.time(),
+        }
+
+    @classmethod
+    def validate_metadata(cls, metadata):
+        """Raises an exception if the metadata version is newer then
+        tron.__version__.
+        """
+        if not metadata:
+            return
+
+        metadata = metadata[0]
+        if metadata['version'] > cls.version:
+            msg = "State for version %s, expected %s"
+            raise VersionMismatchError(
+                msg % (metadata['version'] , cls.version))
 
 
-# TODO: add timing logging
+# TODO: buffering
 class PersistentStateManager(observer.Observer):
     """Provides an interface to persist the state of Tron."""
 
     def __init__(self, persistence_impl):
         self.enabled        = True
         self._impl          = persistence_impl
-        self.version        = tron.__version_info__
         self.metadata_key   = self._impl.build_key(
                                 runstate.MCP_STATE, StateMetadata)
 
     def restore(self, jobs, services):
         """Return the most recent serialized state."""
         log.debug("Restoring state.")
-        self._validate_version()
+        metadata = self._impl.restore([self.metadata_key])
+        StateMetadata.validate_metadata(metadata)
 
         return (self._restore_dicts(runstate.JOB_STATE, jobs),
                 self._restore_dicts(runstate.SERVICE_STATE, services))
@@ -80,19 +99,11 @@ class PersistentStateManager(observer.Observer):
 
     def _restore_dicts(self, item_type, items):
         """Return a dict mapping of the items name to its state data."""
-        item_keys = self._keys_for_items(item_type, items)
-        key_states = self._impl.restore(key for key, _ in item_keys.iteritems())
+        key_to_item_map  = self._keys_for_items(item_type, items)
+        key_to_state_map = self._impl.restore(key_to_item_map.keys())
         return dict(
-            (item_keys[key].name, state_data) for key, state_data in key_states)
-
-    def _validate_version(self):
-        """Raises an exception if the state version is newer then tron.version.
-        """
-        metadata = self._impl.restore([self.metadata_key])
-        if metadata and metadata[0]['version'] > self.version:
-            msg = "State for version %s, expected %s"
-            raise VersionMismatchError(
-                msg % (metadata[0]['version'] , self.version))
+                (key_to_item_map[key].name, state_data)
+                for key, state_data in key_to_state_map.iteritems())
 
     def _save(self, type_enum, item):
         """Persist an items state."""
@@ -101,12 +112,13 @@ class PersistentStateManager(observer.Observer):
         key = self._impl.build_key(type_enum, item.name)
         log.debug("Saving state for %s" % (key,))
 
-        try:
-            self._impl.save(key, item.state_data)
-        except Exception, e:
-            msg = "Failed to save state for %s: %s" % (key, e)
-            log.warn(msg)
-            raise PersistenceStoreError(msg)
+        with self.timeit():
+            try:
+                self._impl.save(key, item.state_data)
+            except Exception, e:
+                msg = "Failed to save state for %s: %s" % (key, e)
+                log.warn(msg)
+                raise PersistenceStoreError(msg)
 
     def save_job(self, job):
         self._save(runstate.JOB_STATE, job)
@@ -115,11 +127,7 @@ class PersistentStateManager(observer.Observer):
         self._save(runstate.SERVICE_STATE, service)
 
     def save_metadata(self):
-        state_data = StateMetadata({
-            'version':              self.version,
-            'create_time':          time.time(),
-        })
-        self._save(runstate.MCP_STATE, state_data)
+        self._save(runstate.MCP_STATE, StateMetadata())
 
     def cleanup(self):
         self._impl.cleanup()
@@ -132,12 +140,18 @@ class PersistentStateManager(observer.Observer):
             self.save_service(observable)
 
     @contextmanager
+    def timeit(self):
+        """Log the time spent saving the state."""
+        start_time = time.time()
+        yield
+        duration = time.time() - start_time
+        log.info("State saved using %s in %0.2fs." % (self._impl, duration))
+
+    @contextmanager
     def disabled(self):
         """Temporarily disable the state manager."""
         self.enabled = False
         try:
             yield
-        except:
-            raise
         finally:
             self.enabled = True

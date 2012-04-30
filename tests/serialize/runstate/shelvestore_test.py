@@ -30,14 +30,16 @@ class ShelveStateStoreTestCase(TestCase):
         assert_equal(stored_data[key.key], value)
 
     def test_restore(self):
-        key = ShelveKey("three", "four")
+        keys = [ShelveKey("thing", i) for i in xrange(5)]
         value = {'this': 'data'}
         store = shelve.open(self.filename)
-        store[key.key] = value
+        for key in keys:
+            store[key.key] = value
         store.close()
 
-        retrieved_data = self.store.restore([key])
-        assert_equal(retrieved_data[0], (key, value))
+        retrieved_data = self.store.restore(keys)
+        for key in keys:
+            assert_equal(retrieved_data[key], value)
 
 
 if __name__ == "__main__":
