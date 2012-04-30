@@ -6,6 +6,7 @@ import tron
 from tron.core import job
 from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
+from tron.serialize.runstate.yamlstore import YamlStateStore
 from tron.utils import observer
 from tron import service
 
@@ -35,8 +36,8 @@ class PersistenceManagerFactory(object):
 #        if store_type == 'sqlalchemy':
 #            store = SQLAlchemyStore(name, connection_details)
 
-#        if store_type == 'yaml':
-#           store = YamlStateStore(name, buffer_size)
+        if store_type == 'yaml':
+           store = YamlStateStore(name)
 
         if not store:
             raise PersistenceStoreError("Unknown store type: %s" % store_type)
@@ -74,7 +75,26 @@ class StateMetadata(object):
 
 # TODO: buffering
 class PersistentStateManager(observer.Observer):
-    """Provides an interface to persist the state of Tron."""
+    """Provides an interface to persist the state of Tron.
+
+    The implementation of persisting and restoring the state from disk is
+    handled by a class which supports the StateStore interface:
+
+    class IStateStore(object):
+
+        def build_key(self, type, identifier):
+            return <a key>
+
+        def restore(self, keys):
+            return <dict of key to states>
+
+        def save(self, key, state_data):
+            pass
+
+        def cleanup(self):
+            pass
+
+    """
 
     def __init__(self, persistence_impl):
         self.enabled        = True
@@ -112,7 +132,7 @@ class PersistentStateManager(observer.Observer):
         key = self._impl.build_key(type_enum, item.name)
         log.debug("Saving state for %s" % (key,))
 
-        with self.timeit():
+        with self._timeit():
             try:
                 self._impl.save(key, item.state_data)
             except Exception, e:
@@ -140,7 +160,7 @@ class PersistentStateManager(observer.Observer):
             self.save_service(observable)
 
     @contextmanager
-    def timeit(self):
+    def _timeit(self):
         """Log the time spent saving the state."""
         start_time = time.time()
         yield

@@ -12,6 +12,7 @@ class TestRunner(object):
 
     def __init__(self, basepath):
         self.basepath = basepath
+        self.test_exec = ['testify', '--summary']
 
     def testable_file(self, filename):
         return filename.endswith('.py') and filename.startswith(self.basepath)
@@ -30,7 +31,7 @@ class TestRunner(object):
         self.run_test(test_name)
 
     def run_test(self, test_name):
-        subprocess.call(['testify', test_name])
+        subprocess.call(self.test_exec + [test_name])
 
     def get_test_filename(self, filename):
         # Strip basepath

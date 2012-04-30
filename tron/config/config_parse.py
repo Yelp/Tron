@@ -651,10 +651,11 @@ class ValidateService(ValidatorWithNamedPath):
 valid_service = ValidateService()
 
 
-class ValidateStatePersistence(Validator):
+class ValidateStatePersistence(ValidatorWithNamedPath):
     config_class                = ConfigState
     defaults = {
-        'buffer_size':          0
+        'buffer_size':          0,
+        'connection_details':   None,
     }
     validators = {
         'name':                 valid_str,

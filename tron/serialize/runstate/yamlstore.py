@@ -1,45 +1,48 @@
+"""Store state in a local YAML file.
+
+WARNING: Using this store is NOT recommended.  It will be far too slow for
+anything but the most trivial setups.  It should only be used with a high
+buffer size (10+), and a low run_limit (< 10).
+"""
 from collections import namedtuple
 import itertools
-from tron.serialize import runstate
-yaml = None
+import operator
+import os
+yaml = None # For pyflakes
 
-YamlKey = namedtuple('ShelveKey', ['type', 'iden'])
+YamlKey = namedtuple('YamlKey', ['type', 'iden'])
 
 class YamlStateStore(object):
 
-    def __init__(self, filename, buffer_size):
+    def __init__(self, filename):
+        # Differ import of yaml until class is instantiated
+        import yaml
+        global yaml
+        assert yaml
         self.filename           = filename
         self.buffer             = {}
-        self.buffer_size        = buffer_size
-        self.counter            = itertools.cycle(xrange(self.buffer_size))
-        self.buffer.setdefault(runstate.JOB_STATE, {})
-        self.buffer.setdefault(runstate.SERVICE_STATE, {})
-        self.buffer.setdefault(runstate.MCP_STATE, {})
-
-    def check_missing_imports(self):
-        try:
-            import yaml
-            global yaml
-            return None
-        except ImportError:
-            return 'yaml'
 
     def build_key(self, type, iden):
         return YamlKey(type, iden)
 
-    def save(self, key, state_data):
-        self.buffer[key.type][key.iden] = state_data
-        if not self.counter.next():
-            self.write_buffer()
+    def restore(self, keys):
+        if not os.path.exists(self.filename):
+            return {}
 
-    def write_buffer(self):
+        with open(self.filename, 'r') as fh:
+            self.buffer = yaml.load(fh)
+
+        items = (self.buffer.get(key.type, {}).get(key.iden) for key in keys)
+        key_item_pairs = itertools.izip(keys, items)
+        return dict(itertools.ifilter(operator.itemgetter(1), key_item_pairs))
+
+    def save(self, key, state_data):
+        self.buffer.setdefault(key.type, {})[key.iden] = state_data
+        self._write_buffer()
+
+    def _write_buffer(self):
         with open(self.filename, 'w') as fh:
             yaml.dump(self.buffer, fh)
-
-    def restore(self, keys):
-        with open(self.filename) as fh:
-            self.buffer = yaml.load(fh)
-        return (self.buffer[key.type].get(key.iden) for key in keys)
 
     def cleanup(self):
         pass
