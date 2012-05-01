@@ -122,7 +122,10 @@ class TronSandbox(object):
             self.stop_trond()
         shutil.rmtree(self.tmp_dir)
         os.unlink(self.log_file)
-        os.unlink(self.state_file)
+        try:
+            os.unlink(self.state_file)
+        except OSError:
+            pass
         self.tmp_dir = None
         self.tron_bin = None
         self.tronctl_bin = None

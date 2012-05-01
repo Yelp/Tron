@@ -17,7 +17,7 @@ nodes:
     hostname: 'localhost'
 
 state_persistence:
-    name: "/tmp/state_data"
+    name: "/tmp/state_data.shelve"
     store_type: shelve
 
 """
@@ -172,10 +172,7 @@ class BasicTronTestCase(SandboxTestCase):
     def test_cleanup_on_failure(self):
         canary = os.path.join(self.sandbox.tmp_dir, 'end_to_end_done')
 
-        FAIL_CONFIG = dedent("""
-        nodes:
-          - name: local
-            hostname: 'localhost'
+        FAIL_CONFIG = BASIC_CONFIG + dedent("""
         jobs:
           - name: "failjob"
             node: local
@@ -196,10 +193,7 @@ class BasicTronTestCase(SandboxTestCase):
 
     @suite('sandbox')
     def test_skip_failed_actions(self):
-        CONFIG = dedent("""
-        nodes:
-          - name: local
-            hostname: 'localhost'
+        CONFIG = BASIC_CONFIG + dedent("""
         jobs:
           - name: "multi_step_job"
             node: local
@@ -228,20 +222,13 @@ class BasicTronTestCase(SandboxTestCase):
 
     @suite('sandbox')
     def test_failure_on_multi_step_job_doesnt_wedge_tron(self):
-        # WARNING: This test may be flaky.
-        FAIL_CONFIG = dedent("""
-            ssh_options: !SSHOptions
-              agent: true
-
-            nodes:
-              - &local
-                  hostname: 'localhost'
+        FAIL_CONFIG = BASIC_CONFIG + dedent("""
             jobs:
               - &random_job
                 name: "random_failure_job"
-                node: *local
+                node: local
                 queueing: true
-                schedule: "interval 1 seconds"
+                schedule: "interval 2 seconds"
                 actions:
                   - &fa
                     name: "fa"
@@ -249,7 +236,7 @@ class BasicTronTestCase(SandboxTestCase):
                   - &sa
                     name: "sa"
                     command: "echo 'you will never see this'"
-                    requires: [*fa]
+                    requires: [fa]
         """)
 
         with open(self.sandbox.config_file, 'w') as f:
@@ -267,6 +254,6 @@ class BasicTronTestCase(SandboxTestCase):
             jerb = self.sandbox.list_job('random_failure_job')
             total_tries += 1
 
-        assert_equal(jerb['runs'][-1][u'state'], u'FAIL')
-        assert_in(jerb['runs'][-2][u'state'], [u'FAIL', u'RUNN'])
-        assert_equal(jerb['runs'][0][u'state'], u'SCHE')
+        assert_equal(jerb['runs'][-1][u'state'], 'FAIL')
+        assert_in(jerb['runs'][-2][u'state'], ['FAIL', 'SCHE', 'RUNN', 'START'])
+        assert_equal(jerb['runs'][0][u'state'], 'SCHE')
