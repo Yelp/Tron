@@ -245,11 +245,11 @@ class MasterControlProgram(Observable):
             raise ValueError("Job %s unknown", job_name)
 
         job_scheduler = self.jobs.pop(job_name)
-        job_scheduler.disabled()
+        job_scheduler.disable()
 
     def disable_all(self):
         for job_scheduler in self.jobs.itervalues():
-            job_scheduler.disabled()
+            job_scheduler.disable()
 
     def enable_all(self):
         for job_scheduler in self.jobs.itervalues():

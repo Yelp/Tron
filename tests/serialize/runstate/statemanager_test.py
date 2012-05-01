@@ -7,6 +7,7 @@ import tron
 from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 from tron.serialize.runstate.statemanager import PersistentStateManager
+from tron.serialize.runstate.statemanager import StateSaveBuffer
 from tron.serialize.runstate.statemanager import StateMetadata
 from tron.serialize.runstate.statemanager import PersistenceStoreError
 from tron.serialize.runstate.statemanager import VersionMismatchError
@@ -17,7 +18,7 @@ class PersistenceManagerFactoryTestCase(TestCase):
 
     def test_from_config_shelve(self):
         thefilename = 'thefilename'
-        config = Turtle(store_type='shelve', name=thefilename)
+        config = Turtle(store_type='shelve', name=thefilename, buffer_size=0)
         manager = PersistenceManagerFactory.from_config(config)
         store = manager._impl
         assert_equal(store.filename, config.name)
@@ -41,12 +42,37 @@ class StateMetadataTestCase(TestCase):
                 VersionMismatchError, StateMetadata.validate_metadata, metadata)
 
 
+class StateSaveBufferTestCase(TestCase):
+
+    @setup
+    def setup_buffer(self):
+        self.buffer_size = 5
+        self.buffer = StateSaveBuffer(self.buffer_size)
+
+    def test_save(self):
+        assert self.buffer.save(1, 2)
+        assert not self.buffer.save(1, 3)
+        assert not self.buffer.save(1, 4)
+        assert not self.buffer.save(1, 5)
+        assert not self.buffer.save(1, 6)
+        assert self.buffer.save(1, 7)
+        assert_equal(self.buffer.buffer[1], 7)
+
+    def test__iter__(self):
+        self.buffer.save(1, 2)
+        self.buffer.save(2, 3)
+        items = list(self.buffer)
+        assert not self.buffer.buffer
+        assert_equal(items, [(1,2), (2,3)])
+
+
 class PersistentStateManagerTestCase(TestCase):
 
     @setup
     def setup_manager(self):
         self.store = Turtle()
-        self.manager = PersistentStateManager(self.store)
+        self.buffer = StateSaveBuffer(1)
+        self.manager = PersistentStateManager(self.store, self.buffer)
 
     def test__init__(self):
         assert_equal(self.manager._impl, self.store)

@@ -15,6 +15,11 @@ BASIC_CONFIG = """
 nodes:
   - name: local
     hostname: 'localhost'
+
+state_persistence:
+    name: "/tmp/state_data"
+    store_type: shelve
+
 """
 
 SINGLE_ECHO_CONFIG = BASIC_CONFIG + """
@@ -44,7 +49,6 @@ class SandboxTestCase(TestCase):
     @teardown
     def delete_sandbox(self):
         self.sandbox.delete()
-        self.sandbox = None
 
 
 class BasicTronTestCase(SandboxTestCase):
@@ -61,8 +65,6 @@ class BasicTronTestCase(SandboxTestCase):
         canary = os.path.join(self.sandbox.tmp_dir, 'end_to_end_done')
         second_config = DOUBLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT % canary
         self.sandbox.upload_config(second_config)
-        assert_equal(self.sandbox.list_events()['data'][0]['name'], 'restoring')
-        assert_equal(self.sandbox.list_events()['data'][1]['name'], 'run_created')
         assert_equal(self.sandbox.get_config(), second_config)
 
         expected = {'jobs': [

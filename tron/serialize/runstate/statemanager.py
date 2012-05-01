@@ -24,11 +24,11 @@ class PersistenceManagerFactory(object):
 
     @classmethod
     def from_config(cls, persistence_config):
-        store_type          = persistence_config.store_type
-        name                = persistence_config.name
-        #connection_details  = persistence_config.connection_details
-        #buffer_size         = persistence_config.buffer_size
-        store               = None
+        store_type              = persistence_config.store_type
+        name                    = persistence_config.name
+        #connection_details      = persistence_config.connection_details
+        buffer_size             = persistence_config.buffer_size
+        store                   = None
 
         if store_type == 'shelve':
             store = ShelveStateStore(name)
@@ -42,18 +42,19 @@ class PersistenceManagerFactory(object):
         if not store:
             raise PersistenceStoreError("Unknown store type: %s" % store_type)
 
-        return PersistentStateManager(store)
+        buffer = StateSaveBuffer(buffer_size)
+        return PersistentStateManager(store, buffer)
 
 
 class StateMetadata(object):
     """A data object for saving state metadata. Conforms to the same
     RunState interface as Jobs and Services.
     """
-    name                    = 'StateMetadata'
-    version                 = tron.__version_info__
+    name                        = 'StateMetadata'
+    version                     = tron.__version_info__
 
     def __init__(self):
-        self.state_data     = {
+        self.state_data         = {
             'version':              self.version,
             'create_time':          time.time(),
         }
@@ -73,7 +74,30 @@ class StateMetadata(object):
                 msg % (metadata['version'] , cls.version))
 
 
-# TODO: buffering
+class StateSaveBuffer(object):
+    """Buffer calls to save, and perform the saves when buffer reaches
+    buffer size. This buffer will only store one state_data for each key.
+    """
+
+    def __init__(self, buffer_size):
+        self.buffer_size        = buffer_size
+        self.buffer             = {}
+        self.counter            = itertools.cycle(xrange(buffer_size))
+
+    def save(self, key, state_data):
+        """Save the state_data indexed by key and return True if the buffer
+        is full.
+        """
+        self.buffer[key] = state_data
+        return not self.counter.next()
+
+    def __iter__(self):
+        """Return all buffered data and clear the buffer."""
+        for key, item in self.buffer.iteritems():
+            yield key, item
+        self.buffer.clear()
+
+
 class PersistentStateManager(observer.Observer):
     """Provides an interface to persist the state of Tron.
 
@@ -96,10 +120,11 @@ class PersistentStateManager(observer.Observer):
 
     """
 
-    def __init__(self, persistence_impl):
-        self.enabled        = True
-        self._impl          = persistence_impl
-        self.metadata_key   = self._impl.build_key(
+    def __init__(self, persistence_impl, buffer):
+        self.enabled            = True
+        self._buffer            = buffer
+        self._impl              = persistence_impl
+        self.metadata_key       = self._impl.build_key(
                                 runstate.MCP_STATE, StateMetadata)
 
     def restore(self, jobs, services):
@@ -127,18 +152,21 @@ class PersistentStateManager(observer.Observer):
 
     def _save(self, type_enum, item):
         """Persist an items state."""
-        if not self.enabled:
-            return
         key = self._impl.build_key(type_enum, item.name)
-        log.debug("Saving state for %s" % (key,))
+        if self._buffer.save(key, item.state_data) and self.enabled:
+            self._save_from_buffer()
 
-        with self._timeit():
-            try:
-                self._impl.save(key, item.state_data)
-            except Exception, e:
-                msg = "Failed to save state for %s: %s" % (key, e)
-                log.warn(msg)
-                raise PersistenceStoreError(msg)
+    def _save_from_buffer(self):
+        for key, state_data in self._buffer:
+            log.debug("Saving state for %s" % (key,))
+
+            with self._timeit():
+                try:
+                    self._impl.save(key, state_data)
+                except Exception, e:
+                    msg = "Failed to save state for %s: %s" % (key, e)
+                    log.warn(msg)
+                    raise PersistenceStoreError(msg)
 
     def save_job(self, job):
         self._save(runstate.JOB_STATE, job)
@@ -150,6 +178,7 @@ class PersistentStateManager(observer.Observer):
         self._save(runstate.MCP_STATE, StateMetadata())
 
     def cleanup(self):
+        self._save_from_buffer()
         self._impl.cleanup()
 
     def handler(self, observable, _event):

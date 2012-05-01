@@ -3,6 +3,10 @@
 ssh_options:
     agent: true
 
+state_persistence:
+    store_type: shelve
+    name: wd/tron_state_data.shelve
+
 nodes:
     - hostname: localhost
     - name: box1

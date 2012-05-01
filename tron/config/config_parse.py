@@ -212,7 +212,6 @@ valid_float = type_converter(float, 'Value at %s is not a number: %s')
 
 valid_int = type_converter(int, 'Value at %s is not an integer: %s')
 
-
 def type_validator(validator, error_fmt):
     def f(path, value, optional=False):
         """If *validator* does not return True for *value*, raise ConfigError
@@ -654,9 +653,10 @@ valid_service = ValidateService()
 class ValidateStatePersistence(ValidatorWithNamedPath):
     config_class                = ConfigState
     defaults = {
-        'buffer_size':          0,
+        'buffer_size':          1,
         'connection_details':   None,
     }
+
     validators = {
         'name':                 valid_str,
         'store_type':           valid_str,
@@ -664,9 +664,15 @@ class ValidateStatePersistence(ValidatorWithNamedPath):
         'buffer_size':          valid_int,
     }
 
+    def post_validation(self, config, path_name):
+        buffer_size = config.get('buffer_size')
+
+        if buffer_size and buffer_size < 1:
+            raise ConfigError("%s buffer_size must be >= 1." % path_name)
+
 valid_state_persistence = ValidateStatePersistence()
 
-DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, None)
+DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1)
 
 
 class ValidateConfig(Validator):

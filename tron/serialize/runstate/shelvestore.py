@@ -18,6 +18,12 @@ class ShelveKey(object):
     def __str__(self):
         return "%s %s" % (self.type, self.iden)
 
+    def __eq__(self, other):
+        return self.type == other.type and self.iden == other.iden
+
+    def __hash__(self):
+        return hash(self.key)
+
 class ShelveStateStore(object):
     """Persist state using `shelve`."""
 
@@ -39,5 +45,5 @@ class ShelveStateStore(object):
     def cleanup(self):
         self.shelve.close()
 
-    def __str__(self):
-        return "ShelveStateStore(%s)" % self.filename
+    def __repr__(self):
+        return "ShelveStateStore('%s')" % self.filename

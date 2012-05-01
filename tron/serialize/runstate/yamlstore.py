@@ -46,3 +46,6 @@ class YamlStateStore(object):
 
     def cleanup(self):
         pass
+
+    def __repr__(self):
+        return "YamlStateStore('%s')" % self.filename

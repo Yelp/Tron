@@ -228,8 +228,6 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
                              self.options.config_file)
             sys.exit(1)
 
-        master_control.state_manager.writing_enabled = True
-
         # Setup our reconfiguration signal handler
         def sighup_handler(signum, frame):
             logger.info("SIGHUP Caught!")
@@ -237,6 +235,8 @@ class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
             reactor.callLater(0, setup_logging, self.options)
 
         signal.signal(signal.SIGHUP, sighup_handler)
+
+        # TODO: call cleanup on state manager before shutdown
 
         # Start up our web management interface
         logger.debug("listenTCP")
