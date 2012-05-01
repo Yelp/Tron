@@ -21,13 +21,16 @@ class ShelveStateStoreTestCase(TestCase):
         assert_equal(self.filename, self.store.filename)
 
     def test_save(self):
-        key = ShelveKey("one", "two")
-        value = {'this': 'data'}
-        self.store.save(key, value)
+        key_value_pairs = [
+            (ShelveKey("one", "two"), {'this': 'data'}),
+            (ShelveKey("three", "four"), {'this': 'data2'})
+        ]
+        self.store.save(key_value_pairs)
         self.store.cleanup()
 
         stored_data = shelve.open(self.filename)
-        assert_equal(stored_data[key.key], value)
+        for key, value in key_value_pairs:
+            assert_equal(stored_data[key.key], value)
 
     def test_restore(self):
         keys = [ShelveKey("thing", i) for i in xrange(5)]

@@ -49,18 +49,22 @@ class YamlStateStoreTestCase(TestCase):
         assert_equal(state_data, {})
 
     def test_save(self):
-        key = yamlstore.YamlKey('one', 'five')
         expected = {'one': {'five': 'dataz'}, 'two': {'seven': 'stars'}}
+
+        key_value_pairs = [
+            (yamlstore.YamlKey('one', 'five'), 'barz')
+        ]
         # Save first
-        self.store.save(key, 'dataz')
+        self.store.save(key_value_pairs)
 
         # Save second
-        key = yamlstore.YamlKey('two', 'seven')
-        self.store.save(key, 'first')
-        self.store.save(key, 'stars')
+        key_value_pairs = [
+            (yamlstore.YamlKey('two', 'seven'), 'stars'),
+            (yamlstore.YamlKey('one', 'five'), 'dataz')
+        ]
+        self.store.save(key_value_pairs)
 
         assert_equal(self.store.buffer, expected)
-
         with open(self.filename, 'r') as fh:
             actual = yaml.load(fh)
         assert_equal(actual, expected)

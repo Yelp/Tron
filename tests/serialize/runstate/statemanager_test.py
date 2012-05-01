@@ -70,21 +70,20 @@ class PersistentStateManagerTestCase(TestCase):
 
     @setup
     def setup_manager(self):
-        self.store = Turtle()
+        self.store = Turtle(build_key=lambda t, i: '%s%s' % (t, i))
         self.buffer = StateSaveBuffer(1)
         self.manager = PersistentStateManager(self.store, self.buffer)
 
     def test__init__(self):
         assert_equal(self.manager._impl, self.store)
-        assert_equal(self.manager.metadata_key, self.store.build_key.returns[0])
 
     def test_keys_for_items(self):
         items = [Turtle(), Turtle()]
         key_to_item_map = self.manager._keys_for_items('type', items)
 
         # Skip first return, its from the constructor
-        assert_equal(key_to_item_map,
-                dict(zip(self.store.build_key.returns[1:], items)))
+        keys = ['type%s' % item.name for item in items]
+        assert_equal(key_to_item_map, dict(zip(keys, items)))
 
     def test_restore_dicts(self):
         items = [Turtle(), Turtle()]
@@ -102,28 +101,23 @@ class PersistentStateManagerTestCase(TestCase):
     def test_save_job(self):
         job = Turtle()
         self.manager.save_job(job)
-        assert_call(self.store.build_key, 1, runstate.JOB_STATE, job.name)
-        assert_call(
-            self.store.save, 0, self.store.build_key.returns[1], job.state_data)
+        key = '%s%s' % (runstate.JOB_STATE, job.name)
+        assert_call(self.store.save, 0, [(key, job.state_data)])
 
     def test_save_service(self):
         service = Turtle()
         self.manager.save_service(service)
-        assert_call(self.store.build_key, 1, runstate.SERVICE_STATE, service.name)
-        assert_call(self.store.save, 0,
-                self.store.build_key.returns[1], service.state_data)
+        key = '%s%s' % (runstate.SERVICE_STATE, service.name)
+        assert_call(self.store.save, 0, [(key, service.state_data)])
 
     def test_save_metadata(self):
         self.manager.save_metadata()
-        assert_call(self.store.build_key, 1,
-                runstate.MCP_STATE, StateMetadata.name)
-
-        key, state_data = self.store.save.calls[0][0]
-        assert_equal(key, self.store.build_key.returns[1])
+        key, state_data = self.store.save.calls[0][0][0][0]
+        assert_equal(key, '%s%s' % (runstate.MCP_STATE, StateMetadata.name))
         assert_equal(state_data['version'], tron.__version_info__)
 
     def test_save_failed(self):
-        def err(_k, _d):
+        def err(_ks):
             raise PersistenceStoreError("blah")
         self.store.save = err
         assert_raises(PersistenceStoreError, self.manager._save, None, Turtle())

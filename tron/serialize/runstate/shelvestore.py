@@ -34,8 +34,9 @@ class ShelveStateStore(object):
     def build_key(self, type, iden):
         return ShelveKey(type, iden)
 
-    def save(self, key, state_data):
-        self.shelve[key.key] = state_data
+    def save(self, key_value_pairs):
+        for key, state_data in key_value_pairs:
+            self.shelve[key.key] = state_data
         self.shelve.sync()
 
     def restore(self, keys):
