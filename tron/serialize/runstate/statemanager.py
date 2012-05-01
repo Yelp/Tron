@@ -157,16 +157,17 @@ class PersistentStateManager(observer.Observer):
             self._save_from_buffer()
 
     def _save_from_buffer(self):
-        for key, state_data in self._buffer:
-            log.debug("Saving state for %s" % (key,))
+        key_state_pairs = list(self._buffer)
+        keys = ','.join(str(key) for key, _ in key_state_pairs)
+        log.debug("Saving state for %s" % keys)
 
-            with self._timeit():
-                try:
-                    self._impl.save(key, state_data)
-                except Exception, e:
-                    msg = "Failed to save state for %s: %s" % (key, e)
-                    log.warn(msg)
-                    raise PersistenceStoreError(msg)
+        with self._timeit():
+            try:
+                self._impl.save(key_state_pairs)
+            except Exception, e:
+                msg = "Failed to save state for %s: %s" % (keys, e)
+                log.warn(msg)
+                raise PersistenceStoreError(msg)
 
     def save_job(self, job):
         self._save(runstate.JOB_STATE, job)

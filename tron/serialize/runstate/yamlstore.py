@@ -36,8 +36,9 @@ class YamlStateStore(object):
         key_item_pairs = itertools.izip(keys, items)
         return dict(itertools.ifilter(operator.itemgetter(1), key_item_pairs))
 
-    def save(self, key, state_data):
-        self.buffer.setdefault(key.type, {})[key.iden] = state_data
+    def save(self, key_value_pairs):
+        for key, state_data in key_value_pairs:
+            self.buffer.setdefault(key.type, {})[key.iden] = state_data
         self._write_buffer()
 
     def _write_buffer(self):
