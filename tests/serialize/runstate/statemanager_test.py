@@ -29,15 +29,15 @@ class PersistenceManagerFactoryTestCase(TestCase):
 class StateMetadataTestCase(TestCase):
 
     def test_validate_metadata(self):
-        metadata = [{'version': (0, 1, 1)}]
+        metadata = {'version': (0, 1, 1)}
         StateMetadata.validate_metadata(metadata)
 
     def test_validate_metadata_no_state_data(self):
-        metadata = []
+        metadata = None
         StateMetadata.validate_metadata(metadata)
 
     def test_validate_metadata_mismatch(self):
-        metadata = [{'version': (200, 1, 1)}]
+        metadata = {'version': (200, 1, 1)}
         assert_raises(
                 VersionMismatchError, StateMetadata.validate_metadata, metadata)
 

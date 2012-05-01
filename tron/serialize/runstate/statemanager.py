@@ -5,6 +5,7 @@ import itertools
 import tron
 from tron.core import job
 from tron.serialize import runstate
+from tron.serialize.runstate.mongostore import MongoStateStore
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 from tron.serialize.runstate.yamlstore import YamlStateStore
 from tron.utils import observer
@@ -26,7 +27,7 @@ class PersistenceManagerFactory(object):
     def from_config(cls, persistence_config):
         store_type              = persistence_config.store_type
         name                    = persistence_config.name
-        #connection_details      = persistence_config.connection_details
+        connection_details      = persistence_config.connection_details
         buffer_size             = persistence_config.buffer_size
         store                   = None
 
@@ -35,6 +36,9 @@ class PersistenceManagerFactory(object):
 
 #        if store_type == 'sqlalchemy':
 #            store = SQLAlchemyStore(name, connection_details)
+
+        if store_type == 'mongo':
+            store = MongoStateStore(name, connection_details)
 
         if store_type == 'yaml':
            store = YamlStateStore(name)
@@ -67,7 +71,6 @@ class StateMetadata(object):
         if not metadata:
             return
 
-        metadata = metadata[0]
         if metadata['version'] > cls.version:
             msg = "State for version %s, expected %s"
             raise VersionMismatchError(
@@ -125,16 +128,19 @@ class PersistentStateManager(observer.Observer):
         self._buffer            = buffer
         self._impl              = persistence_impl
         self.metadata_key       = self._impl.build_key(
-                                runstate.MCP_STATE, StateMetadata)
+                                    runstate.MCP_STATE, StateMetadata.name)
 
     def restore(self, jobs, services):
         """Return the most recent serialized state."""
         log.debug("Restoring state.")
-        metadata = self._impl.restore([self.metadata_key])
-        StateMetadata.validate_metadata(metadata)
+        self._restore_metadata()
 
         return (self._restore_dicts(runstate.JOB_STATE, jobs),
                 self._restore_dicts(runstate.SERVICE_STATE, services))
+
+    def _restore_metadata(self):
+        metadata = self._impl.restore([self.metadata_key])
+        StateMetadata.validate_metadata(metadata.get(self.metadata_key))
 
     def _keys_for_items(self, item_type, items):
         """Returns a dict of item to the key for that item."""

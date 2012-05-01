@@ -1,5 +1,9 @@
 from collections import namedtuple
+import urlparse
+import itertools
+import operator
 from tron.serialize import runstate
+pymongo = None # pyflakes
 
 
 MongoStateKey = namedtuple('MongoStateKey', ['collection', 'key'])
@@ -30,21 +34,31 @@ class MongoStateStore(object):
         """Connect to MongoDB."""
         hostname            = params.get('hostname')
         port                = params.get('port')
+        username            = params.get('username')
+        password            = params.get('password')
         self.connection     = pymongo.Connection(hostname, port)
         self.db             = self.connection[db_name]
+        if username and password:
+            self.db.authenticate(username, password)
 
     def _parse_connection_details(self, connection_details):
-        # TODO:
-        return {}
+        if not connection_details:
+            return {}
+        return dict(urlparse.parse_qsl(connection_details))
 
     def build_key(self, type, iden):
         return MongoStateKey(self.TYPE_TO_COLLECTION_MAP[type], iden)
 
-    def save(self, key, state_data):
-        collection = self.db[key.collection]
+    def save(self, key_value_pairs):
+        for key, state_data in key_value_pairs:
+            state_data['_id'] = key.key
+            collection = self.db[key.collection]
+            collection.save(state_data)
 
     def restore(self, keys):
-        pass
+        items = [
+            (key, self.db[key.collection].find_one(key.key)) for key in keys]
+        return dict(itertools.ifilter(operator.itemgetter(1), items))
 
     def cleanup(self):
         self.connection.disconnect()
