@@ -467,7 +467,7 @@ class MasterControlProgram(Observable):
         service.event_recorder.set_parent(self.event_recorder)
 
         # Trigger storage on any state changes
-        self.state_handler.watch(service)
+        self.state_handler.watch(service.machine)
         self.services[service.name] = service
 
         if prev_service is not None:
