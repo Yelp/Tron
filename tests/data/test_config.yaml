@@ -163,6 +163,6 @@ jobs:
 services:
     -   name: service_0
         node: pool1
-        pid_file: "services/%(name)s-%(instance_number)s.pid"
-        command: "bash -c 'echo $BASHPID > %(pid_file)s && sleep 5 && echo done &'"
-        monitor_interval: 30
+        pid_file: "/tmp/mock_daemon.pid"
+        command: "python tests/mock_daemon.py"
+        monitor_interval: 5
