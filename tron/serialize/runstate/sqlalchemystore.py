@@ -94,9 +94,10 @@ class SQLAlchemyStateStore(object):
             return dict(itertools.ifilter(operator.itemgetter(1), items))
 
     def _select(self, conn, key):
-        select = key.table.select(key.table.c.state_data)
-        result = conn.execute(select.where(key.table.c.id==key.id)).fetchone()
-        return self.decoder(result) if result else None
+        cols = [key.table.c.state_data]
+        select = sqlalchemy.sql.select(cols, key.table.c.id==key.id)
+        result = conn.execute(select).fetchone()
+        return self.decoder(result[0]) if result else None
 
     def cleanup(self):
         if self._connection:

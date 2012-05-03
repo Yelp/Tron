@@ -63,8 +63,8 @@ class SQLAlchmeyStateStoreTestCase(TestCase):
         self.store.save(zip(keys, items))
 
         docs = self.store.restore(keys)
-        assert_equal(docs['stars'], items[0])
-        assert_equal(docs['foo'], items[1])
+        assert_equal(docs[keys[0]], items[0])
+        assert_equal(docs[keys[1]], items[1])
 
     @suite('sqlalchemy')
     def test_restore_partial(self):
@@ -77,7 +77,7 @@ class SQLAlchmeyStateStoreTestCase(TestCase):
 
         docs = self.store.restore(keys)
         assert_length(docs, 1)
-        assert_equal(docs['stars'], item)
+        assert_equal(docs[keys[0]], item)
 
 
 if __name__ == "__main__":
