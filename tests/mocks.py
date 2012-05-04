@@ -107,3 +107,9 @@ class MockNodePool(object):
             return self.nodes[0]
 
     next_round_robin = next
+
+
+class MockJobRunCollection(Turtle):
+
+    def __iter__(self):
+        return iter(self.runs)
