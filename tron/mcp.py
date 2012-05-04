@@ -56,6 +56,10 @@ class MasterControlProgram(Observable):
         self.event_recorder     = self.event_manager.add(self)
         self.state_manager      = None
 
+    def shutdown(self):
+        if self.state_manager:
+            self.state_manager.cleanup()
+
     def reconfigure(self):
         """Reconfigure MCP while Tron is already running."""
         self.event_recorder.emit_info("reconfig")
