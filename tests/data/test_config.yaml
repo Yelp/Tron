@@ -27,9 +27,11 @@ command_context:
     THE_JOB_DIR: "testconfig/jobs/"
     ECHO:        "echo"
 
+
 jobs:
     # IntervalScheduler no dependent Actions, single node
     -   name: interval_job0
+        run_limit: 3
         node: localhost
         schedule:
             interval: 13s

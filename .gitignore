@@ -1,9 +1,5 @@
 dist
 build
-env
-run
-ssh.log
-tron.log
 MANIFEST
 tron.egg-info
 *.pyc

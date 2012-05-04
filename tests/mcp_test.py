@@ -200,6 +200,7 @@ class MasterControlProgramTestCase(TestCase):
     def teardown_mcp(self):
         self.mcp.nodes.clear()
         self.mcp.event_manager.clear()
+        shutil.rmtree(self.working_dir)
 
     def test_ssh_options_from_config(self):
         ssh_conf = turtle.Turtle(agent=False, identities=[])
