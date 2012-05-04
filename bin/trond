@@ -63,7 +63,7 @@ def parse_options():
             default=commands.DEFAULT_HOST)
     parser.add_option_group(api_group)
 
-    (options, args) = parser.parse_args(sys.argv)
+    options, args = parser.parse_args(sys.argv)
 
     if options.log_conf and not os.path.exists(options.log_conf):
         parser.error("Logging config file not found: %s" % options.log_conf)
@@ -98,7 +98,7 @@ def setup_environment(options):
 
     if (not os.path.isdir(options.working_dir) or
         not os.access(options.working_dir, os.R_OK | os.W_OK | os.X_OK)):
-        msg = "Error, can't access working directory %s." % (options.working_dir)
+        msg = "Error, can't access working directory %s" % (options.working_dir)
         raise SystemExit(msg)
 
     # Attempt to create a default config if config is missing

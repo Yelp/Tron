@@ -150,4 +150,3 @@ class TronDaemon(object):
     def _handle_reconfigure(self, _signal_number, _stack_frame):
         log.info("Reconfigure requested by SIGHUP.")
         reactor.callLater(0, self.mcp.reconfigure)
-        # TODO: reload config

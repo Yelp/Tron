@@ -203,7 +203,7 @@ class JobResource(resource.Resource):
             msg = "Job %s is enabled" % self._job_sched.job.name
 
         elif cmd == 'disable':
-            self._job_sched.disabled()
+            self._job_sched.disable()
             msg = "Job %s is disabled" % self._job_sched.job.name
 
         elif cmd == 'start':
