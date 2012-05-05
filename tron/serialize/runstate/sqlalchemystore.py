@@ -24,14 +24,15 @@ class SQLAlchemyStateStore(object):
         self.encoder            = yaml.dump
         self.decoder            = yaml.load
         self._create_engine(connection_details)
-        self._create_tables()
+        self._build_tables()
+        self.create_tables()
 
     def _create_engine(self, connection_details):
         """Connect to the configured database."""
         self.engine = sqlalchemy.create_engine(connection_details)
 
-    def _create_tables(self):
-        """Create table objects."""
+    def _build_tables(self):
+        """Build table objects."""
         from sqlalchemy import Table, Column, String, Text
         self._metadata = sqlalchemy.MetaData()
         self.job_table = Table('job_state_data', self._metadata,
@@ -48,6 +49,10 @@ class SQLAlchemyStateStore(object):
             Column('id', String, primary_key=True),
             Column('state_data', Text)
         )
+
+    def create_tables(self):
+        """Execute the create table statements."""
+        self._metadata.create_all(self.engine)
 
     @contextmanager
     def connect(self):
@@ -102,10 +107,6 @@ class SQLAlchemyStateStore(object):
     def cleanup(self):
         if self._connection:
             self._connection.close()
-
-    def create_tables(self):
-        """Create the database tables."""
-        self._metadata.create_all(self.engine)
 
     def __str__(self):
         return "SQLAlchemyStateStore(%s)" % self.name
