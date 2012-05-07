@@ -6,6 +6,7 @@ import itertools
 log = logging.getLogger(__name__)
 
 class ShelveKey(object):
+    __slots__ = ['type', 'iden']
 
     def __init__(self, type, iden):
         self.type               = type
