@@ -16,7 +16,7 @@ except ImportError:
 from twisted.web import http, resource, server
 
 from tron import service, event
-from tron.api import adapter
+from tron.api import adapter, controller
 from tron.core import actionrun
 from tron.api import requestargs
 
@@ -163,8 +163,8 @@ class JobResource(resource.Resource):
     isLeaf = False
 
     def __init__(self, job_sched, master_control):
-        self._job_sched = job_sched
-        self._master_control = master_control
+        self._job_sched         = job_sched
+        self._master_control    = master_control
         resource.Resource.__init__(self)
 
     def getChild(self, run_id, request):
@@ -221,24 +221,25 @@ class JobsResource(resource.Resource):
     """Resource for all our daemon's jobs"""
 
     def __init__(self, master_control):
-        self._master_control = master_control
+        self.mcp                = master_control
+        self.controller         = controller.JobController(master_control)
         resource.Resource.__init__(self)
 
     def getChild(self, name, request):
         if name == '':
             return self
 
-        job_sched = self._master_control.jobs.get(name)
+        job_sched = self.mcp.get_job_by_name(name)
         if job_sched is None:
             return resource.NoResource("Cannot find job '%s'" % name)
 
-        return JobResource(job_sched, self._master_control)
+        return JobResource(job_sched, self.mcp)
 
     def get_data(self, include_job_run=False, include_action_runs=False):
         job_adapter = adapter.JobAdapter
         return [
             job_adapter(job.job, include_job_run, include_action_runs).get_repr()
-            for job in self._master_control.jobs.itervalues()
+            for job in self.mcp.get_jobs()
         ]
 
     def render_GET(self, request):
@@ -252,11 +253,11 @@ class JobsResource(resource.Resource):
         log.info("Handling '%s' request on all jobs", cmd)
 
         if cmd == 'disableall':
-            self._master_control.disable_all()
+            self.controller.disable_all()
             return respond(request, {'result': "All jobs are now disabled"})
 
         if cmd == 'enableall':
-            self._master_control.enable_all()
+            self.controller.enable_all()
             return respond(request, {'result': "All jobs are now enabled"})
 
         log.warning("Unknown request command %s for all jobs", cmd)
@@ -423,23 +424,24 @@ class ConfigResource(resource.Resource):
     isLeaf = True
 
     def __init__(self, master_control):
-        self._master_control = master_control
+        self.mcp                = master_control
+        config_filepath         = master_control.config_filepath
+        self.controller         = controller.ConfigController(config_filepath)
         resource.Resource.__init__(self)
 
     def render_GET(self, request):
-        return respond(request,
-                       {'config': self._master_control.config_lines()})
+        return respond(request, {'config': self.controller.read_config()})
 
     def render_POST(self, request):
-        log.info("Handling reconfig request")
+        log.info("Handling reconfigure request")
         new_config = requestargs.get_string(request, 'config')
-        self._master_control.rewrite_config(new_config)
+        self.controller.rewrite_config(new_config)
 
         response = {'status': "Active"}
         try:
-            self._master_control.reconfigure()
+            self.mcp.reconfigure()
         except Exception, e:
-            log.exception("Failure doing live reconfig")
+            log.exception("Failure doing live reconfigure")
             response['error'] = str(e)
 
         return respond(request, response)
@@ -454,7 +456,7 @@ class StatusResource(resource.Resource):
         resource.Resource.__init__(self)
 
     def render_GET(self, request):
-        return respond(request, {'status': "I'm alive biatch"})
+        return respond(request, {'status': "I'm alive."})
 
 
 class EventResource(resource.Resource):
