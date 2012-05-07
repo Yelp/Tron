@@ -58,6 +58,7 @@ class MasterControlProgram(Observable):
 
     def shutdown(self):
         if self.state_manager:
+            self.state_manager.enabled = False
             self.state_manager.cleanup()
 
     def reconfigure(self):

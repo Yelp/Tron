@@ -43,7 +43,7 @@ class PIDFile(object):
             raise SystemExit("Daemon was running as %s. Remove PID file." % pid)
 
     def is_process_running(self, pid):
-        """Return True the process is still running."""
+        """Return True if the process is still running."""
         if not pid:
             return False
         try:
@@ -71,7 +71,7 @@ class PIDFile(object):
 
 
 class NoDaemonContext(object):
-    """A mock DaemonContext."""
+    """A mock DaemonContext for running trond without being a daemon."""
 
     def __init__(self, **kwargs):
         self.signal_map     = kwargs.pop('signal_map', {})
@@ -104,7 +104,8 @@ class TronDaemon(object):
         signal_map = {
             signal.SIGHUP:  self._handle_reconfigure,
             signal.SIGINT:  self._handle_shutdown,
-            signal.SIGTERM: self._handle_shutdown
+            signal.SIGTERM: self._handle_shutdown,
+            signal.SIGUSR1: self._handle_debug
         }
         return context_class(
             working_directory=options.working_dir,
@@ -150,3 +151,7 @@ class TronDaemon(object):
     def _handle_reconfigure(self, _signal_number, _stack_frame):
         log.info("Reconfigure requested by SIGHUP.")
         reactor.callLater(0, self.mcp.reconfigure)
+
+    def _handle_debug(self, _sig_num, _frame):
+        import ipdb
+        ipdb.set_trace()
