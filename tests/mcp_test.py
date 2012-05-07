@@ -49,6 +49,11 @@ class MasterControlProgramTestCase(TestCase):
         assert_equal(ssh_options.identitys, [])
         # TODO: tests with agent and identities
 
+    def test_graceful_shutdown(self):
+        self.mcp.graceful_shutdown()
+        for job_sched in self.mcp.get_jobs():
+            assert job_sched.shutdown_requested
+
 class MasterControlProgramRestoreStateTestCase(TestCase):
 
     @setup
