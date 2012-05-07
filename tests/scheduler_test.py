@@ -130,13 +130,10 @@ class DailySchedulerDSTTest(TestCase):
         timeutils.override_current_time(None)
 
     def hours_until_time(self, run_time, sch):
-        # TODO: use timeutils
         tz = sch.time_zone
         now = timeutils.current_time()
         now = tz.localize(now) if tz else now
-        sleep = run_time - now
-        seconds = (sleep.days * 86400 + sleep.seconds +
-                   sleep.microseconds * .000001)
+        seconds = timeutils.delta_total_seconds(run_time - now)
         return round(max(0, seconds) / 60 / 60, 1)
 
     def hours_diff_at_datetime(self, sch, *args, **kwargs):

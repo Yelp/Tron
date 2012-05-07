@@ -435,8 +435,7 @@ class ConfigResource(resource.Resource):
         new_config = requestargs.get_string(request, 'config')
         self._master_control.rewrite_config(new_config)
 
-        # TODO: This should be a more informative response
-        response = {'status': "I'm alive biatch"}
+        response = {'status': "Active"}
         try:
             self._master_control.reconfigure()
         except Exception, e:

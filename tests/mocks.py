@@ -1,6 +1,9 @@
+import atexit
 import datetime
 from exceptions import KeyError
 import itertools
+import shutil
+import tempfile
 from tests.testingutils import Turtle
 
 
@@ -33,9 +36,10 @@ class MockActionGraph(Turtle):
 class MockActionRun(Turtle):
 
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault('output_path', ['path'])
+        kwargs.setdefault('output_path', [tempfile.mkdtemp()])
         kwargs.setdefault('start_time', datetime.datetime.now())
         kwargs.setdefault('end_time', datetime.datetime.now())
+        atexit.register(lambda: shutil.rmtree(kwargs['output_path'][0]))
         super(MockActionRun, self).__init__(*args, **kwargs)
 
 
@@ -55,10 +59,11 @@ class MockActionRunCollection(Turtle):
 class MockJobRun(Turtle):
 
     def __init__(self, *args, **kwargs):
-        kwargs.setdefault('output_path', ['path'])
+        kwargs.setdefault('output_path', [tempfile.mkdtemp()])
         kwargs.setdefault('action_graph', MockActionGraph())
         action_runs = MockActionRunCollection(action_graph=kwargs['action_graph'])
         kwargs.setdefault('action_runs', action_runs)
+        atexit.register(lambda: shutil.rmtree(kwargs['output_path'][0]))
         super(MockJobRun, self).__init__(*args, **kwargs)
 
 
@@ -102,3 +107,9 @@ class MockNodePool(object):
             return self.nodes[0]
 
     next_round_robin = next
+
+
+class MockJobRunCollection(Turtle):
+
+    def __iter__(self):
+        return iter(self.runs)

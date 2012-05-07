@@ -43,7 +43,6 @@ class JobRun(Observable, Observer):
     """
 
     NOTIFY_DONE           = 'notify_done'
-    NOTIFY_START_FAILED   = 'notify_start_failed'
     NOTIFY_STATE_CHANGED  = 'notify_state_changed'
 
     EVENT_START           = event.EventType(event.LEVEL_INFO, "start")
@@ -173,8 +172,6 @@ class JobRun(Observable, Observer):
         self.notify(self.EVENT_START)
         if self.action_runs.has_startable_action_runs and self._do_start():
             return True
-        # TODO: re-evaluate if this is needed
-        self.notify(self.NOTIFY_START_FAILED)
 
     def _do_start(self):
         log.info("Starting JobRun %s", self.id)

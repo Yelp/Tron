@@ -128,8 +128,7 @@ class JobRunTestCase(TestCase):
 
         assert not self.job_run.start()
         assert_call(self.job_run.notify, 0, self.job_run.EVENT_START)
-        assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_START_FAILED)
-        assert_length(self.job_run.notify.calls, 2)
+        assert_length(self.job_run.notify.calls, 1)
 
     def test_start_no_startable_action_runs(self):
         self.job_run._do_start = Turtle()
@@ -137,8 +136,7 @@ class JobRunTestCase(TestCase):
 
         assert not self.job_run.start()
         assert_call(self.job_run.notify, 0, self.job_run.EVENT_START)
-        assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_START_FAILED)
-        assert_length(self.job_run.notify.calls, 2)
+        assert_length(self.job_run.notify.calls, 1)
 
     def test_do_start(self):
         timeutils.override_current_time(self.run_time)
@@ -344,6 +342,8 @@ class MockJobRun(Turtle):
 
     manual = False
 
+    node = 'anode'
+
     @property
     def is_scheduled(self):
         return self.state == actionrun.ActionRun.STATE_SCHEDULED
@@ -355,6 +355,10 @@ class MockJobRun(Turtle):
     @property
     def is_running(self):
         return self.state == actionrun.ActionRun.STATE_RUNNING
+
+    @property
+    def is_starting(self):
+        return self.state == actionrun.ActionRun.STATE_STARTING
 
     def __repr__(self):
         return str(self.__dict__)
@@ -505,7 +509,28 @@ class JobRunCollectionTestCase(TestCase):
         assert_length(pending, 2)
         assert_equal(pending, [scheduled_run, self.job_runs[0]])
 
-    # TODO: get_active
+    def test_get_active(self):
+        starting_run = self._mock_run(
+            run_num=self.run_collection.next_run_num(),
+            state=actionrun.ActionRun.STATE_STARTING)
+        self.run_collection.runs.appendleft(starting_run)
+        active = list(self.run_collection.get_active())
+        assert_length(active, 2)
+        assert_equal(active, [starting_run, self.job_runs[1]])
+
+    def test_get_active_with_node(self):
+        starting_run = self._mock_run(
+            run_num=self.run_collection.next_run_num(),
+            state=actionrun.ActionRun.STATE_STARTING)
+        starting_run.node = 'differentnode'
+        self.run_collection.runs.appendleft(starting_run)
+        active = list(self.run_collection.get_active('anode'))
+        assert_length(active, 1)
+        assert_equal(active, [self.job_runs[1]])
+
+    def test_get_active_none(self):
+        active = list(self.run_collection.get_active('bogus'))
+        assert_length(active, 0)
 
     def test_get_first_queued(self):
         run_num = self.run_collection.next_run_num()

@@ -1,4 +1,6 @@
-from testify import TestCase, assert_equal, run, setup
+import shutil
+import tempfile
+from testify import TestCase, assert_equal, run, setup, teardown
 from tests import mocks
 from tests.assertions import assert_length
 from tests.testingutils import Turtle
@@ -63,9 +65,14 @@ class ActionRunAdapterTestCase(TestCase):
 
     @setup
     def setup_adapter(self):
-        self.action_run = Turtle(output_path=['/tmp', 'two'])
+        self.temp_dir = tempfile.mkdtemp()
+        self.action_run = Turtle(output_path=[self.temp_dir])
         self.original = Turtle(action_runs={'action_name': self.action_run})
         self.adapter = ActionRunAdapter(self.original, 'action_name', 4)
+
+    @teardown
+    def teardown_adapter(self):
+        shutil.rmtree(self.temp_dir)
 
     def test__init__(self):
         assert_equal(self.adapter.max_lines, 4)

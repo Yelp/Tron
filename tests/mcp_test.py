@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 
 from testify import TestCase, setup, teardown
@@ -64,6 +65,7 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
     def teardown_mcp(self):
         self.mcp.nodes.clear()
         self.mcp.event_manager.clear()
+        shutil.rmtree(self.working_dir)
 
     def test_restore_state(self):
         def restore(jobs, services):

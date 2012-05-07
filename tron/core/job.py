@@ -192,10 +192,6 @@ class Job(Observable, Observer):
         if event == jobrun.JobRun.NOTIFY_DONE:
             self.notify(self.NOTIFY_RUN_DONE)
             return
-
-        # JobRun failed to start for some reason, maybe a bad command?
-        if event == jobrun.JobRun.NOTIFY_START_FAILED:
-            self.notify(self.NOTIFY_RUN_DONE)
     handler = handle_job_run_state_change
 
     def __eq__(self, other):
@@ -231,7 +227,6 @@ class JobScheduler(Observer):
         self.job = job
         self.watch(job)
 
-    # TODO: test
     def restore_job_state(self, job_state_data):
         """Restore the job state and schedule any JobRuns."""
         self.job.restore_state(job_state_data)

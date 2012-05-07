@@ -1,9 +1,10 @@
 import datetime
+import shutil
+import tempfile
 
 from testify import run, setup, TestCase, assert_equal, turtle
 from testify.assertions import assert_raises, assert_in
 from testify.test_case import class_setup, class_teardown, teardown
-from tests import testingutils
 from tests.assertions import assert_length
 from tests.mocks import MockNode
 from tests.testingutils import Turtle
@@ -139,7 +140,7 @@ class ActionRunTestCase(TestCase):
     @setup
     def setup_action_run(self):
         anode = turtle.Turtle()
-        self.output_path = filehandler.OutputPath("random_dir")
+        self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.command = "do command %(actionname)s"
         self.rendered_command = "do command action_name"
         self.action_run = ActionRun(
@@ -152,8 +153,7 @@ class ActionRunTestCase(TestCase):
 
     @teardown
     def teardown_action_run(self):
-        with testingutils.no_handlers_for_logger():
-            self.output_path.delete()
+        shutil.rmtree(self.output_path.base, ignore_errors=True)
 
     def test_init_state(self):
         assert_equal(self.action_run.state, ActionRun.STATE_SCHEDULED)
@@ -439,12 +439,16 @@ class ActionRunCollectionTestCase(TestCase):
         ]
         self.action_graph = actiongraph.ActionGraph(
             action_graph, dict((a.name, a) for a in action_graph))
-        self.output_path = filehandler.OutputPath("random_dir")
+        self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.command = "do command"
         self.action_runs = [self._build_run(name) for name in action_names]
         self.run_map = dict((a.action_name, a) for a in self.action_runs)
         self.run_map['cleanup'].is_cleanup = True
         self.collection = ActionRunCollection(self.action_graph, self.run_map)
+
+    @teardown
+    def teardown_action_run(self):
+        shutil.rmtree(self.output_path.base, ignore_errors=True)
 
     def test__init__(self):
         assert_equal(self.collection.action_graph, self.action_graph)
@@ -579,12 +583,16 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
         action_map['second_name'] = second_act
         self.action_graph = actiongraph.ActionGraph(action_graph, action_map)
 
-        self.output_path = filehandler.OutputPath("random_dir")
+        self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.command = "do command"
         self.action_runs = [self._build_run(name) for name in action_names]
         self.run_map = dict((a.action_name, a) for a in self.action_runs)
         self.run_map['cleanup'].is_cleanup = True
         self.collection = ActionRunCollection(self.action_graph, self.run_map)
+
+    @teardown
+    def teardown_action_run(self):
+        shutil.rmtree(self.output_path.base, ignore_errors=True)
 
     def test_is_run_blocked_no_required_actions(self):
         assert not self.collection._is_run_blocked(self.run_map['action_name'])

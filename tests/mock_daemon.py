@@ -10,6 +10,7 @@ def do_main_program():
         print "ok"
         time.sleep(2)
 
+
 if __name__ == "__main__":
     with daemon.DaemonContext(pidfile=PIDFile('/tmp/mock_daemon.pid')):
         do_main_program()
