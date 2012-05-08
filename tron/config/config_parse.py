@@ -228,10 +228,12 @@ valid_str = type_validator(
     lambda s: isinstance(s, basestring),
     'Value at %s is not a string: %s')
 
-IDENTIFIER_RE = re.compile(r'^[A-Za-z_]\w*$')
+MAX_IDENTIFIER_LENGTH = 255
+IDENTIFIER_RE = re.compile(r'^[A-Za-z_]\w{0,254}$')
+
 valid_identifier = type_validator(
-    lambda s: IDENTIFIER_RE.match(s),
-    'Identifier at %s is not a valid identifier')
+    lambda s: isinstance(s, basestring) and IDENTIFIER_RE.match(s),
+    'Identifier at %s is not a valid identifier: %s')
 
 valid_list = type_validator(
     lambda s: isinstance(s, list), 'Value at %s is not a list: %s')

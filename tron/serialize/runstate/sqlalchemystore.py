@@ -7,6 +7,7 @@ import yaml
 sqlalchemy = None # pyflakes
 
 from tron.serialize import runstate
+from tron.config.config_parse import MAX_IDENTIFIER_LENGTH
 
 
 SQLStateKey = namedtuple('SQLStateKey', ['table', 'id'])
@@ -36,17 +37,17 @@ class SQLAlchemyStateStore(object):
         from sqlalchemy import Table, Column, String, Text
         self._metadata = sqlalchemy.MetaData()
         self.job_table = Table('job_state_data', self._metadata,
-            Column('id', String, primary_key=True),
+            Column('id', String(MAX_IDENTIFIER_LENGTH), primary_key=True),
             Column('state_data', Text)
         )
 
         self.service_table = Table('service_state_data', self._metadata,
-            Column('id', String, primary_key=True),
+            Column('id', String(MAX_IDENTIFIER_LENGTH), primary_key=True),
             Column('state_data', Text)
         )
 
         self.metadata_table = Table('metadata_table', self._metadata,
-            Column('id', String, primary_key=True),
+            Column('id', String(MAX_IDENTIFIER_LENGTH), primary_key=True),
             Column('state_data', Text)
         )
 

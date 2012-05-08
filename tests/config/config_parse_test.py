@@ -9,7 +9,7 @@ from textwrap import dedent
 from testify import assert_equal, assert_in
 from testify import run, setup, teardown, TestCase
 from tron.config import config_parse
-from tron.config.config_parse import TronConfig, load_config, ConfigSSHOptions
+from tron.config.config_parse import TronConfig, load_config, ConfigSSHOptions, valid_identifier
 from tron.config.config_parse import valid_job, valid_output_stream_dir
 from tron.config.config_parse import ConfigNode, ConfigNodePool, ConfigJob
 from tron.config.config_parse import ConfigAction, ConfigCleanupAction
@@ -662,6 +662,20 @@ class ValidOutputStreamDirTestCase(TestCase):
         exception = assert_raises(ConfigError, valid_output_stream_dir, self.dir)
         assert_in("is not writable", str(exception))
 
+
+class ValidatorIdentifierTestCase(TestCase):
+
+    def test_valid_identifier_too_long(self):
+        name = 'a' * 256
+        assert_raises(ConfigError, valid_identifier, '', name)
+
+    def test_valid_identifier(self):
+        name = 'avalidname'
+        assert_equal(name, valid_identifier('', name))
+
+    def test_valid_identifier_invalid_character(self):
+        for name in ['invalid space', '*name', '1numberstarted', 123, '']:
+            assert_raises(ConfigError, valid_identifier, '', name)
 
 
 if __name__ == '__main__':
