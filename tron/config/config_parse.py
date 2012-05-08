@@ -172,26 +172,24 @@ class Validator(object):
         keys = self.config_class.required_keys + self.config_class.optional_keys
         missing_key_str = ', '.join(missing_keys)
         if 'name' in keys and 'name' in in_dict:
-            raise ConfigError("%s %s is missing options: %s" % (
-                    self.type_name, in_dict['name'], missing_key_str)
-            )
+            msg  = "%s %s is missing options: %s"
+            name = in_dict['name']
+            raise ConfigError(msg % (self.type_name, name, missing_key_str))
 
-        raise ConfigError("Nameless %s is missing options: %s" % (
-                self.type_name, missing_key_str)
-        )
+        msg = "Nameless %s is missing options: %s"
+        raise ConfigError(msg % (self.type_name, missing_key_str))
 
     def validate_extra_keys(self, in_dict):
         """Check that no unexpected keys are present."""
-        all_keys = self.config_class.required_keys + self.config_class.optional_keys
-        extra_keys = set(in_dict) - set(all_keys)
+        conf_class      = self.config_class
+        all_keys        = conf_class.required_keys + conf_class.optional_keys
+        extra_keys      = set(in_dict) - set(all_keys)
         if not extra_keys:
             return
 
-        raise ConfigError("Unknown options in %s %s: %s" % (
-                self.type_name,
-                in_dict.get('name', ''),
-                ', '.join(extra_keys)
-        ))
+        msg             = "Unknown options in %s %s: %s"
+        name            = in_dict.get('name', '')
+        raise ConfigError(msg % (self.type_name, name, ', '.join(extra_keys)))
 
     def set_defaults(self, output_dict):
         """Set any default values for any optional values that were not
@@ -396,15 +394,14 @@ class ValidateCleanupAction(ValidatorWithNamedPath):
     }
 
     def post_validation(self, action, path_name):
-        if (
-            'name' in action
-            and action['name'] not in (None, CLEANUP_ACTION_NAME)
-        ):
-            raise ConfigError("Cleanup actions cannot have custom names (you"
-                              " wanted %s.%s)" % (path_name, action['name']))
+        expected_names = (None, CLEANUP_ACTION_NAME)
+        if 'name' in action and action['name'] not in expected_names:
+            msg = "Cleanup actions cannot have custom names (%s.%s)"
+            raise ConfigError(msg % (path_name, action['name']))
 
         if 'requires' in action:
-            raise ConfigError("Cleanup action %s can not have requires." % path_name)
+            msg = "Cleanup action %s can not have requires."
+            raise ConfigError(msg % path_name)
 
         action['requires'] = tuple()
 
@@ -458,7 +455,8 @@ class ValidateJob(ValidatorWithNamedPath):
 
     def post_validation(self, job, path):
         """Validate actions for the job."""
-        actions = UniqueNameDict('Action name %%s on job %s used twice' % job['name'])
+        actions = UniqueNameDict(
+                'Action name %%s on job %s used twice' % job['name'])
         for action in job['actions'] or []:
             try:
                 final_action = valid_action(action)
@@ -466,8 +464,8 @@ class ValidateJob(ValidatorWithNamedPath):
                 raise ConfigError("Invalid action config for %s: %s" % (path, e))
 
             if not (final_action.node or job['node']):
-                raise ConfigError(
-                    '%s has no node configured for %s' % (path, final_action.name))
+                msg = '%s has no node configured for %s'
+                raise ConfigError(msg % (path, final_action.name))
             actions[final_action.name] = final_action
 
         for action in actions.values():
@@ -557,7 +555,8 @@ class ValidateConfig(Validator):
         """Validate jobs, nodes, and services."""
 
         node_names = UniqueNameDict('Node and NodePool names must be unique %s')
-        job_service_names = UniqueNameDict('Job and Service names must be unique %s')
+        job_service_names = UniqueNameDict(
+                'Job and Service names must be unique %s')
 
         def parse_sub_config(cname, valid, name_dict):
             target_dict = UniqueNameDict(
@@ -582,19 +581,17 @@ class ValidateConfig(Validator):
         """
         actions = itertools.chain.from_iterable(
             job.actions.values()
-            for job in config['jobs'].values()
-        )
+            for job in config['jobs'].values())
+
         task_list = itertools.chain(
             config['jobs'].values(),
             config['services'].values(),
-            actions
-        )
+            actions)
         for task in task_list:
             if task.node and task.node not in node_names:
                 raise ConfigError("Unknown node %s configured for %s %s" % (
                     task.node, task.__class__.__name__, task.name))
 
-    # TODO: only check name is in nodes list, and check names on jobs/actions/services too
     def validate_node_pool_nodes(self, config):
         """Validate that each node in a node_pool is in fact a node, and not
         another pool.
@@ -604,12 +601,7 @@ class ValidateConfig(Validator):
                 node = config['nodes'].get(node_name)
                 if node:
                     continue
-                raise ConfigError(
-                    "NodePool %s contains another NodePool %s. " % (
-                        node_pool.name,
-                        node_name
-                    )
-                )
-
+                msg = "NodePool %s contains another NodePool %s. "
+                raise ConfigError(msg % (node_pool.name, node_name))
 
 valid_config = ValidateConfig()
