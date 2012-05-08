@@ -165,6 +165,9 @@ class PersistentStateManager(observer.Observer):
 
     def _save_from_buffer(self):
         key_state_pairs = list(self._buffer)
+        if not key_state_pairs:
+            return
+
         keys = ','.join(str(key) for key, _ in key_state_pairs)
         log.debug("Saving state for %s" % keys)
 

@@ -56,6 +56,10 @@ class MasterControlProgram(Observable):
         self.event_recorder     = self.event_manager.add(self)
         self.state_manager      = None
 
+    def shutdown(self):
+        if self.state_manager:
+            self.state_manager.cleanup()
+
     def reconfigure(self):
         """Reconfigure MCP while Tron is already running."""
         self.event_recorder.emit_info("reconfig")
@@ -83,23 +87,6 @@ class MasterControlProgram(Observable):
         # Any job with existing state would have been scheduled already. Jobs
         # without any state will be scheduled here.
         self.schedule_jobs()
-
-    # TODO: Move to ConfigController
-    def config_lines(self):
-        try:
-            with open(self.config_filepath, 'r') as config:
-                return config.read()
-        except IOError, e:
-            log.error("Failed to open configuration file: %s" % e)
-            return ""
-
-    # TODO: Move to ConfigController
-    def rewrite_config(self, content):
-        try:
-            with open(self.config_filepath, 'w') as config:
-                config.write(content)
-        except IOError, e:
-            log.error("Failed to write to configuration file: %s" % e)
 
     def apply_config(self, conf, skip_env_dependent=False, reconfigure=False):
         """Apply a configuration. If skip_env_dependent is True we're
@@ -140,12 +127,13 @@ class MasterControlProgram(Observable):
 
         for file_name in ssh_conf.identities:
             file_path = os.path.expanduser(file_name)
+            msg = None
             if not os.path.exists(file_path):
-                raise ConfigError("Private key file '%s' doesn't exist" %
-                                  file_name)
+                msg = "Private key file '%s' doesn't exist" % file_name
             if not os.path.exists(file_path + ".pub"):
-                raise ConfigError("Public key '%s' doesn't exist" %
-                                  (file_name + ".pub"))
+                msg = "Public key '%s' doesn't exist" % (file_name + ".pub")
+            if msg:
+                raise ConfigError(msg)
 
             ssh_options.opt_identity(file_name)
 
@@ -211,7 +199,6 @@ class MasterControlProgram(Observable):
             self.crash_reporter = crash_reporter.CrashReporter(em, self)
             self.crash_reporter.start()
 
-    ### JOBS ###
     def add_job(self, job_config, reconfigure=False):
         log.debug("Building new job %s", job_config.name)
         output_path = filehandler.OutputPath(self.output_stream_dir)
@@ -247,19 +234,16 @@ class MasterControlProgram(Observable):
         job_scheduler = self.jobs.pop(job_name)
         job_scheduler.disable()
 
-    def disable_all(self):
-        for job_scheduler in self.jobs.itervalues():
-            job_scheduler.disable()
-
-    def enable_all(self):
-        for job_scheduler in self.jobs.itervalues():
-            job_scheduler.enable()
-
     def schedule_jobs(self):
         for job_scheduler in self.jobs.itervalues():
             job_scheduler.schedule()
 
-    ### SERVICES ###
+    def get_jobs(self):
+        return self.jobs.itervalues()
+
+    def get_job_by_name(self, name):
+        return self.jobs.get(name)
+
     def add_service(self, service):
         if service.name in self.jobs:
             raise ValueError("Service %s is already a job", service.name)
@@ -305,7 +289,6 @@ class MasterControlProgram(Observable):
         log.info("Loaded state for %d services", len(service_states))
 
         self.state_manager.save_metadata()
-
 
     def __str__(self):
         return "MCP"

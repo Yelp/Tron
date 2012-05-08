@@ -1,6 +1,7 @@
 import datetime
 
 from testify import setup, teardown, TestCase, run, assert_equal, assert_raises
+from tests import mocks
 from tests.assertions import assert_length, assert_call
 from tests.mocks import MockNode
 from tests.testingutils import MockReactorTestCase, Turtle
@@ -183,9 +184,6 @@ class JobTestCase(TestCase):
         self.job.handler(None, jobrun.JobRun.NOTIFY_DONE)
         assert_call(self.job.notify, 1, self.job.NOTIFY_RUN_DONE)
 
-        self.job.handler(None, jobrun.JobRun.NOTIFY_START_FAILED)
-        assert_call(self.job.notify, 2, self.job.NOTIFY_RUN_DONE)
-
     def test__eq__(self):
         other_job = job.Job("jobname", 'scheduler')
         assert not self.job == other_job
@@ -213,6 +211,16 @@ class JobSchedulerTestCase(TestCase):
                 node_pool=node_pool,
         )
         self.job_scheduler = job.JobScheduler(self.job)
+
+    def test_restore_job_state(self):
+        run_collection = mocks.MockJobRunCollection(get_scheduled=lambda: ['a'])
+        self.job_scheduler.job = Turtle(runs=run_collection)
+        self.job_scheduler._set_callback = Turtle()
+        state_data = 'state_data_token'
+        self.job_scheduler.restore_job_state(state_data)
+        assert_call(self.job_scheduler.job.restore_state, 0, state_data)
+        assert_length(self.job_scheduler._set_callback.calls, 1)
+        assert_call(self.job_scheduler._set_callback, 0, 'a')
 
     def test_disable(self):
         self.job_scheduler.disable()

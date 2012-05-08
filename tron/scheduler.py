@@ -169,7 +169,6 @@ class IntervalScheduler(object):
     interval.
     """
 
-    # TODO: make this configurable
     queue_overlapping = False
 
     def __init__(self, interval=None):

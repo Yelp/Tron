@@ -1,41 +1,88 @@
 #!/usr/bin/env python
+""" Start the Tron server daemon."""
 
-"""The core of trond is a hacked-up version of twistd. It mainly exists to set
-up command line-related logging options and invoke the MasterControlProgram.
-This file can probably be left alone as long as we continue to use Twisted.
-"""
-
-from __future__ import with_statement
-
-import errno
 import logging
 import logging.config
 import optparse
 import os
 import pkg_resources
-import signal
 import sys
 
-from twisted.internet import reactor, defer
+from twisted.internet import defer
 from twisted.python import log
-from twisted.web import server
-
-# Annoying that we have to import twisted internal module here, but we don't
-# really want to use 'twistd' to run our daemon.
-from twisted.scripts import _twistd_unix
 
 import tron
 from tron import commands
-from tron import mcp
-from tron.api import www
-
-logger = logging.getLogger('tron.trond')
+from tron import trondaemon
 
 
-TRON                    = 'tron'
-DEFAULT_CONF            = 'default_config.yaml'
-DEFAULT_WORKING_CONF    = 'tron_config.yaml'
-DEFAULT_LOGGING_CONF    = 'logging.conf'
+TRON                        = 'tron'
+DEFAULT_CONF                = 'default_config.yaml'
+DEFAULT_WORKING_CONF        = 'tron_config.yaml'
+DEFAULT_LOGGING_CONF        = 'logging.conf'
+DEFAULT_WORKING_DIR         = '/var/lib/tron/'
+DEFAULT_PIDFILE             =  'tron.pid'
+DEFAULT_PIDPATH             = '/var/run/' + DEFAULT_PIDFILE
+
+
+def parse_options():
+    parser = optparse.OptionParser(version="%%prog %s" % tron.__version__)
+
+    parser.add_option("--working-dir", default=DEFAULT_WORKING_DIR,
+            help="Working directory for the Tron daemon, default %default")
+
+    parser.add_option("-c", "--config-file",
+            help="File path to the Tron configuration file")
+
+    parser.add_option("--nodaemon", action="store_true", default=False,
+            help="Disable daemonizing, default %default")
+
+    parser.add_option("--pid-file",
+            help="File path to PID file, defaults to %s if working directory "
+                 "is default. Otherwise defaults to <working dir>/%s" %
+                 (DEFAULT_PIDPATH, DEFAULT_PIDFILE))
+
+    logging_group = optparse.OptionGroup(parser, "Logging")
+    logging_group.add_option("--log-conf", "-l",
+            help="File path to a custom logging.conf")
+
+    logging_group.add_option("-v", "--verbose", action="count", default=0,
+            help="Verbose logging. Repeat for more verbosity.")
+
+    logging_group.add_option("--debug", action="store_true",
+            help="Debug mode, extra error reporting, no daemonizing")
+    parser.add_option_group(logging_group)
+
+    api_group = optparse.OptionGroup(parser, "Web Service API")
+    api_group.add_option("--port", "-P", dest="listen_port", type=int,
+            help="TCP port number to listen on, default %default",
+            default=commands.DEFAULT_PORT)
+
+    api_group.add_option("--host", "-H", dest="listen_host",
+            help="Hostname to listen on, default %default",
+            default=commands.DEFAULT_HOST)
+    parser.add_option_group(api_group)
+
+    options, args = parser.parse_args(sys.argv)
+
+    if options.log_conf and not os.path.exists(options.log_conf):
+        parser.error("Logging config file not found: %s" % options.log_conf)
+
+    if options.working_dir != DEFAULT_WORKING_DIR and not options.pid_file:
+        options.pid_file = os.path.join(options.working_dir, DEFAULT_PIDFILE)
+
+    if not options.pid_file:
+        options.pid_file = DEFAULT_PIDPATH
+
+    if options.config_file is None:
+        options.config_file = os.path.join(
+                options.working_dir, DEFAULT_WORKING_CONF)
+
+    if options.debug:
+        options.nodaemon = True
+
+    return options
+
 
 def create_default_config(config_path):
     """Create a default empty configuration for first time installs"""
@@ -44,54 +91,27 @@ def create_default_config(config_path):
         config_file.write(default)
 
 
-def parse_options():
-    parser = optparse.OptionParser(version="%%prog %s" % tron.__version__)
+def setup_environment(options):
+    """Setup the working directory and config environment."""
+    if not os.path.exists(options.working_dir):
+        os.makedirs(options.working_dir)
 
-    parser.add_option("--working-dir", action="store", dest="working_dir",
-                      help="Directory where tron's state and output is stored"
-                           " (default %default)",
-                      default="/var/lib/tron/")
-    parser.add_option("--log-conf", "-l", action="store", dest="log_conf",
-                      help="Custom logging.conf file to use")
-    parser.add_option("--config-file", "-c", action="store",
-                      dest="config_file", default=None,
-                      help="Configuration file to load (default in working"
-                           " dir)")
+    if (not os.path.isdir(options.working_dir) or
+        not os.access(options.working_dir, os.R_OK | os.W_OK | os.X_OK)):
+        msg = "Error, can't access working directory %s" % (options.working_dir)
+        raise SystemExit(msg)
 
-    parser.add_option("--verbose", "-v", action="count", dest="verbose",
-                      help="Verbose logging", default=0)
-    parser.add_option("--debug", action="store_true", dest="debug",
-                      help="Debug mode, extra error reporting, no daemonizing")
+    # Attempt to create a default config if config is missing
+    if not os.path.exists(options.config_file):
+        try:
+            create_default_config(options.config_file)
+        except OSError, e:
+            msg = "Error creating default configuration at %s: %s"
+            raise SystemExit(msg % (options.config_file, e))
 
-    parser.add_option("--nodaemon", action="store_true", dest="nodaemon",
-                      help="Indicates we should not fork and daemonize the"
-                           " process (default %default)",
-                      default=False)
-    parser.add_option("--pid-file", action="store", dest="pidfile",
-                      help="Where to store pid of the executing process"
-                           " (default %default)",
-                      default="/var/run/tron.pid")
-
-    parser.add_option("--port", "-P", action="store", dest="listen_port",
-                      help="What port to listen on, defaults %default",
-                      default=commands.DEFAULT_PORT, type=int)
-    parser.add_option("--host", "-H", action="store", dest="listen_host",
-                      help="What host to listen on defaults to %default",
-                      default=commands.DEFAULT_HOST, type=str)
-
-    (options, args) = parser.parse_args(sys.argv)
-
-    if not options.working_dir:
-        parser.error("Bad working-dir option")
-
-    if options.log_conf and not os.path.exists(options.log_conf):
-        parser.error("Logging config file not found: %s" % options.log_conf)
-
-    if options.config_file is None:
-        options.config_file = os.path.join(
-                options.working_dir, DEFAULT_WORKING_CONF)
-
-    return options
+    if not os.access(options.config_file, os.R_OK | os.W_OK):
+        msg = "Error opening configuration %s: Missing Permissions"
+        raise SystemExit(msg % options.config_file)
 
 
 def setup_logging(options):
@@ -125,131 +145,13 @@ def setup_logging(options):
         defer.setDebugging(True)
 
 
-# This is rather crazy thing to do, but I don't really like 'twistd', but it
-# has all kinds of useful functions in it for daemonizing stuff. So rather than
-# use twisted and build a tac file and all that crap, we're going to hack out
-# the parts we like.
-class FakeConfig(dict):
-    """Wrapper class to make a options object look like dictionary for twistd
-    stuff
-    """
-
-    def __init__(self, options):
-        self.options = options
-
-    def __getitem__(self, key):
-        return getattr(self.options, key)
-
-
-class TronApplicationRunner(_twistd_unix.UnixApplicationRunner):
-
-    def __init__(self, options):
-        # We arn't supporting all the options that twistd has, so add some
-        # default values here.
-        options.profile = None
-        options.chroot = None
-        options.rundir = '.'
-        options.umask = 022
-
-        self.options = options
-
-        self.config = FakeConfig(options)
-
-        # The ApplicationRunner is suppose to have an actual application it
-        # runs, but that abstraction just confused me.
-        self.application = None
-        self.profiler = None
-
-    def preApplication(self):
-        _twistd_unix.UnixApplicationRunner.preApplication(self)
-
-        # Setup our environment
-        try:
-            os.makedirs(self.options.working_dir)
-        except OSError, e:
-            if e.errno != errno.EEXIST:
-                raise
-
-        if (not os.path.isdir(self.options.working_dir) or
-            not os.access(self.options.working_dir,
-                          os.R_OK | os.W_OK | os.X_OK)):
-            print >>sys.stderr, "Error, working directory %s invalid" % (
-                self.options.working_dir)
-            sys.exit(1)
-
-        # See if we can access or create the config file
-        if not os.path.exists(self.options.config_file):
-            try:
-                create_default_config(self.options.config_file)
-            except OSError, create_e:
-                print >>sys.stderr, ("Error creating default configuration at"
-                                     " %s: %r" % (self.options.config_file,
-                                                  create_e))
-                sys.exit(1)
-
-        if not os.access(self.options.config_file, os.R_OK | os.W_OK):
-            print >>sys.stderr, ("Error opening configuration %s:"
-                                 " Permissions" % (self.options.config_file))
-            sys.exit(1)
-
-    def run(self):
-        logger.debug("init: preApplication")
-        self.preApplication()
-
-        logger.debug("init: setup_logging")
-        setup_logging(self.options)
-
-        logger.debug("init: postApplication")
-        self.postApplication()
-
-    def startApplication(self, application):
-        logger.debug("init: about to setup environment")
-
-        try:
-            self.setupEnvironment(self.config['chroot'],
-                              self.config['rundir'],
-                              self.config['nodaemon'],
-                              self.config['umask'],
-                              self.config['pidfile'])
-        except Exception, e:
-            # We may have already forked/daemonized at this point, so lets hope
-            # that logging was setup properly otherwise, we may never know...
-            logger.exception("Error setting up environment")
-            print >>sys.stderr, "Error setting up environment: %r" % e
-            sys.exit(1)
-
-        # Build and configure the mcp
-        master_control = mcp.MasterControlProgram(self.options.working_dir,
-                                                  self.options.config_file)
-        try:
-            master_control.initial_setup()
-        except Exception, e:
-            logger.exception("Error in configuration file %s" %
-                             self.options.config_file)
-            sys.exit(1)
-
-        # Setup our reconfiguration signal handler
-        def sighup_handler(signum, frame):
-            logger.info("SIGHUP Caught!")
-            reactor.callLater(0, master_control.reconfigure)
-            reactor.callLater(0, setup_logging, self.options)
-
-        signal.signal(signal.SIGHUP, sighup_handler)
-
-        # TODO: call cleanup on state manager before shutdown
-
-        # Start up our web management interface
-        logger.debug("listenTCP")
-        site = server.Site(www.RootResource(master_control))
-        reactor.listenTCP(self.options.listen_port, site,
-                interface=self.options.listen_host)
-
-
 def main():
     options = parse_options()
 
-    app_runner = TronApplicationRunner(options)
-    app_runner.run()
+    setup_environment(options)
+    setup_logging(options)
+    trond = trondaemon.TronDaemon(options)
+    trond.run()
 
 if __name__ == '__main__':
     main()
