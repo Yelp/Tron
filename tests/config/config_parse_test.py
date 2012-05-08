@@ -8,7 +8,7 @@ from textwrap import dedent
 
 from testify import assert_equal, assert_in
 from testify import run, setup, teardown, TestCase
-from tron.config import config_parse
+from tron.config import config_parse, schema
 from tron.config.config_parse import TronConfig, load_config, ConfigSSHOptions, valid_identifier
 from tron.config.config_parse import valid_job, valid_output_stream_dir
 from tron.config.config_parse import ConfigNode, ConfigNodePool, ConfigJob
@@ -31,9 +31,9 @@ ssh_options:
 
 nodes:
     - name: node0
-      hostname: 'batch0'
+      hostname: 'node0'
     - name: node1
-      hostname: 'batch1'
+      hostname: 'node1'
 
 node_pools:
     - name: NodePool
@@ -41,97 +41,97 @@ node_pools:
 """
 
 
-class OldConfigTest(TestCase):
-    OLD_BASE_CONFIG = """
---- !TronConfiguration
+class ConfigTestCase(TestCase):
+    BASE_CONFIG = """
 output_stream_dir: "/tmp"
 
-ssh_options: !SSHOptions
+ssh_options:
     agent: true
     identities:
         - tests/test_id_rsa
 
 nodes:
-    - &node0 !Node
-        hostname: 'batch0'
-    - &node1
-        hostname: 'batch1'
-    - &nodePool !NodePool
-        nodes: [*node0, *node1]
+    -   name: node0
+        hostname: 'node0'
+    -   name: node1
+        hostname: 'node1'
+node_pools:
+    -   name: nodePool
+        nodes: [node0, node1]
     """
 
-    config = OLD_BASE_CONFIG + """
+    config = BASE_CONFIG + """
 
 command_context:
     batch_dir: /tron/batch/test/foo
     python: /usr/bin/python
 
 jobs:
-    - &job0 !Job
+    -
         name: "test_job0"
-        node: *node0
+        node: node0
         schedule: "interval 20s"
         actions:
-            - &intAction !Action
+            -
                 name: "action0_0"
                 command: "test_command0.0"
-        cleanup_action: !CleanupAction
+        cleanup_action:
             command: "test_command0.1"
 
-    - &job1
+    -
         name: "test_job1"
-        node: *node0
+        node: node0
         schedule: "daily 00:30:00 MWF"
         actions:
-            - &intAction2
+            -
                 name: "action1_0"
                 command: "test_command1.0"
-            - &actionBar
+            -
                 name: "action1_1"
                 command: "test_command1.1"
-                requires: *intAction2
+                requires: [action1_0]
 
-    - &job2
+    -
         name: "test_job2"
-        node: *node1
+        node: node1
         schedule: "daily 16:30:00"
         actions:
-            - &actionFail !Action
+            -
                 name: "action2_0"
                 command: "test_command2.0"
 
-    - &job3
+    -
         name: "test_job3"
-        node: *node1
+        node: node1
         schedule: "constant"
         actions:
-            - &actionConstant0
+            -
                 name: "action3_0"
                 command: "test_command3.0"
-            - &actionConstant1
+            -
                 name: "action3_1"
                 command: "test_command3.1"
-            - &actionFollow
+            -
                 name: "action3_2"
-                node: *node0
+                node: node0
                 command: "test_command3.2"
-                requires: [*actionConstant0, *actionConstant1]
+                requires: [action3_0, action3_1]
 
-    - &job4
+    -
         name: "test_job4"
-        node: *nodePool
+        node: nodePool
         all_nodes: True
         schedule: "daily"
         enabled: False
         actions:
-            - &actionDaily
+            -
                 name: "action4_0"
                 command: "test_command4.0"
 
 services:
     -
         name: "service0"
-        node: *nodePool
+        node: nodePool
         command: "service_command0"
         count: 2
         pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
@@ -149,9 +149,8 @@ services:
     def test_attributes(self):
         test_config = load_config(StringIO.StringIO(self.config))
         expected = TronConfig(
-            working_dir=None,
             output_stream_dir='/tmp',
-            command_context=FrozenDict(**{
+            command_context=FrozenDict({
                 'python': '/usr/bin/python',
                 'batch_dir': '/tron/batch/test/foo'
             }),
@@ -162,21 +161,21 @@ services:
             notification_options=None,
             time_zone=None,
             state_persistence=config_parse.DEFAULT_STATE_PERSISTENCE,
-            nodes=FrozenDict(**{
-                'batch0': ConfigNode(name='batch0', hostname='batch0'),
-                'batch1': ConfigNode(name='batch1', hostname='batch1')
+            nodes=FrozenDict({
+                'node0': ConfigNode(name='node0', hostname='node0'),
+                'node1': ConfigNode(name='node1', hostname='node1')
             }),
-            node_pools=FrozenDict(**{
-                'batch0_batch1': ConfigNodePool(nodes=['batch0', 'batch1'],
-                                                name='batch0_batch1')
+            node_pools=FrozenDict({
+                'nodePool': ConfigNodePool(nodes=['node0', 'node1'],
+                                                name='nodePool')
             }),
-            jobs=FrozenDict(**{
+            jobs=FrozenDict({
                 'test_job0': ConfigJob(
                     name='test_job0',
-                    node='batch0',
+                    node='node0',
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20)),
-                    actions=FrozenDict(**{
+                    actions=FrozenDict({
                         'action0_0': ConfigAction(
                             name='action0_0',
                             command='test_command0.0',
@@ -194,7 +193,7 @@ services:
                     enabled=True),
                 'test_job1': ConfigJob(
                     name='test_job1',
-                    node='batch0',
+                    node='node0',
                     enabled=True,
                     schedule=ConfigDailyScheduler(
                         ordinals=None,
@@ -203,7 +202,7 @@ services:
                         months=None,
                         timestr='00:30',
                     ),
-                    actions=FrozenDict(**{
+                    actions=FrozenDict({
                         'action1_1': ConfigAction(
                             name='action1_1',
                             command='test_command1.1',
@@ -221,7 +220,7 @@ services:
                     cleanup_action=None),
                 'test_job2': ConfigJob(
                     name='test_job2',
-                    node='batch1',
+                    node='node1',
                     enabled=True,
                     schedule=ConfigDailyScheduler(
                         ordinals=None,
@@ -230,7 +229,7 @@ services:
                         months=None,
                         timestr='16:30',
                     ),
-                    actions=FrozenDict(**{
+                    actions=FrozenDict({
                         'action2_0': ConfigAction(
                             name='action2_0',
                             command='test_command2.0',
@@ -243,10 +242,10 @@ services:
                     cleanup_action=None),
                 'test_job3': ConfigJob(
                     name='test_job3',
-                    node='batch1',
+                    node='node1',
                     schedule=ConfigConstantScheduler(),
                     enabled=True,
-                    actions=FrozenDict(**{
+                    actions=FrozenDict({
                         'action3_1': ConfigAction(
                             name='action3_1',
                             command='test_command3.1',
@@ -261,7 +260,7 @@ services:
                             name='action3_2',
                             command='test_command3.2',
                             requires=('action3_0', 'action3_1'),
-                            node='batch0')
+                            node='node0')
                     }),
                     queueing=True,
                     run_limit=50,
@@ -269,7 +268,7 @@ services:
                     cleanup_action=None),
                 'test_job4': ConfigJob(
                     name='test_job4',
-                    node='batch0_batch1',
+                    node='nodePool',
                     schedule=ConfigDailyScheduler(
                         ordinals=None,
                         weekdays=None,
@@ -277,7 +276,7 @@ services:
                         months=None,
                         timestr='00:00',
                     ),
-                    actions=FrozenDict(**{
+                    actions=FrozenDict({
                         'action4_0': ConfigAction(
                             name='action4_0',
                             command='test_command4.0',
@@ -289,10 +288,10 @@ services:
                     cleanup_action=None,
                     enabled=False)
                 }),
-                services=FrozenDict(**{
+                services=FrozenDict({
                     'service0': ConfigService(
                         name='service0',
-                        node='batch0_batch1',
+                        node='nodePool',
                         pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                         command='service_command0',
                         monitor_interval=20,
@@ -572,11 +571,11 @@ class NodeConfigTestCase(TestCase):
         test_config = dedent("""
             nodes:
                 - name: node0
-                  hostname: batch0
+                  hostname: node0
 
             node_pools:
                 - name: pool0
-                  nodes: [batch1]
+                  nodes: [node1]
                 - name: pool1
                   nodes: [node0, pool0]
             jobs:
@@ -595,11 +594,11 @@ class NodeConfigTestCase(TestCase):
         test_config = dedent("""
             nodes:
                 - name: node0
-                  hostname: batch0
+                  hostname: node0
 
             node_pools:
                 - name: pool0
-                  hostname: batch1
+                  hostname: node1
                 - name: pool1
                   nodes: [node0, pool0]
             jobs:
@@ -615,7 +614,7 @@ class NodeConfigTestCase(TestCase):
         assert_in(expected_msg, str(exception))
 
 
-StubConfigObject = config_parse.config_object_factory(
+StubConfigObject = schema.config_object_factory(
     'StubConfigObject',
     ['req1', 'req2'],
     ['opt1', 'opt2']
