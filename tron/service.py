@@ -7,8 +7,10 @@ from tron import command_context
 from tron import event
 from tron import node
 from tron.actioncommand import ActionCommand
-from tron.utils import state, observer
+from tron.utils import observer
+from tron.utils import state
 from tron.utils import timeutils
+from tron.utils.state import NamedEventState
 
 
 log = logging.getLogger(__name__)
@@ -24,41 +26,156 @@ class InvalidStateError(Error):
     """Invalid state error"""
 
 
+class ServiceInstanceMonitor(observer.Observable):
+
+    def __init__(self):
+        super(ServiceInstanceMonitor, self).__init__()
+
+    def _queue_monitor(self):
+        self.monitor_action = None
+        if self.service.monitor_interval > 0:
+            self._monitor_delayed_call = reactor.callLater(
+                self.service.monitor_interval, self._run_monitor)
+
+    def _queue_monitor_hang_check(self):
+        """Since our monitor cycle is controlled by monitors actually
+        completing, we need a check to ensure the monitor doesn't hang.
+
+        We aren't going to make this monitor interval configurable right now,
+        but just peg it to a factor of the interval.
+        """
+
+        current_action = self.monitor_action
+        hang_monitor_duration = max((self.service.monitor_interval or 0) * 0.8,
+            MIN_MONITOR_HANG_TIME)
+
+        self._hanging_monitor_check_delayed_call = reactor.callLater(
+            hang_monitor_duration,
+            lambda: self._monitor_hang_check(current_action))
+
+    def _run_monitor(self):
+        self._monitor_delayed_call = None
+
+        if self.monitor_action:
+            log.warning("Monitor action already exists, old callLater ?")
+            return
+
+        self.machine.transition("monitor")
+        pid_file = self.pid_file
+
+        if pid_file is None:
+            # If our pid file doesn't exist or failed to be generated, we
+            # can't really monitor
+            self._monitor_complete_failstart()
+            return
+
+        monitor_command = "cat %(pid_file)s | xargs kill -0" % self.context
+        log.debug("Executing '%s' on %s for %s", monitor_command,
+            self.node.hostname, self.id)
+        self.monitor_action = ActionCommand("%s.monitor" % self.id,
+            monitor_command)
+        self.watch(self.monitor_action)
+
+        try:
+            self.node.run(self.monitor_action)
+        except node.Error, e:
+            log.error("Failed to run monitor: %r", e)
+            return
+
+        self._queue_monitor_hang_check()
+
+    def _monitor_hang_check(self, action):
+        self._hanging_monitor_check_delayed_call = None
+        if self.monitor_action is action:
+            log.warning("Monitor for %s is still running", self.id)
+            self.machine.transition("monitor_fail")
+            self._queue_monitor_hang_check()
+
+    def _monitor_complete_callback(self):
+        """Callback when our monitor has completed"""
+        if not self.monitor_action:
+            # This actually happened. I suspect it was a cascading failure
+            # caused by a crash somewhere else leaving us in an inconsistent
+            # state, but perhaps there is a reasonable explanation. Either way,
+            # we don't really care about this monitor anymore.
+            log.warning("Monitor for %s complete, but we don't see to care...",
+                self.id)
+            return
+
+        self.last_check = timeutils.current_time()
+        log.debug("Monitor callback with exit %r",
+            self.monitor_action.exit_status)
+        if self.monitor_action.exit_status != 0:
+            self.machine.transition("down")
+        else:
+            self.machine.transition("up")
+            self._queue_monitor()
+
+        self.monitor_action = None
+
+    def _monitor_complete_failstart(self):
+        """Callback when our monitor failed to even start"""
+        self.machine.transition("monitor_fail")
+        self._queue_monitor()
+
+        self.monitor_action = None
+
+
+class ServiceInstanceKiller(object):
+
+    def kill_instance(self):
+        assert self.pid_file, self.pid_file
+
+    kill_command = "cat %(pid_file)s | xargs kill" % self.context
+
+    self.stop_action = ActionCommand("%s.stop" % self.id,
+        kill_command)
+    self.watch(self.stop_action)
+    try:
+        self.node.run(self.stop_action)
+    except node.Error, e:
+        log.warning("Failed to kill instance %s: %r", self.id, e)
+
+    def _stop_complete_callback(self):
+        if self.stop_action.exit_status != 0:
+            log.error("Failed to stop service instance %s: Exit %r", self.id,
+                self.stop_action.exit_status)
+
+        self._queue_monitor()
+        self.stop_action = None
+
+    def _stop_complete_failstart(self):
+        log.warning("Failed to start kill command for %s", self.id)
+        self._queue_monitor()
+
+
 class ServiceInstance(observer.Observer):
-    class ServiceInstanceState(state.NamedEventState):
+
+    class ServiceInstanceState(NamedEventState):
         """Event state subclass for service instances"""
 
-    STATE_DOWN = ServiceInstanceState("down")
+    STATE_DOWN          = ServiceInstanceState("down")
+    STATE_UP            = ServiceInstanceState("up")
+    STATE_FAILED        = ServiceInstanceState("failed",
+                            stop=STATE_DOWN,
+                            up=STATE_UP)
+    STATE_STOPPING      = ServiceInstanceState("stopping",
+                            down=STATE_DOWN)
+    STATE_MONITORING    = ServiceInstanceState("monitoring",
+                            down=STATE_FAILED,
+                            stop=STATE_STOPPING,
+                            up=STATE_UP)
+    STATE_STARTING      = ServiceInstanceState("starting",
+                            down=STATE_FAILED,
+                            monitor=STATE_MONITORING,
+                            stop=STATE_STOPPING)
+    STATE_UNKNOWN       = ServiceInstanceState("unknown",
+                            monitor=STATE_MONITORING)
 
-    STATE_UP = ServiceInstanceState("up")
-
-    STATE_FAILED = ServiceInstanceState("failed",
-                                        stop=STATE_DOWN,
-                                        up=STATE_UP)
-
-    STATE_STOPPING = ServiceInstanceState("stopping",
-                                          down=STATE_DOWN)
-
-    STATE_MONITORING = ServiceInstanceState("monitoring",
-                                            down=STATE_FAILED,
-                                            stop=STATE_STOPPING,
-                                            up=STATE_UP)
-
-    STATE_STARTING = ServiceInstanceState("starting",
-                                          down=STATE_FAILED,
-                                          monitor=STATE_MONITORING,
-                                          stop=STATE_STOPPING)
-
-    STATE_UNKNOWN = ServiceInstanceState("unknown",
-                                         monitor=STATE_MONITORING)
-
-    STATE_MONITORING['monitor_fail'] = STATE_UNKNOWN
-
-    STATE_UP['stop'] = STATE_STOPPING
-
-    STATE_UP['monitor'] = STATE_MONITORING
-
-    STATE_DOWN['start'] = STATE_STARTING
+    STATE_MONITORING['monitor_fail']    = STATE_UNKNOWN
+    STATE_UP['stop']                    = STATE_STOPPING
+    STATE_UP['monitor']                 = STATE_MONITORING
+    STATE_DOWN['start']                 = STATE_STARTING
 
     def __init__(self, service, node, instance_number):
         self.service = service
@@ -85,10 +202,6 @@ class ServiceInstance(observer.Observer):
         return self.machine.state
 
     @property
-    def attach(self):
-        return self.machine.attach
-
-    @property
     def pid_file(self):
         if self.service.pid_file_template:
             try:
@@ -111,95 +224,6 @@ class ServiceInstance(observer.Observer):
                       self.service.name, self.service.command)
 
         return None
-
-    def _queue_monitor(self):
-        self.monitor_action = None
-        if self.service.monitor_interval > 0:
-            self._monitor_delayed_call = reactor.callLater(
-                self.service.monitor_interval, self._run_monitor)
-
-    def _queue_monitor_hang_check(self):
-        """Since our monitor cycle is controlled by monitors actually
-        completing, we need a check to ensure the monitor doesn't hang.
-
-        We aren't going to make this monitor interval configurable right now,
-        but just peg it to a factor of the interval.
-        """
-
-        current_action = self.monitor_action
-        hang_monitor_duration = max((self.service.monitor_interval or 0) * 0.8,
-                                    MIN_MONITOR_HANG_TIME)
-
-        self._hanging_monitor_check_delayed_call = reactor.callLater(
-            hang_monitor_duration,
-            lambda: self._monitor_hang_check(current_action))
-
-    def _run_monitor(self):
-        self._monitor_delayed_call = None
-
-        if self.monitor_action:
-            log.warning("Monitor action already exists, old callLater ?")
-            return
-
-        self.machine.transition("monitor")
-        pid_file = self.pid_file
-
-        if pid_file is None:
-            # If our pid file doesn't exist or failed to be generated, we
-            # can't really monitor
-            self._monitor_complete_failstart()
-            return
-
-        monitor_command = "cat %(pid_file)s | xargs kill -0" % self.context
-        log.debug("Executing '%s' on %s for %s", monitor_command,
-                  self.node.hostname, self.id)
-        self.monitor_action = ActionCommand("%s.monitor" % self.id,
-                                                   monitor_command)
-        self.watch(self.monitor_action)
-
-        try:
-            self.node.run(self.monitor_action)
-        except node.Error, e:
-            log.error("Failed to run monitor: %r", e)
-            return
-
-        self._queue_monitor_hang_check()
-
-    def _monitor_hang_check(self, action):
-        self._hanging_monitor_check_delayed_call = None
-        if self.monitor_action is action:
-            log.warning("Monitor for %s is still running", self.id)
-            self.machine.transition("monitor_fail")
-            self._queue_monitor_hang_check()
-
-    def _monitor_complete_callback(self):
-        """Callback when our monitor has completed"""
-        if not self.monitor_action:
-            # This actually happened. I suspect it was a cascading failure
-            # caused by a crash somewhere else leaving us in an inconsistent
-            # state, but perhaps there is a reasonable explanation. Either way,
-            # we don't really care about this monitor anymore.
-            log.warning("Monitor for %s complete, but we don't see to care...",
-                        self.id)
-            return
-
-        self.last_check = timeutils.current_time()
-        log.debug("Monitor callback with exit %r",
-                  self.monitor_action.exit_status)
-        if self.monitor_action.exit_status != 0:
-            self.machine.transition("down")
-        else:
-            self.machine.transition("up")
-            self._queue_monitor()
-
-        self.monitor_action = None
-
-    def _monitor_complete_failstart(self):
-        """Callback when our monitor failed to even start"""
-        self.machine.transition("monitor_fail")
-        self._queue_monitor()
-
-        self.monitor_action = None
 
     def start(self):
         if self.machine.state != self.STATE_DOWN:
@@ -278,31 +302,6 @@ class ServiceInstance(observer.Observer):
         if self.machine.state == self.STATE_STOPPING:
             self.kill_instance()
 
-    def kill_instance(self):
-        assert self.pid_file, self.pid_file
-
-        kill_command = "cat %(pid_file)s | xargs kill" % self.context
-
-        self.stop_action = ActionCommand("%s.stop" % self.id,
-                                                kill_command)
-        self.watch(self.stop_action)
-        try:
-            self.node.run(self.stop_action)
-        except node.Error, e:
-            log.warning("Failed to kill instance %s: %r", self.id, e)
-
-    def _stop_complete_callback(self):
-        if self.stop_action.exit_status != 0:
-            log.error("Failed to stop service instance %s: Exit %r", self.id,
-                      self.stop_action.exit_status)
-
-        self._queue_monitor()
-        self.stop_action = None
-
-    def _stop_complete_failstart(self):
-        log.warning("Failed to start kill command for %s", self.id)
-        self._queue_monitor()
-
     def zap(self):
         self.machine.transition("stop")
         self.machine.transition("down")
@@ -320,9 +319,9 @@ class ServiceInstance(observer.Observer):
     def state_data(self):
         """This data is used to serialize the state of this service instance."""
         return {
-            'node': self.node.hostname,
-            'instance_number': self.instance_number,
-            'state': str(self.state),
+            'node':             self.node.hostname,
+            'instance_number':  self.instance_number,
+            'state':            str(self.state),
         }
 
     def __str__(self):
@@ -334,7 +333,7 @@ class Service(observer.Observable, observer.Observer):
     COMPARE_ATTRIBUTES = ['name', 'command', 'node_pool', 'count',
                           'monitor_interval', 'pid_file_template']
 
-    class ServiceState(state.NamedEventState):
+    class ServiceState(NamedEventState):
         """Named event state subclass for services"""
 
     STATE_DOWN = ServiceState("down")
