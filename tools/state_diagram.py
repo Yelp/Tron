@@ -7,7 +7,7 @@
 
 """
 from tron.core.actionrun import ActionRun
-from tron.service import Service, ServiceInstance
+from tron.core.service import Service, ServiceInstance
 
 def traverse_graph(starting_state, func=lambda f, a, t: None, seen_states=None):
     """Traverse the graph depth-first without cycling."""

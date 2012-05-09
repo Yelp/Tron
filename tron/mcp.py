@@ -15,7 +15,7 @@ from tron.node import Node, NodePool
 from tron.scheduler import scheduler_from_config
 from tron.serialize import filehandler
 from tron.serialize.runstate.statemanager import PersistenceManagerFactory
-from tron.service import Service
+from tron.core.service import Service
 from tron.utils import emailer
 from tron.utils.observer import Observable
 

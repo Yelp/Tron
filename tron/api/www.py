@@ -15,9 +15,9 @@ except ImportError:
 
 from twisted.web import http, resource, server
 
-from tron import service, event
+from tron import event
 from tron.api import adapter, controller
-from tron.core import actionrun
+from tron.core import actionrun, service
 from tron.api import requestargs
 
 
