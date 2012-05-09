@@ -56,22 +56,6 @@ class UniqueNameDict(dict):
         super(UniqueNameDict, self).__setitem__(key, value)
 
 
-def type_converter(convert, error_fmt):
-    def f(path, value, optional=False):
-        """Convert *value* at config path *path* into something else via the
-        *convert* function, raising ConfigError if *convert* raises a
-        TypeError. *error_fmt* will be interpolated with (path, value).
-        If optional is True, None values will be returned without converting.
-        """
-        if value is None and optional:
-            return None
-        try:
-            return convert(value)
-        except TypeError:
-            raise ConfigError(error_fmt % (path, value))
-    return f
-
-
 def type_validator(validator, error_fmt):
     def f(path, value, optional=False):
         """If *validator* does not return True for *value*, raise ConfigError
@@ -85,9 +69,22 @@ def type_validator(validator, error_fmt):
     return f
 
 
-valid_float = type_converter(float, 'Value at %s is not a number: %s')
+def valid_number(type_func, path, value, optional=False):
+    if value is None and optional:
+        return None
+    try:
+        value = type_func(value)
+    except TypeError:
+        name = type_func.__name__
+        raise ConfigError('Value at %s is not an %s: %s' % (path, name, value))
 
-valid_int   = type_converter(int,   'Value at %s is not an integer: %s')
+    if value < 0:
+        raise ConfigError('%s must be a positive int.' % path)
+
+    return value
+
+valid_int   = partial(valid_number, int)
+valid_float = partial(valid_number, float)
 
 MAX_IDENTIFIER_LENGTH       = 255
 IDENTIFIER_RE               = re.compile(r'^[A-Za-z_]\w{0,254}$')
@@ -102,9 +99,8 @@ valid_populated_list = type_validator(
 valid_list = type_validator(
     lambda s: isinstance(s, list), 'Value at %s is not a list: %s')
 
-valid_str   = type_validator(
-    lambda s: isinstance(s, basestring),
-    'Value at %s is not a string: %s')
+valid_str  = type_validator(
+    lambda s: isinstance(s, basestring), 'Value at %s is not a string: %s')
 
 valid_dict = type_validator(
     lambda s: isinstance(s, dict), 'Value at %s is not a dictionary: %s')
@@ -136,6 +132,7 @@ class Validator(object):
         in_dict = self.cast(in_dict)
         self.validate_required_keys(in_dict)
         self.validate_extra_keys(in_dict)
+
         output_dict = self.build_dict(in_dict)
         self.set_defaults(output_dict)
         return self.config_class(**output_dict)
@@ -488,10 +485,10 @@ class ValidateService(ValidatorWithNamedPath):
         'name':                 valid_identifier,
         'pid_file':             valid_str,
         'command':              valid_str,
-        'monitor_interval':     valid_int,
+        'monitor_interval':     valid_float,
         'count':                valid_int,
         'node':                 valid_identifier,
-        'restart_interval':     valid_int,
+        'restart_interval':     valid_float,
     }
 
 valid_service = ValidateService()

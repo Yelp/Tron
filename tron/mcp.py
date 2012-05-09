@@ -258,7 +258,7 @@ class MasterControlProgram(Observable):
 
         log.info("Adding new service %s" % service.name)
         self.services[service.name] = service
-        self.state_manager.watch(service.machine)
+        self.state_manager.watch(service)
 
     def remove_service(self, service_name):
         if service_name not in self.services:

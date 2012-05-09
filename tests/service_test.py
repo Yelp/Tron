@@ -136,6 +136,7 @@ class ServiceMonitorTestCase(MockReactorTestCase):
         self.monitor._set_restart_callback()
         assert_length(self.reactor.callLater.calls, 0)
 
+
 #class ServiceTestCase(TestCase):
 #
 #    @setup
