@@ -2,12 +2,14 @@ import collections
 import logging
 
 from twisted.internet import reactor
+import weakref
+import operator
 
 from tron import command_context
 from tron import event
 from tron import node
 from tron.actioncommand import ActionCommand
-from tron.utils import observer
+from tron.utils import observer, proxy
 from tron.utils import state
 from tron.utils import timeutils
 from tron.utils.state import NamedEventState
@@ -28,8 +30,93 @@ class InvalidStateError(Error):
 
 class ServiceInstanceMonitor(observer.Observable):
 
-    def __init__(self):
+    def __init__(self, monitor_interval):
         super(ServiceInstanceMonitor, self).__init__()
+        self.monitor_interval   = monitor_interval
+
+
+class ServiceInstanceKiller(object):
+    pass
+
+
+class ServiceInstance(observer.Observer):
+
+    class ServiceInstanceState(NamedEventState):
+        """Event state subclass for service instances"""
+
+    STATE_DOWN          = ServiceInstanceState("down")
+    STATE_UP            = ServiceInstanceState("up")
+    STATE_FAILED        = ServiceInstanceState("failed",
+                            stop=STATE_DOWN,
+                            up=STATE_UP)
+    STATE_STOPPING      = ServiceInstanceState("stopping",
+                            down=STATE_DOWN)
+    STATE_MONITORING    = ServiceInstanceState("monitoring",
+                            down=STATE_FAILED,
+                            stop=STATE_STOPPING,
+                            up=STATE_UP)
+    STATE_STARTING      = ServiceInstanceState("starting",
+                            down=STATE_FAILED,
+                            monitor=STATE_MONITORING,
+                            stop=STATE_STOPPING)
+    STATE_UNKNOWN       = ServiceInstanceState("unknown",
+                            monitor=STATE_MONITORING)
+
+    STATE_MONITORING['monitor_fail']    = STATE_UNKNOWN
+    STATE_UP['stop']                    = STATE_STOPPING
+    STATE_UP['monitor']                 = STATE_MONITORING
+    STATE_DOWN['start']                 = STATE_STARTING
+
+    def __init__(self, service_name, node, instance_number, context,
+            pid_file_template, bare_command):
+        self.instance_number    = instance_number
+        self.node               = node
+        self.id                 = "%s.%s" % (service_name, self.instance_number)
+
+        self.machine            = state.StateMachine(
+                                    ServiceInstance.STATE_DOWN, delegate=self)
+
+        self.context            = command_context.CommandContext(self, context)
+        self.pid_file           = self._create_pid_file(pid_file_template)
+        self.bare_command       = bare_command
+
+        self.monitor_action     = None
+        self.start_action       = None
+        self.stop_action        = None
+
+        # Store the Twisted delayed call objects here for later cancellation
+        self._monitor_delayed_call = None
+        self._hanging_monitor_check_delayed_call = None
+
+    @property
+    def state(self):
+        return self.machine.state
+
+    @property
+    def attach(self):
+        return self.machine.attach
+
+    @classmethod
+    def from_config(cls, config, node, instance_number, context):
+        service_instance = cls(
+            config.name,
+            node,
+            instance_number,
+            context,
+            config.pid_file_template,
+            config.command)
+        return service_instance
+
+    @classmethod
+    def from_state(cls, config, node, inst_number, context, state):
+        service_instance = cls.from_config(config, node, inst_number, context)
+
+        # TODO: old code set this to monitoring and started the monitoring,
+        # if we maintain this behaviour, remove state as an arg
+        service_instance.machine.state = ServiceInstance.STATE_MONITORING
+        service_instance._run_monitor()
+
+        return service_instance
 
     def _queue_monitor(self):
         self.monitor_action = None
@@ -120,21 +207,18 @@ class ServiceInstanceMonitor(observer.Observable):
 
         self.monitor_action = None
 
-
-class ServiceInstanceKiller(object):
-
     def kill_instance(self):
         assert self.pid_file, self.pid_file
 
-    kill_command = "cat %(pid_file)s | xargs kill" % self.context
+        kill_command = "cat %(pid_file)s | xargs kill" % self.context
 
-    self.stop_action = ActionCommand("%s.stop" % self.id,
-        kill_command)
-    self.watch(self.stop_action)
-    try:
-        self.node.run(self.stop_action)
-    except node.Error, e:
-        log.warning("Failed to kill instance %s: %r", self.id, e)
+        self.stop_action = ActionCommand("%s.stop" % self.id,
+            kill_command)
+        self.watch(self.stop_action)
+        try:
+            self.node.run(self.stop_action)
+        except node.Error, e:
+            log.warning("Failed to kill instance %s: %r", self.id, e)
 
     def _stop_complete_callback(self):
         if self.stop_action.exit_status != 0:
@@ -149,79 +233,21 @@ class ServiceInstanceKiller(object):
         self._queue_monitor()
 
 
-class ServiceInstance(observer.Observer):
-
-    class ServiceInstanceState(NamedEventState):
-        """Event state subclass for service instances"""
-
-    STATE_DOWN          = ServiceInstanceState("down")
-    STATE_UP            = ServiceInstanceState("up")
-    STATE_FAILED        = ServiceInstanceState("failed",
-                            stop=STATE_DOWN,
-                            up=STATE_UP)
-    STATE_STOPPING      = ServiceInstanceState("stopping",
-                            down=STATE_DOWN)
-    STATE_MONITORING    = ServiceInstanceState("monitoring",
-                            down=STATE_FAILED,
-                            stop=STATE_STOPPING,
-                            up=STATE_UP)
-    STATE_STARTING      = ServiceInstanceState("starting",
-                            down=STATE_FAILED,
-                            monitor=STATE_MONITORING,
-                            stop=STATE_STOPPING)
-    STATE_UNKNOWN       = ServiceInstanceState("unknown",
-                            monitor=STATE_MONITORING)
-
-    STATE_MONITORING['monitor_fail']    = STATE_UNKNOWN
-    STATE_UP['stop']                    = STATE_STOPPING
-    STATE_UP['monitor']                 = STATE_MONITORING
-    STATE_DOWN['start']                 = STATE_STARTING
-
-    def __init__(self, service, node, instance_number):
-        self.service = service
-        self.instance_number = instance_number
-        self.node = node
-
-        self.id = "%s.%s" % (service.name, self.instance_number)
-
-        self.machine = state.StateMachine(
-                ServiceInstance.STATE_DOWN, delegate=self)
-
-        self.context = command_context.CommandContext(self, service.context)
-
-        self.monitor_action = None
-        self.start_action   = None
-        self.stop_action    = None
-
-        # Store the Twisted delayed call objects here for later cancellation
-        self._monitor_delayed_call = None
-        self._hanging_monitor_check_delayed_call = None
-
-    @property
-    def state(self):
-        return self.machine.state
-
-    @property
-    def pid_file(self):
-        if self.service.pid_file_template:
-            try:
-                return self.service.pid_file_template % self.context
-            except KeyError:
-                log.error("Failed to render pid file template: %r",
-                          self.service.pid_file_template)
-        else:
-            log.warning("No pid_file configured for service %s",
-                        self.service.name)
-
+    def _create_pid_file(self, pid_file_template):
+        try:
+            return pid_file_template % self.context
+        except KeyError:
+            msg = "Failed to render pid file template: %r" % pid_file_template
+            log.error(msg)
         return None
 
     @property
     def command(self):
         try:
-            return self.service.command % self.context
+            return self.bare_command % self.context
         except KeyError:
-            log.error("Failed to render service command for service %s: %s",
-                      self.service.name, self.service.command)
+            msg = "Failed to render service command for service %s: %s"
+            log.error(msg % (self.service_name, self.bare_command))
 
         return None
 
@@ -297,10 +323,9 @@ class ServiceInstance(observer.Observer):
         self.start_action = None
 
     def stop(self):
-        self.machine.transition("stop")
-
-        if self.machine.state == self.STATE_STOPPING:
+        if self.machine.check('stop'):
             self.kill_instance()
+            return self.machine.transition("stop")
 
     def zap(self):
         self.machine.transition("stop")
@@ -328,107 +353,258 @@ class ServiceInstance(observer.Observer):
         return "SERVICE:%s" % self.id
 
 
+class ServiceInstanceCollection(object):
+    """A collection of ServiceInstances."""
+
+    def __init__(self, config, node_pool, context):
+        self.count              = config.count
+        self.config             = config
+        self.node_pool          = node_pool
+        self.instances          = []
+        self.context            = command_context.CommandContext(next=context)
+
+        self.instances_proxy    = proxy.CollectionProxy(
+            lambda: self.instances,
+            [
+                ('stop',    all,    True),
+                ('zap',     all,    True),
+                ('start',   all,    True)
+            ]
+        )
+
+    # TODO: test
+    def restore_state(self, instances_state_data):
+        """Restore state of the instances."""
+        created_instances = []
+        for state_data in instances_state_data:
+            node_name = state_data['node']
+            if node_name not in self.node_pool:
+                msg = "Failed to find node %s in node_pool for %s"
+                log.error(msg % (node_name, self.config.name))
+                continue
+
+            node            = self.node_pool[node_name]
+            instance_num    = state_data['instance_number']
+            instances_state = state_data['state']
+            instance        = ServiceInstance.from_state(
+                self.config, node, instance_num, self.context, instances_state)
+
+            created_instances.append(instance)
+            self.instances.append(instance)
+
+        self.instances.sort()
+        return created_instances
+
+    def clear_failed(self):
+        """Remove and cleanup any instances that have failed."""
+        self._clear(ServiceInstance.STATE_FAILED)
+
+    def clear_down(self):
+        self._clear(ServiceInstance.STATE_DOWN)
+
+    def _clear(self, state):
+        self.instances = [i for i in self.instances if i.state != state]
+
+    def get_failed(self):
+        return self._filter(ServiceInstance.STATE_FAILED)
+
+    def get_up(self):
+        return self._filter(ServiceInstance.STATE_UP)
+
+    def _filter(self, state):
+        return (i for i in self.instances if i.state == state)
+
+    def create_missing(self):
+        """Create instances until this collection contains the configured
+        number of instances.
+        """
+        created_instances = []
+        while self.missing:
+            instance = self.build_instance()
+            created_instances.append(instance)
+            self.instances.append(instance)
+        self.sort()
+        return created_instances
+
+    def sort(self):
+        self.instances.sort(key=operator.attrgetter('instance_number'))
+
+    def build_instance(self):
+        node                = self.node_pool.next_round_robin()
+        instance_number     = self.next_instance_number()
+        service_instance    = ServiceInstance.from_config(
+                                self.config, node, instance_number, self.context)
+        return service_instance
+
+    def next_instance_number(self):
+        """Return the next available instance number."""
+        instance_nums = set(inst.instance_number for inst in self.instances)
+        for num in xrange(self.count):
+            if num not in instance_nums:
+                return num
+
+    @property
+    def missing(self):
+        return self.count - len(self.instances)
+
+    @property
+    def state_data(self):
+        return [inst.state_data for inst in self.instances]
+
+    def __len__(self):
+        return len(self.instances)
+
+    def __getattr__(self, item):
+        return self.instances_proxy.perform(item)
+
+
+class ServiceMonitor(observer.Observer):
+    """Observe a service and restart it when it fails."""
+
+    def __init__(self, service, restart_interval):
+        self.service            = weakref.proxy(service)
+        self.restart_interval   = restart_interval
+        self.timer              = None
+
+    def start(self):
+        """Start watching the service.  If restart_interval is None then
+        there is no reason to start.
+        """
+        if self.restart_interval is not None:
+            self.watch(self.service)
+
+    def _restart_after_failure(self):
+        self._clear_timer()
+
+        if self.service.state in (Service.STATE_DEGRADED, Service.STATE_FAILED):
+            msg = "Restarting failed instances for service %s"
+            log.info(msg % self.service.name)
+            self.service.start()
+
+    def _clear_timer(self):
+        self.timer = None
+
+    def _set_restart_callback(self):
+        if self.timer:
+            return
+        func            = self._restart_after_failure
+        self.timer      = reactor.callLater(self.restart_interval, func)
+
+    def handle_service_state_change(self, _observable, event):
+        if event in (Service.STATE_DEGRADED, Service.STATE_FAILED):
+            self._set_restart_callback()
+
+        if event == Service.STATE_STARTING:
+            self._clear_timer()
+
+    handler = handle_service_state_change
+
+
 class Service(observer.Observable, observer.Observer):
-    # For comparing equality, we check these fields
-    COMPARE_ATTRIBUTES = ['name', 'command', 'node_pool', 'count',
-                          'monitor_interval', 'pid_file_template']
 
     class ServiceState(NamedEventState):
         """Named event state subclass for services"""
 
-    STATE_DOWN = ServiceState("down")
-
-    STATE_UP = ServiceState("up")
-
-    STATE_DEGRADED = ServiceState("degraded")
-
-    STATE_STOPPING = ServiceState("stopping", all_down=STATE_DOWN)
-
-    STATE_FAILED = ServiceState("failed")
-
-    STATE_STARTING = ServiceState("starting",
-                                  all_up=STATE_UP,
-                                  failed=STATE_DEGRADED,
-                                  stop=STATE_STOPPING)
+    STATE_DOWN          = ServiceState("down")
+    STATE_UP            = ServiceState("up")
+    STATE_DEGRADED      = ServiceState("degraded")
+    STATE_STOPPING      = ServiceState("stopping",
+                            all_down=STATE_DOWN)
+    STATE_FAILED        = ServiceState("failed")
+    STATE_STARTING      = ServiceState("starting",
+                            all_up=STATE_UP,
+                            failed=STATE_DEGRADED,
+                            stop=STATE_STOPPING)
 
     STATE_DOWN['start'] = STATE_STARTING
 
-    STATE_DEGRADED.update(dict(stop=STATE_STOPPING,
-                               all_up=STATE_UP,
-                               all_failed=STATE_FAILED))
+    STATE_DEGRADED.update(dict(
+                            stop=STATE_STOPPING,
+                            all_up=STATE_UP,
+                            all_failed=STATE_FAILED))
 
-    STATE_FAILED.update(dict(stop=STATE_STOPPING,
-                             up=STATE_DEGRADED,
-                             start=STATE_STARTING))
+    STATE_FAILED.update(dict(
+                            stop=STATE_STOPPING,
+                            up=STATE_DEGRADED,
+                            start=STATE_STARTING))
 
-    STATE_UP.update(dict(stop=STATE_STOPPING,
-                         failed=STATE_DEGRADED,
-                         down=STATE_DEGRADED))
+    STATE_UP.update(dict(
+                            stop=STATE_STOPPING,
+                            failed=STATE_DEGRADED,
+                            down=STATE_DEGRADED))
 
-    def __init__(self, name=None, command=None, node_pool=None, context=None,
-                 event_recorder=None, monitor_interval=None,
-                 restart_interval=None, pid_file_template=None, count=0):
+    def __init__(self, config, instance_collection):
         super(Service, self).__init__()
-        self.name = name
-        self.command = command
-        self.node_pool = node_pool
-        self.count = count
-        self.monitor_interval = monitor_interval
-        self.restart_interval = restart_interval
-        self._restart_timer = None
+        self.config             = config
+        self.name               = config.name
+        self.instances          = instance_collection
+        self.machine            = state.StateMachine(
+                                    Service.STATE_DOWN, delegate=self)
 
-        self.machine = state.StateMachine(Service.STATE_DOWN, delegate=self)
-
-        self.pid_file_template = pid_file_template
-
-        self.context = None
-        if context is not None:
-            self.set_context(context)
-
-        self.instances = []
-
-        self.event_recorder = event.EventRecorder(self, parent=event_recorder)
+        # TODO: fix up events, parent should be mcp
+        self.event_recorder = event.EventRecorder(self, parent=None)
         # TODO: this is a little weird, should get cleaned up
-        self.listen(True, self)
+        self.watch(self.machine)
 
     @classmethod
-    def from_config(cls, srv_config, node_pools):
-        return cls(
-            name=srv_config.name,
-            node_pool=node_pools[srv_config.node] if srv_config.node else None,
-            monitor_interval=srv_config.monitor_interval,
-            restart_interval=srv_config.restart_interval,
-            pid_file_template=srv_config.pid_file,
-            command=srv_config.command,
-            count=srv_config.count
-        )
+    def from_config(cls, config, node_pools, base_context):
+        node_pool           = node_pools[config.node] if config.node else None
+        instance_collection = ServiceInstanceCollection(
+                                config, node_pool, base_context)
+        service             = cls(config, base_context, instance_collection)
+
+        ServiceMonitor(service, config.restart_interval).start()
+        return service
 
     @property
     def state(self):
         return self.machine.state
 
-    @property
-    def listen(self):
-        return self.machine.attach
+    def start(self):
+        """Start the service."""
+        self.instances.clear_failed()
+        for instance in self.instances.create_missing():
+            self.watch(instance)
 
-    @property
-    def is_started(self):
-        """Indicate if the service has been started/initialized
+        return self.instances.start() and self.machine.transition("start")
 
-        For now we're going to decide this if we have instances or not. It
-        doesn't really correspond well to a "state", but it might at some point
-        need to be some sort of enable/disable thing.
-        """
-        return len(self.instances) > 0
+    def stop(self):
+        if not self.machine.transition("stop"):
+            return False
 
-    def set_context(self, context):
-        self.context = command_context.CommandContext(self, context)
+        if not self.instances.stop():
+            return False
+        return True
 
-    def _record_state_changes(self):
-        # If we no longer have a state machine, that means we no longer matter
-        if self.machine is None:
+    def zap(self):
+        """Force down the service."""
+        self.machine.transition("stop")
+        self.instances.zap()
+
+    def _handle_instance_state_change(self):
+        """Handle any changes to the state of this service's instances."""
+        self.instances.clear_down()
+
+        if not len(self.instances):
+            return self.machine.transition("all_down")
+
+        if any(self.instances.get_failed()):
+            self.machine.transition("failed")
+
+            if all(self.instances.get_failed()):
+                self.machine.transition("all_failed")
             return
 
+        if self.instances.missing:
+            msg = "Found %s instances are missing from %s."
+            log.warn(msg % (self.instances.missing, self.name))
+            return self.machine.transition("down")
+
+        if all(self.instances.get_up()):
+            return self.machine.transition("all_up")
+
+    def _record_state_changes(self):
+        """Record an event when the state changes."""
         if self.machine.state in (self.STATE_FAILED, self.STATE_DEGRADED):
             func = self.event_recorder.emit_critical
         elif self.machine.state in (self.STATE_UP, self.STATE_DOWN):
@@ -436,146 +612,13 @@ class Service(observer.Observable, observer.Observer):
         else:
             func = self.event_recorder.emit_info
 
-        if func:
-            func(str(self.machine.state))
-
-    def _clear_failed_instances(self):
-        """Remove and cleanup any instances that are no longer with us"""
-        self.instances = [inst for inst in self.instances
-                          if inst.state != ServiceInstance.STATE_FAILED]
-
-    def _restart_after_failure(self):
-        if self._restart_timer is None:
-            return
-
-        if self.state in (self.STATE_DEGRADED, self.STATE_FAILED):
-            log.info("Restarting failed instances for service %s", self.name)
-            self.start()
-        else:
-            self._restart_timer = None
-
-    def start(self):
-        # Clear out the restart timer, just to make sure we don't get any
-        # extraneous starts
-        self._restart_timer = None
-
-        # Start can really mean restart any failed or down instances.
-        # So first off, clear out any old instances that are of no use to us
-        # anymore
-        self._clear_failed_instances()
-
-        # Build all the new instances well need
-        needed_instances_count = self.count - len(self.instances)
-        if needed_instances_count > 0:
-            for _ in range(0, needed_instances_count):
-                self.build_instance()
-
-        self.machine.transition("start")
-
-    def stop(self):
-        self.machine.transition("stop")
-
-        for service_instance in self.instances:
-            service_instance.stop()
-
-        # Just in case we somehow ended up stuck with no instances, double
-        # check here for stop complete.
-        if self.state == self.STATE_STOPPING and not self.instances:
-            self.machine.transition("all_down")
-
-    def zap(self):
-        self.machine.transition("stop")
-
-        for service_instance in self.instances:
-            service_instance.zap()
-
-        if self.state == self.STATE_STOPPING and not self.instances:
-            self.machine.transition("all_down")
-
-    def _create_instance(self, node, instance_number):
-        service_instance = ServiceInstance(self, node, instance_number)
-        self.instances.append(service_instance)
-        self.instances.sort(key=lambda i: i.instance_number)
-        self.watch(service_instance)
-        return service_instance
-
-    def _find_unused_instance_number(self):
-        available_instance_numbers = (set(range(0, self.count)) -
-                                      set(instance.instance_number
-                                          for instance in self.instances))
-
-        if len(available_instance_numbers) == 0:
-            return None
-
-        return min(available_instance_numbers)
-
-    def build_instance(self):
-        node = self.node_pool.next_round_robin()
-
-        instance_number = self._find_unused_instance_number()
-
-        if instance_number is None:
-            log.error("Can't build a new service instance for %r. %d instances"
-                      " in use. Maybe try again later ?",
-                      self.name, self.count)
-            return None
-
-        service_instance = self._create_instance(node, instance_number)
-
-        # No reason not to start this guy right away, we don't keep 'down'
-        # instances around really.
-        service_instance.start()
-
-        return service_instance
-
-    def _instance_change(self):
-        """Handle any changes to our service's instances
-
-        This is the state change callback handler for all our instances.
-        Anytime an instance changes, we need to re-evaluate our own current
-        state.
-        """
-        #TODO: this can be improved now that we have a reference to
-        # the instance that changed
-
-        # Remove any downed instances
-        self.instances = [inst for inst in self.instances
-                          if inst.state != inst.STATE_DOWN]
-
-        # Now we can make some inferences about state changes based on our
-        # instances
-        if not self.instances:
-            self.machine.transition("all_down")
-
-        elif any([instance.state == ServiceInstance.STATE_FAILED
-                  for instance in self.instances]):
-            self.machine.transition("failed")
-
-            if all([instance.state == ServiceInstance.STATE_FAILED
-                    for instance in self.instances]):
-                self.machine.transition("all_failed")
-
-        elif len(self.instances) < self.count:
-            log.info("Only found %d instances rather than %d",
-                     len(self.instances), self.count)
-            self.machine.transition("down")
-
-        elif all(instance.state == ServiceInstance.STATE_UP
-                  for instance in self.instances):
-            self.machine.transition("all_up")
-
-        if self.machine.state in (Service.STATE_DEGRADED,
-                                  Service.STATE_FAILED):
-            # Start a restart timer if configure
-            if self.restart_interval is not None and not self._restart_timer:
-                self._restart_timer = reactor.callLater(
-                    self.restart_interval, self._restart_after_failure)
+        func(str(self.machine.state))
 
     def handler(self, observable, _event):
         if observable == self:
             return self._record_state_changes()
 
-        self._instance_change()
+        self._handle_instance_state_change()
 
     # TODO: clean this up
     def absorb_previous(self, prev_service):
@@ -585,6 +628,8 @@ class Service(observer.Observable, observer.Observer):
         # * Changing the node pool
         # * Changes to the context ?
         # * Restart counts for downed services ?
+
+
         assert self.node_pool, "Missing node pool for %s" % self.name
         removed_instances = 0
 
@@ -615,7 +660,7 @@ class Service(observer.Observable, observer.Observer):
 
         prev_service.instances = []
 
-        self.instances.sort(key=lambda i: i.instance_number)
+        self.instances.sort()
 
         current_instances = [i for i in self.instances if i.state not in
                              (ServiceInstance.STATE_STOPPING,
@@ -624,7 +669,7 @@ class Service(observer.Observable, observer.Observer):
 
         # Now that we've inherited some instances, let's trigger an update to
         # our state machine.
-        self._instance_change()
+        self._handle_instance_state_change()
 
         # We have special handling for node pool changes. This would cover the
         # case of removing (or subsituting) a node in a pool which would
@@ -674,65 +719,34 @@ class Service(observer.Observable, observer.Observer):
                 service_instance.stop()
                 removed_instances += 1
 
-        # Now make adjustments to how many there are
-        while len(self.instances) < self.count:
-            self.build_instance()
-
+        self.instances.create_missing()
         self.event_recorder.emit_notice("reconfigured")
 
     @property
     def state_data(self):
-        """This data is used to serialize the state of this service."""
-        data = {
-            'state': str(self.machine.state),
-            'instances': [instance.state_data for instance in self.instances]
+        """Data used to serialize the state of this service."""
+        return {
+            # TODO: this state is probably not useful, since it is
+            # derived from the states of instances. Remove it
+            'state':        str(self.machine.state),
+            'instances':    self.instances.state_data
         }
-        return data
 
     def restore_service_state(self, service_state_data):
-        """Restore state of this service from datafile"""
-        # The state of a service is more easier than for jobs. There are just a
-        # few things we want to guarantee:
-        #  1. If service instances are up, they can continue to be up. We'll
-        #     just start monitoring from where we left off.
-        #  2. Failures are maintained and have to be cleared.
-
-        # Start our machine from where it left off
-        self.machine.state = state.named_event_by_name(Service.STATE_DOWN,
-                                                   service_state_data['state'])
-
-        if self.machine.state in (Service.STATE_DOWN, Service.STATE_FAILED):
-            self.event_recorder.emit_info("restored")
-            return
-
-        # Restore all the instances
-        # We're going to just indicate they are up and start a monitor
-        for instance in service_state_data['instances']:
-            try:
-                node = self.node_pool[instance['node']]
-            except KeyError:
-                log.error("Failed to find node %s in pool for %s",
-                          instance['node'],
-                          self.name)
-                continue
-
-            service_instance = self._create_instance(
-                node, instance['instance_number'])
-            service_instance.machine.state = ServiceInstance.STATE_MONITORING
-            service_instance._run_monitor()
-
-        self.instances.sort(key=lambda i: i.instance_number)
+        """Restore state of this service. If service instances are up,
+        restart monitoring.
+        """
+        instance_state_data = service_state_data['instances']
+        for instance in self.instances.restore_state(instance_state_data):
+            self.watch(instance)
+        self._handle_instance_state_change()
         self.event_recorder.emit_info("restored")
 
     def __eq__(self, other):
         if other is None or not isinstance(other, Service):
             return False
 
-        for attr_name in self.COMPARE_ATTRIBUTES:
-            if getattr(self, attr_name) != getattr(other, attr_name):
-                return False
-
-        return True
+        return self.config == other.config
 
     def __str__(self):
         return "SERVICE:%s" % self.name

@@ -166,7 +166,7 @@ class MasterControlProgram(Observable):
         services_to_add = []
         for srv_config in srv_configs.values():
             log.debug("Building new services %s", srv_config.name)
-            service = Service.from_config(srv_config, self.nodes)
+            service = Service.from_config(srv_config, self.nodes, self.context)
             services_to_add.append(service)
 
         for srv_name in (set(self.services.keys()) - set(srv_configs.keys())):
@@ -254,7 +254,6 @@ class MasterControlProgram(Observable):
             return
 
         log.info("(re)adding service %s", service.name)
-        service.set_context(self.context)
         service.event_recorder.set_parent(self.event_recorder)
 
         # Trigger storage on any state changes
