@@ -173,6 +173,7 @@ class MasterControlProgram(Observable):
             log.debug("Removing service %s", srv_name)
             self.remove_service(srv_name)
 
+        # TODO: remove this
         # Go through our constructed services and add them. We'll catch all the
         # failures and throw an exception at the end if anything failed. This
         # is a mitigation against a bug easily cause us to be in an
@@ -212,12 +213,12 @@ class MasterControlProgram(Observable):
             if job == self.jobs[job.name].job:
                 return
 
-            log.info("re-adding job %s", job.name)
+            log.info("Updating job %s", job.name)
             self.jobs[job.name].job.update_from_job(job)
             self.jobs[job.name].schedule_reconfigured()
             return
 
-        log.info("adding new job %s", job.name)
+        log.info("Adding new job %s", job.name)
         self.jobs[job.name] = JobScheduler(job)
         self.event_manager.add(job, parent=self)
         self.state_manager.watch(job, Job.NOTIFY_STATE_CHANGE)
@@ -245,23 +246,19 @@ class MasterControlProgram(Observable):
         return self.jobs.get(name)
 
     def add_service(self, service):
-        if service.name in self.jobs:
-            raise ValueError("Service %s is already a job", service.name)
+        """Add a new service or update an existing service."""
+        if service.name in self.services:
+            # No change to configuration of the service
+            if service == self.services[service.name]:
+                return
 
-        prev_service = self.services.get(service.name)
-
-        if service == prev_service:
+            log.info("Updating service %s" % service.name)
+            self.services[service.name].update_from_service(service)
             return
 
-        log.info("(re)adding service %s", service.name)
-        service.event_recorder.set_parent(self.event_recorder)
-
-        # Trigger storage on any state changes
-        self.state_manager.watch(service.machine)
+        log.info("Adding new service %s" % service.name)
         self.services[service.name] = service
-
-        if prev_service is not None:
-            service.absorb_previous(prev_service)
+        self.state_manager.watch(service.machine)
 
     def remove_service(self, service_name):
         if service_name not in self.services:

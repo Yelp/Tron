@@ -1,4 +1,3 @@
-import collections
 import logging
 
 from twisted.internet import reactor
@@ -395,6 +394,10 @@ class ServiceInstanceCollection(object):
         self.instances.sort()
         return created_instances
 
+    def update_config(self, config):
+        self.config         = config
+        self.count          = config.count
+
     def clear_failed(self):
         """Remove and cleanup any instances that have failed."""
         self._clear(ServiceInstance.STATE_FAILED)
@@ -419,7 +422,7 @@ class ServiceInstanceCollection(object):
         number of instances.
         """
         created_instances = []
-        while self.missing:
+        while self.missing > 0:
             instance = self.build_instance()
             created_instances.append(instance)
             self.instances.append(instance)
@@ -430,6 +433,8 @@ class ServiceInstanceCollection(object):
         self.instances.sort(key=operator.attrgetter('instance_number'))
 
     def build_instance(self):
+        # TODO: shouldn't this check which nodes are not used to properly
+        # balance across nodes?
         node                = self.node_pool.next_round_robin()
         instance_number     = self.next_instance_number()
         service_instance    = ServiceInstance.from_config(
@@ -446,6 +451,10 @@ class ServiceInstanceCollection(object):
     @property
     def missing(self):
         return self.count - len(self.instances)
+
+    @property
+    def extra(self):
+        return len(self.instances) - self.count
 
     @property
     def state_data(self):
@@ -540,10 +549,11 @@ class Service(observer.Observable, observer.Observer):
         self.instances          = instance_collection
         self.machine            = state.StateMachine(
                                     Service.STATE_DOWN, delegate=self)
+        self.monitor            = None
 
         # TODO: fix up events, parent should be mcp
         self.event_recorder = event.EventRecorder(self, parent=None)
-        # TODO: this is a little weird, should get cleaned up
+
         self.watch(self.machine)
 
     @classmethod
@@ -553,7 +563,8 @@ class Service(observer.Observable, observer.Observer):
                                 config, node_pool, base_context)
         service             = cls(config, base_context, instance_collection)
 
-        ServiceMonitor(service, config.restart_interval).start()
+        service.monitor     = ServiceMonitor(service, config.restart_interval)
+        service.monitor.start()
         return service
 
     @property
@@ -620,107 +631,24 @@ class Service(observer.Observable, observer.Observer):
 
         self._handle_instance_state_change()
 
-    # TODO: clean this up
-    def absorb_previous(self, prev_service):
-        # Some changes we need to worry about:
-        # * Changing instance counts
-        # * Changing the command
-        # * Changing the node pool
-        # * Changes to the context ?
-        # * Restart counts for downed services ?
+    def update_from_service(self, service):
+        """Update this service from the new config."""
+        old_config, self.config  = self.config, service.config
+        self.instances.update_config(service.config)
 
+        if service.config.restart_interval != old_config.restart_interval:
+            self.monitor.stop_watching(self)
+            self.monitor = ServiceMonitor(self, service.config.restart_interval)
 
-        assert self.node_pool, "Missing node pool for %s" % self.name
-        removed_instances = 0
+        diff_node_pool = service.instances.node_pool != self.instances.node_pool
+        diff_command   = service.config.command      != old_config.command
+        diff_count     = service.config.count        != old_config.count
+        if diff_node_pool or diff_command or diff_count:
+            self.instances.node_pool = service.instances.node_pool
+            self.stop()
 
-        rebuild_all_instances = any([
-            self.command != prev_service.command,
-            self.pid_file_template != prev_service.pid_file_template])
-
-        # Since we are inheriting all the existing instances, it's safe to also
-        # inherit the previous state machine as well.
-        self.machine = prev_service.machine
-
-        # To permanently disable the older service, remove it's machine.
-        prev_service.machine = None
-
-        # Copy over all the old instances
-        self.instances += prev_service.instances
-        for service_instance in prev_service.instances:
-            service_instance.machine.clear_observers()
-            self.watch(service_instance)
-
-            if rebuild_all_instances:
-                # For some configuration changes, we'll just stop all the
-                # previous instances. When those services stop, we should be in
-                # a degraded mode, triggering a restart of the newer generation
-                # of instances.
-                service_instance.stop()
-                removed_instances += 1
-
-        prev_service.instances = []
-
-        self.instances.sort()
-
-        current_instances = [i for i in self.instances if i.state not in
-                             (ServiceInstance.STATE_STOPPING,
-                              ServiceInstance.STATE_DOWN,
-                              ServiceInstance.STATE_FAILED)]
-
-        # Now that we've inherited some instances, let's trigger an update to
-        # our state machine.
-        self._handle_instance_state_change()
-
-        # We have special handling for node pool changes. This would cover the
-        # case of removing (or subsituting) a node in a pool which would
-        # require rebalancing services.
-
-        if self.node_pool != prev_service.node_pool:
-            # How many instances per node should we have ?
-            optimal_instances_per_node = self.count / len(self.node_pool.nodes)
-            instance_count_per_node = collections.defaultdict(int)
-
-            for service_instance in current_instances:
-                # First we'll stop any instances on nodes that are no longer
-                # part of our pool
-                try:
-                    hostname = service_instance.node.hostname
-                    service_instance.node = self.node_pool[hostname]
-                except KeyError:
-                    log.info("Stopping instance %r because it's not on a"
-                             " current node (%r)",
-                             service_instance.id,
-                             service_instance.node.hostname)
-                    service_instance.stop()
-                    removed_instances += 1
-                    continue
-
-                instance_count_per_node[service_instance.node] += 1
-                if (instance_count_per_node[service_instance.node] >
-                        optimal_instances_per_node):
-                    log.info("Stopping instance %r because node %s has too"
-                             " many instances",
-                             service_instance.id,
-                             service_instance.node.hostname)
-                    service_instance.stop()
-                    removed_instances += 1
-                    continue
-
-        current_instances = [i for i in self.instances if i.state not in
-                             (ServiceInstance.STATE_STOPPING,
-                              ServiceInstance.STATE_DOWN,
-                              ServiceInstance.STATE_FAILED)]
-
-        count_to_remove = ((len(self.instances) - removed_instances) -
-                           self.count)
-        if count_to_remove > 0:
-            instances_to_remove = current_instances[-count_to_remove:]
-            for service_instance in instances_to_remove:
-                service_instance.stop()
-                removed_instances += 1
-
-        self.instances.create_missing()
-        self.event_recorder.emit_notice("reconfigured")
+        # TODO: can this auto-restart the instances that need to start?
+        self.monitor.start()
 
     @property
     def state_data(self):
