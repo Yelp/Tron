@@ -106,7 +106,7 @@ class Service(observer.Observer):
         node_pool           = node_pools[config.node] if config.node else None
         instance_collection = serviceinstance.ServiceInstanceCollection(
                                 config, node_pool, base_context)
-        service             = cls(config, base_context, instance_collection)
+        service             = cls(config, instance_collection)
 
         service.monitor     = ServiceMonitor(service, config.restart_interval)
         service.monitor.start()

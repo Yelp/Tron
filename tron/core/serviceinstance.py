@@ -28,11 +28,13 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
 
     def __init__(self, id, node, interval, pid_filename):
         super(ServiceInstanceMonitorTask, self).__init__()
-        self.interval       = interval or 0
-        self.node           = node
-        self.id             = id
-        self.pid_filename   = pid_filename
-        self.action         = None
+        self.interval               = interval or 0
+        self.node                   = node
+        self.id                     = id
+        self.pid_filename           = pid_filename
+        self.action                 = None
+        self.callback               = None
+        self.hang_check_callback    = None
 
     def queue(self):
         """Queue this task to run after monitor_interval."""
@@ -44,11 +46,8 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
         """Run the monitoring command."""
         self.callback = None
 
-        # TODO: do we really need this?
-        # TODO: this could happen if the monitor_interval is set to less then
-        # MIN_HANG_CHECK_SECONDS (10) and the monitor action is hanging
         if self.action:
-            log.warning("Monitor action already exists, old callLater ?")
+            log.warning("Monitor action already exists.")
             return
 
         self.notify(self.NOTIFY_START)
@@ -107,11 +106,12 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
 
     def _handle_action_exit(self):
         log.debug("Monitor callback with exit %r" % self.action.exit_status)
-        self.action = None
         if self.action.exit_status:
             self.notify(self.NOTIFY_DOWN)
+            self.action = None
             return
 
+        self.action = None
         self.notify(self.NOTIFY_UP)
         self.queue()
 
