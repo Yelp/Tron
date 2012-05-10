@@ -33,7 +33,7 @@ class ActionRunContextTestCase(TestCase):
         action_run = turtle.Turtle(
             id="runid",
             node=turtle.Turtle(hostname="nodename"),
-            run_time=self.now
+            job_run_time=self.now
         )
         self.context = ActionRunContext(action_run)
 
@@ -99,7 +99,7 @@ class ActionRunFactoryTestCase(TestCase):
         assert_length(collection.run_map, 2)
         assert_equal(collection.run_map['act1'].action_name, 'act1')
         assert_equal(collection.run_map['cleanup'].action_name, 'cleanup')
-        assert_equal(collection.run_map['act1'].run_time,
+        assert_equal(collection.run_map['act1'].job_run_time,
                 self.action_state_data['run_time'])
 
     def test_build_run_for_action(self):
@@ -108,7 +108,7 @@ class ActionRunFactoryTestCase(TestCase):
         action_run = ActionRunFactory.build_run_for_action(self.job_run, action)
 
         assert_equal(action_run.job_run_id, self.job_run.id)
-        assert_equal(action_run.run_time, self.run_time)
+        assert_equal(action_run.job_run_time, self.run_time)
         assert_equal(action_run.node, self.job_run.node)
         assert_equal(action_run.action_name, action.name)
         assert not action_run.is_cleanup
@@ -119,7 +119,7 @@ class ActionRunFactoryTestCase(TestCase):
         action_run = ActionRunFactory.build_run_for_action(self.job_run, action)
 
         assert_equal(action_run.job_run_id, self.job_run.id)
-        assert_equal(action_run.run_time, self.run_time)
+        assert_equal(action_run.job_run_time, self.run_time)
         assert_equal(action_run.node, action.node_pool.next.returns[0])
         assert action_run.is_cleanup
         assert_equal(action_run.action_name, action.name)
@@ -131,7 +131,7 @@ class ActionRunFactoryTestCase(TestCase):
                 self.job_run, state_data)
 
         assert_equal(action_run.job_run_id, state_data['job_run_id'])
-        assert_equal(action_run.run_time, state_data['run_time'])
+        assert_equal(action_run.job_run_time, state_data['run_time'])
         assert not action_run.is_cleanup
 
 
@@ -363,6 +363,8 @@ class ActionRunStateRestoreTestCase(TestCase):
         for key, value in self.state_data.iteritems():
             if key in ['state', 'node_name']:
                 continue
+            if key == 'run_time':
+                key = 'job_run_time'
             assert_equal(getattr(action_run, key), value)
 
         assert action_run.is_succeeded

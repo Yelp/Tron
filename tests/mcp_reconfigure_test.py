@@ -21,6 +21,9 @@ class MCPReconfigureTest(TestCase):
             dict(name='node1', hostname='batch1'),
         ],
         node_pools=[dict(name='nodePool', nodes=['node0', 'node1'])],
+        command_context={
+            'thischanges': 'froma'
+        },
         jobs=[
             dict(
                 name='test_unchanged',
@@ -77,7 +80,8 @@ class MCPReconfigureTest(TestCase):
         ],
         node_pools=[dict(name='nodePool', nodes=['node0', 'node1'])],
         command_context={
-            'a_variable': 'is_constant'
+            'a_variable': 'is_constant',
+            'thischanges': 'tob'
         },
         jobs=[
             dict(
@@ -174,6 +178,7 @@ class MCPReconfigureTest(TestCase):
         assert_equal(job_sched.job.runs.runs[0], run1)
         assert run1.is_scheduled
         assert_equal(job_sched.job.context['a_variable'], 'is_constant')
+        assert_equal(job_sched.job.context['thischanges'], 'tob')
 
     @suite('integration')
     def test_job_removed(self):

@@ -59,7 +59,7 @@ class ActionRunAdapter(RunAdapter):
 
     field_names = [
             'id',
-            'run_time',
+            'job_run_time',
             'start_time',
             'end_time',
             'exit_status'

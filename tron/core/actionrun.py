@@ -45,7 +45,7 @@ class ActionRunContext(object):
 
     def __getitem__(self, name):
         """Attempt to parse date arithmetic syntax and apply to run_time."""
-        run_time = self.action_run.run_time
+        run_time = self.action_run.job_run_time
         time_value = timeutils.DateArithmetic.parse(name, run_time)
         if time_value:
             return time_value
@@ -160,6 +160,7 @@ class ActionRun(Observer):
          STATE_UNKNOWN)
     )
 
+    # Failed render command is false to ensure that it will fail when run
     FAILED_RENDER = 'false'
 
     def __init__(self, job_run_id, name, node, run_time, bare_command=None,
@@ -169,7 +170,7 @@ class ActionRun(Observer):
         self.job_run_id         = job_run_id
         self.action_name        = name
         self.node               = node
-        self.run_time           = run_time      # parent JobRun start time
+        self.job_run_time       = run_time      # parent JobRun start time
         self.start_time         = start_time    # ActionRun start time
         self.end_time           = end_time
         self.exit_status        = None
@@ -317,7 +318,7 @@ class ActionRun(Observer):
             'job_run_id':       self.job_run_id,
             'action_name':      self.action_name,
             'state':            str(self.state),
-            'run_time':         self.run_time,
+            'run_time':         self.job_run_time,
             'start_time':       self.start_time,
             'end_time':         self.end_time,
             'command':          command,
