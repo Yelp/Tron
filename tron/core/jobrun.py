@@ -62,14 +62,13 @@ class JobRun(Observable, Observer):
         self.output_path.append(self.id)
         self.start_time         = start_time
         self.end_time           = end_time
-        self.action_runs        = None
         self.action_runs_proxy  = None
         self.action_graph       = action_graph
         # TODO: expose this through the api
         self.manual             = manual
 
         if action_runs:
-            self.register_action_runs(action_runs)
+            self.action_runs    = action_runs
 
         context = JobRunContext(self)
         self.context = command_context.CommandContext(context, base_context)
@@ -84,8 +83,8 @@ class JobRun(Observable, Observer):
         run = cls(job.name, run_num, run_time, node, job.output_path.clone(),
                 job.context, action_graph=job.action_graph, manual=manual)
 
-        action_runs = ActionRunFactory.build_action_run_collection(run)
-        run.register_action_runs(action_runs)
+        action_runs     = ActionRunFactory.build_action_run_collection(run)
+        run.action_runs = action_runs
         return run
 
     @classmethod
@@ -115,7 +114,7 @@ class JobRun(Observable, Observer):
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
                 job_run, state_data['runs'], state_data['cleanup_run'])
-        job_run.register_action_runs(action_runs)
+        job_run.action_runs = action_runs
         return job_run
 
     @property
@@ -133,11 +132,15 @@ class JobRun(Observable, Observer):
             'manual':           self.manual,
         }
 
-    def register_action_runs(self, run_collection):
+    def _get_action_runs(self):
+        return self._action_runs
+
+    def _set_action_runs(self, run_collection):
         """Store action runs and register callbacks."""
-        if self.action_runs:
+        if hasattr(self, '_action_runs'):
             raise ValueError("ActionRunCollection already set on %s" % self)
-        self.action_runs = run_collection
+
+        self._action_runs = run_collection
         for action_run in run_collection.action_runs_with_cleanup:
             self.watch(action_run)
 
@@ -159,6 +162,11 @@ class JobRun(Observable, Observer):
                 'is_skipped',
                 'is_starting',
             ])
+
+    def _del_action_runs(self):
+        del self._action_runs
+
+    action_runs = property(_get_action_runs, _set_action_runs, _del_action_runs)
 
     def seconds_until_run_time(self):
         run_time = self.run_time
@@ -246,7 +254,7 @@ class JobRun(Observable, Observer):
         event.EventManager.get_instance().remove(self)
         self.node = None
         self.action_graph = None
-        self.action_runs = None
+        del self.action_runs
         self.clear_observers()
         self.output_path.delete()
 

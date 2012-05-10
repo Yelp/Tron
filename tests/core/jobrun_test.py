@@ -79,28 +79,28 @@ class JobRunTestCase(TestCase):
         assert not state_data['manual']
         assert_equal(state_data['run_time'], self.run_time)
 
-    def test_register_action_runs(self):
-        self.job_run.action_runs = None
+    def test_set_action_runs(self):
+        del self.job_run.action_runs
         action_runs = [Turtle(), Turtle()]
         run_collection = Turtle(action_runs_with_cleanup=action_runs)
-        self.job_run.register_action_runs(run_collection)
+        self.job_run._set_action_runs(run_collection)
         assert_length(self.job_run.watch.calls, 2)
         for i in xrange(2):
             assert_call(self.job_run.watch, i, action_runs[i])
         assert_equal(self.job_run.action_runs, run_collection)
         assert self.job_run.action_runs_proxy
 
-    def test_register_action_runs_none(self):
-        self.job_run.action_runs = None
+    def test_set_action_runs_none(self):
+        del self.job_run.action_runs
         run_collection = Turtle(action_runs_with_cleanup=[])
-        self.job_run.register_action_runs(run_collection)
+        self.job_run._set_action_runs(run_collection)
         assert_length(self.job_run.watch.calls, 0)
         assert_equal(self.job_run.action_runs, run_collection)
 
-    def test_register_action_duplicate(self):
+    def test_set_action_runs_duplicate(self):
         run_collection = Turtle(action_runs_with_cleanup=[])
         assert_raises(ValueError,
-                self.job_run.register_action_runs, run_collection)
+            self.job_run._set_action_runs, run_collection)
 
     def test_seconds_until_run_time(self):
         now = datetime.datetime(2012, 3, 14, 15, 9, 20)
@@ -270,7 +270,7 @@ class JobRunTestCase(TestCase):
         assert_call(self.job_run.output_path.delete, 0)
         assert not self.job_run.node
         assert not self.job_run.action_graph
-        assert not self.job_run.action_runs
+        assert not hasattr(self.job_run, '_action_runs')
 
     def test__getattr__(self):
         assert self.job_run.cancel
