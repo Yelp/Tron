@@ -1,4 +1,5 @@
 import logging
+from tron.utils.observer import Observable
 
 
 class Error(Exception):
@@ -17,9 +18,8 @@ log = logging.getLogger(__name__)
 
 
 class NamedEventState(dict):
-    """Simple state type that allows you to easily use a dictionary for a state
-    implementation. A raw dictionary works fine as well, but this might be more
-    clear, plus it gives you a name.
+    """A dict like object with a name that acts as a state. The dict stores
+    valid transition actions and the destination state.
     """
 
     def __init__(self, name, short_name=None, short_chars=4, **kwargs):
@@ -33,6 +33,9 @@ class NamedEventState(dict):
             return self.name == other.name
         except AttributeError:
             return False
+
+    def __hash__(self):
+        return hash(self.name)
 
     def __nonzero__(self):
         return bool(self.name)
@@ -72,7 +75,7 @@ def named_event_by_name(starting_state, state_name):
     raise ValueError(state_name)
 
 
-class StateMachine(object):
+class StateMachine(Observable):
     """StateMachine is a class that can be used for managing state machines.
 
     A state machine is made up of a State() and a target. The target is the
@@ -83,11 +86,12 @@ class StateMachine(object):
     transitioning to other states based on the target.
     """
 
-    def __init__(self, initial_state):
+    def __init__(self, initial_state, delegate=None):
+        super(StateMachine, self).__init__()
         self.initial_state = initial_state
         self.state = self.initial_state
-        self._listeners = list()
         self._state_by_name = None
+        self.delegate = delegate
 
 
     def check(self, target):
@@ -114,63 +118,19 @@ class StateMachine(object):
         log.debug("Transitioning from state %r to %r", self.state, next_state)
 
         # Check if we are doing some circular transition.
-        # TODO: There might be some users who actually want this functionality,
-        # as moving to other states could automatically cause a transition back
-        # to the start. But let's add support for that later.
-
         if stop_item is not None and next_state is stop_item:
             raise CircularTransitionError()
 
         self.state = next_state
-        self.notify()
+        self.notify(self.state)
 
-        # We always call recursivly after a state change incase there are
+        # We always call recursively after a state change incase there are
         # multiple steps to take.
-        # TODO: We may want to make this optional
         self.transition(target, stop_item=(stop_item or prev_state))
-
         return True
 
-    def listen(self, listen_spec, callback):
-
-        """Listen for the specific state or set of states and callback on the
-        function provided.
-
-        The callback is called AFTER the state transition has been made.
-
-        Listener Spec matches on:
-         True - Matches everything
-         Specific state - Matches only that state
-         List of states - Matches any of the states
-        """
-        self._listeners.append((listen_spec, callback))
-
-    def clear_listeners(self, listen_spec=None):
-        self._listeners = [(l, c) for l, c in self._listeners
-                           if listen_spec is not None and listen_spec != l]
-
-    def _listener_spec_match(self, listen_spec):
-        """Does the specified listener specification match the current state.
-
-        See listen() for more details.
-        """
-        if listen_spec is True:
-            return True
-
-        if self.state == listen_spec:
-            return True
-
-        try:
-            if self.state in listen_spec:
-                return True
-        except TypeError:
-            pass
-
-        return False
-
-    def notify(self):
-        log.debug("Notifying listeners for new state %r", self.state)
-        matched_listeners = [listener for spec, listener in self._listeners
-                             if self._listener_spec_match(spec)]
-        for listener in matched_listeners:
-            listener()
+    def notify(self, event):
+        """Notify observers."""
+        watched = self.delegate if self.delegate else self
+        for handler in self._get_handlers_for_event(event):
+            handler.handler(watched, event)

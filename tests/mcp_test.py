@@ -1,74 +1,126 @@
 import datetime
+import os
 import shutil
 import StringIO
 import tempfile
 
-from testify import *
+from testify import TestCase, class_setup, class_teardown, setup, teardown
+from testify import assert_raises, assert_equal, suite, run
 from testify.utils import turtle
+import time
+import yaml
+from tests.assertions import assert_length
+from tests.mocks import MockNode
+import tron
+from tron.config import config_parse
 
-from tests import testingutils
+from tron.core import job, actionrun
+from tron import mcp, scheduler, event, node, service
 from tron.utils import timeutils
-from tron import mcp, job, action, scheduler
 
 
-class TestStateHandler(TestCase):
+class StateHandlerIntegrationTestCase(TestCase):
     @class_setup
-    def class_setup(self):
+    def class_setup_time(self):
         timeutils.override_current_time(datetime.datetime.now())
         self.now = timeutils.current_time()
 
     @class_teardown
-    def class_teardown(self):
+    def class_teardown_time(self):
         timeutils.override_current_time(None)
 
+    def _advance_run(self, job_run, state):
+        for action_run in job_run.action_runs:
+            action_run.machine.state = state
+
+    def _create_runs(self, job_sched):
+        # Advance first run to succeeded
+        run0 = job_sched.get_runs_to_schedule().next()
+        self._advance_run(run0, actionrun.ActionRun.STATE_SUCCEEDED)
+
+        # Advance second run to failure
+        run1 = job_sched.get_runs_to_schedule().next()
+        self._advance_run(run1, actionrun.ActionRun.STATE_FAILED)
+
+        job_sched.get_runs_to_schedule().next()
+
+    def _build_job_sched(self, name):
+        """Create a JobScheduler with a name."""
+        sched = scheduler.IntervalScheduler(interval=datetime.timedelta(30))
+        config = {
+            'name': name,
+            'node': 'localhost',
+            'schedule': 'interval 13s',
+            'actions': [
+                {
+                    'name': 'task0',
+                    'command': "echo do",
+                },
+            ]
+        }
+        job0 = job.Job.from_config(config_parse.valid_job(config), sched, {}, [])
+        job_sched = job.JobScheduler(job0)
+        return job_sched
+
+    def _build_service(self, name):
+        return service.Service(name)
+
+    def _load_state(self):
+        # This is sloppy, but necessary for now, until state writing is fixed
+        time.sleep(1)
+        with open(self.state_handler.get_state_file_path(), 'r') as fh:
+            return yaml.load(fh)
+
     @setup
-    def setup(self):
+    def setup_mcp(self):
         self.test_dir = tempfile.mkdtemp()
+        node.NodePoolStore.get_instance().put(MockNode("localhost"))
         self.mcp = mcp.MasterControlProgram(self.test_dir, "config")
         self.state_handler = self.mcp.state_handler
-        self.action = action.Action("Test Action")
-
-        self.action.command = "Test command"
-        self.action.queueing = True
-        self.action.node = turtle.Turtle()
-        self.job = job.Job("Test Job", self.action)
-        self.job.output_path = self.test_dir
-
-        self.job.node_pool = turtle.Turtle()
-        self.job.scheduler = scheduler.IntervalScheduler(datetime.timedelta(seconds=5))
-        self.action.job = self.job
+        for job_name in ['job1', 'job2']:
+            self.mcp.jobs[job_name] = self._build_job_sched(job_name)
+        self.mcp.services['service1'] = self._build_service('service1')
+        self.state_handler.writing_enabled = True
 
     @teardown
-    def teardown(self):
+    def teardown_mcp(self):
         shutil.rmtree(self.test_dir)
+        event.EventManager.get_instance().clear()
 
-    def test_reschedule(self):
-        def callNow(sleep, func, run):
-            raise NotImplementedError(sleep)
-
-        self.job.next_runs()
-        #callLate = reactor.callLater
-        #reactor.callLater = callNow
-
-        #try:
-        #    self.state_handler._reschedule(run)
-        #    assert False
-        #except NotImplementedError as sleep:
-        #    assert_equals(sleep, 0)
-#
-        #try:
-        #    self.state_handler._reschedule(run)
-        #    assert False
-        #except NotImplementedError as sleep:
-        #    assert_equals(sleep, 5)
-#
-        #reactor.callLater = callLate
-
+    @suite('integration')
     def test_store_data(self):
-        pass
+        self._create_runs(self.mcp.jobs['job1'])
+        self._create_runs(self.mcp.jobs['job2'])
+        self.mcp.state_handler.store_state()
 
+        state_data = self._load_state()
+        tstamp = time.mktime(self.now.timetuple())
+        assert_equal(state_data['create_time'], tstamp)
+
+        assert_length(state_data['jobs'], 2)
+        assert_length(state_data['jobs']['job2']['runs'], 3)
+        run_states = [
+            r['runs'][0]['state'] for r in state_data['jobs']['job2']['runs']]
+        assert_equal(run_states, ['scheduled', 'failed', 'succeeded'])
+
+    @suite('integration')
+    def test_load_data_no_state_file(self):
+        assert not os.path.exists(self.state_handler.get_state_file_path())
+        assert not self.state_handler.load_data()
+
+    @suite('integration')
     def test_load_data(self):
-        pass
+        state_data = {
+            'version': tron.__version_info__,
+            'jobs': {'one': 1, 'two': 2},
+            'services': {'one': 'ONE', 'two': 'TWO'}
+        }
+
+        with open(self.state_handler.get_state_file_path(), 'w') as fh:
+            fh.write(yaml.dump(state_data))
+
+        loaded_data = self.state_handler.load_data()
+        assert_equal(loaded_data, state_data)
 
 
 class TestNoVersionState(TestCase):
@@ -93,6 +145,10 @@ sample_job:
         start_time: null
 """
         self.data_file = StringIO.StringIO(self.state_data)
+
+    @teardown
+    def teardown_mcp(self):
+        event.EventManager.get_instance().clear()
 
     def test(self):
         handler = mcp.StateHandler(turtle.Turtle(), "/tmp")
@@ -123,54 +179,36 @@ jobs:
 """
         self.data_file = StringIO.StringIO(self.state_data)
 
+    @teardown
+    def teardown_mcp(self):
+        event.EventManager.get_instance().clear()
+
     def test(self):
         handler = mcp.StateHandler(turtle.Turtle(), "/tmp")
         assert_raises(mcp.StateFileVersionError, handler._load_data_file, self.data_file)
 
-class TestMasterControlProgram(TestCase):
+
+class MasterControlProgramTestCase(TestCase):
 
     @setup
-    def build_actions(self):
-        self.test_dir = tempfile.mkdtemp()
-        self.action = action.Action("Test Action")
-        self.job = job.Job("Test Job", self.action)
-        self.job.output_path = self.test_dir
-        self.mcp = mcp.MasterControlProgram(self.test_dir, "config")
-        self.job.node_pool = testingutils.TestPool()
+    def setup_mcp(self):
+        self.working_dir = tempfile.mkdtemp()
+        config_file = tempfile.NamedTemporaryFile(dir=self.working_dir)
+        self.mcp = mcp.MasterControlProgram(self.working_dir, config_file.name)
 
     @teardown
-    def teardown(self):
-        shutil.rmtree(self.test_dir)
+    def teardown_mcp(self):
+        self.mcp.nodes.clear()
+        self.mcp.event_manager.clear()
+        shutil.rmtree(self.working_dir)
 
-    def test_schedule_next_run(self):
-        act = action.Action("Test Action")
-        jo = job.Job("Test Job", act)
-        jo.output_path = self.test_dir
-        jo.node_pool = testingutils.TestPool()
-        jo.scheduler = scheduler.DailyScheduler()
+    def test_ssh_options_from_config(self):
+        ssh_conf = turtle.Turtle(agent=False, identities=[])
+        ssh_options = self.mcp._ssh_options_from_config(ssh_conf)
 
-        act.job = jo
-        act.command = "Test command"
-        act.node = turtle.Turtle()
-
-        def call_now(time, func, next):
-            next.start()
-            next.action_runs[0].succeed()
-
-        callLater = mcp.reactor.callLater
-        mcp.reactor.callLater = call_now
-        try:
-            self.mcp.schedule_next_run(jo)
-        finally:
-            mcp.reactor.callLater = callLater
-        next = jo.runs[0]
-
-        assert_equals(len(filter(lambda r:r.is_success, jo.runs)), 1)
-        assert_equals(jo.topo_actions[0], next.action_runs[0].action)
-        assert next.action_runs[0].is_success
-        assert next.is_success
-
-
+        assert_equal(ssh_options['agent'], False)
+        assert_equal(ssh_options.identitys, [])
+        # TODO: tests with agent and identities
 
 if __name__ == '__main__':
     run()

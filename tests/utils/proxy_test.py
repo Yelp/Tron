@@ -35,7 +35,7 @@ class CollectionProxyTestCase(TestCase):
     @setup
     def setup_proxy(self):
         self.target_list = [DummyTarget(1), DummyTarget(2), DummyTarget(0)]
-        self.proxy = CollectionProxy(self.target_list, [
+        self.proxy = CollectionProxy(lambda: self.target_list, [
             ('foo', any, True),
             ('not_foo', all, False),
             ('equals', lambda a: list(a), True)
@@ -54,8 +54,9 @@ class CollectionProxyTestCase(TestCase):
         assert_raises(AttributeError, self.dummy.proxy.perform, 'bar')
 
     def test_perform_with_params(self):
-        assert_equal(self.proxy.perform('equals', 2)(), [False, True, False])
-        assert_equal(self.proxy.perform('equals', 3, sometimes=True)(), ['sometimes'] * 3)
+        assert_equal(self.proxy.perform('equals')(2), [False, True, False])
+        sometimes = ['sometimes'] * 3
+        assert_equal(self.proxy.perform('equals')(3, sometimes=True), sometimes)
 
 
 class AttributeProxyTestCase(TestCase):

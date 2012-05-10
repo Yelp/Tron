@@ -4,13 +4,14 @@ import sys
 from textwrap import dedent
 import time
 
-from testify import *
+from testify import TestCase, setup, teardown, assert_equal, assert_in, suite
+from testify import assert_gt
 
-from tests.sandbox import TronSandbox, TronSandboxException, wait_for_file_to_exist
+from tests.sandbox import TronSandbox, TronSandboxException
+from tests.sandbox import wait_for_file_to_exist
 
 
 BASIC_CONFIG = """
---- !TronConfiguration
 nodes:
   - name: local
     hostname: 'localhost'
@@ -31,7 +32,7 @@ DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
 
 TOUCH_CLEANUP_FMT = """
     cleanup_action:
-      command: "touch %s" """
+      command: "touch %s.%%(runid)s" """
 
 
 class SandboxTestCase(TestCase):
@@ -48,6 +49,7 @@ class SandboxTestCase(TestCase):
 
 class BasicTronTestCase(SandboxTestCase):
 
+    @suite('sandbox')
     def test_end_to_end_basic(self):
         # start with a basic configuration
         self.sandbox.save_config(SINGLE_ECHO_CONFIG)
@@ -59,18 +61,20 @@ class BasicTronTestCase(SandboxTestCase):
         canary = os.path.join(self.sandbox.tmp_dir, 'end_to_end_done')
         second_config = DOUBLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT % canary
         self.sandbox.upload_config(second_config)
-        assert_equal(self.sandbox.list_events()['data'][0]['name'], 'reconfig')
+        assert_equal(self.sandbox.list_events()['data'][0]['name'], 'restoring')
+        assert_equal(self.sandbox.list_events()['data'][1]['name'], 'run_created')
         assert_equal(self.sandbox.get_config(), second_config)
 
         expected = {'jobs': [
                 {
-                    'action_names': ['echo_action', 'another_echo_action'],
+                    'action_names': ['echo_action', 'cleanup', 'another_echo_action'],
                     'status': 'ENABLED',
                     'href': '/jobs/echo_job',
                     'last_success': None,
                     'name': 'echo_job',
                     'scheduler': 'INTERVAL:1:00:00',
                     'node_pool': ['localhost'],
+                    'runs': None
                 }
             ],
             'status_href': '/status',
@@ -86,25 +90,26 @@ class BasicTronTestCase(SandboxTestCase):
         self.sandbox.ctl('start', 'echo_job')
 
         try:
-            wait_for_file_to_exist(canary)
+            wait_for_file_to_exist(canary + '.echo_job.1.cleanup')
         except TronSandboxException:
             print >> sys.stderr, "trond appears to have crashed. Log:"
             print >> sys.stderr, self.sandbox.log_contents()
             raise
 
         echo_action_run = self.sandbox.list_action_run(
-            'echo_job', 2, 'echo_action')
+            'echo_job', 1, 'echo_action')
         another_echo_action_run = self.sandbox.list_action_run(
-            'echo_job', 2, 'another_echo_action')
+            'echo_job', 1, 'another_echo_action')
         assert_equal(echo_action_run['state'], 'SUCC')
         assert_equal(echo_action_run['stdout'], ['Echo!'])
         assert_equal(another_echo_action_run['state'], 'FAIL')
         assert_equal(another_echo_action_run['stdout'],
                      [datetime.datetime.now().strftime(
                          'Today is %Y-%m-%d, which is the same as %Y-%m-%d')])
-        assert_equal(self.sandbox.list_job_run('echo_job', 2)['state'],
+        assert_equal(self.sandbox.list_job_run('echo_job', 1)['state'],
                      'FAIL')
 
+    @suite('sandbox')
     def test_tronview_basic(self):
         self.sandbox.save_config(SINGLE_ECHO_CONFIG)
         self.sandbox.start_trond()
@@ -122,6 +127,7 @@ class BasicTronTestCase(SandboxTestCase):
             remove_line_space(expected)
         )
 
+    @suite('sandbox')
     def test_tronctl_basic(self):
         canary = os.path.join(self.sandbox.tmp_dir, 'tronctl_basic_done')
         self.sandbox.save_config(SINGLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT % canary)
@@ -129,11 +135,12 @@ class BasicTronTestCase(SandboxTestCase):
 
         # run the job and check its output
         self.sandbox.tronctl(['start', 'echo_job'])
-        wait_for_file_to_exist(canary)
+        wait_for_file_to_exist(canary + '.echo_job.1.cleanup')
 
         assert_equal(self.sandbox.list_action_run('echo_job', 1, 'echo_action')['state'], 'SUCC')
         assert_equal(self.sandbox.list_job_run('echo_job', 1)['state'], 'SUCC')
 
+    @suite('sandbox')
     def test_tronctl_service_zap(self):
         SERVICE_CONFIG = dedent("""
         nodes:
@@ -159,6 +166,7 @@ class BasicTronTestCase(SandboxTestCase):
         self.sandbox.tronctl(['zap', 'fake_service'])
         assert_equal('DOWN', self.sandbox.list_service('fake_service')['state'])
 
+    @suite('sandbox')
     def test_cleanup_on_failure(self):
         canary = os.path.join(self.sandbox.tmp_dir, 'end_to_end_done')
 
@@ -181,9 +189,10 @@ class BasicTronTestCase(SandboxTestCase):
 
         time.sleep(3)
 
-        assert os.path.exists(canary)
+        assert os.path.exists(canary + '.failjob.0.cleanup')
         assert_gt(len(self.sandbox.list_job('failjob')['runs']), 1)
 
+    @suite('sandbox')
     def test_skip_failed_actions(self):
         CONFIG = dedent("""
         nodes:
@@ -215,54 +224,10 @@ class BasicTronTestCase(SandboxTestCase):
         assert_equal(job_run['state'], 'SUCC')
 
 
-class SchedulerTestCase(SandboxTestCase):
-
-    QUEUE_CONFIG = dedent("""
-        --- !TronConfiguration
-        ssh_options:
-                agent: true
-        nodes:
-            - &local
-                hostname: 'localhost'
-        jobs:
-            - &echo_job
-                name: "delayed_echo_job"
-                node: *local
-                queueing: true
-                schedule: "interval 1 second"
-                actions:
-                    -
-                        name: "delayed_echo_action"
-                        command: "sleep 2 && echo 'Echo'"
-        """)
-
-    def test_queue_on_overlap(self):
-        self.sandbox.save_config(SchedulerTestCase.QUEUE_CONFIG)
-        self.sandbox.start_trond()
-        time.sleep(4)
-        self.sandbox.upload_config(SchedulerTestCase.QUEUE_CONFIG)
-
-        runs = self.sandbox.list_job('delayed_echo_job')['runs']
-        complete_runs = sum(1 for j in runs if j['end_time'])
-
-        assert_lte(complete_runs, 2)
-        assert_gte(len(runs), 3)
-
-        # at this point, up to 5 jobs have been queued up, but only
-        # up to 2 should have output
-
-        time.sleep(5)
-
-        runs = self.sandbox.list_job('delayed_echo_job')['runs']
-
-        assert_lte(complete_runs, 4)
-        assert_gte(len(runs), 8)
-
+    @suite('sandbox')
     def test_failure_on_multi_step_job_doesnt_wedge_tron(self):
         # WARNING: This test may be flaky.
         FAIL_CONFIG = dedent("""
-            --- !TronConfiguration
-
             ssh_options: !SSHOptions
               agent: true
 
@@ -290,7 +255,7 @@ class SchedulerTestCase(SandboxTestCase):
         self.sandbox.start_trond()
 
         # Wait a little to give things time to explode
-        time.sleep(1)
+        time.sleep(1.5)
         jerb = self.sandbox.list_job('random_failure_job')
         total_tries = 0
         while ((len(jerb['runs']) < 3 or

@@ -100,7 +100,7 @@ jobs
         run_limit (optional, default 50)
             Number of runs to store in history
         enabled
-            If False the job will not be queued to run.
+            If False the job will not be scheduled to run.
 
 Action objects
     These are the required options for action objects. **The exception is

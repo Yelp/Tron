@@ -1,0 +1,165 @@
+# This test config is intended to cover most common configuration cases
+
+ssh_options:
+    agent: true
+
+nodes:
+    - hostname: localhost
+    - name: box1
+      hostname: localhost
+    - name: box2
+      hostname: localhost
+    - name: box3
+      hostname: localhost
+    - name: box4
+      hostname: 127.0.0.1
+
+node_pools:
+    - name: pool0
+      nodes: [localhost, box2]
+    - name: pool1
+      nodes: [box1]
+    - nodes: [box1, box2]
+    - name: pool2
+      nodes: [box3, box4]
+
+command_context:
+    THE_JOB_DIR: "testconfig/jobs/"
+    ECHO:        "echo"
+
+
+jobs:
+    # IntervalScheduler no dependent Actions, single node
+    -   name: interval_job0
+        run_limit: 3
+        node: localhost
+        schedule:
+            interval: 13s
+        actions:
+            -   name: "task0"
+                command: "%(ECHO)s %(actionname)s"
+            -   name: "task1"
+                command: "sleep 10 && %(ECHO)s %(actionname)s"
+
+
+    # IntervalScheduler dependent successful Actions, node pool
+    -   name: interval_job1
+        node: pool0
+        schedule: "interval 27seconds"
+        actions:
+            -   name: task1
+                command: "%(ECHO)s %(actionname)s"
+                requires: [task0]
+            -   name: task0
+                command: "sleep 3 && %(ECHO)s %(actionname)s"
+
+
+    # IntervalScheduler dependent failure Actions
+    -   name: interval_job2
+        node: box1_box2
+        schedule: "interval 22s"
+        actions:
+            -   name: task1
+                command: "%(ECHO)s %(actionname)s"
+                requires: [task0]
+            -   name: task0
+                command: "%(ECHO)s %(actionname)s && sleep 7 && false"
+
+    # Multiple dependent failure Actions
+    -   name: interval_job3
+        node: box1_box2
+        schedule: "interval 22s"
+        actions:
+            -   name: task0
+                command: "%(ECHO)s %(actionname)s && sleep 7 && false"
+            -   name: task1
+                command: "%(ECHO)s %(actionname)s"
+                requires: [task0]
+            -   name: task2
+                command: "%(ECHO)s %(actionname)s && sleep 10"
+            -   name: task3
+                command: "%(ECHO)s %(actionname)s"
+                requires: [task2]
+
+
+    # Multiple dependent failure Actions with cleanup
+    -   name: interval_job4
+        node: box2
+        schedule: "interval 34s"
+        actions:
+            -   name: task0
+                command: "%(ECHO)s %(actionname)s && sleep 7 && false"
+            -   name: task1
+                command: "%(ECHO)s %(actionname)s"
+                requires: [task0]
+            -   name: task2
+                command: "%(ECHO)s %(actionname)s && sleep 10"
+            -   name: task3
+                command: "%(ECHO)s %(actionname)s && sleep 3"
+                requires: [task2]
+        cleanup_action:
+            command: "%(ECHO)s %(actionname)s %(cleanup_job_status)s"
+
+
+    # No failures, with cleanup, different node for action
+    -   name: interval_job5
+        node: box1
+        schedule:
+            interval: 13s
+        actions:
+            -   name: "task0"
+                command: "%(ECHO)s %(actionname)s"
+                node: box2
+            -   name: "task1"
+                command: "sleep 10 && %(ECHO)s %(actionname)s"
+                node: pool0
+        cleanup_action:
+            command: "%(ECHO)s %(actionname)s %(cleanup_job_status)s"
+
+
+    # ConstantScheduler successful
+    -   name: constant_job6
+        node: box2
+        schedule: "constant"
+        actions:
+            -   name: task0
+                command: "%(ECHO)s %(actionname)s"
+            -   name: task1
+                command: "%(ECHO)s %(actionname)s && sleep 10"
+                requires: [task0]
+
+
+    # ConstantScheduler failure
+    -   name: constant_job7
+        node: localhost
+        schedule: "constant"
+        actions:
+            -   name: task0
+                command: "%(ECHO)s %(actionname)s && sleep 7 && false"
+            -   name: task1
+                command: "%(ECHO)s %(actionname)s"
+                requires: [task0]
+
+
+    # all_nodes Job
+    -   name: allnodes_job8
+        node: pool2
+        schedule: "interval 15s"
+        all_nodes: true
+        actions:
+            -   name: "task0"
+                command: "%(ECHO)s %(actionname)s"
+            -   name: "task1"
+                command: "sleep 10 && %(ECHO)s %(actionname)s"
+
+
+    # Job failing bad action
+
+    # DailyScheduler
+
+services:
+    -   name: service_0
+        node: pool1
+        pid_file: "/tmp/mock_daemon.pid"
+        command: "python tests/mock_daemon.py"
+        monitor_interval: 5

@@ -9,7 +9,7 @@ from tron import ssh
 from tron.utils import twistedutils
 
 
-log = logging.getLogger('tron.node')
+log = logging.getLogger(__name__)
 
 # We should also only wait a certain amount of time for a connection to be
 # established.
@@ -62,15 +62,39 @@ class RunState(object):
         self.channel = None
 
 
+class NodePoolStore(dict):
+    """A Singleton to store Node and NodePool objects."""
+
+    _instance = None
+
+    def __init__(self):
+        if self._instance is not None:
+            raise ValueError("NodePoolStore is already instantiated.")
+        super(NodePoolStore, self).__init__()
+
+    @classmethod
+    def get_instance(cls):
+        if cls._instance is None:
+            cls._instance = cls()
+        return cls._instance
+
+    def put(self, node):
+        self[node.name] = node
+
+    def update(self, nodes):
+        super(NodePoolStore, self).update((node.name, node) for node in nodes)
+
+
 class NodePool(object):
     """A pool of Node objects."""
     def __init__(self, nodes, name=None):
         self.nodes = nodes
         self.name = name or '_'.join(n.name for n in nodes)
-        self.iter = None
+        self.iter = itertools.cycle(self.nodes)
 
     @classmethod
-    def from_config(cls, node_pool_config, nodes):
+    def from_config(cls, node_pool_config):
+        nodes = NodePoolStore.get_instance()
         return cls(
             name=node_pool_config.name,
             nodes=[nodes[n] for n in node_pool_config.nodes]
@@ -88,9 +112,6 @@ class NodePool(object):
 
     def next_round_robin(self):
         """Return the next node cycling in a consistent order."""
-        if not self.iter:
-            self.iter = itertools.cycle(self.nodes)
-
         return self.iter.next()
 
     def __getitem__(self, value):
@@ -181,6 +202,15 @@ class Node(object):
         fudge_factor = max(0.0, outstanding_runs - 4)
         return random.random() * float(fudge_factor)
 
+    # TODO: Test
+    def submit_command(self, command):
+        """Submit an ActionCommand to be run on this node. Optionally provide
+        an error callback which will be called on error.
+        """
+        deferred = self.run(command)
+        deferred.addErrback(command.handle_errback)
+        return deferred
+
     def run(self, run):
         """Execute the specified run
 
@@ -215,9 +245,7 @@ class Node(object):
             reactor.callLater(fudge_factor, lambda: self._do_run(run))
 
         # We return the deferred here, but really we're trying to keep the rest
-        # of the world from getting too involved with twisted. We will call
-        # back to mark the action success/fail directly, so using this deferred
-        # isn't strictly necessary.
+        # of the world from getting too involved with twisted.
         return self.run_states[run.id].deferred
 
     def _do_run(self, run):
@@ -382,7 +410,7 @@ class Node(object):
 
         chan.addOutputCallback(run.write_stdout)
         chan.addErrorCallback(run.write_stderr)
-        chan.addEndCallback(run.write_done)
+        chan.addEndCallback(run.done)
 
         chan.command = run.command
         chan.start_defer = defer.Deferred()
@@ -460,3 +488,6 @@ class Node(object):
             'name':             self.name,
             'hostname':         self.hostname
         }
+
+    def __str__(self):
+        return "Node:%s" % self.hostname

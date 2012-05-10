@@ -1,5 +1,5 @@
 from testify import setup, assert_equal, TestCase
-from tests import testingutils
+from tests.mocks import MockNode, MockNodePool
 
 from tron import service
 from tron import node
@@ -17,7 +17,7 @@ class SimpleTest(TestCase):
     @setup
     def build_service(self):
         self.service = service.Service("Sample Service", "sleep 60 &",
-                                       node_pool=testingutils.TestPool())
+                                       node_pool=MockNodePool())
         self.service.pid_file_template = "/var/run/service.pid"
         self.service.count = 2
 
@@ -102,7 +102,7 @@ class ReconfigTest(TestCase):
     @setup
     def build_service(self):
         self.service = service.Service("Sample Service", "sleep 60 &",
-                                       node_pool=testingutils.TestPool())
+                                       node_pool=MockNodePool())
         self.service.pid_file_template = "/tmp/pid"
         self.service.count = 2
 
@@ -170,7 +170,7 @@ class ReconfigNodePoolTest(TestCase):
 
     @setup
     def build_current_service(self):
-        self.node_pool = testingutils.TestPool("node0", "node1")
+        self.node_pool = MockNodePool("node0", "node1")
         self.service = service.Service("Sample Service", "sleep 60 &",
                                        node_pool=self.node_pool)
         self.service.pid_file_template = "/tmp/pid"
@@ -178,7 +178,7 @@ class ReconfigNodePoolTest(TestCase):
 
     @setup
     def build_new_service(self):
-        self.new_node_pool = testingutils.TestPool("node0")
+        self.new_node_pool = MockNodePool("node0")
         self.new_service = service.Service("Sample Service", "sleep 60 &",
                                            node_pool=self.new_node_pool)
         self.new_service.pid_file_template = "/tmp/pid"
@@ -199,7 +199,7 @@ class ReconfigRebuildAllTest(TestCase):
 
     @setup
     def build_current_service(self):
-        self.node_pool = testingutils.TestPool("node0")
+        self.node_pool = MockNodePool("node0")
         self.service = service.Service("Sample Service", "sleep 60 &",
                                        node_pool=self.node_pool)
         self.service.pid_file_template = "/tmp/pid"
@@ -232,7 +232,7 @@ class ReconfigRebuildAllTest(TestCase):
 class SimpleRestoreTest(TestCase):
     @setup
     def build_service(self):
-        test_node = testingutils.TestNode('testnode')
+        test_node = MockNode('testnode')
         self.node_pool = node.NodePool(nodes=[test_node])
         self.node_pool.nodes.append(test_node)
 
@@ -248,7 +248,7 @@ class SimpleRestoreTest(TestCase):
         self.service.machine.state = service.Service.STATE_UP
 
     def test(self):
-        data = self.service.data
+        data = self.service.state_data
 
         new_service = service.Service("Sample Service", "sleep 60 &",
                                       node_pool=self.node_pool)
@@ -267,7 +267,7 @@ class FailureRestoreTest(TestCase):
 
     @setup
     def build_service(self):
-        test_node = testingutils.TestNode('testname')
+        test_node = MockNode('testname')
         self.node_pool = node.NodePool(nodes=[test_node])
         self.node_pool.nodes.append(test_node)
 
@@ -283,7 +283,7 @@ class FailureRestoreTest(TestCase):
         self.service.machine.state = service.Service.STATE_DEGRADED
 
     def test(self):
-        data = self.service.data
+        data = self.service.state_data
 
         new_service = service.Service(
                 "Sample Service", "sleep 60 &", node_pool=self.node_pool)
@@ -303,7 +303,7 @@ class MonitorFailureTest(TestCase):
     @setup
     def build_service(self):
         self.service = service.Service("Sample Service", "sleep 60 &",
-                                       node_pool=testingutils.TestPool())
+                                       node_pool=MockNodePool())
         self.service.pid_file_template = "/var/run/service.pid"
         self.service.count = 2
 

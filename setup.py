@@ -1,5 +1,6 @@
 try:
     from setuptools import setup
+    assert setup
 except ImportError:
     from distutils.core import setup
 
@@ -32,7 +33,15 @@ setup(
         'pycrypto>=2.4',
         'pytz>=2011n'
     ],
-    packages=["tron", "tron.utils", "tron.config", "tron.commands"],
+    packages=[
+        "tron",
+        "tron.api",
+        "tron.commands",
+        "tron.config",
+        "tron.core",
+        "tron.serialize",
+        "tron.utils",
+    ],
     scripts=[
         'bin/trond',
         'bin/tronview',

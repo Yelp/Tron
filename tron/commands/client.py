@@ -44,7 +44,6 @@ def request(host, path, data=None):
     return OK, result
 
 
-# TODO: tests
 class Client(object):
     """A client used in commands to make requests to the tron.www """
 
@@ -78,14 +77,14 @@ class Client(object):
         """Convert a string of the form job_name[.run_number[.action]] to its
         corresponding URL.
         """
-        content = self.index()
         obj_name_elements = iden.split('.')
         obj_name = obj_name_elements[0]
-        obj_rel_path = "/".join(obj_name_elements[1:])
+        obj_rel_path = '/'.join(obj_name_elements[1:])
 
         def full_url(obj_url):
             return '/'.join((obj_url, obj_rel_path))
 
+        content = self.index()
         if obj_name in content['jobs']:
             return full_url(content['jobs'][obj_name])
         if obj_name in content['services']:

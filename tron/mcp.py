@@ -1,6 +1,5 @@
 from __future__ import with_statement
 import logging
-import logging.handlers
 import os
 import shutil
 import time
@@ -12,16 +11,20 @@ from twisted.internet import reactor
 import tron
 from tron import command_context
 from tron import event
-from tron import monitor
+from tron import crash_reporter
+from tron import node
 from tron.config import config_parse
 from tron.config.config_parse import ConfigError
-from tron.job import Job
+from tron.core.job import Job, JobScheduler
 from tron.node import Node, NodePool
+from tron.scheduler import scheduler_from_config
+from tron.serialize import filehandler
 from tron.service import Service
 from tron.utils import timeutils, emailer
+from tron.utils.observer import Observer, Observable
 
 
-log = logging.getLogger('tron.mcp')
+log = logging.getLogger(__name__)
 
 STATE_FILE = 'tron_state.yaml'
 STATE_SLEEP_SECS = 1
@@ -45,31 +48,26 @@ class ConfigApplyError(Exception):
     pass
 
 
-class StateHandler(object):
+class StateHandler(Observer, Observable):
+    """StateHandler is responsible for serializing state changes to disk.
+    It is an Observer of Jobs and Services and an Observable for an
+    EventRecorder.
+    """
+
+    EVENT_WRITE_FAILED   = event.EventType(event.LEVEL_CRITICAL, "write_failed")
+    EVENT_WRITE_COMPLETE = event.EventType(event.LEVEL_OK, "write_complete")
+    EVENT_WRITE_DELAYED  = event.EventType(event.LEVEL_NOTICE, "write_delayed")
+    EVENT_RESTORING      = event.EventType(event.LEVEL_NOTICE, "restoring")
+    EVENT_STORING        = event.EventType(event.LEVEL_INFO, "storing")
 
     def __init__(self, mcp, working_dir, writing=False):
+        super(StateHandler, self).__init__()
         self.mcp = mcp
         self.working_dir = working_dir
         self.write_pid = None
         self.write_start = None
         self.writing_enabled = writing
         self.store_delayed = False
-        self.event_recorder = event.EventRecorder(self,
-                                                  parent=mcp.event_recorder)
-
-    def restore_job(self, job_inst, data):
-        job_inst.set_context(self.mcp.context)
-        job_inst.restore(data)
-
-        for run in job_inst.runs:
-            if run.is_scheduled:
-                reactor.callLater(run.seconds_until_run_time(),
-                                  self.mcp.run_job,
-                                  run)
-
-        next = job_inst.next_to_finish()
-        if job_inst.enabled and next and next.is_queued:
-            next.start()
 
     def restore_service(self, service, data):
         service.set_context(self.mcp.context)
@@ -88,9 +86,9 @@ class StateHandler(object):
                 if status != 0:
                     log.warning("State writing process failed with status %d",
                                 status)
-                    self.event_recorder.emit_critical("write_failed")
+                    self.notify(self.EVENT_WRITE_FAILED)
                 else:
-                    self.event_recorder.emit_ok("write_complete")
+                    self.notify(self.EVENT_WRITE_COMPLETE)
                 self.write_pid = None
                 self.write_start = None
             else:
@@ -100,9 +98,13 @@ class StateHandler(object):
                 if write_duration > WRITE_DURATION_WARNING_SECS:
                     log.warning("State writing hasn't completed in %d secs",
                                 write_duration)
-                    self.event_recorder.emit_notice("write_delayed")
+                    self.notify(self.EVENT_WRITE_DELAYED)
 
                 reactor.callLater(STATE_SLEEP_SECS, self.check_write_child)
+
+    def handle_state_changes(self, _observable, _event):
+        self.store_state()
+    handler = handle_state_changes
 
     def store_state(self):
         """Stores the state of tron"""
@@ -122,7 +124,7 @@ class StateHandler(object):
         file_path = os.path.join(self.working_dir, STATE_FILE)
         log.info("Storing state in %s", file_path)
 
-        self.event_recorder.emit_info("storing")
+        self.notify(self.EVENT_STORING)
 
         self.write_start = timeutils.current_timestamp()
         pid = os.fork()
@@ -133,7 +135,7 @@ class StateHandler(object):
             exit_status = os.EX_SOFTWARE
             try:
                 with open(tmp_path, 'w') as data_file:
-                    yaml.dump(self.data, data_file,
+                    yaml.dump(self.state_data, data_file,
                               default_flow_style=False, indent=4)
                     data_file.flush()
                     os.fsync(data_file.fileno())
@@ -149,7 +151,12 @@ class StateHandler(object):
 
     def load_data(self):
         log.info('Restoring state from %s', self.get_state_file_path())
-        self.event_recorder.emit_notice("restoring")
+        self.notify(self.EVENT_RESTORING)
+
+        if not os.path.isfile(self.get_state_file_path()):
+            log.info("No state data found")
+            return
+
         with open(self.get_state_file_path()) as data_file:
             return self._load_data_file(data_file)
 
@@ -181,7 +188,7 @@ class StateHandler(object):
             return data
 
     @property
-    def data(self):
+    def state_data(self):
         data = {
             'version': tron.__version_info__,
             'create_time': int(time.time()),
@@ -189,11 +196,11 @@ class StateHandler(object):
             'services': {},
         }
 
-        for j in self.mcp.jobs.itervalues():
-            data['jobs'][j.name] = j.data
+        for name, job_sched in self.mcp.jobs.iteritems():
+            data['jobs'][name] = job_sched.job.state_data
 
         for s in self.mcp.services.itervalues():
-            data['services'][s.name] = s.data
+            data['services'][s.name] = s.state_data
 
         return data
 
@@ -201,25 +208,24 @@ class StateHandler(object):
         return "STATE_HANDLER"
 
 
-class MasterControlProgram(object):
+class MasterControlProgram(Observable):
     """master of tron's domain
 
-    This object is responsible for figuring who needs to run and when. It is
-    the main entry point where our daemon finds work to do.
+    Central state object for the Tron daemon. Stores all jobs and services.
     """
 
-    def __init__(self, working_dir, config_file, context=None):
+    def __init__(self, working_dir, config_file):
+        super(MasterControlProgram, self).__init__()
         self.jobs = {}
         self.services = {}
 
-        # Mapping of node name to node (or node pool) objects
-        self.nodes = {}
+        self.nodes = node.NodePoolStore.get_instance()
 
         # Path to the config file
         self.config_file = config_file
 
         # Root command context
-        self.context = context or command_context.CommandContext()
+        self.context = command_context.CommandContext()
 
         self.output_stream_dir = None
         self.working_dir = working_dir
@@ -232,10 +238,12 @@ class MasterControlProgram(object):
         # events for specific jobs, job runs, actions, action runs, etc. and
         # these events will be propagated up but not down the event recorder
         # tree.
-        self.event_recorder = event.EventRecorder(self)
+        self.event_manager = event.EventManager.get_instance()
+        self.event_recorder = self.event_manager.add(self)
 
         # Control writing of the state file
         self.state_handler = StateHandler(self, working_dir)
+        self.event_manager.add(self.state_handler, parent=self)
 
     ### CONFIGURATION ###
 
@@ -246,11 +254,8 @@ class MasterControlProgram(object):
             # lot of state changes
             old_state_writing = self.state_handler.writing_enabled
             self.state_handler.writing_enabled = False
+            self.load_config(reconfigure=True)
 
-            self.load_config()
-
-            # Any new jobs will need to be scheduled
-            self.run_jobs()
         except Exception:
             self.event_recorder.emit_critical("reconfig_failure")
             log.exception("Reconfig failure")
@@ -258,30 +263,38 @@ class MasterControlProgram(object):
         finally:
             self.state_handler.writing_enabled = old_state_writing
 
-    def load_config(self):
+    def load_config(self, reconfigure=False):
         log.info("Loading configuration from %s" % self.config_file)
         with open(self.config_file, 'r') as f:
-            self.apply_config(config_parse.load_config(f))
+            config = config_parse.load_config(f)
+        self.apply_config(config, reconfigure=reconfigure)
+
+    def initial_setup(self):
+        """When the MCP is initialized the config is applied before the state.
+        In this case jobs shouldn't be scheduled until the state is applied.
+        """
+        self.load_config()
+        self.try_restore()
+        # Any job with existing state would have been scheduled already. Jobs
+        # without any state will be scheduled here.
+        self.schedule_jobs()
 
     def config_lines(self):
         try:
-            conf = open(self.config_file, 'r')
-            data = conf.read()
-            conf.close()
-            return data
+            with open(self.config_file, 'r') as config:
+                return config.read()
         except IOError, e:
             log.error(str(e) + " - Cannot open configuration file!")
             return ""
 
     def rewrite_config(self, lines):
         try:
-            conf = open(self.config_file, 'w')
-            conf.write(lines)
-            conf.close()
+            with open(self.config_file, 'w') as config:
+                config.write(lines)
         except IOError, e:
             log.error(str(e) + " - Cannot write to configuration file!")
 
-    def apply_config(self, conf, skip_env_dependent=False):
+    def apply_config(self, conf, skip_env_dependent=False, reconfigure=False):
         """Apply a configuration. If skip_env_dependent is True we're
         loading this locally to test the config as part of tronfig. We want to
         skip applying some settings because the local machine we're using to
@@ -300,7 +313,7 @@ class MasterControlProgram(object):
         self._apply_node_pools(conf.node_pools)
 
         self.time_zone = conf.time_zone
-        self._apply_jobs(conf.jobs)
+        self._apply_jobs(conf.jobs, reconfigure=reconfigure)
         self._apply_services(conf.services)
         self._apply_notification_options(conf.notification_options)
 
@@ -332,23 +345,21 @@ class MasterControlProgram(object):
         return ssh_options
 
     def _apply_nodes(self, node_confs, ssh_options):
-        self.nodes = dict(
-            (name, Node.from_config(config, ssh_options))
-            for name, config in node_confs.iteritems()
+        self.nodes.update(
+            Node.from_config(config, ssh_options)
+            for config in node_confs.itervalues()
         )
 
     def _apply_node_pools(self, pool_confs):
         self.nodes.update(
-            (name, NodePool.from_config(config, self.nodes))
-            for name, config in pool_confs.iteritems()
+            NodePool.from_config(config)
+            for config in pool_confs.itervalues()
         )
 
-    def _apply_jobs(self, job_configs):
+    def _apply_jobs(self, job_configs, reconfigure=False):
         """Add and remove jobs based on the configuration."""
         for job_config in job_configs.values():
-            log.debug("Building new job %s", job_config.name)
-            job = Job.from_config(job_config, self.nodes, self.time_zone)
-            self.add_job(job)
+            self.add_job(job_config, reconfigure=reconfigure)
 
         for job_name in (set(self.jobs.keys()) - set(job_configs.keys())):
             log.debug("Removing job %s", job_name)
@@ -390,58 +401,58 @@ class MasterControlProgram(object):
 
             em = emailer.Emailer(notification_conf.smtp_host,
                                  notification_conf.notification_addr)
-            self.monitor = monitor.CrashReporter(em, self)
+            self.monitor = crash_reporter.CrashReporter(em, self)
             self.monitor.start()
 
     ### JOBS ###
-    def add_job(self, job):
-        if job.name in self.services:
-            raise ValueError("Job %s is already a service", job.name)
+    def add_job(self, job_config, reconfigure=False):
+        log.debug("Building new job %s", job_config.name)
+        output_path = filehandler.OutputPath(self.output_stream_dir)
+        scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
+        job = Job.from_config(job_config, scheduler, self.context, output_path)
 
         if job.name in self.jobs:
-
             # Jobs have a complex eq implementation that allows us to catch
             # jobs that have not changed and thus don't need to be updated
             # during a reconfigure
-            if job == self.jobs[job.name]:
+            if job == self.jobs[job.name].job:
                 return
 
             log.info("re-adding job %s", job.name)
+            self.jobs[job.name].job.update_from_job(job)
+            self.jobs[job.name].schedule_reconfigured()
+            return
 
-            # We're updating an existing job, we have to copy over run time
-            # information
-            job.absorb_old_job(self.jobs[job.name])
+        log.info("adding new job %s", job.name)
+        self.jobs[job.name] = JobScheduler(job)
+        self.event_manager.add(job, parent=self)
+        self.state_handler.watch(job, Job.NOTIFY_STATE_CHANGE)
 
-            if job.enabled:
-                self.disable_job(job)
-                self.enable_job(job)
-        else:
-            log.info("adding job %s", job.name)
-
-        self.jobs[job.name] = job
-
-        # add some command context variables
-        job.set_context(self.context)
-
-        job.event_recorder.set_parent(self.event_recorder)
-
-        # make the directory for output
-        job.setup_job_dir(self.output_stream_dir)
-
-        # Tell the job to call store_state() whenever its state changes.
-        # job isn't actaully a StateMachine object, but its interface tries
-        # to look like one.
-        job.listen(True, self.state_handler.store_state)
+        # If this is not a reconfigure, wait for state to be restored before
+        # scheduling job runs.
+        if reconfigure:
+            self.jobs[job.name].schedule()
 
     def remove_job(self, job_name):
         if job_name not in self.jobs:
             raise ValueError("Job %s unknown", job_name)
 
-        job = self.jobs.pop(job_name)
-        job.disable()
+        job_scheduler = self.jobs.pop(job_name)
+        job_scheduler.disable()
+
+    def disable_all(self):
+        for job_scheduler in self.jobs.itervalues():
+            job_scheduler.disable()
+
+    def enable_all(self):
+        for job_scheduler in self.jobs.itervalues():
+            job_scheduler.enable()
+
+    def schedule_jobs(self):
+        for job_scheduler in self.jobs.itervalues():
+            job_scheduler.schedule()
 
     ### SERVICES ###
-
     def add_service(self, service):
         if service.name in self.jobs:
             raise ValueError("Service %s is already a job", service.name)
@@ -456,8 +467,7 @@ class MasterControlProgram(object):
         service.event_recorder.set_parent(self.event_recorder)
 
         # Trigger storage on any state changes
-        service.listen(True, self.state_handler.store_state)
-
+        self.state_handler.watch(service.machine)
         self.services[service.name] = service
 
         if prev_service is not None:
@@ -472,72 +482,19 @@ class MasterControlProgram(object):
         service.stop()
 
     ### OTHER ACTIONS ###
-
-    def _schedule(self, run):
-        secs = run.seconds_until_run_time()
-        if secs == 0:
-            run.set_run_time(timeutils.current_time())
-        reactor.callLater(secs, self.run_job, run)
-
-    def schedule_next_run(self, job):
-        if job.runs and job.runs[0].is_scheduled:
-            log.info('Job is already scheduled')
-            return
-
-        for next in job.next_runs():
-            log.info("Scheduling next job for %s", next.job.name)
-            self._schedule(next)
-
-    def run_job(self, now):
-        """This runs when a job was scheduled.
-        Here we run the job and schedule the next time it should run
-        """
-        if not now.job:
-            return
-
-        if not now.job.enabled:
-            return
-
-        if not (now.is_running or now.is_failure or now.is_success):
-            log.debug("Running next scheduled job")
-            now.scheduled_start()
-
-        self.schedule_next_run(now.job)
-
-    def enable_job(self, job):
-        job.enable()
-        if not job.runs or not job.runs[0].is_scheduled:
-            self.schedule_next_run(job)
-
-    def disable_job(self, job):
-        job.disable()
-
-    def disable_all(self):
-        for jo in self.jobs.itervalues():
-            self.disable_job(jo)
-
-    def enable_all(self):
-        for jo in self.jobs.itervalues():
-            self.enable_job(jo)
-
     def try_restore(self):
-        if not os.path.isfile(self.state_handler.get_state_file_path()):
-            log.info("No state data found")
-            return
-
         data = self.state_handler.load_data()
         if not data:
             log.warning("Failed to load state data")
             return
 
         state_load_count = 0
-        for name in data['jobs'].iterkeys():
-            if name in self.jobs:
-                self.state_handler.restore_job(self.jobs[name],
-                                               data['jobs'][name])
-                state_load_count += 1
-            else:
+        for name, job_state_data in data['jobs'].iteritems():
+            if name not in self.jobs:
                 log.warning("Job name %s from state file unknown", name)
+                continue
+            self.jobs[name].restore_job_state(job_state_data)
+            state_load_count += 1
 
         for name in data['services'].iterkeys():
             if name in self.services:
@@ -548,20 +505,6 @@ class MasterControlProgram(object):
                 log.warning("Service name %s from state file unknown", name)
 
         log.info("Loaded state for %d jobs", state_load_count)
-
-    def run_jobs(self):
-        """This schedules the first time each job runs"""
-        for tron_job in self.jobs.itervalues():
-            if tron_job.enabled:
-                if tron_job.runs:
-                    self.schedule_next_run(tron_job)
-                else:
-                    self.enable_job(tron_job)
-
-    def run_services(self):
-        for service in self.services.itervalues():
-            if not service.is_started:
-                service.start()
 
     def __str__(self):
         return "MCP"
