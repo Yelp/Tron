@@ -337,13 +337,13 @@ class ActionRun(Observer):
 
         try:
             self.rendered_command = self.render_command()
-            return self.rendered_command
         except Exception:
             log.error("Failed generating rendering command\n%s" %
                       traceback.format_exc())
 
             # Return a command string that will always fail
-            return self.FAILED_RENDER
+            self.rendered_command = self.FAILED_RENDER
+        return self.rendered_command
 
     @property
     def is_valid_command(self):
