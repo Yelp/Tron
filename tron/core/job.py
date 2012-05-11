@@ -41,6 +41,8 @@ class JobContext(object):
 
         if date_name == 'last_success':
             last_success = self.job.runs.last_success
+            last_success = last_success.run_time if last_success else None
+
             time_value = timeutils.DateArithmetic.parse(date_spec, last_success)
             if time_value:
                 return time_value
