@@ -43,14 +43,13 @@ class MockReactorTestCase(TestCase):
 
     @class_setup
     def setup_patched_reactor(self):
-        msg = "subclassses of %s must set reactor_to_mock" % self.__class__
+        msg = "%s must set a reactor_to_mock field" % self.__class__
         assert self.module_to_mock, msg
-
-        self.old_module = self.module_to_mock
+        self.old_reactor = getattr(self.module_to_mock, 'reactor')
 
     @class_teardown
     def teardown_patched_reactor(self):
-        setattr(self.module_to_mock, 'reactor', self.old_module)
+        setattr(self.module_to_mock, 'reactor', self.old_reactor)
 
     @setup
     def teardown_mock_reactor_calls(self):
