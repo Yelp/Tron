@@ -3,11 +3,11 @@ import logging
 
 from twisted.internet import reactor
 
-from tron import action
 from tron import command_context
 from tron import event
 from tron import node
-from tron.utils import state
+from tron.actioncommand import ActionCommand
+from tron.utils import state, observer
 from tron.utils import timeutils
 
 
@@ -24,7 +24,7 @@ class InvalidStateError(Error):
     """Invalid state error"""
 
 
-class ServiceInstance(object):
+class ServiceInstance(observer.Observer):
     class ServiceInstanceState(state.NamedEventState):
         """Event state subclass for service instances"""
 
@@ -67,13 +67,14 @@ class ServiceInstance(object):
 
         self.id = "%s.%s" % (service.name, self.instance_number)
 
-        self.machine = state.StateMachine(ServiceInstance.STATE_DOWN)
+        self.machine = state.StateMachine(
+                ServiceInstance.STATE_DOWN, delegate=self)
 
         self.context = command_context.CommandContext(self, service.context)
 
         self.monitor_action = None
-        self.start_action = None
-        self.kill_action = None
+        self.start_action   = None
+        self.stop_action    = None
 
         # Store the Twisted delayed call objects here for later cancellation
         self._monitor_delayed_call = None
@@ -84,8 +85,8 @@ class ServiceInstance(object):
         return self.machine.state
 
     @property
-    def listen(self):
-        return self.machine.listen
+    def attach(self):
+        return self.machine.attach
 
     @property
     def pid_file(self):
@@ -152,15 +153,9 @@ class ServiceInstance(object):
         monitor_command = "cat %(pid_file)s | xargs kill -0" % self.context
         log.debug("Executing '%s' on %s for %s", monitor_command,
                   self.node.hostname, self.id)
-        self.monitor_action = action.ActionCommand("%s.monitor" % self.id,
+        self.monitor_action = ActionCommand("%s.monitor" % self.id,
                                                    monitor_command)
-
-        # We use exiting instead of complete because all we really need is the
-        # exit status
-        self.monitor_action.machine.listen(action.ActionCommand.EXITING,
-                                           self._monitor_complete_callback)
-        self.monitor_action.machine.listen(action.ActionCommand.FAILSTART,
-                                           self._monitor_complete_failstart)
+        self.watch(self.monitor_action)
 
         try:
             self.node.run(self.monitor_action)
@@ -217,16 +212,37 @@ class ServiceInstance(object):
             self._start_complete_failstart()
             return
 
-        self.start_action = action.ActionCommand("%s.start" % self.id, command)
-        self.start_action.machine.listen(action.ActionCommand.EXITING,
-                                         self._start_complete_callback)
-        self.start_action.machine.listen(action.ActionCommand.FAILSTART,
-                                         self._start_complete_failstart)
+        self.start_action = ActionCommand("%s.start" % self.id, command)
+        self.watch(self.start_action)
 
         try:
             self.node.run(self.start_action)
         except node.Error, e:
             log.warning("Failed to start %s: %r", self.id, e)
+
+    def handler(self, observable, event):
+        # TODO: this no longer requires setting the start action as a field
+        # TODO: This can be easily cleaned up
+
+        if observable == self.monitor_action:
+            # We use exiting instead of complete because all we really need is
+            # the exit status
+            if event == ActionCommand.EXITING:
+                return self._monitor_complete_callback()
+            if event == ActionCommand.FAILSTART:
+                return self._monitor_complete_failstart()
+
+        elif observable == self.start_action:
+            if event == ActionCommand.EXITING:
+                return self._start_complete_callback()
+            if event == ActionCommand.FAILSTART:
+                return self._start_complete_failstart()
+
+        elif observable == self.stop_action:
+            if event == ActionCommand.COMPLETE:
+                return self._stop_complete_callback()
+            if event == ActionCommand.FAILSTART:
+                return self._stop_complete_failstart()
 
     def _start_complete_callback(self):
         if self.start_action.exit_status != 0:
@@ -267,12 +283,9 @@ class ServiceInstance(object):
 
         kill_command = "cat %(pid_file)s | xargs kill" % self.context
 
-        self.stop_action = action.ActionCommand("%s.stop" % self.id,
+        self.stop_action = ActionCommand("%s.stop" % self.id,
                                                 kill_command)
-        self.stop_action.machine.listen(action.ActionCommand.COMPLETE,
-                                        self._stop_complete_callback)
-        self.stop_action.machine.listen(action.ActionCommand.FAILSTART,
-                                        self._stop_complete_failstart)
+        self.watch(self.stop_action)
         try:
             self.node.run(self.stop_action)
         except node.Error, e:
@@ -304,7 +317,7 @@ class ServiceInstance(object):
             self._hanging_monitor_check_delayed_call = None
 
     @property
-    def data(self):
+    def state_data(self):
         """This data is used to serialize the state of this service instance."""
         return {
             'node': self.node.hostname,
@@ -316,8 +329,8 @@ class ServiceInstance(object):
         return "SERVICE:%s" % self.id
 
 
-class Service(object):
-    # For compareing equality, we check these fields
+class Service(observer.Observable, observer.Observer):
+    # For comparing equality, we check these fields
     COMPARE_ATTRIBUTES = ['name', 'command', 'node_pool', 'count',
                           'monitor_interval', 'pid_file_template']
 
@@ -356,6 +369,7 @@ class Service(object):
     def __init__(self, name=None, command=None, node_pool=None, context=None,
                  event_recorder=None, monitor_interval=None,
                  restart_interval=None, pid_file_template=None, count=0):
+        super(Service, self).__init__()
         self.name = name
         self.command = command
         self.node_pool = node_pool
@@ -364,7 +378,7 @@ class Service(object):
         self.restart_interval = restart_interval
         self._restart_timer = None
 
-        self.machine = state.StateMachine(Service.STATE_DOWN)
+        self.machine = state.StateMachine(Service.STATE_DOWN, delegate=self)
 
         self.pid_file_template = pid_file_template
 
@@ -375,7 +389,8 @@ class Service(object):
         self.instances = []
 
         self.event_recorder = event.EventRecorder(self, parent=event_recorder)
-        self.listen(True, self._record_state_changes)
+        # TODO: this is a little weird, should get cleaned up
+        self.listen(True, self)
 
     @classmethod
     def from_config(cls, srv_config, node_pools):
@@ -395,7 +410,7 @@ class Service(object):
 
     @property
     def listen(self):
-        return self.machine.listen
+        return self.machine.attach
 
     @property
     def is_started(self):
@@ -415,7 +430,6 @@ class Service(object):
         if self.machine is None:
             return
 
-        func = None
         if self.machine.state in (self.STATE_FAILED, self.STATE_DEGRADED):
             func = self.event_recorder.emit_critical
         elif self.machine.state in (self.STATE_UP, self.STATE_DOWN):
@@ -483,9 +497,7 @@ class Service(object):
         service_instance = ServiceInstance(self, node, instance_number)
         self.instances.append(service_instance)
         self.instances.sort(key=lambda i: i.instance_number)
-
-        service_instance.listen(True, self._instance_change)
-
+        self.watch(service_instance)
         return service_instance
 
     def _find_unused_instance_number(self):
@@ -524,6 +536,9 @@ class Service(object):
         Anytime an instance changes, we need to re-evaluate our own current
         state.
         """
+        #TODO: this can be improved now that we have a reference to
+        # the instance that changed
+
         # Remove any downed instances
         self.instances = [inst for inst in self.instances
                           if inst.state != inst.STATE_DOWN]
@@ -546,8 +561,8 @@ class Service(object):
                      len(self.instances), self.count)
             self.machine.transition("down")
 
-        elif all([instance.state == ServiceInstance.STATE_UP
-                  for instance in self.instances]):
+        elif all(instance.state == ServiceInstance.STATE_UP
+                  for instance in self.instances):
             self.machine.transition("all_up")
 
         if self.machine.state in (Service.STATE_DEGRADED,
@@ -556,6 +571,12 @@ class Service(object):
             if self.restart_interval is not None and not self._restart_timer:
                 self._restart_timer = reactor.callLater(
                     self.restart_interval, self._restart_after_failure)
+
+    def handler(self, observable, _event):
+        if observable == self:
+            return self._record_state_changes()
+
+        self._instance_change()
 
     # TODO: clean this up
     def absorb_previous(self, prev_service):
@@ -582,8 +603,8 @@ class Service(object):
         # Copy over all the old instances
         self.instances += prev_service.instances
         for service_instance in prev_service.instances:
-            service_instance.machine.clear_listeners()
-            service_instance.machine.listen(True, self._instance_change)
+            service_instance.machine.clear_observers()
+            self.watch(service_instance)
 
             if rebuild_all_instances:
                 # For some configuration changes, we'll just stop all the
@@ -661,11 +682,11 @@ class Service(object):
         self.event_recorder.emit_notice("reconfigured")
 
     @property
-    def data(self):
+    def state_data(self):
         """This data is used to serialize the state of this service."""
         data = {
             'state': str(self.machine.state),
-            'instances': [instance.data for instance in self.instances]
+            'instances': [instance.state_data for instance in self.instances]
         }
         return data
 

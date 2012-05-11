@@ -1,11 +1,14 @@
+import os
+import shutil
 import time
-from tempfile import NamedTemporaryFile
+from tempfile import NamedTemporaryFile, mkdtemp
 
 from testify import TestCase, run, assert_equal, assert_not_in, assert_in
-from testify import assert_not_equal
-from testify import setup, teardown
+from testify import assert_not_equal, turtle
+from testify import setup, teardown, suite
 
-from tron.filehandler import FileHandleManager
+from tron.serialize.filehandler import FileHandleManager, OutputStreamSerializer
+from tron.serialize.filehandler import OutputPath, NullFileHandle
 
 class FileHandleWrapperTestCase(TestCase):
 
@@ -17,20 +20,22 @@ class FileHandleWrapperTestCase(TestCase):
 
     @teardown
     def teardown_fh_wrapper(self):
-         self.fh_wrapper.close()
+        self.fh_wrapper.close()
 
     def test_init(self):
-        assert_equal(self.fh_wrapper._fh, None)
+        assert_equal(self.fh_wrapper._fh, NullFileHandle)
 
     def test_close(self):
         # Test close without a write, no exception is good
+        self.fh_wrapper.close()
+        # Test close again, after already closed
         self.fh_wrapper.close()
 
     def test_close_with_write(self):
         # Test close with a write
         self.fh_wrapper.write("some things")
         self.fh_wrapper.close()
-        assert_equal(self.fh_wrapper._fh, None)
+        assert_equal(self.fh_wrapper._fh, NullFileHandle)
         assert_equal(self.fh_wrapper.manager, self.manager)
         # This is somewhat coupled
         assert_not_in(self.fh_wrapper, self.manager.cache)
@@ -50,6 +55,21 @@ class FileHandleWrapperTestCase(TestCase):
         self.fh_wrapper.write("\nmore things")
         after_time = time.time()
         assert before_time <= self.fh_wrapper.last_accessed <= after_time
+        self.fh_wrapper.close()
+        with open(self.file.name) as fh:
+            assert_equal(fh.read(), "some things\nmore things")
+
+    def test_close_many(self):
+        self.fh_wrapper.write("some things")
+        self.fh_wrapper.close()
+        self.fh_wrapper.close()
+
+    def test_context_manager(self):
+        with self.fh_wrapper as fh:
+            fh.write("123")
+        assert fh._fh.closed
+        with open(self.file.name) as fh:
+            assert_equal(fh.read(), "123")
 
 
 class FileHandleManagerTestCase(TestCase):
@@ -170,6 +190,104 @@ class FileHandleManagerTestCase(TestCase):
         self.manager.update(fh_wrapper1)
         assert_equal(self.manager.cache.keys(), [fh_wrapper2.name, fh_wrapper1.name])
 
+
+class OutputStreamSerializerTestCase(TestCase):
+
+    @setup
+    def setup_serializer(self):
+        self.test_dir = mkdtemp()
+        self.serial = OutputStreamSerializer([self.test_dir])
+        self.filename = "STARS"
+        self.content = "123\n456\n789"
+        self.expected = self.content.split('\n')
+
+    @teardown
+    def teardown_test_dir(self):
+        shutil.rmtree(self.test_dir)
+
+    def _write_contents(self):
+        with open(self.serial.full_path(self.filename), 'w') as f:
+            f.write(self.content)
+
+    def test_open(self):
+        with self.serial.open(self.filename) as fh:
+            fh.write(self.content)
+
+        with open(self.serial.full_path(self.filename)) as f:
+            assert_equal(f.read(), self.content)
+
+    @suite('integration')
+    def test_init_with_output_path(self):
+        self.test_dir = 'tmp'
+        path = OutputPath(self.test_dir, 'one', 'two', 'three')
+        stream = OutputStreamSerializer(path)
+        assert_equal(stream.base_path, str(path))
+
+    def test_tail(self):
+        self._write_contents()
+        assert_equal(self.serial.tail(self.filename), self.expected)
+
+    def test_tail_num_lines(self):
+        self._write_contents()
+        assert_equal(self.serial.tail(self.filename, 1), self.expected[-1:])
+
+    def test_tail_file_does_not_exist(self):
+        file_dne = 'bogusfile123'
+        assert_equal(self.serial.tail(file_dne), [])
+
+
+class OutputPathTestCase(TestCase):
+
+    @setup
+    def setup_path(self):
+        self.path = OutputPath('one', 'two', 'three')
+
+    def test__init__(self):
+        assert_equal(self.path.base, 'one')
+        assert_equal(self.path.parts, ['two', 'three'])
+
+        path = OutputPath('base')
+        assert_equal(path.base, 'base')
+        assert_equal(path.parts, [])
+
+    def test__iter__(self):
+        assert_equal(list(self.path), ['one', 'two', 'three'])
+
+    def test__str__(self):
+        # Breaks in windows probably,
+        assert_equal('one/two/three', str(self.path))
+
+    def test_append(self):
+        self.path.append('four')
+        assert_equal(self.path.parts, ['two', 'three', 'four'])
+
+    def test_clone(self):
+        new_path = self.path.clone()
+        assert_equal(str(new_path), str(self.path))
+
+        self.path.append('alpha')
+        assert_equal(str(new_path), 'one/two/three')
+
+        new_path.append('beta')
+        assert_equal(str(self.path), 'one/two/three/alpha')
+
+    def test_clone_with_parts(self):
+        new_path = self.path.clone('seven', 'ten')
+        assert_equal(list(new_path), ['one/two/three', 'seven', 'ten'])
+
+    def test_delete(self):
+        tmp_dir = mkdtemp()
+        path = OutputPath(tmp_dir)
+        path.delete()
+        assert not os.path.exists(tmp_dir)
+
+    def test__eq__(self):
+        other = turtle.Turtle(base='one', parts=['two', 'three'])
+        assert_equal(self.path, other)
+
+    def test__ne__(self):
+        other = turtle.Turtle(base='one/two', parts=['three'])
+        assert_not_equal(self.path, other)
 
 if __name__ == "__main__":
     run()

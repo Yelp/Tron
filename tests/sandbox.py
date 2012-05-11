@@ -22,20 +22,18 @@ _repo_root, _ = os.path.split(_test_folder)
 log = logging.getLogger(__name__)
 
 
-def wait_for_sandbox_success(func, delay=0.1, stop_at=5.0):
+def wait_for_sandbox_success(func, delay=0.1, max_wait=5.0):
     """Call *func* repeatedly until it stops throwing TronSandboxException.
     Wait increasing amounts from *start_delay* but wait no more than a total
     of *stop_at* seconds
     """
-    total_time = 0.0
-    while total_time < stop_at:
+    start_time = time.time()
+    while time.time() - start_time < max_wait:
         time.sleep(delay)
-        total_time += delay
         try:
-            func()
-            return
+            return func()
         except TronSandboxException:
-            delay *= 2
+            pass
     raise
 
 
@@ -45,9 +43,9 @@ def make_file_existence_sandbox_exception_thrower(path):
             raise TronSandboxException('File does not exist: %s' % path)
     return func
 
-def wait_for_file_to_exist(path):
+def wait_for_file_to_exist(path, max_wait=5.0):
     func = make_file_existence_sandbox_exception_thrower(path)
-    wait_for_sandbox_success(func)
+    wait_for_sandbox_success(func, max_wait=max_wait)
 
 
 def handle_output(cmd, (stdout, stderr), returncode):
@@ -84,8 +82,8 @@ class TronSandbox(object):
         self.trond_bin = os.path.join(self.tron_bin, 'trond')
         self.tronfig_bin = os.path.join(self.tron_bin, 'tronfig')
         self.tronview_bin = os.path.join(self.tron_bin, 'tronview')
-        self.log_file = os.path.join(self.tmp_dir, 'tron.log')
-        self.log_conf = 'tests/logging.conf'
+        self.log_file = 'tron.log'
+        self.log_conf = 'tests/data/logging.conf'
 
         self.pid_file = os.path.join(self.tmp_dir, 'tron.pid')
         self.config_file = os.path.join(self.tmp_dir, 'tron_config.yaml')
@@ -122,6 +120,7 @@ class TronSandbox(object):
         if os.path.exists(self.pid_file):
             self.stop_trond()
         shutil.rmtree(self.tmp_dir)
+        os.unlink(self.log_file)
         self.tmp_dir = None
         self.tron_bin = None
         self.tronctl_bin = None

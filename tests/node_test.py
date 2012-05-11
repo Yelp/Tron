@@ -1,12 +1,47 @@
-import StringIO
-
 from testify import setup, TestCase, assert_equal, run
 from testify import assert_in, assert_raises, assert_lt
+from testify.assertions import assert_not_in
 from testify.utils import turtle
-from tests import testingutils
 
-from tron import node, action
+from tron import node
+from tron.core import actionrun
 
+
+class NodePoolStore(TestCase):
+
+    @setup
+    def setup_store(self):
+        self.node = turtle.Turtle()
+        self.store = node.NodePoolStore.get_instance()
+        self.store.put(self.node)
+
+    def test_single_instance(self):
+        assert_raises(ValueError, node.NodePoolStore)
+        assert self.store is node.NodePoolStore.get_instance()
+
+    def test_put(self):
+        n = turtle.Turtle()
+        self.store.put(n)
+        assert_in(n.name, self.store)
+
+    def test_update(self):
+        nodes = [turtle.Turtle(), turtle.Turtle()]
+        self.store.update(nodes)
+        for n in nodes:
+            assert_in(n.name, self.store)
+
+    def test__getitem__(self):
+        assert_equal(self.node, self.store[self.node.name])
+
+    def test_get(self):
+        assert_equal(self.node, self.store.get(self.node.name))
+
+    def test_get_miss(self):
+        assert_equal(None, self.store.get('bogus'))
+
+    def test_clear(self):
+        self.store.clear()
+        assert_not_in(self.node, self.store)
 
 class NodeTestCase(TestCase):
 
@@ -18,14 +53,14 @@ class NodeTestCase(TestCase):
     def setup_node(self):
         self.ssh_options = turtle.Turtle()
         self.node = node.Node('localhost', 'thename', self.ssh_options)
-        self.stdout = StringIO.StringIO()
-        self.stderr = StringIO.StringIO()
 
-    def test_run_output_logging(self):
-        nod = self.node
-        action_cmd = action.ActionCommand("test", "false",
-                                          stdout=self.stdout,
-                                          stderr=self.stderr)
+    def test_output_logging(self):
+        nod = node.Node(hostname="localhost",
+                        ssh_options=turtle.Turtle())
+
+        fh = turtle.Turtle()
+        serializer = turtle.Turtle(open=lambda fn: fh)
+        action_cmd = actionrun.ActionCommand("test", "false", serializer)
 
         nod.connection = self.TestConnection()
         nod.run_states = {action_cmd.id: turtle.Turtle(state=0)}
@@ -34,9 +69,7 @@ class NodeTestCase(TestCase):
         nod._open_channel(action_cmd)
         assert nod.connection.chan is not None
         nod.connection.chan.dataReceived("test")
-
-        self.stdout.seek(0)
-        assert_equal(self.stdout.read(4), "test")
+        assert_equal(fh.write.calls, [(("test",), {})])
 
     def test_from_config(self):
         node_config = turtle.Turtle(hostname='localhost', name='thename')
@@ -72,33 +105,6 @@ class NodeTestCase(TestCase):
         assert 0 < self.node._determine_fudge_factor() < 20
 
 
-class NodeTimeoutTest(testingutils.ReactorTestCase):
-    @setup
-    def build_node(self):
-        self.node = node.Node(hostname="testnodedoesnotexist",
-                              ssh_options=turtle.Turtle())
-
-        # Make this test faster
-        node.CONNECT_TIMEOUT = 1
-
-    @setup
-    def build_run(self):
-        self.run = turtle.Turtle()
-
-    def test_connect_timeout(self):
-        self.job_marked_failed = False
-        def fail_job(*args):
-            self.job_marked_failed = True
-
-        df = self.node.run(self.run)
-        df.addErrback(fail_job)
-
-        with testingutils.no_handlers_for_logger():
-            testingutils.wait_for_deferred(df)
-        assert df.called
-        assert self.job_marked_failed
-
-
 class NodePoolTestCase(TestCase):
 
     @setup
@@ -113,9 +119,9 @@ class NodePoolTestCase(TestCase):
         node_pool_config = turtle.Turtle(
                 name='thename', nodes=['node1', 'node3'])
 
-        node_dict = dict((n.name, n) for n in self.nodes)
+        node.NodePoolStore.get_instance().update(self.nodes)
 
-        new_pool = node.NodePool.from_config(node_pool_config, node_dict)
+        new_pool = node.NodePool.from_config(node_pool_config)
         assert_equal(new_pool.name, node_pool_config.name)
         assert_equal(len(new_pool.nodes), 2)
         node_names = set(n.name for n in new_pool.nodes)

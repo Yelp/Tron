@@ -19,7 +19,7 @@ from tron.config.config_parse import valid_node_pool, valid_config
 from tron.config.schedule_parse import ConfigConstantScheduler
 from tron.config.schedule_parse import ConfigDailyScheduler
 from tron.config.schedule_parse import ConfigIntervalScheduler
-from tests.testingutils import assert_raises
+from tests.assertions import assert_raises
 from tron.utils.dicts import FrozenDict
 
 
@@ -182,7 +182,7 @@ services:
                             requires=(),
                             node=None)
                     }),
-                    queueing=False,
+                    queueing=True,
                     run_limit=50,
                     all_nodes=False,
                     cleanup_action=ConfigCleanupAction(
@@ -262,7 +262,7 @@ services:
                             requires=('action3_0', 'action3_1'),
                             node='batch0')
                     }),
-                    queueing=False,
+                    queueing=True,
                     run_limit=50,
                     all_nodes=False,
                     cleanup_action=None),
