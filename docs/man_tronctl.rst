@@ -6,13 +6,13 @@ tronctl
 Synopsys
 --------
 
-**tronctl** [**--server** *server_name*] [**--verbose** | **-v**] *command* *<job_name | job_run_id | action_run_id>*
+**tronctl** [**--server** *server_name*] [**--verbose** | **-v**] *command* *<job_name | job_run_id | action_run_id | service_name>*
 
 Description
 -----------
 
-**tronctl** is the control interface for tron. Through tronctl you can start,
-cancel, succeed, and fail job runs and action runs.
+**tronctl** is the control interface for Tron. :command:`tronctl` allows you to
+enable, disable, start, stop and cancel Tron Jobs and Services.
 
 Options
 -------
@@ -33,59 +33,51 @@ enableall
     Enables all jobs
 
 disable <job_name>
-    Disables the specified job. Cancels all scheduled and queued runs. Doesn't
+    Disables the job. Cancels all scheduled and queued runs. Doesn't
     schedule any more.
 
 enable <job_name>
-    Enables the specified job by starting the oldest job that still needs to run
+    Enables the job and schedules a new run.
 
 start <job_name>
-    Creates a new run of the specified job. If no other instance is running, it starts
+    Creates a new run of the specified job and runs it immediately.
 
 start <job_run_id>
-    Tries to start the given job or action run. A Job run only starts if no
-    other instance is running. If the job has already started, start continues
-    by retrying failed runs Valid states that you can run "start" on: SCHE,
-    QUE
+    Attempt to start the given job run. A Job run only starts if no
+    other instance is running. If the job has already started, it will attempt
+    to start any actions in the SCH or QUE state.
 
 start <action_run_id>
-    Starts the action run regardless of anything else running.  Valid states
-    that you can run "start" on: SCHE, QUE
+    Attempt to start the action run.
 
 restart <job_run_id>
-    Resets the given Job Run and starts it over.  Valid states that you can run
-    "restart" on: SCHE, FAIL, QUE, CANC, UNKWN
+    Creates a new job run with the same run time as this job.
 
 cancel <job_run_id | action_run_id>
-    Cancels the specified job run or action run.  Cancelled runs don't start at
-    their scheduled time and they are skipped over when there is a job run
-    queue.  Valid states that you can run "cancel" on: SCHE, QUE
+    Cancels the specified job run or action run.
 
-succeed <job_run_id | action_run_id>
+success <job_run_id | action_run_id>
     Marks the specified job run or action run as succeeded.  This behaves the
-    same as the run actually completing.  Dependant actions are ran and queued
-    runs start.  Valid states that you can run "succeed" on: SCHE, QUE, UNKWN,
-    RUNN
+    same as the run actually completing.  Dependant actions are run and queued
+    runs start.
 
 skip <action_run_id>
     Marks the specified action run as skipped.  This allows dependant actions
-    to run. Valid states that you can "skip" on: FAIL
+    to run.
 
 fail <job_run_id | action_run_id>
     Marks the specified job run or action run as failed.  This behaves the same
-    as the job actually failing.  Dependant actions are queued and following
-    jobs are queued or cancelled Valid states that you can run "fail" on: SCHE,
-    QUE, UNKWN
+    as the job actually failing.
 
 
 Service Commands
 ----------------
 
 start <service name>
-    Start instances the named service
+    Start the service.
 
 stop <service name>
-    Stop instances of the named service
+    Stop the service.
 
 zap <service_id | service_instance_id>
     Marks the specified service or service instance as **DOWN** without

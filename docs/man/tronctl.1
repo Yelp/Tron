@@ -1,4 +1,4 @@
-.TH "TRONCTL" "1" "March 27, 2012" "0.3" "Tron"
+.TH "TRONCTL" "1" "May 11, 2012" "0.4" "Tron"
 .SH NAME
 tronctl \- send management commands to jobs and actions within tron
 .
@@ -32,11 +32,11 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .
 .SH SYNOPSYS
 .sp
-\fBtronctl\fP [\fB\-\-server\fP \fIserver_name\fP] [\fB\-\-verbose\fP | \fB\-v\fP] \fIcommand\fP \fI<job_name | job_run_id | action_run_id>\fP
+\fBtronctl\fP [\fB\-\-server\fP \fIserver_name\fP] [\fB\-\-verbose\fP | \fB\-v\fP] \fIcommand\fP \fI<job_name | job_run_id | action_run_id | service_name>\fP
 .SH DESCRIPTION
 .sp
-\fBtronctl\fP is the control interface for tron. Through tronctl you can start,
-cancel, succeed, and fail job runs and action runs.
+\fBtronctl\fP is the control interface for Tron. \fBtronctl\fP allows you to
+enable, disable, start, stop and cancel Tron Jobs and Services.
 .SH OPTIONS
 .INDENT 0.0
 .TP
@@ -61,58 +61,50 @@ Disables all jobs
 Enables all jobs
 .TP
 .B disable <job_name>
-Disables the specified job. Cancels all scheduled and queued runs. Doesn\(aqt
+Disables the job. Cancels all scheduled and queued runs. Doesn\(aqt
 schedule any more.
 .TP
 .B enable <job_name>
-Enables the specified job by starting the oldest job that still needs to run
+Enables the job and schedules a new run.
 .TP
 .B start <job_name>
-Creates a new run of the specified job. If no other instance is running, it starts
+Creates a new run of the specified job and runs it immediately.
 .TP
 .B start <job_run_id>
-Tries to start the given job or action run. A Job run only starts if no
-other instance is running. If the job has already started, start continues
-by retrying failed runs Valid states that you can run "start" on: SCHE,
-QUE
+Attempt to start the given job run. A Job run only starts if no
+other instance is running. If the job has already started, it will attempt
+to start any actions in the SCH or QUE state.
 .TP
 .B start <action_run_id>
-Starts the action run regardless of anything else running.  Valid states
-that you can run "start" on: SCHE, QUE
+Attempt to start the action run.
 .TP
 .B restart <job_run_id>
-Resets the given Job Run and starts it over.  Valid states that you can run
-"restart" on: SCHE, FAIL, QUE, CANC, UNKWN
+Creates a new job run with the same run time as this job.
 .TP
 .B cancel <job_run_id | action_run_id>
-Cancels the specified job run or action run.  Cancelled runs don\(aqt start at
-their scheduled time and they are skipped over when there is a job run
-queue.  Valid states that you can run "cancel" on: SCHE, QUE
+Cancels the specified job run or action run.
 .TP
-.B succeed <job_run_id | action_run_id>
+.B success <job_run_id | action_run_id>
 Marks the specified job run or action run as succeeded.  This behaves the
-same as the run actually completing.  Dependant actions are ran and queued
-runs start.  Valid states that you can run "succeed" on: SCHE, QUE, UNKWN,
-RUNN
+same as the run actually completing.  Dependant actions are run and queued
+runs start.
 .TP
 .B skip <action_run_id>
 Marks the specified action run as skipped.  This allows dependant actions
-to run. Valid states that you can "skip" on: FAIL
+to run.
 .TP
 .B fail <job_run_id | action_run_id>
 Marks the specified job run or action run as failed.  This behaves the same
-as the job actually failing.  Dependant actions are queued and following
-jobs are queued or cancelled Valid states that you can run "fail" on: SCHE,
-QUE, UNKWN
+as the job actually failing.
 .UNINDENT
 .SH SERVICE COMMANDS
 .INDENT 0.0
 .TP
 .B start <service name>
-Start instances the named service
+Start the service.
 .TP
 .B stop <service name>
-Stop instances of the named service
+Stop the service.
 .TP
 .B zap <service_id | service_instance_id>
 Marks the specified service or service instance as \fBDOWN\fP without

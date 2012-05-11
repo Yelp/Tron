@@ -52,10 +52,9 @@ stderr links of::
 If you want a simple solution for serving output files, you can use Python's
 built-in HTTP server::
 
-    > cd working/directory/for/tron
-    > python -m SimpleHTTPServer 8889
+    $ cd working/directory/for/tron
+    $ python -m SimpleHTTPServer 8889
 
 Once you have ``config.py`` set up, you simply start the server by running it::
 
-    > python tronweb.py # or
-    > nohup python tronweb.py &
+    $ python tronweb.py
