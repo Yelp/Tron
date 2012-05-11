@@ -42,7 +42,7 @@ class MockReactorTestCase(TestCase):
     module_to_mock = None
 
     @class_setup
-    def setup_patched_reactor(self):
+    def class_setup_patched_reactor(self):
         msg = "%s must set a reactor_to_mock field" % self.__class__
         assert self.module_to_mock, msg
         self.old_reactor = getattr(self.module_to_mock, 'reactor')
@@ -52,7 +52,7 @@ class MockReactorTestCase(TestCase):
         setattr(self.module_to_mock, 'reactor', self.old_reactor)
 
     @setup
-    def teardown_mock_reactor_calls(self):
+    def setup_mock_reactor(self):
         self.reactor = Turtle()
         setattr(self.module_to_mock, 'reactor', self.reactor)
 
