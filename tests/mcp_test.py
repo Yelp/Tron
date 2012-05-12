@@ -1,4 +1,5 @@
 import os
+import shutil
 import tempfile
 
 from testify import TestCase, setup, teardown
