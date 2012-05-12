@@ -212,7 +212,7 @@ man_pages = [
      [u'Yelp, Inc.'], 1),
     ('man_tronfig', 'tronfig', u'tronfig documentation',
      [u'Yelp, Inc.'], 1),
-    ('man_tronctl', 'tronctl', u'send management commands to jobs and actions within tron',
+    ('man_tronctl', 'tronctl', u'control Tron jobs and services',
      [u'Yelp, Inc.'], 1),
     ('man_trond', 'trond', u'trond documentation',
      [u'Yelp, Inc.'], 8),

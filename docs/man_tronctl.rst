@@ -6,7 +6,7 @@ tronctl
 Synopsys
 --------
 
-**tronctl** [**--server** *server_name*] [**--verbose** | **-v**] *command* *<job_name | job_run_id | action_run_id | service_name>*
+``tronctl [--server <host:port>] [--verbose] <command> <job_name | job_run_id | action_run_id | service_name>``
 
 Description
 -----------
@@ -17,11 +17,14 @@ enable, disable, start, stop and cancel Tron Jobs and Services.
 Options
 -------
 
---server=<config-file>      Config file containing the address of the server the
-                            tron instance is running on
---verbose                   Displays status messages along the way
---run-date=<YYYY-MM-DD>     For starting a new job, specifies the run date that
-                            should be set. Defaults to today.
+``--server=<config-file>``
+    Config file containing the address of the server the tron instance is running on
+
+``--verbose``
+        Displays status messages along the way
+
+``--run-date=<YYYY-MM-DD>``
+        For starting a new job, specifies the run date that should be set. Defaults to today.
 
 Job Commands
 ------------
