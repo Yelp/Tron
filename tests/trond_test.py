@@ -223,7 +223,6 @@ class BasicTronTestCase(SandboxTestCase):
         job_run = self.sandbox.list_job_run('multi_step_job', 0)
         assert_equal(job_run['state'], 'SUCC')
 
-
     @suite('sandbox')
     def test_failure_on_multi_step_job_doesnt_wedge_tron(self):
         # WARNING: This test may be flaky.

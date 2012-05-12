@@ -33,7 +33,7 @@ class ActionRunContext(object):
 
     @property
     def runid(self):
-        return self.action_run.id
+        return self.action_run.job_run_id
 
     @property
     def actionname(self):
