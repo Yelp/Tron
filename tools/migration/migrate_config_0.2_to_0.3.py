@@ -11,7 +11,7 @@ import re
 import sys
 import yaml
 
-from tron.config import config_parse
+YAML_TAG_RE = re.compile(r'!\w+\b')
 
 class Loader(yaml.Loader):
     """A YAML loader that does not clear its anchor mapping."""
@@ -25,7 +25,7 @@ class Loader(yaml.Loader):
 
 def strip_tags(source):
     """Remove YAML tags."""
-    return config_parse.YAML_TAG_RE.sub('', source)
+    return YAML_TAG_RE.sub('', source)
 
 
 def name_from_doc(doc):

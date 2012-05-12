@@ -3,6 +3,11 @@
 ssh_options:
     agent: true
 
+state_persistence:
+    store_type: mongo
+    name: tron_db
+    buffer_size: 1
+
 nodes:
     - hostname: localhost
     - name: box1

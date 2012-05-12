@@ -84,6 +84,7 @@ class TronSandbox(object):
         self.tronview_bin = os.path.join(self.tron_bin, 'tronview')
         self.log_file = 'tron.log'
         self.log_conf = 'tests/data/logging.conf'
+        self.state_file = '/tmp/state_data.shelve'
 
         self.pid_file = os.path.join(self.tmp_dir, 'tron.pid')
         self.config_file = os.path.join(self.tmp_dir, 'tron_config.yaml')
@@ -121,6 +122,10 @@ class TronSandbox(object):
             self.stop_trond()
         shutil.rmtree(self.tmp_dir)
         os.unlink(self.log_file)
+        try:
+            os.unlink(self.state_file)
+        except OSError:
+            pass
         self.tmp_dir = None
         self.tron_bin = None
         self.tronctl_bin = None
