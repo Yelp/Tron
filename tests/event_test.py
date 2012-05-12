@@ -12,7 +12,7 @@ class FixedLimitStoreTestCase(TestCase):
             event.LEVEL_INFO:       2,
             event.LEVEL_CRITICAL:   3
         }
-        self.store = event.FixedLimitStore(self.limits)
+        self.store = event.EventStore(self.limits)
 
     @setup
     def add_data(self):
@@ -27,12 +27,12 @@ class FixedLimitStoreTestCase(TestCase):
     def test_build_deque(self):
         deq = self.store._build_deque('stars')
         deq.extend(range(12))
-        assert_equal(len(deq), event.FixedLimitStore.DEFAULT_LIMIT)
+        assert_equal(len(deq), event.EventStore.DEFAULT_LIMIT)
 
     def test_append(self):
-        assert_equal(len(self.store._values), 3)
+        assert_equal(len(self.store.events), 3)
         for level, limit in self.limits.iteritems():
-            assert_equal(len(self.store._values[level]), limit)
+            assert_equal(len(self.store.events[level]), limit)
 
     def test__iter__(self):
         values = list(self.store)
