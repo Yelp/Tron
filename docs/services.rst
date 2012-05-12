@@ -72,7 +72,16 @@ State Diagram
 This diagram shows all the states and (where applicable) the command used to
 transition between states.
 
+Service State
+~~~~~~~~~~~~~
+
 .. image:: images/service.png
+    :width: 680px
+
+Service Instance State
+~~~~~~~~~~~~~~~~~~~~~~
+
+.. image:: images/service_instance.png
     :width: 680px
 
 Examples
