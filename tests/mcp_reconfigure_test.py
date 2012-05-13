@@ -139,7 +139,7 @@ class MCPReconfigureTest(TestCase):
 
     @teardown
     def teardown_mcp(self):
-        event.EventManager.get_instance().clear()
+        event.EventManager.reset()
         filehandler.OutputPath(self.test_dir).delete()
         filehandler.FileHandleManager.reset()
 

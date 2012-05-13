@@ -95,9 +95,7 @@ class Service(observer.Observer):
         self.machine            = state.StateMachine(
                                     Service.STATE_DOWN, delegate=self)
         self.monitor            = None
-
-        # TODO: fix up events, parent should be mcp
-        self.event_recorder = event.EventRecorder(self, parent=None)
+        self.event_recorder     = event.get_recorder(str(self))
 
         self.watch(self.machine)
 
@@ -166,11 +164,11 @@ class Service(observer.Observer):
     def _record_state_changes(self):
         """Record an event when the state changes."""
         if self.machine.state in (self.STATE_FAILED, self.STATE_DEGRADED):
-            func = self.event_recorder.emit_critical
+            func = self.event_recorder.critical
         elif self.machine.state in (self.STATE_UP, self.STATE_DOWN):
-            func = self.event_recorder.emit_ok
+            func = self.event_recorder.ok
         else:
-            func = self.event_recorder.emit_info
+            func = self.event_recorder.info
 
         func(str(self.machine.state))
 
@@ -217,7 +215,7 @@ class Service(observer.Observer):
         for instance in self.instances.restore_state(instance_state_data):
             self.watch(instance)
         self._handle_instance_state_change()
-        self.event_recorder.emit_info("restored")
+        self.event_recorder.info("restored")
 
     def __eq__(self, other):
         if other is None or not isinstance(other, Service):

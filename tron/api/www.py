@@ -99,7 +99,7 @@ class JobRunResource(resource.Resource):
         if act_name == '':
             return self
         if act_name == '_events':
-            return EventResource(self._run)
+            return EventResource(self._run.id)
         if act_name in self._run.action_runs:
             return ActionRunResource(self._run, act_name)
 
@@ -172,7 +172,7 @@ class JobResource(resource.Resource):
         if run_id == '':
             return self
         if run_id == '_events':
-            return EventResource(self._job_sched.job)
+            return EventResource(self._job_sched.job.name)
 
         run_id = run_id.upper()
         if run_id == 'HEAD':
@@ -312,7 +312,7 @@ class ServiceResource(resource.Resource):
         if name == '':
             return self
         if name == '_events':
-            return EventResource(self._service)
+            return EventResource(str(self._service))
 
         for instance in self._service.instances:
             if str(instance.instance_number) == str(name):
@@ -463,25 +463,14 @@ class EventResource(resource.Resource):
 
     isLeaf = True
 
-    def __init__(self, recordable):
+    def __init__(self, entity_name):
         resource.Resource.__init__(self)
-        self._recordable = recordable
+        self.entity_name = entity_name
 
     def render_GET(self, request):
-        response_data = []
-
-        recorder = event.EventManager.get_instance().get(self._recordable)
-        if not recorder:
-            return respond(request, dict(data=[]))
-
-        for evt in recorder.list():
-            entity_desc = "UNKNOWN" if not evt.entity else str(evt.entity)
-            response_data.append({
-                'level':        evt.level,
-                'name':         evt.name,
-                'entity':       entity_desc,
-                'time':         evt.time
-            })
+        recorder        = event.get_recorder(self.entity_name)
+        adapt_class     = adapter.EventAdapter
+        response_data   = [adapt_class(e).get_repr() for e in recorder.list()]
         return respond(request, dict(data=response_data))
 
 
@@ -495,7 +484,7 @@ class RootResource(resource.Resource):
         self.putChild('services',   ServicesResource(master_control))
         self.putChild('config',     ConfigResource(master_control))
         self.putChild('status',     StatusResource(master_control))
-        self.putChild('events',     EventResource(master_control))
+        self.putChild('events',     EventResource(''))
 
     def getChild(self, name, request):
         if name == '':
