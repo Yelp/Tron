@@ -43,6 +43,7 @@ class JobRunTestCase(TestCase):
                 ))
         self.job_run.watch = Turtle()
         self.job_run.notify = Turtle()
+        self.job_run.event = Turtle()
 
     @teardown
     def teardown_jobrun(self):
@@ -117,26 +118,23 @@ class JobRunTestCase(TestCase):
 
     def test_start(self):
         self.job_run._do_start = Turtle()
-
         assert self.job_run.start()
-        assert_call(self.job_run.notify, 0, self.job_run.EVENT_START)
+        assert_call(self.job_run.event.info, 0, 'start')
         assert_call(self.job_run._do_start, 0)
-        assert_length(self.job_run.notify.calls, 1)
 
     def test_start_failed(self):
         self.job_run._do_start = lambda: False
-
         assert not self.job_run.start()
-        assert_call(self.job_run.notify, 0, self.job_run.EVENT_START)
-        assert_length(self.job_run.notify.calls, 1)
+        assert_call(self.job_run.event.info, 0, 'start')
+        assert_length(self.job_run.event.ok.calls, 0)
 
     def test_start_no_startable_action_runs(self):
         self.job_run._do_start = Turtle()
         self.job_run.action_runs.has_startable_action_runs = False
 
         assert not self.job_run.start()
-        assert_call(self.job_run.notify, 0, self.job_run.EVENT_START)
-        assert_length(self.job_run.notify.calls, 1)
+        assert_call(self.job_run.event.info, 0, 'start')
+        assert_length(self.job_run.event.ok.calls, 0)
 
     def test_do_start(self):
         timeutils.override_current_time(self.run_time)
@@ -149,8 +147,8 @@ class JobRunTestCase(TestCase):
         for i, startable_run in enumerate(startable_runs):
             assert_call(startable_run.start, 0)
 
-        assert_length(self.job_run.notify.calls, 1)
-        assert_call(self.job_run.notify, 0, self.job_run.EVENT_STARTED)
+        assert_length(self.job_run.event.ok.calls, 1)
+        assert_call(self.job_run.event.ok, 0, 'started')
 
     def test_do_start_all_failed(self):
         timeutils.override_current_time(self.run_time)
@@ -158,7 +156,7 @@ class JobRunTestCase(TestCase):
 
         assert not self.job_run._do_start()
         assert_equal(self.job_run.start_time, self.run_time)
-        assert_length(self.job_run.notify.calls, 0)
+        assert_length(self.job_run.event.ok.calls, 0)
 
     def test_do_start_some_failed(self):
         timeutils.override_current_time(self.run_time)
@@ -166,8 +164,8 @@ class JobRunTestCase(TestCase):
 
         assert self.job_run._do_start()
         assert_equal(self.job_run.start_time, self.run_time)
-        assert_length(self.job_run.notify.calls, 1)
-        assert_call(self.job_run.notify, 0, self.job_run.EVENT_STARTED)
+        assert_length(self.job_run.event.ok.calls, 1)
+        assert_call(self.job_run.event.ok, 0, 'started')
 
     def test_do_start_no_runs(self):
         assert not self.job_run._do_start()
@@ -254,15 +252,15 @@ class JobRunTestCase(TestCase):
         timeutils.override_current_time(self.run_time)
         self.job_run.action_runs.is_failed = False
         self.job_run.finalize()
-        assert_call(self.job_run.notify, 0, self.job_run.EVENT_SUCCEEDED)
-        assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_DONE)
+        assert_call(self.job_run.event.ok, 0, 'succeeded')
+        assert_call(self.job_run.notify, 0, self.job_run.NOTIFY_DONE)
         assert_equal(self.job_run.end_time, self.run_time)
 
     def test_finalize_failure(self):
         timeutils.override_current_time(self.run_time)
         self.job_run.finalize()
-        assert_call(self.job_run.notify, 0, self.job_run.EVENT_FAILED)
-        assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_DONE)
+        assert_call(self.job_run.event.critical, 0, 'failed')
+        assert_call(self.job_run.notify, 0, self.job_run.NOTIFY_DONE)
         assert_equal(self.job_run.end_time, self.run_time)
 
     def test_cleanup(self):

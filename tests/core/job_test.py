@@ -65,6 +65,7 @@ class JobTestCase(TestCase):
                 node_pool=node_store.get('thenodepool'))
         self.job.notify = Turtle()
         self.job.watch = Turtle()
+        self.job.event = Turtle()
 
     @teardown
     def teardown_job(self):
@@ -104,7 +105,7 @@ class JobTestCase(TestCase):
         self.job.update_from_job(other_job)
         assert_equal(self.job.name, 'otherjob')
         assert_equal(self.job.scheduler, 'scheduler')
-        assert_call(self.job.notify, 0, self.job.EVENT_RECONFIGURED)
+        assert_call(self.job.event.ok, 0, 'reconfigured')
 
     def test_status_disabled(self):
         self.job.enabled = False
@@ -141,7 +142,7 @@ class JobTestCase(TestCase):
         assert not self.job.enabled
         for i in xrange(len(job_runs)):
             assert_call(self.job.watch, i, job_runs[i])
-        assert_call(self.job.notify, 0, self.job.EVENT_STATE_RESTORED)
+        assert_call(self.job.event.ok, 0, 'restored')
 
     def test_build_new_runs(self):
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
@@ -416,7 +417,7 @@ class JobSchedulerScheduleTestCase(MockReactorTestCase):
 
     @teardown
     def teardown_job(self):
-        event.EventManager.get_instance().clear()
+        event.EventManager.reset()
 
     def test_enable(self):
         self.job_scheduler.schedule = Turtle()

@@ -44,16 +44,10 @@ class MasterControlProgram(Observable):
         self.crash_reporter     = None
         self.config_filepath    = config_file
         self.context            = command_context.CommandContext()
-
         # Time zone of the system clock
         self.time_zone          = None
-
-        # Record events for the entire system. Child event recorders may record
-        # events for specific jobs, job runs, actions, action runs, etc. and
-        # these events will be propagated up but not down the event recorder
-        # tree.
-        self.event_manager      = event.EventManager.get_instance()
-        self.event_recorder     = self.event_manager.add(self)
+        self.event_recorder     = event.get_recorder()
+        self.event_recorder.ok('started')
         self.state_manager      = None
 
     def shutdown(self):
@@ -74,13 +68,13 @@ class MasterControlProgram(Observable):
 
     def reconfigure(self):
         """Reconfigure MCP while Tron is already running."""
-        self.event_recorder.emit_info("reconfig")
+        self.event_recorder.ok("reconfigured")
         with self.state_manager.disabled():
             try:
                 self._load_config(reconfigure=True)
             except Exception:
-                self.event_recorder.emit_critical("reconfig_failure")
-                log.exception("Reconfig failure")
+                self.event_recorder.critical("reconfigure_failure")
+                log.exception("reconfigure failure")
                 raise
 
     def _load_config(self, reconfigure=False):
@@ -202,15 +196,16 @@ class MasterControlProgram(Observable):
         if failure:
             raise ConfigError("Failed adding services %s" % failure)
 
-    def _apply_notification_options(self, notification_conf):
-        if notification_conf is not None:
-            if self.crash_reporter:
-                self.crash_reporter.stop()
+    def _apply_notification_options(self, conf):
+        if not conf:
+            return
 
-            em = emailer.Emailer(notification_conf.smtp_host,
-                                 notification_conf.notification_addr)
-            self.crash_reporter = crash_reporter.CrashReporter(em, self)
-            self.crash_reporter.start()
+        if self.crash_reporter:
+            self.crash_reporter.stop()
+
+        email_sender = emailer.Emailer(conf.smtp_host, conf.notification_addr)
+        self.crash_reporter = crash_reporter.CrashReporter(email_sender)
+        self.crash_reporter.start()
 
     def add_job(self, job_config, reconfigure=False):
         log.debug("Building new job %s", job_config.name)
@@ -232,7 +227,6 @@ class MasterControlProgram(Observable):
 
         log.info("Adding new job %s", job.name)
         self.jobs[job.name] = JobScheduler(job)
-        self.event_manager.add(job, parent=self)
         self.state_manager.watch(job, Job.NOTIFY_STATE_CHANGE)
 
         # If this is not a reconfigure, wait for state to be restored before

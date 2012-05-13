@@ -6,9 +6,10 @@ from testify import TestCase, setup, teardown
 from testify import  assert_equal, run
 from testify.utils import turtle
 from tests.assertions import assert_call, assert_length
+from tests.mocks import MockContext
 from tests.testingutils import Turtle
 
-from tron import mcp
+from tron import mcp, event
 
 
 class MasterControlProgramTestCase(TestCase):
@@ -30,12 +31,12 @@ class MasterControlProgramTestCase(TestCase):
     @teardown
     def teardown_mcp(self):
         self.mcp.nodes.clear()
-        self.mcp.event_manager.clear()
+        event.EventManager.reset()
         os.unlink(self.config_file.name)
 
     def test_reconfigure(self):
         self.mcp._load_config = Turtle()
-        self.mcp.state_manager = Turtle()
+        self.mcp.state_manager = MockContext()
 
         self.mcp.reconfigure()
         assert_call(self.mcp._load_config, 0, reconfigure=True)
@@ -69,7 +70,7 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
     @teardown
     def teardown_mcp(self):
         self.mcp.nodes.clear()
-        self.mcp.event_manager.clear()
+        event.EventManager.reset()
         shutil.rmtree(self.working_dir)
 
     def test_restore_state(self):

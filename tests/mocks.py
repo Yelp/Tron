@@ -113,3 +113,12 @@ class MockJobRunCollection(Turtle):
 
     def __iter__(self):
         return iter(self.runs)
+
+
+class MockContext(Turtle):
+
+    def __enter__(self):
+        pass
+
+    def __exit__(self, _exc_type, _exc_val, _exc_tb):
+        pass
