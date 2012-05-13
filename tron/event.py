@@ -81,7 +81,7 @@ class EventRecorder(object):
     """A node in a tree which stores EventRecorders, links to children,
     and adds missing children on get_child().
     """
-    __slots__ = ('name', 'recorder', 'children', 'events')
+    __slots__ = ('name', 'children', 'events')
 
     def __init__(self, name):
         self.name           = name
