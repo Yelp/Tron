@@ -1,10 +1,9 @@
 from testify import setup, TestCase, assert_equal, teardown, assert_raises
-from testify import turtle, assert_in
 from tests.assertions import assert_length
 
 from tron import event
 
-class FixedLimitStoreTestCase(TestCase):
+class EventStoreTestCase(TestCase):
 
     @setup
     def build_store(self):
@@ -14,15 +13,19 @@ class FixedLimitStoreTestCase(TestCase):
         }
         self.store = event.EventStore(self.limits)
 
+    def _build_event(self, level, name):
+        return event.Event('entity', level, name)
+
     @setup
     def add_data(self):
         for i in xrange(1,5):
-            self.store.append(event.LEVEL_INFO, "test%s" % i)
+            self.store.append(self._build_event(event.LEVEL_INFO, "test%s" % i))
 
         for i in xrange(5,10):
-            self.store.append(event.LEVEL_CRITICAL, "test%s" % i)
+            e = self._build_event(event.LEVEL_CRITICAL, "test%s" % i)
+            self.store.append(e)
 
-        self.store.append(event.LEVEL_OK, "alpha")
+        self.store.append(self._build_event(event.LEVEL_OK, "alpha"))
 
     def test_build_deque(self):
         deq = self.store._build_deque('stars')
@@ -34,14 +37,14 @@ class FixedLimitStoreTestCase(TestCase):
         for level, limit in self.limits.iteritems():
             assert_equal(len(self.store.events[level]), limit)
 
-    def test__iter__(self):
-        values = list(self.store)
-        expected = ['test3', 'test4', 'test7', 'test8', 'test9', 'alpha']
+    def test_get_events(self):
+        values = set(e.name for e in self.store.get_events())
+        expected = set(['test3', 'test4', 'test7', 'test8', 'test9', 'alpha'])
         assert_equal(values, expected)
 
-    def test_list(self):
-        values = self.store.list([event.LEVEL_OK, event.LEVEL_INFO, 'BOGUS'])
-        expected = ['test3', 'test4', 'alpha']
+    def test_get_events_with_min_level(self):
+        values = set(e.name for e in self.store.get_events(event.LEVEL_OK))
+        expected = set(['test7', 'test8', 'test9', 'alpha'])
         assert_equal(values, expected)
 
 
@@ -49,116 +52,114 @@ class EventRecorderTestCase(TestCase):
 
     @setup
     def build_recorders(self):
-        self.observable = turtle.Turtle()
-        self.parent_observable = turtle.Turtle()
-        self.parent_recorder = event.EventRecorder(self.parent_observable)
-        self.recorder = event.EventRecorder(
-                self.observable, parent=self.parent_recorder)
+        self.entity_name = 'the_name'
+        self.recorder    = event.EventRecorder(self.entity_name)
 
-    def test_record_with_parent(self):
-        self.recorder.record(event.Event(
-                self.observable, event.LEVEL_INFO, "hello"))
-        self.recorder.emit_notice("hello again")
+    def test_get_child(self):
+        child_rec = self.recorder.get_child('start')
+        assert_equal(self.recorder.get_child('start'), child_rec)
+        assert_equal(child_rec.name, 'the_name.start')
 
-        assert_equal(len(self.recorder.list()), 2)
-        assert_equal(len(self.parent_recorder.list()), 1)
+    def test_get_child_missing(self):
+        child_rec = self.recorder.get_child('next')
+        assert_equal(child_rec.name, 'the_name.next')
+        assert_equal(self.recorder.children['next'], child_rec)
 
-        assert_equal(len(self.recorder.list(min_level=event.LEVEL_CRITICAL)), 0)
-        assert_equal(len(self.recorder.list(min_level=event.LEVEL_NOTICE)), 1)
+    def test_remove_child(self):
+        self.recorder.get_child('next')
+        self.recorder.remove_child('next')
+        assert 'next' not in self.recorder.children
 
-    def test_handler(self):
-        cat_event = event.EventType(event.LEVEL_OK, "a cat happened")
-        self.recorder.handler(self.observable, cat_event)
-        assert_equal(len(self.recorder.list()), 1)
-        first_event = self.recorder.list()[0]
-        assert_equal(first_event.level, cat_event.level)
-        assert_equal(first_event.name,  cat_event.name)
+    def test_remove_child_missing(self):
+        self.recorder.remove_child('bogus')
+        assert 'bogus' not in self.recorder.children
 
-    def test_handler_non_event_type_event(self):
-        non_event = ('bogus', 'thing')
-        self.recorder.handler(self.observable, non_event)
-        assert_equal(len(self.recorder.list()), 0)
+    def test_record(self):
+        self.recorder._record(event.LEVEL_CRITICAL, 'this thing')
+        recorded_event = self.recorder.events.events[event.LEVEL_CRITICAL][0]
+        assert_equal(recorded_event.level, event.LEVEL_CRITICAL)
+        assert_equal(recorded_event.name, 'this thing')
+        assert_equal(recorded_event.entity, self.entity_name)
 
+    def test_list_with_children(self):
+        self.recorder.ok('one')
+        self.recorder.notice('two')
+        child_rec = self.recorder.get_child('stars')
+        child_rec.critical('three')
+        child_rec.ok('four')
+        self.recorder.info('five')
 
-class EntitySwapTestCase(TestCase):
-    """EventRecorder should be able to swap out the underlying entity, and all
-    the associated events should be updated
-    """
+        events = self.recorder.list()
+        expected = ['one', 'two', 'three', 'four', 'five']
+        assert_equal([e.name for e in events], expected)
 
-    @setup
-    def build_recorder(self):
-        self.entity = turtle.Turtle()
-        self.orig_entity = turtle.Turtle()
-        self.recorder = event.EventRecorder(self.orig_entity)
+    def test_list_without_children(self):
+        self.recorder.ok('one')
+        self.recorder.notice('two')
+        child_rec = self.recorder.get_child('stars')
+        child_rec.critical('three')
+        child_rec.ok('four')
+        self.recorder.info('five')
 
-    @setup
-    def create_event(self):
-        self.recorder.emit_notice("hello")
+        events = self.recorder.list(child_events=False)
+        expected = ['one', 'two', 'five']
+        assert_equal([e.name for e in events], expected)
 
-    def test(self):
-        assert self.entity != self.orig_entity
-        self.recorder.entity = self.entity
-
-        evt = self.recorder.list()[0]
-        assert_equal(evt.entity, self.entity)
+    def test_list_no_events(self):
+        assert_length(self.recorder.list(), 0)
+        assert_length(self.recorder.list(child_events=False), 0)
 
 
 class EventManagerTestCase(TestCase):
 
-    class MockObservable(turtle.Turtle):
-        def __str__(self):
-            return 'thisid'
-
     @setup
     def setup_manager(self):
         self.manager = event.EventManager.get_instance()
-        self.observable = self.MockObservable()
+        self.root = self.manager.root_recorder
 
     @teardown
     def teardown_manager(self):
-        self.manager.clear()
+        self.manager.reset()
 
     def test_get_instance(self):
         assert_equal(self.manager, event.EventManager.get_instance())
         assert_raises(ValueError, event.EventManager)
 
-    def test_build_key(self):
-        assert_equal(self.manager._build_key(self.observable), "thisid")
+    def test_get_root(self):
+        recorder = self.manager.get('')
+        assert_equal(recorder, self.root)
 
-    def test_add(self):
-        recorder = self.manager.add(self.observable)
-        assert_equal(recorder.entity, self.observable)
-        assert_in(recorder, self.manager.recorders.values())
-
-    def test_add_duplicate(self):
-        self.manager.add(self.observable)
-        recorder = self.manager.add(self.observable)
-        assert_in(recorder, self.manager.recorders.values())
-
-    def test_add_parent(self):
-        parent = turtle.Turtle()
-        parent_recorder = self.manager.add(parent)
-        recorder = self.manager.add(self.observable, parent)
-        assert_equal(recorder._parent(), parent_recorder)
-
-    def test_add_missing_parent(self):
-        parent = turtle.Turtle()
-        recorder = self.manager.add(self.observable, parent)
-        assert_equal(recorder._parent, None)
-
-    def test_get(self):
-        recorder = self.manager.add(self.observable)
-        assert_equal(self.manager.get(self.observable), recorder)
-        assert_equal(recorder.entity, self.observable)
+    def test_get_nested(self):
+        name = 'one.two'
+        recorder = self.manager.get(name)
+        assert_equal(self.manager.get(name), recorder)
+        assert_equal(recorder.name, name)
 
     def test_get_missing(self):
-        assert self.manager.get(self.observable) is None
+        name = 'name.second.third'
+        recorder = self.manager.get(name)
+        assert_equal(
+            self.root.children['name'].children['second'].children['third'],
+            recorder)
+        assert_equal(recorder.name, name)
 
     def test_remove(self):
-        self.manager.add(self.observable)
-        self.manager.remove(self.observable)
-        assert_length(self.manager.recorders, 0)
+        self.manager.get('one')
+        self.manager.remove('one')
+        assert not self.manager.root_recorder.children.get('one')
+
+    def test_remove_nested(self):
+        self.manager.get('one.two')
+        self.manager.remove('one.two')
+        assert not self.root.children['one'].children.get('two')
+        assert self.root.children['one']
+
+    def test_remove_missing_nested(self):
+        self.manager.get('one')
+        self.manager.remove('one.two')
+        assert not self.root.children['one'].children.get('two')
+        assert self.root.children['one']
 
     def test_remove_missing(self):
-        self.manager.remove('bogus thing')
-        assert_length(self.manager.recorders, 0)
+        self.manager.remove('bogus')
+        assert not self.manager.root_recorder.children.get('bogus')

@@ -21,13 +21,13 @@ class EventLevel(object):
         self.label          = label
 
     def __eq__(self, other):
-        return self.order == other.order and self.label == other.label
+        return self.order == other.order
 
     def __cmp__(self, other):
         return cmp(self.order, other.order)
 
     def __hash__(self):
-        return hash((self.order, self.label))
+        return hash(self.order)
 
 
 LEVEL_INFO      = EventLevel(0, "INFO")         # Troubleshooting information
@@ -52,9 +52,10 @@ class EventStore(object):
         return deque(maxlen=limit)
 
     def append(self, event):
-        if event.level not in self.events:
-            self.events[event.level] = self._build_deque(event.level)
-        self.events[event.level].append(event)
+        level = event.level
+        if level not in self.events:
+            self.events[level] = self._build_deque(level)
+        self.events[level].append(event)
 
     def get_events(self, min_level=None):
         min_level       = min_level or self.NO_LEVEL
@@ -92,12 +93,14 @@ class EventRecorder(object):
             return self.children[child_key]
 
         split_char      = NAME_CHARACTER
-        child_name      = '%s%s%s' % (self.name, split_char, child_key)
+        name_parts      = [self.name, child_key] if self.name else [child_key]
+        child_name      = split_char.join(name_parts)
         child           = EventRecorder(child_name)
         return self.children.setdefault(child_key, child)
 
     def remove_child(self, child_key):
-        del self.children[child_key]
+        if child_key in self.children:
+            del self.children[child_key]
 
     def _record(self, level, name, **data):
         self.events.append(Event(self.name, level, name, **data))
@@ -107,7 +110,7 @@ class EventRecorder(object):
             events = self._events_with_child_events(min_level)
         else:
             events = self.events.get_events(min_level)
-        return sorted(events, key=operator.itemgetter('time'))
+        return sorted(events, key=operator.attrgetter('time'))
 
     def _events_with_child_events(self, min_level):
         """Yield all events and all child events which were recorded with a
@@ -115,21 +118,21 @@ class EventRecorder(object):
         """
         for event in self.events.get_events(min_level):
             yield event
-        for child in self.children:
+        for child in self.children.itervalues():
             for event in child._events_with_child_events(min_level):
                 yield event
 
     def info(self, name, **data):
-        return self._record(LEVEL_INFO,     name **data)
+        return self._record(LEVEL_INFO,     name, **data)
 
     def ok(self, name, **data):
-        return self._record(LEVEL_OK,       name **data)
+        return self._record(LEVEL_OK,       name, **data)
 
     def notice(self, name, **data):
-        return self._record(LEVEL_NOTICE,   name **data)
+        return self._record(LEVEL_NOTICE,   name, **data)
 
     def critical(self, name, **data):
-        return self._record(LEVEL_CRITICAL, name **data)
+        return self._record(LEVEL_CRITICAL, name, **data)
 
 
 def get_recorder(entity_name=''):
@@ -159,7 +162,7 @@ class EventManager(object):
         return cls._instance
 
     def _get_name_parts(self, entity_name):
-        return entity_name.split(NAME_CHARACTER)
+        return entity_name.split(NAME_CHARACTER) if entity_name else []
 
     def get(self, entity_name):
         """Search for and return the event recorder in the tree."""
