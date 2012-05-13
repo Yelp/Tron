@@ -241,6 +241,15 @@ class JobSchedulerTestCase(TestCase):
         assert_length(job_run.start.calls, 1)
         assert_length(self.job_scheduler.schedule.calls, 1)
 
+    def test_run_job_shutdown_requested(self):
+        self.job_scheduler.shutdown_requested = True
+        self.job_scheduler.schedule = Turtle()
+        job_run = Turtle()
+        self.job_scheduler.run_job(job_run)
+        assert_length(self.job_scheduler.schedule.calls, 0)
+        assert_length(job_run.start.calls, 0)
+        assert_length(job_run.cancel.calls, 0)
+
     def test_run_job_job_disabled(self):
         self.job_scheduler.schedule = Turtle()
         job_run = Turtle()

@@ -43,7 +43,7 @@ class PIDFile(object):
             raise SystemExit("Daemon was running as %s. Remove PID file." % pid)
 
     def is_process_running(self, pid):
-        """Return True the process is still running."""
+        """Return True if the process is still running."""
         if not pid:
             return False
         try:
@@ -71,7 +71,7 @@ class PIDFile(object):
 
 
 class NoDaemonContext(object):
-    """A mock DaemonContext."""
+    """A mock DaemonContext for running trond without being a daemon."""
 
     def __init__(self, **kwargs):
         self.signal_map     = kwargs.pop('signal_map', {})
@@ -93,6 +93,8 @@ class NoDaemonContext(object):
 class TronDaemon(object):
     """Daemonize and run the tron daemon."""
 
+    WAIT_SECONDS = 5
+
     def __init__(self, options):
         self.options    = options
         self.mcp        = None
@@ -103,8 +105,9 @@ class TronDaemon(object):
     def _build_context(self, options, context_class):
         signal_map = {
             signal.SIGHUP:  self._handle_reconfigure,
-            signal.SIGINT:  self._handle_shutdown,
-            signal.SIGTERM: self._handle_shutdown
+            signal.SIGINT:  self._handle_graceful_shutdown,
+            signal.SIGTERM: self._handle_shutdown,
+            signal.SIGUSR1: self._handle_debug
         }
         return context_class(
             working_directory=options.working_dir,
@@ -140,13 +143,34 @@ class TronDaemon(object):
         """Run the twisted reactor."""
         reactor.run()
 
-    def _handle_shutdown(self, signal_number, stack_frame):
-        log.info("Shutdown requested: sig %s" % signal_number)
+    def _handle_shutdown(self, sig_num, stack_frame):
+        log.info("Shutdown requested: sig %s" % sig_num)
         if self.mcp:
             self.mcp.shutdown()
         reactor.stop()
-        self.context.terminate(signal_number, stack_frame)
+        self.context.terminate(sig_num, stack_frame)
+
+    def _handle_graceful_shutdown(self, sig_num, stack_frame):
+        """Gracefully shutdown by waiting for Jobs to finish."""
+        log.info("Graceful Shutdown requested: sig %s" % sig_num)
+        if not self.mcp:
+            self._handle_shutdown(sig_num, stack_frame)
+            return
+        self.mcp.graceful_shutdown()
+        self._wait_for_jobs()
+
+    def _wait_for_jobs(self):
+        if self.mcp.jobs_shutdown():
+            self._handle_shutdown(None, None)
+            return
+
+        log.info("Waiting for jobs to shutdown.")
+        reactor.callLater(self.WAIT_SECONDS, self._wait_for_jobs)
 
     def _handle_reconfigure(self, _signal_number, _stack_frame):
         log.info("Reconfigure requested by SIGHUP.")
         reactor.callLater(0, self.mcp.reconfigure)
+
+    def _handle_debug(self, _sig_num, _frame):
+        import ipdb
+        ipdb.set_trace()

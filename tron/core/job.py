@@ -226,7 +226,8 @@ class JobScheduler(Observer):
     """
 
     def __init__(self, job):
-        self.job = job
+        self.job                = job
+        self.shutdown_requested = False
         self.watch(job)
 
     def restore_job_state(self, job_state_data):
@@ -246,6 +247,11 @@ class JobScheduler(Observer):
         """Disable the job and cancel and pending scheduled jobs."""
         self.job.enabled = False
         self.job.runs.cancel_pending()
+
+    @property
+    def is_shutdown(self):
+        """Return True if there are no running or starting runs."""
+        return not any(self.job.runs.get_active())
 
     def manual_start(self, run_time=None):
         """Trigger a job run manually (instead of from the scheduler)."""
@@ -281,6 +287,9 @@ class JobScheduler(Observer):
         """Triggered by a callback to actually start the JobRun. Also
         schedules the next JobRun.
         """
+        if self.shutdown_requested:
+            return
+
         # If the Job has been disabled after this run was scheduled, then cancel
         # the JobRun and do not schedule another
         if not self.job.enabled:

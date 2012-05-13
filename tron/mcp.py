@@ -58,7 +58,19 @@ class MasterControlProgram(Observable):
 
     def shutdown(self):
         if self.state_manager:
+            self.state_manager.enabled = False
             self.state_manager.cleanup()
+
+    def graceful_shutdown(self):
+        """Tell JobSchedulers that a shutdown has been requested."""
+        for job_sched in self.jobs.itervalues():
+            job_sched.shutdown_requested = True
+
+    def jobs_shutdown(self):
+        """Return True if all jobs have finished their runs after
+        shutdown was requested.
+        """
+        return all(job.is_shutdown for job in self.jobs.itervalues())
 
     def reconfigure(self):
         """Reconfigure MCP while Tron is already running."""
