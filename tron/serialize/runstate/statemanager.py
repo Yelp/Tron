@@ -7,6 +7,7 @@ from tron.core import job
 from tron.serialize import runstate
 from tron.serialize.runstate.mongostore import MongoStateStore
 from tron.serialize.runstate.shelvestore import ShelveStateStore
+from tron.serialize.runstate.sqlalchemystore import SQLAlchemyStateStore
 from tron.serialize.runstate.yamlstore import YamlStateStore
 from tron.utils import observer
 from tron import service
@@ -34,14 +35,14 @@ class PersistenceManagerFactory(object):
         if store_type == 'shelve':
             store = ShelveStateStore(name)
 
-#        if store_type == 'sqlalchemy':
-#            store = SQLAlchemyStore(name, connection_details)
+        if store_type == 'sql':
+            store = SQLAlchemyStateStore(name, connection_details)
 
         if store_type == 'mongo':
             store = MongoStateStore(name, connection_details)
 
         if store_type == 'yaml':
-           store = YamlStateStore(name)
+            store = YamlStateStore(name)
 
         if not store:
             raise PersistenceStoreError("Unknown store type: %s" % store_type)
@@ -201,7 +202,7 @@ class PersistentStateManager(observer.Observer):
         start_time = time.time()
         yield
         duration = time.time() - start_time
-        log.info("State saved using %s in %0.2fs." % (self._impl, duration))
+        log.info("State saved using %s in %0.3fs." % (self._impl, duration))
 
     @contextmanager
     def disabled(self):
