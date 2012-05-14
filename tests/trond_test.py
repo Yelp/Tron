@@ -93,7 +93,7 @@ class BasicTronTestCase(SandboxTestCase):
         self.sandbox.ctl('start', 'echo_job')
 
         try:
-            wait_for_file_to_exist(canary + '.echo_job.1.cleanup')
+            wait_for_file_to_exist(canary + '.echo_job.1')
         except TronSandboxException:
             print >> sys.stderr, "trond appears to have crashed. Log:"
             print >> sys.stderr, self.sandbox.log_contents()
@@ -138,7 +138,7 @@ class BasicTronTestCase(SandboxTestCase):
 
         # run the job and check its output
         self.sandbox.tronctl(['start', 'echo_job'])
-        wait_for_file_to_exist(canary + '.echo_job.1.cleanup')
+        wait_for_file_to_exist(canary + '.echo_job.1')
 
         assert_equal(self.sandbox.list_action_run('echo_job', 1, 'echo_action')['state'], 'SUCC')
         assert_equal(self.sandbox.list_job_run('echo_job', 1)['state'], 'SUCC')
@@ -189,7 +189,7 @@ class BasicTronTestCase(SandboxTestCase):
 
         time.sleep(3)
 
-        assert os.path.exists(canary + '.failjob.0.cleanup')
+        assert os.path.exists(canary + '.failjob.0')
         assert_gt(len(self.sandbox.list_job('failjob')['runs']), 1)
 
     @suite('sandbox')
