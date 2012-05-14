@@ -12,7 +12,7 @@ class TestRunner(object):
 
     def __init__(self, basepath):
         self.basepath = basepath
-        self.test_exec = ['testify', '--summary']
+        self.test_exec = ['testify', '-v', '--summary']
 
     def testable_file(self, filename):
         return filename.endswith('.py') and filename.startswith(self.basepath)

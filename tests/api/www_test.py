@@ -9,6 +9,7 @@ from testify import TestCase, class_setup, assert_equal, run, setup
 from testify import class_teardown
 from testify.utils import turtle
 from tests import mocks
+from tests.assertions import assert_call
 from tron.api import www
 from tests.testingutils import Turtle
 
@@ -51,7 +52,7 @@ class ActionRunResourceTestCase(WWWTestCase):
         assert_equal(resp['id'], self.job_run.action_runs[self.action_name].id)
 
 
-class RootTest(TestCase):
+class RootResourceTestCase(TestCase):
     @class_setup
     def build_root(self):
         self.mc = turtle.Turtle()
@@ -74,10 +75,10 @@ class RootTest(TestCase):
         assert isinstance(child, www.ServicesResource), child
 
 
-class JobsTest(WWWTestCase):
+class JobsResourceTestCase(WWWTestCase):
+
     @class_setup
     def build_resource(self):
-        self.mc = turtle.Turtle()
         self.job = turtle.Turtle(
             repr_data=lambda: {'name': 'testname'},
             name="testname",
@@ -86,28 +87,27 @@ class JobsTest(WWWTestCase):
             scheduler_str="testsched",
             node_pool=mocks.MockNodePool()
         )
+        self.mcp = turtle.Turtle()
+        self.resource = www.JobsResource(self.mcp)
 
-        self.mc.jobs = {self.job.name: turtle.Turtle(job=self.job)}
-        self.resource = www.JobsResource(self.mc)
-
-    def test_job_list(self):
-        """Test that we get a proper job list"""
+    def test_render_GET(self):
+        self.resource.get_data = Turtle()
         result = self.resource.render_GET(REQUEST)
+        assert_call(self.resource.get_data, 0, False, False)
         assert 'jobs' in result
-        assert result['jobs'][0]['name'] == "testname"
 
-    def test_get_job(self):
-        """Test that we can find a specific job"""
-        child = self.resource.getChildWithDefault("testname", turtle.Turtle())
+    def test_getChild(self):
+        child = self.resource.getChild("testname", turtle.Turtle())
         assert isinstance(child, www.JobResource)
-        assert child._job_sched.job is self.job
+        assert_call(self.mcp.get_job_by_name, 0, "testname")
 
-    def test_missing_job(self):
-        child = self.resource.getChildWithDefault("bar", turtle.Turtle())
+    def test_getChild_missing_job(self):
+        self.mcp.get_job_by_name = lambda n: None
+        child = self.resource.getChild("bar", turtle.Turtle())
         assert isinstance(child, twisted.web.resource.NoResource)
 
 
-class JobDetailTest(WWWTestCase):
+class JobResourceTestCase(WWWTestCase):
     @class_setup
     def build_resource(self):
         self.job = turtle.Turtle(
