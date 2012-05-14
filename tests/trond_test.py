@@ -12,6 +12,9 @@ from tests.sandbox import wait_for_file_to_exist
 
 
 BASIC_CONFIG = """
+ssh_options:
+    agent: true
+
 nodes:
   - name: local
     hostname: 'localhost'
@@ -170,10 +173,7 @@ class BasicTronTestCase(SandboxTestCase):
     def test_cleanup_on_failure(self):
         canary = os.path.join(self.sandbox.tmp_dir, 'end_to_end_done')
 
-        FAIL_CONFIG = dedent("""
-        nodes:
-          - name: local
-            hostname: 'localhost'
+        FAIL_CONFIG = BASIC_CONFIG + dedent("""
         jobs:
           - name: "failjob"
             node: local
@@ -194,10 +194,7 @@ class BasicTronTestCase(SandboxTestCase):
 
     @suite('sandbox')
     def test_skip_failed_actions(self):
-        CONFIG = dedent("""
-        nodes:
-          - name: local
-            hostname: 'localhost'
+        CONFIG = BASIC_CONFIG + dedent("""
         jobs:
           - name: "multi_step_job"
             node: local
@@ -217,6 +214,7 @@ class BasicTronTestCase(SandboxTestCase):
         self.sandbox.tronctl(['skip', 'multi_step_job.0.broken'])
         action_run = self.sandbox.list_action_run('multi_step_job', 0, 'broken')
         assert_equal(action_run['state'], 'SKIP')
+        time.sleep(1)
 
         action_run = self.sandbox.list_action_run('multi_step_job', 0, 'works')
         assert_equal(action_run['state'], 'SUCC')
