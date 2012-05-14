@@ -76,6 +76,7 @@ class FileHandleManagerTestCase(TestCase):
 
     @setup
     def setup_fh_manager(self):
+        FileHandleManager.reset()
         self.file1 = NamedTemporaryFile('r')
         self.file2 = NamedTemporaryFile('r')
         FileHandleManager.set_max_idle_time(2)
