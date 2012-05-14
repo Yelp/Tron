@@ -1,16 +1,13 @@
 Services
 ========
 
-A service is composed of several *service instances* which are either on or
-off. Service instances are interacted with as processes, but those processes
-can represent daemons, third party web services, and more.
-
-A service is started by invoking a command that writes a file containing the
-service's **pid** to **pid_file**. Tron checks for that pid's existence every
+A service is composed of several *service instances* which are either `up` or
+`down`. Service instances are daemon processes running on a node. Services
+are required to manage a pid file, which is used to determine the state of
+the service instance. Tron checks for the pid stored in the pid file every
 **monitor_interval** seconds and restarts it after **restart_interval** seconds
-if it goes down.
+if the process is no longer running.
 
-.. Keep this up to date with man_tronfig.rst
 
 Required Fields
 ---------------
@@ -19,12 +16,11 @@ Required Fields
     Name of the service. Used in :command:`tronview` and :command:`tronctl`.
 
 **node**
-    Reference to the node or pool to service the job in. If a pool, instances
-    are started by round robin scheduling of the nodes in the pool. This is an
-    alias to an anchor specified in **nodes**.
+    Reference to the node or node pool. If a pool, instances
+    are started by round robin scheduling of the nodes in the pool.
 
 **pid_file**
-    File to write one service instance's pid to. This will typically include
+    Path to the pid file used by the service. This will typically include
     the command context variables ``name`` and ``instance_number``.
 
 **command**
@@ -32,13 +28,14 @@ Required Fields
     service pid to ``pid_file``.
 
 **monitor_interval**
-    Seconds between checks that the service is still up.
+    The number of seconds between status checks of the services state (if the
+    process is still running or not).
 
 Optional Fields
 ---------------
 
 **restart_interval** (default **never**)
-    Seconds to wait before restarting to the service when it appears to be
+    Seconds to wait before restarting the service when it appears to be
     down. If not specified, service instances will not be restarted when down.
 
 **count** (default **1**)
@@ -46,28 +43,28 @@ Optional Fields
     is used, the instances are spread across all nodes in the pool evenly by
     round robin scheduling.
 
-.. Keep this up to date with man_tronview.rst
 
 States
 ------
+
+The following is a list of states for a Service.
 
 **STARTING**
     The service has been started. The service will remain in this state until
     the first monitor interval runs.
 
 **UP**
-    The service is running normally. All instances were available during the
-    last monitor period.
+    The service is running. All instances were up when they were last checked.
 
 **DEGRADED**
     One or more instances of the service are unexpectedly not available. The
-    service will go back to **UP** when the instance is restarted.
+    service will go back to **UP** when the instance(s) are restarted.
 
 **FAILED**
-    All instances of the service are unexpectedly unavailable.
+    All instances of the service are down.
 
 **DOWN**
-    Service has been stopped
+    Service has been stopped.
 
 State Diagram
 ^^^^^^^^^^^^^
@@ -83,12 +80,11 @@ Examples
 
 Here is the example from :ref:`Overview: Services <overview_services>`::
 
-    # ...
     services:
-      - name: "email_worker"
-        node: *pool
-        count: 4
-        monitor_interval: 60
-        restart_interval: 120
-        pid_file: "/var/run/batch/%(name)s-%(instance_number)s.pid"
-        command: "/usr/local/bin/start_email_worker --pid_file=%(pid_file)s"
+        -   name: "email_worker"
+            node: service_pool
+            count: 4
+            monitor_interval: 60
+            restart_interval: 120
+            pid_file: "/var/run/batch/%(name)s-%(instance_number)s.pid"
+            command: "/usr/local/bin/start_email_worker --pid_file=%(pid_file)s"

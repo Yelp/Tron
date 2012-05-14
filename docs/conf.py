@@ -86,7 +86,7 @@ pygments_style = 'sphinx'
 
 # The theme to use for HTML and HTML Help pages.  See the documentation for
 # a list of builtin themes.
-html_theme = 'default'
+html_theme = 'nature'
 
 # Theme options are theme-specific and customize the look and feel of a theme
 # further.  For a list of options available for each theme, see the
@@ -212,7 +212,7 @@ man_pages = [
      [u'Yelp, Inc.'], 1),
     ('man_tronfig', 'tronfig', u'tronfig documentation',
      [u'Yelp, Inc.'], 1),
-    ('man_tronctl', 'tronctl', u'send management commands to jobs and actions within tron',
+    ('man_tronctl', 'tronctl', u'control Tron jobs and services',
      [u'Yelp, Inc.'], 1),
     ('man_trond', 'trond', u'trond documentation',
      [u'Yelp, Inc.'], 8),

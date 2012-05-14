@@ -117,7 +117,7 @@ Time Zone
     or late on the days bordering each mode. See :ref:`dst_notes` for more
     information.
 
-    ::
+Example::
 
         time_zone: US/Pacific
 
@@ -130,93 +130,33 @@ Command Context
     Dictionary of custom :ref:`command context variables
     <command_context_variables>`. It is an arbitrary set of key-value pairs.
 
-    ::
+Example::
 
         command_context:
             PYTHON: /usr/bin/python
             TMPDIR: /tmp
 
-.. Keep this synchronized with man_tronfig
-
-.. _built_in_cc:
-
-Built-In Command Context Variables
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-
-**shortdate**
-    Current date in ``YYYY-MM-DD`` format. Supports simple arithmetic of the
-    form ``%(shortdate+6)s`` which returns a date 6 days in the future,
-    ``%(shortdate-2)s`` which returns a date 2 days before the run date.
-
-**year**
-    Current year in ``YYYY`` format. Supports the same arithmetic operations
-    as `shortdate`. For example, ``%(year-1)s`` would return the year previous
-    to the run date.
-
-**month**
-    Current month in `MM` format. Supports the same arithmetic operations
-    as `shortdate`. For example, ``%(month+2)s`` would return 2 months in the
-    future.
-
-**day**
-    Current day in `DD` format. Supports the same arithmetic operations
-    as `shortdate`. For example, ``%(day+1)s`` would return the day after the
-    run date.
-
-**unixtime**
-    Current timestamp. Supports addition and subtraction of seconds. For
-    example ``%(unixtime+20)s`` would return the timestamp 20 seconds after
-    the jobs runtime.
-
-**daynumber**
-    Current day number as an ordinal (datetime.toordinal()). Supports addition
-    and subtraction of days. For example ``%(daynumber-3)s`` would be 3 days
-    before the run date.
-
-**name**
-    Name of the job or service
-
-**node**
-    Hostname of the node the action is being run on
-
-
-Context variables only available to Jobs:
-
-**runid**
-    Run ID of the job or service (e.g. ``sample_job.23``)
-
-**cleanup_job_status**
-    ``SUCCESS`` if all actions have succeeded when the cleanup action runs,
-    ``FAILURE`` otherwise. ``UNKNOWN`` if used in an action other than the
-    cleanup action.
-
-
-Context variables only available to Services:
-
-**pid_file**
-    The filename of the pid file.
-
-**instance_number**
-    The number identifying this instance (will be 0 to n-1 where n is the
-    total number of instances).
+See a list of :ref:`built_in_cc`.
 
 
 Output Stream Directory
 -----------------------
-**output_stream_dir** allows you to specific the directory used to store the
-stdout/stderr logs from jobs.  It defaults to the `working_dir` option passed
-to :ref:`trond`.
+**output_stream_dir**
+    A path to the directory used to store the stdout/stderr logs from jobs.
+    It defaults to the ``--working_dir`` option passed to :ref:`trond`.
+
+Example::
+
+    output_stream_dir: "/home/tronuser/output/"
 
 
 Nodes
 -----
 
 **nodes**
-    List of nodes, each with a ``name`` and a ``hostname``. (This section may
-    also contain node pools, but we recommend that you put those under
-    ``node_pools``.) ``name`` defaults to ``hostname``. If you do not specify
-    any nodes, Tron will create a node with name and hostname ``localhost``.
+    List of nodes, each with a ``name`` and a ``hostname``.  ``name`` defaults
+    to ``hostname``. Each of these nodes should be configured to allow SSH
+    connections from :command:`trond`.
 
 Example::
 
@@ -262,7 +202,8 @@ Logging
 As of v0.3.3 Logging is no longer configured in the tron configuration file.
 
 Tron uses Python's standard logging and by default uses a rotating log file
-handler that rotates files each day. Logs go to /var/log/tron/tron.log.
+handler that rotates files each day. The default log directory is
+``/var/log/tron/tron.log``.
 
 To configure logging pass -l <logging.conf> to trond. You can modify the
 default logging.conf by copying it from tron/logging.conf. See

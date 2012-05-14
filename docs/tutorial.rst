@@ -1,67 +1,69 @@
 Tutorial
 ========
 
-To get Tron up and running, you need:
+To install Tron you will need:
 
-* Tron to be installed (see below)
-* A management node to run the tron daemon on
-* A set of nodes to run your processes and services on (can include the
-  management node)
-* SSH keys and a user that will allow the tron daemon to login to all your
-  working nodes
+* A copy of the most recent Tron release from either
+  `github <http://github.com/yelp/Tron>`_ or `pypi <http://pypi.python.org/pypi/tron>`_
+  (see :ref:`installing_tron`).
+* A server on which to run :command:`trond`.
+* One or more batch/service boxes which will run the Jobs and Services.
+* An SSH key and a user that will allow the tron daemon to login to all of the
+  batch/service machines without a password prompt.
+
+.. _installing_tron:
 
 Installing Tron
 ---------------
 
 The easiest way to install Tron is from PyPI::
 
-    > sudo pip install tron
+    $ sudo pip install tron
 
-This will install :py:mod:`tron` and its dependencies (currently
-:py:mod:`twisted` and :py:mod:`PyYAML`).
+You can also get a copy of the current developmnent release from
+`github <http://github.com/yelp/Tron>`_. See `setup.py` in the source package
+for a full list of required packages.
 
-If you're working on Tron itself, use a `virtualenv` to isolate the
-dependencies.
+If you are interested in working on Tron development see :ref:`developing`
+for additional requirements and setting up a dev environment.
 
-If you'd rather install from source, you must also install the dependencies
-by hand, via :command:`pip` or your package manager. Some package managers
-may also require you to install :py:mod:`pyasn1` due to missing package
-dependencies.
 
-Starting Tron
+Running Tron
 -------------
 
 Tron runs as a single daemon, :command:`trond`.
 
 On your management node, run::
 
-    > sudo -u <tron user> trond
+    $ sudo -u <tron user> trond
 
-What user you choose to run tron as is very important. The tron daemon will
-need SSH access to all your worker nodes, as well as permission to write to
-certain directories in /var for storing state (unless you change the working
-directory). If you want to further control permissions, take a look at the
-multitude of options for trond.
+The chosen user will need SSH access to all your worker nodes, as well as
+permission to write to the working directory, log file, and pid file
+(see ``trond --help`` for defaults).  You can change these directories using
+command line options. Also see :ref:`config_logging` on how to change the
+default logging settings.
 
-Now check to make sure `trond` is running::
 
-    > tronview
-    Connected to tron server http://localhost:8089
+Once :command:`trond` is running, you can view its status using :command:`tronview`
+(by default tronview will connect to localhost, use ``--server=<host>:<port> -s``
+to specify a different server, and have that setting saved in ``~/.tron``)::
+
+    $ tronview
 
     Services:
     No services
 
     Jobs:
     No jobs
-  
+
 Configuring Tron
 ----------------
 
 There are a few options on how to configure tron, but the most straightforward
 is through tronfig::
 
-    > tronfig
-  
+    $ tronfig
+
 This will open your configured :envvar:`$EDITOR` with the current configuration
 file. Edit your file to be something like this::
 
@@ -88,7 +90,7 @@ file. Edit your file to be something like this::
             command: "cat /proc/cpuinfo"
             requires: [uname]
 
-After you exit your editor, the configuration will be validated and uploaded to `trond`
+After you exit your editor, the configuration will be validated and uploaded to `trond`.
 
 Now if you run :command:`tronview` again, you'll see ``getting_node_info`` as a
 configured job. Note that it is configured to run 10 minutes from now. This
@@ -100,32 +102,32 @@ should give you time to examine the job to ensure you really want to run it.
     No services
 
     Jobs:
-    Name              State      Scheduler            Last Success        
+    Name              State      Scheduler            Last Success
     getting_node_info ENABLED    INTERVAL:0:10:00     None
 
 You can quickly disable a job by using :command:`tronctl`::
 
-    > tronctl disable getting_node_info
+    $ tronctl disable getting_node_info
     Job getting_node_info is disabled
 
 This will stop scheduled jobs and prevent anymore from being scheduled. You are
 now in manual control. To manually execute a job immediately, do this::
 
-    > tronctl start getting_node_info
+    $ tronctl start getting_node_info
     New job getting_node_info.1 created
 
 You can monitor this job run by using :command:`tronview`::
 
-    > tronview getting_node_info.1
+    $ tronview getting_node_info.1
     Job Run: getting_node_info.1
     State: SUCC
     Node: localhost
 
-    Action ID & Command  State  Start Time           End Time             Duration  
-    .uname               SUCC   2011-02-28 16:57:48  2011-02-28 16:57:48  0:00:00   
-    .cpu_info            SUCC   2011-02-28 16:57:48  2011-02-28 16:57:48  0:00:00   
+    Action ID & Command  State  Start Time           End Time             Duration
+    .uname               SUCC   2011-02-28 16:57:48  2011-02-28 16:57:48  0:00:00
+    .cpu_info            SUCC   2011-02-28 16:57:48  2011-02-28 16:57:48  0:00:00
 
-    > tronview getting_node_info.1.uname
+    $ tronview getting_node_info.1.uname
     Action Run: getting_node_info.1.uname
     State: SUCC
     Node: localhost
@@ -140,6 +142,6 @@ You can monitor this job run by using :command:`tronview`::
 
 Tron also provides a simple, optional web UI that can be used to get tronview data in a browser. See :doc:`tronweb` for setup
 instructions.
-    
+
 That's it for the basics. You might want to look at :doc:`overview` for a more
 comprehensive description of how Tron works.

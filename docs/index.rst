@@ -8,12 +8,8 @@ to use it.
 
 .. note::
 
-    The HTML documentation is a work in progress, but is checked more closely
-    than other resources such as the Github wiki. When sources disagree,
-    the HTML documentation is considered canonical.
-
     Please report bugs in the documentation at `our Github issue tracker
-    <http://www.github.com.com/yelp/Tron/issues>`_.
+    <http://www.github.com/yelp/Tron/issues>`_.
 
 Table of Contents
 -----------------
@@ -27,6 +23,7 @@ Table of Contents
     config.rst
     jobs.rst
     services.rst
+    command_context.rst
     tronweb.rst
     tools.rst
     developing.rst
