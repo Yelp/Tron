@@ -446,7 +446,7 @@ class Service(observer.Observable, observer.Observer):
                           if inst.state != ServiceInstance.STATE_FAILED]
 
     def _restart_after_failure(self):
-        if self._restart_timer is None:
+        if self._restart_timer is None or self.machine is None:
             return
 
         if self.state in (self.STATE_DEGRADED, self.STATE_FAILED):

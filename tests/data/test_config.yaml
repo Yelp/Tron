@@ -24,8 +24,9 @@ node_pools:
       nodes: [box3, box4]
 
 command_context:
-    THE_JOB_DIR: "testconfig/jobs/"
+    THE_JOB_DIR: "testconfig/jobs"
     ECHO:        "echo"
+    THE_SERVICE_DIR: "/home/user/code/Tron"
 
 
 jobs:
@@ -160,6 +161,22 @@ jobs:
 services:
     -   name: service_0
         node: pool1
-        pid_file: "/tmp/mock_daemon.pid"
-        command: "python tests/mock_daemon.py"
-        monitor_interval: 5
+        pid_file: "/tmp/%(name)s-%(instance_number)s.pid"
+        command: "python %(THE_SERVICE_DIR)s/tests/mock_daemon.py %(pid_file)s"
+        monitor_interval: 15
+        restart_interval: 10
+
+    -   name: service_1
+        node: pool2
+        pid_file: "/tmp/%(name)s-%(instance_number)s.pid"
+        command: "python %(THE_SERVICE_DIR)s/tests/mock_daemon.py %(pid_file)s"
+        monitor_interval: 30
+        count: 3
+
+    -   name: service_2
+        node: box1
+        pid_file: "/tmp/%(name)s-%(instance_number)s.pid"
+        command: "python %(THE_SERVICE_DIR)s/tests/mock_daemon.py %(pid_file)s"
+        monitor_interval: 30
+        restart_interval: 40
+        count: 2
