@@ -31,14 +31,14 @@ class ActionRunContextTestCase(TestCase):
     @setup
     def build_context(self):
         action_run = turtle.Turtle(
-            id="runid",
             node=turtle.Turtle(hostname="nodename"),
-            job_run_time=self.now
+            job_run_time=self.now,
+            job_run_id='job_run_id'
         )
         self.context = ActionRunContext(action_run)
 
     def test_runid(self):
-        assert_equal(self.context.runid, 'runid')
+        assert_equal(self.context.runid, 'job_run_id')
 
     def test_daynumber(self):
         daynum = self.now.toordinal()

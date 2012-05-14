@@ -1,6 +1,18 @@
 What's New
 ==========
 
+0.4.0
+-----
+
+* Jobs now continue to run all possible actions after one of its actions fail
+* Enabling a disabled job now schedules the next run using current time instead
+  of the last successful run (which could cause many runs to be
+  scheduled in the past if the job had been disabled for a while)
+* Command context is now better defined. see :ref:`built_in_cc`. Also adds support for a
+  last_success keyboard which supports date arithmetic.
+* Resolved many inconsistencies and bugs around Job scheduling.
+
+
 0.3.3
 -----
 
