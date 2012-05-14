@@ -690,7 +690,7 @@ class Service(observer.Observable, observer.Observer):
         }
         return data
 
-    def restore(self, data):
+    def restore_service_state(self, service_state_data):
         """Restore state of this service from datafile"""
         # The state of a service is more easier than for jobs. There are just a
         # few things we want to guarantee:
@@ -700,7 +700,7 @@ class Service(observer.Observable, observer.Observer):
 
         # Start our machine from where it left off
         self.machine.state = state.named_event_by_name(Service.STATE_DOWN,
-                                                       data['state'])
+                                                   service_state_data['state'])
 
         if self.machine.state in (Service.STATE_DOWN, Service.STATE_FAILED):
             self.event_recorder.emit_info("restored")
@@ -708,7 +708,7 @@ class Service(observer.Observable, observer.Observer):
 
         # Restore all the instances
         # We're going to just indicate they are up and start a monitor
-        for instance in data['instances']:
+        for instance in service_state_data['instances']:
             try:
                 node = self.node_pool[instance['node']]
             except KeyError:
