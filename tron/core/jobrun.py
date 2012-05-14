@@ -63,6 +63,7 @@ class JobRun(Observable, Observer):
         self.start_time         = start_time
         self.end_time           = end_time
         self.action_runs_proxy  = None
+        self._action_runs       = None
         self.action_graph       = action_graph
         # TODO: expose this through the api
         self.manual             = manual
@@ -137,7 +138,7 @@ class JobRun(Observable, Observer):
 
     def _set_action_runs(self, run_collection):
         """Store action runs and register callbacks."""
-        if hasattr(self, '_action_runs'):
+        if self._action_runs is not None:
             raise ValueError("ActionRunCollection already set on %s" % self)
 
         self._action_runs = run_collection
@@ -254,7 +255,7 @@ class JobRun(Observable, Observer):
         event.EventManager.get_instance().remove(self)
         self.node = None
         self.action_graph = None
-        del self.action_runs
+        self._action_runs = None
         self.clear_observers()
         self.output_path.delete()
 
@@ -262,6 +263,10 @@ class JobRun(Observable, Observer):
     def state(self):
         """The overall state of this job run. Based on the state of its actions.
         """
+        if not self.action_runs:
+            log.info("%s has no state" % self)
+            return ActionRun.STATE_UNKNOWN
+
         if self.action_runs.is_complete:
             return ActionRun.STATE_SUCCEEDED
         if self.action_runs.is_cancelled:

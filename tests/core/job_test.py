@@ -15,7 +15,7 @@ class JobContextTestCase(TestCase):
 
     @setup
     def setup_job(self):
-        self.last_success = datetime.datetime(2012, 3, 14)
+        self.last_success = Turtle(run_time=datetime.datetime(2012, 3, 14))
         scheduler = Turtle()
         run_collection = Turtle(last_success=self.last_success)
         self.job = job.Job("jobname", scheduler, run_collection=run_collection)
@@ -26,7 +26,7 @@ class JobContextTestCase(TestCase):
 
     def test__getitem__last_success(self):
         item = self.context["last_success:day-1"]
-        expected = (self.last_success - datetime.timedelta(days=1)).day
+        expected = (self.last_success.run_time - datetime.timedelta(days=1)).day
         assert_equal(item, str(expected))
 
         item = self.context["last_success:shortdate"]

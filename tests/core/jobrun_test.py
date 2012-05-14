@@ -80,7 +80,7 @@ class JobRunTestCase(TestCase):
         assert_equal(state_data['run_time'], self.run_time)
 
     def test_set_action_runs(self):
-        del self.job_run.action_runs
+        self.job_run._action_runs = None
         action_runs = [Turtle(), Turtle()]
         run_collection = Turtle(action_runs_with_cleanup=action_runs)
         self.job_run._set_action_runs(run_collection)
@@ -91,7 +91,7 @@ class JobRunTestCase(TestCase):
         assert self.job_run.action_runs_proxy
 
     def test_set_action_runs_none(self):
-        del self.job_run.action_runs
+        self.job_run._action_runs = None
         run_collection = Turtle(action_runs_with_cleanup=[])
         self.job_run._set_action_runs(run_collection)
         assert_length(self.job_run.watch.calls, 0)
@@ -246,6 +246,10 @@ class JobRunTestCase(TestCase):
     def test_state(self):
         assert_equal(self.job_run.state, actionrun.ActionRun.STATE_SUCCEEDED)
 
+    def test_state_with_no_action_runs(self):
+        self.job_run._action_runs = None
+        assert_equal(self.job_run.state, actionrun.ActionRun.STATE_UNKNOWN)
+
     def test_finalize(self):
         timeutils.override_current_time(self.run_time)
         self.job_run.action_runs.is_failed = False
@@ -270,7 +274,7 @@ class JobRunTestCase(TestCase):
         assert_call(self.job_run.output_path.delete, 0)
         assert not self.job_run.node
         assert not self.job_run.action_graph
-        assert not hasattr(self.job_run, '_action_runs')
+        assert not self.job_run.action_runs
 
     def test__getattr__(self):
         assert self.job_run.cancel
