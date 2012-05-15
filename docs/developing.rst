@@ -1,6 +1,6 @@
 .. _developing:
 
-Working on Tron
+Contributing to Tron
 ===============
 
 Tron is an open source project and welcomes contributions from the community.
@@ -46,10 +46,20 @@ of Tron create a working directory and start
 
 Running the Tests
 -----------------
+Tron uses the `Testify <https://github.com/Yelp/Testify>`_ unit testing
+framework.
+
 
 Run the tests using ``make tests`` or ``testify tests``.  If you're using a
 virtualenv you may want to run ``python `which testify` test`` to have it
 use the correct environment.
+
+Under dev/ There is also a very useful test runner ``runtests.py``. This script
+uses the ``watchdog`` module to watch for file modifications, and then runs
+the appropriate unit tests.  This script is also a good way to verify that your
+test filenames match the proper convention.  If you don't see your tests run
+when you make a modification, it will print the expected filename for the
+test file.
 
 Contributing
 ------------

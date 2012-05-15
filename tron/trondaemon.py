@@ -172,5 +172,6 @@ class TronDaemon(object):
         reactor.callLater(0, self.mcp.reconfigure)
 
     def _handle_debug(self, _sig_num, _frame):
-        import ipdb
-        ipdb.set_trace()
+        if self.options.nodaemon:
+            import ipdb
+            ipdb.set_trace()

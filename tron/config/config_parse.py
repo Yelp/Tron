@@ -90,7 +90,7 @@ valid_float = type_converter(float, 'Value at %s is not a number: %s')
 valid_int   = type_converter(int,   'Value at %s is not an integer: %s')
 
 MAX_IDENTIFIER_LENGTH       = 255
-IDENTIFIER_RE               = re.compile(r'^[A-Za-z_]\w{0,254}$')
+IDENTIFIER_RE               = re.compile(r'^[A-Za-z_][\w\-]{0,254}$')
 
 valid_identifier = type_validator(
     lambda s: isinstance(s, basestring) and IDENTIFIER_RE.match(s),

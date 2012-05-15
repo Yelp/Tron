@@ -1,6 +1,18 @@
 What's New
 ==========
 
+0.5.0
+-----
+* Names for nodes, jobs, actions and service can now contain underscore characters
+  but are restricted to 255 characters.
+* trond now supports a graceful shutdown. Send trond SIGINT to have it wait for
+  all currently running jobs to complete before shutting down. SIGTERM
+  also performs some cleanup before terminating.
+* State serialization has changed.  See :ref:`config_state` for configuration
+  options.  `tools/migration/migrate_state.py` is included to migrate your
+  existing Tron state to a new store.  YAML store is now deprecated.
+* Old style config, which was deprecated in 0.3 will no longer work.
+
 0.4.0
 -----
 
