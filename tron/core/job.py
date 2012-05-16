@@ -160,8 +160,8 @@ class Job(Observable, Observer):
                 state_data['runs'],
                 self.action_graph,
                 self.output_path.clone(),
-                self.context
-        )
+                self.context,
+                self.node_pool)
         for run in job_runs:
             self.watch(run)
 
