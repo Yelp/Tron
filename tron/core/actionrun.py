@@ -87,7 +87,7 @@ class ActionRunFactory(object):
         """Create an ActionRun for a JobRun and Action."""
         run_node = action.node_pool.next() if action.node_pool else job_run.node
 
-        action_run = ActionRun(
+        return ActionRun(
             job_run.id,
             action.name,
             run_node,
@@ -97,7 +97,6 @@ class ActionRunFactory(object):
             output_path=job_run.output_path.clone(),
             cleanup=action.is_cleanup
         )
-        return action_run
 
     @classmethod
     def action_run_from_state(cls, job_run, state_data, cleanup=False):
@@ -106,6 +105,7 @@ class ActionRunFactory(object):
             state_data,
             job_run.context,
             job_run.output_path.clone(),
+            job_run.node,
             cleanup=cleanup
         )
 
@@ -201,7 +201,8 @@ class ActionRun(Observer):
         return self.machine.check(state)
 
     @classmethod
-    def from_state(cls, state_data, parent_context, output_path, cleanup=False):
+    def from_state(cls, state_data, parent_context, output_path,
+                job_run_node, cleanup=False):
         """Restore the state of this ActionRun from a serialized state."""
         node_pools = node.NodePoolStore.get_instance()
 
@@ -211,12 +212,15 @@ class ActionRun(Observer):
         else:
             job_run_id = state_data['job_run_id']
             action_name = state_data['action_name']
-        rendered_command = state_data.get('rendered_command')
 
+        if state_data.get('node_name'):
+            job_run_node = node_pools.get(state_data['node_name'])
+
+        rendered_command = state_data.get('rendered_command')
         run = cls(
             job_run_id,
             action_name,
-            node_pools.get(state_data.get('node_name')),
+            job_run_node,
             state_data['run_time'],
             parent_context=parent_context,
             output_path=output_path,
