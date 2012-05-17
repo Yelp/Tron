@@ -219,7 +219,6 @@ class OutputStreamSerializerTestCase(TestCase):
 
     @suite('integration')
     def test_init_with_output_path(self):
-        self.test_dir = 'tmp'
         path = OutputPath(self.test_dir, 'one', 'two', 'three')
         stream = OutputStreamSerializer(path)
         assert_equal(stream.base_path, str(path))
