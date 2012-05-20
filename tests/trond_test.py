@@ -27,7 +27,8 @@ jobs:
 
 DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
       - name: "another_echo_action"
-        command: "echo 'Today is %(shortdate)s, which is the same as %(year)s-%(month)s-%(day)s' && false" """
+        command: "echo 'Today is %(shortdate)s, which is the same
+                    as %(year)s-%(month)s-%(day)s' && false" """
 
 TOUCH_CLEANUP_FMT = """
     cleanup_action:
@@ -53,18 +54,18 @@ class TrondTestCase(sandbox.SandboxTestCase):
         assert_equal(events[1]['name'], 'run_created')
         assert_equal(client.config(), second_config)
 
-        expected = {'jobs': [
-                {
-                    'action_names': ['echo_action', 'cleanup', 'another_echo_action'],
-                    'status': 'ENABLED',
-                    'href': '/jobs/echo_job',
-                    'last_success': None,
-                    'name': 'echo_job',
-                    'scheduler': 'INTERVAL:1:00:00',
-                    'node_pool': ['localhost'],
-                    'runs': None
-                }
-            ],
+        job = {
+            'action_names': ['echo_action', 'cleanup', 'another_echo_action'],
+            'status': 'ENABLED',
+            'href': '/jobs/echo_job',
+            'last_success': None,
+            'name': 'echo_job',
+            'scheduler': 'INTERVAL:1:00:00',
+            'node_pool': ['localhost'],
+            'runs': None
+        }
+        expected = {
+            'jobs': [job],
             'status_href': '/status',
             'jobs_href': '/jobs',
             'config_href': '/config',
@@ -83,13 +84,15 @@ class TrondTestCase(sandbox.SandboxTestCase):
         sandbox.wait_on_sandbox(wait_on_cleanup)
 
         echo_action_run = client.action('echo_job.1.echo_action')
-        another_echo_action_run = client.action('echo_job.1.another_echo_action')
+        other_act_run = client.action('echo_job.1.another_echo_action')
         assert_equal(echo_action_run['state'], 'SUCC')
         assert_equal(echo_action_run['stdout'], ['Echo!'])
-        assert_equal(another_echo_action_run['state'], 'FAIL')
-        assert_equal(another_echo_action_run['stdout'],
-                     [datetime.datetime.now().strftime(
-                         'Today is %Y-%m-%d, which is the same as %Y-%m-%d')])
+        assert_equal(other_act_run['state'], 'FAIL')
+
+        now = datetime.datetime.now()
+        stdout = now.strftime('Today is %Y-%m-%d, which is the same as %Y-%m-%d')
+        assert_equal(other_act_run['stdout'], [stdout])
+
         assert_equal(client.job_runs('echo_job.1')['state'], 'FAIL')
 
     def test_tronview_basic(self):

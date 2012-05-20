@@ -107,7 +107,7 @@ class TronSandbox(object):
 
     def __init__(self):
         """Set up a temp directory and store paths to relevant binaries"""
-        self.verify_ssh_agent()
+        self.verify_environment()
         self.tmp_dir        = tempfile.mkdtemp(prefix='tron-')
         cmd_path_func       = functools.partial(os.path.join, _repo_root, 'bin')
         cmds                = 'tronctl', 'trond', 'tronfig', 'tronview'
@@ -137,11 +137,15 @@ class TronSandbox(object):
         with open(self.log_conf, 'w') as fh:
             fh.write(config.format(self.log_file))
 
-    def verify_ssh_agent(self):
+    def verify_environment(self):
         ssh_sock = 'SSH_AUTH_SOCK'
+        msg = "Missing $%s in test environment."
         if not os.environ.get(ssh_sock):
-            msg = "Missing $%s in test environment."
             raise TronSandboxException(msg % ssh_sock)
+
+        path = 'PYTHONPATH'
+        if not os.environ.get(path):
+            raise TronSandboxException(msg % path)
 
     def delete(self):
         """Delete the temp directory and shutdown trond."""
