@@ -127,10 +127,8 @@ class BasicTronTestCase(SandboxTestCase):
         def remove_line_space(s):
             return [l.replace(' ', '') for l in s.split('\n')]
 
-        assert_equal(
-            remove_line_space(self.sandbox.tronview()[0]),
-            remove_line_space(expected)
-        )
+        actual = self.sandbox.tronview()[0]
+        assert_equal(remove_line_space(actual), remove_line_space(expected))
 
     @suite('sandbox')
     def test_tronctl_basic(self):
