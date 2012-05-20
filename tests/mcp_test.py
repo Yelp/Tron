@@ -2,9 +2,11 @@ import os
 import shutil
 import tempfile
 
+import mock
 from testify import TestCase, setup, teardown
 from testify import  assert_equal, run
 from testify.utils import turtle
+from tests import mocks
 from tests.assertions import assert_call, assert_length
 from tests.testingutils import Turtle
 
@@ -35,11 +37,13 @@ class MasterControlProgramTestCase(TestCase):
 
     def test_reconfigure(self):
         self.mcp._load_config = Turtle()
-        self.mcp.state_manager = Turtle()
+        self.mcp.state_manager = mock.Mock()
+        cm = mocks.MockContextManager()
+        self.mcp.state_manager.disabled = mock.Mock(return_value=cm)
 
         self.mcp.reconfigure()
         assert_call(self.mcp._load_config, 0, reconfigure=True)
-        assert_call(self.mcp.state_manager.disabled, 0)
+        self.mcp.state_manager.disabled.assert_called_with()
 
     def test_ssh_options_from_config(self):
         ssh_conf = turtle.Turtle(agent=False, identities=[])
