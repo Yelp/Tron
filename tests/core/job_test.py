@@ -4,11 +4,11 @@ from testify import setup, teardown, TestCase, run, assert_equal, assert_raises
 from tests import mocks
 from tests.assertions import assert_length, assert_call
 from tests.mocks import MockNode
-from tests.testingutils import MockReactorTestCase, Turtle
+from tests.testingutils import Turtle
+from tests import testingutils
 from tron import node, event
 from tron.core import job, jobrun
 from tron.core.actionrun import ActionRun
-from tron.utils import timeutils
 
 
 class JobContextTestCase(TestCase):
@@ -367,7 +367,9 @@ class MockRunBuilder(Turtle):
         return [self.manual_run]
 
 
-class JobSchedulerManualStartTestCase(TestCase):
+class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
+
+    now = datetime.datetime.now()
 
     @setup
     def setup_job(self):
@@ -383,13 +385,6 @@ class JobSchedulerManualStartTestCase(TestCase):
         self.job_scheduler = job.JobScheduler(self.job)
         self.manual_run = Turtle()
         self.job.build_new_runs = MockRunBuilder(manual_run=self.manual_run)
-
-        self.now = datetime.datetime.now()
-        timeutils.override_current_time(self.now)
-
-    @teardown
-    def teardown_timeutils(self):
-        timeutils.override_current_time(None)
 
     def test_manual_start(self):
         manual_runs = self.job_scheduler.manual_start()
@@ -407,7 +402,7 @@ class JobSchedulerManualStartTestCase(TestCase):
         assert_length(self.manual_run.start.calls, 1)
 
 
-class JobSchedulerScheduleTestCase(MockReactorTestCase):
+class JobSchedulerScheduleTestCase(testingutils.MockReactorTestCase):
 
     module_to_mock = job
 

@@ -2,9 +2,9 @@ import datetime
 import shutil
 import tempfile
 
-from testify import run, setup, TestCase, assert_equal, turtle
+from testify import run, setup, TestCase, assert_equal, turtle, teardown
 from testify.assertions import assert_raises, assert_in
-from testify.test_case import class_setup, class_teardown, teardown
+from tests import testingutils
 from tests.assertions import assert_length
 from tests.mocks import MockNode
 from tests.testingutils import Turtle
@@ -17,16 +17,9 @@ from tron.core.actionrun import InvalidStartStateError
 from tron.serialize import filehandler
 from tron.utils import timeutils
 
-class ActionRunContextTestCase(TestCase):
+class ActionRunContextTestCase(testingutils.MockTimeTestCase):
 
-    @class_setup
-    def freeze_time(self):
-        timeutils.override_current_time(datetime.datetime.now())
-        self.now = timeutils.current_time()
-
-    @class_teardown
-    def unfreeze_time(self):
-        timeutils.override_current_time(None)
+    now = datetime.datetime.now()
 
     @setup
     def build_context(self):
