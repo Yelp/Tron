@@ -204,7 +204,6 @@ class Job(Observable, Observer):
                 'node_pool',
                 'all_nodes',
                 'action_graph',
-                'enabled',
                 'output_path',
         ]
         return all(
