@@ -91,8 +91,8 @@ class ClientProxy(object):
         try:
             return func(*args, **kwargs)
         except client.RequestError, e:
-            log.warn("Tron Log:\n%s" % self.log_contents())
-            raise TronSandboxException(e)
+            log.warn("%r, Log:\n%s" % (e, self.log_contents()))
+            return False
 
     def __getattr__(self, name):
         attr = getattr(self.client, name)
@@ -159,19 +159,19 @@ class TronSandbox(object):
         with open(self.config_file, 'w') as f:
             f.write(config_text)
 
-    def run_command(self, command_name, args=None):
+    def run_command(self, command_name, args=None, stdin_lines=None):
         """Run the command by name and return (stdout, stderr)."""
         args        = args or []
         command     = [sys.executable, self.commands[command_name]] + args
-        proc        = Popen(command, stdout=PIPE, stderr=PIPE)
-        streams     = proc.communicate()
+        stdin       = PIPE if stdin_lines else None
+        proc        = Popen(command, stdout=PIPE, stderr=PIPE, stdin=stdin)
+        streams     = proc.communicate(stdin_lines)
         handle_output(command, streams, proc.returncode)
         return streams
 
     def tronctl(self, args=None):
         args = list(args) if args else []
-        args += ['--server', self.api_uri]
-        return self.run_command('tronctl', args)
+        return self.run_command('tronctl', args + ['--server', self.api_uri])
 
     def tronview(self, args=None):
         args = list(args) if args else []
@@ -181,24 +181,16 @@ class TronSandbox(object):
     def trond(self, args=None):
         args = list(args) if args else []
         args += ['--working-dir=%s' % self.tmp_dir,
-                       '--pid-file=%s'  % self.pid_file,
-                       '--port=%d'      % self.port,
-                       '--host=%s'      % self.host,
-                       '--config=%s'    % self.config_file,
-                       '--log-conf=%s'  % self.log_conf]
+                   '--pid-file=%s'  % self.pid_file,
+                   '--port=%d'      % self.port,
+                   '--host=%s'      % self.host,
+                   '--config=%s'    % self.config_file,
+                   '--log-conf=%s'  % self.log_conf]
 
         self.run_command('trond', args)
-        def wait_on_startup():
-            try:
-                return bool(self.client.home())
-            except client.RequestError:
-                return False
+        wait_on_startup = lambda: bool(self.client.home())
         wait_on_sandbox(wait_on_startup)
 
     def tronfig(self, config_content):
-        args        = ['--server', self.api_uri, '-']
-        command     = [sys.executable, self.commands['tronfig']] + args
-        proc        = Popen(command, stdout=PIPE, stderr=PIPE, stdin=PIPE)
-        streams     = proc.communicate(config_content)
-        handle_output(command, streams, proc.returncode)
-        return streams
+        args = ['--server', self.api_uri, '-']
+        return self.run_command('tronfig', args, stdin_lines=config_content)
