@@ -188,8 +188,7 @@ class TronSandbox(object):
                    '--log-conf=%s'  % self.log_conf]
 
         self.run_command('trond', args)
-        wait_on_startup = lambda: bool(self.client.home())
-        wait_on_sandbox(wait_on_startup)
+        wait_on_sandbox(lambda: bool(self.client.home()))
 
     def tronfig(self, config_content):
         args = ['--server', self.api_uri, '-']

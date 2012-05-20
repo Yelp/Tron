@@ -16,7 +16,7 @@ nodes:
     hostname: 'localhost'
 
 state_persistence:
-    name: "/tmp/state_data.shelve"
+    name: "state_data.shelve"
     store_type: shelve
 
 """

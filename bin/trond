@@ -1,25 +1,18 @@
 #!/usr/bin/env python
 """ Start the Tron server daemon."""
 
-import logging
-import logging.config
 import optparse
 import os
 import pkg_resources
 import sys
-
-from twisted.internet import defer
-from twisted.python import log
 
 import tron
 from tron import commands
 from tron import trondaemon
 
 
-TRON                        = 'tron'
 DEFAULT_CONF                = 'default_config.yaml'
 DEFAULT_WORKING_CONF        = 'tron_config.yaml'
-DEFAULT_LOGGING_CONF        = 'logging.conf'
 DEFAULT_WORKING_DIR         = '/var/lib/tron/'
 DEFAULT_PIDFILE             =  'tron.pid'
 DEFAULT_PIDPATH             = '/var/run/' + DEFAULT_PIDFILE
@@ -86,7 +79,7 @@ def parse_options():
 
 def create_default_config(config_path):
     """Create a default empty configuration for first time installs"""
-    default = pkg_resources.resource_string(TRON, DEFAULT_CONF)
+    default = pkg_resources.resource_string(tron.__name__, DEFAULT_CONF)
     with open(config_path, "w") as config_file:
         config_file.write(default)
 
@@ -98,7 +91,7 @@ def setup_environment(options):
 
     if (not os.path.isdir(options.working_dir) or
         not os.access(options.working_dir, os.R_OK | os.W_OK | os.X_OK)):
-        msg = "Error, can't access working directory %s" % (options.working_dir)
+        msg = "Error, can't access working directory %s" % options.working_dir
         raise SystemExit(msg)
 
     # Attempt to create a default config if config is missing
@@ -114,42 +107,10 @@ def setup_environment(options):
         raise SystemExit(msg % options.config_file)
 
 
-def setup_logging(options):
-    default = pkg_resources.resource_filename(TRON, DEFAULT_LOGGING_CONF)
-    logfile = options.log_conf or default
-
-    level = twist_level = None
-    if options.verbose > 0:
-        level = logging.INFO
-        twist_level = logging.WARNING
-    if options.verbose > 1:
-        level = logging.DEBUG
-        twist_level = logging.INFO
-    if options.verbose > 2:
-        twist_level = logging.DEBUG
-
-    tron_logger = logging.getLogger('tron')
-    twisted_logger = logging.getLogger('twisted')
-
-    logging.config.fileConfig(logfile)
-    if level is not None:
-        tron_logger.setLevel(level)
-    if twist_level is not None:
-        twisted_logger.setLevel(twist_level)
-
-    # Hookup twisted to standard logging
-    log.PythonLoggingObserver().start()
-
-    # Show stack traces for errors in twisted deferreds.
-    if options.debug:
-        defer.setDebugging(True)
-
-
 def main():
     options = parse_options()
 
     setup_environment(options)
-    setup_logging(options)
     trond = trondaemon.TronDaemon(options)
     trond.run()
 
