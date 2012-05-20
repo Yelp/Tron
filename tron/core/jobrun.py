@@ -1,5 +1,5 @@
 """
- tron.core.jobrun
+ Classes to manage job runs.
 """
 
 from collections import deque
