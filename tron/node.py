@@ -242,7 +242,7 @@ class Node(object):
         else:
             log.info("Delaying execution of %s for %.2f secs",
                      run.id, fudge_factor)
-            reactor.callLater(fudge_factor, lambda: self._do_run(run))
+            reactor.callLater(fudge_factor, self._do_run, run)
 
         # We return the deferred here, but really we're trying to keep the rest
         # of the world from getting too involved with twisted.

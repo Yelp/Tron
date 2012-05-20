@@ -22,31 +22,16 @@ _repo_root, _   = os.path.split(_test_folder)
 log = logging.getLogger(__name__)
 
 
-def wait_for_sandbox_success(func, delay=0.1, max_wait=5.0):
-    """Call *func* repeatedly until it stops throwing TronSandboxException.
-    Wait increasing amounts from *start_delay* but wait no more than a total
-    of *stop_at* seconds
+def wait_on_sandbox(func, delay=0.1, max_wait=5.0):
+    """Poll for func() to return True. Sleeps `delay` seconds between polls
+    up to a max of `max_wait` seconds.
     """
     start_time = time.time()
     while time.time() - start_time < max_wait:
         time.sleep(delay)
-        try:
-            return func()
-        except TronSandboxException:
-            pass
-    raise
-
-
-def make_file_existence_sandbox_exception_thrower(path):
-    def func():
-        if not os.path.exists(path):
-            raise TronSandboxException('File does not exist: %s' % path)
-    return func
-
-
-def wait_for_file_to_exist(path, max_wait=5.0):
-    func = make_file_existence_sandbox_exception_thrower(path)
-    wait_for_sandbox_success(func, max_wait=max_wait)
+        if func():
+            return
+    raise TronSandboxException("Failed %s" % func.__name__)
 
 
 def handle_output(cmd, (stdout, stderr), returncode):
@@ -75,6 +60,8 @@ class TronSandboxException(Exception):
 
 
 class SandboxTestCase(TestCase):
+
+    _suites = ['sandbox']
 
     @setup
     def make_sandbox(self):
@@ -120,6 +107,7 @@ class TronSandbox(object):
 
     def __init__(self):
         """Set up a temp directory and store paths to relevant binaries"""
+        self.verify_ssh_agent()
         self.tmp_dir        = tempfile.mkdtemp(prefix='tron-')
         cmd_path_func       = functools.partial(os.path.join, _repo_root, 'bin')
         cmds                = 'tronctl', 'trond', 'tronfig', 'tronview'
@@ -148,6 +136,12 @@ class TronSandbox(object):
 
         with open(self.log_conf, 'w') as fh:
             fh.write(config.format(self.log_file))
+
+    def verify_ssh_agent(self):
+        ssh_sock = 'SSH_AUTH_SOCK'
+        if not os.environ.get(ssh_sock):
+            msg = "Missing $%s in test environment."
+            raise TronSandboxException(msg % ssh_sock)
 
     def delete(self):
         """Delete the temp directory and shutdown trond."""
@@ -190,8 +184,12 @@ class TronSandbox(object):
                        '--log-conf=%s'  % self.log_conf]
 
         self.run_command('trond', args)
-        # Wait for trond to finish startup
-        wait_for_sandbox_success(self.client.home)
+        def wait_on_startup():
+            try:
+                return bool(self.client.home())
+            except client.RequestError:
+                return False
+        wait_on_sandbox(wait_on_startup)
 
     def tronfig(self, config_content):
         args        = ['--server', self.api_uri, '-']

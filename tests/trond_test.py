@@ -1,13 +1,10 @@
 import datetime
 import os
 from textwrap import dedent
-import time
 
-from testify import assert_equal, assert_in, suite
+from testify import assert_equal
 from testify import assert_gt
 from tests import sandbox
-
-from tests.sandbox import wait_for_file_to_exist
 
 
 BASIC_CONFIG = """
@@ -34,12 +31,12 @@ DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
 
 TOUCH_CLEANUP_FMT = """
     cleanup_action:
-      command: "touch %s.%%(runid)s" """
+      command: "echo 'at last'"
+"""
 
 
-class BasicTronTestCase(sandbox.SandboxTestCase):
+class TrondTestCase(sandbox.SandboxTestCase):
 
-    @suite('sandbox')
     def test_end_to_end_basic(self):
         client = self.sandbox.client
         # start with a basic configuration
@@ -49,8 +46,7 @@ class BasicTronTestCase(sandbox.SandboxTestCase):
         assert_equal(client.config(), SINGLE_ECHO_CONFIG)
 
         # reconfigure and confirm results
-        canary = os.path.join(self.sandbox.tmp_dir, 'end_to_end_done')
-        second_config = DOUBLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT % canary
+        second_config = DOUBLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT
         self.sandbox.tronfig(second_config)
         events = client.events()
         assert_equal(events[0]['name'], 'restoring')
@@ -81,7 +77,11 @@ class BasicTronTestCase(sandbox.SandboxTestCase):
         # run the job and check its output
         self.sandbox.tronctl(['start', 'echo_job'])
 
-        wait_for_file_to_exist(canary + '.echo_job.1')
+        def wait_on_cleanup():
+            return (len(client.job('echo_job')['runs']) >= 2 and
+                    client.action('echo_job.1.echo_action')['state'] == 'SUCC')
+        sandbox.wait_on_sandbox(wait_on_cleanup)
+
         echo_action_run = client.action('echo_job.1.echo_action')
         another_echo_action_run = client.action('echo_job.1.another_echo_action')
         assert_equal(echo_action_run['state'], 'SUCC')
@@ -92,7 +92,6 @@ class BasicTronTestCase(sandbox.SandboxTestCase):
                          'Today is %Y-%m-%d, which is the same as %Y-%m-%d')])
         assert_equal(client.job_runs('echo_job.1')['state'], 'FAIL')
 
-    @suite('sandbox')
     def test_tronview_basic(self):
         self.sandbox.save_config(SINGLE_ECHO_CONFIG)
         self.sandbox.trond()
@@ -108,21 +107,19 @@ class BasicTronTestCase(sandbox.SandboxTestCase):
         actual = self.sandbox.tronview()[0]
         assert_equal(remove_line_space(actual), remove_line_space(expected))
 
-    @suite('sandbox')
     def test_tronctl_basic(self):
-        canary = os.path.join(self.sandbox.tmp_dir, 'tronctl_basic_done')
         client = self.sandbox.client
-        self.sandbox.save_config(SINGLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT % canary)
+        self.sandbox.save_config(SINGLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT)
         self.sandbox.trond()
-
-        # run the job and check its output
         self.sandbox.tronctl(['start', 'echo_job'])
-        wait_for_file_to_exist(canary + '.echo_job.1')
+
+        def wait_on_cleanup():
+            return client.action('echo_job.1.cleanup')['state'] == 'SUCC'
+        sandbox.wait_on_sandbox(wait_on_cleanup)
 
         assert_equal(client.action('echo_job.1.echo_action')['state'], 'SUCC')
         assert_equal(client.job_runs('echo_job.1')['state'], 'SUCC')
 
-    @suite('sandbox')
     def test_tronctl_service_zap(self):
         SERVICE_CONFIG = dedent("""
         nodes:
@@ -140,45 +137,50 @@ class BasicTronTestCase(sandbox.SandboxTestCase):
         client = self.sandbox.client
         self.sandbox.trond()
         self.sandbox.tronfig(SERVICE_CONFIG)
-        time.sleep(1)
+
+        wait_on_config = lambda: 'fake_service' in client.config()
+        sandbox.wait_on_sandbox(wait_on_config)
 
         self.sandbox.tronctl(['start', 'fake_service'])
 
-        time.sleep(1)
+        def wait_on_start():
+            return client.service('fake_service')['state'] == 'STARTING'
+        sandbox.wait_on_sandbox(wait_on_start)
+
         self.sandbox.tronctl(['zap', 'fake_service'])
         assert_equal('DOWN', client.service('fake_service')['state'])
 
-    @suite('sandbox')
     def test_cleanup_on_failure(self):
-        canary = os.path.join(self.sandbox.tmp_dir, 'end_to_end_done')
-
         FAIL_CONFIG = BASIC_CONFIG + dedent("""
         jobs:
           - name: "failjob"
             node: local
-            schedule: "interval 1 seconds"
+            schedule: "constant"
             actions:
               - name: "failaction"
                 command: "failplz"
-        """) + TOUCH_CLEANUP_FMT % canary
+        """) + TOUCH_CLEANUP_FMT
 
-        # start with a basic configuration
+        client = self.sandbox.client
         self.sandbox.save_config(FAIL_CONFIG)
         self.sandbox.trond()
 
-        time.sleep(3)
+        def wait_on_failaction():
+            return client.action('failjob.0.failaction')['state'] == 'FAIL'
+        sandbox.wait_on_sandbox(wait_on_failaction)
 
-        assert os.path.exists(canary + '.failjob.0')
-        client = self.sandbox.client
+        def wait_on_cleanup():
+            return client.action('failjob.1.cleanup')['state'] == 'SUCC'
+        sandbox.wait_on_sandbox(wait_on_cleanup)
+
         assert_gt(len(client.job('failjob')['runs']), 1)
 
-    @suite('sandbox')
     def test_skip_failed_actions(self):
         CONFIG = BASIC_CONFIG + dedent("""
         jobs:
           - name: "multi_step_job"
             node: local
-            schedule: "interval 1 seconds"
+            schedule: "constant"
             actions:
               - name: "broken"
                 command: "failingcommand"
@@ -190,57 +192,43 @@ class BasicTronTestCase(sandbox.SandboxTestCase):
         client = self.sandbox.client
         self.sandbox.save_config(CONFIG)
         self.sandbox.trond()
-        time.sleep(2)
 
+        def build_wait_func(state):
+            def wait_on_multi_step_job():
+                action_name = 'multi_step_job.0.broken'
+                return client.action(action_name)['state'] == state
+            return wait_on_multi_step_job
+
+        sandbox.wait_on_sandbox(build_wait_func('FAIL'))
         self.sandbox.tronctl(['skip', 'multi_step_job.0.broken'])
         assert_equal(client.action('multi_step_job.0.broken')['state'], 'SKIP')
-        time.sleep(1)
 
+        sandbox.wait_on_sandbox(build_wait_func('SKIP'))
         assert_equal(client.action('multi_step_job.0.works')['state'], 'SUCC')
         assert_equal(client.job_runs('multi_step_job.0')['state'], 'SUCC')
 
-    @suite('sandbox')
     def test_failure_on_multi_step_job_doesnt_wedge_tron(self):
-        FAIL_CONFIG = dedent("""
-            ssh_options: !SSHOptions
-              agent: true
-
-            nodes:
-              - &local
-                  hostname: 'localhost'
+        FAIL_CONFIG = BASIC_CONFIG + dedent("""
             jobs:
-              - &random_job
-                name: "random_failure_job"
-                node: *local
-                queueing: true
-                schedule: "interval 1 seconds"
-                actions:
-                  - &fa
-                    name: "fa"
-                    command: "sleep 1.1; failplz"
-                  - &sa
-                    name: "sa"
-                    command: "echo 'you will never see this'"
-                    requires: [*fa]
+                -   name: "random_failure_job"
+                    node: local
+                    queueing: true
+                    schedule: "constant"
+                    actions:
+                        -   name: "fa"
+                            command: "sleep 0.1; failplz"
+                        -   name: "sa"
+                            command: "echo 'you will never see this'"
+                            requires: [fa]
         """)
 
         client = self.sandbox.client
-        with open(self.sandbox.config_file, 'w') as f:
-            f.write(FAIL_CONFIG)
+        self.sandbox.save_config(FAIL_CONFIG)
         self.sandbox.trond()
 
-        # Wait a little to give things time to explode
-        time.sleep(1.5)
+        def wait_on_random_failure_job():
+            return len(client.job('random_failure_job')['runs']) >= 4
+        sandbox.wait_on_sandbox(wait_on_random_failure_job)
 
-        jerb = client.job('random_failure_job')
-        total_tries = 0
-        while ((len(jerb['runs']) < 3 or
-                jerb['runs'][-1][u'state'] not in [u'FAIL', u'SUCC']) and
-                total_tries < 30):
-            time.sleep(0.2)
-            jerb = client.job('random_failure_job')
-            total_tries += 1
-
-        assert_equal(jerb['runs'][-1][u'state'], u'FAIL')
-        assert_in(jerb['runs'][-2][u'state'], [u'FAIL', u'RUNN'])
-        assert_equal(jerb['runs'][0][u'state'], u'SCHE')
+        job_runs = client.job('random_failure_job')['runs']
+        assert_equal([run['state'] for run in job_runs[-3:]], ['FAIL'] * 3)
