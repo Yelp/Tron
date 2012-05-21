@@ -90,7 +90,8 @@ class ClientProxy(object):
     def wrap(self, func, *args, **kwargs):
         try:
             return func(*args, **kwargs)
-        except client.RequestError, e:
+        except (client.RequestError, ValueError), e:
+            # ValueError for JSONDecode errors
             log.warn("%r, Log:\n%s" % (e, self.log_contents()))
             return False
 
