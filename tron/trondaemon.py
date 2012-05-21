@@ -2,14 +2,18 @@
  Daemonize trond.
 """
 import logging
+import logging.config
 import os
+import pkg_resources
 import daemon
 
 import lockfile
 import signal
 from twisted.web import server
-from twisted.internet import reactor
+from twisted.internet import reactor, defer
+from twisted.python import log as twisted_log
 from tron import mcp
+import tron
 
 from tron.api import www
 
@@ -70,6 +74,37 @@ class PIDFile(object):
             log.warn("Failed to remove pidfile: %s" % self.filename)
 
 
+def setup_logging(options):
+    default = pkg_resources.resource_filename(tron.__name__, 'logging.conf')
+    logfile = options.log_conf or default
+
+    level = twist_level = None
+    if options.verbose > 0:
+        level = logging.INFO
+        twist_level = logging.WARNING
+    if options.verbose > 1:
+        level = logging.DEBUG
+        twist_level = logging.INFO
+    if options.verbose > 2:
+        twist_level = logging.DEBUG
+
+    tron_logger = logging.getLogger('tron')
+    twisted_logger = logging.getLogger('twisted')
+
+    logging.config.fileConfig(logfile)
+    if level is not None:
+        tron_logger.setLevel(level)
+    if twist_level is not None:
+        twisted_logger.setLevel(twist_level)
+
+    # Hookup twisted to standard logging
+    twisted_log.PythonLoggingObserver().start()
+
+    # Show stack traces for errors in twisted deferreds.
+    if options.debug:
+        defer.setDebugging(True)
+
+
 class NoDaemonContext(object):
     """A mock DaemonContext for running trond without being a daemon."""
 
@@ -118,6 +153,7 @@ class TronDaemon(object):
 
     def run(self):
         with self.context:
+            setup_logging(self.options)
             self._run_mcp()
             self._run_www_api()
             self._run_reactor()

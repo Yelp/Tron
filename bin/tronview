@@ -46,6 +46,8 @@ def parse_options():
 
 
 def console_height():
+    if not sys.stdout.isatty():
+        return 40
     return int(os.popen('stty size', 'r').read().split()[0])
 
 def display_events(data):
@@ -133,7 +135,7 @@ def main():
         print >>sys.stderr, "What is a %s?" % args[0]
         sys.exit(1)
 
-    if len(output.split('\n')) > console_height() and sys.stdout.isatty():
+    if sys.stdout.isatty() and len(output.split('\n')) > console_height():
         display.view_with_less(output, options.display_color)
     else:
         print output

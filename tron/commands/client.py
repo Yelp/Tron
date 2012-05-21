@@ -5,6 +5,7 @@ import logging
 import urllib
 import urllib2
 import urlparse
+import tron
 
 try:
     import simplejson
@@ -12,14 +13,13 @@ try:
 except ImportError:
     import json as simplejson
 
-log = logging.getLogger("tron.commands.client")
+log = logging.getLogger(__name__)
 
-USER_AGENT = "Tron Command/1.0 +http://github.com/Yelp/Tron"
+USER_AGENT = "Tron Command/%s +http://github.com/Yelp/Tron" % tron.__version__
 
 # Result Codes
-OK = "OK"
-REDIRECT = "REDIRECT"
-ERROR = "ERROR"
+OK          = "OK"
+ERROR       = "ERROR"
 
 
 def request(host, path, data=None):
@@ -32,7 +32,8 @@ def request(host, path, data=None):
     req.add_header("User-Agent", USER_AGENT)
     opener = urllib2.build_opener()
     try:
-        output = opener.open(req)
+        page = opener.open(req)
+        contents = page.read()
     except urllib2.HTTPError, e:
         log.error("Recieved error response: %s" % e)
         return ERROR, e.code
@@ -40,8 +41,16 @@ def request(host, path, data=None):
         log.error("Recieved error response: %s" % e)
         return ERROR, e.reason
 
-    result = simplejson.load(output)
+    try:
+        result = simplejson.loads(contents)
+    except ValueError, e:
+        log.error("Failed to decode response: %s, %s" % (e, contents))
+        return ERROR, str(e)
     return OK, result
+
+
+class RequestError(ValueError):
+    """Raised when there is a connection failure."""
 
 
 class Client(object):
@@ -62,8 +71,11 @@ class Client(object):
             return self.request('/config', dict(config=data))
         return self.request('/config', )['config']
 
+    def home(self):
+        return self.request('/')
+
     def index(self):
-        content = self.request('/')
+        content = self.home()
 
         def name_href_dict(source):
             return dict((i['name'], i['href']) for i in source)
@@ -134,9 +146,9 @@ class Client(object):
         return self.request('/jobs/%s/_events' % action_id)['data']
 
     def request(self, url, data=None):
-        status, content = request(self.options.server, url, data)
+        server = self.options.server
+        status, content = request(server, url, data)
         if not status == OK:
-            err_msg = "Failed to request %s%s: %s %s" % (
-                self.options.server, url, content, data or '')
-            raise ValueError(err_msg)
+            err_msg = "%s%s: %s %s"
+            raise RequestError(err_msg % (server, url, content, data or ''))
         return content

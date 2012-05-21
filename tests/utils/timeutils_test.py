@@ -1,6 +1,6 @@
 import datetime
 from testify import TestCase, assert_equal, setup
-from testify.test_case import class_setup, class_teardown
+from tests import testingutils
 
 from tron.utils import timeutils
 from tron.utils.timeutils import duration, macro_timedelta, DateArithmetic
@@ -110,19 +110,11 @@ class DeltaTotalSecondsTestCase(TestCase):
         assert_equal(delta_seconds, expected)
 
 
-class DateArithmeticTestCase(TestCase):
+class DateArithmeticTestCase(testingutils.MockTimeTestCase):
 
-    @class_setup
-    def freeze_time(self):
-        # Set a date with days less then 28, otherwise some tests will fail
-        # when run on days > 28.
-        dt = datetime.datetime(2012, 3, 20)
-        timeutils.override_current_time(dt)
-        self.now = timeutils.current_time()
-
-    @class_teardown
-    def unfreeze_time(self):
-        timeutils.override_current_time(None)
+    # Set a date with days less then 28, otherwise some tests will fail
+    # when run on days > 28.
+    now = datetime.datetime(2012, 3, 20)
 
     def _cmp_date(self, item, dt):
         assert_equal(DateArithmetic.parse(item), dt.strftime("%Y-%m-%d"))

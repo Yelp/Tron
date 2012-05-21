@@ -1,51 +1,37 @@
-from __future__ import with_statement
-
 import logging
 import os
 import shutil
 import signal
+import socket
 from subprocess import Popen, PIPE, CalledProcessError
 import sys
 import tempfile
 import time
+import contextlib
+import functools
 
-from testify import turtle
+from testify import TestCase, setup, teardown, turtle
 
-from tron import commands
 from tron.commands import client
 
 
-# Used for getting the locations of the executables
+# Used for getting the locations of the executable
 _test_folder, _ = os.path.split(__file__)
-_repo_root, _ = os.path.split(_test_folder)
+_repo_root, _   = os.path.split(_test_folder)
 
 log = logging.getLogger(__name__)
 
 
-def wait_for_sandbox_success(func, delay=0.1, max_wait=5.0):
-    """Call *func* repeatedly until it stops throwing TronSandboxException.
-    Wait increasing amounts from *start_delay* but wait no more than a total
-    of *stop_at* seconds
+def wait_on_sandbox(func, delay=0.1, max_wait=5.0):
+    """Poll for func() to return True. Sleeps `delay` seconds between polls
+    up to a max of `max_wait` seconds.
     """
     start_time = time.time()
     while time.time() - start_time < max_wait:
         time.sleep(delay)
-        try:
-            return func()
-        except TronSandboxException:
-            pass
-    raise
-
-
-def make_file_existence_sandbox_exception_thrower(path):
-    def func():
-        if not os.path.exists(path):
-            raise TronSandboxException('File does not exist: %s' % path)
-    return func
-
-def wait_for_file_to_exist(path, max_wait=5.0):
-    func = make_file_existence_sandbox_exception_thrower(path)
-    wait_for_sandbox_success(func, max_wait=max_wait)
+        if func():
+            return
+    raise TronSandboxException("Failed %s" % func.__name__)
 
 
 def handle_output(cmd, (stdout, stderr), returncode):
@@ -53,215 +39,158 @@ def handle_output(cmd, (stdout, stderr), returncode):
     is nonzero.
     """
     if stdout:
-        log.info("%s: %s", cmd, stdout)
+        log.warn("%s: %s", cmd, stdout)
     if stderr:
-        log.warning("%s: %s", cmd, stderr)
-    if returncode != 0:
+        log.warn("%s: %s", cmd, stderr)
+    if returncode:
         raise CalledProcessError(returncode, cmd)
+
+
+def find_unused_port():
+    """Return a port number that is not in use."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+    with contextlib.closing(sock) as sock:
+        sock.bind(('localhost', 0))
+        _, port = sock.getsockname()
+    return port
 
 
 class TronSandboxException(Exception):
     pass
 
 
-class MockConfigOptions(object):
+class SandboxTestCase(TestCase):
 
-    def __init__(self, server):
-        self.server = server
+    _suites = ['sandbox']
+
+    @setup
+    def make_sandbox(self):
+        self.sandbox = TronSandbox()
+
+    @teardown
+    def delete_sandbox(self):
+        self.sandbox.delete()
+        self.sandbox = None
+
+
+class ClientProxy(object):
+    """Wrap calls to client and raise a TronSandboxException on connection
+    failures.
+    """
+
+    def __init__(self, client, log_filename):
+        self.client         = client
+        self.log_filename   = log_filename
+
+    def log_contents(self):
+        """Return the contents of the log file."""
+        with open(self.log_filename, 'r') as f:
+            return f.read()
+
+    def wrap(self, func, *args, **kwargs):
+        try:
+            return func(*args, **kwargs)
+        except (client.RequestError, ValueError), e:
+            # ValueError for JSONDecode errors
+            log.warn("%r, Log:\n%s" % (e, self.log_contents()))
+            return False
+
+    def __getattr__(self, name):
+        attr = getattr(self.client, name)
+        if not callable(attr):
+            return attr
+
+        return functools.partial(self.wrap, attr)
 
 
 class TronSandbox(object):
+    """A sandbox for running trond and tron commands in subprocesses."""
 
     def __init__(self):
         """Set up a temp directory and store paths to relevant binaries"""
-        super(TronSandbox, self).__init__()
+        self.verify_environment()
+        self.tmp_dir        = tempfile.mkdtemp(prefix='tron-')
+        cmd_path_func       = functools.partial(os.path.join, _repo_root, 'bin')
+        cmds                = 'tronctl', 'trond', 'tronfig', 'tronview'
+        self.commands       = dict((cmd, cmd_path_func(cmd)) for cmd in cmds)
+        self.log_file       = self.abs_path('tron.log')
+        self.log_conf       = self.abs_path('logging.conf')
+        self.pid_file       = self.abs_path('tron.pid')
+        self.config_file    = self.abs_path('tron_config.yaml')
+        self.port           = find_unused_port()
+        self.host           = 'localhost'
+        self.api_uri        = 'http://%s:%s' % (self.host, self.port)
+        client_config       = turtle.Turtle(server=self.api_uri,
+                                warn=False, num_displays=100)
+        cclient             = client.Client(client_config)
+        self.client         = ClientProxy(cclient, self.log_file)
+        self.setup_logging_conf()
 
-        self.tmp_dir = tempfile.mkdtemp(prefix='tron-')
-        self.tron_bin = os.path.join(_repo_root, 'bin')
-        self.tronctl_bin = os.path.join(self.tron_bin, 'tronctl')
-        self.trond_bin = os.path.join(self.tron_bin, 'trond')
-        self.tronfig_bin = os.path.join(self.tron_bin, 'tronfig')
-        self.tronview_bin = os.path.join(self.tron_bin, 'tronview')
-        self.log_file = 'tron.log'
-        self.log_conf = 'tests/data/logging.conf'
-        self.state_file = '/tmp/state_data.shelve'
+    def abs_path(self, filename):
+        """Return the absolute path for a file in the sandbox."""
+        return os.path.join(self.tmp_dir, filename)
 
-        self.pid_file = os.path.join(self.tmp_dir, 'tron.pid')
-        self.config_file = os.path.join(self.tmp_dir, 'tron_config.yaml')
+    def setup_logging_conf(self):
+        config_template = os.path.join(_repo_root, 'tests/data/logging.conf')
+        with open(config_template, 'r') as fh:
+            config = fh.read()
 
-        self.port = 8089
-        self.host = 'localhost'
+        with open(self.log_conf, 'w') as fh:
+            fh.write(config.format(self.log_file))
 
-        self.run_time = None
+    def verify_environment(self):
+        ssh_sock = 'SSH_AUTH_SOCK'
+        msg = "Missing $%s in test environment."
+        if not os.environ.get(ssh_sock):
+            raise TronSandboxException(msg % ssh_sock)
 
-        self.trond_debug_args = ['--working-dir=%s' % self.tmp_dir,
-                                 '--pid-file=%s' % self.pid_file,
-                                 '--port=%d' % self.port,
-                                 '--host=%s' % self.host,
-                                 '--config=%s' % self.config_file,
-                                 '--log-conf=%s' % self.log_conf,
-                                 '--verbose', '--verbose']
-
-        self.tron_server_address = '%s:%d' % (self.host, self.port)
-        self.tron_server_uri = 'http://%s' % self.tron_server_address
-        self.tron_server_arg = '--server=%s' % self.tron_server_address
-
-        # mock a config object
-        self.config_obj = MockConfigOptions(self.tron_server_uri)
-        commands.save_config(self.config_obj)
-
-        self._last_trond_launch_args = []
-
-    def log_contents(self):
-        with open(self.log_file, 'r') as f:
-            return f.read()
+        path = 'PYTHONPATH'
+        if not os.environ.get(path):
+            raise TronSandboxException(msg % path)
 
     def delete(self):
-        """Delete the temp directory and its contents"""
+        """Delete the temp directory and shutdown trond."""
         if os.path.exists(self.pid_file):
-            self.stop_trond()
+            with open(self.pid_file, 'r') as f:
+                os.kill(int(f.read()), signal.SIGKILL)
         shutil.rmtree(self.tmp_dir)
-        os.unlink(self.log_file)
-        try:
-            os.unlink(self.state_file)
-        except OSError:
-            pass
-        self.tmp_dir = None
-        self.tron_bin = None
-        self.tronctl_bin = None
-        self.trond_bin = None
-        self.tronfig_bin = None
-        self.tronview_bin = None
-        self.tron_server_uri = None
 
     def save_config(self, config_text):
-        """Save a tron configuration to tron_config.yaml. Mainly useful for
-        setting trond's initial configuration.
-        """
+        """Save the initial tron configuration."""
         with open(self.config_file, 'w') as f:
             f.write(config_text)
-        return config_text
 
-    ### trond control ###
-
-    def start_trond(self, args=None):
-        """Start trond"""
-        args = args or []
-        self._last_trond_launch_args = args
-        command = [sys.executable, self.trond_bin] + self.trond_debug_args + args
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-
-        handle_output(command, p.communicate(), p.returncode)
-
-        # make sure trond has actually launched
-        wait_for_sandbox_success(self.list_all)
-
-        # (but p.communicate() already waits for the process to exit... -Steve)
-        return p.wait()
-
-    def stop_trond(self):
-        """Stop trond based on the tron.pid in the temp directory"""
-        with open(self.pid_file, 'r') as f:
-            os.kill(int(f.read()), signal.SIGKILL)
-
-    def restart_trond(self, args=None):
-        """Stop and start trond"""
-        if args == None:
-            args = self._last_trond_launch_args
-        self.stop_tron()
-        self.start_tron(args=args)
-
-    ### www API ###
-
-    def _check_call_api(self, uri, data=None):
-        commands.load_config(self.config_obj)
-        status, content = client.request(self.tron_server_uri, uri, data=data)
-
-        if status != client.OK or not content:
-            log.warning('trond appears to have crashed. Log:')
-            log.warning(self.log_contents())
-            raise TronSandboxException("Error connecting to tron server at %s%s" % (self.tron_server_uri, uri))
-
-        return content
-
-    def upload_config(self, config_text):
-        """Upload a tron configuration to the server"""
-        return self._check_call_api('/config', {'config': config_text})
-
-    def get_config(self):
-        """Get the text of the current configuration"""
-        return self._check_call_api('/config')['config']
-
-    def ctl(self, command, arg=None, run_time=None):
-        """Call the www API like tronctl does. ``command`` can be one of
-        ``(start, cancel, disable, enable, disableall, enableall, fail, succeed)``.
-        ``run_time`` should be of the form ``YYYY-MM-DD HH:MM:SS``.
-        """
-        data = {'command': command}
-
-        if run_time is not None:
-            data['run_time'] = run_time
-
-        if arg is not None:
-            options = turtle.Turtle(server=self.tron_server_uri)
-            cclient = client.Client(options)
-            full_uri = cclient.get_url_from_identifier(arg)
-
-        else:
-            full_uri = '/jobs'
-
-        self._check_call_api(full_uri, data=data)
-
-    def list_all(self):
-        """Call the www API to list jobs and services."""
-        return self._check_call_api('/')
-
-    def list_events(self):
-        """Call the www API to list all events."""
-        return self._check_call_api('/events')
-
-    def list_job(self, job_name):
-        """Call the www API to list all runs of one job."""
-        return self._check_call_api('/jobs/%s' % job_name)
-
-    def list_job_events(self, job_name):
-        """Call the www API to list all events of one job."""
-        return self._check_call_api('/jobs/%s/_events' % job_name)
-
-    def list_job_run(self, job_name, run_number):
-        """Call the www API to list all actions of one job run."""
-        return self._check_call_api('/jobs/%s/%d' % (job_name, run_number))
-
-    def list_job_run_events(self, job_name, run_number):
-        """Call the www API to list all actions of one job run."""
-        return self._check_call_api('/jobs/%s/%d/_events' % (job_name, run_number))
-
-    def list_action_run(self, job_name, run_number, action_name, num_lines=100):
-        """Call the www API to display the results of an action."""
-        return self._check_call_api('/jobs/%s/%d/%s?num_lines=%d' % (job_name, run_number, action_name, num_lines))
-
-    def list_service(self, service_name):
-        return self._check_call_api('/services/%s' % service_name)
-
-    def list_service_events(self, service_name):
-        return self._check_call_api('/services/%s/_events' % service_name)
-
-    ### Basic subprocesses ###
+    def run_command(self, command_name, args=None, stdin_lines=None):
+        """Run the command by name and return (stdout, stderr)."""
+        args        = args or []
+        command     = [sys.executable, self.commands[command_name]] + args
+        stdin       = PIPE if stdin_lines else None
+        proc        = Popen(command, stdout=PIPE, stderr=PIPE, stdin=stdin)
+        streams     = proc.communicate(stdin_lines)
+        handle_output(command, streams, proc.returncode)
+        return streams
 
     def tronctl(self, args=None):
-        """Call tronctl with args and return ``(stdout, stderr)``"""
-        args = args or []
-        command = [sys.executable, self.tronctl_bin] + args
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        retval = p.communicate()
-        handle_output(command, retval, p.returncode)
-        return retval
+        args = list(args) if args else []
+        return self.run_command('tronctl', args + ['--server', self.api_uri])
 
     def tronview(self, args=None):
-        """Call tronview with args and return ``(stdout, stderr)``"""
-        args = args or ['--nocolor']
-        command = [sys.executable, self.tronview_bin] + args
-        p = Popen(command, stdout=PIPE, stderr=PIPE)
-        retval = p.communicate()
-        handle_output(command, retval, p.returncode)
-        return retval
+        args = list(args) if args else []
+        args += ['--nocolor', '--server', self.api_uri]
+        return self.run_command('tronview', args)
+
+    def trond(self, args=None):
+        args = list(args) if args else []
+        args += ['--working-dir=%s' % self.tmp_dir,
+                   '--pid-file=%s'  % self.pid_file,
+                   '--port=%d'      % self.port,
+                   '--host=%s'      % self.host,
+                   '--config=%s'    % self.config_file,
+                   '--log-conf=%s'  % self.log_conf]
+
+        self.run_command('trond', args)
+        wait_on_sandbox(lambda: bool(self.client.home()))
+
+    def tronfig(self, config_content):
+        args = ['--server', self.api_uri, '-']
+        return self.run_command('tronfig', args, stdin_lines=config_content)

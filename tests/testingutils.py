@@ -1,8 +1,12 @@
 from contextlib import contextmanager
 import logging
+import functools
 
 from testify import  TestCase, setup
 from testify import class_setup, class_teardown
+from testify import teardown
+import time
+from tron.utils import timeutils
 
 
 log = logging.getLogger(__name__)
@@ -43,7 +47,7 @@ class MockReactorTestCase(TestCase):
 
     @class_setup
     def class_setup_patched_reactor(self):
-        msg = "%s must set a reactor_to_mock field" % self.__class__
+        msg = "%s must set a module_to_mock field" % self.__class__
         assert self.module_to_mock, msg
         self.old_reactor = getattr(self.module_to_mock, 'reactor')
 
@@ -55,6 +59,41 @@ class MockReactorTestCase(TestCase):
     def setup_mock_reactor(self):
         self.reactor = Turtle()
         setattr(self.module_to_mock, 'reactor', self.reactor)
+
+
+class MockTimeTestCase(TestCase):
+
+    now = None
+
+    @setup
+    def setup_current_time(self):
+        assert self.now, "%s must set a now field" % self.__class__
+        self.old_current_time  = timeutils.current_time
+        timeutils.current_time = lambda: self.now
+
+    @teardown
+    def teardown_current_time(self):
+        timeutils.current_time = self.old_current_time
+        # Reset 'now' back to what was set on the class because some test may
+        # have changed it
+        self.now = self.__class__.now
+
+
+def retry(max_tries=3, delay=0.1, exceptions=(KeyError, IndexError)):
+    """A function decorator for re-trying an operation. Useful for MongoDB
+    which is only eventually consistent.
+    """
+    def wrapper(f):
+        @functools.wraps(f)
+        def wrap(*args, **kwargs):
+            for _ in xrange(max_tries):
+                try:
+                    return f(*args, **kwargs)
+                except exceptions:
+                    time.sleep(delay)
+            raise
+        return wrap
+    return wrapper
 
 
 class Turtle(object):

@@ -15,7 +15,7 @@ setup using `virtualenvwrapper
 <http://www.doughellmann.com/projects/virtualenvwrapper/>`_::
 
     $ mkvirtualenv tron --distribute --no-site-packages
-    $ pip install -r req_dev.txt
+    $ pip install -r dev/req_dev.txt
 
 ``req_dev.txt`` contains a list of packages required for development, including:
 `Testify <https://github.com/yelp/testify>`_ to run the tests and `Sphinx

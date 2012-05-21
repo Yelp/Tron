@@ -4,11 +4,11 @@ from testify import setup, teardown, TestCase, run, assert_equal, assert_raises
 from tests import mocks
 from tests.assertions import assert_length, assert_call
 from tests.mocks import MockNode
-from tests.testingutils import MockReactorTestCase, Turtle
+from tests.testingutils import Turtle
+from tests import testingutils
 from tron import node, event
 from tron.core import job, jobrun
 from tron.core.actionrun import ActionRun
-from tron.utils import timeutils
 
 
 class JobContextTestCase(TestCase):
@@ -133,7 +133,7 @@ class JobTestCase(TestCase):
     def test_restore_state(self):
         run_data = ['one', 'two']
         job_runs = [Turtle(), Turtle()]
-        self.job.runs.restore_state = lambda r, a, o, c: job_runs
+        self.job.runs.restore_state = lambda r, a, o, c, n: job_runs
         state_data = {'enabled': False, 'runs': run_data}
 
         self.job.restore_state(state_data)
@@ -235,6 +235,7 @@ class JobSchedulerTestCase(TestCase):
 
     def test_run_job(self):
         self.job_scheduler.schedule = Turtle()
+        self.scheduler.schedule_on_complete = False
         self.job.runs.get_active = lambda n: []
         job_run = Turtle(is_cancelled=False)
         self.job_scheduler.run_job(job_run)
@@ -283,7 +284,7 @@ class JobSchedulerTestCase(TestCase):
         self.job_scheduler.run_job(job_run)
         assert_length(job_run.start.calls, 0)
         assert_length(job_run.cancel.calls, 1)
-        assert_length(self.job_scheduler.schedule.calls, 0)
+        assert_length(self.job_scheduler.schedule.calls, 1)
 
     def test_run_job_has_starting_queueing(self):
         self.job_scheduler.schedule = Turtle()
@@ -294,12 +295,21 @@ class JobSchedulerTestCase(TestCase):
         assert_length(job_run.queue.calls, 1)
         assert_length(self.job_scheduler.schedule.calls, 0)
 
+    def test_run_job_schedule_on_complete(self):
+        self.job_scheduler.schedule = Turtle()
+        self.scheduler.schedule_on_complete = True
+        self.job.runs.get_active = lambda s: []
+        job_run = Turtle(is_cancelled=False)
+        self.job_scheduler.run_job(job_run)
+        assert_length(job_run.start.calls, 1)
+        assert_length(self.job_scheduler.schedule.calls, 0)
+
 class JobSchedulerGetRunsToScheduleTestCase(TestCase):
 
     @setup
     def setup_job(self):
         self.scheduler = Turtle()
-        run_collection = Turtle()
+        run_collection = Turtle(has_pending=False)
         node_pool = Turtle()
         self.job = job.Job(
             "jobname",
@@ -313,7 +323,7 @@ class JobSchedulerGetRunsToScheduleTestCase(TestCase):
 
     def test_get_runs_to_schedule_no_queue_with_pending(self):
         self.scheduler.queue_overlapping = False
-        self.job.runs.get_pending = lambda: True
+        self.job.runs.has_pending = True
         job_runs = self.job_scheduler.get_runs_to_schedule()
         assert_length(job_runs, 0)
 
@@ -357,7 +367,9 @@ class MockRunBuilder(Turtle):
         return [self.manual_run]
 
 
-class JobSchedulerManualStartTestCase(TestCase):
+class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
+
+    now = datetime.datetime.now()
 
     @setup
     def setup_job(self):
@@ -373,13 +385,6 @@ class JobSchedulerManualStartTestCase(TestCase):
         self.job_scheduler = job.JobScheduler(self.job)
         self.manual_run = Turtle()
         self.job.build_new_runs = MockRunBuilder(manual_run=self.manual_run)
-
-        self.now = datetime.datetime.now()
-        timeutils.override_current_time(self.now)
-
-    @teardown
-    def teardown_timeutils(self):
-        timeutils.override_current_time(None)
 
     def test_manual_start(self):
         manual_runs = self.job_scheduler.manual_start()
@@ -397,14 +402,14 @@ class JobSchedulerManualStartTestCase(TestCase):
         assert_length(self.manual_run.start.calls, 1)
 
 
-class JobSchedulerScheduleTestCase(MockReactorTestCase):
+class JobSchedulerScheduleTestCase(testingutils.MockReactorTestCase):
 
     module_to_mock = job
 
     @setup
     def setup_job(self):
         self.scheduler = Turtle()
-        run_collection = Turtle()
+        run_collection = Turtle(has_pending=False)
         node_pool = Turtle()
         self.job = job.Job(
             "jobname",
@@ -419,10 +424,16 @@ class JobSchedulerScheduleTestCase(MockReactorTestCase):
         event.EventManager.get_instance().clear()
 
     def test_enable(self):
-        self.job_scheduler.schedule = Turtle()
+        self.job.enabled = False
         self.job_scheduler.enable()
         assert self.job.enabled
         assert_length(self.reactor.callLater.calls, 1)
+
+    def test_enable_noop(self):
+        self.job.enalbed = True
+        self.job_scheduler.enable()
+        assert self.job.enabled
+        assert_length(self.reactor.callLater.calls, 0)
 
     def test_schedule(self):
         self.job_scheduler.schedule()
@@ -443,12 +454,20 @@ class JobSchedulerScheduleTestCase(MockReactorTestCase):
         self.job_scheduler.schedule()
         assert_length(self.reactor.callLater.calls, 0)
 
-    def test_handler(self):
+    def test_handle_job_events_no_schedule_on_complete(self):
         self.job_scheduler.run_job = Turtle()
+        self.job.scheduler.schedule_on_complete = False
         queued_job_run = Turtle()
         self.job.runs.get_first_queued = lambda: queued_job_run
-        self.job_scheduler.handler(self.job, job.Job.NOTIFY_RUN_DONE)
-        assert_length(self.reactor.callLater.calls, 1)
+        self.job_scheduler.handle_job_events(self.job, job.Job.NOTIFY_RUN_DONE)
+        assert_call(self.reactor.callLater, 0, 0,
+            self.job_scheduler.run_job, queued_job_run, run_queued=True)
+
+    def test_handle_job_events_schedule_on_complete(self):
+        self.job_scheduler.schedule = Turtle()
+        self.job.scheduler.schedule_on_complete = True
+        self.job_scheduler.handle_job_events(self.job, job.Job.NOTIFY_RUN_DONE)
+        assert_call(self.job_scheduler.schedule, 0)
 
     def test_handler_unknown_event(self):
         self.job.runs.get_runs_by_state = Turtle()

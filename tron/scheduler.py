@@ -5,21 +5,18 @@ Tron schedulers
 
  class Scheduler(object):
 
-    queue_overlapping = <bool>
+    schedule_on_complete = <bool>
 
     def next_run_time(self, last_run_time):
         <returns datetime>
 
 
-
  next_run_time() should return a datetime which is the time the next job run
  will be run.
 
- queue_overlapping should be False if this scheduler should stop queueing
- runs once there is a queued or scheduled run already waiting.  It should
- be True if jobs should always be queued regardless of the current
- state of other jobs.
-
+ schedule_on_complete is a bool that identifies if this scheduler should have
+ jobs scheduled with the start_time of the previous run (False), or the
+ end time of the previous run (False).
 """
 import logging
 
@@ -30,7 +27,7 @@ from tron.utils import groctimespecification
 from tron.utils import timeutils
 
 
-log = logging.getLogger('tron.scheduler')
+log = logging.getLogger(__name__)
 
 
 def scheduler_from_config(config, time_zone):
@@ -54,8 +51,7 @@ def scheduler_from_config(config, time_zone):
 
 class ConstantScheduler(object):
     """The constant scheduler schedules a new job immediately."""
-
-    queue_overlapping = False
+    schedule_on_complete = True
 
     def next_run_time(self, _):
         return timeutils.current_time()
@@ -74,8 +70,7 @@ class DailyScheduler(object):
     """Wrapper around SpecificTimeSpecification in the Google App Engine cron
     library
     """
-
-    queue_overlapping = True
+    schedule_on_complete = False
 
     def __init__(self, ordinals=None, weekdays=None, months=None,
                  monthdays=None, timestr=None, time_zone=None,
@@ -95,15 +90,14 @@ class DailyScheduler(object):
           string_repr - Original string representation this was parsed from,
                         if applicable
         """
-        self.ordinals = ordinals
-        self.weekdays = weekdays
-        self.months = months
-        self.monthdays = monthdays
-        self.timestr = timestr or '00:00'
-        self.time_zone = time_zone
-        self.string_repr = string_repr
-
-        self._time_spec = None
+        self.ordinals               = ordinals
+        self.weekdays               = weekdays
+        self.months                 = months
+        self.monthdays              = monthdays
+        self.timestr                = timestr or '00:00'
+        self.time_zone              = time_zone
+        self.string_repr            = string_repr
+        self._time_spec             = None
 
     @property
     def time_spec(self):
@@ -168,8 +162,7 @@ class IntervalScheduler(object):
     """The interval scheduler runs a job (to success) based on a configured
     interval.
     """
-
-    queue_overlapping = False
+    schedule_on_complete = False
 
     def __init__(self, interval=None):
         self.interval = interval
