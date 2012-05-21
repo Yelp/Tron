@@ -39,9 +39,9 @@ def handle_output(cmd, (stdout, stderr), returncode):
     is nonzero.
     """
     if stdout:
-        log.info("%s: %s", cmd, stdout)
+        log.warn("%s: %s", cmd, stdout)
     if stderr:
-        log.warning("%s: %s", cmd, stderr)
+        log.warn("%s: %s", cmd, stderr)
     if returncode:
         raise CalledProcessError(returncode, cmd)
 

@@ -32,7 +32,8 @@ def request(host, path, data=None):
     req.add_header("User-Agent", USER_AGENT)
     opener = urllib2.build_opener()
     try:
-        output = opener.open(req)
+        page = opener.open(req)
+        contents = page.read()
     except urllib2.HTTPError, e:
         log.error("Recieved error response: %s" % e)
         return ERROR, e.code
@@ -41,10 +42,10 @@ def request(host, path, data=None):
         return ERROR, e.reason
 
     try:
-        result = simplejson.load(output)
+        result = simplejson.loads(contents)
     except ValueError, e:
-        log.error("Failed to decode response: %s, %s" % (e, output))
-        return ERROR, e.reason
+        log.error("Failed to decode response: %s, %s" % (e, contents))
+        return ERROR, str(e)
     return OK, result
 
 
