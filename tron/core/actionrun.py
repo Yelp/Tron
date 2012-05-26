@@ -10,7 +10,7 @@ from tron.serialize import filehandler
 from tron import node
 from tron.actioncommand import ActionCommand
 
-from tron.utils import state, timeutils, proxy
+from tron.utils import state, timeutils, proxy, iteration
 from tron.utils.observer import Observer
 
 log = logging.getLogger(__name__)
@@ -235,7 +235,7 @@ class ActionRun(Observer):
 
         # Transition running to fail unknown because exit status was missed
         if run.is_running:
-            run.machine.transition('fail_unknown')
+            run._done('fail_unknown')
         if run.is_queued or run.is_starting:
             run.fail(None)
         return run
@@ -400,7 +400,6 @@ class ActionRunCollection(object):
     def __init__(self, action_graph, run_map):
         self.action_graph       = action_graph
         self.run_map            = run_map
-
         # Setup proxies
         self.proxy_action_runs_with_cleanup = proxy.CollectionProxy(
             self.get_action_runs_with_cleanup, [
@@ -416,6 +415,8 @@ class ActionRunCollection(object):
                 ('success',         all,    True),
                 ('fail',            all,    True),
                 ('ready',           all,    True),
+                ('start_time',      iteration.min_filter,    False),
+                ('end_time',        iteration.max_filter,    False),
             ])
 
     def action_runs_for_actions(self, actions):

@@ -131,12 +131,10 @@ class JobRunTestCase(testingutils.MockTimeTestCase):
         assert_length(self.job_run.notify.calls, 1)
 
     def test_do_start(self):
-        self.now = self.run_time
         startable_runs = [Turtle(), Turtle(), Turtle()]
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
         assert self.job_run._do_start()
-        assert_equal(self.job_run.start_time, self.run_time)
         assert_call(self.job_run.action_runs.ready, 0)
         for i, startable_run in enumerate(startable_runs):
             assert_call(startable_run.start, 0)
@@ -145,19 +143,15 @@ class JobRunTestCase(testingutils.MockTimeTestCase):
         assert_call(self.job_run.notify, 0, self.job_run.EVENT_STARTED)
 
     def test_do_start_all_failed(self):
-        self.now = self.run_time
         self.job_run._start_action_runs = lambda: [None]
 
         assert not self.job_run._do_start()
-        assert_equal(self.job_run.start_time, self.run_time)
         assert_length(self.job_run.notify.calls, 0)
 
     def test_do_start_some_failed(self):
-        self.now = self.run_time
         self.job_run._start_action_runs = lambda: [True, None]
 
         assert self.job_run._do_start()
-        assert_equal(self.job_run.start_time, self.run_time)
         assert_length(self.job_run.notify.calls, 1)
         assert_call(self.job_run.notify, 0, self.job_run.EVENT_STARTED)
 
@@ -243,19 +237,15 @@ class JobRunTestCase(testingutils.MockTimeTestCase):
         assert_equal(self.job_run.state, actionrun.ActionRun.STATE_UNKNOWN)
 
     def test_finalize(self):
-        self.now = self.run_time
         self.job_run.action_runs.is_failed = False
         self.job_run.finalize()
         assert_call(self.job_run.notify, 0, self.job_run.EVENT_SUCCEEDED)
         assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_DONE)
-        assert_equal(self.job_run.end_time, self.run_time)
 
     def test_finalize_failure(self):
-        self.now = self.run_time
         self.job_run.finalize()
         assert_call(self.job_run.notify, 0, self.job_run.EVENT_FAILED)
         assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_DONE)
-        assert_equal(self.job_run.end_time, self.run_time)
 
     def test_cleanup(self):
         self.job_run.clear_observers = Turtle()
