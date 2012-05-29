@@ -127,7 +127,6 @@ class Job(Observable, Observer):
         self.action_graph   = job.action_graph
         self.enabled        = job.enabled
         self.output_path    = job.output_path
-        self.context        = job.context
         self.notify(self.EVENT_RECONFIGURED)
 
     @property
