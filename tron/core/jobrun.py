@@ -353,6 +353,7 @@ class JobRunCollection(object):
     def remove_pending(self):
         """Remove pending runs from the run list."""
         for pending in list(self.get_pending()):
+            pending.clear_observers()
             pending.cancel()
             pending.cleanup()
             self.runs.remove(pending)
