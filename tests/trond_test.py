@@ -5,6 +5,7 @@ from textwrap import dedent
 from testify import assert_equal
 from testify import assert_gt
 from tests import sandbox
+from tests.assertions import assert_length
 
 
 BASIC_CONFIG = """
@@ -240,3 +241,28 @@ class TrondTestCase(sandbox.SandboxTestCase):
 
         job_runs = client.job('random_failure_job')['runs']
         assert_equal([run['state'] for run in job_runs[-3:]], ['FAIL'] * 3)
+
+    def test_cancel_schedules_a_new_run(self):
+        config = BASIC_CONFIG + dedent("""
+            jobs:
+                -   name: "a_job"
+                    node: local
+                    schedule: "daily 05:00:00"
+                    actions:
+                        -   name: "first_action"
+                            command: "echo OK"
+        """)
+
+        client = self.sandbox.client
+        self.sandbox.save_config(config)
+        self.sandbox.trond()
+
+        self.sandbox.tronctl(['cancel', 'a_job.0'])
+        def wait_on_cancel():
+            return len(client.job('a_job')['runs']) == 2
+        sandbox.wait_on_sandbox(wait_on_cancel)
+
+        job_runs = client.job('a_job')['runs']
+        assert_length(job_runs, 2)
+        run_states = [run['state'] for run in job_runs]
+        assert_equal(run_states, ['SCHE', 'CANC'])
