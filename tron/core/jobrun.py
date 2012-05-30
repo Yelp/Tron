@@ -1,5 +1,5 @@
 """
- tron.core.jobrun
+ Classes to manage job runs.
 """
 
 from collections import deque
@@ -51,8 +51,8 @@ class JobRun(Observable, Observer):
     EVENT_SUCCEEDED       = event.EventType(event.LEVEL_OK, "succeeded")
 
     def __init__(self, job_name, run_num, run_time, node, output_path=None,
-                base_context=None, action_runs=None, start_time=None,
-                end_time=None, action_graph=None, manual=None):
+                base_context=None, action_runs=None,
+                action_graph=None, manual=None):
         super(JobRun, self).__init__()
         self.job_name           = job_name
         self.run_num            = run_num
@@ -60,8 +60,6 @@ class JobRun(Observable, Observer):
         self.node               = node
         self.output_path        = output_path or filehandler.OutputPath()
         self.output_path.append(self.id)
-        self.start_time         = start_time
-        self.end_time           = end_time
         self.action_runs_proxy  = None
         self._action_runs       = None
         self.action_graph       = action_graph
@@ -108,8 +106,6 @@ class JobRun(Observable, Observer):
             state_data['run_num'],
             state_data['run_time'],
             run_node,
-            end_time=state_data['end_time'],
-            start_time=state_data['start_time'],
             action_graph=action_graph,
             manual=state_data.get('manual', False),
             output_path=output_path,
@@ -129,8 +125,6 @@ class JobRun(Observable, Observer):
             'run_time':         self.run_time,
             'node_name':        self.node.name if self.node else None,
             'runs':             self.action_runs.state_data,
-            'start_time':       self.start_time,
-            'end_time':         self.end_time,
             'cleanup_run':      self.action_runs.cleanup_action_state_data,
             'manual':           self.manual,
         }
@@ -164,6 +158,8 @@ class JobRun(Observable, Observer):
                 'is_scheduled',
                 'is_skipped',
                 'is_starting',
+                'start_time',
+                'end_time'
             ])
 
     def _del_action_runs(self):
@@ -186,7 +182,6 @@ class JobRun(Observable, Observer):
 
     def _do_start(self):
         log.info("Starting JobRun %s", self.id)
-        self.start_time = timeutils.current_time()
 
         self.action_runs.ready()
         started_runs = self._start_action_runs()
@@ -242,9 +237,8 @@ class JobRun(Observable, Observer):
         completes or if the job has no cleanup action, called once all action
         runs have reached a 'done' state.
 
-        Sets end_time and triggers an event to notifies the Job that is is done.
+        Triggers an event to notifies the Job that is is done.
         """
-        self.end_time = timeutils.current_time()
         failure = self.action_runs.is_failed
         event = self.EVENT_FAILED if failure else self.EVENT_SUCCEEDED
         self.notify(event)
