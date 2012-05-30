@@ -2,7 +2,6 @@ from __future__ import with_statement
 import logging
 import os
 import shutil
-import time
 import yaml
 
 from twisted.conch.client.options import ConchOptions
@@ -191,7 +190,7 @@ class StateHandler(Observer, Observable):
     def state_data(self):
         data = {
             'version': tron.__version_info__,
-            'create_time': int(time.time()),
+            'create_time': timeutils.current_timestamp(),
             'jobs': {},
             'services': {},
         }

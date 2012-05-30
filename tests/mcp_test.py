@@ -3,31 +3,26 @@ import os
 import shutil
 import StringIO
 import tempfile
-
-from testify import TestCase, class_setup, class_teardown, setup, teardown
-from testify import assert_raises, assert_equal, suite, run
-from testify.utils import turtle
 import time
 import yaml
+
+from testify import TestCase, setup, teardown
+from testify import assert_raises, assert_equal, suite, run
+from testify.utils import turtle
+
+from tests import testingutils
 from tests.assertions import assert_length
 from tests.mocks import MockNode
+
 import tron
 from tron.config import config_parse
-
 from tron.core import job, actionrun
 from tron import mcp, scheduler, event, node, service
-from tron.utils import timeutils
 
 
-class StateHandlerIntegrationTestCase(TestCase):
-    @class_setup
-    def class_setup_time(self):
-        timeutils.override_current_time(datetime.datetime.now())
-        self.now = timeutils.current_time()
+class StateHandlerIntegrationTestCase(testingutils.MockTimeTestCase):
 
-    @class_teardown
-    def class_teardown_time(self):
-        timeutils.override_current_time(None)
+    now = datetime.datetime.now()
 
     def _advance_run(self, job_run, state):
         for action_run in job_run.action_runs:

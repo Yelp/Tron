@@ -1,12 +1,12 @@
 import datetime
 import pytz
-from testify import TestCase, setup, assert_equal, teardown
+from testify import TestCase, setup, assert_equal
 from testify.assertions import assert_in
 from tests.assertions import assert_length, assert_raises, assert_call
 from tests.mocks import MockNode
 from tron.core import jobrun, actionrun
 from tests.testingutils import Turtle
-from tron.utils import timeutils
+from tests import testingutils
 
 
 class JobRunContextTestCase(TestCase):
@@ -23,11 +23,11 @@ class JobRunContextTestCase(TestCase):
 
     def test_cleanup_job_status_failure(self):
         self.jobrun.action_runs.is_failed = True
-        assert_equal(self.context.cleanup_job_status, 'FAILURE')
 
 
+class JobRunTestCase(testingutils.MockTimeTestCase):
 
-class JobRunTestCase(TestCase):
+    now = datetime.datetime(2012, 3, 14, 15, 9, 20)
 
     @setup
     def setup_jobrun(self):
@@ -43,10 +43,6 @@ class JobRunTestCase(TestCase):
                 ))
         self.job_run.watch = Turtle()
         self.job_run.notify = Turtle()
-
-    @teardown
-    def teardown_jobrun(self):
-        timeutils.override_current_time(None)
 
     def test__init__(self):
         assert_equal(self.job_run.job_name, 'jobname')
@@ -103,15 +99,11 @@ class JobRunTestCase(TestCase):
             self.job_run._set_action_runs, run_collection)
 
     def test_seconds_until_run_time(self):
-        now = datetime.datetime(2012, 3, 14, 15, 9, 20)
-        timeutils.override_current_time(now)
         seconds = self.job_run.seconds_until_run_time()
         assert_equal(seconds, 6)
 
     def test_seconds_until_run_time_with_tz(self):
         self.job_run.run_time = self.run_time.replace(tzinfo=pytz.utc)
-        now = datetime.datetime(2012, 3, 14, 15, 9, 20)
-        timeutils.override_current_time(now)
         seconds = self.job_run.seconds_until_run_time()
         assert_equal(seconds, 6)
 
@@ -139,12 +131,10 @@ class JobRunTestCase(TestCase):
         assert_length(self.job_run.notify.calls, 1)
 
     def test_do_start(self):
-        timeutils.override_current_time(self.run_time)
         startable_runs = [Turtle(), Turtle(), Turtle()]
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
         assert self.job_run._do_start()
-        assert_equal(self.job_run.start_time, self.run_time)
         assert_call(self.job_run.action_runs.ready, 0)
         for i, startable_run in enumerate(startable_runs):
             assert_call(startable_run.start, 0)
@@ -153,19 +143,15 @@ class JobRunTestCase(TestCase):
         assert_call(self.job_run.notify, 0, self.job_run.EVENT_STARTED)
 
     def test_do_start_all_failed(self):
-        timeutils.override_current_time(self.run_time)
         self.job_run._start_action_runs = lambda: [None]
 
         assert not self.job_run._do_start()
-        assert_equal(self.job_run.start_time, self.run_time)
         assert_length(self.job_run.notify.calls, 0)
 
     def test_do_start_some_failed(self):
-        timeutils.override_current_time(self.run_time)
         self.job_run._start_action_runs = lambda: [True, None]
 
         assert self.job_run._do_start()
-        assert_equal(self.job_run.start_time, self.run_time)
         assert_length(self.job_run.notify.calls, 1)
         assert_call(self.job_run.notify, 0, self.job_run.EVENT_STARTED)
 
@@ -251,19 +237,15 @@ class JobRunTestCase(TestCase):
         assert_equal(self.job_run.state, actionrun.ActionRun.STATE_UNKNOWN)
 
     def test_finalize(self):
-        timeutils.override_current_time(self.run_time)
         self.job_run.action_runs.is_failed = False
         self.job_run.finalize()
         assert_call(self.job_run.notify, 0, self.job_run.EVENT_SUCCEEDED)
         assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_DONE)
-        assert_equal(self.job_run.end_time, self.run_time)
 
     def test_finalize_failure(self):
-        timeutils.override_current_time(self.run_time)
         self.job_run.finalize()
         assert_call(self.job_run.notify, 0, self.job_run.EVENT_FAILED)
         assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_DONE)
-        assert_equal(self.job_run.end_time, self.run_time)
 
     def test_cleanup(self):
         self.job_run.clear_observers = Turtle()

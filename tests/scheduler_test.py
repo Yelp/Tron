@@ -2,40 +2,38 @@ import calendar
 import datetime
 
 import pytz
-from testify import setup, teardown, run, TestCase, assert_equal
+from testify import setup, run, assert_equal
 from testify import assert_gte, assert_lte, assert_gt, assert_lt
+from tests import testingutils
 
 from tron import scheduler
 from tron.config.schedule_parse import parse_daily_expression as parse_daily
 from tron.utils import timeutils
 
 
-class ConstantSchedulerTest(TestCase):
+class ConstantSchedulerTest(testingutils.MockTimeTestCase):
+
+    now = datetime.datetime(2012, 3, 14)
 
     @setup
     def build_scheduler(self):
         self.scheduler = scheduler.ConstantScheduler()
 
     def test_next_run_time(self):
-        current_time = timeutils.current_time()
         scheduled_time = self.scheduler.next_run_time(None)
-        assert current_time <= scheduled_time <= timeutils.current_time()
+        assert_equal(scheduled_time, self.now)
 
     def test__str__(self):
         assert_equal(str(self.scheduler), "CONSTANT")
 
 
-class DailySchedulerTest(TestCase):
+class DailySchedulerTestCase(testingutils.MockTimeTestCase):
+
+    now = datetime.datetime.now().replace(hour=15, minute=0)
 
     @setup
     def build_scheduler(self):
-        self.now = datetime.datetime.now().replace(hour=15, minute=0)
-        timeutils.override_current_time(self.now)
         self.scheduler = scheduler.DailyScheduler(timestr='14:30')
-
-    @teardown
-    def unset_time(self):
-        timeutils.override_current_time(None)
 
     def test_next_run_time(self):
         one_day = datetime.timedelta(days=1)
@@ -53,22 +51,18 @@ class DailySchedulerTest(TestCase):
         assert_equal(str(self.scheduler), "DAILY")
 
 
-class DailySchedulerTimeTestBase(TestCase):
+class DailySchedulerTimeTestBase(testingutils.MockTimeTestCase):
+
+    now = datetime.datetime(2012, 3, 14, 15, 9, 26)
+
     @setup
     def build_scheduler(self):
         self.scheduler = scheduler.DailyScheduler(timestr='14:30')
 
-    @teardown
-    def unset_time(self):
-        timeutils.override_current_time(None)
-
 
 class DailySchedulerTodayTest(DailySchedulerTimeTestBase):
 
-    @setup
-    def set_time(self):
-        self.now = datetime.datetime.now().replace(hour=12, minute=0)
-        timeutils.override_current_time(self.now)
+    now = datetime.datetime.now().replace(hour=12, minute=0)
 
     def test(self):
         # If we schedule a job for later today, it should run today
@@ -83,10 +77,7 @@ class DailySchedulerTodayTest(DailySchedulerTimeTestBase):
 
 class DailySchedulerTomorrowTest(DailySchedulerTimeTestBase):
 
-    @setup
-    def set_time(self):
-        self.now = datetime.datetime.now().replace(hour=15, minute=0)
-        timeutils.override_current_time(self.now)
+    now = datetime.datetime.now().replace(hour=15, minute=0)
 
     def test(self):
         # If we schedule a job for later today, it should run today
@@ -102,10 +93,7 @@ class DailySchedulerTomorrowTest(DailySchedulerTimeTestBase):
 
 class DailySchedulerLongJobRunTest(DailySchedulerTimeTestBase):
 
-    @setup
-    def set_time(self):
-        self.now = datetime.datetime.now().replace(hour=12, minute=0)
-        timeutils.override_current_time(self.now)
+    now = datetime.datetime.now().replace(hour=12, minute=0)
 
     def test_long_jobs_dont_wedge_scheduler(self):
         # Advance days twice as fast as they are scheduled, demonstrating
@@ -118,16 +106,12 @@ class DailySchedulerLongJobRunTest(DailySchedulerTimeTestBase):
             assert_equal(next_run, last_run + datetime.timedelta(days=1))
 
             self.now += datetime.timedelta(days=2)
-            timeutils.override_current_time(self.now)
-
             last_run = next_run
 
 
-class DailySchedulerDSTTest(TestCase):
+class DailySchedulerDSTTest(testingutils.MockTimeTestCase):
 
-    @teardown
-    def unset_time(self):
-        timeutils.override_current_time(None)
+    now = datetime.datetime(2011, 11, 6, 1, 10, 0)
 
     def hours_until_time(self, run_time, sch):
         tz = sch.time_zone
@@ -140,13 +124,8 @@ class DailySchedulerDSTTest(TestCase):
         """Return the number of hours until the next *two* runs of a job with
         the given scheduler
         """
-        # if you need to print a datetime with tz info, use this:
-        #   fmt = '%Y-%m-%d %H:%M:%S %Z%z'
-        #   my_datetime.strftime(fmt)
-
-        now = datetime.datetime(*args, **kwargs)
-        timeutils.override_current_time(now)
-        next_run = sch.next_run_time(now)
+        self.now = datetime.datetime(*args, **kwargs)
+        next_run = sch.next_run_time(self.now)
         t1 = self.hours_until_time(next_run, sch)
         next_run = sch.next_run_time(next_run.replace(tzinfo=None))
         t2 = self.hours_until_time(next_run, sch)
@@ -181,10 +160,7 @@ class DailySchedulerDSTTest(TestCase):
 
     def test_correct_time(self):
         sch = scheduler.DailyScheduler(time_zone=pytz.timezone('US/Pacific'))
-
-        now = datetime.datetime(2011, 11, 6, 1, 10, 0)
-        timeutils.override_current_time(now)
-        next_run_time = sch.next_run_time(now)
+        next_run_time = sch.next_run_time(self.now)
         assert_equal(next_run_time.hour, 0)
 
     def test_spring_forward(self):
@@ -211,16 +187,9 @@ class DailySchedulerDSTTest(TestCase):
         self._assert_range(s1a - s2a, -0.61, -0.59)
 
 
-class ComplexParserTest(TestCase):
+class ComplexParserTest(testingutils.MockTimeTestCase):
 
-    @setup
-    def build_scheduler(self):
-        self.today = datetime.datetime(2011, 6, 1)
-        timeutils.override_current_time(self.today)
-
-    @teardown
-    def unset_time(self):
-        timeutils.override_current_time(None)
+    now = datetime.datetime(2011, 6, 1)
 
     def test_parse_all(self):
         cfg = parse_daily('1st,2nd,3rd,4th monday,Tue of march,apr,September at 00:00')
@@ -270,7 +239,7 @@ class ComplexParserTest(TestCase):
         sch = scheduler.DailyScheduler(**cfg._asdict())
         next_run_date = sch.next_run_time(None)
 
-        assert_gte(next_run_date, self.today)
+        assert_gte(next_run_date, self.now)
         assert_equal(next_run_date.month, 6)
         assert_equal(next_run_date.day, 2)
         assert_equal(next_run_date.hour, 0)
@@ -280,8 +249,8 @@ class ComplexParserTest(TestCase):
         sch = scheduler.DailyScheduler(**cfg._asdict())
         next_run_date = sch.next_run_time(None)
 
-        assert_gte(next_run_date, self.today)
-        assert_equal(next_run_date.year, self.today.year)
+        assert_gte(next_run_date, self.now)
+        assert_equal(next_run_date.year, self.now.year)
         assert_equal(next_run_date.month, 6)
         assert_equal(next_run_date.day, 1)
         assert_equal(next_run_date.hour, 2)
@@ -292,7 +261,7 @@ class ComplexParserTest(TestCase):
         sch = scheduler.DailyScheduler(**cfg._asdict())
         next_run_date = sch.next_run_time(None)
 
-        assert_gte(next_run_date, self.today)
+        assert_gte(next_run_date, self.now)
         assert_equal(calendar.weekday(next_run_date.year,
                                       next_run_date.month,
                                       next_run_date.day), 0)
@@ -302,8 +271,8 @@ class ComplexParserTest(TestCase):
         sch = scheduler.DailyScheduler(**cfg._asdict())
         next_run_date = sch.next_run_time(None)
 
-        assert_gte(next_run_date, self.today)
-        assert_equal(next_run_date.year, self.today.year+1)
+        assert_gte(next_run_date, self.now)
+        assert_equal(next_run_date.year, self.now.year+1)
         assert_equal(next_run_date.month, 1)
         assert_equal(next_run_date.hour, 0)
         assert_equal(next_run_date.minute, 1)
@@ -316,11 +285,13 @@ class ComplexParserTest(TestCase):
         sch = scheduler.DailyScheduler(**cfg._asdict())
         next_run_date = sch.next_run_time(None)
 
-        assert_gt(next_run_date, self.today)
+        assert_gt(next_run_date, self.now)
         assert_equal(next_run_date.month, 7)
 
 
-class IntervalSchedulerTest(TestCase):
+class IntervalSchedulerTest(testingutils.MockTimeTestCase):
+
+    now = datetime.datetime(2012, 3, 14)
 
     @setup
     def build_scheduler(self):
@@ -328,9 +299,8 @@ class IntervalSchedulerTest(TestCase):
         self.scheduler = scheduler.IntervalScheduler(self.interval)
 
     def test_next_run_time(self):
-        current_time = timeutils.current_time()
-        run_time = self.scheduler.next_run_time(current_time)
-        assert_gte(current_time + self.interval, run_time)
+        run_time = self.scheduler.next_run_time(self.now)
+        assert_equal(self.now + self.interval, run_time)
 
     def test__str__(self):
         assert_equal(str(self.scheduler), "INTERVAL:%s" % self.interval)
