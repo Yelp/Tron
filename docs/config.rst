@@ -162,9 +162,9 @@ State Persistence
         Valid options are:
             **shelve** - uses the `shelve` module and saves to a local file
 
-            **sql** - uses `sqlalchemy <http://www.sqlalchemy.org/>`_ to save to a database.
+            **sql** - uses `sqlalchemy <http://www.sqlalchemy.org/>`_ to save to a database (tested with version 0.7).
 
-            **mongo** - uses `pymongo` to save to a mongodb.
+            **mongo** - uses `pymongo` to save to a mongodb (tested with version 2.2).
 
             **yaml** - uses `yaml` and saves to a local file (this is not recommend and is provided to be backwards compatible with previous versions of Tron).
 

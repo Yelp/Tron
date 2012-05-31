@@ -1,4 +1,4 @@
-.TH "TROND" "8" "May 11, 2012" "0.4" "Tron"
+.TH "TROND" "8" "May 31, 2012" "0.5" "Tron"
 .SH NAME
 trond \- trond documentation
 .
@@ -83,10 +83,21 @@ Contains the pid of the daemonized process.
 .TP
 .B Log File
 trond error log, configured from logging.conf
+.UNINDENT
+.SH SIGNALS
+.INDENT 0.0
 .TP
-.B State file
-trond serializes its state to this file and uses it to reloads its start
-when it starts.
+.B SIGINT
+Graceful shutdown. Waits for running jobs to complete.
+.TP
+.B SIGTERM
+Does some cleanup before shutting down.
+.TP
+.B SIGHUP
+Reload the configuration file.
+.TP
+.B SIGUSR1
+If running with \fB\-\-nodaemon\fP will drop into an ipdb debugging prompt.
 .UNINDENT
 .SH LOGGING
 .sp
