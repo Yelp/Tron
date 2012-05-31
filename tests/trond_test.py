@@ -266,3 +266,39 @@ class TrondTestCase(sandbox.SandboxTestCase):
         assert_length(job_runs, 2)
         run_states = [run['state'] for run in job_runs]
         assert_equal(run_states, ['SCHE', 'CANC'])
+
+    def test_service_reconfigure(self):
+        config_template = BASIC_CONFIG + dedent("""
+            services:
+                -   name: "a_service"
+                    node: local
+                    pid_file: "{wd}/%(name)s-%(instance_number)s.pid"
+                    command: "{command}"
+                    monitor_interval: {monitor_interval}
+                    restart_interval: 2
+        """)
+
+        command = ("cd {path} && PYTHONPATH=. python "
+                    "{path}/tests/mock_daemon.py %(pid_file)s")
+        command = command.format(path=os.path.abspath('.'))
+        config = config_template.format(
+            command=command, monitor_interval=1, wd=self.sandbox.tmp_dir)
+        client = self.sandbox.client
+        self.sandbox.save_config(config)
+        self.sandbox.trond()
+        self.sandbox.tronctl(['start', 'a_service'])
+
+        def wait_on_service_start():
+            return client.service('a_service')['state'] == 'UP'
+        sandbox.wait_on_sandbox(wait_on_service_start)
+
+        new_config = config_template.format(
+            command=command, monitor_interval=2, wd=self.sandbox.tmp_dir)
+        self.sandbox.tronfig(new_config)
+
+        sandbox.wait_on_sandbox(wait_on_service_start)
+        self.sandbox.tronctl(['stop', 'a_service'])
+
+        def wait_on_service_stop():
+            return client.service('a_service')['state'] == 'DOWN'
+        sandbox.wait_on_sandbox(wait_on_service_stop)

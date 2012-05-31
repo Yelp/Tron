@@ -598,6 +598,7 @@ class Service(observer.Observable, observer.Observer):
         self.machine = prev_service.machine
 
         # To permanently disable the older service, remove it's machine.
+        prev_service.machine.clear_observers()
         prev_service.machine = None
 
         # Copy over all the old instances

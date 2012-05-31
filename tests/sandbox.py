@@ -16,8 +16,8 @@ from tron.commands import client
 
 
 # Used for getting the locations of the executable
-_test_folder, _ = os.path.split(__file__)
-_repo_root, _   = os.path.split(_test_folder)
+test_dir, _ = os.path.split(__file__)
+repo_root, _   = os.path.split(test_dir)
 
 log = logging.getLogger(__name__)
 
@@ -110,7 +110,7 @@ class TronSandbox(object):
         """Set up a temp directory and store paths to relevant binaries"""
         self.verify_environment()
         self.tmp_dir        = tempfile.mkdtemp(prefix='tron-')
-        cmd_path_func       = functools.partial(os.path.join, _repo_root, 'bin')
+        cmd_path_func       = functools.partial(os.path.join, repo_root, 'bin')
         cmds                = 'tronctl', 'trond', 'tronfig', 'tronview'
         self.commands       = dict((cmd, cmd_path_func(cmd)) for cmd in cmds)
         self.log_file       = self.abs_path('tron.log')
@@ -131,7 +131,7 @@ class TronSandbox(object):
         return os.path.join(self.tmp_dir, filename)
 
     def setup_logging_conf(self):
-        config_template = os.path.join(_repo_root, 'tests/data/logging.conf')
+        config_template = os.path.join(repo_root, 'tests/data/logging.conf')
         with open(config_template, 'r') as fh:
             config = fh.read()
 
@@ -167,7 +167,11 @@ class TronSandbox(object):
         stdin       = PIPE if stdin_lines else None
         proc        = Popen(command, stdout=PIPE, stderr=PIPE, stdin=stdin)
         streams     = proc.communicate(stdin_lines)
-        handle_output(command, streams, proc.returncode)
+        try:
+            handle_output(command, streams, proc.returncode)
+        except CalledProcessError:
+            log.warn(self.client.log_contents())
+            raise
         return streams
 
     def tronctl(self, args=None):
