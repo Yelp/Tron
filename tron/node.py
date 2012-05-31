@@ -217,7 +217,7 @@ class Node(object):
         A run consists of a very specific set of interfaces which allow us to
         execute a command on this remote machine and return results.
         """
-        log.info("Running %s on %s", run.id, self.hostname)
+        log.info("Running %s for %s on %s", run.command, run.id, self.hostname)
 
         # When this run completes, for good or bad, we'll inform the caller by
         # calling 'succeed' or 'fail' on the run Since the definined interface
