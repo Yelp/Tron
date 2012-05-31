@@ -167,11 +167,11 @@ jobs:
         schedule: "daily 16:00:00"
         actions:
             -   name: "task0"
-                command: "%(ECHO)s %(actionname)s"
+                command: "%(ECHO)s %(actionname)s 1 && false"
                 node: box2
                 requires: ["task1"]
             -   name: "task1"
-                command: "sleep 10 && %(ECHO)s %(actionname)s"
+                command: "sleep 10 && %(ECHO)s %(actionname)s %(last_success:shortdate)s"
                 node: pool0
         cleanup_action:
             command: "%(ECHO)s %(actionname)s %(cleanup_job_status)s"

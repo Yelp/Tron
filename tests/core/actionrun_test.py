@@ -331,7 +331,9 @@ class ActionRunTestCase(TestCase):
             self.action_run.__getattr__, 'is_not_a_real_state')
 
 
-class ActionRunStateRestoreTestCase(TestCase):
+class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
+
+    now = datetime.datetime(2012, 3, 14, 15, 19)
 
     @setup
     def setup_action_run(self):
@@ -370,12 +372,15 @@ class ActionRunStateRestoreTestCase(TestCase):
         action_run = ActionRun.from_state(self.state_data,
                 self.parent_context, self.output_path, self.run_node)
         assert action_run.is_unknown
+        assert_equal(action_run.exit_status, 0)
+        assert_equal(action_run.end_time, self.now)
 
     def test_from_state_queued(self):
         self.state_data['state'] = 'queued'
         action_run = ActionRun.from_state(self.state_data, self.parent_context,
                 self.output_path, self.run_node)
         assert action_run.is_failed
+        assert_equal(action_run.end_time, self.now)
 
     def test_from_state_no_node_name(self):
         del self.state_data['node_name']

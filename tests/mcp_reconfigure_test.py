@@ -237,6 +237,7 @@ class MCPReconfigureTestCase(TestCase):
         assert new_job_sched.job.runs.runs[1].is_starting
         assert new_job_sched.job.runs.runs[0].is_scheduled
         assert_equal(job_sched.job.context['a_variable'], 'is_constant')
+        assert new_job_sched.job.context.base.job is new_job_sched.job
 
     @suite('integration')
     def test_job_new(self):
