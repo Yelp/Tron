@@ -450,7 +450,6 @@ class JobRunCollectionTestCase(TestCase):
         self.run_collection.remove_pending()
         assert_length(self.run_collection.runs, 3)
         assert_equal(self.run_collection.runs[0], self.job_runs[1])
-        assert_call(self.job_runs[0].cancel, 0)
         assert_call(self.job_runs[0].cleanup, 0)
 
     def test_get_run_by_state(self):

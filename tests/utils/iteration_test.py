@@ -1,5 +1,6 @@
 from testify import TestCase, assert_equal, setup, run
-from tron.utils.iteration import min_filter, max_filter
+from tests.assertions import assert_raises
+from tron.utils.iteration import min_filter, max_filter, list_all
 
 class FilterFuncTestCase(TestCase):
 
@@ -46,6 +47,19 @@ class FilteredMaxTestCase(FilterFuncTestCase):
         seq = [None, 2, None, 7, None, 9, 10, 12, 1]
         assert_equal(max_filter(seq), 12)
 
+
+class ListAllTestCase(TestCase):
+
+    def test_all_true(self):
+        assert list_all(range(1,5))
+
+    def test_all_false(self):
+        assert not list_all(0 for _ in xrange(7))
+
+    def test_full_iteration(self):
+        seq = iter([1, 0, 3, 0, 5])
+        assert not list_all(seq)
+        assert_raises(StopIteration, seq.next)
 
 if __name__ == "__main__":
     run()
