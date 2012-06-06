@@ -372,6 +372,10 @@ class ActionRun(Observer):
     def is_active(self):
         return self.is_starting or self.is_running
 
+    def cleanup(self):
+        self.machine.clear_observers()
+        self.cancel()
+
     def __getattr__(self, name):
         """Support convenience properties for checking if this ActionRun is in
         a specific state (Ex: self.is_running would check if self.state is
@@ -403,20 +407,21 @@ class ActionRunCollection(object):
         # Setup proxies
         self.proxy_action_runs_with_cleanup = proxy.CollectionProxy(
             self.get_action_runs_with_cleanup, [
-                ('is_running',      any,    False),
-                ('is_starting',     any,    False),
-                ('is_scheduled',    any,    False),
-                ('is_cancelled',    any,    False),
-                ('is_active',       any,    False),
-                ('is_queued',       all,    False),
-                ('is_complete',     all,    False),
-                ('queue',           all,    True),
-                ('cancel',          all,    True),
-                ('success',         all,    True),
-                ('fail',            all,    True),
-                ('ready',           all,    True),
-                ('start_time',      iteration.min_filter,    False),
-                ('end_time',        iteration.max_filter,    False),
+                ('is_running',      any,                    False),
+                ('is_starting',     any,                    False),
+                ('is_scheduled',    any,                    False),
+                ('is_cancelled',    any,                    False),
+                ('is_active',       any,                    False),
+                ('is_queued',       all,                    False),
+                ('is_complete',     all,                    False),
+                ('queue',           iteration.list_all,     True),
+                ('cancel',          iteration.list_all,     True),
+                ('success',         iteration.list_all,     True),
+                ('fail',            iteration.list_all,     True),
+                ('ready',           iteration.list_all,     True),
+                ('cleanup',         iteration.list_all,     True),
+                ('start_time',      iteration.min_filter,   False),
+                ('end_time',        iteration.max_filter,   False),
             ])
 
     def action_runs_for_actions(self, actions):

@@ -14,3 +14,11 @@ def build_filtered_func(func):
 
 min_filter = build_filtered_func(min)
 max_filter = build_filtered_func(max)
+
+
+def list_all(seq):
+    """Create a list from the sequence then evaluate all the entries using
+    all(). This differs from the built-in all() which will short circuit
+    on the first False.
+    """
+    return all(list(seq))
