@@ -1,3 +1,8 @@
+"""
+ State storage using mongoDB.
+ Tested with pymongo 2.2
+"""
+
 from collections import namedtuple
 import urlparse
 import itertools

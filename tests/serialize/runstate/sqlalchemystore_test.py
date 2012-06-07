@@ -1,9 +1,11 @@
-from testify import TestCase, run, setup, suite, assert_equal, teardown
+from testify import TestCase, run, setup, assert_equal, teardown
 from tests.assertions import assert_length
 from tron.serialize import runstate
 sqlalchemystore = None # pyflakes
 
+
 class SQLAlchmeyStateStoreTestCase(TestCase):
+    _suites = ['sqlalchemy']
 
     @setup
     def setup_store(self):
@@ -18,23 +20,19 @@ class SQLAlchmeyStateStoreTestCase(TestCase):
     def teardown_store(self):
         self.store.cleanup()
 
-    @suite('sqlalchemy')
     def test_create_engine(self):
         assert_equal(self.store.engine.url.database, ':memory:')
 
-    @suite('sqlalchemy')
     def test_create_tables(self):
         assert self.store.job_table.name
         assert self.store.service_table.name
         assert self.store.metadata_table.name
 
-    @suite('sqlalchemy')
     def test_build_key(self):
         key = self.store.build_key(runstate.SERVICE_STATE, 'blah')
         assert_equal(key.table, self.store.service_table)
         assert_equal(key.id, 'blah')
 
-    @suite('sqlalchemy')
     def test_save(self):
         key = sqlalchemystore.SQLStateKey(self.store.job_table, 'stars')
         doc = {'docs': 'blocks'}
@@ -44,13 +42,11 @@ class SQLAlchmeyStateStoreTestCase(TestCase):
         rows = self.store.engine.execute(self.store.job_table.select())
         assert_equal(rows.fetchone(), ('stars', "{docs: blocks}\n"))
 
-    @suite('sqlalchemy')
     def test_restore_missing(self):
         key = sqlalchemystore.SQLStateKey(self.store.job_table, 'stars')
         docs = self.store.restore([key])
         assert_equal(docs, {})
 
-    @suite('sqlalchemy')
     def test_restore_many(self):
         keys = [
             sqlalchemystore.SQLStateKey(self.store.job_table, 'stars'),
@@ -66,7 +62,6 @@ class SQLAlchmeyStateStoreTestCase(TestCase):
         assert_equal(docs[keys[0]], items[0])
         assert_equal(docs[keys[1]], items[1])
 
-    @suite('sqlalchemy')
     def test_restore_partial(self):
         keys = [
             sqlalchemystore.SQLStateKey(self.store.job_table, 'stars'),

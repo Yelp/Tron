@@ -4,6 +4,7 @@ from exceptions import KeyError
 import itertools
 import shutil
 import tempfile
+import mock
 from tests.testingutils import Turtle
 
 
@@ -114,11 +115,7 @@ class MockJobRunCollection(Turtle):
     def __iter__(self):
         return iter(self.runs)
 
+class MockContextManager(mock.Mock):
 
-class MockContext(Turtle):
-
-    def __enter__(self):
-        pass
-
-    def __exit__(self, _exc_type, _exc_val, _exc_tb):
-        pass
+    __enter__ = mock.Mock()
+    __exit__ = mock.Mock()

@@ -31,7 +31,9 @@ setup(
         'PyYAML>=3.0',
         'pyasn1>=0.0.13',
         'pycrypto>=2.4',
-        'pytz>=2011n'
+        'pytz>=2011n',
+        'python-daemon>=1.5.5',
+        'lockfile>=0.7',
     ],
     packages=[
         "tron",
@@ -40,6 +42,7 @@ setup(
         "tron.config",
         "tron.core",
         "tron.serialize",
+        "tron.serialize.runstate",
         "tron.utils",
     ],
     scripts=[

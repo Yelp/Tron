@@ -278,6 +278,7 @@ class MasterControlProgram(Observable):
         """Use the state manager to retrieve to persisted state and apply it
         to the configured Jobs and Services.
         """
+        self.event_recorder.notice('restoring')
         job_states, service_states = self.state_manager.restore(
                 [job_sched.job for job_sched in self.jobs.values()],
                 self.services.values())

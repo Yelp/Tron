@@ -152,7 +152,6 @@ class JobRunTestCase(testingutils.MockTimeTestCase):
         assert self.job_run._do_start()
         assert_length(self.job_run.event.ok.calls, 1)
         assert_call(self.job_run.event.ok, 0, 'started')
-        assert_call(self.job_run.notify, 0, self.job_run.EVENT_STARTED)
 
     def test_do_start_no_runs(self):
         assert not self.job_run._do_start()
@@ -239,14 +238,12 @@ class JobRunTestCase(testingutils.MockTimeTestCase):
         self.job_run.action_runs.is_failed = False
         self.job_run.finalize()
         assert_call(self.job_run.event.ok, 0, 'succeeded')
-        assert_call(self.job_run.notify, 0, self.job_run.EVENT_SUCCEEDED)
-        assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_DONE)
+        assert_call(self.job_run.notify, 0, self.job_run.NOTIFY_DONE)
 
     def test_finalize_failure(self):
         self.job_run.finalize()
         assert_call(self.job_run.event.critical, 0, 'failed')
-        assert_call(self.job_run.notify, 0, self.job_run.EVENT_FAILED)
-        assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_DONE)
+        assert_call(self.job_run.notify, 0, self.job_run.NOTIFY_DONE)
 
     def test_cleanup(self):
         self.job_run.clear_observers = Turtle()

@@ -5,6 +5,7 @@ import logging
 import urllib
 import urllib2
 import urlparse
+import tron
 
 try:
     import simplejson
@@ -12,14 +13,13 @@ try:
 except ImportError:
     import json as simplejson
 
-log = logging.getLogger("tron.commands.client")
+log = logging.getLogger(__name__)
 
-USER_AGENT = "Tron Command/1.0 +http://github.com/Yelp/Tron"
+USER_AGENT = "Tron Command/%s +http://github.com/Yelp/Tron" % tron.__version__
 
 # Result Codes
-OK = "OK"
-REDIRECT = "REDIRECT"
-ERROR = "ERROR"
+OK          = "OK"
+ERROR       = "ERROR"
 
 
 def request(host, path, data=None):
@@ -32,7 +32,8 @@ def request(host, path, data=None):
     req.add_header("User-Agent", USER_AGENT)
     opener = urllib2.build_opener()
     try:
-        output = opener.open(req)
+        page = opener.open(req)
+        contents = page.read()
     except urllib2.HTTPError, e:
         log.error("Recieved error response: %s" % e)
         return ERROR, e.code
@@ -40,7 +41,11 @@ def request(host, path, data=None):
         log.error("Recieved error response: %s" % e)
         return ERROR, e.reason
 
-    result = simplejson.load(output)
+    try:
+        result = simplejson.loads(contents)
+    except ValueError, e:
+        log.error("Failed to decode response: %s, %s" % (e, contents))
+        return ERROR, str(e)
     return OK, result
 
 

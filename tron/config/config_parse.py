@@ -87,7 +87,7 @@ valid_int   = partial(valid_number, int)
 valid_float = partial(valid_number, float)
 
 MAX_IDENTIFIER_LENGTH       = 255
-IDENTIFIER_RE               = re.compile(r'^[A-Za-z_]\w{0,254}$')
+IDENTIFIER_RE               = re.compile(r'^[A-Za-z_][\w\-]{0,254}$')
 
 valid_identifier = type_validator(
     lambda s: isinstance(s, basestring) and IDENTIFIER_RE.match(s),
