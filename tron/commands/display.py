@@ -75,7 +75,10 @@ class TableDisplay(object):
         self.num_cols = self.console_width()
 
     def console_width(self):
-        return int(os.popen('stty size', 'r').read().split()[1])
+        console_sizes = os.popen('stty size', 'r').read().split()
+        if not console_sizes or len(console_sizes) != 2:
+            return 80
+        return int(console_sizes[1])
 
     def banner(self):
         if not self.title:

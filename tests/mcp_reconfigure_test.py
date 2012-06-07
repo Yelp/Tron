@@ -9,7 +9,7 @@ from tron import mcp, event
 from tron.config import config_parse
 from tron.serialize import filehandler
 
-class MCPReconfigureTest(TestCase):
+class MCPReconfigureTestCase(TestCase):
 
     pre_config = dict(
         ssh_options=dict(
@@ -182,6 +182,18 @@ class MCPReconfigureTest(TestCase):
         assert_equal(job_sched.job.context['thischanges'], 'tob')
 
     @suite('integration')
+    def test_job_unchanged_disabled(self):
+        job_sched = self.mcp.jobs['test_unchanged']
+        orig_job = job_sched.job
+        job_sched.get_runs_to_schedule().next()
+        job_sched.disable()
+
+        self.reconfigure()
+        assert job_sched is self.mcp.jobs['test_unchanged']
+        assert job_sched.job is orig_job
+        assert not job_sched.job.enabled
+
+    @suite('integration')
     def test_job_removed(self):
         assert 'test_remove' in self.mcp.jobs
         job_sched = self.mcp.jobs['test_remove']
@@ -225,6 +237,7 @@ class MCPReconfigureTest(TestCase):
         assert new_job_sched.job.runs.runs[1].is_starting
         assert new_job_sched.job.runs.runs[0].is_scheduled
         assert_equal(job_sched.job.context['a_variable'], 'is_constant')
+        assert new_job_sched.job.context.base.job is new_job_sched.job
 
     @suite('integration')
     def test_job_new(self):

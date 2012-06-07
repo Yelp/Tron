@@ -2,9 +2,9 @@ import datetime
 import shutil
 import tempfile
 
-from testify import run, setup, TestCase, assert_equal, turtle
+from testify import run, setup, TestCase, assert_equal, turtle, teardown
 from testify.assertions import assert_raises, assert_in
-from testify.test_case import class_setup, class_teardown, teardown
+from tests import testingutils
 from tests.assertions import assert_length
 from tests.mocks import MockNode
 from tests.testingutils import Turtle
@@ -17,16 +17,9 @@ from tron.core.actionrun import InvalidStartStateError
 from tron.serialize import filehandler
 from tron.utils import timeutils
 
-class ActionRunContextTestCase(TestCase):
+class ActionRunContextTestCase(testingutils.MockTimeTestCase):
 
-    @class_setup
-    def freeze_time(self):
-        timeutils.override_current_time(datetime.datetime.now())
-        self.now = timeutils.current_time()
-
-    @class_teardown
-    def unfreeze_time(self):
-        timeutils.override_current_time(None)
+    now = datetime.datetime.now()
 
     @setup
     def build_context(self):
@@ -338,7 +331,9 @@ class ActionRunTestCase(TestCase):
             self.action_run.__getattr__, 'is_not_a_real_state')
 
 
-class ActionRunStateRestoreTestCase(TestCase):
+class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
+
+    now = datetime.datetime(2012, 3, 14, 15, 19)
 
     @setup
     def setup_action_run(self):
@@ -354,11 +349,12 @@ class ActionRunStateRestoreTestCase(TestCase):
             'end_time':         'end_time',
             'state':            'succeeded'
         }
+        self.run_node = Turtle()
 
     def test_from_state(self):
         state_data = self.state_data
-        action_run = ActionRun.from_state(
-            state_data, self.parent_context, list(self.output_path))
+        action_run = ActionRun.from_state(state_data, self.parent_context,
+                list(self.output_path), self.run_node)
 
         for key, value in self.state_data.iteritems():
             if key in ['state', 'node_name']:
@@ -373,29 +369,32 @@ class ActionRunStateRestoreTestCase(TestCase):
 
     def test_from_state_running(self):
         self.state_data['state'] = 'running'
-        action_run = ActionRun.from_state(
-            self.state_data, self.parent_context, self.output_path)
+        action_run = ActionRun.from_state(self.state_data,
+                self.parent_context, self.output_path, self.run_node)
         assert action_run.is_unknown
+        assert_equal(action_run.exit_status, 0)
+        assert_equal(action_run.end_time, self.now)
 
     def test_from_state_queued(self):
         self.state_data['state'] = 'queued'
-        action_run = ActionRun.from_state(
-            self.state_data, self.parent_context, self.output_path)
+        action_run = ActionRun.from_state(self.state_data, self.parent_context,
+                self.output_path, self.run_node)
         assert action_run.is_failed
+        assert_equal(action_run.end_time, self.now)
 
     def test_from_state_no_node_name(self):
         del self.state_data['node_name']
-        action_run = ActionRun.from_state(
-            self.state_data, self.parent_context, self.output_path)
-        assert action_run.node is None
+        action_run = ActionRun.from_state(self.state_data,
+                self.parent_context, self.output_path, self.run_node)
+        assert_equal(action_run.node, self.run_node)
 
     def test_from_state_with_node_exists(self):
         anode = turtle.Turtle(name="anode", hostname="box")
         node_store = node.NodePoolStore.get_instance()
         node_store.put(anode)
 
-        action_run = ActionRun.from_state(
-            self.state_data, self.parent_context, self.output_path)
+        action_run = ActionRun.from_state(self.state_data,
+                self.parent_context, self.output_path, self.run_node)
 
         assert_equal(action_run.node, anode)
         node_store.clear()
@@ -403,23 +402,23 @@ class ActionRunStateRestoreTestCase(TestCase):
     def test_from_state_before_rendered_command(self):
         self.state_data['command'] = 'do things %(actionname)s'
         self.state_data['rendered_command'] = None
-        action_run = ActionRun.from_state(
-            self.state_data, self.parent_context, self.output_path)
+        action_run = ActionRun.from_state(self.state_data,
+                self.parent_context, self.output_path, self.run_node)
         assert_equal(action_run.bare_command, self.state_data['command'])
         assert not action_run.rendered_command
 
     def test_from_state_old_state(self):
         self.state_data['command'] = 'do things %(actionname)s'
-        action_run = ActionRun.from_state(
-            self.state_data, self.parent_context, self.output_path)
+        action_run = ActionRun.from_state(self.state_data,
+                self.parent_context, self.output_path, self.run_node)
         assert_equal(action_run.bare_command, self.state_data['command'])
         assert not action_run.rendered_command
 
     def test_from_state_after_rendered_command(self):
         self.state_data['command'] = 'do things theaction'
         self.state_data['rendered_command'] = self.state_data['command']
-        action_run = ActionRun.from_state(
-            self.state_data, self.parent_context, self.output_path)
+        action_run = ActionRun.from_state(self.state_data,
+                self.parent_context, self.output_path, self.run_node)
         assert_equal(action_run.bare_command, self.state_data['command'])
         assert_equal(action_run.rendered_command, self.state_data['command'])
 

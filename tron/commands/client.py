@@ -44,6 +44,10 @@ def request(host, path, data=None):
     return OK, result
 
 
+class RequestError(ValueError):
+    """Raised when there is a connection failure."""
+
+
 class Client(object):
     """A client used in commands to make requests to the tron.www """
 
@@ -62,8 +66,11 @@ class Client(object):
             return self.request('/config', dict(config=data))
         return self.request('/config', )['config']
 
+    def home(self):
+        return self.request('/')
+
     def index(self):
-        content = self.request('/')
+        content = self.home()
 
         def name_href_dict(source):
             return dict((i['name'], i['href']) for i in source)
@@ -134,9 +141,9 @@ class Client(object):
         return self.request('/jobs/%s/_events' % action_id)['data']
 
     def request(self, url, data=None):
-        status, content = request(self.options.server, url, data)
+        server = self.options.server
+        status, content = request(server, url, data)
         if not status == OK:
-            err_msg = "Failed to request %s%s: %s %s" % (
-                self.options.server, url, content, data or '')
-            raise ValueError(err_msg)
+            err_msg = "%s%s: %s %s"
+            raise RequestError(err_msg % (server, url, content, data or ''))
         return content

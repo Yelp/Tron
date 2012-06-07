@@ -1,6 +1,12 @@
 What's New
 ==========
 
+0.4.1
+-----
+* :ref:`tronview` will once again attempt to find the tty width even when stdout is not a tty.
+* Fixed last_success for job context.
+* Job runs which are manually cancelled will now continue to schedule new runs.
+
 0.4.0
 -----
 

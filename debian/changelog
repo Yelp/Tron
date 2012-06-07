@@ -1,10 +1,16 @@
+tron (0.4.1) unstable; urgency=low
+
+  * tronview will once again attempt to find the tty width even when stdout is not a tty.
+  * Fixed last_success for job context.
+  * Job runs which are manually cancelled will now continue to schedule new runs.
+
+ -- Daniel Nephin <dnephin@yelp.com>  Wed, 30 May 2012 16:35:44 -0700
+
 tron (0.4.0) unstable; urgency=low
 
-* Jobs now continue to run all possible actions after one of its actions fail
-* Enabling a disabled job now schedules the next run using current time instead
-  of the last successful run (which could cause many runs to be scheduled in
-  the past if the job had been disabled for a while)
-* Resolved many inconsistencies and bugs around Job scheduling.
+  * Jobs now continue to run all possible actions after one of its actions fail
+  * Enabling a disabled job now schedules the next run using current time instead of the last successful run (which could cause many runs to be scheduled in the past if the job had been disabled for a while)
+  * Resolved many inconsistencies and bugs around Job scheduling.
 
  -- Daniel Nephin <dnephin@yelp.com>  Fri, 11 May 2012 18:00:00 -0800
 

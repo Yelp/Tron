@@ -29,8 +29,9 @@ node_pools:
       nodes: [box3, box4]
 
 command_context:
-    THE_JOB_DIR: "testconfig/jobs/"
+    THE_JOB_DIR: "testconfig/jobs"
     ECHO:        "echo"
+    THE_SERVICE_DIR: "/home/user/code/Tron"
 
 
 jobs:
@@ -161,10 +162,50 @@ jobs:
     # Job failing bad action
 
     # DailyScheduler
+    -   name: daily_job9
+        node: box1
+        schedule: "daily 16:00:00"
+        actions:
+            -   name: "task0"
+                command: "%(ECHO)s %(actionname)s 1 && false"
+                node: box2
+                requires: ["task1"]
+            -   name: "task1"
+                command: "sleep 10 && %(ECHO)s %(actionname)s %(last_success:shortdate)s"
+                node: pool0
+        cleanup_action:
+            command: "%(ECHO)s %(actionname)s %(cleanup_job_status)s"
+
+    # Overlapping, queueing
+    -   name: overlap_cancel
+        node: pool2
+        schedule:
+            interval: 20s
+        queueing: false
+        actions:
+            -   name: "task0"
+                command: "sleep 30s && %(ECHO)s %(actionname)s"
+
 
 services:
     -   name: service_0
         node: pool1
-        pid_file: "/tmp/mock_daemon.pid"
-        command: "python tests/mock_daemon.py"
-        monitor_interval: 5
+        pid_file: "/tmp/%(name)s-%(instance_number)s.pid"
+        command: "python %(THE_SERVICE_DIR)s/tests/mock_daemon.py %(pid_file)s"
+        monitor_interval: 15
+        restart_interval: 10
+
+    -   name: service_1
+        node: pool2
+        pid_file: "/tmp/%(name)s-%(instance_number)s.pid"
+        command: "python %(THE_SERVICE_DIR)s/tests/mock_daemon.py %(pid_file)s"
+        monitor_interval: 30
+        count: 3
+
+    -   name: service_2
+        node: box1
+        pid_file: "/tmp/%(name)s-%(instance_number)s.pid"
+        command: "python %(THE_SERVICE_DIR)s/tests/mock_daemon.py %(pid_file)s"
+        monitor_interval: 30
+        restart_interval: 40
+        count: 2
