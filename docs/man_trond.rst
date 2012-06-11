@@ -65,16 +65,16 @@ Log File
 Signals
 -------
 
-SIGINT
+`SIGINT`
     Graceful shutdown. Waits for running jobs to complete.
 
-SIGTERM
+`SIGTERM`
     Does some cleanup before shutting down.
 
-SIGHUP
+`SIGHUP`
     Reload the configuration file.
 
-SIGUSR1
+`SIGUSR1`
     If running with ``--nodaemon`` will drop into an ipdb debugging prompt.
 
 Logging
