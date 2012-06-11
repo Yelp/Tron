@@ -3,7 +3,7 @@ import logging
 from twisted.internet import reactor
 import weakref
 
-from tron import event
+from tron import event, node
 from tron.core import serviceinstance
 from tron.utils import observer
 from tron.utils import state
@@ -100,8 +100,9 @@ class Service(observer.Observer):
         self.watch(self.machine)
 
     @classmethod
-    def from_config(cls, config, node_pools, base_context):
-        node_pool           = node_pools[config.node] if config.node else None
+    def from_config(cls, config, base_context):
+        node_store          = node.NodePoolStore.get_instance()
+        node_pool           = node_store[config.node] if config.node else None
         instance_collection = serviceinstance.ServiceInstanceCollection(
                                 config, node_pool, base_context)
         service             = cls(config, instance_collection)

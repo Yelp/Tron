@@ -172,7 +172,7 @@ class MasterControlProgram(Observable):
         services_to_add = []
         for srv_config in srv_configs.values():
             log.debug("Building new services %s", srv_config.name)
-            service = Service.from_config(srv_config, self.nodes, self.context)
+            service = Service.from_config(srv_config, self.context)
             services_to_add.append(service)
 
         for srv_name in (set(self.services.keys()) - set(srv_configs.keys())):
