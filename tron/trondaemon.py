@@ -8,6 +8,7 @@ import pkg_resources
 import daemon
 
 import lockfile
+from tron.utils import flockfile
 import signal
 from twisted.web import server
 from twisted.internet import reactor, defer
@@ -25,17 +26,20 @@ class PIDFile(object):
     """Create and check for a PID file for the daemon."""
 
     def __init__(self, filename):
-        self.filename = filename
+        self.lock = flockfile.FlockFile(filename)
         self.check_if_pidfile_exists()
 
+    @property
+    def filename(self):
+        return self.lock.path
+
     def check_if_pidfile_exists(self):
-        self.lock = lockfile.FileLock(self.filename)
-        self.lock.acquire(0)
+        self.lock.acquire()
 
         try:
-            with open(self.filename) as fh:
+            with open(self.filename, 'r') as fh:
                 pid = int(fh.read().strip())
-        except IOError:
+        except (IOError, ValueError):
             pid = None
 
         if self.is_process_running(pid):
@@ -57,8 +61,8 @@ class PIDFile(object):
             return False
 
     def __enter__(self):
-        with open(self.filename, 'w') as fh:
-            fh.write('%s\n' % os.getpid())
+        print >>self.lock.file, os.getpid()
+        self.lock.file.flush()
 
     def _try_unlock(self):
         try:
@@ -66,7 +70,7 @@ class PIDFile(object):
         except lockfile.NotLocked:
             log.warn("Lockfile was already unlocked.")
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, *args):
         self._try_unlock()
         try:
             os.unlink(self.filename)
