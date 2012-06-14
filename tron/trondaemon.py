@@ -29,7 +29,7 @@ class PIDFile(object):
         self.check_if_pidfile_exists()
 
     def check_if_pidfile_exists(self):
-        self.lock = lockfile.FileLock(self.filename)
+        self.lock = lockfile.FileLock(self.filename, threaded=False)
         self.lock.acquire(0)
 
         try:
@@ -66,7 +66,7 @@ class PIDFile(object):
         except lockfile.NotLocked:
             log.warn("Lockfile was already unlocked.")
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, *args):
         self._try_unlock()
         try:
             os.unlink(self.filename)
@@ -122,7 +122,7 @@ class NoDaemonContext(object):
         if self.pidfile:
             self.pidfile.__exit__(exc_type, exc_val, exc_tb)
 
-    def terminate(self, _sig_num, _frame):
+    def terminate(self, *args):
         pass
 
 class TronDaemon(object):
@@ -144,11 +144,13 @@ class TronDaemon(object):
             signal.SIGTERM: self._handle_shutdown,
             signal.SIGUSR1: self._handle_debug
         }
+        pidfile = PIDFile(options.pid_file)
         return context_class(
             working_directory=options.working_dir,
             umask=0o022,
-            pidfile=PIDFile(options.pid_file),
-            signal_map=signal_map
+            pidfile=pidfile,
+            signal_map=signal_map,
+            files_preserve=[pidfile.lock.file]
         )
 
     def run(self):
