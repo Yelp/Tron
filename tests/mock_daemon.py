@@ -13,6 +13,8 @@ def do_main_program():
 
 
 if __name__ == "__main__":
-    pid_file = sys.argv[1]
-    with daemon.DaemonContext(pidfile=PIDFile(pid_file)):
+    pidfile = pidfile=PIDFile(sys.argv[1])
+    with daemon.DaemonContext(
+            pidfile=pidfile,
+            files_preserve=[pidfile.lock.file]):
         do_main_program()
