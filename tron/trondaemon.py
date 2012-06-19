@@ -115,10 +115,18 @@ class NoDaemonContext(object):
     def __init__(self, **kwargs):
         self.signal_map     = kwargs.pop('signal_map', {})
         self.pidfile        = kwargs.pop('pidfile', None)
+        self.working_dir    = kwargs.pop('working_directory', '.')
+        self.signal_map[signal.SIGUSR1] = self._handle_debug
+
+    def _handle_debug(self, *args):
+        import ipdb
+        ipdb.set_trace()
 
     def __enter__(self):
         for signum, handler in self.signal_map.iteritems():
             signal.signal(signum, handler)
+
+        os.chdir(self.working_dir)
         if self.pidfile:
             self.pidfile.__enter__()
 
@@ -146,7 +154,6 @@ class TronDaemon(object):
             signal.SIGHUP:  self._handle_reconfigure,
             signal.SIGINT:  self._handle_graceful_shutdown,
             signal.SIGTERM: self._handle_shutdown,
-            signal.SIGUSR1: self._handle_debug
         }
         pidfile = PIDFile(options.pid_file)
         return context_class(
@@ -212,8 +219,3 @@ class TronDaemon(object):
     def _handle_reconfigure(self, _signal_number, _stack_frame):
         log.info("Reconfigure requested by SIGHUP.")
         reactor.callLater(0, self.mcp.reconfigure)
-
-    def _handle_debug(self, _sig_num, _frame):
-        if self.options.nodaemon:
-            import ipdb
-            ipdb.set_trace()

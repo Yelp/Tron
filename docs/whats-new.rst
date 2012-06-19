@@ -11,6 +11,9 @@ What's New
 * State serialization has changed.  See :ref:`config_state` for configuration
   options.  `tools/migration/migrate_state.py` is included to migrate your
   existing Tron state to a new store.  YAML store is now deprecated.
+* All relative path options to :ref:`trond` and relative paths in the configuration
+  will now be relative to the ``--working-dir`` directory instead of the current
+  working directory.
 * Old style config, which was deprecated in 0.3 will no longer work.
 
 
