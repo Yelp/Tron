@@ -254,7 +254,7 @@ class SimpleRestoreTest(TestCase):
                                       node_pool=self.node_pool)
         new_service.pid_file_template = "/tmp/pid"
         new_service.count = 2
-        new_service.restore(data)
+        new_service.restore_service_state(data)
 
         assert_equal(new_service.machine.state, service.Service.STATE_UP)
         assert_equal(len(new_service.instances), 2)
@@ -289,7 +289,7 @@ class FailureRestoreTest(TestCase):
                 "Sample Service", "sleep 60 &", node_pool=self.node_pool)
         new_service.pid_file_template = "/tmp/pid"
         new_service.count = 2
-        new_service.restore(data)
+        new_service.restore_service_state(data)
 
         assert_equal(new_service.machine.state, service.Service.STATE_DEGRADED)
         assert_equal(len(new_service.instances), 2)

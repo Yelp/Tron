@@ -143,11 +143,9 @@ This means that to upgrade :command:`trond`, you have to either wait until no
 jobs are running, or accept an inconsistent state. This limitation is being
 worked on, and should be improved in later releases.
 
-**Tron stores state in a (potentially enormous) YAML file.** This file is
-susceptible to file system entropy and can be cumbersome to deal with. This
-is being resolved in release 0.5, which will allow you to store state in a
-datastore such as ``shelve``, mongodb, or an sql db supported by ``sqlalchemy``.
-
 **Tron is under active development.** This means that some things will change.
 Whenever possible these changes will be backwards compatible, but in some
 cases there may be non-backwards compatible changes.
+
+**Tron does not support unicode.** Tron is built using `twisted <http://twistedmatrix.com/>`_
+which does not support unicode.

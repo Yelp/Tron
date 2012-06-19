@@ -61,10 +61,21 @@ Pid file
 Log File
     trond error log, configured from logging.conf
 
-State file
-    trond serializes its state to this file and uses it to reloads its start
-    when it starts.
 
+Signals
+-------
+
+`SIGINT`
+    Graceful shutdown. Waits for running jobs to complete.
+
+`SIGTERM`
+    Does some cleanup before shutting down.
+
+`SIGHUP`
+    Reload the configuration file.
+
+`SIGUSR1`
+    If running with ``--nodaemon`` will drop into an ipdb debugging prompt.
 
 Logging
 -------

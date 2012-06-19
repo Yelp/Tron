@@ -29,7 +29,9 @@ class NullFileHandle(object):
 class FileHandleWrapper(object):
     """Acts as a proxy to file handles.  Wrap a file handle and stores
     access time and metadata.  These objects should only be created
-    by FileHandleManager. Do not instantiate them on their own."""
+    by FileHandleManager. Do not instantiate them on their own.
+    """
+    __slots__ = ['manager', 'name', 'last_accessed', '_fh']
 
     def __init__(self, manager, name):
         self.manager = manager
@@ -187,6 +189,7 @@ class OutputPath(object):
     file path is constructed by joining the base path with any additional
     path elements.
     """
+    __slots__ = ['base', 'parts']
 
     def __init__(self, base='.', *path_parts):
         self.base = base

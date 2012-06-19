@@ -248,11 +248,12 @@ class JobRun(Observable, Observer):
 
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
+        self.clear_observers()
+        self.action_runs.cleanup()
         event.EventManager.get_instance().remove(self)
         self.node = None
         self.action_graph = None
         self._action_runs = None
-        self.clear_observers()
         self.output_path.delete()
 
     @property
@@ -347,8 +348,6 @@ class JobRunCollection(object):
     def remove_pending(self):
         """Remove pending runs from the run list."""
         for pending in list(self.get_pending()):
-            pending.clear_observers()
-            pending.cancel()
             pending.cleanup()
             self.runs.remove(pending)
 

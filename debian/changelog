@@ -1,3 +1,12 @@
+tron (0.5.0) unstable; urgency=low
+
+  * Names for nodes, jobs, actions and service can now contain underscore characters but are restricted to 255 characters.
+  * trond now supports a graceful shutdown. Send trond SIGINT to have it wait for all currently running jobs to complete before shutting down. SIGTERM also performs some cleanup before terminating.
+  * State serialization has changed.  See :ref:`config_state` for configuration options.  `tools/migration/migrate_state.py` is included to migrate your existing Tron state to a new store.  YAML store is now deprecated.
+  * Old style config, which was deprecated in 0.3 will no longer work.
+
+ -- Daniel Nephin <dnephin@yelp.com>  Tue, 05 Jun 2012 18:47:34 -0700
+
 tron (0.4.1) unstable; urgency=low
 
   * tronview will once again attempt to find the tty width even when stdout is not a tty.

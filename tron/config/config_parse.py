@@ -12,7 +12,6 @@ Validator objects: These are responsible for validating a dictionary structure
 and returning a valid immutable config object.
 """
 
-from collections import namedtuple
 from functools import partial
 import itertools
 import logging
@@ -24,147 +23,23 @@ import yaml
 
 from tron.config import ConfigError
 from tron.config.schedule_parse import valid_schedule
+from tron.config.schema import TronConfig, NotificationOptions, ConfigSSHOptions
+from tron.config.schema import ConfigNode, ConfigNodePool, ConfigState
+from tron.config.schema import ConfigJob, ConfigAction, ConfigCleanupAction
+from tron.config.schema import ConfigService
 from tron.utils.dicts import FrozenDict
 from tron.core.action import CLEANUP_ACTION_NAME
 
 
-log = logging.getLogger("tron.config")
+log = logging.getLogger(__name__)
 
-YAML_TAG_RE = re.compile(r'!\w+\b')
-
-def load_config(string_or_file):
+def load_config(config):
     """Given a string or file object, load it with PyYAML and return an
     immutable, validated representation of the configuration it specifies.
     """
-    # TODO: 0.5 remove this
-    # Hackishly strip !Tags from the file so PyYAML doesn't try to make them
-    # into Python objects
-    if not isinstance(string_or_file, basestring):
-        s_tags = string_or_file.read()
-    else:
-        s_tags = string_or_file
-    s_notags = YAML_TAG_RE.sub('', s_tags)
-
-    if len(s_tags) > len(s_notags):
-        log.warn('Tron no longer uses !Tags to parse config files. Please'
-                 ' remove them from yours.')
-
     # Load with YAML. safe_load() disables python classes
-    config = yaml.safe_load(s_notags)
+    return valid_config(yaml.safe_load(config))
 
-    return valid_config(config)
-
-
-### SCHEMA DEFINITION ###
-
-def config_object_factory(name, required=None, optional=None):
-    """
-    Creates a namedtuple which has two additional attributes:
-        required_keys:
-            all keys required to be set on this configuration object
-        optional keys:
-            optional keys for this configuration object
-
-    The tuple is created from required + optional
-    """
-    required = required or []
-    optional = optional or []
-    config_class = namedtuple(name, required + optional)
-    config_class.required_keys = required
-    config_class.optional_keys = optional
-    return config_class
-
-
-TronConfig = config_object_factory(
-    'TronConfig',
-    optional=[
-         'working_dir',         # str
-         'output_stream_dir',   # str
-         'command_context',     # FrozenDict of str
-         'ssh_options',         # ConchOptions
-         'notification_options',# NotificationOptions or None
-         'time_zone',           # pytz time zone
-         'nodes',               # FrozenDict of ConfigNode
-         'node_pools',          # FrozenDict of ConfigNodePool
-         'jobs',                # FrozenDict of ConfigJob
-         'services'             # FrozenDict of ConfigService
-    ])
-
-
-NotificationOptions = config_object_factory(
-    'NotificationOptions',
-    [
-        'smtp_host',            # str
-        'notification_addr',    # str
-    ])
-
-
-ConfigSSHOptions = config_object_factory(
-    'ConfigSSHOptions',
-    optional=[
-        'agent',                # bool
-        'identities',           # list of str
-    ])
-
-
-ConfigNode = config_object_factory('ConfigNode', ['hostname'], ['name'])
-
-
-ConfigNodePool = config_object_factory('ConfigNodePool', ['nodes'], ['name'])
-
-
-ConfigJob = config_object_factory(
-    'ConfigJob',
-    [
-        'name',                 # str
-        'node',                 # str
-        'schedule',             # Config*Scheduler
-        'actions',              # FrozenDict of ConfigAction
-    ],[
-        'queueing',             # bool
-        'run_limit',            # int
-        'all_nodes',            # bool
-        'cleanup_action',       # ConfigAction
-        'enabled',              # bool
-    ])
-
-
-ConfigAction = config_object_factory(
-    'ConfigAction',
-    [
-        'name',                 # str
-        'command',              # str
-    ],[
-        'requires',             # tuple of str
-        'node',                 # str
-    ])
-
-ConfigCleanupAction = config_object_factory(
-    'ConfigCleanupAction',
-    [
-        'command',              # str
-    ],[
-        'requires',             # tuple of str
-        'name',                 # str
-        'node',                 # str
-    ])
-
-
-ConfigService = config_object_factory(
-    'ConfigService',
-    [
-        'name',                 # str
-        'node',                 # str
-        'pid_file',             # str
-        'command',              # str
-        'monitor_interval',     # float
-    ],[
-        'restart_interval',     # float
-        'count',                # int
-    ])
-
-
-### VALIDATION ###
 
 class UniqueNameDict(dict):
     """A dict like object that throws a ConfigError if a key exists and a set
@@ -196,10 +71,6 @@ def type_converter(convert, error_fmt):
             raise ConfigError(error_fmt % (path, value))
     return f
 
-valid_float = type_converter(float, 'Value at %s is not a number: %s')
-
-valid_int = type_converter(int, 'Value at %s is not an integer: %s')
-
 
 def type_validator(validator, error_fmt):
     def f(path, value, optional=False):
@@ -213,20 +84,27 @@ def type_validator(validator, error_fmt):
         return value
     return f
 
-valid_str = type_validator(
-    lambda s: isinstance(s, basestring),
-    'Value at %s is not a string: %s')
 
-IDENTIFIER_RE = re.compile(r'^[A-Za-z_]\w*$')
+valid_float = type_converter(float, 'Value at %s is not a number: %s')
+
+valid_int   = type_converter(int,   'Value at %s is not an integer: %s')
+
+MAX_IDENTIFIER_LENGTH       = 255
+IDENTIFIER_RE               = re.compile(r'^[A-Za-z_][\w\-]{0,254}$')
+
 valid_identifier = type_validator(
-    lambda s: IDENTIFIER_RE.match(s),
-    'Identifier at %s is not a valid identifier')
+    lambda s: isinstance(s, basestring) and IDENTIFIER_RE.match(s),
+    'Identifier at %s is not a valid identifier: %s')
+
+valid_populated_list = type_validator(
+    bool, 'Value at %s is not a list with items: %s')
 
 valid_list = type_validator(
     lambda s: isinstance(s, list), 'Value at %s is not a list: %s')
 
-valid_populated_list = type_validator(
-    bool, 'Value at %s is not a list with items: %s')
+valid_str   = type_validator(
+    lambda s: isinstance(s, basestring),
+    'Value at %s is not a string: %s')
 
 valid_dict = type_validator(
     lambda s: isinstance(s, dict), 'Value at %s is not a dictionary: %s')
@@ -239,10 +117,10 @@ class Validator(object):
     """Base class for validating a collection and creating a mutable
     collection from the source.
     """
-    config_class =              None
-    defaults =                  {}
-    validators =                {}
-    optional =                  False
+    config_class            = None
+    defaults                = {}
+    validators              = {}
+    optional                = False
 
     def validate(self, in_dict):
         if self.optional and in_dict is None:
@@ -294,26 +172,24 @@ class Validator(object):
         keys = self.config_class.required_keys + self.config_class.optional_keys
         missing_key_str = ', '.join(missing_keys)
         if 'name' in keys and 'name' in in_dict:
-            raise ConfigError("%s %s is missing options: %s" % (
-                    self.type_name, in_dict['name'], missing_key_str)
-            )
+            msg  = "%s %s is missing options: %s"
+            name = in_dict['name']
+            raise ConfigError(msg % (self.type_name, name, missing_key_str))
 
-        raise ConfigError("Nameless %s is missing options: %s" % (
-                self.type_name, missing_key_str)
-        )
+        msg = "Nameless %s is missing options: %s"
+        raise ConfigError(msg % (self.type_name, missing_key_str))
 
     def validate_extra_keys(self, in_dict):
         """Check that no unexpected keys are present."""
-        all_keys = self.config_class.required_keys + self.config_class.optional_keys
-        extra_keys = set(in_dict) - set(all_keys)
+        conf_class      = self.config_class
+        all_keys        = conf_class.required_keys + conf_class.optional_keys
+        extra_keys      = set(in_dict) - set(all_keys)
         if not extra_keys:
             return
 
-        raise ConfigError("Unknown options in %s %s: %s" % (
-                self.type_name,
-                in_dict.get('name', ''),
-                ', '.join(extra_keys)
-        ))
+        msg             = "Unknown options in %s %s: %s"
+        name            = in_dict.get('name', '')
+        raise ConfigError(msg % (self.type_name, name, ', '.join(extra_keys)))
 
     def set_defaults(self, output_dict):
         """Set any default values for any optional values that were not
@@ -356,15 +232,6 @@ class ValidatorWithNamedPath(Validator):
                 valid_input[key] = value
         self.post_validation(valid_input, path_name)
         return valid_input
-
-
-# TODO: remove in 0.5
-def valid_working_dir(wd):
-    """Given a working directory or None, return a valid working directory.
-    If wd=None the mcp will attempt to use a default.
-    """
-    log.warning("working_dir is no longer supported. "
-        "Use output_stream_dir to set the directory for stdout/stderr files.")
 
 
 def valid_output_stream_dir(output_dir):
@@ -423,25 +290,12 @@ class ValidateNotificationOptions(Validator):
 valid_notification_options = ValidateNotificationOptions()
 
 
-# TODO: remove in 0.5
-def normalize_node(node):
-    """Given a node value from a config, determine if it's the node's name, the
-    node's value, or actually a node pool. The former case is the "new style"
-    of identifiers and the latter case is the "old style" of anchors and
-    aliases (*/&). Return the name.
-    """
-    if node is None:
-        return None
-    if isinstance(node, basestring):
-        return node
-    # probably a reference back to an already validated node
-    try:
-        return valid_node(node).name
-    except ConfigError:
-        return valid_node_pool(node).name
-
 class ValidateNode(Validator):
     config_class =              ConfigNode
+    validators = {
+        'name':                 partial(valid_identifier, 'nodes'),
+        'hostname':             partial(valid_str, 'nodes')
+    }
 
     def do_shortcut(self, node):
         """Nodes can be specified with just a hostname string."""
@@ -456,18 +310,22 @@ valid_node = ValidateNode()
 
 class ValidateNodePool(Validator):
     config_class =              ConfigNodePool
+    validators = {
+        'name':                 partial(valid_identifier, 'node_pools'),
+        'nodes':                partial(valid_populated_list, 'node_pools')
+    }
 
     def cast(self, node_pool):
         if isinstance(node_pool, list):
             node_pool = dict(nodes=node_pool)
-        if 'nodes' in node_pool:
-            node_pool['nodes'] = [
-                normalize_node(node) for node in node_pool['nodes']
-            ]
         return node_pool
 
     def set_defaults(self, node_pool):
         node_pool.setdefault('name', '_'.join(node_pool['nodes']))
+
+    def post_validation(self, node_pool):
+        node_pool['nodes'] = [
+            valid_identifier('node_pools', node) for node in node_pool['nodes']]
 
 valid_node_pool = ValidateNodePool()
 
@@ -481,7 +339,7 @@ class ValidateAction(ValidatorWithNamedPath):
     validators = {
         'name':                 valid_identifier,
         'command':              valid_str,
-        'node':                 lambda _, v: normalize_node(v)
+        'node':                 valid_identifier,
     }
 
     def post_validation(self, action, path_name):
@@ -532,19 +390,18 @@ class ValidateCleanupAction(ValidatorWithNamedPath):
     validators = {
         'name':                 valid_identifier,
         'command':              valid_str,
-        'node':                 lambda _, v: normalize_node(v)
+        'node':                 valid_identifier
     }
 
     def post_validation(self, action, path_name):
-        if (
-            'name' in action
-            and action['name'] not in (None, CLEANUP_ACTION_NAME)
-        ):
-            raise ConfigError("Cleanup actions cannot have custom names (you"
-                              " wanted %s.%s)" % (path_name, action['name']))
+        expected_names = (None, CLEANUP_ACTION_NAME)
+        if 'name' in action and action['name'] not in expected_names:
+            msg = "Cleanup actions cannot have custom names (%s.%s)"
+            raise ConfigError(msg % (path_name, action['name']))
 
         if 'requires' in action:
-            raise ConfigError("Cleanup action %s can not have requires." % path_name)
+            msg = "Cleanup action %s can not have requires."
+            raise ConfigError(msg % path_name)
 
         action['requires'] = tuple()
 
@@ -569,7 +426,7 @@ class ValidateJob(ValidatorWithNamedPath):
         'all_nodes':            valid_bool,
         'actions':              valid_populated_list,
         'cleanup_action':       lambda _, v: valid_cleanup_action(v),
-        'node':                 lambda _, v: normalize_node(v),
+        'node':                 valid_identifier,
         'queueing':             valid_bool,
         'enabled':              valid_bool,
     }
@@ -598,7 +455,8 @@ class ValidateJob(ValidatorWithNamedPath):
 
     def post_validation(self, job, path):
         """Validate actions for the job."""
-        actions = UniqueNameDict('Action name %%s on job %s used twice' % job['name'])
+        actions = UniqueNameDict(
+                'Action name %%s on job %s used twice' % job['name'])
         for action in job['actions'] or []:
             try:
                 final_action = valid_action(action)
@@ -606,8 +464,8 @@ class ValidateJob(ValidatorWithNamedPath):
                 raise ConfigError("Invalid action config for %s: %s" % (path, e))
 
             if not (final_action.node or job['node']):
-                raise ConfigError(
-                    '%s has no node configured for %s' % (path, final_action.name))
+                msg = '%s has no node configured for %s'
+                raise ConfigError(msg % (path, final_action.name))
             actions[final_action.name] = final_action
 
         for action in actions.values():
@@ -632,11 +490,36 @@ class ValidateService(ValidatorWithNamedPath):
         'command':              valid_str,
         'monitor_interval':     valid_int,
         'count':                valid_int,
-        'node':                 lambda _, v: normalize_node(v),
+        'node':                 valid_identifier,
         'restart_interval':     valid_int,
     }
 
 valid_service = ValidateService()
+
+
+class ValidateStatePersistence(ValidatorWithNamedPath):
+    config_class                = ConfigState
+    defaults = {
+        'buffer_size':          1,
+        'connection_details':   None,
+    }
+
+    validators = {
+        'name':                 valid_str,
+        'store_type':           valid_str,
+        'connection_details':   valid_str,
+        'buffer_size':          valid_int,
+    }
+
+    def post_validation(self, config, path_name):
+        buffer_size = config.get('buffer_size')
+
+        if buffer_size and buffer_size < 1:
+            raise ConfigError("%s buffer_size must be >= 1." % path_name)
+
+valid_state_persistence = ValidateStatePersistence()
+
+DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1)
 
 
 class ValidateConfig(Validator):
@@ -647,12 +530,12 @@ class ValidateConfig(Validator):
     """
     config_class =              TronConfig
     defaults = {
-        'working_dir':          None,
         'output_stream_dir':    None,
         'command_context':      None,
         'ssh_options':          valid_ssh_options({}),
         'notification_options': None,
         'time_zone':            None,
+        'state_persistence':    DEFAULT_STATE_PERSISTENCE,
         'nodes':                (dict(name='localhost', hostname='localhost'),),
         'node_pools':           (),
         'jobs':                 (),
@@ -660,11 +543,11 @@ class ValidateConfig(Validator):
     }
     validators = {
         'output_stream_dir':    valid_output_stream_dir,
-        'working_dir':          valid_working_dir,
         'command_context':      valid_command_context,
         'ssh_options':          valid_ssh_options,
         'notification_options': valid_notification_options,
         'time_zone':            valid_time_zone,
+        'state_persistence':    valid_state_persistence
     }
     optional = False
 
@@ -672,24 +555,8 @@ class ValidateConfig(Validator):
         """Validate jobs, nodes, and services."""
 
         node_names = UniqueNameDict('Node and NodePool names must be unique %s')
-        job_service_names = UniqueNameDict('Job and Service names must be unique %s')
-
-        # We need to set this default here until 0.5, see comment below
-        config.setdefault('node_pools', [])
-        # 'nodes' may contain nodes or node pools (for now). Internally split them
-        # into 'nodes' and 'node_pools'. Process the nodes.
-        nodes = config.pop('nodes', None) or []
-        config['nodes'] = []
-        for node in nodes:
-            # TODO: 0.5 remove
-            # A node pool is characterized by being a list, or a dictionary that
-            # contains a list of nodes
-            if isinstance(node, (list, dict)) and 'nodes' in node:
-                log.warn('Node pools should be moved from "nodes" to "node_pools"'
-                         ' before upgrading to Tron 0.5.')
-                config['node_pools'].append(node)
-            else:
-                config['nodes'].append(node)
+        job_service_names = UniqueNameDict(
+                'Job and Service names must be unique %s')
 
         def parse_sub_config(cname, valid, name_dict):
             target_dict = UniqueNameDict(
@@ -714,13 +581,12 @@ class ValidateConfig(Validator):
         """
         actions = itertools.chain.from_iterable(
             job.actions.values()
-            for job in config['jobs'].values()
-        )
+            for job in config['jobs'].values())
+
         task_list = itertools.chain(
             config['jobs'].values(),
             config['services'].values(),
-            actions
-        )
+            actions)
         for task in task_list:
             if task.node and task.node not in node_names:
                 raise ConfigError("Unknown node %s configured for %s %s" % (
@@ -730,18 +596,12 @@ class ValidateConfig(Validator):
         """Validate that each node in a node_pool is in fact a node, and not
         another pool.
         """
-        # TODO: this can be cleaned up after 0.5
         for node_pool in config['node_pools'].itervalues():
             for node_name in node_pool.nodes:
                 node = config['nodes'].get(node_name)
                 if node:
                     continue
-                raise ConfigError(
-                    "NodePool %s contains another NodePool %s. " % (
-                        node_pool.name,
-                        node_name
-                    )
-                )
-
+                msg = "NodePool %s contains another NodePool %s. "
+                raise ConfigError(msg % (node_pool.name, node_name))
 
 valid_config = ValidateConfig()

@@ -1,9 +1,11 @@
 from contextlib import contextmanager
 import logging
+import functools
 
 from testify import  TestCase, setup
 from testify import class_setup, class_teardown
 from testify import teardown
+import time
 from tron.utils import timeutils
 
 
@@ -75,6 +77,23 @@ class MockTimeTestCase(TestCase):
         # Reset 'now' back to what was set on the class because some test may
         # have changed it
         self.now = self.__class__.now
+
+
+def retry(max_tries=3, delay=0.1, exceptions=(KeyError, IndexError)):
+    """A function decorator for re-trying an operation. Useful for MongoDB
+    which is only eventually consistent.
+    """
+    def wrapper(f):
+        @functools.wraps(f)
+        def wrap(*args, **kwargs):
+            for _ in xrange(max_tries):
+                try:
+                    return f(*args, **kwargs)
+                except exceptions:
+                    time.sleep(delay)
+            raise
+        return wrap
+    return wrapper
 
 
 class Turtle(object):
