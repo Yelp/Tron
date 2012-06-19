@@ -66,7 +66,7 @@ class ActionRunResource(resource.Resource):
 
     def render_POST(self, request):
         cmd = requestargs.get_string(request, 'command')
-        log.info("Handling '%s' request for action run %s",
+        log.info("Handling '%s' request for action run %s.%s",
                  cmd, self._job_run.id, self._action_name)
 
         if cmd not in ('start', 'success', 'cancel', 'fail', 'skip'):
