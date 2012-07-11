@@ -82,6 +82,7 @@ jobs:
         name: "test_job1"
         node: node0
         schedule: "daily 00:30:00 MWF"
+        allow_overlap: True
         actions:
             -
                 name: "action1_0"
@@ -190,7 +191,8 @@ services:
                         command='test_command0.1',
                         requires=(),
                         node=None),
-                    enabled=True),
+                    enabled=True,
+                    allow_overlap=False),
                 'test_job1': ConfigJob(
                     name='test_job1',
                     node='node0',
@@ -217,7 +219,8 @@ services:
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
-                    cleanup_action=None),
+                    cleanup_action=None,
+                    allow_overlap=True),
                 'test_job2': ConfigJob(
                     name='test_job2',
                     node='node1',
@@ -239,7 +242,8 @@ services:
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
-                    cleanup_action=None),
+                    cleanup_action=None,
+                    allow_overlap=False),
                 'test_job3': ConfigJob(
                     name='test_job3',
                     node='node1',
@@ -265,7 +269,8 @@ services:
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
-                    cleanup_action=None),
+                    cleanup_action=None,
+                    allow_overlap=False),
                 'test_job4': ConfigJob(
                     name='test_job4',
                     node='nodePool',
@@ -286,7 +291,8 @@ services:
                     run_limit=50,
                     all_nodes=True,
                     cleanup_action=None,
-                    enabled=False)
+                    enabled=False,
+                    allow_overlap=False)
                 }),
                 services=FrozenDict({
                     'service0': ConfigService(
