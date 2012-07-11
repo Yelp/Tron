@@ -77,7 +77,8 @@ class Job(Observable, Observer):
 
     def __init__(self, name, scheduler, queueing=True, all_nodes=False,
             node_pool=None, enabled=True, action_graph=None,
-            run_collection=None, parent_context=None, output_path=None):
+            run_collection=None, parent_context=None, output_path=None,
+            allow_overlap=None):
         super(Job, self).__init__()
         self.name               = name
         self.action_graph       = action_graph
@@ -87,6 +88,7 @@ class Job(Observable, Observer):
         self.all_nodes          = all_nodes
         self.enabled            = enabled
         self.node_pool          = node_pool
+        self.allow_overlap      = allow_overlap
         self.context            = command_context.CommandContext(
                                     JobContext(self), parent_context)
         self.output_path        = output_path or filehandler.OutputPath()
@@ -111,7 +113,8 @@ class Job(Observable, Observer):
             run_collection      = runs,
             action_graph        = action_graph,
             parent_context      = parent_context,
-            output_path         = output_path
+            output_path         = output_path,
+            allow_overlap       = job_config.allow_overlap
         )
 
     def update_from_job(self, job):
@@ -310,7 +313,7 @@ class JobScheduler(Observer):
 
         node = job_run.node if self.job.all_nodes else None
         # If there is another job run still running, queue or cancel this one
-        if any(self.job.runs.get_active(node)):
+        if not self.job.allow_overlap and any(self.job.runs.get_active(node)):
             self._queue_or_cancel_active(job_run)
             return
 
