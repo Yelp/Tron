@@ -39,7 +39,7 @@ def scheduler_from_config(config, time_zone):
         return IntervalScheduler(interval=config.timedelta)
 
     if isinstance(config, schedule_parse.ConfigDailyScheduler):
-        return DailyScheduler(
+        return GrocScheduler(
             time_zone=time_zone,
             timestr=config.timestr,
             ordinals=config.ordinals,
@@ -66,9 +66,9 @@ class ConstantScheduler(object):
         return not self == other
 
 
-class DailyScheduler(object):
-    """Wrapper around SpecificTimeSpecification in the Google App Engine cron
-    library
+class GrocScheduler(object):
+    """Scheduler which uses the SpecificTimeSpecification from the
+    Google App Engine cron library.
     """
     schedule_on_complete = False
 
@@ -145,7 +145,7 @@ class DailyScheduler(object):
             return self.string_repr
 
     def __eq__(self, other):
-        return isinstance(other, DailyScheduler) and \
+        return isinstance(other, GrocScheduler) and \
            all(getattr(self, attr) == getattr(other, attr)
                for attr in ('ordinals',
                             'weekdays',
