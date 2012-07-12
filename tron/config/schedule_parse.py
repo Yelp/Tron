@@ -9,8 +9,8 @@ import re
 from tron.config import ConfigError
 
 
-ConfigDailyScheduler = namedtuple(
-    'ConfigDailyScheduler',
+ConfigGrocScheduler = namedtuple(
+    'ConfigGrocScheduler',
     ['ordinals', 'weekdays', 'monthdays', 'months', 'timestr']
 )
 
@@ -52,7 +52,7 @@ def valid_schedule(path, schedule):
 
 
 def valid_daily_scheduler(start_time=None, days=None):
-    """Old style, will be converted to DailyScheduler with a compatibility
+    """Old style, will be converted to GrocScheduler with a compatibility
     function
 
     schedule:
@@ -227,7 +227,7 @@ def _parse_number(day):
 def parse_daily_expression(expression):
     """Given an expression of the form in the docstring of
     daily_schedule_parser_re(), return the parsed values in a
-    ConfigDailyScheduler
+    ConfigGrocScheduler
     """
     m = DAILY_SCHEDULE_RE.match(expression.lower())
     if not m:
@@ -259,7 +259,7 @@ def parse_daily_expression(expression):
     else:
         months = set(CONVERT_MONTHS[mo] for mo in m.group('months').split(','))
 
-    return ConfigDailyScheduler(
+    return ConfigGrocScheduler(
         ordinals=ordinals,
         weekdays=weekdays,
         monthdays=monthdays,

@@ -38,7 +38,7 @@ def scheduler_from_config(config, time_zone):
     if isinstance(config, schedule_parse.ConfigIntervalScheduler):
         return IntervalScheduler(interval=config.timedelta)
 
-    if isinstance(config, schedule_parse.ConfigDailyScheduler):
+    if isinstance(config, schedule_parse.ConfigGrocScheduler):
         return GrocScheduler(
             time_zone=time_zone,
             timestr=config.timestr,
