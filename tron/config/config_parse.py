@@ -416,7 +416,8 @@ class ValidateJob(ValidatorWithNamedPath):
         'all_nodes':            False,
         'cleanup_action':       None,
         'enabled':              True,
-        'queueing':             True
+        'queueing':             True,
+        'allow_overlap':        False
     }
 
     validators = {
@@ -429,6 +430,7 @@ class ValidateJob(ValidatorWithNamedPath):
         'node':                 valid_identifier,
         'queueing':             valid_bool,
         'enabled':              valid_bool,
+        'allow_overlap':        valid_bool,
     }
 
     def _validate_dependencies(self, job, actions,
