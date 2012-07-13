@@ -62,8 +62,9 @@ Optional Fields
     See :ref:`job_cleanup_actions`.
 
 **enabled** (default **True**)
-    If **False** the job will not be schedule to run.
-
+    If **False** the job will not be scheduled to run. This configuration option
+    is only relevant when a Job is first added to the configuration, after
+    which this value will be ignored.
 
 .. _job_actions:
 

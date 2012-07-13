@@ -128,7 +128,6 @@ class Job(Observable, Observer):
         self.node_pool      = job.node_pool
         self.all_nodes      = job.all_nodes
         self.action_graph   = job.action_graph
-        self.enabled        = job.enabled
         self.output_path    = job.output_path
         self.notify(self.EVENT_RECONFIGURED)
 
