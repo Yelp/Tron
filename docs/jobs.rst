@@ -36,6 +36,10 @@ Optional Fields
     not defined to queue overlapping then this setting is ignored.
     IntervalScheduler and ConstantScheduler will not queue overlapping.
 
+**allow_overlap** (default **False**)
+    If **True** new job runs will start even if the previous run is still running.
+    By default new job runs are either cancelled or queued (see **queuing**).
+
 **run_limit** (default **50**)
     Number of runs which will be stored. Once a Job has more then run_limit
     runs, the output and state for the oldest run are removed. Failed runs
@@ -58,7 +62,7 @@ Optional Fields
     See :ref:`job_cleanup_actions`.
 
 **enabled** (default **True**)
-    If **False** the job will not be queued to run. This configuration option
+    If **False** the job will not be scheduled to run. This configuration option
     is only relevant when a Job is first added to the configuration, after
     which this value will be ignored.
 
