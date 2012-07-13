@@ -14,6 +14,7 @@
 
 import calendar
 import datetime
+import itertools
 
 try:
     import pytz
@@ -36,11 +37,8 @@ except ImportError:
     class AmbiguousTimeError(Exception):
         pass
 
-class GrocException(Exception):
-    pass
 
-
-def _GetTimezone(timezone_string):
+def get_timezone(timezone_string):
     """Converts a timezone string to a pytz timezone object.
 
     Arguments:
@@ -61,7 +59,7 @@ def _GetTimezone(timezone_string):
         return None
 
 
-def _ToTimeZone(t, tzinfo):
+def to_timezone(t, tzinfo):
     """Converts 't' to the time zone 'tzinfo'.
 
     Arguments:
@@ -84,7 +82,7 @@ def _ToTimeZone(t, tzinfo):
         return t
 
 
-def _GetTime(time_string):
+def get_time(time_string):
     """Converts a string to a datetime.time object.
 
     Arguments:
@@ -94,14 +92,32 @@ def _GetTime(time_string):
       a datetime.time object
     """
     try:
-        hourstr, minutestr = time_string.split(':')[0:2]
-        return datetime.time(int(hourstr), int(minutestr))
+        return datetime.datetime.strptime(time_string, "%H:%M").time()
     except ValueError:
         return None
 
 
-# TODO: delete from tron.util.groctimespecification once complete
-class TronTimeSpecification(object):
+
+ordinal_range  = range(1, 6)
+weekday_range  = range(0, 7)
+month_range    = range(1, 13)
+monthday_range = range(1, 32)
+hour_range     = range(0, 24)
+minute_range   = second_range = range(0, 60)
+
+
+def validate_spec(source, value_range, type, default=None):
+    default = default if default is not None else value_range
+    if not source:
+        return default
+
+    for item in source:
+        if item not in value_range:
+            raise ValueError("%s not in range %s" % (type, value_range))
+    return sorted(set(source))
+
+
+class TimeSpecification(object):
     """Specific time specification.
 
     A Specific interval is more complex, but defines a certain time to run and
@@ -123,132 +139,129 @@ class TronTimeSpecification(object):
     time would be '09:15'.
     """
 
-    def __init__(self, ordinals=None, weekdays=None, months=None, monthdays=None,
-                 timestr='00:00', timezone=None):
+    def __init__(self,
+            ordinals=None,
+            weekdays=None,
+            months=None,
+            monthdays=None,
+            timestr=None,
+            timezone=None,
+            minutes=None,
+            hours=None,
+            seconds=None):
 
-        super(TronTimeSpecification, self).__init__()
         if weekdays and monthdays:
             raise ValueError('cannot supply both monthdays and weekdays')
 
-        self.ordinals = set(range(1, 6)) if ordinals is None else set(ordinals)
-        self.weekdays = set(range(7)) if weekdays is None else set(weekdays)
-        self.months   = set(range(1, 13)) if months is None else set(months)
+        if timestr and (minutes or hours):
+            raise ValueError('cannot supply both timestr and h/m/s')
 
-        if not monthdays:
-            self.monthdays = set()
-        else:
-            if max(monthdays) > 31 or min(monthdays) < 1:
-                raise ValueError('invalid day of month')
-            self.monthdays = set(monthdays)
+        if not any((timestr, minutes, hours, seconds)):
+            timestr = '00:00'
 
-        self.time = _GetTime(timestr)
-        self.timezone = _GetTimezone(timezone)
+        if timestr:
+            time    = get_time(timestr)
+            hours   = [time.hour]
+            minutes = [time.minute]
+            seconds = [0]
 
-    def _MatchingDays(self, year, month):
+        self.hours      = validate_spec(hours, hour_range, 'hour')
+        self.minutes    = validate_spec(minutes, minute_range, 'minute')
+        self.seconds    = validate_spec(seconds, second_range, 'second')
+        self.ordinals   = validate_spec(ordinals, ordinal_range, 'ordinal')
+        self.weekdays   = validate_spec(weekdays, weekday_range, 'weekdays')
+        self.months     = validate_spec(months, month_range, 'month')
+        self.monthdays  = validate_spec(
+                            monthdays, monthday_range, 'monthdays', [])
+        self.timezone   = get_timezone(timezone)
+
+    def next_day(self, first_day, year, month):
         """Returns matching days for the given year and month.
-
-        For the given year and month, return the days that match this instance's
-        day specification, based on either (a) the ordinals and weekdays, or
-        (b) the explicitly specified monthdays.  If monthdays are specified,
-        dates that fall outside the range of the month will not be returned.
-
-        Arguments:
-          year: the year as an integer
-          month: the month as an integer, in range 1-12
-
-        Returns:
-          a list of matching days, as ints in range 1-31
         """
-        start_day, last_day = calendar.monthrange(year, month)
-        if self.monthdays:
-            return sorted([day for day in self.monthdays if day <= last_day])
+        first_day_of_month, last_day_of_month = calendar.monthrange(year, month)
+        def day_filter(day):
+            return first_day <= day <= last_day_of_month
 
+        if self.monthdays:
+            return itertools.ifilter(day_filter, self.monthdays)
+
+        # TODO: adjust this to make monday day = 0
         out_days = []
-        start_day = (start_day + 1) % 7
+        start_day = (first_day_of_month + 1) % 7
         for ordinal in self.ordinals:
             for weekday in self.weekdays:
-                day = ((weekday - start_day) % 7) + 1
-                day += 7 * (ordinal - 1)
-                if day <= last_day:
+                week = (ordinal - 1) * 7
+                day  = ((weekday - start_day) % 7) + week + 1
+                if day_filter(day):
                     out_days.append(day)
-        return sorted(out_days)
+        return itertools.ifilter(day_filter, sorted(out_days))
 
-    def _NextMonthGenerator(self, start, matches):
-        """Creates a generator that produces results from the set 'matches'.
-
-        Matches must be >= 'start'. If none match, the wrap counter is incremented,
-        and the result set is reset to the full set. Yields a 2-tuple of (match,
-        wrapcount).
-
-        Arguments:
-          start: first set of matches will be >= this value (an int)
-          matches: the set of potential matches (a sequence of ints)
-
-        Yields:
-          a two-tuple of (match, wrap counter). match is an int in range (1-12),
-          wrapcount is a int indicating how many times we've wrapped around.
+    def next_month(self, current):
+        """Create a generator which yields valid months after the start month.
         """
-        potential = matches = sorted(matches)
+        matches     = self.months
+        potential   = [m for m in matches if m >= current]
+        wrapcount   = 0
 
-        after = start - 1
-        wrapcount = 0
         while True:
-            potential = [x for x in potential if x > after]
             if not potential:
-
                 wrapcount += 1
-                potential = matches
-            after = potential[0]
-            yield (after, wrapcount)
+                potential = list(matches)
 
-    def GetMatch(self, start):
-        """Returns the next match after time start.
+            yield potential.pop(0), wrapcount
+            current += 1
 
-        Must be implemented in subclasses.
+    def next_time(self, start_date, year, month, day):
+        """Return the next valid time."""
+        is_start_day = start_date.timetuple()[:3] == (year, month, day)
 
-        Arguments:
-          start: a datetime to start from. Matches will start from after this time.
-              This may be in any pytz time zone, or it may be timezone-naive
-              (interpreted as UTC).
+        for hour in self.hours:
+            for minute in self.minutes:
+                for second in self.seconds:
+                    candidate = datetime.time(hour, minute, second)
 
-        Returns:
-          a datetime object in the timezone of the input 'start'
-        """
-        start_time = _ToTimeZone(start, self.timezone).replace(tzinfo=None)
-        months = self._NextMonthGenerator(start_time.month, self.months)
+                    if is_start_day and start_date.time() >= candidate:
+                        continue
 
-        while True:
-            month, yearwraps = months.next()
-            candidate_month = start_time.replace(
-                day=1, month=month, year=start_time.year + yearwraps)
+                    return candidate
 
-            day_matches = self._MatchingDays(candidate_month.year, month)
+    def get_match(self, start):
+        """Returns the next datetime match after start."""
+        start_date  = to_timezone(start, self.timezone).replace(tzinfo=None)
 
-            if ((candidate_month.year, candidate_month.month)
-                == (start_time.year, start_time.month)):
+        for month, year_wraps in self.next_month(start_date.month):
+            year        = start_date.year + year_wraps
+            first_day   = start_date.day
 
-                day_matches = [x for x in day_matches if x >= start_time.day]
+            if (year, month) != (start_date.year, start_date.month):
+                first_day = 1
 
-                while (day_matches and day_matches[0] == start_time.day
-                       and start_time.time() >= self.time):
-                    day_matches.pop(0)
+            for day in self.next_day(first_day, year, month):
 
-            while day_matches:
-                out = candidate_month.replace(day=day_matches[0], hour=self.time.hour,
-                    minute=self.time.minute, second=0,
-                    microsecond=0)
+                time = self.next_time(start_date, year, month, day)
+                if time is None:
+                    continue
 
-                if self.timezone and pytz is not None:
+                candidate = start_date.replace(year, month, day, time.hour,
+                    time.minute, second=0, microsecond=0)
+                candidate = self.handle_timezone(candidate, start.tzinfo)
+                if not candidate:
+                    continue
+                return candidate
+
+    # TODO: test
+    def handle_timezone(self, out, tzinfo):
+        if self.timezone and pytz is not None:
+            try:
+                out = self.timezone.localize(out, is_dst=None)
+            except AmbiguousTimeError:
+                out = self.timezone.localize(out)
+            except NonExistentTimeError:
+                # TODO: this is duplicated in the scheduler
+                for _ in range(24):
+                    out += datetime.timedelta(minutes=60)
                     try:
-                        out = self.timezone.localize(out, is_dst=None)
-                    except AmbiguousTimeError:
                         out = self.timezone.localize(out)
                     except NonExistentTimeError:
-                        for _ in range(24):
-                            out = out + datetime.timedelta(minutes=60)
-                            try:
-                                out = self.timezone.localize(out)
-                            except NonExistentTimeError:
-                                continue
-                            break
-                return _ToTimeZone(out, start.tzinfo)
+                        return None
+        return to_timezone(out, tzinfo)
