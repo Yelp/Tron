@@ -195,7 +195,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         cfg = parse_daily('1st,2nd,3rd,4th monday,Tue of march,apr,September at 00:00')
         assert_equal(cfg.ordinals, set((1, 2, 3, 4)))
         assert_equal(cfg.monthdays, None)
-        assert_equal(cfg.weekdays, set((0, 1)))
+        assert_equal(cfg.weekdays, set((1, 2)))
         assert_equal(cfg.months, set((3, 4, 9)))
         assert_equal(cfg.timestr, '00:00')
         assert_equal(scheduler.GeneralScheduler(**cfg._asdict()),

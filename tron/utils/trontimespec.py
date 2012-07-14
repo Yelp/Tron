@@ -97,6 +97,7 @@ def get_time(time_string):
         return None
 
 
+TOKEN_LAST = 'LAST'
 
 ordinal_range  = range(1, 6)
 weekday_range  = range(0, 7)
@@ -106,12 +107,14 @@ hour_range     = range(0, 24)
 minute_range   = second_range = range(0, 60)
 
 
-def validate_spec(source, value_range, type, default=None):
+def validate_spec(source, value_range, type, default=None, allow_last=False):
     default = default if default is not None else value_range
     if not source:
         return default
 
     for item in source:
+        if allow_last and item == TOKEN_LAST:
+            continue
         if item not in value_range:
             raise ValueError("%s not in range %s" % (type, value_range))
     return sorted(set(source))
@@ -152,32 +155,33 @@ class TimeSpecification(object):
         self.minutes    = validate_spec(minutes, minute_range, 'minute')
         self.seconds    = validate_spec(seconds, second_range, 'second')
         self.ordinals   = validate_spec(ordinals, ordinal_range, 'ordinal')
-        self.weekdays   = validate_spec(weekdays, weekday_range, 'weekdays')
+        self.weekdays   = validate_spec(
+            weekdays, weekday_range, 'weekdays', allow_last=True)
         self.months     = validate_spec(months, month_range, 'month')
         self.monthdays  = validate_spec(
-                            monthdays, monthday_range, 'monthdays', [])
+            monthdays, monthday_range, 'monthdays', [], True)
         self.timezone   = get_timezone(timezone)
 
     def next_day(self, first_day, year, month):
         """Returns matching days for the given year and month.
         """
         first_day_of_month, last_day_of_month = calendar.monthrange(year, month)
-        def day_filter(day):
-            return first_day <= day <= last_day_of_month
+
+        day_filter = lambda day: first_day <= day <= last_day_of_month
+        map_last   = lambda day: last_day_of_month if day == TOKEN_LAST else day
+        sort_days  = lambda days: sorted(itertools.ifilter(day_filter, days))
 
         if self.monthdays:
-            return itertools.ifilter(day_filter, self.monthdays)
+            return sort_days(map_last(day) for day in self.monthdays)
 
-        # TODO: adjust this to make monday day = 0
         out_days = []
         start_day = (first_day_of_month + 1) % 7
         for ordinal in self.ordinals:
             for weekday in self.weekdays:
                 week = (ordinal - 1) * 7
                 day  = ((weekday - start_day) % 7) + week + 1
-                if day_filter(day):
-                    out_days.append(day)
-        return itertools.ifilter(day_filter, sorted(out_days))
+                out_days.append(day)
+        return sort_days(out_days)
 
     def next_month(self, current):
         """Create a generator which yields valid months after the start month.

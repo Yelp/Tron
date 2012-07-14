@@ -105,10 +105,6 @@ class GeneralScheduler(object):
           string_repr - Original string representation this was parsed from,
                         if applicable
         """
-        # calendar module has 0=Monday, groc has 0=Sunday
-        if weekdays:
-            weekdays = set((x + 1) % 7 for x in weekdays)
-
         self.time_zone      = time_zone
         self.string_repr    = string_repr or "DAILY"
         self.time_spec      = trontimespec.TimeSpecification(

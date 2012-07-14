@@ -53,6 +53,11 @@ class TimeSpecificationTestCase(TestCase):
         gen = time_spec.next_day(1, 2012, 3)
         assert_equal(list(gen), [5, 10, 15])
 
+    def test_next_day_monthdays_with_last(self):
+        time_spec = trontimespec.TimeSpecification(monthdays=[5,'LAST'])
+        gen = time_spec.next_day(14, 2012, 3)
+        assert_equal(list(gen), [31])
+
     def test_next_day_weekdays(self):
         time_spec = trontimespec.TimeSpecification(weekdays=[1,5])
         gen = time_spec.next_day(14, 2012, 3)

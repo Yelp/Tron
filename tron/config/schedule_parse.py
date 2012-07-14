@@ -128,20 +128,25 @@ def valid_interval_scheduler(interval):
     return ConfigIntervalScheduler(timedelta=datetime.timedelta(**kwargs))
 
 
+def normalize_weekdays(seq):
+    return seq[6:7] + seq[:6]
+
 def day_canonicalization_map():
     """Build a map of weekday synonym to int index 0-6 inclusive."""
     canon_map = dict()
 
     # 7-element lists with weekday names in order
-    weekday_lists = (calendar.day_name,
-                     calendar.day_abbr,
-                     ('m', 't', 'w', 'r', 'f', 's', 'u'),
-                     ('mo', 'tu', 'we', 'th', 'fr', 'sa', 'su'))
+    weekday_lists = [
+        normalize_weekdays(calendar.day_name),
+        normalize_weekdays(calendar.day_abbr),
+        ('u', 'm', 't', 'w', 'r', 'f', 's',),
+        ('su', 'mo', 'tu', 'we', 'th', 'fr', 'sa',)]
     for day_list in weekday_lists:
         for day_name_synonym, day_index in zip(day_list, range(7)):
             canon_map[day_name_synonym] = day_index
             canon_map[day_name_synonym.lower()] = day_index
             canon_map[day_name_synonym.upper()] = day_index
+
     return canon_map
 
 # Canonicalize weekday names to integer indices

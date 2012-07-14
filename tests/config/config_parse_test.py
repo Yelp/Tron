@@ -197,7 +197,7 @@ services:
                     enabled=True,
                     schedule=ConfigGrocScheduler(
                         ordinals=None,
-                        weekdays=set([0, 2, 4]),
+                        weekdays=set([1, 3, 5]),
                         monthdays=None,
                         months=None,
                         timestr='00:30',
