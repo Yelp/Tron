@@ -68,8 +68,8 @@ class MonthFieldParserTestCase(TestCase):
         self.parser = crontab.MonthFieldParser()
 
     def test_parse(self):
-        expected = [1, 3, 7, 12]
-        assert_equal(self.parser.parse("DEC, Jan, jul, MaR"), expected)
+        expected = [1, 2, 3, 7, 12]
+        assert_equal(self.parser.parse("DEC, Jan-Feb, jul, MaR"), expected)
 
 
 class WeekdayFieldParserTestCase(TestCase):
@@ -80,7 +80,7 @@ class WeekdayFieldParserTestCase(TestCase):
 
     def test_parser(self):
         expected = [0,3,5,6]
-        assert_equal(self.parser.parse("Sun, 3, FRI, SaT"), expected)
+        assert_equal(self.parser.parse("Sun, 3, FRI, SaT-Sun"), expected)
 
 if __name__ == "__main__":
     run()

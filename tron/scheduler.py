@@ -54,6 +54,7 @@ def scheduler_from_config(config, time_zone):
             monthdays=config.monthdays,
             months=config.months,
             weekdays=config.weekdays,
+            ordinals=config.ordinals,
             string_repr='CRON')
 
 

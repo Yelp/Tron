@@ -24,20 +24,15 @@ def convert_predefined(line):
     return PREDEFINED_SCHEDULE[line]
 
 
-def flip_pairs(seq):
-    for key, value in seq:
-        yield value.lower(), str(key)
-
-
 class FieldParser(object):
     """Parse and validate a field in a crontab entry."""
 
     name   = None
     bounds = None
     range_pattern = re.compile(r'''
-        (?P<min>\d+|\*)     # Initial value
-        (?:-(?P<max>\d+))?   # Optional max upper bound
-        (?:/(?P<step>\d+))?   # Optional step increment
+        (?P<min>\d+|\*)         # Initial value
+        (?:-(?P<max>\d+))?      # Optional max upper bound
+        (?:/(?P<step>\d+))?     # Optional step increment
         ''', re.VERBOSE)
 
     def normalize(self, source):
@@ -59,20 +54,24 @@ class FieldParser(object):
     def get_values(self, source):
         source               = self.normalize(source)
         match_groups         = self.get_match_groups(source)
-        min_value, max_value = self.bounds
         step                 = 1
-
-        if match_groups['min'] != '*':
-            min_value = self.validate_bounds(match_groups['min'])
-            max_value = min_value + 1
-            if match_groups['max']:
-                # Cron expressions are inclusive, range is exclusive on upper bound
-                max_value = self.validate_bounds(match_groups['max']) + 1
+        min_value, max_value = self.get_value_range(match_groups)
 
         if match_groups['step']:
             step = self.validate_bounds(match_groups['step'])
-
         return self.get_range(min_value, max_value, step)
+
+    def get_value_range(self, match_groups):
+        if match_groups['min'] == '*':
+            return self.bounds
+
+        min_value = self.validate_bounds(match_groups['min'])
+        if match_groups['max']:
+            # Cron expressions are inclusive, range is exclusive on upper bound
+            max_value = self.validate_bounds(match_groups['max']) + 1
+            return min_value, max_value
+
+        return min_value, min_value + 1
 
     def get_range(self, min_value, max_value, step):
         if min_value < max_value:
@@ -105,23 +104,25 @@ class MonthdayFieldParser(FieldParser):
 class MonthFieldParser(FieldParser):
     name        = 'months'
     bounds      = (1, 13)
-    month_names = dict(flip_pairs(enumerate(calendar.month_abbr[1:], start=1)))
+    month_names = calendar.month_abbr[1:]
 
     def normalize(self, month):
         month = super(MonthFieldParser, self).normalize(month)
         month = month.lower()
-        return self.month_names.get(month, month)
+        for month_num, month_name in  enumerate(self.month_names, start=1):
+            month = month.replace(month_name.lower(), str(month_num))
+        return month
 
 class WeekdayFieldParser(FieldParser):
     name        = 'weekdays'
     bounds      = (0, 7)
-    day_names   = dict(flip_pairs(enumerate(
-                    ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat'])))
+    day_names   = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
     def normalize(self, day_of_week):
         day_of_week = super(WeekdayFieldParser, self).normalize(day_of_week)
         day_of_week = day_of_week.lower()
-        day_of_week = self.day_names.get(day_of_week, day_of_week)
+        for dow_num, dow_name in enumerate(self.day_names):
+            day_of_week = day_of_week.replace(dow_name, str(dow_num))
         return day_of_week.replace('7', '0').replace('?', '*')
 
 

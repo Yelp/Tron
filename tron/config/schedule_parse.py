@@ -16,7 +16,7 @@ ConfigGrocScheduler = namedtuple(
 
 ConfigCronScheduler = namedtuple(
     'ConfigCronScheduler',
-    ['minutes', 'hours', 'monthdays', 'months', 'weekdays'])
+    ['minutes', 'hours', 'monthdays', 'months', 'weekdays', 'ordinals'])
 
 ConfigConstantScheduler = namedtuple('ConfigConstantScheduler', [])
 ConfigIntervalScheduler = namedtuple('ConfigIntervalScheduler', ['timedelta'])
