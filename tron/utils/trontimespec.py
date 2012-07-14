@@ -118,25 +118,8 @@ def validate_spec(source, value_range, type, default=None):
 
 
 class TimeSpecification(object):
-    """Specific time specification.
-
-    A Specific interval is more complex, but defines a certain time to run and
-    the days that it should run. It has the following attributes:
-    time     - the time of day to run, as 'HH:MM'
-    ordinals - first, second, third &c, as a set of integers in 1..5
-    months   - the months that this should run, as a set of integers in 1..12
-    weekdays - the days of the week that this should run, as a set of integers,
-               0=Sunday, 6=Saturday
-    timezone - the optional timezone as a string for this specification.
-               Defaults to UTC - valid entries are things like Australia/Victoria
-               or PST8PDT.
-
-    A specific time schedule can be quite complex. A schedule could look like
-    this:
-    '1st,third sat,sun of jan,feb,mar 09:15'
-
-    In this case, ordinals would be {1,3}, weekdays {0,6}, months {1,2,3} and
-    time would be '09:15'.
+    """TimeSpecification determines the next time which matches the
+    configured pattern.
     """
 
     def __init__(self,
@@ -265,3 +248,20 @@ class TimeSpecification(object):
                     except NonExistentTimeError:
                         return None
         return to_timezone(out, tzinfo)
+
+    def __eq__(self, other):
+        attrs = [
+            'hours',
+            'minutes',
+            'seconds',
+            'ordinals',
+            'weekdays',
+            'months',
+            'monthdays',
+            'timezone']
+        return all(
+            getattr(other, attr, None) == getattr(self, attr, None)
+                for attr in attrs)
+
+    def __ne__(self, other):
+        return not self == other

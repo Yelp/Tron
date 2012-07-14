@@ -7,25 +7,22 @@ import datetime
 import re
 
 from tron.config import ConfigError
+from tron.utils import crontab
 
 
 ConfigGrocScheduler = namedtuple(
     'ConfigGrocScheduler',
-    ['ordinals', 'weekdays', 'monthdays', 'months', 'timestr']
-)
+    ['ordinals', 'weekdays', 'monthdays', 'months', 'timestr'])
 
+ConfigCronScheduler = namedtuple(
+    'ConfigCronScheduler',
+    ['minutes', 'hours', 'monthdays', 'months', 'weekdays'])
 
 ConfigConstantScheduler = namedtuple('ConfigConstantScheduler', [])
-
-
-ConfigIntervalScheduler = namedtuple(
-    'ConfigIntervalScheduler', [
-        'timedelta',    # datetime.timedelta
-    ])
+ConfigIntervalScheduler = namedtuple('ConfigIntervalScheduler', ['timedelta'])
 
 class ScheduleParseError(Exception):
     pass
-
 
 
 def valid_schedule(path, schedule):
@@ -40,6 +37,8 @@ def valid_schedule(path, schedule):
             return valid_daily_scheduler(*scheduler_args)
         elif scheduler_name == 'interval':
             return valid_interval_scheduler(' '.join(scheduler_args))
+        elif scheduler_name == 'cron':
+            return valid_cron_scheduler(scheduler_args)
         else:
             return parse_daily_expression(schedule)
 
@@ -264,5 +263,10 @@ def parse_daily_expression(expression):
         weekdays=weekdays,
         monthdays=monthdays,
         months=months,
-        timestr=timestr,
-    )
+        timestr=timestr)
+
+
+def valid_cron_scheduler(scheduler_args):
+    """Parse a cron schedule."""
+    # TODO: catch ValueErrors and raise SchedulerParseErrors
+    return ConfigCronScheduler(**crontab.parse_crontab(''.join(scheduler_args)))
