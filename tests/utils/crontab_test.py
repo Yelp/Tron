@@ -18,13 +18,13 @@ class ConvertPredefinedTestCase(TestCase):
 
 
 class ParseCrontabTestCase(TestCase):
-    pass
-#    def test_parse_asterisk(self):
-#        line = '* * * * *'
-#        actual = crontab.parse_crontab(line)
-#        assert_equal(actual['minutes'], range(60))
-#        assert_equal(actual['hours'], range(24))
-#        assert_equal(actual['months'], range(1,13))
+
+    def test_parse_asterisk(self):
+        line = '* * * * *'
+        actual = crontab.parse_crontab(line)
+        assert_equal(actual['minutes'], range(60))
+        assert_equal(actual['hours'], range(24))
+        assert_equal(actual['months'], range(1,13))
 
 
 class MinuteFieldParserTestCase(TestCase):
@@ -60,6 +60,27 @@ class MinuteFieldParserTestCase(TestCase):
         expected = [0,1,11,13,15,17,19,20,21,40]
         assert_equal(self.parser.parse("1,11-22/2,*/20"), expected)
 
+
+class MonthFieldParserTestCase(TestCase):
+
+    @setup
+    def setup_parser(self):
+        self.parser = crontab.MonthFieldParser()
+
+    def test_parse(self):
+        expected = [1, 3, 7, 12]
+        assert_equal(self.parser.parse("DEC, Jan, jul, MaR"), expected)
+
+
+class WeekdayFieldParserTestCase(TestCase):
+
+    @setup
+    def setup_parser(self):
+        self.parser = crontab.WeekdayFieldParser()
+
+    def test_parser(self):
+        expected = [0,3,5,6]
+        assert_equal(self.parser.parse("Sun, 3, FRI, SaT"), expected)
 
 if __name__ == "__main__":
     run()
