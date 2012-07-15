@@ -107,17 +107,17 @@ class TimeSpecificationTestCase(TestCase):
         time = time_spec.next_time(start_date, 2012, 3, 15)
         assert_equal(time, datetime.time(0, 20))
 
-    def test_next_time_hours_and_minutes(self):
+    def test_next_time_hours_and_minutes_and_seconds(self):
         time_spec = trontimespec.TimeSpecification(
-                    minutes=[20,30], hours=[1,5], seconds=[0])
+                    minutes=[20,30], hours=[1,5], seconds=[4,5])
         start_date = datetime.datetime(2012, 3, 14, 1, 25)
         time = time_spec.next_time(start_date, 2012, 3, 14)
-        assert_equal(time, datetime.time(1, 30))
+        assert_equal(time, datetime.time(1, 30, 4))
 
-        start_date = datetime.datetime(2012, 3, 14, 5, 30)
+        start_date = datetime.datetime(2012, 3, 14, 5, 30, 6)
         assert time_spec.next_time(start_date, 2012, 3, 14) is None
         time = time_spec.next_time(start_date, 2012, 3, 15)
-        assert_equal(time, datetime.time(1, 20))
+        assert_equal(time, datetime.time(1, 20, 4))
 
 
 if __name__ == "__main__":

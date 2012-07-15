@@ -230,7 +230,7 @@ class TimeSpecification(object):
                     continue
 
                 candidate = start_date.replace(year, month, day, time.hour,
-                    time.minute, second=0, microsecond=0)
+                    time.minute, second=time.second, microsecond=0)
                 candidate = self.handle_timezone(candidate, start.tzinfo)
                 if not candidate:
                     continue
