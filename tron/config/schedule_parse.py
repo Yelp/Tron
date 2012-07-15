@@ -273,5 +273,8 @@ def parse_daily_expression(expression):
 
 def valid_cron_scheduler(scheduler_args):
     """Parse a cron schedule."""
-    # TODO: catch ValueErrors and raise SchedulerParseErrors
-    return ConfigCronScheduler(**crontab.parse_crontab(''.join(scheduler_args)))
+    try:
+        crontab_kwargs = crontab.parse_crontab(' '.join(scheduler_args))
+        return ConfigCronScheduler(**crontab_kwargs)
+    except ValueError, e:
+        raise ConfigError("Invalid scheduler config: %s" % e)

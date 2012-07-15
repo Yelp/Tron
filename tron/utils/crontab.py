@@ -101,6 +101,14 @@ class MonthdayFieldParser(FieldParser):
     name    = 'monthdays'
     bounds  = (1, 13)
 
+    def get_values(self, source):
+        # Handle special case for last day of month
+        source = self.normalize(source)
+        if source == 'L':
+            return ['LAST']
+
+        return super(MonthdayFieldParser, self).get_values(source)
+
 class MonthFieldParser(FieldParser):
     name        = 'months'
     bounds      = (1, 13)
@@ -133,7 +141,7 @@ month_parser    = MonthdayFieldParser()
 weekday_parser  = WeekdayFieldParser()
 
 
-# TODO: support L, W, #
+# TODO: support L (for dow), W, #
 def parse_crontab(line):
     line = convert_predefined(line)
     minutes, hours, dom, months, dow = line.split(None, 4)
@@ -143,4 +151,5 @@ def parse_crontab(line):
         'hours':        hour_parser.parse(hours),
         'monthdays':    monthday_parser.parse(dom),
         'months':       month_parser.parse(months),
-        'weekdays':     weekday_parser.parse(dow)}
+        'weekdays':     weekday_parser.parse(dow),
+        'ordinals':     None}

@@ -82,5 +82,16 @@ class WeekdayFieldParserTestCase(TestCase):
         expected = [0,3,5,6]
         assert_equal(self.parser.parse("Sun, 3, FRI, SaT-Sun"), expected)
 
+
+class MonthdayFieldParserTestCase(TestCase):
+
+    @setup
+    def setup_parser(self):
+        self.parser = crontab.MonthdayFieldParser()
+
+    def test_parse_last(self):
+        expected = [5, 6, 'LAST']
+        assert_equal(self.parser.parse("5, 6, L"), expected)
+
 if __name__ == "__main__":
     run()
