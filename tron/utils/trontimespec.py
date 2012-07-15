@@ -139,7 +139,7 @@ class TimeSpecification(object):
         if weekdays and monthdays:
             raise ValueError('cannot supply both monthdays and weekdays')
 
-        if timestr and (minutes or hours):
+        if timestr and (minutes or hours or seconds):
             raise ValueError('cannot supply both timestr and h/m/s')
 
         if not any((timestr, minutes, hours, seconds)):
@@ -183,26 +183,26 @@ class TimeSpecification(object):
                 out_days.append(day)
         return sort_days(out_days)
 
-    def next_month(self, current):
+    def next_month(self, start_date):
         """Create a generator which yields valid months after the start month.
         """
-        matches     = self.months
-        potential   = [m for m in matches if m >= current]
-        wrapcount   = 0
+        current     = start_date.month
+        potential   = [m for m in self.months if m >= current]
+        year_wraps   = 0
 
         while True:
             if not potential:
-                wrapcount += 1
-                potential = list(matches)
+                year_wraps += 1
+                potential = list(self.months)
 
-            yield potential.pop(0), wrapcount
-            current += 1
+            yield potential.pop(0), start_date.year + year_wraps
 
-    def next_time(self, start_date, year, month, day):
+    def next_time(self, start_date, is_start_day):
         """Return the next valid time."""
-        is_start_day = start_date.timetuple()[:3] == (year, month, day)
+        start_hour   = start_date.time().hour
+        hour_filter  = lambda hour: not is_start_day or hour >= start_hour
 
-        for hour in self.hours:
+        for hour in itertools.ifilter(hour_filter, self.hours):
             for minute in self.minutes:
                 for second in self.seconds:
                     candidate = datetime.time(hour, minute, second)
@@ -216,16 +216,16 @@ class TimeSpecification(object):
         """Returns the next datetime match after start."""
         start_date  = to_timezone(start, self.timezone).replace(tzinfo=None)
 
-        for month, year_wraps in self.next_month(start_date.month):
-            year        = start_date.year + year_wraps
-            first_day   = start_date.day
-
+        for month, year in self.next_month(start_date):
             if (year, month) != (start_date.year, start_date.month):
                 first_day = 1
+            else:
+                first_day = start_date.day
 
             for day in self.next_day(first_day, year, month):
+                is_start_day = start_date.timetuple()[:3] == (year, month, day)
 
-                time = self.next_time(start_date, year, month, day)
+                time = self.next_time(start_date, is_start_day)
                 if time is None:
                     continue
 

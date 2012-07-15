@@ -41,8 +41,8 @@ class TimeSpecificationTestCase(TestCase):
 
     def test_next_month_generator(self):
         time_spec = trontimespec.TimeSpecification(months=[2,5])
-        gen = time_spec.next_month(3)
-        expected = [(5, 0), (2, 1), (5, 1), (2, 2)]
+        gen = time_spec.next_month(datetime.datetime(2012, 3, 14))
+        expected = [(5, 2012), (2, 2013), (5, 2013), (2, 2014)]
         assert_equal([gen.next() for _ in xrange(4)], expected)
 
     def test_next_day_monthdays(self):
@@ -77,46 +77,46 @@ class TimeSpecificationTestCase(TestCase):
     def test_next_time_timestr(self):
         time_spec = trontimespec.TimeSpecification(timestr="13:13")
         start_date = datetime.datetime(2012, 3, 14, 0, 15)
-        time = time_spec.next_time(start_date, 2012, 3, 14)
+        time = time_spec.next_time(start_date, True)
         assert_equal(time, datetime.time(13, 13))
 
         start_date = datetime.datetime(2012, 3, 14, 13, 13)
-        assert time_spec.next_time(start_date, 2012, 3, 14) is None
-        time = time_spec.next_time(start_date, 2012, 3, 15)
+        assert time_spec.next_time(start_date, True) is None
+        time = time_spec.next_time(start_date, False)
         assert_equal(time, datetime.time(13, 13))
 
     def test_next_time_hours(self):
         time_spec = trontimespec.TimeSpecification(hours=[4,10])
         start_date = datetime.datetime(2012, 3, 14, 0, 15)
-        time = time_spec.next_time(start_date, 2012, 3, 14)
+        time = time_spec.next_time(start_date, True)
         assert_equal(time, datetime.time(4, 0))
 
         start_date = datetime.datetime(2012, 3, 14, 13, 13)
-        assert time_spec.next_time(start_date, 2012, 3, 14) is None
-        time = time_spec.next_time(start_date, 2012, 3, 15)
+        assert time_spec.next_time(start_date, True) is None
+        time = time_spec.next_time(start_date, False)
         assert_equal(time, datetime.time(4, 0))
 
     def test_next_time_minutes(self):
         time_spec = trontimespec.TimeSpecification(minutes=[30, 20, 30], seconds=[0])
         start_date = datetime.datetime(2012, 3, 14, 0, 25)
-        time = time_spec.next_time(start_date, 2012, 3, 14)
+        time = time_spec.next_time(start_date, True)
         assert_equal(time, datetime.time(0, 30))
 
         start_date = datetime.datetime(2012, 3, 14, 23, 30)
-        assert time_spec.next_time(start_date, 2012, 3, 14) is None
-        time = time_spec.next_time(start_date, 2012, 3, 15)
+        assert time_spec.next_time(start_date, True) is None
+        time = time_spec.next_time(start_date, False)
         assert_equal(time, datetime.time(0, 20))
 
     def test_next_time_hours_and_minutes_and_seconds(self):
         time_spec = trontimespec.TimeSpecification(
                     minutes=[20,30], hours=[1,5], seconds=[4,5])
         start_date = datetime.datetime(2012, 3, 14, 1, 25)
-        time = time_spec.next_time(start_date, 2012, 3, 14)
+        time = time_spec.next_time(start_date, True)
         assert_equal(time, datetime.time(1, 30, 4))
 
         start_date = datetime.datetime(2012, 3, 14, 5, 30, 6)
-        assert time_spec.next_time(start_date, 2012, 3, 14) is None
-        time = time_spec.next_time(start_date, 2012, 3, 15)
+        assert time_spec.next_time(start_date, True) is None
+        time = time_spec.next_time(start_date, False)
         assert_equal(time, datetime.time(1, 20, 4))
 
 
