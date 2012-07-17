@@ -62,7 +62,7 @@ class RunState(object):
         self.channel = None
 
 
-class NodePoolStore(object):
+class NodePoolStore(dict):
     """A Singleton to store Node and NodePool objects."""
 
     _instance = None
@@ -70,31 +70,19 @@ class NodePoolStore(object):
     def __init__(self):
         if self._instance is not None:
             raise ValueError("NodePoolStore is already instantiated.")
-        self.store = {}
+        super(NodePoolStore, self).__init__()
 
     @classmethod
     def get_instance(cls):
-        if not cls._instance:
+        if cls._instance is None:
             cls._instance = cls()
         return cls._instance
 
     def put(self, node):
-        self.store[node.name] = node
+        self[node.name] = node
 
     def update(self, nodes):
-        self.store.update((node.name, node) for node in nodes)
-
-    def __getitem__(self, name):
-        return self.store[name]
-
-    def get(self, name, default=None):
-        return self.store.get(name, default)
-
-    def __contains__(self, name):
-        return name in self.store
-
-    def clear(self):
-        self.store.clear()
+        super(NodePoolStore, self).update((node.name, node) for node in nodes)
 
 
 class NodePool(object):
@@ -229,7 +217,7 @@ class Node(object):
         A run consists of a very specific set of interfaces which allow us to
         execute a command on this remote machine and return results.
         """
-        log.info("Running %s on %s", run.id, self.hostname)
+        log.info("Running %s for %s on %s", run.command, run.id, self.hostname)
 
         # When this run completes, for good or bad, we'll inform the caller by
         # calling 'succeed' or 'fail' on the run Since the definined interface
@@ -254,7 +242,7 @@ class Node(object):
         else:
             log.info("Delaying execution of %s for %.2f secs",
                      run.id, fudge_factor)
-            reactor.callLater(fudge_factor, lambda: self._do_run(run))
+            reactor.callLater(fudge_factor, self._do_run, run)
 
         # We return the deferred here, but really we're trying to keep the rest
         # of the world from getting too involved with twisted.

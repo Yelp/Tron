@@ -1,5 +1,5 @@
 """
- tron.core.jobrun
+ Classes to manage job runs.
 """
 
 from collections import deque
@@ -51,8 +51,8 @@ class JobRun(Observable, Observer):
     EVENT_SUCCEEDED       = event.EventType(event.LEVEL_OK, "succeeded")
 
     def __init__(self, job_name, run_num, run_time, node, output_path=None,
-                base_context=None, action_runs=None, start_time=None,
-                end_time=None, action_graph=None, manual=None):
+                base_context=None, action_runs=None,
+                action_graph=None, manual=None):
         super(JobRun, self).__init__()
         self.job_name           = job_name
         self.run_num            = run_num
@@ -60,16 +60,14 @@ class JobRun(Observable, Observer):
         self.node               = node
         self.output_path        = output_path or filehandler.OutputPath()
         self.output_path.append(self.id)
-        self.start_time         = start_time
-        self.end_time           = end_time
-        self.action_runs        = None
         self.action_runs_proxy  = None
+        self._action_runs       = None
         self.action_graph       = action_graph
         # TODO: expose this through the api
         self.manual             = manual
 
         if action_runs:
-            self.register_action_runs(action_runs)
+            self.action_runs    = action_runs
 
         context = JobRunContext(self)
         self.context = command_context.CommandContext(context, base_context)
@@ -84,15 +82,17 @@ class JobRun(Observable, Observer):
         run = cls(job.name, run_num, run_time, node, job.output_path.clone(),
                 job.context, action_graph=job.action_graph, manual=manual)
 
-        action_runs = ActionRunFactory.build_action_run_collection(run)
-        run.register_action_runs(action_runs)
+        action_runs     = ActionRunFactory.build_action_run_collection(run)
+        run.action_runs = action_runs
         return run
 
     @classmethod
-    def from_state(cls, state_data, action_graph, output_path, context):
+    def from_state(cls, state_data, action_graph, output_path, context,
+                run_node):
         """Restore a JobRun from a serialized state."""
         node_pools = node.NodePoolStore.get_instance()
-        stored_node = node_pools.get(state_data.get('node_name'))
+        if state_data.get('node_name'):
+            run_node = node_pools.get(state_data['node_name'])
 
         # TODO: remove in 0.6
         if 'job_name' not in state_data:
@@ -105,9 +105,7 @@ class JobRun(Observable, Observer):
             job_name,
             state_data['run_num'],
             state_data['run_time'],
-            stored_node,
-            end_time=state_data['end_time'],
-            start_time=state_data['start_time'],
+            run_node,
             action_graph=action_graph,
             manual=state_data.get('manual', False),
             output_path=output_path,
@@ -115,7 +113,7 @@ class JobRun(Observable, Observer):
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
                 job_run, state_data['runs'], state_data['cleanup_run'])
-        job_run.register_action_runs(action_runs)
+        job_run.action_runs = action_runs
         return job_run
 
     @property
@@ -127,17 +125,19 @@ class JobRun(Observable, Observer):
             'run_time':         self.run_time,
             'node_name':        self.node.name if self.node else None,
             'runs':             self.action_runs.state_data,
-            'start_time':       self.start_time,
-            'end_time':         self.end_time,
             'cleanup_run':      self.action_runs.cleanup_action_state_data,
             'manual':           self.manual,
         }
 
-    def register_action_runs(self, run_collection):
+    def _get_action_runs(self):
+        return self._action_runs
+
+    def _set_action_runs(self, run_collection):
         """Store action runs and register callbacks."""
-        if self.action_runs:
+        if self._action_runs is not None:
             raise ValueError("ActionRunCollection already set on %s" % self)
-        self.action_runs = run_collection
+
+        self._action_runs = run_collection
         for action_run in run_collection.action_runs_with_cleanup:
             self.watch(action_run)
 
@@ -158,7 +158,14 @@ class JobRun(Observable, Observer):
                 'is_scheduled',
                 'is_skipped',
                 'is_starting',
+                'start_time',
+                'end_time'
             ])
+
+    def _del_action_runs(self):
+        del self._action_runs
+
+    action_runs = property(_get_action_runs, _set_action_runs, _del_action_runs)
 
     def seconds_until_run_time(self):
         run_time = self.run_time
@@ -175,7 +182,6 @@ class JobRun(Observable, Observer):
 
     def _do_start(self):
         log.info("Starting JobRun %s", self.id)
-        self.start_time = timeutils.current_time()
 
         self.action_runs.ready()
         started_runs = self._start_action_runs()
@@ -231,9 +237,8 @@ class JobRun(Observable, Observer):
         completes or if the job has no cleanup action, called once all action
         runs have reached a 'done' state.
 
-        Sets end_time and triggers an event to notifies the Job that is is done.
+        Triggers an event to notifies the Job that is is done.
         """
-        self.end_time = timeutils.current_time()
         failure = self.action_runs.is_failed
         event = self.EVENT_FAILED if failure else self.EVENT_SUCCEEDED
         self.notify(event)
@@ -243,17 +248,22 @@ class JobRun(Observable, Observer):
 
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
+        self.clear_observers()
+        self.action_runs.cleanup()
         event.EventManager.get_instance().remove(self)
         self.node = None
         self.action_graph = None
-        self.action_runs = None
-        self.clear_observers()
+        self._action_runs = None
         self.output_path.delete()
 
     @property
     def state(self):
         """The overall state of this job run. Based on the state of its actions.
         """
+        if not self.action_runs:
+            log.info("%s has no state" % self)
+            return ActionRun.STATE_UNKNOWN
+
         if self.action_runs.is_complete:
             return ActionRun.STATE_SUCCEEDED
         if self.action_runs.is_cancelled:
@@ -302,15 +312,16 @@ class JobRunCollection(object):
         """Factory method for creating a JobRunCollection from a config."""
         return cls(job_config.run_limit)
 
-    def restore_state(self, state_data, action_graph, output_path, context):
+    def restore_state(self, state_data, action_graph, output_path, context,
+            node_pool):
         """Apply state to all jobs from the state dict."""
         if self.runs:
             msg = "State can not be restored to a collection with runs."
             raise ValueError(msg)
 
         restored_runs = [
-            JobRun.from_state(
-                    run_state, action_graph, output_path.clone(), context)
+            JobRun.from_state(run_state, action_graph, output_path.clone(),
+                context, node_pool.next())
             for run_state in state_data
         ]
         self.runs.extend(restored_runs)
@@ -337,7 +348,6 @@ class JobRunCollection(object):
     def remove_pending(self):
         """Remove pending runs from the run list."""
         for pending in list(self.get_pending()):
-            pending.cancel()
             pending.cleanup()
             self.runs.remove(pending)
 

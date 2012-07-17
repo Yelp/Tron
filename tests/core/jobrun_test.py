@@ -1,12 +1,12 @@
 import datetime
 import pytz
-from testify import TestCase, setup, assert_equal, teardown
+from testify import TestCase, setup, assert_equal
 from testify.assertions import assert_in
 from tests.assertions import assert_length, assert_raises, assert_call
 from tests.mocks import MockNode
 from tron.core import jobrun, actionrun
 from tests.testingutils import Turtle
-from tron.utils import timeutils
+from tests import testingutils
 
 
 class JobRunContextTestCase(TestCase):
@@ -23,11 +23,11 @@ class JobRunContextTestCase(TestCase):
 
     def test_cleanup_job_status_failure(self):
         self.jobrun.action_runs.is_failed = True
-        assert_equal(self.context.cleanup_job_status, 'FAILURE')
 
 
+class JobRunTestCase(testingutils.MockTimeTestCase):
 
-class JobRunTestCase(TestCase):
+    now = datetime.datetime(2012, 3, 14, 15, 9, 20)
 
     @setup
     def setup_jobrun(self):
@@ -43,10 +43,6 @@ class JobRunTestCase(TestCase):
                 ))
         self.job_run.watch = Turtle()
         self.job_run.notify = Turtle()
-
-    @teardown
-    def teardown_jobrun(self):
-        timeutils.override_current_time(None)
 
     def test__init__(self):
         assert_equal(self.job_run.job_name, 'jobname')
@@ -79,39 +75,35 @@ class JobRunTestCase(TestCase):
         assert not state_data['manual']
         assert_equal(state_data['run_time'], self.run_time)
 
-    def test_register_action_runs(self):
-        self.job_run.action_runs = None
+    def test_set_action_runs(self):
+        self.job_run._action_runs = None
         action_runs = [Turtle(), Turtle()]
         run_collection = Turtle(action_runs_with_cleanup=action_runs)
-        self.job_run.register_action_runs(run_collection)
+        self.job_run._set_action_runs(run_collection)
         assert_length(self.job_run.watch.calls, 2)
         for i in xrange(2):
             assert_call(self.job_run.watch, i, action_runs[i])
         assert_equal(self.job_run.action_runs, run_collection)
         assert self.job_run.action_runs_proxy
 
-    def test_register_action_runs_none(self):
-        self.job_run.action_runs = None
+    def test_set_action_runs_none(self):
+        self.job_run._action_runs = None
         run_collection = Turtle(action_runs_with_cleanup=[])
-        self.job_run.register_action_runs(run_collection)
+        self.job_run._set_action_runs(run_collection)
         assert_length(self.job_run.watch.calls, 0)
         assert_equal(self.job_run.action_runs, run_collection)
 
-    def test_register_action_duplicate(self):
+    def test_set_action_runs_duplicate(self):
         run_collection = Turtle(action_runs_with_cleanup=[])
         assert_raises(ValueError,
-                self.job_run.register_action_runs, run_collection)
+            self.job_run._set_action_runs, run_collection)
 
     def test_seconds_until_run_time(self):
-        now = datetime.datetime(2012, 3, 14, 15, 9, 20)
-        timeutils.override_current_time(now)
         seconds = self.job_run.seconds_until_run_time()
         assert_equal(seconds, 6)
 
     def test_seconds_until_run_time_with_tz(self):
         self.job_run.run_time = self.run_time.replace(tzinfo=pytz.utc)
-        now = datetime.datetime(2012, 3, 14, 15, 9, 20)
-        timeutils.override_current_time(now)
         seconds = self.job_run.seconds_until_run_time()
         assert_equal(seconds, 6)
 
@@ -139,12 +131,10 @@ class JobRunTestCase(TestCase):
         assert_length(self.job_run.notify.calls, 1)
 
     def test_do_start(self):
-        timeutils.override_current_time(self.run_time)
         startable_runs = [Turtle(), Turtle(), Turtle()]
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
         assert self.job_run._do_start()
-        assert_equal(self.job_run.start_time, self.run_time)
         assert_call(self.job_run.action_runs.ready, 0)
         for i, startable_run in enumerate(startable_runs):
             assert_call(startable_run.start, 0)
@@ -153,19 +143,15 @@ class JobRunTestCase(TestCase):
         assert_call(self.job_run.notify, 0, self.job_run.EVENT_STARTED)
 
     def test_do_start_all_failed(self):
-        timeutils.override_current_time(self.run_time)
         self.job_run._start_action_runs = lambda: [None]
 
         assert not self.job_run._do_start()
-        assert_equal(self.job_run.start_time, self.run_time)
         assert_length(self.job_run.notify.calls, 0)
 
     def test_do_start_some_failed(self):
-        timeutils.override_current_time(self.run_time)
         self.job_run._start_action_runs = lambda: [True, None]
 
         assert self.job_run._do_start()
-        assert_equal(self.job_run.start_time, self.run_time)
         assert_length(self.job_run.notify.calls, 1)
         assert_call(self.job_run.notify, 0, self.job_run.EVENT_STARTED)
 
@@ -246,20 +232,20 @@ class JobRunTestCase(TestCase):
     def test_state(self):
         assert_equal(self.job_run.state, actionrun.ActionRun.STATE_SUCCEEDED)
 
+    def test_state_with_no_action_runs(self):
+        self.job_run._action_runs = None
+        assert_equal(self.job_run.state, actionrun.ActionRun.STATE_UNKNOWN)
+
     def test_finalize(self):
-        timeutils.override_current_time(self.run_time)
         self.job_run.action_runs.is_failed = False
         self.job_run.finalize()
         assert_call(self.job_run.notify, 0, self.job_run.EVENT_SUCCEEDED)
         assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_DONE)
-        assert_equal(self.job_run.end_time, self.run_time)
 
     def test_finalize_failure(self):
-        timeutils.override_current_time(self.run_time)
         self.job_run.finalize()
         assert_call(self.job_run.notify, 0, self.job_run.EVENT_FAILED)
         assert_call(self.job_run.notify, 1, self.job_run.NOTIFY_DONE)
-        assert_equal(self.job_run.end_time, self.run_time)
 
     def test_cleanup(self):
         self.job_run.clear_observers = Turtle()
@@ -289,6 +275,7 @@ class JobRunFromStateTestCase(TestCase):
         self.run_time = datetime.datetime(2012, 3, 14, 15, 9 ,26)
         self.path = ['base', 'path']
         self.output_path = Turtle(clone=lambda: self.path)
+        self.node_pool = Turtle()
         self.action_run_state_data = [{
             'job_run_id':       'thejobname.22',
             'action_name':      'blingaction',
@@ -313,8 +300,8 @@ class JobRunFromStateTestCase(TestCase):
         self.context = Turtle()
 
     def test_from_state(self):
-        run = jobrun.JobRun.from_state(
-            self.state_data, self.action_graph, self.output_path, self.context)
+        run = jobrun.JobRun.from_state(self.state_data, self.action_graph,
+            self.output_path, self.context, self.node_pool)
         assert_length(run.action_runs.run_map, 1)
         assert_equal(run.job_name, self.state_data['job_name'])
         assert_equal(run.run_time, self.run_time)
@@ -323,19 +310,27 @@ class JobRunFromStateTestCase(TestCase):
         assert run.context.next
         assert run.action_graph
 
+    def test_from_state_node_no_longer_exists(self):
+        run = jobrun.JobRun.from_state(self.state_data, self.action_graph,
+            self.output_path, self.context, self.node_pool)
+        assert_length(run.action_runs.run_map, 1)
+        assert_equal(run.job_name, 'thejobname')
+        assert_equal(run.run_time, self.run_time)
+        assert not run.node
+
     def test_from_state_old_state_data(self):
         del self.state_data['manual']
         del self.state_data['job_name']
         del self.state_data['node_name']
         self.state_data['id'] = 'thejobname.22'
 
-        run = jobrun.JobRun.from_state(
-            self.state_data, self.action_graph, self.output_path, self.context)
+        run = jobrun.JobRun.from_state(self.state_data, self.action_graph,
+            self.output_path, self.context, self.node_pool)
         assert_length(run.action_runs.run_map, 1)
         assert_equal(run.job_name, 'thejobname')
         assert_equal(run.run_time, self.run_time)
         assert not run.manual
-        assert not run.node
+        assert_equal(run.node, self.node_pool)
 
 
 class MockJobRun(Turtle):
@@ -407,14 +402,14 @@ class JobRunCollectionTestCase(TestCase):
         context = Turtle()
 
         restored_runs = run_collection.restore_state(
-                state_data, action_graph, output_path, context)
+                state_data, action_graph, output_path, context, Turtle())
         assert_equal(run_collection.runs[0].run_num, 3)
         assert_equal(run_collection.runs[3].run_num, 0)
         assert_length(restored_runs, 4)
 
     def test_restore_state_with_runs(self):
         assert_raises(ValueError,
-                self.run_collection.restore_state, None, None, None, None)
+                self.run_collection.restore_state, None, None, None, None, None)
 
     def test_build_new_run(self):
         self.run_collection.remove_old_runs = Turtle()
@@ -455,7 +450,6 @@ class JobRunCollectionTestCase(TestCase):
         self.run_collection.remove_pending()
         assert_length(self.run_collection.runs, 3)
         assert_equal(self.run_collection.runs[0], self.job_runs[1])
-        assert_call(self.job_runs[0].cancel, 0)
         assert_call(self.job_runs[0].cleanup, 0)
 
     def test_get_run_by_state(self):

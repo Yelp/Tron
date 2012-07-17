@@ -21,6 +21,7 @@ class FileHandleWrapperTestCase(TestCase):
     @teardown
     def teardown_fh_wrapper(self):
         self.fh_wrapper.close()
+        FileHandleManager.reset()
 
     def test_init(self):
         assert_equal(self.fh_wrapper._fh, NullFileHandle)
@@ -76,6 +77,7 @@ class FileHandleManagerTestCase(TestCase):
 
     @setup
     def setup_fh_manager(self):
+        FileHandleManager.reset()
         self.file1 = NamedTemporaryFile('r')
         self.file2 = NamedTemporaryFile('r')
         FileHandleManager.set_max_idle_time(2)
@@ -218,7 +220,6 @@ class OutputStreamSerializerTestCase(TestCase):
 
     @suite('integration')
     def test_init_with_output_path(self):
-        self.test_dir = 'tmp'
         path = OutputPath(self.test_dir, 'one', 'two', 'three')
         stream = OutputStreamSerializer(path)
         assert_equal(stream.base_path, str(path))

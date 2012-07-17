@@ -41,6 +41,8 @@ class JobContext(object):
 
         if date_name == 'last_success':
             last_success = self.job.runs.last_success
+            last_success = last_success.run_time if last_success else None
+
             time_value = timeutils.DateArithmetic.parse(date_spec, last_success)
             if time_value:
                 return time_value
@@ -125,7 +127,6 @@ class Job(Observable, Observer):
         self.action_graph   = job.action_graph
         self.enabled        = job.enabled
         self.output_path    = job.output_path
-        self.context        = job.context
         self.notify(self.EVENT_RECONFIGURED)
 
     @property
@@ -158,8 +159,8 @@ class Job(Observable, Observer):
                 state_data['runs'],
                 self.action_graph,
                 self.output_path.clone(),
-                self.context
-        )
+                self.context,
+                self.node_pool)
         for run in job_runs:
             self.watch(run)
 
@@ -202,7 +203,6 @@ class Job(Observable, Observer):
                 'node_pool',
                 'all_nodes',
                 'action_graph',
-                'enabled',
                 'output_path',
         ]
         return all(
@@ -224,7 +224,8 @@ class JobScheduler(Observer):
     """
 
     def __init__(self, job):
-        self.job = job
+        self.job                = job
+        self.shutdown_requested = False
         self.watch(job)
 
     def restore_job_state(self, job_state_data):
@@ -233,9 +234,14 @@ class JobScheduler(Observer):
         scheduled = self.job.runs.get_scheduled()
         for job_run in scheduled:
             self._set_callback(job_run)
+        # Ensure we have at least 1 scheduled run
+        self.schedule()
 
     def enable(self):
         """Enable the job and start its scheduling cycle."""
+        if self.job.enabled:
+            return
+
         self.job.enabled = True
         for job_run in self.get_runs_to_schedule(ignore_last_run_time=True):
             self._set_callback(job_run)
@@ -244,6 +250,11 @@ class JobScheduler(Observer):
         """Disable the job and cancel and pending scheduled jobs."""
         self.job.enabled = False
         self.job.runs.cancel_pending()
+
+    @property
+    def is_shutdown(self):
+        """Return True if there are no running or starting runs."""
+        return not any(self.job.runs.get_active())
 
     def manual_start(self, run_time=None):
         """Trigger a job run manually (instead of from the scheduler)."""
@@ -279,6 +290,9 @@ class JobScheduler(Observer):
         """Triggered by a callback to actually start the JobRun. Also
         schedules the next JobRun.
         """
+        if self.shutdown_requested:
+            return
+
         # If the Job has been disabled after this run was scheduled, then cancel
         # the JobRun and do not schedule another
         if not self.job.enabled:
@@ -297,14 +311,20 @@ class JobScheduler(Observer):
         node = job_run.node if self.job.all_nodes else None
         # If there is another job run still running, queue or cancel this one
         if any(self.job.runs.get_active(node)):
-            if self.job.queueing:
-                log.info("%s still running, queueing %s." % (self.job, job_run))
-                return job_run.queue()
-
-            log.info("%s still running, cancelling %s." % (self.job, job_run))
-            return job_run.cancel()
+            self._queue_or_cancel_active(job_run)
+            return
 
         job_run.start()
+        if not self.job.scheduler.schedule_on_complete:
+            self.schedule()
+
+    def _queue_or_cancel_active(self, job_run):
+        if self.job.queueing:
+            log.info("%s still running, queueing %s." % (self.job, job_run))
+            return job_run.queue()
+
+        log.info("%s still running, cancelling %s." % (self.job, job_run))
+        job_run.cancel()
         self.schedule()
 
     def handle_job_events(self, _observable, event):
@@ -319,16 +339,16 @@ class JobScheduler(Observer):
         queued_run = self.job.runs.get_first_queued()
         if queued_run:
             reactor.callLater(0, self.run_job, queued_run, run_queued=True)
+
+        # Attempt to schedule a new run.  This will only schedule a run if the
+        # previous run was cancelled from a scheduled state, or if the job
+        # scheduler is `schedule_on_complete`.
+        self.schedule()
     handler = handle_job_events
 
     def get_runs_to_schedule(self, ignore_last_run_time=False):
-        """If the scheduler does not support queuing overlapping and this job
-        has queued runs, do not schedule any more yet. Otherwise schedule
-        the next run.
-        """
-        queue_overlapping = self.job.scheduler.queue_overlapping
-
-        if not queue_overlapping and self.job.runs.has_pending:
+        """Build and return the runs to schedule."""
+        if self.job.runs.has_pending:
             log.info("%s has pending runs, can't schedule more." % self.job)
             return []
 

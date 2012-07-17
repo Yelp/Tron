@@ -117,7 +117,7 @@ Time Zone
     or late on the days bordering each mode. See :ref:`dst_notes` for more
     information.
 
-    ::
+Example::
 
         time_zone: US/Pacific
 
@@ -130,93 +130,80 @@ Command Context
     Dictionary of custom :ref:`command context variables
     <command_context_variables>`. It is an arbitrary set of key-value pairs.
 
-    ::
+Example::
 
         command_context:
             PYTHON: /usr/bin/python
             TMPDIR: /tmp
 
-.. Keep this synchronized with man_tronfig
-
-.. _built_in_cc:
-
-Built-In Command Context Variables
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-
-**shortdate**
-    Current date in ``YYYY-MM-DD`` format. Supports simple arithmetic of the
-    form ``%(shortdate+6)s`` which returns a date 6 days in the future,
-    ``%(shortdate-2)s`` which returns a date 2 days before the run date.
-
-**year**
-    Current year in ``YYYY`` format. Supports the same arithmetic operations
-    as `shortdate`. For example, ``%(year-1)s`` would return the year previous
-    to the run date.
-
-**month**
-    Current month in `MM` format. Supports the same arithmetic operations
-    as `shortdate`. For example, ``%(month+2)s`` would return 2 months in the
-    future.
-
-**day**
-    Current day in `DD` format. Supports the same arithmetic operations
-    as `shortdate`. For example, ``%(day+1)s`` would return the day after the
-    run date.
-
-**unixtime**
-    Current timestamp. Supports addition and subtraction of seconds. For
-    example ``%(unixtime+20)s`` would return the timestamp 20 seconds after
-    the jobs runtime.
-
-**daynumber**
-    Current day number as an ordinal (datetime.toordinal()). Supports addition
-    and subtraction of days. For example ``%(daynumber-3)s`` would be 3 days
-    before the run date.
-
-**name**
-    Name of the job or service
-
-**node**
-    Hostname of the node the action is being run on
-
-
-Context variables only available to Jobs:
-
-**runid**
-    Run ID of the job or service (e.g. ``sample_job.23``)
-
-**cleanup_job_status**
-    ``SUCCESS`` if all actions have succeeded when the cleanup action runs,
-    ``FAILURE`` otherwise. ``UNKNOWN`` if used in an action other than the
-    cleanup action.
-
-
-Context variables only available to Services:
-
-**pid_file**
-    The filename of the pid file.
-
-**instance_number**
-    The number identifying this instance (will be 0 to n-1 where n is the
-    total number of instances).
+See a list of :ref:`built_in_cc`.
 
 
 Output Stream Directory
 -----------------------
-**output_stream_dir** allows you to specific the directory used to store the
-stdout/stderr logs from jobs.  It defaults to the `working_dir` option passed
-to :ref:`trond`.
+**output_stream_dir**
+    A path to the directory used to store the stdout/stderr logs from jobs.
+    It defaults to the ``--working_dir`` option passed to :ref:`trond`.
+
+Example::
+
+    output_stream_dir: "/home/tronuser/output/"
+
+
+.. _config_state:
+
+State Persistence
+-----------------
+**state_persistence**
+    Configure how trond should persist its state to disk. By default a `shelve`
+    store is used and saved to `./tron_state` in the working directory.
+
+    **store_type**
+        Valid options are:
+            **shelve** - uses the `shelve` module and saves to a local file
+
+            **sql** - uses `sqlalchemy <http://www.sqlalchemy.org/>`_ to save to a database (tested with version 0.7).
+
+            **mongo** - uses `pymongo` to save to a mongodb (tested with version 2.2).
+
+            **yaml** - uses `yaml` and saves to a local file (this is not recommend and is provided to be backwards compatible with previous versions of Tron).
+
+        You will need the appropriate python module for the option you choose.
+
+    **name**
+        The name of this store. This will be the filename for a **shelve** or
+        **yaml** store, or the database name for a **mongo** store. It is
+        just a label when used with an **sql** store.
+
+    **connection_details**
+        Ignored by **shelve** and **yaml** stores.
+
+        A connection string (see `sqlalchemy engine configuration <http://docs.sqlalchemy.org/en/latest/core/engines.html>`_) when using an **sql** store.
+
+        An HTTP query string when using **mongo**. Valid keys are: hostname, port, username, password.
+        Example: ``"hostname=localhost&port=5555"``
+
+    **buffer_size**
+        The number of save calls to buffer before writing the state.  Defaults to 1,
+        which is no buffering.
+
+
+Example::
+
+    state_persistence:
+        store_type: sql
+        name: local_sqlite
+        connection_details: "sqlite:///dest_state.db"
+        buffer_size: 1 # No buffer
 
 
 Nodes
 -----
 
 **nodes**
-    List of nodes, each with a ``name`` and a ``hostname``. (This section may
-    also contain node pools, but we recommend that you put those under
-    ``node_pools``.) ``name`` defaults to ``hostname``. If you do not specify
-    any nodes, Tron will create a node with name and hostname ``localhost``.
+    List of nodes, each with a ``name`` and a ``hostname``.  ``name`` defaults
+    to ``hostname``. Each of these nodes should be configured to allow SSH
+    connections from :command:`trond`.
 
 Example::
 
@@ -262,7 +249,8 @@ Logging
 As of v0.3.3 Logging is no longer configured in the tron configuration file.
 
 Tron uses Python's standard logging and by default uses a rotating log file
-handler that rotates files each day. Logs go to /var/log/tron/tron.log.
+handler that rotates files each day. The default log directory is
+``/var/log/tron/tron.log``.
 
 To configure logging pass -l <logging.conf> to trond. You can modify the
 default logging.conf by copying it from tron/logging.conf. See

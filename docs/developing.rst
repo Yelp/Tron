@@ -1,61 +1,69 @@
-Working on Tron
+.. _developing:
+
+Contributing to Tron
 ===============
+
+Tron is an open source project and welcomes contributions from the community.
+The source and issue tracker are hosted on github at
+http://github.com/yelp/Tron.
 
 Setting Up an Environment
 -------------------------
 
-Tron works well with `virtualenv <http://www.virtualenv.org>`_, so let's make
-one of those with `virtualenvwrapper
+Tron works well with `virtualenv <http://www.virtualenv.org>`_, which can be
+setup using `virtualenvwrapper
 <http://www.doughellmann.com/projects/virtualenvwrapper/>`_::
 
-    > mkvirtualenv tron --distribute --no-site-packages
-    > pip install -r req_dev.txt
+    $ mkvirtualenv tron --distribute --no-site-packages
+    $ pip install -r dev/req_dev.txt
 
-Here we used ``req_dev.txt`` instead of ``req.txt`` because `Testify
-<https://github.com/yelp/testify>`_ is required to run the tests and `Sphinx
-<http://sphinx.pocoo.org/>`_ is required to build the documentation.
+``req_dev.txt`` contains a list of packages required for development, including:
+`Testify <https://github.com/yelp/testify>`_ to run the tests and `Sphinx
+<http://sphinx.pocoo.org/>`_ to build the documentation.
 
 Coding Standards
 ----------------
 
 All code should be `PEP8 <http://www.python.org/dev/peps/pep-0008/>`_ compliant,
-and should pass pyflakes without warnings. The documentation must also be kept
-up to date with any changes in functionality, especially the man pages.
+and should pass pyflakes without warnings. All new code should include full
+test coverage, and bug fixes should include a test which reproduces the
+reported issue.
+
+This documentation must also be kept up to date with any changes in functionality.
 
 
 Running Tron in a Sandbox
 -------------------------
 
-If you're testing Tron by hand, you typically don't want to pollute your main
-directory structure with your test jobs and configs. To put everything in one
-directory, launch `trond` like this::
+The source package includes a development logging.conf and a
+sample configuration file with a few test cases. To run a development intsance
+of Tron create a working directory and start
+:command:`trond` using the following::
 
-    > mkdir wd
-    > bin/trond --working-dir=wd --pid-file=wd/tron.pid --verbose
+    $ mkdir wd
+    $ bin/trond --working-dir=wd --pid-file=wd/tron.pid --nodaemon -l dev/dev-logging.conf --config-file=tests/data/test_config.yaml
 
-You may be tempted to run with ``--nodaemon``, but all the interesting output
-goes to ``tron.log``, so you're better off running ``tail -f tron.log`` in a
-terminal. Kill ``trond`` when you're done with ``cat wd/tron.pid | xargs
-kill``.
 
 Running the Tests
 -----------------
+Tron uses the `Testify <https://github.com/Yelp/Testify>`_ unit testing
+framework.
 
-If you're working in a virtualenv and have installed Testify there (the
-recommended practice), you can run the tests with ``python `which testify`
-test`` from the repository root. You do this instead of just calling
-``testify`` in order for the correct Python executable and module search path
-to be used.
+
+Run the tests using ``make tests`` or ``testify tests``.  If you're using a
+virtualenv you may want to run ``python `which testify` test`` to have it
+use the correct environment.
+
+Under dev/ There is also a very useful test runner ``runtests.py``. This script
+uses the ``watchdog`` module to watch for file modifications, and then runs
+the appropriate unit tests.  This script is also a good way to verify that your
+test filenames match the proper convention.  If you don't see your tests run
+when you make a modification, it will print the expected filename for the
+test file.
 
 Contributing
 ------------
 
-If there's no Github issue associated with what you're working on, make one.
-
-Create a feature branch in Git and incorporate the issue number if applicable,
-probably as a suffix. (For example, this paragraph was written in
-``doc_refactor_49``.)
-
-Update the documentation (including the man pages and ``debian/changelog``)
-with your changes and `submit a pull request to yelp/tron on Github
-<http://www.github.com/yelp/tron/pull/new>`_.
+There should be a github issue created prior to all pull requests.  Pull requests
+should be made to the ``Yelp:development`` branch, and should include additions to
+``CHANGES.txt`` which describe what has changed.

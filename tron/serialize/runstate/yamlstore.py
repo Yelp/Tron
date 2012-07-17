@@ -8,9 +8,17 @@ from collections import namedtuple
 import itertools
 import operator
 import os
+from tron.serialize import runstate
+
 yaml = None # For pyflakes
 
 YamlKey = namedtuple('YamlKey', ['type', 'iden'])
+
+TYPE_MAPPING = {
+    runstate.JOB_STATE:     'jobs',
+    runstate.SERVICE_STATE: 'services',
+    runstate.MCP_STATE:     runstate.MCP_STATE
+}
 
 class YamlStateStore(object):
 
@@ -23,7 +31,7 @@ class YamlStateStore(object):
         self.buffer             = {}
 
     def build_key(self, type, iden):
-        return YamlKey(type, iden)
+        return YamlKey(TYPE_MAPPING[type], iden)
 
     def restore(self, keys):
         if not os.path.exists(self.filename):

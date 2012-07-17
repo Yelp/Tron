@@ -50,11 +50,12 @@ class FileHandleWrapper(object):
 
     def write(self, content):
         """Write content to the fh. Re-open if necessary."""
-        try:
-            self._fh = open(self.name, 'a')
-        except IOError, e:
-            log.error("Failed to open %s: %s", (self.name, e))
-            return
+        if self._fh == NullFileHandle:
+            try:
+                self._fh = open(self.name, 'a')
+            except IOError, e:
+                log.error("Failed to open %s: %s", self.name, e)
+                return
 
         self.last_accessed = time.time()
         self._fh.write(content)
@@ -69,7 +70,7 @@ class FileHandleWrapper(object):
 
 class FileHandleManager(object):
     """Creates FileHandleWrappers, closes handles when they have
-    been inactive for a period of time, and transparently re-open then next
+    been inactive for a period of time, and transparently re-open the next
     time they are needed. All files are opened in append mode.
 
     This class is singleton.  An already configured instance can be
@@ -85,8 +86,8 @@ class FileHandleManager(object):
             max_idle_time           - max idle time in seconds
         """
         if self.__class__._instance:
-            raise ValueError(
-                "FileHandleManager is a singleton. Call get_instance()")
+            msg = "FileHandleManager is a singleton. Call get_instance()"
+            raise ValueError(msg)
         self.max_idle_time = max_idle_time
         self.cache = OrderedDict()
         self.__class__._instance = self

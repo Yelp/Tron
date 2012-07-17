@@ -2,6 +2,7 @@
  A mock daemon for testing service handling.
 """
 import daemon
+import sys
 import time
 from tron.trondaemon import PIDFile
 
@@ -12,5 +13,8 @@ def do_main_program():
 
 
 if __name__ == "__main__":
-    with daemon.DaemonContext(pidfile=PIDFile('/tmp/mock_daemon.pid')):
+    pidfile = pidfile=PIDFile(sys.argv[1])
+    with daemon.DaemonContext(
+            pidfile=pidfile,
+            files_preserve=[pidfile.lock.file]):
         do_main_program()
