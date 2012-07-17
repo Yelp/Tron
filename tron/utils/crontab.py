@@ -42,6 +42,9 @@ class FieldParser(object):
         return source.split(',')
 
     def parse(self, source):
+        if source == '*':
+            return None
+
         groups  = [self.get_values(group) for group in self.get_groups(source)]
         return sorted(set(itertools.chain.from_iterable(groups)))
 

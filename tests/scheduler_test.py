@@ -1,14 +1,27 @@
 import calendar
 import datetime
-
+import mock
 import pytz
-from testify import setup, run, assert_equal
+
+from testify import setup, run, assert_equal, TestCase
 from testify import assert_gte, assert_lte, assert_gt, assert_lt
 from tests import testingutils
 
 from tron import scheduler
+from tron.config import schedule_parse
 from tron.config.schedule_parse import parse_daily_expression as parse_daily
 from tron.utils import timeutils
+
+
+class SchedulerFromConfigTestCase(TestCase):
+
+    def test_cron_scheduler(self):
+        line = "cron */5 * * 7,8 *"
+        config = schedule_parse.valid_schedule('test', line)
+        sched = scheduler.scheduler_from_config(config, mock.Mock())
+        start_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
+        next_time = sched.next_run_time(start_time)
+        assert_equal(next_time, datetime.datetime(2012, 7, 1, 0))
 
 
 class ConstantSchedulerTest(testingutils.MockTimeTestCase):

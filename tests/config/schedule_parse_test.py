@@ -10,7 +10,7 @@ class ValidCronSchedulerTestCase(TestCase):
         line = '5 0 L * *'.split()
         config = schedule_parse.valid_cron_scheduler(line)
         assert_equal(config.minutes, [5])
-        assert_equal(config.months, range(1, 13))
+        assert_equal(config.months, None)
         assert_equal(config.monthdays, ['LAST'])
 
 

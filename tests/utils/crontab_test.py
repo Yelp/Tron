@@ -22,9 +22,9 @@ class ParseCrontabTestCase(TestCase):
     def test_parse_asterisk(self):
         line = '* * * * *'
         actual = crontab.parse_crontab(line)
-        assert_equal(actual['minutes'], range(60))
-        assert_equal(actual['hours'], range(24))
-        assert_equal(actual['months'], range(1,13))
+        assert_equal(actual['minutes'], None)
+        assert_equal(actual['hours'], None)
+        assert_equal(actual['months'], None)
 
 
 class MinuteFieldParserTestCase(TestCase):

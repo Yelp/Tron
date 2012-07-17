@@ -41,7 +41,7 @@ def scheduler_from_config(config, time_zone):
     if isinstance(config, schedule_parse.ConfigGrocScheduler):
         return GeneralScheduler(
             time_zone=time_zone,
-            timestr=config.timestr,
+            timestr=config.timestr or '00:00',
             ordinals=config.ordinals,
             monthdays=config.monthdays,
             months=config.months,
@@ -55,6 +55,7 @@ def scheduler_from_config(config, time_zone):
             months=config.months,
             weekdays=config.weekdays,
             ordinals=config.ordinals,
+            seconds=[0],
             string_repr='CRON')
 
 
@@ -88,6 +89,7 @@ class GeneralScheduler(object):
             timestr=None,
             minutes=None,
             hours=None,
+            seconds=None,
             time_zone=None,
             string_repr=None):
         """Parameters:
@@ -112,9 +114,10 @@ class GeneralScheduler(object):
             weekdays=weekdays,
             months=months,
             monthdays=monthdays,
-            timestr=timestr or '00:00',
+            timestr=timestr,
             hours=hours,
             minutes=minutes,
+            seconds=seconds,
             timezone=time_zone.zone if time_zone else None)
 
     def next_run_time(self, start_time):
