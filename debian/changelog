@@ -1,3 +1,9 @@
+tron (0.5.0.2) unstable; urgency=low
+
+  * Fix a bug with daemonizing and some versions of twisted reactor.
+
+ -- Daniel Nephin <dnephin@yelp.com>  Tue, 17 Jul 2012 19:21:39 -0700
+
 tron (0.5.0) unstable; urgency=low
 
   * Names for nodes, jobs, actions and service can now contain underscore characters but are restricted to 255 characters.
