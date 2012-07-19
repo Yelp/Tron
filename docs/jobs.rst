@@ -120,7 +120,7 @@ Example Actions
 Scheduling
 ----------
 
-Tron supports three different kinds of schedules in config files.
+Tron supports four different kinds of schedules in config files.
 
 Interval
 ^^^^^^^^
@@ -157,6 +157,28 @@ Run the job on specific weekdays at a specific time. The time expression is
     schedule:                       # long form
         start_time: "07:00:00"
         days: "MWF"                 # this field is optional
+
+Cron
+^^^^
+
+Schedule a job using cron syntax.  Tron supports predefined schedules, ranges,
+and lists for each field. It supports the *L* in day of month field only (which
+schedules the job on the last day of the month). Only one of the day fields
+(day of month and day of week) can have a value.
+
+
+::
+
+    schedule: "cron */5 * * 7,8 *"  # Every 5 minutes in July and August
+
+::
+
+    schedule: "cron 0 3-6 * * *"    # Every hour between 3am and 6am
+
+::
+
+    schedule: "cron 30 4 L * *"     # The last day of the month at 4:30am
+
 
 Complex
 ^^^^^^^
