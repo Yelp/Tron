@@ -1,6 +1,17 @@
 What's New
 ==========
 
+0.5.1
+-----
+* Jobs which are disabled will no longer be re-enabled when part of their
+  configuration changes.
+* Individual actions for a Job can no longer be started independently before
+  a job is started. This was never intentionally supported.
+* Adding a new configuration option `allow_overlap` for Jobs, which allows
+  job runs to overlap each other.
+* Jobs can now be configured using crontab syntax. see :ref:`job_scheduling`
+
+
 0.5.0
 -----
 * Names for nodes, jobs, actions and service can now contain underscore characters
