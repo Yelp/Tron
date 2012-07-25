@@ -13,7 +13,7 @@ try:
 except ImportError:
     import json
 
-from twisted.web import http, resource, server
+from twisted.web import http, resource
 
 from tron import service, event
 from tron.api import adapter, controller
@@ -526,15 +526,3 @@ class RootResource(resource.Resource):
             'status_href':      request.uri + request.childLink('status'),
         }
         return respond(request, response)
-
-
-if __name__ == '__main__':
-    from twisted.internet import reactor
-    from testify.utils import turtle
-    master_control = turtle.Turtle()
-    master_control.jobs = {
-        'test_job': turtle.Turtle(name="test_job",
-                                  node=turtle.Turtle(hostname="batch0")),
-    }
-    reactor.listenTCP(8082, server.Site(RootResource(master_control)))
-    reactor.run()
