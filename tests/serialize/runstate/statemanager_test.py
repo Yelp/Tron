@@ -143,6 +143,11 @@ class PersistentStateManagerTestCase(TestCase):
         assert_raises(ValueError, testfunc)
         assert self.manager.enabled
 
+    def test_disabled_nested(self):
+        self.manager.enabled = False
+        with self.manager.disabled():
+            pass
+        assert not self.manager.enabled
 
 
 if __name__ == "__main__":

@@ -1,6 +1,52 @@
 What's New
 ==========
 
+0.5.1
+-----
+* Jobs which are disabled will no longer be re-enabled when part of their
+  configuration changes.
+* Individual actions for a Job can no longer be started independently before
+  a job is started. This was never intentionally supported.
+* Adding a new configuration option `allow_overlap` for Jobs, which allows
+  job runs to overlap each other.
+* Jobs can now be configured using crontab syntax. see :ref:`job_scheduling`
+
+
+0.5.0
+-----
+* Names for nodes, jobs, actions and service can now contain underscore characters
+  but are restricted to 255 characters.
+* trond now supports a graceful shutdown. Send trond SIGINT to have it wait for
+  all currently running jobs to complete before shutting down. SIGTERM
+  also performs some cleanup before terminating.
+* State serialization has changed.  See :ref:`config_state` for configuration
+  options.  `tools/migration/migrate_state.py` is included to migrate your
+  existing Tron state to a new store.  YAML store is now deprecated.
+* All relative path options to :ref:`trond` and relative paths in the configuration
+  will now be relative to the ``--working-dir`` directory instead of the current
+  working directory.
+* Old style config, which was deprecated in 0.3 will no longer work.
+
+
+0.4.1
+-----
+* :ref:`tronview` will once again attempt to find the tty width even when stdout is not a tty.
+* Fixed last_success for job context.
+* Job runs which are manually cancelled will now continue to schedule new runs.
+
+
+0.4.0
+-----
+
+* Jobs now continue to run all possible actions after one of its actions fail
+* Enabling a disabled job now schedules the next run using current time instead
+  of the last successful run (which could cause many runs to be
+  scheduled in the past if the job had been disabled for a while)
+* Command context is now better defined. see :ref:`built_in_cc`. Also adds support for a
+  last_success keyboard which supports date arithmetic.
+* Resolved many inconsistencies and bugs around Job scheduling.
+
+
 0.3.3
 -----
 

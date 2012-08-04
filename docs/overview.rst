@@ -1,20 +1,20 @@
 Overview
 ========
 
-Batch process scheduling on single UNIX machines has historically been managed
-by :command:`cron` and its derivatives. But if you have many batches and many
-machines, maintaining config files across them may be difficult. Tron solves
-this problem by centralizing the configuration and scheduling of jobs to a
-daemon.
+Batch process scheduling and service monitoring on a single UNIX machines has
+historically been managed by :command:`cron` and its derivatives. But if you
+have many batches, complex dependencies between batches, or many machines,
+maintaining config files across them may be difficult. Tron solves this
+problem by centralizing the configuration and scheduling of jobs to a single daemon.
 
-The Tron system is split into four programs:
+The Tron system is split into four commands:
 
 :ref:`trond`
     Daemon responsible for scheduling, running, and saving state. Provides an
     HTTP interface to tools.
 
 :ref:`tronview`
-    View job state and results.
+    View job and service state and output.
 
 :ref:`tronctl`
     Start, stop, enable, disable, and otherwise control jobs and services.
@@ -22,8 +22,7 @@ The Tron system is split into four programs:
 :ref:`tronfig`
     Change Tron's configuration while the daemon is still running.
 
-The config file uses YAML syntax and relies on several YAML features to
-validate.
+The config file uses YAML syntax, and is further described in :doc:`config`.
 
 Nodes, Jobs and Actions
 -----------------------
@@ -95,9 +94,6 @@ Nodes can be grouped into *pools*. To continue the previous example::
 (:ref:`overview_services` behave slightly differently.) When ``pool_action`` is
 complete, ``cleanup_action`` will run on the same node.
 
-Node pools may also exist under ``nodes``, but this is purely for backward
-compatibility and not recommended for new configurations.
-
 For more information, see :doc:`jobs`.
 
 .. _overview_services:
@@ -135,15 +131,6 @@ representing the work queue itself.
 
 For more information, see :doc:`services`.
 
-Notifications
--------------
-
-If you configure notifications, :command:`trond` will send you emails when
-something fails::
-
-    notification_options:
-      smtp_host: localhost
-      notification_addr: batch+live@example.com
 
 Caveats
 -------
@@ -153,12 +140,12 @@ watch out for.
 
 **Tron keeps an SSH connection open for the entire lifespan of a process.**
 This means that to upgrade :command:`trond`, you have to either wait until no
-jobs are running, or accept an inconsistent state.
+jobs are running, or accept an inconsistent state. This limitation is being
+worked on, and should be improved in later releases.
 
-**Tron stores state in a (potentially enormous) YAML file.** This file is
-susceptible to file system entropy and can be cumbersome to deal with.
+**Tron is under active development.** This means that some things will change.
+Whenever possible these changes will be backwards compatible, but in some
+cases there may be non-backwards compatible changes.
 
-**Tron is undergoing a major rewrite.** The configuration interface will remain
-backward compatible, but the rest of the system is getting an overhaul.  If
-Tron currently works for you, this shouldn't be a problem. The rewrite is
-happening in stages.
+**Tron does not support unicode.** Tron is built using `twisted <http://twistedmatrix.com/>`_
+which does not support unicode.

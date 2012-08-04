@@ -5,32 +5,29 @@ Tron schedulers
 
  class Scheduler(object):
 
-    queue_overlapping = <bool>
+    schedule_on_complete = <bool>
 
     def next_run_time(self, last_run_time):
         <returns datetime>
 
 
-
  next_run_time() should return a datetime which is the time the next job run
  will be run.
 
- queue_overlapping should be False if this scheduler should stop queueing
- runs once there is a queued or scheduled run already waiting.  It should
- be True if jobs should always be queued regardless of the current
- state of other jobs.
-
+ schedule_on_complete is a bool that identifies if this scheduler should have
+ jobs scheduled with the start_time of the previous run (False), or the
+ end time of the previous run (False).
 """
 import logging
 
 from pytz import AmbiguousTimeError, NonExistentTimeError
 from tron.config import schedule_parse
 
-from tron.utils import groctimespecification
+from tron.utils import trontimespec
 from tron.utils import timeutils
 
 
-log = logging.getLogger('tron.scheduler')
+log = logging.getLogger(__name__)
 
 
 def scheduler_from_config(config, time_zone):
@@ -41,21 +38,30 @@ def scheduler_from_config(config, time_zone):
     if isinstance(config, schedule_parse.ConfigIntervalScheduler):
         return IntervalScheduler(interval=config.timedelta)
 
-    if isinstance(config, schedule_parse.ConfigDailyScheduler):
-        return DailyScheduler(
+    if isinstance(config, schedule_parse.ConfigGrocScheduler):
+        return GeneralScheduler(
             time_zone=time_zone,
-            timestr=config.timestr,
+            timestr=config.timestr or '00:00',
             ordinals=config.ordinals,
             monthdays=config.monthdays,
             months=config.months,
-            weekdays=config.weekdays
-        )
+            weekdays=config.weekdays)
+
+    if isinstance(config, schedule_parse.ConfigCronScheduler):
+        return GeneralScheduler(
+            minutes=config.minutes,
+            hours=config.hours,
+            monthdays=config.monthdays,
+            months=config.months,
+            weekdays=config.weekdays,
+            ordinals=config.ordinals,
+            seconds=[0],
+            string_repr='CRON')
 
 
 class ConstantScheduler(object):
     """The constant scheduler schedules a new job immediately."""
-
-    queue_overlapping = False
+    schedule_on_complete = True
 
     def next_run_time(self, _):
         return timeutils.current_time()
@@ -70,16 +76,22 @@ class ConstantScheduler(object):
         return not self == other
 
 
-class DailyScheduler(object):
-    """Wrapper around SpecificTimeSpecification in the Google App Engine cron
-    library
+class GeneralScheduler(object):
+    """Scheduler which uses a TimeSpecification.
     """
+    schedule_on_complete = False
 
-    queue_overlapping = True
-
-    def __init__(self, ordinals=None, weekdays=None, months=None,
-                 monthdays=None, timestr=None, time_zone=None,
-                 string_repr=None):
+    def __init__(self,
+            ordinals=None,
+            weekdays=None,
+            months=None,
+            monthdays=None,
+            timestr=None,
+            minutes=None,
+            hours=None,
+            seconds=None,
+            time_zone=None,
+            string_repr=None):
         """Parameters:
           timestr     - the time of day to run, as 'HH:MM'
           ordinals    - first, second, third &c, as a set of integers in 1..5 to
@@ -95,34 +107,18 @@ class DailyScheduler(object):
           string_repr - Original string representation this was parsed from,
                         if applicable
         """
-        self.ordinals = ordinals
-        self.weekdays = weekdays
-        self.months = months
-        self.monthdays = monthdays
-        self.timestr = timestr or '00:00'
-        self.time_zone = time_zone
-        self.string_repr = string_repr
-
-        self._time_spec = None
-
-    @property
-    def time_spec(self):
-        if self._time_spec is None:
-            # calendar module has 0=Monday
-            # groc has 0=Sunday
-            if self.weekdays:
-                groc_weekdays = set((x + 1) % 7 for x in self.weekdays)
-            else:
-                groc_weekdays = None
-            self._time_spec = groctimespecification.SpecificTimeSpecification(
-                ordinals=self.ordinals,
-                weekdays=groc_weekdays,
-                months=self.months,
-                monthdays=self.monthdays,
-                timestr=self.timestr,
-                timezone=self.time_zone.zone if self.time_zone else None,
-            )
-        return self._time_spec
+        self.time_zone      = time_zone
+        self.string_repr    = string_repr or "DAILY"
+        self.time_spec      = trontimespec.TimeSpecification(
+            ordinals=ordinals,
+            weekdays=weekdays,
+            months=months,
+            monthdays=monthdays,
+            timestr=timestr,
+            hours=hours,
+            minutes=minutes,
+            seconds=seconds,
+            timezone=time_zone.zone if time_zone else None)
 
     def next_run_time(self, start_time):
         """Find the next time to run."""
@@ -140,25 +136,13 @@ class DailyScheduler(object):
                 # exist. Pretend like it's the later time, every time.
                 start_time = self.time_zone.localize(start_time, is_dst=True)
 
-        return self.time_spec.GetMatch(start_time)
+        return self.time_spec.get_match(start_time)
 
     def __str__(self):
-        # Backward compatible string representation which also happens to be
-        # user-friendly
-        if self.string_repr is None:
-            return 'DAILY'
-        else:
-            return self.string_repr
+        return self.string_repr
 
     def __eq__(self, other):
-        return isinstance(other, DailyScheduler) and \
-           all(getattr(self, attr) == getattr(other, attr)
-               for attr in ('ordinals',
-                            'weekdays',
-                            'months',
-                            'monthdays',
-                            'timestr',
-                            'time_zone'))
+        return hasattr(other, 'time_spec') and self.time_spec == other.time_spec
 
     def __ne__(self, other):
         return not self == other
@@ -168,8 +152,7 @@ class IntervalScheduler(object):
     """The interval scheduler runs a job (to success) based on a configured
     interval.
     """
-
-    queue_overlapping = False
+    schedule_on_complete = False
 
     def __init__(self, interval=None):
         self.interval = interval

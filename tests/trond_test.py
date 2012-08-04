@@ -1,23 +1,23 @@
 import datetime
 import os
-import sys
 from textwrap import dedent
-import time
 
-from testify import TestCase, setup, teardown, assert_equal, assert_in, suite
+from testify import assert_equal
 from testify import assert_gt
-
-from tests.sandbox import TronSandbox, TronSandboxException
-from tests.sandbox import wait_for_file_to_exist
+from tests import sandbox
+from tests.assertions import assert_length
 
 
 BASIC_CONFIG = """
+ssh_options:
+    agent: true
+
 nodes:
   - name: local
     hostname: 'localhost'
 
 state_persistence:
-    name: "/tmp/state_data.shelve"
+    name: "state_data.shelve"
     store_type: shelve
 
 """
@@ -33,88 +33,77 @@ jobs:
 
 DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
       - name: "another_echo_action"
-        command: "echo 'Today is %(shortdate)s, which is the same as %(year)s-%(month)s-%(day)s' && false" """
+        command: "echo 'Today is %(shortdate)s, which is the same
+                    as %(year)s-%(month)s-%(day)s' && false" """
 
 TOUCH_CLEANUP_FMT = """
     cleanup_action:
-      command: "touch %s.%%(runid)s" """
+      command: "echo 'at last'"
+"""
 
 
-class SandboxTestCase(TestCase):
+class TrondTestCase(sandbox.SandboxTestCase):
 
-    @setup
-    def make_sandbox(self):
-        self.sandbox = TronSandbox()
-
-    @teardown
-    def delete_sandbox(self):
-        self.sandbox.delete()
-
-
-class BasicTronTestCase(SandboxTestCase):
-
-    @suite('sandbox')
     def test_end_to_end_basic(self):
+        client = self.sandbox.client
         # start with a basic configuration
         self.sandbox.save_config(SINGLE_ECHO_CONFIG)
-        self.sandbox.start_trond()
+        self.sandbox.trond()
         # make sure it got in
-        assert_equal(self.sandbox.get_config(), SINGLE_ECHO_CONFIG)
+        assert_equal(client.config(), SINGLE_ECHO_CONFIG)
 
         # reconfigure and confirm results
-        canary = os.path.join(self.sandbox.tmp_dir, 'end_to_end_done')
-        second_config = DOUBLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT % canary
-        self.sandbox.upload_config(second_config)
-        assert_equal(self.sandbox.get_config(), second_config)
+        second_config = DOUBLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT
+        self.sandbox.tronfig(second_config)
+        events = client.events()
+        assert_equal(events[0]['name'], 'restoring')
+        assert_equal(events[1]['name'], 'run_created')
+        assert_equal(client.config(), second_config)
 
-        expected = {'jobs': [
-                {
-                    'action_names': ['echo_action', 'cleanup', 'another_echo_action'],
-                    'status': 'ENABLED',
-                    'href': '/jobs/echo_job',
-                    'last_success': None,
-                    'name': 'echo_job',
-                    'scheduler': 'INTERVAL:1:00:00',
-                    'node_pool': ['localhost'],
-                    'runs': None
-                }
-            ],
+        job = {
+            'action_names': ['echo_action', 'cleanup', 'another_echo_action'],
+            'status': 'ENABLED',
+            'href': '/jobs/echo_job',
+            'last_success': None,
+            'name': 'echo_job',
+            'scheduler': 'INTERVAL:1:00:00',
+            'node_pool': ['localhost'],
+            'runs': None
+        }
+        expected = {
+            'jobs': [job],
             'status_href': '/status',
             'jobs_href': '/jobs',
             'config_href': '/config',
             'services': [],
             'services_href': '/services'
         }
-        result = self.sandbox.list_all()
+        result = self.sandbox.client.home()
         assert_equal(result, expected)
 
         # run the job and check its output
-        self.sandbox.ctl('start', 'echo_job')
+        self.sandbox.tronctl(['start', 'echo_job'])
 
-        try:
-            wait_for_file_to_exist(canary + '.echo_job.1.cleanup')
-        except TronSandboxException:
-            print >> sys.stderr, "trond appears to have crashed. Log:"
-            print >> sys.stderr, self.sandbox.log_contents()
-            raise
+        def wait_on_cleanup():
+            return (len(client.job('echo_job')['runs']) >= 2 and
+                    client.action('echo_job.1.echo_action')['state'] == 'SUCC')
+        sandbox.wait_on_sandbox(wait_on_cleanup)
 
-        echo_action_run = self.sandbox.list_action_run(
-            'echo_job', 1, 'echo_action')
-        another_echo_action_run = self.sandbox.list_action_run(
-            'echo_job', 1, 'another_echo_action')
+        echo_action_run = client.action('echo_job.1.echo_action')
+        other_act_run = client.action('echo_job.1.another_echo_action')
         assert_equal(echo_action_run['state'], 'SUCC')
         assert_equal(echo_action_run['stdout'], ['Echo!'])
-        assert_equal(another_echo_action_run['state'], 'FAIL')
-        assert_equal(another_echo_action_run['stdout'],
-                     [datetime.datetime.now().strftime(
-                         'Today is %Y-%m-%d, which is the same as %Y-%m-%d')])
-        assert_equal(self.sandbox.list_job_run('echo_job', 1)['state'],
-                     'FAIL')
+        assert_equal(other_act_run['state'], 'FAIL')
 
-    @suite('sandbox')
+        now = datetime.datetime.now()
+        stdout = now.strftime('Today is %Y-%m-%d, which is the same as %Y-%m-%d')
+        assert_equal(other_act_run['stdout'], [stdout])
+
+        assert_equal(client.job_runs('echo_job.1')['state'], 'FAIL')
+
     def test_tronview_basic(self):
         self.sandbox.save_config(SINGLE_ECHO_CONFIG)
-        self.sandbox.start_trond()
+        self.sandbox.trond()
 
         expected = """\nServices:\nNo Services\n\n\nJobs:
             Name       State       Scheduler           Last Success
@@ -124,25 +113,22 @@ class BasicTronTestCase(SandboxTestCase):
         def remove_line_space(s):
             return [l.replace(' ', '') for l in s.split('\n')]
 
-        assert_equal(
-            remove_line_space(self.sandbox.tronview()[0]),
-            remove_line_space(expected)
-        )
+        actual = self.sandbox.tronview()[0]
+        assert_equal(remove_line_space(actual), remove_line_space(expected))
 
-    @suite('sandbox')
     def test_tronctl_basic(self):
-        canary = os.path.join(self.sandbox.tmp_dir, 'tronctl_basic_done')
-        self.sandbox.save_config(SINGLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT % canary)
-        self.sandbox.start_trond()
-
-        # run the job and check its output
+        client = self.sandbox.client
+        self.sandbox.save_config(SINGLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT)
+        self.sandbox.trond()
         self.sandbox.tronctl(['start', 'echo_job'])
-        wait_for_file_to_exist(canary + '.echo_job.1.cleanup')
 
-        assert_equal(self.sandbox.list_action_run('echo_job', 1, 'echo_action')['state'], 'SUCC')
-        assert_equal(self.sandbox.list_job_run('echo_job', 1)['state'], 'SUCC')
+        def wait_on_cleanup():
+            return client.action('echo_job.1.cleanup')['state'] == 'SUCC'
+        sandbox.wait_on_sandbox(wait_on_cleanup)
 
-    @suite('sandbox')
+        assert_equal(client.action('echo_job.1.echo_action')['state'], 'SUCC')
+        assert_equal(client.job_runs('echo_job.1')['state'], 'SUCC')
+
     def test_tronctl_service_zap(self):
         SERVICE_CONFIG = dedent("""
         nodes:
@@ -157,47 +143,53 @@ class BasicTronTestCase(SandboxTestCase):
             monitor_interval: 0.1
         """ % {'pid': os.getpid()})
 
-        self.sandbox.start_trond()
-        self.sandbox.upload_config(SERVICE_CONFIG)
-        time.sleep(1)
+        client = self.sandbox.client
+        self.sandbox.trond()
+        self.sandbox.tronfig(SERVICE_CONFIG)
 
-        self.sandbox.ctl('start', 'fake_service')
+        wait_on_config = lambda: 'fake_service' in client.config()
+        sandbox.wait_on_sandbox(wait_on_config)
+
         self.sandbox.tronctl(['start', 'fake_service'])
 
-        time.sleep(1)
+        def wait_on_start():
+            return client.service('fake_service')['state'] == 'STARTING'
+        sandbox.wait_on_sandbox(wait_on_start)
+
         self.sandbox.tronctl(['zap', 'fake_service'])
-        assert_equal('DOWN', self.sandbox.list_service('fake_service')['state'])
+        assert_equal('DOWN', client.service('fake_service')['state'])
 
-    @suite('sandbox')
     def test_cleanup_on_failure(self):
-        canary = os.path.join(self.sandbox.tmp_dir, 'end_to_end_done')
-
         FAIL_CONFIG = BASIC_CONFIG + dedent("""
         jobs:
           - name: "failjob"
             node: local
-            schedule: "interval 1 seconds"
+            schedule: "constant"
             actions:
               - name: "failaction"
                 command: "failplz"
-        """) + TOUCH_CLEANUP_FMT % canary
+        """) + TOUCH_CLEANUP_FMT
 
-        # start with a basic configuration
+        client = self.sandbox.client
         self.sandbox.save_config(FAIL_CONFIG)
-        self.sandbox.start_trond()
+        self.sandbox.trond()
 
-        time.sleep(3)
+        def wait_on_failaction():
+            return client.action('failjob.0.failaction')['state'] == 'FAIL'
+        sandbox.wait_on_sandbox(wait_on_failaction)
 
-        assert os.path.exists(canary + '.failjob.0.cleanup')
-        assert_gt(len(self.sandbox.list_job('failjob')['runs']), 1)
+        def wait_on_cleanup():
+            return client.action('failjob.1.cleanup')['state'] == 'SUCC'
+        sandbox.wait_on_sandbox(wait_on_cleanup)
 
-    @suite('sandbox')
+        assert_gt(len(client.job('failjob')['runs']), 1)
+
     def test_skip_failed_actions(self):
         CONFIG = BASIC_CONFIG + dedent("""
         jobs:
           - name: "multi_step_job"
             node: local
-            schedule: "interval 1 seconds"
+            schedule: "constant"
             actions:
               - name: "broken"
                 command: "failingcommand"
@@ -206,54 +198,107 @@ class BasicTronTestCase(SandboxTestCase):
                 requires: broken
         """)
 
+        client = self.sandbox.client
         self.sandbox.save_config(CONFIG)
-        self.sandbox.start_trond()
-        time.sleep(2)
+        self.sandbox.trond()
 
+        def build_wait_func(state):
+            def wait_on_multi_step_job():
+                action_name = 'multi_step_job.0.broken'
+                return client.action(action_name)['state'] == state
+            return wait_on_multi_step_job
+
+        sandbox.wait_on_sandbox(build_wait_func('FAIL'))
         self.sandbox.tronctl(['skip', 'multi_step_job.0.broken'])
-        action_run = self.sandbox.list_action_run('multi_step_job', 0, 'broken')
-        assert_equal(action_run['state'], 'SKIP')
+        assert_equal(client.action('multi_step_job.0.broken')['state'], 'SKIP')
 
-        action_run = self.sandbox.list_action_run('multi_step_job', 0, 'works')
-        assert_equal(action_run['state'], 'SUCC')
-        job_run = self.sandbox.list_job_run('multi_step_job', 0)
-        assert_equal(job_run['state'], 'SUCC')
+        sandbox.wait_on_sandbox(build_wait_func('SKIP'))
+        assert_equal(client.action('multi_step_job.0.works')['state'], 'SUCC')
+        assert_equal(client.job_runs('multi_step_job.0')['state'], 'SUCC')
 
-
-    @suite('sandbox')
     def test_failure_on_multi_step_job_doesnt_wedge_tron(self):
         FAIL_CONFIG = BASIC_CONFIG + dedent("""
             jobs:
-              - &random_job
-                name: "random_failure_job"
-                node: local
-                queueing: true
-                schedule: "interval 2 seconds"
-                actions:
-                  - &fa
-                    name: "fa"
-                    command: "sleep 1.1; failplz"
-                  - &sa
-                    name: "sa"
-                    command: "echo 'you will never see this'"
-                    requires: [fa]
+                -   name: "random_failure_job"
+                    node: local
+                    queueing: true
+                    schedule: "constant"
+                    actions:
+                        -   name: "fa"
+                            command: "sleep 0.1; failplz"
+                        -   name: "sa"
+                            command: "echo 'you will never see this'"
+                            requires: [fa]
         """)
 
-        with open(self.sandbox.config_file, 'w') as f:
-            f.write(FAIL_CONFIG)
-        self.sandbox.start_trond()
+        client = self.sandbox.client
+        self.sandbox.save_config(FAIL_CONFIG)
+        self.sandbox.trond()
 
-        # Wait a little to give things time to explode
-        time.sleep(1.5)
-        jerb = self.sandbox.list_job('random_failure_job')
-        total_tries = 0
-        while ((len(jerb['runs']) < 3 or
-                jerb['runs'][-1][u'state'] not in [u'FAIL', u'SUCC']) and
-                total_tries < 30):
-            time.sleep(0.2)
-            jerb = self.sandbox.list_job('random_failure_job')
-            total_tries += 1
+        def wait_on_random_failure_job():
+            return len(client.job('random_failure_job')['runs']) >= 4
+        sandbox.wait_on_sandbox(wait_on_random_failure_job)
 
-        assert_equal(jerb['runs'][-1][u'state'], 'FAIL')
-        assert_in(jerb['runs'][-2][u'state'], ['FAIL', 'SCHE', 'RUNN', 'START'])
-        assert_equal(jerb['runs'][0][u'state'], 'SCHE')
+        job_runs = client.job('random_failure_job')['runs']
+        assert_equal([run['state'] for run in job_runs[-3:]], ['FAIL'] * 3)
+
+    def test_cancel_schedules_a_new_run(self):
+        config = BASIC_CONFIG + dedent("""
+            jobs:
+                -   name: "a_job"
+                    node: local
+                    schedule: "daily 05:00:00"
+                    actions:
+                        -   name: "first_action"
+                            command: "echo OK"
+        """)
+
+        client = self.sandbox.client
+        self.sandbox.save_config(config)
+        self.sandbox.trond()
+
+        self.sandbox.tronctl(['cancel', 'a_job.0'])
+        def wait_on_cancel():
+            return len(client.job('a_job')['runs']) == 2
+        sandbox.wait_on_sandbox(wait_on_cancel)
+
+        job_runs = client.job('a_job')['runs']
+        assert_length(job_runs, 2)
+        run_states = [run['state'] for run in job_runs]
+        assert_equal(run_states, ['SCHE', 'CANC'])
+
+    def test_service_reconfigure(self):
+        config_template = BASIC_CONFIG + dedent("""
+            services:
+                -   name: "a_service"
+                    node: local
+                    pid_file: "{wd}/%(name)s-%(instance_number)s.pid"
+                    command: "{command}"
+                    monitor_interval: {monitor_interval}
+                    restart_interval: 2
+        """)
+
+        command = ("cd {path} && PYTHONPATH=. python "
+                    "{path}/tests/mock_daemon.py %(pid_file)s")
+        command = command.format(path=os.path.abspath('.'))
+        config = config_template.format(
+            command=command, monitor_interval=1, wd=self.sandbox.tmp_dir)
+        client = self.sandbox.client
+        self.sandbox.save_config(config)
+        self.sandbox.trond()
+        self.sandbox.tronctl(['start', 'a_service'])
+
+        def wait_on_service_start():
+            return client.service('a_service')['state'] == 'UP'
+        sandbox.wait_on_sandbox(wait_on_service_start)
+
+        new_config = config_template.format(
+            command=command, monitor_interval=2, wd=self.sandbox.tmp_dir)
+        self.sandbox.tronfig(new_config)
+
+        sandbox.wait_on_sandbox(wait_on_service_start)
+        self.sandbox.tronctl(['stop', 'a_service'])
+
+        def wait_on_service_stop():
+            return client.service('a_service')['state'] == 'DOWN'
+        sandbox.wait_on_sandbox(wait_on_service_stop)

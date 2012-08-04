@@ -1,3 +1,43 @@
+tron (0.5.1) unstable; urgency=low
+
+  * Jobs which are disabled will no longer be re-enabled when part of their configuration changes.
+  * Individual actions for a Job can no longer be started independently before a job is started. This was never intentionally supported.
+  * Adding a new configuration option `allow_overlap` for Jobs, which allows job runs to overlap each other.
+  * Jobs can now be configured using crontab syntax.
+
+ -- Daniel Nephin <dnephin@yelp-dnephin>  Wed, 25 Jul 2012 16:25:53 -0700
+
+tron (0.5.0.2) unstable; urgency=low
+
+  * Fix a bug with daemonizing and some versions of twisted reactor.
+
+ -- Daniel Nephin <dnephin@yelp.com>  Tue, 17 Jul 2012 19:21:39 -0700
+
+tron (0.5.0) unstable; urgency=low
+
+  * Names for nodes, jobs, actions and service can now contain underscore characters but are restricted to 255 characters.
+  * trond now supports a graceful shutdown. Send trond SIGINT to have it wait for all currently running jobs to complete before shutting down. SIGTERM also performs some cleanup before terminating.
+  * State serialization has changed.  See :ref:`config_state` for configuration options.  `tools/migration/migrate_state.py` is included to migrate your existing Tron state to a new store.  YAML store is now deprecated.
+  * Old style config, which was deprecated in 0.3 will no longer work.
+
+ -- Daniel Nephin <dnephin@yelp.com>  Tue, 05 Jun 2012 18:47:34 -0700
+
+tron (0.4.1) unstable; urgency=low
+
+  * tronview will once again attempt to find the tty width even when stdout is not a tty.
+  * Fixed last_success for job context.
+  * Job runs which are manually cancelled will now continue to schedule new runs.
+
+ -- Daniel Nephin <dnephin@yelp.com>  Wed, 30 May 2012 16:35:44 -0700
+
+tron (0.4.0) unstable; urgency=low
+
+  * Jobs now continue to run all possible actions after one of its actions fail
+  * Enabling a disabled job now schedules the next run using current time instead of the last successful run (which could cause many runs to be scheduled in the past if the job had been disabled for a while)
+  * Resolved many inconsistencies and bugs around Job scheduling.
+
+ -- Daniel Nephin <dnephin@yelp.com>  Fri, 11 May 2012 18:00:00 -0800
+
 tron (0.3.3-1) unstable; urgency=low
 
   * Remove logrotate script from debian packaging

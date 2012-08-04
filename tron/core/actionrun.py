@@ -10,7 +10,7 @@ from tron.serialize import filehandler
 from tron import node
 from tron.actioncommand import ActionCommand
 
-from tron.utils import state, timeutils, proxy
+from tron.utils import state, timeutils, proxy, iteration
 from tron.utils.observer import Observer
 
 log = logging.getLogger(__name__)
@@ -33,7 +33,7 @@ class ActionRunContext(object):
 
     @property
     def runid(self):
-        return self.action_run.id
+        return self.action_run.job_run_id
 
     @property
     def actionname(self):
@@ -45,7 +45,7 @@ class ActionRunContext(object):
 
     def __getitem__(self, name):
         """Attempt to parse date arithmetic syntax and apply to run_time."""
-        run_time = self.action_run.run_time
+        run_time = self.action_run.job_run_time
         time_value = timeutils.DateArithmetic.parse(name, run_time)
         if time_value:
             return time_value
@@ -87,7 +87,7 @@ class ActionRunFactory(object):
         """Create an ActionRun for a JobRun and Action."""
         run_node = action.node_pool.next() if action.node_pool else job_run.node
 
-        action_run = ActionRun(
+        return ActionRun(
             job_run.id,
             action.name,
             run_node,
@@ -97,7 +97,6 @@ class ActionRunFactory(object):
             output_path=job_run.output_path.clone(),
             cleanup=action.is_cleanup
         )
-        return action_run
 
     @classmethod
     def action_run_from_state(cls, job_run, state_data, cleanup=False):
@@ -106,6 +105,7 @@ class ActionRunFactory(object):
             state_data,
             job_run.context,
             job_run.output_path.clone(),
+            job_run.node,
             cleanup=cleanup
         )
 
@@ -160,6 +160,7 @@ class ActionRun(Observer):
          STATE_UNKNOWN)
     )
 
+    # Failed render command is false to ensure that it will fail when run
     FAILED_RENDER = 'false'
 
     def __init__(self, job_run_id, name, node, run_time, bare_command=None,
@@ -169,7 +170,7 @@ class ActionRun(Observer):
         self.job_run_id         = job_run_id
         self.action_name        = name
         self.node               = node
-        self.run_time           = run_time      # parent JobRun start time
+        self.job_run_time       = run_time      # parent JobRun start time
         self.start_time         = start_time    # ActionRun start time
         self.end_time           = end_time
         self.exit_status        = None
@@ -200,7 +201,8 @@ class ActionRun(Observer):
         return self.machine.check(state)
 
     @classmethod
-    def from_state(cls, state_data, parent_context, output_path, cleanup=False):
+    def from_state(cls, state_data, parent_context, output_path,
+                job_run_node, cleanup=False):
         """Restore the state of this ActionRun from a serialized state."""
         node_pools = node.NodePoolStore.get_instance()
 
@@ -210,12 +212,15 @@ class ActionRun(Observer):
         else:
             job_run_id = state_data['job_run_id']
             action_name = state_data['action_name']
-        rendered_command = state_data.get('rendered_command')
 
+        if state_data.get('node_name'):
+            job_run_node = node_pools.get(state_data['node_name'])
+
+        rendered_command = state_data.get('rendered_command')
         run = cls(
             job_run_id,
             action_name,
-            node_pools.get(state_data.get('node_name')),
+            job_run_node,
             state_data['run_time'],
             parent_context=parent_context,
             output_path=output_path,
@@ -230,7 +235,7 @@ class ActionRun(Observer):
 
         # Transition running to fail unknown because exit status was missed
         if run.is_running:
-            run.machine.transition('fail_unknown')
+            run._done('fail_unknown')
         if run.is_queued or run.is_starting:
             run.fail(None)
         return run
@@ -317,7 +322,7 @@ class ActionRun(Observer):
             'job_run_id':       self.job_run_id,
             'action_name':      self.action_name,
             'state':            str(self.state),
-            'run_time':         self.run_time,
+            'run_time':         self.job_run_time,
             'start_time':       self.start_time,
             'end_time':         self.end_time,
             'command':          command,
@@ -336,13 +341,13 @@ class ActionRun(Observer):
 
         try:
             self.rendered_command = self.render_command()
-            return self.rendered_command
         except Exception:
             log.error("Failed generating rendering command\n%s" %
                       traceback.format_exc())
 
             # Return a command string that will always fail
-            return self.FAILED_RENDER
+            self.rendered_command = self.FAILED_RENDER
+        return self.rendered_command
 
     @property
     def is_valid_command(self):
@@ -366,6 +371,10 @@ class ActionRun(Observer):
     @property
     def is_active(self):
         return self.is_starting or self.is_running
+
+    def cleanup(self):
+        self.machine.clear_observers()
+        self.cancel()
 
     def __getattr__(self, name):
         """Support convenience properties for checking if this ActionRun is in
@@ -395,22 +404,24 @@ class ActionRunCollection(object):
     def __init__(self, action_graph, run_map):
         self.action_graph       = action_graph
         self.run_map            = run_map
-
         # Setup proxies
         self.proxy_action_runs_with_cleanup = proxy.CollectionProxy(
             self.get_action_runs_with_cleanup, [
-                ('is_running',      any,    False),
-                ('is_starting',     any,    False),
-                ('is_scheduled',    any,    False),
-                ('is_cancelled',    any,    False),
-                ('is_active',       any,    False),
-                ('is_queued',       all,    False),
-                ('is_complete',     all,    False),
-                ('queue',           all,    True),
-                ('cancel',          all,    True),
-                ('success',         all,    True),
-                ('fail',            all,    True),
-                ('ready',           all,    True),
+                ('is_running',      any,                    False),
+                ('is_starting',     any,                    False),
+                ('is_scheduled',    any,                    False),
+                ('is_cancelled',    any,                    False),
+                ('is_active',       any,                    False),
+                ('is_queued',       all,                    False),
+                ('is_complete',     all,                    False),
+                ('queue',           iteration.list_all,     True),
+                ('cancel',          iteration.list_all,     True),
+                ('success',         iteration.list_all,     True),
+                ('fail',            iteration.list_all,     True),
+                ('ready',           iteration.list_all,     True),
+                ('cleanup',         iteration.list_all,     True),
+                ('start_time',      iteration.min_filter,   False),
+                ('end_time',        iteration.max_filter,   False),
             ])
 
     def action_runs_for_actions(self, actions):

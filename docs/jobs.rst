@@ -1,14 +1,13 @@
 Jobs
 ====
 
-A job consists of a name, a node/node pool, set of actions, schedule, and
-optional cleanup action. They are periodic events that do not interact with
+A job consists of a name, a node/node pool, a list of actions, a schedule, and
+an optional cleanup action. They are periodic events that do not interact with
 other jobs while running.
 
 If all actions exit with status 0, the job has succeeded. If any action exists
 with a nonzero status, the job has failed.
 
-.. Keep this up to date with man_tronfig.rst
 
 Required Fields
 ---------------
@@ -18,8 +17,7 @@ Required Fields
 
 **node**
     Reference to the node or pool to run the job in. If a pool, the job is
-    run in a random node in the pool. This is an alias to an anchor specified
-    in **nodes**.
+    run in a random node in the pool.
 
 **schedule**
     When to run this job. Schedule fields can take multiple forms. See
@@ -38,15 +36,21 @@ Optional Fields
     not defined to queue overlapping then this setting is ignored.
     IntervalScheduler and ConstantScheduler will not queue overlapping.
 
+**allow_overlap** (default **False**)
+    If **True** new job runs will start even if the previous run is still running.
+    By default new job runs are either cancelled or queued (see **queuing**).
+
 **run_limit** (default **50**)
-    Number of previous runs to store output and state for.
+    Number of runs which will be stored. Once a Job has more then run_limit
+    runs, the output and state for the oldest run are removed. Failed runs
+    will not be removed.
 
 **all_nodes** (default **False**)
-    If **True** and **node** is a node pool, run this job on each node in the
+    If **True** run this job on each node in the
     node pool list. If a node appears more than once in the list, the job will
     be run on that node once for each appearance.
 
-    If **False** and **node** is a node pool, run this job on a random node
+    If **False** run this job on a random node
     from the node pool list. If a node appears more than once in the list, the
     job will be more likely to run on that node, proportionate to the number of
     appearances.
@@ -58,7 +62,9 @@ Optional Fields
     See :ref:`job_cleanup_actions`.
 
 **enabled** (default **True**)
-    If **False** the job will not be queued to run.
+    If **False** the job will not be scheduled to run. This configuration option
+    is only relevant when a Job is first added to the configuration, after
+    which this value will be ignored.
 
 .. _job_actions:
 
@@ -71,8 +77,9 @@ So if your job has 10 actions, 1 of which depends on the other 9, then Tron
 will launch the first 9 actions in parallel and run the last one when all have
 completed successfully.
 
-If any action exits with nonzero status, the job is aborted and no further
-actions are run.
+If any action exits with nonzero status, the job will continue to run any
+actions which do not depend on the failed action.
+
 
 Required Fields
 ^^^^^^^^^^^^^^^
@@ -95,28 +102,23 @@ Optional Fields
 
 **node**
     Node or node pool to run the action on if different from the rest of the
-    job. This is an alias to an anchor specified in **nodes**.
+    job.
 
 Example Actions
 ^^^^^^^^^^^^^^^
 
 ::
 
-    # ...
     jobs:
         - name: convert_logs
-          node: *node1
+          node: node1
           schedule:
             start_time: 04:00:00
           actions:
             - name: verify_logs_present
-              command: >
-                ls /var/log/app/log_%(shortdate-1).txt
+              command: "ls /var/log/app/log_%(shortdate-1).txt"
             - name: convert_logs
-              command: >
-                convert_logs \
-                  /var/log/app/log_%(shortdate-1).txt \
-                  /var/log/app_converted/log_%(shortdate-1).txt
+              command: "convert_logs /var/log/app/log_%(shortdate-1).txt /var/log/app_converted/log_%(shortdate-1).txt"
               requires: [verify_logs_present]
 
 .. _job_scheduling:
@@ -124,13 +126,13 @@ Example Actions
 Scheduling
 ----------
 
-Tron supports three different kinds of schedules in config files.
+Tron supports four different kinds of schedules in config files.
 
 Interval
 ^^^^^^^^
 
 Run the job every X seconds, minutes, hours, or days. The time expression
-is ``<int>[ ]months|days|hours|minutes|seconds``, where the units can be
+is ``<interval> months|days|hours|minutes|seconds``, where the units can be
 abbreviated.
 
 ::
@@ -162,6 +164,28 @@ Run the job on specific weekdays at a specific time. The time expression is
         start_time: "07:00:00"
         days: "MWF"                 # this field is optional
 
+Cron
+^^^^
+
+Schedule a job using cron syntax.  Tron supports predefined schedules, ranges,
+and lists for each field. It supports the *L* in day of month field only (which
+schedules the job on the last day of the month). Only one of the day fields
+(day of month and day of week) can have a value.
+
+
+::
+
+    schedule: "cron */5 * * 7,8 *"  # Every 5 minutes in July and August
+
+::
+
+    schedule: "cron 0 3-6 * * *"    # Every hour between 3am and 6am
+
+::
+
+    schedule: "cron 30 4 L * *"     # The last day of the month at 4:30am
+
+
 Complex
 ^^^^^^^
 
@@ -172,18 +196,18 @@ as the schedule::
     ("every"|ordinal) (days) ["of|in" (monthspec)] (["at"] HH:MM)
 
 **ordinal**
-    Comma-separated list of "1st" and so forth. Use "every" if you don't want
+    Comma-separated list of ``1st`` and so forth. Use ``every`` if you don't want
     to limit by day of the month.
 
 **days**
-    Comma-separated list of days of the week (for example, "mon", "tuesday",
-    with both short and long forms being accepted); "every day" is equivalent
-    to "every mon,tue,wed,thu,fri,sat,sun"
+    Comma-separated list of days of the week (for example, ``mon``, ``tuesday``,
+    with both short and long forms being accepted); ``every day`` is equivalent
+    to ``every mon,tue,wed,thu,fri,sat,sun``
 
 **monthspec**
-    Comma-separated list of month names (for example, "jan", "march", "sep").
-    If omitted, implies every month. You can also say "month" to mean every
-    month, as in "1,8th,15,22nd of month 09:00".
+    Comma-separated list of month names (for example, ``jan``, ``march``, ``sep``).
+    If omitted, implies every month. You can also say ``month`` to mean every
+    month, as in ``1,8th,15,22nd of month 09:00``.
 
 **HH:MM**
     Time of day in 24 hour time.
@@ -252,27 +276,28 @@ The command context variable ``cleanup_job_status`` is provided to cleanup
 actions and has a value of ``SUCCESS`` or ``FAILURE`` depending on the job's
 final state. For example::
 
-    - !Job
+    -
         # ...
         cleanup_action:
           command: "python -m mrjob.tools.emr.job_flow_pool --terminate MY_POOL"
 
-.. Keep this up to date with man_tronfig.rst
 
 States
 ------
+
+The following are the possible states for a Job and Job Run.
 
 Job States
 ^^^^^^^^^^
 
 **ENABLED**
-    Scheduled and ready to go
+    A run is scheduled and new runs will continue to be scheduled.
 
 **DISABLED**
-    No job runs scheduled
+    No new runs will be scheduled, and scheduled runs will be cancelled.
 
 **RUNNING**
-    Job run currently in progress
+    Job run currently in progress.
 
 Job Run States
 ^^^^^^^^^^^^^^
@@ -293,12 +318,11 @@ Job Run States
     The run is queued behind another run(s) and will start when said runs finish
 
 **CANC**
-    The run is cancelled. Does not run at scheduled time and the job run queue
-    ignores the run
+    The run was scheduled, but later cancelled.
 
 **UNKWN**
     The run is in and unknown state.  This state occurs when tron restores a
-    job that was running at the time of shutdown
+    job that was running at the time of shutdown.
 
 
 Action States

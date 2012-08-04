@@ -1,4 +1,4 @@
-.TH "TRONVIEW" "1" "March 27, 2012" "0.3" "Tron"
+.TH "TRONVIEW" "1" "June 11, 2012" "0.5" "Tron"
 .SH NAME
 tronview \- tronview documentation
 .
@@ -32,7 +32,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .
 .SH SYNOPSYS
 .sp
-\fBtronview\fP [\fB\-n\fP \fInumshown\fP] [\fB\-\-server\fP \fIserver_name\fP] [\fB\-\-verbose\fP | \fB\-v\fP] [\fIjob_name\fP | \fIjob_run_id\fP | \fIaction_run_id\fP]
+\fBtronview [\-n <numshown>] [\-\-server <server_name>] [\-\-verbose] [<job_name> | <job_run_id> | <action_run_id>]\fP
 .SH DESCRIPTION
 .sp
 \fBtronview\fP displays the status of tron scheduled jobs and services.
@@ -42,11 +42,11 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 Show all configured jobs and services
 .TP
 .B tronview <job_name|service_name>
-Shows details for specied job or service. Ex:
+Shows details for a job or service. Ex:
 .sp
 .nf
 .ft C
-> tronview my_job
+$ tronview my_job
 .ft P
 .fi
 .TP
@@ -55,7 +55,7 @@ Show details for specific run or instance. Ex:
 .sp
 .nf
 .ft C
-> tronview my_job.0
+$ tronview my_job.0
 .ft P
 .fi
 .TP
@@ -64,111 +64,56 @@ Show details for specific action run. Ex:
 .sp
 .nf
 .ft C
-> tronview my_job.0.my_action
+$ tronview my_job.0.my_action
 .ft P
 .fi
 .UNINDENT
 .SH OPTIONS
 .INDENT 0.0
 .TP
-.B \-\-version
+.B \fB\-\-version\fP
 show program\(aqs version number and exit
 .TP
-.B \-h,  \-\-help
+.B \fB\-h, \-\-help\fP
 show this help message and exit
 .TP
-.B \-v,  \-\-verbose
+.B \fB\-v, \-\-verbose\fP
 Verbose logging
 .TP
-.BI \-n \ NUM_DISPLAYS, \ \-\-numshown\fB= NUM_DISPLAYS
+.B \fB\-n NUM_DISPLAYS, \-\-numshown=NUM_DISPLAYS\fP
 The maximum number of job runs or lines of output to display(0 for show
 all).  Does not affect the display of all jobs and the display of actions
 for given job.
 .TP
-.BI \-\-server\fB= SERVER
+.B \fB\-\-server=SERVER\fP
 Server URL to connect to
 .TP
-.B \-z,  \-\-hide\-preface
+.B \fB\-z, \-\-hide\-preface\fP
 Don\(aqt display preface
 .TP
-.B \-c,  \-\-color
+.B \fB\-c, \-\-color\fP
 Display in color
 .TP
-.B \-\-nocolor
+.B \fB\-\-nocolor\fP
 Display without color
 .TP
-.B \-o,  \-\-stdout
+.B \fB\-o, \-\-stdout\fP
 Solely displays stdout
 .TP
-.B \-e,  \-\-stderr
+.B \fB\-e, \-\-stderr\fP
 Solely displays stderr
 .TP
-.B \-w,  \-\-warn
+.B \fB\-w, \-\-warn\fP
 Solely displays warnings and errors
 .TP
-.B \-\-events
+.B \fB\-\-events\fP
 Show events for the specified entity
 .UNINDENT
-.SH JOB STATES
+.SH STATES
 .sp
-Jobs will be described with the following states:
-.INDENT 0.0
-.TP
-.B ENABLED
-Scheduled and ready to go
-.TP
-.B DISABLED
-No job runs scheduled
-.TP
-.B RUNNING
-Job run currently in progress
-.UNINDENT
-.SH JOB RUN STATES
-.INDENT 0.0
-.TP
-.B SCHE
-The run is scheduled for a specific time
-.TP
-.B RUNN
-The run is currently running
-.TP
-.B SUCC
-The run completed successfully
-.TP
-.B FAIL
-The run failed
-.TP
-.B QUE
-The run is queued behind another run(s) and will start when said runs finish
-.TP
-.B CANC
-The run is cancelled. Does not run at scheduled time and the job run queue
-ignores the run
-.TP
-.B UNKWN
-The run is in and unknown state.  This state occurs when tron restores a
-job that was running at the time of shutdown
-.UNINDENT
-.SH SERVICE STATES
-.INDENT 0.0
-.TP
-.B STARTING
-The service has been started. The service will remain in this state until
-the first monitor interval runs.
-.TP
-.B UP
-The service is running normally, all instances were available during the
-last monitor period
-.TP
-.B DEGRADED
-One or more instances of the service are unexpectedly not available.
-.TP
-.B FAILED
-All instances of the service are unexpectedly unavailable.
-.TP
-.B DOWN
-Service has been stopped
-.UNINDENT
+For complete list of states with a diagram of valid transitions see
+\fI\%http://packages.python.org/tron/jobs.html#states\fP and
+\fI\%http://packages.python.org/tron/services.html#states\fP
 .SH BUGS
 .sp
 Post bugs to \fI\%http://www.github.com/yelp/tron/issues\fP.

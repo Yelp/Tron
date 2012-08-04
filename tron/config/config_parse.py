@@ -87,7 +87,7 @@ valid_int   = partial(valid_number, int)
 valid_float = partial(valid_number, float)
 
 MAX_IDENTIFIER_LENGTH       = 255
-IDENTIFIER_RE               = re.compile(r'^[A-Za-z_]\w{0,254}$')
+IDENTIFIER_RE               = re.compile(r'^[A-Za-z_][\w\-]{0,254}$')
 
 valid_identifier = type_validator(
     lambda s: isinstance(s, basestring) and IDENTIFIER_RE.match(s),
@@ -413,7 +413,8 @@ class ValidateJob(ValidatorWithNamedPath):
         'all_nodes':            False,
         'cleanup_action':       None,
         'enabled':              True,
-        'queueing':             True
+        'queueing':             True,
+        'allow_overlap':        False
     }
 
     validators = {
@@ -426,6 +427,7 @@ class ValidateJob(ValidatorWithNamedPath):
         'node':                 valid_identifier,
         'queueing':             valid_bool,
         'enabled':              valid_bool,
+        'allow_overlap':        valid_bool,
     }
 
     def _validate_dependencies(self, job, actions,

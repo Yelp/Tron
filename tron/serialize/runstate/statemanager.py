@@ -209,8 +209,8 @@ class PersistentStateManager(observer.Observer):
     @contextmanager
     def disabled(self):
         """Temporarily disable the state manager."""
-        self.enabled = False
+        self.enabled, prev_enabled = False, self.enabled
         try:
             yield
         finally:
-            self.enabled = True
+            self.enabled = prev_enabled

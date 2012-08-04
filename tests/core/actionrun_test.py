@@ -2,9 +2,9 @@ import datetime
 import shutil
 import tempfile
 
-from testify import run, setup, TestCase, assert_equal, turtle
+from testify import run, setup, TestCase, assert_equal, turtle, teardown
 from testify.assertions import assert_raises, assert_in
-from testify.test_case import class_setup, class_teardown, teardown
+from tests import testingutils
 from tests.assertions import assert_length
 from tests.mocks import MockNode
 from tests.testingutils import Turtle
@@ -17,28 +17,21 @@ from tron.core.actionrun import InvalidStartStateError
 from tron.serialize import filehandler
 from tron.utils import timeutils
 
-class ActionRunContextTestCase(TestCase):
+class ActionRunContextTestCase(testingutils.MockTimeTestCase):
 
-    @class_setup
-    def freeze_time(self):
-        timeutils.override_current_time(datetime.datetime.now())
-        self.now = timeutils.current_time()
-
-    @class_teardown
-    def unfreeze_time(self):
-        timeutils.override_current_time(None)
+    now = datetime.datetime.now()
 
     @setup
     def build_context(self):
         action_run = turtle.Turtle(
-            id="runid",
             node=turtle.Turtle(hostname="nodename"),
-            run_time=self.now
+            job_run_time=self.now,
+            job_run_id='job_run_id'
         )
         self.context = ActionRunContext(action_run)
 
     def test_runid(self):
-        assert_equal(self.context.runid, 'runid')
+        assert_equal(self.context.runid, 'job_run_id')
 
     def test_daynumber(self):
         daynum = self.now.toordinal()
@@ -99,7 +92,7 @@ class ActionRunFactoryTestCase(TestCase):
         assert_length(collection.run_map, 2)
         assert_equal(collection.run_map['act1'].action_name, 'act1')
         assert_equal(collection.run_map['cleanup'].action_name, 'cleanup')
-        assert_equal(collection.run_map['act1'].run_time,
+        assert_equal(collection.run_map['act1'].job_run_time,
                 self.action_state_data['run_time'])
 
     def test_build_run_for_action(self):
@@ -108,7 +101,7 @@ class ActionRunFactoryTestCase(TestCase):
         action_run = ActionRunFactory.build_run_for_action(self.job_run, action)
 
         assert_equal(action_run.job_run_id, self.job_run.id)
-        assert_equal(action_run.run_time, self.run_time)
+        assert_equal(action_run.job_run_time, self.run_time)
         assert_equal(action_run.node, self.job_run.node)
         assert_equal(action_run.action_name, action.name)
         assert not action_run.is_cleanup
@@ -119,7 +112,7 @@ class ActionRunFactoryTestCase(TestCase):
         action_run = ActionRunFactory.build_run_for_action(self.job_run, action)
 
         assert_equal(action_run.job_run_id, self.job_run.id)
-        assert_equal(action_run.run_time, self.run_time)
+        assert_equal(action_run.job_run_time, self.run_time)
         assert_equal(action_run.node, action.node_pool.next.returns[0])
         assert action_run.is_cleanup
         assert_equal(action_run.action_name, action.name)
@@ -131,7 +124,7 @@ class ActionRunFactoryTestCase(TestCase):
                 self.job_run, state_data)
 
         assert_equal(action_run.job_run_id, state_data['job_run_id'])
-        assert_equal(action_run.run_time, state_data['run_time'])
+        assert_equal(action_run.job_run_time, state_data['run_time'])
         assert not action_run.is_cleanup
 
 
@@ -338,7 +331,9 @@ class ActionRunTestCase(TestCase):
             self.action_run.__getattr__, 'is_not_a_real_state')
 
 
-class ActionRunStateRestoreTestCase(TestCase):
+class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
+
+    now = datetime.datetime(2012, 3, 14, 15, 19)
 
     @setup
     def setup_action_run(self):
@@ -354,15 +349,18 @@ class ActionRunStateRestoreTestCase(TestCase):
             'end_time':         'end_time',
             'state':            'succeeded'
         }
+        self.run_node = Turtle()
 
     def test_from_state(self):
         state_data = self.state_data
-        action_run = ActionRun.from_state(
-            state_data, self.parent_context, list(self.output_path))
+        action_run = ActionRun.from_state(state_data, self.parent_context,
+                list(self.output_path), self.run_node)
 
         for key, value in self.state_data.iteritems():
             if key in ['state', 'node_name']:
                 continue
+            if key == 'run_time':
+                key = 'job_run_time'
             assert_equal(getattr(action_run, key), value)
 
         assert action_run.is_succeeded
@@ -371,29 +369,32 @@ class ActionRunStateRestoreTestCase(TestCase):
 
     def test_from_state_running(self):
         self.state_data['state'] = 'running'
-        action_run = ActionRun.from_state(
-            self.state_data, self.parent_context, self.output_path)
+        action_run = ActionRun.from_state(self.state_data,
+                self.parent_context, self.output_path, self.run_node)
         assert action_run.is_unknown
+        assert_equal(action_run.exit_status, 0)
+        assert_equal(action_run.end_time, self.now)
 
     def test_from_state_queued(self):
         self.state_data['state'] = 'queued'
-        action_run = ActionRun.from_state(
-            self.state_data, self.parent_context, self.output_path)
+        action_run = ActionRun.from_state(self.state_data, self.parent_context,
+                self.output_path, self.run_node)
         assert action_run.is_failed
+        assert_equal(action_run.end_time, self.now)
 
     def test_from_state_no_node_name(self):
         del self.state_data['node_name']
-        action_run = ActionRun.from_state(
-            self.state_data, self.parent_context, self.output_path)
-        assert action_run.node is None
+        action_run = ActionRun.from_state(self.state_data,
+                self.parent_context, self.output_path, self.run_node)
+        assert_equal(action_run.node, self.run_node)
 
     def test_from_state_with_node_exists(self):
         anode = turtle.Turtle(name="anode", hostname="box")
         node_store = node.NodePoolStore.get_instance()
         node_store.put(anode)
 
-        action_run = ActionRun.from_state(
-            self.state_data, self.parent_context, self.output_path)
+        action_run = ActionRun.from_state(self.state_data,
+                self.parent_context, self.output_path, self.run_node)
 
         assert_equal(action_run.node, anode)
         node_store.clear()
@@ -401,23 +402,23 @@ class ActionRunStateRestoreTestCase(TestCase):
     def test_from_state_before_rendered_command(self):
         self.state_data['command'] = 'do things %(actionname)s'
         self.state_data['rendered_command'] = None
-        action_run = ActionRun.from_state(
-            self.state_data, self.parent_context, self.output_path)
+        action_run = ActionRun.from_state(self.state_data,
+                self.parent_context, self.output_path, self.run_node)
         assert_equal(action_run.bare_command, self.state_data['command'])
         assert not action_run.rendered_command
 
     def test_from_state_old_state(self):
         self.state_data['command'] = 'do things %(actionname)s'
-        action_run = ActionRun.from_state(
-            self.state_data, self.parent_context, self.output_path)
+        action_run = ActionRun.from_state(self.state_data,
+                self.parent_context, self.output_path, self.run_node)
         assert_equal(action_run.bare_command, self.state_data['command'])
         assert not action_run.rendered_command
 
     def test_from_state_after_rendered_command(self):
         self.state_data['command'] = 'do things theaction'
         self.state_data['rendered_command'] = self.state_data['command']
-        action_run = ActionRun.from_state(
-            self.state_data, self.parent_context, self.output_path)
+        action_run = ActionRun.from_state(self.state_data,
+                self.parent_context, self.output_path, self.run_node)
         assert_equal(action_run.bare_command, self.state_data['command'])
         assert_equal(action_run.rendered_command, self.state_data['command'])
 
