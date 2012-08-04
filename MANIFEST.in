@@ -4,5 +4,5 @@ include Makefile
 include tron/default_config.yaml
 include tron/logging.conf
 recursive-include debian *
-recursive-include test *.py *.yaml
+recursive-include tests *.py *.yaml
 recursive-include docs *.txt *.rst *.yaml *.1 *.8

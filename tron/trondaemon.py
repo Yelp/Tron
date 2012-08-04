@@ -7,15 +7,14 @@ import os
 import pkg_resources
 import daemon
 
-import lockfile
-import signal
-from twisted.web import server
-from twisted.internet import reactor, defer
-from twisted.python import log as twisted_log
-from tron import mcp
-import tron
+from twisted.internet import pollreactor, defer
+from twisted.internet.main import installReactor
 
-from tron.api import www
+import lockfile
+from tron.utils import flockfile
+import signal
+from twisted.python import log as twisted_log
+import tron
 
 
 log = logging.getLogger(__name__)
@@ -25,17 +24,20 @@ class PIDFile(object):
     """Create and check for a PID file for the daemon."""
 
     def __init__(self, filename):
-        self.filename = filename
+        self.lock = flockfile.FlockFile(filename)
         self.check_if_pidfile_exists()
 
+    @property
+    def filename(self):
+        return self.lock.path
+
     def check_if_pidfile_exists(self):
-        self.lock = lockfile.FileLock(self.filename)
-        self.lock.acquire(0)
+        self.lock.acquire()
 
         try:
-            with open(self.filename) as fh:
+            with open(self.filename, 'r') as fh:
                 pid = int(fh.read().strip())
-        except IOError:
+        except (IOError, ValueError):
             pid = None
 
         if self.is_process_running(pid):
@@ -57,8 +59,8 @@ class PIDFile(object):
             return False
 
     def __enter__(self):
-        with open(self.filename, 'w') as fh:
-            fh.write('%s\n' % os.getpid())
+        print >>self.lock.file, os.getpid()
+        self.lock.file.flush()
 
     def _try_unlock(self):
         try:
@@ -66,7 +68,7 @@ class PIDFile(object):
         except lockfile.NotLocked:
             log.warn("Lockfile was already unlocked.")
 
-    def __exit__(self, exc_type, exc_val, exc_tb):
+    def __exit__(self, *args):
         self._try_unlock()
         try:
             os.unlink(self.filename)
@@ -111,10 +113,18 @@ class NoDaemonContext(object):
     def __init__(self, **kwargs):
         self.signal_map     = kwargs.pop('signal_map', {})
         self.pidfile        = kwargs.pop('pidfile', None)
+        self.working_dir    = kwargs.pop('working_directory', '.')
+        self.signal_map[signal.SIGUSR1] = self._handle_debug
+
+    def _handle_debug(self, *args):
+        import ipdb
+        ipdb.set_trace()
 
     def __enter__(self):
         for signum, handler in self.signal_map.iteritems():
             signal.signal(signum, handler)
+
+        os.chdir(self.working_dir)
         if self.pidfile:
             self.pidfile.__enter__()
 
@@ -122,7 +132,7 @@ class NoDaemonContext(object):
         if self.pidfile:
             self.pidfile.__exit__(exc_type, exc_val, exc_tb)
 
-    def terminate(self, _sig_num, _frame):
+    def terminate(self, *args):
         pass
 
 class TronDaemon(object):
@@ -136,34 +146,47 @@ class TronDaemon(object):
         nodaemon        = self.options.nodaemon
         context_class   = NoDaemonContext if nodaemon else daemon.DaemonContext
         self.context    = self._build_context(options, context_class)
+        self.reactor    = None
 
     def _build_context(self, options, context_class):
         signal_map = {
             signal.SIGHUP:  self._handle_reconfigure,
             signal.SIGINT:  self._handle_graceful_shutdown,
             signal.SIGTERM: self._handle_shutdown,
-            signal.SIGUSR1: self._handle_debug
         }
+        pidfile = PIDFile(options.pid_file)
         return context_class(
             working_directory=options.working_dir,
             umask=0o022,
-            pidfile=PIDFile(options.pid_file),
-            signal_map=signal_map
+            pidfile=pidfile,
+            signal_map=signal_map,
+            files_preserve=[pidfile.lock.file]
         )
 
     def run(self):
         with self.context:
+            self.setup_reactor()
             setup_logging(self.options)
             self._run_mcp()
             self._run_www_api()
             self._run_reactor()
 
+
+    def setup_reactor(self):
+        self.reactor = pollreactor.PollReactor()
+        installReactor(self.reactor)
+
     def _run_www_api(self):
+        # Local import required because of reactor import in server and www
+        from twisted.web import server
+        from tron.api import www
         site = server.Site(www.RootResource(self.mcp))
         port = self.options.listen_port
-        reactor.listenTCP(port, site, interface=self.options.listen_host)
+        self.reactor.listenTCP(port, site, interface=self.options.listen_host)
 
     def _run_mcp(self):
+        # Local import required because of reactor import in mcp
+        from tron import mcp
         working_dir         = self.options.working_dir
         config_file         = self.options.config_file
         self.mcp            = mcp.MasterControlProgram(working_dir, config_file)
@@ -177,13 +200,13 @@ class TronDaemon(object):
 
     def _run_reactor(self):
         """Run the twisted reactor."""
-        reactor.run()
+        self.reactor.run()
 
     def _handle_shutdown(self, sig_num, stack_frame):
         log.info("Shutdown requested: sig %s" % sig_num)
         if self.mcp:
             self.mcp.shutdown()
-        reactor.stop()
+        self.reactor.stop()
         self.context.terminate(sig_num, stack_frame)
 
     def _handle_graceful_shutdown(self, sig_num, stack_frame):
@@ -201,13 +224,8 @@ class TronDaemon(object):
             return
 
         log.info("Waiting for jobs to shutdown.")
-        reactor.callLater(self.WAIT_SECONDS, self._wait_for_jobs)
+        self.reactor.callLater(self.WAIT_SECONDS, self._wait_for_jobs)
 
     def _handle_reconfigure(self, _signal_number, _stack_frame):
         log.info("Reconfigure requested by SIGHUP.")
-        reactor.callLater(0, self.mcp.reconfigure)
-
-    def _handle_debug(self, _sig_num, _frame):
-        if self.options.nodaemon:
-            import ipdb
-            ipdb.set_trace()
+        self.reactor.callLater(0, self.mcp.reconfigure)

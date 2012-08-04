@@ -32,7 +32,7 @@ setup(
         'pyasn1>=0.0.13',
         'pycrypto>=2.4',
         'pytz>=2011n',
-        'python-daemon>=1.5.5',
+        'python-daemon>=1.5.2',
         'lockfile>=0.7',
     ],
     packages=[
@@ -51,11 +51,7 @@ setup(
         'bin/tronctl',
         'bin/tronfig'
     ],
-    data_files=[
-        ('share/doc/tron', [
-            'docs/sample_config.yaml'
-        ]),
-    ],
+    include_package_data=True,
     long_description="""Tron is a centralized system for managing periodic batch processes and services across a cluster. If you find cron or fcron to be insufficient for managing complex work flows across multiple computers, Tron might be for you.
 
 For more information, look at the tutorial (http://packages.python.org/tron/tutorial.html) or the full documentation (http://packages.python.org/tron).""",

@@ -147,5 +147,5 @@ worked on, and should be improved in later releases.
 Whenever possible these changes will be backwards compatible, but in some
 cases there may be non-backwards compatible changes.
 
-**Tron does not support unicode.** Tron is built using `twsited <http://twistedmatrix.com/>`_
+**Tron does not support unicode.** Tron is built using `twisted <http://twistedmatrix.com/>`_
 which does not support unicode.

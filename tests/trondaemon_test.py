@@ -1,8 +1,8 @@
 import os
 import tempfile
 import lockfile
+import mock
 from testify import TestCase, assert_equal, run, setup, teardown
-import threading
 from testify.assertions import assert_in
 from tests.assertions import assert_raises
 from tron.trondaemon import PIDFile
@@ -23,35 +23,18 @@ class PIDFileTestCase(TestCase):
         assert self.pidfile.lock.is_locked()
         assert_equal(self.filename, self.pidfile.filename)
 
-    def _test_in_thread(self, func):
-        """lockfile acquisitions will only fail if they come from another thread
-        so create the thread and run the tests in that thread.  Then test
-        the tread completed properly.
-        """
-        def runnable():
-            func()
-            self.completed = True
-
-        self.completed = False
-        pid_thread = threading.Thread(target=runnable)
-        pid_thread.start()
-        pid_thread.join()
-        assert self.completed
-
     def test_check_if_pidfile_exists_file_locked(self):
-        def test_func():
-            assert_raises(lockfile.AlreadyLocked, PIDFile, self.filename)
-        self._test_in_thread(test_func)
+        assert_raises(lockfile.AlreadyLocked, PIDFile, self.filename)
 
     def test_check_if_pidfile_exists_file_exists(self):
         self.pidfile.__exit__(None, None, None)
         with open(self.filename, 'w') as fh:
             fh.write('123\n')
 
-        def test_func():
+        with mock.patch.object(PIDFile, 'is_process_running') as mock_method:
+            mock_method.return_value = True
             exception = assert_raises(SystemExit, PIDFile, self.filename)
-            assert_in('Daemon was running as 123', str(exception))
-        self._test_in_thread(test_func)
+            assert_in('Daemon running as 123', str(exception))
 
     def test_is_process_running(self):
         assert self.pidfile.is_process_running(os.getpid())

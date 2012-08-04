@@ -13,7 +13,7 @@ try:
 except ImportError:
     import json
 
-from twisted.web import http, resource, server
+from twisted.web import http, resource
 
 from tron import event
 from tron.api import adapter, controller
@@ -66,7 +66,7 @@ class ActionRunResource(resource.Resource):
 
     def render_POST(self, request):
         cmd = requestargs.get_string(request, 'command')
-        log.info("Handling '%s' request for action run %s",
+        log.info("Handling '%s' request for action run %s.%s",
                  cmd, self._job_run.id, self._action_name)
 
         if cmd not in ('start', 'success', 'cancel', 'fail', 'skip'):
@@ -74,13 +74,19 @@ class ActionRunResource(resource.Resource):
             return respond(request, None, code=http.NOT_IMPLEMENTED)
 
         action_run = self._job_run.action_runs[self._action_name]
-        try:
-            resp = getattr(action_run, cmd)()
-        except actionrun.Error:
+
+        # An action can only be started if the job run has been started
+        if cmd == 'start' and self._job_run.is_scheduled:
             resp = None
+        else:
+            try:
+                resp = getattr(action_run, cmd)()
+            except actionrun.Error:
+                resp = None
 
         if not resp:
-            msg = "Failed to %s action run %s." % (cmd, action_run)
+            msg = "Failed to %s action run %s is in state %s." % (
+                    cmd, action_run, action_run.state)
         else:
             msg = "Action run now in state %s" % action_run.state.short_name
         return respond(request, {'result': msg})
@@ -509,15 +515,3 @@ class RootResource(resource.Resource):
             'status_href':      request.uri + request.childLink('status'),
         }
         return respond(request, response)
-
-
-if __name__ == '__main__':
-    from twisted.internet import reactor
-    from testify.utils import turtle
-    master_control = turtle.Turtle()
-    master_control.jobs = {
-        'test_job': turtle.Turtle(name="test_job",
-                                  node=turtle.Turtle(hostname="batch0")),
-    }
-    reactor.listenTCP(8082, server.Site(RootResource(master_control)))
-    reactor.run()

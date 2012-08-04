@@ -17,7 +17,7 @@ from tron.config.config_parse import ConfigService, ConfigError
 from tron.config.config_parse import CLEANUP_ACTION_NAME
 from tron.config.config_parse import valid_node_pool, valid_config
 from tron.config.schedule_parse import ConfigConstantScheduler
-from tron.config.schedule_parse import ConfigDailyScheduler
+from tron.config.schedule_parse import ConfigGrocScheduler
 from tron.config.schedule_parse import ConfigIntervalScheduler
 from tests.assertions import assert_raises
 from tron.utils.dicts import FrozenDict
@@ -82,6 +82,7 @@ jobs:
         name: "test_job1"
         node: node0
         schedule: "daily 00:30:00 MWF"
+        allow_overlap: True
         actions:
             -
                 name: "action1_0"
@@ -190,14 +191,15 @@ services:
                         command='test_command0.1',
                         requires=(),
                         node=None),
-                    enabled=True),
+                    enabled=True,
+                    allow_overlap=False),
                 'test_job1': ConfigJob(
                     name='test_job1',
                     node='node0',
                     enabled=True,
-                    schedule=ConfigDailyScheduler(
+                    schedule=ConfigGrocScheduler(
                         ordinals=None,
-                        weekdays=set([0, 2, 4]),
+                        weekdays=set([1, 3, 5]),
                         monthdays=None,
                         months=None,
                         timestr='00:30',
@@ -217,12 +219,13 @@ services:
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
-                    cleanup_action=None),
+                    cleanup_action=None,
+                    allow_overlap=True),
                 'test_job2': ConfigJob(
                     name='test_job2',
                     node='node1',
                     enabled=True,
-                    schedule=ConfigDailyScheduler(
+                    schedule=ConfigGrocScheduler(
                         ordinals=None,
                         weekdays=None,
                         monthdays=None,
@@ -239,7 +242,8 @@ services:
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
-                    cleanup_action=None),
+                    cleanup_action=None,
+                    allow_overlap=False),
                 'test_job3': ConfigJob(
                     name='test_job3',
                     node='node1',
@@ -265,11 +269,12 @@ services:
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
-                    cleanup_action=None),
+                    cleanup_action=None,
+                    allow_overlap=False),
                 'test_job4': ConfigJob(
                     name='test_job4',
                     node='nodePool',
-                    schedule=ConfigDailyScheduler(
+                    schedule=ConfigGrocScheduler(
                         ordinals=None,
                         weekdays=None,
                         monthdays=None,
@@ -286,7 +291,8 @@ services:
                     run_limit=50,
                     all_nodes=True,
                     cleanup_action=None,
-                    enabled=False)
+                    enabled=False,
+                    allow_overlap=False)
                 }),
                 services=FrozenDict({
                     'service0': ConfigService(

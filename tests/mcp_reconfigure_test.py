@@ -240,6 +240,16 @@ class MCPReconfigureTestCase(TestCase):
         assert new_job_sched.job.context.base.job is new_job_sched.job
 
     @suite('integration')
+    def test_job_changed_disabled(self):
+        job_sched = self.mcp.jobs['test_change']
+        job_sched.disable()
+        assert not job_sched.job.enabled
+
+        self.reconfigure()
+        new_job_sched = self.mcp.jobs['test_change']
+        assert not new_job_sched.job.enabled
+
+    @suite('integration')
     def test_job_new(self):
         assert not 'test_new' in self.mcp.jobs
         self.reconfigure()

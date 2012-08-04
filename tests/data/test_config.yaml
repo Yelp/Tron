@@ -5,7 +5,7 @@ ssh_options:
 
 state_persistence:
     store_type: shelve
-    name: wd/tron_state.shelve
+    name: tron_state.shelve
     buffer_size: 1
 
 nodes:

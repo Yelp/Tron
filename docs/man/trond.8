@@ -1,4 +1,4 @@
-.TH "TROND" "8" "May 31, 2012" "0.5" "Tron"
+.TH "TROND" "8" "June 11, 2012" "0.5" "Tron"
 .SH NAME
 trond \- trond documentation
 .
@@ -87,16 +87,16 @@ trond error log, configured from logging.conf
 .SH SIGNALS
 .INDENT 0.0
 .TP
-.B SIGINT
+.B \fISIGINT\fP
 Graceful shutdown. Waits for running jobs to complete.
 .TP
-.B SIGTERM
+.B \fISIGTERM\fP
 Does some cleanup before shutting down.
 .TP
-.B SIGHUP
+.B \fISIGHUP\fP
 Reload the configuration file.
 .TP
-.B SIGUSR1
+.B \fISIGUSR1\fP
 If running with \fB\-\-nodaemon\fP will drop into an ipdb debugging prompt.
 .UNINDENT
 .SH LOGGING
