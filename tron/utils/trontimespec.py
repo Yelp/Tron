@@ -167,21 +167,21 @@ class TimeSpecification(object):
         """
         first_day_of_month, last_day_of_month = calendar.monthrange(year, month)
 
-        day_filter = lambda day: first_day <= day <= last_day_of_month
         map_last   = lambda day: last_day_of_month if day == TOKEN_LAST else day
+        day_filter = lambda day: first_day <= day <= last_day_of_month
         sort_days  = lambda days: sorted(itertools.ifilter(day_filter, days))
 
         if self.monthdays:
             return sort_days(map_last(day) for day in self.monthdays)
 
-        out_days = []
         start_day = (first_day_of_month + 1) % 7
-        for ordinal in self.ordinals:
-            for weekday in self.weekdays:
+        def days_from_weekdays():
+            for ordinal in self.ordinals:
                 week = (ordinal - 1) * 7
-                day  = ((weekday - start_day) % 7) + week + 1
-                out_days.append(day)
-        return sort_days(out_days)
+                for weekday in self.weekdays:
+                    yield ((weekday - start_day) % 7) + week + 1
+
+        return sort_days(days_from_weekdays())
 
     def next_month(self, start_date):
         """Create a generator which yields valid months after the start month.
@@ -216,11 +216,13 @@ class TimeSpecification(object):
         """Returns the next datetime match after start."""
         start_date  = to_timezone(start, self.timezone).replace(tzinfo=None)
 
+        def get_first_day(month, year):
+            if (month, year) != (start_date.month, start_date.year):
+                return 1
+            return start_date.day
+
         for month, year in self.next_month(start_date):
-            if (year, month) != (start_date.year, start_date.month):
-                first_day = 1
-            else:
-                first_day = start_date.day
+            first_day = get_first_day(month, year)
 
             for day in self.next_day(first_day, year, month):
                 is_start_day = start_date.timetuple()[:3] == (year, month, day)
