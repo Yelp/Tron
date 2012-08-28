@@ -102,7 +102,7 @@ class HourFieldParser(FieldParser):
 
 class MonthdayFieldParser(FieldParser):
     name    = 'monthdays'
-    bounds  = (1, 13)
+    bounds  = (1, 32)
 
     def get_values(self, source):
         # Handle special case for last day of month
