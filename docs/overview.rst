@@ -109,7 +109,7 @@ work queue::
     # ...
     services:
         - name: "email_worker"
-          node: *pool
+          node: pool
           count: 4
           monitor_interval: 60
           restart_interval: 120
