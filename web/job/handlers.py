@@ -61,8 +61,6 @@ class JobRunHandler(tornado.web.RequestHandler):
         if status == client.OK:
             run_data=[]
             for run in data['runs']:
-		import sys
-		print >>sys.stderr, run
                 status, run_info = client.request(trond_url(),
                                                'jobs/%s/%s/%s' % (
                                                    job, run_id, run["id"]))
