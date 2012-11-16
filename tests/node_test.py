@@ -52,10 +52,10 @@ class NodeTestCase(TestCase):
     @setup
     def setup_node(self):
         self.ssh_options = turtle.Turtle()
-        self.node = node.Node('localhost', 'thename', self.ssh_options)
+        self.node = node.Node(hostname='localhost', username='theuser', name='thename', ssh_options=self.ssh_options)
 
     def test_output_logging(self):
-        nod = node.Node(hostname="localhost",
+        nod = node.Node(hostname="localhost", username='theuser',
                         ssh_options=turtle.Turtle())
 
         fh = turtle.Turtle()
@@ -72,11 +72,12 @@ class NodeTestCase(TestCase):
         assert_equal(fh.write.calls, [(("test",), {})])
 
     def test_from_config(self):
-        node_config = turtle.Turtle(hostname='localhost', name='thename')
+        node_config = turtle.Turtle(hostname='localhost', username='theuser', name='thename')
         ssh_options = turtle.Turtle()
         new_node = node.Node.from_config(node_config, ssh_options)
         assert_equal(new_node.name, node_config.name)
         assert_equal(new_node.hostname, node_config.hostname)
+        assert_equal(new_node.username, node_config.username)
 
     def test_next(self):
         for _ in xrange(3):
@@ -94,7 +95,7 @@ class NodeTestCase(TestCase):
         assert_raises(KeyError, lambda: self.node['thename'])
 
     def test__cmp__(self):
-        other_node = node.Node('mocalhost', 'mocal', self.ssh_options)
+        other_node = node.Node(hostname='mocalhost', username='mser', name='mocal', ssh_options=self.ssh_options)
         assert_lt(self.node, 'thename')
         assert_lt(self.node, other_node)
 
@@ -111,7 +112,7 @@ class NodePoolTestCase(TestCase):
     def setup_nodes(self):
         ssh_options = turtle.Turtle(agent=True)
         self.nodes = [
-            node.Node(str(i), 'node%s' % i, ssh_options) for i in xrange(5)
+            node.Node(hostname=str(i), username='user', name='node%s' % i, ssh_options=ssh_options) for i in xrange(5)
         ]
         self.node_pool = node.NodePool(self.nodes, 'thename')
 

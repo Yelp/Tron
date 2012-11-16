@@ -1,5 +1,6 @@
 import logging
 import itertools
+import os
 import random
 
 from twisted.internet import protocol, defer, reactor
@@ -133,9 +134,12 @@ class Node(object):
     directly as a NodePool of 1 Node.
     """
 
-    def __init__(self, hostname=None, name=None, ssh_options=None):
+    def __init__(self, hostname=None, username=None, name=None, ssh_options=None):
         # Host we are to connect to
         self.hostname = hostname
+
+        # Username to connect to the remote machine under
+        self.username = username or os.environ['USER']
 
         # Identifier for UI
         self.name = name or hostname
@@ -162,6 +166,7 @@ class Node(object):
     def from_config(cls, node_config, ssh_options):
         return cls(
             hostname=node_config.hostname,
+            username=node_config.username,
             name=node_config.name,
             ssh_options=ssh_options
         )
@@ -361,6 +366,7 @@ class Node(object):
         #  3. The connection service is started, so we can use it
 
         client_creator = protocol.ClientCreator(reactor, ssh.ClientTransport,
+                                                username=self.username,
                                                 options=self.conch_options)
         create_defer = client_creator.connectTCP(self.hostname, 22)
 
@@ -486,8 +492,9 @@ class Node(object):
         """Returns a dict which is an external view of this object."""
         return {
             'name':             self.name,
-            'hostname':         self.hostname
+            'hostname':         self.hostname,
+            'username':         self.username
         }
 
     def __str__(self):
-        return "Node:%s" % self.hostname
+        return "Node:%s@%s" % (self.username, self.hostname)
