@@ -305,6 +305,7 @@ class ValidateNode(Validator):
 
     def set_defaults(self, output_dict):
         output_dict.setdefault('name', output_dict['hostname'])
+        output_dict.setdefault('username', 'tronuser')
 
 valid_node = ValidateNode()
 

@@ -163,8 +163,8 @@ services:
             time_zone=None,
             state_persistence=config_parse.DEFAULT_STATE_PERSISTENCE,
             nodes=FrozenDict({
-                'node0': ConfigNode(name='node0', hostname='node0'),
-                'node1': ConfigNode(name='node1', hostname='node1')
+                'node0': ConfigNode(name='node0', username='tronuser', hostname='node0'),
+                'node1': ConfigNode(name='node1', username='tronuser', hostname='node1')
             }),
             node_pools=FrozenDict({
                 'nodePool': ConfigNodePool(nodes=['node0', 'node1'],
