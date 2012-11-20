@@ -134,7 +134,8 @@ class Node(object):
     directly as a NodePool of 1 Node.
     """
 
-    def __init__(self, hostname=None, username=None, name=None, ssh_options=None):
+    def __init__(self, hostname, ssh_options, username=None, name=None):
+
         # Host we are to connect to
         self.hostname = hostname
 
@@ -144,9 +145,7 @@ class Node(object):
         # Identifier for UI
         self.name = name or hostname
 
-        if not ssh_options or not hostname:
-            raise ValueError('Must specify hostname and ssh_options')
-
+        # SSH Options
         self.conch_options = ssh_options
 
         # The SSH connection we use to open channels on. If present, means we
@@ -165,10 +164,10 @@ class Node(object):
     @classmethod
     def from_config(cls, node_config, ssh_options):
         return cls(
-            hostname=node_config.hostname,
+            node_config.hostname,
+            ssh_options,
             username=node_config.username,
-            name=node_config.name,
-            ssh_options=ssh_options
+            name=node_config.name
         )
 
     def next(self):

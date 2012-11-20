@@ -52,11 +52,10 @@ class NodeTestCase(TestCase):
     @setup
     def setup_node(self):
         self.ssh_options = turtle.Turtle()
-        self.node = node.Node(hostname='localhost', username='theuser', name='thename', ssh_options=self.ssh_options)
+        self.node = node.Node('localhost', self.ssh_options, username='theuser', name='thename')
 
     def test_output_logging(self):
-        nod = node.Node(hostname="localhost", username='theuser',
-                        ssh_options=turtle.Turtle())
+        nod = node.Node('localhost', turtle.Turtle(), username='theuser')
 
         fh = turtle.Turtle()
         serializer = turtle.Turtle(open=lambda fn: fh)
@@ -95,7 +94,7 @@ class NodeTestCase(TestCase):
         assert_raises(KeyError, lambda: self.node['thename'])
 
     def test__cmp__(self):
-        other_node = node.Node(hostname='mocalhost', username='mser', name='mocal', ssh_options=self.ssh_options)
+        other_node = node.Node('mocalhost', self.ssh_options, username='mser', name='mocal')
         assert_lt(self.node, 'thename')
         assert_lt(self.node, other_node)
 
@@ -112,7 +111,7 @@ class NodePoolTestCase(TestCase):
     def setup_nodes(self):
         ssh_options = turtle.Turtle(agent=True)
         self.nodes = [
-            node.Node(hostname=str(i), username='user', name='node%s' % i, ssh_options=ssh_options) for i in xrange(5)
+            node.Node(str(i), ssh_options, username='user', name='node%s' % i) for i in xrange(5)
         ]
         self.node_pool = node.NodePool(self.nodes, 'thename')
 
