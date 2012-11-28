@@ -140,7 +140,7 @@ class Node(object):
         self.hostname = hostname
 
         # Username to connect to the remote machine under
-        self.username = username or os.environ['USER']
+        self.username = username
 
         # Identifier for UI
         self.name = name or hostname
@@ -496,4 +496,4 @@ class Node(object):
         }
 
     def __str__(self):
-        return "Node:%s@%s" % (self.username, self.hostname)
+        return "Node:%s@%s" % (self.username or "<default>", self.hostname)
