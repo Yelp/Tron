@@ -4,7 +4,7 @@
 Built-In Command Context Variables
 ==================================
 
-Tron includes some built in command contenxt variables that can be used in
+Tron includes some built in command context variables that can be used in
 command configuration (as well as pid_file_template for services).
 
 
