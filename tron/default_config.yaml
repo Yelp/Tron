@@ -15,6 +15,7 @@ nodes:
     ## You'll need to list out all the available nodes for doing work.
     # - name: "node"
     #   hostname: 'localhost'
+    #   username: 'tronuser'
 
 ## Optionally you can list 'pools' of nodes where selection of a node will
 ## be randomly determined or jobs can be configured to be run on all nodes

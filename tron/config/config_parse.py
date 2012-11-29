@@ -294,6 +294,7 @@ class ValidateNode(Validator):
     config_class =              ConfigNode
     validators = {
         'name':                 partial(valid_identifier, 'nodes'),
+        'username':             partial(valid_str, 'nodes'),
         'hostname':             partial(valid_str, 'nodes')
     }
 
@@ -304,6 +305,7 @@ class ValidateNode(Validator):
 
     def set_defaults(self, output_dict):
         output_dict.setdefault('name', output_dict['hostname'])
+        output_dict.setdefault('username', os.environ['USER'])
 
 valid_node = ValidateNode()
 
@@ -538,7 +540,7 @@ class ValidateConfig(Validator):
         'notification_options': None,
         'time_zone':            None,
         'state_persistence':    DEFAULT_STATE_PERSISTENCE,
-        'nodes':                (dict(name='localhost', hostname='localhost'),),
+        'nodes':                (dict(name='localhost', username='tronuser', hostname='localhost'),),
         'node_pools':           (),
         'jobs':                 (),
         'services':             (),

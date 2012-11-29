@@ -51,6 +51,7 @@ class ClientTransport(transport.SSHClientTransport):
         # they're all old style classes
         # transport.SSHClientTransport.__init__(self, *args, **kwargs)
 
+        self.username = kwargs['username']
         self.options = kwargs['options']
 
     def verifyHostKey(self, pubKey, fingerprint):

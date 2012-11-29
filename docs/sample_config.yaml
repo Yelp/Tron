@@ -20,8 +20,10 @@ command_context:
 nodes:
   - name: node1
     hostname: 'batch1'
+    username: 'tronuser'
   - name: node2
     hostname: 'batch2'
+    username: 'tronuser'
 
 node_pools:
   - name: pool

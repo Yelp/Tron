@@ -25,6 +25,9 @@ class JobController(object):
 class ConfigController(object):
     """Control config."""
 
+    # TODO: This could really use a permissions manager. The fact that
+    # this can flatten existing configuration files without validation
+    # is more than somewhat worrying.
     def __init__(self, filepath):
         self.filepath = filepath
 
