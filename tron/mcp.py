@@ -10,6 +10,7 @@ from tron import crash_reporter
 from tron import node
 from tron.config import config_parse
 from tron.config.config_parse import ConfigError
+from tron.config.schema import MASTER_NAMESPACE
 from tron.core.job import Job, JobScheduler
 from tron.node import Node, NodePool
 from tron.scheduler import scheduler_from_config
@@ -100,32 +101,34 @@ class MasterControlProgram(Observable):
         # without any state will be scheduled here.
         self.schedule_jobs()
 
-    def apply_config(self, conf, skip_env_dependent=False, reconfigure=False):
+    def apply_config(self, configs, skip_env_dependent=False, reconfigure=False):
         """Apply a configuration. If skip_env_dependent is True we're
         loading this locally to test the config as part of tronfig. We want to
         skip applying some settings because the local machine we're using to
         edit the config may not have the same environment as the live
         trond machine.
         """
-        self.output_stream_dir = conf.output_stream_dir or self.working_dir
+        master_config = configs[MASTER_NAMESPACE]
+        self.output_stream_dir = master_config.output_stream_dir or self.working_dir
 
-        if not skip_env_dependent:
-            ssh_options = self._ssh_options_from_config(conf.ssh_options)
-            state_persistence = conf.state_persistence
-        else:
-            ssh_options = config_parse.valid_ssh_options({})
-            state_persistence = config_parse.DEFAULT_STATE_PERSISTENCE
+        for conf in configs.values():
+            if not skip_env_dependent:
+                ssh_options = self._ssh_options_from_config(conf.ssh_options)
+                state_persistence = conf.state_persistence
+            else:
+                ssh_options = config_parse.valid_ssh_options({})
+                state_persistence = config_parse.DEFAULT_STATE_PERSISTENCE
 
-        self.state_manager = PersistenceManagerFactory.from_config(
-                state_persistence)
-        self.context.base = conf.command_context
-        self.time_zone = conf.time_zone
+            self.state_manager = PersistenceManagerFactory.from_config(
+                        state_persistence)
+            self.context.base = conf.command_context
+            self.time_zone = conf.time_zone
 
-        self._apply_nodes(conf.nodes, ssh_options)
-        self._apply_node_pools(conf.node_pools)
-        self._apply_jobs(conf.jobs, reconfigure=reconfigure)
-        self._apply_services(conf.services)
-        self._apply_notification_options(conf.notification_options)
+            self._apply_nodes(conf.nodes, ssh_options)
+            self._apply_node_pools(conf.node_pools)
+            self._apply_jobs(conf.jobs, reconfigure=reconfigure)
+            self._apply_services(conf.services)
+            self._apply_notification_options(conf.notification_options)
 
     def _ssh_options_from_config(self, ssh_conf):
         ssh_options = ConchOptions()

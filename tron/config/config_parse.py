@@ -27,6 +27,7 @@ from tron.config.schema import TronConfig, NotificationOptions, ConfigSSHOptions
 from tron.config.schema import ConfigNode, ConfigNodePool, ConfigState
 from tron.config.schema import ConfigJob, ConfigAction, ConfigCleanupAction
 from tron.config.schema import ConfigService
+from tron.config.schema import MASTER_NAMESPACE
 from tron.utils.dicts import FrozenDict
 from tron.core.action import CLEANUP_ACTION_NAME
 
@@ -38,7 +39,19 @@ def load_config(config):
     immutable, validated representation of the configuration it specifies.
     """
     # Load with YAML. safe_load() disables python classes
-    return valid_config(yaml.safe_load(config))
+    # We accept a raw configuration fragment or a collection of fragments
+
+    # TODO: add a sentinel to define which version of configuration we
+    # receive as input, instead of relying on an Exception
+    try:
+        parsed_config = valid_config(yaml.safe_load(config))
+        return {MASTER_NAMESPACE: parsed_config}
+    except ConfigError:
+        parsed_yaml = yaml.safe_load(config)
+        config = {}
+        for fragment in parsed_yaml:
+            config[fragment] = valid_config(parsed_yaml[fragment])
+        return config
 
 
 class UniqueNameDict(dict):

@@ -3,6 +3,7 @@
 """
 from collections import namedtuple
 
+MASTER_NAMESPACE = "MASTER"
 
 def config_object_factory(name, required=None, optional=None):
     """

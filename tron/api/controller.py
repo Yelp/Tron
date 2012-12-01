@@ -3,6 +3,12 @@
 """
 import logging
 
+import yaml
+
+from tron.config import ConfigError
+from tron.config.config_parse import valid_config
+from tron.config.schema import MASTER_NAMESPACE
+
 log = logging.getLogger(__name__)
 
 
@@ -39,9 +45,32 @@ class ConfigController(object):
             log.error("Failed to open configuration file: %s" % e)
 
     def rewrite_config(self, content):
+
         try:
+            # Parse the original config and the update
+            with open(self.filepath, 'r') as config:
+                original = yaml.safe_load(config)
+            update = yaml.safe_load(content)
+
+            # Verify the update is a valid configuration
+            assert valid_config(update)
+
+            # Get the namespace for the update
+            namespace = update.get("config_name")
+            if namespace:
+                # Clear "config_name" from the data structure 
+                del update["config_name"]
+            else:
+                namespace = MASTER_NAMESPACE
+
+            # Update the namespace key within the original object
+            original[namespace] = update
+            
+            # Write it back to the original file location
             with open(self.filepath, 'w') as config:
-                config.write(content)
+                yaml.dump(original, config)
+
             return True
-        except (OSError, IOError), e:
-            log.error("Failed to write to configuration file: %s" % e)
+        except (OSError, IOError, ConfigError, yaml.YAMLError), e:
+            log.error("Configuration update failed: %s" % e)
+            return False
