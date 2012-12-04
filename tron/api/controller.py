@@ -2,6 +2,7 @@
  Controllers for the API to perform actions on POSTs.
 """
 import logging
+import os
 
 import yaml
 
@@ -48,8 +49,11 @@ class ConfigController(object):
 
         try:
             # Parse the original config and the update
-            with open(self.filepath, 'r') as config:
-                original = yaml.safe_load(config)
+            if os.path.exists(self.filepath):
+                with open(self.filepath, 'r') as config:
+                    original = yaml.safe_load(config)
+            else:
+                original = {}
             update = yaml.safe_load(content)
 
             # Verify the update is a valid configuration
@@ -57,11 +61,12 @@ class ConfigController(object):
 
             # Get the namespace for the update
             namespace = update.get("config_name")
-            if namespace:
-                # Clear "config_name" from the data structure 
-                del update["config_name"]
-            else:
+            if not namespace:
                 namespace = MASTER_NAMESPACE
+
+                # TODO: Remove the duplicate entry for config_name, by
+                # relaxing the __new__ needs of our class builder.
+                update['config_name'] = MASTER_NAMESPACE
 
             # Update the namespace key within the original object
             original[namespace] = update

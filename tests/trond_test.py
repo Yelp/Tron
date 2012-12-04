@@ -59,6 +59,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
         assert_equal(events[0]['name'], 'restoring')
         assert_equal(events[1]['name'], 'run_created')
         assert_equal(client.config(), second_config)
+        # TODO: Assert YAML equivalence with namespacing
 
         job = {
             'action_names': ['echo_action', 'cleanup', 'another_echo_action'],
@@ -80,6 +81,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
         }
         result = self.sandbox.client.home()
         assert_equal(result, expected)
+
 
         # run the job and check its output
         self.sandbox.tronctl(['start', 'echo_job'])

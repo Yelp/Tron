@@ -35,10 +35,10 @@ def request(host, path, data=None):
         page = opener.open(req)
         contents = page.read()
     except urllib2.HTTPError, e:
-        log.error("Recieved error response: %s" % e)
+        log.error("Received error response: %s" % e)
         return ERROR, e.code
     except urllib2.URLError, e:
-        log.error("Recieved error response: %s" % e)
+        log.error("Received error response: %s" % e)
         return ERROR, e.reason
 
     try:

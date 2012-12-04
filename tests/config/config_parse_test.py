@@ -19,6 +19,7 @@ from tron.config.config_parse import valid_node_pool, valid_config
 from tron.config.schedule_parse import ConfigConstantScheduler
 from tron.config.schedule_parse import ConfigGrocScheduler
 from tron.config.schedule_parse import ConfigIntervalScheduler
+from tron.config.schema import MASTER_NAMESPACE
 from tests.assertions import assert_raises
 from tron.utils.dicts import FrozenDict
 
@@ -150,6 +151,7 @@ services:
     def test_attributes(self):
         test_config = load_config(StringIO.StringIO(self.config))
         expected = TronConfig(
+            config_name='MASTER',
             output_stream_dir='/tmp',
             command_context=FrozenDict({
                 'python': '/usr/bin/python',
@@ -309,21 +311,21 @@ services:
 
         # we could just do a big assert_equal here, but it would be hella hard
         # to debug failures that way.
-        assert_equal(test_config.command_context, expected.command_context)
-        assert_equal(test_config.ssh_options, expected.ssh_options)
-        assert_equal(test_config.notification_options, expected.notification_options)
-        assert_equal(test_config.time_zone, expected.time_zone)
-        assert_equal(test_config.nodes, expected.nodes)
-        assert_equal(test_config.node_pools, expected.node_pools)
-        assert_equal(test_config.jobs['test_job0'], expected.jobs['test_job0'])
-        assert_equal(test_config.jobs['test_job1'], expected.jobs['test_job1'])
-        assert_equal(test_config.jobs['test_job2'], expected.jobs['test_job2'])
-        assert_equal(test_config.jobs['test_job3'], expected.jobs['test_job3'])
-        assert_equal(test_config.jobs['test_job4'], expected.jobs['test_job4'])
-        assert_equal(test_config.jobs, expected.jobs)
-        assert_equal(test_config.services, expected.services)
-        assert_equal(test_config, expected)
-        assert_equal(test_config.jobs['test_job4'].enabled, False)
+        assert_equal(test_config[MASTER_NAMESPACE].command_context, expected.command_context)
+        assert_equal(test_config[MASTER_NAMESPACE].ssh_options, expected.ssh_options)
+        assert_equal(test_config[MASTER_NAMESPACE].notification_options, expected.notification_options)
+        assert_equal(test_config[MASTER_NAMESPACE].time_zone, expected.time_zone)
+        assert_equal(test_config[MASTER_NAMESPACE].nodes, expected.nodes)
+        assert_equal(test_config[MASTER_NAMESPACE].node_pools, expected.node_pools)
+        assert_equal(test_config[MASTER_NAMESPACE].jobs['test_job0'], expected.jobs['test_job0'])
+        assert_equal(test_config[MASTER_NAMESPACE].jobs['test_job1'], expected.jobs['test_job1'])
+        assert_equal(test_config[MASTER_NAMESPACE].jobs['test_job2'], expected.jobs['test_job2'])
+        assert_equal(test_config[MASTER_NAMESPACE].jobs['test_job3'], expected.jobs['test_job3'])
+        assert_equal(test_config[MASTER_NAMESPACE].jobs['test_job4'], expected.jobs['test_job4'])
+        assert_equal(test_config[MASTER_NAMESPACE].jobs, expected.jobs)
+        assert_equal(test_config[MASTER_NAMESPACE].services, expected.services)
+        assert_equal(test_config[MASTER_NAMESPACE], expected)
+        assert_equal(test_config[MASTER_NAMESPACE].jobs['test_job4'].enabled, False)
 
 
 class JobConfigTestCase(TestCase):

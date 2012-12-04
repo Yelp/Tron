@@ -43,15 +43,16 @@ def load_config(config):
 
     # TODO: add a sentinel to define which version of configuration we
     # receive as input, instead of relying on an Exception
-    try:
-        parsed_config = valid_config(yaml.safe_load(config))
-        return {MASTER_NAMESPACE: parsed_config}
-    except ConfigError:
-        parsed_yaml = yaml.safe_load(config)
-        config = {}
+    parsed_yaml = yaml.safe_load(config)
+    if MASTER_NAMESPACE in parsed_yaml:
+        parsed_config = {}
         for fragment in parsed_yaml:
-            config[fragment] = valid_config(parsed_yaml[fragment])
-        return config
+            parsed_config[fragment] = valid_config(parsed_yaml[fragment])
+        return parsed_config
+    else:
+        parsed_config = valid_config(parsed_yaml)
+        #namespace = parsed_yaml.get("config_name") or MASTER_NAMESPACE
+        return {MASTER_NAMESPACE: parsed_config}
 
 
 class UniqueNameDict(dict):
@@ -547,6 +548,7 @@ class ValidateConfig(Validator):
     """
     config_class =              TronConfig
     defaults = {
+        'config_name':          MASTER_NAMESPACE,
         'output_stream_dir':    None,
         'command_context':      None,
         'ssh_options':          valid_ssh_options({}),

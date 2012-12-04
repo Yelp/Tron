@@ -26,6 +26,40 @@ class JobControllerTestCase(TestCase):
 
 class ConfigControllerTestCase(TestCase):
 
+    TEST_CONFIG_UPDATE = """
+config_name: MASTER
+jobs:
+- actions:
+  - {command: echo 'Echo!', name: echo_action}
+  - {command: 'echo ''Today is %(shortdate)s, which is the same as %(year)s-%(month)s-%(day)s''
+      && false', name: another_echo_action}
+  cleanup_action: {command: echo 'at last'}
+  name: echo_job
+  node: local
+  schedule: interval 1 hour
+nodes:
+- {hostname: localhost, name: local}
+ssh_options: {agent: true}
+state_persistence: {name: state_data.shelve, store_type: shelve}
+"""
+
+    TEST_CONFIG_RESULT = """MASTER:
+  config_name: MASTER
+  jobs:
+  - actions:
+    - {command: echo 'Echo!', name: echo_action}
+    - {command: 'echo ''Today is %(shortdate)s, which is the same as %(year)s-%(month)s-%(day)s''
+        && false', name: another_echo_action}
+    cleanup_action: {command: echo 'at last'}
+    name: echo_job
+    node: local
+    schedule: interval 1 hour
+  nodes:
+  - {hostname: localhost, name: local}
+  ssh_options: {agent: true}
+  state_persistence: {name: state_data.shelve, store_type: shelve}
+"""
+
     @setup
     def setup_controller(self):
         self.filename = os.path.join(tempfile.gettempdir(), 'test_config')
@@ -42,7 +76,7 @@ class ConfigControllerTestCase(TestCase):
         content = "12345"
         with open(self.filename, 'w') as fh:
             fh.write(content)
-
+            
         assert_equal(self.controller.read_config(), content)
 
     def test_read_config_missing(self):
@@ -50,13 +84,12 @@ class ConfigControllerTestCase(TestCase):
         assert not self.controller.read_config()
 
     def test_rewrite_config(self):
-        content = '123456'
-        assert self.controller.rewrite_config(content)
-        assert_equal(self.controller.read_config(), content)
+        assert self.controller.rewrite_config(self.TEST_CONFIG_UPDATE)
+        assert_equal(self.controller.read_config(), self.TEST_CONFIG_RESULT)
 
     def test_rewrite_config_missing(self):
         self.controller.filepath = '/bogggusssss'
-        assert not self.controller.rewrite_config('123')
+        assert not self.controller.rewrite_config(self.TEST_CONFIG_UPDATE)
 
 
 if __name__ == "__main__":
