@@ -46,12 +46,17 @@ class ConfigController(object):
             log.error("Failed to open configuration file: %s" % e)
 
     def rewrite_config(self, content):
-
         try:
             # Parse the original config and the update
             if os.path.exists(self.filepath):
                 with open(self.filepath, 'r') as config:
                     original = yaml.safe_load(config)
+
+                    # Forward-convert legacy configurations
+                    # TODO: Make legacy detection non-reliant on side
+                    # effects
+                    if MASTER_NAMESPACE not in original:
+                        original = {MASTER_NAMESPACE: original}
             else:
                 original = {}
             update = yaml.safe_load(content)
