@@ -67,3 +67,6 @@ tests:
 	PYTHONPATH=. testify -x sandbox -x mongodb -x integration tests
 
 test: tests
+
+test_all:
+	PYTHONPATH=. testify tests
