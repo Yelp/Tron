@@ -131,7 +131,7 @@ class MasterControlProgram(Observable):
         for namespace in configs:
             # Collate jobs and services for our diff, before we continue
             for job in configs[namespace].jobs:
-                job_identifier = '.'.join((namespace, job))
+                job_identifier = '_'.join((namespace, job))
                 if job_identifier in jobs:
                     raise ConfigError("Duplicate job found for %s" % job_identifier)
 
@@ -139,7 +139,7 @@ class MasterControlProgram(Observable):
                 jobs[job_identifier] = (job_content, namespace)
 
             for service in configs[namespace].services:
-                service_identifier = '.'.join((namespace, service))
+                service_identifier = '_'.join((namespace, service))
                 if service_identifier in services:
                     raise ConfigError("Duplicate service found for %s" % service_identifier)
 
@@ -201,7 +201,7 @@ class MasterControlProgram(Observable):
         for srv_config in srv_configs.values():
             log.debug("Building new services %s", srv_config[0].name)
             service = Service.from_config(srv_config[0], self.nodes)
-            service.name = '.'.join((srv_config[1], service.name))
+            service.name = '_'.join((srv_config[1], service.name))
             services_to_add.append(service)
 
         for srv_name in (set(self.services.keys()) - set(srv_configs.keys())):
@@ -239,7 +239,7 @@ class MasterControlProgram(Observable):
         output_path = filehandler.OutputPath(self.output_stream_dir)
         scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
         job = Job.from_config(job_config, scheduler, self.context, output_path)
-        job.name = '.'.join((namespace, job.name))
+        job.name = '_'.join((namespace, job.name))
 
         if job.name in self.jobs:
             # Jobs have a complex eq implementation that allows us to catch
@@ -275,7 +275,6 @@ class MasterControlProgram(Observable):
             job_scheduler.schedule()
 
     def get_jobs(self):
-        print self.jobs
         return self.jobs.itervalues()
 
     def get_job_by_name(self, name):
