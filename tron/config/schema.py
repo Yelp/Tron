@@ -39,6 +39,14 @@ TronConfig = config_object_factory(
         'services'             # FrozenDict of ConfigService
     ])
 
+NamedTronConfig = config_object_factory(
+    'NamedTronConfig',
+    optional=[
+        'config_name',         # str
+        'jobs',                # FrozenDict of ConfigJob
+        'services'             # FrozenDict of ConfigService
+    ])
+
 
 NotificationOptions = config_object_factory(
     'NotificationOptions',

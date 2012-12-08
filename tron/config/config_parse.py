@@ -23,7 +23,7 @@ import yaml
 
 from tron.config import ConfigError
 from tron.config.schedule_parse import valid_schedule
-from tron.config.schema import TronConfig, NotificationOptions, ConfigSSHOptions
+from tron.config.schema import TronConfig, NamedTronConfig, NotificationOptions, ConfigSSHOptions
 from tron.config.schema import ConfigNode, ConfigNodePool, ConfigState
 from tron.config.schema import ConfigJob, ConfigAction, ConfigCleanupAction
 from tron.config.schema import ConfigService
@@ -33,6 +33,7 @@ from tron.core.action import CLEANUP_ACTION_NAME
 
 
 log = logging.getLogger(__name__)
+
 
 def load_config(config):
     """Given a string or file object, load it with PyYAML and return an
@@ -47,12 +48,17 @@ def load_config(config):
     if MASTER_NAMESPACE in parsed_yaml:
         parsed_config = {}
         for fragment in parsed_yaml:
-            parsed_config[fragment] = valid_config(parsed_yaml[fragment])
+            if fragment == MASTER_NAMESPACE:
+                parsed_config[fragment] = valid_config(parsed_yaml[fragment])
+            else:
+                parsed_config[fragment] = valid_named_config(parsed_yaml[fragment])
+
         return parsed_config
     else:
         parsed_config = valid_config(parsed_yaml)
         #namespace = parsed_yaml.get("config_name") or MASTER_NAMESPACE
         return {MASTER_NAMESPACE: parsed_config}
+
 
 def rewrite_config(filepath, content):
     """ Given a configuration, perform input validation, parse the
@@ -668,4 +674,36 @@ class ValidateConfig(Validator):
                 msg = "NodePool %s contains another NodePool %s. "
                 raise ConfigError(msg % (node_pool.name, node_name))
 
+class ValidateNamedConfig(Validator):
+    """A shorter validator for named configurations, which allow for
+    jobs and services to be defined as configuration fragments that
+    are, in turn, reconciled by Tron.
+    """
+    config_class =              NamedTronConfig
+    defaults = {
+        'config_name':          None,
+        'jobs':                 (),
+        'services':             ()
+    }
+    optional = False
+
+    def post_validation(self, config):
+        """Validate jobs, nodes, and services."""
+
+        job_service_names = UniqueNameDict(
+                'Job and Service names must be unique %s')
+
+        def parse_sub_config(cname, valid, name_dict):
+            target_dict = UniqueNameDict(
+                "%s name %%s used twice" % cname.replace('_', ' '))
+            for item in config.get(cname) or []:
+                final = valid(item)
+                target_dict[final.name] = final
+                name_dict[final.name] = True
+            config[cname] = FrozenDict(**target_dict)
+
+        parse_sub_config('jobs',        valid_job ,         job_service_names)
+        parse_sub_config('services',    valid_service,      job_service_names)
+
 valid_config = ValidateConfig()
+valid_named_config = ValidateNamedConfig()

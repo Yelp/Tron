@@ -111,24 +111,24 @@ class MasterControlProgram(Observable):
         master_config = configs[MASTER_NAMESPACE]
         self.output_stream_dir = master_config.output_stream_dir or self.working_dir
 
+        if not skip_env_dependent:
+            ssh_options = self._ssh_options_from_config(configs[MASTER_NAMESPACE].ssh_options)
+            state_persistence = configs[MASTER_NAMESPACE].state_persistence
+        else:
+            ssh_options = config_parse.valid_ssh_options({})
+            state_persistence = config_parse.DEFAULT_STATE_PERSISTENCE
+
+        self.state_manager = PersistenceManagerFactory.from_config(
+                    state_persistence)
+        self.context.base = configs[MASTER_NAMESPACE].command_context
+        self.time_zone = configs[MASTER_NAMESPACE].time_zone
+        self._apply_nodes(configs[MASTER_NAMESPACE].nodes, ssh_options)
+        self._apply_node_pools(configs[MASTER_NAMESPACE].node_pools)
+        self._apply_notification_options(configs[MASTER_NAMESPACE].notification_options)
+
         for conf in configs.values():
-            if not skip_env_dependent:
-                ssh_options = self._ssh_options_from_config(conf.ssh_options)
-                state_persistence = conf.state_persistence
-            else:
-                ssh_options = config_parse.valid_ssh_options({})
-                state_persistence = config_parse.DEFAULT_STATE_PERSISTENCE
-
-            self.state_manager = PersistenceManagerFactory.from_config(
-                        state_persistence)
-            self.context.base = conf.command_context
-            self.time_zone = conf.time_zone
-
-            self._apply_nodes(conf.nodes, ssh_options)
-            self._apply_node_pools(conf.node_pools)
             self._apply_jobs(conf.jobs, reconfigure=reconfigure)
             self._apply_services(conf.services)
-            self._apply_notification_options(conf.notification_options)
 
     def _ssh_options_from_config(self, ssh_conf):
         ssh_options = ConchOptions()
