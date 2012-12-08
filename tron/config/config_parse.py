@@ -46,7 +46,7 @@ def load_config(config):
     # receive as input, instead of relying on an Exception
     parsed_yaml = yaml.safe_load(config)
     if MASTER_NAMESPACE in parsed_yaml:
-        parsed_config = {}
+        parsed_config = ConfigContainer()
         for fragment in parsed_yaml:
             if fragment == MASTER_NAMESPACE:
                 parsed_config[fragment] = valid_config(parsed_yaml[fragment])
@@ -57,7 +57,7 @@ def load_config(config):
     else:
         parsed_config = valid_config(parsed_yaml)
         #namespace = parsed_yaml.get("config_name") or MASTER_NAMESPACE
-        return {MASTER_NAMESPACE: parsed_config}
+        return ConfigContainer({MASTER_NAMESPACE: parsed_config})
 
 
 def rewrite_config(filepath, content):
@@ -707,3 +707,4 @@ class ValidateNamedConfig(Validator):
 
 valid_config = ValidateConfig()
 valid_named_config = ValidateNamedConfig()
+ConfigContainer = dict
