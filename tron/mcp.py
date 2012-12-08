@@ -126,9 +126,28 @@ class MasterControlProgram(Observable):
         self._apply_node_pools(configs[MASTER_NAMESPACE].node_pools)
         self._apply_notification_options(configs[MASTER_NAMESPACE].notification_options)
 
-        for conf in configs.values():
-            self._apply_jobs(conf.jobs, reconfigure=reconfigure)
-            self._apply_services(conf.services)
+        jobs = {}
+        services = {}
+        for namespace in configs:
+            # Collate jobs and services for our diff, before we continue
+            for job in configs[namespace].jobs:
+                job_identifier = '.'.join((namespace, job))
+                if job_identifier in jobs:
+                    raise ConfigError("Duplicate job found for %s" % job_identifier)
+
+                job_content = configs[namespace].jobs[job]
+                jobs[job_identifier] = (job_content, namespace)
+
+            for service in configs[namespace].services:
+                service_identifier = '.'.join((namespace, service))
+                if service_identifier in services:
+                    raise ConfigError("Duplicate service found for %s" % service_identifier)
+
+                service_content = configs[namespace].services[service]
+                services[service_identifier] = (service_content, namespace)
+
+        self._apply_jobs(jobs, reconfigure=reconfigure)
+        self._apply_services(services)
 
     def _ssh_options_from_config(self, ssh_conf):
         ssh_options = ConchOptions()
@@ -169,7 +188,7 @@ class MasterControlProgram(Observable):
     def _apply_jobs(self, job_configs, reconfigure=False):
         """Add and remove jobs based on the configuration."""
         for job_config in job_configs.values():
-            self.add_job(job_config, reconfigure=reconfigure)
+            self.add_job(job_config[0], job_config[1], reconfigure=reconfigure)
 
         for job_name in (set(self.jobs.keys()) - set(job_configs.keys())):
             log.debug("Removing job %s", job_name)
@@ -180,8 +199,9 @@ class MasterControlProgram(Observable):
 
         services_to_add = []
         for srv_config in srv_configs.values():
-            log.debug("Building new services %s", srv_config.name)
-            service = Service.from_config(srv_config, self.nodes)
+            log.debug("Building new services %s", srv_config[0].name)
+            service = Service.from_config(srv_config[0], self.nodes)
+            service.name = '.'.join((srv_config[1], service.name))
             services_to_add.append(service)
 
         for srv_name in (set(self.services.keys()) - set(srv_configs.keys())):
@@ -214,11 +234,12 @@ class MasterControlProgram(Observable):
             self.crash_reporter = crash_reporter.CrashReporter(em, self)
             self.crash_reporter.start()
 
-    def add_job(self, job_config, reconfigure=False):
+    def add_job(self, job_config, namespace, reconfigure=False):
         log.debug("Building new job %s", job_config.name)
         output_path = filehandler.OutputPath(self.output_stream_dir)
         scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
         job = Job.from_config(job_config, scheduler, self.context, output_path)
+        job.name = '.'.join((namespace, job.name))
 
         if job.name in self.jobs:
             # Jobs have a complex eq implementation that allows us to catch
@@ -254,12 +275,14 @@ class MasterControlProgram(Observable):
             job_scheduler.schedule()
 
     def get_jobs(self):
+        print self.jobs
         return self.jobs.itervalues()
 
     def get_job_by_name(self, name):
         return self.jobs.get(name)
 
     def add_service(self, service):
+
         if service.name in self.jobs:
             raise ValueError("Service %s is already a job", service.name)
 

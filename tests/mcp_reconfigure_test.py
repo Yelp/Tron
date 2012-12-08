@@ -157,21 +157,21 @@ class MCPReconfigureTestCase(TestCase):
 
     @suite('integration')
     def test_job_unchanged(self):
-        assert 'test_unchanged' in self.mcp.jobs
-        job_sched = self.mcp.jobs['test_unchanged']
+        assert 'MASTER.test_unchanged' in self.mcp.jobs
+        job_sched = self.mcp.jobs['MASTER.test_unchanged']
         orig_job = job_sched.job
         run0 = job_sched.get_runs_to_schedule().next()
         run0.start()
         run1 = job_sched.get_runs_to_schedule().next()
 
-        assert_equal(job_sched.job.name, "test_unchanged")
+        assert_equal(job_sched.job.name, "MASTER.test_unchanged")
         action_map = job_sched.job.action_graph.action_map
         assert_equal(len(action_map), 1)
         assert_equal(action_map['action_unchanged'].name, 'action_unchanged')
         assert_equal(str(job_sched.job.scheduler), "DAILY")
 
         self.reconfigure()
-        assert job_sched is self.mcp.jobs['test_unchanged']
+        assert job_sched is self.mcp.jobs['MASTER.test_unchanged']
         assert job_sched.job is orig_job
 
         assert_equal(len(job_sched.job.runs.runs), 2)
@@ -183,25 +183,25 @@ class MCPReconfigureTestCase(TestCase):
 
     @suite('integration')
     def test_job_unchanged_disabled(self):
-        job_sched = self.mcp.jobs['test_unchanged']
+        job_sched = self.mcp.jobs['MASTER.test_unchanged']
         orig_job = job_sched.job
         job_sched.get_runs_to_schedule().next()
         job_sched.disable()
 
         self.reconfigure()
-        assert job_sched is self.mcp.jobs['test_unchanged']
+        assert job_sched is self.mcp.jobs['MASTER.test_unchanged']
         assert job_sched.job is orig_job
         assert not job_sched.job.enabled
 
     @suite('integration')
     def test_job_removed(self):
-        assert 'test_remove' in self.mcp.jobs
-        job_sched = self.mcp.jobs['test_remove']
+        assert 'MASTER.test_remove' in self.mcp.jobs
+        job_sched = self.mcp.jobs['MASTER.test_remove']
         run0 = job_sched.get_runs_to_schedule().next()
         run0.start()
         run1 = job_sched.get_runs_to_schedule().next()
 
-        assert_equal(job_sched.job.name, "test_remove")
+        assert_equal(job_sched.job.name, "MASTER.test_remove")
         action_map = job_sched.job.action_graph.action_map
         assert_equal(len(action_map), 2)
         assert_equal(action_map['action_remove'].name, 'action_remove')
@@ -213,23 +213,23 @@ class MCPReconfigureTestCase(TestCase):
 
     @suite('integration')
     def test_job_changed(self):
-        assert 'test_change' in self.mcp.jobs
-        job_sched = self.mcp.jobs['test_change']
+        assert 'MASTER.test_change' in self.mcp.jobs
+        job_sched = self.mcp.jobs['MASTER.test_change']
         run0 = job_sched.get_runs_to_schedule().next()
         run0.start()
         job_sched.get_runs_to_schedule().next()
         assert_equal(len(job_sched.job.runs.runs), 2)
 
-        assert_equal(job_sched.job.name, "test_change")
+        assert_equal(job_sched.job.name, "MASTER.test_change")
         action_map = job_sched.job.action_graph.action_map
         assert_equal(len(action_map), 2)
 
         self.reconfigure()
-        new_job_sched = self.mcp.jobs['test_change']
+        new_job_sched = self.mcp.jobs['MASTER.test_change']
         assert new_job_sched is job_sched
         assert new_job_sched.job is job_sched.job
 
-        assert_equal(new_job_sched.job.name, "test_change")
+        assert_equal(new_job_sched.job.name, "MASTER.test_change")
         action_map = job_sched.job.action_graph.action_map
         assert_equal(len(action_map), 1)
 
@@ -241,12 +241,12 @@ class MCPReconfigureTestCase(TestCase):
 
     @suite('integration')
     def test_job_changed_disabled(self):
-        job_sched = self.mcp.jobs['test_change']
+        job_sched = self.mcp.jobs['MASTER.test_change']
         job_sched.disable()
         assert not job_sched.job.enabled
 
         self.reconfigure()
-        new_job_sched = self.mcp.jobs['test_change']
+        new_job_sched = self.mcp.jobs['MASTER.test_change']
         assert not new_job_sched.job.enabled
 
     @suite('integration')
@@ -254,10 +254,10 @@ class MCPReconfigureTestCase(TestCase):
         assert not 'test_new' in self.mcp.jobs
         self.reconfigure()
 
-        assert 'test_new' in self.mcp.jobs
-        job_sched = self.mcp.jobs['test_new']
+        assert 'MASTER.test_new' in self.mcp.jobs
+        job_sched = self.mcp.jobs['MASTER.test_new']
 
-        assert_equal(job_sched.job.name, "test_new")
+        assert_equal(job_sched.job.name, "MASTER.test_new")
         action_map = job_sched.job.action_graph.action_map
         assert_equal(len(action_map), 1)
         assert_equal(action_map['action_new'].name, 'action_new')
@@ -267,7 +267,7 @@ class MCPReconfigureTestCase(TestCase):
 
     @suite('integration')
     def test_daily_reschedule(self):
-        job_sched = self.mcp.jobs['test_daily_change']
+        job_sched = self.mcp.jobs['MASTER.test_daily_change']
 
         job_sched.get_runs_to_schedule().next()
 
@@ -287,7 +287,7 @@ class MCPReconfigureTestCase(TestCase):
     @suite('integration')
     def test_action_added(self):
         self.reconfigure()
-        job_sched = self.mcp.jobs['test_action_added']
+        job_sched = self.mcp.jobs['MASTER.test_action_added']
         assert_length(job_sched.job.action_graph.action_map, 2)
 
 if __name__ == '__main__':

@@ -83,7 +83,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
             'status': 'ENABLED',
             'href': '/jobs/echo_job',
             'last_success': None,
-            'name': 'echo_job',
+            'name': 'MASTER.echo_job',
             'scheduler': 'INTERVAL:1:00:00',
             'node_pool': ['localhost'],
             'runs': None
@@ -126,7 +126,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
 
         expected = """\nServices:\nNo Services\n\n\nJobs:
             Name       State       Scheduler           Last Success
-            echo_job   ENABLED     INTERVAL:1:00:00    None
+            MASTER.echo_job   ENABLED     INTERVAL:1:00:00    None
             """
 
         def remove_line_space(s):
