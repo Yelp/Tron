@@ -55,9 +55,13 @@ def load_config(config):
 
         return parsed_config
     else:
-        parsed_config = valid_config(parsed_yaml)
-        #namespace = parsed_yaml.get("config_name") or MASTER_NAMESPACE
-        return ConfigContainer({MASTER_NAMESPACE: parsed_config})
+        namespace = parsed_yaml.get("config_name") or MASTER_NAMESPACE
+        if namespace == MASTER_NAMESPACE:
+            parsed_config = valid_config(parsed_yaml)
+        else:
+            parsed_config = valid_named_config(parsed_yaml)
+
+        return ConfigContainer({namespace: parsed_config})
 
 
 def rewrite_config(filepath, content):

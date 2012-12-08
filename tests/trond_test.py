@@ -36,6 +36,16 @@ DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
         command: "echo 'Today is %(shortdate)s, which is the same
                     as %(year)s-%(month)s-%(day)s' && false" """
 
+ALT_NAMESPACED_ECHO_CONFIG = """
+config_name: "echo"
+jobs:
+  - name: "echo_job"
+    node: local
+    schedule: "interval 1 hour"
+    actions:
+      - name: "echo_action"
+        command: "echo 'Echo!'" """
+
 TOUCH_CLEANUP_FMT = """
     cleanup_action:
       command: "echo 'at last'"
@@ -76,7 +86,10 @@ class TrondTestCase(sandbox.SandboxTestCase):
         assert_equal(events[0]['name'], 'restoring')
         assert_equal(events[1]['name'], 'run_created')
         assert_equal(client.config(), RECONFIGURE_RESULT)
-        # TODO: Assert YAML equivalence with namespacing
+        
+        # reconfigure, by uploading a third configuration
+        third_config = ALT_NAMESPACED_ECHO_CONFIG
+        self.sandbox.tronfig(third_config)
 
         job = {
             'action_names': ['echo_action', 'cleanup', 'another_echo_action'],
