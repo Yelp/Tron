@@ -34,35 +34,57 @@ from tron.core.action import CLEANUP_ACTION_NAME
 
 log = logging.getLogger(__name__)
 
-
 def load_config(config):
     """Given a string or file object, load it with PyYAML and return an
     immutable, validated representation of the configuration it specifies.
     """
-    # Load with YAML. safe_load() disables python classes
-    # We accept a raw configuration fragment or a collection of fragments
-
+    # TODO: load with YAML. safe_load() disables python classes
     # TODO: add a sentinel to define which version of configuration we
     # receive as input, instead of relying on an Exception
+
     parsed_yaml = yaml.safe_load(config)
     if MASTER_NAMESPACE in parsed_yaml:
-        parsed_config = ConfigContainer()
-        for fragment in parsed_yaml:
-            if fragment == MASTER_NAMESPACE:
-                parsed_config[fragment] = valid_config(parsed_yaml[fragment])
-            else:
-                parsed_config[fragment] = valid_named_config(parsed_yaml[fragment])
-
-        return parsed_config
+        return _parse_config_container_file(parsed_yaml)
     else:
-        namespace = parsed_yaml.get("config_name") or MASTER_NAMESPACE
-        if namespace == MASTER_NAMESPACE:
-            parsed_config = valid_config(parsed_yaml)
+        return _create_new_config_container(parsed_yaml)
+
+def _parse_config_container_file(parsed_yaml):
+    """Parses a file-backed representation of a ConfigContainer directly."""
+    parsed_config = ConfigContainer()
+    for fragment in parsed_yaml:
+        if fragment == MASTER_NAMESPACE:
+            parsed_config[fragment] = valid_config(parsed_yaml[fragment])
         else:
-            parsed_config = valid_named_config(parsed_yaml)
+            parsed_config[fragment] = valid_named_config(parsed_yaml[fragment])
+    return parsed_config
 
-        return ConfigContainer({namespace: parsed_config})
+def _create_new_config_container(parsed_yaml):
+    """Generates a new ConfigContainer from a partial or legacy configuration."""
+    namespace = parsed_yaml.get("config_name") or MASTER_NAMESPACE
+    if namespace == MASTER_NAMESPACE:
+        parsed_config = valid_config(parsed_yaml)
+    else:
+        parsed_config = valid_named_config(parsed_yaml)
+    return ConfigContainer({namespace: parsed_config})
 
+
+def initialize_original_config(filepath):
+    """Initialize the dictionary for our original configuration file."""
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as config:
+            original = yaml.safe_load(config)
+
+            # Forward-convert legacy configurations
+            # TODO: Make legacy detection non-reliant on side
+            # effects
+            if MASTER_NAMESPACE not in original:
+                return {MASTER_NAMESPACE: original}
+    else:
+        return {}
+
+def extract_namespace(yaml_config):
+    """Get the namespace from this yaml_config."""
+    return yaml_config.get("config_name")
 
 def rewrite_config(filepath, content):
     """ Given a configuration, perform input validation, parse the
@@ -71,36 +93,18 @@ def rewrite_config(filepath, content):
     container. 
     """
     try:
-        # Parse the original config and the update
-        if os.path.exists(filepath):
-            with open(filepath, 'r') as config:
-                original = yaml.safe_load(config)
-
-                # Forward-convert legacy configurations
-                # TODO: Make legacy detection non-reliant on side
-                # effects
-                if MASTER_NAMESPACE not in original:
-                    original = {MASTER_NAMESPACE: original}
-        else:
-            original = {}
+        original = initialize_original_config(filepath)
         update = yaml.safe_load(content)
-
-        # Verify the update is a valid configuration
         assert valid_config(update)
 
-        # Get the namespace for the update
-        namespace = update.get("config_name")
+        namespace = extract_namespace(update)
         if not namespace:
             namespace = MASTER_NAMESPACE
-
             # TODO: Remove the duplicate entry for config_name, by
             # relaxing the __new__ needs of our class builder.
             update['config_name'] = MASTER_NAMESPACE
-
-        # Update the namespace key within the original object
         original[namespace] = update
-        
-        # Write it back to the original file location
+
         with open(filepath, 'w') as config:
             yaml.dump(original, config)
 
@@ -108,6 +112,28 @@ def rewrite_config(filepath, content):
     except (OSError, IOError, ConfigError, yaml.YAMLError), e:
         log.error("Configuration update failed: %s" % e)
         return False
+
+def collate_jobs_and_services(configs):
+    """Collate jobs and services from an iterable of Config objects."""
+    jobs = {}
+    services = {}
+    
+    def _iter_items(config, namespace, attr):
+        for item in getattr(config, attr):
+            identifier = '_'.join((namespace, item))
+            if identifier in jobs or identifier in services:
+                raise ConfigError("Collision found for identifier '%s'" % job_identifier)
+            content = getattr(config, attr)[item]
+            yield identifier, content
+            
+    for namespace, config in configs.items():
+        for job_identifier, content in _iter_items(config, namespace, "jobs"):
+            jobs[job_identifier] = (content, namespace)
+
+        for service_identifier, content in _iter_items(config, namespace, "services"):
+            services[service_identifier] = (content, namespace)
+        
+    return jobs, services
 
 
 class UniqueNameDict(dict):
@@ -594,6 +620,24 @@ valid_state_persistence = ValidateStatePersistence()
 
 DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1)
 
+def parse_sub_config(config, cname, valid, name_dict):
+    target_dict = UniqueNameDict(
+        "%s name %%s used twice" % cname.replace('_', ' '))
+    for item in config.get(cname) or []:
+        final = valid(item)
+        target_dict[final.name] = final
+        name_dict[final.name] = True
+    config[cname] = FrozenDict(**target_dict)
+
+def validate_jobs_and_services(config):
+    """Validate jobs and services."""
+
+    job_service_names = UniqueNameDict(
+            'Job and Service names must be unique %s')
+
+    parse_sub_config(config, 'jobs',        valid_job ,         job_service_names)
+    parse_sub_config(config, 'services',    valid_service,      job_service_names)
+
 
 class ValidateConfig(Validator):
     """Given a parsed config file (should be only basic literals and
@@ -625,30 +669,6 @@ class ValidateConfig(Validator):
     }
     optional = False
 
-    def post_validation(self, config):
-        """Validate jobs, nodes, and services."""
-
-        node_names = UniqueNameDict('Node and NodePool names must be unique %s')
-        job_service_names = UniqueNameDict(
-                'Job and Service names must be unique %s')
-
-        def parse_sub_config(cname, valid, name_dict):
-            target_dict = UniqueNameDict(
-                "%s name %%s used twice" % cname.replace('_', ' '))
-            for item in config.get(cname) or []:
-                final = valid(item)
-                target_dict[final.name] = final
-                name_dict[final.name] = True
-            config[cname] = FrozenDict(**target_dict)
-
-        parse_sub_config('nodes',       valid_node,         node_names)
-        parse_sub_config('node_pools',  valid_node_pool,    node_names)
-        parse_sub_config('jobs',        valid_job ,         job_service_names)
-        parse_sub_config('services',    valid_service,      job_service_names)
-
-        self.validate_node_names(config, node_names)
-        self.validate_node_pool_nodes(config)
-
     def validate_node_names(self, config, node_names):
         """Validate that any node/node_pool name that were used are configured
         as nodes/node_pools.
@@ -656,7 +676,7 @@ class ValidateConfig(Validator):
         actions = itertools.chain.from_iterable(
             job.actions.values()
             for job in config['jobs'].values())
-
+    
         task_list = itertools.chain(
             config['jobs'].values(),
             config['services'].values(),
@@ -665,7 +685,7 @@ class ValidateConfig(Validator):
             if task.node and task.node not in node_names:
                 raise ConfigError("Unknown node %s configured for %s %s" % (
                     task.node, task.__class__.__name__, task.name))
-
+    
     def validate_node_pool_nodes(self, config):
         """Validate that each node in a node_pool is in fact a node, and not
         another pool.
@@ -677,6 +697,16 @@ class ValidateConfig(Validator):
                     continue
                 msg = "NodePool %s contains another NodePool %s. "
                 raise ConfigError(msg % (node_pool.name, node_name))
+    
+    def post_validation(self, config):
+        """Validate a non-named config."""
+        validate_jobs_and_services(config)
+        node_names = UniqueNameDict('Node and NodePool names must be unique %s')
+        parse_sub_config(config, 'nodes',       valid_node,         node_names)
+        parse_sub_config(config, 'node_pools',  valid_node_pool,    node_names)
+        self.validate_node_names(config, node_names)
+        self.validate_node_pool_nodes(config)
+
 
 class ValidateNamedConfig(Validator):
     """A shorter validator for named configurations, which allow for
@@ -692,22 +722,8 @@ class ValidateNamedConfig(Validator):
     optional = False
 
     def post_validation(self, config):
-        """Validate jobs, nodes, and services."""
-
-        job_service_names = UniqueNameDict(
-                'Job and Service names must be unique %s')
-
-        def parse_sub_config(cname, valid, name_dict):
-            target_dict = UniqueNameDict(
-                "%s name %%s used twice" % cname.replace('_', ' '))
-            for item in config.get(cname) or []:
-                final = valid(item)
-                target_dict[final.name] = final
-                name_dict[final.name] = True
-            config[cname] = FrozenDict(**target_dict)
-
-        parse_sub_config('jobs',        valid_job ,         job_service_names)
-        parse_sub_config('services',    valid_service,      job_service_names)
+        """Validate a named config."""
+        validate_jobs_and_services(config)
 
 valid_config = ValidateConfig()
 valid_named_config = ValidateNamedConfig()

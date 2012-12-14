@@ -9,7 +9,7 @@ from tron import event
 from tron import crash_reporter
 from tron import node
 from tron.config import config_parse
-from tron.config.config_parse import ConfigError
+from tron.config.config_parse import collate_jobs_and_services, ConfigError
 from tron.config.schema import MASTER_NAMESPACE
 from tron.core.job import Job, JobScheduler
 from tron.node import Node, NodePool
@@ -101,22 +101,12 @@ class MasterControlProgram(Observable):
         # without any state will be scheduled here.
         self.schedule_jobs()
 
-    def apply_config(self, configs, skip_env_dependent=False, reconfigure=False):
-        """Apply a configuration. If skip_env_dependent is True we're
-        loading this locally to test the config as part of tronfig. We want to
-        skip applying some settings because the local machine we're using to
-        edit the config may not have the same environment as the live
-        trond machine.
-        """
+    def apply_config(self, configs, reconfigure=False):
+        """Apply a configuration."""
         master_config = configs[MASTER_NAMESPACE]
         self.output_stream_dir = master_config.output_stream_dir or self.working_dir
-
-        if not skip_env_dependent:
-            ssh_options = self._ssh_options_from_config(configs[MASTER_NAMESPACE].ssh_options)
-            state_persistence = configs[MASTER_NAMESPACE].state_persistence
-        else:
-            ssh_options = config_parse.valid_ssh_options({})
-            state_persistence = config_parse.DEFAULT_STATE_PERSISTENCE
+        ssh_options = config_parse.valid_ssh_options({})
+        state_persistence = config_parse.DEFAULT_STATE_PERSISTENCE
 
         self.state_manager = PersistenceManagerFactory.from_config(
                     state_persistence)
@@ -126,25 +116,7 @@ class MasterControlProgram(Observable):
         self._apply_node_pools(configs[MASTER_NAMESPACE].node_pools)
         self._apply_notification_options(configs[MASTER_NAMESPACE].notification_options)
 
-        jobs = {}
-        services = {}
-        for namespace in configs:
-            # Collate jobs and services for our diff, before we continue
-            for job in configs[namespace].jobs:
-                job_identifier = '_'.join((namespace, job))
-                if job_identifier in jobs:
-                    raise ConfigError("Duplicate job found for %s" % job_identifier)
-
-                job_content = configs[namespace].jobs[job]
-                jobs[job_identifier] = (job_content, namespace)
-
-            for service in configs[namespace].services:
-                service_identifier = '_'.join((namespace, service))
-                if service_identifier in services:
-                    raise ConfigError("Duplicate service found for %s" % service_identifier)
-
-                service_content = configs[namespace].services[service]
-                services[service_identifier] = (service_content, namespace)
+        jobs, services = collate_jobs_and_services(configs)
 
         self._apply_jobs(jobs, reconfigure=reconfigure)
         self._apply_services(services)
