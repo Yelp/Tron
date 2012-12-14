@@ -67,25 +67,6 @@ def _create_new_config_container(parsed_yaml):
         parsed_config = valid_named_config(parsed_yaml)
     return ConfigContainer({namespace: parsed_config})
 
-
-def initialize_original_config(filepath):
-    """Initialize the dictionary for our original configuration file."""
-    if os.path.exists(filepath):
-        with open(filepath, 'r') as config:
-            original = yaml.safe_load(config)
-
-            # Forward-convert legacy configurations
-            # TODO: Make legacy detection non-reliant on side
-            # effects
-            if MASTER_NAMESPACE not in original:
-                return {MASTER_NAMESPACE: original}
-    else:
-        return {}
-
-def extract_namespace(yaml_config):
-    """Get the namespace from this yaml_config."""
-    return yaml_config.get("config_name")
-
 def rewrite_config(filepath, content):
     """ Given a configuration, perform input validation, parse the
     YAML into what we hope to be a valid configuration object, then
@@ -93,25 +74,48 @@ def rewrite_config(filepath, content):
     container. 
     """
     try:
-        original = initialize_original_config(filepath)
-        update = yaml.safe_load(content)
-        assert valid_config(update)
-
-        namespace = extract_namespace(update)
-        if not namespace:
-            namespace = MASTER_NAMESPACE
-            # TODO: Remove the duplicate entry for config_name, by
-            # relaxing the __new__ needs of our class builder.
-            update['config_name'] = MASTER_NAMESPACE
+        original = _initialize_original_config(filepath)
+        namespace, update = _initialize_namespaced_update(content)
         original[namespace] = update
 
         with open(filepath, 'w') as config:
             yaml.dump(original, config)
-
         return True
     except (OSError, IOError, ConfigError, yaml.YAMLError), e:
         log.error("Configuration update failed: %s" % e)
         return False
+
+def _initialize_original_config(filepath):
+    """Initialize the dictionary for our original configuration file."""
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as config:
+            original = yaml.safe_load(config)
+
+        # Forward-convert legacy configurations
+        # TODO: Make legacy detection non-reliant on side
+        # effects
+        if MASTER_NAMESPACE not in original:
+            return {MASTER_NAMESPACE: original}
+        return original
+    else:
+        return {}
+
+def _initialize_namespaced_update(content):
+    """Initialize the update configuration object."""
+    update = yaml.safe_load(content)
+    namespace = update.get("config_name")
+    if not namespace:
+        namespace = MASTER_NAMESPACE
+        # TODO: Remove the duplicate entry for config_name, by
+        # relaxing the __new__ needs of our class builder.
+        update['config_name'] = MASTER_NAMESPACE
+
+    if namespace == MASTER_NAMESPACE:
+        assert valid_config(update)
+    else:
+        assert valid_named_config(update)
+
+    return namespace, update
 
 def collate_jobs_and_services(configs):
     """Collate jobs and services from an iterable of Config objects."""
