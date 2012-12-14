@@ -37,7 +37,7 @@ DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
                     as %(year)s-%(month)s-%(day)s' && false" """
 
 ALT_NAMESPACED_ECHO_CONFIG = """
-config_name: "echo"
+config_name: "ohce"
 jobs:
   - name: "echo_job"
     node: local
@@ -91,7 +91,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
         third_config = ALT_NAMESPACED_ECHO_CONFIG
         self.sandbox.tronfig(third_config)
 
-        job = {
+        job1 = {
             'action_names': ['echo_action', 'cleanup', 'another_echo_action'],
             'status': 'ENABLED',
             'href': '/jobs/MASTER_echo_job',
@@ -101,8 +101,18 @@ class TrondTestCase(sandbox.SandboxTestCase):
             'node_pool': ['localhost'],
             'runs': None
         }
+        job2 = {
+            'action_names': ['echo_action'],
+            'status': 'ENABLED',
+            'href': '/jobs/ohce_echo_job',
+            'last_success': None,
+            'name': 'ohce_echo_job',
+            'scheduler': 'INTERVAL:1:00:00',
+            'node_pool': ['localhost'],
+            'runs': None
+        }
         expected = {
-            'jobs': [job],
+            'jobs': [job1, job2],
             'status_href': '/status',
             'jobs_href': '/jobs',
             'config_href': '/config',
