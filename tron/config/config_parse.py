@@ -39,8 +39,9 @@ def load_config(config):
     immutable, validated representation of the configuration it specifies.
     """
     # TODO: load with YAML. safe_load() disables python classes
-    # TODO: add a sentinel to define which version of configuration we
-    # receive as input, instead of relying on an Exception
+    # TODO: this logic provides automatic forward-porting of legacy
+    # configuration files. These files should be deprecated and this
+    # logic should be considered for removal in later versions.
 
     parsed_yaml = yaml.safe_load(config)
     if MASTER_NAMESPACE in parsed_yaml:
