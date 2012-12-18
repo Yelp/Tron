@@ -1,9 +1,13 @@
 import os
 import tempfile
-from testify import teardown, setup, TestCase, run, assert_equal
+
+from testify import teardown, setup, TestCase, run, assert_equal, assert_raises, assert_in
 from tests.assertions import assert_call
 from tests.testingutils import Turtle
+
 from tron.api.controller import JobController, ConfigController
+from tron.config.config_parse import rewrite_config, ConfigError
+
 
 class JobControllerTestCase(TestCase):
 
@@ -26,8 +30,15 @@ class JobControllerTestCase(TestCase):
 
 class ConfigControllerTestCase(TestCase):
 
-    TEST_CONFIG_UPDATE = """
+    BASE_CONFIG = """
 config_name: MASTER
+nodes:
+- {hostname: localhost, name: local}
+ssh_options: {agent: true}
+state_persistence: {name: state_data.shelve, store_type: shelve}
+"""
+
+    TEST_CONFIG_UPDATE = BASE_CONFIG + """
 jobs:
 - actions:
   - {command: echo 'Echo!', name: echo_action}
@@ -37,10 +48,6 @@ jobs:
   name: echo_job
   node: local
   schedule: interval 1 hour
-nodes:
-- {hostname: localhost, name: local}
-ssh_options: {agent: true}
-state_persistence: {name: state_data.shelve, store_type: shelve}
 """
 
     TEST_CONFIG_RESULT = """MASTER:
@@ -91,6 +98,40 @@ state_persistence: {name: state_data.shelve, store_type: shelve}
         self.controller.filepath = '/bogggusssss'
         assert not self.controller.rewrite_config(self.TEST_CONFIG_UPDATE)
 
+    def test_missing_job_node(self):
+        test_config = self.BASE_CONFIG + """
+jobs:
+    -
+        name: "test_job0"
+        node: bogussssss
+        schedule: "interval 20s"
+        actions:
+            -
+                name: "action0_0"
+                command: "test_command0.0"
+        cleanup_action:
+            command: "test_command0.1"
+            requires: [action0_0]
+        """
+
+        assert_raises(ConfigError, rewrite_config, self.filename, test_config)
+        
+    def test_missing_service_node(self):
+        test_config = self.BASE_CONFIG + """
+services:
+    -
+        name: "test_job0"
+        node: bogusssss
+        schedule: "interval 20s"
+        actions:
+            -
+                name: "action0_0"
+                command: "test_command0.0"
+        cleanup_action:
+            command: "test_command0.1"
+"""
+
+        assert_raises(ConfigError, rewrite_config, self.filename, test_config)
 
 if __name__ == "__main__":
     run()

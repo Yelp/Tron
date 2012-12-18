@@ -3,7 +3,10 @@
 """
 import logging
 
+from yaml import YAMLError
+
 from tron.config import config_parse
+
 
 log = logging.getLogger(__name__)
 
@@ -27,9 +30,6 @@ class JobController(object):
 class ConfigController(object):
     """Control config."""
 
-    # TODO: This could really use a permissions manager. The fact that
-    # this can flatten existing configuration files without validation
-    # is more than somewhat worrying.
     def __init__(self, filepath):
         self.filepath = filepath
 
@@ -42,4 +42,9 @@ class ConfigController(object):
 
     def rewrite_config(self, content):
         """ Rewrites the local configuration file."""
-        return config_parse.rewrite_config(self.filepath, content)
+        try:
+            config_parse.rewrite_config(self.filepath, content)
+            return True
+        except (OSError, IOError, config_parse.ConfigError, YAMLError), e:
+            log.error("Configuration update failed: %s" % e)
+            return False

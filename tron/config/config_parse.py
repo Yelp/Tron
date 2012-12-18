@@ -66,7 +66,22 @@ def _create_new_config_container(parsed_yaml):
         parsed_config = valid_config(parsed_yaml)
     else:
         parsed_config = valid_named_config(parsed_yaml)
-    return ConfigContainer({namespace: parsed_config})
+    parsed_config = ConfigContainer({namespace: parsed_config})
+    return parsed_config
+
+def valid_job_service_node_mapping(config):
+    """Validate the node for all namespaces' services and jobs."""
+    nodes = [i["name"] for i in config[MASTER_NAMESPACE]["nodes"]]
+    err_msg = "Missing node: %s"
+    for ns_content in config.values():
+
+        for attr in ("jobs", "services"):
+            attr_elems = ns_content.get(attr)
+            if not attr_elems:
+                continue
+            for elem in attr_elems:
+                if elem["node"] not in nodes:
+                    raise ConfigError(err_msg % elem["node"])
 
 def rewrite_config(filepath, content):
     """ Given a configuration, perform input validation, parse the
@@ -74,17 +89,13 @@ def rewrite_config(filepath, content):
     reconcile the altered configuration with the remainder of the
     container. 
     """
-    try:
-        original = _initialize_original_config(filepath)
-        namespace, update = _initialize_namespaced_update(content)
-        original[namespace] = update
+    original = _initialize_original_config(filepath)
+    namespace, update = _initialize_namespaced_update(content)
+    original[namespace] = update
+    valid_job_service_node_mapping(original)
 
-        with open(filepath, 'w') as config:
-            yaml.dump(original, config)
-        return True
-    except (OSError, IOError, ConfigError, yaml.YAMLError), e:
-        log.error("Configuration update failed: %s" % e)
-        return False
+    with open(filepath, 'w') as config:
+        yaml.dump(original, config)
 
 def _initialize_original_config(filepath):
     """Initialize the dictionary for our original configuration file."""
