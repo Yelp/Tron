@@ -44,9 +44,12 @@ class ConfigController(object):
     def rewrite_config(self, content):
         """ Rewrites the local configuration file."""
         try:
-            config_parse.rewrite_config(self.filepath, content)
-            with open(self.filepath) as config:
-                self.validate_config(config)
+            new_config = config_parse.update_config(self.filepath, content)
+            self.validate_config(new_config)
+
+            with open(self.filepath, 'w') as config:
+                config.write(new_config)
+
             return True
         except Exception, e:
             log.error("Configuration update failed: %s" % e)

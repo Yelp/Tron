@@ -6,7 +6,7 @@ from tests.assertions import assert_call
 from tests.testingutils import Turtle
 
 from tron.api.controller import JobController, ConfigController
-from tron.config.config_parse import rewrite_config, ConfigError
+from tron.config.config_parse import update_config, ConfigError
 
 
 class JobControllerTestCase(TestCase):
@@ -114,7 +114,7 @@ jobs:
             requires: [action0_0]
         """
 
-        assert_raises(ConfigError, rewrite_config, self.filename, test_config)
+        assert_raises(ConfigError, update_config, self.filename, test_config)
         
     def test_missing_service_node(self):
         test_config = self.BASE_CONFIG + """
@@ -131,7 +131,7 @@ services:
             command: "test_command0.1"
 """
 
-        assert_raises(ConfigError, rewrite_config, self.filename, test_config)
+        assert_raises(ConfigError, update_config, self.filename, test_config)
 
 if __name__ == "__main__":
     run()
