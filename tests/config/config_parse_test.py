@@ -328,7 +328,7 @@ services:
         assert_equal(test_config[MASTER_NAMESPACE].jobs['test_job4'].enabled, False)
 
 
-class ConfigTestCase(TestCase):
+class NamedConfigTestCase(TestCase):
     config = """
 config_name: "test_namespace"
 jobs:

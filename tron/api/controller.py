@@ -2,9 +2,10 @@
  Controllers for the API to perform actions on POSTs.
 """
 import logging
+import shutil
+import tempfile
 
-from yaml import YAMLError
-
+from tron import mcp
 from tron.config import config_parse
 
 
@@ -44,7 +45,20 @@ class ConfigController(object):
         """ Rewrites the local configuration file."""
         try:
             config_parse.rewrite_config(self.filepath, content)
+            with open(self.filepath) as config:
+                self.validate_config(config)
             return True
-        except (OSError, IOError, config_parse.ConfigError, YAMLError), e:
+        except Exception, e:
             log.error("Configuration update failed: %s" % e)
             return False
+
+    def validate_config(self, contents):
+        tmpdir = tempfile.mkdtemp()
+        
+        # Can the MCP handle the configuration?
+        try:
+            config = config_parse.load_config(contents)
+            master = mcp.MasterControlProgram(tmpdir, None)
+            master.apply_config(config, skip_env_dependent=True)
+        finally:
+            shutil.rmtree(tmpdir)

@@ -101,12 +101,21 @@ class MasterControlProgram(Observable):
         # without any state will be scheduled here.
         self.schedule_jobs()
 
-    def apply_config(self, configs,reconfigure=False):
-        """Apply a configuration."""
+    def apply_config(self, configs, skip_env_dependent=False, reconfigure=False):
+        """Apply a configuration. If skip_env_dependent is True we're
+        loading this locally to test the config as part of tronfig. We want to
+        skip applying some settings because the local machine we're using to
+        edit the config may not have the same environment as the live
+        trond machine.
+        """
         master_config = configs[MASTER_NAMESPACE]
         self.output_stream_dir = master_config.output_stream_dir or self.working_dir
-        ssh_options = self._ssh_options_from_config(configs[MASTER_NAMESPACE].ssh_options)
-        state_persistence = configs[MASTER_NAMESPACE].state_persistence
+        if not skip_env_dependent:
+            ssh_options = self._ssh_options_from_config(configs[MASTER_NAMESPACE].ssh_options)
+            state_persistence = configs[MASTER_NAMESPACE].state_persistence
+        else:
+            ssh_options = config_parse.valid_ssh_options({})
+            state_persistence = config_parse.DEFAULT_STATE_PERSISTENCE
 
         self.state_manager = PersistenceManagerFactory.from_config(
                     state_persistence)
