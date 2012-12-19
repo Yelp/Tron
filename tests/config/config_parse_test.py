@@ -6,16 +6,13 @@ import stat
 import tempfile
 from textwrap import dedent
 
+import mock
+
 from testify import assert_equal, assert_in
 from testify import run, setup, teardown, TestCase
 from tron.config import config_parse, schema
-from tron.config.config_parse import TronConfig, NamedTronConfig, load_config, ConfigSSHOptions, valid_identifier
-from tron.config.config_parse import valid_job, valid_output_stream_dir
-from tron.config.config_parse import ConfigNode, ConfigNodePool, ConfigJob
-from tron.config.config_parse import ConfigAction, ConfigCleanupAction
-from tron.config.config_parse import ConfigService, ConfigError
-from tron.config.config_parse import CLEANUP_ACTION_NAME
-from tron.config.config_parse import valid_node_pool, valid_config
+from tron.config.config_parse import *
+from tron.config.config_parse import _initialize_original_config, _initialize_namespaced_update
 from tron.config.schedule_parse import ConfigConstantScheduler
 from tron.config.schedule_parse import ConfigGrocScheduler
 from tron.config.schedule_parse import ConfigIntervalScheduler
@@ -858,6 +855,202 @@ class NodeConfigTestCase(TestCase):
         expected_msg = "NodePool pool0 is missing options"
         exception = assert_raises(ConfigError, load_config, test_config)
         assert_in(expected_msg, str(exception))
+
+    def test_missing_original_config(self):
+        assert_equal({}, _initialize_original_config('/test/bogusssss'))
+
+    def test_valid_unnamed_update(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    -
+        name: "test_job0"
+        node: node0
+        schedule: "interval 20s"
+        actions:
+            -
+                name: "action0_0"
+                command: "test_command0.0"
+        cleanup_action:
+            command: "test_command0.1"
+services:
+    -
+        name: "test_service0"
+        node: node0
+        command: "service_command0"
+        count: 2
+        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+        monitor_interval: 20
+        """
+        expected_result = ('MASTER',
+                           {'config_name': 'MASTER',
+                            'jobs': [{'node': 'node0',
+                                      'schedule': 'interval 20s',
+                                      'name': 'test_job0',
+                                      'actions': [{'command': 'test_command0.0',
+                                                   'name': 'action0_0'}],
+                                      'cleanup_action': {'command': 'test_command0.1'}}],
+                            'node_pools': [{'nodes': ['node0',
+                                                      'node1'],
+                                            'name': 'NodePool'}],
+                            'ssh_options': {'identities': ['tests/test_id_rsa'],
+                                            'agent': True},
+                            'services': [{'node': 'node0',
+                                          'count': 2,
+                                          'command': 'service_command0',
+                                          'name': 'test_service0',
+                                          'monitor_interval': 20,
+                                          'pid_file': '/var/run/%(name)s-%(instance_number)s.pid'}],
+                            'nodes': [{'hostname': 'node0',
+                                       'name': 'node0'},
+                                      {'hostname': 'node1',
+                                       'name': 'node1'}]})
+        assert_equal(expected_result, _initialize_namespaced_update(test_config))
+
+    def test_invalid_unnamed_update(self):
+        test_config = BASE_CONFIG + """
+foobar:
+"""
+        expected_message = "Unknown options in Tron : foobar"
+        exception = assert_raises(ConfigError, _initialize_namespaced_update, test_config)
+        assert_in(expected_message, str(exception))
+
+    def test_valid_named_update(self):
+        test_config = """
+config_name: test_config
+jobs:
+    -
+        name: "test_job0"
+        node: node0
+        schedule: "interval 20s"
+        actions:
+            -
+                name: "action0_0"
+                command: "test_command0.0"
+        cleanup_action:
+            command: "test_command0.1"
+services:
+    -
+        name: "test_service0"
+        node: node0
+        command: "service_command0"
+        count: 2
+        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+        monitor_interval: 20
+        """
+        expected_result = ('test_config',
+                           {'services': [{'node': 'node0',
+                                          'count': 2,
+                                          'command': 'service_command0',
+                                          'name': 'test_service0',
+                                          'monitor_interval': 20,
+                                          'pid_file': '/var/run/%(name)s-%(instance_number)s.pid'}],
+                            'config_name': 'test_config',
+                            'jobs': [{'node': 'node0',
+                                      'schedule': 'interval 20s',
+                                      'name': 'test_job0',
+                                      'actions': [{'command': 'test_command0.0',
+                                                   'name': 'action0_0'}],
+                                      'cleanup_action': {'command': 'test_command0.1'}}]})
+        assert_equal(expected_result, _initialize_namespaced_update(test_config))
+
+    def test_invalid_named_update(self):
+        test_config = """
+config_name: "foo"
+bozray:
+        """
+        expected_message = "Unknown options in NamedTron : bozray"
+        exception = assert_raises(ConfigError, load_config, test_config)
+        assert_in(expected_message, str(exception))
+
+    def test_valid_job_collation(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    -
+        name: "test_job0"
+        node: node0
+        schedule: "interval 20s"
+        actions:
+            -
+                name: "action0_0"
+                command: "test_command0.0"
+        cleanup_action:
+            command: "test_command0.1"
+services:
+    -
+        name: "test_service0"
+        node: node0
+        command: "service_command0"
+        count: 2
+        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+        monitor_interval: 20
+        """
+        expected_collated_jobs = {'MASTER_test_job0': (
+                ConfigJob(name='test_job0',
+                          node='node0',
+                          schedule=ConfigIntervalScheduler(timedelta=datetime.timedelta(0, 20)),
+                          actions=FrozenDict({'action0_0': 
+                                              ConfigAction(name='action0_0',
+                                                           command='test_command0.0',
+                                                           requires=(),
+                                                           node=None)}),
+                          queueing=True,
+                          run_limit=50,
+                          all_nodes=False,
+                          cleanup_action=ConfigCleanupAction(command='test_command0.1',
+                                                             requires=(),
+                                                             name='cleanup',
+                                                             node=None),
+                          enabled=True,
+                          allow_overlap=False),
+                'MASTER')}
+
+        expected_collated_services = {'MASTER_test_service0': (
+                ConfigService(name='test_service0',
+                              node='node0',
+                              pid_file='/var/run/%(name)s-%(instance_number)s.pid',
+                              command='service_command0',
+                              monitor_interval=20,
+                              restart_interval=None,
+                              count=2),
+                'MASTER')}
+
+        config_container = load_config(test_config)
+        jobs, services = collate_jobs_and_services(config_container)
+        assert_equal(expected_collated_jobs, jobs)
+        assert_equal(expected_collated_services, services)
+
+    def test_invalid_job_collation(self):
+        jobs = FrozenDict({'test_collision0': ConfigJob(name='test_collision0',
+                                                node='node0',
+                                                schedule=ConfigIntervalScheduler(timedelta=datetime.timedelta(0,
+                                                                                                              20)),
+                                                actions=FrozenDict({'action0_0': ConfigAction(name='action0_0',
+                                                                                              command='test_command0.0',
+                                                                                              requires=(),
+                                                                                              node=None)}),
+                                                queueing=True,
+                                                run_limit=50,
+                                                all_nodes=False,
+                                                cleanup_action=ConfigCleanupAction(command='test_command0.1',
+                                                                                   requires=(),
+                                                                                   name='cleanup',
+                                                                                   node=None),
+                                                enabled=True,
+                                                allow_overlap=False)})
+
+        services = FrozenDict({'test_collision0': ConfigService(name='test_collision0',
+                                                            node='node0',
+                                                            pid_file='/var/run/%(name)s-%(instance_number)s.pid',
+                                                            command='service_command0',
+                                                            monitor_interval=20,
+                                                            restart_interval=None,
+                                                            count=2)})
+        fake_config = mock.Mock()
+        setattr(fake_config, 'jobs', jobs)
+        setattr(fake_config, 'services', services)
+        expected_message = "Collision found for identifier 'MASTER_test_collision0'"
+        exception = assert_raises(ConfigError, collate_jobs_and_services, {'MASTER': fake_config})
+        assert_in(expected_message, str(exception))
 
 
 StubConfigObject = schema.config_object_factory(

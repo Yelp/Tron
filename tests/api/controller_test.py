@@ -6,7 +6,7 @@ from tests.assertions import assert_call
 from tests.testingutils import Turtle
 
 from tron.api.controller import JobController, ConfigController
-from tron.config.config_parse import update_config, ConfigError
+from tron.config.config_parse import update_config, _initialize_original_config, ConfigError
 
 
 class JobControllerTestCase(TestCase):
@@ -113,7 +113,6 @@ jobs:
             command: "test_command0.1"
             requires: [action0_0]
         """
-
         assert_raises(ConfigError, update_config, self.filename, test_config)
         
     def test_missing_service_node(self):
@@ -130,8 +129,35 @@ services:
         cleanup_action:
             command: "test_command0.1"
 """
-
         assert_raises(ConfigError, update_config, self.filename, test_config)
+
+
+    def test_valid_original_config(self):
+        test_config = self.BASE_CONFIG + """
+jobs:
+    -
+        name: "test_job0"
+        node: node0
+        schedule: "interval 20s"
+        actions:
+        """
+        expected_result = {'MASTER': 
+                           {'nodes': 
+                            [{'hostname': 'localhost',
+                              'name': 'local'}],
+                            'config_name': 'MASTER',
+                            'jobs': 
+                            [{'node': 'node0',
+                              'name': 'test_job0',
+                              'actions': None,
+                              'schedule': 'interval 20s'}],
+                            'ssh_options': {'agent': True},
+                            'state_persistence': {'store_type': 'shelve',
+                                                  'name': 'state_data.shelve'}}}
+        fd = open(self.filename,'w')
+        fd.write(test_config)
+        fd.close()
+        assert_equal(expected_result, _initialize_original_config(self.filename))
 
 if __name__ == "__main__":
     run()
