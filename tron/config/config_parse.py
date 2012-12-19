@@ -44,30 +44,19 @@ def load_config(config):
     # logic should be considered for removal in later versions.
 
     parsed_yaml = yaml.safe_load(config)
-    if MASTER_NAMESPACE in parsed_yaml:
-        return _parse_config_container_file(parsed_yaml)
-    else:
-        return _create_new_config_container(parsed_yaml)
+    
+    if MASTER_NAMESPACE not in parsed_yaml:
+        namespace = parsed_yaml.get("config_name") or MASTER_NAMESPACE
+        parsed_yaml = {namespace: parsed_yaml}
 
-def _parse_config_container_file(parsed_yaml):
-    """Parses a file-backed representation of a ConfigContainer directly."""
     parsed_config = ConfigContainer()
     for fragment in parsed_yaml:
         if fragment == MASTER_NAMESPACE:
             parsed_config[fragment] = valid_config(parsed_yaml[fragment])
         else:
             parsed_config[fragment] = valid_named_config(parsed_yaml[fragment])
-    return parsed_config
-
-def _create_new_config_container(parsed_yaml):
-    """Generates a new ConfigContainer from a partial or legacy configuration."""
-    namespace = parsed_yaml.get("config_name") or MASTER_NAMESPACE
-    if namespace == MASTER_NAMESPACE:
-        parsed_config = valid_config(parsed_yaml)
-    else:
-        parsed_config = valid_named_config(parsed_yaml)
-    parsed_config = ConfigContainer({namespace: parsed_config})
-    return parsed_config
+    collate_jobs_and_services(parsed_config)
+    return parsed_config    
 
 def update_config(filepath, content):
     """ Given a configuration, perform input validation, parse the
@@ -78,7 +67,9 @@ def update_config(filepath, content):
     original = _initialize_original_config(filepath)
     namespace, update = _initialize_namespaced_update(content)
     original[namespace] = update
-    return yaml.dump(original)
+    ret = yaml.dump(original)
+    load_config(ret)
+    return ret
 
 def _initialize_original_config(filepath):
     """Initialize the dictionary for our original configuration file."""

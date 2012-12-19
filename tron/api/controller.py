@@ -45,23 +45,9 @@ class ConfigController(object):
         """ Rewrites the local configuration file."""
         try:
             new_config = config_parse.update_config(self.filepath, content)
-            self.validate_config(new_config)
-
             with open(self.filepath, 'w') as config:
                 config.write(new_config)
-
             return True
         except Exception, e:
             log.error("Configuration update failed: %s" % e)
             return False
-
-    def validate_config(self, contents):
-        tmpdir = tempfile.mkdtemp()
-        
-        # Can the MCP handle the configuration?
-        try:
-            config = config_parse.load_config(contents)
-            master = mcp.MasterControlProgram(tmpdir, None)
-            master.apply_config(config, skip_env_dependent=True)
-        finally:
-            shutil.rmtree(tmpdir)
