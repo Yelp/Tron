@@ -34,7 +34,7 @@ Optional Fields
     add the next run to a queue if this is **True**. Otherwise, cancel
     the job run. Note that if the scheduler used for this job is
     not defined to queue overlapping then this setting is ignored.
-    IntervalScheduler and ConstantScheduler will not queue overlapping.
+    The ConstantScheduler will not queue overlapping.
 
 **allow_overlap** (default **False**)
     If **True** new job runs will start even if the previous run is still running.
