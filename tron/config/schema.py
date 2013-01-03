@@ -3,6 +3,7 @@
 """
 from collections import namedtuple
 
+MASTER_NAMESPACE = "MASTER"
 
 def config_object_factory(name, required=None, optional=None):
     """
@@ -25,6 +26,7 @@ def config_object_factory(name, required=None, optional=None):
 TronConfig = config_object_factory(
     'TronConfig',
     optional=[
+        'config_name',         # str
         'output_stream_dir',   # str
         'state_persistence',   # ConfigState
         'command_context',     # FrozenDict of str
@@ -33,6 +35,14 @@ TronConfig = config_object_factory(
         'time_zone',           # pytz time zone
         'nodes',               # FrozenDict of ConfigNode
         'node_pools',          # FrozenDict of ConfigNodePool
+        'jobs',                # FrozenDict of ConfigJob
+        'services'             # FrozenDict of ConfigService
+    ])
+
+NamedTronConfig = config_object_factory(
+    'NamedTronConfig',
+    optional=[
+        'config_name',         # str
         'jobs',                # FrozenDict of ConfigJob
         'services'             # FrozenDict of ConfigService
     ])

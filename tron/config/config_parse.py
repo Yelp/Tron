@@ -23,10 +23,11 @@ import yaml
 
 from tron.config import ConfigError
 from tron.config.schedule_parse import valid_schedule
-from tron.config.schema import TronConfig, NotificationOptions, ConfigSSHOptions
+from tron.config.schema import TronConfig, NamedTronConfig, NotificationOptions, ConfigSSHOptions
 from tron.config.schema import ConfigNode, ConfigNodePool, ConfigState
 from tron.config.schema import ConfigJob, ConfigAction, ConfigCleanupAction
 from tron.config.schema import ConfigService
+from tron.config.schema import MASTER_NAMESPACE
 from tron.utils.dicts import FrozenDict
 from tron.core.action import CLEANUP_ACTION_NAME
 
@@ -37,8 +38,92 @@ def load_config(config):
     """Given a string or file object, load it with PyYAML and return an
     immutable, validated representation of the configuration it specifies.
     """
-    # Load with YAML. safe_load() disables python classes
-    return valid_config(yaml.safe_load(config))
+    # TODO: load with YAML. safe_load() disables python classes
+    # TODO: this logic provides automatic forward-porting of legacy
+    # configuration files. These files should be deprecated and this
+    # logic should be considered for removal in later versions.
+
+    parsed_yaml = yaml.safe_load(config)
+    
+    if MASTER_NAMESPACE not in parsed_yaml:
+        namespace = parsed_yaml.get("config_name") or MASTER_NAMESPACE
+        parsed_yaml = {namespace: parsed_yaml}
+
+    parsed_config = ConfigContainer()
+    for fragment in parsed_yaml:
+        if fragment == MASTER_NAMESPACE:
+            parsed_config[fragment] = valid_config(parsed_yaml[fragment])
+        else:
+            parsed_config[fragment] = valid_named_config(parsed_yaml[fragment])
+    collate_jobs_and_services(parsed_config)
+    return parsed_config    
+
+def update_config(filepath, content):
+    """ Given a configuration, perform input validation, parse the
+    YAML into what we hope to be a valid configuration object, then
+    reconcile the altered configuration with the remainder of the
+    container. 
+    """
+    original = _initialize_original_config(filepath)
+    namespace, update = _initialize_namespaced_update(content)
+    original[namespace] = update
+    ret = yaml.dump(original)
+    load_config(ret)
+    return ret
+
+def _initialize_original_config(filepath):
+    """Initialize the dictionary for our original configuration file."""
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as config:
+            original = yaml.safe_load(config)
+
+        # Forward-convert legacy configurations
+        # TODO: Make legacy detection non-reliant on side
+        # effects
+        if MASTER_NAMESPACE not in original:
+            return {MASTER_NAMESPACE: original}
+        return original
+    else:
+        return {}
+
+def _initialize_namespaced_update(content):
+    """Initialize the update configuration object."""
+    update = yaml.safe_load(content)
+    namespace = update.get("config_name")
+    if not namespace:
+        namespace = MASTER_NAMESPACE
+        # TODO: Remove the duplicate entry for config_name, by
+        # relaxing the __new__ needs of our class builder.
+        update['config_name'] = MASTER_NAMESPACE
+
+    if namespace == MASTER_NAMESPACE:
+        assert valid_config(update)
+    else:
+        assert valid_named_config(update)
+
+    return namespace, update
+
+def collate_jobs_and_services(configs):
+    """Collate jobs and services from an iterable of Config objects."""
+    jobs = {}
+    services = {}
+    
+    def _iter_items(config, namespace, attr):
+        for item in getattr(config, attr):
+            identifier = '_'.join((namespace, item))
+            if identifier in jobs or identifier in services:
+                raise ConfigError("Collision found for identifier '%s'" % job_identifier)
+            content = getattr(config, attr)[item]
+            yield identifier, content
+            
+    for namespace, config in configs.items():
+        for job_identifier, content in _iter_items(config, namespace, "jobs"):
+            jobs[job_identifier] = (content, namespace)
+
+        for service_identifier, content in _iter_items(config, namespace, "services"):
+            services[service_identifier] = (content, namespace)
+        
+    return jobs, services
 
 
 class UniqueNameDict(dict):
@@ -525,6 +610,24 @@ valid_state_persistence = ValidateStatePersistence()
 
 DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1)
 
+def parse_sub_config(config, cname, valid, name_dict):
+    target_dict = UniqueNameDict(
+        "%s name %%s used twice" % cname.replace('_', ' '))
+    for item in config.get(cname) or []:
+        final = valid(item)
+        target_dict[final.name] = final
+        name_dict[final.name] = True
+    config[cname] = FrozenDict(**target_dict)
+
+def validate_jobs_and_services(config):
+    """Validate jobs and services."""
+
+    job_service_names = UniqueNameDict(
+            'Job and Service names must be unique %s')
+
+    parse_sub_config(config, 'jobs',        valid_job ,         job_service_names)
+    parse_sub_config(config, 'services',    valid_service,      job_service_names)
+
 
 class ValidateConfig(Validator):
     """Given a parsed config file (should be only basic literals and
@@ -534,6 +637,7 @@ class ValidateConfig(Validator):
     """
     config_class =              TronConfig
     defaults = {
+        'config_name':          MASTER_NAMESPACE,
         'output_stream_dir':    None,
         'command_context':      None,
         'ssh_options':          valid_ssh_options({}),
@@ -555,30 +659,6 @@ class ValidateConfig(Validator):
     }
     optional = False
 
-    def post_validation(self, config):
-        """Validate jobs, nodes, and services."""
-
-        node_names = UniqueNameDict('Node and NodePool names must be unique %s')
-        job_service_names = UniqueNameDict(
-                'Job and Service names must be unique %s')
-
-        def parse_sub_config(cname, valid, name_dict):
-            target_dict = UniqueNameDict(
-                "%s name %%s used twice" % cname.replace('_', ' '))
-            for item in config.get(cname) or []:
-                final = valid(item)
-                target_dict[final.name] = final
-                name_dict[final.name] = True
-            config[cname] = FrozenDict(**target_dict)
-
-        parse_sub_config('nodes',       valid_node,         node_names)
-        parse_sub_config('node_pools',  valid_node_pool,    node_names)
-        parse_sub_config('jobs',        valid_job ,         job_service_names)
-        parse_sub_config('services',    valid_service,      job_service_names)
-
-        self.validate_node_names(config, node_names)
-        self.validate_node_pool_nodes(config)
-
     def validate_node_names(self, config, node_names):
         """Validate that any node/node_pool name that were used are configured
         as nodes/node_pools.
@@ -586,7 +666,7 @@ class ValidateConfig(Validator):
         actions = itertools.chain.from_iterable(
             job.actions.values()
             for job in config['jobs'].values())
-
+    
         task_list = itertools.chain(
             config['jobs'].values(),
             config['services'].values(),
@@ -595,7 +675,7 @@ class ValidateConfig(Validator):
             if task.node and task.node not in node_names:
                 raise ConfigError("Unknown node %s configured for %s %s" % (
                     task.node, task.__class__.__name__, task.name))
-
+    
     def validate_node_pool_nodes(self, config):
         """Validate that each node in a node_pool is in fact a node, and not
         another pool.
@@ -607,5 +687,34 @@ class ValidateConfig(Validator):
                     continue
                 msg = "NodePool %s contains another NodePool %s. "
                 raise ConfigError(msg % (node_pool.name, node_name))
+    
+    def post_validation(self, config):
+        """Validate a non-named config."""
+        validate_jobs_and_services(config)
+        node_names = UniqueNameDict('Node and NodePool names must be unique %s')
+        parse_sub_config(config, 'nodes',       valid_node,         node_names)
+        parse_sub_config(config, 'node_pools',  valid_node_pool,    node_names)
+        self.validate_node_names(config, node_names)
+        self.validate_node_pool_nodes(config)
+
+
+class ValidateNamedConfig(Validator):
+    """A shorter validator for named configurations, which allow for
+    jobs and services to be defined as configuration fragments that
+    are, in turn, reconciled by Tron.
+    """
+    config_class =              NamedTronConfig
+    defaults = {
+        'config_name':          None,
+        'jobs':                 (),
+        'services':             ()
+    }
+    optional = False
+
+    def post_validation(self, config):
+        """Validate a named config."""
+        validate_jobs_and_services(config)
 
 valid_config = ValidateConfig()
+valid_named_config = ValidateNamedConfig()
+ConfigContainer = dict

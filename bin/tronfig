@@ -42,19 +42,13 @@ def upload_config(client, contents):
 
 
 def test_config(contents):
-    tmpdir = tempfile.mkdtemp()
 
     # Can the MCP handle the configuration?
     try:
         config = config_parse.load_config(contents)
-        master = mcp.MasterControlProgram(tmpdir, None)
-        master.apply_config(config, skip_env_dependent=True)
         return True
     except Exception, e:
         print >>sys.stderr, "Error in configuration: %s" % str(e)
-
-    finally:
-        shutil.rmtree(tmpdir)
 
 
 def edit_config(contents):
