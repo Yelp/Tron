@@ -71,7 +71,7 @@ class StateMachineMultiOptionTestCase(TestCase):
 
         self.machine = state.StateMachine(self.state_listening)
 
-    def test_transition(self):
+    def test_transition_many(self):
         # Talking, we should listen
         self.machine.transition("talking")
         assert_equal(self.machine.state, self.state_listening)
@@ -87,7 +87,7 @@ class StateMachineMultiOptionTestCase(TestCase):
         self.machine.transition("ignoring")
         assert_equal(self.machine.state, self.state_angry)
 
-    def test_transitions(self):
+    def test_transition_set(self):
         expected = set(['listening', 'talking', 'ignoring'])
         assert_equal(set(self.machine.transitions), expected)
 

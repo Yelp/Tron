@@ -57,11 +57,13 @@ class NamedEventState(dict):
 
 
 def traverse(starting_state, match_func):
-    visited, state_pairs    = set(), [(None, starting_state)]
+    visited                 = set()
+    state_pairs             = [(None, starting_state)]
     pair_with_name          = lambda p: (p[0], p[1].name)
 
     while state_pairs:
-        transition_state_pair = _, cur_state = state_pairs.pop()
+        transition_state_pair = state_pairs.pop()
+        _, cur_state = transition_state_pair
         visited.add(pair_with_name(transition_state_pair))
 
         if match_func(*transition_state_pair):
