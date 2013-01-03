@@ -56,23 +56,36 @@ class NamedEventState(dict):
         return self.name[:self._short_chars].upper()
 
 
-def named_event_by_name(starting_state, state_name):
-    """Traverse the state graph and pull out the one with the provided name.
-    Does a simple breadth-first-search, being careful to avoid cycles.
-    """
-    seen_states = set()
-    state_list = [starting_state]
-    while state_list:
-        current_state = state_list.pop()
-        seen_states.add(current_state.name)
-        if state_name == current_state.name:
-            return current_state
+def traverse(starting_state, match_func):
+    visited                 = set()
+    state_pairs             = [(None, starting_state)]
+    pair_with_name          = lambda p: (p[0], p[1].name)
 
-        for next_state in current_state.itervalues():
-            if next_state.name not in seen_states:
-                state_list.append(next_state)
+    while state_pairs:
+        transition_state_pair = state_pairs.pop()
+        _, cur_state = transition_state_pair
+        visited.add(pair_with_name(transition_state_pair))
 
-    raise ValueError(state_name)
+        if match_func(*transition_state_pair):
+            yield transition_state_pair
+
+        for next_pair in cur_state.iteritems():
+            if pair_with_name(next_pair) not in visited:
+                state_pairs.append(next_pair)
+
+
+def named_event_by_name(starting_state, name):
+    name_match = lambda t, s: s.name == name
+    try:
+        _, state = traverse(starting_state, name_match).next()
+        return state
+    except StopIteration:
+        raise ValueError("State %s not found." % name)
+
+
+def get_transitions(starting_state):
+    transition_match = lambda t, s: bool(t)
+    return [trans for trans, _ in traverse(starting_state, transition_match)]
 
 
 class StateMachine(Observable):
@@ -100,6 +113,10 @@ class StateMachine(Observable):
         None otherwise.
         """
         return self.state.get(target, None)
+
+    @property
+    def transitions(self):
+        return get_transitions(self.initial_state)
 
     def transition(self, target, stop_item=None):
         """Check our current state for a transition based on the input 'target'

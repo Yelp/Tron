@@ -42,6 +42,13 @@ class CollectionProxy(object):
         return func
 
 
+def func_proxy(name, func):
+    return name, func, True
+
+def attr_proxy(name, func):
+    return name, func, False
+
+
 class AttributeProxy(object):
     """Proxy attribute lookups to another object."""
 
