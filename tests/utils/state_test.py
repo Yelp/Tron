@@ -4,7 +4,8 @@ from testify.utils import turtle
 from tron.utils import state
 from tron.utils.state import NamedEventState
 
-class SimpleTestCase(TestCase):
+class StateMachineSimpleTestCase(TestCase):
+
     @setup
     def build_machine(self):
         self.state_green = NamedEventState('green')
@@ -47,7 +48,7 @@ class SimpleTestCase(TestCase):
             [((delegate, self.state_green),{})])
 
 
-class MultiOptionTestCase(TestCase):
+class StateMachineMultiOptionTestCase(TestCase):
     @setup
     def build_machine(self):
         # Generalized rules of a conversation
@@ -70,7 +71,7 @@ class MultiOptionTestCase(TestCase):
 
         self.machine = state.StateMachine(self.state_listening)
 
-    def test(self):
+    def test_transition_many(self):
         # Talking, we should listen
         self.machine.transition("talking")
         assert_equal(self.machine.state, self.state_listening)
@@ -86,27 +87,29 @@ class MultiOptionTestCase(TestCase):
         self.machine.transition("ignoring")
         assert_equal(self.machine.state, self.state_angry)
 
+    def test_transition_set(self):
+        expected = set(['listening', 'talking', 'ignoring'])
+        assert_equal(set(self.machine.transitions), expected)
 
-class TestCircular(TestCase):
+
+class TraverseCircularTestCase(TestCase):
     @setup
     def build_machine(self):
         # Going around and around in circles
         self.state_telling_false = NamedEventState('telling_false')
 
         self.state_telling_truth = NamedEventState('telling_truth',
-            true=self.state_telling_false
-        )
-        self.state_telling_false.update({
-            'true': self.state_telling_truth,
-        })
+            true=self.state_telling_false)
+        self.state_telling_false.update({'true': self.state_telling_truth})
 
         self.machine = state.StateMachine(self.state_telling_truth)
 
-    def test(self):
+    def test_transition(self):
         assert_raises(state.CircularTransitionError, self.machine.transition, 'true')
 
 
-class TestNamedSearch(TestCase):
+class NamedEventByNameTestCase(TestCase):
+
     @setup
     def create_state_graph(self):
         self.start = STATE_A = state.NamedEventState("a")
@@ -115,5 +118,8 @@ class TestNamedSearch(TestCase):
         STATE_A['next'] = STATE_B
         STATE_B['next'] = STATE_C
 
-    def test(self):
+    def test_match(self):
         assert_equal(state.named_event_by_name(self.start, "c"), self.end)
+
+    def test_miss(self):
+        assert_raises(ValueError, state.named_event_by_name, self.start, 'x')
