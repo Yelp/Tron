@@ -381,7 +381,7 @@ class ActionRun(Observer):
         a specific state (Ex: self.is_running would check if self.state is
         STATE_RUNNING) or for transitioning to a new state (ex: ready).
         """
-        if name in ['cancel', 'schedule', 'queue', 'skip', 'ready', 'success']:
+        if name in self.machine.transitions:
             return lambda: self.machine.transition(name)
 
         state_name = name.replace('is_', 'state_').upper()
@@ -407,21 +407,21 @@ class ActionRunCollection(object):
         # Setup proxies
         self.proxy_action_runs_with_cleanup = proxy.CollectionProxy(
             self.get_action_runs_with_cleanup, [
-                ('is_running',      any,                    False),
-                ('is_starting',     any,                    False),
-                ('is_scheduled',    any,                    False),
-                ('is_cancelled',    any,                    False),
-                ('is_active',       any,                    False),
-                ('is_queued',       all,                    False),
-                ('is_complete',     all,                    False),
-                ('queue',           iteration.list_all,     True),
-                ('cancel',          iteration.list_all,     True),
-                ('success',         iteration.list_all,     True),
-                ('fail',            iteration.list_all,     True),
-                ('ready',           iteration.list_all,     True),
-                ('cleanup',         iteration.list_all,     True),
-                ('start_time',      iteration.min_filter,   False),
-                ('end_time',        iteration.max_filter,   False),
+                proxy.attr_proxy('is_running',      any),
+                proxy.attr_proxy('is_starting',     any),
+                proxy.attr_proxy('is_scheduled',    any),
+                proxy.attr_proxy('is_cancelled',    any),
+                proxy.attr_proxy('is_active',       any),
+                proxy.attr_proxy('is_queued',       all),
+                proxy.attr_proxy('is_complete',     all),
+                proxy.func_proxy('queue',           iteration.list_all),
+                proxy.func_proxy('cancel',          iteration.list_all),
+                proxy.func_proxy('success',         iteration.list_all),
+                proxy.func_proxy('fail',            iteration.list_all),
+                proxy.func_proxy('ready',           iteration.list_all),
+                proxy.func_proxy('cleanup',         iteration.list_all),
+                proxy.attr_proxy('start_time',      iteration.min_filter),
+                proxy.attr_proxy('end_time',        iteration.max_filter),
             ])
 
     def action_runs_for_actions(self, actions):
