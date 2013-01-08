@@ -1,3 +1,9 @@
+tron (0.5.2) unstable; urgency=low
+
+  * Tron now supports the ability to use different users per node connection.
+  * Fragmented configuration is now possible by using namespaced config files.
+  * Additional cleanup and stability patches have been applied.
+
 tron (0.5.1) unstable; urgency=low
 
   * Jobs which are disabled will no longer be re-enabled when part of their configuration changes.
