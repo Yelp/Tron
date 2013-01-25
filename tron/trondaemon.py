@@ -7,16 +7,14 @@ import os
 import pkg_resources
 import daemon
 
+from twisted.internet import pollreactor, defer
+from twisted.internet.main import installReactor
+
 import lockfile
 from tron.utils import flockfile
 import signal
-from twisted.web import server
-from twisted.internet import reactor, defer
 from twisted.python import log as twisted_log
-from tron import mcp
 import tron
-
-from tron.api import www
 
 
 log = logging.getLogger(__name__)
@@ -148,6 +146,7 @@ class TronDaemon(object):
         nodaemon        = self.options.nodaemon
         context_class   = NoDaemonContext if nodaemon else daemon.DaemonContext
         self.context    = self._build_context(options, context_class)
+        self.reactor    = None
 
     def _build_context(self, options, context_class):
         signal_map = {
@@ -166,17 +165,28 @@ class TronDaemon(object):
 
     def run(self):
         with self.context:
+            self.setup_reactor()
             setup_logging(self.options)
             self._run_mcp()
             self._run_www_api()
             self._run_reactor()
 
+
+    def setup_reactor(self):
+        self.reactor = pollreactor.PollReactor()
+        installReactor(self.reactor)
+
     def _run_www_api(self):
+        # Local import required because of reactor import in server and www
+        from twisted.web import server
+        from tron.api import www
         site = server.Site(www.RootResource(self.mcp))
         port = self.options.listen_port
-        reactor.listenTCP(port, site, interface=self.options.listen_host)
+        self.reactor.listenTCP(port, site, interface=self.options.listen_host)
 
     def _run_mcp(self):
+        # Local import required because of reactor import in mcp
+        from tron import mcp
         working_dir         = self.options.working_dir
         config_file         = self.options.config_file
         self.mcp            = mcp.MasterControlProgram(working_dir, config_file)
@@ -190,13 +200,13 @@ class TronDaemon(object):
 
     def _run_reactor(self):
         """Run the twisted reactor."""
-        reactor.run()
+        self.reactor.run()
 
     def _handle_shutdown(self, sig_num, stack_frame):
         log.info("Shutdown requested: sig %s" % sig_num)
         if self.mcp:
             self.mcp.shutdown()
-        reactor.stop()
+        self.reactor.stop()
         self.context.terminate(sig_num, stack_frame)
 
     def _handle_graceful_shutdown(self, sig_num, stack_frame):
@@ -214,8 +224,8 @@ class TronDaemon(object):
             return
 
         log.info("Waiting for jobs to shutdown.")
-        reactor.callLater(self.WAIT_SECONDS, self._wait_for_jobs)
+        self.reactor.callLater(self.WAIT_SECONDS, self._wait_for_jobs)
 
     def _handle_reconfigure(self, _signal_number, _stack_frame):
         log.info("Reconfigure requested by SIGHUP.")
-        reactor.callLater(0, self.mcp.reconfigure)
+        self.reactor.callLater(0, self.mcp.reconfigure)

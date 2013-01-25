@@ -7,25 +7,22 @@ import datetime
 import re
 
 from tron.config import ConfigError
+from tron.utils import crontab
 
 
-ConfigDailyScheduler = namedtuple(
-    'ConfigDailyScheduler',
-    ['ordinals', 'weekdays', 'monthdays', 'months', 'timestr']
-)
+ConfigGrocScheduler = namedtuple(
+    'ConfigGrocScheduler',
+    ['ordinals', 'weekdays', 'monthdays', 'months', 'timestr'])
 
+ConfigCronScheduler = namedtuple(
+    'ConfigCronScheduler',
+    ['minutes', 'hours', 'monthdays', 'months', 'weekdays', 'ordinals'])
 
 ConfigConstantScheduler = namedtuple('ConfigConstantScheduler', [])
-
-
-ConfigIntervalScheduler = namedtuple(
-    'ConfigIntervalScheduler', [
-        'timedelta',    # datetime.timedelta
-    ])
+ConfigIntervalScheduler = namedtuple('ConfigIntervalScheduler', ['timedelta'])
 
 class ScheduleParseError(Exception):
     pass
-
 
 
 def valid_schedule(path, schedule):
@@ -40,6 +37,8 @@ def valid_schedule(path, schedule):
             return valid_daily_scheduler(*scheduler_args)
         elif scheduler_name == 'interval':
             return valid_interval_scheduler(' '.join(scheduler_args))
+        elif scheduler_name == 'cron':
+            return valid_cron_scheduler(scheduler_args)
         else:
             return parse_daily_expression(schedule)
 
@@ -52,7 +51,7 @@ def valid_schedule(path, schedule):
 
 
 def valid_daily_scheduler(start_time=None, days=None):
-    """Old style, will be converted to DailyScheduler with a compatibility
+    """Old style, will be converted to GrocScheduler with a compatibility
     function
 
     schedule:
@@ -129,20 +128,25 @@ def valid_interval_scheduler(interval):
     return ConfigIntervalScheduler(timedelta=datetime.timedelta(**kwargs))
 
 
+def normalize_weekdays(seq):
+    return seq[6:7] + seq[:6]
+
 def day_canonicalization_map():
     """Build a map of weekday synonym to int index 0-6 inclusive."""
     canon_map = dict()
 
     # 7-element lists with weekday names in order
-    weekday_lists = (calendar.day_name,
-                     calendar.day_abbr,
-                     ('m', 't', 'w', 'r', 'f', 's', 'u'),
-                     ('mo', 'tu', 'we', 'th', 'fr', 'sa', 'su'))
+    weekday_lists = [
+        normalize_weekdays(calendar.day_name),
+        normalize_weekdays(calendar.day_abbr),
+        ('u', 'm', 't', 'w', 'r', 'f', 's',),
+        ('su', 'mo', 'tu', 'we', 'th', 'fr', 'sa',)]
     for day_list in weekday_lists:
         for day_name_synonym, day_index in zip(day_list, range(7)):
             canon_map[day_name_synonym] = day_index
             canon_map[day_name_synonym.lower()] = day_index
             canon_map[day_name_synonym.upper()] = day_index
+
     return canon_map
 
 # Canonicalize weekday names to integer indices
@@ -227,7 +231,7 @@ def _parse_number(day):
 def parse_daily_expression(expression):
     """Given an expression of the form in the docstring of
     daily_schedule_parser_re(), return the parsed values in a
-    ConfigDailyScheduler
+    ConfigGrocScheduler
     """
     m = DAILY_SCHEDULE_RE.match(expression.lower())
     if not m:
@@ -259,10 +263,18 @@ def parse_daily_expression(expression):
     else:
         months = set(CONVERT_MONTHS[mo] for mo in m.group('months').split(','))
 
-    return ConfigDailyScheduler(
+    return ConfigGrocScheduler(
         ordinals=ordinals,
         weekdays=weekdays,
         monthdays=monthdays,
         months=months,
-        timestr=timestr,
-    )
+        timestr=timestr)
+
+
+def valid_cron_scheduler(scheduler_args):
+    """Parse a cron schedule."""
+    try:
+        crontab_kwargs = crontab.parse_crontab(' '.join(scheduler_args))
+        return ConfigCronScheduler(**crontab_kwargs)
+    except ValueError, e:
+        raise ConfigError("Invalid scheduler config: %s" % e)

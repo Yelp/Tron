@@ -1,3 +1,18 @@
+tron (0.5.1) unstable; urgency=low
+
+  * Jobs which are disabled will no longer be re-enabled when part of their configuration changes.
+  * Individual actions for a Job can no longer be started independently before a job is started. This was never intentionally supported.
+  * Adding a new configuration option `allow_overlap` for Jobs, which allows job runs to overlap each other.
+  * Jobs can now be configured using crontab syntax.
+
+ -- Daniel Nephin <dnephin@yelp-dnephin>  Wed, 25 Jul 2012 16:25:53 -0700
+
+tron (0.5.0.2) unstable; urgency=low
+
+  * Fix a bug with daemonizing and some versions of twisted reactor.
+
+ -- Daniel Nephin <dnephin@yelp.com>  Tue, 17 Jul 2012 19:21:39 -0700
+
 tron (0.5.0) unstable; urgency=low
 
   * Names for nodes, jobs, actions and service can now contain underscore characters but are restricted to 255 characters.

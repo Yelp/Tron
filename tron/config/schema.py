@@ -84,6 +84,7 @@ ConfigJob = config_object_factory(
         'all_nodes',            # bool
         'cleanup_action',       # ConfigAction
         'enabled',              # bool
+        'allow_overlap',        # bool
     ])
 
 
