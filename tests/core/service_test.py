@@ -1,4 +1,6 @@
+import mock
 from testify import setup, assert_equal, TestCase, run
+from testify.test_case import teardown
 from tests import mocks
 from tests.assertions import assert_call, assert_length
 from tests.mocks import MockNode, MockNodePool
@@ -54,21 +56,83 @@ class ServiceMonitorTestCase(MockReactorTestCase):
         assert_length(self.reactor.callLater.calls, 0)
 
 
-#class ServiceTestCase(TestCase):
-#
-#    @setup
-#    def setup_service(self):
-#        node_pool = mocks.MockNodePool()
-#        self.service = service.Service(
-#            "servicename",
-#            "command",
-#            node_pool,
-#            monitor_interval=10,
-#            restart_interval=7,
-#            pid_file_template="%(name)s",
-#            count=5
-#        )
-#
+class ServiceTestCase(TestCase):
+
+    @setup
+    def setup_service(self):
+        config = mock.Mock()
+        self.instances = mock.Mock()
+        self.service = service.Service(config, self.instances)
+        self.service.watch = mock.Mock()
+        node_store = node.NodePoolStore.get_instance()
+        self.anode, self.bnode = mock.Mock(), mock.Mock()
+        node_store.put(self.anode)
+        node_store.put(self.bnode)
+
+    @teardown
+    def teardown_service(self):
+        node.NodePoolStore.get_instance().clear()
+
+    def test_from_config(self):
+        config = mock.Mock(node=self.bnode.name, restart_interval=20)
+        context = mock.Mock()
+        new_service = service.Service.from_config(config, context)
+        assert_equal(new_service.instances.node_pool, self.bnode)
+        assert_equal(new_service.monitor.restart_interval, 20)
+
+    def test_start_with_missing(self):
+        service_instance = mock.Mock()
+        self.instances.create_missing.return_value = [service_instance]
+
+        assert self.service.start()
+        self.instances.clear_failed.assert_called_with()
+        self.service.watch.assert_called_with(service_instance)
+        self.instances.start.assert_called_with()
+        assert_equal(self.service.state, service.Service.STATE_STARTING)
+
+    def test_start_instances_failed_to_start(self):
+        self.instances.create_missing.return_value = []
+        self.instances.start.return_value = False
+        assert not self.service.start()
+        assert_equal(self.service.state, service.Service.STATE_DOWN)
+
+    def test_stop_success(self):
+        self.service.machine.state = service.Service.STATE_UP
+        assert self.service.stop()
+        self.instances.stop.assert_called_with()
+
+    def test_stop_failed(self):
+        self.service.machine.state = service.Service.STATE_UP
+        self.instances.stop.return_value = False
+        assert not self.service.stop()
+        self.instances.stop.assert_called_with()
+
+    def test_stop_failed_already_stoppped(self):
+        assert not self.service.stop()
+
+    def test_zap(self):
+        self.service.zap()
+        self.instances.zap.assert_called_with()
+
+    def test_handle_instance_state_change_no_instances(self):
+        self.instances.__len__.return_value = 0
+
+
+    def test_handle_instance_state_change_failed_instances(self):
+        pass
+
+    def test_handle_instance_state_change_all_failed_instances(self):
+        pass
+
+    def test_handle_instance_state_change_missing_instances(self):
+        pass
+
+    def test_handle_instance_state_all_up(self):
+        pass
+
+
+
+
 #    def test__eq__not_equal(self):
 #        other = None
 #        assert not self.service == other

@@ -7,11 +7,12 @@ import twisted.web.http
 import twisted.web.server
 
 from testify import TestCase, class_setup, assert_equal, run, setup
-from testify import class_teardown
+from testify import class_teardown, teardown
 from testify.assertions import assert_in
 from testify.utils import turtle
 from tests import mocks
 from tests.assertions import assert_call
+from tron import event
 from tron.api import www
 from tests.testingutils import Turtle
 
@@ -282,6 +283,25 @@ class ServiceTest(WWWTestCase):
     def test_missing_service(self):
         child = self.resource.getChildWithDefault("bar", mock.Mock())
         assert isinstance(child, twisted.web.resource.NoResource)
+
+class EventResourceTestCase(WWWTestCase):
+
+    @setup
+    def setup_resource(self):
+        self.name       = 'the_name'
+        self.resource   = www.EventResource(self.name)
+
+    @teardown
+    def teardown_resource(self):
+        event.EventManager.reset()
+
+    def test_render_GET(self):
+        recorder = event.get_recorder(self.name)
+        recorder.ok('what')
+        recorder.critical('oh')
+        response = self.resource.render_GET(self.request())
+        names = [e['name'] for e in response['data']]
+        assert_equal(names, ['what', 'oh'])
 
 
 if __name__ == '__main__':

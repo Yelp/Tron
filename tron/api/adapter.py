@@ -167,3 +167,12 @@ class JobAdapter(ReprAdapter):
             JobRunAdapter(job_run, self.include_action_runs).get_repr()
             for job_run in self._obj.runs
         ]
+
+
+class EventAdapter(ReprAdapter):
+
+    field_names = ['name', 'entity', 'time']
+    translated_field_names = ['level']
+
+    def get_level(self):
+        return self._obj.level.label

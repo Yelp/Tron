@@ -45,11 +45,6 @@ class JobRun(Observable, Observer):
     NOTIFY_DONE           = 'notify_done'
     NOTIFY_STATE_CHANGED  = 'notify_state_changed'
 
-    EVENT_START           = event.EventType(event.LEVEL_INFO, "start")
-    EVENT_STARTED         = event.EventType(event.LEVEL_INFO, "started")
-    EVENT_FAILED          = event.EventType(event.LEVEL_CRITICAL, "failed")
-    EVENT_SUCCEEDED       = event.EventType(event.LEVEL_OK, "succeeded")
-
     def __init__(self, job_name, run_num, run_time, node, output_path=None,
                 base_context=None, action_runs=None,
                 action_graph=None, manual=None):
@@ -65,6 +60,8 @@ class JobRun(Observable, Observer):
         self.action_graph       = action_graph
         # TODO: expose this through the api
         self.manual             = manual
+        self.event              = event.get_recorder(self.id)
+        self.event.ok('created')
 
         if action_runs:
             self.action_runs    = action_runs
@@ -176,7 +173,7 @@ class JobRun(Observable, Observer):
 
     def start(self):
         """Start this JobRun as a scheduled run (not a manual run)."""
-        self.notify(self.EVENT_START)
+        self.event.info('start')
         if self.action_runs.has_startable_action_runs and self._do_start():
             return True
 
@@ -186,7 +183,7 @@ class JobRun(Observable, Observer):
         self.action_runs.ready()
         started_runs = self._start_action_runs()
         if any(started_runs):
-            self.notify(self.EVENT_STARTED)
+            self.event.ok('started')
             return True
 
     def _start_action_runs(self):
@@ -239,18 +236,20 @@ class JobRun(Observable, Observer):
 
         Triggers an event to notifies the Job that is is done.
         """
-        failure = self.action_runs.is_failed
-        event = self.EVENT_FAILED if failure else self.EVENT_SUCCEEDED
-        self.notify(event)
+        if self.action_runs.is_failed:
+            self.event.critical('failed')
+        else:
+            self.event.ok('succeeded')
 
         # Notify Job that this JobRun is complete
         self.notify(self.NOTIFY_DONE)
 
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
+        self.event.notice('removed')
+        event.EventManager.get_instance().remove(str(self))
         self.clear_observers()
         self.action_runs.cleanup()
-        event.EventManager.get_instance().remove(self)
         self.node = None
         self.action_graph = None
         self._action_runs = None

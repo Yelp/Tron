@@ -10,7 +10,7 @@ from tests import mocks
 from tests.assertions import assert_call, assert_length
 from tests.testingutils import Turtle
 
-from tron import mcp
+from tron import mcp, event
 
 
 class MasterControlProgramTestCase(TestCase):
@@ -32,7 +32,7 @@ class MasterControlProgramTestCase(TestCase):
     @teardown
     def teardown_mcp(self):
         self.mcp.nodes.clear()
-        self.mcp.event_manager.clear()
+        event.EventManager.reset()
         os.unlink(self.config_file.name)
 
     def test_reconfigure(self):
@@ -73,7 +73,7 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
     @teardown
     def teardown_mcp(self):
         self.mcp.nodes.clear()
-        self.mcp.event_manager.clear()
+        event.EventManager.reset()
         shutil.rmtree(self.working_dir)
 
     def test_restore_state(self):
