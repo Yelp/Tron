@@ -1,6 +1,12 @@
 What's New
 ==========
 
+0.5.2
+-----
+* Tron now supports the ability to use different users per node connection.
+* Fragmented configuration is now possible by using namespaced config files.
+* Additional cleanup and stability patches have been applied.
+
 0.5.1
 -----
 * Jobs which are disabled will no longer be re-enabled when part of their

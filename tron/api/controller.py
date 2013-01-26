@@ -3,6 +3,9 @@
 """
 import logging
 
+from tron.config import config_parse
+
+
 log = logging.getLogger(__name__)
 
 
@@ -36,9 +39,12 @@ class ConfigController(object):
             log.error("Failed to open configuration file: %s" % e)
 
     def rewrite_config(self, content):
+        """ Rewrites the local configuration file."""
         try:
+            new_config = config_parse.update_config(self.filepath, content)
             with open(self.filepath, 'w') as config:
-                config.write(content)
+                config.write(new_config)
             return True
-        except (OSError, IOError), e:
-            log.error("Failed to write to configuration file: %s" % e)
+        except Exception, e:
+            log.error("Configuration update failed: %s" % e)
+            return False

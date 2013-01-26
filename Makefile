@@ -15,6 +15,7 @@ ALLSPHINXOPTS=-d $(DOCS_BUILDDIR)/doctrees $(SPHINXOPTS)
 
 all:
 		@echo "make source - Create source package"
+		@echo "make build - Build from source"
 		@echo "make install - Install on local system"
 		@echo "make rpm - Generate a rpm package"
 		@echo "make deb - Generate a deb package"
@@ -22,6 +23,9 @@ all:
 
 source:
 		$(PYTHON) setup.py sdist $(COMPILE)
+
+build:
+		$(PYTHON) setup.py build $(COMPILE)
 
 install:
 		$(PYTHON) setup.py install --root $(DESTDIR) $(COMPILE)
@@ -56,10 +60,18 @@ html:
 	@echo
 	@echo "Build finished. The HTML pages are in $(DOCS_BUILDDIR)/html."
 
+doc: html
+docs: html
+
 man: 
 	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_DIR)/man
 	@echo
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
 
 tests:
+	PYTHONPATH=. testify -x sandbox -x mongodb -x integration tests
+
+test: tests
+
+test_all:
 	PYTHONPATH=. testify tests

@@ -1,7 +1,7 @@
 .. _developing:
 
 Contributing to Tron
-===============
+====================
 
 Tron is an open source project and welcomes contributions from the community.
 The source and issue tracker are hosted on github at

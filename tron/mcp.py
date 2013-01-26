@@ -9,7 +9,8 @@ from tron import event
 from tron import crash_reporter
 from tron import node
 from tron.config import config_parse
-from tron.config.config_parse import ConfigError
+from tron.config.config_parse import collate_jobs_and_services, ConfigError
+from tron.config.schema import MASTER_NAMESPACE
 from tron.core.job import Job, JobScheduler
 from tron.node import Node, NodePool
 from tron.scheduler import scheduler_from_config
@@ -94,32 +95,33 @@ class MasterControlProgram(Observable):
         # without any state will be scheduled here.
         self.schedule_jobs()
 
-    def apply_config(self, conf, skip_env_dependent=False, reconfigure=False):
+    def apply_config(self, configs, skip_env_dependent=False, reconfigure=False):
         """Apply a configuration. If skip_env_dependent is True we're
         loading this locally to test the config as part of tronfig. We want to
         skip applying some settings because the local machine we're using to
         edit the config may not have the same environment as the live
         trond machine.
         """
-        self.output_stream_dir = conf.output_stream_dir or self.working_dir
-
+        master_config = configs[MASTER_NAMESPACE]
+        self.output_stream_dir = master_config.output_stream_dir or self.working_dir
         if not skip_env_dependent:
-            ssh_options = self._ssh_options_from_config(conf.ssh_options)
-            state_persistence = conf.state_persistence
+            ssh_options = self._ssh_options_from_config(configs[MASTER_NAMESPACE].ssh_options)
+            state_persistence = configs[MASTER_NAMESPACE].state_persistence
         else:
             ssh_options = config_parse.valid_ssh_options({})
             state_persistence = config_parse.DEFAULT_STATE_PERSISTENCE
 
         self.state_manager = PersistenceManagerFactory.from_config(
-                state_persistence)
-        self.context.base = conf.command_context
-        self.time_zone = conf.time_zone
+                    state_persistence)
+        self.context.base = configs[MASTER_NAMESPACE].command_context
+        self.time_zone = configs[MASTER_NAMESPACE].time_zone
+        self._apply_nodes(configs[MASTER_NAMESPACE].nodes, ssh_options)
+        self._apply_node_pools(configs[MASTER_NAMESPACE].node_pools)
+        self._apply_notification_options(configs[MASTER_NAMESPACE].notification_options)
 
-        self._apply_nodes(conf.nodes, ssh_options)
-        self._apply_node_pools(conf.node_pools)
-        self._apply_jobs(conf.jobs, reconfigure=reconfigure)
-        self._apply_services(conf.services)
-        self._apply_notification_options(conf.notification_options)
+        jobs, services = collate_jobs_and_services(configs)
+        self._apply_jobs(jobs, reconfigure=reconfigure)
+        self._apply_services(services)
 
     def _ssh_options_from_config(self, ssh_conf):
         ssh_options = ConchOptions()
@@ -160,7 +162,7 @@ class MasterControlProgram(Observable):
     def _apply_jobs(self, job_configs, reconfigure=False):
         """Add and remove jobs based on the configuration."""
         for job_config in job_configs.values():
-            self.add_job(job_config, reconfigure=reconfigure)
+            self.add_job(job_config[0], job_config[1], reconfigure=reconfigure)
 
         for job_name in (set(self.jobs.keys()) - set(job_configs.keys())):
             log.debug("Removing job %s", job_name)
@@ -171,8 +173,9 @@ class MasterControlProgram(Observable):
 
         services_to_add = []
         for srv_config in srv_configs.values():
-            log.debug("Building new services %s", srv_config.name)
-            service = Service.from_config(srv_config, self.context)
+            log.debug("Building new services %s", srv_config[0].name)
+            service = Service.from_config(srv_config[0], self.nodes)
+            service.name = '_'.join((srv_config[1], service.name))
             services_to_add.append(service)
 
         for srv_name in (set(self.services.keys()) - set(srv_configs.keys())):
@@ -207,11 +210,12 @@ class MasterControlProgram(Observable):
         self.crash_reporter = crash_reporter.CrashReporter(email_sender)
         self.crash_reporter.start()
 
-    def add_job(self, job_config, reconfigure=False):
+    def add_job(self, job_config, namespace, reconfigure=False):
         log.debug("Building new job %s", job_config.name)
         output_path = filehandler.OutputPath(self.output_stream_dir)
         scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
         job = Job.from_config(job_config, scheduler, self.context, output_path)
+        job.name = '_'.join((namespace, job.name))
 
         if job.name in self.jobs:
             # Jobs have a complex eq implementation that allows us to catch

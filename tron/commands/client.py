@@ -6,6 +6,7 @@ import urllib
 import urllib2
 import urlparse
 import tron
+from tron.config.schema import MASTER_NAMESPACE
 
 try:
     import simplejson
@@ -35,10 +36,10 @@ def request(host, path, data=None):
         page = opener.open(req)
         contents = page.read()
     except urllib2.HTTPError, e:
-        log.error("Recieved error response: %s" % e)
+        log.error("Received error response: %s" % e)
         return ERROR, e.code
     except urllib2.URLError, e:
-        log.error("Recieved error response: %s" % e)
+        log.error("Received error response: %s" % e)
         return ERROR, e.reason
 
     try:
@@ -96,11 +97,23 @@ class Client(object):
         def full_url(obj_url):
             return '/'.join((obj_url, obj_rel_path))
 
+        # Before falling through, we also check if our caller simply
+        # failed to provide a namespace in their call. This is only
+        # provided for MASTER for backwards-compatibility.
+        obj_name_compat = '_'.join((MASTER_NAMESPACE, obj_name))
+
         content = self.index()
-        if obj_name in content['jobs']:
-            return full_url(content['jobs'][obj_name])
-        if obj_name in content['services']:
-            return full_url(content['services'][obj_name])
+        for lookup_name in (obj_name, obj_name_compat):
+           if lookup_name in content['jobs']:
+                if lookup_name == obj_name_compat:
+                    log.warn("Job lookup without namespace is"
+                             + " deprecated; using %s" % obj_name_compat)
+                return full_url(content['jobs'][lookup_name])
+           elif lookup_name in content['services']:
+                if lookup_name == obj_name_compat:
+                    log.warn("Service lookup without namespace is"
+                             + " deprecated; using %s" % obj_name_compat)
+                return full_url(content['services'][lookup_name])
 
         raise ValueError("Unknown identifier: %s" % iden)
 

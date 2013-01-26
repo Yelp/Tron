@@ -63,7 +63,7 @@ class JobRunHandler(tornado.web.RequestHandler):
             for run in data['runs']:
                 status, run_info = client.request(trond_url(),
                                                'jobs/%s/%s/%s' % (
-                                                   job, run_id, run["name"]))
+                                                   job, run_id, run["id"]))
                 if status == client.OK:
                     run_data.append(run_info)
             return (data, run_data)
