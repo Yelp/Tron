@@ -5,6 +5,15 @@ from tron.utils import state, timeutils
 
 log = logging.getLogger(__name__)
 
+
+class ActionState(state.NamedEventState):
+    pass
+
+
+class CompletedActionCommand(object):
+    is_complete = True
+
+
 class ActionCommand(object):
     """An ActionCommand encapsulates a runnable task that is passed to a node
     for execution.
@@ -15,9 +24,6 @@ class ActionCommand(object):
       write_<channel> (when output is received)
       done      (when the command is finished)
     """
-
-    class ActionState(state.NamedEventState):
-        pass
 
     COMPLETE    = ActionState('complete')
     FAILSTART   = ActionState('failstart')
@@ -85,6 +91,14 @@ class ActionCommand(object):
                 self.id, self.command, str(result))
         self.exited(result)
         self.done()
+
+    @property
+    def has_failed(self):
+        return bool(self.exit_status)
+
+    @property
+    def is_complete(self):
+        return self.machine.state == self.COMPLETE
 
     def __repr__(self):
         return "ActionCommand %s %s: %s" % (self.id, self.command, self.state)

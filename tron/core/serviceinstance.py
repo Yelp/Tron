@@ -1,11 +1,11 @@
 import logging
 
-from twisted.internet import reactor
 import operator
 
 from tron import command_context
+from tron import eventloop
 from tron import node
-from tron.actioncommand import ActionCommand
+from tron.actioncommand import ActionCommand, CompletedActionCommand
 from tron.utils import observer, proxy
 from tron.utils import state
 from tron.utils.state import NamedEventState
@@ -14,11 +14,16 @@ from tron.utils.state import NamedEventState
 log = logging.getLogger(__name__)
 
 
+
 class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
     """ServiceInstance task which monitors the service process and
-    notifies observers if the process is up or down.
+    notifies observers if the process is up or down. Also monitors itself
+    to ensure this check does not hang.
+
+    This task will be a no-op if interval is Falsy.
     """
 
+    # TODO: config setting
     MIN_HANG_CHECK_SECONDS  = 10
 
     NOTIFY_START            = 'monitor_task_notify_start'
@@ -26,28 +31,28 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
     NOTIFY_UP               = 'monitor_task_notify_up'
     NOTIFY_DOWN             = 'monitor_task_notify_down'
 
+    command_template        = "cat %s | xargs kill -0"
+
     def __init__(self, id, node, interval, pid_filename):
         super(ServiceInstanceMonitorTask, self).__init__()
         self.interval               = interval or 0
         self.node                   = node
         self.id                     = id
         self.pid_filename           = pid_filename
-        self.action                 = None
-        self.callback               = None
-        self.hang_check_callback    = None
+        self.action                 = CompletedActionCommand
+        self.callback               = eventloop.NullCallback
+        self.hang_check_callback    = eventloop.NullCallback
 
     def queue(self):
         """Queue this task to run after monitor_interval."""
-        if not self.interval or self.callback:
+        if not self.interval or self.callback.active():
             return
-        self.callback = reactor.callLater(self.interval, self.run)
+        self.callback = eventloop.call_later(self.interval, self.run)
 
     def run(self):
         """Run the monitoring command."""
-        self.callback = None
-
-        if self.action:
-            log.warning("Monitor action already exists.")
+        if not self.action.is_complete:
+            log.warn("%s: Monitor action already exists.", self)
             return
 
         self.notify(self.NOTIFY_START)
@@ -58,10 +63,10 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
 
     def _build_action(self):
         """Build and watch the monitor ActionCommand."""
-        command         = "cat %s | xargs kill -0" % self.pid_filename
+        command         = self.command_template % self.pid_filename
         action          = ActionCommand("%s.monitor" % self.id, command)
         msg             = "Executing '%s' on %s for %s"
-        log.debug(msg % (command, self.node.hostname, self.id))
+        log.debug(msg % (command, self.node, self.id))
         self.watch(action)
         return action
 
@@ -75,28 +80,42 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
         return True
 
     def handle_action_event(self, _action, event):
+        # TODO: check action matches self.action ?
         if event == ActionCommand.EXITING:
             return self._handle_action_exit()
         if event == ActionCommand.FAILSTART:
-            self.action = None
             self.notify(self.NOTIFY_FAILED)
             self.queue()
 
     handler = handle_action_event
 
+    def _handle_action_exit(self):
+        log.debug("%s with exit failure %r", self, self.action.has_failed)
+        if self.action.has_failed:
+            self.notify(self.NOTIFY_DOWN)
+            return
+
+        self.notify(self.NOTIFY_UP)
+        self.queue()
+
+    def cancel(self):
+        """Cancel the monitor callback and hang check."""
+        self.callback.cancel()
+        self.hang_check_callback.cancel()
+
     def _queue_hang_check(self):
         """Set a callback to verify this task has completed."""
         current_action  = self.action
+        # TODO: constant
         seconds         = max(self.interval * 0.8, self.MIN_HANG_CHECK_SECONDS)
         func            = self._run_hang_check
-        callback        = reactor.callLater(seconds, func, current_action)
+        callback        = eventloop.call_later(seconds, func, current_action)
         self.hang_check_callback = callback
 
     def _run_hang_check(self, action):
         """If the monitor command is still running, notify the observers that
         this monitor has failed.
         """
-        self.hang_check_callback = None
         if self.action is not action:
             return
 
@@ -104,26 +123,8 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
         self.notify(self.NOTIFY_FAILED)
         self._queue_hang_check()
 
-    def _handle_action_exit(self):
-        log.debug("Monitor callback with exit %r" % self.action.exit_status)
-        if self.action.exit_status:
-            self.notify(self.NOTIFY_DOWN)
-            self.action = None
-            return
-
-        self.action = None
-        self.notify(self.NOTIFY_UP)
-        self.queue()
-
-    def cancel(self):
-        """Cancel the monitor callback and hang check."""
-        if self.callback:
-            self.callback.cancel()
-            self.callback = None
-
-        if self.hang_check_callback:
-            self.hang_check_callback.cancel()
-            self.hang_check_callback = None
+    def __str__(self):
+        return "%s(%s)" % (self.__class__.__name__, self.id)
 
 
 class ServiceInstanceStopTask(observer.Observable, observer.Observer):
