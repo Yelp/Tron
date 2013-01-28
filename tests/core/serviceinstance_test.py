@@ -69,9 +69,7 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
         self.task.node.run.assert_called_with(self.task.action)
 
     def test_run_action_failed(self):
-        def raise_error(_):
-            raise node.Error()
-        self.task.node.run = raise_error
+        self.task.node.run.side_effect = node.Error
         assert not self.task._run_action()
         self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
 
@@ -115,9 +113,110 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
         assert_equal(self.task.queue.call_count, 0)
 
 
-# TODO: Start task test case
-# TODO: stop task test case
-# TODO: instance test case
+class ServiceInstanceStopTaskTestCase(TestCase):
+
+    @setup
+    def setup_task(self):
+        self.node = mock.create_autospec(node.Node)
+        self.pid_filename = '/tmp/filename'
+        self.task = serviceinstance.ServiceInstanceStopTask(
+            'id', self.node, self.pid_filename)
+        self.task.watch = mock.create_autospec(self.task.watch)
+        self.task.notify = mock.create_autospec(self.task.notify)
+
+    def test_kill_success(self):
+        patcher = mock.patch('tron.core.serviceinstance.log', autospec=True)
+        with patcher as mock_log:
+            deferred = self.task.kill()
+            assert_equal(mock_log.warn.call_count, 0)
+            assert_equal(deferred, self.node.run.return_value)
+
+    def test_kill_failed(self):
+        self.node.run.side_effect = node.Error
+        patcher = mock.patch('tron.core.serviceinstance.log', autospec=True)
+        with patcher as mock_log:
+            assert not self.task.kill()
+            assert_equal(mock_log.warn.call_count, 1)
+
+    def test_handle_action_event_complete(self):
+        action = mock.create_autospec(ActionCommand)
+        event = ActionCommand.COMPLETE
+        self.task.handle_action_event(action, event)
+        self.task.notify.assert_called_with(self.task.NOTIFY_SUCCESS)
+
+    def test_handle_action_event_failstart(self):
+        action = mock.create_autospec(ActionCommand)
+        event = ActionCommand.FAILSTART
+        self.task.handle_action_event(action, event)
+        self.task.notify.assert_called_with(self.task.NOTIFY_FAIL)
+
+    def test_handle_complete_failed(self):
+        action = mock.create_autospec(ActionCommand, has_failed=True)
+        with mock.patch('tron.core.serviceinstance.log', autospec=True) as mock_log:
+            self.task._handle_complete(action)
+            assert_equal(mock_log.error.call_count, 1)
+
+        self.task.notify.assert_called_with(self.task.NOTIFY_SUCCESS)
+
+    def test_handle_complete(self):
+        action = mock.create_autospec(ActionCommand, has_failed=False)
+        self.task._handle_complete(action)
+        self.task.notify.assert_called_with(self.task.NOTIFY_SUCCESS)
+
+
+class ServiceInstanceStartTaskTestCase(TestCase):
+
+    @setup
+    def setup_task(self):
+        self.node = mock.create_autospec(node.Node)
+        self.task = serviceinstance.ServiceInstanceStartTask('id', self.node)
+        self.task.notify = mock.create_autospec(self.task.notify)
+        self.task.watch = mock.create_autospec(self.task.watch)
+
+    def test_start(self):
+        command = 'the command'
+        with mock.patch('tron.core.serviceinstance.ActionCommand') as mock_ac:
+            self.task.start(command)
+            self.task.watch.assert_called_with(mock_ac.return_value)
+            self.node.run.assert_called_with(mock_ac.return_value)
+
+    def test_start_failed(self):
+        command = 'the command'
+        self.node.run.side_effect = node.Error
+        self.task.start(command)
+        self.task.notify.assert_called_with(self.task.NOTIFY_DOWN)
+
+    def test_handle_action_event_exit(self):
+        action = mock.create_autospec(ActionCommand)
+        event = ActionCommand.EXITING
+        self.task.handle_action_event(action, event)
+        self.task.notify(self.task.NOTIFY_STARTED)
+
+    def test_handle_action_event_failstart(self):
+        action = mock.create_autospec(ActionCommand)
+        event = ActionCommand.FAILSTART
+        patcher = mock.patch('tron.core.serviceinstance.log', autospec=True)
+        with patcher as mock_log:
+            self.task.handle_action_event(action, event)
+            assert_equal(mock_log.warn.call_count, 1)
+
+    def test_handle_action_exit_fail(self):
+        action = mock.create_autospec(ActionCommand, has_failed=True)
+        self.task._handle_action_exit(action)
+        self.task.notify.assert_called_with(self.task.NOTIFY_DOWN)
+
+    def test_handle_action_exit_success(self):
+        action = mock.create_autospec(ActionCommand, has_failed=False)
+        self.task._handle_action_exit(action)
+        self.task.notify.assert_called_with(self.task.NOTIFY_STARTED)
+
+
+class ServiceInstanceTestCase(TestCase):
+
+    @setup
+    def setup_instance(self):
+        pass
+
 
 def create_mock_instance(**kwargs):
     return mock.create_autospec(serviceinstance.ServiceInstance, **kwargs)

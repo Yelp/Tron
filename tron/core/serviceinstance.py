@@ -8,11 +8,9 @@ from tron import node
 from tron.actioncommand import ActionCommand, CompletedActionCommand
 from tron.utils import observer, proxy
 from tron.utils import state
-from tron.utils.state import NamedEventState
 
 
 log = logging.getLogger(__name__)
-
 
 
 class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
@@ -121,6 +119,7 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
 
         log.warning("Monitor for %s is still running", self.id)
         self.notify(self.NOTIFY_FAILED)
+        # TODO: max hang checks, then fail
         self._queue_hang_check()
 
     def __str__(self):
@@ -130,7 +129,10 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
 class ServiceInstanceStopTask(observer.Observable, observer.Observer):
     """ServiceInstance task which kills the service process."""
 
-    NOTIFY_DONE             = 'stop_task_notify_done'
+    NOTIFY_SUCCESS              = 'stop_task_notify_success'
+    NOTIFY_FAIL                 = 'stop_task_notify_fail'
+
+    command_template            = "cat %s | xargs kill"
 
     def __init__(self, id, node, pid_filename):
         super(ServiceInstanceStopTask, self).__init__()
@@ -139,38 +141,40 @@ class ServiceInstanceStopTask(observer.Observable, observer.Observer):
         self.pid_filename   = pid_filename
 
     def kill(self):
-        kill_command    = "cat %s | xargs kill" % self.pid_filename
+        kill_command    =  self.command_template % self.pid_filename
         action          = ActionCommand("%s.stop" % self.id, kill_command)
         self.watch(action)
 
         try:
-            self.node.run(action)
+            return self.node.run(action)
         except node.Error, e:
-            log.warning("Failed to kill instance %s: %r", self.id, e)
+            log.warn("Failed to kill instance %s: %r", self.id, e)
 
     def handle_action_event(self, action, event):
         if event == ActionCommand.COMPLETE:
             return self._handle_complete(action)
 
         if event == ActionCommand.FAILSTART:
-            log.warning("Failed to start kill command for %s", self.id)
-            self.notify(self.NOTIFY_DONE)
+            log.warn("Failed to start kill command for %s", self.id)
+            self.notify(self.NOTIFY_FAIL)
 
     handler = handle_action_event
 
     def _handle_complete(self, action):
-        if action.exit_status:
-            msg = "Failed to stop service instance %s: Exit %r"
-            log.error(msg % (self.id, action.exit_status))
+        if action.has_failed:
+            log.error("Failed to stop service instance %s", self)
 
-        self.notify(self.NOTIFY_DONE)
+        self.notify(self.NOTIFY_SUCCESS)
+
+    def __str__(self):
+        return "%s(%s)" % (self.__class__.__name__, self.id)
 
 
 class ServiceInstanceStartTask(observer.Observable, observer.Observer):
     """ServiceInstance task which starts the service process."""
 
     NOTIFY_DOWN             = 'start_task_notify_down'
-    NOTIFY_MONITOR          = 'start_task_notify_monitor'
+    NOTIFY_STARTED          = 'start_task_notify_started'
 
     def __init__(self, id, node):
         super(ServiceInstanceStartTask, self).__init__()
@@ -188,7 +192,7 @@ class ServiceInstanceStartTask(observer.Observable, observer.Observer):
         try:
             self.node.run(action)
         except node.Error, e:
-            log.warning("Failed to start %s: %r", self.id, e)
+            log.warn("Failed to start %s: %r", self.id, e)
             self.notify(self.NOTIFY_DOWN)
 
     def handle_action_event(self, action, event):
@@ -196,44 +200,39 @@ class ServiceInstanceStartTask(observer.Observable, observer.Observer):
         if event == ActionCommand.EXITING:
             return self._handle_action_exit(action)
         if event == ActionCommand.FAILSTART:
-            return self._handle_action_failstart(action)
+            log.warn("Failed to start service %s on %s.", self.id, self.node)
+            self.notify(self.NOTIFY_DOWN)
     handler = handle_action_event
 
-    def _handle_action_failstart(self, _action):
-        msg = "Failed to start service %s on %s."
-        log.warning(msg % (self.id, self.node.hostname))
-        self.notify(self.NOTIFY_DOWN)
-
     def _handle_action_exit(self, action):
-        if action.exit_status:
-            self.notify(self.NOTIFY_DOWN)
-            return
+        event = self.NOTIFY_DOWN if action.has_failed else self.NOTIFY_STARTED
+        self.notify(event)
 
-        self.notify(self.NOTIFY_MONITOR)
+
+
+class ServiceInstanceState(state.NamedEventState):
+    """Event state subclass for service instances"""
 
 
 class ServiceInstance(observer.Observer):
 
-    class ServiceInstanceState(NamedEventState):
-        """Event state subclass for service instances"""
-
-    STATE_DOWN                  = ServiceInstanceState("down")
-    STATE_UP                    = ServiceInstanceState("up")
-    STATE_FAILED                = ServiceInstanceState("failed",
-        stop=STATE_DOWN,
-        up=STATE_UP)
-    STATE_STOPPING              = ServiceInstanceState("stopping",
-        down=STATE_DOWN)
-    STATE_MONITORING            = ServiceInstanceState("monitoring",
-        down=STATE_FAILED,
-        stop=STATE_STOPPING,
-        up=STATE_UP)
-    STATE_STARTING              = ServiceInstanceState("starting",
-        down=STATE_FAILED,
-        monitor=STATE_MONITORING,
-        stop=STATE_STOPPING)
-    STATE_UNKNOWN               = ServiceInstanceState("unknown",
-        monitor=STATE_MONITORING)
+    STATE_DOWN          = ServiceInstanceState("down")
+    STATE_UP            = ServiceInstanceState("up")
+    STATE_FAILED        = ServiceInstanceState("failed",
+                            stop=STATE_DOWN,
+                            up=STATE_UP)
+    STATE_STOPPING      = ServiceInstanceState("stopping",
+                            down=STATE_DOWN)
+    STATE_MONITORING    = ServiceInstanceState("monitoring",
+                            down=STATE_FAILED,
+                            stop=STATE_STOPPING,
+                            up=STATE_UP)
+    STATE_STARTING      = ServiceInstanceState("starting",
+                            down=STATE_FAILED,
+                            monitor=STATE_MONITORING,
+                            stop=STATE_STOPPING)
+    STATE_UNKNOWN       = ServiceInstanceState("unknown",
+                            monitor=STATE_MONITORING)
 
     STATE_MONITORING['monitor_fail']    = STATE_UNKNOWN
     STATE_UP['stop']                    = STATE_STOPPING
@@ -242,7 +241,6 @@ class ServiceInstance(observer.Observer):
 
     def __init__(self, service_name, node, instance_number, context,
                  pid_file_template, bare_command, interval):
-        self.service_name       = service_name
         self.instance_number    = instance_number
         self.node               = node
         self.id                 = "%s.%s" % (service_name, self.instance_number)
@@ -302,6 +300,7 @@ class ServiceInstance(observer.Observer):
             log.error(msg)
             # TODO: put this instance in a disabled state so a check for None
             # does not have to be performed later
+            # TODO: register error somewhere
         return None
 
     @property
@@ -310,7 +309,7 @@ class ServiceInstance(observer.Observer):
             return self.bare_command % self.context
         except KeyError:
             msg = "Failed to render service command for service %s: %s"
-            log.error(msg % (self.service_name, self.bare_command))
+            log.error(msg % (self.id, self.bare_command))
 
         return None
 
