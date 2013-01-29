@@ -23,7 +23,8 @@ import yaml
 
 from tron.config import ConfigError
 from tron.config.schedule_parse import valid_schedule
-from tron.config.schema import TronConfig, NamedTronConfig, NotificationOptions, ConfigSSHOptions
+from tron.config.schema import TronConfig, NamedTronConfig, NotificationOptions
+from tron.config.schema import ConfigSSHOptions, CommandFormatKeys
 from tron.config.schema import ConfigNode, ConfigNodePool, ConfigState
 from tron.config.schema import ConfigJob, ConfigAction, ConfigCleanupAction
 from tron.config.schema import ConfigService
@@ -103,6 +104,7 @@ def _initialize_namespaced_update(content):
 
     return namespace, update
 
+
 def collate_jobs_and_services(configs):
     """Collate jobs and services from an iterable of Config objects."""
     jobs = {}
@@ -141,11 +143,18 @@ class UniqueNameDict(dict):
         super(UniqueNameDict, self).__setitem__(key, value)
 
 
-def type_validator(validator, error_fmt):
+def build_type_validator(validator, error_fmt):
+    """Create a validator function using `validator` to validate the value.
+        validator - a function which takes a single argument `value`
+        error_fmt - a string which accepts two format variables (path, value)
+
+        Returns a function func(path, value, optional=False) where
+            path - the hierarchical path in the configuration
+            value - the value to validate
+            optional - flag to set if this value is optional
+            Returns True if the value is valid
+    """
     def f(path, value, optional=False):
-        """If *validator* does not return True for *value*, raise ConfigError
-        If optional is True, None values will be returned without validation.
-        """
         if value is None and optional:
             return None
         if not validator(value):
@@ -174,24 +183,39 @@ valid_float = partial(valid_number, float)
 MAX_IDENTIFIER_LENGTH       = 255
 IDENTIFIER_RE               = re.compile(r'^[A-Za-z_][\w\-]{0,254}$')
 
-valid_identifier = type_validator(
+valid_identifier = build_type_validator(
     lambda s: isinstance(s, basestring) and IDENTIFIER_RE.match(s),
     'Identifier at %s is not a valid identifier: %s')
 
-valid_populated_list = type_validator(
+valid_populated_list = build_type_validator(
     bool, 'Value at %s is not a list with items: %s')
 
-valid_list = type_validator(
+valid_list = build_type_validator(
     lambda s: isinstance(s, list), 'Value at %s is not a list: %s')
 
-valid_str  = type_validator(
+valid_str  = build_type_validator(
     lambda s: isinstance(s, basestring), 'Value at %s is not a string: %s')
 
-valid_dict = type_validator(
+valid_dict = build_type_validator(
     lambda s: isinstance(s, dict), 'Value at %s is not a dictionary: %s')
 
-valid_bool = type_validator(
+valid_bool = build_type_validator(
     lambda s: isinstance(s, bool), 'Value at %s is not a boolean: %s')
+
+
+def validate_format_string(path, value, valid_keys):
+    """Validate that a string does not contain any unexpected formatting keys.
+        valid_keys - a sequence of strings
+    """
+    def validator(value):
+        context = dict.fromkeys(valid_keys, ' ')
+        try:
+            value % context
+            return isinstance(value, basestring)
+        except KeyError:
+            return False
+    error_msg = "Invalid template string at %s: %s"
+    return build_type_validator(validator, error_msg)(path, value)
 
 
 class Validator(object):
@@ -222,7 +246,8 @@ class Validator(object):
         self.set_defaults(output_dict)
         return self.config_class(**output_dict)
 
-    __call__ = validate
+    def __call__(self, in_dict):
+        return self.validate(in_dict)
 
     @property
     def type_name(self):
@@ -616,6 +641,7 @@ def parse_sub_config(config, cname, valid, name_dict):
         name_dict[final.name] = True
     config[cname] = FrozenDict(**target_dict)
 
+
 def validate_jobs_and_services(config):
     """Validate jobs and services."""
 
@@ -624,6 +650,27 @@ def validate_jobs_and_services(config):
 
     parse_sub_config(config, 'jobs',        valid_job ,         job_service_names)
     parse_sub_config(config, 'services',    valid_service,      job_service_names)
+
+
+def validate_format_strings(config):
+    """Validate that all format strings do not contain unexpected keys.
+    """
+    job_keys = CommandFormatKeys.job_keys
+    for job in config['jobs'].itervalues():
+        for action in job.actions.itervalues():
+            path = 'Action:%s.%s' % (job.name, action.name)
+            validate_format_string(path, action.command, job_keys)
+
+        if job.cleanup_action:
+            path = 'Job:%s.cleanup_action' % job.name
+            command = job.cleanup_action.command
+            validate_format_string(path, command, job_keys)
+
+    service_keys = CommandFormatKeys.service_keys
+    for service in config['services'].itervalues():
+        path = 'Service %s' % service.name
+        validate_format_string(path, service.command, service_keys)
+        validate_format_string(path, service.pid_file, service_keys)
 
 
 class ValidateConfig(Validator):
@@ -636,7 +683,7 @@ class ValidateConfig(Validator):
     defaults = {
         'config_name':          MASTER_NAMESPACE,
         'output_stream_dir':    None,
-        'command_context':      None,
+        'command_context':      {},
         'ssh_options':          valid_ssh_options({}),
         'notification_options': None,
         'time_zone':            None,
@@ -693,6 +740,7 @@ class ValidateConfig(Validator):
         parse_sub_config(config, 'node_pools',  valid_node_pool,    node_names)
         self.validate_node_names(config, node_names)
         self.validate_node_pool_nodes(config)
+        validate_format_strings(config)
 
 
 class ValidateNamedConfig(Validator):
@@ -711,6 +759,9 @@ class ValidateNamedConfig(Validator):
     def post_validation(self, config):
         """Validate a named config."""
         validate_jobs_and_services(config)
+        # TODO: this is missing strings from command_context
+        validate_format_strings(config)
+
 
 valid_config = ValidateConfig()
 valid_named_config = ValidateNamedConfig()

@@ -383,9 +383,9 @@ class ServiceInstanceCollection(object):
                 proxy.func_proxy('start',   all)
             ])
 
-
     def load_state(self):
         pass
+        # TODO:
 
     def update_config(self, config):
         self.config = config
@@ -431,10 +431,9 @@ class ServiceInstanceCollection(object):
         node                = self.node_pool.next_round_robin()
         instance_number     = self.next_instance_number()
         context             = build_instance_context(
-            self.config.name, node, instance_number, self.context)
-        # TODO: render pid_filename and command, and fail if broken
-        service_instance    = ServiceInstance(
-            self.config, node, instance_number, context)
+                        self.config.name, node, instance_number, self.context)
+        service_instance    = ServiceInstance.create(
+                        self.config, node, instance_number, context)
         return service_instance
 
     def next_instance_number(self):

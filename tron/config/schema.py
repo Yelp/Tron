@@ -2,6 +2,7 @@
  Immutable config schema objects.
 """
 from collections import namedtuple
+from tron.utils.timeutils import DateArithmetic
 
 MASTER_NAMESPACE = "MASTER"
 
@@ -131,3 +132,11 @@ ConfigService = config_object_factory(
         'restart_interval',     # float
         'count',                # int
     ])
+
+
+class CommandFormatKeys(object):
+    """Define expected keys for format strings."""
+
+    base_keys     = DateArithmetic.SUPPORTED_FORMATS + ['name', 'node']
+    job_keys      = base_keys + ['runid', 'cleanup_job_status', 'last_success']
+    service_keys  = base_keys + ['pid_file', 'instance_number']

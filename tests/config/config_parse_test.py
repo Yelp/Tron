@@ -1116,5 +1116,21 @@ class ValidatorIdentifierTestCase(TestCase):
             assert_raises(ConfigError, valid_identifier, '', name)
 
 
+class BuildStringTemplateValidatorTestCase(TestCase):
+
+    @setup
+    def setup_keys(self):
+        self.keys = ['one', 'seven', 'stars']
+
+    def test_validator_passes(self):
+        template = "The %(one)s thing I %(seven)s is %(stars)s"
+        assert config_parse.validate_format_string('', template, self.keys)
+
+    def test_validator_error(self):
+        template = "The %(one)s thing I %(seven)s is %(unknown)s"
+        assert_raises(ConfigError,
+            config_parse.validate_format_string, '', template, self.keys)
+
+
 if __name__ == '__main__':
     run()

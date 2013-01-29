@@ -377,7 +377,7 @@ class ServiceInstanceCollectionTestCase(TestCase):
         with contextlib.nested(patcher, context_patcher ) as (
             mock_service_instance_class, mock_build_context):
             instance = self.collection.build_instance()
-            factory = mock_service_instance_class
+            factory = mock_service_instance_class.create
             assert_equal(instance, factory.return_value)
             factory.assert_called_with(self.config,
                 self.node_pool.next_round_robin.return_value,
