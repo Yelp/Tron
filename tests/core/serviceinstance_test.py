@@ -1,11 +1,13 @@
+import contextlib
 import mock
 from testify import setup, assert_equal, TestCase, run, setup_teardown
 from testify.assertions import assert_in
 from tests.assertions import assert_length
 
-from tron import node, eventloop
+from tron import node, eventloop, command_context
 from tron.actioncommand import ActionCommand
 from tron.core import serviceinstance
+from tron.utils import state
 
 
 class ServiceInstanceMonitorTaskTestCase(TestCase):
@@ -215,6 +217,56 @@ class ServiceInstanceTestCase(TestCase):
 
     @setup
     def setup_instance(self):
+        self.config = mock.MagicMock()
+        self.node = mock.create_autospec(node.Node)
+        self.number = 5
+        self.context = mock.create_autospec(command_context.CommandContext)
+        self.instance = serviceinstance.ServiceInstance(
+            self.config, self.node, self.number, self.context)
+        self.instance.machine = mock.create_autospec(state.StateMachine)
+
+    def test_create_tasks(self):
+        assert self.instance.start_task
+        assert self.instance.stop_task
+        assert self.instance.monitor_task
+        # TODO: more tests around this
+
+    def test_command(self):
+        # TODO
+        pass
+
+    # TODO
+
+
+class ServiceInstanceFinderTaskTestCase(TestCase):
+
+    @setup
+    def setup_task(self):
+        self.config = mock.Mock(count=7)
+        self.node = mock.create_autospec(node.Node, hostname='hostname')
+        self.context = mock.MagicMock()
+        self.task = serviceinstance.ServiceInstanceFinderTask(
+            self.config, self.node, self.context)
+        self.task.notify = mock.create_autospec(self.task.notify)
+        self.task.watch = mock.create_autospec(self.task.watch)
+
+    def test_generate_pid_filenames(self):
+        self.task.config.pid_file = 'filename_%(instance_number)s'
+        filenames = list(self.task.generate_pid_filenames())
+        expected = ['filename_%s' % i for i in xrange(self.task.config.count)]
+        assert_equal(filenames, expected)
+
+    def test_build_action(self):
+        # TODO:
+        pass
+
+    def test_start_success(self):
+        patcher = mock.patch('tron.core.serviceinstance.ActionCommand', autospec=True)
+        with patcher as mock_action_command:
+            self.task.start()
+            self.node.run.assert_called_with()
+
+    def test_start_failed(self):
         pass
 
 
@@ -228,11 +280,11 @@ class ServiceInstanceCollectionTestCase(TestCase):
         self.node_pool      = mock.create_autospec(node.NodePool)
         self.config         = mock.Mock()
         context             = mock.Mock()
-        self.collection = serviceinstance.ServiceInstanceCollection(
+        self.collection     = serviceinstance.ServiceInstanceCollection(
             self.config, self.node_pool, context)
 
     def test__init__(self):
-        assert_equal(self.collection.count, self.config.count)
+        assert_equal(self.collection.config.count, self.config.count)
         assert_equal(self.collection.config, self.config)
         assert_equal(self.collection.instances,
             self.collection.instances_proxy.obj_list_getter())
@@ -271,14 +323,14 @@ class ServiceInstanceCollectionTestCase(TestCase):
         assert_equal(up_instances, [])
 
     def test_create_missing(self):
-        self.collection.count = 5
+        self.collection.config.count = 5
         self.collection.build_instance = mock.create_autospec(self.collection.build_instance)
         created = self.collection.create_missing()
         assert_length(created, 5)
         assert_equal(set(created), set(self.collection.instances))
 
     def test_create_missing_none(self):
-        self.collection.count = 2
+        self.collection.config.count = 2
         self.collection.instances = [create_mock_instance(instance_number=i) for i in range(2)]
         created = self.collection.create_missing()
         assert_length(created, 0)
@@ -287,28 +339,31 @@ class ServiceInstanceCollectionTestCase(TestCase):
         self.collection.next_instance_number = mock.create_autospec(
             self.collection.next_instance_number)
         patcher = mock.patch('tron.core.serviceinstance.ServiceInstance', autospec=True)
-        with patcher as mock_service_instance_class:
+        context_patcher = mock.patch(
+            'tron.core.serviceinstance.build_instance_context', autospec=True)
+        with contextlib.nested(patcher, context_patcher ) as (
+            mock_service_instance_class, mock_build_context):
             instance = self.collection.build_instance()
-            factory = mock_service_instance_class.from_config
+            factory = mock_service_instance_class
             assert_equal(instance, factory.return_value)
             factory.assert_called_with(self.config,
                 self.node_pool.next_round_robin.return_value,
                 self.collection.next_instance_number.return_value,
-                self.collection.context)
+                mock_build_context.return_value)
 
     def test_next_instance_number(self):
-        self.collection.count = 6
+        self.collection.config.count = 6
         self.collection.instances = [create_mock_instance(instance_number=i) for i in range(5)]
         assert_equal(self.collection.next_instance_number(), 5)
 
     def test_next_instance_number_in_middle(self):
-        self.collection.count = 6
+        self.collection.config.count = 6
         self.collection.instances = [
             create_mock_instance(instance_number=i) for i in range(6) if i != 3]
         assert_equal(self.collection.next_instance_number(), 3)
 
     def test_missing(self):
-        self.collection.count = 5
+        self.collection.config.count = 5
         assert_equal(self.collection.missing, 5)
 
         self.collection.instances = range(5)
