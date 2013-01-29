@@ -248,6 +248,7 @@ class ServiceInstance(observer.Observer):
                             monitor=STATE_MONITORING)
 
     STATE_MONITORING['monitor_fail']    = STATE_UNKNOWN
+    STATE_STOPPING['stop_fail']         = STATE_UNKNOWN
     STATE_UP['stop']                    = STATE_STOPPING
     STATE_UP['monitor']                 = STATE_MONITORING
     STATE_DOWN['start']                 = STATE_STARTING
@@ -261,10 +262,11 @@ class ServiceInstance(observer.Observer):
 
         start_state             = ServiceInstance.STATE_DOWN
         self.machine            = state.StateMachine(start_state, delegate=self)
-        self._create_tasks(config.pid_file, config.monitor_interval)
 
-    def _create_tasks(self, pid_file_template, interval):
+    def create_tasks(self):
         """Create and watch tasks."""
+        pid_file_template       = self.config.pid_file
+        interval                = self.config.monitor_interval
         pid_file                = self._create_pid_file(pid_file_template)
         self.monitor_task       = ServiceInstanceMonitorTask(
                                     self.id, self.node, interval, pid_file)
@@ -274,6 +276,12 @@ class ServiceInstance(observer.Observer):
         self.watch(self.monitor_task)
         self.watch(self.start_task)
         self.watch(self.stop_task)
+
+    @classmethod
+    def create(cls, config, node, instance_number, context):
+        instance = cls(config, node, instance_number, context)
+        instance.create_tasks()
+        return instance
 
     # TODO: remove once moved down stack
     def _create_pid_file(self, pid_file_template):
@@ -319,30 +327,25 @@ class ServiceInstance(observer.Observer):
         self.machine.transition("down")
         self.monitor_task.cancel()
 
-    def handler(self, observable, event):
+    event_to_transition_map = {
+        ServiceInstanceMonitorTask.NOTIFY_START:        "monitor",
+        ServiceInstanceMonitorTask.NOTIFY_FAILED:       "monitor_fail",
+        ServiceInstanceMonitorTask.NOTIFY_DOWN:         "down",
+        ServiceInstanceMonitorTask.NOTIFY_UP:           "up",
+        ServiceInstanceStartTask.NOTIFY_DOWN:           "down",
+        ServiceInstanceStopTask.NOTIFY_FAIL:            "stop_fail",
+    }
+
+    def handler(self, _, event):
         """Handle events from ServiceInstance tasks."""
-        if event == ServiceInstanceMonitorTask.NOTIFY_START:
-            self.machine.transition("monitor")
-
-        if event == ServiceInstanceMonitorTask.NOTIFY_FAILED:
-            self.machine.transition("monitor_fail")
-
-        if event == ServiceInstanceMonitorTask.NOTIFY_DOWN:
-            self.machine.transition("down")
-
-        if event == ServiceInstanceMonitorTask.NOTIFY_UP:
-            self.machine.transition("up")
-
-        if event == ServiceInstanceStartTask.NOTIFY_DOWN:
-            self.machine.transition('down')
+        if event in self.event_to_transition_map:
+            self.machine.transition(self.event_to_transition_map[event])
 
         if event == ServiceInstanceStartTask.NOTIFY_STARTED:
             self._handle_start_task_complete()
 
         if event == ServiceInstanceStopTask.NOTIFY_SUCCESS:
-            self.monitor_task.queue()
-
-        # TODO: stop task notify fail
+            self.monitor_task.cancel()
 
     def _handle_start_task_complete(self):
         if self.machine.state == ServiceInstance.STATE_STARTING:
@@ -352,51 +355,15 @@ class ServiceInstance(observer.Observer):
 
         self.stop_task.kill()
 
+    @property
+    def state_data(self):
+        return {
+            'instance_number': self.instance_number,
+            'node': self.node.hostname
+        }
+
     def __str__(self):
         return "%s:%s" % (self.__class__.__name__, self.id)
-
-
-class ServiceInstanceFinderTask(observer.Observable, observer.Observer):
-    """Retrieve a list of running instances from a node."""
-
-    NOTIFY_FAIL             = 'finder_task_notify_fail'
-    NOTIFY_SUCCESS          = 'finder_task_notify_success'
-
-    command_template = 'ls %s'
-
-    def __init__(self, config, node, context):
-        super(ServiceInstanceFinderTask, self).__init__()
-        self.config = config
-        self.node = node
-        self.context = context
-
-    def generate_pid_filenames(self):
-        """Generate all possible pid filenames."""
-        for num in xrange(self.config.count):
-            args = self.config.name, self.node, num, self.context
-            context = build_instance_context(*args)
-            yield self.config.pid_file % context
-
-    def build_action(self):
-        command = self.command_template % ' '.join(self.generate_pid_filenames())
-        return ActionCommand("%s.find" % self.config.name, command)
-
-    def start(self):
-        action = self.build_action()
-        self.watch(action)
-
-        try:
-            self.node.run(action)
-        except node.Error, e:
-            log.warn("Failed to start %s: %s", self, e)
-            self.notify(self.NOTIFY_FAIL)
-
-    def handler(self, _, event):
-        pass
-
-    def __str__(self):
-        class_name = self.__class__.__name__
-        return "%s(%s, %s)" % (class_name, self.config.name, self.node)
 
 
 class ServiceInstanceCollection(object):

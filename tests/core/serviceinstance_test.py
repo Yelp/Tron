@@ -218,56 +218,89 @@ class ServiceInstanceTestCase(TestCase):
     @setup
     def setup_instance(self):
         self.config = mock.MagicMock()
-        self.node = mock.create_autospec(node.Node)
+        self.node = mock.create_autospec(node.Node, hostname='hostname')
         self.number = 5
         self.context = mock.create_autospec(command_context.CommandContext)
         self.instance = serviceinstance.ServiceInstance(
             self.config, self.node, self.number, self.context)
-        self.instance.machine = mock.create_autospec(state.StateMachine)
+        self.instance.machine = mock.create_autospec(state.StateMachine, state=None)
+        self.instance.start_task = mock.create_autospec(
+            serviceinstance.ServiceInstanceStartTask)
+        self.instance.stop_task = mock.create_autospec(
+            serviceinstance.ServiceInstanceStopTask)
+        self.instance.monitor_task = mock.create_autospec(
+            serviceinstance.ServiceInstanceMonitorTask)
+        self.instance.watch = mock.create_autospec(self.instance.watch)
 
     def test_create_tasks(self):
-        assert self.instance.start_task
-        assert self.instance.stop_task
-        assert self.instance.monitor_task
-        # TODO: more tests around this
+        self.instance.create_tasks()
+        assert_equal(self.instance.watch.mock_calls, [
+            mock.call(self.instance.monitor_task),
+            mock.call(self.instance.start_task),
+            mock.call(self.instance.stop_task),
+        ])
 
-    def test_command(self):
-        # TODO
-        pass
+    def test_start_invalid_state(self):
+        self.instance.machine.transition.return_value = False
+        self.instance.start()
+        assert_equal(self.instance.start_task.start.call_count, 0)
 
-    # TODO
+    def test_start(self):
+        self.instance.start()
+        self.instance.start_task.start.assert_called_with(self.instance.command)
 
+    def test_stop_invalid_state(self):
+        self.instance.machine.check.return_value = False
+        self.instance.stop()
+        assert not self.instance.machine.transition.call_count
 
-class ServiceInstanceFinderTaskTestCase(TestCase):
+    def test_stop(self):
+        self.instance.stop()
+        self.instance.stop_task.kill.assert_called_with()
+        self.instance.machine.transition.assert_called_with('stop')
 
-    @setup
-    def setup_task(self):
-        self.config = mock.Mock(count=7)
-        self.node = mock.create_autospec(node.Node, hostname='hostname')
-        self.context = mock.MagicMock()
-        self.task = serviceinstance.ServiceInstanceFinderTask(
-            self.config, self.node, self.context)
-        self.task.notify = mock.create_autospec(self.task.notify)
-        self.task.watch = mock.create_autospec(self.task.watch)
+    def test_zap(self):
+        self.instance.zap()
+        assert_equal(self.instance.machine.transition.mock_calls, [
+            mock.call('stop'), mock.call('down')])
+        self.instance.monitor_task.cancel.assert_called_with()
 
-    def test_generate_pid_filenames(self):
-        self.task.config.pid_file = 'filename_%(instance_number)s'
-        filenames = list(self.task.generate_pid_filenames())
-        expected = ['filename_%s' % i for i in xrange(self.task.config.count)]
-        assert_equal(filenames, expected)
+    def test_handler_transition_map(self):
+        obs = mock.Mock()
+        event = serviceinstance.ServiceInstanceMonitorTask.NOTIFY_START
+        self.instance.handler(obs, event)
+        self.instance.machine.transition.assert_called_with("monitor")
 
-    def test_build_action(self):
-        # TODO:
-        pass
+    def test_handler_notify_started(self):
+        obs = mock.Mock()
+        event = serviceinstance.ServiceInstanceStartTask.NOTIFY_STARTED
+        self.instance._handle_start_task_complete = mock.create_autospec(
+            self.instance._handle_start_task_complete)
+        self.instance.handler(obs, event)
+        self.instance._handle_start_task_complete.assert_called_with()
 
-    def test_start_success(self):
-        patcher = mock.patch('tron.core.serviceinstance.ActionCommand', autospec=True)
-        with patcher as mock_action_command:
-            self.task.start()
-            self.node.run.assert_called_with()
+    def test_handler_notify_success(self):
+        obs = mock.Mock()
+        event = serviceinstance.ServiceInstanceStopTask.NOTIFY_SUCCESS
+        self.instance.handler(obs, event)
+        self.instance.monitor_task.cancel.assert_called_with()
 
-    def test_start_failed(self):
-        pass
+    def test_handle_start_task_complete(self):
+        self.instance.machine = mock.Mock(
+            state=serviceinstance.ServiceInstance.STATE_STARTING)
+        self.instance._handle_start_task_complete()
+        self.instance.monitor_task.queue.assert_called_with()
+
+    def test_handle_start_task_complete_from_unknown(self):
+        self.instance._handle_start_task_complete()
+        self.instance.stop_task.kill.assert_called_with()
+
+    def test_state_data(self):
+        expected = {
+            'instance_number': self.number,
+            'node': self.node.hostname
+        }
+        assert_equal(self.instance.state_data, expected)
 
 
 def create_mock_instance(**kwargs):
