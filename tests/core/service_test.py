@@ -1,59 +1,69 @@
 import mock
 from testify import setup, assert_equal, TestCase, run
 from testify.test_case import teardown
-from tests import mocks
-from tests.assertions import assert_call, assert_length
-from tests.mocks import MockNode, MockNodePool
-from tests.testingutils import Turtle, MockReactorTestCase
 
+from tests.testingutils import autospec_method
 from tron.core import service
-from tron import node
+from tron import node, eventloop
 
 
-class ServiceMonitorTestCase(MockReactorTestCase):
-
-    module_to_mock = service
+class ServiceMonitorTestCase(TestCase):
 
     @setup
     def setup_monitor(self):
-        self.service = Turtle()
+        self.service = mock.create_autospec(service.Service)
         self.monitor = service.ServiceMonitor(self.service, 5)
+        autospec_method(self.monitor.watch)
 
     def test__init__(self):
         assert_equal(self.monitor.restart_interval, 5)
-        assert_equal(self.service.name, self.monitor.service.name)
+        assert_equal(self.service, self.monitor.service)
 
     def test_start(self):
         self.monitor.start()
-        assert_call(self.service.attach, 0, True, self.monitor)
+        self.monitor.watch.assert_called_with(self.service)
 
     def test_start_no_restart_interval(self):
         self.monitor.restart_interval = None
         self.monitor.start()
-        assert_length(self.service.attach.calls, 0)
+        assert not self.monitor.watch.call_count
 
-    def test_restart_after_failure(self):
+    def test_restart_service(self):
         self.service.state = service.Service.STATE_DEGRADED
-        self.monitor._restart_after_failure()
-        assert_call(self.service.start, 0)
-        assert not self.monitor.timer
+        self.monitor.restart_service()
+        self.service.start.assert_called_with()
 
-    def test_restart_after_failure_not_degraded(self):
-        self.monitor._restart_after_failure()
-        assert_length(self.service.start.calls, 0)
-        assert not self.monitor.timer
+    def test_restart_service_not_degraded(self):
+        self.monitor.restart_service()
+        assert not self.service.start.call_count
 
     def test_set_restart_callback(self):
-        self.monitor._set_restart_callback()
-        interval = self.monitor.restart_interval
-        func = self.monitor._restart_after_failure
-        assert_call(self.reactor.callLater, 0, interval, func)
-        assert_equal(self.monitor.timer, self.reactor.callLater.returns[0])
+        patcher = mock.patch('tron.core.service.eventloop', autospec=True)
+        with patcher as mock_eventloop:
+            self.monitor._set_restart_callback()
+            mock_eventloop.call_later.assert_called_with(
+                self.monitor.restart_interval, self.monitor.restart_service)
 
     def test_set_restart_callback_already_exists(self):
-        self.monitor.timer = True
-        self.monitor._set_restart_callback()
-        assert_length(self.reactor.callLater.calls, 0)
+        self.monitor.timer.active = mock.Mock(return_value=True)
+        patcher = mock.patch('tron.core.service.eventloop', autospec=True)
+        with patcher as mock_eventloop:
+            self.monitor._set_restart_callback()
+            assert not mock_eventloop.call_later.call_count
+
+    def test_handle_service_state_change_failure(self):
+        autospec_method(self.monitor._set_restart_callback)
+        event = service.Service.STATE_FAILED
+        self.monitor.handle_service_state_change(None, event)
+        self.monitor._set_restart_callback.assert_called_with()
+
+    def test_handle_service_state_change_starting(self):
+        event = service.Service.STATE_STARTING
+        self.monitor.timer = mock.create_autospec(eventloop.Callback)
+        self.monitor.handle_service_state_change(None, event)
+        self.monitor.timer.cancel.assert_called_with()
+
+
 
 
 class ServiceTestCase(TestCase):

@@ -1,9 +1,6 @@
 import logging
 
-from twisted.internet import reactor
-import weakref
-
-from tron import event, node
+from tron import event, node, eventloop
 from tron.core import serviceinstance
 from tron.utils import observer
 from tron.utils import state
@@ -11,48 +8,6 @@ from tron.utils.state import NamedEventState
 
 
 log = logging.getLogger(__name__)
-
-
-class ServiceMonitor(observer.Observer):
-    """Observe a service and restart it when it fails."""
-
-    def __init__(self, service, restart_interval):
-        self.service            = weakref.proxy(service)
-        self.restart_interval   = restart_interval
-        self.timer              = None
-
-    def start(self):
-        """Start watching the service.  If restart_interval is None then
-        there is no reason to start.
-        """
-        if self.restart_interval is not None:
-            self.watch(self.service)
-
-    def _restart_after_failure(self):
-        self._clear_timer()
-
-        if self.service.state in (Service.STATE_DEGRADED, Service.STATE_FAILED):
-            msg = "Restarting failed instances for service %s"
-            log.info(msg % self.service.name)
-            self.service.start()
-
-    def _clear_timer(self):
-        self.timer = None
-
-    def _set_restart_callback(self):
-        if self.timer:
-            return
-        func            = self._restart_after_failure
-        self.timer      = reactor.callLater(self.restart_interval, func)
-
-    def handle_service_state_change(self, _observable, event):
-        if event in (Service.STATE_DEGRADED, Service.STATE_FAILED):
-            self._set_restart_callback()
-
-        if event == Service.STATE_STARTING:
-            self._clear_timer()
-
-    handler = handle_service_state_change
 
 
 class Service(observer.Observer):
@@ -225,4 +180,42 @@ class Service(observer.Observer):
         return self.config == other.config
 
     def __str__(self):
-        return "SERVICE:%s" % self.name
+        return "Service:%s" % self.name
+
+
+class ServiceMonitor(observer.Observer, observer.Observable):
+    """Observe a service and restart it when it fails."""
+
+    FAILURE_STATES = (Service.STATE_DEGRADED, Service.STATE_FAILED)
+
+    def __init__(self, service, restart_interval):
+        super(ServiceMonitor, self).__init__()
+        self.service            = service
+        self.restart_interval   = restart_interval
+        self.timer              = eventloop.NullCallback
+
+    def start(self):
+        """Start watching the service if restart_interval is Truthy."""
+        if self.restart_interval:
+            self.watch(self.service)
+
+    def restart_service(self):
+        if self.service.state not in self.FAILURE_STATES:
+            return
+        log.info("Restarting failed instances for %s" % self.service)
+        self.service.start()
+
+    def _set_restart_callback(self):
+        if self.timer.active():
+            return
+        func            = self.restart_service
+        self.timer      = eventloop.call_later(self.restart_interval, func)
+
+    def handle_service_state_change(self, _service, event):
+        if event in self.FAILURE_STATES:
+            self._set_restart_callback()
+
+        if event == Service.STATE_STARTING:
+            self.timer.cancel()
+
+    handler = handle_service_state_change

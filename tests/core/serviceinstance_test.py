@@ -3,6 +3,7 @@ import mock
 from testify import setup, assert_equal, TestCase, run, setup_teardown
 from testify.assertions import assert_in
 from tests.assertions import assert_length
+from tests.testingutils import autospec_method
 
 from tron import node, eventloop, command_context
 from tron.actioncommand import ActionCommand
@@ -19,8 +20,8 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
         mock_node = mock.create_autospec(node.Node)
         self.task = serviceinstance.ServiceInstanceMonitorTask(
             "id", mock_node, self.interval, self.filename)
-        self.task.notify = mock.create_autospec(self.task.notify)
-        self.task.watch = mock.create_autospec(self.task.watch)
+        autospec_method(self.task.notify)
+        autospec_method(self.task.watch)
         self.mock_eventloop = None
         with mock.patch('tron.core.serviceinstance.eventloop') as self.mock_eventloop:
             yield
@@ -55,8 +56,7 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
             assert_equal(mock_log.warn.call_count, 1)
 
     def test_run_failed(self):
-        self.task._run_action = mock.create_autospec(
-            self.task._run_action, return_value=False)
+        autospec_method(self.task._run_action, return_value=False)
         self.task.run()
         assert_equal(self.mock_eventloop.call_later.call_count, 0)
 
@@ -102,14 +102,14 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
     def test_handle_action_exit_up(self):
         self.task.action = mock.create_autospec(ActionCommand)
         self.task.action.has_failed = False
-        self.task.queue = mock.create_autospec(self.task.queue)
+        autospec_method(self.task.queue)
         self.task._handle_action_exit()
         self.task.notify.assert_called_with(self.task.NOTIFY_UP)
         self.task.queue.assert_called_with()
 
     def test_handle_action_exit_down(self):
         self.task.action = mock.create_autospec(ActionCommand)
-        self.task.queue = mock.create_autospec(self.task.queue)
+        autospec_method(self.task.queue)
         self.task._handle_action_exit()
         self.task.notify.assert_called_with(self.task.NOTIFY_DOWN)
         assert_equal(self.task.queue.call_count, 0)
@@ -123,8 +123,8 @@ class ServiceInstanceStopTaskTestCase(TestCase):
         self.pid_filename = '/tmp/filename'
         self.task = serviceinstance.ServiceInstanceStopTask(
             'id', self.node, self.pid_filename)
-        self.task.watch = mock.create_autospec(self.task.watch)
-        self.task.notify = mock.create_autospec(self.task.notify)
+        autospec_method(self.task.watch)
+        autospec_method(self.task.notify)
 
     def test_kill_success(self):
         patcher = mock.patch('tron.core.serviceinstance.log', autospec=True)
@@ -172,8 +172,8 @@ class ServiceInstanceStartTaskTestCase(TestCase):
     def setup_task(self):
         self.node = mock.create_autospec(node.Node)
         self.task = serviceinstance.ServiceInstanceStartTask('id', self.node)
-        self.task.notify = mock.create_autospec(self.task.notify)
-        self.task.watch = mock.create_autospec(self.task.watch)
+        autospec_method(self.task.notify)
+        autospec_method(self.task.watch)
 
     def test_start(self):
         command = 'the command'
@@ -274,8 +274,7 @@ class ServiceInstanceTestCase(TestCase):
     def test_handler_notify_started(self):
         obs = mock.Mock()
         event = serviceinstance.ServiceInstanceStartTask.NOTIFY_STARTED
-        self.instance._handle_start_task_complete = mock.create_autospec(
-            self.instance._handle_start_task_complete)
+        autospec_method(self.instance._handle_start_task_complete)
         self.instance.handler(obs, event)
         self.instance._handle_start_task_complete.assert_called_with()
 
@@ -357,7 +356,7 @@ class ServiceInstanceCollectionTestCase(TestCase):
 
     def test_create_missing(self):
         self.collection.config.count = 5
-        self.collection.build_instance = mock.create_autospec(self.collection.build_instance)
+        autospec_method(self.collection.build_instance)
         created = self.collection.create_missing()
         assert_length(created, 5)
         assert_equal(set(created), set(self.collection.instances))
@@ -369,8 +368,7 @@ class ServiceInstanceCollectionTestCase(TestCase):
         assert_length(created, 0)
 
     def test_build_instance(self):
-        self.collection.next_instance_number = mock.create_autospec(
-            self.collection.next_instance_number)
+        autospec_method(self.collection.next_instance_number)
         patcher = mock.patch('tron.core.serviceinstance.ServiceInstance', autospec=True)
         context_patcher = mock.patch(
             'tron.core.serviceinstance.build_instance_context', autospec=True)

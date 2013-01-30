@@ -265,9 +265,8 @@ class ServiceInstance(observer.Observer):
 
     def create_tasks(self):
         """Create and watch tasks."""
-        pid_file_template       = self.config.pid_file
         interval                = self.config.monitor_interval
-        pid_file                = self._create_pid_file(pid_file_template)
+        pid_file                = self.config.pid_file % self.context
         self.monitor_task       = ServiceInstanceMonitorTask(
                                     self.id, self.node, interval, pid_file)
         self.start_task         = ServiceInstanceStartTask(self.id, self.node)
@@ -283,35 +282,13 @@ class ServiceInstance(observer.Observer):
         instance.create_tasks()
         return instance
 
-    # TODO: remove once moved down stack
-    def _create_pid_file(self, pid_file_template):
-        try:
-            return pid_file_template % self.context
-        except KeyError:
-            msg = "Failed to render pid file template: %r" % pid_file_template
-            log.error(msg)
-            # TODO: put this instance in a disabled state so a check for None
-            # does not have to be performed later
-            # TODO: register error somewhere
-        return None
-
-    # TODO: remove error handling once moved down stack
     @property
     def command(self):
-        try:
-            return self.config.command % self.context
-        except KeyError:
-            msg = "Failed to render service command for service %s: %s"
-            log.error(msg % (self.id, self.config.command))
+        return self.config.command % self.context
 
     def start(self):
         if not self.machine.transition('start'):
             return False
-
-        if self.command is None:
-            self.machine.transition("down")
-            return False
-
         self.start_task.start(self.command)
 
     def stop(self):
@@ -348,19 +325,17 @@ class ServiceInstance(observer.Observer):
             self.monitor_task.cancel()
 
     def _handle_start_task_complete(self):
-        if self.machine.state == ServiceInstance.STATE_STARTING:
-            log.info("Start for %s complete, starting monitor" % self.id)
-            self.monitor_task.queue()
+        if self.machine.state != ServiceInstance.STATE_STARTING:
+            self.stop_task.kill()
             return
 
-        self.stop_task.kill()
+        log.info("Start for %s complete, starting monitor" % self.id)
+        self.monitor_task.queue()
 
     @property
     def state_data(self):
-        return {
-            'instance_number': self.instance_number,
-            'node': self.node.hostname
-        }
+        return dict(instance_number=self.instance_number,
+                    node=self.node.hostname)
 
     def __str__(self):
         return "%s:%s" % (self.__class__.__name__, self.id)
@@ -380,16 +355,20 @@ class ServiceInstanceCollection(object):
             [
                 proxy.func_proxy('stop',    all),
                 proxy.func_proxy('zap',     all),
-                proxy.func_proxy('start',   all)
+                proxy.func_proxy('start',   all),
+                proxy.func_proxy('state_data', list)
             ])
 
-    def load_state(self):
+    @classmethod
+    def from_state(cls):
         pass
         # TODO:
 
-    def update_config(self, config):
-        self.config = config
+    @classmethod
+    def update_from_config(cls, config, old_instances):
+        #self.config = config
         # TODO: restart instances
+        pass
 
     def clear_failed(self):
         """Remove and cleanup any instances that have failed."""

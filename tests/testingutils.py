@@ -1,6 +1,6 @@
-from contextlib import contextmanager
 import logging
 import functools
+import mock
 
 from testify import  TestCase, setup
 from testify import class_setup, class_teardown
@@ -11,34 +11,7 @@ from tron.utils import timeutils
 
 log = logging.getLogger(__name__)
 
-# this exists as logging.NullHandler as of Python 2.7
-class NullHandler(logging.Handler):
-    def emit(self, record):
-        pass
-
-
-@contextmanager
-def no_handlers_for_logger(name=None):
-    """Temporarily remove handlers all handlers from a logger.
-
-    Use this in a `with` block. For example::
-
-        with no_handlers_for_logger('tron.mcp'):
-            # do stuff with mcp
-
-    Any handlers you add inside the `with` block will be removed at the end.
-    """
-    log = logging.getLogger(name)
-    old_handlers = log.handlers
-
-    # add null handler so logging doesn't yell about there being no handlers
-    log.handlers = [NullHandler()]
-
-    yield
-
-    log.handlers = old_handlers
-
-
+# TODO: remove when replaced with tron.eventloop
 class MockReactorTestCase(TestCase):
     """Patch the reactor to a MockReactor."""
 
@@ -96,6 +69,7 @@ def retry(max_tries=3, delay=0.1, exceptions=(KeyError, IndexError)):
     return wrapper
 
 
+# TODO: remove when replaced with mock
 class Turtle(object):
     """A more complete Mock implementation."""
     def __init__(self, *args, **kwargs):
@@ -112,3 +86,8 @@ class Turtle(object):
         new_turtle = type(self)()
         self.returns.append(new_turtle)
         return new_turtle
+
+
+def autospec_method(method, *args, **kwargs):
+    """create an autospec for an instance method."""
+    setattr(method.im_self, method.__name__, mock.create_autospec(method, *args, **kwargs))
