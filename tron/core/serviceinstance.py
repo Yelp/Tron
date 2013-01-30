@@ -210,9 +210,6 @@ class ServiceInstanceStartTask(observer.Observable, observer.Observer):
         self.notify(event)
 
 
-# TODO: object to record failures/stdout/stderr
-
-
 def build_instance_context(name, node, number, parent_context):
     context = {
         'instance_number': number,
@@ -337,6 +334,12 @@ class ServiceInstance(observer.Observer):
         return dict(instance_number=self.instance_number,
                     node=self.node.hostname)
 
+    def get_observable(self):
+        return self.machine
+
+    def get_state(self):
+        return self.machine.state
+
     def __str__(self):
         return "%s:%s" % (self.__class__.__name__, self.id)
 
@@ -406,7 +409,8 @@ class ServiceInstanceCollection(object):
 
     def build_instance(self):
         # TODO: shouldn't this check which nodes are not used to properly
-        # balance across nodes?
+        # balance across nodes? But doing this makes it less resilient to
+        # failures of a node
         node                = self.node_pool.next_round_robin()
         instance_number     = self.next_instance_number()
         context             = build_instance_context(
@@ -429,6 +433,15 @@ class ServiceInstanceCollection(object):
     @property
     def extra(self):
         return len(self.instances) - self.config.count
+
+    # TODO: test
+    def all_states(self, state):
+        return all(inst.get_state() == state for inst in self.instances)
+
+    # TODO: cleanup/test
+    def is_starting(self):
+        states = [ServiceInstance.STATE_STARTING, ServiceInstance.STATE_MONITORING]
+        return all(inst.get_state() in states for inst in self.instances)
 
     def __len__(self):
         return len(self.instances)

@@ -64,8 +64,6 @@ class ServiceMonitorTestCase(TestCase):
         self.monitor.timer.cancel.assert_called_with()
 
 
-
-
 class ServiceTestCase(TestCase):
 
     @setup
@@ -119,10 +117,6 @@ class ServiceTestCase(TestCase):
 
     def test_stop_failed_already_stoppped(self):
         assert not self.service.stop()
-
-    def test_zap(self):
-        self.service.zap()
-        self.instances.zap.assert_called_with()
 
     def test_handle_instance_state_change_no_instances(self):
         self.instances.__len__.return_value = 0

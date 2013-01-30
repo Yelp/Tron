@@ -113,15 +113,15 @@ class MasterControlProgram(Observable):
 
         self.state_manager = PersistenceManagerFactory.from_config(
                     state_persistence)
-        self.context.base = configs[MASTER_NAMESPACE].command_context
-        self.time_zone = configs[MASTER_NAMESPACE].time_zone
-        self._apply_nodes(configs[MASTER_NAMESPACE].nodes, ssh_options)
-        self._apply_node_pools(configs[MASTER_NAMESPACE].node_pools)
-        self._apply_notification_options(configs[MASTER_NAMESPACE].notification_options)
+        self.context.base = master_config.command_context
+        self.time_zone = master_config.time_zone
+        self._apply_nodes(master_config.nodes, ssh_options)
+        self._apply_node_pools(master_config.node_pools)
+        self._apply_notification_options(master_config.notification_options)
 
         jobs, services = collate_jobs_and_services(configs)
         self._apply_jobs(jobs, reconfigure=reconfigure)
-        self._apply_services(services)
+        self._apply_services(services, reconfigure=reconfigure)
 
     def _ssh_options_from_config(self, ssh_conf):
         ssh_options = ConchOptions()
@@ -168,17 +168,17 @@ class MasterControlProgram(Observable):
             log.debug("Removing job %s", job_name)
             self.remove_job(job_name)
 
-    def _apply_services(self, srv_configs):
+    def _apply_services(self, service_configs, reconfigure=False):
         """Add and remove services."""
 
         services_to_add = []
-        for srv_config in srv_configs.values():
+        for srv_config in service_configs.values():
             log.debug("Building new services %s", srv_config[0].name)
             service = Service.from_config(srv_config[0], self.nodes)
             service.name = '_'.join((srv_config[1], service.name))
             services_to_add.append(service)
 
-        for srv_name in (set(self.services.keys()) - set(srv_configs.keys())):
+        for srv_name in (set(self.services.keys()) - set(service_configs.keys())):
             log.debug("Removing service %s", srv_name)
             self.remove_service(srv_name)
 
