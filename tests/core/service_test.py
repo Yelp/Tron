@@ -1,9 +1,10 @@
 import mock
 from testify import setup, assert_equal, TestCase, run
+from testify.assertions import assert_not_equal
 
 from tests.testingutils import autospec_method
 from tron.core import service, serviceinstance
-from tron import node, command_context
+from tron import node, command_context, event
 from tron.core.serviceinstance import ServiceInstance
 
 
@@ -67,18 +68,18 @@ class ServiceTestCase(TestCase):
         assert_equal(collection.context, context)
 
     def test_state_disabled(self):
-        assert_equal(self.service.state, self.service.STATE_DISABLED)
+        assert_equal(self.service.get_state(), self.service.STATE_DISABLED)
 
     def test_state_up(self):
         self.service.enabled = True
-        assert_equal(self.service.state, self.service.STATE_UP)
-        self.instances.all_states.assert_called_with(ServiceInstance.STATE_UP)
+        assert_equal(self.service.get_state(), self.service.STATE_UP)
+        self.instances.all.assert_called_with(ServiceInstance.STATE_UP)
 
     def test_state_degraded(self):
         self.service.enabled = True
-        self.instances.all_states.return_value = False
+        self.instances.all.return_value = False
         self.instances.is_starting.return_value = False
-        assert_equal(self.service.state, self.service.STATE_DEGRADED)
+        assert_equal(self.service.get_state(), self.service.STATE_DEGRADED)
 
     def test_enable(self):
         autospec_method(self.service.repair)
@@ -107,20 +108,32 @@ class ServiceTestCase(TestCase):
         # TODO
         pass
 
-    def test_record_events(self):
-        #TODO
-        pass
+    def test_record_events_failure(self):
+        autospec_method(self.service.get_state)
+        state = self.service.get_state.return_value  = self.service.STATE_FAILED
+        self.service.event_recorder = mock.create_autospec(event.EventRecorder)
+        self.service.record_events()
+        self.service.event_recorder.critical.assert_called_with(state)
+
+    def test_record_events_up(self):
+        autospec_method(self.service.get_state)
+        state = self.service.get_state.return_value  = self.service.STATE_UP
+        self.service.event_recorder = mock.create_autospec(event.EventRecorder)
+        self.service.record_events()
+        self.service.event_recorder.ok.assert_called_with(state)
 
     def test_state_data(self):
         expected = dict(enabled=False, instances=self.instances.state_data)
         assert_equal(self.service.state_data, expected)
 
     def test__eq__not_equal(self):
-        assert not self.service == None
-        assert not self.service == mock.Mock()
+        assert_not_equal(self.service, None)
+        assert_not_equal(self.service, mock.Mock())
+        other = service.Service(self.config, mock.Mock())
+        assert_not_equal(self.service, other)
 
     def test__eq__(self):
-        other = service.Service(self.config, mock.Mock())
+        other = service.Service(self.config, self.instances)
         assert_equal(self.service, other)
 
     def test_restore_state(self):

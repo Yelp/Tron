@@ -347,6 +347,19 @@ class ServiceInstance(observer.Observer):
         return "%s:%s" % (self.__class__.__name__, self.id)
 
 
+# TODO: shouldn't this check which nodes are not used to properly
+# balance across nodes? But doing this makes it less resilient to
+# failures of a node
+def node_selector(node_pool, hostname=None):
+    """Attempt to retrieve the node by hostname.  If that node is not
+    available, or hostname is None, then pick one the next node.
+    """
+    next_node = node_pool.next_round_robin
+    if not hostname:
+        return next_node()
+
+    return node_pool.get_by_hostname(hostname) or next_node()
+
 class ServiceInstanceCollection(object):
     """A collection of ServiceInstances."""
 
@@ -365,23 +378,13 @@ class ServiceInstanceCollection(object):
             ])
 
     def clear_failed(self):
-        """Remove and cleanup any instances that have failed."""
         self._clear(ServiceInstance.STATE_FAILED)
 
     def clear_down(self):
         self._clear(ServiceInstance.STATE_DOWN)
 
     def _clear(self, state):
-        self.instances = [i for i in self.instances if i.state != state]
-
-    def get_failed(self):
-        return self._filter(ServiceInstance.STATE_FAILED)
-
-    def get_up(self):
-        return self._filter(ServiceInstance.STATE_UP)
-
-    def _filter(self, state):
-        return (i for i in self.instances if i.state == state)
+        self.instances = [i for i in self.instances if i.get_state != state]
 
     def sort(self):
         self.instances.sort(key=operator.attrgetter('instance_number'))
@@ -390,27 +393,19 @@ class ServiceInstanceCollection(object):
         """Create instances until this collection contains the configured
         number of instances.
         """
-        builder = lambda _: self.build_instance()
+        def builder(_):
+            node = node_selector(self.node_pool)
+            return self._build_instance(node, self.next_instance_number())
         return self._build_and_sort(builder, xrange(self.missing))
 
-    def build_instance(self):
-        # TODO: shouldn't this check which nodes are not used to properly
-        # balance across nodes? But doing this makes it less resilient to
-        # failures of a node
-        node                = self.node_pool.next_round_robin()
-        instance_number     = self.next_instance_number()
-        return ServiceInstance.create(
-                            self.config, node, instance_number, self.context)
+    def _build_instance(self, node, number):
+        return ServiceInstance.create(self.config, node, number, self.context)
 
-    # TODO: test case
     def restore_state(self, state_data):
         assert not self.instances
         def builder(instance_state):
-            node = (self.node_pool.get_by_hostname(instance_state.node) or
-                           self.node_pool.next_round_robin())
-            instance_number = instance_state['instance_number']
-            args = self.config, node, instance_number, self.context
-            return ServiceInstance.create(*args)
+            node = node_selector(self.node_pool, instance_state['node'])
+            return self._build_instance(node, instance_state['instance_number'])
 
         return self._build_and_sort(builder, state_data)
 
@@ -438,13 +433,17 @@ class ServiceInstanceCollection(object):
     def extra(self):
         return len(self.instances) - self.config.count
 
-    # TODO: test
-    def all_states(self, state):
-        return all(inst.get_state() == state for inst in self.instances)
+    def all(self, state):
+        if not self.instances:
+            return False
+        return self._all_states_match([state])
 
-    # TODO: cleanup/test
     def is_starting(self):
-        states = [ServiceInstance.STATE_STARTING, ServiceInstance.STATE_MONITORING]
+        states = set(
+            [ServiceInstance.STATE_STARTING, ServiceInstance.STATE_MONITORING])
+        return self._all_states_match(states)
+
+    def _all_states_match(self, states):
         return all(inst.get_state() in states for inst in self.instances)
 
     def __len__(self):
@@ -452,3 +451,11 @@ class ServiceInstanceCollection(object):
 
     def __getattr__(self, item):
         return self.instances_proxy.perform(item)
+
+    def __eq__(self, other):
+        return (self.node_pool == other.node_pool and
+                self.config == other.config and
+                self.context == other.context)
+
+    def __ne__(self, other):
+        return not self == other

@@ -297,7 +297,7 @@ class ServiceInstanceResource(resource.Resource):
                 self._service_instance.start()
             except service.InvalidStateError:
                 msg = ("Failed to start: Service is already %s" %
-                       self._service_instance.state)
+                       self._service_instance.get_state())
                 return respond(request, {'result': msg})
 
             return respond(request, {'result': "Service instance starting"})
@@ -330,7 +330,7 @@ class ServiceResource(resource.Resource):
         return {
             'id':           instance.id,
             'node':         instance.node.hostname if instance.node else None,
-            'state':        instance.state.name,
+            'state':        instance.get_state(),
         }
 
     # TODO: create an adapter
@@ -342,7 +342,7 @@ class ServiceResource(resource.Resource):
 
         output = {
             'name':         self._service.name,
-            'state':        self._service.state.name.upper(),
+            'state':        self._service.get_state(),
             'count':        self._service.count,
             'command':      self._service.command,
             'instances':    instance_output,
@@ -368,7 +368,7 @@ class ServiceResource(resource.Resource):
                 self._service.start()
             except service.InvalidStateError:
                 msg = ("Failed to start: Service is already %s" %
-                       self._service.state)
+                       self._service.get_state())
                 return respond(request, {'result': msg})
 
             return respond(request, {'result': "Service starting"})
@@ -399,7 +399,7 @@ class ServicesResource(resource.Resource):
         service_list = []
         for current_service in self._master_control.services.itervalues():
             try:
-                status = current_service.state.name.upper()
+                status = current_service.get_state()
             except Exception, e:
                 log.error("Unexpected service state: %s" % e)
                 status = "BROKEN"

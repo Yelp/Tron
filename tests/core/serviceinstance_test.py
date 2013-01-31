@@ -1,6 +1,6 @@
 import mock
 from testify import setup, assert_equal, TestCase, run, setup_teardown
-from testify.assertions import assert_in
+from testify.assertions import assert_in, assert_not_equal
 from tests.assertions import assert_length
 from tests.testingutils import autospec_method
 
@@ -301,6 +301,28 @@ class ServiceInstanceTestCase(TestCase):
         assert_equal(self.instance.state_data, expected)
 
 
+class NodeSelectorTestCase(TestCase):
+
+    @setup
+    def setup_mocks(self):
+        self.node_pool = mock.create_autospec(node.NodePool)
+
+    def test_node_selector_no_hostname(self):
+        selected_node = serviceinstance.node_selector(self.node_pool)
+        assert_equal(selected_node, self.node_pool.next_round_robin())
+
+    def test_node_selector_hostname_not_in_pool(self):
+        hostname = 'hostname'
+        self.node_pool.get_by_hostname.return_value = None
+        selected_node = serviceinstance.node_selector(self.node_pool, hostname)
+        assert_equal(selected_node, self.node_pool.next_round_robin.return_value)
+
+    def test_node_selector_hostname_found(self):
+        hostname = 'hostname'
+        selected_node = serviceinstance.node_selector(self.node_pool, hostname)
+        assert_equal(selected_node, self.node_pool.get_by_hostname.return_value)
+
+
 def create_mock_instance(**kwargs):
     return mock.create_autospec(serviceinstance.ServiceInstance, **kwargs)
 
@@ -310,9 +332,9 @@ class ServiceInstanceCollectionTestCase(TestCase):
     def setup_collection(self):
         self.node_pool      = mock.create_autospec(node.NodePool)
         self.config         = mock.Mock()
-        context             = mock.Mock()
+        self.context        = mock.Mock()
         self.collection     = serviceinstance.ServiceInstanceCollection(
-            self.config, self.node_pool, context)
+            self.config, self.node_pool, self.context)
 
     def test__init__(self):
         assert_equal(self.collection.config.count, self.config.count)
@@ -335,27 +357,9 @@ class ServiceInstanceCollectionTestCase(TestCase):
         self.collection.clear_failed()
         assert_equal(self.collection.instances, instances)
 
-    def test_get_up(self):
-        instances = [
-            create_mock_instance(state=serviceinstance.ServiceInstance.STATE_UP),
-            create_mock_instance(state=serviceinstance.ServiceInstance.STATE_FAILED)
-        ]
-        self.collection.instances.extend(instances)
-        up_instances = list(self.collection.get_up())
-        assert_equal(up_instances, instances[:1])
-
-    def test_get_up_none(self):
-        instances = [
-            create_mock_instance(state=serviceinstance.ServiceInstance.STATE_DOWN),
-            create_mock_instance(state=serviceinstance.ServiceInstance.STATE_FAILED)
-        ]
-        self.collection.instances.extend(instances)
-        up_instances = list(self.collection.get_up())
-        assert_equal(up_instances, [])
-
     def test_create_missing(self):
         self.collection.config.count = 5
-        autospec_method(self.collection.build_instance)
+        autospec_method(self.collection._build_instance)
         created = self.collection.create_missing()
         assert_length(created, 5)
         assert_equal(set(created), set(self.collection.instances))
@@ -367,16 +371,40 @@ class ServiceInstanceCollectionTestCase(TestCase):
         assert_length(created, 0)
 
     def test_build_instance(self):
-        autospec_method(self.collection.next_instance_number)
         patcher = mock.patch('tron.core.serviceinstance.ServiceInstance', autospec=True)
+        mock_node = mock.create_autospec(node.Node)
+        number = 7
         with patcher as mock_service_instance_class:
-            instance = self.collection.build_instance()
+            instance = self.collection._build_instance(mock_node, number)
             factory = mock_service_instance_class.create
             assert_equal(instance, factory.return_value)
-            factory.assert_called_with(self.config,
-                self.node_pool.next_round_robin.return_value,
-                self.collection.next_instance_number.return_value,
-                self.collection.context)
+            factory.assert_called_with(
+                    self.config, mock_node, number, self.collection.context)
+
+    def test_restore_state(self):
+        count = 3
+        state_data = [
+            dict(instance_number=i*3, node='node') for i in xrange(count)]
+        autospec_method(self.collection._build_instance)
+        created = self.collection.restore_state(state_data)
+        assert_length(created, count)
+        assert_equal(set(created), set(self.collection.instances))
+        expected = [
+            mock.call(
+                self.node_pool.get_by_hostname.return_value,
+                d['instance_number'])
+            for d in state_data]
+        assert_equal(self.collection._build_instance.mock_calls[:3], expected)
+
+    def test_build_and_sort(self):
+        autospec_method(self.collection.sort)
+        count = 4
+        builder, seq = mock.Mock(), range(count)
+        instances = self.collection._build_and_sort(builder, seq)
+        self.collection.sort.assert_called_with()
+        assert_equal(builder.mock_calls, [mock.call(i) for i in seq])
+        assert_length(instances, count)
+        assert_equal(instances, self.collection.instances)
 
     def test_next_instance_number(self):
         self.collection.config.count = 6
@@ -395,6 +423,45 @@ class ServiceInstanceCollectionTestCase(TestCase):
 
         self.collection.instances = range(5)
         assert_equal(self.collection.missing, 0)
+
+    def test_all_true(self):
+        state = serviceinstance.ServiceInstance.STATE_UP
+        def build():
+            inst = create_mock_instance()
+            inst.get_state.return_value = state
+            return inst
+        self.collection.instances = [build() for _ in xrange(3)]
+        assert self.collection.all(state)
+
+    def test_all_empty(self):
+        assert not self.collection.all(serviceinstance.ServiceInstance.STATE_UP)
+
+    def test_all_false(self):
+        state = serviceinstance.ServiceInstance.STATE_UP
+        def build():
+            inst = create_mock_instance()
+            inst.get_state.return_value = state
+            return inst
+        self.collection.instances = [build() for _ in xrange(3)]
+        self.collection.instances.append(create_mock_instance())
+        assert not self.collection.all(state)
+
+    def test__eq__(self):
+        other = serviceinstance.ServiceInstanceCollection(
+            self.config, self.node_pool, self.context)
+        assert_equal(self.collection, other)
+
+    def test__ne__(self):
+        other = serviceinstance.ServiceInstanceCollection(
+            mock.Mock(), self.node_pool, self.context)
+        assert_not_equal(self.collection, other)
+        other = serviceinstance.ServiceInstanceCollection(
+            self.config, mock.Mock(), self.context)
+        assert_not_equal(self.collection, other)
+        other = serviceinstance.ServiceInstanceCollection(
+            self.config, self.node_pool, mock.Mock())
+        assert_not_equal(self.collection, other)
+
 
 if __name__ == "__main__":
     run()

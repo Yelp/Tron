@@ -46,24 +46,23 @@ class Service(observer.Observer):
         instance_collection = serviceinstance.ServiceInstanceCollection(*args)
         return cls(config, instance_collection)
 
-    @property
-    def state(self):
+    def get_state(self):
         if not self.enabled:
             if not len(self.instances):
                 return self.STATE_DISABLED
 
-            if self.instances.all_states(ServiceInstance.STATE_STOPPING):
+            if self.instances.all(ServiceInstance.STATE_STOPPING):
                 return self.STATE_STOPPING
 
             return self.STATE_UNKNOWN
 
-        if self.instances.all_states(ServiceInstance.STATE_UP):
+        if self.instances.all(ServiceInstance.STATE_UP):
             return self.STATE_UP
 
         if self.instances.is_starting():
             return self.STATE_STARTING
 
-        if self.instances.all_states(ServiceInstance.STATE_FAILED):
+        if self.instances.all(ServiceInstance.STATE_FAILED):
             return self.STATE_FAILED
 
         return self.STATE_DEGRADED
@@ -93,7 +92,7 @@ class Service(observer.Observer):
         self.instances.clear_down()
         self.record_events()
 
-        if self.state in self.FAILURE_STATES:
+        if self.get_state() in self.FAILURE_STATES:
             self.repair_callback.start()
         # TODO: record failures to a ServiceFailures
 
@@ -101,7 +100,7 @@ class Service(observer.Observer):
 
     def record_events(self):
         """Record an event when the state changes."""
-        state = self.state
+        state = self.get_state()
         if state in (self.STATE_FAILED, self.STATE_DEGRADED):
             return self.event_recorder.critical(state)
 
@@ -118,9 +117,10 @@ class Service(observer.Observer):
         if other is None or not isinstance(other, Service):
             return False
 
-        # TODO: should compare node_pool as well so that changes to node_pools
-        # cause the service to restart
-        return self.config == other.config
+        return self.config == other.config and self.instances == other.instances
+
+    def __ne__(self, other):
+        return not self == other
 
     def __str__(self):
         return "Service:%s" % self.config.name
