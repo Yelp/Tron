@@ -210,11 +210,12 @@ class ServiceInstanceStartTask(observer.Observable, observer.Observer):
         self.notify(event)
 
 
-def build_instance_context(name, node, number, parent_context):
+def build_instance_context(config, node, number, parent_context):
     context = {
         'instance_number': number,
-        'name': name,
-        'node': node.hostname
+        'name': config.name,
+        'node': node.hostname,
+        'pid_file': config.pid_file % parent_context,
     }
     return command_context.CommandContext(context, parent_context)
 
@@ -275,6 +276,8 @@ class ServiceInstance(observer.Observer):
 
     @classmethod
     def create(cls, config, node, instance_number, context):
+        context  = build_instance_context(
+                    config, node, instance_number, context)
         instance = cls(config, node, instance_number, context)
         instance.create_tasks()
         return instance
@@ -351,27 +354,15 @@ class ServiceInstanceCollection(object):
         self.config             = config
         self.node_pool          = node_pool
         self.instances          = []
-        self.context            = command_context.CommandContext(next=context)
+        self.context            = context
 
         self.instances_proxy    = proxy.CollectionProxy(
             lambda: self.instances,
             [
                 proxy.func_proxy('stop',    all),
-                proxy.func_proxy('zap',     all),
                 proxy.func_proxy('start',   all),
                 proxy.func_proxy('state_data', list)
             ])
-
-    @classmethod
-    def from_state(cls):
-        pass
-        # TODO:
-
-    @classmethod
-    def update_from_config(cls, config, old_instances):
-        #self.config = config
-        # TODO: restart instances
-        pass
 
     def clear_failed(self):
         """Remove and cleanup any instances that have failed."""
@@ -392,20 +383,15 @@ class ServiceInstanceCollection(object):
     def _filter(self, state):
         return (i for i in self.instances if i.state == state)
 
+    def sort(self):
+        self.instances.sort(key=operator.attrgetter('instance_number'))
+
     def create_missing(self):
         """Create instances until this collection contains the configured
         number of instances.
         """
-        created_instances = []
-        while self.missing > 0:
-            instance = self.build_instance()
-            created_instances.append(instance)
-            self.instances.append(instance)
-        self.sort()
-        return created_instances
-
-    def sort(self):
-        self.instances.sort(key=operator.attrgetter('instance_number'))
+        builder = lambda _: self.build_instance()
+        return self._build_and_sort(builder, xrange(self.missing))
 
     def build_instance(self):
         # TODO: shouldn't this check which nodes are not used to properly
@@ -413,11 +399,29 @@ class ServiceInstanceCollection(object):
         # failures of a node
         node                = self.node_pool.next_round_robin()
         instance_number     = self.next_instance_number()
-        context             = build_instance_context(
-                        self.config.name, node, instance_number, self.context)
-        service_instance    = ServiceInstance.create(
-                        self.config, node, instance_number, context)
-        return service_instance
+        return ServiceInstance.create(
+                            self.config, node, instance_number, self.context)
+
+    # TODO: test case
+    def restore_state(self, state_data):
+        assert not self.instances
+        def builder(instance_state):
+            node = (self.node_pool.get_by_hostname(instance_state.node) or
+                           self.node_pool.next_round_robin())
+            instance_number = instance_state['instance_number']
+            args = self.config, node, instance_number, self.context
+            return ServiceInstance.create(*args)
+
+        return self._build_and_sort(builder, state_data)
+
+    def _build_and_sort(self, builder, seq):
+        def build_and_add(item):
+            instance = builder(item)
+            self.instances.append(instance)
+            return instance
+        instances = list(build_and_add(item) for item in seq)
+        self.sort()
+        return instances
 
     def next_instance_number(self):
         """Return the next available instance number."""

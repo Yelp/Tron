@@ -18,6 +18,7 @@ class ServiceState(state.NamedEventState):
 # TODO: get failure messages from instance stderr/stdout
 
 class Service(observer.Observer):
+    """Manage a collection of service instances."""
 
     STATE_DISABLED      = "disabled"
     STATE_STARTING      = "starting"
@@ -27,11 +28,14 @@ class Service(observer.Observer):
     STATE_STOPPING      = "stopping"
     STATE_UNKNOWN       = "unknown"
 
+    FAILURE_STATES = set([STATE_DEGRADED, STATE_FAILED])
+
     def __init__(self, config, instance_collection):
         self.config             = config
         self.instances          = instance_collection
         self.enabled            = False
-        self.monitor            = ServiceMonitor(self, config.restart_interval)
+        self.repair_callback    = ServiceRepairCallback(
+                                    self.repair, config.restart_interval)
         self.event_recorder     = event.get_recorder(str(self))
 
     @classmethod
@@ -67,23 +71,20 @@ class Service(observer.Observer):
     def enable(self):
         """Enable the service."""
         self.enabled = True
-        self.monitor.start()
         self.event_recorder.ok('enabled')
+        self.repair()
 
     # TODO: update api, used to be stop
     def disable(self):
         self.enabled = False
         self.instances.stop()
-        self.monitor.cancel()
+        self.repair_callback.cancel()
         self.event_recorder.ok('disabled')
 
     def repair(self):
         """Repair the service by restarting instances."""
-        # TODO:
         self.instances.clear_failed()
-        for instance in self.instances.create_missing():
-            self.watch(instance.get_observable())
-
+        self.watch_instances(self.instances.create_missing())
         self.event_recorder.ok('repairing')
         self.instances.start()
 
@@ -92,7 +93,8 @@ class Service(observer.Observer):
         self.instances.clear_down()
         self.record_events()
 
-        # TODO: trigger repair?
+        if self.state in self.FAILURE_STATES:
+            self.repair_callback.start()
         # TODO: record failures to a ServiceFailures
 
     handler = _handle_instance_state_change
@@ -116,83 +118,46 @@ class Service(observer.Observer):
         if other is None or not isinstance(other, Service):
             return False
 
+        # TODO: should compare node_pool as well so that changes to node_pools
+        # cause the service to restart
         return self.config == other.config
 
     def __str__(self):
         return "Service:%s" % self.config.name
 
+    def watch_instances(self, instances):
+        for instance in instances:
+            self.watch(instance.get_observable())
 
-class ServiceRestore(object):
-    """Restore a service from state, or after reconfig."""
+    def restore_state(self, state_data):
+        instances = self.instances.restore_state(state_data['instances'])
+        self.watch_instances(instances)
 
-    def restore_service_state(self, service_state_data):
-        """Restore state of this service. If service instances are up,
-        restart monitoring.
-        """
-        instance_state_data = service_state_data['instances']
-        for instance in self.instances.restore_state(instance_state_data):
-            self.watch(instance)
-        self._handle_instance_state_change()
+        (self.enable if state_data['enabled'] else self.disable)()
         self.event_recorder.info("restored")
 
-    def update_from_service(self, service):
-        """Update this service from the new config."""
-        old_config, self.config  = self.config, service.config
-        self.instances.update_config(service.config)
 
-        if service.config.restart_interval != old_config.restart_interval:
-            self.monitor.stop_watching(self)
-            self.monitor = ServiceMonitor(self, service.config.restart_interval)
+class ServiceRepairCallback(object):
+    """Monitor a callback to ensure that only a single instance is active."""
 
-        diff_node_pool = service.instances.node_pool != self.instances.node_pool
-        diff_command   = service.config.command      != old_config.command
-        diff_count     = service.config.count        != old_config.count
-        if diff_node_pool or diff_command or diff_count:
-            self.instances.node_pool = service.instances.node_pool
-            self.stop()
-
-        # TODO: can this auto-restart the instances that need to start?
-        self.monitor.start()
-
-
-
-class ServiceMonitor(observer.Observer, observer.Observable):
-    """Observe a service and restart it when it fails."""
-
-    FAILURE_STATES = (Service.STATE_DEGRADED, Service.STATE_FAILED)
-
-    def __init__(self, service, restart_interval):
-        super(ServiceMonitor, self).__init__()
-        self.service            = service
+    def __init__(self, callback, restart_interval):
+        super(ServiceRepairCallback, self).__init__()
+        self.callback           = callback
         self.restart_interval   = restart_interval
         self.timer              = eventloop.NullCallback
 
     def start(self):
-        """Start watching the service if restart_interval is Truthy."""
-        if self.restart_interval:
-            self.watch(self.service)
-
-    def restart_service(self):
-        if self.service.state not in self.FAILURE_STATES:
+        """Start the callback if restart_interval is Truthy and the current
+        timer is not active.
+        """
+        if not self.restart_interval or self.timer.active():
             return
-        log.info("Restarting failed instances for %s" % self.service)
-        # TODO: check service.enabled
-        self.service.repair()
 
-    def _set_restart_callback(self):
-        if self.timer.active():
-            return
-        func            = self.restart_service
+        func            = self.run_callback
         self.timer      = eventloop.call_later(self.restart_interval, func)
 
-    def handle_service_state_change(self, _service, event):
-        if event in self.FAILURE_STATES:
-            self._set_restart_callback()
-
-        if event == Service.STATE_STARTING:
-            self.timer.cancel()
+    def run_callback(self):
+        self.callback()
 
     def cancel(self):
         self.timer.cancel()
-
-    handler = handle_service_state_change

@@ -1,322 +1,138 @@
 import mock
 from testify import setup, assert_equal, TestCase, run
-from testify.test_case import teardown
 
 from tests.testingutils import autospec_method
-from tron.core import service
-from tron import node, eventloop
+from tron.core import service, serviceinstance
+from tron import node, command_context
+from tron.core.serviceinstance import ServiceInstance
 
 
-class ServiceMonitorTestCase(TestCase):
+class ServiceRepairCallbackTestCase(TestCase):
 
     @setup
     def setup_monitor(self):
-        self.service = mock.create_autospec(service.Service)
-        self.monitor = service.ServiceMonitor(self.service, 5)
-        autospec_method(self.monitor.watch)
+        self.callback = mock.create_autospec(service.Service.repair)
+        self.monitor = service.ServiceRepairCallback(self.callback, 5)
 
     def test__init__(self):
         assert_equal(self.monitor.restart_interval, 5)
-        assert_equal(self.service, self.monitor.service)
-
-    def test_start(self):
-        self.monitor.start()
-        self.monitor.watch.assert_called_with(self.service)
+        assert_equal(self.callback, self.monitor.callback)
 
     def test_start_no_restart_interval(self):
         self.monitor.restart_interval = None
-        self.monitor.start()
-        assert not self.monitor.watch.call_count
-
-    def test_restart_service(self):
-        self.service.state = service.Service.STATE_DEGRADED
-        self.monitor.restart_service()
-        self.service.start.assert_called_with()
-
-    def test_restart_service_not_degraded(self):
-        self.monitor.restart_service()
-        assert not self.service.start.call_count
-
-    def test_set_restart_callback(self):
         patcher = mock.patch('tron.core.service.eventloop', autospec=True)
         with patcher as mock_eventloop:
-            self.monitor._set_restart_callback()
-            mock_eventloop.call_later.assert_called_with(
-                self.monitor.restart_interval, self.monitor.restart_service)
+            self.monitor.start()
+            assert not mock_eventloop.call_later.call_count
 
-    def test_set_restart_callback_already_exists(self):
+    def test_start(self):
+        patcher = mock.patch('tron.core.service.eventloop', autospec=True)
+        with patcher as mock_eventloop:
+            self.monitor.start()
+            mock_eventloop.call_later.assert_called_with(
+                self.monitor.restart_interval, self.monitor.run_callback)
+
+    def test_start_already_actice(self):
         self.monitor.timer.active = mock.Mock(return_value=True)
         patcher = mock.patch('tron.core.service.eventloop', autospec=True)
         with patcher as mock_eventloop:
-            self.monitor._set_restart_callback()
+            self.monitor.start()
             assert not mock_eventloop.call_later.call_count
-
-    def test_handle_service_state_change_failure(self):
-        autospec_method(self.monitor._set_restart_callback)
-        event = service.Service.STATE_FAILED
-        self.monitor.handle_service_state_change(None, event)
-        self.monitor._set_restart_callback.assert_called_with()
-
-    def test_handle_service_state_change_starting(self):
-        event = service.Service.STATE_STARTING
-        self.monitor.timer = mock.create_autospec(eventloop.Callback)
-        self.monitor.handle_service_state_change(None, event)
-        self.monitor.timer.cancel.assert_called_with()
 
 
 class ServiceTestCase(TestCase):
 
     @setup
     def setup_service(self):
-        config = mock.Mock()
-        self.instances = mock.Mock()
-        self.service = service.Service(config, self.instances)
-        self.service.watch = mock.Mock()
-        node_store = node.NodePoolStore.get_instance()
-        self.anode, self.bnode = mock.Mock(), mock.Mock()
-        node_store.put(self.anode)
-        node_store.put(self.bnode)
+        self.config = mock.MagicMock()
+        self.instances = mock.create_autospec(
+            serviceinstance.ServiceInstanceCollection,
+            stop=mock.Mock(), start=mock.Mock(), state_data=mock.Mock())
+        self.service = service.Service(self.config, self.instances)
+        autospec_method(self.service.watch)
+        self.service.repair_callback = mock.create_autospec(
+            service.ServiceRepairCallback)
 
-    @teardown
-    def teardown_service(self):
-        node.NodePoolStore.get_instance().clear()
+    @mock.patch('tron.core.service.node')
+    def test_from_config(self, mock_node):
+        node_store = mock.create_autospec(node.NodePoolStore)
+        mock_node.NodePoolStore.get_instance.return_value = node_store
+        node_store[self.config.node] = mock.create_autospec(node.Node)
+        context = mock.create_autospec(command_context.CommandContext)
 
-    def test_from_config(self):
-        config = mock.Mock(node=self.bnode.name, restart_interval=20)
-        context = mock.Mock()
-        new_service = service.Service.from_config(config, context)
-        assert_equal(new_service.instances.node_pool, self.bnode)
-        assert_equal(new_service.monitor.restart_interval, 20)
+        service_inst = service.Service.from_config(self.config, context)
+        collection = service_inst.instances
+        assert_equal(service_inst.config, self.config)
+        assert_equal(collection.node_pool, node_store[self.config.node])
+        assert_equal(collection.context, context)
 
-    def test_start_with_missing(self):
-        service_instance = mock.Mock()
-        self.instances.create_missing.return_value = [service_instance]
+    def test_state_disabled(self):
+        assert_equal(self.service.state, self.service.STATE_DISABLED)
 
-        assert self.service.start()
+    def test_state_up(self):
+        self.service.enabled = True
+        assert_equal(self.service.state, self.service.STATE_UP)
+        self.instances.all_states.assert_called_with(ServiceInstance.STATE_UP)
+
+    def test_state_degraded(self):
+        self.service.enabled = True
+        self.instances.all_states.return_value = False
+        self.instances.is_starting.return_value = False
+        assert_equal(self.service.state, self.service.STATE_DEGRADED)
+
+    def test_enable(self):
+        autospec_method(self.service.repair)
+        self.service.enable()
+        assert self.service.enabled
+        self.service.repair.assert_called_with()
+
+    def test_disable(self):
+        self.service.disable()
+        assert not self.service.enabled
+        self.instances.stop.assert_called_with()
+        self.service.repair_callback.cancel.assert_called_with()
+
+    def test_repair(self):
+        count = 3
+        created_instances = [
+            mock.create_autospec(ServiceInstance) for _ in xrange(count)]
+        self.instances.create_missing.return_value = created_instances
+        self.service.repair()
         self.instances.clear_failed.assert_called_with()
-        self.service.watch.assert_called_with(service_instance)
+        assert_equal(self.service.watch.mock_calls,
+            [mock.call(inst.get_observable()) for inst in created_instances])
         self.instances.start.assert_called_with()
-        assert_equal(self.service.state, service.Service.STATE_STARTING)
 
-    def test_start_instances_failed_to_start(self):
-        self.instances.create_missing.return_value = []
-        self.instances.start.return_value = False
-        assert not self.service.start()
-        assert_equal(self.service.state, service.Service.STATE_DOWN)
-
-    def test_stop_success(self):
-        self.service.machine.state = service.Service.STATE_UP
-        assert self.service.stop()
-        self.instances.stop.assert_called_with()
-
-    def test_stop_failed(self):
-        self.service.machine.state = service.Service.STATE_UP
-        self.instances.stop.return_value = False
-        assert not self.service.stop()
-        self.instances.stop.assert_called_with()
-
-    def test_stop_failed_already_stoppped(self):
-        assert not self.service.stop()
-
-    def test_handle_instance_state_change_no_instances(self):
-        self.instances.__len__.return_value = 0
-
-
-    def test_handle_instance_state_change_failed_instances(self):
+    def test_handle_instance_state_change(self):
+        # TODO
         pass
 
-    def test_handle_instance_state_change_all_failed_instances(self):
+    def test_record_events(self):
+        #TODO
         pass
 
-    def test_handle_instance_state_change_missing_instances(self):
-        pass
+    def test_state_data(self):
+        expected = dict(enabled=False, instances=self.instances.state_data)
+        assert_equal(self.service.state_data, expected)
 
-    def test_handle_instance_state_all_up(self):
-        pass
+    def test__eq__not_equal(self):
+        assert not self.service == None
+        assert not self.service == mock.Mock()
+
+    def test__eq__(self):
+        other = service.Service(self.config, mock.Mock())
+        assert_equal(self.service, other)
+
+    def test_restore_state(self):
+        autospec_method(self.service.watch_instances)
+        autospec_method(self.service.enable)
+        state_data = {'enabled': True, 'instances': []}
+        self.service.restore_state(state_data)
+        self.service.watch_instances.assert_called_with(
+            self.instances.restore_state.return_value)
+        self.service.enable.assert_called_with()
 
 
-
-
-#    def test__eq__not_equal(self):
-#        other = None
-#        assert not self.service == other
-#        other = Turtle()
-#        assert not self.service == other
-#
-#    def test__eq__(self):
-#        other = service.Service(
-#            "servicename",
-#            "command",
-#            self.service.node_pool,
-#            monitor_interval=10,
-#            restart_interval=7,
-#            pid_file_template="%(name)s",
-#            count=5
-#        )
-#        assert_equal(self.service, other)
-
-#def set_instance_up(service_instance):
-#    service_instance.start_action.exit_status = 0
-#    service_instance._start_complete_callback()
-#
-#    service_instance._run_monitor()
-#    service_instance.monitor_action.exit_status = 0
-#    service_instance._monitor_complete_callback()
-#
-#class SimpleTest(TestCase):
-#
-#    @setup
-#    def build_service(self):
-#        self.service = service.Service("Sample Service", "sleep 60 &",
-#                                       node_pool=MockNodePool())
-#        self.service.pid_file_template = "/var/run/service.pid"
-#        self.service.count = 2
-#
-#    def test_start(self):
-#        assert_equal(self.service.state, service.Service.STATE_DOWN)
-#
-#        self.service.start()
-#        assert_equal(self.service.machine.state, service.Service.STATE_STARTING)
-#        for instance in self.service.instances:
-#            assert_equal(instance.state, service.ServiceInstance.STATE_STARTING)
-#
-#            set_instance_up(instance)
-#
-#            assert_equal(instance.state, service.ServiceInstance.STATE_UP)
-#        assert_equal(self.service.state, service.Service.STATE_UP)
-#
-#    def test_instance_up(self):
-#        self.service.start()
-#        instance1, instance2 = self.service.instances
-#
-#        instance1._run_monitor()
-#        assert_equal(instance1.state, service.ServiceInstance.STATE_MONITORING)
-#
-#        instance1.monitor_action.exit_status = 0
-#        instance1._monitor_complete_callback()
-#        assert_equal(instance1.state, service.ServiceInstance.STATE_UP)
-#        assert_equal(self.service.state, service.Service.STATE_STARTING)
-#
-#        instance2._run_monitor()
-#        instance2.monitor_action.exit_status = 0
-#        instance2._monitor_complete_callback()
-#
-#        assert_equal(self.service.state, service.Service.STATE_UP)
-#
-#    def test_instance_failure(self):
-#        self.service.start()
-#        instance1, instance2 = self.service.instances
-#
-#        instance1.machine.state = service.ServiceInstance.STATE_UP
-#        instance2.machine.state = service.ServiceInstance.STATE_UP
-#        self.service.machine.state = service.Service.STATE_UP
-#
-#        # Fail an instance
-#        instance2._run_monitor()
-#        instance2.monitor_action.exit_status = 1
-#        instance2._monitor_complete_callback()
-#
-#        assert_equal(instance2.state, service.ServiceInstance.STATE_FAILED)
-#        assert_equal(self.service.state, service.Service.STATE_DEGRADED)
-#        assert_equal(len(self.service.instances), 2)
-#
-#        instance2.stop()
-#        assert_equal(len(self.service.instances), 1)
-#        assert_equal(instance2.state, service.ServiceInstance.STATE_DOWN)
-#
-#        # Bring a new instance back up
-#        instance3 = self.service.build_instance()
-#
-#        instance3._run_monitor()
-#        instance3.monitor_action.exit_status = 0
-#        instance3._monitor_complete_callback()
-#
-#        assert_equal(instance3.state, service.ServiceInstance.STATE_UP)
-#        assert_equal(self.service.state, service.Service.STATE_UP)
-#
-#        # Fail both
-#        instance1._run_monitor()
-#        instance1.monitor_action.exit_status = 1
-#        instance1._monitor_complete_callback()
-#
-#        instance3._run_monitor()
-#        instance3.monitor_action.exit_status = 1
-#        instance3._monitor_complete_callback()
-#
-#
-#        assert_equal(instance1.state, service.ServiceInstance.STATE_FAILED)
-#        assert_equal(self.service.state, service.Service.STATE_FAILED)
-#
-#
-#class ReconfigTest(TestCase):
-#
-#    @setup
-#    def build_service(self):
-#        self.service = service.Service("Sample Service", "sleep 60 &",
-#                                       node_pool=MockNodePool())
-#        self.service.pid_file_template = "/tmp/pid"
-#        self.service.count = 2
-#
-#    def test_absorb_state(self):
-#        self.service.start()
-#
-#        new_service = service.Service("Sample Service", "sleep 60 &",
-#                                      node_pool=self.service.node_pool)
-#        new_service.count = self.service.count
-#
-#        new_service.absorb_previous(self.service)
-#
-#        assert_equal(len(new_service.instances), 2)
-#        assert_equal(self.service.machine, None)
-#
-#    def test_absorb_count_incr(self):
-#        self.service.start()
-#
-#        new_service = service.Service("Sample Service", "sleep 60 &",
-#                                      node_pool=self.service.node_pool)
-#        new_service.count = 3
-#        self.service.machine.state = service.Service.STATE_DEGRADED
-#
-#        new_service.absorb_previous(self.service)
-#        assert_equal(len(new_service.instances), new_service.count)
-#
-#        assert_equal(len(new_service.instances), 3)
-#
-#    def test_absorb_count_decr(self):
-#        self.service.start()
-#
-#        new_service = service.Service("Sample Service", "sleep 60 &",
-#                                      node_pool=self.service.node_pool)
-#        new_service.pid_file_template = "/tmp/pid"
-#        new_service.count = 1
-#
-#        new_service.absorb_previous(self.service)
-#        assert_equal(new_service.instances[-1].state,
-#                     service.ServiceInstance.STATE_STOPPING)
-#
-#    def test_rapid_change(self):
-#        self.service.start()
-#
-#        new_service = service.Service("Sample Service", "sleep 60 &",
-#                                      node_pool=self.service.node_pool)
-#        new_service.pid_file_template = "/tmp/pid"
-#        new_service.count = 1
-#
-#        new_service.absorb_previous(self.service)
-#        assert_equal(new_service.instances[-1].state,
-#                     service.ServiceInstance.STATE_STOPPING)
-#
-#        another_new_service = service.Service("Sample Service", "sleep 60 &",
-#                                              node_pool=self.service.node_pool)
-#        another_new_service.pid_file_template = "/tmp/pid"
-#        another_new_service.count = 3
-#
-#        another_new_service.absorb_previous(new_service)
-#        assert_equal(len(another_new_service.instances), 3)
-#        assert_equal(another_new_service.instances[-2].state,
-#                     service.ServiceInstance.STATE_STOPPING)
-#
-#
 #class ReconfigNodePoolTest(TestCase):
 #
 #    @setup

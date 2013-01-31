@@ -1,4 +1,3 @@
-import contextlib
 import mock
 from testify import setup, assert_equal, TestCase, run, setup_teardown
 from testify.assertions import assert_in
@@ -370,17 +369,14 @@ class ServiceInstanceCollectionTestCase(TestCase):
     def test_build_instance(self):
         autospec_method(self.collection.next_instance_number)
         patcher = mock.patch('tron.core.serviceinstance.ServiceInstance', autospec=True)
-        context_patcher = mock.patch(
-            'tron.core.serviceinstance.build_instance_context', autospec=True)
-        with contextlib.nested(patcher, context_patcher ) as (
-            mock_service_instance_class, mock_build_context):
+        with patcher as mock_service_instance_class:
             instance = self.collection.build_instance()
             factory = mock_service_instance_class.create
             assert_equal(instance, factory.return_value)
             factory.assert_called_with(self.config,
                 self.node_pool.next_round_robin.return_value,
                 self.collection.next_instance_number.return_value,
-                mock_build_context.return_value)
+                self.collection.context)
 
     def test_next_instance_number(self):
         self.collection.config.count = 6

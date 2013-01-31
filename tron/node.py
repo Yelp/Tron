@@ -115,10 +115,16 @@ class NodePool(object):
         return self.iter.next()
 
     def __getitem__(self, value):
-        for node in self.nodes:
-            if node.hostname == value:
-                return node
+        node = self.get_by_hostname(value)
+        if node:
+            return node
         raise KeyError(value)
+
+    # TODO: no need to iterate
+    def get_by_hostname(self, hostname):
+        for node in self.nodes:
+            if node.hostname == hostname:
+                return node
 
     def repr_data(self):
         """Returns a dict which is an external view of this object."""
@@ -187,6 +193,11 @@ class Node(object):
         if self.hostname == value:
             return self
         raise KeyError(value)
+
+    # TODO: test
+    # TODO: extract this NodePool code
+    def get_by_hostname(self, hostname):
+        return self if self.hostname == hostname else None
 
     def __cmp__(self, other):
         if not isinstance(other, self.__class__):

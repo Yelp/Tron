@@ -105,8 +105,8 @@ class MasterControlProgram(Observable):
         master_config = configs[MASTER_NAMESPACE]
         self.output_stream_dir = master_config.output_stream_dir or self.working_dir
         if not skip_env_dependent:
-            ssh_options = self._ssh_options_from_config(configs[MASTER_NAMESPACE].ssh_options)
-            state_persistence = configs[MASTER_NAMESPACE].state_persistence
+            ssh_options = self._ssh_options_from_config(master_config.ssh_options)
+            state_persistence = master_config.state_persistence
         else:
             ssh_options = config_parse.valid_ssh_options({})
             state_persistence = config_parse.DEFAULT_STATE_PERSISTENCE
@@ -292,7 +292,7 @@ class MasterControlProgram(Observable):
         log.info("Loaded state for %d jobs", len(job_states))
 
         for name, service_state_data in service_states.iteritems():
-            self.services[name].restore_service_state(service_state_data)
+            self.services[name].restore_state(service_state_data)
         log.info("Loaded state for %d services", len(service_states))
 
         self.state_manager.save_metadata()
