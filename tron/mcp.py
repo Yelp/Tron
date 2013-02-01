@@ -11,12 +11,12 @@ from tron import node
 from tron.config import config_parse
 from tron.config.config_parse import collate_jobs_and_services, ConfigError
 from tron.config.schema import MASTER_NAMESPACE
+from tron.core import service
 from tron.core.job import Job, JobScheduler
 from tron.node import Node, NodePool
 from tron.scheduler import scheduler_from_config
 from tron.serialize import filehandler
 from tron.serialize.runstate.statemanager import PersistenceManagerFactory
-from tron.core.service import Service
 from tron.utils import emailer
 from tron.utils.observer import Observable
 
@@ -38,7 +38,7 @@ class MasterControlProgram(Observable):
     def __init__(self, working_dir, config_file):
         super(MasterControlProgram, self).__init__()
         self.jobs               = {}
-        self.services           = {}
+        self.services           = service.ServiceCollection()
         self.nodes              = node.NodePoolStore.get_instance()
         self.output_stream_dir  = None
         self.working_dir        = working_dir
@@ -52,6 +52,7 @@ class MasterControlProgram(Observable):
         self.state_manager      = None
 
     def shutdown(self):
+        # TODO: NullStateManager
         if self.state_manager:
             self.state_manager.enabled = False
             self.state_manager.cleanup()
@@ -121,7 +122,8 @@ class MasterControlProgram(Observable):
 
         jobs, services = collate_jobs_and_services(configs)
         self._apply_jobs(jobs, reconfigure=reconfigure)
-        self._apply_services(services, reconfigure=reconfigure)
+        services = self.services.load_from_config(services, self.context)
+        self.state_manager.watch_all(services)
 
     def _ssh_options_from_config(self, ssh_conf):
         ssh_options = ConchOptions()
@@ -167,37 +169,6 @@ class MasterControlProgram(Observable):
         for job_name in (set(self.jobs.keys()) - set(job_configs.keys())):
             log.debug("Removing job %s", job_name)
             self.remove_job(job_name)
-
-    def _apply_services(self, service_configs, reconfigure=False):
-        """Add and remove services."""
-
-        services_to_add = []
-        for srv_config in service_configs.values():
-            log.debug("Building new services %s", srv_config[0].name)
-            service = Service.from_config(srv_config[0], self.nodes)
-            service.name = '_'.join((srv_config[1], service.name))
-            services_to_add.append(service)
-
-        for srv_name in (set(self.services.keys()) - set(service_configs.keys())):
-            log.debug("Removing service %s", srv_name)
-            self.remove_service(srv_name)
-
-        # TODO: remove this
-        # Go through our constructed services and add them. We'll catch all the
-        # failures and throw an exception at the end if anything failed. This
-        # is a mitigation against a bug easily cause us to be in an
-        # inconsistent state, probably due to bad code elsewhere.
-        # TODO: what actually causes this
-        failure = False
-        for service in services_to_add:
-            try:
-                self.add_service(service)
-            except Exception, e:
-                log.exception("Failed adding new service.", e)
-                failure = e
-
-        if failure:
-            raise ConfigError("Failed adding services %s" % failure)
 
     def _apply_notification_options(self, conf):
         if not conf:
@@ -255,29 +226,6 @@ class MasterControlProgram(Observable):
     def get_job_by_name(self, name):
         return self.jobs.get(name)
 
-    def add_service(self, service):
-        """Add a new service or update an existing service."""
-        if service.name in self.services:
-            # No change to configuration of the service
-            if service == self.services[service.name]:
-                return
-
-            log.info("Updating service %s" % service.name)
-            self.services[service.name].update_from_service(service)
-            return
-
-        log.info("Adding new service %s" % service.name)
-        self.services[service.name] = service
-        self.state_manager.watch(service)
-
-    def remove_service(self, service_name):
-        if service_name not in self.services:
-            raise ValueError("Service %s unknown", service_name)
-
-        log.info("Removing services %s", service_name)
-        service = self.services.pop(service_name)
-        service.stop()
-
     def restore_state(self):
         """Use the state manager to retrieve to persisted state and apply it
         to the configured Jobs and Services.
@@ -285,16 +233,13 @@ class MasterControlProgram(Observable):
         self.event_recorder.notice('restoring')
         job_states, service_states = self.state_manager.restore(
                 [job_sched.job for job_sched in self.jobs.values()],
-                self.services.values())
+                self.services)
 
         for name, job_state_data in job_states.iteritems():
             self.jobs[name].restore_job_state(job_state_data)
         log.info("Loaded state for %d jobs", len(job_states))
 
-        for name, service_state_data in service_states.iteritems():
-            self.services[name].restore_state(service_state_data)
-        log.info("Loaded state for %d services", len(service_states))
-
+        self.services.restore_state(service_states)
         self.state_manager.save_metadata()
 
     def __str__(self):
