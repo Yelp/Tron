@@ -172,6 +172,7 @@ services:
             jobs=FrozenDict({
                 'test_job0': ConfigJob(
                     name='test_job0',
+                    namespace='MASTER',
                     node='node0',
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20)),
@@ -194,6 +195,7 @@ services:
                     allow_overlap=False),
                 'test_job1': ConfigJob(
                     name='test_job1',
+                    namespace='MASTER',
                     node='node0',
                     enabled=True,
                     schedule=ConfigGrocScheduler(
@@ -222,6 +224,7 @@ services:
                     allow_overlap=True),
                 'test_job2': ConfigJob(
                     name='test_job2',
+                    namespace='MASTER',
                     node='node1',
                     enabled=True,
                     schedule=ConfigGrocScheduler(
@@ -245,6 +248,7 @@ services:
                     allow_overlap=False),
                 'test_job3': ConfigJob(
                     name='test_job3',
+                    namespace='MASTER',
                     node='node1',
                     schedule=ConfigConstantScheduler(),
                     enabled=True,
@@ -272,6 +276,7 @@ services:
                     allow_overlap=False),
                 'test_job4': ConfigJob(
                     name='test_job4',
+                    namespace='MASTER',
                     node='nodePool',
                     schedule=ConfigGrocScheduler(
                         ordinals=None,
@@ -296,6 +301,7 @@ services:
                 services=FrozenDict({
                     'service0': ConfigService(
                         name='service0',
+                        namespace='MASTER',
                         node='nodePool',
                         pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                         command='service_command0',
@@ -416,6 +422,7 @@ services:
             jobs=FrozenDict({
                 'test_job0': ConfigJob(
                     name='test_job0',
+                    namespace='test_namespace',
                     node='node0',
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20)),
@@ -438,6 +445,7 @@ services:
                     allow_overlap=False),
                 'test_job1': ConfigJob(
                     name='test_job1',
+                    namespace='test_namespace',
                     node='node0',
                     enabled=True,
                     schedule=ConfigGrocScheduler(
@@ -466,6 +474,7 @@ services:
                     allow_overlap=True),
                 'test_job2': ConfigJob(
                     name='test_job2',
+                    namespace='test_namespace',
                     node='node1',
                     enabled=True,
                     schedule=ConfigGrocScheduler(
@@ -489,6 +498,7 @@ services:
                     allow_overlap=False),
                 'test_job3': ConfigJob(
                     name='test_job3',
+                    namespace='test_namespace',
                     node='node1',
                     schedule=ConfigConstantScheduler(),
                     enabled=True,
@@ -516,6 +526,7 @@ services:
                     allow_overlap=False),
                 'test_job4': ConfigJob(
                     name='test_job4',
+                    namespace='test_namespace',
                     node='nodePool',
                     schedule=ConfigGrocScheduler(
                         ordinals=None,
@@ -540,6 +551,7 @@ services:
                 services=FrozenDict({
                     'service0': ConfigService(
                         name='service0',
+                        namespace='test_namespace',
                         node='nodePool',
                         pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                         command='service_command0',
@@ -586,7 +598,7 @@ jobs:
         schedule: "interval 20s"
         actions:
         """
-        expected_message = "Value at Job.test_job0 is not a list with items"
+        expected_message = "Value at config.Job.test_job0.actions"
         exception = assert_raises(ConfigError, load_config, test_config)
         assert_in(expected_message, str(exception))
 
@@ -676,7 +688,7 @@ jobs:
                 command: "test_command0.0"
 
         """ % CLEANUP_ACTION_NAME
-        expected_message = "Bad action name at Action.cleanup: cleanup"
+        expected_message = "config.Job.test_job0.actions.Action.cleanup.name"
         exception = assert_raises(ConfigError, load_config, test_config)
         assert_in(expected_message, str(exception))
 
@@ -752,7 +764,7 @@ services:
                     node="localhost",
                     pid_file="file",
                     command="something",
-                    monitor_interval="20"
+                    monitor_interval=20
                 )
             ]
         )
@@ -767,8 +779,9 @@ services:
             schedule="constant",
             actions=[]
         )
-        expected_msg = "Value at Job.job_name is not a list with items"
-        exception = assert_raises(ConfigError, valid_job, job_config)
+        config_context = config_parse.ConfigContext('config', None, None)
+        expected_msg = "Value at config.Job.job_name.actions is not a list with items"
+        exception = assert_raises(ConfigError, valid_job, job_config, config_context)
         assert_in(expected_msg, str(exception))
 
 
@@ -776,8 +789,7 @@ class NodeConfigTestCase(TestCase):
 
     def test_validate_node_pool(self):
         config_node_pool = valid_node_pool(
-            dict(name="theName", nodes=["node1", "node2"])
-        )
+            dict(name="theName", nodes=["node1", "node2"]))
         assert_equal(config_node_pool.name, "theName")
         assert_equal(len(config_node_pool.nodes), 2)
 
@@ -859,6 +871,9 @@ class NodeConfigTestCase(TestCase):
     def test_missing_original_config(self):
         assert_equal({}, _initialize_original_config('/test/bogusssss'))
 
+
+class InitializeNamespacedUpdateTestCase(TestCase):
+
     def test_valid_unnamed_update(self):
         test_config = BASE_CONFIG + """
 jobs:
@@ -882,28 +897,30 @@ services:
         monitor_interval: 20
         """
         expected_result = ('MASTER',
-                           {'config_name': 'MASTER',
-                            'jobs': [{'node': 'node0',
-                                      'schedule': 'interval 20s',
-                                      'name': 'test_job0',
-                                      'actions': [{'command': 'test_command0.0',
-                                                   'name': 'action0_0'}],
-                                      'cleanup_action': {'command': 'test_command0.1'}}],
-                            'node_pools': [{'nodes': ['node0',
-                                                      'node1'],
-                                            'name': 'NodePool'}],
-                            'ssh_options': {'identities': ['tests/test_id_rsa'],
-                                            'agent': True},
-                            'services': [{'node': 'node0',
-                                          'count': 2,
-                                          'command': 'service_command0',
-                                          'name': 'test_service0',
-                                          'monitor_interval': 20,
-                                          'pid_file': '/var/run/%(name)s-%(instance_number)s.pid'}],
-                            'nodes': [{'hostname': 'node0',
-                                       'name': 'node0'},
-                                      {'hostname': 'node1',
-                                       'name': 'node1'}]})
+            {'config_name': 'MASTER',
+            'jobs': [{'node': 'node0',
+                      'namespace': 'MASTER',
+                      'schedule': 'interval 20s',
+                      'name': 'test_job0',
+                      'actions': [{'command': 'test_command0.0',
+                                   'name': 'action0_0'}],
+                      'cleanup_action': {'command': 'test_command0.1'}}],
+            'node_pools': [{'nodes': ['node0',
+                                      'node1'],
+                            'name': 'NodePool'}],
+            'ssh_options': {'identities': ['tests/test_id_rsa'],
+                            'agent': True},
+            'services': [{'node': 'node0',
+                          'namespace': 'MASTER',
+                          'count': 2,
+                          'command': 'service_command0',
+                          'name': 'test_service0',
+                          'monitor_interval': 20,
+                          'pid_file': '/var/run/%(name)s-%(instance_number)s.pid'}],
+            'nodes': [{'hostname': 'node0',
+                       'name': 'node0'},
+                      {'hostname': 'node1',
+                       'name': 'node1'}]})
         assert_equal(expected_result, _initialize_namespaced_update(test_config))
 
     def test_invalid_unnamed_update(self):
@@ -939,6 +956,7 @@ services:
         """
         expected_result = ('test_config',
                            {'services': [{'node': 'node0',
+                                          'namespace': 'test_config',
                                           'count': 2,
                                           'command': 'service_command0',
                                           'name': 'test_service0',
@@ -946,6 +964,7 @@ services:
                                           'pid_file': '/var/run/%(name)s-%(instance_number)s.pid'}],
                             'config_name': 'test_config',
                             'jobs': [{'node': 'node0',
+                                      'namespace': 'test_config',
                                       'schedule': 'interval 20s',
                                       'name': 'test_job0',
                                       'actions': [{'command': 'test_command0.0',
@@ -984,35 +1003,37 @@ services:
         pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
         monitor_interval: 20
         """
-        expected_collated_jobs = {'MASTER_test_job0': (
+        expected_collated_jobs = {'MASTER_test_job0':
                 ConfigJob(name='test_job0',
+                          namespace='MASTER',
                           node='node0',
                           schedule=ConfigIntervalScheduler(timedelta=datetime.timedelta(0, 20)),
                           actions=FrozenDict({'action0_0':
-                                              ConfigAction(name='action0_0',
-                                                           command='test_command0.0',
-                                                           requires=(),
-                                                           node=None)}),
+                                  ConfigAction(name='action0_0',
+                                               command='test_command0.0',
+                                               requires=(),
+                                               node=None)}),
                           queueing=True,
                           run_limit=50,
                           all_nodes=False,
                           cleanup_action=ConfigCleanupAction(command='test_command0.1',
-                                                             requires=(),
-                                                             name='cleanup',
-                                                             node=None),
+                                 requires=(),
+                                 name='cleanup',
+                                 node=None),
                           enabled=True,
-                          allow_overlap=False),
-                'MASTER')}
+                          allow_overlap=False)
+                }
 
-        expected_collated_services = {'MASTER_test_service0': (
+        expected_collated_services = {'MASTER_test_service0':
                 ConfigService(name='test_service0',
+                              namespace='MASTER',
                               node='node0',
                               pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                               command='service_command0',
                               monitor_interval=20,
                               restart_interval=None,
-                              count=2),
-                'MASTER')}
+                              count=2)
+                }
 
         config_container = load_config(test_config)
         jobs, services = collate_jobs_and_services(config_container)
@@ -1020,31 +1041,34 @@ services:
         assert_equal(expected_collated_services, services)
 
     def test_invalid_job_collation(self):
-        jobs = FrozenDict({'test_collision0': ConfigJob(name='test_collision0',
-                                                node='node0',
-                                                schedule=ConfigIntervalScheduler(timedelta=datetime.timedelta(0,
-                                                                                                              20)),
-                                                actions=FrozenDict({'action0_0': ConfigAction(name='action0_0',
-                                                                                              command='test_command0.0',
-                                                                                              requires=(),
-                                                                                              node=None)}),
-                                                queueing=True,
-                                                run_limit=50,
-                                                all_nodes=False,
-                                                cleanup_action=ConfigCleanupAction(command='test_command0.1',
-                                                                                   requires=(),
-                                                                                   name='cleanup',
-                                                                                   node=None),
-                                                enabled=True,
-                                                allow_overlap=False)})
+        jobs = FrozenDict({'test_collision0': ConfigJob(
+            name='test_collision0',
+            node='node0',
+            namespace='MASTER',
+            schedule=ConfigIntervalScheduler(
+                timedelta=datetime.timedelta(0, 20)),
+            actions=FrozenDict({'action0_0': ConfigAction(name='action0_0',
+                command='test_command0.0',
+                requires=(),
+                node=None)}),
+            queueing=True,
+            run_limit=50,
+            all_nodes=False,
+            cleanup_action=ConfigCleanupAction(command='test_command0.1',
+                requires=(),
+                name='cleanup',
+                node=None),
+            enabled=True,
+            allow_overlap=False)})
 
         services = FrozenDict({'test_collision0': ConfigService(name='test_collision0',
-                                                            node='node0',
-                                                            pid_file='/var/run/%(name)s-%(instance_number)s.pid',
-                                                            command='service_command0',
-                                                            monitor_interval=20,
-                                                            restart_interval=None,
-                                                            count=2)})
+            namespace='MASTER',
+            node='node0',
+            pid_file='/var/run/%(name)s-%(instance_number)s.pid',
+            command='service_command0',
+            monitor_interval=20,
+            restart_interval=None,
+            count=2)})
         fake_config = mock.Mock()
         setattr(fake_config, 'jobs', jobs)
         setattr(fake_config, 'services', services)
@@ -1089,47 +1113,46 @@ class ValidOutputStreamDirTestCase(TestCase):
         shutil.rmtree(self.dir)
 
     def test_valid_dir(self):
-        assert_equal(self.dir, valid_output_stream_dir(self.dir))
+        assert_equal(self.dir, valid_output_stream_dir(self.dir, None))
 
     def test_missing_dir(self):
-        exception = assert_raises(ConfigError, valid_output_stream_dir, 'bogus-dir')
+        exception = assert_raises(ConfigError, valid_output_stream_dir, 'bogus-dir', None)
         assert_in("is not a directory", str(exception))
 
     def test_no_ro_dir(self):
         os.chmod(self.dir, stat.S_IRUSR)
-        exception = assert_raises(ConfigError, valid_output_stream_dir, self.dir)
+        exception = assert_raises(ConfigError, valid_output_stream_dir, self.dir, None)
         assert_in("is not writable", str(exception))
 
 
 class ValidatorIdentifierTestCase(TestCase):
 
     def test_valid_identifier_too_long(self):
-        name = 'a' * 256
-        assert_raises(ConfigError, valid_identifier, '', name)
+        assert_raises(ConfigError, valid_identifier, 'a' * 256, mock.Mock())
 
     def test_valid_identifier(self):
         name = 'avalidname'
-        assert_equal(name, valid_identifier('', name))
+        assert_equal(name, valid_identifier(name, mock.Mock()))
 
     def test_valid_identifier_invalid_character(self):
         for name in ['invalid space', '*name', '1numberstarted', 123, '']:
-            assert_raises(ConfigError, valid_identifier, '', name)
+            assert_raises(ConfigError, valid_identifier, name, mock.Mock())
 
 
-class BuildStringTemplateValidatorTestCase(TestCase):
+class BuildFormatStringValidatorTestCase(TestCase):
 
     @setup
     def setup_keys(self):
         self.keys = ['one', 'seven', 'stars']
+        self.validator = build_format_string_validator(self.keys)
 
     def test_validator_passes(self):
         template = "The %(one)s thing I %(seven)s is %(stars)s"
-        assert config_parse.validate_format_string('', template, self.keys)
+        assert self.validator(template, NullConfigContext)
 
     def test_validator_error(self):
         template = "The %(one)s thing I %(seven)s is %(unknown)s"
-        assert_raises(ConfigError,
-            config_parse.validate_format_string, '', template, self.keys)
+        assert_raises(ConfigError, self.validator, template, NullConfigContext)
 
 
 if __name__ == '__main__':

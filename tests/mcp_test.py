@@ -11,6 +11,8 @@ from tests.assertions import assert_call, assert_length
 from tests.testingutils import Turtle
 
 from tron import mcp, event
+from tron.core import service
+from tron.serialize.runstate import statemanager
 
 
 class MasterControlProgramTestCase(TestCase):
@@ -68,7 +70,8 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
         self.mcp                = mcp.MasterControlProgram(
                                     self.working_dir, self.config_file.name)
         self.mcp.jobs           = {'1': Turtle(), '2': Turtle()}
-        self.mcp.services       = {'1': Turtle(), '2': Turtle()}
+        self.mcp.services       = mock.create_autospec(service.ServiceCollection)
+        self.mcp.state_manager = mock.create_autospec(statemanager.PersistentStateManager)
 
     @teardown
     def teardown_mcp(self):
@@ -77,36 +80,30 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
         shutil.rmtree(self.working_dir)
 
     def test_restore_state(self):
-        def restore(jobs, services):
-            state_data = {'1': 'things', '2': 'things'}
-            return state_data, state_data
-        self.mcp.state_manager = Turtle(restore=restore)
+        service_state_data = {'3': 'things', '4': 'things'}
+        job_state_data = {'1': 'things', '2': 'things'}
+        self.mcp.state_manager.restore.return_value = job_state_data, service_state_data
         self.mcp.restore_state()
         for job in self.mcp.jobs.values():
             assert_call(job.restore_job_state, 0, 'things')
-        for service in self.mcp.services.values():
-            assert_call(service.restore_service_state, 0, 'things')
+        self.mcp.services.restore_state.assert_called_with(service_state_data)
 
     def test_restore_state_no_state(self):
-        def restore(jobs, services):
-            return {}, {}
-        self.mcp.state_manager = Turtle(restore=restore)
+        service_state_data = mock.Mock()
+        job_state_data = {}
+        self.mcp.state_manager.restore.return_value = job_state_data, service_state_data
         self.mcp.restore_state()
         for job in self.mcp.jobs.values():
             assert_length(job.restore_job_state.calls, 0)
-        for service in self.mcp.services.values():
-            assert_length(service.restore_service_state.calls, 0)
+        self.mcp.services.restore_state.assert_called_with(service_state_data)
 
     def test_restore_state_partial(self):
-        def restore(jobs, services):
-            return {'1': 'thing'}, {'2': 'thing'}
-        self.mcp.state_manager = Turtle(restore=restore)
+        self.mcp.state_manager.restore.return_value = {'1': 'thing'}, {'2': 'thing'}
         self.mcp.restore_state()
 
         assert_call(self.mcp.jobs['1'].restore_job_state, 0, 'thing')
         assert_length(self.mcp.jobs['2'].restore_job_state.calls, 0)
-        assert_length(self.mcp.services['1'].restore_service_state.calls, 0)
-        assert_call(self.mcp.services['2'].restore_service_state, 0, 'thing')
+        self.mcp.services.restore_state.assert_called_with({'2': 'thing'})
 
 if __name__ == '__main__':
     run()

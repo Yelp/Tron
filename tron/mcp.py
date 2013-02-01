@@ -164,7 +164,7 @@ class MasterControlProgram(Observable):
     def _apply_jobs(self, job_configs, reconfigure=False):
         """Add and remove jobs based on the configuration."""
         for job_config in job_configs.values():
-            self.add_job(job_config[0], job_config[1], reconfigure=reconfigure)
+            self.add_job(job_config, reconfigure=reconfigure)
 
         for job_name in (set(self.jobs.keys()) - set(job_configs.keys())):
             log.debug("Removing job %s", job_name)
@@ -181,12 +181,11 @@ class MasterControlProgram(Observable):
         self.crash_reporter = crash_reporter.CrashReporter(email_sender)
         self.crash_reporter.start()
 
-    def add_job(self, job_config, namespace, reconfigure=False):
+    def add_job(self, job_config, reconfigure=False):
         log.debug("Building new job %s", job_config.name)
         output_path = filehandler.OutputPath(self.output_stream_dir)
         scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
         job = Job.from_config(job_config, scheduler, self.context, output_path)
-        job.name = '_'.join((namespace, job.name))
 
         if job.name in self.jobs:
             # Jobs have a complex eq implementation that allows us to catch

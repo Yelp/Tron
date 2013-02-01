@@ -100,9 +100,10 @@ class Job(Observable, Observer):
                 job_config.actions, node_pools, job_config.cleanup_action)
         runs = jobrun.JobRunCollection.from_config(job_config)
         nodes = node_pools[job_config.node] if job_config.node else None
+        job_name = '%s_%s' % (job_config.namespace, job_config.name)
 
         return cls(
-            name                = job_config.name,
+            name                = job_name,
             queueing            = job_config.queueing,
             all_nodes           = job_config.all_nodes,
             node_pool           = nodes,

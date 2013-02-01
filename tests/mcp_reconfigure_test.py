@@ -9,6 +9,7 @@ from tron import mcp, event
 from tron.config import config_parse
 from tron.serialize import filehandler
 
+
 class MCPReconfigureTestCase(TestCase):
 
     pre_config = dict(
