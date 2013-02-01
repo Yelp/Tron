@@ -343,10 +343,13 @@ class ServiceInstanceCollectionTestCase(TestCase):
             self.collection.instances_proxy.obj_list_getter())
 
     def test_clear_failed(self):
+        def build(state):
+            inst = create_mock_instance()
+            inst.get_state.return_value = state
+            return inst
         instances = [
-            create_mock_instance(state=serviceinstance.ServiceInstance.STATE_FAILED),
-            create_mock_instance(state=serviceinstance.ServiceInstance.STATE_UP),
-            ]
+            build(serviceinstance.ServiceInstance.STATE_FAILED),
+            build(serviceinstance.ServiceInstance.STATE_UP)]
         self.collection.instances.extend(instances)
         self.collection.clear_failed()
         assert_equal(self.collection.instances, instances[1:])

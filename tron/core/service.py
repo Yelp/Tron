@@ -46,6 +46,10 @@ class Service(observer.Observer):
         instance_collection = serviceinstance.ServiceInstanceCollection(*args)
         return cls(config, instance_collection)
 
+    @property
+    def name(self):
+        return self.config.name
+
     def get_state(self):
         if not self.enabled:
             if not len(self.instances):
@@ -123,7 +127,7 @@ class Service(observer.Observer):
         return not self == other
 
     def __str__(self):
-        return "Service:%s" % self.config.name
+        return "Service:%s" % self.name
 
     def watch_instances(self, instances):
         for instance in instances:
@@ -161,3 +165,65 @@ class ServiceRepairCallback(object):
 
     def cancel(self):
         self.timer.cancel()
+
+
+class ServiceCollection(object):
+    """A collection of services."""
+
+    def __init__(self):
+        self.services = {}
+
+    def load_from_config(self, service_configs, context):
+        """Apply a configuration to this collection and return a generator of
+        services which were added.
+        """
+        self._filter_by_name(service_configs.keys())
+
+        for name, (service_config, namespace) in service_configs.itervalues():
+            log.debug("Building new services %s", name)
+            # TODO: NO NO NO, fix name
+            service = Service.from_config(service_config, context)
+            service.name = '%s_%s' % (namespace, name)
+            if self.add(service):
+                yield service
+
+    def add(self, service):
+        """Add a new service or update an existing service."""
+        if self._service_exists(service):
+            return False
+
+        log.info("Adding new service %s" % service.name)
+        self.services[service.name] = service
+        return True
+
+    def _service_exists(self, service):
+        """Return True if the service is already in the collection and it's
+        equal to service. Otherwise remove it from the collection and return
+        False.
+        """
+        if service.name in self.services:
+            if service == self.services[service.name]:
+                return True
+
+            self.remove(service.name)
+        return False
+
+    def _filter_by_name(self, service_names):
+        """Remove all services which are not named in service_names."""
+        for name in set(self.services.keys()) - set(service_names):
+            self.remove(name)
+
+    def remove(self, service_name):
+        if service_name not in self.services:
+            raise ValueError("Service %s unknown", service_name)
+
+        log.info("Removing service %s", service_name)
+        self.services.pop(service_name).disable()
+
+    def restore_state(self, service_state_data):
+        for name, state_data in service_state_data.iteritems():
+            self.services[name].restore_state(state_data)
+        log.info("Loaded state for %d services", len(service_state_data))
+
+    def __iter__(self):
+        return self.services.itervalues()

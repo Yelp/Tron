@@ -384,7 +384,7 @@ class ServiceInstanceCollection(object):
         self._clear(ServiceInstance.STATE_DOWN)
 
     def _clear(self, state):
-        self.instances = [i for i in self.instances if i.get_state != state]
+        self.instances = [i for i in self.instances if i.get_state() != state]
 
     def sort(self):
         self.instances.sort(key=operator.attrgetter('instance_number'))

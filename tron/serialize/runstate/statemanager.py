@@ -198,6 +198,10 @@ class PersistentStateManager(observer.Observer):
         if isinstance(observable, service.Service):
             self.save_service(observable)
 
+    def watch_all(self, observables):
+        for observable in observables:
+            self.watch(observable)
+
     @contextmanager
     def _timeit(self):
         """Log the time spent saving the state."""
