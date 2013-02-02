@@ -2,11 +2,6 @@
  Controllers for the API to perform actions on POSTs.
 """
 import logging
-import shutil
-import tempfile
-
-from tron import mcp
-from tron.config import config_parse
 
 
 log = logging.getLogger(__name__)
@@ -31,23 +26,18 @@ class JobController(object):
 class ConfigController(object):
     """Control config."""
 
-    def __init__(self, filepath):
-        self.filepath = filepath
+    def __init__(self, mcp):
+        self.mcp = mcp
+        self.config_manager = mcp.get_config_manager()
 
-    def read_config(self):
-        try:
-            with open(self.filepath, 'r') as config:
-                return config.read()
-        except (OSError, IOError), e:
-            log.error("Failed to open configuration file: %s" % e)
+    def read_config(self, name):
+        self.config_manager.read_config(name)
 
-    def rewrite_config(self, content):
-        """ Rewrites the local configuration file."""
+    def update_config(self, name, content):
+        """Update a configuration fragment and reload the MCP."""
         try:
-            new_config = config_parse.update_config(self.filepath, content)
-            with open(self.filepath, 'w') as config:
-                config.write(new_config)
-            return True
+            self.config_manager.write_config(name, content)
+            self.mcp.reconfigure()
         except Exception, e:
             log.error("Configuration update failed: %s" % e)
-            return False
+            return str(e)

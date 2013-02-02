@@ -1,163 +1,62 @@
-import os
-import tempfile
+import mock
 
-from testify import teardown, setup, TestCase, run, assert_equal, assert_raises, assert_in
-from tests.assertions import assert_call
-from tests.testingutils import Turtle
+from testify import setup, TestCase, run
+from tron import mcp
 
 from tron.api.controller import JobController, ConfigController
-from tron.config.config_parse import update_config, _initialize_original_config, ConfigError
+from tron.config import ConfigError
+from tron.core import job
 
 
 class JobControllerTestCase(TestCase):
 
     @setup
     def setup_controller(self):
-        self.jobs           = [Turtle(), Turtle(), Turtle()]
-        self.mcp            = Turtle(get_jobs=lambda: self.jobs)
+        self.jobs           = [mock.create_autospec(job.JobScheduler)]
+        self.mcp            = mock.create_autospec(mcp.MasterControlProgram)
         self.controller     = JobController(self.mcp)
 
     def test_disable_all(self):
+        self.mcp.get_jobs.return_value = self.jobs
         self.controller.disable_all()
+        self.mcp.get_jobs.assert_called_with()
         for job in self.jobs:
-            assert_call(job.disable, 0)
+            job.disable.assert_called_with()
 
     def test_enable_all(self):
+        self.mcp.get_jobs.return_value = self.jobs
         self.controller.enable_all()
+        self.mcp.get_jobs.assert_called_with()
         for job in self.jobs:
-            assert_call(job.enable, 0)
+            job.enable.assert_called_with()
 
 
 class ConfigControllerTestCase(TestCase):
 
-    BASE_CONFIG = """
-config_name: MASTER
-nodes:
-- {hostname: localhost, name: local}
-ssh_options: {agent: true}
-state_persistence: {name: state_data.shelve, store_type: shelve}
-"""
-
-    TEST_CONFIG_UPDATE = BASE_CONFIG + """
-jobs:
-- actions:
-  - {command: echo 'Echo!', name: echo_action}
-  - {command: 'echo ''Today is %(shortdate)s, which is the same as %(year)s-%(month)s-%(day)s''
-      && false', name: another_echo_action}
-  cleanup_action: {command: echo 'at last'}
-  name: echo_job
-  node: local
-  schedule: interval 1 hour
-"""
-
-    TEST_CONFIG_RESULT = """MASTER:
-  config_name: MASTER
-  jobs:
-  - actions:
-    - {command: echo 'Echo!', name: echo_action}
-    - {command: 'echo ''Today is %(shortdate)s, which is the same as %(year)s-%(month)s-%(day)s''
-        && false', name: another_echo_action}
-    cleanup_action: {command: echo 'at last'}
-    name: echo_job
-    node: local
-    schedule: interval 1 hour
-  nodes:
-  - {hostname: localhost, name: local}
-  ssh_options: {agent: true}
-  state_persistence: {name: state_data.shelve, store_type: shelve}
-"""
-
     @setup
     def setup_controller(self):
-        self.filename = os.path.join(tempfile.gettempdir(), 'test_config')
-        self.controller = ConfigController(self.filename)
-
-    @teardown
-    def teardown_controller(self):
-        try:
-            os.unlink(self.filename)
-        except OSError:
-            pass
+        self.mcp = mock.create_autospec(mcp.MasterControlProgram)
+        self.controller = ConfigController(self.mcp)
+        self.manager = self.mcp.get_config_manager.return_value
 
     def test_read_config(self):
-        content = "12345"
-        with open(self.filename, 'w') as fh:
-            fh.write(content)
-            
-        assert_equal(self.controller.read_config(), content)
+        name = 'MASTER'
+        self.controller.read_config(name)
+        self.manager.read_config.assert_called_with(name)
 
-    def test_read_config_missing(self):
-        self.controller.filepath = '/bogggusssss'
-        assert not self.controller.read_config()
+    def test_update_config(self):
+        name, content = None, mock.Mock()
+        assert not self.controller.update_config(name, content)
+        self.manager.write_config.assert_called_with(name, content)
+        self.mcp.reconfigure.assert_called_with()
 
-    def test_rewrite_config(self):
-        assert self.controller.rewrite_config(self.TEST_CONFIG_UPDATE)
-        assert_equal(self.controller.read_config(), self.TEST_CONFIG_RESULT)
+    def test_update_config_failure(self):
+        name, content = None, mock.Mock()
+        self.manager.write_config.side_effect = ConfigError("It broke")
+        assert self.controller.update_config(name, content)
+        self.manager.write_config.assert_called_with(name, content)
+        assert not self.mcp.reconfigure.call_count
 
-    def test_rewrite_config_missing(self):
-        self.controller.filepath = '/bogggusssss'
-        assert not self.controller.rewrite_config(self.TEST_CONFIG_UPDATE)
-
-    def test_missing_job_node(self):
-        test_config = self.BASE_CONFIG + """
-jobs:
-    -
-        name: "test_job0"
-        node: bogussssss
-        schedule: "interval 20s"
-        actions:
-            -
-                name: "action0_0"
-                command: "test_command0.0"
-        cleanup_action:
-            command: "test_command0.1"
-            requires: [action0_0]
-        """
-        assert_raises(ConfigError, update_config, self.filename, test_config)
-        
-    def test_missing_service_node(self):
-        test_config = self.BASE_CONFIG + """
-services:
-    -
-        name: "test_job0"
-        node: bogusssss
-        schedule: "interval 20s"
-        actions:
-            -
-                name: "action0_0"
-                command: "test_command0.0"
-        cleanup_action:
-            command: "test_command0.1"
-"""
-        assert_raises(ConfigError, update_config, self.filename, test_config)
-
-
-    def test_valid_original_config(self):
-        test_config = self.BASE_CONFIG + """
-jobs:
-    -
-        name: "test_job0"
-        node: node0
-        schedule: "interval 20s"
-        actions:
-        """
-        expected_result = {'MASTER': 
-                           {'nodes': 
-                            [{'hostname': 'localhost',
-                              'name': 'local'}],
-                            'config_name': 'MASTER',
-                            'jobs': 
-                            [{'node': 'node0',
-                              'name': 'test_job0',
-                              'actions': None,
-                              'schedule': 'interval 20s'}],
-                            'ssh_options': {'agent': True},
-                            'state_persistence': {'store_type': 'shelve',
-                                                  'name': 'state_data.shelve'}}}
-        fd = open(self.filename,'w')
-        fd.write(test_config)
-        fd.close()
-        assert_equal(expected_result, _initialize_original_config(self.filename))
 
 if __name__ == "__main__":
     run()

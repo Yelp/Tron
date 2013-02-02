@@ -1,7 +1,6 @@
 import datetime
 import os
 import shutil
-import StringIO
 import stat
 import tempfile
 from textwrap import dedent
@@ -10,9 +9,9 @@ import mock
 
 from testify import assert_equal, assert_in
 from testify import run, setup, teardown, TestCase
+import yaml
 from tron.config import config_parse, schema
 from tron.config.config_parse import *
-from tron.config.config_parse import _initialize_original_config, _initialize_namespaced_update
 from tron.config.schedule_parse import ConfigConstantScheduler
 from tron.config.schedule_parse import ConfigGrocScheduler
 from tron.config.schedule_parse import ConfigIntervalScheduler
@@ -137,16 +136,7 @@ services:
         monitor_interval: 20
 """
 
-    @setup
-    def setup_testdir(self):
-        self.test_dir = tempfile.mkdtemp()
-
-    @teardown
-    def teardown_testdir(self):
-        shutil.rmtree(self.test_dir)
-
     def test_attributes(self):
-        test_config = load_config(StringIO.StringIO(self.config))
         expected = TronConfig(
             config_name=MASTER_NAMESPACE,
             output_stream_dir='/tmp',
@@ -306,23 +296,24 @@ services:
             )
         )
 
+        test_config = valid_config(yaml.load(self.config))
         # we could just do a big assert_equal here, but it would be hella hard
         # to debug failures that way.
-        assert_equal(test_config[MASTER_NAMESPACE].command_context, expected.command_context)
-        assert_equal(test_config[MASTER_NAMESPACE].ssh_options, expected.ssh_options)
-        assert_equal(test_config[MASTER_NAMESPACE].notification_options, expected.notification_options)
-        assert_equal(test_config[MASTER_NAMESPACE].time_zone, expected.time_zone)
-        assert_equal(test_config[MASTER_NAMESPACE].nodes, expected.nodes)
-        assert_equal(test_config[MASTER_NAMESPACE].node_pools, expected.node_pools)
-        assert_equal(test_config[MASTER_NAMESPACE].jobs['test_job0'], expected.jobs['test_job0'])
-        assert_equal(test_config[MASTER_NAMESPACE].jobs['test_job1'], expected.jobs['test_job1'])
-        assert_equal(test_config[MASTER_NAMESPACE].jobs['test_job2'], expected.jobs['test_job2'])
-        assert_equal(test_config[MASTER_NAMESPACE].jobs['test_job3'], expected.jobs['test_job3'])
-        assert_equal(test_config[MASTER_NAMESPACE].jobs['test_job4'], expected.jobs['test_job4'])
-        assert_equal(test_config[MASTER_NAMESPACE].jobs, expected.jobs)
-        assert_equal(test_config[MASTER_NAMESPACE].services, expected.services)
-        assert_equal(test_config[MASTER_NAMESPACE], expected)
-        assert_equal(test_config[MASTER_NAMESPACE].jobs['test_job4'].enabled, False)
+        assert_equal(test_config.command_context, expected.command_context)
+        assert_equal(test_config.ssh_options, expected.ssh_options)
+        assert_equal(test_config.notification_options, expected.notification_options)
+        assert_equal(test_config.time_zone, expected.time_zone)
+        assert_equal(test_config.nodes, expected.nodes)
+        assert_equal(test_config.node_pools, expected.node_pools)
+        assert_equal(test_config.jobs['test_job0'], expected.jobs['test_job0'])
+        assert_equal(test_config.jobs['test_job1'], expected.jobs['test_job1'])
+        assert_equal(test_config.jobs['test_job2'], expected.jobs['test_job2'])
+        assert_equal(test_config.jobs['test_job3'], expected.jobs['test_job3'])
+        assert_equal(test_config.jobs['test_job4'], expected.jobs['test_job4'])
+        assert_equal(test_config.jobs, expected.jobs)
+        assert_equal(test_config.services, expected.services)
+        assert_equal(test_config, expected)
+        assert_equal(test_config.jobs['test_job4'].enabled, False)
 
 
 class NamedConfigTestCase(TestCase):
@@ -401,16 +392,7 @@ services:
         monitor_interval: 20
 """
 
-    @setup
-    def setup_testdir(self):
-        self.test_dir = tempfile.mkdtemp()
-
-    @teardown
-    def teardown_testdir(self):
-        shutil.rmtree(self.test_dir)
-
     def test_attributes(self):
-        test_config = load_config(StringIO.StringIO(self.config))
         expected = NamedTronConfig(
             config_name='test_namespace',
             jobs=FrozenDict({
@@ -550,17 +532,18 @@ services:
             )
         )
 
+        test_config = valid_named_config(yaml.load(self.config))
         # we could just do a big assert_equal here, but it would be hella hard
         # to debug failures that way.
-        assert_equal(test_config["test_namespace"].jobs['test_job0'], expected.jobs['test_job0'])
-        assert_equal(test_config["test_namespace"].jobs['test_job1'], expected.jobs['test_job1'])
-        assert_equal(test_config["test_namespace"].jobs['test_job2'], expected.jobs['test_job2'])
-        assert_equal(test_config["test_namespace"].jobs['test_job3'], expected.jobs['test_job3'])
-        assert_equal(test_config["test_namespace"].jobs['test_job4'], expected.jobs['test_job4'])
-        assert_equal(test_config["test_namespace"].jobs, expected.jobs)
-        assert_equal(test_config["test_namespace"].services, expected.services)
-        assert_equal(test_config["test_namespace"], expected)
-        assert_equal(test_config["test_namespace"].jobs['test_job4'].enabled, False)
+        assert_equal(test_config.jobs['test_job0'], expected.jobs['test_job0'])
+        assert_equal(test_config.jobs['test_job1'], expected.jobs['test_job1'])
+        assert_equal(test_config.jobs['test_job2'], expected.jobs['test_job2'])
+        assert_equal(test_config.jobs['test_job3'], expected.jobs['test_job3'])
+        assert_equal(test_config.jobs['test_job4'], expected.jobs['test_job4'])
+        assert_equal(test_config.jobs, expected.jobs)
+        assert_equal(test_config.services, expected.services)
+        assert_equal(test_config, expected)
+        assert_equal(test_config.jobs['test_job4'].enabled, False)
 
 
 class JobConfigTestCase(TestCase):
@@ -573,8 +556,9 @@ jobs:
         node: node0
         schedule: "interval 20s"
         """
+        test_config = yaml.load(test_config)
         expected_message = "Job test_job0 is missing options: actions"
-        exception = assert_raises(ConfigError, load_config, test_config)
+        exception = assert_raises(ConfigError, valid_config, test_config)
         assert_in(expected_message, str(exception))
 
     def test_empty_actions(self):
@@ -586,8 +570,9 @@ jobs:
         schedule: "interval 20s"
         actions:
         """
+        test_config = yaml.load(test_config)
         expected_message = "Value at Job.test_job0 is not a list with items"
-        exception = assert_raises(ConfigError, load_config, test_config)
+        exception = assert_raises(ConfigError, valid_config, test_config)
         assert_in(expected_message, str(exception))
 
     def test_dupe_names(self):
@@ -606,8 +591,9 @@ jobs:
                 command: "test_command0.0"
 
         """
+        test_config = yaml.load(test_config)
         expected_message = "Action name action0_0 on job test_job0 used twice"
-        exception = assert_raises(ConfigError, load_config, test_config)
+        exception = assert_raises(ConfigError, valid_config, test_config)
         assert_in(expected_message, str(exception))
 
     def test_bad_requires(self):
@@ -636,9 +622,10 @@ jobs:
                 requires: action0_0
 
         """
+        test_config = yaml.load(test_config)
         expected_message = ('jobs.test_job1.action1_0 has a dependency '
                 '"action0_0" that is not in the same job!')
-        exception = assert_raises(ConfigError, load_config, test_config)
+        exception = assert_raises(ConfigError, valid_config, test_config)
         assert_in(expected_message, str(exception))
 
 
@@ -659,8 +646,9 @@ jobs:
                 command: "test_command0.1"
                 requires: action0_0
         """
+        test_config = yaml.load(test_config)
         expect = "Circular dependency in job.test_job0: action0_0 -> action0_1"
-        exception = assert_raises(ConfigError, load_config, test_config)
+        exception = assert_raises(ConfigError, valid_config, test_config)
         assert_in(expect, exception)
 
     def test_config_cleanup_name_collision(self):
@@ -676,8 +664,9 @@ jobs:
                 command: "test_command0.0"
 
         """ % CLEANUP_ACTION_NAME
+        test_config = yaml.load(test_config)
         expected_message = "Bad action name at Action.cleanup: cleanup"
-        exception = assert_raises(ConfigError, load_config, test_config)
+        exception = assert_raises(ConfigError, valid_config, test_config)
         assert_in(expected_message, str(exception))
 
     def test_config_cleanup_action_name(self):
@@ -695,8 +684,9 @@ jobs:
             name: "gerald"
             command: "test_command0.1"
         """
+        test_config = yaml.load(test_config)
         expected_msg = "Cleanup actions cannot have custom names"
-        exception = assert_raises(ConfigError, load_config, test_config)
+        exception = assert_raises(ConfigError, valid_config, test_config)
         assert_in(expected_msg, str(exception))
 
     def test_config_cleanup_requires(self):
@@ -714,8 +704,9 @@ jobs:
             command: "test_command0.1"
             requires: [action0_0]
         """
+        test_config = yaml.load(test_config)
         expected_msg = "can not have requires"
-        exception = assert_raises(ConfigError, load_config, test_config)
+        exception = assert_raises(ConfigError, valid_config, test_config)
         assert_in(expected_msg, str(exception))
 
     def test_job_in_services(self):
@@ -732,8 +723,9 @@ services:
         cleanup_action:
             command: "test_command0.1"
 """
+        test_config = yaml.load(test_config)
         expected_msg = "Service test_job0 is missing options:"
-        exception = assert_raises(ConfigError, load_config, test_config)
+        exception = assert_raises(ConfigError, valid_config, test_config)
         assert_in(expected_msg, str(exception))
 
     def test_overlap_job_service_names(self):
@@ -806,8 +798,9 @@ class NodeConfigTestCase(TestCase):
                             name: "action0_0"
                             command: "test_command0.0"
             """)
+        test_config = yaml.load(test_config)
         expected_msg = "some_unknown_node configured for ConfigJob test_job0"
-        exception = assert_raises(ConfigError, load_config, test_config)
+        exception = assert_raises(ConfigError, valid_config, test_config)
         assert_in(expected_msg, str(exception))
 
     def test_invalid_nested_node_pools(self):
@@ -829,8 +822,9 @@ class NodeConfigTestCase(TestCase):
                     - name: first
                       command: "echo 1"
         """)
+        test_config = yaml.load(test_config)
         expected_msg = "NodePool pool1 contains another NodePool pool0"
-        exception = assert_raises(ConfigError, load_config, test_config)
+        exception = assert_raises(ConfigError, valid_config, test_config)
         assert_in(expected_msg, str(exception))
 
     def test_invalid_node_pool_config(self):
@@ -852,115 +846,116 @@ class NodeConfigTestCase(TestCase):
                     - name: first
                       command: "echo 1"
         """)
+        test_config = yaml.load(test_config)
         expected_msg = "NodePool pool0 is missing options"
-        exception = assert_raises(ConfigError, load_config, test_config)
+        exception = assert_raises(ConfigError, valid_config, test_config)
         assert_in(expected_msg, str(exception))
 
-    def test_missing_original_config(self):
-        assert_equal({}, _initialize_original_config('/test/bogusssss'))
+#    def test_valid_unnamed_update(self):
+#        test_config = BASE_CONFIG + """
+#jobs:
+#    -
+#        name: "test_job0"
+#        node: node0
+#        schedule: "interval 20s"
+#        actions:
+#            -
+#                name: "action0_0"
+#                command: "test_command0.0"
+#        cleanup_action:
+#            command: "test_command0.1"
+#services:
+#    -
+#        name: "test_service0"
+#        node: node0
+#        command: "service_command0"
+#        count: 2
+#        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+#        monitor_interval: 20
+#        """
+#        expected_result = ('MASTER',
+#                           {'config_name': 'MASTER',
+#                            'jobs': [{'node': 'node0',
+#                                      'schedule': 'interval 20s',
+#                                      'name': 'test_job0',
+#                                      'actions': [{'command': 'test_command0.0',
+#                                                   'name': 'action0_0'}],
+#                                      'cleanup_action': {'command': 'test_command0.1'}}],
+#                            'node_pools': [{'nodes': ['node0',
+#                                                      'node1'],
+#                                            'name': 'NodePool'}],
+#                            'ssh_options': {'identities': ['tests/test_id_rsa'],
+#                                            'agent': True},
+#                            'services': [{'node': 'node0',
+#                                          'count': 2,
+#                                          'command': 'service_command0',
+#                                          'name': 'test_service0',
+#                                          'monitor_interval': 20,
+#                                          'pid_file': '/var/run/%(name)s-%(instance_number)s.pid'}],
+#                            'nodes': [{'hostname': 'node0',
+#                                       'name': 'node0'},
+#                                      {'hostname': 'node1',
+#                                       'name': 'node1'}]})
+#        assert_equal(expected_result, _initialize_namespaced_update(test_config))
+#
+#    def test_invalid_unnamed_update(self):
+#        test_config = BASE_CONFIG + """
+#foobar:
+#"""
+#        expected_message = "Unknown options in Tron : foobar"
+#        exception = assert_raises(ConfigError, _initialize_namespaced_update, test_config)
+#        assert_in(expected_message, str(exception))
+#
+#    def test_valid_named_update(self):
+#        test_config = """
+#config_name: test_config
+#jobs:
+#    -
+#        name: "test_job0"
+#        node: node0
+#        schedule: "interval 20s"
+#        actions:
+#            -
+#                name: "action0_0"
+#                command: "test_command0.0"
+#        cleanup_action:
+#            command: "test_command0.1"
+#services:
+#    -
+#        name: "test_service0"
+#        node: node0
+#        command: "service_command0"
+#        count: 2
+#        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+#        monitor_interval: 20
+#        """
+#        expected_result = ('test_config',
+#                           {'services': [{'node': 'node0',
+#                                          'count': 2,
+#                                          'command': 'service_command0',
+#                                          'name': 'test_service0',
+#                                          'monitor_interval': 20,
+#                                          'pid_file': '/var/run/%(name)s-%(instance_number)s.pid'}],
+#                            'config_name': 'test_config',
+#                            'jobs': [{'node': 'node0',
+#                                      'schedule': 'interval 20s',
+#                                      'name': 'test_job0',
+#                                      'actions': [{'command': 'test_command0.0',
+#                                                   'name': 'action0_0'}],
+#                                      'cleanup_action': {'command': 'test_command0.1'}}]})
+#        assert_equal(expected_result, _initialize_namespaced_update(test_config))
+#
+#    def test_invalid_named_update(self):
+#        test_config = """
+#config_name: "foo"
+#bozray:
+#        """
+#        expected_message = "Unknown options in NamedTron : bozray"
+#        exception = assert_raises(ConfigError, valid_config, test_config)
+#        assert_in(expected_message, str(exception))
 
-    def test_valid_unnamed_update(self):
-        test_config = BASE_CONFIG + """
-jobs:
-    -
-        name: "test_job0"
-        node: node0
-        schedule: "interval 20s"
-        actions:
-            -
-                name: "action0_0"
-                command: "test_command0.0"
-        cleanup_action:
-            command: "test_command0.1"
-services:
-    -
-        name: "test_service0"
-        node: node0
-        command: "service_command0"
-        count: 2
-        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
-        monitor_interval: 20
-        """
-        expected_result = ('MASTER',
-                           {'config_name': 'MASTER',
-                            'jobs': [{'node': 'node0',
-                                      'schedule': 'interval 20s',
-                                      'name': 'test_job0',
-                                      'actions': [{'command': 'test_command0.0',
-                                                   'name': 'action0_0'}],
-                                      'cleanup_action': {'command': 'test_command0.1'}}],
-                            'node_pools': [{'nodes': ['node0',
-                                                      'node1'],
-                                            'name': 'NodePool'}],
-                            'ssh_options': {'identities': ['tests/test_id_rsa'],
-                                            'agent': True},
-                            'services': [{'node': 'node0',
-                                          'count': 2,
-                                          'command': 'service_command0',
-                                          'name': 'test_service0',
-                                          'monitor_interval': 20,
-                                          'pid_file': '/var/run/%(name)s-%(instance_number)s.pid'}],
-                            'nodes': [{'hostname': 'node0',
-                                       'name': 'node0'},
-                                      {'hostname': 'node1',
-                                       'name': 'node1'}]})
-        assert_equal(expected_result, _initialize_namespaced_update(test_config))
 
-    def test_invalid_unnamed_update(self):
-        test_config = BASE_CONFIG + """
-foobar:
-"""
-        expected_message = "Unknown options in Tron : foobar"
-        exception = assert_raises(ConfigError, _initialize_namespaced_update, test_config)
-        assert_in(expected_message, str(exception))
-
-    def test_valid_named_update(self):
-        test_config = """
-config_name: test_config
-jobs:
-    -
-        name: "test_job0"
-        node: node0
-        schedule: "interval 20s"
-        actions:
-            -
-                name: "action0_0"
-                command: "test_command0.0"
-        cleanup_action:
-            command: "test_command0.1"
-services:
-    -
-        name: "test_service0"
-        node: node0
-        command: "service_command0"
-        count: 2
-        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
-        monitor_interval: 20
-        """
-        expected_result = ('test_config',
-                           {'services': [{'node': 'node0',
-                                          'count': 2,
-                                          'command': 'service_command0',
-                                          'name': 'test_service0',
-                                          'monitor_interval': 20,
-                                          'pid_file': '/var/run/%(name)s-%(instance_number)s.pid'}],
-                            'config_name': 'test_config',
-                            'jobs': [{'node': 'node0',
-                                      'schedule': 'interval 20s',
-                                      'name': 'test_job0',
-                                      'actions': [{'command': 'test_command0.0',
-                                                   'name': 'action0_0'}],
-                                      'cleanup_action': {'command': 'test_command0.1'}}]})
-        assert_equal(expected_result, _initialize_namespaced_update(test_config))
-
-    def test_invalid_named_update(self):
-        test_config = """
-config_name: "foo"
-bozray:
-        """
-        expected_message = "Unknown options in NamedTron : bozray"
-        exception = assert_raises(ConfigError, load_config, test_config)
-        assert_in(expected_message, str(exception))
+class CollateJobsAndServicesTestCase(TestCase):
 
     def test_valid_job_collation(self):
         test_config = BASE_CONFIG + """
@@ -988,7 +983,7 @@ services:
                 ConfigJob(name='test_job0',
                           node='node0',
                           schedule=ConfigIntervalScheduler(timedelta=datetime.timedelta(0, 20)),
-                          actions=FrozenDict({'action0_0': 
+                          actions=FrozenDict({'action0_0':
                                               ConfigAction(name='action0_0',
                                                            command='test_command0.0',
                                                            requires=(),
@@ -1115,6 +1110,21 @@ class ValidatorIdentifierTestCase(TestCase):
         for name in ['invalid space', '*name', '1numberstarted', 123, '']:
             assert_raises(ConfigError, valid_identifier, '', name)
 
+
+class ConfigContainerTestCase(TestCase):
+
+    @setup
+    def setup_container(self):
+        master_config = valid_config(yaml.load(BASE_CONFIG))
+        config = {MASTER_NAMESPACE: master_config}
+        self.container = config_parse.ConfigContainer(config)
+
+    def test_get_node_names(self):
+        node_names = self.container.get_node_names()
+        expected = set(['node0', 'node1', 'NodePool'])
+        assert_equal(node_names, expected)
+
+    # TODO: test create, validate, add
 
 if __name__ == '__main__':
     run()
