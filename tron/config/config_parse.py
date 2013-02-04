@@ -34,6 +34,7 @@ from tron.core.action import CLEANUP_ACTION_NAME
 log = logging.getLogger(__name__)
 
 
+# TODO(0.6): move to ConfigContainer
 def collate_jobs_and_services(configs):
     """Collate jobs and services from an iterable of Config objects."""
     jobs = {}
@@ -203,7 +204,7 @@ class Validator(object):
         if not extra_keys:
             return
 
-        msg             = "Unknown options in %s %s: %s"
+        msg             = "Unknown keys in %s %s: %s"
         name            = in_dict.get('name', '')
         raise ConfigError(msg % (self.type_name, name, ', '.join(extra_keys)))
 
@@ -590,23 +591,7 @@ class ValidateConfig(Validator):
     }
     optional = False
 
-    def validate_node_names(self, config, node_names):
-        """Validate that any node/node_pool name that were used are configured
-        as nodes/node_pools.
-        """
-        actions = itertools.chain.from_iterable(
-            job.actions.values()
-            for job in config['jobs'].values())
-    
-        task_list = itertools.chain(
-            config['jobs'].values(),
-            config['services'].values(),
-            actions)
-        for task in task_list:
-            if task.node and task.node not in node_names:
-                raise ConfigError("Unknown node %s configured for %s %s" % (
-                    task.node, task.__class__.__name__, task.name))
-    
+
     def validate_node_pool_nodes(self, config):
         """Validate that each node in a node_pool is in fact a node, and not
         another pool.
@@ -625,8 +610,27 @@ class ValidateConfig(Validator):
         node_names = UniqueNameDict('Node and NodePool names must be unique %s')
         parse_sub_config(config, 'nodes',       valid_node,         node_names)
         parse_sub_config(config, 'node_pools',  valid_node_pool,    node_names)
-        self.validate_node_names(config, node_names)
+        validate_node_names(config['jobs'], config['services'], node_names)
         self.validate_node_pool_nodes(config)
+
+
+# TODO(0.6): validate inline in Validation class
+def validate_node_names(jobs, services, node_names):
+
+    def tasks_from_job(job):
+        for action in job.actions.itervalues():
+            yield action
+        if job.cleanup_action:
+            yield job.cleanup_action
+        yield job
+
+    job_tasks = itertools.chain.from_iterable(
+                    tasks_from_job(job) for job in jobs.itervalues())
+    task_list = itertools.chain(job_tasks, services.itervalues())
+    for task in task_list:
+        if task.node and task.node not in node_names:
+            raise ConfigError("Unknown node %s configured for %s %s" % (
+                task.node, task.__class__.__name__, task.name))
 
 
 class ValidateNamedConfig(Validator):
@@ -635,6 +639,7 @@ class ValidateNamedConfig(Validator):
     are, in turn, reconciled by Tron.
     """
     config_class =              NamedTronConfig
+    type_name =                 "NamedConfigFragment"
     defaults = {
         'config_name':          valid_identifier,
         'jobs':                 (),
@@ -652,8 +657,8 @@ valid_named_config = ValidateNamedConfig()
 
 def validate_fragment(name, fragment):
     if name == MASTER_NAMESPACE:
-        return name, valid_config(fragment)
-    return name, valid_named_config(fragment)
+        return valid_config(fragment)
+    return valid_named_config(fragment)
 
 
 class ConfigContainer(object):
@@ -674,8 +679,11 @@ class ConfigContainer(object):
             msg = "%s requires a %s"
             raise ConfigError(msg % (cls.__name__, MASTER_NAMESPACE))
 
-        seq = config_mapping.iteritems()
-        container = cls(validate_fragment(*item) for item in seq)
+        def build_mapping():
+            for name, content in config_mapping.iteritems():
+                yield name, validate_fragment(name, content)
+
+        container = cls(dict(build_mapping()))
         container.validate()
         return container
 
@@ -683,12 +691,9 @@ class ConfigContainer(object):
         """Validate the integrity of all the configuration fragments as a whole.
         """
         collate_jobs_and_services(self)
-        # TODO: test case to prove I need this
         node_names = self.get_node_names()
         for name, fragment in self.iteritems():
-            if name == MASTER_NAMESPACE:
-                continue
-            valid_config.validate_node_names(fragment, node_names)
+            validate_node_names(fragment.jobs, fragment.services, node_names)
 
     def add(self, name, config_content):
         self.configs[name] = validate_fragment(name, config_content)
