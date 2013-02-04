@@ -54,6 +54,7 @@ class RequestError(ValueError):
     """Raised when there is a connection failure."""
 
 
+# TODO: remove options, plreace with explicit args
 class Client(object):
     """A client used in commands to make requests to the tron.www """
 
@@ -86,6 +87,7 @@ class Client(object):
             'services': name_href_dict(content['services'])
         }
 
+    # TODO: break this out
     def get_url_from_identifier(self, iden):
         """Convert a string of the form job_name[.run_number[.action]] to its
         corresponding URL.

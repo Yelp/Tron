@@ -1,10 +1,10 @@
 import mock
 
-from testify import setup, TestCase, run
+from testify import setup, TestCase, run, assert_equal
 from tron import mcp
 
 from tron.api.controller import JobController, ConfigController
-from tron.config import ConfigError
+from tron.config import ConfigError, manager
 from tron.core import job
 
 
@@ -36,13 +36,15 @@ class ConfigControllerTestCase(TestCase):
     @setup
     def setup_controller(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
+        self.manager = mock.create_autospec(manager.ConfigManager)
+        self.mcp.get_config_manager.return_value = self.manager
         self.controller = ConfigController(self.mcp)
-        self.manager = self.mcp.get_config_manager.return_value
 
     def test_read_config(self):
         name = 'MASTER'
-        self.controller.read_config(name)
-        self.manager.read_config.assert_called_with(name)
+        resp = self.controller.read_config(name)
+        self.manager.read_raw_config.assert_called_with(name)
+        assert_equal(resp, self.manager.read_raw_config.return_value)
 
     def test_update_config(self):
         name, content = None, mock.Mock()

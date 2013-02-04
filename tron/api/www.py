@@ -434,11 +434,13 @@ class ConfigResource(resource.Resource):
         resource.Resource.__init__(self)
 
     def render_GET(self, request):
+        # TODO: validate name is not None
         config_name = requestargs.get_string(request, 'name')
         response = {'config': self.controller.read_config(config_name)}
         return respond(request, response)
 
     def render_POST(self, request):
+        # TODO: validate name is not None
         log.info("Handling reconfigure request")
         config_content = requestargs.get_string(request, 'config')
         config_name = requestargs.get_string(request, 'name')

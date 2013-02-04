@@ -1,20 +1,37 @@
 import logging
-import os.path
+import os
 import yaml
 
-from tron.config import schema, config_parse
+from tron.config import schema, config_parse, ConfigError
 
 
 log = logging.getLogger(__name__)
+
+def from_string(content):
+    try:
+        return yaml.load(content)
+    except yaml.error.YAMLError, e:
+        raise ConfigError("Invalid config format: %s" % str(e))
 
 
 def write(path, content):
     with open(path, 'w') as fh:
         yaml.dump(content, fh)
 
+
 def read(path):
     with open(path, 'r') as fh:
-        return yaml.load(fh)
+        return from_string(fh)
+
+
+def write_raw(path, content):
+    with open(path, 'w') as fh:
+        fh.write(content)
+
+
+def read_raw(path):
+    with open(path, 'r') as fh:
+        return fh.read()
 
 
 class ManifestFile(object):
@@ -57,20 +74,21 @@ class ConfigManager(object):
 
     def build_file_path(self, name):
         name = name.replace('.', '_').replace(os.path.sep, '_')
-        return os.path.join(self.config_path, name)
+        return os.path.join(self.config_path, '%s.yaml' % name)
 
-    def read_config(self, name=schema.MASTER_NAMESPACE):
+    def read_raw_config(self, name=schema.MASTER_NAMESPACE):
+        """Read the config file without converting to yaml."""
         filename = self.manifest.get_file_name(name)
-        return read(filename)
+        return read_raw(filename)
 
     def write_config(self, name, content):
-        self.validate_fragment(name, content)
+        self.validate_fragment(name, from_string(content))
         filename = self.manifest.get_file_name(name)
         if not filename:
             filename = self.build_file_path(name)
             self.manifest.add(name, filename)
 
-        write(filename, content)
+        write_raw(filename, content)
 
     def validate_fragment(self, name, content):
         container = self.load()
@@ -83,3 +101,13 @@ class ConfigManager(object):
         seq = self.manifest.get_file_mapping().iteritems()
         name_mapping = dict((name, read(filename)) for name, filename in seq)
         return config_parse.ConfigContainer.create(name_mapping)
+
+
+def create_new_config(path, master_content, master_filename='master'):
+    """Create a new configuration directory with master config."""
+    os.makedirs(path)
+    manager = ConfigManager(path)
+    master_filename = manager.build_file_path(master_filename)
+    write_raw(master_filename, master_content)
+    manager.manifest.create()
+    manager.manifest.add(schema.MASTER_NAMESPACE, master_filename)

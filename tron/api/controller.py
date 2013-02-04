@@ -31,7 +31,7 @@ class ConfigController(object):
         self.config_manager = mcp.get_config_manager()
 
     def read_config(self, name):
-        self.config_manager.read_config(name)
+        return self.config_manager.read_raw_config(name)
 
     def update_config(self, name, content):
         """Update a configuration fragment and reload the MCP."""
