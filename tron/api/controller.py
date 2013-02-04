@@ -31,6 +31,7 @@ class ConfigController(object):
         self.config_manager = mcp.get_config_manager()
 
     def read_config(self, name):
+        # TODO: check is_name_managed
         return self.config_manager.read_raw_config(name)
 
     def update_config(self, name, content):

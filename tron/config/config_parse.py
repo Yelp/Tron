@@ -569,7 +569,6 @@ class ValidateConfig(Validator):
     """
     config_class =              TronConfig
     defaults = {
-        'config_name':          MASTER_NAMESPACE,
         'output_stream_dir':    None,
         'command_context':      None,
         'ssh_options':          valid_ssh_options({}),
@@ -590,7 +589,6 @@ class ValidateConfig(Validator):
         'state_persistence':    valid_state_persistence
     }
     optional = False
-
 
     def validate_node_pool_nodes(self, config):
         """Validate that each node in a node_pool is in fact a node, and not

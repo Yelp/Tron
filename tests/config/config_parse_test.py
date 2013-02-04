@@ -138,7 +138,6 @@ services:
 
     def test_attributes(self):
         expected = TronConfig(
-            config_name=MASTER_NAMESPACE,
             output_stream_dir='/tmp',
             command_context=FrozenDict({
                 'python': '/usr/bin/python',
