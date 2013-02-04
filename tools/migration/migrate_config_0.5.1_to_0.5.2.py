@@ -27,6 +27,7 @@ def parse_options():
 
 
 def main(source, dest):
+    dest = os.path.abspath(dest)
     if not os.path.isfile(source):
         raise SystemExit("Error: Source (%s) is not a file" % source)
     if os.path.exists(dest):

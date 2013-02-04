@@ -39,7 +39,7 @@ def collate_jobs_and_services(configs):
     """Collate jobs and services from an iterable of Config objects."""
     jobs = {}
     services = {}
-    
+
     def _iter_items(config, namespace, attr):
         for item in getattr(config, attr):
             identifier = '_'.join((namespace, item))
@@ -47,14 +47,14 @@ def collate_jobs_and_services(configs):
                 raise ConfigError("Collision found for identifier '%s'" % job_identifier)
             content = getattr(config, attr)[item]
             yield identifier, content
-            
+
     for namespace, config in configs.iteritems():
         for job_identifier, content in _iter_items(config, namespace, "jobs"):
             jobs[job_identifier] = (content, namespace)
 
         for service_identifier, content in _iter_items(config, namespace, "services"):
             services[service_identifier] = (content, namespace)
-        
+
     return jobs, services
 
 
@@ -601,7 +601,7 @@ class ValidateConfig(Validator):
                     continue
                 msg = "NodePool %s contains another NodePool %s. "
                 raise ConfigError(msg % (node_pool.name, node_name))
-    
+
     def post_validation(self, config):
         """Validate a non-named config."""
         validate_jobs_and_services(config)
@@ -665,9 +665,6 @@ class ConfigContainer(object):
     def __init__(self, config_mapping):
         self.configs = config_mapping
 
-    def __getitem__(self, item):
-        return self.configs[item]
-
     def iteritems(self):
         return self.configs.iteritems()
 
@@ -702,3 +699,9 @@ class ConfigContainer(object):
     def get_node_names(self):
         master = self.get_master()
         return set(itertools.chain(master.nodes, master.node_pools))
+
+    def __getitem__(self, name):
+        return self.configs[name]
+
+    def __contains__(self, name):
+        return name in self.configs
