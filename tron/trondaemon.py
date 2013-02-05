@@ -188,14 +188,14 @@ class TronDaemon(object):
         # Local import required because of reactor import in mcp
         from tron import mcp
         working_dir         = self.options.working_dir
-        config_file         = self.options.config_file
-        self.mcp            = mcp.MasterControlProgram(working_dir, config_file)
+        config_path         = self.options.config_path
+        self.mcp            = mcp.MasterControlProgram(working_dir, config_path)
 
         try:
             self.mcp.initial_setup()
         except Exception, e:
-            msg = "Error in configuration file %s: %s"
-            log.exception(msg % (self.options.config_file, e))
+            msg = "Error in configuration %s: %s"
+            log.exception(msg % (config_path, e))
             raise SystemExit("Failed to configure MCP")
 
     def _run_reactor(self):

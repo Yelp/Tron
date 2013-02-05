@@ -181,6 +181,7 @@ class ServiceCollectionTestCase(TestCase):
         mock_service.disable.assert_called_with()
         assert_not_in(mock_service, self.collection.services)
 
+    # TODO: this test can flake
     def test_filter_by_name(self):
         self._add_service()
         services_names = [serv.name for serv in self.service_list[:2]]

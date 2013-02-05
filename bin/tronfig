@@ -4,16 +4,16 @@ import os
 import tempfile
 import optparse
 import sys
-import shutil
 
 import tron
-from tron import mcp, commands
+from tron import commands
 from tron.commands.client import Client
 from tron.config import config_parse
+from tron.config import schema, manager, ConfigError
 
 
 def parse_options():
-    parser = optparse.OptionParser("usage: %prog [options] [-]",
+    parser = optparse.OptionParser("usage: %prog [<name>] [options] [-]",
                                    version="%%prog %s" % tron.__version__)
 
     parser.add_option("--print", "-p", action="store_true",
@@ -27,28 +27,21 @@ def parse_options():
     parser.add_option("--save", "-s", action="store_true", dest="save_config",
                       help="Save options used on this job for next time.",
                       default=False)
-    (options, args) = parser.parse_args(sys.argv)
 
-    options.from_stdin = False
-    if args[-1] == "-":
+    options, args = parser.parse_args(sys.argv)
+    if args[-1] == '-':
         options.from_stdin = True
+        args = args[:-1]
+    else:
+        options.from_stdin = False
 
+    options.config_name = args[1] if len(args) > 1 else schema.MASTER_NAMESPACE
     return options
 
 
-def upload_config(client, contents):
-    client.config(contents)
+def upload_config(client, config_name, contents):
+    client.config(config_name, data=contents)
     print "Configuration uploaded successfully"
-
-
-def test_config(contents):
-
-    # Can the MCP handle the configuration?
-    try:
-        config = config_parse.load_config(contents)
-        return True
-    except Exception, e:
-        print >>sys.stderr, "Error in configuration: %s" % str(e)
 
 
 def edit_config(contents):
@@ -66,18 +59,28 @@ def edit_config(contents):
     with open(fi.name) as upload_file:
         return upload_file.read()
 
+def validate(config_name, config_content):
+    try:
+        config_data = manager.from_string(config_content)
+        config_parse.validate_fragment(config_name, config_data)
+        return True
+    except ConfigError, e:
+        print str(e)
 
+
+# TODO: cleanup, move out of if_main block
 if __name__ == '__main__':
     options = parse_options()
     commands.setup_logging(options)
     commands.load_config(options)
     client = Client(options)
+    config_name = options.config_name
 
     def finish(new_config):
         if options.print_config:
             print new_config
         else:
-            upload_config(client, new_config)
+            upload_config(client, config_name, new_config)
 
         if options.save_config:
             # Save our command options (NOT THE CONFIG FILE)
@@ -87,12 +90,13 @@ if __name__ == '__main__':
     if options.from_stdin:
         # We're taking config from stdin
         new_config = sys.stdin.read()
-        if not test_config(new_config):
+        if not validate(config_name, new_config):
             sys.exit(1)
         finish(new_config)
 
-    new_config = client.config()
+    new_config = client.config(config_name)
     if not sys.stdout.isatty():
+        # TODO: this shouldn't upload again
         # No editing possible, use the existing config
         finish(new_config)
 
@@ -102,7 +106,7 @@ if __name__ == '__main__':
             print >>sys.stderr, "Cancelling edit"
             sys.exit(1)
 
-        if test_config(new_config):
+        if validate(config_name, new_config):
             finish(new_config)
 
         response = raw_input(

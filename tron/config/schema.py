@@ -27,7 +27,6 @@ def config_object_factory(name, required=None, optional=None):
 TronConfig = config_object_factory(
     'TronConfig',
     optional=[
-        'config_name',         # str
         'output_stream_dir',   # str
         'state_persistence',   # ConfigState
         'command_context',     # FrozenDict of str

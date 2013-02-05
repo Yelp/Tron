@@ -430,26 +430,27 @@ class ConfigResource(resource.Resource):
     isLeaf = True
 
     def __init__(self, master_control):
-        self.mcp                = master_control
-        config_filepath         = master_control.config_filepath
-        self.controller         = controller.ConfigController(config_filepath)
+        self.controller = controller.ConfigController(master_control)
         resource.Resource.__init__(self)
 
     def render_GET(self, request):
-        return respond(request, {'config': self.controller.read_config()})
+        config_name = requestargs.get_string(request, 'name')
+        if not config_name:
+            return respond(request, {'error': "'name' for config is required."})
+        response = {'config': self.controller.read_config(config_name)}
+        return respond(request, response)
 
     def render_POST(self, request):
         log.info("Handling reconfigure request")
-        new_config = requestargs.get_string(request, 'config')
-        self.controller.rewrite_config(new_config)
+        config_content = requestargs.get_string(request, 'config')
+        config_name = requestargs.get_string(request, 'name')
+        if not config_name:
+            return respond(request, {'error': "'name' for config is required."})
 
         response = {'status': "Active"}
-        try:
-            self.mcp.reconfigure()
-        except Exception, e:
-            log.exception("Failure doing live reconfigure")
-            response['error'] = str(e)
-
+        error = self.controller.update_config(config_name, config_content)
+        if error:
+            response['error'] = error
         return respond(request, response)
 
 

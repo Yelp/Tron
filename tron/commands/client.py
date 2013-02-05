@@ -54,6 +54,7 @@ class RequestError(ValueError):
     """Raised when there is a connection failure."""
 
 
+# TODO: remove options, plreace with explicit args
 class Client(object):
     """A client used in commands to make requests to the tron.www """
 
@@ -66,11 +67,11 @@ class Client(object):
     def events(self):
         return self.request('/events')['data']
 
-    def config(self, data=None):
+    def config(self, config_name, data=None):
         """This may be a post or a get, depending on data."""
         if data:
-            return self.request('/config', dict(config=data))
-        return self.request('/config', )['config']
+            return self.request('/config', dict(config=data, name=config_name))
+        return self.request('/config?name=%s' % config_name)['config']
 
     def home(self):
         return self.request('/')
@@ -86,6 +87,7 @@ class Client(object):
             'services': name_href_dict(content['services'])
         }
 
+    # TODO: break this out
     def get_url_from_identifier(self, iden):
         """Convert a string of the form job_name[.run_number[.action]] to its
         corresponding URL.

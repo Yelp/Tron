@@ -90,4 +90,5 @@ class Turtle(object):
 
 def autospec_method(method, *args, **kwargs):
     """create an autospec for an instance method."""
-    setattr(method.im_self, method.__name__, mock.create_autospec(method, *args, **kwargs))
+    mocked_method = mock.create_autospec(method, *args, **kwargs)
+    setattr(method.im_self, method.__name__, mocked_method)

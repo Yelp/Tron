@@ -8,7 +8,7 @@ from tron import command_context
 from tron import event
 from tron import crash_reporter
 from tron import node
-from tron.config import config_parse
+from tron.config import config_parse, manager
 from tron.config.config_parse import collate_jobs_and_services, ConfigError
 from tron.config.schema import MASTER_NAMESPACE
 from tron.core import service
@@ -35,7 +35,7 @@ class MasterControlProgram(Observable):
     Central state object for the Tron daemon. Stores all jobs and services.
     """
 
-    def __init__(self, working_dir, config_file):
+    def __init__(self, working_dir, config_path):
         super(MasterControlProgram, self).__init__()
         self.jobs               = {}
         self.services           = service.ServiceCollection()
@@ -43,13 +43,16 @@ class MasterControlProgram(Observable):
         self.output_stream_dir  = None
         self.working_dir        = working_dir
         self.crash_reporter     = None
-        self.config_filepath    = config_file
+        self.config             = manager.ConfigManager(config_path)
         self.context            = command_context.CommandContext()
         # Time zone of the system clock
         self.time_zone          = None
         self.event_recorder     = event.get_recorder()
         self.event_recorder.ok('started')
         self.state_manager      = None
+
+    def get_config_manager(self):
+        return self.config
 
     def shutdown(self):
         # TODO: NullStateManager
@@ -81,10 +84,7 @@ class MasterControlProgram(Observable):
 
     def _load_config(self, reconfigure=False):
         """Read config data and apply it."""
-        log.info("Loading configuration from %s" % self.config_filepath)
-        with open(self.config_filepath, 'r') as f:
-            config = config_parse.load_config(f)
-        self.apply_config(config, reconfigure=reconfigure)
+        self.apply_config(self.config.load(), reconfigure=reconfigure)
 
     def initial_setup(self):
         """When the MCP is initialized the config is applied before the state.
