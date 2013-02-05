@@ -102,9 +102,8 @@ class ConfigManager(object):
         name_mapping = dict((name, read(filename)) for name, filename in seq)
         return config_parse.ConfigContainer.create(name_mapping)
 
-    def is_name_managed(self, name):
+    def __contains__(self, name):
         return name in self.manifest
-
 
 def create_new_config(path, master_content, master_filename='master'):
     """Create a new configuration directory with master config."""
