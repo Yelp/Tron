@@ -69,7 +69,7 @@ def validate(config_name, config_content):
         config_parse.validate_fragment(config_name, config_data)
         return True
     except ConfigError, e:
-        print str(e)
+        print "Error: %s" % e
 
 def print_config(client, config_name):
     print client.config(config_name)
@@ -77,10 +77,8 @@ def print_config(client, config_name):
 
 def update_from_stdin(client, config_name):
     config_content = sys.stdin.read()
-    error = validate(config_name, config_content)
-    if error:
-        raise SystemExit(error)
-    upload_config(client, config_name, config_content)
+    if validate(config_name, config_content):
+        upload_config(client, config_name, config_content)
 
 
 def update_with_editor(client, config_name):
