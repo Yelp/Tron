@@ -164,6 +164,6 @@ class Client(object):
         server = self.options.server
         status, content = request(server, url, data)
         if not status == OK:
-            err_msg = "%s%s: %s %s"
-            raise RequestError(err_msg % (server, url, content, data or ''))
+            err_msg = "%s%s: %s"
+            raise RequestError(err_msg % (server, url, content))
         return content

@@ -35,13 +35,15 @@ def format_mapping(mapping):
 
 
 class ConfigController(object):
-    """Control config."""
+    """Control config. Return config contents and accept updated configuration
+    from the API.
+    """
 
     TEMPLATE_FILE = 'named_config_template.yaml'
 
     TEMPLATE = pkg_resources.resource_string(tron.__name__, TEMPLATE_FILE)
 
-    HEADER_END = '#' * 80 + '\n'
+    HEADER_END = TEMPLATE.split('\n')[-2] + '\n'
 
     DEFAULT_NAMED_CONFIG =  "\njobs:\n\nservices:\n"
 
