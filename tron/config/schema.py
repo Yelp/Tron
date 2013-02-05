@@ -41,7 +41,6 @@ TronConfig = config_object_factory(
 NamedTronConfig = config_object_factory(
     'NamedTronConfig',
     optional=[
-        'config_name',         # str
         'jobs',                # FrozenDict of ConfigJob
         'services'             # FrozenDict of ConfigService
     ])
