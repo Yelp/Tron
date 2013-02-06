@@ -7,12 +7,24 @@ from textwrap import dedent
 import textwrap
 
 import mock
+import pytz
 
 from testify import assert_equal, assert_in
 from testify import run, setup, teardown, TestCase
 import yaml
-from tron.config import config_parse, schema, manager
-from tron.config.config_parse import *
+from tron.config import config_parse, schema, manager, config_utils
+from tron.config.config_parse import valid_config, ConfigContainer
+from tron.config.config_parse import collate_jobs_and_services
+from tron.config.config_parse import valid_identifier
+from tron.config.config_parse import valid_output_stream_dir
+from tron.config.config_parse import valid_node_pool
+from tron.config.config_parse import validate_fragment
+from tron.config.config_utils import NullConfigContext, ConfigContext
+from tron.config.config_parse import build_format_string_validator
+from tron.config.config_parse import build_list_of_type_validator
+from tron.config.config_parse import CLEANUP_ACTION_NAME
+from tron.config.config_parse import valid_job
+from tron.config import ConfigError
 from tron.config.schedule_parse import ConfigConstantScheduler
 from tron.config.schedule_parse import ConfigGrocScheduler
 from tron.config.schedule_parse import ConfigIntervalScheduler
@@ -144,13 +156,13 @@ services:
 """
 
     def test_attributes(self):
-        expected = TronConfig(
+        expected = schema.TronConfig(
             output_stream_dir='/tmp',
             command_context=FrozenDict({
                 'python': '/usr/bin/python',
                 'batch_dir': '/tron/batch/test/foo'
             }),
-            ssh_options=ConfigSSHOptions(
+            ssh_options=schema.ConfigSSHOptions(
                 agent=True,
                 identities=['tests/test_id_rsa'],
             ),
@@ -158,22 +170,24 @@ services:
             time_zone=pytz.timezone("EST"),
             state_persistence=config_parse.DEFAULT_STATE_PERSISTENCE,
             nodes=FrozenDict({
-                'node0': ConfigNode(name='node0', username=os.environ['USER'], hostname='node0'),
-                'node1': ConfigNode(name='node1', username=os.environ['USER'], hostname='node1')
+                'node0': schema.ConfigNode(name='node0',
+                    username=os.environ['USER'], hostname='node0'),
+                'node1': schema.ConfigNode(name='node1',
+                    username=os.environ['USER'], hostname='node1')
             }),
             node_pools=FrozenDict({
-                'nodePool': ConfigNodePool(nodes=('node0', 'node1'),
+                'nodePool': schema.ConfigNodePool(nodes=('node0', 'node1'),
                                                 name='nodePool')
             }),
             jobs=FrozenDict({
-                'test_job0': ConfigJob(
+                'test_job0': schema.ConfigJob(
                     name='test_job0',
                     namespace='MASTER',
                     node='node0',
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20)),
                     actions=FrozenDict({
-                        'action0_0': ConfigAction(
+                        'action0_0': schema.ConfigAction(
                             name='action0_0',
                             command='test_command0.0',
                             requires=(),
@@ -182,13 +196,13 @@ services:
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
-                    cleanup_action=ConfigCleanupAction(
+                    cleanup_action=schema.ConfigCleanupAction(
                         name='cleanup',
                         command='test_command0.1',
                         node=None),
                     enabled=True,
                     allow_overlap=False),
-                'test_job1': ConfigJob(
+                'test_job1': schema.ConfigJob(
                     name='test_job1',
                     namespace='MASTER',
                     node='node0',
@@ -201,12 +215,12 @@ services:
                         timestr='00:30',
                     ),
                     actions=FrozenDict({
-                        'action1_1': ConfigAction(
+                        'action1_1': schema.ConfigAction(
                             name='action1_1',
                             command='test_command1.1',
                             requires=('action1_0',),
                             node=None),
-                        'action1_0': ConfigAction(
+                        'action1_0': schema.ConfigAction(
                             name='action1_0',
                             command='test_command1.0',
                             requires=(),
@@ -217,7 +231,7 @@ services:
                     all_nodes=False,
                     cleanup_action=None,
                     allow_overlap=True),
-                'test_job2': ConfigJob(
+                'test_job2': schema.ConfigJob(
                     name='test_job2',
                     namespace='MASTER',
                     node='node1',
@@ -230,7 +244,7 @@ services:
                         timestr='16:30',
                     ),
                     actions=FrozenDict({
-                        'action2_0': ConfigAction(
+                        'action2_0': schema.ConfigAction(
                             name='action2_0',
                             command='test_command2.0',
                             requires=(),
@@ -241,24 +255,24 @@ services:
                     all_nodes=False,
                     cleanup_action=None,
                     allow_overlap=False),
-                'test_job3': ConfigJob(
+                'test_job3': schema.ConfigJob(
                     name='test_job3',
                     namespace='MASTER',
                     node='node1',
                     schedule=ConfigConstantScheduler(),
                     enabled=True,
                     actions=FrozenDict({
-                        'action3_1': ConfigAction(
+                        'action3_1': schema.ConfigAction(
                             name='action3_1',
                             command='test_command3.1',
                             requires=(),
                             node=None),
-                        'action3_0': ConfigAction(
+                        'action3_0': schema.ConfigAction(
                             name='action3_0',
                             command='test_command3.0',
                             requires=(),
                             node=None),
-                        'action3_2': ConfigAction(
+                        'action3_2': schema.ConfigAction(
                             name='action3_2',
                             command='test_command3.2',
                             requires=('action3_0', 'action3_1'),
@@ -269,7 +283,7 @@ services:
                     all_nodes=False,
                     cleanup_action=None,
                     allow_overlap=False),
-                'test_job4': ConfigJob(
+                'test_job4': schema.ConfigJob(
                     name='test_job4',
                     namespace='MASTER',
                     node='nodePool',
@@ -281,7 +295,7 @@ services:
                         timestr='00:00',
                     ),
                     actions=FrozenDict({
-                        'action4_0': ConfigAction(
+                        'action4_0': schema.ConfigAction(
                             name='action4_0',
                             command='test_command4.0',
                             requires=(),
@@ -294,7 +308,7 @@ services:
                     allow_overlap=False)
                 }),
                 services=FrozenDict({
-                    'service0': ConfigService(
+                    'service0': schema.ConfigService(
                         name='service0',
                         namespace='MASTER',
                         node='nodePool',
@@ -401,16 +415,16 @@ services:
 """
 
     def test_attributes(self):
-        expected = NamedTronConfig(
+        expected = schema.NamedTronConfig(
             jobs=FrozenDict({
-                'test_job0': ConfigJob(
+                'test_job0': schema.ConfigJob(
                     name='test_job0',
                     namespace='test_namespace',
                     node='node0',
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20)),
                     actions=FrozenDict({
-                        'action0_0': ConfigAction(
+                        'action0_0': schema.ConfigAction(
                             name='action0_0',
                             command='test_command0.0',
                             requires=(),
@@ -419,13 +433,13 @@ services:
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
-                    cleanup_action=ConfigCleanupAction(
+                    cleanup_action=schema.ConfigCleanupAction(
                         name='cleanup',
                         command='test_command0.1',
                         node=None),
                     enabled=True,
                     allow_overlap=False),
-                'test_job1': ConfigJob(
+                'test_job1': schema.ConfigJob(
                     name='test_job1',
                     namespace='test_namespace',
                     node='node0',
@@ -438,12 +452,12 @@ services:
                         timestr='00:30',
                     ),
                     actions=FrozenDict({
-                        'action1_1': ConfigAction(
+                        'action1_1': schema.ConfigAction(
                             name='action1_1',
                             command='test_command1.1',
                             requires=('action1_0',),
                             node=None),
-                        'action1_0': ConfigAction(
+                        'action1_0': schema.ConfigAction(
                             name='action1_0',
                             command='test_command1.0 %(some_var)s',
                             requires=(),
@@ -454,7 +468,7 @@ services:
                     all_nodes=False,
                     cleanup_action=None,
                     allow_overlap=True),
-                'test_job2': ConfigJob(
+                'test_job2': schema.ConfigJob(
                     name='test_job2',
                     namespace='test_namespace',
                     node='node1',
@@ -467,7 +481,7 @@ services:
                         timestr='16:30',
                     ),
                     actions=FrozenDict({
-                        'action2_0': ConfigAction(
+                        'action2_0': schema.ConfigAction(
                             name='action2_0',
                             command='test_command2.0',
                             requires=(),
@@ -478,24 +492,24 @@ services:
                     all_nodes=False,
                     cleanup_action=None,
                     allow_overlap=False),
-                'test_job3': ConfigJob(
+                'test_job3': schema.ConfigJob(
                     name='test_job3',
                     namespace='test_namespace',
                     node='node1',
                     schedule=ConfigConstantScheduler(),
                     enabled=True,
                     actions=FrozenDict({
-                        'action3_1': ConfigAction(
+                        'action3_1': schema.ConfigAction(
                             name='action3_1',
                             command='test_command3.1',
                             requires=(),
                             node=None),
-                        'action3_0': ConfigAction(
+                        'action3_0': schema.ConfigAction(
                             name='action3_0',
                             command='test_command3.0',
                             requires=(),
                             node=None),
-                        'action3_2': ConfigAction(
+                        'action3_2': schema.ConfigAction(
                             name='action3_2',
                             command='test_command3.2',
                             requires=('action3_0', 'action3_1'),
@@ -506,7 +520,7 @@ services:
                     all_nodes=False,
                     cleanup_action=None,
                     allow_overlap=False),
-                'test_job4': ConfigJob(
+                'test_job4': schema.ConfigJob(
                     name='test_job4',
                     namespace='test_namespace',
                     node='NodePool',
@@ -518,7 +532,7 @@ services:
                         timestr='00:00',
                     ),
                     actions=FrozenDict({
-                        'action4_0': ConfigAction(
+                        'action4_0': schema.ConfigAction(
                             name='action4_0',
                             command='test_command4.0',
                             requires=(),
@@ -531,7 +545,7 @@ services:
                     allow_overlap=False)
                 }),
                 services=FrozenDict({
-                    'service0': ConfigService(
+                    'service0': schema.ConfigService(
                         namespace='test_namespace',
                         name='service0',
                         node='NodePool',
@@ -761,7 +775,7 @@ services:
             schedule="constant",
             actions=[]
         )
-        config_context = config_parse.ConfigContext('config', ['localhost'], None, None)
+        config_context = config_utils.ConfigContext('config', ['localhost'], None, None)
         expected_msg = "Required non-empty list at config.Job.job_name.actions"
         exception = assert_raises(ConfigError, valid_job, job_config, config_context)
         assert_in(expected_msg, str(exception))
@@ -883,19 +897,19 @@ services:
         monitor_interval: 20
         """
         expected_collated_jobs = {'MASTER_test_job0':
-                ConfigJob(name='test_job0',
+                schema.ConfigJob(name='test_job0',
                           namespace='MASTER',
                           node='node0',
                           schedule=ConfigIntervalScheduler(timedelta=datetime.timedelta(0, 20)),
                           actions=FrozenDict({'action0_0':
-                                  ConfigAction(name='action0_0',
+                                  schema.ConfigAction(name='action0_0',
                                                command='test_command0.0',
                                                requires=(),
                                                node=None)}),
                           queueing=True,
                           run_limit=50,
                           all_nodes=False,
-                          cleanup_action=ConfigCleanupAction(command='test_command0.1',
+                          cleanup_action=schema.ConfigCleanupAction(command='test_command0.1',
                                  name='cleanup',
                                  node=None),
                           enabled=True,
@@ -903,7 +917,7 @@ services:
                 }
 
         expected_collated_services = {'MASTER_test_service0':
-                ConfigService(name='test_service0',
+                schema.ConfigService(name='test_service0',
                               namespace='MASTER',
                               node='node0',
                               pid_file='/var/run/%(name)s-%(instance_number)s.pid',
@@ -920,26 +934,26 @@ services:
         assert_equal(expected_collated_services, services)
 
     def test_invalid_job_collation(self):
-        jobs = FrozenDict({'test_collision0': ConfigJob(
+        jobs = FrozenDict({'test_collision0': schema.ConfigJob(
             name='test_collision0',
             node='node0',
             namespace='MASTER',
             schedule=ConfigIntervalScheduler(
                 timedelta=datetime.timedelta(0, 20)),
-            actions=FrozenDict({'action0_0': ConfigAction(name='action0_0',
+            actions=FrozenDict({'action0_0': schema.ConfigAction(name='action0_0',
                 command='test_command0.0',
                 requires=(),
                 node=None)}),
             queueing=True,
             run_limit=50,
             all_nodes=False,
-            cleanup_action=ConfigCleanupAction(command='test_command0.1',
+            cleanup_action=schema.ConfigCleanupAction(command='test_command0.1',
                 name='cleanup',
                 node=None),
             enabled=True,
             allow_overlap=False)})
 
-        services = FrozenDict({'test_collision0': ConfigService(name='test_collision0',
+        services = FrozenDict({'test_collision0': schema.ConfigService(name='test_collision0',
             namespace='MASTER',
             node='node0',
             pid_file='/var/run/%(name)s-%(instance_number)s.pid',
@@ -972,12 +986,13 @@ class ValidatorTestCase(TestCase):
 
     def test_validate_with_none(self):
         expected_msg = "A StubObject is required"
-        exception = assert_raises(ConfigError, self.validator.validate, None)
+        exception = assert_raises(ConfigError,
+            self.validator.validate, None, NullConfigContext)
         assert_in(expected_msg, str(exception))
 
     def test_validate_optional_with_none(self):
         self.validator.optional = True
-        assert_equal(self.validator.validate(None), None)
+        assert_equal(self.validator.validate(None, NullConfigContext), None)
 
 
 class ValidOutputStreamDirTestCase(TestCase):

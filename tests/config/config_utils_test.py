@@ -23,16 +23,16 @@ class ConfigContextTestCase(TestCase):
 
     def test_build_config_context(self):
         path, nodes, namespace = 'path', set([1,2,3]), 'namespace'
-        command_context, local = mock.MagicMock(), True
+        command_context = mock.MagicMock()
         parent_context = config_utils.ConfigContext(
-            path, nodes, command_context, namespace, local)
+            path, nodes, command_context, namespace)
 
         child = parent_context.build_child_context('child')
         assert_equal(child.path, '%s.child' % path)
         assert_equal(child.nodes, nodes)
         assert_equal(child.namespace, namespace)
         assert_equal(child.command_context, command_context)
-        assert_equal(child.local, local)
+        assert not child.partial
 
 
 if __name__ == "__main__":

@@ -11,7 +11,9 @@ import re
 import pytz
 
 from tron.config import ConfigError, config_utils
-from tron.config.config_utils import UniqueNameDict, build_type_validator, NullConfigContext, ConfigContext
+from tron.config.config_utils import UniqueNameDict, build_type_validator
+from tron.config.config_utils import NullConfigContext, ConfigContext
+from tron.config.config_utils import PartialConfigContext
 from tron.config.schedule_parse import valid_schedule
 from tron.config.schema import TronConfig, NamedTronConfig, NotificationOptions
 from tron.config.schema import ConfigSSHOptions, CommandFormatKeys
@@ -93,7 +95,7 @@ def build_format_string_validator(valid_keys):
         valid_keys - a sequence of strings
     """
     def validator(value, config_context):
-        if config_context.is_local():
+        if config_context.partial:
             return valid_string(value, config_context)
 
         keys = set(valid_keys) | set(config_context.command_context.keys())
@@ -118,7 +120,7 @@ class Validator(object):
     validators              = {}
     optional                = False
 
-    def validate(self, in_dict, config_context=NullConfigContext):
+    def validate(self, in_dict, config_context):
         if self.optional and in_dict is None:
             return None
 
@@ -136,7 +138,7 @@ class Validator(object):
         return self.build_config(in_dict, config_context)
 
     def __call__(self, in_dict, config_context=NullConfigContext):
-        return self.validate(in_dict, config_context=config_context)
+        return self.validate(in_dict, config_context)
 
     @property
     def type_name(self):
@@ -259,7 +261,7 @@ def valid_time_zone(tz, config_context):
 
 def valid_node_name(value, config_context):
     valid_identifier(value, config_context)
-    if not config_context.is_local() and value not in config_context.nodes:
+    if not config_context.partial and value not in config_context.nodes:
         msg = "Unknown node name %s at %s"
         raise ConfigError(msg % (value, config_context.path))
     return value
@@ -588,8 +590,7 @@ valid_named_config = ValidateNamedConfig()
 def validate_fragment(name, fragment):
     if name == MASTER_NAMESPACE:
         return valid_config(fragment)
-    # Create a local context, no nodes or command_context
-    config_context = ConfigContext(name, None, None, name, local=True)
+    config_context = PartialConfigContext(name, name)
     return valid_named_config(fragment, config_context=config_context)
 
 
