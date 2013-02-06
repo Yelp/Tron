@@ -6,7 +6,8 @@ import sys
 import tron
 from tron import commands
 from tron.commands import display
-from tron.commands.client import Client
+from tron.commands.client import Client, get_object_type_from_identifier
+from tron.commands.client import TronObjectType
 
 
 def parse_options():
@@ -96,24 +97,22 @@ def view_service(options, service_name, client):
     service_content = client.service(service_name)
     return display.DisplayServices().format_details(service_content)
 
+
+obj_type_to_view_map = {
+    TronObjectType.job:         view_job,
+    TronObjectType.job_run:     view_job_run,
+    TronObjectType.action_run:  view_action_run,
+    TronObjectType.service:     view_service,
+}
+
 def get_view_output(name, options):
-    client = Client(options)
-    content = client.index()
+    client      = Client(options)
+    url_index   = client.index()
+    tron_id     = get_object_type_from_identifier(url_index, name)
 
-    level = name.count('.')
-    object_name = name.split('.')[0]
-
-    if object_name in content['jobs']:
-        if not level:
-            return view_job(options, name, client)
-        elif level == 1:
-            return view_job_run(options, name, client)
-        return view_action_run(options, name, client)
-
-    if object_name in content['services']:
-        if level:
-            return
-        return view_service(options, name, client)
+    if tron_id.type not in obj_type_to_view_map:
+        return
+    return obj_type_to_view_map[tron_id.type](options, tron_id.name, client)
 
 
 def main():

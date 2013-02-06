@@ -7,7 +7,7 @@ import sys
 
 import tron
 from tron import commands
-from tron.commands.client import Client
+from tron.commands.client import Client, RequestError
 from tron.config import config_parse
 from tron.config import schema, manager, ConfigError
 
@@ -40,8 +40,12 @@ def parse_options():
 
 
 def upload_config(client, config_name, contents):
-    client.config(config_name, data=contents)
+    response = client.config(config_name, data=contents)
+    if 'error' in response:
+        print response['error']
+        return False
     print "Configuration uploaded successfully"
+    return True
 
 
 def edit_config(contents):
@@ -65,10 +69,39 @@ def validate(config_name, config_content):
         config_parse.validate_fragment(config_name, config_data)
         return True
     except ConfigError, e:
-        print str(e)
+        print "Error: %s" % e
+
+def print_config(client, config_name):
+    print client.config(config_name)
 
 
-# TODO: cleanup, move out of if_main block
+def update_from_stdin(client, config_name):
+    config_content = sys.stdin.read()
+    if validate(config_name, config_content):
+        upload_config(client, config_name, config_content)
+
+
+def update_with_editor(client, config_name):
+    if not sys.stdout.isatty():
+        raise SystemExit("No editing possible.")
+
+    config_content = client.config(config_name)
+    while True:
+        config_content = edit_config(config_content)
+        if not config_content:
+            print >>sys.stderr, "Cancelling edit"
+            return
+
+        if validate(config_name, config_content):
+            if upload_config(client, config_name, config_content):
+                return
+
+        response = raw_input(
+            "There are errors in your configuration. Continue editing? (y/n): ")
+        if response[:1].lower() == 'n':
+            return
+
+
 if __name__ == '__main__':
     options = parse_options()
     commands.setup_logging(options)
@@ -76,40 +109,15 @@ if __name__ == '__main__':
     client = Client(options)
     config_name = options.config_name
 
-    def finish(new_config):
-        if options.print_config:
-            print new_config
-        else:
-            upload_config(client, config_name, new_config)
+    if options.print_config:
+        print_config(client, config_name)
 
-        if options.save_config:
-            # Save our command options (NOT THE CONFIG FILE)
-            commands.save_config(options)
-        sys.exit(0)
+    elif options.from_stdin:
+        update_from_stdin(client, config_name)
 
-    if options.from_stdin:
-        # We're taking config from stdin
-        new_config = sys.stdin.read()
-        if not validate(config_name, new_config):
-            sys.exit(1)
-        finish(new_config)
+    else:
+        update_with_editor(client, config_name)
 
-    new_config = client.config(config_name)
-    if not sys.stdout.isatty():
-        # TODO: this shouldn't upload again
-        # No editing possible, use the existing config
-        finish(new_config)
-
-    while True:
-        new_config = edit_config(new_config)
-        if not new_config:
-            print >>sys.stderr, "Cancelling edit"
-            sys.exit(1)
-
-        if validate(config_name, new_config):
-            finish(new_config)
-
-        response = raw_input(
-            "There are errors in your configuration. Continue editing? (y/n): ")
-        if response[:1].lower() == 'n':
-            sys.exit(1)
+    if options.save_config:
+        # Save our command options (NOT THE CONFIG FILE)
+        commands.save_config(options)

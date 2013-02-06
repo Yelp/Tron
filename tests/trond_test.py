@@ -37,7 +37,6 @@ DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
                     as %(year)s-%(month)s-%(day)s' && false" """
 
 ALT_NAMESPACED_ECHO_CONFIG = """
-config_name: "ohce"
 jobs:
   - name: "echo_job"
     node: local

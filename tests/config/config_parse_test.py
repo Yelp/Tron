@@ -323,7 +323,6 @@ services:
 
 class NamedConfigTestCase(TestCase):
     config = """
-config_name: "test_namespace"
 jobs:
     -
         name: "test_job0"
@@ -399,7 +398,6 @@ services:
 
     def test_attributes(self):
         expected = NamedTronConfig(
-            config_name='test_namespace',
             jobs=FrozenDict({
                 'test_job0': ConfigJob(
                     name='test_job0',
@@ -863,10 +861,7 @@ class NodeConfigTestCase(TestCase):
         assert_in(expected_msg, str(exception))
 
     def test_invalid_named_update(self):
-        test_config = """
-config_name: "foo"
-bozray:
-        """
+        test_config = """bozray:"""
         test_config = yaml.load(test_config)
         expected_message = "Unknown keys in NamedConfigFragment : bozray"
         exception = assert_raises(ConfigError, validate_fragment, 'foo', test_config)

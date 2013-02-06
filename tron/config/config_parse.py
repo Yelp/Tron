@@ -730,7 +730,6 @@ class ValidateNamedConfig(Validator):
     config_class =              NamedTronConfig
     type_name =                 "NamedConfigFragment"
     defaults = {
-        'config_name':          valid_identifier,
         'jobs':                 (),
         'services':             ()
     }
