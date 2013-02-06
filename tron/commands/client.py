@@ -68,11 +68,13 @@ class Client(object):
     def events(self):
         return self.request('/events')['data']
 
-    def config(self, config_name, data=None):
+    def config(self, config_name, config_data=None, config_hash=None):
         """This may be a post or a get, depending on data."""
-        if data:
-            return self.request('/config', dict(config=data, name=config_name))
-        return self.request('/config?name=%s' % config_name)['config']
+        if config_data:
+            request_data = dict(
+                        config=config_data, name=config_name, hash=config_hash)
+            return self.request('/config', request_data)
+        return self.request('/config?name=%s' % config_name)
 
     def home(self):
         return self.request('/')

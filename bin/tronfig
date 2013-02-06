@@ -39,8 +39,9 @@ def parse_options():
     return options
 
 
-def upload_config(client, config_name, contents):
-    response = client.config(config_name, data=contents)
+def upload_config(client, config_name, contents, config_hash):
+    response = client.config(config_name,
+                             config_data=contents, config_hash=config_hash)
     if 'error' in response:
         print response['error']
         return False
@@ -63,6 +64,7 @@ def edit_config(contents):
     with open(fi.name) as upload_file:
         return upload_file.read()
 
+
 def validate(config_name, config_content):
     try:
         config_data = manager.from_string(config_content)
@@ -71,21 +73,25 @@ def validate(config_name, config_content):
     except ConfigError, e:
         print "Error: %s" % e
 
+
 def print_config(client, config_name):
-    print client.config(config_name)
+    print client.config(config_name)['config']
 
 
 def update_from_stdin(client, config_name):
     config_content = sys.stdin.read()
+    config_hash = client.config(config_name)['hash']
     if validate(config_name, config_content):
-        upload_config(client, config_name, config_content)
+        upload_config(client, config_name, config_content, config_hash)
 
 
 def update_with_editor(client, config_name):
     if not sys.stdout.isatty():
         raise SystemExit("No editing possible.")
 
-    config_content = client.config(config_name)
+    response        = client.config(config_name)
+    config_content  = response['config']
+    config_hash     = response['hash']
     while True:
         config_content = edit_config(config_content)
         if not config_content:
@@ -93,7 +99,7 @@ def update_with_editor(client, config_name):
             return
 
         if validate(config_name, config_content):
-            if upload_config(client, config_name, config_content):
+            if upload_config(client, config_name, config_content, config_hash):
                 return
 
         response = raw_input(
