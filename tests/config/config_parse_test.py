@@ -10,7 +10,7 @@ import mock
 from testify import assert_equal, assert_in
 from testify import run, setup, teardown, TestCase
 import yaml
-from tron.config import config_parse, schema
+from tron.config import config_parse, schema, manager
 from tron.config.config_parse import *
 from tron.config.schedule_parse import ConfigConstantScheduler
 from tron.config.schedule_parse import ConfigGrocScheduler
@@ -36,6 +36,10 @@ node_pools:
     - name: NodePool
       nodes: [node0, node1]
 """
+
+
+def valid_config_from_yaml(config_content):
+    return valid_config(manager.from_string(config_content))
 
 
 class ConfigTestCase(TestCase):
@@ -295,9 +299,7 @@ services:
             )
         )
 
-        test_config = valid_config(yaml.load(self.config))
-        # we could just do a big assert_equal here, but it would be hella hard
-        # to debug failures that way.
+        test_config = valid_config_from_yaml(self.config)
         assert_equal(test_config.command_context, expected.command_context)
         assert_equal(test_config.ssh_options, expected.ssh_options)
         assert_equal(test_config.notification_options, expected.notification_options)
@@ -530,8 +532,6 @@ services:
         )
 
         test_config = valid_named_config(yaml.load(self.config))
-        # we could just do a big assert_equal here, but it would be hella hard
-        # to debug failures that way.
         assert_equal(test_config.jobs['test_job0'], expected.jobs['test_job0'])
         assert_equal(test_config.jobs['test_job1'], expected.jobs['test_job1'])
         assert_equal(test_config.jobs['test_job2'], expected.jobs['test_job2'])
@@ -553,9 +553,8 @@ jobs:
         node: node0
         schedule: "interval 20s"
         """
-        test_config = yaml.load(test_config)
         expected_message = "Job test_job0 is missing options: actions"
-        exception = assert_raises(ConfigError, valid_config, test_config)
+        exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expected_message, str(exception))
 
     def test_empty_actions(self):
@@ -567,9 +566,8 @@ jobs:
         schedule: "interval 20s"
         actions:
         """
-        test_config = yaml.load(test_config)
         expected_message = "Value at Job.test_job0 is not a list with items"
-        exception = assert_raises(ConfigError, valid_config, test_config)
+        exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expected_message, str(exception))
 
     def test_dupe_names(self):
@@ -588,9 +586,8 @@ jobs:
                 command: "test_command0.0"
 
         """
-        test_config = yaml.load(test_config)
         expected_message = "Action name action0_0 on job test_job0 used twice"
-        exception = assert_raises(ConfigError, valid_config, test_config)
+        exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expected_message, str(exception))
 
     def test_bad_requires(self):
@@ -619,10 +616,9 @@ jobs:
                 requires: action0_0
 
         """
-        test_config = yaml.load(test_config)
         expected_message = ('jobs.test_job1.action1_0 has a dependency '
                 '"action0_0" that is not in the same job!')
-        exception = assert_raises(ConfigError, valid_config, test_config)
+        exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expected_message, str(exception))
 
 
@@ -643,9 +639,8 @@ jobs:
                 command: "test_command0.1"
                 requires: action0_0
         """
-        test_config = yaml.load(test_config)
         expect = "Circular dependency in job.test_job0: action0_0 -> action0_1"
-        exception = assert_raises(ConfigError, valid_config, test_config)
+        exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expect, exception)
 
     def test_config_cleanup_name_collision(self):
@@ -661,9 +656,8 @@ jobs:
                 command: "test_command0.0"
 
         """ % CLEANUP_ACTION_NAME
-        test_config = yaml.load(test_config)
         expected_message = "Bad action name at Action.cleanup: cleanup"
-        exception = assert_raises(ConfigError, valid_config, test_config)
+        exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expected_message, str(exception))
 
     def test_config_cleanup_action_name(self):
@@ -681,9 +675,8 @@ jobs:
             name: "gerald"
             command: "test_command0.1"
         """
-        test_config = yaml.load(test_config)
         expected_msg = "Cleanup actions cannot have custom names"
-        exception = assert_raises(ConfigError, valid_config, test_config)
+        exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expected_msg, str(exception))
 
     def test_config_cleanup_requires(self):
@@ -701,9 +694,8 @@ jobs:
             command: "test_command0.1"
             requires: [action0_0]
         """
-        test_config = yaml.load(test_config)
         expected_msg = "can not have requires"
-        exception = assert_raises(ConfigError, valid_config, test_config)
+        exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expected_msg, str(exception))
 
     def test_job_in_services(self):
@@ -720,9 +712,8 @@ services:
         cleanup_action:
             command: "test_command0.1"
 """
-        test_config = yaml.load(test_config)
         expected_msg = "Service test_job0 is missing options:"
-        exception = assert_raises(ConfigError, valid_config, test_config)
+        exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expected_msg, str(exception))
 
     def test_overlap_job_service_names(self):
@@ -795,9 +786,8 @@ class NodeConfigTestCase(TestCase):
                             name: "action0_0"
                             command: "test_command0.0"
             """)
-        test_config = yaml.load(test_config)
         expected_msg = "some_unknown_node configured for ConfigJob test_job0"
-        exception = assert_raises(ConfigError, valid_config, test_config)
+        exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expected_msg, str(exception))
 
     def test_invalid_nested_node_pools(self):
@@ -819,9 +809,8 @@ class NodeConfigTestCase(TestCase):
                     - name: first
                       command: "echo 1"
         """)
-        test_config = yaml.load(test_config)
         expected_msg = "NodePool pool1 contains another NodePool pool0"
-        exception = assert_raises(ConfigError, valid_config, test_config)
+        exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expected_msg, str(exception))
 
     def test_invalid_node_pool_config(self):
@@ -843,9 +832,8 @@ class NodeConfigTestCase(TestCase):
                     - name: first
                       command: "echo 1"
         """)
-        test_config = yaml.load(test_config)
         expected_msg = "NodePool pool0 is missing options"
-        exception = assert_raises(ConfigError, valid_config, test_config)
+        exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expected_msg, str(exception))
 
 
@@ -911,7 +899,7 @@ services:
                               count=2),
                 'MASTER')}
 
-        config_mapping = {MASTER_NAMESPACE: valid_config(yaml.load(test_config))}
+        config_mapping = {MASTER_NAMESPACE: valid_config_from_yaml(test_config)}
         config_container = ConfigContainer(config_mapping)
         jobs, services = collate_jobs_and_services(config_container)
         assert_equal(expected_collated_jobs, jobs)
