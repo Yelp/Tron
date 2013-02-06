@@ -55,7 +55,7 @@ class RequestError(ValueError):
     """Raised when there is a connection failure."""
 
 
-# TODO: remove options, plreace with explicit args
+# TODO: remove options, replace with explicit args
 class Client(object):
     """A client used in commands to make requests to the tron.www """
 

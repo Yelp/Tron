@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import with_statement
+import logging
 import os
 import tempfile
 import optparse
@@ -7,9 +8,12 @@ import sys
 
 import tron
 from tron import commands
-from tron.commands.client import Client, RequestError
+from tron.commands.client import Client
 from tron.config import config_parse
 from tron.config import schema, manager, ConfigError
+
+
+log = logging.getLogger('tronfig')
 
 
 def parse_options():
@@ -43,9 +47,9 @@ def upload_config(client, config_name, contents, config_hash):
     response = client.config(config_name,
                              config_data=contents, config_hash=config_hash)
     if 'error' in response:
-        print response['error']
+        log.error(response['error'])
         return False
-    print "Configuration uploaded successfully"
+    print >>sys.stderr, "Configuration uploaded successfully"
     return True
 
 
@@ -71,7 +75,8 @@ def validate(config_name, config_content):
         config_parse.validate_fragment(config_name, config_data)
         return True
     except ConfigError, e:
-        print "Error: %s" % e
+        log.error(e)
+
 
 
 def print_config(client, config_name):
@@ -95,7 +100,7 @@ def update_with_editor(client, config_name):
     while True:
         config_content = edit_config(config_content)
         if not config_content:
-            print >>sys.stderr, "Cancelling edit"
+            log.warn("Cancelling edit.")
             return
 
         if validate(config_name, config_content):
@@ -123,7 +128,3 @@ if __name__ == '__main__':
 
     else:
         update_with_editor(client, config_name)
-
-    if options.save_config:
-        # Save our command options (NOT THE CONFIG FILE)
-        commands.save_config(options)

@@ -12,6 +12,7 @@ import sys
 
 import tron
 from tron import commands
+from tron.commands import ExitCode
 from tron.commands.client import Client, OK, request
 from tron.commands.client import get_object_type_from_identifier
 
@@ -109,17 +110,16 @@ def main():
     commands.setup_logging(options)
     commands.load_config(options)
 
-    command, is_success = args.pop(0), False
+    command = args.pop(0)
     if not args:
         # our only non-object commands are for enabling and disabling jobs, so
         # just direct those commands here
-        is_success = edit(options, command, '/jobs')
+        if not edit(options, command, '/jobs'):
+            sys.exit(ExitCode.fail)
     else:
-        is_success = all(control_objects(options, command, args))
+        if not all(control_objects(options, command, args)):
+            sys.exit(ExitCode.fail)
 
-    if options.save_config:
-        commands.save_config(options)
-    sys.exit(int(not is_success))
 
 if __name__ == '__main__':
     main()
