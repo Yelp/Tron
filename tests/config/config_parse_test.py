@@ -158,7 +158,7 @@ services:
                 'node1': ConfigNode(name='node1', username=os.environ['USER'], hostname='node1')
             }),
             node_pools=FrozenDict({
-                'nodePool': ConfigNodePool(nodes=['node0', 'node1'],
+                'nodePool': ConfigNodePool(nodes=('node0', 'node1'),
                                                 name='nodePool')
             }),
             jobs=FrozenDict({
@@ -181,7 +181,6 @@ services:
                     cleanup_action=ConfigCleanupAction(
                         name='cleanup',
                         command='test_command0.1',
-                        requires=(),
                         node=None),
                     enabled=True,
                     allow_overlap=False),
@@ -421,7 +420,6 @@ services:
                     cleanup_action=ConfigCleanupAction(
                         name='cleanup',
                         command='test_command0.1',
-                        requires=(),
                         node=None),
                     enabled=True,
                     allow_overlap=False),
@@ -604,9 +602,9 @@ jobs:
 
         """
         test_config = yaml.load(test_config)
-        expected_message = "Action name action0_0 on job test_job0 used twice"
+        expected = "Duplicate action name action0_0 at config.Job.test_job0.actions"
         exception = assert_raises(ConfigError, valid_config, test_config)
-        assert_in(expected_message, str(exception))
+        assert_in(expected, str(exception))
 
     def test_bad_requires(self):
         test_config = BASE_CONFIG + """
@@ -631,7 +629,7 @@ jobs:
             -
                 name: "action1_0"
                 command: "test_command1.0"
-                requires: action0_0
+                requires: [action0_0]
 
         """
         test_config = yaml.load(test_config)
@@ -652,11 +650,11 @@ jobs:
             -
                 name: "action0_0"
                 command: "test_command0.0"
-                requires: action0_1
+                requires: [action0_1]
             -
                 name: "action0_1"
                 command: "test_command0.1"
-                requires: action0_0
+                requires: [action0_0]
         """
         test_config = yaml.load(test_config)
         expect = "Circular dependency in job.test_job0: action0_0 -> action0_1"
@@ -717,9 +715,9 @@ jobs:
             requires: [action0_0]
         """
         test_config = yaml.load(test_config)
-        expected_msg = "can not have requires"
+        expected_msg = "Unknown keys in CleanupAction : requires"
         exception = assert_raises(ConfigError, valid_config, test_config)
-        assert_in(expected_msg, str(exception))
+        assert_equal(expected_msg, str(exception))
 
     def test_job_in_services(self):
         test_config = BASE_CONFIG + """
@@ -773,7 +771,7 @@ services:
             actions=[]
         )
         config_context = config_parse.ConfigContext('config', ['localhost'], None, None)
-        expected_msg = "Value at config.Job.job_name.actions is not a list with items"
+        expected_msg = "Required non-empty list at config.Job.job_name.actions"
         exception = assert_raises(ConfigError, valid_job, job_config, config_context)
         assert_in(expected_msg, str(exception))
 
@@ -910,7 +908,6 @@ services:
                           run_limit=50,
                           all_nodes=False,
                           cleanup_action=ConfigCleanupAction(command='test_command0.1',
-                                 requires=(),
                                  name='cleanup',
                                  node=None),
                           enabled=True,
@@ -949,7 +946,6 @@ services:
             run_limit=50,
             all_nodes=False,
             cleanup_action=ConfigCleanupAction(command='test_command0.1',
-                requires=(),
                 name='cleanup',
                 node=None),
             enabled=True,
@@ -1047,6 +1043,25 @@ class BuildFormatStringValidatorTestCase(TestCase):
     def test_validator_error(self):
         template = "The %(one)s thing I %(seven)s is %(unknown)s"
         assert_raises(ConfigError, self.validator, template, NullConfigContext)
+
+
+class BuildListOfTypeValidatorTestCase(TestCase):
+
+    @setup
+    def setup_validator(self):
+        self.item_validator = mock.Mock()
+        self.validator = build_list_of_type_validator(self.item_validator)
+
+    def test_validator_passes(self):
+        items, context = ['one', 'two'], mock.create_autospec(ConfigContext)
+        self.validator(items, context)
+        expected = [mock.call(item, context) for item in items]
+        assert_equal(self.item_validator.mock_calls, expected)
+
+    def test_validator_fails(self):
+        self.item_validator.side_effect = ConfigError
+        items, context = ['one', 'two'], mock.create_autospec(ConfigContext)
+        assert_raises(ConfigError, self.validator, items, context)
 
 
 class ConfigContainerTestCase(TestCase):

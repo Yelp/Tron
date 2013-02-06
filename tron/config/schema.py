@@ -113,7 +113,6 @@ ConfigCleanupAction = config_object_factory(
     [
         'command',              # str
     ],[
-        'requires',             # tuple of str
         'name',                 # str
         'node',                 # str
     ])
