@@ -5,6 +5,7 @@ import mock
 from testify import TestCase, assert_equal, run, setup, teardown
 import yaml
 from tests.assertions import assert_raises
+from tests.testingutils import autospec_method
 from tron.config import manager, ConfigError
 
 
@@ -110,8 +111,7 @@ class ConfigManagerTestCase(TestCase):
         name = 'filename'
         path = self.manager.build_file_path(name)
         self.manifest.get_file_name.return_value = path
-        self.manager.validate_fragment = mock.create_autospec(
-            self.manager.validate_fragment)
+        autospec_method(self.manager.validate_fragment)
         self.manager.write_config(name, self.raw_content)
         assert_equal(manager.read(path), self.content)
         self.manifest.get_file_name.assert_called_with(name)
@@ -122,15 +122,14 @@ class ConfigManagerTestCase(TestCase):
         name = 'filename2'
         path = self.manager.build_file_path(name)
         self.manifest.get_file_name.return_value = None
-        self.manager.validate_fragment = mock.create_autospec(
-            self.manager.validate_fragment)
+        autospec_method(self.manager.validate_fragment)
         self.manager.write_config(name, self.raw_content)
         assert_equal(manager.read(path), self.content)
         self.manifest.get_file_name.assert_called_with(name)
         self.manifest.add.assert_called_with(name, path)
 
     def test_validate_fragment(self):
-        self.manager.load = mock.create_autospec(self.manager.load)
+        autospec_method(self.manager.load)
         name = 'the_name'
         self.manager.validate_fragment(name, self.content)
         container = self.manager.load.return_value
@@ -150,6 +149,17 @@ class ConfigManagerTestCase(TestCase):
             for ((name, _), call) in zip(content_items, mock_read.mock_calls))
         mock_config_container.create.assert_called_with(expected)
 
+    def test_get_hash_default(self):
+        self.manifest.__contains__.return_value = False
+        hash_digest = self.manager.get_hash('name')
+        assert_equal(hash_digest, self.manager.DEFAULT_HASH)
+
+    def test_get_hash(self):
+        content = "OkOkOk"
+        autospec_method(self.manager.read_raw_config, return_value=content)
+        self.manifest.__contains__.return_value = True
+        hash_digest = self.manager.get_hash('name')
+        assert_equal(hash_digest, manager.hash_digest(content))
 
 
 if __name__ == "__main__":

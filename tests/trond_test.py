@@ -59,7 +59,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
         self.sandbox.save_config(SINGLE_ECHO_CONFIG)
         self.sandbox.trond()
         # make sure it got in
-        assert_equal(client.config('MASTER'), SINGLE_ECHO_CONFIG)
+        assert_equal(client.config('MASTER')['config'], SINGLE_ECHO_CONFIG)
 
         # reconfigure and confirm results
         second_config = DOUBLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT
@@ -67,7 +67,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
         events = client.events()
         assert_equal(events[0]['name'], 'restoring')
         assert_equal(events[1]['name'], 'run_created')
-        assert_equal(client.config('MASTER'), second_config)
+        assert_equal(client.config('MASTER')['config'], second_config)
 
         # reconfigure, by uploading a third configuration
         self.sandbox.tronfig(ALT_NAMESPACED_ECHO_CONFIG, name='ohce')
@@ -169,7 +169,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
         self.sandbox.trond()
         self.sandbox.tronfig(SERVICE_CONFIG)
 
-        wait_on_config = lambda: 'fake_service' in client.config('MASTER')
+        wait_on_config = lambda: 'fake_service' in client.config('MASTER')['config']
         sandbox.wait_on_sandbox(wait_on_config)
 
         self.sandbox.tronctl(['start', 'MASTER_fake_service'])

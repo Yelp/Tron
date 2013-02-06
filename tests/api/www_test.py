@@ -8,12 +8,14 @@ import twisted.web.server
 
 from testify import TestCase, class_setup, assert_equal, run, setup
 from testify import class_teardown, teardown
+from testify import setup_teardown
 from testify.assertions import assert_in
 from testify.utils import turtle
 from tests import mocks
 from tests.assertions import assert_call
 from tron import event
-from tron.api import www
+from tron import mcp
+from tron.api import www, controller
 from tests.testingutils import Turtle
 
 try:
@@ -24,6 +26,11 @@ except ImportError:
 
 REQUEST = twisted.web.server.Request(mock.Mock(), None)
 REQUEST.childLink = lambda val : "/jobs/%s" % val
+
+
+def build_request(**kwargs):
+    args = dict((k, [v]) for k, v in kwargs.iteritems())
+    return mock.create_autospec(twisted.web.server.Request, args=args)
 
 
 class WWWTestCase(TestCase):
@@ -302,6 +309,36 @@ class EventResourceTestCase(WWWTestCase):
         response = self.resource.render_GET(self.request())
         names = [e['name'] for e in response['data']]
         assert_equal(names, ['what', 'oh'])
+
+
+class ConfigResourceTestCase(TestCase):
+
+    @setup_teardown
+    def setup_resource(self):
+        self.mcp = mock.create_autospec(mcp.MasterControlProgram)
+        self.resource = www.ConfigResource(self.mcp)
+        self.controller = self.resource.controller = mock.create_autospec(
+            controller.ConfigController)
+        with mock.patch('tron.api.www.respond', autospec=True) as self.respond:
+            yield
+
+    def test_render_GET(self):
+        name = 'the_nane'
+        request = build_request(name=name)
+        self.resource.render_GET(request)
+        self.controller.read_config.assert_called_with(name)
+        self.respond.assert_called_with(request,
+                self.resource.controller.read_config.return_value)
+
+    def test_render_POST(self):
+        name, config, hash = 'the_name', mock.Mock(), mock.Mock()
+        request = build_request(name=name, config=config, hash=hash)
+        self.resource.render_POST(request)
+        self.controller.update_config.assert_called_with(name, config, hash)
+        response_content = {
+            'status': 'Active',
+            'error': self.controller.update_config.return_value}
+        self.respond.assert_called_with(request, response_content)
 
 
 if __name__ == '__main__':
