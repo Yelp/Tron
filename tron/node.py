@@ -84,6 +84,11 @@ class NodePoolStore(dict):
     def update(self, nodes):
         super(NodePoolStore, self).update((node.name, node) for node in nodes)
 
+    @classmethod
+    def update_from_config(cls, node_config, node_pool_config, ssh_options):
+        # TODO: clear and add new ones
+        pass
+
 
 class NodePool(object):
     """A pool of Node objects."""

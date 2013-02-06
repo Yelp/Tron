@@ -12,7 +12,6 @@ from tron.config import manager
 from tron.config.config_parse import collate_jobs_and_services, ConfigError
 from tron.core import service
 from tron.core.job import Job, JobScheduler
-from tron.node import Node, NodePool
 from tron.scheduler import scheduler_from_config
 from tron.serialize import filehandler
 from tron.serialize.runstate.statemanager import PersistenceManagerFactory
@@ -38,7 +37,6 @@ class MasterControlProgram(Observable):
         super(MasterControlProgram, self).__init__()
         self.jobs               = {}
         self.services           = service.ServiceCollection()
-        self.nodes              = node.NodePoolStore.get_instance()
         self.output_stream_dir  = None
         self.working_dir        = working_dir
         self.crash_reporter     = None
@@ -104,8 +102,8 @@ class MasterControlProgram(Observable):
             master_config.state_persistence)
         self.context.base = master_config.command_context
         self.time_zone = master_config.time_zone
-        self._apply_nodes(master_config.nodes, ssh_options)
-        self._apply_node_pools(master_config.node_pools)
+        node.NodePoolStore.update_from_config(
+            master_config.nodes, master_config.node_pools, ssh_options)
         self._apply_notification_options(master_config.notification_options)
 
         jobs, services = collate_jobs_and_services(config_container)
@@ -136,18 +134,6 @@ class MasterControlProgram(Observable):
             ssh_options.opt_identity(file_name)
 
         return ssh_options
-
-    def _apply_nodes(self, node_confs, ssh_options):
-        self.nodes.update(
-            Node.from_config(config, ssh_options)
-            for config in node_confs.itervalues()
-        )
-
-    def _apply_node_pools(self, pool_confs):
-        self.nodes.update(
-            NodePool.from_config(config)
-            for config in pool_confs.itervalues()
-        )
 
     def _apply_jobs(self, job_configs, reconfigure=False):
         """Add and remove jobs based on the configuration."""

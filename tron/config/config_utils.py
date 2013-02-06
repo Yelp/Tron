@@ -1,4 +1,5 @@
 """Utilities used for configuration parsing and validation."""
+import itertools
 from tron.config import ConfigError
 from tron.config.schema import MASTER_NAMESPACE
 
@@ -10,14 +11,22 @@ class UniqueNameDict(dict):
      fmt_string - format string used to create an error message, expects a
                   single format argument of 'key'
     """
-    def __init__(self, fmt_string, **kwargs):
-        super(dict, self).__init__(**kwargs)
+    def __init__(self, fmt_string):
+        super(dict, self).__init__()
         self.fmt_string = fmt_string
 
     def __setitem__(self, key, value):
         if key in self:
             raise ConfigError(self.fmt_string % key)
         super(UniqueNameDict, self).__setitem__(key, value)
+
+
+def unique_names(fmt_string, *seqs):
+    """Validate that each object in all sequences has a unique name."""
+    name_dict = UniqueNameDict(fmt_string)
+    for item in itertools.chain.from_iterable(seqs):
+        name_dict[item] = True
+    return name_dict
 
 
 def build_type_validator(validator, error_fmt):

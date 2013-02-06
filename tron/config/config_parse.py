@@ -10,7 +10,7 @@ import re
 
 import pytz
 
-from tron.config import ConfigError
+from tron.config import ConfigError, config_utils
 from tron.config.config_utils import UniqueNameDict, build_type_validator, NullConfigContext, ConfigContext
 from tron.config.schedule_parse import valid_schedule
 from tron.config.schema import TronConfig, NamedTronConfig, NotificationOptions
@@ -73,6 +73,18 @@ def build_list_of_type_validator(item_validator, allow_empty=False):
             msg = "Required non-empty list at %s"
             raise ConfigError(msg % config_context.path)
         return tuple(item_validator(item, config_context) for item in seq)
+    return validator
+
+
+def build_dict_name_validator(item_validator, allow_empty=False):
+    """Build a validator which validates a list, and returns a dict."""
+    valid = build_list_of_type_validator(item_validator, allow_empty)
+    def validator(value, config_context):
+        msg = "Duplicate name %%s at %s" % config_context.path
+        name_dict = UniqueNameDict(msg)
+        for item in valid(value, config_context):
+            name_dict[item.name] = item
+        return FrozenDict(**name_dict)
     return validator
 
 
@@ -385,7 +397,7 @@ class ValidateJob(Validator):
         'schedule':             valid_schedule,
         'run_limit':            valid_int,
         'all_nodes':            valid_bool,
-        'actions':              build_list_of_type_validator(valid_action),
+        'actions':              build_dict_name_validator(valid_action),
         'cleanup_action':       valid_cleanup_action,
         'node':                 valid_node_name,
         'queueing':             valid_bool,
@@ -421,16 +433,8 @@ class ValidateJob(Validator):
 
     def post_validation(self, job, config_context):
         """Validate actions for the job."""
-        msg = 'Duplicate action name %%s at %s.actions'
-        actions = UniqueNameDict(msg % config_context.path)
-
-        for action in job['actions']:
-            actions[action.name] = action
-
-        for action in actions.itervalues():
-            self._validate_dependencies(job, actions, action)
-
-        job['actions'] = FrozenDict(**actions)
+        for action in job['actions'].itervalues():
+            self._validate_dependencies(job, job['actions'], action)
 
 valid_job = ValidateJob()
 
@@ -485,26 +489,17 @@ class ValidateStatePersistence(Validator):
 valid_state_persistence = ValidateStatePersistence()
 
 
-# TODO: create a builder or class for this to reduce arguments
-def parse_sub_config(config, cname, valid, name_dict, config_context):
-    target_dict = UniqueNameDict(
-        "%s name %%s used twice" % cname.replace('_', ' '))
-    for item in config.get(cname) or []:
-        final = valid(item, config_context)
-        target_dict[final.name] = final
-        name_dict[final.name] = True
-    config[cname] = FrozenDict(**target_dict)
-
-
-# TODO: cleanup with above
 def validate_jobs_and_services(config, config_context):
     """Validate jobs and services."""
+    valid_jobs      = build_dict_name_validator(valid_job, allow_empty=True)
+    valid_services  = build_dict_name_validator(valid_service, allow_empty=True)
+    validation      = [('jobs', valid_jobs), ('services', valid_services)]
 
-    job_service_names = UniqueNameDict(
-            'Job and Service names must be unique %s')
+    for config_name, valid in validation:
+        config[config_name] = valid(config.get(config_name, []), config_context)
 
-    parse_sub_config(config, 'jobs',        valid_job,          job_service_names, config_context)
-    parse_sub_config(config, 'services',    valid_service,      job_service_names, config_context)
+    fmt_string = 'Job and Service names must be unique %s'
+    config_utils.unique_names(fmt_string, config['jobs'], config['services'])
 
 
 DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1)
@@ -525,18 +520,21 @@ class ValidateConfig(Validator):
         'notification_options': None,
         'time_zone':            None,
         'state_persistence':    DEFAULT_STATE_PERSISTENCE,
-        'nodes':                DEFAULT_NODE,
+        'nodes':                {'localhost': DEFAULT_NODE},
         'node_pools':           (),
         'jobs':                 (),
         'services':             (),
     }
+    node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
     validators = {
         'output_stream_dir':    valid_output_stream_dir,
         'command_context':      valid_command_context,
         'ssh_options':          valid_ssh_options,
         'notification_options': valid_notification_options,
         'time_zone':            valid_time_zone,
-        'state_persistence':    valid_state_persistence
+        'state_persistence':    valid_state_persistence,
+        'nodes':                build_dict_name_validator(valid_node),
+        'node_pools':           node_pools,
     }
     optional = False
 
@@ -544,25 +542,24 @@ class ValidateConfig(Validator):
         """Validate that each node in a node_pool is in fact a node, and not
         another pool.
         """
+        all_node_names = set(config['nodes'])
         for node_pool in config['node_pools'].itervalues():
-            for node_name in node_pool.nodes:
-                if config['nodes'].get(node_name):
-                    continue
-                msg = "NodePool %s contains another NodePool %s. "
-                raise ConfigError(msg % (node_pool.name, node_name))
+            invalid_names = set(node_pool.nodes) - all_node_names
+            if invalid_names:
+                msg = "NodePool %s contains other NodePools: " % node_pool.name
+                raise ConfigError(msg + ",".join(invalid_names))
 
     def post_validation(self, config, _):
         """Validate a non-named config."""
+        node_names = config_utils.unique_names(
+            'Node and NodePool names must be unique %s',
+            config['nodes'], config.get('node_pools', []))
 
-        config_context = ConfigContext(
-            'config', None, config.get('command_context'), MASTER_NAMESPACE)
+        if config.get('node_pools'):
+            self.validate_node_pool_nodes(config)
 
-        node_names = UniqueNameDict('Node and NodePool names must be unique %s')
-        parse_sub_config(config, 'nodes',       valid_node,         node_names, config_context)
-        parse_sub_config(config, 'node_pools',  valid_node_pool,    node_names, config_context)
-        self.validate_node_pool_nodes(config)
-
-        config_context.nodes = set(node_names)
+        config_context = ConfigContext('config', node_names,
+            config.get('command_context'), MASTER_NAMESPACE)
         validate_jobs_and_services(config, config_context)
 
 

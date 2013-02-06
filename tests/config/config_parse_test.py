@@ -602,7 +602,7 @@ jobs:
 
         """
         test_config = yaml.load(test_config)
-        expected = "Duplicate action name action0_0 at config.Job.test_job0.actions"
+        expected = "Duplicate name action0_0 at config.Job.test_job0.actions"
         exception = assert_raises(ConfigError, valid_config, test_config)
         assert_in(expected, str(exception))
 
@@ -834,7 +834,7 @@ class NodeConfigTestCase(TestCase):
                       command: "echo 1"
         """)
         test_config = yaml.load(test_config)
-        expected_msg = "NodePool pool1 contains another NodePool pool0"
+        expected_msg = "NodePool pool1 contains other NodePools: pool0"
         exception = assert_raises(ConfigError, valid_config, test_config)
         assert_in(expected_msg, str(exception))
 
