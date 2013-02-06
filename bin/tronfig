@@ -117,7 +117,3 @@ if __name__ == '__main__':
 
     else:
         update_with_editor(client, config_name)
-
-    if options.save_config:
-        # Save our command options (NOT THE CONFIG FILE)
-        commands.save_config(options)

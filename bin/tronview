@@ -5,7 +5,7 @@ import sys
 
 import tron
 from tron import commands
-from tron.commands import display
+from tron.commands import display, ExitCode
 from tron.commands.client import Client, get_object_type_from_identifier
 from tron.commands.client import TronObjectType
 
@@ -131,16 +131,14 @@ def main():
         output = get_view_output(args[0], options)
 
     if not output:
-        print >>sys.stderr, "What is a %s?" % args[0]
-        sys.exit(1)
+        print >>sys.stderr, "Unrecognized identifier: %s" % args[0]
+        sys.exit(ExitCode.fail)
 
     if sys.stdout.isatty() and len(output.split('\n')) > console_height():
         display.view_with_less(output, options.display_color)
     else:
         print output
 
-    if options.save_config:
-        commands.save_config(options)
 
 if __name__ == '__main__':
     try:
