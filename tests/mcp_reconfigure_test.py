@@ -1,12 +1,11 @@
 """Tests for reconfiguring mcp."""
 import tempfile
 
-import yaml
 from testify import TestCase, run, setup, assert_equal, teardown, suite
 
 from tests.assertions import assert_length
 from tron import mcp, event
-from tron.config import config_parse
+from tron.config import config_parse, schema
 from tron.serialize import filehandler
 
 class MCPReconfigureTestCase(TestCase):
@@ -128,14 +127,15 @@ class MCPReconfigureTestCase(TestCase):
     def _get_config(self, idx, output_dir):
         config = dict(self.post_config if idx else self.pre_config)
         config['output_stream_dir'] = output_dir
-        return yaml.dump(config)
+        return config
 
     @setup
     def setup_mcp(self):
         self.test_dir = tempfile.mkdtemp()
         self.mcp = mcp.MasterControlProgram(self.test_dir, 'config')
-        config = self._get_config(0, self.test_dir)
-        self.mcp.apply_config(config_parse.load_config(config))
+        config = {schema.MASTER_NAMESPACE: self._get_config(0, self.test_dir)}
+        container = config_parse.ConfigContainer.create(config)
+        self.mcp.apply_config(container)
 
     @teardown
     def teardown_mcp(self):
@@ -144,9 +144,9 @@ class MCPReconfigureTestCase(TestCase):
         filehandler.FileHandleManager.reset()
 
     def reconfigure(self):
-        config = self._get_config(1, self.test_dir)
-        contents = config_parse.load_config(config)
-        self.mcp.apply_config(contents, reconfigure=True)
+        config = {schema.MASTER_NAMESPACE: self._get_config(1, self.test_dir)}
+        container = config_parse.ConfigContainer.create(config)
+        self.mcp.apply_config(container, reconfigure=True)
 
     @suite('integration')
     def test_job_list(self):

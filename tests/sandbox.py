@@ -13,6 +13,7 @@ import functools
 from testify import TestCase, setup, teardown, turtle
 
 from tron.commands import client
+from tron.config import manager, schema
 
 
 # Used for getting the locations of the executable
@@ -116,7 +117,7 @@ class TronSandbox(object):
         self.log_file       = self.abs_path('tron.log')
         self.log_conf       = self.abs_path('logging.conf')
         self.pid_file       = self.abs_path('tron.pid')
-        self.config_file    = self.abs_path('tron_config.yaml')
+        self.config_path    = self.abs_path('configs/')
         self.port           = find_unused_port()
         self.host           = 'localhost'
         self.api_uri        = 'http://%s:%s' % (self.host, self.port)
@@ -157,8 +158,7 @@ class TronSandbox(object):
 
     def save_config(self, config_text):
         """Save the initial tron configuration."""
-        with open(self.config_file, 'w') as f:
-            f.write(config_text)
+        manager.create_new_config(self.config_path, config_text)
 
     def run_command(self, command_name, args=None, stdin_lines=None):
         """Run the command by name and return (stdout, stderr)."""
@@ -185,16 +185,16 @@ class TronSandbox(object):
 
     def trond(self, args=None):
         args = list(args) if args else []
-        args += ['--working-dir=%s' % self.tmp_dir,
-                   '--pid-file=%s'  % self.pid_file,
-                   '--port=%d'      % self.port,
-                   '--host=%s'      % self.host,
-                   '--config=%s'    % self.config_file,
-                   '--log-conf=%s'  % self.log_conf]
+        args += ['--working-dir=%s'     % self.tmp_dir,
+                   '--pid-file=%s'      % self.pid_file,
+                   '--port=%d'          % self.port,
+                   '--host=%s'          % self.host,
+                   '--config-path=%s'   % self.config_path,
+                   '--log-conf=%s'      % self.log_conf]
 
         self.run_command('trond', args)
         wait_on_sandbox(lambda: bool(self.client.home()))
 
-    def tronfig(self, config_content):
-        args = ['--server', self.api_uri, '-']
+    def tronfig(self, config_content, name=schema.MASTER_NAMESPACE):
+        args = ['--server', self.api_uri, name, '-']
         return self.run_command('tronfig', args, stdin_lines=config_content)

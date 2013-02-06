@@ -37,7 +37,6 @@ DOUBLE_ECHO_CONFIG = SINGLE_ECHO_CONFIG + """
                     as %(year)s-%(month)s-%(day)s' && false" """
 
 ALT_NAMESPACED_ECHO_CONFIG = """
-config_name: "ohce"
 jobs:
   - name: "echo_job"
     node: local
@@ -51,23 +50,6 @@ TOUCH_CLEANUP_FMT = """
       command: "echo 'at last'"
 """
 
-RECONFIGURE_RESULT = """MASTER:
-  config_name: MASTER
-  jobs:
-  - actions:
-    - {command: echo 'Echo!', name: echo_action}
-    - {command: 'echo ''Today is %(shortdate)s, which is the same as %(year)s-%(month)s-%(day)s''
-        && false', name: another_echo_action}
-    cleanup_action: {command: echo 'at last'}
-    name: echo_job
-    node: local
-    schedule: interval 1 hour
-  nodes:
-  - {hostname: localhost, name: local}
-  ssh_options: {agent: true}
-  state_persistence: {name: state_data.shelve, store_type: shelve}
-"""
-
 
 class TrondTestCase(sandbox.SandboxTestCase):
 
@@ -77,7 +59,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
         self.sandbox.save_config(SINGLE_ECHO_CONFIG)
         self.sandbox.trond()
         # make sure it got in
-        assert_equal(client.config(), SINGLE_ECHO_CONFIG)
+        assert_equal(client.config('MASTER'), SINGLE_ECHO_CONFIG)
 
         # reconfigure and confirm results
         second_config = DOUBLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT
@@ -85,11 +67,10 @@ class TrondTestCase(sandbox.SandboxTestCase):
         events = client.events()
         assert_equal(events[0]['name'], 'restoring')
         assert_equal(events[1]['name'], 'run_created')
-        assert_equal(client.config(), RECONFIGURE_RESULT)
+        assert_equal(client.config('MASTER'), second_config)
         
         # reconfigure, by uploading a third configuration
-        third_config = ALT_NAMESPACED_ECHO_CONFIG
-        self.sandbox.tronfig(third_config)
+        self.sandbox.tronfig(ALT_NAMESPACED_ECHO_CONFIG, name='ohce')
 
         job1 = {
             'action_names': ['echo_action', 'cleanup', 'another_echo_action'],
@@ -121,7 +102,6 @@ class TrondTestCase(sandbox.SandboxTestCase):
         }
         result = self.sandbox.client.home()
         assert_equal(result, expected)
-
 
         # run the job and check its output
         self.sandbox.tronctl(['start', 'MASTER_echo_job'])
@@ -189,7 +169,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
         self.sandbox.trond()
         self.sandbox.tronfig(SERVICE_CONFIG)
 
-        wait_on_config = lambda: 'fake_service' in client.config()
+        wait_on_config = lambda: 'fake_service' in client.config('MASTER')
         sandbox.wait_on_sandbox(wait_on_config)
 
         self.sandbox.tronctl(['start', 'MASTER_fake_service'])

@@ -1,0 +1,22 @@
+#
+# Named Configuration Template
+#
+# You are creating or editing a named configuration.  Add your jobs and services
+# in the lists below.
+#
+# The following node, node pools, and command_context are made available from
+# the master configuration.
+#
+# Node and NodePool names:
+# -----------------------
+# %(node_names)s
+#
+#
+# Command Context:
+# ---------------
+# %(command_context)s
+#
+#
+# All the lines above will be ignored and removed from your configuration.
+# Configuration starts below this line.
+###################################END#HEADER###################################

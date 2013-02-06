@@ -1,163 +1,120 @@
-import os
-import tempfile
+import mock
 
-from testify import teardown, setup, TestCase, run, assert_equal, assert_raises, assert_in
-from tests.assertions import assert_call
-from tests.testingutils import Turtle
+from testify import setup, TestCase, run, assert_equal
+from testify.assertions import assert_in
+from tests.testingutils import autospec_method
+from tron import mcp
 
 from tron.api.controller import JobController, ConfigController
-from tron.config.config_parse import update_config, _initialize_original_config, ConfigError
+from tron.config import ConfigError, manager, config_parse
+from tron.core import job
 
 
 class JobControllerTestCase(TestCase):
 
     @setup
     def setup_controller(self):
-        self.jobs           = [Turtle(), Turtle(), Turtle()]
-        self.mcp            = Turtle(get_jobs=lambda: self.jobs)
+        self.jobs           = [mock.create_autospec(job.JobScheduler)]
+        self.mcp            = mock.create_autospec(mcp.MasterControlProgram)
         self.controller     = JobController(self.mcp)
 
     def test_disable_all(self):
+        self.mcp.get_jobs.return_value = self.jobs
         self.controller.disable_all()
+        self.mcp.get_jobs.assert_called_with()
         for job in self.jobs:
-            assert_call(job.disable, 0)
+            job.disable.assert_called_with()
 
     def test_enable_all(self):
+        self.mcp.get_jobs.return_value = self.jobs
         self.controller.enable_all()
+        self.mcp.get_jobs.assert_called_with()
         for job in self.jobs:
-            assert_call(job.enable, 0)
+            job.enable.assert_called_with()
 
 
 class ConfigControllerTestCase(TestCase):
 
-    BASE_CONFIG = """
-config_name: MASTER
-nodes:
-- {hostname: localhost, name: local}
-ssh_options: {agent: true}
-state_persistence: {name: state_data.shelve, store_type: shelve}
-"""
-
-    TEST_CONFIG_UPDATE = BASE_CONFIG + """
-jobs:
-- actions:
-  - {command: echo 'Echo!', name: echo_action}
-  - {command: 'echo ''Today is %(shortdate)s, which is the same as %(year)s-%(month)s-%(day)s''
-      && false', name: another_echo_action}
-  cleanup_action: {command: echo 'at last'}
-  name: echo_job
-  node: local
-  schedule: interval 1 hour
-"""
-
-    TEST_CONFIG_RESULT = """MASTER:
-  config_name: MASTER
-  jobs:
-  - actions:
-    - {command: echo 'Echo!', name: echo_action}
-    - {command: 'echo ''Today is %(shortdate)s, which is the same as %(year)s-%(month)s-%(day)s''
-        && false', name: another_echo_action}
-    cleanup_action: {command: echo 'at last'}
-    name: echo_job
-    node: local
-    schedule: interval 1 hour
-  nodes:
-  - {hostname: localhost, name: local}
-  ssh_options: {agent: true}
-  state_persistence: {name: state_data.shelve, store_type: shelve}
-"""
-
     @setup
     def setup_controller(self):
-        self.filename = os.path.join(tempfile.gettempdir(), 'test_config')
-        self.controller = ConfigController(self.filename)
+        self.mcp = mock.create_autospec(mcp.MasterControlProgram)
+        self.manager = mock.create_autospec(manager.ConfigManager)
+        self.mcp.get_config_manager.return_value = self.manager
+        self.controller = ConfigController(self.mcp)
 
-    @teardown
-    def teardown_controller(self):
-        try:
-            os.unlink(self.filename)
-        except OSError:
-            pass
+    def test_render_template(self):
+        config_content = "asdf asdf"
+        container = self.manager.load.return_value = mock.create_autospec(
+            config_parse.ConfigContainer)
+        container.get_node_names.return_value = ['one', 'two', 'three']
+        container.get_master.return_value.command_context = {'zing': 'stars'}
+        content = self.controller.render_template(config_content)
+        assert_in('# one\n# three\n# two\n', content)
+        assert_in('# %-30s: %s' % ('zing', 'stars'), content)
+        assert_in(config_content, content)
 
-    def test_read_config(self):
-        content = "12345"
-        with open(self.filename, 'w') as fh:
-            fh.write(content)
-            
-        assert_equal(self.controller.read_config(), content)
+    def test_strip_header_master(self):
+        name, content = 'MASTER', mock.Mock()
+        assert_equal(self.controller.strip_header(name, content), content)
 
-    def test_read_config_missing(self):
-        self.controller.filepath = '/bogggusssss'
-        assert not self.controller.read_config()
+    def test_strip_header_named(self):
+        expected = "\nthing"
+        name, content = 'something', self.controller.TEMPLATE + expected
+        assert_equal(self.controller.strip_header(name, content), expected)
 
-    def test_rewrite_config(self):
-        assert self.controller.rewrite_config(self.TEST_CONFIG_UPDATE)
-        assert_equal(self.controller.read_config(), self.TEST_CONFIG_RESULT)
+    def test_strip_header_named_missing(self):
+        name, content = 'something', 'whatever content'
+        assert_equal(self.controller.strip_header(name, content), content)
 
-    def test_rewrite_config_missing(self):
-        self.controller.filepath = '/bogggusssss'
-        assert not self.controller.rewrite_config(self.TEST_CONFIG_UPDATE)
+    def test_get_config_content_new(self):
+        self.manager.__contains__.return_value = False
+        content = self.controller._get_config_content('name')
+        assert_equal(content, self.controller.DEFAULT_NAMED_CONFIG)
+        assert not self.manager.read_raw_config.call_count
 
-    def test_missing_job_node(self):
-        test_config = self.BASE_CONFIG + """
-jobs:
-    -
-        name: "test_job0"
-        node: bogussssss
-        schedule: "interval 20s"
-        actions:
-            -
-                name: "action0_0"
-                command: "test_command0.0"
-        cleanup_action:
-            command: "test_command0.1"
-            requires: [action0_0]
-        """
-        assert_raises(ConfigError, update_config, self.filename, test_config)
-        
-    def test_missing_service_node(self):
-        test_config = self.BASE_CONFIG + """
-services:
-    -
-        name: "test_job0"
-        node: bogusssss
-        schedule: "interval 20s"
-        actions:
-            -
-                name: "action0_0"
-                command: "test_command0.0"
-        cleanup_action:
-            command: "test_command0.1"
-"""
-        assert_raises(ConfigError, update_config, self.filename, test_config)
+    def test_get_config_content_old(self):
+        self.manager.__contains__.return_value = True
+        name = 'the_name'
+        content = self.controller._get_config_content(name)
+        assert_equal(content, self.manager.read_raw_config.return_value)
+        self.manager.read_raw_config.assert_called_with(name)
 
+    def test_read_config_master(self):
+        self.manager.__contains__.return_value = True
+        name = 'MASTER'
+        resp = self.controller.read_config(name)
+        self.manager.read_raw_config.assert_called_with(name)
+        assert_equal(resp, self.manager.read_raw_config.return_value)
 
-    def test_valid_original_config(self):
-        test_config = self.BASE_CONFIG + """
-jobs:
-    -
-        name: "test_job0"
-        node: node0
-        schedule: "interval 20s"
-        actions:
-        """
-        expected_result = {'MASTER': 
-                           {'nodes': 
-                            [{'hostname': 'localhost',
-                              'name': 'local'}],
-                            'config_name': 'MASTER',
-                            'jobs': 
-                            [{'node': 'node0',
-                              'name': 'test_job0',
-                              'actions': None,
-                              'schedule': 'interval 20s'}],
-                            'ssh_options': {'agent': True},
-                            'state_persistence': {'store_type': 'shelve',
-                                                  'name': 'state_data.shelve'}}}
-        fd = open(self.filename,'w')
-        fd.write(test_config)
-        fd.close()
-        assert_equal(expected_result, _initialize_original_config(self.filename))
+    def test_read_config_named(self):
+        name = 'some_name'
+        autospec_method(self.controller._get_config_content)
+        autospec_method(self.controller.render_template)
+        resp = self.controller.read_config(name)
+        self.controller._get_config_content.assert_called_with(name)
+        self.controller.render_template.assert_called_with(
+            self.controller._get_config_content.return_value)
+        assert_equal(resp, self.controller.render_template.return_value)
+
+    def test_update_config(self):
+        autospec_method(self.controller.strip_header)
+        name, content = None, mock.Mock()
+        assert not self.controller.update_config(name, content)
+        striped_content = self.controller.strip_header.return_value
+        self.manager.write_config.assert_called_with(name, striped_content)
+        self.mcp.reconfigure.assert_called_with()
+        self.controller.strip_header.assert_called_with(name, content)
+
+    def test_update_config_failure(self):
+        autospec_method(self.controller.strip_header)
+        striped_content = self.controller.strip_header.return_value
+        name, content = None, mock.Mock()
+        self.manager.write_config.side_effect = ConfigError("It broke")
+        error = self.controller.update_config(name, striped_content)
+        assert_equal(error, "It broke")
+        self.manager.write_config.assert_called_with(name, striped_content)
+        assert not self.mcp.reconfigure.call_count
+
 
 if __name__ == "__main__":
     run()

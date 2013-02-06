@@ -1,6 +1,7 @@
 from contextlib import contextmanager
 import logging
 import functools
+import mock
 
 from testify import  TestCase, setup
 from testify import class_setup, class_teardown
@@ -112,3 +113,9 @@ class Turtle(object):
         new_turtle = type(self)()
         self.returns.append(new_turtle)
         return new_turtle
+
+
+def autospec_method(method, *args, **kwargs):
+    """create an autospec for an instance method."""
+    mocked_method = mock.create_autospec(method, *args, **kwargs)
+    setattr(method.im_self, method.__name__, mocked_method)

@@ -1,16 +1,14 @@
-import os
 import shutil
 import tempfile
 
 import mock
 from testify import TestCase, setup, teardown
 from testify import  assert_equal, run
-from testify.utils import turtle
-from tests import mocks
 from tests.assertions import assert_call, assert_length
-from tests.testingutils import Turtle
+from tests.testingutils import Turtle, autospec_method
 
 from tron import mcp
+from tron.config import config_parse
 
 
 class MasterControlProgramTestCase(TestCase):
@@ -19,34 +17,27 @@ class MasterControlProgramTestCase(TestCase):
 
     @setup
     def setup_mcp(self):
-        self.working_dir        = tempfile.mkdtemp()
-        self.config_file        = tempfile.NamedTemporaryFile(
-                                    dir=self.working_dir, delete=False)
-        self.mcp                = mcp.MasterControlProgram(
-                                    self.working_dir, self.config_file.name)
-
-        with open(self.config_file.name, 'w') as fh:
-            with open(self.TEST_CONFIG, 'r') as rh:
-                fh.write(rh.read())
+        self.working_dir    = tempfile.mkdtemp()
+        self.config_path    = tempfile.mkdtemp()
+        self.mcp            = mcp.MasterControlProgram(
+                                        self.working_dir, self.config_path)
 
     @teardown
     def teardown_mcp(self):
         self.mcp.nodes.clear()
         self.mcp.event_manager.clear()
-        os.unlink(self.config_file.name)
+        shutil.rmtree(self.config_path)
+        shutil.rmtree(self.working_dir)
 
     def test_reconfigure(self):
-        self.mcp._load_config = Turtle()
-        self.mcp.state_manager = mock.Mock()
-        cm = mocks.MockContextManager()
-        self.mcp.state_manager.disabled = mock.Mock(return_value=cm)
-
+        autospec_method(self.mcp._load_config)
+        self.mcp.state_manager = mock.MagicMock()
         self.mcp.reconfigure()
-        assert_call(self.mcp._load_config, 0, reconfigure=True)
+        self.mcp._load_config.assert_called_with(reconfigure=True)
         self.mcp.state_manager.disabled.assert_called_with()
 
     def test_ssh_options_from_config(self):
-        ssh_conf = turtle.Turtle(agent=False, identities=[])
+        ssh_conf = mock.Mock(agent=False, identities=[])
         ssh_options = self.mcp._ssh_options_from_config(ssh_conf)
 
         assert_equal(ssh_options['agent'], False)
@@ -57,6 +48,18 @@ class MasterControlProgramTestCase(TestCase):
         self.mcp.graceful_shutdown()
         for job_sched in self.mcp.get_jobs():
             assert job_sched.shutdown_requested
+
+    @mock.patch('tron.mcp.PersistenceManagerFactory', autospec=True)
+    def test_apply_config(self, mock_state_factory):
+        config_container = mock.create_autospec(config_parse.ConfigContainer)
+        master_config = config_container.get_master.return_value
+        self.mcp.apply_config(config_container)
+        mock_state_factory.from_config.assert_called_with(
+            master_config.state_persistence)
+        assert_equal(self.mcp.output_stream_dir, master_config.output_stream_dir)
+        assert_equal(self.mcp.time_zone, master_config.time_zone)
+        assert_equal(self.mcp.context.base, master_config.command_context)
+
 
 class MasterControlProgramRestoreStateTestCase(TestCase):
 
