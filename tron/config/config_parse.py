@@ -77,16 +77,14 @@ class UniqueNameDict(dict):
         super(UniqueNameDict, self).__setitem__(key, value)
 
 
-# TODO: fix docstring
 def build_type_validator(validator, error_fmt):
     """Create a validator function using `validator` to validate the value.
         validator - a function which takes a single argument `value`
         error_fmt - a string which accepts two format variables (path, value)
 
-        Returns a function func(path, value, optional=False) where
-            path - the hierarchical path in the configuration
+        Returns a function func(value, config_context) where
             value - the value to validate
-            optional - flag to set if this value is optional
+            config_context - a ConfigContext object
             Returns True if the value is valid
     """
     def f(value, config_context):
@@ -125,7 +123,7 @@ valid_populated_list = build_type_validator(
 valid_list = build_type_validator(
     lambda s: isinstance(s, list), 'Value at %s is not a list: %s')
 
-valid_str  = build_type_validator(
+valid_string  = build_type_validator(
     lambda s: isinstance(s, basestring), 'Value at %s is not a string: %s')
 
 valid_dict = build_type_validator(
@@ -140,6 +138,9 @@ def build_format_string_validator(valid_keys):
         valid_keys - a sequence of strings
     """
     def validator(value, config_context):
+        if config_context.is_local():
+            return valid_string(value, config_context)
+
         keys = set(valid_keys) | set(config_context.command_context.keys())
         context = dict.fromkeys(keys, ' ')
         try:
@@ -158,28 +159,36 @@ class ConfigContext(object):
     configuration outside of the immediate configuration dictionary.
     """
 
-    def __init__(self, path, nodes, command_context, namespace=None):
+    def __init__(self, path, nodes, command_context, namespace, local=False):
         self.path = path
-        self.nodes = nodes
+        self.nodes = set(nodes or [])
         self.command_context = command_context or {}
         self.namespace = namespace
+        self.local = local
 
-    def build_child_context(self, path, node=None):
+    def build_child_context(self, path):
         """Construct a new ConfigContext based on this one."""
         path = '%s.%s' % (self.path, path)
-        node = node or self.nodes
-        return ConfigContext(path, node, self.command_context, self.namespace)
+        args = path, self.nodes, self.command_context, self.namespace, self.local
+        return ConfigContext(*args)
+
+    def is_local(self):
+        return self.local
 
 
 class NullConfigContext(object):
     path = ''
-    nodes = None
+    nodes = set()
     command_context = {}
     namespace = MASTER_NAMESPACE
 
     @staticmethod
     def build_child_context(_):
         return NullConfigContext
+
+    @staticmethod
+    def is_local():
+        return False
 
 
 # TODO: extract code
@@ -192,7 +201,6 @@ class Validator(object):
     validators              = {}
     optional                = False
 
-    # TODO: should this use null config context?
     def validate(self, in_dict, config_context=NullConfigContext):
         if self.optional and in_dict is None:
             return None
@@ -299,14 +307,14 @@ class Validator(object):
         return valid_input
 
 
-def valid_output_stream_dir(output_dir, _):
+def valid_output_stream_dir(output_dir, config_context):
     """Returns a valid string for the output directory, or raises ConfigError
     if the output_dir is not valid.
     """
-    # TODO: validate string
     if not output_dir:
         return
 
+    valid_string(output_dir, config_context)
     if not os.path.isdir(output_dir):
         msg = "output_stream_dir '%s' is not a directory"
         raise ConfigError(msg % output_dir)
@@ -322,22 +330,22 @@ def valid_command_context(context, config_context):
     return FrozenDict(**valid_dict(context or {}, config_context))
 
 
-def valid_time_zone(tz):
+def valid_time_zone(tz, config_context):
     if tz is None:
         return None
+    valid_string(tz, config_context)
     try:
-        # TODO: validate str
         return pytz.timezone(tz)
     except pytz.exceptions.UnknownTimeZoneError:
         raise ConfigError('%s is not a valid time zone' % tz)
 
 
-# TODO: move
-def build_context(validation_func, name):
-    def func(value, config_context):
-        context = config_context.build_child_context(name)
-        return validation_func(value, context)
-    return func
+def valid_node_name(value, config_context):
+    valid_identifier(value, config_context)
+    if not config_context.is_local() and value not in config_context.nodes:
+        msg = "Unknown node name %s at %s"
+        raise ConfigError(msg % (value, config_context.path))
+    return value
 
 
 class ValidateSSHOptions(Validator):
@@ -349,8 +357,8 @@ class ValidateSSHOptions(Validator):
         'identities':           ()
     }
     validators = {
-        'agent':                build_context(valid_bool, 'ssh_options.agent'),
-        'identities':           build_context(valid_list, 'ssh_options.identities')
+        'agent':                valid_bool,
+        'identities':           valid_list,
     }
 
 valid_ssh_options = ValidateSSHOptions()
@@ -367,15 +375,15 @@ valid_notification_options = ValidateNotificationOptions()
 class ValidateNode(Validator):
     config_class =              ConfigNode
     validators = {
-        'name':                 build_context(valid_identifier, 'nodes'),
-        'username':             build_context(valid_str, 'nodes'),
-        'hostname':             build_context(valid_str, 'nodes')
+        'name':                 valid_identifier,
+        'username':             valid_string,
+        'hostname':             valid_string,
     }
 
     def do_shortcut(self, node):
         """Nodes can be specified with just a hostname string."""
         if isinstance(node, basestring):
-            return ConfigNode(hostname=node, name=node)
+            return ConfigNode(hostname=node, name=node, username=None)
 
     def set_defaults(self, output_dict, _):
         output_dict.setdefault('name', output_dict['hostname'])
@@ -387,8 +395,8 @@ valid_node = ValidateNode()
 class ValidateNodePool(Validator):
     config_class =              ConfigNodePool
     validators = {
-        'name':                 build_context(valid_identifier, 'node_pools'),
-        'nodes':                build_context(valid_populated_list, 'node_pools')
+        'name':                 valid_identifier,
+        'nodes':                valid_populated_list,
     }
 
     def cast(self, node_pool, _context):
@@ -424,7 +432,7 @@ class ValidateAction(Validator):
     validators = {
         'name':                 valid_action_name,
         'command':              build_format_string_validator(context_keys),
-        'node':                 valid_identifier,
+        'node':                 valid_node_name,
     }
 
     # TODO: cleanup
@@ -473,7 +481,7 @@ class ValidateCleanupAction(Validator):
     validators = {
         'name':                 valid_identifier,
         'command':              build_format_string_validator(context_keys),
-        'node':                 valid_identifier
+        'node':                 valid_node_name,
     }
 
     # TODO: cleanup
@@ -512,7 +520,7 @@ class ValidateJob(Validator):
         'all_nodes':            valid_bool,
         'actions':              valid_populated_list,
         'cleanup_action':       valid_cleanup_action,
-        'node':                 valid_identifier,
+        'node':                 valid_node_name,
         'queueing':             valid_bool,
         'enabled':              valid_bool,
         'allow_overlap':        valid_bool,
@@ -584,7 +592,7 @@ class ValidateService(Validator):
         'command':              build_format_string_validator(context_keys),
         'monitor_interval':     valid_float,
         'count':                valid_int,
-        'node':                 valid_identifier,
+        'node':                 valid_node_name,
         'restart_interval':     valid_float,
     }
 
@@ -603,9 +611,9 @@ class ValidateStatePersistence(Validator):
     }
 
     validators = {
-        'name':                 valid_str,
-        'store_type':           valid_str,
-        'connection_details':   valid_str,
+        'name':                 valid_string,
+        'store_type':           valid_string,
+        'connection_details':   valid_string,
         'buffer_size':          valid_int,
     }
 
@@ -630,6 +638,7 @@ def parse_sub_config(config, cname, valid, name_dict, config_context):
     config[cname] = FrozenDict(**target_dict)
 
 
+# TODO: cleanup with above
 def validate_jobs_and_services(config, config_context):
     """Validate jobs and services."""
 
@@ -679,47 +688,24 @@ class ValidateConfig(Validator):
         """
         for node_pool in config['node_pools'].itervalues():
             for node_name in node_pool.nodes:
-                node = config['nodes'].get(node_name)
-                if node:
+                if config['nodes'].get(node_name):
                     continue
                 msg = "NodePool %s contains another NodePool %s. "
                 raise ConfigError(msg % (node_pool.name, node_name))
 
-    def post_validation(self, config, config_context):
+    def post_validation(self, config, _):
         """Validate a non-named config."""
 
-        # TODO: add nodes,
         config_context = ConfigContext(
             'config', None, config.get('command_context'), MASTER_NAMESPACE)
 
-        validate_jobs_and_services(config, config_context)
         node_names = UniqueNameDict('Node and NodePool names must be unique %s')
         parse_sub_config(config, 'nodes',       valid_node,         node_names, config_context)
         parse_sub_config(config, 'node_pools',  valid_node_pool,    node_names, config_context)
-        validate_node_names(config['jobs'], config['services'], node_names)
         self.validate_node_pool_nodes(config)
-        # TODO: this can be done within the Job/Service config with a parent context
-        # TODO: also move constants into Job/Service parser
 
-
-# TODO: make sure this is called with master config_context
-# TODO(0.6): validate inline in Validation class
-def validate_node_names(jobs, services, node_names):
-
-    def tasks_from_job(job):
-        for action in job.actions.itervalues():
-            yield action
-        if job.cleanup_action:
-            yield job.cleanup_action
-        yield job
-
-    job_tasks = itertools.chain.from_iterable(
-                    tasks_from_job(job) for job in jobs.itervalues())
-    task_list = itertools.chain(job_tasks, services.itervalues())
-    for task in task_list:
-        if task.node and task.node not in node_names:
-            raise ConfigError("Unknown node %s configured for %s %s" % (
-                task.node, task.__class__.__name__, task.name))
+        config_context.nodes = set(node_names)
+        validate_jobs_and_services(config, config_context)
 
 
 class ValidateNamedConfig(Validator):
@@ -734,20 +720,9 @@ class ValidateNamedConfig(Validator):
         'services':             ()
     }
 
-    validators = {
-        'config_name':          valid_identifier,
-    }
-
     optional = False
 
     def post_validation(self, config, config_context):
-        """Validate a named config."""
-        # TODO: add nodes,
-        config_context = ConfigContext(
-            'config',
-            None,
-            config_context.command_context,
-            config['config_name'])
         validate_jobs_and_services(config, config_context)
 
 
@@ -758,7 +733,27 @@ valid_named_config = ValidateNamedConfig()
 def validate_fragment(name, fragment):
     if name == MASTER_NAMESPACE:
         return valid_config(fragment)
-    return valid_named_config(fragment)
+    # Create a local context, no nodes or command_context
+    config_context = ConfigContext(name, None, None, name, local=True)
+    return valid_named_config(fragment, config_context=config_context)
+
+
+def get_nodes_from_master_namespace(master):
+    return set(itertools.chain(master.nodes, master.node_pools))
+
+
+def validate_config_mapping(config_mapping):
+    if MASTER_NAMESPACE not in config_mapping:
+        msg = "A config mapping requires a %s namespace"
+        raise ConfigError(msg % MASTER_NAMESPACE)
+
+    master = valid_config(config_mapping.pop(MASTER_NAMESPACE))
+    nodes = get_nodes_from_master_namespace(master)
+    yield MASTER_NAMESPACE, master
+
+    for name, content in config_mapping.iteritems():
+        context = ConfigContext(name, nodes, master.command_context, name)
+        yield name, valid_named_config(content, config_context=context)
 
 
 class ConfigContainer(object):
@@ -772,15 +767,7 @@ class ConfigContainer(object):
 
     @classmethod
     def create(cls, config_mapping):
-        if MASTER_NAMESPACE not in config_mapping:
-            msg = "%s requires a %s"
-            raise ConfigError(msg % (cls.__name__, MASTER_NAMESPACE))
-
-        def build_mapping():
-            for name, content in config_mapping.iteritems():
-                yield name, validate_fragment(name, content)
-
-        container = cls(dict(build_mapping()))
+        container = cls(dict(validate_config_mapping(config_mapping)))
         container.validate()
         return container
 
@@ -788,19 +775,18 @@ class ConfigContainer(object):
         """Validate the integrity of all the configuration fragments as a whole.
         """
         collate_jobs_and_services(self)
-        node_names = self.get_node_names()
-        for name, fragment in self.iteritems():
-            validate_node_names(fragment.jobs, fragment.services, node_names)
 
     def add(self, name, config_content):
-        self.configs[name] = validate_fragment(name, config_content)
+        master = self.get_master()
+        nodes = self.get_node_names()
+        context = ConfigContext(name, nodes, master.command_context, name)
+        self.configs[name] = valid_named_config(config_content, context)
 
     def get_master(self):
         return self.configs[MASTER_NAMESPACE]
 
     def get_node_names(self):
-        master = self.get_master()
-        return set(itertools.chain(master.nodes, master.node_pools))
+        return get_nodes_from_master_namespace(self.get_master())
 
     def __getitem__(self, name):
         return self.configs[name]

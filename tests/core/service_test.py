@@ -181,12 +181,11 @@ class ServiceCollectionTestCase(TestCase):
         mock_service.disable.assert_called_with()
         assert_not_in(mock_service, self.collection.services)
 
-    # TODO: this test can flake
     def test_filter_by_name(self):
         self._add_service()
         services_names = [serv.name for serv in self.service_list[:2]]
         self.collection._filter_by_name(services_names)
-        assert_equal(list(self.collection), self.service_list[:2])
+        assert_equal(set(self.collection), set(self.service_list[:2]))
 
     def test_service_exists_false(self):
         mock_service = mock.create_autospec(service.Service)

@@ -4,6 +4,7 @@ import shutil
 import stat
 import tempfile
 from textwrap import dedent
+import textwrap
 
 import mock
 
@@ -41,6 +42,8 @@ node_pools:
 class ConfigTestCase(TestCase):
     BASE_CONFIG = """
 output_stream_dir: "/tmp"
+
+time_zone: "EST"
 
 ssh_options:
     agent: true
@@ -148,7 +151,7 @@ services:
                 identities=['tests/test_id_rsa'],
             ),
             notification_options=None,
-            time_zone=None,
+            time_zone=pytz.timezone("EST"),
             state_persistence=config_parse.DEFAULT_STATE_PERSISTENCE,
             nodes=FrozenDict({
                 'node0': ConfigNode(name='node0', username=os.environ['USER'], hostname='node0'),
@@ -343,7 +346,7 @@ jobs:
         actions:
             -
                 name: "action1_0"
-                command: "test_command1.0"
+                command: "test_command1.0 %(some_var)s"
             -
                 name: "action1_1"
                 command: "test_command1.1"
@@ -442,7 +445,7 @@ services:
                             node=None),
                         'action1_0': ConfigAction(
                             name='action1_0',
-                            command='test_command1.0',
+                            command='test_command1.0 %(some_var)s',
                             requires=(),
                             node=None)
                     }),
@@ -541,7 +544,7 @@ services:
             )
         )
 
-        test_config = valid_named_config(yaml.load(self.config))
+        test_config = validate_fragment('test_namespace', yaml.load(self.config))
         # we could just do a big assert_equal here, but it would be hella hard
         # to debug failures that way.
         assert_equal(test_config.jobs['test_job0'], expected.jobs['test_job0'])
@@ -739,6 +742,7 @@ services:
 
     def test_overlap_job_service_names(self):
         tron_config = dict(
+            nodes=['localhost'],
             jobs=[
                 dict(
                     name="sameName",
@@ -768,7 +772,7 @@ services:
             schedule="constant",
             actions=[]
         )
-        config_context = config_parse.ConfigContext('config', None, None)
+        config_context = config_parse.ConfigContext('config', ['localhost'], None, None)
         expected_msg = "Value at config.Job.job_name.actions is not a list with items"
         exception = assert_raises(ConfigError, valid_job, job_config, config_context)
         assert_in(expected_msg, str(exception))
@@ -808,9 +812,9 @@ class NodeConfigTestCase(TestCase):
                             command: "test_command0.0"
             """)
         test_config = yaml.load(test_config)
-        expected_msg = "some_unknown_node configured for ConfigJob test_job0"
+        expected_msg = "Unknown node name some_unknown_node at config.Job.test_job0.node"
         exception = assert_raises(ConfigError, valid_config, test_config)
-        assert_in(expected_msg, str(exception))
+        assert_equal(expected_msg, str(exception))
 
     def test_invalid_nested_node_pools(self):
         test_config = dedent("""
@@ -1047,29 +1051,27 @@ class BuildFormatStringValidatorTestCase(TestCase):
 
 class ConfigContainerTestCase(TestCase):
 
+    config = BASE_CONFIG + textwrap.dedent(
+        """
+        command_context:
+            some_var: "The string"
+        """)
+
     @setup
     def setup_container(self):
         other_config = yaml.load(NamedConfigTestCase.config)
         self.config_mapping = {
-            MASTER_NAMESPACE: valid_config(yaml.load(BASE_CONFIG)),
+            MASTER_NAMESPACE: valid_config(yaml.load(self.config)),
             'other': validate_fragment('other', other_config)}
         self.container = config_parse.ConfigContainer(self.config_mapping)
 
-    @mock.patch('tron.config.config_parse.ConfigContainer.validate', autospec=True)
-    @mock.patch('tron.config.config_parse.validate_fragment', autospec=True)
-    def test_create(self, mock_validate_fragment, mock_validate):
+    def test_create(self):
         config_mapping = {
-            MASTER_NAMESPACE: yaml.load(BASE_CONFIG),
+            MASTER_NAMESPACE: yaml.load(self.config),
             'other': yaml.load(NamedConfigTestCase.config)}
 
-        def validate_frag(name, config):
-            return name, config
-        mock_validate_fragment.side_effect = validate_frag
         container = config_parse.ConfigContainer.create(config_mapping)
-        expected = [mock.call(k, v) for k, v in config_mapping.iteritems()]
-        assert_equal(mock_validate_fragment.mock_calls, expected)
-        mock_validate.assert_called_with(container)
-        assert container.configs
+        assert_equal(set(container.configs.keys()), set(['MASTER', 'other']))
 
     def test_create_missing_master(self):
         config_mapping = {'other': mock.Mock()}
@@ -1089,17 +1091,21 @@ class ConfigContainerTestCase(TestCase):
             'pid_file': '/tmp',
             'monitor_interval': 30
         }
-        config = {'services': [service], 'config_name': 'third'}
-        self.container.add('third', config)
-        assert_raises(ConfigError, self.container.validate)
+        config = {'services': [service]}
+        assert_raises(ConfigError, self.container.add, 'third', config)
 
-    @mock.patch('tron.config.config_parse.validate_fragment', autospec=True)
-    def test_add(self, mock_validate_fragment):
+    @mock.patch('tron.config.config_parse.ConfigContext', autospec=True)
+    @mock.patch('tron.config.config_parse.valid_named_config', autospec=True)
+    def test_add(self, mock_valid_named_config, mock_config_context):
         name, content = 'name', mock.Mock()
         self.container.add(name, content)
         assert_equal(self.container.configs[name],
-            mock_validate_fragment.return_value)
-        mock_validate_fragment.assert_called_with(name, content)
+            mock_valid_named_config.return_value)
+        context = mock_config_context.return_value
+        mock_config_context.assert_called_with(
+            name, self.container.get_node_names(),
+            self.container.get_master().command_context, name)
+        mock_valid_named_config.assert_called_with(content, context)
 
     def test_get_node_names(self):
         node_names = self.container.get_node_names()
