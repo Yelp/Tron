@@ -1,47 +1,76 @@
+import mock
 from testify import setup, TestCase, assert_equal, run
 from testify import assert_in, assert_raises, assert_lt
 from testify.assertions import assert_not_in
+from testify.test_case import teardown
 from testify.utils import turtle
 
+from twisted.conch.client.options import ConchOptions
 from tron import node
 from tron.core import actionrun
 
 
-class NodePoolStore(TestCase):
+def create_mock_node(name=None):
+    mock_node = mock.create_autospec(node.Node)
+    if name:
+        mock_node.get_name.return_value = name
+    return mock_node
+
+def create_mock_pool():
+    return mock.create_autospec(node.NodePool)
+
+class NodePoolStoreTestCase(TestCase):
 
     @setup
     def setup_store(self):
-        self.node = turtle.Turtle()
+        self.node = create_mock_node()
         self.store = node.NodePoolStore.get_instance()
-        self.store.put(self.node)
+        self.store.add(self.node)
+
+    @teardown
+    def teardown_store(self):
+        node.NodePoolStore.clear()
 
     def test_single_instance(self):
         assert_raises(ValueError, node.NodePoolStore)
         assert self.store is node.NodePoolStore.get_instance()
 
-    def test_put(self):
-        n = turtle.Turtle()
-        self.store.put(n)
-        assert_in(n.name, self.store)
-
-    def test_update(self):
-        nodes = [turtle.Turtle(), turtle.Turtle()]
-        self.store.update(nodes)
-        for n in nodes:
-            assert_in(n.name, self.store)
+    def test_add(self):
+        mock_node = create_mock_node()
+        self.store.add(mock_node)
+        assert_in(mock_node, self.store)
 
     def test__getitem__(self):
-        assert_equal(self.node, self.store[self.node.name])
+        assert_equal(self.node, self.store[self.node.get_name()])
 
     def test_get(self):
-        assert_equal(self.node, self.store.get(self.node.name))
+        assert_equal(self.node, self.store.get(self.node.get_name()))
 
     def test_get_miss(self):
         assert_equal(None, self.store.get('bogus'))
 
     def test_clear(self):
-        self.store.clear()
+        node.NodePoolStore.clear()
         assert_not_in(self.node, self.store)
+
+    def test_filter_by_name(self):
+        self.store.add(create_mock_node('a'))
+        self.store.add(create_mock_node('b'))
+        self.store._filter_by_name(['b', 'c'])
+        assert_equal(self.store.nodes.keys(), ['b'])
+
+    @mock.patch('tron.node.NodePool')
+    @mock.patch('tron.node.Node')
+    def test_update_from_config(self, _mock_node, _mock_node_pool):
+        node_config = {'a': mock.Mock()}
+        node_pool_config = {'c': mock.Mock()}
+        ssh_options = mock.create_autospec(ConchOptions)
+        node.NodePoolStore.update_from_config(
+            node_config, node_pool_config, ssh_options)
+
+        assert_equal(len(self.store.nodes), 2)
+
+
 
 class NodeTestCase(TestCase):
 
@@ -109,30 +138,27 @@ class NodePoolTestCase(TestCase):
 
     @setup
     def setup_nodes(self):
-        ssh_options = turtle.Turtle(agent=True)
+        ssh_options = mock.create_autospec(ConchOptions)
         self.nodes = [
-            node.Node(str(i), ssh_options, username='user', name='node%s' % i) for i in xrange(5)
-        ]
+            node.Node(str(i), ssh_options, username='user', name='node%s' % i)
+            for i in xrange(5)]
         self.node_pool = node.NodePool(self.nodes, 'thename')
 
-    def test_from_config(self):
-        node_pool_config = turtle.Turtle(
-                name='thename', nodes=['node1', 'node3'])
-
-        node.NodePoolStore.get_instance().update(self.nodes)
-
+    @mock.patch('tron.node.NodePoolStore')
+    def test_from_config(self, mock_pool_store):
+        node_names = ['node1', 'node3']
+        node_pool_config = mock.Mock(name='thename', nodes=node_names)
         new_pool = node.NodePool.from_config(node_pool_config)
         assert_equal(new_pool.name, node_pool_config.name)
-        assert_equal(len(new_pool.nodes), 2)
-        node_names = set(n.name for n in new_pool.nodes)
-        assert_equal(set(node_names), set(node_pool_config.nodes))
+        store = mock_pool_store.get_instance.return_value
+        expected = [mock.call(name) for name in node_names]
+        assert_equal(store.__getitem__.mock_calls, expected)
+        expected = [store.__getitem__.return_value] * 2
+        assert_equal(new_pool.nodes, expected)
 
     def test__init__(self):
         new_node = node.NodePool(self.nodes, 'thename')
         assert_equal(new_node.name, 'thename')
-
-        new_node = node.NodePool(self.nodes)
-        assert_equal(new_node.name, 'node0_node1_node2_node3_node4')
 
     def test__eq__(self):
         other_pool = node.NodePool(self.nodes, 'othername')

@@ -13,7 +13,7 @@ from testify import assert_equal, assert_in
 from testify import run, setup, teardown, TestCase
 import yaml
 from tron.config import config_parse, schema, manager, config_utils
-from tron.config.config_parse import valid_config, ConfigContainer
+from tron.config.config_parse import valid_config, ConfigContainer, valid_cleanup_action_name
 from tron.config.config_parse import collate_jobs_and_services
 from tron.config.config_parse import valid_identifier
 from tron.config.config_parse import valid_output_stream_dir
@@ -994,6 +994,16 @@ class ValidatorTestCase(TestCase):
         self.validator.optional = True
         assert_equal(self.validator.validate(None, NullConfigContext), None)
 
+
+class ValidCleanupActionNameTestCase(TestCase):
+
+    def test_valid_cleanup_action_name_pass(self):
+        name = valid_cleanup_action_name(CLEANUP_ACTION_NAME, None)
+        assert_equal(CLEANUP_ACTION_NAME, name)
+
+    def test_valid_cleanup_action_name_fail(self):
+        assert_raises(ConfigError,
+            valid_cleanup_action_name, 'other', NullConfigContext)
 
 class ValidOutputStreamDirTestCase(TestCase):
 

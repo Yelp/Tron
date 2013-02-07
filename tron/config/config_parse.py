@@ -364,6 +364,7 @@ def valid_cleanup_action_name(value, config_context):
     if value != CLEANUP_ACTION_NAME:
         msg = "Cleanup actions cannot have custom names %s.%s"
         raise ConfigError(msg % (config_context.path, value))
+    return CLEANUP_ACTION_NAME
 
 
 class ValidateCleanupAction(Validator):
@@ -523,7 +524,7 @@ class ValidateConfig(Validator):
         'time_zone':            None,
         'state_persistence':    DEFAULT_STATE_PERSISTENCE,
         'nodes':                {'localhost': DEFAULT_NODE},
-        'node_pools':           (),
+        'node_pools':           {},
         'jobs':                 (),
         'services':             (),
     }
@@ -598,6 +599,7 @@ def get_nodes_from_master_namespace(master):
     return set(itertools.chain(master.nodes, master.node_pools))
 
 
+# TODO: DRY with ConfigContainer.add
 def validate_config_mapping(config_mapping):
     if MASTER_NAMESPACE not in config_mapping:
         msg = "A config mapping requires a %s namespace"

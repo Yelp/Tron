@@ -26,7 +26,6 @@ class MasterControlProgramTestCase(TestCase):
 
     @teardown
     def teardown_mcp(self):
-        self.mcp.nodes.clear()
         event.EventManager.reset()
         shutil.rmtree(self.config_path)
         shutil.rmtree(self.working_dir)
@@ -68,17 +67,15 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
     @setup
     def setup_mcp(self):
         self.working_dir        = tempfile.mkdtemp()
-        self.config_file        = tempfile.NamedTemporaryFile(
-                                    dir=self.working_dir)
+        self.config_path    = tempfile.mkdtemp()
         self.mcp                = mcp.MasterControlProgram(
-                                    self.working_dir, self.config_file.name)
+                                    self.working_dir, self.config_path)
         self.mcp.jobs           = {'1': Turtle(), '2': Turtle()}
         self.mcp.services       = mock.create_autospec(service.ServiceCollection)
         self.mcp.state_manager = mock.create_autospec(statemanager.PersistentStateManager)
 
     @teardown
     def teardown_mcp(self):
-        self.mcp.nodes.clear()
         event.EventManager.reset()
         shutil.rmtree(self.working_dir)
 

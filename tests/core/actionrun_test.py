@@ -1,6 +1,7 @@
 import datetime
 import shutil
 import tempfile
+import mock
 
 from testify import run, setup, TestCase, assert_equal, turtle, teardown
 from testify.assertions import assert_raises, assert_in
@@ -388,16 +389,12 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
                 self.parent_context, self.output_path, self.run_node)
         assert_equal(action_run.node, self.run_node)
 
-    def test_from_state_with_node_exists(self):
-        anode = turtle.Turtle(name="anode", hostname="box")
-        node_store = node.NodePoolStore.get_instance()
-        node_store.put(anode)
-
-        action_run = ActionRun.from_state(self.state_data,
+    @mock.patch('tron.core.actionrun.node.NodePoolStore')
+    def test_from_state_with_node_exists(self, mock_store):
+        ActionRun.from_state(self.state_data,
                 self.parent_context, self.output_path, self.run_node)
-
-        assert_equal(action_run.node, anode)
-        node_store.clear()
+        mock_store.get_instance().get.assert_called_with(
+            self.state_data['node_name'])
 
     def test_from_state_before_rendered_command(self):
         self.state_data['command'] = 'do things %(actionname)s'

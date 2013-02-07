@@ -201,11 +201,12 @@ class ServiceCollection(object):
         equal to service. Otherwise remove it from the collection and return
         False.
         """
-        if service.name in self.services:
-            if service == self.services[service.name]:
-                return True
+        if service == self.services.get(service.name):
+            return True
 
+        if service.name in self.services:
             self.remove(service.name)
+
         return False
 
     def _filter_by_name(self, service_names):

@@ -2,10 +2,10 @@ import datetime
 import mock
 
 from testify import setup, teardown, TestCase, run, assert_equal, assert_raises
+from testify import setup_teardown
 from tests import mocks
 from tests.assertions import assert_length, assert_call
-from tests.mocks import MockNode
-from tests.testingutils import Turtle
+from tests.testingutils import Turtle, autospec_method
 from tests import testingutils
 from tron import node, event
 from tron.core import job, jobrun
@@ -51,25 +51,22 @@ class JobContextTestCase(TestCase):
 
 class JobTestCase(TestCase):
 
-    @setup
+    @setup_teardown
     def setup_job(self):
         action_graph = mock.Mock(names=lambda: ['one', 'two'])
         scheduler = mock.Mock()
         run_collection = Turtle()
-        self.nodes = [MockNode("box1"), MockNode("box0")]
-        node_store = node.NodePoolStore.get_instance()
-        node_store.put(Turtle(name="thenodepool", nodes=self.nodes))
+        self.nodes = mock.create_autospec(node.NodePool)
 
-        self.job = job.Job("jobname", scheduler,
-                run_collection=run_collection, action_graph=action_graph,
-                node_pool=node_store.get('thenodepool'))
-        self.job.notify = mock.Mock()
-        self.job.watch = mock.Mock()
-        self.job.event = mock.Mock()
-
-    @teardown
-    def teardown_job(self):
-        node.NodePoolStore.get_instance().clear()
+        patcher = mock.patch('tron.core.job.node.NodePoolStore')
+        with patcher as self.mock_node_store:
+            self.job = job.Job("jobname", scheduler,
+                    run_collection=run_collection, action_graph=action_graph,
+                    node_pool=self.nodes)
+            autospec_method(self.job.notify)
+            autospec_method(self.job.watch)
+            self.job.event = mock.create_autospec(event.EventRecorder)
+            yield
 
     def test__init__(self):
         assert str(self.job.output_path).endswith(self.job.name)
@@ -96,7 +93,7 @@ class JobTestCase(TestCase):
 
         assert_equal(new_job.scheduler, scheduler)
         assert_equal(new_job.context.next, parent_context)
-        assert_equal(new_job.node_pool.nodes, self.nodes)
+        self.mock_node_store.get_instance().__getitem__.assert_called_with(job_config.node)
         assert_equal(new_job.enabled, True)
         assert new_job.action_graph
 
@@ -148,8 +145,8 @@ class JobTestCase(TestCase):
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         runs = list(self.job.build_new_runs(run_time))
 
-        assert_call(self.job.node_pool.next, 0)
-        node = self.job.node_pool.next.returns[0]
+        self.job.node_pool.next.assert_called_with()
+        node = self.job.node_pool.next.return_value
         assert_call(self.job.runs.build_new_run,
                 0, self.job, run_time, node, manual=False)
         assert_length(runs, 1)
@@ -158,9 +155,11 @@ class JobTestCase(TestCase):
     def test_build_new_runs_all_nodes(self):
         self.job.all_nodes = True
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
+        node_count = 2
+        self.job.node_pool.nodes = [mock.Mock()] * node_count
         runs = list(self.job.build_new_runs(run_time))
 
-        assert_length(runs, 2)
+        assert_length(runs, node_count)
         for i in xrange(len(runs)):
             node = self.job.node_pool.nodes[i]
             assert_call(self.job.runs.build_new_run,
@@ -172,8 +171,8 @@ class JobTestCase(TestCase):
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         runs = list(self.job.build_new_runs(run_time, manual=True))
 
-        assert_call(self.job.node_pool.next, 0)
-        node = self.job.node_pool.next.returns[0]
+        self.job.node_pool.next.assert_called_with()
+        node = self.job.node_pool.next.return_value
         assert_length(runs, 1)
         assert_call(self.job.runs.build_new_run,
                 0, self.job, run_time, node, manual=True)
