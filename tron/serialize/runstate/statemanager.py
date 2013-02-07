@@ -148,8 +148,7 @@ class PersistentStateManager(observer.Observer):
 
     def _keys_for_items(self, item_type, names):
         """Returns a dict of item to the key for that item."""
-        make_key = self._impl.build_key
-        keys = (make_key(item_type, name) for name in names)
+        keys = (self._impl.build_key(item_type, name) for name in names)
         return dict(itertools.izip(keys, names))
 
     def _restore_dicts(self, item_type, items):

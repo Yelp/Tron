@@ -17,7 +17,7 @@
 from collections import namedtuple
 
 import optparse
-from tron.config import manager
+from tron.config import manager, schema
 from tron.serialize.runstate.statemanager import PersistenceManagerFactory
 from tron.utils import tool_utils
 
@@ -36,7 +36,7 @@ def parse_options():
         help="The working directory for source dir to resolve relative paths.")
     parser.add_option('--dest-working-dir',
         help="The working directory for dest dir to resolve relative paths.")
-    parser.add_option('--namespace',
+    parser.add_option('--namespace', action='store_true',
         help="Move jobs/services which are missing a namespace to the MASTER")
 
     opts, args = parser.parse_args()
@@ -64,8 +64,12 @@ def get_current_config(config_path):
     return config_manager.load()
 
 
-def add_namespaces(container, job_states, services_states):
-    pass
+def add_namespaces(state_data):
+    return dict(('%s.%s' % (schema.MASTER_NAMESPACE, name), data)
+                for (name, data) in state_data.iteritems())
+
+def strip_namespace(names):
+    return [name.split('.', 1)[1] for name in names]
 
 
 def convert_state(opts):
@@ -77,11 +81,16 @@ def convert_state(opts):
     print msg % (source_manager._impl, dest_manager._impl)
 
     job_names, service_names = container.get_job_and_service_names()
+    if opts.namespace:
+        job_names       = strip_namespace(job_names)
+        service_names   = strip_namespace(service_names)
+
     job_states, service_states = source_manager.restore(job_names, service_names)
     source_manager.cleanup()
 
     if opts.namespace:
-        add_namespaces(container, job_states, service_states)
+        job_states      = add_namespaces(job_states)
+        service_states  = add_namespaces(service_states)
 
     for name, job in job_states.iteritems():
         dest_manager.save_job(Item(name, job))

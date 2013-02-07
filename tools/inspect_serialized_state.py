@@ -17,13 +17,13 @@ from tron.utils import tool_utils
 
 def parse_options():
     parser = optparse.OptionParser()
-    parser.add_option("--config-path", help="Path to the configuration.")
+    parser.add_option("-c", "--config-path", help="Path to the configuration.")
     parser.add_option("-w", "--working-dir", default=".",
         help="Working directory to resolve relative paths.")
     opts, _ = parser.parse_args()
 
     if not opts.config_path:
-        parser.error("A config_path is required.")
+        parser.error("A --config-path is required.")
     return opts
 
 
