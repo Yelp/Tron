@@ -3,7 +3,8 @@ import mock
 from testify import TestCase, assert_equal, setup, run
 
 from tests.assertions import assert_raises
-from tests.testingutils import Turtle, autospec_method
+from tests.testingutils import autospec_method
+from tron.config import schema
 from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 from tron.serialize.runstate.statemanager import PersistentStateManager
@@ -18,7 +19,9 @@ class PersistenceManagerFactoryTestCase(TestCase):
 
     def test_from_config_shelve(self):
         thefilename = 'thefilename'
-        config = Turtle(store_type='shelve', name=thefilename, buffer_size=0)
+        config = schema.ConfigState(
+            store_type='shelve', name=thefilename, buffer_size=0,
+            connection_details=None)
         manager = PersistenceManagerFactory.from_config(config)
         store = manager._impl
         assert_equal(store.filename, config.name)
@@ -29,7 +32,7 @@ class PersistenceManagerFactoryTestCase(TestCase):
 class StateMetadataTestCase(TestCase):
 
     def test_validate_metadata(self):
-        metadata = {'version': (0, 1, 1)}
+        metadata = {'version': (0, 5, 2)}
         StateMetadata.validate_metadata(metadata)
 
     def test_validate_metadata_no_state_data(self):

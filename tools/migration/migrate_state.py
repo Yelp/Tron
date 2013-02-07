@@ -1,8 +1,11 @@
 """
- Migrate a state file/database from one StateStore implementation to another.
+ Migrate a state file/database from one StateStore implementation to another. It
+ may also be used to add namespace names to jobs/services when upgrading
+ from pre-0.5.2 to version 0.5.2.
 
  Usage:
-    python tools/migration/migrate_state -s old_config_dir -d new_config_dir
+    python tools/migration/migrate_state.py \
+        -s <old_config_dir> -d <new_config_dir> [ --namespace ]
 
  old_config.yaml and new_config.yaml should be configuration files with valid
  state_persistence sections. The state_persistence section configures the
@@ -33,6 +36,8 @@ def parse_options():
         help="The working directory for source dir to resolve relative paths.")
     parser.add_option('--dest-working-dir',
         help="The working directory for dest dir to resolve relative paths.")
+    parser.add_option('--namespace',
+        help="Move jobs/services which are missing a namespace to the MASTER")
 
     opts, args = parser.parse_args()
 
@@ -45,8 +50,7 @@ def parse_options():
 
 
 def get_state_manager_from_config(config_path, working_dir):
-    """Return a state manager that is configured in the file at
-    config_filename.
+    """Return a state manager from the configuration.
     """
     config_manager = manager.ConfigManager(config_path)
     config_container = config_manager.load()
@@ -60,6 +64,10 @@ def get_current_config(config_path):
     return config_manager.load()
 
 
+def add_namespaces(container, job_states, services_states):
+    pass
+
+
 def convert_state(opts):
     source_manager  = get_state_manager_from_config(opts.source, opts.source_working_dir)
     dest_manager    = get_state_manager_from_config(opts.dest, opts.dest_working_dir)
@@ -69,16 +77,19 @@ def convert_state(opts):
     print msg % (source_manager._impl, dest_manager._impl)
 
     job_names, service_names = container.get_job_and_service_names()
-    jobs_states, services_states = source_manager.restore(job_names, service_names)
+    job_states, service_states = source_manager.restore(job_names, service_names)
     source_manager.cleanup()
 
-    for name, job in jobs_states.iteritems():
-        dest_manager.save_job(Item(name, job))
-    print "Migrated %s jobs." % len(jobs_states)
+    if opts.namespace:
+        add_namespaces(container, job_states, service_states)
 
-    for name, service in services_states.iteritems():
+    for name, job in job_states.iteritems():
+        dest_manager.save_job(Item(name, job))
+    print "Migrated %s jobs." % len(job_states)
+
+    for name, service in service_states.iteritems():
         dest_manager.save_service(Item(name, service))
-    print "Migrated %s services." % len(services_states)
+    print "Migrated %s services." % len(service_states)
 
     dest_manager.cleanup()
 

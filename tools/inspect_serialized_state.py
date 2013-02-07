@@ -74,8 +74,8 @@ def display_report(state_config, job_states, service_states):
     print "Total Jobs: %s" % len(job_states)
     print "Total Services: %s" % len(service_states)
 
-    print "\n%s\n" % format_jobs(job_states)
-    print "\n%s\n" % format_service(service_states)
+    print "\n%s" % format_jobs(job_states)
+    print "\n%s" % format_service(service_states)
 
 
 def main(config_path, working_dir):

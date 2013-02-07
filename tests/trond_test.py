@@ -75,9 +75,9 @@ class TrondTestCase(sandbox.SandboxTestCase):
         job1 = {
             'action_names': ['echo_action', 'cleanup', 'another_echo_action'],
             'status': 'ENABLED',
-            'href': '/jobs/MASTER_echo_job',
+            'href': '/jobs/MASTER.echo_job',
             'last_success': None,
-            'name': 'MASTER_echo_job',
+            'name': 'MASTER.echo_job',
             'scheduler': 'INTERVAL:1:00:00',
             'node_pool': ['localhost'],
             'runs': None
@@ -85,9 +85,9 @@ class TrondTestCase(sandbox.SandboxTestCase):
         job2 = {
             'action_names': ['echo_action'],
             'status': 'ENABLED',
-            'href': '/jobs/ohce_echo_job',
+            'href': '/jobs/ohce.echo_job',
             'last_success': None,
-            'name': 'ohce_echo_job',
+            'name': 'ohce.echo_job',
             'scheduler': 'INTERVAL:1:00:00',
             'node_pool': ['localhost'],
             'runs': None
@@ -104,15 +104,18 @@ class TrondTestCase(sandbox.SandboxTestCase):
         assert_equal(result, expected)
 
         # run the job and check its output
-        self.sandbox.tronctl(['start', 'MASTER_echo_job'])
+        self.sandbox.tronctl(['start', 'MASTER.echo_job'])
 
+        job_url = client.get_url('MASTER.echo_job')
+        action_url = client.get_url('MASTER.echo_job.1.echo_action')
+        another_action_url = client.get_url('MASTER.echo_job.1.another_echo_action')
         def wait_on_cleanup():
-            return (len(client.job('MASTER_echo_job')['runs']) >= 2 and
-                    client.action('MASTER_echo_job.1.echo_action')['state'] == 'SUCC')
+            return (len(client.job(job_url)['runs']) >= 2 and
+                    client.action(action_url)['state'] == 'SUCC')
         sandbox.wait_on_sandbox(wait_on_cleanup)
 
-        echo_action_run = client.action('MASTER_echo_job.1.echo_action')
-        other_act_run = client.action('MASTER_echo_job.1.another_echo_action')
+        echo_action_run = client.action(action_url)
+        other_act_run = client.action(another_action_url)
         assert_equal(echo_action_run['state'], 'SUCC')
         assert_equal(echo_action_run['stdout'], ['Echo!'])
         assert_equal(other_act_run['state'], 'FAIL')
@@ -121,7 +124,8 @@ class TrondTestCase(sandbox.SandboxTestCase):
         stdout = now.strftime('Today is %Y-%m-%d, which is the same as %Y-%m-%d')
         assert_equal(other_act_run['stdout'], [stdout])
 
-        assert_equal(client.job_runs('MASTER_echo_job.1')['state'], 'FAIL')
+        job_runs_url = client.get_url('MASTER.echo_job.1')
+        assert_equal(client.job_runs(job_runs_url)['state'], 'FAIL')
 
     def test_tronview_basic(self):
         self.sandbox.save_config(SINGLE_ECHO_CONFIG)
@@ -129,7 +133,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
 
         expected = """\nServices:\nNo Services\n\n\nJobs:
             Name       State       Scheduler           Last Success
-            MASTER_echo_job   ENABLED     INTERVAL:1:00:00    None
+            MASTER.echo_job   ENABLED     INTERVAL:1:00:00    None
             """
 
         def remove_line_space(s):
@@ -142,14 +146,17 @@ class TrondTestCase(sandbox.SandboxTestCase):
         client = self.sandbox.client
         self.sandbox.save_config(SINGLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT)
         self.sandbox.trond()
-        self.sandbox.tronctl(['start', 'MASTER_echo_job'])
+        self.sandbox.tronctl(['start', 'MASTER.echo_job'])
 
+        cleanup_url = client.get_url('MASTER.echo_job.1.cleanup')
         def wait_on_cleanup():
-            return client.action('MASTER_echo_job.1.cleanup')['state'] == 'SUCC'
+            return client.action(cleanup_url)['state'] == 'SUCC'
         sandbox.wait_on_sandbox(wait_on_cleanup)
 
-        assert_equal(client.action('MASTER_echo_job.1.echo_action')['state'], 'SUCC')
-        assert_equal(client.job_runs('MASTER_echo_job.1')['state'], 'SUCC')
+        action_run_url = client.get_url('MASTER.echo_job.1.echo_action')
+        assert_equal(client.action(action_run_url)['state'], 'SUCC')
+        job_run_url = client.get_url('MASTER.echo_job.1')
+        assert_equal(client.job_runs(job_run_url)['state'], 'SUCC')
 
     def test_tronctl_service_zap(self):
         SERVICE_CONFIG = dedent("""
@@ -172,14 +179,15 @@ class TrondTestCase(sandbox.SandboxTestCase):
         wait_on_config = lambda: 'fake_service' in client.config('MASTER')
         sandbox.wait_on_sandbox(wait_on_config)
 
-        self.sandbox.tronctl(['start', 'MASTER_fake_service'])
+        self.sandbox.tronctl(['start', 'MASTER.fake_service'])
+        service_url = client.get_url('MASTER.fake_service')
 
         def wait_on_start():
-            return client.service('MASTER_fake_service')['state'] == 'STARTING'
+            return client.service(service_url)['state'] == 'STARTING'
         sandbox.wait_on_sandbox(wait_on_start)
 
-        self.sandbox.tronctl(['zap', 'MASTER_fake_service'])
-        assert_equal('DOWN', client.service('MASTER_fake_service')['state'])
+        self.sandbox.tronctl(['zap', 'MASTER.fake_service'])
+        assert_equal('DOWN', client.service(service_url)['state'])
 
     def test_cleanup_on_failure(self):
         FAIL_CONFIG = BASIC_CONFIG + dedent("""
@@ -196,15 +204,17 @@ class TrondTestCase(sandbox.SandboxTestCase):
         self.sandbox.save_config(FAIL_CONFIG)
         self.sandbox.trond()
 
+        action_run_url = client.get_url('MASTER.failjob.0.failaction')
         def wait_on_failaction():
-            return client.action('MASTER_failjob.0.failaction')['state'] == 'FAIL'
+            return client.action(action_run_url)['state'] == 'FAIL'
         sandbox.wait_on_sandbox(wait_on_failaction)
 
+        action_run_url = client.get_url('MASTER.failjob.1.cleanup')
         def wait_on_cleanup():
-            return client.action('MASTER_failjob.1.cleanup')['state'] == 'SUCC'
+            return client.action(action_run_url)['state'] == 'SUCC'
         sandbox.wait_on_sandbox(wait_on_cleanup)
 
-        assert_gt(len(client.job('MASTER_failjob')['runs']), 1)
+        assert_gt(len(client.job(client.get_url('MASTER.failjob'))['runs']), 1)
 
     def test_skip_failed_actions(self):
         CONFIG = BASIC_CONFIG + dedent("""
@@ -223,20 +233,22 @@ class TrondTestCase(sandbox.SandboxTestCase):
         client = self.sandbox.client
         self.sandbox.save_config(CONFIG)
         self.sandbox.trond()
+        action_run_url = client.get_url('MASTER.multi_step_job.0.broken')
 
         def build_wait_func(state):
             def wait_on_multi_step_job():
-                action_name = 'MASTER_multi_step_job.0.broken'
-                return client.action(action_name)['state'] == state
+                return client.action(action_run_url)['state'] == state
             return wait_on_multi_step_job
 
         sandbox.wait_on_sandbox(build_wait_func('FAIL'))
-        self.sandbox.tronctl(['skip', 'MASTER_multi_step_job.0.broken'])
-        assert_equal(client.action('MASTER_multi_step_job.0.broken')['state'], 'SKIP')
+        self.sandbox.tronctl(['skip', 'MASTER.multi_step_job.0.broken'])
+        assert_equal(client.action(action_run_url)['state'], 'SKIP')
 
         sandbox.wait_on_sandbox(build_wait_func('SKIP'))
-        assert_equal(client.action('MASTER_multi_step_job.0.works')['state'], 'SUCC')
-        assert_equal(client.job_runs('MASTER_multi_step_job.0')['state'], 'SUCC')
+        action_run_url = client.get_url('MASTER.multi_step_job.0.works')
+        assert_equal(client.action(action_run_url)['state'], 'SUCC')
+        job_run_url = client.get_url('MASTER.multi_step_job.0')
+        assert_equal(client.job_runs(job_run_url)['state'], 'SUCC')
 
     def test_failure_on_multi_step_job_doesnt_wedge_tron(self):
         FAIL_CONFIG = BASIC_CONFIG + dedent("""
@@ -256,12 +268,13 @@ class TrondTestCase(sandbox.SandboxTestCase):
         client = self.sandbox.client
         self.sandbox.save_config(FAIL_CONFIG)
         self.sandbox.trond()
+        job_url = client.get_url('MASTER.random_failure_job')
 
         def wait_on_random_failure_job():
-            return len(client.job('MASTER_random_failure_job')['runs']) >= 4
+            return len(client.job(job_url)['runs']) >= 4
         sandbox.wait_on_sandbox(wait_on_random_failure_job)
 
-        job_runs = client.job('MASTER_random_failure_job')['runs']
+        job_runs = client.job(job_url)['runs']
         assert_equal([run['state'] for run in job_runs[-3:]], ['FAIL'] * 3)
 
     def test_cancel_schedules_a_new_run(self):
@@ -278,13 +291,14 @@ class TrondTestCase(sandbox.SandboxTestCase):
         client = self.sandbox.client
         self.sandbox.save_config(config)
         self.sandbox.trond()
+        job_url = client.get_url('MASTER.a_job')
 
-        self.sandbox.tronctl(['cancel', 'MASTER_a_job.0'])
+        self.sandbox.tronctl(['cancel', 'MASTER.a_job.0'])
         def wait_on_cancel():
-            return len(client.job('MASTER_a_job')['runs']) == 2
+            return len(client.job(job_url)['runs']) == 2
         sandbox.wait_on_sandbox(wait_on_cancel)
 
-        job_runs = client.job('MASTER_a_job')['runs']
+        job_runs = client.job(job_url)['runs']
         assert_length(job_runs, 2)
         run_states = [run['state'] for run in job_runs]
         assert_equal(run_states, ['SCHE', 'CANC'])
@@ -308,10 +322,11 @@ class TrondTestCase(sandbox.SandboxTestCase):
         client = self.sandbox.client
         self.sandbox.save_config(config)
         self.sandbox.trond()
-        self.sandbox.tronctl(['start', 'MASTER_a_service'])
+        self.sandbox.tronctl(['start', 'MASTER.a_service'])
+        service_url = client.get_url('MASTER.a_service')
 
         def wait_on_service_start():
-            return client.service('MASTER_a_service')['state'] == 'UP'
+            return client.service(service_url)['state'] == 'UP'
         sandbox.wait_on_sandbox(wait_on_service_start)
 
         new_config = config_template.format(
@@ -319,8 +334,8 @@ class TrondTestCase(sandbox.SandboxTestCase):
         self.sandbox.tronfig(new_config)
 
         sandbox.wait_on_sandbox(wait_on_service_start)
-        self.sandbox.tronctl(['stop', 'MASTER_a_service'])
+        self.sandbox.tronctl(['stop', 'MASTER.a_service'])
 
         def wait_on_service_stop():
-            return client.service('MASTER_a_service')['state'] == 'DOWN'
+            return client.service(service_url)['state'] == 'DOWN'
         sandbox.wait_on_sandbox(wait_on_service_stop)

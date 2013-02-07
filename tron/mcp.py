@@ -155,8 +155,8 @@ class MasterControlProgram(Observable):
 
     def _apply_jobs(self, job_configs, reconfigure=False):
         """Add and remove jobs based on the configuration."""
-        for job_config in job_configs.values():
-            self.add_job(job_config[0], job_config[1], reconfigure=reconfigure)
+        for job_config in job_configs.itervalues():
+            self.add_job(job_config, reconfigure=reconfigure)
 
         for job_name in (set(self.jobs.keys()) - set(job_configs.keys())):
             log.debug("Removing job %s", job_name)
@@ -166,10 +166,9 @@ class MasterControlProgram(Observable):
         """Add and remove services."""
 
         services_to_add = []
-        for srv_config in srv_configs.values():
-            log.debug("Building new services %s", srv_config[0].name)
-            service = Service.from_config(srv_config[0], self.nodes)
-            service.name = '_'.join((srv_config[1], service.name))
+        for srv_config in srv_configs.itervalues():
+            log.debug("Building new services %s", srv_config.name)
+            service = Service.from_config(srv_config, self.nodes)
             services_to_add.append(service)
 
         for srv_name in (set(self.services.keys()) - set(srv_configs.keys())):
@@ -202,12 +201,11 @@ class MasterControlProgram(Observable):
             self.crash_reporter = crash_reporter.CrashReporter(em, self)
             self.crash_reporter.start()
 
-    def add_job(self, job_config, namespace, reconfigure=False):
+    def add_job(self, job_config, reconfigure=False):
         log.debug("Building new job %s", job_config.name)
         output_path = filehandler.OutputPath(self.output_stream_dir)
         scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
         job = Job.from_config(job_config, scheduler, self.context, output_path)
-        job.name = '_'.join((namespace, job.name))
 
         if job.name in self.jobs:
             # Jobs have a complex eq implementation that allows us to catch
