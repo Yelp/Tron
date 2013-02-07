@@ -134,10 +134,11 @@ class PersistentStateManager(observer.Observer):
         self.metadata_key       = self._impl.build_key(
                                     runstate.MCP_STATE, StateMetadata.name)
 
-    def restore(self, job_names, service_names):
+    def restore(self, job_names, service_names, skip_validation=False):
         """Return the most recent serialized state."""
         log.debug("Restoring state.")
-        self._restore_metadata()
+        if not skip_validation:
+            self._restore_metadata()
 
         return (self._restore_dicts(runstate.JOB_STATE, job_names),
                 self._restore_dicts(runstate.SERVICE_STATE, service_names))

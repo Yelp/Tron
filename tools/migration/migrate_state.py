@@ -85,7 +85,8 @@ def convert_state(opts):
         job_names       = strip_namespace(job_names)
         service_names   = strip_namespace(service_names)
 
-    job_states, service_states = source_manager.restore(job_names, service_names)
+    job_states, service_states = source_manager.restore(
+        job_names, service_names, skip_validation=True)
     source_manager.cleanup()
 
     if opts.namespace:
