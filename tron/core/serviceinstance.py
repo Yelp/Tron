@@ -251,6 +251,7 @@ class ServiceInstance(observer.Observer):
     STATE_UP['monitor']                 = STATE_MONITORING
     STATE_DOWN['start']                 = STATE_STARTING
 
+    # TODO: add start time?
     def __init__(self, config, node, instance_number, context):
         self.config             = config
         self.node               = node
@@ -425,6 +426,12 @@ class ServiceInstanceCollection(object):
             if num not in instance_nums:
                 return num
 
+    # TODO: test case
+    def get_by_number(self, instance_number):
+        for instance in self.instances:
+            if instance.instance_number == instance_number:
+                return instance
+
     @property
     def missing(self):
         return self.config.count - len(self.instances)
@@ -459,3 +466,6 @@ class ServiceInstanceCollection(object):
 
     def __ne__(self, other):
         return not self == other
+
+    def __iter__(self):
+        return iter(self.instances)

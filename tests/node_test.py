@@ -16,8 +16,10 @@ def create_mock_node(name=None):
         mock_node.get_name.return_value = name
     return mock_node
 
+
 def create_mock_pool():
     return mock.create_autospec(node.NodePool)
+
 
 class NodePoolStoreTestCase(TestCase):
 
@@ -69,7 +71,6 @@ class NodePoolStoreTestCase(TestCase):
             node_config, node_pool_config, ssh_options)
 
         assert_equal(len(self.store.nodes), 2)
-
 
 
 class NodeTestCase(TestCase):

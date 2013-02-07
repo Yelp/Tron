@@ -196,6 +196,9 @@ class MasterControlProgram(Observable):
     def get_jobs(self):
         return self.jobs.itervalues()
 
+    def get_service_collection(self):
+        return self.services
+
     def get_job_by_name(self, name):
         return self.jobs.get(name)
 

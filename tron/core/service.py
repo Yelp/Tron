@@ -226,5 +226,8 @@ class ServiceCollection(object):
             self.services[name].restore_state(state_data)
         log.info("Loaded state for %d services", len(service_state_data))
 
+    def get_by_name(self, name):
+        return self.services.get(name)
+
     def __iter__(self):
         return self.services.itervalues()
