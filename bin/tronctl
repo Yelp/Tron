@@ -12,7 +12,9 @@ import sys
 
 import tron
 from tron import commands
+from tron.commands import ExitCode
 from tron.commands.client import Client, OK, request
+from tron.commands.client import get_object_type_from_identifier
 
 
 COMMAND_HELP = (
@@ -90,32 +92,34 @@ def edit(options, command, uri):
     else:
         return False
 
+def control_objects(options, command, object_identifiers):
+    client = Client(options)
+    url_index = client.index()
+    for identifier in object_identifiers:
+        try:
+            tron_id = get_object_type_from_identifier(url_index, identifier)
+        except ValueError, e:
+            raise SystemExit("Error: %s" % e)
+
+        yield edit(options, command, tron_id.url)
+
 
 def main():
     """run tronctl"""
     options, args = parse_options()
     commands.setup_logging(options)
     commands.load_config(options)
-    client = Client(options)
 
-    command, ret = args.pop(0), 0
+    command = args.pop(0)
     if not args:
         # our only non-object commands are for enabling and disabling jobs, so
         # just direct those commands here
-        ret = edit(options, command, '/jobs')
+        if not edit(options, command, '/jobs'):
+            sys.exit(ExitCode.fail)
     else:
-        for obj_spec in args:
-            try:
-                full_uri = client.get_url_from_identifier(obj_spec)
-            except ValueError, e:
-                log.error(e)
-                sys.exit(1)
+        if not all(control_objects(options, command, args)):
+            sys.exit(ExitCode.fail)
 
-            ret = edit(options, command, full_uri)
-
-    if options.save_config:
-        commands.save_config(options)
-    sys.exit(int(not ret))
 
 if __name__ == '__main__':
     main()

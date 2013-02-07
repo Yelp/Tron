@@ -1,6 +1,7 @@
 """
 A command line http client used by tronview, tronctl, and tronfig
 """
+from collections import namedtuple
 import logging
 import urllib
 import urllib2
@@ -54,6 +55,7 @@ class RequestError(ValueError):
     """Raised when there is a connection failure."""
 
 
+# TODO: remove options, replace with explicit args
 class Client(object):
     """A client used in commands to make requests to the tron.www """
 
@@ -66,11 +68,11 @@ class Client(object):
     def events(self):
         return self.request('/events')['data']
 
-    def config(self, data=None):
+    def config(self, config_name, data=None):
         """This may be a post or a get, depending on data."""
         if data:
-            return self.request('/config', dict(config=data))
-        return self.request('/config', )['config']
+            return self.request('/config', dict(config=data, name=config_name))
+        return self.request('/config?name=%s' % config_name)['config']
 
     def home(self):
         return self.request('/')
@@ -85,37 +87,6 @@ class Client(object):
             'jobs':     name_href_dict(content['jobs']),
             'services': name_href_dict(content['services'])
         }
-
-    def get_url_from_identifier(self, iden):
-        """Convert a string of the form job_name[.run_number[.action]] to its
-        corresponding URL.
-        """
-        obj_name_elements = iden.split('.')
-        obj_name = obj_name_elements[0]
-        obj_rel_path = '/'.join(obj_name_elements[1:])
-
-        def full_url(obj_url):
-            return '/'.join((obj_url, obj_rel_path))
-
-        # Before falling through, we also check if our caller simply
-        # failed to provide a namespace in their call. This is only
-        # provided for MASTER for backwards-compatibility.
-        obj_name_compat = '_'.join((MASTER_NAMESPACE, obj_name))
-
-        content = self.index()
-        for lookup_name in (obj_name, obj_name_compat): 
-           if lookup_name in content['jobs']:
-                if lookup_name == obj_name_compat:
-                    log.warn("Job lookup without namespace is" 
-                             + " deprecated; using %s" % obj_name_compat)
-                return full_url(content['jobs'][lookup_name])
-           elif lookup_name in content['services']:
-                if lookup_name == obj_name_compat:
-                    log.warn("Service lookup without namespace is" 
-                             + " deprecated; using %s" % obj_name_compat)
-                return full_url(content['services'][lookup_name])
-
-        raise ValueError("Unknown identifier: %s" % iden)
 
     def services(self):
         return self.request('/services').get('services')
@@ -162,6 +133,54 @@ class Client(object):
         server = self.options.server
         status, content = request(server, url, data)
         if not status == OK:
-            err_msg = "%s%s: %s %s"
-            raise RequestError(err_msg % (server, url, content, data or ''))
+            err_msg = "%s%s: %s"
+            raise RequestError(err_msg % (server, url, content))
         return content
+
+
+class TronObjectType(object):
+    """Constants to identify a Tron object type."""
+    job              = 'JOB'
+    job_run          = 'JOB_RUN'
+    action_run       = 'ACTION_RUN'
+    service          = 'SERVICE'
+    service_instance = 'SERVICE_INSTANCE'
+
+    groups = {
+        'jobs':     [job, job_run, action_run],
+        'services': [service, service_instance]
+    }
+
+
+TronObjectIdentifier = namedtuple('TronObjectIdentifier', 'type name url')
+
+
+def get_object_type_from_identifier(url_index, identifier):
+    """Given a string identifier, return a TronObjectIdentifier.
+    """
+    name_elements       = identifier.split('.')
+    identifier_length   = len(name_elements) - 1
+    obj_name            = name_elements[0]
+    relative_path       = '/'.join(name_elements[1:])
+
+    def full_url(obj_url):
+        return '%s/%s' % (obj_url, relative_path)
+
+    def find_by_type(name, index_name):
+        url_type_index = url_index[index_name]
+        if name in url_type_index:
+            tron_type = TronObjectType.groups[index_name][identifier_length]
+            url = full_url(url_type_index[name])
+            return TronObjectIdentifier(tron_type, name, url)
+
+    def find_by_name(name):
+        return find_by_type(name, 'jobs') or find_by_type(name, 'services')
+
+    # TODO: include a list of namespaces in the index so that a job can be
+    # found in any namespace
+    default_name = '%s_%s' % (MASTER_NAMESPACE, obj_name)
+    type_url = find_by_name(obj_name) or find_by_name(default_name)
+    if type_url:
+        return type_url
+
+    raise ValueError("Unknown identifier: %s" % identifier)

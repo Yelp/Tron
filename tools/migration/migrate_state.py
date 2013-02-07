@@ -2,7 +2,7 @@
  Migrate a state file/database from one StateStore implementation to another.
 
  Usage:
-    python tools/migration/migrate_state -s old_config.yaml -d new_config.yaml
+    python tools/migration/migrate_state -s old_config_dir -d new_config_dir
 
  old_config.yaml and new_config.yaml should be configuration files with valid
  state_persistence sections. The state_persistence section configures the
@@ -14,7 +14,7 @@
 from collections import namedtuple
 
 import optparse
-from tron.config import config_parse
+from tron.config import manager
 from tron.serialize.runstate.statemanager import PersistenceManagerFactory
 
 Item = namedtuple('Item', ['name', 'state_data'])
@@ -23,10 +23,10 @@ Item = namedtuple('Item', ['name', 'state_data'])
 def parse_options():
     parser = optparse.OptionParser()
     parser.add_option('-s', '--source',
-        help="The source configuration file which contains a state_persistence "
+        help="The source configuration path which contains a state_persistence "
              "section configured for the state file/database.")
     parser.add_option('-d', '--dest',
-        help="The destination configuration file which contains a "
+        help="The destination configuration path which contains a "
              "state_persistence section configured for the state file/database.")
 
     opts, args = parser.parse_args()
@@ -39,22 +39,26 @@ def parse_options():
     return opts, args
 
 
-def get_state_manager_from_config(config_filename):
+def get_state_manager_from_config(config_path):
     """Return a state manager that is configured in the file at
     config_filename.
     """
-    with open(config_filename) as fh:
-        config = config_parse.load_config(fh)
-    state_config = config.state_persistence
-
+    config_manager = manager.ConfigManager(config_path)
+    config_container = config_manager.load()
+    state_config = config_container.get_master().state_persistence
     return PersistenceManagerFactory.from_config(state_config)
+
+
+def get_current_master_config(config_path):
+    config_manager = manager.ConfigManager(config_path)
+    config_container = config_manager.load()
+    return config_container.get_master()
 
 
 def convert_state(opts):
     source_manager  = get_state_manager_from_config(opts.source)
     dest_manager    = get_state_manager_from_config(opts.dest)
-    with open(opts.source) as fh:
-        config = config_parse.load_config(fh)
+    config          = get_current_master_config(opts.source)
 
     msg = "Migrating state from %s to %s"
     print msg % (source_manager._impl, dest_manager._impl)

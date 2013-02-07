@@ -8,9 +8,8 @@ from tron import command_context
 from tron import event
 from tron import crash_reporter
 from tron import node
-from tron.config import config_parse
+from tron.config import manager
 from tron.config.config_parse import collate_jobs_and_services, ConfigError
-from tron.config.schema import MASTER_NAMESPACE
 from tron.core.job import Job, JobScheduler
 from tron.node import Node, NodePool
 from tron.scheduler import scheduler_from_config
@@ -35,7 +34,7 @@ class MasterControlProgram(Observable):
     Central state object for the Tron daemon. Stores all jobs and services.
     """
 
-    def __init__(self, working_dir, config_file):
+    def __init__(self, working_dir, config_path):
         super(MasterControlProgram, self).__init__()
         self.jobs               = {}
         self.services           = {}
@@ -43,7 +42,7 @@ class MasterControlProgram(Observable):
         self.output_stream_dir  = None
         self.working_dir        = working_dir
         self.crash_reporter     = None
-        self.config_filepath    = config_file
+        self.config             = manager.ConfigManager(config_path)
         self.context            = command_context.CommandContext()
 
         # Time zone of the system clock
@@ -56,6 +55,9 @@ class MasterControlProgram(Observable):
         self.event_manager      = event.EventManager.get_instance()
         self.event_recorder     = self.event_manager.add(self)
         self.state_manager      = None
+
+    def get_config_manager(self):
+        return self.config
 
     def shutdown(self):
         if self.state_manager:
@@ -86,10 +88,7 @@ class MasterControlProgram(Observable):
 
     def _load_config(self, reconfigure=False):
         """Read config data and apply it."""
-        log.info("Loading configuration from %s" % self.config_filepath)
-        with open(self.config_filepath, 'r') as f:
-            config = config_parse.load_config(f)
-        self.apply_config(config, reconfigure=reconfigure)
+        self.apply_config(self.config.load(), reconfigure=reconfigure)
 
     def initial_setup(self):
         """When the MCP is initialized the config is applied before the state.
@@ -101,31 +100,20 @@ class MasterControlProgram(Observable):
         # without any state will be scheduled here.
         self.schedule_jobs()
 
-    def apply_config(self, configs, skip_env_dependent=False, reconfigure=False):
-        """Apply a configuration. If skip_env_dependent is True we're
-        loading this locally to test the config as part of tronfig. We want to
-        skip applying some settings because the local machine we're using to
-        edit the config may not have the same environment as the live
-        trond machine.
-        """
-        master_config = configs[MASTER_NAMESPACE]
+    def apply_config(self, config_container, reconfigure=False):
+        """Apply a configuration."""
+        master_config = config_container.get_master()
         self.output_stream_dir = master_config.output_stream_dir or self.working_dir
-        if not skip_env_dependent:
-            ssh_options = self._ssh_options_from_config(configs[MASTER_NAMESPACE].ssh_options)
-            state_persistence = configs[MASTER_NAMESPACE].state_persistence
-        else:
-            ssh_options = config_parse.valid_ssh_options({})
-            state_persistence = config_parse.DEFAULT_STATE_PERSISTENCE
-
+        ssh_options = self._ssh_options_from_config(master_config.ssh_options)
         self.state_manager = PersistenceManagerFactory.from_config(
-                    state_persistence)
-        self.context.base = configs[MASTER_NAMESPACE].command_context
-        self.time_zone = configs[MASTER_NAMESPACE].time_zone
-        self._apply_nodes(configs[MASTER_NAMESPACE].nodes, ssh_options)
-        self._apply_node_pools(configs[MASTER_NAMESPACE].node_pools)
-        self._apply_notification_options(configs[MASTER_NAMESPACE].notification_options)
+            master_config.state_persistence)
+        self.context.base = master_config.command_context
+        self.time_zone = master_config.time_zone
+        self._apply_nodes(master_config.nodes, ssh_options)
+        self._apply_node_pools(master_config.node_pools)
+        self._apply_notification_options(master_config.notification_options)
 
-        jobs, services = collate_jobs_and_services(configs)
+        jobs, services = collate_jobs_and_services(config_container)
         self._apply_jobs(jobs, reconfigure=reconfigure)
         self._apply_services(services)
 

@@ -24,10 +24,18 @@ DEFAULT_CONFIG = {
 log = logging.getLogger("tron.cmd")
 
 
+class ExitCode(object):
+    """Enumeration of exit status codes."""
+    success =           0
+    fail =              1
+
+
 def load_config(options):
     """Attempt to load a user specific configuration or a global config file
     and set any unset options based on values from the config. Finally fallback
     to DEFAULT_CONFIG for those settings.
+
+    Also save back options to the config if options.save_config is True.
     """
     config = {}
     config_file_list = [CONFIG_FILE_NAME, GLOBAL_CONFIG_FILE_NAME]
@@ -53,6 +61,9 @@ def load_config(options):
 
         default_value = DEFAULT_CONFIG[opt_name]
         setattr(options, opt_name, config.get(opt_name, default_value))
+
+    if options.save_config:
+        save_config(options)
 
 
 def save_config(options):
