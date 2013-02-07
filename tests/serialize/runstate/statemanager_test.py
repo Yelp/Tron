@@ -1,9 +1,9 @@
 import os
+import mock
 from testify import TestCase, assert_equal, setup, run
 
-from tests.assertions import assert_raises, assert_call, assert_length
-from tests.testingutils import Turtle
-import tron
+from tests.assertions import assert_raises
+from tests.testingutils import Turtle, autospec_method
 from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 from tron.serialize.runstate.statemanager import PersistentStateManager
@@ -70,7 +70,8 @@ class PersistentStateManagerTestCase(TestCase):
 
     @setup
     def setup_manager(self):
-        self.store = Turtle(build_key=lambda t, i: '%s%s' % (t, i))
+        self.store = mock.Mock()
+        self.store.build_key.side_effect = lambda t, i: '%s%s' % (t, i)
         self.buffer = StateSaveBuffer(1)
         self.manager = PersistentStateManager(self.store, self.buffer)
 
@@ -78,58 +79,57 @@ class PersistentStateManagerTestCase(TestCase):
         assert_equal(self.manager._impl, self.store)
 
     def test_keys_for_items(self):
-        items = [Turtle(), Turtle()]
-        key_to_item_map = self.manager._keys_for_items('type', items)
+        names = ['namea', 'nameb']
+        key_to_item_map = self.manager._keys_for_items('type', names)
 
-        # Skip first return, its from the constructor
-        keys = ['type%s' % item.name for item in items]
-        assert_equal(key_to_item_map, dict(zip(keys, items)))
+        keys = ['type%s' % name for name in names]
+        assert_equal(key_to_item_map, dict(zip(keys, names)))
 
     def test_restore_dicts(self):
-        items = [Turtle(), Turtle()]
-        self.manager._keys_for_items = lambda t, i: {'1': items[0], '2': items[1]}
-        self.store.restore = lambda keys: {
-            '1': {'state': 'data'}, '2': {'state': '2data'}
-        }
-        state_data = self.manager._restore_dicts('type', items)
+        names = ['namea', 'nameb']
+        autospec_method(self.manager._keys_for_items)
+        self.manager._keys_for_items.return_value = dict(enumerate(names))
+        self.store.restore.return_value = {
+            0: {'state': 'data'}, 1: {'state': '2data'}}
+        state_data = self.manager._restore_dicts('type', names)
         expected = {
-            items[0].name: {'state': 'data'},
-            items[1].name: {'state': '2data'}
-        }
+            names[0]: {'state': 'data'},
+            names[1]: {'state': '2data'}}
         assert_equal(expected, state_data)
 
     def test_save_job(self):
-        job = Turtle()
-        self.manager.save_job(job)
-        key = '%s%s' % (runstate.JOB_STATE, job.name)
-        assert_call(self.store.save, 0, [(key, job.state_data)])
+        mock_job = mock.Mock()
+        self.manager.save_job(mock_job)
+        key = '%s%s' % (runstate.JOB_STATE, mock_job.name)
+        self.store.save.assert_called_with([(key, mock_job.state_data)])
 
     def test_save_service(self):
-        service = Turtle()
-        self.manager.save_service(service)
-        key = '%s%s' % (runstate.SERVICE_STATE, service.name)
-        assert_call(self.store.save, 0, [(key, service.state_data)])
+        mock_service = mock.Mock()
+        self.manager.save_service(mock_service)
+        key = '%s%s' % (runstate.SERVICE_STATE, mock_service.name)
+        self.store.save.assert_called_with([(key, mock_service.state_data)])
 
     def test_save_metadata(self):
-        self.manager.save_metadata()
-        key, state_data = self.store.save.calls[0][0][0][0]
-        assert_equal(key, '%s%s' % (runstate.MCP_STATE, StateMetadata.name))
-        assert_equal(state_data['version'], tron.__version_info__)
+        patcher = mock.patch('tron.serialize.runstate.statemanager.StateMetadata')
+        with patcher as mock_state_metadata:
+            self.manager.save_metadata()
+            meta_data = mock_state_metadata.return_value
+            expected_key = '%s%s' % (runstate.MCP_STATE, meta_data.name)
+            expected_data = meta_data.state_data
+            self.store.save.assert_called_with([(expected_key, expected_data)])
 
     def test_save_failed(self):
-        def err(_ks):
-            raise PersistenceStoreError("blah")
-        self.store.save = err
-        assert_raises(PersistenceStoreError, self.manager._save, None, Turtle())
+        self.store.save.side_effect = PersistenceStoreError("blah")
+        assert_raises(PersistenceStoreError, self.manager._save, None, mock.Mock())
 
     def test_save_while_disabled(self):
         with self.manager.disabled():
             self.manager._save("something", StateMetadata())
-        assert_length(self.store.save.calls, 0)
+        assert not self.store.save.mock_calls
 
     def test_cleanup(self):
         self.manager.cleanup()
-        assert_call(self.store.cleanup, 0)
+        self.store.cleanup.assert_called_with()
 
     def test_disabled(self):
         with self.manager.disabled():
