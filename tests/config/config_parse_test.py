@@ -339,6 +339,9 @@ services:
         assert_equal(test_config.jobs['test_job4'].enabled, False)
 
 
+    def test_empty_node_test(self):
+        valid_config_from_yaml("""nodes:""")
+
 class NamedConfigTestCase(TestCase):
     config = """
 jobs:
@@ -593,7 +596,7 @@ jobs:
         schedule: "interval 20s"
         actions:
         """
-        expected_message = "Value at config.Job.test_job0.actions"
+        expected_message = "Value at config.jobs.Job.test_job0.actions"
         exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expected_message, str(exception))
 
@@ -613,7 +616,7 @@ jobs:
                 command: "test_command0.0"
 
         """
-        expected = "Duplicate name action0_0 at config.Job.test_job0.actions"
+        expected = "Duplicate name action0_0 at config.jobs.Job.test_job0.actions"
         exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expected, str(exception))
 
@@ -683,7 +686,7 @@ jobs:
                 command: "test_command0.0"
 
         """ % CLEANUP_ACTION_NAME
-        expected_message = "config.Job.test_job0.actions.Action.cleanup.name"
+        expected_message = "config.jobs.Job.test_job0.actions.Action.cleanup.name"
         exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expected_message, str(exception))
 
@@ -814,7 +817,7 @@ class NodeConfigTestCase(TestCase):
                             name: "action0_0"
                             command: "test_command0.0"
             """)
-        expected_msg = "Unknown node name some_unknown_node at config.Job.test_job0.node"
+        expected_msg = "Unknown node name some_unknown_node at config.jobs.Job.test_job0.node"
         exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_equal(expected_msg, str(exception))
 

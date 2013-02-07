@@ -179,10 +179,11 @@ class ServiceCollection(object):
         """
         self._filter_by_name(service_configs.keys())
 
-        for name, (service_config, namespace) in service_configs.itervalues():
+        for name, service_config in service_configs.itervalues():
             log.debug("Building new services %s", name)
             # TODO: NO NO NO, fix name
             service = Service.from_config(service_config, context)
+            # TODO:
             service.name = '%s_%s' % (namespace, name)
             if self.add(service):
                 yield service

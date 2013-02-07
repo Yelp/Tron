@@ -70,8 +70,10 @@ def build_list_of_type_validator(item_validator, allow_empty=False):
     item_validator.
     """
     def validator(value, config_context):
+        if allow_empty and not value:
+            return ()
         seq = valid_list(value, config_context)
-        if not allow_empty and not seq:
+        if not seq:
             msg = "Required non-empty list at %s"
             raise ConfigError(msg % config_context.path)
         return tuple(item_validator(item, config_context) for item in seq)
@@ -499,7 +501,8 @@ def validate_jobs_and_services(config, config_context):
     validation      = [('jobs', valid_jobs), ('services', valid_services)]
 
     for config_name, valid in validation:
-        config[config_name] = valid(config.get(config_name, []), config_context)
+        child_context = config_context.build_child_context(config_name)
+        config[config_name] = valid(config.get(config_name, []), child_context)
 
     fmt_string = 'Job and Service names must be unique %s'
     config_utils.unique_names(fmt_string, config['jobs'], config['services'])
@@ -528,7 +531,8 @@ class ValidateConfig(Validator):
         'jobs':                 (),
         'services':             (),
     }
-    node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
+    node_pools  = build_dict_name_validator(valid_node_pool, allow_empty=True)
+    nodes       = build_dict_name_validator(valid_node, allow_empty=True)
     validators = {
         'output_stream_dir':    valid_output_stream_dir,
         'command_context':      valid_command_context,
@@ -536,10 +540,13 @@ class ValidateConfig(Validator):
         'notification_options': valid_notification_options,
         'time_zone':            valid_time_zone,
         'state_persistence':    valid_state_persistence,
-        'nodes':                build_dict_name_validator(valid_node),
+        'nodes':                nodes,
         'node_pools':           node_pools,
     }
     optional = False
+
+    def build_context(self, in_dict, _):
+        return config_utils.PartialConfigContext('config', MASTER_NAMESPACE)
 
     def validate_node_pool_nodes(self, config):
         """Validate that each node in a node_pool is in fact a node, and not
