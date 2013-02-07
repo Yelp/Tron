@@ -176,7 +176,8 @@ class ActionRun(Observer):
         self.exit_status        = None
         self.bare_command       = bare_command
         self.rendered_command   = rendered_command
-        self.machine            = state.StateMachine(run_state, delegate=self)
+        self.machine            = state.StateMachine(
+                    self.STATE_SCHEDULED, delegate=self, force_state=run_state)
         context                 = ActionRunContext(self)
         self.context            = command_context.CommandContext(
                                     context, parent_context)
