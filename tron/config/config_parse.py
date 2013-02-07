@@ -689,6 +689,11 @@ class ConfigContainer(object):
         for name, fragment in self.iteritems():
             validate_node_names(fragment.jobs, fragment.services, node_names)
 
+    # TODO(0.6) remove once names are compiled inline
+    def get_job_and_service_names(self):
+        jobs, services = collate_jobs_and_services(self)
+        return jobs.keys(), services.keys()
+
     def add(self, name, config_content):
         self.configs[name] = validate_fragment(name, config_content)
 
