@@ -869,8 +869,8 @@ services:
         pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
         monitor_interval: 20
         """
-        expected_collated_jobs = {'MASTER_test_job0': (
-                ConfigJob(name='test_job0',
+        expected_collated_jobs = {'MASTER.test_job0':
+                ConfigJob(name='MASTER.test_job0',
                           node='node0',
                           schedule=ConfigIntervalScheduler(timedelta=datetime.timedelta(0, 20)),
                           actions=FrozenDict({'action0_0':
@@ -887,17 +887,17 @@ services:
                                                              node=None),
                           enabled=True,
                           allow_overlap=False),
-                'MASTER')}
+                }
 
-        expected_collated_services = {'MASTER_test_service0': (
-                ConfigService(name='test_service0',
+        expected_collated_services = {'MASTER.test_service0':
+                ConfigService(name='MASTER.test_service0',
                               node='node0',
                               pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                               command='service_command0',
                               monitor_interval=20,
                               restart_interval=None,
                               count=2),
-                'MASTER')}
+                }
 
         config_mapping = {MASTER_NAMESPACE: valid_config_from_yaml(test_config)}
         config_container = ConfigContainer(config_mapping)
@@ -934,7 +934,7 @@ services:
         fake_config = mock.Mock()
         setattr(fake_config, 'jobs', jobs)
         setattr(fake_config, 'services', services)
-        expected_message = "Collision found for identifier 'MASTER_test_collision0'"
+        expected_message = "Collision found for identifier 'MASTER.test_collision0'"
         exception = assert_raises(ConfigError, collate_jobs_and_services, {'MASTER': fake_config})
         assert_in(expected_message, str(exception))
 

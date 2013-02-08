@@ -90,16 +90,14 @@ class Client(object):
             'services': name_href_dict(content['services'])
         }
 
+    def get_url(self, identifier):
+        return get_object_type_from_identifier(self.index(), identifier).url
+
     def services(self):
         return self.request('/services').get('services')
 
-    def service(self, service_id):
-        service_url = "/services/%s" % service_id
+    def service(self, service_url):
         return self.request(service_url)
-
-    def service_events(self, service_id):
-        service_url = "/services/%s/_events" % service_id
-        return self.request(service_url)['data']
 
     def _get_job_params(self):
         if self.options.warn:
@@ -110,26 +108,20 @@ class Client(object):
         params = self._get_job_params()
         return self.request('/jobs' + params).get('jobs')
 
-    def job(self, job_id):
+    def job(self, job_url):
         params = self._get_job_params()
-        return self.request('/jobs/%s%s' % (job_id, params))
+        return self.request('%s%s' % (job_url, params))
 
-    def job_events(self, job_id):
-        return self.request('/jobs/%s/_events' % job_id)['data']
-
-    def job_runs(self, action_id):
+    def job_runs(self, job_run_url):
         params = self._get_job_params()
-        action_id = action_id.replace('.', '/')
-        return self.request('/jobs/%s%s' % (action_id, params))
+        return self.request('%s%s' % (job_run_url, params))
 
-    def action(self, action_id):
-        url = "/jobs/%s?num_lines=%s" % (action_id.replace('.', '/'),
-            self.options.num_displays)
+    def action(self, action_run_url):
+        url = "%s?num_lines=%s" % (action_run_url, self.options.num_displays)
         return self.request(url)
 
-    def action_events(self, action_id):
-        action_id = action_id.replace('.', '/')
-        return self.request('/jobs/%s/_events' % action_id)['data']
+    def object_events(self, item_url):
+        return self.request('%s/_events' % item_url)['data']
 
     def request(self, url, data=None):
         server = self.options.server
@@ -156,33 +148,38 @@ class TronObjectType(object):
 
 TronObjectIdentifier = namedtuple('TronObjectIdentifier', 'type name url')
 
+IdentifierParts = namedtuple('IdentifierParts', 'name path length')
+
 
 def get_object_type_from_identifier(url_index, identifier):
     """Given a string identifier, return a TronObjectIdentifier.
     """
-    name_elements       = identifier.split('.')
-    identifier_length   = len(name_elements) - 1
-    obj_name            = name_elements[0]
-    relative_path       = '/'.join(name_elements[1:])
+    def get_name_parts(identifier, namespace=None):
+        if namespace:
+            identifier = '%s.%s' % (namespace, identifier)
 
-    def full_url(obj_url):
-        return '%s/%s' % (obj_url, relative_path)
+        name_elements       = identifier.split('.')
+        name                = '.'.join(name_elements[:2])
+        length              = len(name_elements) - 2
+        relative_path       = '/'.join(name_elements[2:])
+        return IdentifierParts(name, relative_path, length)
 
-    def find_by_type(name, index_name):
+    def find_by_type(id_parts, index_name):
         url_type_index = url_index[index_name]
-        if name in url_type_index:
-            tron_type = TronObjectType.groups[index_name][identifier_length]
-            url = full_url(url_type_index[name])
-            return TronObjectIdentifier(tron_type, name, url)
+        if id_parts.name in url_type_index:
+            tron_type = TronObjectType.groups[index_name][id_parts.length]
+            url = '%s/%s' % (url_type_index[id_parts.name], id_parts.path)
+            return TronObjectIdentifier(tron_type, id_parts.name, url)
 
-    def find_by_name(name):
-        return find_by_type(name, 'jobs') or find_by_type(name, 'services')
+    def find_by_name(name, namespace=None):
+        id = get_name_parts(name, namespace)
+        return find_by_type(id, 'jobs') or find_by_type(id, 'services')
 
     # TODO: include a list of namespaces in the index so that a job can be
     # found in any namespace
-    default_name = '%s_%s' % (MASTER_NAMESPACE, obj_name)
-    type_url = find_by_name(obj_name) or find_by_name(default_name)
-    if type_url:
-        return type_url
+    id_obj = (find_by_name(identifier) or
+              find_by_name(identifier, MASTER_NAMESPACE))
+    if id_obj:
+        return id_obj
 
     raise ValueError("Unknown identifier: %s" % identifier)
