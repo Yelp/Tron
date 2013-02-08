@@ -53,7 +53,7 @@ class ConfigController(object):
 
     def render_template(self, config_content):
         container = self.config_manager.load()
-        command_context = container.get_master().command_context
+        command_context = container.get_master().command_context or {}
         context = {
             'node_names': format_seq(container.get_node_names()),
             'command_context': format_mapping(command_context)}
@@ -75,13 +75,16 @@ class ConfigController(object):
 
     def read_config(self, name):
         config_content = self._get_config_content(name)
+        config_hash = self.config_manager.get_hash(name)
 
-        if name == schema.MASTER_NAMESPACE:
-            return config_content
-        return self.render_template(config_content)
+        if name != schema.MASTER_NAMESPACE:
+            config_content = self.render_template(config_content)
+        return dict(config=config_content, hash=config_hash)
 
-    def update_config(self, name, content):
+    def update_config(self, name, content, config_hash):
         """Update a configuration fragment and reload the MCP."""
+        if self.config_manager.get_hash(name) != config_hash:
+            return "Configuration has changed. Please try again."
         content = self.strip_header(name, content)
         try:
             self.config_manager.write_config(name, content)
