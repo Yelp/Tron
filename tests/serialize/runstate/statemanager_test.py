@@ -7,7 +7,7 @@ from tests.testingutils import autospec_method
 from tron.config import schema
 from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
-from tron.serialize.runstate.statemanager import PersistentStateManager
+from tron.serialize.runstate.statemanager import PersistentStateManager, StateChangeWatcher
 from tron.serialize.runstate.statemanager import StateSaveBuffer
 from tron.serialize.runstate.statemanager import StateMetadata
 from tron.serialize.runstate.statemanager import PersistenceStoreError
@@ -100,34 +100,19 @@ class PersistentStateManagerTestCase(TestCase):
             names[1]: {'state': '2data'}}
         assert_equal(expected, state_data)
 
-    def test_save_job(self):
-        mock_job = mock.Mock()
-        self.manager.save_job(mock_job)
-        key = '%s%s' % (runstate.JOB_STATE, mock_job.name)
-        self.store.save.assert_called_with([(key, mock_job.state_data)])
-
-    def test_save_service(self):
-        mock_service = mock.Mock()
-        self.manager.save_service(mock_service)
-        key = '%s%s' % (runstate.SERVICE_STATE, mock_service.name)
-        self.store.save.assert_called_with([(key, mock_service.state_data)])
-
-    def test_save_metadata(self):
-        patcher = mock.patch('tron.serialize.runstate.statemanager.StateMetadata')
-        with patcher as mock_state_metadata:
-            self.manager.save_metadata()
-            meta_data = mock_state_metadata.return_value
-            expected_key = '%s%s' % (runstate.MCP_STATE, meta_data.name)
-            expected_data = meta_data.state_data
-            self.store.save.assert_called_with([(expected_key, expected_data)])
+    def test_save(self):
+        name, state_data = 'name', mock.Mock()
+        self.manager.save(runstate.JOB_STATE, name, state_data)
+        key = '%s%s' % (runstate.JOB_STATE, name)
+        self.store.save.assert_called_with([(key, state_data)])
 
     def test_save_failed(self):
         self.store.save.side_effect = PersistenceStoreError("blah")
-        assert_raises(PersistenceStoreError, self.manager._save, None, mock.Mock())
+        assert_raises(PersistenceStoreError, self.manager.save, None, None, None)
 
     def test_save_while_disabled(self):
         with self.manager.disabled():
-            self.manager._save("something", StateMetadata())
+            self.manager.save("something", 'name', mock.Mock())
         assert not self.store.save.mock_calls
 
     def test_cleanup(self):
@@ -151,6 +136,69 @@ class PersistentStateManagerTestCase(TestCase):
         with self.manager.disabled():
             pass
         assert not self.manager.enabled
+
+
+class StateChangeWatcherTestCase(TestCase):
+
+    @setup
+    def setup_watcher(self):
+        self.watcher = StateChangeWatcher()
+        self.state_manager = mock.create_autospec(PersistentStateManager)
+        self.watcher.state_manager = self.state_manager
+
+    def test_update_from_config_no_change(self):
+        self.watcher.config = state_config = mock.Mock()
+        assert not self.watcher.update_from_config(state_config)
+        autospec_method(self.watcher.shutdown)
+        assert_equal(self.watcher.state_manager, self.state_manager)
+        assert not self.watcher.shutdown.mock_calls
+
+    @mock.patch('tron.serialize.runstate.statemanager.PersistenceManagerFactory',
+    autospec=True)
+    def test_update_from_config_changed(self, mock_factory):
+        state_config = mock.Mock()
+        autospec_method(self.watcher.shutdown)
+        assert self.watcher.update_from_config(state_config)
+        assert_equal(self.watcher.config, state_config)
+        self.watcher.shutdown.assert_called_with()
+        assert_equal(self.watcher.state_manager,
+            mock_factory.from_config.return_value)
+        mock_factory.from_config.assert_called_with(state_config)
+
+    def test_save_job(self):
+        mock_job = mock.Mock()
+        self.watcher.save_job(mock_job)
+        self.watcher.state_manager.save.assert_called_with(
+            runstate.JOB_STATE, mock_job.name, mock_job.state_data)
+
+    def test_save_service(self):
+        mock_service = mock.Mock()
+        self.watcher.save_service(mock_service)
+        self.watcher.state_manager.save.assert_called_with(
+            runstate.SERVICE_STATE, mock_service.name, mock_service.state_data)
+
+    def test_save_metadata(self):
+        patcher = mock.patch('tron.serialize.runstate.statemanager.StateMetadata')
+        with patcher as mock_state_metadata:
+            self.watcher.save_metadata()
+            meta_data = mock_state_metadata.return_value
+            self.watcher.state_manager.save.assert_called_with(
+                runstate.MCP_STATE, meta_data.name, meta_data.state_data)
+
+    def test_shutdown(self):
+        self.watcher.shutdown()
+        assert not self.watcher.state_manager.enabled
+        self.watcher.state_manager.cleanup.assert_called_with()
+
+    def test_disabled(self):
+        context = self.watcher.disabled()
+        assert_equal(self.watcher.state_manager.disabled.return_value, context)
+
+    def test_restore(self):
+        jobs, services = mock.Mock(), mock.Mock()
+        self.watcher.restore(jobs, services)
+        self.watcher.state_manager.restore.assert_called_with(jobs, services)
+
 
 
 if __name__ == "__main__":
