@@ -1,3 +1,4 @@
+import hashlib
 import logging
 import os
 import yaml
@@ -34,6 +35,10 @@ def read_raw(path):
         return fh.read()
 
 
+def hash_digest(content):
+    return hashlib.sha1(content).hexdigest()
+
+
 class ManifestFile(object):
     """Manage the manifest file, which tracks name to filename."""
 
@@ -67,6 +72,8 @@ class ManifestFile(object):
 
 class ConfigManager(object):
     """Read, load and write configuration."""
+
+    DEFAULT_HASH = hash_digest("")
 
     def __init__(self, config_path):
         self.config_path = config_path
@@ -102,8 +109,15 @@ class ConfigManager(object):
         name_mapping = dict((name, read(filename)) for name, filename in seq)
         return config_parse.ConfigContainer.create(name_mapping)
 
+    def get_hash(self, name):
+        """Return a hash of the configuration contents for name."""
+        if name not in self:
+            return self.DEFAULT_HASH
+        return hash_digest(self.read_raw_config(name))
+
     def __contains__(self, name):
         return name in self.manifest
+
 
 def create_new_config(path, master_content, master_filename='master'):
     """Create a new configuration directory with master config."""

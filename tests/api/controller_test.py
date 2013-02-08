@@ -84,7 +84,9 @@ class ConfigControllerTestCase(TestCase):
         name = 'MASTER'
         resp = self.controller.read_config(name)
         self.manager.read_raw_config.assert_called_with(name)
-        assert_equal(resp, self.manager.read_raw_config.return_value)
+        self.manager.get_hash.assert_called_with(name)
+        assert_equal(resp['config'], self.manager.read_raw_config.return_value)
+        assert_equal(resp['hash'], self.manager.get_hash.return_value)
 
     def test_read_config_named(self):
         name = 'some_name'
@@ -94,27 +96,35 @@ class ConfigControllerTestCase(TestCase):
         self.controller._get_config_content.assert_called_with(name)
         self.controller.render_template.assert_called_with(
             self.controller._get_config_content.return_value)
-        assert_equal(resp, self.controller.render_template.return_value)
+        assert_equal(resp['config'], self.controller.render_template.return_value)
+        assert_equal(resp['hash'], self.manager.get_hash.return_value)
 
     def test_update_config(self):
         autospec_method(self.controller.strip_header)
-        name, content = None, mock.Mock()
-        assert not self.controller.update_config(name, content)
+        name, content, config_hash = None, mock.Mock(), mock.Mock()
+        self.manager.get_hash.return_value = config_hash
+        assert not self.controller.update_config(name, content, config_hash)
         striped_content = self.controller.strip_header.return_value
         self.manager.write_config.assert_called_with(name, striped_content)
         self.mcp.reconfigure.assert_called_with()
         self.controller.strip_header.assert_called_with(name, content)
+        self.manager.get_hash.assert_called_with(name)
 
     def test_update_config_failure(self):
         autospec_method(self.controller.strip_header)
         striped_content = self.controller.strip_header.return_value
-        name, content = None, mock.Mock()
+        name, content, config_hash = None, mock.Mock(), mock.Mock()
+        self.manager.get_hash.return_value = config_hash
         self.manager.write_config.side_effect = ConfigError("It broke")
-        error = self.controller.update_config(name, striped_content)
+        error = self.controller.update_config(name, striped_content, config_hash)
         assert_equal(error, "It broke")
         self.manager.write_config.assert_called_with(name, striped_content)
         assert not self.mcp.reconfigure.call_count
 
+    def test_update_config_hash_mismatch(self):
+        name, content, config_hash = None, mock.Mock(), mock.Mock()
+        error = self.controller.update_config(name, content, config_hash)
+        assert_equal(error, "Configuration has changed. Please try again.")
 
 if __name__ == "__main__":
     run()
