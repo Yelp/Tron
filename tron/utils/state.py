@@ -99,10 +99,10 @@ class StateMachine(Observable):
     transitioning to other states based on the target.
     """
 
-    def __init__(self, initial_state, delegate=None):
+    def __init__(self, initial_state, delegate=None, force_state=None):
         super(StateMachine, self).__init__()
         self.initial_state = initial_state
-        self.state = self.initial_state
+        self.state = force_state or self.initial_state
         self._state_by_name = None
         self.delegate = delegate
 
