@@ -75,7 +75,7 @@ class StateMetadata(object):
         version = metadata['version']
         # Names (and state keys) changed in 0.5.2, requires migration
         # see tools/migration/migrate_state_to_namespace
-        if version > cls.version or version < (0,5,2):
+        if version > cls.version or version < (0, 5, 2):
             msg = "State for version %s, expected %s"
             raise VersionMismatchError(
                 msg % (metadata['version'] , cls.version))
