@@ -73,4 +73,4 @@ tests:
 test: tests
 
 test_all:
-	PYTHONPATH=. testify tests
+	PYTHONPATH=. testify tests --summary
