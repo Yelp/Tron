@@ -72,7 +72,10 @@ class StateMetadata(object):
         if not metadata:
             return
 
-        if metadata['version'] > cls.version:
+        version = metadata['version']
+        # Names (and state keys) changed in 0.5.2, requires migration
+        # see tools/migration/migrate_state_to_namespace
+        if version > cls.version or version < (0,5,2):
             msg = "State for version %s, expected %s"
             raise VersionMismatchError(
                 msg % (metadata['version'] , cls.version))
@@ -131,30 +134,30 @@ class PersistentStateManager(observer.Observer):
         self.metadata_key       = self._impl.build_key(
                                     runstate.MCP_STATE, StateMetadata.name)
 
-    def restore(self, jobs, services):
+    def restore(self, job_names, service_names, skip_validation=False):
         """Return the most recent serialized state."""
         log.debug("Restoring state.")
-        self._restore_metadata()
+        if not skip_validation:
+            self._restore_metadata()
 
-        return (self._restore_dicts(runstate.JOB_STATE, jobs),
-                self._restore_dicts(runstate.SERVICE_STATE, services))
+        return (self._restore_dicts(runstate.JOB_STATE, job_names),
+                self._restore_dicts(runstate.SERVICE_STATE, service_names))
 
     def _restore_metadata(self):
         metadata = self._impl.restore([self.metadata_key])
         StateMetadata.validate_metadata(metadata.get(self.metadata_key))
 
-    def _keys_for_items(self, item_type, items):
+    def _keys_for_items(self, item_type, names):
         """Returns a dict of item to the key for that item."""
-        make_key = self._impl.build_key
-        keys = (make_key(item_type, item.name) for item in items)
-        return dict(itertools.izip(keys, items))
+        keys = (self._impl.build_key(item_type, name) for name in names)
+        return dict(itertools.izip(keys, names))
 
     def _restore_dicts(self, item_type, items):
         """Return a dict mapping of the items name to its state data."""
         key_to_item_map  = self._keys_for_items(item_type, items)
         key_to_state_map = self._impl.restore(key_to_item_map.keys())
         return dict(
-                (key_to_item_map[key].name, state_data)
+                (key_to_item_map[key], state_data)
                 for key, state_data in key_to_state_map.iteritems())
 
     def _save(self, type_enum, item):

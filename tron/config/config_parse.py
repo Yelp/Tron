@@ -40,20 +40,28 @@ def collate_jobs_and_services(configs):
     jobs = {}
     services = {}
 
+    def build_identifier(namespace, name):
+        return '%s.%s' % (namespace, name)
+
+    # TODO(0.6) remove once inline
+    def repack_with_identifier(identifier, item):
+        return type(item)(identifier, *item[1:])
+
     def _iter_items(config, namespace, attr):
         for item in getattr(config, attr):
-            identifier = '_'.join((namespace, item))
+
+            identifier = build_identifier(namespace, item)
             if identifier in jobs or identifier in services:
                 raise ConfigError("Collision found for identifier '%s'" % job_identifier)
             content = getattr(config, attr)[item]
-            yield identifier, content
+            yield identifier, repack_with_identifier(identifier, content)
 
     for namespace, config in configs.iteritems():
         for job_identifier, content in _iter_items(config, namespace, "jobs"):
-            jobs[job_identifier] = (content, namespace)
+            jobs[job_identifier] = content
 
         for service_identifier, content in _iter_items(config, namespace, "services"):
-            services[service_identifier] = (content, namespace)
+            services[service_identifier] = content
 
     return jobs, services
 
@@ -688,6 +696,11 @@ class ConfigContainer(object):
         node_names = self.get_node_names()
         for name, fragment in self.iteritems():
             validate_node_names(fragment.jobs, fragment.services, node_names)
+
+    # TODO(0.6) remove once names are compiled inline
+    def get_job_and_service_names(self):
+        jobs, services = collate_jobs_and_services(self)
+        return jobs.keys(), services.keys()
 
     def add(self, name, config_content):
         self.configs[name] = validate_fragment(name, config_content)
