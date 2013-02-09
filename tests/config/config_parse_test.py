@@ -899,8 +899,8 @@ services:
         pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
         monitor_interval: 20
         """
-        expected_collated_jobs = {'MASTER_test_job0':
-                schema.ConfigJob(name='test_job0',
+        expected_collated_jobs = {'MASTER.test_job0':
+                schema.ConfigJob(name='MASTER.test_job0',
                           namespace='MASTER',
                           node='node0',
                           schedule=ConfigIntervalScheduler(timedelta=datetime.timedelta(0, 20)),
@@ -919,8 +919,8 @@ services:
                           allow_overlap=False)
                 }
 
-        expected_collated_services = {'MASTER_test_service0':
-                schema.ConfigService(name='test_service0',
+        expected_collated_services = {'MASTER.test_service0':
+                schema.ConfigService(name='MASTER.test_service0',
                               namespace='MASTER',
                               node='node0',
                               pid_file='/var/run/%(name)s-%(instance_number)s.pid',
@@ -967,7 +967,7 @@ services:
         fake_config = mock.Mock()
         setattr(fake_config, 'jobs', jobs)
         setattr(fake_config, 'services', services)
-        expected_message = "Collision found for identifier 'MASTER_test_collision0'"
+        expected_message = "Collision found for identifier 'MASTER.test_collision0'"
         exception = assert_raises(ConfigError, collate_jobs_and_services, {'MASTER': fake_config})
         assert_in(expected_message, str(exception))
 

@@ -67,12 +67,12 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
     @setup
     def setup_mcp(self):
         self.working_dir        = tempfile.mkdtemp()
-        self.config_path    = tempfile.mkdtemp()
+        self.config_path        = tempfile.mkdtemp()
         self.mcp                = mcp.MasterControlProgram(
                                     self.working_dir, self.config_path)
         self.mcp.jobs           = {'1': Turtle(), '2': Turtle()}
         self.mcp.services       = mock.create_autospec(service.ServiceCollection)
-        self.mcp.state_manager = mock.create_autospec(statemanager.PersistentStateManager)
+        self.mcp.state_manager  = mock.create_autospec(statemanager.PersistentStateManager)
 
     @teardown
     def teardown_mcp(self):

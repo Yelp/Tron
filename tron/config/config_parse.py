@@ -641,6 +641,11 @@ class ConfigContainer(object):
         """
         collate_jobs_and_services(self)
 
+    # TODO(0.6) remove once names are compiled inline
+    def get_job_and_service_names(self):
+        jobs, services = collate_jobs_and_services(self)
+        return jobs.keys(), services.keys()
+
     def add(self, name, config_content):
         master = self.get_master()
         nodes = self.get_node_names()

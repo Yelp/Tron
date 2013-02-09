@@ -137,7 +137,7 @@ class MasterControlProgram(Observable):
 
     def _apply_jobs(self, job_configs, reconfigure=False):
         """Add and remove jobs based on the configuration."""
-        for job_config in job_configs.values():
+        for job_config in job_configs.itervalues():
             self.add_job(job_config, reconfigure=reconfigure)
 
         for job_name in (set(self.jobs.keys()) - set(job_configs.keys())):
@@ -207,9 +207,10 @@ class MasterControlProgram(Observable):
         to the configured Jobs and Services.
         """
         self.event_recorder.notice('restoring')
+        job_names     = [job_sched.job.name for job_sched in self.jobs.values()]
+        service_names = [service.name for service in self.services]
         job_states, service_states = self.state_manager.restore(
-                [job_sched.job for job_sched in self.jobs.values()],
-                self.services)
+                job_names, service_names)
 
         for name, job_state_data in job_states.iteritems():
             self.jobs[name].restore_job_state(job_state_data)
