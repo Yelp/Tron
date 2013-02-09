@@ -210,16 +210,6 @@ class ServiceInstanceStartTask(observer.Observable, observer.Observer):
         self.notify(event)
 
 
-def build_instance_context(config, node, number, parent_context):
-    context = {
-        'instance_number': number,
-        'name': config.name,
-        'node': node.hostname,
-        'pid_file': config.pid_file % parent_context,
-    }
-    return command_context.CommandContext(context, parent_context)
-
-
 class ServiceInstanceState(state.NamedEventState):
     """Event state subclass for service instances"""
 
@@ -251,16 +241,18 @@ class ServiceInstance(observer.Observer):
     STATE_UP['monitor']                 = STATE_MONITORING
     STATE_DOWN['start']                 = STATE_STARTING
 
+    context_class               = command_context.ServiceInstanceContext
+
     # TODO: add start time?
-    def __init__(self, config, node, instance_number, context):
+    def __init__(self, config, node, instance_number, parent_context):
         self.config             = config
         self.node               = node
         self.instance_number    = instance_number
-        self.context            = context
         self.id                 = "%s.%s" % (config.name, self.instance_number)
 
         start_state             = ServiceInstance.STATE_DOWN
         self.machine            = state.StateMachine(start_state, delegate=self)
+        self.context = command_context.build_context(self, parent_context)
 
     def create_tasks(self):
         """Create and watch tasks."""
@@ -277,8 +269,6 @@ class ServiceInstance(observer.Observer):
 
     @classmethod
     def create(cls, config, node, instance_number, context):
-        context  = build_instance_context(
-                    config, node, instance_number, context)
         instance = cls(config, node, instance_number, context)
         instance.create_tasks()
         return instance
@@ -459,6 +449,8 @@ class ServiceInstanceCollection(object):
     def __getattr__(self, item):
         return self.instances_proxy.perform(item)
 
+    # TODO: I believe context can be removed from here because underline next
+    # objects are replaced
     def __eq__(self, other):
         return (self.node_pool == other.node_pool and
                 self.config == other.config and

@@ -12,34 +12,11 @@ from tests.testingutils import Turtle
 
 from tron import node
 from tron.core import jobrun, actiongraph
-from tron.core.actionrun import ActionCommand, ActionRunContext, ActionRun
+from tron.core.actionrun import ActionCommand, ActionRun
 from tron.core.actionrun import ActionRunCollection, ActionRunFactory
 from tron.core.actionrun import InvalidStartStateError
 from tron.serialize import filehandler
 from tron.utils import timeutils
-
-class ActionRunContextTestCase(testingutils.MockTimeTestCase):
-
-    now = datetime.datetime.now()
-
-    @setup
-    def build_context(self):
-        action_run = turtle.Turtle(
-            node=turtle.Turtle(hostname="nodename"),
-            job_run_time=self.now,
-            job_run_id='job_run_id'
-        )
-        self.context = ActionRunContext(action_run)
-
-    def test_runid(self):
-        assert_equal(self.context.runid, 'job_run_id')
-
-    def test_daynumber(self):
-        daynum = self.now.toordinal()
-        assert_equal(self.context['daynumber'], daynum)
-
-    def test_node_hostname(self):
-        assert_equal(self.context.node, 'nodename')
 
 
 class ActionRunFactoryTestCase(TestCase):

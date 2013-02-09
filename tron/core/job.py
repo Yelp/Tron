@@ -24,38 +24,6 @@ class InvalidStartStateError(Error):
 log = logging.getLogger(__name__)
 
 
-class JobContext(object):
-    """A class which exposes properties for rendering commands."""
-
-    def __init__(self, job):
-        self.job = job
-
-    @property
-    def name(self):
-        return self.job.name
-
-    def __getitem__(self, item):
-        date_name, date_spec = self._get_date_spec_parts(item)
-        if not date_spec:
-            raise KeyError(item)
-
-        if date_name == 'last_success':
-            last_success = self.job.runs.last_success
-            last_success = last_success.run_time if last_success else None
-
-            time_value = timeutils.DateArithmetic.parse(date_spec, last_success)
-            if time_value:
-                return time_value
-
-        raise KeyError(item)
-
-    def _get_date_spec_parts(self, name):
-        parts = name.rsplit(':', 1)
-        if len(parts) != 2:
-            return [name, None]
-        return parts
-
-
 class Job(Observable, Observer):
     """A configurable data object.
 
@@ -63,13 +31,15 @@ class Job(Observable, Observer):
     actions and their dependency graph.
     """
 
-    STATUS_DISABLED       = "DISABLED"
-    STATUS_ENABLED        = "ENABLED"
-    STATUS_UNKNOWN        = "UNKNOWN"
-    STATUS_RUNNING        = "RUNNING"
+    STATUS_DISABLED         = "DISABLED"
+    STATUS_ENABLED          = "ENABLED"
+    STATUS_UNKNOWN          = "UNKNOWN"
+    STATUS_RUNNING          = "RUNNING"
 
-    NOTIFY_STATE_CHANGE   = 'notify_state_change'
-    NOTIFY_RUN_DONE       = 'notify_run_done'
+    NOTIFY_STATE_CHANGE     = 'notify_state_change'
+    NOTIFY_RUN_DONE         = 'notify_run_done'
+
+    context_class           = command_context.JobContext
 
     def __init__(self, name, scheduler, queueing=True, all_nodes=False,
             node_pool=None, enabled=True, action_graph=None,
@@ -85,11 +55,10 @@ class Job(Observable, Observer):
         self.enabled            = enabled
         self.node_pool          = node_pool
         self.allow_overlap      = allow_overlap
-        self.context            = command_context.CommandContext(
-                                    JobContext(self), parent_context)
         self.output_path        = output_path or filehandler.OutputPath()
         self.output_path.append(name)
         self.event              = event.get_recorder(self.name)
+        self.context = command_context.build_context(self, parent_context)
         self.event.ok('created')
 
     @classmethod
@@ -100,10 +69,9 @@ class Job(Observable, Observer):
                 job_config.actions, node_pools, job_config.cleanup_action)
         runs = jobrun.JobRunCollection.from_config(job_config)
         nodes = node_pools[job_config.node] if job_config.node else None
-        job_name = '%s_%s' % (job_config.namespace, job_config.name)
 
         return cls(
-            name                = job_name,
+            name                = job_config.name,
             queueing            = job_config.queueing,
             all_nodes           = job_config.all_nodes,
             node_pool           = nodes,

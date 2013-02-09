@@ -19,23 +19,6 @@ class Error(Exception):
     pass
 
 
-class JobRunContext(object):
-
-    def __init__(self, job_run):
-        self.job_run = job_run
-
-    @property
-    def cleanup_job_status(self):
-        """Provide 'SUCCESS' or 'FAILURE' to a cleanup action context based on
-        the status of the other steps
-        """
-        if self.job_run.action_runs.is_failed:
-            return 'FAILURE'
-        elif self.job_run.action_runs.is_complete_without_cleanup:
-            return 'SUCCESS'
-        return 'UNKNOWN'
-
-
 class JobRun(Observable, Observer):
     """A JobRun is an execution of a Job.  It has a list of ActionRuns and is
     responsible for starting ActionRuns in the correct order and managing their
@@ -44,6 +27,8 @@ class JobRun(Observable, Observer):
 
     NOTIFY_DONE           = 'notify_done'
     NOTIFY_STATE_CHANGED  = 'notify_state_changed'
+
+    context_class         = command_context.JobRunContext
 
     def __init__(self, job_name, run_num, run_time, node, output_path=None,
                 base_context=None, action_runs=None,
@@ -66,8 +51,7 @@ class JobRun(Observable, Observer):
         if action_runs:
             self.action_runs    = action_runs
 
-        context = JobRunContext(self)
-        self.context = command_context.CommandContext(context, base_context)
+        self.context = command_context.build_context(self, base_context)
 
     @property
     def id(self):

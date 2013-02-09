@@ -13,7 +13,7 @@ from testify import assert_equal, assert_in
 from testify import run, setup, teardown, TestCase
 import yaml
 from tron.config import config_parse, schema, manager, config_utils
-from tron.config.config_parse import valid_config, ConfigContainer, valid_cleanup_action_name
+from tron.config.config_parse import valid_config, valid_cleanup_action_name
 from tron.config.config_parse import valid_identifier
 from tron.config.config_parse import valid_output_stream_dir
 from tron.config.config_parse import valid_node_pool

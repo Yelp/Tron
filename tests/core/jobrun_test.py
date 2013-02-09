@@ -9,22 +9,6 @@ from tests.testingutils import Turtle
 from tests import testingutils
 
 
-class JobRunContextTestCase(TestCase):
-
-    @setup
-    def setup_context(self):
-        self.jobrun = Turtle()
-        self.context = jobrun.JobRunContext(self.jobrun)
-
-    def test_cleanup_job_status(self):
-        self.jobrun.action_runs.is_failed = False
-        self.jobrun.action_runs.is_complete_without_cleanup = True
-        assert_equal(self.context.cleanup_job_status, 'SUCCESS')
-
-    def test_cleanup_job_status_failure(self):
-        self.jobrun.action_runs.is_failed = True
-
-
 class JobRunTestCase(testingutils.MockTimeTestCase):
 
     now = datetime.datetime(2012, 3, 14, 15, 9, 20)

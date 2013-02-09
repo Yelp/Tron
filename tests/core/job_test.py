@@ -1,7 +1,7 @@
 import datetime
 import mock
 
-from testify import setup, teardown, TestCase, run, assert_equal, assert_raises
+from testify import setup, teardown, TestCase, run, assert_equal
 from testify import setup_teardown
 from tests import mocks
 from tests.assertions import assert_length, assert_call
@@ -10,43 +10,6 @@ from tests import testingutils
 from tron import node, event
 from tron.core import job, jobrun
 from tron.core.actionrun import ActionRun
-
-
-class JobContextTestCase(TestCase):
-
-    @setup
-    def setup_job(self):
-        self.last_success = mock.Mock(run_time=datetime.datetime(2012, 3, 14))
-        scheduler = mock.Mock()
-        run_collection = mock.Mock(last_success=self.last_success)
-        self.job = job.Job("jobname", scheduler, run_collection=run_collection)
-        self.context = job.JobContext(self.job)
-
-    def test_name(self):
-        assert_equal(self.context.name, self.job.name)
-
-    def test__getitem__last_success(self):
-        item = self.context["last_success:day-1"]
-        expected = (self.last_success.run_time - datetime.timedelta(days=1)).day
-        assert_equal(item, str(expected))
-
-        item = self.context["last_success:shortdate"]
-        assert_equal(item, "2012-03-14")
-
-    def test__getitem__last_success_bad_date_spec(self):
-        name = "last_success:beers-3"
-        assert_raises(KeyError, lambda: self.context[name])
-
-    def test__getitem__last_success_bad_date_name(self):
-        name = "first_success:shortdate-1"
-        assert_raises(KeyError, lambda: self.context[name])
-
-    def test__getitem__last_success_no_date_spec(self):
-        name = "last_success"
-        assert_raises(KeyError, lambda: self.context[name])
-
-    def test__getitem__missing(self):
-        assert_raises(KeyError, lambda: self.context['bogus'])
 
 
 class JobTestCase(TestCase):
