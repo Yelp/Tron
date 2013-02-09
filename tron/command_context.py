@@ -12,6 +12,21 @@ def build_context(object, parent):
     return CommandContext(object.context_class(object), parent)
 
 
+def build_filled_context(*context_objects):
+    """Create a CommandContext chain from context_objects, using a Filler
+    object to pass to each CommandContext. Can be used to validate a format
+    string.
+    """
+    if not context_objects:
+        return CommandContext()
+
+    filler = Filler()
+    def build(current, next):
+        return CommandContext(next(filler), current)
+
+    return reduce(build, context_objects, None)
+
+
 class CommandContext(object):
     """A CommandContext object is a wrapper around any object which has values
     to be used to render a command for execution.  It looks up values by name.
@@ -84,7 +99,7 @@ class JobContext(object):
     def _get_date_spec_parts(self, name):
         parts = name.rsplit(':', 1)
         if len(parts) != 2:
-            return [name, None]
+            return name, None
         return parts
 
 
@@ -133,7 +148,7 @@ class ActionRunContext(object):
         return self.action_run.node.hostname
 
 
-class ServiceInstanceContext(object):
+class ServiceInstancePidContext(object):
 
     def __init__(self, service_instance):
         self.service_instance = service_instance
@@ -150,6 +165,25 @@ class ServiceInstanceContext(object):
     def name(self):
         return self.service_instance.config.name
 
+
+class ServiceInstanceContext(ServiceInstancePidContext):
+
     @property
     def pid_file(self):
         return self.service_instance.config.pid_file % CommandContext(self)
+
+
+class Filler(object):
+    """Filler object for using CommandContext during config parsing."""
+
+    def __getattr__(self, _):
+        return self
+
+    def __str__(self):
+        return "%(...)s"
+
+    def __mod__(self, _):
+        return self
+
+    def __nonzero__(self):
+        return False

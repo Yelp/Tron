@@ -72,8 +72,6 @@ class DateArithmetic(object):
         'shortdate':            '%Y-%m-%d'
     }
 
-    SUPPORTED_FORMATS = DATE_FORMATS.keys() + ['unixtime', 'daynumber']
-
     @classmethod
     def parse(cls, date_str, dt=None):
         """Parse a date arithmetic pattern (Ex: 'shortdate-1'). Supports

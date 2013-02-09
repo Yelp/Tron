@@ -1013,8 +1013,8 @@ class BuildFormatStringValidatorTestCase(TestCase):
 
     @setup
     def setup_keys(self):
-        self.keys = ['one', 'seven', 'stars']
-        self.validator = build_format_string_validator(self.keys)
+        self.context = dict.fromkeys(['one', 'seven', 'stars'])
+        self.validator = build_format_string_validator(self.context)
 
     def test_validator_passes(self):
         template = "The %(one)s thing I %(seven)s is %(stars)s"
@@ -1023,6 +1023,11 @@ class BuildFormatStringValidatorTestCase(TestCase):
     def test_validator_error(self):
         template = "The %(one)s thing I %(seven)s is %(unknown)s"
         assert_raises(ConfigError, self.validator, template, NullConfigContext)
+
+    def test_validator_passes_with_context(self):
+        template = "The %(one)s thing I %(seven)s is %(mars)s"
+        context = config_utils.ConfigContext(None, None, {'mars': 'ok'}, None)
+        assert self.validator(template, context)
 
 
 class BuildListOfTypeValidatorTestCase(TestCase):

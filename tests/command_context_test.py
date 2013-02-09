@@ -19,6 +19,26 @@ class EmptyContextTestCase(TestCase):
         assert not self.context.get('foo')
 
 
+class BuildFilledContextTestCase(TestCase):
+
+    def test_build_filled_context_no_objects(self):
+        output = command_context.build_filled_context()
+        assert not output.base
+        assert not output.next
+
+    def test_build_filled_context_single(self):
+        output = command_context.build_filled_context(command_context.JobContext)
+        assert isinstance(output.base, command_context.JobContext)
+        assert not output.next
+
+    def test_build_filled_context_chain(self):
+        objs = [command_context.JobContext, command_context.JobRunContext]
+        output = command_context.build_filled_context(*objs)
+        assert isinstance(output.base, objs[1])
+        assert isinstance(output.next.base, objs[0])
+        assert not output.next.next
+
+
 class SimpleContextTestCaseBase(TestCase):
     __test__ = False
 
@@ -194,6 +214,27 @@ class ServiceInstanceContextTestCase(TestCase):
     def test_pid_file(self):
         pid_file = self.service_instance.config.pid_file
         assert_equal(self.context.pid_file, pid_file.__mod__.return_value)
+
+
+class FillerTestCase(TestCase):
+
+    @setup
+    def setup_filler(self):
+        self.filler = command_context.Filler()
+
+    def test_filler_with_service_instance_pid_file(self):
+        context = command_context.ServiceInstanceContext(self.filler)
+        assert_equal(context.pid_file, self.filler)
+
+    def test_filler_with_job__getitem__(self):
+        context = command_context.JobContext(self.filler)
+        todays_date = datetime.date.today().strftime("%Y-%m-%d")
+        assert_equal(context['last_success:shortdate'], todays_date)
+
+    def test_filler_with_job_run__getitem__(self):
+        context = command_context.JobRunContext(self.filler)
+        todays_date = datetime.date.today().strftime("%Y-%m-%d")
+        assert_equal(context['shortdate'], todays_date)
 
 
 if __name__ == '__main__':

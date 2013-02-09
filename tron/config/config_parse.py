@@ -9,6 +9,7 @@ import os
 import re
 
 import pytz
+from tron import command_context
 
 from tron.config import ConfigError, config_utils
 from tron.config.config_utils import UniqueNameDict, build_type_validator
@@ -16,7 +17,7 @@ from tron.config.config_utils import NullConfigContext, ConfigContext
 from tron.config.config_utils import PartialConfigContext
 from tron.config.schedule_parse import valid_schedule
 from tron.config.schema import TronConfig, NamedTronConfig, NotificationOptions
-from tron.config.schema import ConfigSSHOptions, CommandFormatKeys
+from tron.config.schema import ConfigSSHOptions
 from tron.config.schema import ConfigNode, ConfigNodePool, ConfigState
 from tron.config.schema import ConfigJob, ConfigAction, ConfigCleanupAction
 from tron.config.schema import ConfigService
@@ -92,7 +93,7 @@ def build_dict_name_validator(item_validator, allow_empty=False):
     return validator
 
 
-def build_format_string_validator(valid_keys):
+def build_format_string_validator(context_object):
     """Validate that a string does not contain any unexpected formatting keys.
         valid_keys - a sequence of strings
     """
@@ -100,8 +101,9 @@ def build_format_string_validator(valid_keys):
         if config_context.partial:
             return valid_string(value, config_context)
 
-        keys = set(valid_keys) | set(config_context.command_context.keys())
-        context = dict.fromkeys(keys, ' ')
+        context = command_context.CommandContext(
+                    context_object, config_context.command_context)
+
         try:
             value % context
             return value
@@ -349,11 +351,16 @@ def valid_action_name(value, config_context):
         raise ConfigError(error_msg % (value, config_context.path))
     return value
 
+action_context = command_context.build_filled_context(
+        command_context.JobContext,
+        command_context.JobRunContext,
+        command_context.ActionRunContext)
+
 
 class ValidateAction(Validator):
     """Validate an action."""
     config_class =              ConfigAction
-    context_keys =              CommandFormatKeys.job_keys
+
     defaults = {
         'node':                 None,
         'requires':             (),
@@ -361,7 +368,7 @@ class ValidateAction(Validator):
     requires = build_list_of_type_validator(valid_action_name, allow_empty=True)
     validators = {
         'name':                 valid_action_name,
-        'command':              build_format_string_validator(context_keys),
+        'command':              build_format_string_validator(action_context),
         'node':                 valid_node_name,
         'requires':             requires,
     }
@@ -378,14 +385,13 @@ def valid_cleanup_action_name(value, config_context):
 
 class ValidateCleanupAction(Validator):
     config_class =              ConfigCleanupAction
-    context_keys =              CommandFormatKeys.job_keys
     defaults = {
         'node':                 None,
         'name':                 CLEANUP_ACTION_NAME,
     }
     validators = {
         'name':                 valid_cleanup_action_name,
-        'command':              build_format_string_validator(context_keys),
+        'command':              build_format_string_validator(action_context),
         'node':                 valid_node_name,
     }
 
@@ -454,7 +460,13 @@ valid_job = ValidateJob()
 class ValidateService(Validator):
     """Validate a services configuration."""
     config_class =              ConfigService
-    context_keys =              CommandFormatKeys.service_keys
+
+    service_context =           command_context.build_filled_context(
+                                    command_context.ServiceInstanceContext)
+
+    service_pid_context =       command_context.build_filled_context(
+                                    command_context.ServiceInstancePidContext)
+
     defaults = {
         'count':                1,
         'restart_interval':     None
@@ -462,8 +474,8 @@ class ValidateService(Validator):
 
     validators = {
         'name':                 valid_name_identifier,
-        'pid_file':             build_format_string_validator(context_keys),
-        'command':              build_format_string_validator(context_keys),
+        'pid_file':             build_format_string_validator(service_pid_context),
+        'command':              build_format_string_validator(service_context),
         'monitor_interval':     valid_float,
         'count':                valid_int,
         'node':                 valid_node_name,
