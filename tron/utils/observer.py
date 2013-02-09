@@ -64,6 +64,10 @@ class Observer(object):
         """Adds this Observer as a watcher of the observable."""
         observable.attach(event, self)
 
+    def watch_all(self, observables):
+        for observable in observables:
+            self.watch(observable)
+
     def handler(self, observable, event):
         """Override this method to call a method to handle events."""
         pass
