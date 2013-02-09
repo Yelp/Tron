@@ -9,7 +9,7 @@ from tron import event
 from tron import crash_reporter
 from tron import node
 from tron.config import manager
-from tron.config.config_parse import collate_jobs_and_services, ConfigError
+from tron.config.config_parse import ConfigError
 from tron.core import service
 from tron.core.job import Job, JobScheduler
 from tron.scheduler import scheduler_from_config
@@ -104,8 +104,8 @@ class MasterControlProgram(Observable):
             master_config.nodes, master_config.node_pools, ssh_options)
         self._apply_notification_options(master_config.notification_options)
 
-        jobs, services = collate_jobs_and_services(config_container)
-        self._apply_jobs(jobs, reconfigure=reconfigure)
+        self._apply_jobs(config_container.get_jobs(), reconfigure=reconfigure)
+        services = config_container.get_services()
         services = self.services.load_from_config(services, self.context)
         self.state_watcher.watch_all(services)
 

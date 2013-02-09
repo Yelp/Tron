@@ -137,5 +137,9 @@ class CommandFormatKeys(object):
     """Define expected keys for format strings."""
 
     base_keys     = DateArithmetic.SUPPORTED_FORMATS + ['name', 'node']
-    job_keys      = base_keys + ['runid', 'cleanup_job_status', 'last_success']
+    # These come from ActionRunContext, JobRunContext and JobContext
+    job_keys      = base_keys + ['runid',
+                                 'actionname',
+                                 'cleanup_job_status',
+                                 'last_success']
     service_keys  = base_keys + ['pid_file', 'instance_number']

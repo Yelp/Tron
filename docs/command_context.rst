@@ -51,6 +51,9 @@ Context variables only available to Jobs
 **runid**
     Run ID of the job run (e.g. ``sample_job.23``)
 
+**actionnname**
+    The name of the action
+
 **cleanup_job_status**
     ``SUCCESS`` if all actions have succeeded when the cleanup action runs,
     ``FAILURE`` otherwise. ``UNKNOWN`` if used in an action other than the

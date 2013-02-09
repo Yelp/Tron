@@ -112,6 +112,13 @@ def build_format_string_validator(valid_keys):
     return validator
 
 
+def valid_name_identifier(value, config_context):
+    valid_identifier(value, config_context)
+    if config_context.partial:
+        return value
+    return '%s.%s' % (config_context.namespace, value)
+
+
 # TODO: extract code
 class Validator(object):
     """Base class for validating a collection and creating a mutable
@@ -398,7 +405,7 @@ class ValidateJob(Validator):
     }
 
     validators = {
-        'name':                 valid_identifier,
+        'name':                 valid_name_identifier,
         'schedule':             valid_schedule,
         'run_limit':            valid_int,
         'all_nodes':            valid_bool,
@@ -454,7 +461,7 @@ class ValidateService(Validator):
     }
 
     validators = {
-        'name':                 valid_identifier,
+        'name':                 valid_name_identifier,
         'pid_file':             build_format_string_validator(context_keys),
         'command':              build_format_string_validator(context_keys),
         'monitor_interval':     valid_float,
@@ -596,6 +603,7 @@ valid_named_config = ValidateNamedConfig()
 
 
 def validate_fragment(name, fragment):
+    """Validate a fragment with a partial context."""
     if name == MASTER_NAMESPACE:
         return valid_config(fragment)
     config_context = PartialConfigContext(name, name)
@@ -632,19 +640,23 @@ class ConfigContainer(object):
 
     @classmethod
     def create(cls, config_mapping):
-        container = cls(dict(validate_config_mapping(config_mapping)))
-        container.validate()
-        return container
+        return cls(dict(validate_config_mapping(config_mapping)))
 
-    def validate(self):
-        """Validate the integrity of all the configuration fragments as a whole.
-        """
-        collate_jobs_and_services(self)
-
-    # TODO(0.6) remove once names are compiled inline
+    # TODO: DRY with get_jobs(), get_services()
     def get_job_and_service_names(self):
-        jobs, services = collate_jobs_and_services(self)
-        return jobs.keys(), services.keys()
+        job_names, service_names = [], []
+        for config in self.configs.itervalues():
+            job_names.extend(config.jobs)
+            service_names.extend(config.services)
+        return job_names, service_names
+
+    def get_jobs(self):
+        return dict(itertools.chain.from_iterable(
+            config.jobs.iteritems() for config in self.configs.itervalues()))
+
+    def get_services(self):
+        return dict(itertools.chain.from_iterable(
+            config.services.iteritems() for config in self.configs.itervalues()))
 
     def add(self, name, config_content):
         master = self.get_master()
@@ -663,30 +675,3 @@ class ConfigContainer(object):
 
     def __contains__(self, name):
         return name in self.configs
-
-
-# TODO(0.6): Remove once name is constructed as part of validators
-def collate_jobs_and_services(configs):
-    """Collate jobs and services from an iterable of Config objects."""
-    jobs = {}
-    services = {}
-
-    def build_identifier(name, namespace):
-        return '%s_%s' % (namespace, name)
-
-    def _iter_items(config, namespace, attr):
-        for item in getattr(config, attr):
-            identifier = build_identifier(item, namespace)
-            if identifier in jobs or identifier in services:
-                raise ConfigError("Collision found for identifier '%s'" % job_identifier)
-            content = getattr(config, attr)[item]
-            yield identifier, content
-
-    for namespace, config in configs.iteritems():
-        for job_identifier, content in _iter_items(config, namespace, "jobs"):
-            jobs[job_identifier] = content
-
-        for service_identifier, content in _iter_items(config, namespace, "services"):
-            services[service_identifier] = content
-
-    return jobs, services

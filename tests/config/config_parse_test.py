@@ -14,7 +14,6 @@ from testify import run, setup, teardown, TestCase
 import yaml
 from tron.config import config_parse, schema, manager, config_utils
 from tron.config.config_parse import valid_config, ConfigContainer, valid_cleanup_action_name
-from tron.config.config_parse import collate_jobs_and_services
 from tron.config.config_parse import valid_identifier
 from tron.config.config_parse import valid_output_stream_dir
 from tron.config.config_parse import valid_node_pool
@@ -180,8 +179,8 @@ services:
                                                 name='nodePool')
             }),
             jobs=FrozenDict({
-                'test_job0': schema.ConfigJob(
-                    name='test_job0',
+                'MASTER.test_job0': schema.ConfigJob(
+                    name='MASTER.test_job0',
                     namespace='MASTER',
                     node='node0',
                     schedule=ConfigIntervalScheduler(
@@ -202,8 +201,8 @@ services:
                         node=None),
                     enabled=True,
                     allow_overlap=False),
-                'test_job1': schema.ConfigJob(
-                    name='test_job1',
+                'MASTER.test_job1': schema.ConfigJob(
+                    name='MASTER.test_job1',
                     namespace='MASTER',
                     node='node0',
                     enabled=True,
@@ -231,8 +230,8 @@ services:
                     all_nodes=False,
                     cleanup_action=None,
                     allow_overlap=True),
-                'test_job2': schema.ConfigJob(
-                    name='test_job2',
+                'MASTER.test_job2': schema.ConfigJob(
+                    name='MASTER.test_job2',
                     namespace='MASTER',
                     node='node1',
                     enabled=True,
@@ -255,8 +254,8 @@ services:
                     all_nodes=False,
                     cleanup_action=None,
                     allow_overlap=False),
-                'test_job3': schema.ConfigJob(
-                    name='test_job3',
+                'MASTER.test_job3': schema.ConfigJob(
+                    name='MASTER.test_job3',
                     namespace='MASTER',
                     node='node1',
                     schedule=ConfigConstantScheduler(),
@@ -283,8 +282,8 @@ services:
                     all_nodes=False,
                     cleanup_action=None,
                     allow_overlap=False),
-                'test_job4': schema.ConfigJob(
-                    name='test_job4',
+                'MASTER.test_job4': schema.ConfigJob(
+                    name='MASTER.test_job4',
                     namespace='MASTER',
                     node='nodePool',
                     schedule=ConfigGrocScheduler(
@@ -308,8 +307,8 @@ services:
                     allow_overlap=False)
                 }),
                 services=FrozenDict({
-                    'service0': schema.ConfigService(
-                        name='service0',
+                    'MASTER.service0': schema.ConfigService(
+                        name='MASTER.service0',
                         namespace='MASTER',
                         node='nodePool',
                         pid_file='/var/run/%(name)s-%(instance_number)s.pid',
@@ -328,15 +327,15 @@ services:
         assert_equal(test_config.time_zone, expected.time_zone)
         assert_equal(test_config.nodes, expected.nodes)
         assert_equal(test_config.node_pools, expected.node_pools)
-        assert_equal(test_config.jobs['test_job0'], expected.jobs['test_job0'])
-        assert_equal(test_config.jobs['test_job1'], expected.jobs['test_job1'])
-        assert_equal(test_config.jobs['test_job2'], expected.jobs['test_job2'])
-        assert_equal(test_config.jobs['test_job3'], expected.jobs['test_job3'])
-        assert_equal(test_config.jobs['test_job4'], expected.jobs['test_job4'])
+        assert_equal(test_config.jobs['MASTER.test_job0'], expected.jobs['MASTER.test_job0'])
+        assert_equal(test_config.jobs['MASTER.test_job1'], expected.jobs['MASTER.test_job1'])
+        assert_equal(test_config.jobs['MASTER.test_job2'], expected.jobs['MASTER.test_job2'])
+        assert_equal(test_config.jobs['MASTER.test_job3'], expected.jobs['MASTER.test_job3'])
+        assert_equal(test_config.jobs['MASTER.test_job4'], expected.jobs['MASTER.test_job4'])
         assert_equal(test_config.jobs, expected.jobs)
         assert_equal(test_config.services, expected.services)
         assert_equal(test_config, expected)
-        assert_equal(test_config.jobs['test_job4'].enabled, False)
+        assert_equal(test_config.jobs['MASTER.test_job4'].enabled, False)
 
 
     def test_empty_node_test(self):
@@ -646,7 +645,7 @@ jobs:
                 requires: [action0_0]
 
         """
-        expected_message = ('jobs.test_job1.action1_0 has a dependency '
+        expected_message = ('jobs.MASTER.test_job1.action1_0 has a dependency '
                 '"action0_0" that is not in the same job!')
         exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expected_message, str(exception))
@@ -669,7 +668,7 @@ jobs:
                 command: "test_command0.1"
                 requires: [action0_0]
         """
-        expect = "Circular dependency in job.test_job0: action0_0 -> action0_1"
+        expect = "Circular dependency in job.MASTER.test_job0: action0_0 -> action0_1"
         exception = assert_raises(ConfigError, valid_config_from_yaml, test_config)
         assert_in(expect, exception)
 
@@ -767,7 +766,7 @@ services:
                 )
             ]
         )
-        expected_message = "Job and Service names must be unique sameName"
+        expected_message = "Job and Service names must be unique MASTER.sameName"
         exception = assert_raises(ConfigError, valid_config, tron_config)
         assert_in(expected_message, str(exception))
 
@@ -875,101 +874,66 @@ class NodeConfigTestCase(TestCase):
         assert_in(expected_message, str(exception))
 
 
-class CollateJobsAndServicesTestCase(TestCase):
+class ValidateJobsAndServicesTestCase(TestCase):
 
-    def test_valid_job_collation(self):
-        test_config = BASE_CONFIG + """
-jobs:
-    -
-        name: "test_job0"
-        node: node0
-        schedule: "interval 20s"
-        actions:
-            -
-                name: "action0_0"
-                command: "test_command0.0"
-        cleanup_action:
-            command: "test_command0.1"
-services:
-    -
-        name: "test_service0"
-        node: node0
-        command: "service_command0"
-        count: 2
-        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
-        monitor_interval: 20
-        """
-        expected_collated_jobs = {'MASTER.test_job0':
-                schema.ConfigJob(name='MASTER.test_job0',
+    def test_valid_jobs_and_services_success(self):
+        test_config = BASE_CONFIG + textwrap.dedent("""
+            jobs:
+                -
+                    name: "test_job0"
+                    node: node0
+                    schedule: "interval 20s"
+                    actions:
+                        -
+                            name: "action0_0"
+                            command: "test_command0.0"
+                    cleanup_action:
+                        command: "test_command0.1"
+            services:
+                -
+                    name: "test_service0"
+                    node: node0
+                    command: "service_command0"
+                    count: 2
+                    pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+                    monitor_interval: 20
+                    """)
+        expected_jobs = {'MASTER.test_job0':
+            schema.ConfigJob(name='MASTER.test_job0',
+                namespace='MASTER',
+                node='node0',
+                schedule=ConfigIntervalScheduler(timedelta=datetime.timedelta(0, 20)),
+                actions=FrozenDict({'action0_0':
+                      schema.ConfigAction(name='action0_0',
+                                   command='test_command0.0',
+                                   requires=(),
+                                   node=None)}),
+                queueing=True,
+                run_limit=50,
+                all_nodes=False,
+                cleanup_action=schema.ConfigCleanupAction(command='test_command0.1',
+                     name='cleanup',
+                     node=None),
+                enabled=True,
+                allow_overlap=False)
+            }
+
+        expected_services = {'MASTER.test_service0':
+            schema.ConfigService(name='MASTER.test_service0',
                           namespace='MASTER',
                           node='node0',
-                          schedule=ConfigIntervalScheduler(timedelta=datetime.timedelta(0, 20)),
-                          actions=FrozenDict({'action0_0':
-                                  schema.ConfigAction(name='action0_0',
-                                               command='test_command0.0',
-                                               requires=(),
-                                               node=None)}),
-                          queueing=True,
-                          run_limit=50,
-                          all_nodes=False,
-                          cleanup_action=schema.ConfigCleanupAction(command='test_command0.1',
-                                 name='cleanup',
-                                 node=None),
-                          enabled=True,
-                          allow_overlap=False)
-                }
+                          pid_file='/var/run/%(name)s-%(instance_number)s.pid',
+                          command='service_command0',
+                          monitor_interval=20,
+                          restart_interval=None,
+                          count=2)
+            }
 
-        expected_collated_services = {'MASTER.test_service0':
-                schema.ConfigService(name='MASTER.test_service0',
-                              namespace='MASTER',
-                              node='node0',
-                              pid_file='/var/run/%(name)s-%(instance_number)s.pid',
-                              command='service_command0',
-                              monitor_interval=20,
-                              restart_interval=None,
-                              count=2)
-                }
-
-        config_mapping = {MASTER_NAMESPACE: valid_config_from_yaml(test_config)}
-        config_container = ConfigContainer(config_mapping)
-        jobs, services = collate_jobs_and_services(config_container)
-        assert_equal(expected_collated_jobs, jobs)
-        assert_equal(expected_collated_services, services)
-
-    def test_invalid_job_collation(self):
-        jobs = FrozenDict({'test_collision0': schema.ConfigJob(
-            name='test_collision0',
-            node='node0',
-            namespace='MASTER',
-            schedule=ConfigIntervalScheduler(
-                timedelta=datetime.timedelta(0, 20)),
-            actions=FrozenDict({'action0_0': schema.ConfigAction(name='action0_0',
-                command='test_command0.0',
-                requires=(),
-                node=None)}),
-            queueing=True,
-            run_limit=50,
-            all_nodes=False,
-            cleanup_action=schema.ConfigCleanupAction(command='test_command0.1',
-                name='cleanup',
-                node=None),
-            enabled=True,
-            allow_overlap=False)})
-
-        services = FrozenDict({'test_collision0': schema.ConfigService(name='test_collision0',
-            namespace='MASTER',
-            node='node0',
-            pid_file='/var/run/%(name)s-%(instance_number)s.pid',
-            command='service_command0',
-            monitor_interval=20,
-            restart_interval=None,
-            count=2)})
-        fake_config = mock.Mock()
-        setattr(fake_config, 'jobs', jobs)
-        setattr(fake_config, 'services', services)
-        expected_message = "Collision found for identifier 'MASTER.test_collision0'"
-        exception = assert_raises(ConfigError, collate_jobs_and_services, {'MASTER': fake_config})
-        assert_in(expected_message, str(exception))
+        config = manager.from_string(test_config)
+        context = config_utils.ConfigContext('config', ['node0'], None, MASTER_NAMESPACE)
+        config_parse.validate_jobs_and_services(config, context)
+        assert_equal(expected_jobs, config['jobs'])
+        assert_equal(expected_services, config['services'])
 
 
 StubConfigObject = schema.config_object_factory(
@@ -1109,21 +1073,18 @@ class ConfigContainerTestCase(TestCase):
         assert_raises(ConfigError,
             config_parse.ConfigContainer.create, config_mapping)
 
-    @mock.patch('tron.config.config_parse.collate_jobs_and_services', autospec=True)
-    def test_validate(self, mock_collate):
-        self.container.validate()
-        mock_collate.assert_called_with(self.container)
+    def test_get_job_and_service_names(self):
+        job_names, service_names = self.container.get_job_and_service_names()
+        expected = ['test_job1', 'test_job0', 'test_job3', 'test_job2', 'test_job4']
+        assert_equal(job_names, expected)
+        assert_equal(service_names, ['service0'])
 
-    def test_validate_unknown_nodes(self):
-        service = {
-            'name': 'some_name',
-            'node': 'unknown_node',
-            'command': 'do things',
-            'pid_file': '/tmp',
-            'monitor_interval': 30
-        }
-        config = {'services': [service]}
-        assert_raises(ConfigError, self.container.add, 'third', config)
+    def test_get_jobs(self):
+        expected = ['test_job1', 'test_job0', 'test_job3', 'test_job2', 'test_job4']
+        assert_equal(expected, self.container.get_jobs().keys())
+
+    def test_get_services(self):
+        assert_equal(self.container.get_services().keys(), ['service0'])
 
     @mock.patch('tron.config.config_parse.ConfigContext', autospec=True)
     @mock.patch('tron.config.config_parse.valid_named_config', autospec=True)
