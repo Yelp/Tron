@@ -23,18 +23,24 @@ class FromStringTestCase(TestCase):
 
 class ReadWriteTestCase(TestCase):
 
+    @setup
+    def setup_tempfile(self):
+        self.filename = tempfile.NamedTemporaryFile().name
+
+    @teardown
+    def teardown_tempfile(self):
+        os.unlink(self.filename)
+
     def test_read_write(self):
-        filename = tempfile.NamedTemporaryFile().name
         content = {'one': 'stars', 'two': 'beers'}
-        manager.write(filename, content)
-        actual = manager.read(filename)
+        manager.write(self.filename, content)
+        actual = manager.read(self.filename)
         assert_equal(content, actual)
 
     def test_read_raw_write_raw(self):
-        filename = tempfile.NamedTemporaryFile().name
         content = "Some string"
-        manager.write_raw(filename, content)
-        actual = manager.read_raw(filename)
+        manager.write_raw(self.filename, content)
+        actual = manager.read_raw(self.filename)
         assert_equal(content, actual)
 
 class ManifestFileTestCase(TestCase):

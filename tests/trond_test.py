@@ -227,7 +227,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
                 command: "failingcommand"
               - name: "works"
                 command: "echo ok"
-                requires: broken
+                requires: [broken]
         """)
 
         client = self.sandbox.client

@@ -101,6 +101,7 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
     def teardown_mcp(self):
         event.EventManager.reset()
         shutil.rmtree(self.working_dir)
+        shutil.rmtree(self.config_path)
 
     def test_restore_state(self):
         service_state_data = {'3': 'things', '4': 'things'}
