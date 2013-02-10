@@ -348,16 +348,15 @@ class ConfigResource(resource.Resource):
         return respond(request, self.controller.read_config(config_name))
 
     def render_POST(self, request):
-        log.info("Handling reconfigure request")
         config_content = requestargs.get_string(request, 'config')
-        config_name = requestargs.get_string(request, 'name')
+        name = requestargs.get_string(request, 'name')
         config_hash = requestargs.get_string(request, 'hash')
-        if not config_name:
+        log.info("Handling reconfigure request: %s, %s" % (name, config_hash))
+        if not name:
             return respond(request, {'error': "'name' for config is required."})
 
         response = {'status': "Active"}
-        error = self.controller.update_config(
-            config_name, config_content, config_hash)
+        error = self.controller.update_config(name, config_content, config_hash)
         if error:
             response['error'] = error
         return respond(request, response)

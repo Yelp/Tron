@@ -626,7 +626,6 @@ def get_nodes_from_master_namespace(master):
     return set(itertools.chain(master.nodes, master.node_pools))
 
 
-# TODO: DRY with ConfigContainer.add
 def validate_config_mapping(config_mapping):
     if MASTER_NAMESPACE not in config_mapping:
         msg = "A config mapping requires a %s namespace"
@@ -669,12 +668,6 @@ class ConfigContainer(object):
     def get_services(self):
         return dict(itertools.chain.from_iterable(
             config.services.iteritems() for config in self.configs.itervalues()))
-
-    def add(self, name, config_content):
-        master = self.get_master()
-        nodes = self.get_node_names()
-        context = ConfigContext(name, nodes, master.command_context, name)
-        self.configs[name] = valid_named_config(config_content, context)
 
     def get_master(self):
         return self.configs[MASTER_NAMESPACE]

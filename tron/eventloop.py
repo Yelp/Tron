@@ -22,4 +22,4 @@ class NullCallback(object):
 
 
 def call_later(interval, *args, **kwargs):
-    return reactor.callLater(interval *args, **kwargs)
+    return reactor.callLater(interval, *args, **kwargs)

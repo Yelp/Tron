@@ -181,7 +181,7 @@ class ServiceAdapter(ReprAdapter):
     ]
 
     def get_href(self):
-        return "/services/%s" % urllib.quote(self._obj.name)
+        return "/services/%s" % urllib.quote(self._obj.get_name())
 
     def get_count(self):
         return self._obj.config.count
@@ -206,7 +206,7 @@ class ServiceInstanceAdapter(ReprAdapter):
     translated_field_names = ['state', 'node']
 
     def get_state(self):
-        return str(self._obj.state)
+        return str(self._obj.get_state())
 
     def get_node(self):
         return str(self._obj.node)

@@ -4,6 +4,7 @@ from textwrap import dedent
 
 from testify import assert_equal
 from testify import assert_gt
+from testify.assertions import assert_in
 from tests import sandbox
 from tests.assertions import assert_length
 
@@ -50,6 +51,9 @@ TOUCH_CLEANUP_FMT = """
       command: "echo 'at last'"
 """
 
+def summarize_events(events):
+    return [(event['entity'], event['name']) for event in events]
+
 
 class TrondTestCase(sandbox.SandboxTestCase):
 
@@ -64,9 +68,9 @@ class TrondTestCase(sandbox.SandboxTestCase):
         # reconfigure and confirm results
         second_config = DOUBLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT
         self.sandbox.tronfig(second_config)
-        events = client.events()
-        assert_equal(events[0]['name'], 'restoring')
-        assert_equal(events[1]['name'], 'run_created')
+        events = summarize_events(client.events())
+        assert_in(('', 'restoring'), events)
+        assert_in(('MASTER.echo_job.0', 'created'), events)
         assert_equal(client.config('MASTER')['config'], second_config)
 
         # reconfigure, by uploading a third configuration
@@ -157,37 +161,6 @@ class TrondTestCase(sandbox.SandboxTestCase):
         assert_equal(client.action(action_run_url)['state'], 'SUCC')
         job_run_url = client.get_url('MASTER.echo_job.1')
         assert_equal(client.job_runs(job_run_url)['state'], 'SUCC')
-
-    def test_tronctl_service_zap(self):
-        SERVICE_CONFIG = dedent("""
-        nodes:
-          - name: local
-            hostname: 'localhost'
-        services:
-          - name: "fake_service"
-            node: local
-            count: 1
-            pid_file: "%%(name)s-%%(instance_number)s.pid"
-            command: "echo %(pid)s > %%(pid_file)s"
-            monitor_interval: 0.1
-        """ % {'pid': os.getpid()})
-
-        client = self.sandbox.client
-        self.sandbox.trond()
-        self.sandbox.tronfig(SERVICE_CONFIG)
-
-        wait_on_config = lambda: 'fake_service' in client.config('MASTER')['config']
-        sandbox.wait_on_sandbox(wait_on_config)
-
-        self.sandbox.tronctl(['start', 'MASTER.fake_service'])
-        service_url = client.get_url('MASTER.fake_service')
-
-        def wait_on_start():
-            return client.service(service_url)['state'] == 'STARTING'
-        sandbox.wait_on_sandbox(wait_on_start)
-
-        self.sandbox.tronctl(['zap', 'MASTER.fake_service'])
-        assert_equal('DOWN', client.service(service_url)['state'])
 
     def test_cleanup_on_failure(self):
         FAIL_CONFIG = BASIC_CONFIG + dedent("""
@@ -333,9 +306,11 @@ class TrondTestCase(sandbox.SandboxTestCase):
             command=command, monitor_interval=2, wd=self.sandbox.tmp_dir)
         self.sandbox.tronfig(new_config)
 
+        self.sandbox.tronctl(['start', 'MASTER.a_service'])
         sandbox.wait_on_sandbox(wait_on_service_start)
         self.sandbox.tronctl(['stop', 'MASTER.a_service'])
 
         def wait_on_service_stop():
-            return client.service(service_url)['state'] == 'DOWN'
+            return client.service(service_url)['state'] == 'DISABLED'
+        import ipdb; ipdb.set_trace()
         sandbox.wait_on_sandbox(wait_on_service_stop)

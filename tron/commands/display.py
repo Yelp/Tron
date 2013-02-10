@@ -173,9 +173,9 @@ class TableDisplay(object):
 class DisplayServices(TableDisplay):
 
     columns = ['Name',  'State',    'Count' ]
-    fields  = ['name',  'status',   'count' ]
+    fields  = ['name',  'state',    'count' ]
     widths  = [None,    10,         10      ]
-    title = 'services'
+    title   = 'services'
 
     def format_details(self, service_content):
         self.out = [

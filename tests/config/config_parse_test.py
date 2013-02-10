@@ -1049,6 +1049,30 @@ class BuildListOfTypeValidatorTestCase(TestCase):
         assert_raises(ConfigError, self.validator, items, context)
 
 
+class ValidateConfigMappingTestCase(TestCase):
+
+    config = BASE_CONFIG + textwrap.dedent(
+        """
+        command_context:
+            some_var: "The string"
+        """)
+
+    def test_validate_config_mapping_missing_master(self):
+        config_mapping = {'other': mock.Mock()}
+        seq = config_parse.validate_config_mapping(config_mapping)
+        exception = assert_raises(ConfigError, list, seq)
+        assert_in('requires a MASTER namespace', str(exception))
+
+    def test_validate_config_mapping(self):
+        master_config = manager.from_string(self.config)
+        other_config = manager.from_string(NamedConfigTestCase.config)
+        config_mapping = {'other': other_config, MASTER_NAMESPACE: master_config}
+        result = list(config_parse.validate_config_mapping(config_mapping))
+        assert_equal(len(result), 2)
+        assert_equal(result[0][0], MASTER_NAMESPACE)
+        assert_equal(result[1][0], 'other')
+
+
 class ConfigContainerTestCase(TestCase):
 
     config = BASE_CONFIG + textwrap.dedent(
@@ -1090,19 +1114,6 @@ class ConfigContainerTestCase(TestCase):
 
     def test_get_services(self):
         assert_equal(self.container.get_services().keys(), ['service0'])
-
-    @mock.patch('tron.config.config_parse.ConfigContext', autospec=True)
-    @mock.patch('tron.config.config_parse.valid_named_config', autospec=True)
-    def test_add(self, mock_valid_named_config, mock_config_context):
-        name, content = 'name', mock.Mock()
-        self.container.add(name, content)
-        assert_equal(self.container.configs[name],
-            mock_valid_named_config.return_value)
-        context = mock_config_context.return_value
-        mock_config_context.assert_called_with(
-            name, self.container.get_node_names(),
-            self.container.get_master().command_context, name)
-        mock_valid_named_config.assert_called_with(content, context)
 
     def test_get_node_names(self):
         node_names = self.container.get_node_names()

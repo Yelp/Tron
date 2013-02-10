@@ -17,20 +17,21 @@ class ServiceState(state.NamedEventState):
 # TODO: object to record failures/stdout/stderr
 # TODO: get failure messages from instance stderr/stdout
 
-class Service(observer.Observer):
+class Service(observer.Observer, observer.Observable):
     """Manage a collection of service instances."""
 
-    STATE_DISABLED      = "disabled"
-    STATE_STARTING      = "starting"
-    STATE_UP            = "up"
-    STATE_DEGRADED      = "degraded"
-    STATE_FAILED        = "failed"
-    STATE_STOPPING      = "stopping"
-    STATE_UNKNOWN       = "unknown"
+    STATE_DISABLED      = "DISABLED"
+    STATE_STARTING      = "STARTING"
+    STATE_UP            = "UP"
+    STATE_DEGRADED      = "DEGRADED"
+    STATE_FAILED        = "FAILED"
+    STATE_STOPPING      = "STOPPING"
+    STATE_UNKNOWN       = "UNKNOWN"
 
     FAILURE_STATES = set([STATE_DEGRADED, STATE_FAILED])
 
     def __init__(self, config, instance_collection):
+        super(Service, self).__init__()
         self.config             = config
         self.instances          = instance_collection
         self.enabled            = False
@@ -46,9 +47,10 @@ class Service(observer.Observer):
         instance_collection = serviceinstance.ServiceInstanceCollection(*args)
         return cls(config, instance_collection)
 
-    @property
-    def name(self):
+    def get_name(self):
         return self.config.name
+
+    name = property(get_name)
 
     def get_state(self):
         if not self.enabled:
@@ -100,6 +102,9 @@ class Service(observer.Observer):
             self.repair_callback.start()
         # TODO: record failures to a ServiceFailures
 
+        # TODO: notify state change when a service is removed from the collection
+        # or when a new one is created
+
     handler = _handle_instance_state_change
 
     def record_events(self):
@@ -137,7 +142,7 @@ class Service(observer.Observer):
         instances = self.instances.restore_state(state_data['instances'])
         self.watch_instances(instances)
 
-        (self.enable if state_data['enabled'] else self.disable)()
+        (self.enable if state_data.get('enabled') else self.disable)()
         self.event_recorder.info("restored")
 
 
@@ -179,8 +184,8 @@ class ServiceCollection(object):
         """
         self._filter_by_name(service_configs.keys())
 
-        for name, service_config in service_configs.itervalues():
-            log.debug("Building new services %s", name)
+        for service_config in service_configs.itervalues():
+            log.debug("Building new services %s", service_config.name)
             service = Service.from_config(service_config, context)
             if self.add(service):
                 yield service
