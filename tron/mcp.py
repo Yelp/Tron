@@ -14,7 +14,7 @@ from tron.core.job import Job, JobScheduler
 from tron.node import Node, NodePool
 from tron.scheduler import scheduler_from_config
 from tron.serialize import filehandler
-from tron.serialize.runstate.statemanager import PersistenceManagerFactory
+from tron.serialize.runstate import statemanager
 from tron.service import Service
 from tron.utils import emailer
 from tron.utils.observer import Observable
@@ -44,6 +44,7 @@ class MasterControlProgram(Observable):
         self.crash_reporter     = None
         self.config             = manager.ConfigManager(config_path)
         self.context            = command_context.CommandContext()
+        self.state_watcher      = statemanager.StateChangeWatcher()
 
         # Time zone of the system clock
         self.time_zone          = None
@@ -54,15 +55,12 @@ class MasterControlProgram(Observable):
         # tree.
         self.event_manager      = event.EventManager.get_instance()
         self.event_recorder     = self.event_manager.add(self)
-        self.state_manager      = None
 
     def get_config_manager(self):
         return self.config
 
     def shutdown(self):
-        if self.state_manager:
-            self.state_manager.enabled = False
-            self.state_manager.cleanup()
+        self.state_watcher.shutdown()
 
     def graceful_shutdown(self):
         """Tell JobSchedulers that a shutdown has been requested."""
@@ -78,7 +76,7 @@ class MasterControlProgram(Observable):
     def reconfigure(self):
         """Reconfigure MCP while Tron is already running."""
         self.event_recorder.emit_info("reconfig")
-        with self.state_manager.disabled():
+        with self.state_watcher.disabled():
             try:
                 self._load_config(reconfigure=True)
             except Exception:
@@ -105,8 +103,8 @@ class MasterControlProgram(Observable):
         master_config = config_container.get_master()
         self.output_stream_dir = master_config.output_stream_dir or self.working_dir
         ssh_options = self._ssh_options_from_config(master_config.ssh_options)
-        self.state_manager = PersistenceManagerFactory.from_config(
-            master_config.state_persistence)
+        self.update_state_watcher_config(master_config.state_persistence)
+
         self.context.base = master_config.command_context
         self.time_zone = master_config.time_zone
         self._apply_nodes(master_config.nodes, ssh_options)
@@ -116,6 +114,16 @@ class MasterControlProgram(Observable):
         jobs, services = collate_jobs_and_services(config_container)
         self._apply_jobs(jobs, reconfigure=reconfigure)
         self._apply_services(services)
+
+    def update_state_watcher_config(self, state_config):
+        """Update the StateChangeWatcher, and save all state if the state config
+        changed.
+        """
+        if self.state_watcher.update_from_config(state_config):
+            for job_sched in self.jobs.itervalues():
+                self.state_watcher.save_job(job_sched.job)
+            for service in self.services.itervalues():
+                self.state_watcher.save_service(service)
 
     def _ssh_options_from_config(self, ssh_conf):
         ssh_options = ConchOptions()
@@ -222,7 +230,7 @@ class MasterControlProgram(Observable):
         log.info("adding new job %s", job.name)
         self.jobs[job.name] = JobScheduler(job)
         self.event_manager.add(job, parent=self)
-        self.state_manager.watch(job, Job.NOTIFY_STATE_CHANGE)
+        self.state_watcher.watch(job, Job.NOTIFY_STATE_CHANGE)
 
         # If this is not a reconfigure, wait for state to be restored before
         # scheduling job runs.
@@ -261,7 +269,7 @@ class MasterControlProgram(Observable):
         service.event_recorder.set_parent(self.event_recorder)
 
         # Trigger storage on any state changes
-        self.state_manager.watch(service.machine)
+        self.state_watcher.watch(service.machine)
         self.services[service.name] = service
 
         if prev_service is not None:
@@ -282,7 +290,7 @@ class MasterControlProgram(Observable):
         self.event_recorder.emit_notice('restoring')
         job_names     = [job_sched.job.name for job_sched in self.jobs.values()]
         service_names = [service.name for service in self.services.itervalues()]
-        job_states, service_states = self.state_manager.restore(
+        job_states, service_states = self.state_watcher.restore(
                 job_names, service_names)
 
         for name, job_state_data in job_states.iteritems():
@@ -293,7 +301,7 @@ class MasterControlProgram(Observable):
             self.services[name].restore_service_state(service_state_data)
         log.info("Loaded state for %d services", len(service_states))
 
-        self.state_manager.save_metadata()
+        self.state_watcher.save_metadata()
 
     def __str__(self):
         return "MCP"
