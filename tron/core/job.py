@@ -245,7 +245,10 @@ class JobScheduler(Observer):
             return
 
         self.job.enabled = True
-        for job_run in self.get_runs_to_schedule(ignore_last_run_time=True):
+        self.create_and_schedule_runs(ignore_last_run_time=True)
+
+    def create_and_schedule_runs(self, ignore_last_run_time=False):
+        for job_run in self.get_runs_to_schedule(ignore_last_run_time):
             self._set_callback(job_run)
 
     def disable(self):
@@ -270,7 +273,7 @@ class JobScheduler(Observer):
         """Remove the pending run and create new runs with the new JobScheduler.
         """
         self.job.runs.remove_pending()
-        self.schedule()
+        self.create_and_schedule_runs(ignore_last_run_time=True)
 
     def schedule(self):
         """Schedule the next run for this job by setting a callback to fire
@@ -278,9 +281,7 @@ class JobScheduler(Observer):
         """
         if not self.job.enabled:
             return
-
-        for job_run in self.get_runs_to_schedule():
-            self._set_callback(job_run)
+        self.create_and_schedule_runs()
 
     def _set_callback(self, job_run):
         """Set a callback for JobRun to fire at the appropriate time."""
@@ -348,7 +349,7 @@ class JobScheduler(Observer):
         self.schedule()
     handler = handle_job_events
 
-    def get_runs_to_schedule(self, ignore_last_run_time=False):
+    def get_runs_to_schedule(self, ignore_last_run_time):
         """Build and return the runs to schedule."""
         if self.job.runs.has_pending:
             log.info("%s has pending runs, can't schedule more." % self.job)
