@@ -125,10 +125,12 @@ class Client(object):
 
     def request(self, url, data=None):
         server = self.options.server
+        log.info("Request: %s, %s, %s", server, url, data)
         status, content = request(server, url, data)
         if not status == OK:
             err_msg = "%s%s: %s"
             raise RequestError(err_msg % (server, url, content))
+        log.info("Response: %s", content)
         return content
 
 
