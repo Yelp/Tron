@@ -393,11 +393,11 @@ class ServiceInstanceCollectionTestCase(TestCase):
         assert_length(created, count)
         assert_equal(set(created), set(self.collection.instances))
         expected = [
-            mock.call(
-                self.node_pool.get_by_hostname.return_value,
+            mock.call(self.node_pool.get_by_hostname.return_value,
                 d['instance_number'])
             for d in state_data]
-        assert_equal(self.collection._build_instance.mock_calls[:3], expected)
+        for expected_call in expected:
+            assert_in(expected_call, self.collection._build_instance.mock_calls)
 
     def test_build_and_sort(self):
         autospec_method(self.collection.sort)
@@ -429,11 +429,12 @@ class ServiceInstanceCollectionTestCase(TestCase):
 
     def test_all_true(self):
         state = serviceinstance.ServiceInstance.STATE_UP
+        self.collection.config.count = count = 4
         def build():
             inst = create_mock_instance()
             inst.get_state.return_value = state
             return inst
-        self.collection.instances = [build() for _ in xrange(3)]
+        self.collection.instances = [build() for _ in xrange(count)]
         assert self.collection.all(state)
 
     def test_all_empty(self):

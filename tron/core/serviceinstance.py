@@ -6,7 +6,7 @@ from tron import command_context
 from tron import eventloop
 from tron import node
 from tron.actioncommand import ActionCommand, CompletedActionCommand
-from tron.utils import observer, proxy
+from tron.utils import observer, proxy, iteration
 from tron.utils import state
 
 
@@ -192,6 +192,7 @@ class ServiceInstanceStartTask(observer.Observable, observer.Observer):
 
         try:
             self.node.run(action)
+            return True
         except node.Error, e:
             log.warn("Failed to start %s: %r", self.id, e)
             self.notify(self.NOTIFY_DOWN)
@@ -280,7 +281,7 @@ class ServiceInstance(observer.Observer):
     def start(self):
         if not self.machine.transition('start'):
             return False
-        self.start_task.start(self.command)
+        return self.start_task.start(self.command)
 
     def stop(self):
         if self.machine.check('stop'):
@@ -351,6 +352,7 @@ def node_selector(node_pool, hostname=None):
 
     return node_pool.get_by_hostname(hostname) or next_node()
 
+
 class ServiceInstanceCollection(object):
     """A collection of ServiceInstances."""
 
@@ -361,10 +363,9 @@ class ServiceInstanceCollection(object):
         self.context            = context
 
         self.instances_proxy    = proxy.CollectionProxy(
-            lambda: self.instances,
-            [
-                proxy.func_proxy('stop',    all),
-                proxy.func_proxy('start',   all),
+            lambda: self.instances, [
+                proxy.func_proxy('stop',    iteration.list_all),
+                proxy.func_proxy('start',   iteration.list_all),
                 proxy.func_proxy('state_data', list)
             ])
 
@@ -375,6 +376,7 @@ class ServiceInstanceCollection(object):
         self._clear(ServiceInstance.STATE_DOWN)
 
     def _clear(self, state):
+        log.info("clear instances in state %s from %s", state, self)
         self.instances = [i for i in self.instances if i.get_state() != state]
 
     def sort(self):
@@ -387,6 +389,7 @@ class ServiceInstanceCollection(object):
         def builder(_):
             node = node_selector(self.node_pool)
             return self._build_instance(node, self.next_instance_number())
+        log.info("Creating %s instances for %s" % (self.missing, self))
         return self._build_and_sort(builder, xrange(self.missing))
 
     def _build_instance(self, node, number):
@@ -403,6 +406,7 @@ class ServiceInstanceCollection(object):
     def _build_and_sort(self, builder, seq):
         def build_and_add(item):
             instance = builder(item)
+            log.info("Building and adding %s to %s" % (instance, self))
             self.instances.append(instance)
             return instance
         instances = list(build_and_add(item) for item in seq)
@@ -431,7 +435,7 @@ class ServiceInstanceCollection(object):
         return len(self.instances) - self.config.count
 
     def all(self, state):
-        if not self.instances:
+        if len(self.instances) != self.config.count:
             return False
         return self._all_states_match([state])
 
@@ -461,3 +465,6 @@ class ServiceInstanceCollection(object):
 
     def __iter__(self):
         return iter(self.instances)
+
+    def __str__(self):
+        return "ServiceInstanceCollection:%s" % self.config.name

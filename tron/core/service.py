@@ -77,6 +77,7 @@ class Service(observer.Observer, observer.Observable):
         """Enable the service."""
         self.enabled = True
         self.event_recorder.ok('enabled')
+        # TODO: what if it's already running?
         self.repair()
 
     # TODO: update api, used to be stop
@@ -95,6 +96,9 @@ class Service(observer.Observer, observer.Observable):
 
     def _handle_instance_state_change(self, instance, event):
         """Handle any changes to the state of this service's instances."""
+        if event in (serviceinstance.ServiceInstance.STATE_STARTING,):
+            return
+
         self.instances.clear_down()
         self.record_events()
 
@@ -135,8 +139,7 @@ class Service(observer.Observer, observer.Observable):
         return "Service:%s" % self.name
 
     def watch_instances(self, instances):
-        for instance in instances:
-            self.watch(instance.get_observable())
+        self.watch_all(instance.get_observable() for instance in instances)
 
     def restore_state(self, state_data):
         instances = self.instances.restore_state(state_data['instances'])
