@@ -224,7 +224,8 @@ class ServiceInstance(observer.Observer):
                             stop=STATE_DOWN,
                             up=STATE_UP)
     STATE_STOPPING      = ServiceInstanceState("stopping",
-                            down=STATE_DOWN)
+                            down=STATE_DOWN,
+                            stop_fail=STATE_FAILED)
     STATE_MONITORING    = ServiceInstanceState("monitoring",
                             down=STATE_FAILED,
                             stop=STATE_STOPPING,
@@ -237,7 +238,6 @@ class ServiceInstance(observer.Observer):
                             monitor=STATE_MONITORING)
 
     STATE_MONITORING['monitor_fail']    = STATE_UNKNOWN
-    STATE_STOPPING['stop_fail']         = STATE_UNKNOWN
     STATE_UP['stop']                    = STATE_STOPPING
     STATE_UP['monitor']                 = STATE_MONITORING
     STATE_DOWN['start']                 = STATE_STARTING
@@ -286,23 +286,17 @@ class ServiceInstance(observer.Observer):
     def stop(self):
         if self.machine.check('stop'):
             self.stop_task.kill()
-            return self.machine.transition("stop")
-
-    def zap(self):
-        """Force service instance into the down state and cancel monitor tasks
-        so they do not restart the process.
-        """
-        self.machine.transition("stop")
-        self.machine.transition("down")
-        self.monitor_task.cancel()
+            self.monitor_task.cancel()
+            return self.machine.transition('stop')
 
     event_to_transition_map = {
-        ServiceInstanceMonitorTask.NOTIFY_START:        "monitor",
-        ServiceInstanceMonitorTask.NOTIFY_FAILED:       "monitor_fail",
-        ServiceInstanceMonitorTask.NOTIFY_DOWN:         "down",
-        ServiceInstanceMonitorTask.NOTIFY_UP:           "up",
-        ServiceInstanceStartTask.NOTIFY_DOWN:           "down",
-        ServiceInstanceStopTask.NOTIFY_FAIL:            "stop_fail",
+        ServiceInstanceMonitorTask.NOTIFY_START:        'monitor',
+        ServiceInstanceMonitorTask.NOTIFY_FAILED:       'monitor_fail',
+        ServiceInstanceMonitorTask.NOTIFY_DOWN:         'down',
+        ServiceInstanceMonitorTask.NOTIFY_UP:           'up',
+        ServiceInstanceStartTask.NOTIFY_DOWN:           'down',
+        ServiceInstanceStopTask.NOTIFY_FAIL:            'stop_fail',
+        ServiceInstanceStopTask.NOTIFY_SUCCESS:         'down',
     }
 
     def handler(self, _, event):
@@ -312,9 +306,6 @@ class ServiceInstance(observer.Observer):
 
         if event == ServiceInstanceStartTask.NOTIFY_STARTED:
             self._handle_start_task_complete()
-
-        if event == ServiceInstanceStopTask.NOTIFY_SUCCESS:
-            self.monitor_task.cancel()
 
     def _handle_start_task_complete(self):
         if self.machine.state != ServiceInstance.STATE_STARTING:
@@ -366,7 +357,7 @@ class ServiceInstanceCollection(object):
             lambda: self.instances, [
                 proxy.func_proxy('stop',    iteration.list_all),
                 proxy.func_proxy('start',   iteration.list_all),
-                proxy.func_proxy('state_data', list)
+                proxy.attr_proxy('state_data', list)
             ])
 
     def clear_failed(self):

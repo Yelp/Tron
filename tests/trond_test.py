@@ -312,5 +312,4 @@ class TrondTestCase(sandbox.SandboxTestCase):
 
         def wait_on_service_stop():
             return client.service(service_url)['state'] == 'DISABLED'
-        import ipdb; ipdb.set_trace()
         sandbox.wait_on_sandbox(wait_on_service_stop)

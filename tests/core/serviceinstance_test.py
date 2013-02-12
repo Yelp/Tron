@@ -257,11 +257,6 @@ class ServiceInstanceTestCase(TestCase):
         self.instance.stop()
         self.instance.stop_task.kill.assert_called_with()
         self.instance.machine.transition.assert_called_with('stop')
-
-    def test_zap(self):
-        self.instance.zap()
-        assert_equal(self.instance.machine.transition.mock_calls, [
-            mock.call('stop'), mock.call('down')])
         self.instance.monitor_task.cancel.assert_called_with()
 
     def test_handler_transition_map(self):
@@ -281,7 +276,7 @@ class ServiceInstanceTestCase(TestCase):
         obs = mock.Mock()
         event = serviceinstance.ServiceInstanceStopTask.NOTIFY_SUCCESS
         self.instance.handler(obs, event)
-        self.instance.monitor_task.cancel.assert_called_with()
+        self.instance.machine.transition.assert_called_with('down')
 
     def test_handle_start_task_complete(self):
         self.instance.machine = mock.Mock(

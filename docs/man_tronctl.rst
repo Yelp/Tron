@@ -82,9 +82,6 @@ start <service name>
 stop <service name>
     Stop the service.
 
-zap <service_id | service_instance_id>
-    Marks the specified service or service instance as **DOWN** without
-    taking any other action (such as actually stopping the service)
 
 Examples
 --------
