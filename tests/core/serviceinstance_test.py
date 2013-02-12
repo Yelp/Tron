@@ -21,22 +21,18 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
             "id", mock_node, self.interval, self.filename)
         autospec_method(self.task.notify)
         autospec_method(self.task.watch)
+        self.task.hang_check_callback = mock.create_autospec(eventloop.UniqueCallback)
+        self.task.callback = mock.create_autospec(eventloop.UniqueCallback)
         self.mock_eventloop = None
         with mock.patch('tron.core.serviceinstance.eventloop') as self.mock_eventloop:
             yield
 
     def test_queue(self):
         self.task.queue()
-        self.mock_eventloop.call_later.assert_called_with(self.interval, self.task.run)
+        self.task.callback.start.assert_called_with()
 
     def test_queue_no_interval(self):
         self.task.interval = 0
-        self.task.queue()
-        assert_equal(self.mock_eventloop.call_later.call_count, 0)
-
-    def test_queue_has_active_callback(self):
-        self.task.callback = mock.create_autospec(eventloop.Callback)
-        self.task.callback.active.return_value = True
         self.task.queue()
         assert_equal(self.mock_eventloop.call_later.call_count, 0)
 
@@ -45,8 +41,7 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
 
         self.task.notify.assert_called_with(self.task.NOTIFY_START)
         self.task.node.run.assert_called_with(self.task.action)
-        self.mock_eventloop.call_later.assert_called_with(
-            self.interval * 0.8, self.task._run_hang_check, self.task.action)
+        self.task.hang_check_callback.start.assert_called_with()
 
     def test_run_action_exists(self):
         self.task.action = mock.create_autospec(ActionCommand, is_complete=False)
@@ -75,28 +70,10 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
         self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
 
     def test_handle_action_event_failstart(self):
+        autospec_method(self.task.queue)
         self.task.handle_action_event(None, ActionCommand.FAILSTART)
         self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
-        self.mock_eventloop.call_later.assert_called_with(self.interval, self.task.run)
-
-    def test_queue_hang_check(self):
-        self.task._queue_hang_check()
-        assert_equal(self.task.hang_check_callback,
-                self.mock_eventloop.call_later.return_value)
-
-    def test_run_hang_check(self):
-        self.task.hang_check_callback = True
-        action = mock.create_autospec(ActionCommand)
-        self.task._run_hang_check(action)
-        assert_equal(self.task.notify.call_count, 0)
-
-    def test_run_hang_check_failed(self):
-        self.task.hang_check_callback = True
-        self.task.action = action = mock.create_autospec(ActionCommand)
-        self.task._run_hang_check(action)
-        assert_equal(self.task.hang_check_callback,
-            self.mock_eventloop.call_later.return_value)
-        self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
+        self.task.queue.assert_called_with()
 
     def test_handle_action_exit_up(self):
         self.task.action = mock.create_autospec(ActionCommand)

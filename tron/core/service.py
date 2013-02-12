@@ -34,8 +34,8 @@ class Service(observer.Observer, observer.Observable):
         self.config             = config
         self.instances          = instance_collection
         self.enabled            = False
-        self.repair_callback    = ServiceRepairCallback(
-                                    self.repair, config.restart_interval)
+        args                    = config.restart_interval, self.repair
+        self.repair_callback    = eventloop.UniqueCallback(*args)
         self.event_recorder     = event.get_recorder(str(self))
 
     @classmethod
@@ -146,32 +146,6 @@ class Service(observer.Observer, observer.Observable):
 
         (self.enable if state_data.get('enabled') else self.disable)()
         self.event_recorder.info("restored")
-
-
-class ServiceRepairCallback(object):
-    """Monitor a callback to ensure that only a single instance is active."""
-
-    def __init__(self, callback, restart_interval):
-        super(ServiceRepairCallback, self).__init__()
-        self.callback           = callback
-        self.restart_interval   = restart_interval
-        self.timer              = eventloop.NullCallback
-
-    def start(self):
-        """Start the callback if restart_interval is Truthy and the current
-        timer is not active.
-        """
-        if not self.restart_interval or self.timer.active():
-            return
-
-        func            = self.run_callback
-        self.timer      = eventloop.call_later(self.restart_interval, func)
-
-    def run_callback(self):
-        self.callback()
-
-    def cancel(self):
-        self.timer.cancel()
 
 
 class ServiceCollection(object):

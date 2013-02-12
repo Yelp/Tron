@@ -4,41 +4,8 @@ from testify.assertions import assert_not_equal, assert_raises, assert_not_in, a
 
 from tests.testingutils import autospec_method
 from tron.core import service, serviceinstance
-from tron import node, command_context, event
+from tron import node, command_context, event, eventloop
 from tron.core.serviceinstance import ServiceInstance
-
-
-class ServiceRepairCallbackTestCase(TestCase):
-
-    @setup
-    def setup_monitor(self):
-        self.callback = mock.create_autospec(service.Service.repair)
-        self.monitor = service.ServiceRepairCallback(self.callback, 5)
-
-    def test__init__(self):
-        assert_equal(self.monitor.restart_interval, 5)
-        assert_equal(self.callback, self.monitor.callback)
-
-    def test_start_no_restart_interval(self):
-        self.monitor.restart_interval = None
-        patcher = mock.patch('tron.core.service.eventloop', autospec=True)
-        with patcher as mock_eventloop:
-            self.monitor.start()
-            assert not mock_eventloop.call_later.call_count
-
-    def test_start(self):
-        patcher = mock.patch('tron.core.service.eventloop', autospec=True)
-        with patcher as mock_eventloop:
-            self.monitor.start()
-            mock_eventloop.call_later.assert_called_with(
-                self.monitor.restart_interval, self.monitor.run_callback)
-
-    def test_start_already_actice(self):
-        self.monitor.timer.active = mock.Mock(return_value=True)
-        patcher = mock.patch('tron.core.service.eventloop', autospec=True)
-        with patcher as mock_eventloop:
-            self.monitor.start()
-            assert not mock_eventloop.call_later.call_count
 
 
 class ServiceTestCase(TestCase):
@@ -53,7 +20,7 @@ class ServiceTestCase(TestCase):
         self.service = service.Service(self.config, self.instances)
         autospec_method(self.service.watch)
         self.service.repair_callback = mock.create_autospec(
-            service.ServiceRepairCallback)
+            eventloop.UniqueCallback)
 
     @mock.patch('tron.core.service.node')
     def test_from_config(self, mock_node):
