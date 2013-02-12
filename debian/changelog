@@ -3,6 +3,8 @@ tron (0.5.2) unstable; urgency=low
   * Tron now supports the ability to use different users per node connection.
   * Fragmented configuration is now possible by using namespaced config files.
   * Additional cleanup and stability patches have been applied.
+  * State persistence configuration can now be changed without restarting trond
+  * State saving now includes a namespace, you will need to run `tools/migration/migrate_state.py` to migrate old state.
 
  -- Thomas Robinson <trobinso@yelp.com>  Wed, 9 Jan 2013 16:25:53 -0700
 
