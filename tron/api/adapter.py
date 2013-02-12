@@ -175,10 +175,15 @@ class JobAdapter(ReprAdapter):
 
 class ServiceAdapter(ReprAdapter):
 
-    field_names = ['name',]
+    field_names = ['name', 'enabled']
     translated_field_names = [
-        'count', 'href', 'state', 'command', 'instances', 'node_pool'
-    ]
+        'count',
+        'href',
+        'state',
+        'command',
+        'instances',
+        'node_pool',
+        'live_count']
 
     def get_href(self):
         return "/services/%s" % urllib.quote(self._obj.get_name())
@@ -193,11 +198,13 @@ class ServiceAdapter(ReprAdapter):
         return self._obj.config.command
 
     def get_instances(self):
-        return [ServiceInstanceAdapter(inst).get_repr()
-                for inst in self._obj.instances]
+        return adapt_many(ServiceInstanceAdapter, self._obj.instances)
 
     def get_node_pool(self):
         return self._obj.config.node
+
+    def get_live_count(self):
+        return len(self._obj.instances)
 
 
 class ServiceInstanceAdapter(ReprAdapter):

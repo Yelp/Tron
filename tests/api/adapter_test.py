@@ -1,10 +1,12 @@
 import shutil
 import tempfile
+import mock
 from testify import TestCase, assert_equal, run, setup, teardown
 from tests import mocks
 from tests.assertions import assert_length
 from tests.testingutils import Turtle
-from tron.api.adapter import ReprAdapter, RunAdapter, ActionRunAdapter, JobRunAdapter
+from tron.api.adapter import ReprAdapter, RunAdapter, ActionRunAdapter
+from tron.api.adapter import JobRunAdapter, ServiceAdapter
 
 
 class MockAdapter(ReprAdapter):
@@ -101,6 +103,19 @@ class JobRunAdapterTestCase(TestCase):
     def test_get_runs_without_action_runs(self):
         self.adapter.include_action_runs = False
         assert_equal(self.adapter.get_runs(), None)
+
+
+class ServiceAdapterTestCase(TestCase):
+
+    @setup
+    def setup_adapter(self):
+        self.service = mock.MagicMock()
+        self.adapter = ServiceAdapter(self.service)
+
+    def test_repr(self):
+        result = self.adapter.get_repr()
+        assert_equal(result['name'], self.service.name)
+        assert_equal(result['node_pool'], self.service.config.node)
 
 
 if __name__ == "__main__":
