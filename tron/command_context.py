@@ -170,7 +170,8 @@ class ServiceInstanceContext(ServiceInstancePidContext):
 
     @property
     def pid_file(self):
-        return self.service_instance.config.pid_file % CommandContext(self)
+        context = CommandContext(self, self.service_instance.parent_context)
+        return self.service_instance.config.pid_file % context
 
 
 class Filler(object):

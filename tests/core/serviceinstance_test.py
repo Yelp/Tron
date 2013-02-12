@@ -441,6 +441,12 @@ class ServiceInstanceCollectionTestCase(TestCase):
             self.config, self.node_pool, mock.Mock())
         assert_not_equal(self.collection, other)
 
+    def test_get_by_number(self):
+        self.collection.instances = instances = [
+                    create_mock_instance(instance_number=i) for i in range(5)]
+        instance = self.collection.get_by_number(3)
+        assert_equal(instance, instances[3])
+
 
 if __name__ == "__main__":
     run()

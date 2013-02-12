@@ -212,8 +212,9 @@ class ServiceInstanceContextTestCase(TestCase):
         assert_equal(self.context.name, self.service_instance.config.name)
 
     def test_pid_file(self):
-        pid_file = self.service_instance.config.pid_file
-        assert_equal(self.context.pid_file, pid_file.__mod__.return_value)
+        self.service_instance.parent_context = {'one': 'thing'}
+        self.service_instance.config.pid_file = '%(one)s %(instance_number)s'
+        assert_equal(self.context.pid_file, 'thing 123')
 
 
 class FillerTestCase(TestCase):

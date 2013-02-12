@@ -255,6 +255,7 @@ class ServiceInstance(observer.Observer):
 
         start_state             = ServiceInstance.STATE_DOWN
         self.machine            = state.StateMachine(start_state, delegate=self)
+        self.parent_context     = parent_context
         self.context = command_context.build_context(self, parent_context)
         self.failures           = []
 
@@ -421,7 +422,6 @@ class ServiceInstanceCollection(object):
             if num not in instance_nums:
                 return num
 
-    # TODO: test case
     def get_by_number(self, instance_number):
         for instance in self.instances:
             if instance.instance_number == instance_number:
@@ -430,10 +430,6 @@ class ServiceInstanceCollection(object):
     @property
     def missing(self):
         return self.config.count - len(self.instances)
-
-    @property
-    def extra(self):
-        return len(self.instances) - self.config.count
 
     def all(self, state):
         if len(self.instances) != self.config.count:
@@ -455,12 +451,9 @@ class ServiceInstanceCollection(object):
     def __getattr__(self, item):
         return self.instances_proxy.perform(item)
 
-    # TODO: I believe context can be removed from here because underlying next
-    # objects are replaced
     def __eq__(self, other):
         return (self.node_pool == other.node_pool and
-                self.config == other.config and
-                self.context == other.context)
+                self.config == other.config)
 
     def __ne__(self, other):
         return not self == other

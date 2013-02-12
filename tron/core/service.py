@@ -127,7 +127,6 @@ class Service(observer.Observer, observer.Observable):
     @property
     def state_data(self):
         """Data used to serialize the state of this service."""
-        # TODO: backwards compatibility
         return dict(enabled=self.enabled, instances=self.instances.state_data)
 
     def __eq__(self, other):

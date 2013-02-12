@@ -48,12 +48,12 @@ def respond(request, response_dict, code=http.OK, headers=None):
     return ""
 
 
-def handle_command(request, controller, obj):
+def handle_command(request, api_controller, obj):
     """Handle a request to perform a command."""
     command = requestargs.get_string(request, 'command')
     log.info("Handling '%s' request on %s", command, obj)
     try:
-        response = controller.handle_command(command)
+        response = api_controller.handle_command(command)
     except controller.UnknownCommandError, e:
         msg = "Unknown command %s for service %s"
         log.warning(msg, command, obj)
@@ -274,8 +274,6 @@ class ServiceInstanceResource(resource.Resource):
         resource.Resource.__init__(self)
         self.service_instance = service_instance
         self.controller = controller.ServiceInstanceController(service_instance)
-
-    # TODO: get for status and failure details
 
     def render_POST(self, request):
         return handle_command(request, self.controller, self.service_instance)
