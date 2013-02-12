@@ -210,6 +210,16 @@ class NullStateManager(object):
     def cleanup():
         pass
 
+    @classmethod
+    def disabled(cls):
+        return cls()
+
+    def __enter__(self):
+        return
+
+    def __exit__(self, *args):
+        return
+
 
 class StateChangeWatcher(observer.Observer):
     """Observer of stateful objects."""

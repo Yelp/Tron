@@ -77,7 +77,6 @@ class Service(observer.Observer, observer.Observable):
         """Enable the service."""
         self.enabled = True
         self.event_recorder.ok('enabled')
-        # TODO: what if it's already running?
         self.repair()
 
     def disable(self):
@@ -89,6 +88,7 @@ class Service(observer.Observer, observer.Observable):
     def repair(self):
         """Repair the service by restarting instances."""
         self.instances.clear_failed()
+        self.instances.restore()
         self.watch_instances(self.instances.create_missing())
         self.notify(self.NOTIFY_STATE_CHANGE)
         self.event_recorder.ok('repairing')

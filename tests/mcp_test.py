@@ -10,7 +10,7 @@ from tests.testingutils import Turtle, autospec_method
 from tron import mcp, event
 from tron.core import service
 from tron.serialize.runstate import statemanager
-from tron.config import config_parse
+from tron.config import config_parse, manager
 
 
 class MasterControlProgramTestCase(TestCase):
@@ -37,7 +37,14 @@ class MasterControlProgramTestCase(TestCase):
         self.mcp.state_watcher = mock.MagicMock()
         self.mcp.reconfigure()
         self.mcp._load_config.assert_called_with(reconfigure=True)
+
+    def test_load_config(self):
+        autospec_method(self.mcp.apply_config)
+        self.mcp.config = mock.create_autospec(manager.ConfigManager)
+        self.mcp._load_config()
         self.mcp.state_watcher.disabled.assert_called_with()
+        self.mcp.apply_config.assert_called_with(
+            self.mcp.config.load.return_value, reconfigure=False)
 
     def test_ssh_options_from_config(self):
         ssh_conf = mock.Mock(agent=False, identities=[])

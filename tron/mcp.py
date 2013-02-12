@@ -69,17 +69,17 @@ class MasterControlProgram(Observable):
     def reconfigure(self):
         """Reconfigure MCP while Tron is already running."""
         self.event_recorder.ok("reconfigured")
-        with self.state_watcher.disabled():
-            try:
-                self._load_config(reconfigure=True)
-            except Exception:
-                self.event_recorder.critical("reconfigure_failure")
-                log.exception("reconfigure failure")
-                raise
+        try:
+            self._load_config(reconfigure=True)
+        except Exception:
+            self.event_recorder.critical("reconfigure_failure")
+            log.exception("reconfigure failure")
+            raise
 
     def _load_config(self, reconfigure=False):
         """Read config data and apply it."""
-        self.apply_config(self.config.load(), reconfigure=reconfigure)
+        with self.state_watcher.disabled():
+            self.apply_config(self.config.load(), reconfigure=reconfigure)
 
     def initial_setup(self):
         """When the MCP is initialized the config is applied before the state.

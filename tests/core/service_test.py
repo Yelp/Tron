@@ -48,7 +48,8 @@ class ServiceTestCase(TestCase):
         self.config = mock.MagicMock()
         self.instances = mock.create_autospec(
             serviceinstance.ServiceInstanceCollection,
-            stop=mock.Mock(), start=mock.Mock(), state_data=mock.Mock())
+            stop=mock.Mock(), start=mock.Mock(), state_data=mock.Mock(),
+            restore=mock.Mock())
         self.service = service.Service(self.config, self.instances)
         autospec_method(self.service.watch)
         self.service.repair_callback = mock.create_autospec(
@@ -103,6 +104,7 @@ class ServiceTestCase(TestCase):
         self.instances.clear_failed.assert_called_with()
         assert_equal(self.service.watch.mock_calls,
             [mock.call(inst.get_observable(), True) for inst in created_instances])
+        self.instances.restore.assert_called_with()
         self.instances.start.assert_called_with()
         self.service.notify.assert_called_with(self.service.NOTIFY_STATE_CHANGE)
 
@@ -179,9 +181,19 @@ class ServiceCollectionTestCase(TestCase):
         self.collection.services = dict(
             (serv.name, serv) for serv in self.service_list)
 
-    def test_load_from_config(self):
-        pass
-        # TODO
+    @mock.patch('tron.core.service.Service', autospec=True)
+    def test_load_from_config(self, mock_service):
+        autospec_method(self.collection._filter_by_name)
+        autospec_method(self.collection.add)
+        service_configs = {'a': mock.Mock(), 'b': mock.Mock()}
+        context = mock.create_autospec(command_context.CommandContext)
+        result = list(self.collection.load_from_config(service_configs, context))
+        expected = [mock.call(config, context)
+                    for config in service_configs.itervalues()]
+        for expected_call in expected:
+            assert_in(expected_call, mock_service.from_config.mock_calls)
+        for expected_call in [mock.call(s) for s in result]:
+            assert_in(expected_call, self.collection.add.mock_calls)
 
     def test_add_service_added(self):
         service = self.service_list[0]

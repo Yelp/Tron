@@ -41,10 +41,12 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
         self.callback               = eventloop.NullCallback
         self.hang_check_callback    = eventloop.NullCallback
 
+    # TODO: a fast queue for starting/restoring
     def queue(self):
         """Queue this task to run after monitor_interval."""
         if not self.interval or self.callback.active():
             return
+        log.info("Queueing %s" % self)
         self.callback = eventloop.call_later(self.interval, self.run)
 
     def run(self):
@@ -59,6 +61,7 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
         if self._run_action():
             self._queue_hang_check()
 
+    # TODO: add tracking for stderr
     def _build_action(self):
         """Build and watch the monitor ActionCommand."""
         command         = self.command_template % self.pid_filename
@@ -71,11 +74,10 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
     def _run_action(self):
         try:
             self.node.run(self.action)
+            return True
         except node.Error, e:
-            log.error("Failed to run monitor: %r", e)
+            log.error("Failed to run %s: %r", self, e)
             self.notify(self.NOTIFY_FAILED)
-            return
-        return True
 
     def handle_action_event(self, _action, event):
         # TODO: check action matches self.action ?
@@ -250,6 +252,7 @@ class ServiceInstance(observer.Observer):
     STATE_UP['stop']                    = STATE_STOPPING
     STATE_UP['monitor']                 = STATE_MONITORING
     STATE_DOWN['start']                 = STATE_STARTING
+    STATE_DOWN['monitor']               = STATE_MONITORING
 
     context_class               = command_context.ServiceInstanceContext
 
@@ -298,6 +301,9 @@ class ServiceInstance(observer.Observer):
             self.stop_task.kill()
             self.monitor_task.cancel()
             return self.machine.transition('stop')
+
+    def restore(self):
+        self.monitor_task.run()
 
     event_to_transition_map = {
         ServiceInstanceMonitorTask.NOTIFY_START:        'monitor',
@@ -370,6 +376,7 @@ class ServiceInstanceCollection(object):
             lambda: self.instances, [
                 proxy.func_proxy('stop',    iteration.list_all),
                 proxy.func_proxy('start',   iteration.list_all),
+                proxy.func_proxy('restore', iteration.list_all),
                 proxy.attr_proxy('state_data', list)
             ])
 
@@ -458,7 +465,7 @@ class ServiceInstanceCollection(object):
     def __getattr__(self, item):
         return self.instances_proxy.perform(item)
 
-    # TODO: I believe context can be removed from here because underline next
+    # TODO: I believe context can be removed from here because underlying next
     # objects are replaced
     def __eq__(self, other):
         return (self.node_pool == other.node_pool and
