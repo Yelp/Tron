@@ -75,7 +75,7 @@ class StateMetadata(object):
         version = metadata['version']
         # Names (and state keys) changed in 0.5.2, requires migration
         # see tools/migration/migrate_state_to_namespace
-        if version > cls.version or version < (0,5,2):
+        if version > cls.version or version < (0, 5, 2):
             msg = "State for version %s, expected %s"
             raise VersionMismatchError(
                 msg % (metadata['version'] , cls.version))
@@ -105,7 +105,7 @@ class StateSaveBuffer(object):
         self.buffer.clear()
 
 
-class PersistentStateManager(observer.Observer):
+class PersistentStateManager(object):
     """Provides an interface to persist the state of Tron.
 
     The implementation of persisting and restoring the state from disk is
@@ -160,10 +160,10 @@ class PersistentStateManager(observer.Observer):
                 (key_to_item_map[key], state_data)
                 for key, state_data in key_to_state_map.iteritems())
 
-    def _save(self, type_enum, item):
+    def save(self, type_enum, name, state_data):
         """Persist an items state."""
-        key = self._impl.build_key(type_enum, item.name)
-        if self._buffer.save(key, item.state_data) and self.enabled:
+        key = self._impl.build_key(type_enum, name)
+        if self._buffer.save(key, state_data) and self.enabled:
             self._save_from_buffer()
 
     def _save_from_buffer(self):
@@ -182,25 +182,9 @@ class PersistentStateManager(observer.Observer):
                 log.warn(msg)
                 raise PersistenceStoreError(msg)
 
-    def save_job(self, job):
-        self._save(runstate.JOB_STATE, job)
-
-    def save_service(self, service):
-        self._save(runstate.SERVICE_STATE, service)
-
-    def save_metadata(self):
-        self._save(runstate.MCP_STATE, StateMetadata())
-
     def cleanup(self):
         self._save_from_buffer()
         self._impl.cleanup()
-
-    def handler(self, observable, _event):
-        """Handle a state change in an observable by saving its state."""
-        if isinstance(observable, job.Job):
-            self.save_job(observable)
-        if isinstance(observable, service.Service):
-            self.save_service(observable)
 
     @contextmanager
     def _timeit(self):
@@ -218,3 +202,57 @@ class PersistentStateManager(observer.Observer):
             yield
         finally:
             self.enabled = prev_enabled
+
+
+class NullStateManager(object):
+    enabled = False
+
+    @staticmethod
+    def cleanup():
+        pass
+
+
+class StateChangeWatcher(observer.Observer):
+    """Observer of stateful objects."""
+
+    def __init__(self):
+        self.state_manager = NullStateManager
+        self.config        = None
+
+    def update_from_config(self, state_config):
+        if self.config == state_config:
+            return False
+
+        self.shutdown()
+        self.state_manager = PersistenceManagerFactory.from_config(state_config)
+        self.config = state_config
+        return True
+
+    def handler(self, observable, _event):
+        """Handle a state change in an observable by saving its state."""
+        if isinstance(observable, job.Job):
+            self.save_job(observable)
+        if isinstance(observable, service.Service):
+            self.save_service(observable)
+
+    def save_job(self, job):
+        self._save_object(runstate.JOB_STATE, job)
+
+    def save_service(self, service):
+        self._save_object(runstate.SERVICE_STATE, service)
+
+    def save_metadata(self):
+        self._save_object(runstate.MCP_STATE, StateMetadata())
+
+    def _save_object(self, state_type, obj):
+        self.state_manager.save(state_type, obj.name, obj.state_data)
+
+    def shutdown(self):
+        self.state_manager.enabled = False
+        self.state_manager.cleanup()
+
+    def disabled(self):
+        return self.state_manager.disabled()
+
+    def restore(self, jobs, services):
+        return self.state_manager.restore(jobs, services)

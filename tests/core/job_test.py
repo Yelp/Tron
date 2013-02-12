@@ -5,7 +5,7 @@ from testify import setup, teardown, TestCase, run, assert_equal, assert_raises
 from tests import mocks
 from tests.assertions import assert_length, assert_call
 from tests.mocks import MockNode
-from tests.testingutils import Turtle
+from tests.testingutils import Turtle, autospec_method
 from tests import testingutils
 from tron import node, event
 from tron.core import job, jobrun
@@ -229,10 +229,11 @@ class JobSchedulerTestCase(TestCase):
         assert_length(self.job.runs.cancel_pending.calls, 1)
 
     def test_schedule_reconfigured(self):
-        self.job_scheduler.schedule = Turtle()
+        autospec_method(self.job_scheduler.create_and_schedule_runs)
         self.job_scheduler.schedule_reconfigured()
         assert_length(self.job.runs.remove_pending.calls, 1)
-        assert_length(self.job_scheduler.schedule.calls, 1)
+        self.job_scheduler.create_and_schedule_runs.assert_called_with(
+            ignore_last_run_time=True)
 
     def test_run_job(self):
         self.job_scheduler.schedule = Turtle()
@@ -333,11 +334,11 @@ class JobSchedulerGetRunsToScheduleTestCase(TestCase):
     def test_get_runs_to_schedule_no_queue_with_pending(self):
         self.scheduler.queue_overlapping = False
         self.job.runs.has_pending = True
-        job_runs = self.job_scheduler.get_runs_to_schedule()
+        job_runs = self.job_scheduler.get_runs_to_schedule(False)
         assert_length(job_runs, 0)
 
     def test_get_runs_to_schedule_queue_with_pending(self):
-        job_runs = list(self.job_scheduler.get_runs_to_schedule())
+        job_runs = list(self.job_scheduler.get_runs_to_schedule(False))
 
         self.job.runs.get_newest.assert_called_with(include_manual=False)
         self.job.scheduler.next_run_time.assert_called_once_with(
@@ -347,7 +348,7 @@ class JobSchedulerGetRunsToScheduleTestCase(TestCase):
         job_runs[0].attach.assert_any_call(True, self.job)
 
     def test_get_runs_to_schedule_no_pending(self):
-        job_runs = list(self.job_scheduler.get_runs_to_schedule())
+        job_runs = list(self.job_scheduler.get_runs_to_schedule(False))
 
         self.job.runs.get_newest.assert_called_with(include_manual=False)
         self.job.scheduler.next_run_time.assert_called_once_with(
@@ -359,7 +360,7 @@ class JobSchedulerGetRunsToScheduleTestCase(TestCase):
     def test_get_runs_to_schedule_no_last_run(self):
         self.job.runs.get_newest.return_value = None
 
-        job_runs = list(self.job_scheduler.get_runs_to_schedule())
+        job_runs = list(self.job_scheduler.get_runs_to_schedule(False))
         self.job.scheduler.next_run_time.assert_called_once_with(None)
         assert_length(job_runs, 1)
         # This should return a JobRun which has the job attached as an observer
@@ -487,7 +488,6 @@ class JobSchedulerScheduleTestCase(testingutils.MockReactorTestCase):
         self.job.runs.get_runs_by_state = get_queued
         self.job_scheduler.handler(self.job, job.Job.NOTIFY_RUN_DONE)
         self.job_scheduler.run_job.assert_not_called()
-
 
 
 if __name__ == '__main__':

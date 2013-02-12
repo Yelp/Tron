@@ -6,6 +6,12 @@ What's New
 * Tron now supports the ability to use different users per node connection.
 * Fragmented configuration is now possible by using namespaced config files.
 * Additional cleanup and stability patches have been applied.
+* State persistence configuration can now be changed without restarting `trond`
+* State saving now includes a namespace, you will need to run 
+  `tools/migration/migrate_state.py` to migrate old state.
+* `trond` now expects a configuration directory. Use 
+  `tools/migration/migrate_config_0.5.1_to_0.5.2.py` to convert your existing
+  config to the new format.
 
 0.5.1
 -----
