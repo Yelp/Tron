@@ -1,4 +1,4 @@
-__version_info__    = (0, 5, 2, 1)
+__version_info__    = (0, 5, 2, 2)
 __version__         = ".".join("%s" % v for v in __version_info__)
 
 __author__          = 'Yelp <yelplabs@yelp.com>'

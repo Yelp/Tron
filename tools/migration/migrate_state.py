@@ -14,14 +14,11 @@
  Pre 0.5 state files can be read by the YamlStateStore. See the configuration
  documentation for more details on how to create state_persistence sections.
 """
-from collections import namedtuple
-
 import optparse
 from tron.config import manager, schema
+from tron.serialize import runstate
 from tron.serialize.runstate.statemanager import PersistenceManagerFactory
 from tron.utils import tool_utils
-
-Item = namedtuple('Item', ['name', 'state_data'])
 
 
 def parse_options():
@@ -94,11 +91,11 @@ def convert_state(opts):
         service_states  = add_namespaces(service_states)
 
     for name, job in job_states.iteritems():
-        dest_manager.save_job(Item(name, job))
+        dest_manager.save(runstate.JOB_STATE, name, job)
     print "Migrated %s jobs." % len(job_states)
 
     for name, service in service_states.iteritems():
-        dest_manager.save_service(Item(name, service))
+        dest_manager.save(runstate.SERVICE_STATE, name, service)
     print "Migrated %s services." % len(service_states)
 
     dest_manager.cleanup()
