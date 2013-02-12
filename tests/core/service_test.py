@@ -7,6 +7,32 @@ from tron.core import service, serviceinstance
 from tron import node, command_context, event, eventloop
 from tron.core.serviceinstance import ServiceInstance
 
+class ServiceStateTestCase(TestCase):
+
+    @setup
+    def setup_service(self):
+        self.instances = mock.create_autospec(
+            serviceinstance.ServiceInstanceCollection)
+        self.service = mock.Mock(enabled=True, instances=self.instances)
+
+    def test_state_disabled(self):
+        self.service.enabled = False
+        state = service.ServiceState.from_service(self.service)
+        assert_equal(state, service.ServiceState.DISABLED)
+
+    def test_state_up(self):
+        self.service.enabled = True
+        state = service.ServiceState.from_service(self.service)
+        assert_equal(state, service.ServiceState.UP)
+        self.instances.all.assert_called_with(ServiceInstance.STATE_UP)
+
+    def test_state_degraded(self):
+        self.service.enabled = True
+        self.instances.all.return_value = False
+        self.instances.is_starting.return_value = False
+        state = service.ServiceState.from_service(self.service)
+        assert_equal(state, service.ServiceState.DEGRADED)
+
 
 class ServiceTestCase(TestCase):
 
@@ -34,20 +60,6 @@ class ServiceTestCase(TestCase):
         assert_equal(service_inst.config, self.config)
         assert_equal(collection.node_pool, node_store[self.config.node])
         assert_equal(collection.context, context)
-
-    def test_state_disabled(self):
-        assert_equal(self.service.get_state(), self.service.STATE_DISABLED)
-
-    def test_state_up(self):
-        self.service.enabled = True
-        assert_equal(self.service.get_state(), self.service.STATE_UP)
-        self.instances.all.assert_called_with(ServiceInstance.STATE_UP)
-
-    def test_state_degraded(self):
-        self.service.enabled = True
-        self.instances.all.return_value = False
-        self.instances.is_starting.return_value = False
-        assert_equal(self.service.get_state(), self.service.STATE_DEGRADED)
 
     def test_enable(self):
         autospec_method(self.service.repair)
@@ -100,14 +112,14 @@ class ServiceTestCase(TestCase):
 
     def test_record_events_failure(self):
         autospec_method(self.service.get_state)
-        state = self.service.get_state.return_value  = self.service.STATE_FAILED
+        state = self.service.get_state.return_value  = service.ServiceState.FAILED
         self.service.event_recorder = mock.create_autospec(event.EventRecorder)
         self.service.record_events()
         self.service.event_recorder.critical.assert_called_with(state)
 
     def test_record_events_up(self):
         autospec_method(self.service.get_state)
-        state = self.service.get_state.return_value  = self.service.STATE_UP
+        state = self.service.get_state.return_value  = service.ServiceState.UP
         self.service.event_recorder = mock.create_autospec(event.EventRecorder)
         self.service.record_events()
         self.service.event_recorder.ok.assert_called_with(state)

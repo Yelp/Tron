@@ -4,28 +4,52 @@ from tron import event, node, eventloop
 from tron.core import serviceinstance
 from tron.core.serviceinstance import ServiceInstance
 from tron.utils import observer
-from tron.utils import state
 
 
 log = logging.getLogger(__name__)
 
 
-class ServiceState(state.NamedEventState):
-    """Named event state subclass for services"""
+class ServiceState(object):
+    """Determine the state of a Service."""
+    DISABLED      = "DISABLED"
+    STARTING      = "STARTING"
+    UP            = "UP"
+    DEGRADED      = "DEGRADED"
+    FAILED        = "FAILED"
+    STOPPING      = "STOPPING"
+    UNKNOWN       = "UNKNOWN"
+
+    FAILURE_STATES = set([DEGRADED, FAILED])
+
+    @classmethod
+    def from_service(cls, service):
+        if not service.enabled:
+            return cls.disabled_states(service)
+
+        if service.instances.all(ServiceInstance.STATE_UP):
+            return cls.UP
+
+        if service.instances.is_starting():
+            return cls.STARTING
+
+        if service.instances.all(ServiceInstance.STATE_FAILED):
+            return cls.FAILED
+
+        return cls.DEGRADED
+
+    @classmethod
+    def disabled_states(cls, service):
+        if not len(service.instances):
+            return cls.DISABLED
+
+        if service.instances.all(ServiceInstance.STATE_STOPPING):
+            return cls.STOPPING
+
+        return cls.UNKNOWN
 
 
 class Service(observer.Observer, observer.Observable):
     """Manage a collection of service instances."""
-
-    STATE_DISABLED      = "DISABLED"
-    STATE_STARTING      = "STARTING"
-    STATE_UP            = "UP"
-    STATE_DEGRADED      = "DEGRADED"
-    STATE_FAILED        = "FAILED"
-    STATE_STOPPING      = "STOPPING"
-    STATE_UNKNOWN       = "UNKNOWN"
-
-    FAILURE_STATES = set([STATE_DEGRADED, STATE_FAILED])
 
     NOTIFY_STATE_CHANGE = 'event_state_changed'
 
@@ -51,27 +75,8 @@ class Service(observer.Observer, observer.Observable):
 
     name = property(get_name)
 
-    # TODO: extract state
     def get_state(self):
-        if not self.enabled:
-            if not len(self.instances):
-                return self.STATE_DISABLED
-
-            if self.instances.all(ServiceInstance.STATE_STOPPING):
-                return self.STATE_STOPPING
-
-            return self.STATE_UNKNOWN
-
-        if self.instances.all(ServiceInstance.STATE_UP):
-            return self.STATE_UP
-
-        if self.instances.is_starting():
-            return self.STATE_STARTING
-
-        if self.instances.all(ServiceInstance.STATE_FAILED):
-            return self.STATE_FAILED
-
-        return self.STATE_DEGRADED
+        return ServiceState.from_service(self)
 
     def enable(self):
         """Enable the service."""
@@ -104,7 +109,7 @@ class Service(observer.Observer, observer.Observable):
                      serviceinstance.ServiceInstance.STATE_UP):
             self.record_events()
 
-        if self.get_state() in self.FAILURE_STATES:
+        if self.get_state() in ServiceState.FAILURE_STATES:
             log.info("Starting service repair for %s", self)
             self.repair_callback.start()
 
@@ -113,10 +118,10 @@ class Service(observer.Observer, observer.Observable):
     def record_events(self):
         """Record an event when the state changes."""
         state = self.get_state()
-        if state in (self.STATE_FAILED, self.STATE_DEGRADED):
+        if state in ServiceState.FAILURE_STATES:
             return self.event_recorder.critical(state)
 
-        if state == self.STATE_UP:
+        if state == ServiceState.UP:
             return self.event_recorder.ok(state)
 
     @property
