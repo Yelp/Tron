@@ -94,6 +94,7 @@ class ServiceTestCase(TestCase):
         self.service.repair_callback.cancel.assert_called_with()
 
     def test_repair(self):
+        autospec_method(self.service.notify)
         count = 3
         created_instances = [
             mock.create_autospec(ServiceInstance) for _ in xrange(count)]
@@ -101,12 +102,32 @@ class ServiceTestCase(TestCase):
         self.service.repair()
         self.instances.clear_failed.assert_called_with()
         assert_equal(self.service.watch.mock_calls,
-            [mock.call(inst.get_observable()) for inst in created_instances])
+            [mock.call(inst.get_observable(), True) for inst in created_instances])
         self.instances.start.assert_called_with()
+        self.service.notify.assert_called_with(self.service.NOTIFY_STATE_CHANGE)
 
-    def test_handle_instance_state_change(self):
-        # TODO
-        pass
+    def test_handle_instance_state_change_down(self):
+        autospec_method(self.service.notify)
+        instance_event = serviceinstance.ServiceInstance.STATE_DOWN
+        self.service._handle_instance_state_change(mock.Mock(), instance_event)
+        self.service.notify.assert_called_with(self.service.NOTIFY_STATE_CHANGE)
+        self.service.instances.clear_down.assert_called_with()
+
+    def test_handle_instance_state_change_failed(self):
+        autospec_method(self.service.notify)
+        autospec_method(self.service.record_events)
+        instance_event = serviceinstance.ServiceInstance.STATE_FAILED
+        self.service._handle_instance_state_change(mock.Mock(), instance_event)
+        assert not self.service.notify.mock_calls
+        self.service.record_events.assert_called_with()
+
+    def test_handle_instance_state_change_starting(self):
+        autospec_method(self.service.notify)
+        autospec_method(self.service.record_events)
+        instance_event = serviceinstance.ServiceInstance.STATE_STARTING
+        self.service._handle_instance_state_change(mock.Mock(), instance_event)
+        assert not self.service.notify.mock_calls
+        assert not self.service.record_events.mock_calls
 
     def test_record_events_failure(self):
         autospec_method(self.service.get_state)

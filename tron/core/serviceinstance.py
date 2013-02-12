@@ -440,8 +440,9 @@ class ServiceInstanceCollection(object):
         return self._all_states_match([state])
 
     def is_starting(self):
-        states = set(
-            [ServiceInstance.STATE_STARTING, ServiceInstance.STATE_MONITORING])
+        states = set([ServiceInstance.STATE_STARTING,
+                      ServiceInstance.STATE_MONITORING,
+                      ServiceInstance.STATE_UP])
         return self._all_states_match(states)
 
     def _all_states_match(self, states):

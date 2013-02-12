@@ -30,6 +30,8 @@ class Service(observer.Observer, observer.Observable):
 
     FAILURE_STATES = set([STATE_DEGRADED, STATE_FAILED])
 
+    NOTIFY_STATE_CHANGE = 'event_state_changed'
+
     def __init__(self, config, instance_collection):
         super(Service, self).__init__()
         self.config             = config
@@ -52,6 +54,7 @@ class Service(observer.Observer, observer.Observable):
 
     name = property(get_name)
 
+    # TODO: extract state
     def get_state(self):
         if not self.enabled:
             if not len(self.instances):
@@ -80,7 +83,6 @@ class Service(observer.Observer, observer.Observable):
         # TODO: what if it's already running?
         self.repair()
 
-    # TODO: update api, used to be stop
     def disable(self):
         self.enabled = False
         self.instances.stop()
@@ -91,23 +93,23 @@ class Service(observer.Observer, observer.Observable):
         """Repair the service by restarting instances."""
         self.instances.clear_failed()
         self.watch_instances(self.instances.create_missing())
+        self.notify(self.NOTIFY_STATE_CHANGE)
         self.event_recorder.ok('repairing')
         self.instances.start()
 
-    def _handle_instance_state_change(self, instance, event):
+    def _handle_instance_state_change(self, _instance, event):
         """Handle any changes to the state of this service's instances."""
-        if event in (serviceinstance.ServiceInstance.STATE_STARTING,):
-            return
+        if event == serviceinstance.ServiceInstance.STATE_DOWN:
+            self.instances.clear_down()
+            self.notify(self.NOTIFY_STATE_CHANGE)
 
-        self.instances.clear_down()
-        self.record_events()
+        if event in (serviceinstance.ServiceInstance.STATE_FAILED,
+                     serviceinstance.ServiceInstance.STATE_UP):
+            self.record_events()
 
         if self.get_state() in self.FAILURE_STATES:
+            log.info("Starting service repair for %s", self)
             self.repair_callback.start()
-        # TODO: record failures to a ServiceFailures
-
-        # TODO: notify state change when a service is removed from the collection
-        # or when a new one is created
 
     handler = _handle_instance_state_change
 

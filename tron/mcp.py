@@ -107,7 +107,8 @@ class MasterControlProgram(Observable):
         self._apply_jobs(config_container.get_jobs(), reconfigure=reconfigure)
         services = config_container.get_services()
         services = self.services.load_from_config(services, self.context)
-        self.state_watcher.watch_all(services)
+        self.state_watcher.watch_all(
+            services, service.Service.NOTIFY_STATE_CHANGE)
 
     def update_state_watcher_config(self, state_config):
         """Update the StateChangeWatcher, and save all state if the state config
