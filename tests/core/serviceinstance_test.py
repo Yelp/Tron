@@ -176,16 +176,19 @@ class ServiceInstanceStartTaskTestCase(TestCase):
 
     def test_start(self):
         command = 'the command'
-        with mock.patch('tron.core.serviceinstance.ActionCommand') as mock_ac:
+        patcher = mock.patch('tron.core.serviceinstance.actioncommand.ActionCommand')
+        with patcher as mock_ac:
             self.task.start(command)
             self.task.watch.assert_called_with(mock_ac.return_value)
             self.node.run.assert_called_with(mock_ac.return_value)
+            mock_ac.assert_called_with("%s.start" % self.task.id, command,
+                serializer=self.task.buffer_store)
 
     def test_start_failed(self):
         command = 'the command'
         self.node.run.side_effect = node.Error
         self.task.start(command)
-        self.task.notify.assert_called_with(self.task.NOTIFY_DOWN)
+        self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
 
     def test_handle_action_event_exit(self):
         action = mock.create_autospec(ActionCommand)
@@ -204,7 +207,7 @@ class ServiceInstanceStartTaskTestCase(TestCase):
     def test_handle_action_exit_fail(self):
         action = mock.create_autospec(ActionCommand, has_failed=True)
         self.task._handle_action_exit(action)
-        self.task.notify.assert_called_with(self.task.NOTIFY_DOWN)
+        self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
 
     def test_handle_action_exit_success(self):
         action = mock.create_autospec(ActionCommand, has_failed=False)

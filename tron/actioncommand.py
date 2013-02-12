@@ -102,3 +102,33 @@ class ActionCommand(object):
 
     def __repr__(self):
         return "ActionCommand %s %s: %s" % (self.id, self.command, self.state)
+
+
+class StringBuffer(object):
+    """An object which stores strings."""
+
+    def __init__(self):
+        self.buffer = []
+
+    def write(self, msg):
+        self.buffer.append(msg)
+
+    def get_value(self):
+        return ''.join(self.buffer).rstrip()
+
+    def close(self):
+        pass
+
+
+class StringBufferStore(object):
+    """A serializer object which can be passed to ActionCommand as a
+    serializer, but stores streams in memory.
+    """
+    def __init__(self):
+        self.buffers = {}
+
+    def open(self, name):
+        return self.buffers.setdefault(name, StringBuffer())
+
+    def get_stream(self, name):
+        return self.buffers[name].get_value()

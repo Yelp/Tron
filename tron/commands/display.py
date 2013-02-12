@@ -19,11 +19,11 @@ class Color(object):
         'white':                '\033[99m',
         # h is for highlighted
         'hgray':                '\033[100m',
-        'hcyan':                '\033[101m',
+        'hred':                 '\033[101m',
         'hgreen':               '\033[102m',
         'hyellow':              '\033[103m',
         'hblue':                '\033[104m',
-        'hred':                 '\033[106m',
+        'hcyan':                 '\033[106m',
         'end':                  '\033[0m',
     }
 
@@ -203,9 +203,17 @@ class DisplayServices(TableDisplay):
     }
 
     def format_instances(self, service_instances):
+        format_str = "    %s : %-30s %s%s"
+        def get_failure_messages(failures):
+            if not failures:
+                return ""
+            header = Color.set("red", "\n    stderr: ")
+            return header + Color.set("red", "\n".join(failures))
+
         def format(inst):
             state = add_color_for_state(inst['state'])
-            return "    %s : %-30s %s" % (inst['id'], inst['node'], state)
+            failures = get_failure_messages(inst['failures'])
+            return format_str % (inst['id'], inst['node'], state, failures)
         return [format(instance) for instance in service_instances]
 
     def format_details(self, service_content):

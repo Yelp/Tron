@@ -2,10 +2,10 @@ import logging
 
 import operator
 
-from tron import command_context
+from tron import command_context, actioncommand
 from tron import eventloop
 from tron import node
-from tron.actioncommand import ActionCommand, CompletedActionCommand
+from tron.actioncommand import ActionCommand
 from tron.utils import observer, proxy, iteration
 from tron.utils import state
 
@@ -37,7 +37,7 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
         self.node                   = node
         self.id                     = id
         self.pid_filename           = pid_filename
-        self.action                 = CompletedActionCommand
+        self.action                 = actioncommand.CompletedActionCommand
         self.callback               = eventloop.NullCallback
         self.hang_check_callback    = eventloop.NullCallback
 
@@ -174,28 +174,34 @@ class ServiceInstanceStopTask(observer.Observable, observer.Observer):
 class ServiceInstanceStartTask(observer.Observable, observer.Observer):
     """ServiceInstance task which starts the service process."""
 
-    NOTIFY_DOWN             = 'start_task_notify_down'
+    NOTIFY_FAILED           = 'start_task_notify_failed'
     NOTIFY_STARTED          = 'start_task_notify_started'
 
     def __init__(self, id, node):
         super(ServiceInstanceStartTask, self).__init__()
         self.id             = id
         self.node           = node
+        self.buffer_store   = actioncommand.StringBufferStore()
+
+    def _build_and_watch(self, command):
+        action = actioncommand.ActionCommand(
+                    "%s.start" % self.id, command, serializer=self.buffer_store)
+        self.watch(action)
+        return action
 
     def start(self, command):
         """Start the service command. It is important that command is passed
         in here when the start is called because it must be rendered using
         a context where the datetime is the current datetime.
         """
-        action = ActionCommand("%s.start" % self.id, command)
-        self.watch(action)
+        action = self._build_and_watch(command)
 
         try:
             self.node.run(action)
             return True
         except node.Error, e:
             log.warn("Failed to start %s: %r", self.id, e)
-            self.notify(self.NOTIFY_DOWN)
+            self.notify(self.NOTIFY_FAILED)
 
     def handle_action_event(self, action, event):
         """Watch for events from the ActionCommand."""
@@ -203,12 +209,15 @@ class ServiceInstanceStartTask(observer.Observable, observer.Observer):
             return self._handle_action_exit(action)
         if event == ActionCommand.FAILSTART:
             log.warn("Failed to start service %s on %s.", self.id, self.node)
-            self.notify(self.NOTIFY_DOWN)
+            self.notify(self.NOTIFY_FAILED)
     handler = handle_action_event
 
     def _handle_action_exit(self, action):
-        event = self.NOTIFY_DOWN if action.has_failed else self.NOTIFY_STARTED
+        event = self.NOTIFY_FAILED if action.has_failed else self.NOTIFY_STARTED
         self.notify(event)
+
+    def get_failure_message(self):
+        return self.buffer_store.get_stream(actioncommand.ActionCommand.STDERR)
 
 
 class ServiceInstanceState(state.NamedEventState):
@@ -254,6 +263,7 @@ class ServiceInstance(observer.Observer):
         start_state             = ServiceInstance.STATE_DOWN
         self.machine            = state.StateMachine(start_state, delegate=self)
         self.context = command_context.build_context(self, parent_context)
+        self.failures           = []
 
     def create_tasks(self):
         """Create and watch tasks."""
@@ -294,7 +304,6 @@ class ServiceInstance(observer.Observer):
         ServiceInstanceMonitorTask.NOTIFY_FAILED:       'monitor_fail',
         ServiceInstanceMonitorTask.NOTIFY_DOWN:         'down',
         ServiceInstanceMonitorTask.NOTIFY_UP:           'up',
-        ServiceInstanceStartTask.NOTIFY_DOWN:           'down',
         ServiceInstanceStopTask.NOTIFY_FAIL:            'stop_fail',
         ServiceInstanceStopTask.NOTIFY_SUCCESS:         'down',
     }
@@ -306,6 +315,10 @@ class ServiceInstance(observer.Observer):
 
         if event == ServiceInstanceStartTask.NOTIFY_STARTED:
             self._handle_start_task_complete()
+
+        if event == ServiceInstanceStartTask.NOTIFY_FAILED:
+            self.machine.transition('down')
+            self.failures.append(self.start_task.get_failure_message())
 
     def _handle_start_task_complete(self):
         if self.machine.state != ServiceInstance.STATE_STARTING:

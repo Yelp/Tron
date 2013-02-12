@@ -14,9 +14,6 @@ class ServiceState(state.NamedEventState):
     """Named event state subclass for services"""
 
 
-# TODO: object to record failures/stdout/stderr
-# TODO: get failure messages from instance stderr/stdout
-
 class Service(observer.Observer, observer.Observable):
     """Manage a collection of service instances."""
 

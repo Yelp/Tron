@@ -209,7 +209,7 @@ class ServiceAdapter(ReprAdapter):
 
 class ServiceInstanceAdapter(ReprAdapter):
 
-    field_names = ['id']
+    field_names = ['id', 'failures']
     translated_field_names = ['state', 'node']
 
     def get_state(self):
