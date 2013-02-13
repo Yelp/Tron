@@ -4,11 +4,10 @@ import tempfile
 import mock
 from testify import TestCase, setup, teardown
 from testify import  assert_equal, run
-from tests.assertions import assert_call, assert_length
-from tests.testingutils import Turtle, autospec_method
+from tests.testingutils import autospec_method
 
 from tron import mcp, event
-from tron.core import service
+from tron.core import service, job
 from tron.serialize.runstate import statemanager
 from tron.config import config_parse, manager
 
@@ -56,7 +55,7 @@ class MasterControlProgramTestCase(TestCase):
 
     def test_graceful_shutdown(self):
         self.mcp.graceful_shutdown()
-        for job_sched in self.mcp.get_jobs():
+        for job_sched in self.mcp.get_job_collection():
             assert job_sched.shutdown_requested
 
     def test_apply_config(self):
@@ -71,7 +70,8 @@ class MasterControlProgramTestCase(TestCase):
 
     def test_update_state_watcher_config_changed(self):
         self.mcp.state_watcher.update_from_config.return_value = True
-        self.mcp.jobs = {'a': mock.Mock(), 'b': mock.Mock()}
+        self.mcp.jobs = mock.create_autospec(job.JobCollection)
+        self.mcp.jobs.__iter__.return_values = {'a': mock.Mock(), 'b': mock.Mock()}
         self.mcp.services = mock.create_autospec(service.ServiceCollection)
         self.mcp.services.__iter__.return_value = {'c': mock.Mock(), 'd': mock.Mock()}
         state_config = mock.Mock()
@@ -79,7 +79,7 @@ class MasterControlProgramTestCase(TestCase):
         self.mcp.state_watcher.update_from_config.assert_called_with(state_config)
         assert_equal(
             self.mcp.state_watcher.save_job.mock_calls,
-            [mock.call(j.job) for j in self.mcp.jobs.itervalues()])
+            [mock.call(j.job) for j in self.mcp.jobs])
         assert_equal(
             self.mcp.state_watcher.save_service.mock_calls,
             [mock.call(s) for s in self.mcp.services])
@@ -100,7 +100,7 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
         self.config_path        = tempfile.mkdtemp()
         self.mcp                = mcp.MasterControlProgram(
                                     self.working_dir, self.config_path)
-        self.mcp.jobs           = {'1': Turtle(), '2': Turtle()}
+        self.mcp.jobs           = mock.create_autospec(job.JobCollection)
         self.mcp.services       = mock.create_autospec(service.ServiceCollection)
         self.mcp.state_watcher  = mock.create_autospec(statemanager.StateChangeWatcher)
 
@@ -115,26 +115,9 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
         job_state_data = {'1': 'things', '2': 'things'}
         self.mcp.state_watcher.restore.return_value = job_state_data, service_state_data
         self.mcp.restore_state()
-        for job in self.mcp.jobs.values():
-            assert_call(job.restore_job_state, 0, 'things')
+        self.mcp.jobs.restore_state.assert_called_with(job_state_data)
         self.mcp.services.restore_state.assert_called_with(service_state_data)
 
-    def test_restore_state_no_state(self):
-        service_state_data = mock.Mock()
-        job_state_data = {}
-        self.mcp.state_watcher.restore.return_value = job_state_data, service_state_data
-        self.mcp.restore_state()
-        for job in self.mcp.jobs.values():
-            assert_length(job.restore_job_state.calls, 0)
-        self.mcp.services.restore_state.assert_called_with(service_state_data)
-
-    def test_restore_state_partial(self):
-        self.mcp.state_watcher.restore.return_value = {'1': 'thing'}, {'2': 'thing'}
-        self.mcp.restore_state()
-
-        assert_call(self.mcp.jobs['1'].restore_job_state, 0, 'thing')
-        assert_length(self.mcp.jobs['2'].restore_job_state.calls, 0)
-        self.mcp.services.restore_state.assert_called_with({'2': 'thing'})
 
 if __name__ == '__main__':
     run()

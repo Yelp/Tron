@@ -5,8 +5,9 @@ from tron import command_context, event, node
 from tron.core import jobrun
 from tron.core import actiongraph
 from tron.core.actionrun import ActionRun
+from tron.scheduler import scheduler_from_config
 from tron.serialize import filehandler
-from tron.utils import timeutils
+from tron.utils import timeutils, proxy, iteration
 from tron.utils.observer import Observable, Observer
 
 class Error(Exception):
@@ -327,3 +328,94 @@ class JobScheduler(Observer):
             last_run_time = last_run.run_time if last_run else None
         next_run_time = self.job.scheduler.next_run_time(last_run_time)
         return self.job.build_new_runs(next_run_time)
+
+    def request_shutdown(self):
+        self.shutdown_requested = True
+
+
+# TODO: tests
+class JobCollection(object):
+    """A collection of jobs."""
+
+    def __init__(self):
+        self.jobs = {}
+        self.proxy = proxy.CollectionProxy(self.jobs.itervalues, [
+            proxy.func_proxy('request_shutdown',    iteration.list_all),
+            proxy.func_proxy('enable',              iteration.list_all),
+            proxy.func_proxy('disable',             iteration.list_all),
+            proxy.func_proxy('schedule',            iteration.list_all),
+            proxy.attr_proxy('is_shutdown',         all)
+        ])
+
+    def get_names(self):
+        return self.jobs.keys()
+
+    def load_from_config(self, job_configs, context, output_stream_dir, time_zone, reconfigure):
+        """Apply a configuration to this collection and return a generator of
+        jobs which were added.
+        """
+        self._filter_by_name(job_configs.keys())
+
+        for job_config in job_configs.itervalues():
+            log.debug("Building new job %s", job_config.name)
+            output_path = filehandler.OutputPath(output_stream_dir)
+            scheduler = scheduler_from_config(job_config.schedule, time_zone)
+            job = Job.from_config(job_config, scheduler, context, output_path)
+            if self.add(job):
+                if reconfigure:
+                    self.jobs[job.name].schedule()
+                yield job
+
+    def add(self, job):
+        """Add a new service or update an existing service."""
+        if self.job_exists(job):
+            return False
+
+        log.info("Adding new job %s" % job.name)
+        self.jobs[job.name] = JobScheduler(job)
+        return True
+
+    def job_exists(self, job):
+        if job == self.jobs.get(job.name):
+            return True
+
+        if job.name in self.jobs:
+            self.update(job)
+            return True
+
+        return False
+
+    def update(self, job):
+        log.info("Updating %s", job)
+        job_scheduler = self.jobs[job.name]
+        job_scheduler.job.update_from_job(job)
+        job_scheduler.schedule_reconfigured()
+
+    def _filter_by_name(self, job_names):
+        """Remove all services which are not named in service_names."""
+        for name in set(self.jobs.keys()) - set(job_names):
+            self.remove(name)
+
+    def remove(self, job_name):
+        if job_name not in self.jobs:
+            raise ValueError("Job %s unknown", job_name)
+
+        log.info("Removing job %s", job_name)
+        self.jobs.pop(job_name).disable()
+
+    def restore_state(self, job_state_data):
+        for name, state_data in job_state_data.iteritems():
+            self.jobs[name].restore_job_state(state_data)
+        log.info("Loaded state for %d jobs", len(job_state_data))
+
+    def get_by_name(self, name):
+        return self.jobs.get(name)
+
+    def __iter__(self):
+        return self.jobs.itervalues()
+
+    def __getattr__(self, name):
+        return self.proxy.perform(name)
+
+    def __contains__(self, name):
+        return name in self.jobs

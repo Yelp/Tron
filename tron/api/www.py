@@ -152,23 +152,23 @@ class JobResource(resource.Resource):
 class JobCollectionResource(resource.Resource):
     """Resource for all our daemon's jobs"""
 
-    def __init__(self, master_control):
-        self.mcp        = master_control
-        self.controller = controller.JobCollectionController(master_control)
+    def __init__(self, job_collection):
+        self.job_collection = job_collection
+        self.controller     = controller.JobCollectionController(job_collection)
         resource.Resource.__init__(self)
 
     def getChild(self, name, request):
         if name == '':
             return self
 
-        job_sched = self.mcp.get_job_by_name(name)
+        job_sched = self.job_collection.get_by_name(name)
         if job_sched is None:
             return resource.NoResource("Cannot find job '%s'" % name)
 
         return JobResource(job_sched)
 
     def get_data(self, include_job_run=False, include_action_runs=False):
-        jobs = (sched.job for sched in self.mcp.get_jobs())
+        jobs = (sched.job for sched in self.job_collection)
         return adapter.adapt_many(adapter.JobAdapter, jobs,
             include_job_run, include_action_runs)
 
@@ -179,7 +179,7 @@ class JobCollectionResource(resource.Resource):
         return respond(request, output)
 
     def render_POST(self, request):
-        return handle_command(request, self.controller, self.mcp)
+        return handle_command(request, self.controller, self.job_collection)
 
 
 class ServiceInstanceResource(resource.Resource):
@@ -225,8 +225,8 @@ class ServiceResource(resource.Resource):
 class ServiceCollectionResource(resource.Resource):
     """Resource for ServiceCollection."""
 
-    def __init__(self, mcp):
-        self.collection = mcp.get_service_collection()
+    def __init__(self, service_collection):
+        self.collection = service_collection
         resource.Resource.__init__(self)
 
     def getChild(self, name, _):
@@ -303,16 +303,16 @@ class EventResource(resource.Resource):
 
 
 class RootResource(resource.Resource):
-    def __init__(self, master_control):
-        self._master_control = master_control
+    def __init__(self, mcp):
+        self._master_control = mcp
         resource.Resource.__init__(self)
 
         # Setup children
-        self.putChild('jobs',       JobCollectionResource(master_control))
-        self.putChild('services',   ServiceCollectionResource(master_control))
-        self.putChild('config',     ConfigResource(master_control))
-        self.putChild('status',     StatusResource(master_control))
-        self.putChild('events',     EventResource(''))
+        self.putChild('jobs',     JobCollectionResource(mcp.get_job_collection()))
+        self.putChild('services', ServiceCollectionResource(mcp.get_service_collection()))
+        self.putChild('config',   ConfigResource(mcp))
+        self.putChild('status',   StatusResource(mcp))
+        self.putChild('events',   EventResource(''))
 
     def getChild(self, name, request):
         if name == '':

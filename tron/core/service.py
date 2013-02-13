@@ -212,5 +212,8 @@ class ServiceCollection(object):
     def get_by_name(self, name):
         return self.services.get(name)
 
+    def get_names(self):
+        return self.services.keys()
+
     def __iter__(self):
         return self.services.itervalues()

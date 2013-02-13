@@ -17,7 +17,7 @@ from tron import event
 from tron import mcp
 from tron.api import www, controller
 from tests.testingutils import Turtle
-from tron.core import service
+from tron.core import service, job
 
 
 REQUEST = twisted.web.server.Request(mock.Mock(), None)
@@ -120,8 +120,8 @@ class JobCollectionResourceTestCase(WWWTestCase):
             scheduler_str="testsched",
             node_pool=mocks.MockNodePool()
         )
-        self.mcp = mock.Mock()
-        self.resource = www.JobCollectionResource(self.mcp)
+        self.job_collection = mock.create_autospec(job.JobCollection)
+        self.resource = www.JobCollectionResource(self.job_collection)
 
     def test_render_GET(self):
         self.resource.get_data = Turtle()
@@ -132,10 +132,10 @@ class JobCollectionResourceTestCase(WWWTestCase):
     def test_getChild(self):
         child = self.resource.getChild("testname", mock.Mock())
         assert isinstance(child, www.JobResource)
-        self.mcp.get_job_by_name.assert_called_with("testname")
+        self.job_collection.get_by_name.assert_called_with("testname")
 
     def test_getChild_missing_job(self):
-        self.mcp.get_job_by_name = lambda n: None
+        self.job_collection.get_by_name.return_value = None
         child = self.resource.getChild("bar", mock.Mock())
         assert isinstance(child, twisted.web.resource.NoResource)
 

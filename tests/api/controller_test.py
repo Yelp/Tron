@@ -14,23 +14,17 @@ class JobCollectionControllerTestCase(TestCase):
 
     @setup
     def setup_controller(self):
-        self.jobs           = [mock.create_autospec(job.JobScheduler)]
-        self.mcp            = mock.create_autospec(mcp.MasterControlProgram)
-        self.controller     = JobCollectionController(self.mcp)
+        self.collection     = mock.create_autospec(job.JobCollection,
+                                enable=mock.Mock(), disable=mock.Mock())
+        self.controller     = JobCollectionController(self.collection)
 
-    def test_disable_all(self):
-        self.mcp.get_jobs.return_value = self.jobs
-        self.controller.disable_all()
-        self.mcp.get_jobs.assert_called_with()
-        for job in self.jobs:
-            job.disable.assert_called_with()
+    def test_handle_command_enabled(self):
+        self.controller.handle_command('enableall')
+        self.collection.enable.assert_called_with()
 
-    def test_enable_all(self):
-        self.mcp.get_jobs.return_value = self.jobs
-        self.controller.enable_all()
-        self.mcp.get_jobs.assert_called_with()
-        for job in self.jobs:
-            job.enable.assert_called_with()
+    def test_handle_command_disable(self):
+        self.controller.handle_command('disableall')
+        self.collection.disable.assert_called_with()
 
 
 class ConfigControllerTestCase(TestCase):
