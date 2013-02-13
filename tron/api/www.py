@@ -55,8 +55,7 @@ def handle_command(request, api_controller, obj):
     try:
         response = api_controller.handle_command(command)
     except controller.UnknownCommandError, e:
-        msg = "Unknown command %s for service %s"
-        log.warning(msg, command, obj)
+        log.warning("Unknown command %s for service %s", command, obj)
         response = {'error': str(e)}
         return respond(request, response, code=http.NOT_IMPLEMENTED)
 

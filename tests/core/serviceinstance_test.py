@@ -4,10 +4,57 @@ from testify.assertions import assert_in, assert_not_equal
 from tests.assertions import assert_length
 from tests.testingutils import autospec_method
 
-from tron import node, eventloop, command_context
+from tron import node, eventloop, command_context, actioncommand
 from tron.actioncommand import ActionCommand
 from tron.core import serviceinstance
 from tron.utils import state
+
+
+class BuildActionTestCase(TestCase):
+
+    @setup
+    def setup_task(self):
+        self.command = 'command'
+        self.id = 'the_id'
+        self.name = 'the_name'
+        self.serializer = mock.create_autospec(actioncommand.StringBufferStore)
+        self.task = mock.Mock(command=self.command,
+            id=self.id, task_name=self.name, buffer_store=self.serializer)
+
+    @setup_teardown
+    def setup_mock(self):
+        patcher = mock.patch('tron.core.serviceinstance.ActionCommand', autospec=True)
+        with patcher as self.mock_action_command:
+            yield
+
+    def test_build_action(self):
+        action = serviceinstance.build_action(self.task)
+        self.mock_action_command.assert_called_with(
+            '%s.%s' % (self.id, self.name), self.command, serializer=self.serializer)
+        assert_equal(action, self.mock_action_command.return_value)
+        self.task.watch.assert_called_with(action)
+
+
+class RunActionTestCase(TestCase):
+
+    @setup
+    def setup_task(self):
+        self.node = mock.create_autospec(node.Node)
+        self.failed = 'NOTIFY_FAILED'
+        self.task = mock.Mock(node=self.node, NOTIFY_FAILED=self.failed,
+            task_name='mock_task')
+        self.action = mock.create_autospec(actioncommand.ActionCommand)
+
+    def test_run_action(self):
+        assert serviceinstance.run_action(self.task, self.action)
+        self.node.run.assert_called_with(self.action)
+
+    def test_run_action_failed(self):
+        error = self.task.node.run.side_effect = node.Error("Ooops")
+        assert not serviceinstance.run_action(self.task, self.action)
+        self.task.notify.assert_called_with(self.failed)
+        self.task.buffer_store.open.return_value.write.assert_called_with(
+            "Node run failure for mock_task: %s" % str(error))
 
 
 class ServiceInstanceMonitorTaskTestCase(TestCase):
@@ -42,32 +89,19 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
         self.task.notify.assert_called_with(self.task.NOTIFY_START)
         self.task.node.run.assert_called_with(self.task.action)
         self.task.hang_check_callback.start.assert_called_with()
+        assert_equal(self.task.action.command, self.task.command)
+
+    def test_run_failed(self):
+        with mock.patch('tron.core.serviceinstance.run_action') as mock_run:
+            mock_run.return_value = False
+            self.task.run()
+            assert_equal(self.mock_eventloop.call_later.call_count, 0)
 
     def test_run_action_exists(self):
         self.task.action = mock.create_autospec(ActionCommand, is_complete=False)
         with mock.patch('tron.core.serviceinstance.log', autospec=True) as mock_log:
             self.task.run()
             assert_equal(mock_log.warn.call_count, 1)
-
-    def test_run_failed(self):
-        autospec_method(self.task._run_action, return_value=False)
-        self.task.run()
-        assert_equal(self.mock_eventloop.call_later.call_count, 0)
-
-    def test_build_action(self):
-        action = self.task._build_action()
-        self.task.watch.assert_called_with(action)
-        assert_in(self.filename, action.command)
-
-    def test_run_action(self):
-        self.task.action = True
-        assert self.task._run_action()
-        self.task.node.run.assert_called_with(self.task.action)
-
-    def test_run_action_failed(self):
-        self.task.node.run.side_effect = node.Error
-        assert not self.task._run_action()
-        self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
 
     def test_handle_action_event_failstart(self):
         autospec_method(self.task.queue)
@@ -102,19 +136,8 @@ class ServiceInstanceStopTaskTestCase(TestCase):
         autospec_method(self.task.watch)
         autospec_method(self.task.notify)
 
-    def test_kill_success(self):
-        patcher = mock.patch('tron.core.serviceinstance.log', autospec=True)
-        with patcher as mock_log:
-            deferred = self.task.kill()
-            assert_equal(mock_log.warn.call_count, 0)
-            assert_equal(deferred, self.node.run.return_value)
-
-    def test_kill_failed(self):
-        self.node.run.side_effect = node.Error
-        patcher = mock.patch('tron.core.serviceinstance.log', autospec=True)
-        with patcher as mock_log:
-            assert not self.task.kill()
-            assert_equal(mock_log.warn.call_count, 1)
+    def test_kill(self):
+        assert self.task.kill()
 
     def test_handle_action_event_complete(self):
         action = mock.create_autospec(ActionCommand)
@@ -126,7 +149,7 @@ class ServiceInstanceStopTaskTestCase(TestCase):
         action = mock.create_autospec(ActionCommand)
         event = ActionCommand.FAILSTART
         self.task.handle_action_event(action, event)
-        self.task.notify.assert_called_with(self.task.NOTIFY_FAIL)
+        self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
 
     def test_handle_complete_failed(self):
         action = mock.create_autospec(ActionCommand, has_failed=True)
@@ -153,7 +176,7 @@ class ServiceInstanceStartTaskTestCase(TestCase):
 
     def test_start(self):
         command = 'the command'
-        patcher = mock.patch('tron.core.serviceinstance.actioncommand.ActionCommand')
+        patcher = mock.patch('tron.core.serviceinstance.ActionCommand', autospec=True)
         with patcher as mock_ac:
             self.task.start(command)
             self.task.watch.assert_called_with(mock_ac.return_value)
@@ -436,9 +459,6 @@ class ServiceInstanceCollectionTestCase(TestCase):
         assert_not_equal(self.collection, other)
         other = serviceinstance.ServiceInstanceCollection(
             self.config, mock.Mock(), self.context)
-        assert_not_equal(self.collection, other)
-        other = serviceinstance.ServiceInstanceCollection(
-            self.config, self.node_pool, mock.Mock())
         assert_not_equal(self.collection, other)
 
     def test_get_by_number(self):

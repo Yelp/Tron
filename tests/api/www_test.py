@@ -12,6 +12,7 @@ from testify import setup_teardown
 from testify.assertions import assert_in
 from testify.utils import turtle
 from tests import mocks
+from twisted.web import http
 from tests.assertions import assert_call
 from tron import event
 from tron import mcp
@@ -27,6 +28,36 @@ REQUEST.childLink = lambda val : "/jobs/%s" % val
 def build_request(**kwargs):
     args = dict((k, [v]) for k, v in kwargs.iteritems())
     return mock.create_autospec(twisted.web.server.Request, args=args)
+
+
+class HandleCommandTestCase(TestCase):
+
+    @setup_teardown
+    def mock_respond(self):
+        with mock.patch('tron.api.www.respond', autospec=True) as self.respond:
+            yield
+
+    def test_handle_command_unknown(self):
+        command = 'the command'
+        request = build_request(command=command)
+        mock_controller, obj = mock.Mock(), mock.Mock()
+        error = controller.UnknownCommandError("No")
+        mock_controller.handle_command.side_effect = error
+        response = www.handle_command(request, mock_controller, obj)
+        mock_controller.handle_command.assert_called_with(command)
+        assert_equal(response, self.respond.return_value)
+        self.respond.assert_called_with(request, {'error': str(error)},
+            code=http.NOT_IMPLEMENTED)
+
+    def test_handle_command(self):
+        command = 'the command'
+        request = build_request(command=command)
+        mock_controller, obj = mock.Mock(), mock.Mock()
+        response = www.handle_command(request, mock_controller, obj)
+        mock_controller.handle_command.assert_called_with(command)
+        assert_equal(response, self.respond.return_value)
+        self.respond.assert_called_with(request,
+                {'result': mock_controller.handle_command.return_value})
 
 
 class WWWTestCase(TestCase):

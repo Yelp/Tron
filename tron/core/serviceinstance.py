@@ -22,6 +22,36 @@ def create_hang_check(interval, func):
     return eventloop.UniqueCallback(delay, func)
 
 
+def build_action(task, command=None):
+    """Create an action for a task which is an Observer, and which has
+    properties 'task_name', 'command', and 'buffer_store'.
+    """
+    name = '%s.%s' % (task.id, task.task_name)
+    command = command or task.command
+    action = ActionCommand(name, command, serializer=task.buffer_store)
+    task.watch(action)
+    return action
+
+
+def run_action(task, action):
+    """Run an action for a task which is an Observable and has has properties
+    'node' and 'NOTIFY_FAILED'. Returns True on success, and calls
+    task.notify(NOTIF_FAILURE) and returns False on failure.
+    """
+    log.debug("Executing %s on %s for %s" % (action, task.node, task))
+    try:
+        task.node.run(action)
+        return True
+    except node.Error, e:
+        log.error("Failed to run %s on %s: %s", action, task.node, e)
+        stream = task.buffer_store.open(actioncommand.ActionCommand.STDERR)
+        stream.write("Node run failure for %s: %s" % (task.task_name, e))
+        task.notify(task.NOTIFY_FAILED)
+
+def get_failures_from_task(task):
+    return task.buffer_store.get_stream(actioncommand.ActionCommand.STDERR)
+
+
 class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
     """ServiceInstance task which monitors the service process and
     notifies observers if the process is up or down. Also monitors itself
@@ -35,6 +65,7 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
     NOTIFY_DOWN             = 'monitor_task_notify_down'
 
     command_template        = "cat %s | xargs kill -0"
+    task_name               = 'monitor'
 
     def __init__(self, id, node, interval, pid_filename):
         super(ServiceInstanceMonitorTask, self).__init__()
@@ -45,6 +76,7 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
         self.action                 = actioncommand.CompletedActionCommand
         self.callback               = eventloop.UniqueCallback(self.interval, self.run)
         self.hang_check_callback    = create_hang_check(self.interval, self.fail)
+        self.buffer_store           = actioncommand.StringBufferStore()
 
     # TODO: a fast queue for starting
     def queue(self):
@@ -59,30 +91,13 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
             return
 
         self.notify(self.NOTIFY_START)
-        self.action = self._build_action()
-
-        if self._run_action():
+        self.action = build_action(self)
+        if run_action(self, self.action):
             self.hang_check_callback.start()
 
     @property
     def command(self):
         return self.command_template % self.pid_filename
-
-    # TODO: add tracking for stderr
-    def _build_action(self):
-        """Build and watch the monitor ActionCommand."""
-        log.debug("Executing %s on %s for %s" % (self.command, self.node, self))
-        action = ActionCommand("%s.monitor" % self.id, self.command)
-        self.watch(action)
-        return action
-
-    def _run_action(self):
-        try:
-            self.node.run(self.action)
-            return True
-        except node.Error, e:
-            log.error("Failed to run %s: %r", self, e)
-            self.notify(self.NOTIFY_FAILED)
 
     def handle_action_event(self, _action, event):
         if event == ActionCommand.EXITING:
@@ -120,28 +135,24 @@ class ServiceInstanceStopTask(observer.Observable, observer.Observer):
     """ServiceInstance task which kills the service process."""
 
     NOTIFY_SUCCESS              = 'stop_task_notify_success'
-    NOTIFY_FAIL                 = 'stop_task_notify_fail'
+    NOTIFY_FAILED               = 'stop_task_notify_fail'
 
     command_template            = "cat %s | xargs kill"
+    task_name                   = 'stop'
 
     def __init__(self, id, node, pid_filename):
         super(ServiceInstanceStopTask, self).__init__()
         self.id             = id
         self.node           = node
         self.pid_filename   = pid_filename
+        self.buffer_store   = actioncommand.StringBufferStore()
 
     @property
     def command(self):
         return self.command_template % self.pid_filename
 
     def kill(self):
-        action = ActionCommand("%s.stop" % self.id, self.command)
-        self.watch(action)
-
-        try:
-            return self.node.run(action)
-        except node.Error, e:
-            log.warn("Failed to kill instance %s: %r", self.id, e)
+        return run_action(self, build_action(self))
 
     def handle_action_event(self, action, event):
         if event == ActionCommand.COMPLETE:
@@ -149,13 +160,13 @@ class ServiceInstanceStopTask(observer.Observable, observer.Observer):
 
         if event == ActionCommand.FAILSTART:
             log.warn("Failed to start kill command for %s", self.id)
-            self.notify(self.NOTIFY_FAIL)
+            self.notify(self.NOTIFY_FAILED)
 
     handler = handle_action_event
 
     def _handle_complete(self, action):
         if action.has_failed:
-            log.error("Failed to stop service instance %s", self)
+            log.error("Failed to stop %s", self)
 
         self.notify(self.NOTIFY_SUCCESS)
 
@@ -169,31 +180,17 @@ class ServiceInstanceStartTask(observer.Observable, observer.Observer):
     NOTIFY_FAILED           = 'start_task_notify_failed'
     NOTIFY_STARTED          = 'start_task_notify_started'
 
+    task_name               = 'start'
+
     def __init__(self, id, node):
         super(ServiceInstanceStartTask, self).__init__()
         self.id             = id
         self.node           = node
         self.buffer_store   = actioncommand.StringBufferStore()
 
-    def _build_and_watch(self, command):
-        action = actioncommand.ActionCommand(
-                    "%s.start" % self.id, command, serializer=self.buffer_store)
-        self.watch(action)
-        return action
-
     def start(self, command):
-        """Start the service command. It is important that command is passed
-        in here when the start is called because it must be rendered using
-        a context where the datetime is the current datetime.
-        """
-        action = self._build_and_watch(command)
-
-        try:
-            self.node.run(action)
-            return True
-        except node.Error, e:
-            log.warn("Failed to start %s: %r", self.id, e)
-            self.notify(self.NOTIFY_FAILED)
+        """Start the service command. command is rendered by the caller."""
+        return run_action(self,  build_action(self, command=command))
 
     def handle_action_event(self, action, event):
         """Watch for events from the ActionCommand."""
@@ -208,8 +205,8 @@ class ServiceInstanceStartTask(observer.Observable, observer.Observer):
         event = self.NOTIFY_FAILED if action.has_failed else self.NOTIFY_STARTED
         self.notify(event)
 
-    def get_failure_message(self):
-        return self.buffer_store.get_stream(actioncommand.ActionCommand.STDERR)
+    def __str__(self):
+        return "%s(%s)" % (self.__class__.__name__, self.id)
 
 
 class ServiceInstanceState(state.NamedEventState):
@@ -246,7 +243,6 @@ class ServiceInstance(observer.Observer):
 
     context_class               = command_context.ServiceInstanceContext
 
-    # TODO: add start time?
     def __init__(self, config, node, instance_number, parent_context):
         self.config             = config
         self.node               = node
@@ -301,11 +297,12 @@ class ServiceInstance(observer.Observer):
         ServiceInstanceMonitorTask.NOTIFY_FAILED:       'monitor_fail',
         ServiceInstanceMonitorTask.NOTIFY_DOWN:         'down',
         ServiceInstanceMonitorTask.NOTIFY_UP:           'up',
-        ServiceInstanceStopTask.NOTIFY_FAIL:            'stop_fail',
+        ServiceInstanceStopTask.NOTIFY_FAILED:          'stop_fail',
         ServiceInstanceStopTask.NOTIFY_SUCCESS:         'down',
+        ServiceInstanceStartTask.NOTIFY_FAILED:         'down',
     }
 
-    def handler(self, _, event):
+    def handler(self, task, event):
         """Handle events from ServiceInstance tasks."""
         if event in self.event_to_transition_map:
             self.machine.transition(self.event_to_transition_map[event])
@@ -313,9 +310,8 @@ class ServiceInstance(observer.Observer):
         if event == ServiceInstanceStartTask.NOTIFY_STARTED:
             self._handle_start_task_complete()
 
-        if event == ServiceInstanceStartTask.NOTIFY_FAILED:
-            self.machine.transition('down')
-            self.failures.append(self.start_task.get_failure_message())
+        if event == task.NOTIFY_FAILED:
+            self.failures.append(get_failures_from_task(task))
 
     def _handle_start_task_complete(self):
         if self.machine.state != ServiceInstance.STATE_STARTING:
