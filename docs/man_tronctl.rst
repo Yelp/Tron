@@ -103,7 +103,7 @@ Examples
     $ tronctl restart job0.4
     Job Run job0.4 now in state RUNN
 
-    $ tronctl succeed job0.5
+    $ tronctl success job0.5
     Job Run job0.5 now in state SUCC
 
 Bugs
