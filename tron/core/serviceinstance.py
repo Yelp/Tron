@@ -13,12 +13,11 @@ from tron.utils import state
 log = logging.getLogger(__name__)
 
 
-# TODO: config setting
 MIN_HANG_CHECK_SECONDS  = 10
+HANG_CHECK_DELAY_RATIO = 0.8
 
-
-def create_hang_check(interval, func):
-    delay = max(interval * 0.8, MIN_HANG_CHECK_SECONDS)
+def create_hang_check(delay, func):
+    delay = max(delay * HANG_CHECK_DELAY_RATIO, MIN_HANG_CHECK_SECONDS)
     return eventloop.UniqueCallback(delay, func)
 
 
@@ -69,16 +68,16 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
 
     def __init__(self, id, node, interval, pid_filename):
         super(ServiceInstanceMonitorTask, self).__init__()
-        self.interval               = interval or 0
-        self.node                   = node
-        self.id                     = id
-        self.pid_filename           = pid_filename
-        self.action                 = actioncommand.CompletedActionCommand
-        self.callback               = eventloop.UniqueCallback(self.interval, self.run)
-        self.hang_check_callback    = create_hang_check(self.interval, self.fail)
-        self.buffer_store           = actioncommand.StringBufferStore()
+        self.interval            = interval or 0
+        self.node                = node
+        self.id                  = id
+        self.pid_filename        = pid_filename
+        self.action              = actioncommand.CompletedActionCommand
+        self.callback            = eventloop.UniqueCallback(
+                                    self.interval, self.run)
+        self.hang_check_callback = create_hang_check(self.interval, self.fail)
+        self.buffer_store        = actioncommand.StringBufferStore()
 
-    # TODO: a fast queue for starting
     def queue(self):
         """Queue this task to run after monitor_interval."""
         log.info("Queueing %s" % self)
