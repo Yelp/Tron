@@ -169,7 +169,7 @@ class MCPReconfigureTestCase(TestCase):
         action_map = job_sched.job.action_graph.action_map
         assert_equal(len(action_map), 1)
         assert_equal(action_map['action_unchanged'].name, 'action_unchanged')
-        assert_equal(str(job_sched.job.scheduler), "DAILY")
+        assert_equal(str(job_sched.job.scheduler), "DAILY every day of month at 00:00")
 
         self.reconfigure()
         assert job_sched is self.mcp.jobs.get_by_name('MASTER.test_unchanged')

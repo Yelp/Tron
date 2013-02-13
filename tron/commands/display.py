@@ -189,12 +189,14 @@ class DisplayServices(TableDisplay):
     title   = 'services'
 
     detail_labels = [
-        ('Service',         'name',         ),
-        ('Enabled',         'enabled',      ),
-        ('State',           'state',        ),
-        ('Max instances',   'count',        ),
-        ('Command',         'command',      ),
-        ('Node Pool',       'node_pool',    )
+        ('Service',             'name'              ),
+        ('Enabled',             'enabled'           ),
+        ('State',               'state'             ),
+        ('Max instances',       'count'             ),
+        ('Command',             'command'           ),
+        ('Node Pool',           'node_pool'         ),
+        ('Restart interval',    'restart_interval'  ),
+        ('Monitor interval',    'monitor_interval'  ),
     ]
 
     colors = {

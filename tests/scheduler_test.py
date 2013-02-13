@@ -9,7 +9,8 @@ from tests import testingutils
 
 from tron import scheduler
 from tron.config import schedule_parse
-from tron.config.schedule_parse import parse_daily_expression as parse_daily
+from tron.config.config_utils import NullConfigContext
+from tron.config.schedule_parse import parse_daily_expression
 from tron.utils import timeutils
 
 
@@ -23,6 +24,7 @@ class SchedulerFromConfigTestCase(TestCase):
         start_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         next_time = sched.next_run_time(start_time)
         assert_equal(next_time, datetime.datetime(2012, 7, 1, 0))
+        assert_equal(str(sched), "CRON */5 * * 7,8 *")
 
 
 class ConstantSchedulerTest(testingutils.MockTimeTestCase):
@@ -201,19 +203,27 @@ class GrocSchedulerDSTTest(testingutils.MockTimeTestCase):
         self._assert_range(s1a - s2a, -0.61, -0.59)
 
 
+def parse_daily(config):
+    return parse_daily_expression(config, NullConfigContext)
+
+def scheduler_from_config(config):
+    return scheduler.scheduler_from_config(parse_daily(config), None)
+
+
 class ComplexParserTest(testingutils.MockTimeTestCase):
 
     now = datetime.datetime(2011, 6, 1)
 
     def test_parse_all(self):
-        cfg = parse_daily('1st,2nd,3rd,4th monday,Tue of march,apr,September at 00:00')
+        config_string = '1st,2nd,3rd,4th monday,Tue of march,apr,September at 00:00'
+        cfg = parse_daily(config_string)
         assert_equal(cfg.ordinals, set((1, 2, 3, 4)))
         assert_equal(cfg.monthdays, None)
         assert_equal(cfg.weekdays, set((1, 2)))
         assert_equal(cfg.months, set((3, 4, 9)))
         assert_equal(cfg.timestr, '00:00')
-        assert_equal(scheduler.GeneralScheduler(**cfg._asdict()),
-                     scheduler.GeneralScheduler(**cfg._asdict()))
+        assert_equal(scheduler_from_config(config_string),
+                     scheduler_from_config(config_string))
 
     def test_parse_no_weekday(self):
         cfg = parse_daily('1st,2nd,3rd,10th day of march,apr,September at 00:00')
@@ -249,8 +259,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         assert_equal(cfg.timestr, '00:00')
 
     def test_daily(self):
-        cfg = parse_daily('every day')
-        sch = scheduler.GeneralScheduler(**cfg._asdict())
+        sch = scheduler_from_config('every day')
         next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.now)
@@ -259,8 +268,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         assert_equal(next_run_date.hour, 0)
 
     def test_daily_with_time(self):
-        cfg = parse_daily('every day at 02:00')
-        sch = scheduler.GeneralScheduler(**cfg._asdict())
+        sch = scheduler_from_config('every day at 02:00')
         next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.now)
@@ -271,8 +279,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         assert_equal(next_run_date.minute, 0)
 
     def test_weekly(self):
-        cfg = parse_daily('every monday at 01:00')
-        sch = scheduler.GeneralScheduler(**cfg._asdict())
+        sch = scheduler_from_config('every monday at 01:00')
         next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.now)
@@ -281,8 +288,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
                                       next_run_date.day), 0)
 
     def test_weekly_in_month(self):
-        cfg = parse_daily('every monday of january at 00:01')
-        sch = scheduler.GeneralScheduler(**cfg._asdict())
+        sch = scheduler_from_config('every monday of january at 00:01')
         next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.now)
@@ -295,8 +301,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
                                       next_run_date.day), 0)
 
     def test_monthly(self):
-        cfg = parse_daily('1st day')
-        sch = scheduler.GeneralScheduler(**cfg._asdict())
+        sch = scheduler_from_config('1st day')
         next_run_date = sch.next_run_time(None)
 
         assert_gt(next_run_date, self.now)

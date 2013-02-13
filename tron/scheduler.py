@@ -45,7 +45,8 @@ def scheduler_from_config(config, time_zone):
             ordinals=config.ordinals,
             monthdays=config.monthdays,
             months=config.months,
-            weekdays=config.weekdays)
+            weekdays=config.weekdays,
+            string_repr='DAILY %s' % config.original)
 
     if isinstance(config, schedule_parse.ConfigCronScheduler):
         return GeneralScheduler(
@@ -56,7 +57,7 @@ def scheduler_from_config(config, time_zone):
             weekdays=config.weekdays,
             ordinals=config.ordinals,
             seconds=[0],
-            string_repr='CRON')
+            string_repr='CRON %s' % ' '.join(config.original))
 
 
 class ConstantScheduler(object):

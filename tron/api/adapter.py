@@ -182,7 +182,9 @@ class ServiceAdapter(ReprAdapter):
         'command',
         'instances',
         'node_pool',
-        'live_count']
+        'live_count',
+        'monitor_interval',
+        'restart_interval']
 
     def get_href(self):
         return "/services/%s" % urllib.quote(self._obj.get_name())
@@ -204,6 +206,12 @@ class ServiceAdapter(ReprAdapter):
 
     def get_live_count(self):
         return len(self._obj.instances)
+
+    def get_monitor_interval(self):
+        return self._obj.config.monitor_interval
+
+    def get_restart_interval(self):
+        return self._obj.config.restart_interval
 
 
 class ServiceInstanceAdapter(ReprAdapter):
