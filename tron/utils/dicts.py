@@ -1,4 +1,5 @@
 """Data structures used in tron."""
+from __future__ import absolute_import
 from collections import Mapping
 
 

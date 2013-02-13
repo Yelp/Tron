@@ -86,9 +86,10 @@ class MasterControlProgram(Observable):
             master_config.nodes, master_config.node_pools, ssh_options)
         self._apply_notification_options(master_config.notification_options)
 
+        args = self.context, self.output_stream_dir, self.time_zone
+        factory = job.JobSchedulerFactory(*args)
         self.apply_collection_config(config_container.get_jobs(),
-            self.jobs, job.Job.NOTIFY_STATE_CHANGE,
-            self.context, self.output_stream_dir, self.time_zone, reconfigure)
+            self.jobs, job.Job.NOTIFY_STATE_CHANGE, factory, reconfigure)
 
         self.apply_collection_config(config_container.get_services(),
             self.services, service.Service.NOTIFY_STATE_CHANGE, self.context)
@@ -102,8 +103,8 @@ class MasterControlProgram(Observable):
         changed.
         """
         if self.state_watcher.update_from_config(state_config):
-            for job_sched in self.jobs:
-                self.state_watcher.save_job(job_sched.job)
+            for job_scheduler in self.jobs:
+                self.state_watcher.save_job(job_scheduler.get_job())
             for service in self.services:
                 self.state_watcher.save_service(service)
 

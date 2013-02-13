@@ -62,6 +62,7 @@ class RunState(object):
         self.channel = None
 
 
+# TODO: make use of MappingCollection
 class NodePoolStore(object):
     """A Singleton to store Node and NodePool objects."""
 
