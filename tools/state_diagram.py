@@ -7,7 +7,7 @@
 
 """
 from tron.core.actionrun import ActionRun
-from tron.core.service import Service, ServiceInstance
+from tron.core.service import ServiceInstance
 
 def traverse_graph(starting_state, func=lambda f, a, t: None, seen_states=None):
     """Traverse the graph depth-first without cycling."""
@@ -54,8 +54,7 @@ def dot_from_starting_state(starting_state):
 
 machines = {
     'action':           ActionRun.STATE_SCHEDULED,
-    'service':          Service.STATE_DOWN,
-    'service_instance': ServiceInstance.STATE_DOWN
+    'service_instance': ServiceInstance.STATE_DOWN,
 }
 
 if __name__ == "__main__":

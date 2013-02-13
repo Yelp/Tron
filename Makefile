@@ -54,7 +54,6 @@ html:
 	$(PYTHON) tools/state_diagram.py
 	mkdir -p $(DOCS_STATICSDIR)
 	$(DOT) -o$(DOCS_STATICSDIR)/action.png action.dot
-	$(DOT) -o$(DOCS_STATICSDIR)/service.png service.dot
 	$(DOT) -o$(DOCS_STATICSDIR)/service_instance.png service_instance.dot
 	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_BUILDDIR)/html
 	@echo
