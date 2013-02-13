@@ -41,6 +41,77 @@ class JobCollectionController(object):
 
 
 # TODO: test
+class ActionRunController(object):
+
+    mapped_commands = set(('start', 'success', 'cancel', 'fail', 'skip'))
+
+    def __init__(self, action_run, job_run):
+        self.action_run = action_run
+        self.job_run    = job_run
+
+    def handle_command(self, command):
+        if command not in self.mapped_commands:
+            raise UnknownCommandError("Unknown command %s" % command)
+
+        if command == 'start' and self.job_run.is_scheduled:
+            return ("Action run can not be started if it's job run is still "
+                    "scheduled.")
+
+        if getattr(self.action_run, command)():
+            msg = "%s now in state %s"
+            return msg % (self.action_run, self.action_run.state)
+
+        msg = "Failed to %s on %s. State is %s."
+        return msg % (command, self.action_run, self.action_run.state)
+
+
+class JobRunController(object):
+
+    mapped_commands = set(('start', 'success', 'cancel', 'fail'))
+
+    def __init__(self, job_run, job_scheduler):
+        self.job_run       = job_run
+        self.job_scheduler = job_scheduler
+
+    def handle_command(self, command):
+        if command == 'restart':
+            runs = self.job_scheduler.manual_start(self.job_run.run_time)
+            return "Created %s" % ",".join(str(run) for run in runs)
+
+        if command in self.mapped_commands:
+            if getattr(self.job_run, command)():
+                log.info("%s %s complete." % (self.job_run, command))
+            else:
+                log.warn("%s %s failed." % (self.job_run, command))
+
+            return "%s now in state %s" % (self.job_run, self.job_run.state)
+
+        raise UnknownCommandError("Unknown command %s" % command)
+
+
+# TODO: test
+class JobController(object):
+
+    def __init__(self, job_scheduler):
+        self.job_scheduler = job_scheduler
+
+    def handle_command(self, command, run_time=None):
+        if command == 'enable':
+            self.job_scheduler.enable()
+            return "%s is enabled" % self.job_scheduler.job
+
+        elif command == 'disable':
+            self.job_scheduler.disable()
+            return "%s is disabled" % self.job_scheduler.job
+
+        elif command == 'start':
+            runs = self.job_scheduler.manual_start(run_time=run_time)
+            return "Created %s" % ",".join(str(run) for run in runs)
+
+        raise UnknownCommandError("Unknown command %s" % command)
+
+
+# TODO: test
 class ServiceInstanceController(object):
 
     def __init__(self, service_instance):
@@ -77,6 +148,7 @@ class ServiceController(object):
             return "%s starting." % self.service
 
         raise UnknownCommandError("Unknown command %s" % command)
+
 
 def format_seq(seq):
     return "\n# ".join(sorted(seq))

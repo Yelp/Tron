@@ -7,9 +7,8 @@ import twisted.web.http
 import twisted.web.server
 
 from testify import TestCase, class_setup, assert_equal, run, setup
-from testify import class_teardown, teardown
+from testify import teardown
 from testify import setup_teardown
-from testify.assertions import assert_in
 from testify.utils import turtle
 from tests import mocks
 from twisted.web import http
@@ -28,6 +27,20 @@ REQUEST.childLink = lambda val : "/jobs/%s" % val
 def build_request(**kwargs):
     args = dict((k, [v]) for k, v in kwargs.iteritems())
     return mock.create_autospec(twisted.web.server.Request, args=args)
+
+
+class WWWTestCase(TestCase):
+    """Patch www.response to not json encode."""
+
+    @setup_teardown
+    def mock_respond(self):
+        with mock.patch('tron.api.www.respond', autospec=True) as self.respond:
+            self.respond.side_effect = lambda _req, output, code=None: output
+            yield
+
+    @setup
+    def setup_request(self):
+        self.request = build_request()
 
 
 class HandleCommandTestCase(TestCase):
@@ -60,45 +73,17 @@ class HandleCommandTestCase(TestCase):
                 {'result': mock_controller.handle_command.return_value})
 
 
-class WWWTestCase(TestCase):
-    """Patch www.response to not json encode."""
-
-    @class_setup
-    def mock_respond(self):
-        self.orig_respond = www.respond
-        www.respond = lambda _req, output, code=None: output
-
-    @class_teardown
-    def teardown_respond(self):
-        www.respond = self.orig_respond
-
-    @setup
-    def setup_request(self):
-        self.request = mock.Mock(args={})
-
 class ActionRunResourceTestCase(WWWTestCase):
 
     @setup
     def setup_resource(self):
-        self.job_run = mocks.MockJobRun()
-        self.action_name = 'theactionname'
-        self.res = www.ActionRunResource(self.job_run, self.action_name)
+        self.job_run = mock.MagicMock()
+        self.action_run = mock.MagicMock(output_path=['one'])
+        self.resource = www.ActionRunResource(self.action_run, self.job_run)
 
     def test_render_GET(self):
-        resp = self.res.render_GET(self.request)
-        assert_equal(resp['id'], self.job_run.action_runs[self.action_name].id)
-
-    def test_start_action_when_job_run_has_started(self):
-        self.job_run.is_scheduled = False
-        self.request.args['command'] = ['start']
-        resp = self.res.render_POST(self.request)
-        assert_in('Action run now in state', resp['result'])
-
-    def test_start_action_when_job_run_not_started(self):
-        self.job_run.is_scheduled = True
-        self.request.args['command'] = ['start']
-        resp = self.res.render_POST(self.request)
-        assert_in('Failed to start action run', resp['result'])
+        response = self.resource.render_GET(self.request)
+        assert_equal(response['id'], self.action_run.id)
 
 
 class RootResourceTestCase(TestCase):
@@ -328,8 +313,7 @@ class EventResourceTestCase(WWWTestCase):
         recorder.ok('what')
         recorder.critical('oh')
         response = self.resource.render_GET(self.request())
-        names = [e['name'] for e in response['data']]
-        assert_equal(names, ['what', 'oh'])
+        assert_equal([e['name'] for e in response['data']], ['what', 'oh'])
 
 
 class ConfigResourceTestCase(TestCase):

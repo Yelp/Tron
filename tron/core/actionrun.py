@@ -16,15 +16,6 @@ from tron.utils.observer import Observer
 log = logging.getLogger(__name__)
 
 
-class Error(Exception):
-    pass
-
-
-class InvalidStartStateError(Error):
-    """Indicates the action can't start in the state it's in"""
-    pass
-
-
 class ActionRunFactory(object):
     """Construct ActionRuns and ActionRunCollections for a JobRun and
     ActionGraph.
@@ -216,7 +207,7 @@ class ActionRun(Observer):
     def start(self):
         """Start this ActionRun."""
         if not self.machine.check('start'):
-            raise InvalidStartStateError(self.state)
+            return False
 
         log.info("Starting action run %s", self.id)
         self.start_time = timeutils.current_time()
@@ -225,14 +216,16 @@ class ActionRun(Observer):
         if not self.is_valid_command:
             log.error("Command for action run %s is invalid: %r",
                 self.id, self.bare_command)
-            return self.fail(-1)
+            self.fail(-1)
+            return
 
         action_command = self.build_action_command()
         try:
             self.node.submit_command(action_command)
         except node.Error, e:
             log.warning("Failed to start %s: %r", self.id, e)
-            return self.fail(-2)
+            self.fail(-2)
+            return
 
         return True
 

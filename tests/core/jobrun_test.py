@@ -149,7 +149,7 @@ class JobRunTestCase(testingutils.MockTimeTestCase):
 
     def test_start_action_runs_failed(self):
         def failing():
-            raise actionrun.Error()
+            return False
         startable_runs = [Turtle(start=failing), Turtle(), Turtle()]
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
@@ -158,7 +158,7 @@ class JobRunTestCase(testingutils.MockTimeTestCase):
 
     def test_start_action_runs_all_failed(self):
         def failing():
-            raise actionrun.Error()
+            return False
         startable_runs = [Turtle(start=failing), Turtle(start=failing)]
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
