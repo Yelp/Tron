@@ -75,12 +75,12 @@ class ActionCommandTestCase(TestCase):
         assert_equal(self.ac.state, ActionCommand.FAILSTART)
         assert self.ac.end_time
 
-    def test_has_failed(self):
-        assert not self.ac.has_failed
+    def test_is_failed(self):
+        assert not self.ac.is_failed
 
-    def test_has_failed_true(self):
+    def test_is_failed_true(self):
         self.ac.exit_status = 255
-        assert self.ac.has_failed
+        assert self.ac.is_failed
 
     def test_is_complete(self):
         assert not self.ac.is_complete

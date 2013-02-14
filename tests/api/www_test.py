@@ -18,7 +18,7 @@ from tron import event
 from tron import mcp
 from tron.api import www, controller
 from tests.testingutils import Turtle
-from tron.core import service
+from tron.core import service, serviceinstance
 
 
 REQUEST = twisted.web.server.Request(mock.Mock(), None)
@@ -278,9 +278,31 @@ class JobRunStartTest(TestCase):
         self.run.start.assert_called_with()
 
 
-class ServiceResourceTestCase(TestCase):
-    pass
-    # TODO
+class ServiceResourceTestCase(WWWTestCase):
+
+    @setup
+    def setup_resource(self):
+        instances = mock.create_autospec(serviceinstance.ServiceInstanceCollection)
+        self.service = mock.create_autospec(service.Service,
+            instances=instances, enabled=True, config=mock.Mock())
+        self.resource = www.ServiceResource(self.service)
+        self.resource.controller = mock.create_autospec(
+            controller.ServiceController)
+
+    def test_getChild(self):
+        number = '3'
+        resource = self.resource.getChild(number, None)
+        assert isinstance(resource, www.ServiceInstanceResource)
+        self.service.instances.get_by_number.assert_called_with(3)
+
+    def test_render_GET(self):
+        response = self.resource.render_GET(build_request())
+        assert_equal(response['name'], self.service.name)
+
+    def test_render_POST(self):
+        response = self.resource.render_POST(build_request())
+        assert_equal(response['result'],
+            self.resource.controller.handle_command.return_value)
 
 
 class ServiceCollectionResourceTestCase(TestCase):
@@ -325,11 +347,12 @@ class EventResourceTestCase(WWWTestCase):
 
     def test_render_GET(self):
         recorder = event.get_recorder(self.name)
-        recorder.ok('what')
-        recorder.critical('oh')
+        ok_message, critical_message ='ok message', 'critical message'
+        recorder.ok(ok_message)
+        recorder.critical(critical_message)
         response = self.resource.render_GET(self.request())
         names = [e['name'] for e in response['data']]
-        assert_equal(names, ['what', 'oh'])
+        assert_equal(names, [ok_message, critical_message])
 
 
 class ConfigResourceTestCase(TestCase):

@@ -175,7 +175,10 @@ class ServiceInstanceContext(ServiceInstancePidContext):
 
 
 class Filler(object):
-    """Filler object for using CommandContext during config parsing."""
+    """Filler object for using CommandContext during config parsing. This class
+    is used as a substitute for objects that would be passed to Context objects.
+    This allows the Context objects to be used directly for config validation.
+    """
 
     def __getattr__(self, _):
         return self

@@ -50,7 +50,7 @@ class RunActionTestCase(TestCase):
         self.node.run.assert_called_with(self.action)
 
     def test_run_action_failed(self):
-        error = self.task.node.run.side_effect = node.Error("Ooops")
+        error = self.task.node.run.side_effect = node.Error("Oops")
         assert not serviceinstance.run_action(self.task, self.action)
         self.task.notify.assert_called_with(self.failed)
         self.task.buffer_store.open.return_value.write.assert_called_with(
@@ -111,7 +111,7 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
 
     def test_handle_action_exit_up(self):
         self.task.action = mock.create_autospec(ActionCommand)
-        self.task.action.has_failed = False
+        self.task.action.is_failed = False
         autospec_method(self.task.queue)
         self.task._handle_action_exit()
         self.task.notify.assert_called_with(self.task.NOTIFY_UP)
@@ -136,7 +136,7 @@ class ServiceInstanceStopTaskTestCase(TestCase):
         autospec_method(self.task.watch)
         autospec_method(self.task.notify)
 
-    def test_kill(self):
+    def test_kill_task(self):
         assert self.task.kill()
 
     def test_handle_action_event_complete(self):
@@ -152,7 +152,7 @@ class ServiceInstanceStopTaskTestCase(TestCase):
         self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
 
     def test_handle_complete_failed(self):
-        action = mock.create_autospec(ActionCommand, has_failed=True)
+        action = mock.create_autospec(ActionCommand, is_failed=True)
         with mock.patch('tron.core.serviceinstance.log', autospec=True) as mock_log:
             self.task._handle_complete(action)
             assert_equal(mock_log.error.call_count, 1)
@@ -160,7 +160,7 @@ class ServiceInstanceStopTaskTestCase(TestCase):
         self.task.notify.assert_called_with(self.task.NOTIFY_SUCCESS)
 
     def test_handle_complete(self):
-        action = mock.create_autospec(ActionCommand, has_failed=False)
+        action = mock.create_autospec(ActionCommand, is_failed=False)
         self.task._handle_complete(action)
         self.task.notify.assert_called_with(self.task.NOTIFY_SUCCESS)
 
@@ -205,12 +205,12 @@ class ServiceInstanceStartTaskTestCase(TestCase):
             assert_equal(mock_log.warn.call_count, 1)
 
     def test_handle_action_exit_fail(self):
-        action = mock.create_autospec(ActionCommand, has_failed=True)
+        action = mock.create_autospec(ActionCommand, is_failed=True)
         self.task._handle_action_exit(action)
         self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
 
     def test_handle_action_exit_success(self):
-        action = mock.create_autospec(ActionCommand, has_failed=False)
+        action = mock.create_autospec(ActionCommand, is_failed=False)
         self.task._handle_action_exit(action)
         self.task.notify.assert_called_with(self.task.NOTIFY_STARTED)
 

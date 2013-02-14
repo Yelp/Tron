@@ -93,7 +93,7 @@ class ActionCommand(object):
         self.done()
 
     @property
-    def has_failed(self):
+    def is_failed(self):
         return bool(self.exit_status)
 
     @property
