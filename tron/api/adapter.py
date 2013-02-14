@@ -46,7 +46,7 @@ class RunAdapter(ReprAdapter):
     """Base class for JobRun and ActionRun adapters."""
 
     def get_state(self):
-        return self._obj.state.short_name
+        return str(self._obj.state.short_name)
 
     def get_node(self):
         node = self._obj.node
@@ -90,7 +90,7 @@ class ActionRunAdapter(RunAdapter):
         return self._obj.bare_command
 
     def get_command(self):
-        return self._obj.rendered_command or self._obj.bare_command
+        return self._obj.rendered_command
 
     def get_requirements(self):
         action_name = self._obj.action_name
@@ -131,7 +131,7 @@ class JobRunAdapter(RunAdapter):
 
 class JobAdapter(ReprAdapter):
 
-    field_names = ['name', 'status']
+    field_names = ['name', 'status', 'all_nodes', 'allow_overlap', 'queueing']
     translated_field_names = [
         'scheduler',
         'action_names',
@@ -153,7 +153,7 @@ class JobAdapter(ReprAdapter):
         return self._obj.action_graph.names
 
     def get_node_pool(self):
-        return [n.hostname for n in self._obj.node_pool.nodes]
+        return self._obj.node_pool.get_name()
 
     def get_last_success(self):
         last_success = self._obj.runs.last_success
