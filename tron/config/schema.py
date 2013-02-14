@@ -86,6 +86,7 @@ ConfigJob = config_object_factory(
         'node',                 # str
         'schedule',             # Config*Scheduler
         'actions',              # FrozenDict of ConfigAction
+        'namespace',            # str
     ],[
         'queueing',             # bool
         'run_limit',            # int
@@ -111,7 +112,6 @@ ConfigCleanupAction = config_object_factory(
     [
         'command',              # str
     ],[
-        'requires',             # tuple of str
         'name',                 # str
         'node',                 # str
     ])
@@ -125,6 +125,7 @@ ConfigService = config_object_factory(
         'pid_file',             # str
         'command',              # str
         'monitor_interval',     # float
+        'namespace',            # str
     ],[
         'restart_interval',     # float
         'count',                # int

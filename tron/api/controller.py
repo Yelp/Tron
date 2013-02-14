@@ -10,12 +10,26 @@ from tron.config import schema
 log = logging.getLogger(__name__)
 
 
-class JobController(object):
-    """Control Jobs."""
+class UnknownCommandError(Exception):
+    """Exception raised when a controller received an unknown command."""
 
-    # TODO: just take a list of Jobs
+
+class JobCollectionController(object):
+
+    # TODO: Use a JobCollection
     def __init__(self, mcp):
         self.mcp = mcp
+
+    def handle_command(self, command):
+        if command == 'disableall':
+            self.disable_all()
+            return "Disabled all jobs."
+
+        if command == 'enableall':
+            self.enable_all()
+            return "Enabled all jobs."
+
+        raise UnknownCommandError("Unknown command %s" % command)
 
     def disable_all(self):
         for job_scheduler in self.mcp.get_jobs():
@@ -25,6 +39,44 @@ class JobController(object):
         for job_scheduler in self.mcp.get_jobs():
             job_scheduler.enable()
 
+
+# TODO: test
+class ServiceInstanceController(object):
+
+    def __init__(self, service_instance):
+        self.service_instance = service_instance
+
+    def handle_command(self, command):
+        error_msg = "Instance could not be %s from state %s."
+        if command == 'stop':
+            if self.service_instance.stop():
+                return "%s stopping." % self.service_instance
+            return error_msg % ("stopped", self.service_instance.get_state())
+
+        if command == 'start':
+            if self.service_instance.start():
+                return "%s starting." % self.service_instance
+            return error_msg % ("started", self.service_instance.get_state())
+
+        raise UnknownCommandError("Unknown command %s" % command)
+
+
+# TODO: test
+class ServiceController(object):
+
+    def __init__(self, service):
+        self.service = service
+
+    def handle_command(self, command):
+        if command == 'stop':
+            self.service.disable()
+            return "%s stopping." % self.service
+
+        if command == 'start':
+            self.service.enable()
+            return "%s starting." % self.service
+
+        raise UnknownCommandError("Unknown command %s" % command)
 
 def format_seq(seq):
     return "\n# ".join(sorted(seq))

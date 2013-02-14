@@ -8,6 +8,7 @@ from tron import mcp, event
 from tron.config import config_parse, schema
 from tron.serialize import filehandler
 
+
 class MCPReconfigureTestCase(TestCase):
 
     pre_config = dict(
@@ -139,7 +140,7 @@ class MCPReconfigureTestCase(TestCase):
 
     @teardown
     def teardown_mcp(self):
-        event.EventManager.get_instance().clear()
+        event.EventManager.reset()
         filehandler.OutputPath(self.test_dir).delete()
         filehandler.FileHandleManager.reset()
 

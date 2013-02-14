@@ -25,34 +25,6 @@ class InvalidStartStateError(Error):
     pass
 
 
-class ActionRunContext(object):
-    """Context object that gives us access to data about the action run."""
-
-    def __init__(self, action_run):
-        self.action_run = action_run
-
-    @property
-    def runid(self):
-        return self.action_run.job_run_id
-
-    @property
-    def actionname(self):
-        return self.action_run.action_name
-
-    @property
-    def node(self):
-        return self.action_run.node.hostname
-
-    def __getitem__(self, name):
-        """Attempt to parse date arithmetic syntax and apply to run_time."""
-        run_time = self.action_run.job_run_time
-        time_value = timeutils.DateArithmetic.parse(name, run_time)
-        if time_value:
-            return time_value
-
-        raise KeyError(name)
-
-
 class ActionRunFactory(object):
     """Construct ActionRuns and ActionRunCollections for a JobRun and
     ActionGraph.
@@ -163,6 +135,8 @@ class ActionRun(Observer):
     # Failed render command is false to ensure that it will fail when run
     FAILED_RENDER = 'false'
 
+    context_class               = command_context.ActionRunContext
+
     def __init__(self, job_run_id, name, node, run_time, bare_command=None,
             parent_context=None, output_path=None, cleanup=False,
             start_time=None, end_time=None, run_state=STATE_SCHEDULED,
@@ -178,12 +152,10 @@ class ActionRun(Observer):
         self.rendered_command   = rendered_command
         self.machine            = state.StateMachine(
                     self.STATE_SCHEDULED, delegate=self, force_state=run_state)
-        context                 = ActionRunContext(self)
-        self.context            = command_context.CommandContext(
-                                    context, parent_context)
         self.is_cleanup         = cleanup
         self.output_path        = output_path or filehandler.OutputPath()
         self.output_path.append(self.id)
+        self.context = command_context.build_context(self, parent_context)
 
     @property
     def state(self):

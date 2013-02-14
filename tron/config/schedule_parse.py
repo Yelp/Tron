@@ -25,7 +25,7 @@ class ScheduleParseError(Exception):
     pass
 
 
-def valid_schedule(path, schedule):
+def valid_schedule(schedule, config_context):
     if isinstance(schedule, basestring):
         schedule = schedule.strip()
         scheduler_args = schedule.split()
@@ -47,6 +47,7 @@ def valid_schedule(path, schedule):
     elif 'start_time' in schedule or 'days' in schedule:
         return valid_daily_scheduler(**schedule)
     else:
+        path = config_context.path
         raise ConfigError("Unknown scheduler at %s: %s" % (path, schedule))
 
 

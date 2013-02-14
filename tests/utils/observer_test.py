@@ -1,4 +1,5 @@
 from testify import run, setup, assert_equal, TestCase, turtle
+from tests.assertions import assert_length
 from tron.utils.observer import Observable, Observer
 
 
@@ -29,6 +30,7 @@ class ObservableTestCase(TestCase):
         self.obs.notify('b')
         assert_equal(len(handler.handler.calls), 2)
 
+
 class ObserverClearTestCase(TestCase):
 
     @setup
@@ -48,6 +50,24 @@ class ObserverClearTestCase(TestCase):
         self.obs.clear_observers('a')
         assert_equal(len(self.obs._observers), 2)
         assert_equal(set(self.obs._observers.keys()), set([True, 'b']))
+
+    def test_remove_observer_none(self):
+        observer = lambda: 2
+        self.obs.remove_observer(observer)
+        assert_equal(set(self.obs._observers.keys()), set([True, 'a', 'b']))
+        assert_length(self.obs._observers['a'], 2)
+        assert_length(self.obs._observers['b'], 2)
+        assert_length(self.obs._observers[True], 1)
+
+    def test_remove_observer(self):
+        observer = lambda: 2
+        self.obs.attach('a', observer)
+        self.obs.attach('c', observer)
+        self.obs.remove_observer(observer)
+        assert_length(self.obs._observers['a'], 2)
+        assert_length(self.obs._observers['b'], 2)
+        assert_length(self.obs._observers[True], 1)
+        assert_length(self.obs._observers['c'], 0)
 
 
 class MockObserver(Observer):

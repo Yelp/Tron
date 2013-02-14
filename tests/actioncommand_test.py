@@ -1,4 +1,5 @@
-from testify import TestCase, assert_equal, setup, turtle
+import mock
+from testify import TestCase, assert_equal, setup
 
 from tron.actioncommand import ActionCommand
 from tron.serialize import filehandler
@@ -7,8 +8,8 @@ class ActionCommandTestCase(TestCase):
 
     @setup
     def setup_command(self):
-        null_fh = filehandler.NullFileHandle
-        self.serializer = turtle.Turtle(open=lambda fn: null_fh)
+        self.serializer = mock.create_autospec(filehandler.FileHandleManager)
+        self.serializer.open.return_value = filehandler.NullFileHandle
         self.ac = ActionCommand("action.1.do", "do", self.serializer)
 
     def test_init(self):
@@ -52,12 +53,13 @@ class ActionCommandTestCase(TestCase):
 
     def test_write_stderr(self):
         message = "this is the message"
-        fh = turtle.Turtle()
-        serializer = turtle.Turtle(open=lambda fn: fh)
+        serializer = mock.create_autospec(filehandler.FileHandleManager)
+        fh = serializer.open.return_value = mock.create_autospec(
+            filehandler.FileHandleWrapper)
         ac = ActionCommand("action.1.do", "do", serializer)
 
         ac.write_stderr(message)
-        assert_equal(fh.write.calls, [((message,), {})])
+        fh.write.assert_called_with(message)
 
     def test_done(self):
         self.ac.started()
@@ -72,3 +74,17 @@ class ActionCommandTestCase(TestCase):
         self.ac.handle_errback(message)
         assert_equal(self.ac.state, ActionCommand.FAILSTART)
         assert self.ac.end_time
+
+    def test_is_failed(self):
+        assert not self.ac.is_failed
+
+    def test_is_failed_true(self):
+        self.ac.exit_status = 255
+        assert self.ac.is_failed
+
+    def test_is_complete(self):
+        assert not self.ac.is_complete
+
+    def test_is_complete_true(self):
+        self.ac.machine.state = self.ac.COMPLETE
+        assert self.ac.is_complete, self.ac.machine.state

@@ -14,7 +14,7 @@ class SimpleDeferredTestCase(TestCase):
     def setup_crash_reporter(self):
         self.emailer = turtle.Turtle()
         self.mcp = turtle.Turtle()
-        self.reporter = crash_reporter.CrashReporter(self.emailer, self.mcp)
+        self.reporter = crash_reporter.CrashReporter(self.emailer)
         self.event_dict = {'isError': False, 'message': ['']}
 
     def test__init__(self):

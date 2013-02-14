@@ -17,7 +17,8 @@ class SchedulerFromConfigTestCase(TestCase):
 
     def test_cron_scheduler(self):
         line = "cron */5 * * 7,8 *"
-        config = schedule_parse.valid_schedule('test', line)
+        config_context = mock.Mock(path='test')
+        config = schedule_parse.valid_schedule(line, config_context)
         sched = scheduler.scheduler_from_config(config, mock.Mock())
         start_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         next_time = sched.next_run_time(start_time)

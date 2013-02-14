@@ -62,9 +62,9 @@ def format_jobs(job_states):
 
 def format_service(service_states):
     format = "%-30s %-8s %s\n"
-    header = format % ("Name", "State", "Instances")
+    header = format % ("Name", "Enabled", "Instances")
     def build(name, service):
-        return format % (name, service['state'], len(service['instances']))
+        return format % (name, service.get('enabled'), len(service['instances']))
     seq = sorted(build(*item) for item in service_states.iteritems())
     return header + "".join(seq)
 

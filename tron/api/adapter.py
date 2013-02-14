@@ -9,6 +9,7 @@ from tron import actioncommand
 from tron.serialize import filehandler
 from tron.utils import timeutils
 
+
 class ReprAdapter(object):
     """Creates a dictionary from the given object for a set of rules."""
 
@@ -36,6 +37,9 @@ class ReprAdapter(object):
         repr_data.update(translated)
         return repr_data
 
+
+def adapt_many(adapter_class, seq, *args):
+    return [adapter_class(item, *args).get_repr() for item in seq]
 
 class RunAdapter(ReprAdapter):
     """Base class for JobRun and ActionRun adapters."""
@@ -167,3 +171,58 @@ class JobAdapter(ReprAdapter):
             JobRunAdapter(job_run, self.include_action_runs).get_repr()
             for job_run in self._obj.runs
         ]
+
+
+class ServiceAdapter(ReprAdapter):
+
+    field_names = ['name', 'enabled']
+    translated_field_names = [
+        'count',
+        'href',
+        'state',
+        'command',
+        'instances',
+        'node_pool',
+        'live_count']
+
+    def get_href(self):
+        return "/services/%s" % urllib.quote(self._obj.get_name())
+
+    def get_count(self):
+        return self._obj.config.count
+
+    def get_state(self):
+        return self._obj.get_state()
+
+    def get_command(self):
+        return self._obj.config.command
+
+    def get_instances(self):
+        return adapt_many(ServiceInstanceAdapter, self._obj.instances)
+
+    def get_node_pool(self):
+        return self._obj.config.node
+
+    def get_live_count(self):
+        return len(self._obj.instances)
+
+
+class ServiceInstanceAdapter(ReprAdapter):
+
+    field_names = ['id', 'failures']
+    translated_field_names = ['state', 'node']
+
+    def get_state(self):
+        return str(self._obj.get_state())
+
+    def get_node(self):
+        return str(self._obj.node)
+
+
+class EventAdapter(ReprAdapter):
+
+    field_names = ['name', 'entity', 'time']
+    translated_field_names = ['level']
+
+    def get_level(self):
+        return self._obj.level.label

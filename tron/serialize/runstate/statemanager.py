@@ -3,14 +3,13 @@ import logging
 import time
 import itertools
 import tron
-from tron.core import job
+from tron.core import job, service
 from tron.serialize import runstate
 from tron.serialize.runstate.mongostore import MongoStateStore
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 from tron.serialize.runstate.sqlalchemystore import SQLAlchemyStateStore
 from tron.serialize.runstate.yamlstore import YamlStateStore
 from tron.utils import observer
-from tron import service
 
 log = logging.getLogger(__name__)
 
@@ -210,6 +209,16 @@ class NullStateManager(object):
     @staticmethod
     def cleanup():
         pass
+
+    @classmethod
+    def disabled(cls):
+        return cls()
+
+    def __enter__(self):
+        return
+
+    def __exit__(self, *args):
+        return
 
 
 class StateChangeWatcher(observer.Observer):

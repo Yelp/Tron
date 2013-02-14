@@ -24,38 +24,6 @@ class InvalidStartStateError(Error):
 log = logging.getLogger(__name__)
 
 
-class JobContext(object):
-    """A class which exposes properties for rendering commands."""
-
-    def __init__(self, job):
-        self.job = job
-
-    @property
-    def name(self):
-        return self.job.name
-
-    def __getitem__(self, item):
-        date_name, date_spec = self._get_date_spec_parts(item)
-        if not date_spec:
-            raise KeyError(item)
-
-        if date_name == 'last_success':
-            last_success = self.job.runs.last_success
-            last_success = last_success.run_time if last_success else None
-
-            time_value = timeutils.DateArithmetic.parse(date_spec, last_success)
-            if time_value:
-                return time_value
-
-        raise KeyError(item)
-
-    def _get_date_spec_parts(self, name):
-        parts = name.rsplit(':', 1)
-        if len(parts) != 2:
-            return [name, None]
-        return parts
-
-
 class Job(Observable, Observer):
     """A configurable data object.
 
@@ -63,17 +31,15 @@ class Job(Observable, Observer):
     actions and their dependency graph.
     """
 
-    STATUS_DISABLED       = "DISABLED"
-    STATUS_ENABLED        = "ENABLED"
-    STATUS_UNKNOWN        = "UNKNOWN"
-    STATUS_RUNNING        = "RUNNING"
+    STATUS_DISABLED         = "DISABLED"
+    STATUS_ENABLED          = "ENABLED"
+    STATUS_UNKNOWN          = "UNKNOWN"
+    STATUS_RUNNING          = "RUNNING"
 
-    NOTIFY_STATE_CHANGE   = 'notify_state_change'
-    NOTIFY_RUN_DONE       = 'notify_run_done'
+    NOTIFY_STATE_CHANGE     = 'notify_state_change'
+    NOTIFY_RUN_DONE         = 'notify_run_done'
 
-    EVENT_RECONFIGURED    = event.EventType(event.LEVEL_NOTICE, 'reconfigured')
-    EVENT_RUN_CREATED     = event.EventType(event.LEVEL_NOTICE, 'run_created')
-    EVENT_STATE_RESTORED  = event.EventType(event.LEVEL_INFO, 'restored')
+    context_class           = command_context.JobContext
 
     def __init__(self, name, scheduler, queueing=True, all_nodes=False,
             node_pool=None, enabled=True, action_graph=None,
@@ -89,10 +55,11 @@ class Job(Observable, Observer):
         self.enabled            = enabled
         self.node_pool          = node_pool
         self.allow_overlap      = allow_overlap
-        self.context            = command_context.CommandContext(
-                                    JobContext(self), parent_context)
         self.output_path        = output_path or filehandler.OutputPath()
         self.output_path.append(name)
+        self.event              = event.get_recorder(self.name)
+        self.context = command_context.build_context(self, parent_context)
+        self.event.ok('created')
 
     @classmethod
     def from_config(cls, job_config, scheduler, parent_context, output_path):
@@ -129,7 +96,7 @@ class Job(Observable, Observer):
         self.all_nodes      = job.all_nodes
         self.action_graph   = job.action_graph
         self.output_path    = job.output_path
-        self.notify(self.EVENT_RECONFIGURED)
+        self.event.ok('reconfigured')
 
     @property
     def status(self):
@@ -166,7 +133,7 @@ class Job(Observable, Observer):
         for run in job_runs:
             self.watch(run)
 
-        self.notify(self.EVENT_STATE_RESTORED)
+        self.event.ok('restored')
 
     def build_new_runs(self, run_time, manual=False):
         """Uses its JobCollection to build new JobRuns. If all_nodes is set,
@@ -178,11 +145,9 @@ class Job(Observable, Observer):
         for node in nodes:
             run = self.runs.build_new_run(self, run_time, node, manual=manual)
             self.watch(run)
-            event.EventManager.get_instance().add(run, parent=self)
-            self.notify(self.EVENT_RUN_CREATED)
             yield run
 
-    def handle_job_run_state_change(self, job_run, event):
+    def handle_job_run_state_change(self, _job_run, event):
         """Handle state changes from JobRuns and propagate changes to any
         observers.
         """
