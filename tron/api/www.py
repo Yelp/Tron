@@ -122,7 +122,7 @@ class JobResource(resource.Resource):
         if run_id == '':
             return self
         if run_id == '_events':
-            return EventResource(self.job_scheduler.job.name)
+            return EventResource(self.job_scheduler.get_name())
 
         run_id = run_id.upper()
         if run_id == 'HEAD':
@@ -140,7 +140,7 @@ class JobResource(resource.Resource):
     def render_GET(self, request):
         include_action_runs = requestargs.get_bool(request, 'include_action_runs')
         job_adapter = adapter.JobAdapter(
-                self.job_scheduler.job, True, include_action_runs)
+                self.job_scheduler.get_job(), True, include_action_runs)
         return respond(request, job_adapter.get_repr())
 
     def render_POST(self, request):

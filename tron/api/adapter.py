@@ -46,7 +46,7 @@ class RunAdapter(ReprAdapter):
     """Base class for JobRun and ActionRun adapters."""
 
     def get_state(self):
-        return str(self._obj.state.short_name)
+        return self._obj.state.short_name
 
     def get_node(self):
         node = self._obj.node

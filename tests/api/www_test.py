@@ -9,7 +9,6 @@ import twisted.web.server
 from testify import TestCase, class_setup, assert_equal, run, setup
 from testify import teardown
 from testify import setup_teardown
-from testify.utils import turtle
 from tests import mocks
 from twisted.web import http
 from tests.assertions import assert_call
@@ -141,126 +140,15 @@ class JobCollectionResourceTestCase(WWWTestCase):
 
 
 class JobResourceTestCase(WWWTestCase):
-    @class_setup
-    def build_resource(self):
-        self.job = turtle.Turtle(
-            name="foo",
-            runs=mocks.MockJobRunCollection(runs=[
-                mocks.MockJobRun(
-                    id="foo.1",
-                    node=mocks.MockNode(),
-                    run_num=1,
-                    start_time=None,
-                    end_time=None,
-                    exit_status=None,
-                    repr_data=lambda: {'id': "foo.1"}
-                )
-            ]),
-            scheduler_str="testsched",
-            node_pool=mocks.MockNodePool(),
-            topo_actions=[],
-            repr_data=lambda: {'name': 'foo'}
-        )
 
-        job_sched = mock.Mock(job=self.job)
-        self.resource = www.JobResource(job_sched)
+    @setup
+    def setup_resource(self):
+        self.job_scheduler = mock.create_autospec(job.JobScheduler)
+        self.resource = www.JobResource(self.job_scheduler)
 
-    def test_detail(self):
-        result = self.resource.render_GET(REQUEST)
-
-        assert_equal(result['name'], self.job.name)
-        assert_equal(len(result['runs']), 1)
-        assert_equal(result['runs'][0]['id'], "foo.1")
-
-
-class JobQueueTest(TestCase):
-    """Test that we can create a new job run"""
-    @class_setup
-    def build_resource(self):
-        self.job = mock.Mock(
-                                 name="foo",
-                                 runs=[],
-                                 scheduler=None,
-                                 node_pool=mocks.MockNodePool()
-                                )
-
-        self.resource = www.JobResource(self.job)
-
-    def test(self):
-        req = twisted.web.server.Request(mock.Mock(), None)
-        req.args = {'command': ['disable']}
-        req.childLink = lambda val : "/jobs/foo/%s" % val
-        self.resource.render_POST(req)
-
-        # Verify the response
-        assert_equal(req.code, twisted.web.http.OK)
-
-
-class JobQueueDuplicateTest(TestCase):
-    """Test that queuing a job that is already waiting is handled correctly"""
-    @class_setup
-    def build_resource(self):
-        self.job = mock.Mock(
-                                 name="foo",
-                                 runs=[
-                                     mock.Mock(
-                                                   id="1",
-                                                   start_time=None,
-                                                   end_time=None,
-                                                   exit_status=None,
-                                                   is_done=False,
-                                                   )
-                                 ],
-                                 scheduler=None,
-                                 node_pool=mocks.MockNodePool()
-                                )
-
-        self.resource = www.JobResource(self.job)
-
-    def test(self):
-        req = twisted.web.server.Request(mock.Mock(), None)
-        req.args = {'command': ['disable']}
-        req.childLink = lambda val : "/jobs/foo/%s" % val
-        self.resource.render_POST(req)
-
-        # Verify the response
-        assert_equal(req.code, twisted.web.http.OK)
-        # Check if a run would have been queued
-        self.job.build_run.assert_not_called()
-
-
-class JobRunStartTest(TestCase):
-    """Test that we can force start a job run"""
-    @class_setup
-    def build_resource(self):
-        self.run = mock.Mock(
-                      id="1",
-                      start_time=None,
-                      end_time=None,
-                      exit_status=None,
-                      is_done=False,
-                      )
-
-        self.job = mock.Mock(
-                                 name="foo",
-                                 runs=[self.run],
-                                 scheduler=None,
-                                 node_pool=mocks.MockNodePool(),
-                                )
-
-        self.resource = www.JobRunResource(self.run, Turtle())
-
-    def test(self):
-        req = twisted.web.server.Request(mock.Mock(), None)
-        req.prePathURL = lambda : "/jobs/foo/1"
-        req.args = {'command': ['start']}
-        req.childLink = lambda val : "/jobs/foo/%s" % val
-        self.resource.render_POST(req)
-
-        # Verify the response
-        assert_equal(req.code, twisted.web.http.OK)
-        # Check if a run would have been queued
-        self.run.start.assert_called_with()
+    def test_render_GET(self):
+        result = self.resource.render_GET(self.request)
+        assert_equal(result['name'], self.job_scheduler.get_job().name)
 
 
 class ServiceResourceTestCase(TestCase):
