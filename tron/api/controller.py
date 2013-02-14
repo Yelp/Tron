@@ -207,3 +207,6 @@ class ConfigController(object):
         except Exception, e:
             log.error("Configuration update failed: %s" % e)
             return str(e)
+
+    def get_namespaces(self):
+        return self.config_manager.get_namespaces()

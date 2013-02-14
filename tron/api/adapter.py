@@ -112,13 +112,13 @@ class JobRunAdapter(RunAdapter):
 
     field_names = [
             'id', 'run_num', 'run_time', 'start_time', 'end_time', 'manual']
-    translated_field_names = ['state', 'node', 'duration', 'href', 'runs']
+    translated_field_names = ['state', 'node', 'duration', 'url', 'runs']
 
     def __init__(self, job_run, include_action_runs=False):
         super(JobRunAdapter, self).__init__(job_run)
         self.include_action_runs = include_action_runs
 
-    def get_href(self):
+    def get_url(self):
         return '/jobs/%s/%s' % (self._obj.job_name, self._obj.run_num)
 
     def get_runs(self):
@@ -136,7 +136,7 @@ class JobAdapter(ReprAdapter):
         'action_names',
         'node_pool',
         'last_success',
-        'href',
+        'url',
         'runs'
     ]
 
@@ -158,7 +158,7 @@ class JobAdapter(ReprAdapter):
         last_success = self._obj.runs.last_success
         return last_success.end_time if last_success else None
 
-    def get_href(self):
+    def get_url(self):
         return '/jobs/%s' % urllib.quote(self._obj.name)
 
     def get_runs(self):
@@ -176,7 +176,7 @@ class ServiceAdapter(ReprAdapter):
     field_names = ['name', 'enabled']
     translated_field_names = [
         'count',
-        'href',
+        'url',
         'state',
         'command',
         'instances',
@@ -185,7 +185,7 @@ class ServiceAdapter(ReprAdapter):
         'monitor_interval',
         'restart_interval']
 
-    def get_href(self):
+    def get_url(self):
         return "/services/%s" % urllib.quote(self._obj.get_name())
 
     def get_count(self):

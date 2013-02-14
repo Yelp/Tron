@@ -6,6 +6,7 @@ import logging
 import urllib
 import urllib2
 import urlparse
+import itertools
 import tron
 from tron.config.schema import MASTER_NAMESPACE
 
@@ -79,16 +80,7 @@ class Client(object):
     def home(self):
         return self.request('/')
 
-    def index(self):
-        content = self.home()
-
-        def name_href_dict(source):
-            return dict((i['name'], i['href']) for i in source)
-
-        return {
-            'jobs':     name_href_dict(content['jobs']),
-            'services': name_href_dict(content['services'])
-        }
+    index = home
 
     def get_url(self, identifier):
         return get_object_type_from_identifier(self.index(), identifier).url
@@ -177,10 +169,12 @@ def get_object_type_from_identifier(url_index, identifier):
         id = get_name_parts(name, namespace)
         return find_by_type(id, 'jobs') or find_by_type(id, 'services')
 
-    # TODO: include a list of namespaces in the index so that a job can be
-    # found in any namespace
-    id_obj = (find_by_name(identifier) or
-              find_by_name(identifier, MASTER_NAMESPACE))
+    def first(seq):
+        for item in itertools.ifilter(None, seq):
+            return item
+
+    namespaces = [None, MASTER_NAMESPACE] + url_index['namespaces']
+    id_obj = first(find_by_name(identifier, name) for name in namespaces)
     if id_obj:
         return id_obj
 

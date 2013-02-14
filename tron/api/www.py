@@ -168,7 +168,7 @@ class JobCollectionResource(resource.Resource):
         return JobResource(job_sched)
 
     def get_data(self, include_job_run=False, include_action_runs=False):
-        jobs = (sched.job for sched in self.job_collection)
+        jobs = (sched.get_job() for sched in self.job_collection)
         return adapter.adapt_many(adapter.JobAdapter, jobs,
             include_job_run, include_action_runs)
 
@@ -255,6 +255,9 @@ class ConfigResource(resource.Resource):
         self.controller = controller.ConfigController(master_control)
         resource.Resource.__init__(self)
 
+    def get_namespaces(self):
+        return self.controller.get_namespaces()
+
     def render_GET(self, request):
         config_name = requestargs.get_string(request, 'name')
         if not config_name:
@@ -319,17 +322,20 @@ class RootResource(resource.Resource):
             return self
         return resource.Resource.getChild(self, name, request)
 
-    def render_GET(self, request):
-        """Load a big response."""
-        # TODO: why?
+    def urls_from_child(self, child_name):
+        def name_url_dict(source):
+            return dict((i['name'], i['url']) for i in source)
+        return name_url_dict(self.children[child_name].get_data())
 
-        # TODO: add namespaces
+    def render_GET(self, request):
+        """Return an index of urls for resources."""
         response = {
-            'jobs':             self.children["jobs"].get_data(),
-            'jobs_href':        request.uri + request.childLink('jobs'),
-            'services':         self.children["services"].get_data(),
-            'services_href':    request.uri + request.childLink('services'),
-            'config_href':      request.uri + request.childLink('config'),
-            'status_href':      request.uri + request.childLink('status'),
+            'jobs':             self.urls_from_child('jobs'),
+            'services':         self.urls_from_child('services'),
+            'jobs_url':         request.uri + request.childLink('jobs'),
+            'services_url':     request.uri + request.childLink('services'),
+            'config_url':       request.uri + request.childLink('config'),
+            'status_url':       request.uri + request.childLink('status'),
+            'namespaces':       self.children['config'].get_namespaces()
         }
         return respond(request, response)

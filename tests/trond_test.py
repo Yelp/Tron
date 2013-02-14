@@ -75,17 +75,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
 
         # reconfigure, by uploading a third configuration
         self.sandbox.tronfig(ALT_NAMESPACED_ECHO_CONFIG, name='ohce')
-
-        expected = set([
-            'jobs',
-            'status_href',
-            'jobs_href',
-            'config_href',
-            'services',
-            'services_href',
-        ])
-        result = self.sandbox.client.home()
-        assert_equal(set(result.keys()), expected)
+        self.sandbox.client.home()
 
         # run the job and check its output
         self.sandbox.tronctl(['start', 'MASTER.echo_job'])

@@ -120,5 +120,10 @@ class ConfigControllerTestCase(TestCase):
         error = self.controller.update_config(name, content, config_hash)
         assert_equal(error, "Configuration has changed. Please try again.")
 
+    def test_get_namespaces(self):
+        result = self.controller.get_namespaces()
+        self.manager.get_namespaces.assert_called_with()
+        assert_equal(result, self.manager.get_namespaces.return_value)
+
 if __name__ == "__main__":
     run()
