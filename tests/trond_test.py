@@ -107,7 +107,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
 
         expected = """\nServices:\nNo Services\n\n\nJobs:
             Name       State       Scheduler           Last Success
-            MASTER.echo_job   ENABLED     INTERVAL:1:00:00    None
+            MASTER.echo_job   ENABLED     INTERVAL 1:00:00    None
             """
 
         def remove_line_space(s):

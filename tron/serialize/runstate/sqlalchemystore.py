@@ -7,7 +7,7 @@ import yaml
 sqlalchemy = None # pyflakes
 
 from tron.serialize import runstate
-from tron.config.config_parse import MAX_IDENTIFIER_LENGTH
+from tron.config.config_utils import MAX_IDENTIFIER_LENGTH
 
 
 SQLStateKey = namedtuple('SQLStateKey', ['table', 'id'])

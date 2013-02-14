@@ -6,23 +6,31 @@ from collections import namedtuple
 import datetime
 import re
 
-from tron.config import ConfigError
-from tron.utils import crontab
+from tron.config import ConfigError, config_utils
+from tron.utils import crontab, dicts
 
 
-ConfigGrocScheduler = namedtuple(
-    'ConfigGrocScheduler',
-    ['original', 'ordinals', 'weekdays', 'monthdays', 'months', 'timestr'])
+ConfigGrocScheduler = namedtuple('ConfigGrocScheduler',
+    'original ordinals weekdays monthdays months timestr')
 
-ConfigCronScheduler = namedtuple(
-    'ConfigCronScheduler',
-    ['original', 'minutes', 'hours', 'monthdays', 'months', 'weekdays', 'ordinals'])
+ConfigCronScheduler = namedtuple('ConfigCronScheduler',
+    'original minutes hours monthdays months weekdays ordinals')
+
+ConfigDailyScheduler    = namedtuple('ConfigDailyScheduler',
+    'original hour minute second days')
 
 ConfigConstantScheduler = namedtuple('ConfigConstantScheduler', [])
-ConfigIntervalScheduler = namedtuple('ConfigIntervalScheduler', ['timedelta'])
+ConfigIntervalScheduler = namedtuple('ConfigIntervalScheduler', 'timedelta')
+
 
 class ScheduleParseError(ConfigError):
     pass
+
+
+def pad_sequence(seq, size, padding=None):
+    """Force a sequence to size. Pad with None if too short, and ignore
+    extra pieces if too long."""
+    return (list(seq) + [padding] * size)[:size]
 
 
 def valid_schedule(schedule, config_context):
@@ -34,100 +42,81 @@ def valid_schedule(schedule, config_context):
         if schedule == 'constant':
             return ConfigConstantScheduler()
         elif scheduler_name == 'daily':
-            # TODO: fix to be args
-            return valid_daily_scheduler(config_context, *scheduler_args)
+            start_time, days = pad_sequence(scheduler_args, 2)
+            return valid_daily_scheduler(start_time, days, config_context)
         elif scheduler_name == 'interval':
-            return valid_interval_scheduler(' '.join(scheduler_args))
+            scheduler_config = ' '.join(scheduler_args)
+            return valid_interval_scheduler(scheduler_config, config_context)
         elif scheduler_name == 'cron':
-            return valid_cron_scheduler(scheduler_args)
+            return valid_cron_scheduler(scheduler_args, config_context)
         else:
-            return parse_daily_expression(schedule, config_context)
+            return parse_groc_expression(schedule, config_context)
 
     if 'interval' in schedule:
-        return valid_interval_scheduler(**schedule)
+        return valid_interval_scheduler(schedule['interval'], config_context)
     elif 'start_time' in schedule or 'days' in schedule:
-        return valid_daily_scheduler(config_context, **schedule)
+        start_time, days = schedule.get('start_time'), schedule.get('days')
+        return valid_daily_scheduler(start_time, days, config_context)
     else:
         path = config_context.path
         raise ConfigError("Unknown scheduler at %s: %s" % (path, schedule))
 
 
-# TODO: this should be much simpler
-def valid_daily_scheduler(config_context, start_time=None, days=None):
-    """Old style, will be converted to GrocScheduler with a compatibility
-    function
+def valid_daily_scheduler(time_string, days, config_context):
+    """Daily scheduler, accepts a time of day and an optional list of days."""
+    time_string = time_string or '00:00:00'
+    time_spec   = config_utils.valid_time(time_string, config_context)
+    days        = config_utils.valid_string(days or "", config_context)
 
-    schedule:
-        start_time: "07:00:00"
-        days: "MWF"
-    """
+    def valid_day(day):
+        if day not in CONVERT_DAYS_INT:
+            raise ConfigError("Unknown day %s at %s" % (day, config_context.path))
+        return CONVERT_DAYS_INT[day]
 
-    err_msg = "start_time at %s must be in format HH:MM[:SS]: %s"
-
-    if start_time is None:
-        hms = ['00', '00']
-    else:
-        if not isinstance(start_time, basestring):
-            raise ConfigError(err_msg % (config_context.path, start_time))
-
-        # make sure at least hours and minutes are specified
-        hms = start_time.strip().split(':')
-
-        if len(hms) < 2:
-            raise ConfigError(err_msg % (config_context.path, start_time))
-
-    weekdays = set(CONVERT_DAYS_INT[d] for d in days or 'MTWRFSU')
-    if weekdays == set([0, 1, 2, 3, 4, 5, 6]):
-        days_str = 'day'
-    else:
-        # incoming string is MTWRF, we want M,T,W,R,F for the parser
-        days_str = ','.join(days)
-
-    return parse_daily_expression(
-        'every %s of month at %s:%s' % (days_str, hms[0], hms[1]),
-        config_context)
+    original = "%s %s" % (time_string, days)
+    weekdays = set(valid_day(day) for day in days or ())
+    return ConfigDailyScheduler(original,
+        time_spec.hour, time_spec.minute, time_spec.second, weekdays)
 
 
-# TODO: include config_context.path
-def valid_interval_scheduler(interval):
-    # remove spaces
-    interval = ''.join(interval.split())
+# Shortcut values for intervals
+TIME_INTERVAL_SHORTCUTS = {
+    'hourly': dict(hours=1),
+}
 
-    # Shortcut values for intervals
-    TIME_INTERVAL_SHORTCUTS = {
-        'hourly': dict(hours=1),
-    }
+# Translations from possible configuration units to the argument to
+# datetime.timedelta
+TIME_INTERVAL_UNITS = dicts.invert_dict_list({
+    'months':   ['mo', 'month', 'months'],
+    'days':     ['d', 'day', 'days'],
+    'hours':    ['h', 'hr', 'hrs', 'hour', 'hours'],
+    'minutes':  ['m', 'min', 'mins', 'minute', 'minutes'],
+    'seconds':  ['s', 'sec', 'secs', 'second', 'seconds']
+})
 
-    # Translations from possible configuration units to the argument to
-    # datetime.timedelta
-    TIME_INTERVAL_UNITS = {
-        'months': ['mo', 'month', 'months'],
-        'days': ['d', 'day', 'days'],
-        'hours': ['h', 'hr', 'hrs', 'hour', 'hours'],
-        'minutes': ['m', 'min', 'mins', 'minute', 'minutes'],
-        'seconds': ['s', 'sec', 'secs', 'second', 'seconds']
-    }
+# Split digits and characters into tokens
+TIME_INTERVAL_RE = re.compile(r"\d+|[a-zA-Z]+")
+
+
+def valid_interval_scheduler(interval,  config_context):
+    interval    = ''.join(interval.split())
+    error_msg   = 'Invalid interval specification at %s: %s'
+
+    def build_config(spec):
+        return ConfigIntervalScheduler(timedelta=datetime.timedelta(**spec))
 
     if interval in TIME_INTERVAL_SHORTCUTS:
-        kwargs = TIME_INTERVAL_SHORTCUTS[interval]
-    else:
-        # Split digits and characters into tokens
-        interval_re = re.compile(r"\d+|[a-zA-Z]+")
-        interval_tokens = interval_re.findall(interval)
-        if len(interval_tokens) != 2:
-            raise ConfigError("Invalid interval specification: %s", interval)
+        return build_config(TIME_INTERVAL_SHORTCUTS[interval])
 
-        value, units = interval_tokens
+    interval_tokens = TIME_INTERVAL_RE.findall(interval)
+    if len(interval_tokens) != 2:
+        raise ConfigError(error_msg % (config_context.path, interval))
 
-        kwargs = {}
-        for key, unit_set in TIME_INTERVAL_UNITS.iteritems():
-            if units in unit_set:
-                kwargs[key] = int(value)
-                break
-        else:
-            raise ConfigError("Invalid interval specification: %s", interval)
+    value, units = interval_tokens
+    if units not in TIME_INTERVAL_UNITS:
+        raise ConfigError(error_msg % (config_context.path, interval))
 
-    return ConfigIntervalScheduler(timedelta=datetime.timedelta(**kwargs))
+    return build_config({TIME_INTERVAL_UNITS[units]: int(value)})
 
 
 def normalize_weekdays(seq):
@@ -173,7 +162,7 @@ def month_canonicalization_map():
 CONVERT_MONTHS = month_canonicalization_map()
 
 
-def daily_schedule_parser_re():
+def build_groc_schedule_parser_re():
     """Build a regular expression that matches this:
 
         ("every"|ordinal) (day) ["of|in" (monthspec)] (["at"] HH:MM)
@@ -224,13 +213,13 @@ def daily_schedule_parser_re():
 # Matches expressions of the form
 # ``("every"|ordinal) (days) ["of|in" (monthspec)] (["at"] HH:MM)``.
 # See :py:func:`daily_schedule_parser_re` for details.
-DAILY_SCHEDULE_RE = daily_schedule_parser_re()
+DAILY_SCHEDULE_RE = build_groc_schedule_parser_re()
 
 
 def _parse_number(day):
     return int(''.join(c for c in day if c.isdigit()))
 
-def parse_daily_expression(expression, config_context):
+def parse_groc_expression(expression, config_context):
     """Given an expression of the form in the docstring of
     daily_schedule_parser_re(), return the parsed values in a
     ConfigGrocScheduler
@@ -274,10 +263,11 @@ def parse_daily_expression(expression, config_context):
         timestr=timestr)
 
 
-def valid_cron_scheduler(scheduler_args):
+def valid_cron_scheduler(scheduler_args, config_context):
     """Parse a cron schedule."""
     try:
         crontab_kwargs = crontab.parse_crontab(' '.join(scheduler_args))
         return ConfigCronScheduler(original=scheduler_args, **crontab_kwargs)
     except ValueError, e:
-        raise ConfigError("Invalid scheduler config: %s" % e)
+        msg = "Invalid cron scheduler %s: %s"
+        raise ConfigError(msg % (config_context.path, e))
