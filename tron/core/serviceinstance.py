@@ -108,9 +108,9 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
     handler = handle_action_event
 
     def _handle_action_exit(self):
-        log.debug("%s exit, failure: %r", self, self.action.has_failed)
+        log.debug("%s exit, failure: %r", self, self.action.is_failed)
         self.hang_check_callback.cancel()
-        if self.action.has_failed:
+        if self.action.is_failed:
             self.notify(self.NOTIFY_DOWN)
             return
 
@@ -164,7 +164,7 @@ class ServiceInstanceStopTask(observer.Observable, observer.Observer):
     handler = handle_action_event
 
     def _handle_complete(self, action):
-        if action.has_failed:
+        if action.is_failed:
             log.error("Failed to stop %s", self)
 
         self.notify(self.NOTIFY_SUCCESS)
@@ -201,7 +201,7 @@ class ServiceInstanceStartTask(observer.Observable, observer.Observer):
     handler = handle_action_event
 
     def _handle_action_exit(self, action):
-        event = self.NOTIFY_FAILED if action.has_failed else self.NOTIFY_STARTED
+        event = self.NOTIFY_FAILED if action.is_failed else self.NOTIFY_STARTED
         self.notify(event)
 
     def __str__(self):
