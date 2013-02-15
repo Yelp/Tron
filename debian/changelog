@@ -1,3 +1,10 @@
+tron (0.5.2.3) unstable; urgency=low
+
+  * Fix a bug that was preventing nodes from connecting with provided username
+  * Patched an issue with the SSH connection that could cause exceptions on channel close
+
+ -- Daniel Nephin <dnephin@yyelp.com>  Fri, 15 Feb 2013 11:19:25 -0800
+
 tron (0.5.2) unstable; urgency=low
 
   * Tron now supports the ability to use different users per node connection.
