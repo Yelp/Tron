@@ -40,7 +40,6 @@ class JobCollectionController(object):
             job_scheduler.enable()
 
 
-# TODO: test
 class ActionRunController(object):
 
     mapped_commands = set(('start', 'success', 'cancel', 'fail', 'skip'))
@@ -80,16 +79,14 @@ class JobRunController(object):
 
         if command in self.mapped_commands:
             if getattr(self.job_run, command)():
-                log.info("%s %s complete." % (self.job_run, command))
-            else:
-                log.warn("%s %s failed." % (self.job_run, command))
+                return "%s now in state %s" % (self.job_run, self.job_run.state)
 
-            return "%s now in state %s" % (self.job_run, self.job_run.state)
+            msg = "Failed to %s, %s in state %s"
+            return msg % (command, self.job_run, self.job_run.state)
 
         raise UnknownCommandError("Unknown command %s" % command)
 
 
-# TODO: test
 class JobController(object):
 
     def __init__(self, job_scheduler):
@@ -98,11 +95,11 @@ class JobController(object):
     def handle_command(self, command, run_time=None):
         if command == 'enable':
             self.job_scheduler.enable()
-            return "%s is enabled" % self.job_scheduler.job
+            return "%s is enabled" % self.job_scheduler.get_job()
 
         elif command == 'disable':
             self.job_scheduler.disable()
-            return "%s is disabled" % self.job_scheduler.job
+            return "%s is disabled" % self.job_scheduler.get_job()
 
         elif command == 'start':
             runs = self.job_scheduler.manual_start(run_time=run_time)
@@ -111,28 +108,26 @@ class JobController(object):
         raise UnknownCommandError("Unknown command %s" % command)
 
 
-# TODO: test
 class ServiceInstanceController(object):
 
     def __init__(self, service_instance):
         self.service_instance = service_instance
 
     def handle_command(self, command):
-        error_msg = "Instance could not be %s from state %s."
+        error_msg = "Failed to %s from state %s."
         if command == 'stop':
             if self.service_instance.stop():
                 return "%s stopping." % self.service_instance
-            return error_msg % ("stopped", self.service_instance.get_state())
+            return error_msg % (command, self.service_instance.get_state())
 
         if command == 'start':
             if self.service_instance.start():
                 return "%s starting." % self.service_instance
-            return error_msg % ("started", self.service_instance.get_state())
+            return error_msg % (command, self.service_instance.get_state())
 
         raise UnknownCommandError("Unknown command %s" % command)
 
 
-# TODO: test
 class ServiceController(object):
 
     def __init__(self, service):
