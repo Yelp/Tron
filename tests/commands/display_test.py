@@ -10,9 +10,9 @@ class DisplayServicesTestCase(TestCase):
     def setup_data(self):
         Color.enabled = True
         self.data = [
-            dict(name="My Service", status="stopped", count="4"),
-            dict(name="Another Service", status="running", count="2"),
-            dict(name="Yet another", status="running", count="1")
+            dict(name="My Service",      state="stopped", live_count="4", enabled=True),
+            dict(name="Another Service", state="running", live_count="2", enabled=False),
+            dict(name="Yet another",     state="running", live_count="1", enabled=True)
         ]
         self.display = DisplayServices(80)
 

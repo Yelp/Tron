@@ -111,6 +111,7 @@ class StateMachine(Observable):
         destination state if target is a valid state to transition to,
         None otherwise.
         """
+        log.debug("Checking for transition from %s to %s", self.state, target)
         return self.state.get(target, None)
 
     @property
@@ -124,14 +125,13 @@ class StateMachine(Observable):
         place.  Listeners for this change will also be notified before
         returning.
         """
-        log.debug("Checking for transition from %r (%r)", self.state, target)
 
         next_state = self.check(target)
         if next_state is None:
             return False
 
         prev_state = self.state
-        log.debug("Transitioning from state %r to %r", self.state, next_state)
+        log.debug("Transitioning from %s to %s", self.state, next_state)
 
         # Check if we are doing some circular transition.
         if stop_item is not None and next_state is stop_item:

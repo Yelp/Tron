@@ -1,6 +1,7 @@
 """
 Format and color output for tron commands.
 """
+from functools import partial
 from operator import itemgetter
 import os
 
@@ -18,11 +19,11 @@ class Color(object):
         'white':                '\033[99m',
         # h is for highlighted
         'hgray':                '\033[100m',
-        'hcyan':                '\033[101m',
+        'hred':                 '\033[101m',
         'hgreen':               '\033[102m',
         'hyellow':              '\033[103m',
         'hblue':                '\033[104m',
-        'hred':                 '\033[106m',
+        'hcyan':                 '\033[106m',
         'end':                  '\033[0m',
     }
 
@@ -170,23 +171,66 @@ class TableDisplay(object):
         return self.output()
 
 
+def add_color_for_state(state):
+    if state.upper()  == 'FAILED':
+        return Color.set('red', state)
+    if state.upper() == 'UP':
+        return Color.set('green', state)
+    if state.upper() in ('DISABLED', 'DOWN'):
+        return Color.set('blue', state)
+    return state
+
+
 class DisplayServices(TableDisplay):
 
-    columns = ['Name',  'State',    'Count' ]
-    fields  = ['name',  'status',   'count' ]
-    widths  = [None,    10,         10      ]
-    title = 'services'
+    columns = ['Name',  'State',    'Count'      ]
+    fields  = ['name',  'state',    'live_count' ]
+    widths  = [None,    12,          5           ]
+    title   = 'services'
+
+    detail_labels = [
+        ('Service',         'name',         ),
+        ('Enabled',         'enabled',      ),
+        ('State',           'state',        ),
+        ('Max instances',   'count',        ),
+        ('Command',         'command',      ),
+        ('Node Pool',       'node_pool',    )
+    ]
+
+    colors = {
+        'name':     partial(Color.set, 'yellow'),
+        'state':    add_color_for_state
+    }
+
+    def format_instances(self, service_instances):
+        format_str = "    %s : %-30s %s%s"
+        def get_failure_messages(failures):
+            if not failures:
+                return ""
+            header = Color.set("red", "\n    stderr: ")
+            return header + Color.set("red", "\n".join(failures))
+
+        def format(inst):
+            state = add_color_for_state(inst['state'])
+            failures = get_failure_messages(inst['failures'])
+            return format_str % (inst['id'], inst['node'], state, failures)
+        return [format(instance) for instance in service_instances]
 
     def format_details(self, service_content):
-        self.out = [
-            "Service: %s" % service_content['name'],
-            "State: %s" % service_content['state'],
-            "Instances: %r" % service_content['count'],
-        ] + [
-            "  %s : %s %s" % (serv['id'], serv['node'], serv['state'])
-            for serv in service_content['instances']
-        ]
+        def add_color(field, field_value):
+            if field not in self.colors:
+                return field_value
+            return self.colors[field](field_value)
+
+        def build_field(label, field):
+            field_value = add_color(field, service_content[field])
+            return "%-20s: %s" % (label, field_value)
+
+        details     = [build_field(*item) for item in self.detail_labels]
+        instances   = self.format_instances(service_content['instances'])
+        self.out    = details + ['\nInstances:'] + instances
         return self.output()
+
 
 class DisplayJobRuns(TableDisplay):
     """Format Job runs."""

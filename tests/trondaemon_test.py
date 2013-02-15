@@ -7,6 +7,7 @@ from testify.assertions import assert_in
 from tests.assertions import assert_raises
 from tron.trondaemon import PIDFile
 
+
 class PIDFileTestCase(TestCase):
 
     @setup
@@ -41,7 +42,8 @@ class PIDFileTestCase(TestCase):
 
     def test_is_process_running_not_running(self):
         assert not self.pidfile.is_process_running(None)
-        assert not self.pidfile.is_process_running(12345)
+        # Hope this isn't in use
+        assert not self.pidfile.is_process_running(99999)
 
     def test__enter__(self):
         self.pidfile.__enter__()

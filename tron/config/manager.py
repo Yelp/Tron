@@ -89,24 +89,30 @@ class ConfigManager(object):
         return read_raw(filename)
 
     def write_config(self, name, content):
-        self.validate_fragment(name, from_string(content))
-        filename = self.manifest.get_file_name(name)
-        if not filename:
-            filename = self.build_file_path(name)
-            self.manifest.add(name, filename)
-
+        self.validate_with_fragment(name, from_string(content))
+        filename = self.get_filename_from_manifest(name)
         write_raw(filename, content)
 
-    def validate_fragment(self, name, content):
-        container = self.load()
-        container.add(name, content)
-        container.validate()
+    def get_filename_from_manifest(self, name):
+        def create_filename():
+            filename = self.build_file_path(name)
+            self.manifest.add(name, filename)
+            return filename
+        return self.manifest.get_file_name(name) or create_filename()
+
+    def validate_with_fragment(self, name, content):
+        name_mapping = self.get_config_name_mapping()
+        name_mapping[name] = content
+        config_parse.ConfigContainer.create(name_mapping)
+
+    def get_config_name_mapping(self):
+        seq = self.manifest.get_file_mapping().iteritems()
+        return dict((name, read(filename)) for name, filename in seq)
 
     def load(self):
         """Return the fully constructed configuration."""
         log.info("Loading full config from %s" % self.config_path)
-        seq = self.manifest.get_file_mapping().iteritems()
-        name_mapping = dict((name, read(filename)) for name, filename in seq)
+        name_mapping = self.get_config_name_mapping()
         return config_parse.ConfigContainer.create(name_mapping)
 
     def get_hash(self, name):

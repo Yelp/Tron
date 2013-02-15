@@ -7,20 +7,19 @@ import twisted.web.http
 import twisted.web.server
 
 from testify import TestCase, class_setup, assert_equal, run, setup
-from testify import class_teardown, setup_teardown
+from testify import class_teardown, teardown
+from testify import setup_teardown
 from testify.assertions import assert_in
 from testify.utils import turtle
 from tests import mocks
+from twisted.web import http
 from tests.assertions import assert_call
+from tron import event
 from tron import mcp
 from tron.api import www, controller
 from tests.testingutils import Turtle
+from tron.core import service, serviceinstance
 
-try:
-    import simplejson
-    assert simplejson
-except ImportError:
-    import json as simplejson
 
 REQUEST = twisted.web.server.Request(mock.Mock(), None)
 REQUEST.childLink = lambda val : "/jobs/%s" % val
@@ -29,6 +28,36 @@ REQUEST.childLink = lambda val : "/jobs/%s" % val
 def build_request(**kwargs):
     args = dict((k, [v]) for k, v in kwargs.iteritems())
     return mock.create_autospec(twisted.web.server.Request, args=args)
+
+
+class HandleCommandTestCase(TestCase):
+
+    @setup_teardown
+    def mock_respond(self):
+        with mock.patch('tron.api.www.respond', autospec=True) as self.respond:
+            yield
+
+    def test_handle_command_unknown(self):
+        command = 'the command'
+        request = build_request(command=command)
+        mock_controller, obj = mock.Mock(), mock.Mock()
+        error = controller.UnknownCommandError("No")
+        mock_controller.handle_command.side_effect = error
+        response = www.handle_command(request, mock_controller, obj)
+        mock_controller.handle_command.assert_called_with(command)
+        assert_equal(response, self.respond.return_value)
+        self.respond.assert_called_with(request, {'error': str(error)},
+            code=http.NOT_IMPLEMENTED)
+
+    def test_handle_command(self):
+        command = 'the command'
+        request = build_request(command=command)
+        mock_controller, obj = mock.Mock(), mock.Mock()
+        response = www.handle_command(request, mock_controller, obj)
+        mock_controller.handle_command.assert_called_with(command)
+        assert_equal(response, self.respond.return_value)
+        self.respond.assert_called_with(request,
+                {'result': mock_controller.handle_command.return_value})
 
 
 class WWWTestCase(TestCase):
@@ -73,29 +102,28 @@ class ActionRunResourceTestCase(WWWTestCase):
 
 
 class RootResourceTestCase(TestCase):
-    @class_setup
-    def build_root(self):
-        self.mc = mock.Mock()
-        self.resource = www.RootResource(self.mc)
 
-    def test_status(self):
-        """Verify that we return a status"""
-        request = mock.Mock()
-        resp = self.resource.getChildWithDefault("status", mock.Mock()).render_GET(request)
+    @setup
+    def build_resource(self):
+        self.mcp = mock.create_autospec(mcp.MasterControlProgram)
+        self.resource = www.RootResource(self.mcp)
 
-        status = simplejson.loads(resp)
-        assert status['status']
+    def test__init__(self):
+        expected_children = ['jobs', 'services', 'config', 'status', 'events']
+        assert_equal(set(expected_children), set(self.resource.children.keys()))
 
-    def test_children(self):
-        """Verify that the jobs child is available"""
-        child = self.resource.getChildWithDefault("jobs", mock.Mock())
-        assert isinstance(child, www.JobsResource), child
+    def test_render_GET(self):
+        expected_keys = [
+            'jobs', 'jobs_href',
+            'services', 'services_href',
+            'config_href',
+            'status_href']
+        with mock.patch('tron.api.www.respond', autospec=True) as respond:
+            self.resource.render_GET(build_request())
+            assert_equal(set(respond.call_args[0][1].keys()), set(expected_keys))
 
-        child = self.resource.getChildWithDefault("services", mock.Mock())
-        assert isinstance(child, www.ServicesResource), child
 
-
-class JobsResourceTestCase(WWWTestCase):
+class JobCollectionResourceTestCase(WWWTestCase):
 
     @class_setup
     def build_resource(self):
@@ -108,7 +136,7 @@ class JobsResourceTestCase(WWWTestCase):
             node_pool=mocks.MockNodePool()
         )
         self.mcp = mock.Mock()
-        self.resource = www.JobsResource(self.mcp)
+        self.resource = www.JobCollectionResource(self.mcp)
 
     def test_render_GET(self):
         self.resource.get_data = Turtle()
@@ -150,7 +178,7 @@ class JobResourceTestCase(WWWTestCase):
         )
 
         job_sched = mock.Mock(job=self.job)
-        self.resource = www.JobResource(job_sched, mock.Mock())
+        self.resource = www.JobResource(job_sched)
 
     def test_detail(self):
         result = self.resource.render_GET(REQUEST)
@@ -171,7 +199,7 @@ class JobQueueTest(TestCase):
                                  node_pool=mocks.MockNodePool()
                                 )
 
-        self.resource = www.JobResource(self.job, mock.Mock())
+        self.resource = www.JobResource(self.job)
 
     def test(self):
         req = twisted.web.server.Request(mock.Mock(), None)
@@ -202,7 +230,7 @@ class JobQueueDuplicateTest(TestCase):
                                  node_pool=mocks.MockNodePool()
                                 )
 
-        self.resource = www.JobResource(self.job, mock.Mock())
+        self.resource = www.JobResource(self.job)
 
     def test(self):
         req = twisted.web.server.Request(mock.Mock(), None)
@@ -250,44 +278,81 @@ class JobRunStartTest(TestCase):
         self.run.start.assert_called_with()
 
 
-class ServiceTest(WWWTestCase):
+class ServiceResourceTestCase(WWWTestCase):
 
-    @class_setup
+    @setup
+    def setup_resource(self):
+        instances = mock.create_autospec(serviceinstance.ServiceInstanceCollection)
+        self.service = mock.create_autospec(service.Service,
+            instances=instances, enabled=True, config=mock.Mock())
+        self.resource = www.ServiceResource(self.service)
+        self.resource.controller = mock.create_autospec(
+            controller.ServiceController)
+
+    def test_getChild(self):
+        number = '3'
+        resource = self.resource.getChild(number, None)
+        assert isinstance(resource, www.ServiceInstanceResource)
+        self.service.instances.get_by_number.assert_called_with(3)
+
+    def test_render_GET(self):
+        response = self.resource.render_GET(build_request())
+        assert_equal(response['name'], self.service.name)
+
+    def test_render_POST(self):
+        response = self.resource.render_POST(build_request())
+        assert_equal(response['result'],
+            self.resource.controller.handle_command.return_value)
+
+
+class ServiceCollectionResourceTestCase(TestCase):
+
+    @setup
     def build_resource(self):
-        self.mc = mock.Mock()
-        self.service = turtle.Turtle(
-                            name="testname",
-                            state=mock.Mock(name="up"),
-                            command="run_service.py",
-                            count=2,
-                            node_pool=mocks.MockNodePool(),
-                            instances=[
-                                mock.Mock(
-                                    id="testname.0",
-                                    node=mocks.MockNodePool(),
-                                    state=mock.Mock(name="up")
-                                )
-                            ])
+        self.mcp = mock.create_autospec(mcp.MasterControlProgram)
+        self.resource = www.ServiceCollectionResource(self.mcp)
+        self.resource.collection = mock.create_autospec(service.ServiceCollection)
 
-        self.mc.services = {self.service.name: self.service}
+    def test_getChild(self):
+        child = self.resource.collection.get_by_name.return_value = mock.Mock()
+        child_resource = self.resource.getChild('name', None)
+        assert isinstance(child_resource, www.ServiceResource)
+        assert_equal(child_resource.service, child)
 
-        self.resource = www.ServicesResource(self.mc)
+    def test_getChild_missing(self):
+        self.resource.collection.get_by_name.return_value = None
+        child_resource = self.resource.getChild('name', None)
+        assert isinstance(child_resource, twisted.web.resource.NoResource)
 
-    def test_service_list(self):
-        """Test that we get a proper job list"""
-        result = self.resource.render_GET(REQUEST)
-        assert 'services' in result
-        assert result['services'][0]['name'] == "testname"
+    def test_render_GET(self):
+        service_count = 3
+        services = [mock.MagicMock() for _ in xrange(service_count)]
+        self.resource.collection.__iter__.return_value = services
+        with mock.patch('tron.api.www.respond', autospec=True) as respond:
+            response = self.resource.render_GET(build_request())
+            assert_equal(response, respond.return_value)
+            assert_equal(len(respond.call_args[0][1]['services']), service_count)
 
-    def test_get_service(self):
-        """Test that we can find a specific service"""
-        child = self.resource.getChildWithDefault("testname", mock.Mock())
-        assert isinstance(child, www.ServiceResource)
-        assert child._service is self.service
 
-    def test_missing_service(self):
-        child = self.resource.getChildWithDefault("bar", mock.Mock())
-        assert isinstance(child, twisted.web.resource.NoResource)
+class EventResourceTestCase(WWWTestCase):
+
+    @setup
+    def setup_resource(self):
+        self.name       = 'the_name'
+        self.resource   = www.EventResource(self.name)
+
+    @teardown
+    def teardown_resource(self):
+        event.EventManager.reset()
+
+    def test_render_GET(self):
+        recorder = event.get_recorder(self.name)
+        ok_message, critical_message ='ok message', 'critical message'
+        recorder.ok(ok_message)
+        recorder.critical(critical_message)
+        response = self.resource.render_GET(self.request())
+        names = [e['name'] for e in response['data']]
+        assert_equal(names, [ok_message, critical_message])
 
 
 class ConfigResourceTestCase(TestCase):

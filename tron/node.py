@@ -1,6 +1,5 @@
 import logging
 import itertools
-import os
 import random
 
 from twisted.internet import protocol, defer, reactor
@@ -63,7 +62,7 @@ class RunState(object):
         self.channel = None
 
 
-class NodePoolStore(dict):
+class NodePoolStore(object):
     """A Singleton to store Node and NodePool objects."""
 
     _instance = None
@@ -72,6 +71,7 @@ class NodePoolStore(dict):
         if self._instance is not None:
             raise ValueError("NodePoolStore is already instantiated.")
         super(NodePoolStore, self).__init__()
+        self.nodes = {}
 
     @classmethod
     def get_instance(cls):
@@ -79,33 +79,66 @@ class NodePoolStore(dict):
             cls._instance = cls()
         return cls._instance
 
-    def put(self, node):
-        self[node.name] = node
+    def add(self, node):
+        name = node.get_name()
+        if node == self.nodes.get(name):
+            return
 
-    def update(self, nodes):
-        super(NodePoolStore, self).update((node.name, node) for node in nodes)
+        if name in self.nodes:
+            self.nodes.pop(name)
+        self.nodes[name] = node
+
+    def _filter_by_name(self, node_names):
+        for name in set(self.nodes.keys()) - set(node_names):
+            self.nodes.pop(name)
+
+    @classmethod
+    def update_from_config(cls, node_configs, node_pool_configs, ssh_options):
+        instance = cls.get_instance()
+        node_names = set(node.name for node in itertools.chain(
+            node_configs.itervalues(), node_pool_configs.itervalues()))
+        instance._filter_by_name(node_names)
+        for config in node_configs.itervalues():
+            instance.add(Node.from_config(config, ssh_options))
+
+        for config in node_pool_configs.itervalues():
+            instance.add(NodePool.from_config(config))
+
+    def __contains__(self, node):
+        return node.get_name() in self.nodes
+
+    def __getitem__(self, name):
+        return self.nodes[name]
+
+    def get(self, name, default=None):
+        return self.nodes.get(name, default)
+
+    @classmethod
+    def clear(cls):
+        cls.get_instance().nodes.clear()
 
 
 class NodePool(object):
     """A pool of Node objects."""
-    def __init__(self, nodes, name=None):
+    def __init__(self, nodes, name):
         self.nodes = nodes
         self.name = name or '_'.join(n.name for n in nodes)
         self.iter = itertools.cycle(self.nodes)
 
     @classmethod
     def from_config(cls, node_pool_config):
-        nodes = NodePoolStore.get_instance()
-        return cls(
-            name=node_pool_config.name,
-            nodes=[nodes[n] for n in node_pool_config.nodes]
-        )
+        store = NodePoolStore.get_instance()
+        return cls(name=node_pool_config.name,
+                   nodes=[store[n] for n in node_pool_config.nodes])
 
     def __eq__(self, other):
         return isinstance(other, NodePool) and self.nodes == other.nodes
 
     def __ne__(self, other):
         return not self == other
+
+    def get_name(self):
+        return self.name
 
     def next(self):
         """Return a random node from the pool."""
@@ -116,10 +149,16 @@ class NodePool(object):
         return self.iter.next()
 
     def __getitem__(self, value):
-        for node in self.nodes:
-            if node.hostname == value:
-                return node
+        node = self.get_by_hostname(value)
+        if node:
+            return node
         raise KeyError(value)
+
+    # TODO: no need to iterate
+    def get_by_hostname(self, hostname):
+        for node in self.nodes:
+            if node.hostname == hostname:
+                return node
 
     def repr_data(self):
         """Returns a dict which is an external view of this object."""
@@ -167,8 +206,10 @@ class Node(object):
             node_config.hostname,
             ssh_options,
             username=node_config.username,
-            name=node_config.name
-        )
+            name=node_config.name)
+
+    def get_name(self):
+        return self.name
 
     def next(self):
         """Required to support the NodePool interface."""
@@ -188,6 +229,18 @@ class Node(object):
         if self.hostname == value:
             return self
         raise KeyError(value)
+
+    # TODO: test
+    # TODO: extract this NodePool code
+    def get_by_hostname(self, hostname):
+        return self if self.hostname == hostname else None
+
+    # TODO: wrap conch_options for equality
+    def __eq__(self, other):
+        if not isinstance(other, self.__class__):
+            return False
+        return (self.hostname == other.hostname and self.name == other.name and
+                self.conch_options == other.conch_options)
 
     def __cmp__(self, other):
         if not isinstance(other, self.__class__):

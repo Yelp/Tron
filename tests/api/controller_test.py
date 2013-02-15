@@ -5,18 +5,18 @@ from testify.assertions import assert_in
 from tests.testingutils import autospec_method
 from tron import mcp
 
-from tron.api.controller import JobController, ConfigController
+from tron.api.controller import JobCollectionController, ConfigController
 from tron.config import ConfigError, manager, config_parse
 from tron.core import job
 
 
-class JobControllerTestCase(TestCase):
+class JobCollectionControllerTestCase(TestCase):
 
     @setup
     def setup_controller(self):
         self.jobs           = [mock.create_autospec(job.JobScheduler)]
         self.mcp            = mock.create_autospec(mcp.MasterControlProgram)
-        self.controller     = JobController(self.mcp)
+        self.controller     = JobCollectionController(self.mcp)
 
     def test_disable_all(self):
         self.mcp.get_jobs.return_value = self.jobs
