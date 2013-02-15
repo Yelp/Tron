@@ -66,17 +66,16 @@ class Job(Observable, Observer):
     @classmethod
     def from_config(cls, job_config, scheduler, parent_context, output_path):
         """Factory method to create a new Job instance from configuration."""
-        node_pools = node.NodePoolStore.get_instance()
         action_graph = actiongraph.ActionGraph.from_config(
-                job_config.actions, node_pools, job_config.cleanup_action)
-        runs = jobrun.JobRunCollection.from_config(job_config)
-        nodes = node_pools[job_config.node] if job_config.node else None
+                job_config.actions, job_config.cleanup_action)
+        runs         = jobrun.JobRunCollection.from_config(job_config)
+        node_repo    = node.NodePoolRepository.get_instance()
 
         return cls(
             name                = job_config.name,
             queueing            = job_config.queueing,
             all_nodes           = job_config.all_nodes,
-            node_pool           = nodes,
+            node_pool           = node_repo.get_by_name(job_config.node),
             scheduler           = scheduler,
             enabled             = job_config.enabled,
             run_collection      = runs,

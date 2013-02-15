@@ -70,9 +70,8 @@ class JobRun(Observable, Observer):
     def from_state(cls, state_data, action_graph, output_path, context,
                 run_node):
         """Restore a JobRun from a serialized state."""
-        node_pools = node.NodePoolStore.get_instance()
-        if state_data.get('node_name'):
-            run_node = node_pools.get(state_data['node_name'])
+        pool_repo = node.NodePoolRepository.get_instance()
+        run_node = pool_repo.get_by_name(state_data.get('node_name'), run_node)
 
         # TODO: remove in 0.6
         if 'job_name' not in state_data:

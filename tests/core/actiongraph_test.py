@@ -19,7 +19,6 @@ class ActionGraphTestCase(TestCase):
         self.action_graph = actiongraph.ActionGraph(self.graph, am)
 
     def test_from_config(self):
-        nodes = dict(first=turtle.Turtle())
         config = dict(
             (name, turtle.Turtle(name=name, node='first', requires=[]))
             for name in self.action_names
@@ -28,7 +27,7 @@ class ActionGraphTestCase(TestCase):
         config['dep_one_one'].requires  = ['dep_one']
         config['dep_one'].requires      = ['base_one']
 
-        built_graph = actiongraph.ActionGraph.from_config(config, nodes)
+        built_graph = actiongraph.ActionGraph.from_config(config)
         am = built_graph.action_map
 
         graph_base_names = set(a.name for a in built_graph.graph)

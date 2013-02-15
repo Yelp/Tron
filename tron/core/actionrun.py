@@ -166,7 +166,7 @@ class ActionRun(Observer):
     def from_state(cls, state_data, parent_context, output_path,
                 job_run_node, cleanup=False):
         """Restore the state of this ActionRun from a serialized state."""
-        node_pools = node.NodePoolStore.get_instance()
+        pool_repo = node.NodePoolRepository.get_instance()
 
         # Support state from older version
         if 'id' in state_data:
@@ -175,8 +175,8 @@ class ActionRun(Observer):
             job_run_id = state_data['job_run_id']
             action_name = state_data['action_name']
 
-        if state_data.get('node_name'):
-            job_run_node = node_pools.get(state_data['node_name'])
+        job_run_node = pool_repo.get_by_name(
+            state_data.get('node_name'), job_run_node)
 
         rendered_command = state_data.get('rendered_command')
         run = cls(

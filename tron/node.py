@@ -6,7 +6,7 @@ from twisted.internet import protocol, defer, reactor
 from twisted.python import failure
 
 from tron import ssh
-from tron.utils import twistedutils
+from tron.utils import twistedutils, collections
 
 
 log = logging.getLogger(__name__)
@@ -62,17 +62,17 @@ class RunState(object):
         self.channel = None
 
 
-# TODO: make use of MappingCollection
-class NodePoolStore(object):
+class NodePoolRepository(object):
     """A Singleton to store Node and NodePool objects."""
 
     _instance = None
 
     def __init__(self):
         if self._instance is not None:
-            raise ValueError("NodePoolStore is already instantiated.")
-        super(NodePoolStore, self).__init__()
-        self.nodes = {}
+            raise ValueError("NodePoolRepository is already instantiated.")
+        super(NodePoolRepository, self).__init__()
+        self.nodes = collections.MappingCollection('nodes')
+        self.pools = collections.MappingCollection('pools')
 
     @classmethod
     def get_instance(cls):
@@ -80,57 +80,55 @@ class NodePoolStore(object):
             cls._instance = cls()
         return cls._instance
 
-    def add(self, node):
-        name = node.get_name()
-        if node == self.nodes.get(name):
-            return
-
-        if name in self.nodes:
-            self.nodes.pop(name)
-        self.nodes[name] = node
-
-    def _filter_by_name(self, node_names):
-        for name in set(self.nodes.keys()) - set(node_names):
-            self.nodes.pop(name)
+    def filter_by_name(self, node_configs, node_pool_configs):
+        self.nodes.filter_by_name(node_configs)
+        self.pools.filter_by_name(node_configs.keys() + node_pool_configs.keys())
 
     @classmethod
     def update_from_config(cls, node_configs, node_pool_configs, ssh_options):
         instance = cls.get_instance()
-        node_names = set(node.name for node in itertools.chain(
-            node_configs.itervalues(), node_pool_configs.itervalues()))
-        instance._filter_by_name(node_names)
+        instance.filter_by_name(node_configs, node_pool_configs)
+
         for config in node_configs.itervalues():
-            instance.add(Node.from_config(config, ssh_options))
+            instance.add_node(Node.from_config(config, ssh_options))
 
         for config in node_pool_configs.itervalues():
-            instance.add(NodePool.from_config(config))
+            nodes = instance._get_nodes_by_name(config.nodes)
+            pool  = NodePool.from_config(config, nodes)
+            instance.pools.add(pool, instance.pools.remove)
+
+    def add_node(self, node):
+        self.nodes.add(node, self.nodes.__delitem__)
+        self.pools.add(NodePool.from_node(node), self.pools.remove)
 
     def __contains__(self, node):
-        return node.get_name() in self.nodes
+        return node.get_name() in self.pools
 
-    def __getitem__(self, name):
-        return self.nodes[name]
+    def get_by_name(self, name, default=None):
+        return self.pools.get(name, default)
 
-    def get(self, name, default=None):
-        return self.nodes.get(name, default)
+    def _get_nodes_by_name(self, names):
+        return [self.nodes[name] for name in names]
 
-    @classmethod
-    def clear(cls):
-        cls.get_instance().nodes.clear()
+    def clear(self):
+        self.nodes.clear()
+        self.pools.clear()
 
 
 class NodePool(object):
     """A pool of Node objects."""
     def __init__(self, nodes, name):
         self.nodes = nodes
-        self.name = name or '_'.join(n.name for n in nodes)
+        self.name = name or '_'.join(n.get_name() for n in nodes)
         self.iter = itertools.cycle(self.nodes)
 
     @classmethod
-    def from_config(cls, node_pool_config):
-        store = NodePoolStore.get_instance()
-        return cls(name=node_pool_config.name,
-                   nodes=[store[n] for n in node_pool_config.nodes])
+    def from_config(cls, node_pool_config, nodes):
+        return cls(nodes, node_pool_config.name)
+
+    @classmethod
+    def from_node(cls, node):
+        return cls([node], node.get_name())
 
     def __eq__(self, other):
         return isinstance(other, NodePool) and self.nodes == other.nodes
@@ -149,13 +147,10 @@ class NodePool(object):
         """Return the next node cycling in a consistent order."""
         return self.iter.next()
 
-    def __getitem__(self, value):
-        node = self.get_by_hostname(value)
-        if node:
-            return node
-        raise KeyError(value)
+    def disable(self):
+        """Required for MappingCollection.Item interface."""
+        #TODO
 
-    # TODO: no need to iterate
     def get_by_hostname(self, hostname):
         for node in self.nodes:
             if node.hostname == hostname:
@@ -163,6 +158,7 @@ class NodePool(object):
 
     def __str__(self):
         return "NodePool:%s" % self.name
+
 
 class Node(object):
     """A node is tron's interface to communicating with an actual machine.
@@ -208,29 +204,9 @@ class Node(object):
     def get_name(self):
         return self.name
 
-    def next(self):
-        """Required to support the NodePool interface."""
-        return self
-
-    def next_round_robin(self):
-        """Required to support the NodePool interface."""
-        return self
-
-    @property
-    def nodes(self):
-        """Required to support the NodePool interface."""
-        return [self]
-
-    def __getitem__(self, value):
-        """Required to support the NodePool interface."""
-        if self.hostname == value:
-            return self
-        raise KeyError(value)
-
-    # TODO: test
-    # TODO: extract this NodePool code
-    def get_by_hostname(self, hostname):
-        return self if self.hostname == hostname else None
+    def disable(self):
+        """Required for MappingCollection.Item interface."""
+        #TODO
 
     # TODO: wrap conch_options for equality
     def __eq__(self, other):
@@ -536,14 +512,6 @@ class Node(object):
         # come back thanks to the magic of TCP, but something is up, best to
         # fail right now then limp along for and unknown amount of time.
         #self.connection.transport.connectionLost(failure.Failure())
-
-    def repr_data(self):
-        """Returns a dict which is an external view of this object."""
-        return {
-            'name':             self.name,
-            'hostname':         self.hostname,
-            'username':         self.username
-        }
 
     def __str__(self):
         return "Node:%s@%s" % (self.username or "<default>", self.hostname)

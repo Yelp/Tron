@@ -1,4 +1,5 @@
 import logging
+from tron import node
 
 log = logging.getLogger(__name__)
 
@@ -21,13 +22,13 @@ class Action(object):
         return self.name == CLEANUP_ACTION_NAME
 
     @classmethod
-    def from_config(cls, config, node_pools):
+    def from_config(cls, config):
         """Factory method for creating a new Action."""
+        node_repo = node.NodePoolRepository.get_instance()
         return cls(
             name=       config.name,
             command=    config.command,
-            node_pool=  node_pools[config.node] if config.node else None,
-        )
+            node_pool=  node_repo.get_by_name(config.node))
 
     def __eq__(self, other):
         attributes_match = all(
