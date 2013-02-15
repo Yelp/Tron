@@ -19,14 +19,13 @@ from tron.config.config_utils import build_dict_name_validator
 from tron.config.config_utils import valid_int, valid_float, valid_dict
 from tron.config.config_utils import PartialConfigContext
 from tron.config.schedule_parse import valid_schedule
-from tron.config.schema import TronConfig, NamedTronConfig, NotificationOptions
+from tron.config.schema import TronConfig, NamedTronConfig, NotificationOptions, CLEANUP_ACTION_NAME
 from tron.config.schema import ConfigSSHOptions
 from tron.config.schema import ConfigNode, ConfigNodePool, ConfigState
 from tron.config.schema import ConfigJob, ConfigAction, ConfigCleanupAction
 from tron.config.schema import ConfigService
 from tron.config.schema import MASTER_NAMESPACE
 from tron.utils.dicts import FrozenDict
-from tron.core.action import CLEANUP_ACTION_NAME
 
 
 log = logging.getLogger(__name__)

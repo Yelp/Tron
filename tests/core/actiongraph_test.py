@@ -21,8 +21,7 @@ class ActionGraphTestCase(TestCase):
     def test_from_config(self):
         config = dict(
             (name, turtle.Turtle(name=name, node='first', requires=[]))
-            for name in self.action_names
-        )
+            for name in self.action_names)
         config['dep_multi'].requires    = ['dep_one_one', 'base_two']
         config['dep_one_one'].requires  = ['dep_one']
         config['dep_one'].requires      = ['base_one']

@@ -1,9 +1,10 @@
 import logging
 from tron import node
+from tron.config.schema import CLEANUP_ACTION_NAME
 
 log = logging.getLogger(__name__)
 
-CLEANUP_ACTION_NAME = 'cleanup'
+
 
 
 class Action(object):

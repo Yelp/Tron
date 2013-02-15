@@ -5,6 +5,8 @@ from collections import namedtuple
 
 MASTER_NAMESPACE = "MASTER"
 
+CLEANUP_ACTION_NAME = 'cleanup'
+
 def config_object_factory(name, required=None, optional=None):
     """
     Creates a namedtuple which has two additional attributes:

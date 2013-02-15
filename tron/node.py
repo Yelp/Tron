@@ -5,7 +5,7 @@ import random
 from twisted.internet import protocol, defer, reactor
 from twisted.python import failure
 
-from tron import ssh
+from tron import ssh, eventloop
 from tron.utils import twistedutils, collections
 
 
@@ -118,9 +118,10 @@ class NodePoolRepository(object):
 class NodePool(object):
     """A pool of Node objects."""
     def __init__(self, nodes, name):
-        self.nodes = nodes
-        self.name = name or '_'.join(n.get_name() for n in nodes)
-        self.iter = itertools.cycle(self.nodes)
+        self.nodes      = nodes
+        self.disabled   =  False
+        self.name       = name or '_'.join(n.get_name() for n in nodes)
+        self.iter       = itertools.cycle(self.nodes)
 
     @classmethod
     def from_config(cls, node_pool_config, nodes):
@@ -149,7 +150,7 @@ class NodePool(object):
 
     def disable(self):
         """Required for MappingCollection.Item interface."""
-        #TODO
+        self.disabled = True
 
     def get_by_hostname(self, hostname):
         for node in self.nodes:
@@ -190,8 +191,8 @@ class Node(object):
         # Map of run id to instance of RunState
         self.run_states = {}
 
-        self.idle_timeout = None
-        self.idle_timer = None
+        self.idle_timer = eventloop.NullCallback
+        self.disabled = False
 
     @classmethod
     def from_config(cls, node_config, ssh_options):
@@ -206,7 +207,7 @@ class Node(object):
 
     def disable(self):
         """Required for MappingCollection.Item interface."""
-        #TODO
+        self.disabled = True
 
     # TODO: wrap conch_options for equality
     def __eq__(self, other):
@@ -259,9 +260,8 @@ class Node(object):
         if run.id in self.run_states:
             raise Error("Run %s already running !?!", run.id)
 
-        if self.idle_timer is not None:
+        if self.idle_timer.active():
             self.idle_timer.cancel()
-            self.idle_timer = None
 
         fudge_factor = self._determine_fudge_factor()
 
@@ -272,7 +272,7 @@ class Node(object):
         else:
             log.info("Delaying execution of %s for %.2f secs",
                      run.id, fudge_factor)
-            reactor.callLater(fudge_factor, self._do_run, run)
+            eventloop.call_later(fudge_factor, self._do_run, run)
 
         # We return the deferred here, but really we're trying to keep the rest
         # of the world from getting too involved with twisted.
@@ -296,7 +296,7 @@ class Node(object):
         del self.run_states[run.id]
 
         if not self.run_states:
-            self.idle_timer = reactor.callLater(IDLE_CONNECTION_TIMEOUT,
+            self.idle_timer = eventloop.call_later(IDLE_CONNECTION_TIMEOUT,
                                                 self._connection_idle_timeout)
 
     def _connection_idle_timeout(self):
@@ -304,8 +304,6 @@ class Node(object):
             log.info("Connection to %s idle for %d secs. Closing.",
                      self.hostname, IDLE_CONNECTION_TIMEOUT)
             self.connection.transport.loseConnection()
-
-        self.idle_timer = None
 
     def _fail_run(self, run, result):
         """Indicate the run has failed, and cleanup state"""
