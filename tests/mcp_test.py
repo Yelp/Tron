@@ -61,12 +61,15 @@ class MasterControlProgramTestCase(TestCase):
     def test_apply_config(self):
         config_container = mock.create_autospec(config_parse.ConfigContainer)
         master_config = config_container.get_master.return_value
+        autospec_method(self.mcp._ssh_options_from_config)
         self.mcp.apply_config(config_container)
         self.mcp.state_watcher.update_from_config.assert_called_with(
             master_config.state_persistence)
         assert_equal(self.mcp.output_stream_dir, master_config.output_stream_dir)
         assert_equal(self.mcp.time_zone, master_config.time_zone)
         assert_equal(self.mcp.context.base, master_config.command_context)
+        self.mcp._ssh_options_from_config.assert_called_with(
+            master_config.ssh_options)
 
     def test_update_state_watcher_config_changed(self):
         self.mcp.state_watcher.update_from_config.return_value = True
