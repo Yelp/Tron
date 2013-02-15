@@ -42,7 +42,6 @@ class JobRun(Observable, Observer):
         self.action_runs_proxy  = None
         self._action_runs       = None
         self.action_graph       = action_graph
-        # TODO: expose this through the api
         self.manual             = manual
         self.event              = event.get_recorder(self.id)
         self.event.ok('created')
@@ -71,7 +70,7 @@ class JobRun(Observable, Observer):
                 run_node):
         """Restore a JobRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
-        run_node = pool_repo.get_by_name(state_data.get('node_name'), run_node)
+        run_node  = pool_repo.get_node(state_data.get('node_name'), run_node)
 
         # TODO: remove in 0.6
         if 'job_name' not in state_data:

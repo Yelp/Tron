@@ -67,10 +67,6 @@ class TableDisplay(object):
 
     header_color = 'hgray'
 
-    @property
-    def max_first_col_width(self):
-        return max(self.num_cols - sum(self.widths[1:]), 10)
-
     def __init__(self, options=None):
         self.out = []
         self.options = options
@@ -125,19 +121,6 @@ class TableDisplay(object):
 
     format_header = format_value
 
-    def calculate_col_widths(self):
-        padding = 3
-        label_width = len(self.columns[0]) + 1
-        if not self.data:
-            max_name_width = 1
-        else:
-            max_name_width = max(len(item[self.fields[0]]) for item in self.data)
-            max_name_width += padding
-        self.widths[0] = min(
-            self.max_first_col_width,
-            max(label_width, max_name_width)
-        )
-
     def output(self):
         out = "\n".join(self.out)
         self.out = []
@@ -159,7 +142,6 @@ class TableDisplay(object):
         self.store_data(data)
         self.banner()
 
-        self.calculate_col_widths()
         if not self.rows():
             return self.output()
 
@@ -241,7 +223,7 @@ class DisplayServices(TableDisplay):
 
     columns = ['Name',  'State',    'Count'      ]
     fields  = ['name',  'state',    'live_count' ]
-    widths  = [None,    12,          5           ]
+    widths  = [50,      12,          5           ]
     title   = 'services'
 
     detail_labels = [
@@ -266,7 +248,7 @@ class DisplayJobRuns(TableDisplay):
 
     columns = ['Run ID', 'State',    'Node', 'Scheduled Time']
     fields  = ['id',     'state',    'node', 'scheduled_time']
-    widths  = [None,     6,          20,     25              ]
+    widths  = [10,       6,          30,     25              ]
     title = 'job runs'
 
     detail_labels = [
@@ -326,7 +308,7 @@ class DisplayJobs(TableDisplay):
 
     columns = ['Name',  'State',    'Scheduler',    'Last Success']
     fields  = ['name',  'status',   'scheduler',    'last_success']
-    widths  = [None,    10,         20,             20            ]
+    widths  = [50,       10,         20,             20           ]
     title = 'jobs'
 
     detail_labels = [
@@ -349,7 +331,7 @@ class DisplayActionRuns(TableDisplay):
 
     columns = ['Action', 'State', 'Start Time', 'End Time', 'Duration']
     fields  = ['id',     'state', 'start_time', 'end_time', 'duration']
-    widths  = [None,     7,        22,          22,         10        ]
+    widths  = [40,         7,        22,          22,         10      ]
     title = 'actions'
 
     detail_labels = [

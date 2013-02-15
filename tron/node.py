@@ -101,6 +101,9 @@ class NodePoolRepository(object):
         self.nodes.add(node, self.nodes.__delitem__)
         self.pools.add(NodePool.from_node(node), self.pools.remove)
 
+    def get_node(self, node_name, default=None):
+        return self.nodes.get(node_name, default)
+
     def __contains__(self, node):
         return node.get_name() in self.pools
 

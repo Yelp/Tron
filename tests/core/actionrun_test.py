@@ -359,7 +359,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
     def test_from_state_with_node_exists(self, mock_store):
         ActionRun.from_state(self.state_data,
                 self.parent_context, self.output_path, self.run_node)
-        mock_store.get_instance().get_by_name.assert_called_with(
+        mock_store.get_instance().get_node.assert_called_with(
             self.state_data['node_name'], self.run_node)
 
     def test_from_state_before_rendered_command(self):

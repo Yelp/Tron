@@ -67,6 +67,10 @@ class NodePoolRepositoryTestCase(TestCase):
         nodes = self.repo._get_nodes_by_name(['a', 'b'])
         assert_equal(nodes, mock_nodes.values())
 
+    def test_get_node(self):
+        returned_node = self.repo.get_node(self.node.get_name())
+        assert_equal(returned_node, self.node)
+
 
 class NodeTestCase(TestCase):
 
