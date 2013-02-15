@@ -54,7 +54,7 @@ class NodePoolRepositoryTestCase(TestCase):
         self.repo.nodes.update(mock_nodes)
         node_config = {'a': mock.Mock(), 'b': mock.Mock()}
         node_pool_config = {'c': mock.Mock(nodes=['a', 'b'])}
-        ssh_options = mock.create_autospec(ConchOptions)
+        ssh_options = mock.Mock(identities=[])
         node.NodePoolRepository.update_from_config(
             node_config, node_pool_config, ssh_options)
         node_names = [node_config['a'].name, node_config['b'].name]
@@ -156,6 +156,24 @@ class NodePoolTestCase(TestCase):
             for _ in xrange(len(self.nodes) * 2)
         ]
         assert_equal(node_order, self.nodes + self.nodes)
+
+
+class BuildSSHOptionsFromConfigTestCase(TestCase):
+
+    def test_build_ssh_options_from_config_none(self):
+        ssh_conf = mock.Mock(agent=False, identities=[])
+        ssh_options = node.build_ssh_options_from_config(ssh_conf)
+        assert_equal(ssh_options['agent'], False)
+        assert_equal(ssh_options['noagent'], True)
+        assert_equal(ssh_options.identitys, [])
+
+    def test_build_ssh_options_from_config_both(self):
+        identities = ['one', 'two']
+        ssh_conf = mock.Mock(agent=True, identities=identities)
+        ssh_options = node.build_ssh_options_from_config(ssh_conf)
+        assert_equal(ssh_options['agent'], True)
+        assert_equal(ssh_options['noagent'], False)
+        assert_equal(ssh_options.identitys, identities)
 
 
 if __name__ == '__main__':

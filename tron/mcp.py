@@ -1,42 +1,39 @@
 from __future__ import with_statement
 import logging
-import os
-
-from twisted.conch.client.options import ConchOptions
 
 from tron import command_context
 from tron import event
 from tron import crash_reporter
 from tron import node
 from tron.config import manager
-from tron.config.config_parse import ConfigError
 from tron.core import service, job
 from tron.serialize.runstate import statemanager
 from tron.utils import emailer
-from tron.utils.observer import Observable
 
 
 log = logging.getLogger(__name__)
 
 
-class MasterControlProgram(Observable):
-    """master of tron's domain
+def apply_master_configuration(mapping, master_config):
+    def get_config_value(seq):
+        return [getattr(master_config, item) for item in seq]
 
-    Central state object for the Tron daemon. Stores all jobs and services.
-    """
+    for entry in mapping:
+        func, args = entry[0], get_config_value(entry[1:])
+        func(*args)
+
+
+class MasterControlProgram(object):
+    """Central state object for the Tron daemon."""
 
     def __init__(self, working_dir, config_path):
         super(MasterControlProgram, self).__init__()
         self.jobs               = job.JobCollection()
         self.services           = service.ServiceCollection()
-        self.output_stream_dir  = None
         self.working_dir        = working_dir
         self.crash_reporter     = None
         self.config             = manager.ConfigManager(config_path)
         self.context            = command_context.CommandContext()
-
-        # Time zone of the system clock
-        self.time_zone          = None
         self.event_recorder     = event.get_recorder()
         self.event_recorder.ok('started')
         self.state_watcher      = statemanager.StateChangeWatcher()
@@ -75,19 +72,19 @@ class MasterControlProgram(Observable):
 
     def apply_config(self, config_container, reconfigure=False):
         """Apply a configuration."""
+        master_config_directives = [
+            (self.update_state_watcher_config,           'state_persistence'),
+            (self.set_context_base,                      'command_context'),
+            (node.NodePoolRepository.update_from_config, 'nodes',
+                                                         'node_pools',
+                                                         'ssh_options'),
+            (self.apply_notification_options,            'notification_options'),
+        ]
         master_config = config_container.get_master()
-        self.output_stream_dir = master_config.output_stream_dir or self.working_dir
-        ssh_options = self._ssh_options_from_config(master_config.ssh_options)
-        self.update_state_watcher_config(master_config.state_persistence)
+        apply_master_configuration(master_config_directives, master_config)
 
-        self.context.base = master_config.command_context
-        self.time_zone = master_config.time_zone
-        node.NodePoolRepository.update_from_config(
-            master_config.nodes, master_config.node_pools, ssh_options)
-        self._apply_notification_options(master_config.notification_options)
-
-        args = self.context, self.output_stream_dir, self.time_zone
-        factory = job.JobSchedulerFactory(*args)
+        # TODO: unify NOTIFY_STATE_CHANGE and simplify this
+        factory = self.build_job_scheduler_factory(master_config)
         self.apply_collection_config(config_container.get_jobs(),
             self.jobs, job.Job.NOTIFY_STATE_CHANGE, factory, reconfigure)
 
@@ -97,6 +94,11 @@ class MasterControlProgram(Observable):
     def apply_collection_config(self, config, collection, notify_type, *args):
         items = collection.load_from_config(config, *args)
         self.state_watcher.watch_all(items, notify_type)
+
+    def build_job_scheduler_factory(self, master_config):
+        output_stream_dir = master_config.output_stream_dir or self.working_dir
+        args = self.context, output_stream_dir, master_config.time_zone
+        return job.JobSchedulerFactory(*args)
 
     def update_state_watcher_config(self, state_config):
         """Update the StateChangeWatcher, and save all state if the state config
@@ -108,31 +110,7 @@ class MasterControlProgram(Observable):
             for service in self.services:
                 self.state_watcher.save_service(service)
 
-    def _ssh_options_from_config(self, ssh_conf):
-        ssh_options = ConchOptions()
-        if ssh_conf.agent:
-            if 'SSH_AUTH_SOCK' in os.environ:
-                ssh_options['agent'] = True
-            else:
-                raise ConfigError("No SSH Agent available ($SSH_AUTH_SOCK)")
-        else:
-            ssh_options['noagent'] = True
-
-        for file_name in ssh_conf.identities:
-            file_path = os.path.expanduser(file_name)
-            msg = None
-            if not os.path.exists(file_path):
-                msg = "Private key file '%s' doesn't exist" % file_name
-            if not os.path.exists(file_path + ".pub"):
-                msg = "Public key '%s' doesn't exist" % (file_name + ".pub")
-            if msg:
-                raise ConfigError(msg)
-
-            ssh_options.opt_identity(file_name)
-
-        return ssh_options
-
-    def _apply_notification_options(self, conf):
+    def apply_notification_options(self, conf):
         if not conf:
             return
 
@@ -142,6 +120,9 @@ class MasterControlProgram(Observable):
         email_sender = emailer.Emailer(conf.smtp_host, conf.notification_addr)
         self.crash_reporter = crash_reporter.CrashReporter(email_sender)
         self.crash_reporter.start()
+
+    def set_context_base(self, command_context):
+        self.context.base = command_context
 
     def get_job_collection(self):
         return self.jobs
