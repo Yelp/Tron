@@ -7,7 +7,6 @@ import logging
 import itertools
 import operator
 from tron import node, command_context, event
-from tron.core import actionrun
 from tron.core.actionrun import ActionRun, ActionRunFactory
 from tron.serialize import filehandler
 from tron.utils import timeutils, proxy
@@ -176,11 +175,8 @@ class JobRun(Observable, Observer):
         """
         started_actions = []
         for action_run in self.action_runs.get_startable_action_runs():
-            try:
-                action_run.start()
+            if action_run.start():
                 started_actions.append(action_run)
-            except actionrun.Error, e:
-                log.warning("Failed to start actions: %r", e)
 
         return started_actions
 

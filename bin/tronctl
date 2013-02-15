@@ -25,7 +25,7 @@ COMMAND_HELP = (
     ('disableall',      'Disable all jobs'),
     ('enableall',       'Enable all jobs'),
     ('fail',            'Mark an UNKNOWN job as having failed'),
-    ('succeed',         'Mark an UNKNOWN job as having succeeded'),
+    ('success',         'Mark an UNKNOWN job as having succeeded'),
     ('skip',            'Skip a failed action, runs dependent actions.'),
     ('stop',            'Stop the selected service'),
 )

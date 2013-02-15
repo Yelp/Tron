@@ -204,6 +204,9 @@ class JobScheduler(Observer):
         # Ensure we have at least 1 scheduled run
         self.schedule()
 
+    def get_job(self):
+        return self.job
+
     def enable(self):
         """Enable the job and start its scheduling cycle."""
         if self.job.enabled:

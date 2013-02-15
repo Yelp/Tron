@@ -8,7 +8,7 @@ import logging
 
 try:
     import simplejson as json
-    assert json # pyflakes
+    _silence_pyflakes = [json]
 except ImportError:
     import json
 
@@ -16,7 +16,6 @@ from twisted.web import http, resource
 
 from tron import event
 from tron.api import adapter, controller
-from tron.core import actionrun
 from tron.api import requestargs
 
 
@@ -48,12 +47,12 @@ def respond(request, response_dict, code=http.OK, headers=None):
     return ""
 
 
-def handle_command(request, api_controller, obj):
+def handle_command(request, api_controller, obj, **kwargs):
     """Handle a request to perform a command."""
     command = requestargs.get_string(request, 'command')
     log.info("Handling '%s' request on %s", command, obj)
     try:
-        response = api_controller.handle_command(command)
+        response = api_controller.handle_command(command, **kwargs)
     except controller.UnknownCommandError, e:
         log.warning("Unknown command %s for service %s", command, obj)
         response = {'error': str(e)}
@@ -66,120 +65,57 @@ class ActionRunResource(resource.Resource):
 
     isLeaf = True
 
-    def __init__(self, job_run, action_name):
+    def __init__(self, action_run, job_run):
         resource.Resource.__init__(self)
-        self._job_run           = job_run
-        self._action_name       = action_name
+        self.job_run    = job_run
+        self.action_run = action_run
+        self.controller = controller.ActionRunController(action_run, job_run)
 
     def render_GET(self, request):
         num_lines = requestargs.get_integer(request, 'num_lines')
         run_adapter = adapter.ActionRunAdapter(
-                self._job_run, self._action_name, num_lines)
+            self.action_run, self.job_run, num_lines)
         return respond(request, run_adapter.get_repr())
 
-    # TODO: controller
     def render_POST(self, request):
-        cmd = requestargs.get_string(request, 'command')
-        log.info("Handling '%s' request for action run %s.%s",
-                 cmd, self._job_run.id, self._action_name)
-
-        if cmd not in ('start', 'success', 'cancel', 'fail', 'skip'):
-            log.warning("Unknown request command %s", cmd)
-            return respond(request, None, code=http.NOT_IMPLEMENTED)
-
-        action_run = self._job_run.action_runs[self._action_name]
-
-        # An action can only be started if the job run has been started
-        if cmd == 'start' and self._job_run.is_scheduled:
-            resp = None
-        else:
-            try:
-                resp = getattr(action_run, cmd)()
-            except actionrun.Error:
-                resp = None
-
-        if not resp:
-            msg = "Failed to %s action run %s is in state %s." % (
-                    cmd, action_run, action_run.state)
-        else:
-            msg = "Action run now in state %s" % action_run.state.short_name
-        return respond(request, {'result': msg})
+        return handle_command(request, self.controller, self.action_run)
 
 
 class JobRunResource(resource.Resource):
 
-    def __init__(self, run, job_scheduler):
+    def __init__(self, job_run, job_scheduler):
         resource.Resource.__init__(self)
-        self._run = run
+        self.job_run       = job_run
         self.job_scheduler = job_scheduler
+        self.controller    = controller.JobRunController(job_run, job_scheduler)
 
-    def getChild(self, act_name, _):
-        if act_name == '':
+    def getChild(self, action_name, _):
+        if action_name == '':
             return self
-        if act_name == '_events':
-            return EventResource(self._run.id)
-        if act_name in self._run.action_runs:
-            return ActionRunResource(self._run, act_name)
+        if action_name == '_events':
+            return EventResource(self.job_run.id)
+        if action_name in self.job_run.action_runs:
+            action_run = self.job_run.action_runs[action_name]
+            return ActionRunResource(action_run, self.job_run)
 
-        return resource.NoResource("Cannot find action '%s' for job run '%s'" %
-                                   (act_name, self._run.id))
+        msg = "Cannot find action %s for %s"
+        return resource.NoResource(msg % (action_name, self.job_run))
 
     def render_GET(self, request):
-        run_adapter = adapter.JobRunAdapter(self._run, include_action_runs=True)
+        run_adapter = adapter.JobRunAdapter(self.job_run, include_action_runs=True)
         return respond(request, run_adapter.get_repr())
 
-    # TODO: controller
     def render_POST(self, request):
-        cmd = requestargs.get_string(request, 'command')
-        log.info("Handling '%s' request for job run %s", cmd, self._run.id)
-
-        if cmd not in ['start', 'restart', 'success', 'fail', 'cancel']:
-            log.warning("Unknown request command %s", cmd)
-            return respond(request, None, code=http.NOT_IMPLEMENTED)
-
-        getattr(self, '_%s' % cmd)()
-        return respond(request, {'result': "Job run now in state %s" %
-                                 self._run.state.short_name})
-
-    def _restart(self):
-        log.info("Resetting all action runs to scheduled state")
-        self.job_scheduler.manual_start(self._run.run_time)
-
-    def _start(self):
-        if self._run.start():
-            log.info("Starting job run %s", self._run.id)
-        else:
-            log.warning("Failed to start job run %s" % self._run)
-
-    def _success(self):
-        if self._run.success():
-            log.info("Marking job run %s for success", self._run.id)
-        else:
-            log.warning("Request to mark job run %s succeed when it has"
-                        " already", self._run.id)
-
-    def _cancel(self):
-        if self._run.cancel():
-            log.info("Cancelling job %s", self._run.id)
-            self._run.cancel()
-        else:
-            log.warning("Request to cancel job run %s when it's already"
-                        " cancelled", self._run.id)
-
-    def _fail(self):
-        if self._run.fail():
-            log.info("Marking job run %s as failed", self._run.id)
-        else:
-            log.warning("Request to fail job run %s when it's already running"
-                        " or done", self._run.id)
+        return handle_command(request, self.controller, self.job_run)
 
 
 class JobResource(resource.Resource):
     """A resource that describes a particular job"""
 
     def __init__(self, job_scheduler):
-        self.job_scheduler = job_scheduler
         resource.Resource.__init__(self)
+        self.job_scheduler = job_scheduler
+        self.controller    = controller.JobController(job_scheduler)
 
     def getChild(self, run_id, _):
         job = self.job_scheduler.job
@@ -207,29 +143,10 @@ class JobResource(resource.Resource):
                 self.job_scheduler.job, True, include_action_runs)
         return respond(request, job_adapter.get_repr())
 
-    # TODO: controller
     def render_POST(self, request):
-        cmd = requestargs.get_string(request, 'command')
-        log.info("Handling '%s' request for job run %s",
-                cmd, self.job_scheduler.job.name)
-
-        if cmd == 'enable':
-            self.job_scheduler.enable()
-            msg = "Job %s is enabled" % self.job_scheduler.job.name
-
-        elif cmd == 'disable':
-            self.job_scheduler.disable()
-            msg = "Job %s is disabled" % self.job_scheduler.job.name
-
-        elif cmd == 'start':
-            run_time = requestargs.get_datetime(request, 'run_time')
-            runs = self.job_scheduler.manual_start(run_time=run_time)
-            msg = "New Job Runs %s created" % ",".join([r.id for r in runs])
-
-        else:
-            return respond(request, None, code=http.NOT_IMPLEMENTED)
-
-        return respond(request, {'result': msg})
+        run_time = requestargs.get_datetime(request, 'run_time')
+        return handle_command(request, self.controller, self.job_scheduler,
+            run_time=run_time)
 
 
 class JobCollectionResource(resource.Resource):
@@ -380,9 +297,8 @@ class EventResource(resource.Resource):
         self.entity_name = entity_name
 
     def render_GET(self, request):
-        recorder        = event.get_recorder(self.entity_name)
-        adapt_class     = adapter.EventAdapter
-        response_data   = [adapt_class(e).get_repr() for e in recorder.list()]
+        recorder      = event.get_recorder(self.entity_name)
+        response_data = adapter.adapt_many(adapter.EventAdapter, recorder.list())
         return respond(request, dict(data=response_data))
 
 

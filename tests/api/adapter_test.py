@@ -69,8 +69,8 @@ class ActionRunAdapterTestCase(TestCase):
     def setup_adapter(self):
         self.temp_dir = tempfile.mkdtemp()
         self.action_run = Turtle(output_path=[self.temp_dir])
-        self.original = Turtle(action_runs={'action_name': self.action_run})
-        self.adapter = ActionRunAdapter(self.original, 'action_name', 4)
+        self.job_run = Turtle(action_runs={'action_name': self.action_run})
+        self.adapter = ActionRunAdapter(self.action_run, self.job_run, 4)
 
     @teardown
     def teardown_adapter(self):
@@ -78,18 +78,17 @@ class ActionRunAdapterTestCase(TestCase):
 
     def test__init__(self):
         assert_equal(self.adapter.max_lines, 4)
-        assert_equal(self.adapter.job_run, self.original)
+        assert_equal(self.adapter.job_run, self.job_run)
         assert_equal(self.adapter._obj, self.action_run)
-        expected_path = "/".join(self.action_run.output_path)
-        assert_equal(self.adapter.serializer.base_path, expected_path)
 
 
 class JobRunAdapterTestCase(TestCase):
 
     @setup
     def setup_adapter(self):
-        action_runs = mocks.MockActionRunCollection(names=['one', 'two'])
-        self.job_run = Turtle(
+        action_runs = mock.MagicMock()
+        action_runs.__iter__.return_value = iter([mock.Mock(), mock.Mock()])
+        self.job_run = mock.Mock(
                 action_runs=action_runs, action_graph=mocks.MockActionGraph())
         self.adapter = JobRunAdapter(self.job_run, include_action_runs=True)
 
@@ -97,8 +96,8 @@ class JobRunAdapterTestCase(TestCase):
         assert self.adapter.include_action_runs
 
     def test_get_runs(self):
-        runs = self.adapter.get_runs()
-        assert_length(runs, 2)
+        with mock.patch('tron.api.adapter.ActionRunAdapter'):
+            assert_length(self.adapter.get_runs(), 2)
 
     def test_get_runs_without_action_runs(self):
         self.adapter.include_action_runs = False
