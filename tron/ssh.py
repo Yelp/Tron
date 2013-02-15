@@ -1,5 +1,3 @@
-import os
-import pwd
 import struct
 import logging
 
@@ -23,23 +21,12 @@ class ChannelClosedEarlyError(Error):
     pass
 
 
-# We need to sub-class and redefine the AuthClient here because there is no way
-# with the default client to force it to not try certain authentication
-# methods. If things get much worse I'll just have to make our own custom
-# version of the default module.
 class NoPasswordAuthClient(default.SSHUserAuthClient):
-    def tryAuth(self, kind):
-        kind = kind.replace('-', '_')
-        if kind != 'publickey':
-            log.info('skipping auth method %s (not supported)' % kind)
-            return
+    """Only support passwordless auth."""
+    preferredOrder              = ['publickey']
+    auth_password               = None
+    auth_keyboard_interactive   = None
 
-        log.info('trying to auth with %s!' % kind)
-        f = getattr(self, 'auth_%s' % kind, None)
-        if f:
-            return f()
-        else:
-            return
 
 
 class ClientTransport(transport.SSHClientTransport):
@@ -55,17 +42,15 @@ class ClientTransport(transport.SSHClientTransport):
         self.options = kwargs['options']
 
     def verifyHostKey(self, pubKey, fingerprint):
+        # TODO: this should verify
         return defer.succeed(1)
 
     def connectionSecure(self):
         conn = ClientConnection()
         conn.service_defer = defer.Deferred()
-
         self.connection_defer.callback(conn)
 
-        auth_service = NoPasswordAuthClient(pwd.getpwuid(os.getuid())[0],
-                                            self.options, conn)
-
+        auth_service = NoPasswordAuthClient(self.username, self.options, conn)
         self.requestService(auth_service)
 
 
@@ -95,6 +80,18 @@ class ClientConnection(connection.SSHConnection):
             channel.openFailed(None)
 
         connection.SSHConnection.channelClosed(self, channel)
+
+    def ssh_CHANNEL_CLOSE(self, packet):
+        """The other side is closing its end.
+            Payload:
+                uint32  local channel number
+
+        We've noticed many occasions when this is called but `local_channel`
+        does not exist in self.channels.
+        """
+        local_channel = struct.unpack('>L', packet[:4])[0]
+        if local_channel in self.channels:
+            return connection.SSHConnection.ssh_CHANNEL_CLOSE(self, packet)
 
 
 class ExecChannel(channel.SSHChannel):

@@ -12,6 +12,8 @@ What's New
 * `trond` now expects a configuration directory. Use 
   `tools/migration/migrate_config_0.5.1_to_0.5.2.py` to convert your existing
   config to the new format.
+* Patched an issue with SSH connections that caused an exception on
+  channel close
 
 0.5.1
 -----
