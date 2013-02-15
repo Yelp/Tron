@@ -81,6 +81,18 @@ class ClientConnection(connection.SSHConnection):
 
         connection.SSHConnection.channelClosed(self, channel)
 
+    def ssh_CHANNEL_CLOSE(self, packet):
+        """The other side is closing its end.
+            Payload:
+                uint32  local channel number
+
+        We've noticed many occasions when this is called but `local_channel`
+        does not exist in self.channels.
+        """
+        local_channel = struct.unpack('>L', packet[:4])[0]
+        if local_channel in self.channels:
+            return connection.SSHConnection.ssh_CHANNEL_CLOSE(self, packet)
+
 
 class ExecChannel(channel.SSHChannel):
 
