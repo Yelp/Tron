@@ -59,14 +59,6 @@ class ResultError(Error):
     pass
 
 
-class RunState(object):
-    def __init__(self, run):
-        self.run = run
-        self.state = RUN_STATE_CONNECTING
-        self.deferred = defer.Deferred()
-        self.channel = None
-
-
 class NodePoolRepository(object):
     """A Singleton to store Node and NodePool objects."""
 
@@ -189,6 +181,20 @@ def get_public_key_for_hostname(known_hosts, hostname):
     # TODO: warn in missing keys
 
 
+def determine_fudge_factor(count, min_count=4):
+    """Return a random number. """
+    fudge_factor = max(0.0, count - min_count)
+    return random.random() * float(fudge_factor)
+
+
+class RunState(object):
+    def __init__(self, action_run):
+        self.run = action_run
+        self.state = RUN_STATE_CONNECTING
+        self.deferred = defer.Deferred()
+        self.channel = None
+
+
 class Node(object):
     """A node is tron's interface to communicating with an actual machine.
     """
@@ -252,17 +258,6 @@ class Node(object):
 
         return cmp(self.hostname, other.hostname)
 
-    def _determine_fudge_factor(self):
-        """We want to introduce some amount of delay to node exec commands
-
-        We see issues where a service may have many instances, and they all
-        start at once, and their monitor steps are blocked for ever. This
-        is bad.
-        """
-        outstanding_runs = len(self.run_states)
-        fudge_factor = max(0.0, outstanding_runs - 4)
-        return random.random() * float(fudge_factor)
-
     # TODO: Test
     def submit_command(self, command):
         """Submit an ActionCommand to be run on this node. Optionally provide
@@ -293,15 +288,14 @@ class Node(object):
         if self.idle_timer.active():
             self.idle_timer.cancel()
 
-        fudge_factor = self._determine_fudge_factor()
-
         self.run_states[run.id] = RunState(run)
 
+        # TODO: have this return a runner instead of number
+        fudge_factor = determine_fudge_factor(len(self.run_states))
         if fudge_factor == 0.0:
             self._do_run(run)
         else:
-            log.info("Delaying execution of %s for %.2f secs",
-                     run.id, fudge_factor)
+            log.info("Delaying execution of %s for %.2f secs", run.id, fudge_factor)
             eventloop.call_later(fudge_factor, self._do_run, run)
 
         # We return the deferred here, but really we're trying to keep the rest
@@ -322,6 +316,7 @@ class Node(object):
             self._open_channel(run)
 
     def _cleanup(self, run):
+        # TODO: why set to None before deleting it?
         self.run_states[run.id].channel = None
         del self.run_states[run.id]
 
