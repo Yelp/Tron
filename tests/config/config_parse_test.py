@@ -161,6 +161,7 @@ services:
             ssh_options=schema.ConfigSSHOptions(
                 agent=False,
                 identities=('tests/test_id_rsa',),
+                known_hosts_file=None,
             ),
             notification_options=None,
             time_zone=pytz.timezone("EST"),

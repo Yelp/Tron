@@ -1,10 +1,12 @@
 import logging
 import itertools
 import random
+from twisted.conch.client.knownhosts import KnownHostsFile
 
 from twisted.conch.client.options import ConchOptions
 from twisted.internet import protocol, defer, reactor
 from twisted.python import failure
+from twisted.python.filepath import FilePath
 
 from tron import ssh, eventloop
 from tron.utils import twistedutils, collections
@@ -12,6 +14,8 @@ from tron.utils import twistedutils, collections
 
 log = logging.getLogger(__name__)
 
+
+# TODO: make these configurable
 # We should also only wait a certain amount of time for a connection to be
 # established.
 CONNECT_TIMEOUT = 30
@@ -89,10 +93,12 @@ class NodePoolRepository(object):
     def update_from_config(cls, node_configs, node_pool_configs, ssh_config):
         instance = cls.get_instance()
         ssh_options = build_ssh_options_from_config(ssh_config)
+        known_hosts = get_known_hosts(ssh_config.known_hosts_file)
         instance.filter_by_name(node_configs, node_pool_configs)
 
         for config in node_configs.itervalues():
-            instance.add_node(Node.from_config(config, ssh_options))
+            pub_key = get_public_key_for_hostname(known_hosts, config.hostname)
+            instance.add_node(Node.from_config(config, ssh_options, pub_key))
 
         for config in node_pool_configs.itervalues():
             nodes = instance._get_nodes_by_name(config.nodes)
@@ -100,7 +106,7 @@ class NodePoolRepository(object):
             instance.pools.add(pool, instance.pools.remove)
 
     def add_node(self, node):
-        self.nodes.add(node, self.nodes.__delitem__)
+        self.nodes.add(node, self.nodes.remove)
         self.pools.add(NodePool.from_node(node), self.pools.remove)
 
     def get_node(self, node_name, default=None):
@@ -166,13 +172,28 @@ class NodePool(object):
         return "NodePool:%s" % self.name
 
 
+# TODO: cleanup
+def get_known_hosts(file_path):
+    if not file_path:
+        return
+
+    return KnownHostsFile.fromPath(FilePath(file_path))
+
+
+def get_public_key_for_hostname(known_hosts, hostname):
+    if not known_hosts:
+        return
+    for entry in known_hosts._entries:
+        if entry.matchesHost(hostname):
+            return entry.publicKey
+    # TODO: warn in missing keys
+
+
 class Node(object):
     """A node is tron's interface to communicating with an actual machine.
-    This class also supports the NodePool interface and can be used
-    directly as a NodePool of 1 Node.
     """
 
-    def __init__(self, hostname, ssh_options, username=None, name=None):
+    def __init__(self, hostname, ssh_options, username=None, name=None, pub_key=None):
 
         # Host we are to connect to
         self.hostname = hostname
@@ -198,14 +219,16 @@ class Node(object):
 
         self.idle_timer = eventloop.NullCallback
         self.disabled = False
+        self.pub_key = pub_key
 
     @classmethod
-    def from_config(cls, node_config, ssh_options):
+    def from_config(cls, node_config, ssh_options, pub_key):
         return cls(
             node_config.hostname,
             ssh_options,
             username=node_config.username,
-            name=node_config.name)
+            name=node_config.name,
+            pub_key=pub_key)
 
     def get_name(self):
         return self.name
@@ -218,8 +241,10 @@ class Node(object):
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
-        return (self.hostname == other.hostname and self.name == other.name and
-                self.conch_options == other.conch_options)
+        return (self.hostname == other.hostname and
+                self.name == other.name and
+                self.conch_options == other.conch_options and
+                self.pub_key == other.pub_key)
 
     def __cmp__(self, other):
         if not isinstance(other, self.__class__):
@@ -393,9 +418,8 @@ class Node(object):
         #  2. Our transport is secure, and we can create our connection
         #  3. The connection service is started, so we can use it
 
-        client_creator = protocol.ClientCreator(reactor, ssh.ClientTransport,
-                                                username=self.username,
-                                                options=self.conch_options)
+        client_creator = protocol.ClientCreator(reactor,
+            ssh.ClientTransport, self.username, self.conch_options, self.pub_key)
         create_defer = client_creator.connectTCP(self.hostname, 22)
 
         # We're going to create a deferred, returned to the caller, that will
@@ -525,8 +549,8 @@ class Node(object):
 
 def build_ssh_options_from_config(ssh_options_config):
     ssh_options = ConchOptions()
-    ssh_options['agent']    = ssh_options_config.agent
-    ssh_options['noagent']  = not ssh_options_config.agent
+    ssh_options['agent']        = ssh_options_config.agent
+    ssh_options['noagent']      = not ssh_options_config.agent
 
     for file_name in ssh_options_config.identities:
         ssh_options.opt_identity(file_name)

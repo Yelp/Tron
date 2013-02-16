@@ -3,11 +3,11 @@ from testify import setup, TestCase, assert_equal, run
 from testify import assert_in, assert_raises, assert_lt
 from testify.assertions import assert_not_in
 from testify.test_case import teardown
-from testify.utils import turtle
 
 from twisted.conch.client.options import ConchOptions
 from tron import node
 from tron.core import actionrun
+from tron.serialize import filehandler
 
 
 def create_mock_node(name=None):
@@ -80,29 +80,27 @@ class NodeTestCase(TestCase):
 
     @setup
     def setup_node(self):
-        self.ssh_options = turtle.Turtle()
+        self.ssh_options = mock.create_autospec(ConchOptions)
         self.node = node.Node('localhost', self.ssh_options, username='theuser', name='thename')
 
     def test_output_logging(self):
-        nod = node.Node('localhost', turtle.Turtle(), username='theuser')
-
-        fh = turtle.Turtle()
-        serializer = turtle.Turtle(open=lambda fn: fh)
+        nod = node.Node('localhost', mock.Mock(), username='theuser')
+        serializer = mock.create_autospec(filehandler.FileHandleManager)
         action_cmd = actionrun.ActionCommand("test", "false", serializer)
 
         nod.connection = self.TestConnection()
-        nod.run_states = {action_cmd.id: turtle.Turtle(state=0)}
+        nod.run_states = {action_cmd.id: mock.Mock(state=0)}
         nod.run_states[action_cmd.id].state = node.RUN_STATE_CONNECTING
 
         nod._open_channel(action_cmd)
         assert nod.connection.chan is not None
         nod.connection.chan.dataReceived("test")
-        assert_equal(fh.write.calls, [(("test",), {})])
+        serializer.open.return_value.write.assert_called_with('test')
 
     def test_from_config(self):
-        node_config = turtle.Turtle(hostname='localhost', username='theuser', name='thename')
-        ssh_options = turtle.Turtle()
-        new_node = node.Node.from_config(node_config, ssh_options)
+        node_config = mock.Mock(hostname='localhost', username='theuser', name='thename')
+        self.ssh_options.__getitem__.return_value = 'something'
+        new_node = node.Node.from_config(node_config, self.ssh_options)
         assert_equal(new_node.name, node_config.name)
         assert_equal(new_node.hostname, node_config.hostname)
         assert_equal(new_node.username, node_config.username)

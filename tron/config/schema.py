@@ -58,10 +58,7 @@ NotificationOptions = config_object_factory(
 
 ConfigSSHOptions = config_object_factory(
     'ConfigSSHOptions',
-    optional=[
-        'agent',                # bool
-        'identities',           # list of str
-    ])
+    optional=['agent', 'identities', 'known_hosts_file'])
 
 
 ConfigNode = config_object_factory('ConfigNode', ['hostname'], ['name', 'username'])

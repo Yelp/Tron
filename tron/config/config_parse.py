@@ -229,13 +229,16 @@ class ValidateSSHOptions(Validator):
     optional =                  True
     defaults = {
         'agent':                False,
-        'identities':           ()
+        'identities':           (),
+        'known_hosts_file':     None,
     }
 
     validators = {
         'agent':                valid_bool,
         'identities':           build_list_of_type_validator(
                                     valid_identity_file, allow_empty=True),
+        # TODO: validate file existence, and contents
+        'known_hosts_file':     valid_string
     }
 
     def post_validation(self, valid_input, config_context):

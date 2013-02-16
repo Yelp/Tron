@@ -2,7 +2,7 @@ import struct
 import logging
 
 from twisted.internet import defer
-from twisted.conch.ssh import channel, common
+from twisted.conch.ssh import channel, common, keys
 from twisted.conch.ssh import connection
 from twisted.conch.ssh import transport
 from twisted.conch.client import default
@@ -28,22 +28,26 @@ class NoPasswordAuthClient(default.SSHUserAuthClient):
     auth_keyboard_interactive   = None
 
 
-
 class ClientTransport(transport.SSHClientTransport):
 
     connection_defer = None
 
-    def __init__(self, *args, **kwargs):
-        # These silly twisted classes tend not to have init functions, and
-        # they're all old style classes
-        # transport.SSHClientTransport.__init__(self, *args, **kwargs)
+    def __init__(self, username, options, expected_pub_key):
+        self.username         = username
+        self.options          = options
+        self.expected_pub_key = expected_pub_key
 
-        self.username = kwargs['username']
-        self.options = kwargs['options']
+    # TODO: test
+    def verifyHostKey(self, public_key, fingerprint):
+        if not self.expected_pub_key:
+            return defer.succeed(1)
 
-    def verifyHostKey(self, pubKey, fingerprint):
-        # TODO: this should verify
-        return defer.succeed(1)
+        if self.expected_pub_key == keys.Key.fromString(public_key):
+            return defer.succeed(1)
+
+        msg = "Public key mismatch got %s expected %s"
+        log.error(msg, fingerprint, self.expected_pub_key.fingerprint())
+        return defer.fail(ValueError("public key mismatch"))
 
     def connectionSecure(self):
         conn = ClientConnection()
