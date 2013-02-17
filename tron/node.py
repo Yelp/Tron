@@ -85,11 +85,11 @@ class NodePoolRepository(object):
     def update_from_config(cls, node_configs, node_pool_configs, ssh_config):
         instance = cls.get_instance()
         ssh_options = build_ssh_options_from_config(ssh_config)
-        known_hosts = get_known_hosts(ssh_config.known_hosts_file)
+        known_hosts = KnownHosts.from_path(ssh_config.known_hosts_file)
         instance.filter_by_name(node_configs, node_pool_configs)
 
         for config in node_configs.itervalues():
-            pub_key = get_public_key_for_hostname(known_hosts, config.hostname)
+            pub_key = known_hosts.get_public_key(config.hostname)
             instance.add_node(Node.from_config(config, ssh_options, pub_key))
 
         for config in node_pool_configs.itervalues():
@@ -164,21 +164,20 @@ class NodePool(object):
         return "NodePool:%s" % self.name
 
 
-# TODO: cleanup
-def get_known_hosts(file_path):
-    if not file_path:
-        return
+class KnownHosts(KnownHostsFile):
+    """Lookup host key for a hostname."""
 
-    return KnownHostsFile.fromPath(FilePath(file_path))
+    @classmethod
+    def from_path(cls, file_path):
+        if not file_path:
+            return cls(None)
+        return cls.fromPath(FilePath(file_path))
 
-
-def get_public_key_for_hostname(known_hosts, hostname):
-    if not known_hosts:
-        return
-    for entry in known_hosts._entries:
-        if entry.matchesHost(hostname):
-            return entry.publicKey
-    # TODO: warn in missing keys
+    def get_public_key(self, hostname):
+        for entry in self._entries:
+            if entry.matchesHost(hostname):
+                return entry.publicKey
+        log.warn("Missing host key for: %s", hostname)
 
 
 def determine_fudge_factor(count, min_count=4):
