@@ -107,7 +107,7 @@ def build_format_string_validator(context_object):
         try:
             value % context
             return value
-        except KeyError:
+        except (KeyError, ValueError):
             error_msg = "Invalid template string at %s: %s"
             raise ConfigError(error_msg % (config_context.path, value))
 
