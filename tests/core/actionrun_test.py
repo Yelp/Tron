@@ -14,7 +14,6 @@ from tron import node
 from tron.core import jobrun, actiongraph
 from tron.core.actionrun import ActionCommand, ActionRun
 from tron.core.actionrun import ActionRunCollection, ActionRunFactory
-from tron.core.actionrun import InvalidStartStateError
 from tron.serialize import filehandler
 from tron.utils import timeutils
 
@@ -137,12 +136,12 @@ class ActionRunTestCase(TestCase):
 
     def test_start_bad_state(self):
         self.action_run.fail()
-        assert_raises(InvalidStartStateError, self.action_run.start)
+        assert not self.action_run.start()
 
     def test_start_invalid_command(self):
         self.action_run.bare_command = "%(notfound)s"
         self.action_run.machine.transition('ready')
-        assert self.action_run.start()
+        assert not self.action_run.start()
         assert self.action_run.is_failed
         assert_equal(self.action_run.exit_status, -1)
 
@@ -151,7 +150,7 @@ class ActionRunTestCase(TestCase):
             raise node.Error("The error")
         self.action_run.node = turtle.Turtle(submit_command=raise_error)
         self.action_run.machine.transition('ready')
-        assert self.action_run.start()
+        assert not self.action_run.start()
         assert_equal(self.action_run.exit_status, -2)
         assert self.action_run.is_failed
 

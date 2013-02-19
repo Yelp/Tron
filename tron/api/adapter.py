@@ -41,6 +41,7 @@ class ReprAdapter(object):
 def adapt_many(adapter_class, seq, *args):
     return [adapter_class(item, *args).get_repr() for item in seq]
 
+
 class RunAdapter(ReprAdapter):
     """Base class for JobRun and ActionRun adapters."""
 
@@ -80,13 +81,10 @@ class ActionRunAdapter(RunAdapter):
             'duration'
     ]
 
-    def __init__(self, job_run, action_name, max_lines=10):
-        action_run = job_run.action_runs[action_name]
+    def __init__(self, action_run, job_run, max_lines=10):
         super(ActionRunAdapter, self).__init__(action_run)
         self.job_run            = job_run
         self.max_lines          = max_lines
-        self.serializer         = filehandler.OutputStreamSerializer(
-                                    action_run.output_path)
 
     def get_raw_command(self):
         return self._obj.bare_command
@@ -99,13 +97,16 @@ class ActionRunAdapter(RunAdapter):
         required = self.job_run.action_graph.get_required_actions(action_name)
         return [act.name for act in required]
 
+    def _get_serializer(self):
+        return filehandler.OutputStreamSerializer(self._obj.output_path)
+
     def get_stdout(self):
         filename = actioncommand.ActionCommand.STDOUT
-        return self.serializer.tail(filename, self.max_lines)
+        return self._get_serializer().tail(filename, self.max_lines)
 
     def get_stderr(self):
         filename = actioncommand.ActionCommand.STDERR
-        return self.serializer.tail(filename, self.max_lines)
+        return self._get_serializer().tail(filename, self.max_lines)
 
 
 class JobRunAdapter(RunAdapter):
@@ -123,12 +124,10 @@ class JobRunAdapter(RunAdapter):
 
     def get_runs(self):
         if not self.include_action_runs:
-            return
+            return None
 
-        return [
-            ActionRunAdapter(self._obj, action_name).get_repr()
-            for action_name in self._obj.action_runs.names
-        ]
+        return adapt_many(ActionRunAdapter, self._obj.action_runs, self._obj)
+
 
 class JobAdapter(ReprAdapter):
 
