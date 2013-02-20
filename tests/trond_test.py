@@ -339,3 +339,39 @@ class TrondTestCase(sandbox.SandboxTestCase):
         def wait_on_service_stop():
             return client.service(service_url)['state'] == 'DOWN'
         sandbox.wait_on_sandbox(wait_on_service_stop)
+
+    def test_job_queueing_false_with_overlap(self):
+        """Test that a job that has queueing false properly cancels an
+        overlapping job run.
+        """
+        config = BASIC_CONFIG + dedent("""
+            jobs:
+                -   name: "cancel_overlap"
+                    schedule: "interval 1s"
+                    queueing: False
+                    node: local
+                    actions:
+                        -   name: "do_something"
+                            command: "sleep 3s"
+                        -   name: "do_other"
+                            command: "sleep 3s"
+                    cleanup_action:
+                        command: "echo done"
+        """)
+        client = self.sandbox.client
+        self.sandbox.save_config(config)
+        self.sandbox.trond()
+        job_run = client.get_url('MASTER.cancel_overlap')
+        job_run_url = client.get_url('MASTER.cancel_overlap.1')
+
+        def wait_on_job_schedule():
+            return len(client.job(job_run)['runs']) == 2
+        sandbox.wait_on_sandbox(wait_on_job_schedule)
+
+        def wait_on_job_cancel():
+            return client.job(job_run_url)['state'] == 'CANC'
+        sandbox.wait_on_sandbox(wait_on_job_cancel)
+
+        action_run_states = [action_run['state'] for action_run in
+                             client.job(job_run_url)['runs']]
+        assert_equal(action_run_states, ['CANC'] * len(action_run_states))
