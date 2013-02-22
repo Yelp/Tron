@@ -148,7 +148,7 @@ class EventManager(object):
     the name of the entity name.
     """
 
-    _instance               = None
+    _instance = None
 
     def __init__(self):
         if self._instance is not None:

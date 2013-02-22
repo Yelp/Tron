@@ -13,7 +13,8 @@ def do_main_program():
 
 
 if __name__ == "__main__":
-    pidfile = pidfile=PIDFile(sys.argv[1] or '/tmp/mock_daemon.pid')
+    filename = sys.argv[1] if len(sys.argv) > 1 else None
+    pidfile = pidfile=PIDFile(filename or '/tmp/mock_daemon.pid')
     with daemon.DaemonContext(
             pidfile=pidfile,
             files_preserve=[pidfile.lock.file]):
