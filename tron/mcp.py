@@ -10,21 +10,13 @@ from tron import crash_reporter
 from tron import node
 from tron.config import manager
 from tron.config.config_parse import ConfigError
-from tron.core import service
-from tron.core.job import Job, JobScheduler
-from tron.scheduler import scheduler_from_config
-from tron.serialize import filehandler
+from tron.core import service, job
 from tron.serialize.runstate import statemanager
 from tron.utils import emailer
 from tron.utils.observer import Observable
 
 
 log = logging.getLogger(__name__)
-
-
-class ConfigApplyError(Exception):
-    """Errors during config application"""
-    pass
 
 
 class MasterControlProgram(Observable):
@@ -35,7 +27,7 @@ class MasterControlProgram(Observable):
 
     def __init__(self, working_dir, config_path):
         super(MasterControlProgram, self).__init__()
-        self.jobs               = {}
+        self.jobs               = job.JobCollection()
         self.services           = service.ServiceCollection()
         self.output_stream_dir  = None
         self.working_dir        = working_dir
@@ -49,22 +41,12 @@ class MasterControlProgram(Observable):
         self.event_recorder.ok('started')
         self.state_watcher      = statemanager.StateChangeWatcher()
 
-    def get_config_manager(self):
-        return self.config
-
     def shutdown(self):
         self.state_watcher.shutdown()
 
     def graceful_shutdown(self):
-        """Tell JobSchedulers that a shutdown has been requested."""
-        for job_sched in self.jobs.itervalues():
-            job_sched.shutdown_requested = True
-
-    def jobs_shutdown(self):
-        """Return True if all jobs have finished their runs after
-        shutdown was requested.
-        """
-        return all(job.is_shutdown for job in self.jobs.itervalues())
+        """Inform JobCollection that a shutdown has been requested."""
+        self.jobs.request_shutdown()
 
     def reconfigure(self):
         """Reconfigure MCP while Tron is already running."""
@@ -89,7 +71,7 @@ class MasterControlProgram(Observable):
         self.restore_state()
         # Any job with existing state would have been scheduled already. Jobs
         # without any state will be scheduled here.
-        self.schedule_jobs()
+        self.jobs.schedule()
 
     def apply_config(self, config_container, reconfigure=False):
         """Apply a configuration."""
@@ -104,19 +86,25 @@ class MasterControlProgram(Observable):
             master_config.nodes, master_config.node_pools, ssh_options)
         self._apply_notification_options(master_config.notification_options)
 
-        self._apply_jobs(config_container.get_jobs(), reconfigure=reconfigure)
-        services = config_container.get_services()
-        services = self.services.load_from_config(services, self.context)
-        self.state_watcher.watch_all(
-            services, service.Service.NOTIFY_STATE_CHANGE)
+        args = self.context, self.output_stream_dir, self.time_zone
+        factory = job.JobSchedulerFactory(*args)
+        self.apply_collection_config(config_container.get_jobs(),
+            self.jobs, job.Job.NOTIFY_STATE_CHANGE, factory, reconfigure)
+
+        self.apply_collection_config(config_container.get_services(),
+            self.services, service.Service.NOTIFY_STATE_CHANGE, self.context)
+
+    def apply_collection_config(self, config, collection, notify_type, *args):
+        items = collection.load_from_config(config, *args)
+        self.state_watcher.watch_all(items, notify_type)
 
     def update_state_watcher_config(self, state_config):
         """Update the StateChangeWatcher, and save all state if the state config
         changed.
         """
         if self.state_watcher.update_from_config(state_config):
-            for job_sched in self.jobs.itervalues():
-                self.state_watcher.save_job(job_sched.job)
+            for job_scheduler in self.jobs:
+                self.state_watcher.save_job(job_scheduler.get_job())
             for service in self.services:
                 self.state_watcher.save_service(service)
 
@@ -144,15 +132,6 @@ class MasterControlProgram(Observable):
 
         return ssh_options
 
-    def _apply_jobs(self, job_configs, reconfigure=False):
-        """Add and remove jobs based on the configuration."""
-        for job_config in job_configs.itervalues():
-            self.add_job(job_config, reconfigure=reconfigure)
-
-        for job_name in (set(self.jobs.keys()) - set(job_configs.keys())):
-            log.debug("Removing job %s", job_name)
-            self.remove_job(job_name)
-
     def _apply_notification_options(self, conf):
         if not conf:
             return
@@ -164,67 +143,24 @@ class MasterControlProgram(Observable):
         self.crash_reporter = crash_reporter.CrashReporter(email_sender)
         self.crash_reporter.start()
 
-    def add_job(self, job_config, reconfigure=False):
-        log.debug("Building new job %s", job_config.name)
-        output_path = filehandler.OutputPath(self.output_stream_dir)
-        scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
-        job = Job.from_config(job_config, scheduler, self.context, output_path)
-
-        if job.name in self.jobs:
-            # Jobs have a complex eq implementation that allows us to catch
-            # jobs that have not changed and thus don't need to be updated
-            # during a reconfigure
-            if job == self.jobs[job.name].job:
-                return
-
-            log.info("Updating job %s", job.name)
-            self.jobs[job.name].job.update_from_job(job)
-            self.jobs[job.name].schedule_reconfigured()
-            return
-
-        log.info("Adding new job %s", job.name)
-        self.jobs[job.name] = JobScheduler(job)
-        self.state_watcher.watch(job, Job.NOTIFY_STATE_CHANGE)
-
-        # If this is not a reconfigure, wait for state to be restored before
-        # scheduling job runs.
-        if reconfigure:
-            self.jobs[job.name].schedule()
-
-    def remove_job(self, job_name):
-        if job_name not in self.jobs:
-            raise ValueError("Job %s unknown", job_name)
-
-        job_scheduler = self.jobs.pop(job_name)
-        job_scheduler.disable()
-
-    def schedule_jobs(self):
-        for job_scheduler in self.jobs.itervalues():
-            job_scheduler.schedule()
-
-    def get_jobs(self):
-        return self.jobs.itervalues()
+    def get_job_collection(self):
+        return self.jobs
 
     def get_service_collection(self):
         return self.services
 
-    def get_job_by_name(self, name):
-        return self.jobs.get(name)
+    def get_config_manager(self):
+        return self.config
 
     def restore_state(self):
         """Use the state manager to retrieve to persisted state and apply it
         to the configured Jobs and Services.
         """
         self.event_recorder.notice('restoring')
-        job_names     = [job_sched.job.name for job_sched in self.jobs.values()]
-        service_names = [service.name for service in self.services]
         job_states, service_states = self.state_watcher.restore(
-                job_names, service_names)
+                self.jobs.get_names(), self.services.get_names())
 
-        for name, job_state_data in job_states.iteritems():
-            self.jobs[name].restore_job_state(job_state_data)
-        log.info("Loaded state for %d jobs", len(job_states))
-
+        self.jobs.restore_state(job_states)
         self.services.restore_state(service_states)
         self.state_watcher.save_metadata()
 

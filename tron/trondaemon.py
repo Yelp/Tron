@@ -219,7 +219,7 @@ class TronDaemon(object):
         self._wait_for_jobs()
 
     def _wait_for_jobs(self):
-        if self.mcp.jobs_shutdown():
+        if self.mcp.jobs.is_shutdown:
             self._handle_shutdown(None, None)
             return
 

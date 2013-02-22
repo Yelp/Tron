@@ -16,28 +16,19 @@ class UnknownCommandError(Exception):
 
 class JobCollectionController(object):
 
-    # TODO: Use a JobCollection
-    def __init__(self, mcp):
-        self.mcp = mcp
+    def __init__(self, job_collection):
+        self.job_collection = job_collection
 
     def handle_command(self, command):
         if command == 'disableall':
-            self.disable_all()
+            self.job_collection.disable()
             return "Disabled all jobs."
 
         if command == 'enableall':
-            self.enable_all()
+            self.job_collection.enable()
             return "Enabled all jobs."
 
         raise UnknownCommandError("Unknown command %s" % command)
-
-    def disable_all(self):
-        for job_scheduler in self.mcp.get_jobs():
-            job_scheduler.disable()
-
-    def enable_all(self):
-        for job_scheduler in self.mcp.get_jobs():
-            job_scheduler.enable()
 
 
 class ActionRunController(object):

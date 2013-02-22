@@ -72,7 +72,7 @@ def view_job(options, job_id, client):
         return display_events(client.object_events(job_id.url))
 
     job_content = client.job(job_id.url)
-    return display.DisplayJobs(options).format_job(job_content)
+    return display.format_job_details(job_content, options)
 
 
 def view_job_run(options, job_run_id, client):
@@ -80,13 +80,13 @@ def view_job_run(options, job_run_id, client):
         return display_events(client.object_events(job_run_id.url))
 
     actions = client.job_runs(job_run_id.url)
-    display_action = display.DisplayActions(options)
+    display_action = display.DisplayActionRuns(options)
     return display_action.format(actions)
 
 
 def view_action_run(options, act_run_id, client):
-    display_action = display.DisplayActions(options)
-    return display_action.format_action_run(client.action(act_run_id.url))
+    content = client.action(act_run_id.url)
+    return display.format_action_run_details(content)
 
 
 def view_service(options, service_id, client):
@@ -95,7 +95,7 @@ def view_service(options, service_id, client):
         return display_events(client.object_events(service_id.url))
 
     service_content = client.service(service_id.url)
-    return display.DisplayServices().format_details(service_content)
+    return display.format_service_details(service_content)
 
 
 obj_type_to_view_map = {
