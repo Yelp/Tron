@@ -62,6 +62,7 @@ class RunState(object):
         self.channel = None
 
 
+# TODO: make use of MappingCollection
 class NodePoolStore(object):
     """A Singleton to store Node and NodePool objects."""
 
@@ -160,12 +161,8 @@ class NodePool(object):
             if node.hostname == hostname:
                 return node
 
-    def repr_data(self):
-        """Returns a dict which is an external view of this object."""
-        return {
-            'name':         self.name,
-            'nodes':        [n.repr_data() for n in self.nodes]
-        }
+    def __str__(self):
+        return "NodePool:%s" % self.name
 
 class Node(object):
     """A node is tron's interface to communicating with an actual machine.

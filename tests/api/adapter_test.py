@@ -48,7 +48,7 @@ class RunAdapterTestCase(TestCase):
 
     @setup
     def setup_adapter(self):
-        self.original           = Turtle()
+        self.original           = mock.Mock()
         self.adapter            = RunAdapter(self.original)
 
     def test_get_state(self):

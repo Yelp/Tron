@@ -1,7 +1,7 @@
 from testify import TestCase, run, setup, assert_equal, turtle
 
 from tron.commands.display import Color, DisplayServices, DisplayJobRuns
-from tron.commands.display import DisplayActions, DisplayJobs
+from tron.commands.display import DisplayActionRuns, DisplayJobs
 
 
 class DisplayServicesTestCase(TestCase):
@@ -39,14 +39,16 @@ class DisplayJobRunsTestCase(TestCase):
                 run_time='2012-01-20 23:11:23',
                 start_time='2012-01-20 23:11:23',
                 end_time='2012-02-21 23:10:10',
-                duration='2 days'
+                duration='2 days',
+                manual=False,
             ),
             dict(
                 id='something.55', state='QUE', node='machine3',
                 run_time='2012-01-20 23:11:23',
                 start_time='2012-01-20 23:11:23',
                 end_time='',
-                duration=''
+                duration='',
+                manual=False,
             )
         ]
 
@@ -82,8 +84,8 @@ class DisplayJobRunsTestCase(TestCase):
         display = DisplayJobRuns(options=self.options)
         out = display.format(self.data)
         lines = out.split('\n')
-        assert_equal(len(lines), 13)
-        assert lines[9].startswith('Actions:'), lines[9]
+        assert_equal(len(lines), 16)
+        assert lines[13].startswith('Actions:'), lines[13]
 
 
 class DisplayJobsTestCase(TestCase):
@@ -142,23 +144,6 @@ class DisplayJobsTestCase(TestCase):
         lines = self.do_format()
         assert_equal(len(lines), 5)
 
-    def test_format_with_warn(self):
-        self.options.warn = True
-        self.data = self.data[:1]
-        self.data[0]['runs'] = self.run_data
-        lines = self.do_format()
-        assert_equal(len(lines), 26)
-        assert lines[13] == lines[23] == 'Actions:'
-
-    def test_format_job(self):
-        self.options.display_preface = True
-        job = self.data[1]
-        job['runs'] = self.run_data
-        display = DisplayJobs(self.options)
-        out = display.format_job(job)
-        lines = out.split("\n")
-        assert_equal(len(lines), 18)
-        assert lines[4:6] == job['action_names']
 
 class DisplayActionsTestCase(TestCase):
 
@@ -175,27 +160,34 @@ class DisplayActionsTestCase(TestCase):
             'id': 'something.23',
             'state': 'UNKWN',
             'node': 'something',
+            'run_time': 'sometime',
+            'start_time': 'sometime',
+            'end_time': 'sometime',
+            'manual': False,
             'runs': [
                 dict(
                     id='something.23.run_other_thing',
                     state='UNKWN',
                     start_time='2012-01-23 10:10:10.123456',
                     end_time='',
-                    duration=''
+                    duration='',
+                    run_time='sometime',
                 ),
                 dict(
                     id='something.1.run_foo',
                     state='FAIL',
                     start_time='2012-01-23 10:10:10.123456',
                     end_time='2012-01-23 10:40:10.123456',
-                    duration='1234.123456'
+                    duration='1234.123456',
+                    run_time='sometime',
                 ),
                 dict(
                     id='something.23.run_other_thing',
                     state='QUE',
                     start_time='2012-01-23 10:10:10.123456',
                     end_time='',
-                    duration=''
+                    duration='',
+                    run_time='sometime',
                 ),
             ]
         }
@@ -207,22 +199,17 @@ class DisplayActionsTestCase(TestCase):
             'stderr':           ['Crash', 'and', 'burn'],
             'command':          '/bin/bash ./runme.sh now',
             'raw_command':      'bash runme.sh now',
-            'requirements':     ['.run_first_job']
+            'requirements':     ['.run_first_job'],
         }
 
     def format_lines(self):
-        display = DisplayActions(options=self.options)
+        display = DisplayActionRuns(options=self.options)
         out = display.format(self.data)
-        return out.split('\n')
-
-    def format_action_run_lines(self):
-        display = DisplayActions(options=self.options)
-        out = display.format_action_run(self.details)
         return out.split('\n')
 
     def test_format(self):
         lines = self.format_lines()
-        assert_equal(len(lines), 9)
+        assert_equal(len(lines), 13)
 
     def test_format_warn(self):
         self.data['runs'] = [self.data['runs'][2]]
@@ -230,28 +217,6 @@ class DisplayActionsTestCase(TestCase):
         self.options.warn = True
         lines = self.format_lines()
         assert_equal(len(lines), 11)
-
-    def test_format_action_run(self):
-        options = self.options
-        options.stdout = options.stderr = options.display_preface = False
-        lines = self.format_action_run_lines()
-        assert_equal(len(lines), 15)
-
-    def test_format_action_run_stdout(self):
-        self.options.stdout = True
-        lines = self.format_action_run_lines()
-        assert_equal(lines, ['Stdout: '] + self.details['stdout'])
-
-    def test_format_action_run_stderr(self):
-        self.options.stderr = True
-        lines = self.format_action_run_lines()
-        assert_equal(lines, ['Stderr: '] + self.details['stderr'])
-
-    def test_format_action_run_display_preface(self):
-        self.options.display_preface = True
-        lines = self.format_action_run_lines()
-        assert_equal(len(lines), 19)
-        assert lines[2] == 'Node: localhost'
 
 
 if __name__ == "__main__":

@@ -183,11 +183,6 @@ class NodePoolTestCase(TestCase):
 
         assert_raises(KeyError, lambda: self.node_pool['node0'])
 
-    def test_repr_data(self):
-        repr_data = self.node_pool.repr_data()
-        assert_equal(repr_data['name'], self.node_pool.name)
-        assert_equal(len(repr_data['nodes']), len(self.nodes))
-
 
 if __name__ == '__main__':
     run()

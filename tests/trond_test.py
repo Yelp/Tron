@@ -76,36 +76,16 @@ class TrondTestCase(sandbox.SandboxTestCase):
         # reconfigure, by uploading a third configuration
         self.sandbox.tronfig(ALT_NAMESPACED_ECHO_CONFIG, name='ohce')
 
-        job1 = {
-            'action_names': ['echo_action', 'cleanup', 'another_echo_action'],
-            'status': 'ENABLED',
-            'href': '/jobs/MASTER.echo_job',
-            'last_success': None,
-            'name': 'MASTER.echo_job',
-            'scheduler': 'INTERVAL:1:00:00',
-            'node_pool': ['localhost'],
-            'runs': None
-        }
-        job2 = {
-            'action_names': ['echo_action'],
-            'status': 'ENABLED',
-            'href': '/jobs/ohce.echo_job',
-            'last_success': None,
-            'name': 'ohce.echo_job',
-            'scheduler': 'INTERVAL:1:00:00',
-            'node_pool': ['localhost'],
-            'runs': None
-        }
-        expected = {
-            'jobs': [job1, job2],
-            'status_href': '/status',
-            'jobs_href': '/jobs',
-            'config_href': '/config',
-            'services': [],
-            'services_href': '/services'
-        }
+        expected = set([
+            'jobs',
+            'status_href',
+            'jobs_href',
+            'config_href',
+            'services',
+            'services_href',
+        ])
         result = self.sandbox.client.home()
-        assert_equal(result, expected)
+        assert_equal(set(result.keys()), expected)
 
         # run the job and check its output
         self.sandbox.tronctl(['start', 'MASTER.echo_job'])

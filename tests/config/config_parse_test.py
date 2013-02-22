@@ -212,6 +212,7 @@ services:
                         monthdays=None,
                         months=None,
                         timestr='00:30',
+                        original="every M,W,F of month at 00:30",
                     ),
                     actions=FrozenDict({
                         'action1_1': schema.ConfigAction(
@@ -241,6 +242,7 @@ services:
                         monthdays=None,
                         months=None,
                         timestr='16:30',
+                        original='every day of month at 16:30'
                     ),
                     actions=FrozenDict({
                         'action2_0': schema.ConfigAction(
@@ -292,6 +294,7 @@ services:
                         monthdays=None,
                         months=None,
                         timestr='00:00',
+                        original='every day of month at 00:00'
                     ),
                     actions=FrozenDict({
                         'action4_0': schema.ConfigAction(
@@ -452,6 +455,7 @@ services:
                         monthdays=None,
                         months=None,
                         timestr='00:30',
+                        original="every M,W,F of month at 00:30",
                     ),
                     actions=FrozenDict({
                         'action1_1': schema.ConfigAction(
@@ -481,6 +485,7 @@ services:
                         monthdays=None,
                         months=None,
                         timestr='16:30',
+                        original="every day of month at 16:30",
                     ),
                     actions=FrozenDict({
                         'action2_0': schema.ConfigAction(
@@ -532,6 +537,7 @@ services:
                         monthdays=None,
                         months=None,
                         timestr='00:00',
+                        original="every day of month at 00:00",
                     ),
                     actions=FrozenDict({
                         'action4_0': schema.ConfigAction(

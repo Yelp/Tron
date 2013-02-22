@@ -1,12 +1,14 @@
 import logging
+import itertools
 from twisted.internet import reactor
 
 from tron import command_context, event, node
 from tron.core import jobrun
 from tron.core import actiongraph
 from tron.core.actionrun import ActionRun
+from tron.scheduler import scheduler_from_config
 from tron.serialize import filehandler
-from tron.utils import timeutils
+from tron.utils import timeutils, proxy, iteration, collections
 from tron.utils.observer import Observable, Observer
 
 class Error(Exception):
@@ -195,7 +197,7 @@ class JobScheduler(Observer):
         self.shutdown_requested = False
         self.watch(job)
 
-    def restore_job_state(self, job_state_data):
+    def restore_state(self, job_state_data):
         """Restore the job state and schedule any JobRuns."""
         self.job.restore_state(job_state_data)
         scheduled = self.job.runs.get_scheduled()
@@ -203,9 +205,6 @@ class JobScheduler(Observer):
             self._set_callback(job_run)
         # Ensure we have at least 1 scheduled run
         self.schedule()
-
-    def get_job(self):
-        return self.job
 
     def enable(self):
         """Enable the job and start its scheduling cycle."""
@@ -330,3 +329,94 @@ class JobScheduler(Observer):
             last_run_time = last_run.run_time if last_run else None
         next_run_time = self.job.scheduler.next_run_time(last_run_time)
         return self.job.build_new_runs(next_run_time)
+
+    def request_shutdown(self):
+        self.shutdown_requested = True
+
+    def __str__(self):
+        return "%s(%s)" % (self.__class__.__name__, self.job)
+
+    def get_name(self):
+        return self.job.name
+
+    def get_job(self):
+        return self.job
+
+    def __eq__(self, other):
+        return bool(other and self.get_job() == other.get_job())
+
+    def __ne__(self, other):
+        return not self == other
+
+
+class JobSchedulerFactory(object):
+    """Construct JobScheduler instances from configuration."""
+
+    def __init__(self, context, output_stream_dir, time_zone):
+        self.context            = context
+        self.output_stream_dir  = output_stream_dir
+        self.time_zone          = time_zone
+
+    def build(self, job_config):
+        log.debug("Building new job %s", job_config.name)
+        output_path = filehandler.OutputPath(self.output_stream_dir)
+        scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
+        job = Job.from_config(job_config, scheduler, self.context, output_path)
+        return JobScheduler(job)
+
+
+class JobCollection(object):
+    """A collection of jobs."""
+
+    def __init__(self):
+        self.jobs = collections.MappingCollection('jobs')
+        self.proxy = proxy.CollectionProxy(self.jobs.itervalues, [
+            proxy.func_proxy('request_shutdown',    iteration.list_all),
+            proxy.func_proxy('enable',              iteration.list_all),
+            proxy.func_proxy('disable',             iteration.list_all),
+            proxy.func_proxy('schedule',            iteration.list_all),
+            proxy.attr_proxy('is_shutdown',         all)
+        ])
+
+    def load_from_config(self, job_configs, factory, reconfigure):
+        """Apply a configuration to this collection and return a generator of
+        jobs which were added.
+        """
+        self.jobs.filter_by_name(job_configs)
+
+        def map_to_job_and_schedule(job_schedulers):
+            for job_scheduler in job_schedulers:
+                if reconfigure:
+                    job_scheduler.schedule()
+                yield job_scheduler.get_job()
+
+        seq = (factory.build(config) for config in job_configs.itervalues())
+        return map_to_job_and_schedule(itertools.ifilter(self.add, seq))
+
+    def add(self, job_scheduler):
+        return self.jobs.add(job_scheduler, self.update)
+
+    def update(self, new_job_scheduler):
+        log.info("Updating %s", new_job_scheduler)
+        job_scheduler = self.get_by_name(new_job_scheduler.get_name())
+        job_scheduler.get_job().update_from_job(new_job_scheduler.get_job())
+        job_scheduler.schedule_reconfigured()
+        return True
+
+    def restore_state(self, job_state_data):
+        self.jobs.restore_state(job_state_data)
+
+    def get_by_name(self, name):
+        return self.jobs.get(name)
+
+    def get_names(self):
+        return self.jobs.keys()
+
+    def __iter__(self):
+        return self.jobs.itervalues()
+
+    def __getattr__(self, name):
+        return self.proxy.perform(name)
+
+    def __contains__(self, name):
+        return name in self.jobs

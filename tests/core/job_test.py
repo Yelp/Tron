@@ -4,7 +4,7 @@ import mock
 from testify import setup, teardown, TestCase, run, assert_equal
 from testify import setup_teardown
 from tests import mocks
-from tests.assertions import assert_length, assert_call
+from tests.assertions import assert_length, assert_call, assert_mock_calls
 from tests.testingutils import Turtle, autospec_method
 from tests import testingutils
 from tron import node, event
@@ -181,7 +181,7 @@ class JobSchedulerTestCase(TestCase):
         self.job_scheduler.job = Turtle(runs=run_collection)
         self.job_scheduler._set_callback = Turtle()
         state_data = 'state_data_token'
-        self.job_scheduler.restore_job_state(state_data)
+        self.job_scheduler.restore_state(state_data)
         assert_call(self.job_scheduler.job.restore_state, 0, state_data)
         assert_length(self.job_scheduler._set_callback.calls, 1)
         assert_call(self.job_scheduler._set_callback, 0, 'a')
@@ -451,6 +451,62 @@ class JobSchedulerScheduleTestCase(testingutils.MockReactorTestCase):
         self.job.runs.get_runs_by_state = get_queued
         self.job_scheduler.handler(self.job, job.Job.NOTIFY_RUN_DONE)
         self.job_scheduler.run_job.assert_not_called()
+
+
+class JobSchedulerFactoryTestCase(TestCase):
+
+    @setup
+    def setup_factory(self):
+        self.context = mock.Mock()
+        self.output_stream_dir = mock.Mock()
+        self.time_zone = mock.Mock()
+        self.factory = job.JobSchedulerFactory(
+            self.context, self.output_stream_dir, self.time_zone)
+
+    def test_build(self):
+        config = mock.Mock()
+        with mock.patch('tron.core.job.Job', autospec=True) as mock_job:
+            job_scheduler = self.factory.build(config)
+            args, _ = mock_job.from_config.call_args
+            job_config, scheduler, context, output_path = args
+            assert_equal(job_config, config)
+            assert_equal(job_scheduler.get_job(), mock_job.from_config.return_value)
+            assert_equal(context, self.context)
+            assert_equal(output_path.base, self.output_stream_dir)
+
+
+class JobCollectionTestCase(TestCase):
+
+    @setup
+    def setup_collection(self):
+        self.collection = job.JobCollection()
+
+    def test_load_from_config(self):
+        autospec_method(self.collection.jobs.filter_by_name)
+        autospec_method(self.collection.add)
+        factory = mock.create_autospec(job.JobSchedulerFactory)
+        job_configs = {'a': mock.Mock(), 'b': mock.Mock()}
+        result = self.collection.load_from_config(job_configs, factory, True)
+        result = list(result)
+        self.collection.jobs.filter_by_name.assert_called_with(job_configs)
+        expected_calls = [mock.call(v) for v in job_configs.itervalues()]
+        assert_mock_calls(expected_calls, factory.build.mock_calls)
+        assert_length(self.collection.add.mock_calls, len(job_configs) * 2)
+        assert_length(result, len(job_configs))
+        job_schedulers = [call[1][0] for call in self.collection.add.mock_calls[::2]]
+        for job_scheduler in job_schedulers:
+            job_scheduler.schedule.assert_called_with()
+            job_scheduler.get_job.assert_called_with()
+
+    def test_update(self):
+        mock_scheduler = mock.create_autospec(job.JobScheduler)
+        existing_scheduler = mock.create_autospec(job.JobScheduler)
+        autospec_method(self.collection.get_by_name, return_value=existing_scheduler)
+        assert self.collection.update(mock_scheduler)
+        self.collection.get_by_name.assert_called_with(mock_scheduler.get_name())
+        existing_scheduler.get_job().update_from_job.assert_called_with(
+            mock_scheduler.get_job.return_value)
+        existing_scheduler.schedule_reconfigured.assert_called_with()
 
 
 if __name__ == '__main__':
