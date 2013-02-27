@@ -342,7 +342,7 @@ class JobScheduler(Observer):
         return self.job
 
     def __eq__(self, other):
-        return other and self.get_job() == other.get_job()
+        return bool(other and self.get_job() == other.get_job())
 
     def __ne__(self, other):
         return not self == other
