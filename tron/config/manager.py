@@ -124,6 +124,9 @@ class ConfigManager(object):
     def __contains__(self, name):
         return name in self.manifest
 
+    def get_namespaces(self):
+        return self.manifest.get_file_mapping().keys()
+
 
 def create_new_config(path, master_content, master_filename='master'):
     """Create a new configuration directory with master config."""

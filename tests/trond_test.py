@@ -75,17 +75,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
 
         # reconfigure, by uploading a third configuration
         self.sandbox.tronfig(ALT_NAMESPACED_ECHO_CONFIG, name='ohce')
-
-        expected = set([
-            'jobs',
-            'status_href',
-            'jobs_href',
-            'config_href',
-            'services',
-            'services_href',
-        ])
-        result = self.sandbox.client.home()
-        assert_equal(set(result.keys()), expected)
+        self.sandbox.client.home()
 
         # run the job and check its output
         self.sandbox.tronctl(['start', 'MASTER.echo_job'])
@@ -117,7 +107,7 @@ class TrondTestCase(sandbox.SandboxTestCase):
 
         expected = """\nServices:\nNo Services\n\n\nJobs:
             Name       State       Scheduler           Last Success
-            MASTER.echo_job   ENABLED     INTERVAL:1:00:00    None
+            MASTER.echo_job   ENABLED     INTERVAL 1:00:00    None
             """
 
         def remove_line_space(s):
