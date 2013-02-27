@@ -28,9 +28,9 @@ class ScheduleParseError(ConfigError):
 
 
 def pad_sequence(seq, size, padding=None):
-    """Force a sequence to size. Pad with None if too short, and ignore
+    """Force a sequence to size. Pad with padding if too short, and ignore
     extra pieces if too long."""
-    return (list(seq) + [padding] * size)[:size]
+    return (list(seq) + [padding for _ in xrange(size)])[:size]
 
 
 def valid_schedule(schedule, config_context):
@@ -95,7 +95,7 @@ TIME_INTERVAL_UNITS = dicts.invert_dict_list({
 })
 
 # Split digits and characters into tokens
-TIME_INTERVAL_RE = re.compile(r"\d+|[a-zA-Z]+")
+TIME_INTERVAL_RE = re.compile(r"^(?P<value>\d+)(?P<units>[a-zA-Z]+)$")
 
 
 def valid_interval_scheduler(interval,  config_context):
@@ -108,15 +108,15 @@ def valid_interval_scheduler(interval,  config_context):
     if interval in TIME_INTERVAL_SHORTCUTS:
         return build_config(TIME_INTERVAL_SHORTCUTS[interval])
 
-    interval_tokens = TIME_INTERVAL_RE.findall(interval)
-    if len(interval_tokens) != 2:
+    matches = TIME_INTERVAL_RE.match(interval)
+    if not matches:
         raise ConfigError(error_msg % (config_context.path, interval))
 
-    value, units = interval_tokens
+    units = matches.group('units')
     if units not in TIME_INTERVAL_UNITS:
         raise ConfigError(error_msg % (config_context.path, interval))
 
-    return build_config({TIME_INTERVAL_UNITS[units]: int(value)})
+    return build_config({TIME_INTERVAL_UNITS[units]: int(matches.group('value'))})
 
 
 def normalize_weekdays(seq):
