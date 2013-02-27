@@ -1,3 +1,4 @@
+# -*- coding: utf-8 -*-
 import datetime
 from testify import TestCase, run, assert_equal, assert_raises
 from testify.test_case import setup
@@ -22,6 +23,9 @@ class PadSequenceTestCase(TestCase):
     def test_pad_sequence_empty(self):
         expected = ["a", "a"]
         assert_equal(schedule_parse.pad_sequence([], 2, "a"), expected)
+
+    def test_pad_negative_size(self):
+        assert_equal(schedule_parse.pad_sequence([], -2, "a"), [])
 
 
 class ValidCronSchedulerTestCase(TestCase):
@@ -99,7 +103,7 @@ class ValidIntervalSchedulerTestCase(TestCase):
         assert_equal(config.timedelta, expected)
 
     def test_valid_interval_scheduler_hours(self):
-        for spec in ['6h', '6 hours', '6 h', '6 hrs', '6 hour']:
+        for spec in ['6h', '6 hours', '6 h', '6 hrs', '6 hour', u'6 hours', u'6hour']:
             config = schedule_parse.valid_interval_scheduler(spec, self.context)
             expected = datetime.timedelta(hours=6)
             assert_equal(config.timedelta, expected)
@@ -115,6 +119,14 @@ class ValidIntervalSchedulerTestCase(TestCase):
     def test_valid_interval_scheduler_bogus(self):
         assert_raises(ConfigError, schedule_parse.valid_interval_scheduler,
             "asdasd.asd", self.context)
+
+    def test_valid_interval_scheduler_underscore(self):
+        assert_raises(ConfigError, schedule_parse.valid_interval_scheduler,
+            u"6_minute", self.context)
+
+    def test_valid_interval_scheduler_unicode(self):
+        assert_raises(ConfigError, schedule_parse.valid_interval_scheduler,
+            u"6 ຖminute", self.context)
 
 
 if __name__ == "__main__":
