@@ -122,7 +122,7 @@ class NodePool(object):
     """A pool of Node objects."""
     def __init__(self, nodes, name):
         self.nodes      = nodes
-        self.disabled   =  False
+        self.disabled   = False
         self.name       = name or '_'.join(n.get_name() for n in nodes)
         self.iter       = itertools.cycle(self.nodes)
 
