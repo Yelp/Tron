@@ -54,7 +54,7 @@ class NodePoolRepositoryTestCase(TestCase):
         self.repo.nodes.update(mock_nodes)
         node_config = {'a': mock.Mock(), 'b': mock.Mock()}
         node_pool_config = {'c': mock.Mock(nodes=['a', 'b'])}
-        ssh_options = mock.Mock(identities=[])
+        ssh_options = mock.Mock(identities=[], known_hosts_file=None)
         node.NodePoolRepository.update_from_config(
             node_config, node_pool_config, ssh_options)
         node_names = [node_config['a'].name, node_config['b'].name]
@@ -70,6 +70,25 @@ class NodePoolRepositoryTestCase(TestCase):
     def test_get_node(self):
         returned_node = self.repo.get_node(self.node.get_name())
         assert_equal(returned_node, self.node)
+
+
+class KnownHostTestCase(TestCase):
+
+    @setup
+    def setup_known_hosts(self):
+        self.known_hosts = node.KnownHosts(None)
+        self.entry = mock.Mock()
+        self.known_hosts._entries.append(self.entry)
+
+    def test_get_public_key(self):
+        hostname = 'hostname'
+        pub_key = self.known_hosts.get_public_key(hostname)
+        self.entry.matchesHost.assert_called_with(hostname)
+        assert_equal(pub_key, self.entry.publicKey)
+
+    def test_get_public_key_not_found(self):
+        self.entry.matchesHost.return_value = False
+        assert not self.known_hosts.get_public_key('hostname')
 
 
 class NodeTestCase(TestCase):
@@ -100,10 +119,12 @@ class NodeTestCase(TestCase):
     def test_from_config(self):
         node_config = mock.Mock(hostname='localhost', username='theuser', name='thename')
         self.ssh_options.__getitem__.return_value = 'something'
-        new_node = node.Node.from_config(node_config, self.ssh_options)
+        public_key = mock.Mock()
+        new_node = node.Node.from_config(node_config, self.ssh_options, public_key)
         assert_equal(new_node.name, node_config.name)
         assert_equal(new_node.hostname, node_config.hostname)
         assert_equal(new_node.username, node_config.username)
+        assert_equal(new_node.pub_key, public_key)
 
     def test__cmp__(self):
         other_node = node.Node('mocalhost', self.ssh_options, username='mser', name='mocal')
@@ -111,10 +132,8 @@ class NodeTestCase(TestCase):
         assert_lt(self.node, other_node)
 
     def test_determine_fudge_factor(self):
-        assert_equal(self.node._determine_fudge_factor(), 0)
-
-        self.node.run_states = dict((i, i) for i in xrange(20))
-        assert 0 < self.node._determine_fudge_factor() < 20
+        assert_equal(node.determine_fudge_factor(0), 0)
+        assert 0 < node.determine_fudge_factor(20) < 20
 
 
 class NodePoolTestCase(TestCase):

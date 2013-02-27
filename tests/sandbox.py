@@ -64,13 +64,17 @@ class SandboxTestCase(TestCase):
 
     _suites = ['sandbox']
 
+    sandbox = None
+
     @setup
     def make_sandbox(self):
+        verify_environment()
         self.sandbox = TronSandbox()
 
     @teardown
     def delete_sandbox(self):
-        self.sandbox.delete()
+        if self.sandbox:
+            self.sandbox.delete()
         self.sandbox = None
 
 
@@ -104,12 +108,17 @@ class ClientProxy(object):
         return functools.partial(self.wrap, attr)
 
 
+def verify_environment():
+    for env_var in ['SSH_AUTH_SOCK', 'PYTHONPATH']:
+        if not os.environ.get(env_var):
+            raise TronSandboxException("Missing $%s in test environment." % env_var)
+
+
 class TronSandbox(object):
     """A sandbox for running trond and tron commands in subprocesses."""
 
     def __init__(self):
         """Set up a temp directory and store paths to relevant binaries"""
-        self.verify_environment()
         self.tmp_dir        = tempfile.mkdtemp(prefix='tron-')
         cmd_path_func       = functools.partial(os.path.join, repo_root, 'bin')
         cmds                = 'tronctl', 'trond', 'tronfig', 'tronview'
@@ -138,16 +147,6 @@ class TronSandbox(object):
 
         with open(self.log_conf, 'w') as fh:
             fh.write(config.format(self.log_file))
-
-    def verify_environment(self):
-        ssh_sock = 'SSH_AUTH_SOCK'
-        msg = "Missing $%s in test environment."
-        if not os.environ.get(ssh_sock):
-            raise TronSandboxException(msg % ssh_sock)
-
-        path = 'PYTHONPATH'
-        if not os.environ.get(path):
-            raise TronSandboxException(msg % path)
 
     def delete(self):
         """Delete the temp directory and shutdown trond."""

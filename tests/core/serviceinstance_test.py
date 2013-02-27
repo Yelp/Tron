@@ -47,10 +47,10 @@ class RunActionTestCase(TestCase):
 
     def test_run_action(self):
         assert serviceinstance.run_action(self.task, self.action)
-        self.node.run.assert_called_with(self.action)
+        self.node.submit_command.assert_called_with(self.action)
 
     def test_run_action_failed(self):
-        error = self.task.node.run.side_effect = node.Error("Oops")
+        error = self.task.node.submit_command.side_effect = node.Error("Oops")
         assert not serviceinstance.run_action(self.task, self.action)
         self.task.notify.assert_called_with(self.failed)
         self.task.buffer_store.open.return_value.write.assert_called_with(
@@ -87,7 +87,7 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
         self.task.run()
 
         self.task.notify.assert_called_with(self.task.NOTIFY_START)
-        self.task.node.run.assert_called_with(self.task.action)
+        self.task.node.submit_command.assert_called_with(self.task.action)
         self.task.hang_check_callback.start.assert_called_with()
         assert_equal(self.task.action.command, self.task.command)
 
@@ -180,13 +180,13 @@ class ServiceInstanceStartTaskTestCase(TestCase):
         with patcher as mock_ac:
             self.task.start(command)
             self.task.watch.assert_called_with(mock_ac.return_value)
-            self.node.run.assert_called_with(mock_ac.return_value)
+            self.node.submit_command.assert_called_with(mock_ac.return_value)
             mock_ac.assert_called_with("%s.start" % self.task.id, command,
                 serializer=self.task.buffer_store)
 
     def test_start_failed(self):
         command = 'the command'
-        self.node.run.side_effect = node.Error
+        self.node.submit_command.side_effect = node.Error
         self.task.start(command)
         self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
 
