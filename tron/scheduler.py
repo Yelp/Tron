@@ -46,7 +46,7 @@ def scheduler_from_config(config, time_zone):
             monthdays=config.monthdays,
             months=config.months,
             weekdays=config.weekdays,
-            string_repr='DAILY %s' % config.original)
+            string_repr='GROC %s' % config.original)
 
     if isinstance(config, schedule_parse.ConfigCronScheduler):
         return GeneralScheduler(
@@ -58,6 +58,14 @@ def scheduler_from_config(config, time_zone):
             ordinals=config.ordinals,
             seconds=[0],
             string_repr='CRON %s' % ' '.join(config.original))
+
+    if isinstance(config, schedule_parse.ConfigDailyScheduler):
+        return GeneralScheduler(
+            hours=[config.hour],
+            minutes=[config.minute],
+            seconds=[config.second],
+            weekdays=config.days,
+            string_repr='DAILY %s' % config.original)
 
 
 class ConstantScheduler(object):
@@ -163,7 +171,7 @@ class IntervalScheduler(object):
         return last_run_time + self.interval
 
     def __str__(self):
-        return "INTERVAL:%s" % self.interval
+        return "INTERVAL %s" % self.interval
 
     def __eq__(self, other):
         return (isinstance(other, IntervalScheduler) and

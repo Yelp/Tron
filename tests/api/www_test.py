@@ -85,7 +85,7 @@ class ActionRunResourceTestCase(WWWTestCase):
         assert_equal(response['id'], self.action_run.id)
 
 
-class RootResourceTestCase(TestCase):
+class RootResourceTestCase(WWWTestCase):
 
     @setup
     def build_resource(self):
@@ -98,13 +98,15 @@ class RootResourceTestCase(TestCase):
 
     def test_render_GET(self):
         expected_keys = [
-            'jobs', 'jobs_href',
-            'services', 'services_href',
-            'config_href',
-            'status_href']
-        with mock.patch('tron.api.www.respond', autospec=True) as respond:
-            self.resource.render_GET(build_request())
-            assert_equal(set(respond.call_args[0][1].keys()), set(expected_keys))
+            'jobs',
+            'jobs_url',
+            'services',
+            'services_url',
+            'config_url',
+            'namespaces',
+            'status_url']
+        response = self.resource.render_GET(build_request())
+        assert_equal(set(response.keys()), set(expected_keys))
 
 
 class JobCollectionResourceTestCase(WWWTestCase):

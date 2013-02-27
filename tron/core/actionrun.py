@@ -54,7 +54,6 @@ class ActionRunFactory(object):
             job_run.id,
             action.name,
             run_node,
-            job_run.run_time,
             action.command,
             parent_context=job_run.context,
             output_path=job_run.output_path.clone(),
@@ -128,15 +127,14 @@ class ActionRun(Observer):
 
     context_class               = command_context.ActionRunContext
 
-    def __init__(self, job_run_id, name, node, run_time, bare_command=None,
+    def __init__(self, job_run_id, name, node, bare_command=None,
             parent_context=None, output_path=None, cleanup=False,
             start_time=None, end_time=None, run_state=STATE_SCHEDULED,
             rendered_command=None):
         self.job_run_id         = job_run_id
         self.action_name        = name
         self.node               = node
-        self.job_run_time       = run_time      # parent JobRun start time
-        self.start_time         = start_time    # ActionRun start time
+        self.start_time         = start_time
         self.end_time           = end_time
         self.exit_status        = None
         self.bare_command       = bare_command
@@ -185,7 +183,6 @@ class ActionRun(Observer):
             job_run_id,
             action_name,
             job_run_node,
-            state_data['run_time'],
             parent_context=parent_context,
             output_path=output_path,
             rendered_command=rendered_command,
@@ -288,7 +285,6 @@ class ActionRun(Observer):
             'job_run_id':       self.job_run_id,
             'action_name':      self.action_name,
             'state':            str(self.state),
-            'run_time':         self.job_run_time,
             'start_time':       self.start_time,
             'end_time':         self.end_time,
             'command':          command,

@@ -32,9 +32,11 @@ class GetContentFromIdentifierTestCase(TestCase):
     def setup_client(self):
         self.options = mock.Mock()
         self.index = {
+            'namespaces': ['OTHER', 'MASTER'],
             'jobs': {
                 'MASTER.namea': '/jobs/MASTER.namea',
-                'MASTER.nameb': '/jobs/MASTER.nameb'
+                'MASTER.nameb': '/jobs/MASTER.nameb',
+                'OTHER.nameg':  '/jobs/MASTER.nameb',
             },
             'services': {
                 'MASTER.foo': '/services/MASTER.foo'
@@ -78,6 +80,12 @@ class GetContentFromIdentifierTestCase(TestCase):
         identifier = get_object_type_from_identifier(self.index, 'MASTER.nameb.7.run')
         assert_equal(identifier.url, self.index['jobs']['MASTER.nameb'] + '/7/run')
         assert_equal(identifier.type, TronObjectType.action_run)
+
+    def test_get_url_from_identifier_job_no_namespace_not_master(self):
+        identifier = get_object_type_from_identifier(self.index, 'nameg')
+        assert_equal(identifier.url, self.index['jobs']['OTHER.nameg'] + '/')
+        assert_equal(identifier.type, TronObjectType.job)
+        assert_equal(identifier.name, 'OTHER.nameg')
 
     def test_get_url_from_identifier_no_match(self):
         exc = assert_raises(ValueError,

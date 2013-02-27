@@ -12,20 +12,17 @@ import pytz
 from testify import assert_equal, assert_in
 from testify import run, setup, teardown, TestCase
 import yaml
-from tron.config import config_parse, schema, manager, config_utils
+from tron.config import config_parse, schema, manager, config_utils, schedule_parse
 from tron.config.config_parse import valid_config, valid_cleanup_action_name
-from tron.config.config_parse import valid_identifier
 from tron.config.config_parse import valid_output_stream_dir
 from tron.config.config_parse import valid_node_pool
 from tron.config.config_parse import validate_fragment
-from tron.config.config_utils import NullConfigContext, ConfigContext
+from tron.config.config_utils import NullConfigContext
 from tron.config.config_parse import build_format_string_validator
-from tron.config.config_parse import build_list_of_type_validator
 from tron.config.config_parse import CLEANUP_ACTION_NAME
 from tron.config.config_parse import valid_job
 from tron.config import ConfigError
 from tron.config.schedule_parse import ConfigConstantScheduler
-from tron.config.schedule_parse import ConfigGrocScheduler
 from tron.config.schedule_parse import ConfigIntervalScheduler
 from tron.config.schema import MASTER_NAMESPACE
 from tests.assertions import assert_raises
@@ -206,13 +203,10 @@ services:
                     namespace='MASTER',
                     node='node0',
                     enabled=True,
-                    schedule=ConfigGrocScheduler(
-                        ordinals=None,
-                        weekdays=set([1, 3, 5]),
-                        monthdays=None,
-                        months=None,
-                        timestr='00:30',
-                        original="every M,W,F of month at 00:30",
+                    schedule=schedule_parse.ConfigDailyScheduler(
+                        days=set([1, 3, 5]),
+                        hour=0, minute=30, second=0,
+                        original="00:30:00 MWF",
                     ),
                     actions=FrozenDict({
                         'action1_1': schema.ConfigAction(
@@ -236,13 +230,10 @@ services:
                     namespace='MASTER',
                     node='node1',
                     enabled=True,
-                    schedule=ConfigGrocScheduler(
-                        ordinals=None,
-                        weekdays=None,
-                        monthdays=None,
-                        months=None,
-                        timestr='16:30',
-                        original='every day of month at 16:30'
+                    schedule=schedule_parse.ConfigDailyScheduler(
+                        days=set(),
+                        hour=16, minute=30, second=0,
+                        original="16:30:00 ",
                     ),
                     actions=FrozenDict({
                         'action2_0': schema.ConfigAction(
@@ -288,13 +279,10 @@ services:
                     name='MASTER.test_job4',
                     namespace='MASTER',
                     node='nodePool',
-                    schedule=ConfigGrocScheduler(
-                        ordinals=None,
-                        weekdays=None,
-                        monthdays=None,
-                        months=None,
-                        timestr='00:00',
-                        original='every day of month at 00:00'
+                    schedule=schedule_parse.ConfigDailyScheduler(
+                        days=set(),
+                        hour=0, minute=0, second=0,
+                        original='00:00:00 '
                     ),
                     actions=FrozenDict({
                         'action4_0': schema.ConfigAction(
@@ -449,13 +437,12 @@ services:
                     namespace='test_namespace',
                     node='node0',
                     enabled=True,
-                    schedule=ConfigGrocScheduler(
-                        ordinals=None,
-                        weekdays=set([1, 3, 5]),
-                        monthdays=None,
-                        months=None,
-                        timestr='00:30',
-                        original="every M,W,F of month at 00:30",
+                    schedule=schedule_parse.ConfigDailyScheduler(
+                        days=set([1, 3, 5]),
+                        hour=0,
+                        minute=30,
+                        second=0,
+                        original="00:30:00 MWF",
                     ),
                     actions=FrozenDict({
                         'action1_1': schema.ConfigAction(
@@ -479,13 +466,12 @@ services:
                     namespace='test_namespace',
                     node='node1',
                     enabled=True,
-                    schedule=ConfigGrocScheduler(
-                        ordinals=None,
-                        weekdays=None,
-                        monthdays=None,
-                        months=None,
-                        timestr='16:30',
-                        original="every day of month at 16:30",
+                    schedule=schedule_parse.ConfigDailyScheduler(
+                        days=set(),
+                        hour=16,
+                        minute=30,
+                        second=0,
+                        original="16:30:00 ",
                     ),
                     actions=FrozenDict({
                         'action2_0': schema.ConfigAction(
@@ -531,13 +517,10 @@ services:
                     name='test_job4',
                     namespace='test_namespace',
                     node='NodePool',
-                    schedule=ConfigGrocScheduler(
-                        ordinals=None,
-                        weekdays=None,
-                        monthdays=None,
-                        months=None,
-                        timestr='00:00',
-                        original="every day of month at 00:00",
+                    schedule=schedule_parse.ConfigDailyScheduler(
+                        days=set(),
+                        hour=0, minute=0, second=0,
+                        original="00:00:00 ",
                     ),
                     actions=FrozenDict({
                         'action4_0': schema.ConfigAction(
@@ -978,6 +961,7 @@ class ValidCleanupActionNameTestCase(TestCase):
         assert_raises(ConfigError,
             valid_cleanup_action_name, 'other', NullConfigContext)
 
+
 class ValidOutputStreamDirTestCase(TestCase):
 
     @setup
@@ -1001,20 +985,6 @@ class ValidOutputStreamDirTestCase(TestCase):
         assert_in("is not writable", str(exception))
 
 
-class ValidatorIdentifierTestCase(TestCase):
-
-    def test_valid_identifier_too_long(self):
-        assert_raises(ConfigError, valid_identifier, 'a' * 256, mock.Mock())
-
-    def test_valid_identifier(self):
-        name = 'avalidname'
-        assert_equal(name, valid_identifier(name, mock.Mock()))
-
-    def test_valid_identifier_invalid_character(self):
-        for name in ['invalid space', '*name', '1numberstarted', 123, '']:
-            assert_raises(ConfigError, valid_identifier, name, mock.Mock())
-
-
 class BuildFormatStringValidatorTestCase(TestCase):
 
     @setup
@@ -1034,25 +1004,6 @@ class BuildFormatStringValidatorTestCase(TestCase):
         template = "The %(one)s thing I %(seven)s is %(mars)s"
         context = config_utils.ConfigContext(None, None, {'mars': 'ok'}, None)
         assert self.validator(template, context)
-
-
-class BuildListOfTypeValidatorTestCase(TestCase):
-
-    @setup
-    def setup_validator(self):
-        self.item_validator = mock.Mock()
-        self.validator = build_list_of_type_validator(self.item_validator)
-
-    def test_validator_passes(self):
-        items, context = ['one', 'two'], mock.create_autospec(ConfigContext)
-        self.validator(items, context)
-        expected = [mock.call(item, context) for item in items]
-        assert_equal(self.item_validator.mock_calls, expected)
-
-    def test_validator_fails(self):
-        self.item_validator.side_effect = ConfigError
-        items, context = ['one', 'two'], mock.create_autospec(ConfigContext)
-        assert_raises(ConfigError, self.validator, items, context)
 
 
 class ValidateConfigMappingTestCase(TestCase):
