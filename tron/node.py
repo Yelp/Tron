@@ -247,15 +247,14 @@ class Node(object):
         if not isinstance(other, self.__class__):
             return False
         return (self.hostname == other.hostname and
+                self.username == other.username and
                 self.name == other.name and
                 self.conch_options == other.conch_options and
                 self.pub_key == other.pub_key)
 
-    def __cmp__(self, other):
-        if not isinstance(other, self.__class__):
-            return -1
 
-        return cmp(self.hostname, other.hostname)
+    def __ne__(self, other):
+        return not self == other
 
     # TODO: Test
     def submit_command(self, command):

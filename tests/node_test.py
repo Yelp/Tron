@@ -1,7 +1,7 @@
 import mock
 from testify import setup, TestCase, assert_equal, run
 from testify import assert_in, assert_raises, assert_lt
-from testify.assertions import assert_not_in
+from testify.assertions import assert_not_in, assert_not_equal
 from testify.test_case import teardown
 
 from twisted.conch.client.options import ConchOptions
@@ -134,6 +134,19 @@ class NodeTestCase(TestCase):
     def test_determine_fudge_factor(self):
         assert_equal(node.determine_fudge_factor(0), 0)
         assert 0 < node.determine_fudge_factor(20) < 20
+
+    def test__eq__true(self):
+        other_node = node.Node('localhost', self.ssh_options,
+            username='theuser', name='thename')
+        assert_equal(other_node, self.node)
+
+    def test__eq__false(self):
+        other_node = node.Node('localhost', self.ssh_options,
+            username='different', name='thename')
+        assert_not_equal(other_node, self.node)
+        other_node = node.Node('localhost', self.ssh_options,
+            username='theuser', name='thename', pub_key="something")
+        assert_not_equal(other_node, self.node)
 
 
 class NodePoolTestCase(TestCase):
