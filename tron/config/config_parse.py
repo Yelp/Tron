@@ -242,6 +242,9 @@ class ValidateSSHOptions(Validator):
     }
 
     def post_validation(self, valid_input, config_context):
+        if config_context.partial:
+            return
+
         if valid_input['agent'] and 'SSH_AUTH_SOCK' not in os.environ:
             raise ConfigError("No SSH Agent available ($SSH_AUTH_SOCK)")
 
