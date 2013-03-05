@@ -65,8 +65,8 @@ class Service(observer.Observer, observer.Observable):
 
     @classmethod
     def from_config(cls, config, base_context):
-        node_store          = node.NodePoolStore.get_instance()
-        node_pool           = node_store[config.node]
+        node_repo           = node.NodePoolRepository.get_instance()
+        node_pool           = node_repo.get_by_name(config.node)
         args                = config, node_pool, base_context
         instance_collection = serviceinstance.ServiceInstanceCollection(*args)
         return cls(config, instance_collection)

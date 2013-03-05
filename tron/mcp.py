@@ -82,7 +82,7 @@ class MasterControlProgram(Observable):
 
         self.context.base = master_config.command_context
         self.time_zone = master_config.time_zone
-        node.NodePoolStore.update_from_config(
+        node.NodePoolRepository.update_from_config(
             master_config.nodes, master_config.node_pools, ssh_options)
         self._apply_notification_options(master_config.notification_options)
 

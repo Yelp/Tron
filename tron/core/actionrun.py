@@ -33,10 +33,8 @@ class ActionRunFactory(object):
     @classmethod
     def action_run_collection_from_state(cls, job_run, runs_state_data,
                 cleanup_action_state_data):
-        action_runs = [
-            cls.action_run_from_state(job_run, state_data)
-            for state_data in runs_state_data
-        ]
+        action_runs = [cls.action_run_from_state(job_run, state_data)
+                       for state_data in runs_state_data]
         if cleanup_action_state_data:
             action_runs.append(cls.action_run_from_state(
                 job_run, cleanup_action_state_data, cleanup=True))
@@ -57,8 +55,7 @@ class ActionRunFactory(object):
             action.command,
             parent_context=job_run.context,
             output_path=job_run.output_path.clone(),
-            cleanup=action.is_cleanup
-        )
+            cleanup=action.is_cleanup)
 
     @classmethod
     def action_run_from_state(cls, job_run, state_data, cleanup=False):
@@ -68,8 +65,7 @@ class ActionRunFactory(object):
             job_run.context,
             job_run.output_path.clone(),
             job_run.node,
-            cleanup=cleanup
-        )
+            cleanup=cleanup)
 
 
 class ActionRun(Observer):
@@ -166,7 +162,7 @@ class ActionRun(Observer):
     def from_state(cls, state_data, parent_context, output_path,
                 job_run_node, cleanup=False):
         """Restore the state of this ActionRun from a serialized state."""
-        node_pools = node.NodePoolStore.get_instance()
+        pool_repo = node.NodePoolRepository.get_instance()
 
         # Support state from older version
         if 'id' in state_data:
@@ -175,8 +171,8 @@ class ActionRun(Observer):
             job_run_id = state_data['job_run_id']
             action_name = state_data['action_name']
 
-        if state_data.get('node_name'):
-            job_run_node = node_pools.get(state_data['node_name'])
+        job_run_node = pool_repo.get_node(
+            state_data.get('node_name'), job_run_node)
 
         rendered_command = state_data.get('rendered_command')
         run = cls(
@@ -486,8 +482,7 @@ class ActionRunCollection(object):
 
         run_states = ', '.join(
             "%s(%s%s)" % (a.action_name, a.state, blocked_state(a))
-            for a in self.run_map.itervalues()
-        )
+            for a in self.run_map.itervalues())
         return "%s[%s]" % (self.__class__.__name__, run_states)
 
     def __getattr__(self, name):
