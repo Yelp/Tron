@@ -200,6 +200,15 @@ def valid_identity_file(file_path, config_context):
     return file_path
 
 
+def valid_known_hosts_file(file_path, config_context):
+    valid_string(file_path, config_context)
+
+    file_path = os.path.expanduser(file_path)
+    if not os.path.exists(file_path):
+        raise ConfigError("Known hosts file %s doesn't exist" % file_path)
+    return file_path
+
+
 def valid_command_context(context, config_context):
     # context can be any dict.
     return FrozenDict(**valid_dict(context or {}, config_context))
@@ -237,8 +246,7 @@ class ValidateSSHOptions(Validator):
         'agent':                valid_bool,
         'identities':           build_list_of_type_validator(
                                     valid_identity_file, allow_empty=True),
-        # TODO: validate file existence, and contents
-        'known_hosts_file':     valid_string
+        'known_hosts_file':     valid_known_hosts_file
     }
 
     def post_validation(self, valid_input, config_context):

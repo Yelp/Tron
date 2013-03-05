@@ -178,9 +178,8 @@ class ServiceCollectionTestCase(TestCase):
         self.collection.services = mock.MagicMock()
         service = mock.Mock()
         result = self.collection.add(service)
-        self.collection.services.add.assert_called_with(
-            service, self.collection.remove_by_service)
-        assert_equal(result, self.collection.services.add.return_value)
+        self.collection.services.replace.assert_called_with(service)
+        assert_equal(result, self.collection.services.replace.return_value)
 
     def test_restore_state(self):
         state_count = 2
