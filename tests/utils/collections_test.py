@@ -65,3 +65,9 @@ class MappingCollectionsTestCase(TestCase):
         item, update_func = mock.Mock(), mock.Mock()
         assert self.collection.add(item, update_func)
         assert_in(item.get_name(), self.collection)
+
+    def test_replace(self):
+        autospec_method(self.collection.add)
+        item = mock.Mock()
+        self.collection.replace(item)
+        self.collection.add.assert_called_with(item, self.collection.remove)
