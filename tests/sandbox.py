@@ -64,14 +64,17 @@ class SandboxTestCase(TestCase):
 
     _suites = ['sandbox']
 
+    sandbox = None
+
     @setup
     def make_sandbox(self):
         self.sandbox = TronSandbox()
 
     @teardown
     def delete_sandbox(self):
-        self.sandbox.delete()
-        self.sandbox = None
+        if self.sandbox:
+            self.sandbox.delete()
+            self.sandbox = None
 
 
 class ClientProxy(object):

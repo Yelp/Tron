@@ -162,8 +162,7 @@ class JobRun(Observable, Observer):
         log.info("Starting JobRun %s", self.id)
 
         self.action_runs.ready()
-        started_runs = self._start_action_runs()
-        if any(started_runs):
+        if any(self._start_action_runs()):
             self.event.ok('started')
             return True
 
@@ -178,21 +177,20 @@ class JobRun(Observable, Observer):
 
         return started_actions
 
-    def handle_action_run_state_change(self, _action_run, event):
+    def handle_action_run_state_change(self, action_run, _):
         """Handle events triggered by JobRuns."""
         # propagate all state changes (from action runs) up to state serializer
         self.notify(self.NOTIFY_STATE_CHANGED)
 
-        if event not in ActionRun.END_STATES:
+        if not action_run.is_done:
             return
 
-        started_actions = self._start_action_runs()
-        if any(started_actions):
+        if not action_run.is_broken and any(self._start_action_runs()):
             log.info("Action runs started for %s." % self)
             return
 
-        if self.action_runs.is_active:
-            log.info("%s still has running actions." % self)
+        if self.action_runs.is_active or self.action_runs.is_scheduled:
+            log.info("%s still has running or scheduled actions." % self)
             return
 
         # If we can't make any progress, we're done
@@ -200,6 +198,7 @@ class JobRun(Observable, Observer):
         if not cleanup_run or cleanup_run.is_done:
             return self.finalize()
 
+        # TODO: remove in (0.6), start() no longer raises an exception
         # When a job is being disabled, or the daemon is being shut down a bunch
         # of ActionRuns will be cancelled/failed. This would cause cleanup
         # action to be triggered more then once. Guard against that.
