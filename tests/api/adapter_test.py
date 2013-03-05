@@ -55,8 +55,7 @@ class RunAdapterTestCase(TestCase):
         assert_equal(self.adapter.get_state(), self.original.state.short_name)
 
     def test_get_node(self):
-        hostname = self.adapter.get_node()
-        assert_equal(hostname, self.original.node.hostname)
+        assert_equal(self.adapter.get_node(), str(self.original.node))
 
     def test_get_duration(self):
         self.original.start_time = None

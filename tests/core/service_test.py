@@ -51,15 +51,15 @@ class ServiceTestCase(TestCase):
 
     @mock.patch('tron.core.service.node')
     def test_from_config(self, mock_node):
-        node_store = mock.create_autospec(node.NodePoolStore)
-        mock_node.NodePoolStore.get_instance.return_value = node_store
-        node_store.__getitem__.return_value = mock.create_autospec(node.Node)
+        node_store = mock.create_autospec(node.NodePoolRepository)
+        mock_node.NodePoolRepository.get_instance.return_value = node_store
+        node_store.get_by_name.return_value = mock.create_autospec(node.Node)
         context = mock.create_autospec(command_context.CommandContext)
 
         service_inst = service.Service.from_config(self.config, context)
         collection = service_inst.instances
         assert_equal(service_inst.config, self.config)
-        assert_equal(collection.node_pool, node_store[self.config.node])
+        assert_equal(collection.node_pool, node_store.get_by_name.return_value)
         assert_equal(collection.context, context)
 
     def test_enable(self):

@@ -21,8 +21,8 @@ class JobTestCase(TestCase):
         run_collection = Turtle()
         self.nodes = mock.create_autospec(node.NodePool)
 
-        patcher = mock.patch('tron.core.job.node.NodePoolStore')
-        with patcher as self.mock_node_store:
+        patcher = mock.patch('tron.core.job.node.NodePoolRepository')
+        with patcher as self.mock_node_repo:
             self.job = job.Job("jobname", scheduler,
                     run_collection=run_collection, action_graph=action_graph,
                     node_pool=self.nodes)
@@ -56,7 +56,8 @@ class JobTestCase(TestCase):
 
         assert_equal(new_job.scheduler, scheduler)
         assert_equal(new_job.context.next, parent_context)
-        self.mock_node_store.get_instance().__getitem__.assert_called_with(job_config.node)
+        self.mock_node_repo.get_instance().get_by_name.assert_called_with(
+            job_config.node)
         assert_equal(new_job.enabled, True)
         assert new_job.action_graph
 

@@ -6,7 +6,7 @@ from twisted.internet.base import DelayedCall
 
 class Callback(DelayedCall):
     """
-        action() - not (cancelled or called)
+        active() - not (cancelled or called)
     """
     pass
 

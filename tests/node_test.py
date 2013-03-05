@@ -21,56 +21,55 @@ def create_mock_pool():
     return mock.create_autospec(node.NodePool)
 
 
-class NodePoolStoreTestCase(TestCase):
+class NodePoolRepositoryTestCase(TestCase):
 
     @setup
     def setup_store(self):
         self.node = create_mock_node()
-        self.store = node.NodePoolStore.get_instance()
-        self.store.add(self.node)
+        self.repo = node.NodePoolRepository.get_instance()
+        self.repo.add_node(self.node)
 
     @teardown
     def teardown_store(self):
-        node.NodePoolStore.clear()
+        self.repo.clear()
 
     def test_single_instance(self):
-        assert_raises(ValueError, node.NodePoolStore)
-        assert self.store is node.NodePoolStore.get_instance()
+        assert_raises(ValueError, node.NodePoolRepository)
+        assert self.repo is node.NodePoolRepository.get_instance()
 
-    def test_add(self):
-        mock_node = create_mock_node()
-        self.store.add(mock_node)
-        assert_in(mock_node, self.store)
+    def test_get_by_name(self):
+        node_pool = self.repo.get_by_name(self.node.get_name())
+        assert_equal(self.node, node_pool.next())
 
-    def test__getitem__(self):
-        assert_equal(self.node, self.store[self.node.get_name()])
-
-    def test_get(self):
-        assert_equal(self.node, self.store.get(self.node.get_name()))
-
-    def test_get_miss(self):
-        assert_equal(None, self.store.get('bogus'))
+    def test_get_by_name_miss(self):
+        assert_equal(None, self.repo.get_by_name('bogus'))
 
     def test_clear(self):
-        node.NodePoolStore.clear()
-        assert_not_in(self.node, self.store)
+        self.repo.clear()
+        assert_not_in(self.node, self.repo.nodes)
+        assert_not_in(self.node, self.repo.pools)
 
-    def test_filter_by_name(self):
-        self.store.add(create_mock_node('a'))
-        self.store.add(create_mock_node('b'))
-        self.store._filter_by_name(['b', 'c'])
-        assert_equal(self.store.nodes.keys(), ['b'])
-
-    @mock.patch('tron.node.NodePool')
-    @mock.patch('tron.node.Node')
-    def test_update_from_config(self, _mock_node, _mock_node_pool):
-        node_config = {'a': mock.Mock()}
-        node_pool_config = {'c': mock.Mock()}
+    def test_update_from_config(self):
+        mock_nodes = {'a': create_mock_node('a'), 'b': create_mock_node('b')}
+        self.repo.nodes.update(mock_nodes)
+        node_config = {'a': mock.Mock(), 'b': mock.Mock()}
+        node_pool_config = {'c': mock.Mock(nodes=['a', 'b'])}
         ssh_options = mock.create_autospec(ConchOptions)
-        node.NodePoolStore.update_from_config(
+        node.NodePoolRepository.update_from_config(
             node_config, node_pool_config, ssh_options)
+        node_names = [node_config['a'].name, node_config['b'].name]
+        assert_equal(set(self.repo.pools), set(node_names + [node_pool_config['c'].name]))
+        assert_equal(set(self.repo.nodes), set(node_names + mock_nodes.keys()))
 
-        assert_equal(len(self.store.nodes), 2)
+    def test_nodes_by_name(self):
+        mock_nodes = {'a': mock.Mock(), 'b': mock.Mock()}
+        self.repo.nodes.update(mock_nodes)
+        nodes = self.repo._get_nodes_by_name(['a', 'b'])
+        assert_equal(nodes, mock_nodes.values())
+
+    def test_get_node(self):
+        returned_node = self.repo.get_node(self.node.get_name())
+        assert_equal(returned_node, self.node)
 
 
 class NodeTestCase(TestCase):
@@ -108,21 +107,6 @@ class NodeTestCase(TestCase):
         assert_equal(new_node.hostname, node_config.hostname)
         assert_equal(new_node.username, node_config.username)
 
-    def test_next(self):
-        for _ in xrange(3):
-            assert_equal(self.node.next(), self.node)
-
-    def test_next_round_robin(self):
-        for _ in xrange(3):
-            assert_equal(self.node.next_round_robin(), self.node)
-
-    def test_nodes(self):
-        assert_equal(self.node.nodes, [self.node])
-
-    def test__getitem__(self):
-        assert_equal(self.node['localhost'], self.node)
-        assert_raises(KeyError, lambda: self.node['thename'])
-
     def test__cmp__(self):
         other_node = node.Node('mocalhost', self.ssh_options, username='mser', name='mocal')
         assert_lt(self.node, 'thename')
@@ -145,17 +129,13 @@ class NodePoolTestCase(TestCase):
             for i in xrange(5)]
         self.node_pool = node.NodePool(self.nodes, 'thename')
 
-    @mock.patch('tron.node.NodePoolStore')
-    def test_from_config(self, mock_pool_store):
-        node_names = ['node1', 'node3']
-        node_pool_config = mock.Mock(name='thename', nodes=node_names)
-        new_pool = node.NodePool.from_config(node_pool_config)
-        assert_equal(new_pool.name, node_pool_config.name)
-        store = mock_pool_store.get_instance.return_value
-        expected = [mock.call(name) for name in node_names]
-        assert_equal(store.__getitem__.mock_calls, expected)
-        expected = [store.__getitem__.return_value] * 2
-        assert_equal(new_pool.nodes, expected)
+    def test_from_config(self):
+        name = 'the pool name'
+        nodes = [create_mock_node(), create_mock_node()]
+        config = mock.Mock(name=name)
+        new_pool = node.NodePool.from_config(config, nodes)
+        assert_equal(new_pool.name, config.name)
+        assert_equal(new_pool.nodes, nodes)
 
     def test__init__(self):
         new_node = node.NodePool(self.nodes, 'thename')
@@ -176,12 +156,6 @@ class NodePoolTestCase(TestCase):
             for _ in xrange(len(self.nodes) * 2)
         ]
         assert_equal(node_order, self.nodes + self.nodes)
-
-    def test__getitem__(self):
-        assert_equal(self.node_pool['0'], self.nodes[0])
-        assert_equal(self.node_pool['3'], self.nodes[3])
-
-        assert_raises(KeyError, lambda: self.node_pool['node0'])
 
 
 if __name__ == '__main__':

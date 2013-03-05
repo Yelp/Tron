@@ -49,8 +49,7 @@ class RunAdapter(ReprAdapter):
         return self._obj.state.short_name
 
     def get_node(self):
-        node = self._obj.node
-        return node.hostname if node else None
+        return str(self._obj.node)
 
     def get_duration(self):
         duration = timeutils.duration(self._obj.start_time, self._obj.end_time)
@@ -137,7 +136,7 @@ class JobAdapter(ReprAdapter):
         'node_pool',
         'last_success',
         'url',
-        'runs'
+        'runs',
     ]
 
     def __init__(self, job, include_job_runs=False, include_action_runs=False):
@@ -164,11 +163,7 @@ class JobAdapter(ReprAdapter):
     def get_runs(self):
         if not self.include_job_runs:
             return
-
-        return [
-            JobRunAdapter(job_run, self.include_action_runs).get_repr()
-            for job_run in self._obj.runs
-        ]
+        return adapt_many(JobRunAdapter, self._obj.runs, self.include_action_runs)
 
 
 class ServiceAdapter(ReprAdapter):

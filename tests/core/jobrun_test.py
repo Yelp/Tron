@@ -298,7 +298,7 @@ class JobRunFromStateTestCase(TestCase):
         assert_length(run.action_runs.run_map, 1)
         assert_equal(run.job_name, 'thejobname')
         assert_equal(run.run_time, self.run_time)
-        assert not run.node
+        assert_equal(run.node, self.node_pool)
 
     def test_from_state_old_state_data(self):
         del self.state_data['manual']
