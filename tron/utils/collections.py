@@ -54,3 +54,6 @@ class MappingCollection(dict):
         log.info("Adding new %s" % item)
         self[item.get_name()] = item
         return True
+
+    def replace(self, item):
+        return self.add(item, self.remove)
