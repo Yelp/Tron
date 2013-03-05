@@ -1,11 +1,12 @@
 import datetime
+import mock
 import pytz
 from testify import TestCase, setup, assert_equal
 from testify.assertions import assert_in
 from tests.assertions import assert_length, assert_raises, assert_call
 from tests.mocks import MockNode
 from tron.core import jobrun, actionrun
-from tests.testingutils import Turtle
+from tests.testingutils import Turtle, autospec_method
 from tests import testingutils
 
 
@@ -22,12 +23,11 @@ class JobRunTestCase(testingutils.MockTimeTestCase):
         self.job_run = jobrun.JobRun('jobname', 7, self.run_time, node,
                 action_runs=Turtle(
                     action_runs_with_cleanup=[],
-                    get_startable_action_runs=lambda: [],
-                    is_active=False
-                ))
+                    get_startable_action_runs=lambda: []))
         self.job_run.watch = Turtle()
         self.job_run.notify = Turtle()
         self.job_run.event = Turtle()
+        self.action_run = mock.create_autospec(actionrun.ActionRun)
 
     def test__init__(self):
         assert_equal(self.job_run.job_name, 'jobname')
@@ -166,50 +166,61 @@ class JobRunTestCase(testingutils.MockTimeTestCase):
         assert_equal(started_runs, [])
 
     def test_handler_not_end_state_event(self):
-        self.job_run.finalize = Turtle()
-        self.job_run.handler(None, actionrun.ActionRun.STATE_STARTING)
-        assert_length(self.job_run.finalize.calls, 0)
+        autospec_method(self.job_run.finalize)
+        autospec_method(self.job_run._start_action_runs)
+        self.action_run.is_done = False
+        self.job_run.handler(self.action_run, mock.Mock())
+        assert not self.job_run.finalize.mock_calls
+        assert not self.job_run._start_action_runs.mock_calls
 
     def test_handler_with_startable(self):
-        self.job_run.action_runs.get_startable_action_runs = lambda: True
-        startable_run = Turtle()
+        startable_run = mock.create_autospec(actionrun.ActionRun)
         self.job_run.action_runs.get_startable_action_runs = lambda: [startable_run]
-        self.job_run.finalize = Turtle()
+        autospec_method(self.job_run.finalize)
+        self.action_run.is_broken = False
 
-        self.job_run.handler(None, actionrun.ActionRun.STATE_SUCCEEDED)
+        self.job_run.handler(self.action_run, mock.Mock())
         assert_call(self.job_run.notify, 0, self.job_run.NOTIFY_STATE_CHANGED)
-        assert_call(startable_run.start, 0)
-        assert_length(self.job_run.finalize.calls, 0)
+        startable_run.start.assert_called_with()
+        assert not self.job_run.finalize.mock_calls
 
-    def test_handler_not_done(self):
+    def test_handler_is_active(self):
         self.job_run.action_runs.is_active = True
-        self.job_run._start_action_runs = lambda: []
-        self.job_run.finalize = Turtle()
-
-        self.job_run.handler(None, actionrun.ActionRun.STATE_SUCCEEDED)
-        assert_length(self.job_run.finalize.calls, 0)
+        autospec_method(self.job_run._start_action_runs, return_value=[])
+        autospec_method(self.job_run.finalize)
+        self.job_run.handler(self.action_run, mock.Mock())
+        assert not self.job_run.finalize.mock_calls
 
     def test_handler_finished_without_cleanup(self):
+        self.job_run.action_runs.is_active = False
+        self.job_run.action_runs.is_scheduled = False
         self.job_run.action_runs.cleanup_action_run = None
-        self.job_run.finalize = Turtle()
-
-        self.job_run.handler(None, actionrun.ActionRun.STATE_SUCCEEDED)
-        assert_call(self.job_run.finalize, 0)
+        autospec_method(self.job_run.finalize)
+        self.job_run.handler(self.action_run, mock.Mock())
+        self.job_run.finalize.assert_called_with()
 
     def test_handler_finished_with_cleanup_done(self):
-        self.job_run.action_runs.cleanup_action_run = Turtle(is_done=True)
-        self.job_run.finalize = Turtle()
-
-        self.job_run.handler(None, actionrun.ActionRun.STATE_SUCCEEDED)
-        assert_call(self.job_run.finalize, 0)
+        self.job_run.action_runs.is_active = False
+        self.job_run.action_runs.is_scheduled = False
+        self.job_run.action_runs.cleanup_action_run = mock.Mock(is_done=True)
+        autospec_method(self.job_run.finalize)
+        self.job_run.handler(self.action_run, mock.Mock())
+        self.job_run.finalize.assert_called_with()
 
     def test_handler_finished_with_cleanup(self):
-        self.job_run.action_runs.cleanup_action_run = Turtle(is_done=False)
-        self.job_run.finalize = Turtle()
+        self.job_run.action_runs.is_active = False
+        self.job_run.action_runs.is_scheduled = False
+        self.job_run.action_runs.cleanup_action_run = mock.Mock(is_done=False)
+        autospec_method(self.job_run.finalize)
+        self.job_run.handler(self.action_run, mock.Mock())
+        assert not self.job_run.finalize.mock_calls
+        self.job_run.action_runs.cleanup_action_run.start.assert_called_with()
 
-        self.job_run.handler(None, actionrun.ActionRun.STATE_SUCCEEDED)
-        assert_length(self.job_run.finalize.calls, 0)
-        assert_call(self.job_run.action_runs.cleanup_action_run.start, 0)
+    def test_handler_action_run_cancelled(self):
+        self.action_run.is_broken = True
+        autospec_method(self.job_run._start_action_runs)
+        self.job_run.handler(self.action_run, mock.Mock())
+        assert not self.job_run._start_action_runs.mock_calls
 
     def test_state(self):
         assert_equal(self.job_run.state, actionrun.ActionRun.STATE_SUCCEEDED)

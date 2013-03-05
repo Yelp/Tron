@@ -75,7 +75,7 @@ class SandboxTestCase(TestCase):
     def delete_sandbox(self):
         if self.sandbox:
             self.sandbox.delete()
-        self.sandbox = None
+            self.sandbox = None
 
 
 class ClientProxy(object):

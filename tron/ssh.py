@@ -85,18 +85,24 @@ class ClientConnection(connection.SSHConnection):
 
         connection.SSHConnection.channelClosed(self, channel)
 
-    def ssh_CHANNEL_CLOSE(self, packet):
-        """The other side is closing its end.
-            Payload:
-                uint32  local channel number
-
-        We've noticed many occasions when this is called but `local_channel`
-        does not exist in self.channels.
+    def ssh_CHANNEL_REQUEST(self, packet):
         """
-        local_channel = struct.unpack('>L', packet[:4])[0]
-        if local_channel in self.channels:
-            return connection.SSHConnection.ssh_CHANNEL_CLOSE(self, packet)
+        The other side is sending a request to a channel.  Payload::
+            uint32  local channel number
+            string  request name
+            bool    want reply
+            <request specific data>
 
+        Handles missing local channel.
+        """
+        localChannel = struct.unpack('>L', packet[: 4])[0]
+        if localChannel not in self.channels:
+            requestType, _ = common.getNS(packet[4:])
+            host = self.transport.transport.getHost()
+            msg = "Missing channel: %s, request_type: %s, host: %s"
+            log.warn(msg, localChannel, requestType, host)
+            return
+        connection.SSHConnection.ssh_CHANNEL_REQUEST(self, packet)
 
 class ExecChannel(channel.SSHChannel):
 
