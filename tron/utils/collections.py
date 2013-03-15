@@ -31,7 +31,7 @@ class MappingCollection(dict):
 
     def remove(self, name):
         if name not in self:
-            raise ValueError("%s %s unknown", self.item_name, name)
+            raise ValueError("%s %s unknown" % (self.item_name, name))
 
         log.info("Removing %s %s", self.item_name, name)
         self.pop(name).disable()
@@ -56,4 +56,7 @@ class MappingCollection(dict):
         return True
 
     def replace(self, item):
-        return self.add(item, self.remove)
+        return self.add(item, self.remove_item)
+
+    def remove_item(self, item):
+        return self.remove(item.get_name())

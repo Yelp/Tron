@@ -1,13 +1,13 @@
 import mock
 from testify import setup, TestCase, assert_equal, run
-from testify import assert_in, assert_raises, assert_lt
-from testify.assertions import assert_not_in
+from testify import assert_in, assert_raises
+from testify.assertions import assert_not_in, assert_not_equal
 from testify.test_case import teardown
-from testify.utils import turtle
 
 from twisted.conch.client.options import ConchOptions
 from tron import node
 from tron.core import actionrun
+from tron.serialize import filehandler
 
 
 def create_mock_node(name=None):
@@ -54,7 +54,7 @@ class NodePoolRepositoryTestCase(TestCase):
         self.repo.nodes.update(mock_nodes)
         node_config = {'a': mock.Mock(), 'b': mock.Mock()}
         node_pool_config = {'c': mock.Mock(nodes=['a', 'b'])}
-        ssh_options = mock.create_autospec(ConchOptions)
+        ssh_options = mock.Mock(identities=[], known_hosts_file=None)
         node.NodePoolRepository.update_from_config(
             node_config, node_pool_config, ssh_options)
         node_names = [node_config['a'].name, node_config['b'].name]
@@ -72,6 +72,25 @@ class NodePoolRepositoryTestCase(TestCase):
         assert_equal(returned_node, self.node)
 
 
+class KnownHostTestCase(TestCase):
+
+    @setup
+    def setup_known_hosts(self):
+        self.known_hosts = node.KnownHosts(None)
+        self.entry = mock.Mock()
+        self.known_hosts._entries.append(self.entry)
+
+    def test_get_public_key(self):
+        hostname = 'hostname'
+        pub_key = self.known_hosts.get_public_key(hostname)
+        self.entry.matchesHost.assert_called_with(hostname)
+        assert_equal(pub_key, self.entry.publicKey)
+
+    def test_get_public_key_not_found(self):
+        self.entry.matchesHost.return_value = False
+        assert not self.known_hosts.get_public_key('hostname')
+
+
 class NodeTestCase(TestCase):
 
     class TestConnection(object):
@@ -80,43 +99,49 @@ class NodeTestCase(TestCase):
 
     @setup
     def setup_node(self):
-        self.ssh_options = turtle.Turtle()
+        self.ssh_options = mock.create_autospec(ConchOptions)
         self.node = node.Node('localhost', self.ssh_options, username='theuser', name='thename')
 
     def test_output_logging(self):
-        nod = node.Node('localhost', turtle.Turtle(), username='theuser')
-
-        fh = turtle.Turtle()
-        serializer = turtle.Turtle(open=lambda fn: fh)
+        nod = node.Node('localhost', mock.Mock(), username='theuser')
+        serializer = mock.create_autospec(filehandler.FileHandleManager)
         action_cmd = actionrun.ActionCommand("test", "false", serializer)
 
         nod.connection = self.TestConnection()
-        nod.run_states = {action_cmd.id: turtle.Turtle(state=0)}
+        nod.run_states = {action_cmd.id: mock.Mock(state=0)}
         nod.run_states[action_cmd.id].state = node.RUN_STATE_CONNECTING
 
         nod._open_channel(action_cmd)
         assert nod.connection.chan is not None
         nod.connection.chan.dataReceived("test")
-        assert_equal(fh.write.calls, [(("test",), {})])
+        serializer.open.return_value.write.assert_called_with('test')
 
     def test_from_config(self):
-        node_config = turtle.Turtle(hostname='localhost', username='theuser', name='thename')
-        ssh_options = turtle.Turtle()
-        new_node = node.Node.from_config(node_config, ssh_options)
+        node_config = mock.Mock(hostname='localhost', username='theuser', name='thename')
+        self.ssh_options.__getitem__.return_value = 'something'
+        public_key = mock.Mock()
+        new_node = node.Node.from_config(node_config, self.ssh_options, public_key)
         assert_equal(new_node.name, node_config.name)
         assert_equal(new_node.hostname, node_config.hostname)
         assert_equal(new_node.username, node_config.username)
-
-    def test__cmp__(self):
-        other_node = node.Node('mocalhost', self.ssh_options, username='mser', name='mocal')
-        assert_lt(self.node, 'thename')
-        assert_lt(self.node, other_node)
+        assert_equal(new_node.pub_key, public_key)
 
     def test_determine_fudge_factor(self):
-        assert_equal(self.node._determine_fudge_factor(), 0)
+        assert_equal(node.determine_fudge_factor(0), 0)
+        assert 0 < node.determine_fudge_factor(20) < 20
 
-        self.node.run_states = dict((i, i) for i in xrange(20))
-        assert 0 < self.node._determine_fudge_factor() < 20
+    def test__eq__true(self):
+        other_node = node.Node('localhost', self.ssh_options,
+            username='theuser', name='thename')
+        assert_equal(other_node, self.node)
+
+    def test__eq__false(self):
+        other_node = node.Node('localhost', self.ssh_options,
+            username='different', name='thename')
+        assert_not_equal(other_node, self.node)
+        other_node = node.Node('localhost', self.ssh_options,
+            username='theuser', name='thename', pub_key="something")
+        assert_not_equal(other_node, self.node)
 
 
 class NodePoolTestCase(TestCase):
@@ -156,6 +181,24 @@ class NodePoolTestCase(TestCase):
             for _ in xrange(len(self.nodes) * 2)
         ]
         assert_equal(node_order, self.nodes + self.nodes)
+
+
+class BuildSSHOptionsFromConfigTestCase(TestCase):
+
+    def test_build_ssh_options_from_config_none(self):
+        ssh_conf = mock.Mock(agent=False, identities=[])
+        ssh_options = node.build_ssh_options_from_config(ssh_conf)
+        assert_equal(ssh_options['agent'], False)
+        assert_equal(ssh_options['noagent'], True)
+        assert_equal(ssh_options.identitys, [])
+
+    def test_build_ssh_options_from_config_both(self):
+        identities = ['one', 'two']
+        ssh_conf = mock.Mock(agent=True, identities=identities)
+        ssh_options = node.build_ssh_options_from_config(ssh_conf)
+        assert_equal(ssh_options['agent'], True)
+        assert_equal(ssh_options['noagent'], False)
+        assert_equal(ssh_options.identitys, identities)
 
 
 if __name__ == '__main__':
