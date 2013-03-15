@@ -173,11 +173,7 @@ class ServiceCollection(object):
         return itertools.ifilter(self.add, seq)
 
     def add(self, service):
-        return self.services.add(service, self.remove_by_service)
-
-    def remove_by_service(self, service):
-        self.services.remove(service.get_name())
-        return False
+        return self.services.replace(service)
 
     def restore_state(self, service_state_data):
         self.services.restore_state(service_state_data)

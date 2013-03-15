@@ -1,6 +1,6 @@
 import mock
 from testify import setup, TestCase, assert_equal, run
-from testify import assert_in, assert_raises, assert_lt
+from testify import assert_in, assert_raises
 from testify.assertions import assert_not_in, assert_not_equal
 from testify.test_case import teardown
 
@@ -125,11 +125,6 @@ class NodeTestCase(TestCase):
         assert_equal(new_node.hostname, node_config.hostname)
         assert_equal(new_node.username, node_config.username)
         assert_equal(new_node.pub_key, public_key)
-
-    def test__cmp__(self):
-        other_node = node.Node('mocalhost', self.ssh_options, username='mser', name='mocal')
-        assert_lt(self.node, 'thename')
-        assert_lt(self.node, other_node)
 
     def test_determine_fudge_factor(self):
         assert_equal(node.determine_fudge_factor(0), 0)

@@ -95,11 +95,11 @@ class NodePoolRepository(object):
         for config in node_pool_configs.itervalues():
             nodes = instance._get_nodes_by_name(config.nodes)
             pool  = NodePool.from_config(config, nodes)
-            instance.pools.add(pool, instance.pools.remove)
+            instance.pools.replace(pool)
 
     def add_node(self, node):
-        self.nodes.add(node, self.nodes.remove)
-        self.pools.add(NodePool.from_node(node), self.pools.remove)
+        self.nodes.replace(node)
+        self.pools.replace(NodePool.from_node(node))
 
     def get_node(self, node_name, default=None):
         return self.nodes.get(node_name, default)
@@ -181,7 +181,7 @@ class KnownHosts(KnownHostsFile):
 
 
 def determine_fudge_factor(count, min_count=4):
-    """Return a random number. """
+    """Return a pseudo-random number. """
     fudge_factor = max(0.0, count - min_count)
     return random.random() * float(fudge_factor)
 
