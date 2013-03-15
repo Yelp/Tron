@@ -7,6 +7,8 @@ mongostore = None # pyflakes
 class MongoStateStoreTestCase(TestCase):
     _suites = ['mongodb']
 
+    store = None
+
     @setup
     def setup_store(self):
         # Defer import
@@ -17,9 +19,10 @@ class MongoStateStoreTestCase(TestCase):
 
     @teardown
     def teardown_store(self):
-        # Clear out records
-        self.store.connection.drop_database(self.db_name)
-        self.store.cleanup()
+        if self.store:
+            # Clear out records
+            self.store.connection.drop_database(self.db_name)
+            self.store.cleanup()
 
     def _create_doc(self, key, doc):
         import pymongo
