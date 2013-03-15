@@ -181,7 +181,7 @@ class KnownHosts(KnownHostsFile):
 
 
 def determine_fudge_factor(count, min_count=4):
-    """Return a random number. """
+    """Return a pseudo-random number. """
     fudge_factor = max(0.0, count - min_count)
     return random.random() * float(fudge_factor)
 

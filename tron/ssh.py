@@ -37,21 +37,23 @@ class ClientTransport(transport.SSHClientTransport):
         self.options          = options
         self.expected_pub_key = expected_pub_key
 
-    # TODO: test
     def verifyHostKey(self, public_key, fingerprint):
         if not self.expected_pub_key:
             return defer.succeed(1)
 
         if self.expected_pub_key == keys.Key.fromString(public_key):
-            return defer.succeed(1)
+            return defer.succeed(2)
 
-        msg = "Public key mismatch got %s expected %s"
-        log.error(msg, fingerprint, self.expected_pub_key.fingerprint())
-        return defer.fail(ValueError("public key mismatch"))
+        msg = "Public key mismatch got %s expected %s" % (
+            fingerprint, self.expected_pub_key.fingerprint())
+        log.error(msg)
+        return defer.fail(ValueError(msg))
 
     def connectionSecure(self):
         conn = ClientConnection()
+        # TODO: this should be initialized by the ClientConnection constructor
         conn.service_defer = defer.Deferred()
+        # TODO: this should be initialized by the constructor
         self.connection_defer.callback(conn)
 
         auth_service = NoPasswordAuthClient(self.username, self.options, conn)
