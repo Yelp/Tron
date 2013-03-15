@@ -1,9 +1,12 @@
 import logging
 import itertools
 import random
+from twisted.conch.client.knownhosts import KnownHostsFile
 
+from twisted.conch.client.options import ConchOptions
 from twisted.internet import protocol, defer, reactor
 from twisted.python import failure
+from twisted.python.filepath import FilePath
 
 from tron import ssh, eventloop
 from tron.utils import twistedutils, collections
@@ -11,6 +14,8 @@ from tron.utils import twistedutils, collections
 
 log = logging.getLogger(__name__)
 
+
+# TODO: make these configurable
 # We should also only wait a certain amount of time for a connection to be
 # established.
 CONNECT_TIMEOUT = 30
@@ -54,14 +59,6 @@ class ResultError(Error):
     pass
 
 
-class RunState(object):
-    def __init__(self, run):
-        self.run = run
-        self.state = RUN_STATE_CONNECTING
-        self.deferred = defer.Deferred()
-        self.channel = None
-
-
 class NodePoolRepository(object):
     """A Singleton to store Node and NodePool objects."""
 
@@ -85,12 +82,15 @@ class NodePoolRepository(object):
         self.pools.filter_by_name(node_configs.keys() + node_pool_configs.keys())
 
     @classmethod
-    def update_from_config(cls, node_configs, node_pool_configs, ssh_options):
+    def update_from_config(cls, node_configs, node_pool_configs, ssh_config):
         instance = cls.get_instance()
+        ssh_options = build_ssh_options_from_config(ssh_config)
+        known_hosts = KnownHosts.from_path(ssh_config.known_hosts_file)
         instance.filter_by_name(node_configs, node_pool_configs)
 
         for config in node_configs.itervalues():
-            instance.add_node(Node.from_config(config, ssh_options))
+            pub_key = known_hosts.get_public_key(config.hostname)
+            instance.add_node(Node.from_config(config, ssh_options, pub_key))
 
         for config in node_pool_configs.itervalues():
             nodes = instance._get_nodes_by_name(config.nodes)
@@ -164,13 +164,41 @@ class NodePool(object):
         return "NodePool:%s" % self.name
 
 
+class KnownHosts(KnownHostsFile):
+    """Lookup host key for a hostname."""
+
+    @classmethod
+    def from_path(cls, file_path):
+        if not file_path:
+            return cls(None)
+        return cls.fromPath(FilePath(file_path))
+
+    def get_public_key(self, hostname):
+        for entry in self._entries:
+            if entry.matchesHost(hostname):
+                return entry.publicKey
+        log.warn("Missing host key for: %s", hostname)
+
+
+def determine_fudge_factor(count, min_count=4):
+    """Return a pseudo-random number. """
+    fudge_factor = max(0.0, count - min_count)
+    return random.random() * float(fudge_factor)
+
+
+class RunState(object):
+    def __init__(self, action_run):
+        self.run = action_run
+        self.state = RUN_STATE_CONNECTING
+        self.deferred = defer.Deferred()
+        self.channel = None
+
+
 class Node(object):
     """A node is tron's interface to communicating with an actual machine.
-    This class also supports the NodePool interface and can be used
-    directly as a NodePool of 1 Node.
     """
 
-    def __init__(self, hostname, ssh_options, username=None, name=None):
+    def __init__(self, hostname, ssh_options, username=None, name=None, pub_key=None):
 
         # Host we are to connect to
         self.hostname = hostname
@@ -196,14 +224,16 @@ class Node(object):
 
         self.idle_timer = eventloop.NullCallback
         self.disabled = False
+        self.pub_key = pub_key
 
     @classmethod
-    def from_config(cls, node_config, ssh_options):
+    def from_config(cls, node_config, ssh_options, pub_key):
         return cls(
             node_config.hostname,
             ssh_options,
             username=node_config.username,
-            name=node_config.name)
+            name=node_config.name,
+            pub_key=pub_key)
 
     def get_name(self):
         return self.name
@@ -216,25 +246,15 @@ class Node(object):
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
-        return (self.hostname == other.hostname and self.name == other.name and
-                self.conch_options == other.conch_options)
+        return (self.hostname == other.hostname and
+                self.username == other.username and
+                self.name == other.name and
+                self.conch_options == other.conch_options and
+                self.pub_key == other.pub_key)
 
-    def __cmp__(self, other):
-        if not isinstance(other, self.__class__):
-            return -1
 
-        return cmp(self.hostname, other.hostname)
-
-    def _determine_fudge_factor(self):
-        """We want to introduce some amount of delay to node exec commands
-
-        We see issues where a service may have many instances, and they all
-        start at once, and their monitor steps are blocked for ever. This
-        is bad.
-        """
-        outstanding_runs = len(self.run_states)
-        fudge_factor = max(0.0, outstanding_runs - 4)
-        return random.random() * float(fudge_factor)
+    def __ne__(self, other):
+        return not self == other
 
     # TODO: Test
     def submit_command(self, command):
@@ -266,15 +286,14 @@ class Node(object):
         if self.idle_timer.active():
             self.idle_timer.cancel()
 
-        fudge_factor = self._determine_fudge_factor()
-
         self.run_states[run.id] = RunState(run)
 
+        # TODO: have this return a runner instead of number
+        fudge_factor = determine_fudge_factor(len(self.run_states))
         if fudge_factor == 0.0:
             self._do_run(run)
         else:
-            log.info("Delaying execution of %s for %.2f secs",
-                     run.id, fudge_factor)
+            log.info("Delaying execution of %s for %.2f secs", run.id, fudge_factor)
             eventloop.call_later(fudge_factor, self._do_run, run)
 
         # We return the deferred here, but really we're trying to keep the rest
@@ -295,6 +314,7 @@ class Node(object):
             self._open_channel(run)
 
     def _cleanup(self, run):
+        # TODO: why set to None before deleting it?
         self.run_states[run.id].channel = None
         del self.run_states[run.id]
 
@@ -391,9 +411,8 @@ class Node(object):
         #  2. Our transport is secure, and we can create our connection
         #  3. The connection service is started, so we can use it
 
-        client_creator = protocol.ClientCreator(reactor, ssh.ClientTransport,
-                                                username=self.username,
-                                                options=self.conch_options)
+        client_creator = protocol.ClientCreator(reactor,
+            ssh.ClientTransport, self.username, self.conch_options, self.pub_key)
         create_defer = client_creator.connectTCP(self.hostname, 22)
 
         # We're going to create a deferred, returned to the caller, that will
@@ -519,3 +538,14 @@ class Node(object):
 
     def __repr__(self):
         return self.__str__()
+
+
+def build_ssh_options_from_config(ssh_options_config):
+    ssh_options = ConchOptions()
+    ssh_options['agent']        = ssh_options_config.agent
+    ssh_options['noagent']      = not ssh_options_config.agent
+
+    for file_name in ssh_options_config.identities:
+        ssh_options.opt_identity(file_name)
+
+    return ssh_options

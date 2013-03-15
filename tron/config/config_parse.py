@@ -11,7 +11,7 @@ from tron import command_context
 
 from tron.config import ConfigError, config_utils
 from tron.config.config_utils import NullConfigContext, ConfigContext
-from tron.config.config_utils import valid_string, valid_bool, valid_list
+from tron.config.config_utils import valid_string, valid_bool
 from tron.config.config_utils import valid_identifier
 from tron.config.config_utils import build_list_of_type_validator
 from tron.config.config_utils import valid_name_identifier
@@ -187,6 +187,28 @@ def valid_output_stream_dir(output_dir, config_context):
     return output_dir
 
 
+def valid_identity_file(file_path, config_context):
+    valid_string(file_path, config_context)
+
+    file_path = os.path.expanduser(file_path)
+    if not os.path.exists(file_path):
+        raise ConfigError("Private key file %s doesn't exist" % file_path)
+
+    public_key_path = file_path + '.pub'
+    if not os.path.exists(public_key_path):
+        raise ConfigError("Public key file %s doesn't exist" % public_key_path)
+    return file_path
+
+
+def valid_known_hosts_file(file_path, config_context):
+    valid_string(file_path, config_context)
+
+    file_path = os.path.expanduser(file_path)
+    if not os.path.exists(file_path):
+        raise ConfigError("Known hosts file %s doesn't exist" % file_path)
+    return file_path
+
+
 def valid_command_context(context, config_context):
     # context can be any dict.
     return FrozenDict(**valid_dict(context or {}, config_context))
@@ -216,12 +238,24 @@ class ValidateSSHOptions(Validator):
     optional =                  True
     defaults = {
         'agent':                False,
-        'identities':           ()
+        'identities':           (),
+        'known_hosts_file':     None,
     }
+
     validators = {
         'agent':                valid_bool,
-        'identities':           valid_list,
+        'identities':           build_list_of_type_validator(
+                                    valid_identity_file, allow_empty=True),
+        'known_hosts_file':     valid_known_hosts_file
     }
+
+    def post_validation(self, valid_input, config_context):
+        if config_context.partial:
+            return
+
+        if valid_input['agent'] and 'SSH_AUTH_SOCK' not in os.environ:
+            raise ConfigError("No SSH Agent available ($SSH_AUTH_SOCK)")
+
 
 valid_ssh_options = ValidateSSHOptions()
 

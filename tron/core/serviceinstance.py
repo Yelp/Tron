@@ -39,7 +39,7 @@ def run_action(task, action):
     """
     log.debug("Executing %s on %s for %s" % (action, task.node, task))
     try:
-        task.node.run(action)
+        task.node.submit_command(action)
         return True
     except node.Error, e:
         log.error("Failed to run %s on %s: %s", action, task.node, e)

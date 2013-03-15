@@ -31,7 +31,7 @@ from tron.utils.dicts import FrozenDict
 
 BASE_CONFIG = """
 ssh_options:
-    agent: true
+    agent: false
     identities:
         - tests/test_id_rsa
 
@@ -58,7 +58,7 @@ output_stream_dir: "/tmp"
 time_zone: "EST"
 
 ssh_options:
-    agent: true
+    agent: false
     identities:
         - tests/test_id_rsa
 
@@ -159,8 +159,9 @@ services:
                 'batch_dir': '/tron/batch/test/foo'
             }),
             ssh_options=schema.ConfigSSHOptions(
-                agent=True,
-                identities=['tests/test_id_rsa'],
+                agent=False,
+                identities=('tests/test_id_rsa',),
+                known_hosts_file=None,
             ),
             notification_options=None,
             time_zone=pytz.timezone("EST"),
@@ -1076,6 +1077,56 @@ class ConfigContainerTestCase(TestCase):
         node_names = self.container.get_node_names()
         expected = set(['node0', 'node1', 'NodePool'])
         assert_equal(node_names, expected)
+
+
+class ValidateSSHOptionsTestCase(TestCase):
+
+    @setup
+    def setup_context(self):
+        self.context = config_utils.NullConfigContext
+        self.config = {'agent': True, 'identities': []}
+
+    @mock.patch.dict('tron.config.config_parse.os.environ')
+    def test_post_validation_failed(self):
+        if 'SSH_AUTH_SOCK' in os.environ:
+            del os.environ['SSH_AUTH_SOCK']
+        assert_raises(ConfigError, config_parse.valid_ssh_options.validate,
+            self.config, self.context)
+
+    @mock.patch.dict('tron.config.config_parse.os.environ')
+    def test_post_validation_success(self):
+        os.environ['SSH_AUTH_SOCK'] = 'something'
+        config = config_parse.valid_ssh_options.validate(self.config, self.context)
+        assert_equal(config.agent, True)
+
+
+class ValidateIdentityFileTestCase(TestCase):
+
+    @setup
+    def setup_context(self):
+        self.context = config_utils.NullConfigContext
+        self.private_file = tempfile.NamedTemporaryFile()
+
+    def test_valid_identity_file_missing_private_key(self):
+        exception = assert_raises(ConfigError,
+            config_parse.valid_identity_file,'/file/not/exist', self.context)
+        assert_in("Private key file", str(exception))
+
+    def test_valid_identity_files_missing_public_key(self):
+        filename = self.private_file.name
+        exception = assert_raises(ConfigError,
+            config_parse.valid_identity_file, filename, self.context)
+        assert_in("Public key file", str(exception))
+
+    def test_valid_identity_files_valid(self):
+        filename = self.private_file.name
+        fh_private = open(filename + '.pub', 'w')
+        try:
+            config = config_parse.valid_identity_file(filename, self.context)
+        finally:
+            fh_private.close()
+            os.unlink(fh_private.name)
+        assert_equal(config, filename)
 
 
 if __name__ == '__main__':

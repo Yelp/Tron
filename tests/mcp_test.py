@@ -45,31 +45,26 @@ class MasterControlProgramTestCase(TestCase):
         self.mcp.apply_config.assert_called_with(
             self.mcp.config.load.return_value, reconfigure=False)
 
-    def test_ssh_options_from_config(self):
-        ssh_conf = mock.Mock(agent=False, identities=[])
-        ssh_options = self.mcp._ssh_options_from_config(ssh_conf)
-
-        assert_equal(ssh_options['agent'], False)
-        assert_equal(ssh_options.identitys, [])
-        # TODO: tests with agent and identities
-
     def test_graceful_shutdown(self):
         self.mcp.graceful_shutdown()
         for job_sched in self.mcp.get_job_collection():
             assert job_sched.shutdown_requested
 
-    def test_apply_config(self):
+    @mock.patch('tron.mcp.node.NodePoolRepository', autospec=True)
+    def test_apply_config(self, mock_repo):
         config_container = mock.create_autospec(config_parse.ConfigContainer)
         master_config = config_container.get_master.return_value
-        autospec_method(self.mcp._ssh_options_from_config)
+        autospec_method(self.mcp.apply_collection_config)
+        autospec_method(self.mcp.apply_notification_options)
         self.mcp.apply_config(config_container)
         self.mcp.state_watcher.update_from_config.assert_called_with(
             master_config.state_persistence)
-        assert_equal(self.mcp.output_stream_dir, master_config.output_stream_dir)
-        assert_equal(self.mcp.time_zone, master_config.time_zone)
         assert_equal(self.mcp.context.base, master_config.command_context)
-        self.mcp._ssh_options_from_config.assert_called_with(
-            master_config.ssh_options)
+        assert_equal(len(self.mcp.apply_collection_config.mock_calls), 2)
+        self.mcp.apply_notification_options.assert_called_with(
+            master_config.notification_options)
+        mock_repo.update_from_config.assert_called_with(master_config.nodes, 
+            master_config.node_pools, master_config.ssh_options)
 
     def test_update_state_watcher_config_changed(self):
         self.mcp.state_watcher.update_from_config.return_value = True
