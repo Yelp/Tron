@@ -13,6 +13,7 @@ from tron.utils import observer
 
 log = logging.getLogger(__name__)
 
+
 class VersionMismatchError(ValueError):
     """Raised when the state has a newer version then tron.__version.__."""
 
@@ -155,13 +156,13 @@ class PersistentStateManager(object):
         """Return a dict mapping of the items name to its state data."""
         key_to_item_map  = self._keys_for_items(item_type, items)
         key_to_state_map = self._impl.restore(key_to_item_map.keys())
-        return dict(
-                (key_to_item_map[key], state_data)
-                for key, state_data in key_to_state_map.iteritems())
+        return dict((key_to_item_map[key], state_data)
+                    for key, state_data in key_to_state_map.iteritems())
 
     def save(self, type_enum, name, state_data):
         """Persist an items state."""
         key = self._impl.build_key(type_enum, name)
+        log.info("Buffering state save for: %s", key)
         if self._buffer.save(key, state_data) and self.enabled:
             self._save_from_buffer()
 
@@ -171,7 +172,7 @@ class PersistentStateManager(object):
             return
 
         keys = ','.join(str(key) for key, _ in key_state_pairs)
-        log.debug("Saving state for %s" % keys)
+        log.info("Saving state for %s" % keys)
 
         with self._timeit():
             try:

@@ -372,9 +372,7 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
         self.manual_run.start.assert_called_once_with()
 
 
-class JobSchedulerScheduleTestCase(testingutils.MockReactorTestCase):
-
-    module_to_mock = job
+class JobSchedulerScheduleTestCase(TestCase):
 
     @setup
     def setup_job(self):
@@ -389,6 +387,12 @@ class JobSchedulerScheduleTestCase(testingutils.MockReactorTestCase):
         )
         self.job_scheduler = job.JobScheduler(self.job)
 
+    @setup_teardown
+    def mock_eventloop(self):
+        patcher = mock.patch('tron.core.job.eventloop', autospec=True)
+        with patcher as self.eventloop:
+            yield
+
     @teardown
     def teardown_job(self):
         event.EventManager.reset()
@@ -397,20 +401,20 @@ class JobSchedulerScheduleTestCase(testingutils.MockReactorTestCase):
         self.job.enabled = False
         self.job_scheduler.enable()
         assert self.job.enabled
-        assert_length(self.reactor.callLater.calls, 1)
+        assert_length(self.eventloop.call_later.mock_calls, 1)
 
     def test_enable_noop(self):
         self.job.enalbed = True
         self.job_scheduler.enable()
         assert self.job.enabled
-        assert_length(self.reactor.callLater.calls, 0)
+        assert_length(self.eventloop.call_later.mock_calls, 0)
 
     def test_schedule(self):
         self.job_scheduler.schedule()
-        assert_length(self.reactor.callLater.calls, 1)
+        assert_length(self.eventloop.call_later.mock_calls, 1)
 
         # Args passed to callLater
-        call_args = self.reactor.callLater.calls[0][0]
+        call_args = self.eventloop.call_later.mock_calls[0][1]
         assert_equal(call_args[1], self.job_scheduler.run_job)
         secs = call_args[0]
         run = call_args[2]
@@ -422,7 +426,7 @@ class JobSchedulerScheduleTestCase(testingutils.MockReactorTestCase):
     def test_schedule_disabled_job(self):
         self.job.enabled = False
         self.job_scheduler.schedule()
-        assert_length(self.reactor.callLater.calls, 0)
+        assert_length(self.eventloop.call_later.mock_calls, 0)
 
     def test_handle_job_events_no_schedule_on_complete(self):
         self.job_scheduler.run_job = mock.Mock()
@@ -430,7 +434,7 @@ class JobSchedulerScheduleTestCase(testingutils.MockReactorTestCase):
         queued_job_run = mock.Mock()
         self.job.runs.get_first_queued = lambda: queued_job_run
         self.job_scheduler.handle_job_events(self.job, job.Job.NOTIFY_RUN_DONE)
-        assert_call(self.reactor.callLater, 0, 0,
+        self.eventloop.call_later.assert_any_call(0,
             self.job_scheduler.run_job, queued_job_run, run_queued=True)
 
     def test_handle_job_events_schedule_on_complete(self):
