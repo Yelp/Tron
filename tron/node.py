@@ -3,7 +3,6 @@ import itertools
 import random
 from twisted.conch.client.knownhosts import KnownHostsFile
 
-from twisted.conch.client.options import ConchOptions
 from twisted.internet import protocol, defer, reactor
 from twisted.python import failure
 from twisted.python.filepath import FilePath
@@ -84,7 +83,7 @@ class NodePoolRepository(object):
     @classmethod
     def update_from_config(cls, node_configs, node_pool_configs, ssh_config):
         instance = cls.get_instance()
-        ssh_options = build_ssh_options_from_config(ssh_config)
+        ssh_options = ssh.SSHAuthOptions.from_config(ssh_config)
         known_hosts = KnownHosts.from_path(ssh_config.known_hosts_file)
         instance.filter_by_name(node_configs, node_pool_configs)
 
@@ -538,14 +537,3 @@ class Node(object):
 
     def __repr__(self):
         return self.__str__()
-
-
-def build_ssh_options_from_config(ssh_options_config):
-    ssh_options = ConchOptions()
-    ssh_options['agent']        = ssh_options_config.agent
-    ssh_options['noagent']      = not ssh_options_config.agent
-
-    for file_name in ssh_options_config.identities:
-        ssh_options.opt_identity(file_name)
-
-    return ssh_options
