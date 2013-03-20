@@ -55,6 +55,9 @@ def parse_options():
     api_group.add_option("--host", "-H", dest="listen_host",
             help="Hostname to listen on, default %default",
             default=commands.DEFAULT_HOST)
+
+    api_group.add_option("--web-path",
+            help="Path to static web resources.")
     parser.add_option_group(api_group)
 
     options, args       = parser.parse_args(sys.argv)

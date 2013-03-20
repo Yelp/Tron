@@ -90,10 +90,11 @@ class RootResourceTestCase(WWWTestCase):
     @setup
     def build_resource(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
-        self.resource = www.RootResource(self.mcp)
+        web_path = '/bogus/path'
+        self.resource = www.RootResource(self.mcp, web_path)
 
     def test__init__(self):
-        expected_children = ['jobs', 'services', 'config', 'status', 'events']
+        expected_children = ['jobs', 'services', 'config', 'status', 'events', 'web']
         assert_equal(set(expected_children), set(self.resource.children.keys()))
 
     def test_render_GET(self):

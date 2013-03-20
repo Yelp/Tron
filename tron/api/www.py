@@ -12,7 +12,7 @@ try:
 except ImportError:
     import json
 
-from twisted.web import http, resource
+from twisted.web import http, resource, static
 
 from tron import event
 from tron.api import adapter, controller
@@ -306,7 +306,7 @@ class EventResource(resource.Resource):
 
 
 class RootResource(resource.Resource):
-    def __init__(self, mcp):
+    def __init__(self, mcp, web_path):
         self._master_control = mcp
         resource.Resource.__init__(self)
 
@@ -316,6 +316,7 @@ class RootResource(resource.Resource):
         self.putChild('config',   ConfigResource(mcp))
         self.putChild('status',   StatusResource(mcp))
         self.putChild('events',   EventResource(''))
+        self.putChild('web',      static.File(web_path))
 
     def getChild(self, name, request):
         if name == '':

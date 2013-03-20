@@ -180,7 +180,7 @@ class TronDaemon(object):
         # Local import required because of reactor import in server and www
         from twisted.web import server
         from tron.api import www
-        site = server.Site(www.RootResource(self.mcp))
+        site = server.Site(www.RootResource(self.mcp, self.options.web_path))
         port = self.options.listen_port
         self.reactor.listenTCP(port, site, interface=self.options.listen_host)
 
