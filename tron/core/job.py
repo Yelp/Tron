@@ -1,8 +1,7 @@
 import logging
 import itertools
-from twisted.internet import reactor
 
-from tron import command_context, event, node
+from tron import command_context, event, node, eventloop
 from tron.core import jobrun
 from tron.core import actiongraph
 from tron.core.actionrun import ActionRun
@@ -253,7 +252,7 @@ class JobScheduler(Observer):
         """Set a callback for JobRun to fire at the appropriate time."""
         log.info("Scheduling next Jobrun for %s", self.job.name)
         seconds = job_run.seconds_until_run_time()
-        reactor.callLater(seconds, self.run_job, job_run)
+        eventloop.call_later(seconds, self.run_job, job_run)
 
     def run_job(self, job_run, run_queued=False):
         """Triggered by a callback to actually start the JobRun. Also
@@ -307,7 +306,7 @@ class JobScheduler(Observer):
         # all_nodes job, but that is currently not possible
         queued_run = self.job.runs.get_first_queued()
         if queued_run:
-            reactor.callLater(0, self.run_job, queued_run, run_queued=True)
+            eventloop.call_later(0, self.run_job, queued_run, run_queued=True)
 
         # Attempt to schedule a new run.  This will only schedule a run if the
         # previous run was cancelled from a scheduled state, or if the job
