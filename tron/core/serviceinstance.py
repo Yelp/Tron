@@ -257,7 +257,7 @@ class ServiceInstance(observer.Observer):
     def create_tasks(self):
         """Create and watch tasks."""
         interval                = self.config.monitor_interval
-        pid_file                = self.config.pid_file % self.context
+        pid_file                = self.pid_filename
         self.monitor_task       = ServiceInstanceMonitorTask(
                                     self.id, self.node, interval, pid_file)
         self.start_task         = ServiceInstanceStartTask(self.id, self.node)
@@ -272,6 +272,10 @@ class ServiceInstance(observer.Observer):
         instance = cls(config, node, instance_number, context)
         instance.create_tasks()
         return instance
+
+    @property
+    def pid_filename(self):
+        return self.config.pid_file % self.context
 
     @property
     def command(self):
