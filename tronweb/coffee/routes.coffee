@@ -16,17 +16,16 @@ class TronRoutes extends Backbone.Router
     home: ->
         window.mainView.clear()
 
-    configs: ->
-        namespaces = new NamespaceList()
-        view = new NamespaceListView(model: namespaces)
-        namespaces.fetch()
+    updateMainView: (model, view_type) ->
+        view = new view_type(model: model)
+        model.fetch()
         window.mainView.render(view)
 
+    configs: ->
+        @updateMainView(new NamespaceList(), NamespaceListView)
+
     config: (name) ->
-        config = new Config(name: name)
-        view = new ConfigView(model: config)
-        config.fetch()
-        window.mainView.render(view)
+        @updateMainView(new Config(name: name), ConfigView)
 
 
 class MainView extends Backbone.View

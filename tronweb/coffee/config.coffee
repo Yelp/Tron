@@ -66,4 +66,4 @@ class window.ConfigView extends Backbone.View
     render: =>
         @$el.html @template(@model.attributes)
         CodeMirror.fromTextArea(@$('textarea').get(0), readOnly: true)
-       @
+        @
