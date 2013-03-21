@@ -311,7 +311,7 @@ class ServiceEndToEndTestCase(sandbox.SandboxTestCase):
                 -   name: service_restart
                     node: local
                     pid_file: "/tmp/file_dne"
-                    command: "cat /bogus/file/DNE"
+                    command: "sleep 1; cat /bogus/file/DNE"
                     monitor_interval: 1
                     restart_interval: 2
         """)
@@ -323,7 +323,6 @@ class ServiceEndToEndTestCase(sandbox.SandboxTestCase):
         waiter = sandbox.build_waiter_func(self.client.service, service_url)
         waiter(service.ServiceState.FAILED)
         service_content = self.client.service(service_url)
-        # TODO: this is really flaky for some reason
-        expected =['cat: /bogus/file/DNE: No such file or directory']
-        assert_equal(service_content['instances'][0]['failures'], expected)
+        expected = 'cat: /bogus/file/DNE: No such file or directory'
+        assert_in(service_content['instances'][0]['failures'][0], expected)
         waiter(service.ServiceState.STARTING)
