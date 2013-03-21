@@ -31,7 +31,7 @@ TronConfig = config_object_factory(
         'output_stream_dir',   # str
         'state_persistence',   # ConfigState
         'command_context',     # FrozenDict of str
-        'ssh_options',         # ConchOptions
+        'ssh_options',         # ConfigSSHOptions
         'notification_options',# NotificationOptions or None
         'time_zone',           # pytz time zone
         'nodes',               # FrozenDict of ConfigNode

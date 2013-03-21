@@ -21,6 +21,36 @@ class ChannelClosedEarlyError(Error):
     pass
 
 
+class SSHAuthOptions(object):
+    """An options class which can be used by NoPasswordAuthClient. This supports
+    the interface provided by: twisted.conch.client.options.ConchOptions.
+    """
+    def __init__(self, identitys, use_agent):
+        self.use_agent = use_agent
+        self.identitys = identitys
+
+    @classmethod
+    def from_config(cls, ssh_config):
+        return cls(ssh_config.identities, ssh_config.agent)
+
+    def __getitem__(self, item):
+        if item != 'noagent':
+            raise KeyError(item)
+        return not self.use_agent
+
+    def __eq__(self, other):
+        return other and (
+            self.use_agent == other.use_agent and
+            self.identitys == other.identitys)
+
+    def __ne__(self, other):
+        return not self == other
+
+    def __str__(self):
+        context = self.__class__.__name__, self.identitys, self.use_agent
+        return "%s(%s, %s)" % context
+
+
 class NoPasswordAuthClient(default.SSHUserAuthClient):
     """Only support passwordless auth."""
     preferredOrder              = ['publickey']

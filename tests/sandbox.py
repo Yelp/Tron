@@ -35,6 +35,18 @@ def wait_on_sandbox(func, delay=0.1, max_wait=5.0):
     raise TronSandboxException("Failed %s" % func.__name__)
 
 
+def wait_on_state(client_func, url, state):
+    """Use client_func(url) to wait until the resource changes to state."""
+    def wait_func():
+        return client_func(url)['state'] == state
+    wait_func.__name__ = '%s wait on %s' % (url, state)
+    wait_on_sandbox(wait_func)
+
+
+def build_waiter_func(client_func, url):
+    return functools.partial(wait_on_state, client_func, url)
+
+
 def handle_output(cmd, (stdout, stderr), returncode):
     """Log process output before it is parsed. Raise exception if exit code
     is nonzero.
@@ -70,12 +82,17 @@ class SandboxTestCase(TestCase):
     def make_sandbox(self):
         verify_environment()
         self.sandbox = TronSandbox()
+        self.client = self.sandbox.client
 
     @teardown
     def delete_sandbox(self):
         if self.sandbox:
             self.sandbox.delete()
             self.sandbox = None
+
+    def start_with_config(self, config):
+        self.sandbox.save_config(config)
+        self.sandbox.trond()
 
 
 class ClientProxy(object):
@@ -176,6 +193,12 @@ class TronSandbox(object):
     def tronctl(self, args=None):
         args = list(args) if args else []
         return self.run_command('tronctl', args + ['--server', self.api_uri])
+
+    def tronctl_start(self, name):
+        self.tronctl(['start', name])
+
+    def tronctl_stop(self, name):
+        self.tronctl(['stop', name])
 
     def tronview(self, args=None):
         args = list(args) if args else []
