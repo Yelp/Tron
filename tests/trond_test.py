@@ -134,6 +134,60 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         assert_equal(self.client.job_runs(job_run_url)['state'],
             actionrun.ActionRun.STATE_SUCCEEDED.short_name)
 
+    def test_node_reconfig(self):
+        job_service_config = dedent("""
+            jobs:
+                - name: a_job
+                  node: local
+                  schedule: "interval 1s"
+                  actions:
+                    - name: first_action
+                      command: "echo something"
+
+            services:
+                - name: a_service
+                  node: local
+                  pid_file: /tmp/does_not_exist
+                  command: "echo service start"
+                  monitor_interval: 1
+        """)
+        second_config = dedent("""
+            ssh_options:
+                agent: true
+
+            nodes:
+              - name: local
+                hostname: '127.0.0.1'
+
+            state_persistence:
+                name: "state_data.shelve"
+                store_type: shelve
+
+        """) + job_service_config
+        self.start_with_config(BASIC_CONFIG + job_service_config)
+
+        service_name = 'MASTER.a_service'
+        service_url = self.client.get_url(service_name)
+        self.sandbox.tronctl_start(service_name)
+        sandbox.wait_on_state(self.client.service, service_url,
+            service.ServiceState.FAILED)
+
+        job_url = self.client.get_url('MASTER.a_job.0')
+        sandbox.wait_on_state(self.client.job_runs, job_url,
+            actionrun.ActionRun.STATE_SUCCEEDED.short_name)
+
+        self.sandbox.tronfig(second_config)
+
+        sandbox.wait_on_state(self.client.service, service_url,
+            service.ServiceState.DISABLED)
+
+        job_url = self.client.get_url('MASTER.a_job')
+        def wait_on_next_run():
+            last_run = self.client.job(job_url)['runs'][0]
+            return last_run['node'].endswith('127.0.0.1')
+
+        sandbox.wait_on_sandbox(wait_on_next_run)
+
 
 class JobEndToEndTestCase(sandbox.SandboxTestCase):
 
