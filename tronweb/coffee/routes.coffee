@@ -30,6 +30,9 @@ class TronRoutes extends Backbone.Router
     services: ->
         @updateMainView(new ServiceCollection(), ServiceListView)
 
+    service: (name) ->
+        @updateMainView(new Service(name: name), ServiceView)
+
 
 class MainView extends Backbone.View
 
