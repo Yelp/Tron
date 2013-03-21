@@ -110,7 +110,7 @@ class ActionRunAdapter(RunAdapter):
 class JobRunAdapter(RunAdapter):
 
     field_names = [
-            'id', 'run_num', 'run_time', 'start_time', 'end_time', 'manual']
+            'id', 'run_num', 'run_time', 'start_time', 'end_time', 'manual', 'job_name']
     translated_field_names = ['state', 'node', 'duration', 'url', 'runs']
 
     def __init__(self, job_run, include_action_runs=False):
@@ -135,6 +135,7 @@ class JobAdapter(ReprAdapter):
         'action_names',
         'node_pool',
         'last_success',
+        'next_run',
         'url',
         'runs',
     ]
@@ -156,6 +157,10 @@ class JobAdapter(ReprAdapter):
     def get_last_success(self):
         last_success = self._obj.runs.last_success
         return last_success.end_time if last_success else None
+
+    def get_next_run(self):
+        next_run = self._obj.runs.next_run
+        return next_run.run_time if next_run else None
 
     def get_url(self):
         return '/jobs/%s' % urllib.quote(self._obj.name)
