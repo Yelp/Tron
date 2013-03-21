@@ -314,6 +314,7 @@ class RootResource(resource.Resource):
         self.putChild('jobs',     JobCollectionResource(mcp.get_job_collection()))
         self.putChild('services', ServiceCollectionResource(mcp.get_service_collection()))
         self.putChild('config',   ConfigResource(mcp))
+        # TODO: namespaces
         self.putChild('status',   StatusResource(mcp))
         self.putChild('events',   EventResource(''))
         self.putChild('web',      static.File(web_path))
