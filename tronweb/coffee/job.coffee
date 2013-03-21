@@ -24,15 +24,15 @@ class window.JobCollection extends Backbone.Collection
         resp['jobs']
 
 
-# TODO: unused ?
-class JobRun extends Backbone.Model
-
-    initialize: (name) ->
-        @name = name
+class window.JobRun extends Backbone.Model
 
     idAttribute: "run_num"
 
+    urlRoot: ->
+        "/jobs/" + @get('name')
 
+
+# TODO: unused ?
 class JobRunCollection extends Backbone.Collection
 
     initialize: (name) ->
@@ -43,6 +43,13 @@ class JobRunCollection extends Backbone.Collection
 
     parse: (resp, options) =>
         resp['runs']
+
+
+class ActionRun extends Backbone.Model
+
+    idAttribute: "action_name"
+
+    # TODO: urlRoot: ->
 
 
 class window.JobListView extends Backbone.View
@@ -134,7 +141,6 @@ class window.JobView extends Backbone.View
                 </table>
             </div>
 
-            <% if (runs.length > 0) { %>
             <div class="span12">
                 <h2>Job Runs</h2>
                 <table class="table">
@@ -151,7 +157,6 @@ class window.JobView extends Backbone.View
                     </tbody>
                 </table>
             </div>
-            <% } %>
 
         </div>
         """
@@ -166,7 +171,6 @@ class window.JobView extends Backbone.View
 class JobRunListEntryView extends Backbone.View
 
     initialize: (options) =>
-        @name = options.name
         @listenTo(@model, "change", @render)
 
     tagName: "tr"
@@ -181,6 +185,90 @@ class JobRunListEntryView extends Backbone.View
     template: _.template """
         <td><a href="#job/<%= job_name %>/<%= run_num %>"><%= id %></a></td>
         <td><%= state %></td>
+        <td><%= node %></td>
+        <td><% print(dateFromNow(start_time || run_time, "Unknown")) %></td>
+        <td><% print(dateFromNow(end_time, "")) %></td>
+        """
+
+    render: ->
+        @$el.html @template(@model.attributes)
+        @
+
+
+class window.JobRunView extends Backbone.View
+
+    initialize: (options) =>
+        @listenTo(@model, "change", @render)
+
+    tagName: "div"
+
+    className: "span12"
+
+    template: _.template """
+         <div class="row">
+            <div class="span12">
+                <h1>Job Run <%= id %></h1>
+            </div>
+            <div class="span8">
+                <h2>Details</h2>
+                <table class="table">
+                    <tr><td>state</td>          <td><%= state %></td></tr>
+                    <tr><td>Node</td>           <td><%= node %></td></tr>
+                    <tr><td>Manual</td>         <td><%= manual %></td></tr>
+                    <tr><td>Scheduled</td>      <td><%= run_time %></td></tr>
+                    <tr><td>Start</td>          <td><%= start_time %></td></tr>
+                    <tr><td>End</td>            <td><%= end_time %> (<%= duration %>)</td></tr>
+                </table>
+            </div>
+
+            <div class="span12">
+                <h2>Action Runs</h2>
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Name</th>
+                            <th>State</th>
+                            <th>Command</th>
+                            <th>Exit</th>
+                            <th>Node</th>
+                            <th>Start</th>
+                            <th>End</th>
+                        </tr>
+                    </thead>
+                    <tbody class="actionruns">
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+        """
+
+    render: ->
+        @$el.html @template(@model.attributes)
+        entry = (run) -> new ActionRunListEntryView(model:new ActionRun(run)).render().el
+        @$('tbody.actionruns').append(entry(model) for model in @model.get('runs'))
+        @
+
+
+class ActionRunListEntryView extends Backbone.View
+
+    initialize: (options) =>
+        @listenTo(@model, "change", @render)
+
+    tagName: "tr"
+
+    className: =>
+         switch @model.get('state')
+            when "RUNN"     then 'info'
+            when "FAIL"     then 'error'
+            when "SUCC"     then 'success'
+
+
+    template: _.template """
+        <td><%= action_name %></td>
+        <td><%= state %></td>
+        <td><%= command %></td>
+        <td><%= exit_status %></td>
         <td><%= node %></td>
         <td><% print(dateFromNow(start_time, "Unknown")) %></td>
         <td><% print(dateFromNow(end_time, "")) %></td>
