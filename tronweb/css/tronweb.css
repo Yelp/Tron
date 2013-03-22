@@ -12,3 +12,10 @@ body, input, button, select {
 [class^="icon-"] {
     margin-top: 3px
 }
+
+div.refresh-view span {
+    font-size: 14px;
+    vertical-align: middle;
+    margin-right: 4px;
+    font-weight: normal;
+}

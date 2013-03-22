@@ -46,7 +46,7 @@ class window.FilterView extends Backbone.View
 
     className: "pull-right"
 
-    render: ->
+    render: =>
         @$el.html """
             <div class="control-group">
                 <div class="controls">
@@ -75,22 +75,35 @@ class window.RefreshToggleView extends Backbone.View
     initialize: ->
         @listenTo(mainView, 'closeView', @model.disable_refresh)
 
-    tagName: "button"
+    tagName: "div"
 
-    className: =>
-        active = if @model.enabled then " active" else ""
-        "btn btn-default pull-right" + active
+    className: "refresh-view pull-right"
 
     attributes:
         "type":             "button"
         "data-toggle":      "button"
 
+    template: _.template """
+        <span class="muted"><%= text %></span>
+        <button class="btn btn-default <%= active %>">
+            <i class="icon-refresh"></i>
+        </button>
+        """
+
+    # TODO: why does text get stuck after a couple refresh?
     render: =>
-        @$el.html """ <i class="icon-refresh"></i> """
+        if @model.enabled
+            seconds = @model.interval / 1000
+            text = _.template("Auto-refresh <%= seconds %>s ")(seconds:seconds)
+            active = "active"
+        else
+            text = active = ""
+        @$el.html @template(text: text, active: active)
         @
 
     events:
-        "click":        "toggle"
+        "click button":        "toggle"
 
     toggle: (event) =>
         @model.toggle(event)
+        @render()
