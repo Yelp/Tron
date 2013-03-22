@@ -68,7 +68,6 @@ class window.JobListView extends Backbone.View
 
     # TODO: sort by name/state/node
     render: ->
-        models = models || @model.models
         @$el.html @template()
         @render_filter()
         @render_list(@model.models)

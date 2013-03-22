@@ -28,13 +28,14 @@ class window.ServiceListView extends Backbone.View
 
     className: "span12"
 
-    # TODO: filter by name
     template: _.template '
         <h1>Services</h1>
+        <div id="filter-bar" class="row"></div>
         <table class="table table-hover">
             <thead>
                 <tr>
                     <th>Name</td>
+                    <th>State</th>
                     <th>Count</td>
                     <th>Node Pool</td>
                 </tr>
@@ -46,9 +47,21 @@ class window.ServiceListView extends Backbone.View
     # TODO: sort by name/state/node
     render: ->
         @$el.html @template()
-        entry = (model) -> new ServiceListEntryView(model: model).render().el
-        @$('tbody').append(entry(model) for model in @model.models)
+        @render_filter()
+        @render_list(@model.models)
         @
+
+    render_list: (models) ->
+        entry = (model) -> new ServiceListEntryView(model: model).render().el
+        @$('tbody').html(entry(model) for model in models)
+
+    render_filter: ->
+        filter = new FilterView()
+        @listenTo(filter, "filter_change", @filter)
+        @$('#filter-bar').html(filter.render().el)
+
+    filter: (prefix) ->
+        @render_list @model.filter((job) -> _.str.startsWith(job.get('name'), prefix))
 
 
 class ServiceListEntryView extends Backbone.View
@@ -67,6 +80,7 @@ class ServiceListEntryView extends Backbone.View
 
     template: _.template '
         <td><a href="#service/<%= name %>"><%= name %></a></td>
+        <td><%= state %>
         <td><%= live_count %> / <%= count %></td>
         <td><%= node_pool %></td>'
 

@@ -33,8 +33,8 @@ class window.FilterView extends Backbone.View
         @
 
     events:
-        "keyup input": "filter_change"
-        "submit form":  "submit"
+        "keyup input":  "filter_change"
+        "submit":       "submit"
 
     filter_change: ->
         @trigger('filter_change', @$('input').val())
