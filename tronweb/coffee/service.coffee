@@ -22,7 +22,6 @@ class window.ServiceListView extends Backbone.View
 
     initialize: (options) =>
         @listenTo(@model, "sync", @render)
-        @listenTo(@model, "sort", @render)
 
     tagName: "div"
 

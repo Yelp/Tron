@@ -13,13 +13,13 @@ class TronRoutes extends Backbone.Router
         "configs":          "configs"
         "config/:name":     "config"
 
-    home: ->
-        window.mainView.clear()
-
     updateMainView: (model, view_type) ->
         view = new view_type(model: model)
         model.fetch()
-        window.mainView.render(view)
+        mainView.render(view)
+
+    home: ->
+        @updateMainView(new Dashboard(), DashboardView)
 
     configs: ->
         @updateMainView(new NamespaceList(), NamespaceListView)

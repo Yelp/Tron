@@ -1,6 +1,24 @@
 
 # Common view elements
 
+# Print the date as a string describing the elapsed time
+window.dateFromNow = (string, defaultString='never') ->
+    template = _.template """
+        <span title="<%= formatted %>" class="tt-enable" data-placement="top">
+            <%= delta %>
+        </span>
+        """
+    if string
+        formatted = moment(string).format('MMM, Do YYYY, h:mm:ss a')
+        delta = moment(string).fromNow()
+    else
+        formatted = delta = defaultString
+    template(formatted: formatted, delta: delta)
+
+
+window.makeTooltips = (root) ->
+    root.find('.tt-enable').tooltip()
+
 
 class window.BreadcrumbView extends Backbone.View
 

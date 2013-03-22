@@ -30,7 +30,7 @@ class NamespaceListEntryView extends Backbone.View
 class window.NamespaceListView extends Backbone.View
 
     initialize: (options) =>
-        @listenTo(@model, "change", @render)
+        @listenTo(@model, "sync", @render)
 
     tagName: "div"
 

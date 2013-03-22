@@ -2,10 +2,6 @@
 
 # Jobs
 
-# TODO: move to utils
-window.dateFromNow = (string, defaultString='Never') ->
-    if string then moment(string).fromNow() else defaultString
-
 
 class window.Job extends Backbone.Model
 
@@ -43,7 +39,6 @@ class window.JobListView extends Backbone.View
 
     initialize: (options) =>
         @listenTo(@model, "sync", @render)
-        @listenTo(@model, "sort", @render)
 
     tagName: "div"
 
@@ -104,12 +99,13 @@ class JobListEntryView extends Backbone.View
         <td><a href="#job/<%= name %>"><%= name %></a></td>
         <td><%= scheduler %></td>
         <td><%= node_pool %></td>
-        <td><% print(dateFromNow(last_success, 'Never')) %></td>
-        <td><% print(dateFromNow(next_run, 'None')) %></td>
+        <td><% print(dateFromNow(last_success, 'never')) %></td>
+        <td><% print(dateFromNow(next_run, 'none')) %></td>
         """
 
     render: ->
         @$el.html @template(@model.attributes)
+        makeTooltips(@$el)
         @
 
 
@@ -198,6 +194,7 @@ class JobRunListEntryView extends Backbone.View
 
     render: ->
         @$el.html @template(@model.attributes)
+        makeTooltips(@$el)
         @
 
 
@@ -290,4 +287,5 @@ class ActionRunListEntryView extends Backbone.View
 
     render: ->
         @$el.html @template(@model.attributes)
+        makeTooltips(@$el)
         @
