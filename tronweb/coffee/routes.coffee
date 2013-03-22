@@ -48,9 +48,11 @@ class MainView extends Backbone.View
     el: $("#main")
 
     render: (item) =>
+        breadcrumbView.clear()
         @$el.html(item.el)
 
     clear: =>
+        breadcrumbView.clear()
         @$el.html('')
 
 
@@ -58,4 +60,5 @@ $(document).ready ->
 
     window.routes = new TronRoutes()
     window.mainView = new MainView()
+    window.breadcrumbView = new BreadcrumbView()
     Backbone.history.start(root: "/web/")

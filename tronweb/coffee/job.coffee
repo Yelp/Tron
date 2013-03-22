@@ -161,8 +161,14 @@ class window.JobView extends Backbone.View
         </div>
         """
 
+    breadcrumb: -> [
+            {url: "#jobs", name: "Jobs"},
+            {url: "", name: @model.get('name')},
+        ]
+
     render: ->
         @$el.html @template(@model.attributes)
+        breadcrumbView.render @breadcrumb()
         entry = (jobrun) -> new JobRunListEntryView(model:new JobRun(jobrun)).render().el
         @$('tbody.jobruns').append(entry(model) for model in @model.get('runs'))
         @
@@ -243,8 +249,16 @@ class window.JobRunView extends Backbone.View
         </div>
         """
 
+    breadcrumb: -> [
+            {url: "#jobs", name: "Jobs"},
+            {url: "#job/" + @model.get('job_name'), name: @model.get('job_name')},
+            {url: "", name: @model.get('run_num')},
+        ]
+
+
     render: ->
         @$el.html @template(@model.attributes)
+        breadcrumbView.render @breadcrumb()
         entry = (run) -> new ActionRunListEntryView(model:new ActionRun(run)).render().el
         @$('tbody.actionruns').append(entry(model) for model in @model.get('runs'))
         @
