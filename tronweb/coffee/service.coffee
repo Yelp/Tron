@@ -73,10 +73,10 @@ class ServiceListEntryView extends Backbone.View
 
     className: =>
         switch @model.attributes.state
-            when "DISABLED" then 'info'
-            when "FAILED"   then 'error'
-            when "DEGRADED" then 'warning'
-            when "UP"       then 'success'
+            when "disabled" then 'info'
+            when "failed"   then 'error'
+            when "degraded" then 'warning'
+            when "up"       then 'success'
 
     template: _.template '
         <td><a href="#service/<%= name %>"><%= name %></a></td>
@@ -98,7 +98,7 @@ class window.ServiceView extends Backbone.View
 
     className: "span12"
 
-    template: _.template '
+    template: _.template """
         <div class="row">
             <div class="span12">
                 <h1>Service <%= name %></h1>
@@ -134,10 +134,16 @@ class window.ServiceView extends Backbone.View
             <% } %>
 
         </div>
-        '
+        """
+
+    breadcrumb: -> [
+            {url: "#services", name: "Services"},
+            {url: "", name: @model.get('name')},
+        ]
 
     render: ->
         @$el.html @template(@model.attributes)
+        breadcrumbView.render @breadcrumb()
         entry = (inst) -> new ServiceInstanceView(model:inst).render().el
         @$('tbody.instances').append(entry(model) for model in @model.get('instances'))
         @
@@ -151,6 +157,7 @@ class ServiceInstanceView extends Backbone.View
         switch @model.state
             when "failed"   then 'error'
             when "up"       then 'success'
+            when "starting" then 'info'
 
     template: _.template '
         <td><%= id %></td>

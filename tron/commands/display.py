@@ -155,11 +155,11 @@ class TableDisplay(object):
 
 
 def add_color_for_state(state):
-    if state.upper() in ('FAILED', 'FAIL'):
+    if state in ('failed', ):
         return Color.set('red', state)
-    if state.upper() in ('UP', 'ENABLED', 'RUNNING', 'SUCC'):
+    if state in ('up', 'enabled', 'running', 'success'):
         return Color.set('green', state)
-    if state.upper() in ('DISABLED', 'DOWN'):
+    if state in ('disabled', 'down'):
         return Color.set('blue', state)
     return state
 

@@ -12,13 +12,13 @@ log = logging.getLogger(__name__)
 
 class ServiceState(object):
     """Determine the state of a Service."""
-    DISABLED      = "DISABLED"
-    STARTING      = "STARTING"
-    UP            = "UP"
-    DEGRADED      = "DEGRADED"
-    FAILED        = "FAILED"
-    STOPPING      = "STOPPING"
-    UNKNOWN       = "UNKNOWN"
+    DISABLED      = "disabled"
+    STARTING      = "starting"
+    UP            = "up"
+    DEGRADED      = "degraded"
+    FAILED        = "failed"
+    STOPPING      = "stopping"
+    UNKNOWN       = "unknown"
 
     FAILURE_STATES = set([DEGRADED, FAILED])
 

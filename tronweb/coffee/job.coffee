@@ -96,9 +96,9 @@ class JobListEntryView extends Backbone.View
 
     className: =>
         switch @model.attributes.status
-            when "DISABLED" then 'warning'
-            when "ENABLED"  then 'enabled'
-            when "RUNNING"  then 'info'
+            when "disabled" then 'warning'
+            when "enabled"  then 'enabled'
+            when "running"  then 'info'
 
     template: _.template """
         <td><a href="#job/<%= name %>"><%= name %></a></td>
@@ -183,9 +183,9 @@ class JobRunListEntryView extends Backbone.View
 
     className: ->
         switch @model.get('state')
-            when "RUNN"     then 'info'
-            when "FAIL"     then 'error'
-            when "SUCC"     then 'success'
+            when "running"      then 'info'
+            when "failed"       then 'error'
+            when "succeeded"    then 'success'
 
     # TODO: add icon for manual run flag
     template: _.template """
@@ -273,9 +273,9 @@ class ActionRunListEntryView extends Backbone.View
 
     className: =>
          switch @model.get('state')
-            when "RUNN"     then 'info'
-            when "FAIL"     then 'error'
-            when "SUCC"     then 'success'
+            when "running"      then 'info'
+            when "failed"       then 'error'
+            when "succeeded"    then 'success'
 
 
     template: _.template """
