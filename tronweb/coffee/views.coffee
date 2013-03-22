@@ -20,3 +20,24 @@ class window.BreadcrumbView extends Backbone.View
 
     clear: ->
         @$el.html('')
+
+
+class window.FilterView extends Backbone.View
+
+    tagName: "form"
+
+    className: "pull-right"
+
+    render: ->
+        @$el.html """ <input type="text" placeholder="Filter by name"> """
+        @
+
+    events:
+        "keyup input": "filter_change"
+        "submit form":  "submit"
+
+    filter_change: ->
+        @trigger('filter_change', @$('input').val())
+
+    submit: (event) ->
+        event.preventDefault()

@@ -53,7 +53,7 @@ class MainView extends Backbone.View
 
     clear: =>
         breadcrumbView.clear()
-        @$el.html('')
+        @$el.empty()
 
 
 $(document).ready ->

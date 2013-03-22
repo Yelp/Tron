@@ -32,19 +32,6 @@ class window.JobRun extends Backbone.Model
         "/jobs/" + @get('name')
 
 
-# TODO: unused ?
-class JobRunCollection extends Backbone.Collection
-
-    initialize: (name) ->
-        @name = name
-
-    url: ->
-        "/jobs/" + @name
-
-    parse: (resp, options) =>
-        resp['runs']
-
-
 class ActionRun extends Backbone.Model
 
     idAttribute: "action_name"
@@ -62,9 +49,9 @@ class window.JobListView extends Backbone.View
 
     className: "span12"
 
-    # TODO: filter by name
     template: _.template '
         <h1>Jobs</h1>
+        <div id="filter-bar" class="row"></div>
         <table class="table table-hover">
             <thead>
                 <tr>
@@ -77,14 +64,28 @@ class window.JobListView extends Backbone.View
             </thead>
             <tbody>
             </tbody>
-        <table>'
+        </table>'
 
     # TODO: sort by name/state/node
     render: ->
+        models = models || @model.models
         @$el.html @template()
-        entry = (model) -> new JobListEntryView(model: model).render().el
-        @$('tbody').append(entry(model) for model in @model.models)
+        @render_filter()
+        @render_list(@model.models)
         @
+
+    render_list: (models) ->
+        entry = (model) -> new JobListEntryView(model: model).render().el
+        @$('tbody').html(entry(model) for model in models)
+
+    render_filter: ->
+        filter = new FilterView()
+        @listenTo(filter, "filter_change", @filter)
+        @$('#filter-bar').html(filter.render().el)
+
+    filter: (prefix) ->
+        @render_list @model.filter((job) -> _.str.startsWith(job.get('name'), prefix))
+
 
 
 class JobListEntryView extends Backbone.View
@@ -187,7 +188,7 @@ class JobRunListEntryView extends Backbone.View
             when "FAIL"     then 'error'
             when "SUCC"     then 'success'
 
-    # TODO: add manual run flag
+    # TODO: add icon for manual run flag
     template: _.template """
         <td><a href="#job/<%= job_name %>/<%= run_num %>"><%= id %></a></td>
         <td><%= state %></td>
