@@ -46,7 +46,7 @@ class window.EventListView extends Backbone.View
     initialize: (options) =>
         super options
         @refreshView = new RefreshToggleView(model: @model.refresh)
-        @listenTo(@model, "change", @render)
+        @listenTo(@model, "sync", @render)
         @listenTo(@refreshView.model, 'refresh', @update)
 
     tagName: "div"
@@ -68,6 +68,7 @@ class window.EventListView extends Backbone.View
         </table>
         """
 
+    # TODO: why doesn't this work directly ?
     update: (name) =>
         @model.fetch()
 

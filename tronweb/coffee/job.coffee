@@ -5,12 +5,22 @@
 
 class window.Job extends Backbone.Model
 
+    initialize: (options) =>
+        super options
+        options = options || {}
+        @refresh = options.refresh
+
     idAttribute: "name"
 
     urlRoot: "/jobs"
 
 
 class window.JobCollection extends Backbone.Collection
+
+    initialize: (options) =>
+        super options
+        options = options || {}
+        @refresh = options.refresh
 
     model: Job
 
@@ -21,6 +31,11 @@ class window.JobCollection extends Backbone.Collection
 
 
 class window.JobRun extends Backbone.Model
+
+    initialize: (options) =>
+        super options
+        options = options || {}
+        @refresh = options.refresh
 
     idAttribute: "run_num"
 
@@ -39,6 +54,8 @@ class window.JobListView extends Backbone.View
 
     initialize: (options) =>
         @listenTo(@model, "sync", @render)
+        @refreshView = new RefreshToggleView(model: @model.refresh)
+        @listenTo(@refreshView.model, 'refresh', => @model.fetch())
 
     tagName: "div"
 
@@ -70,6 +87,7 @@ class window.JobListView extends Backbone.View
 
     render_list: (models) ->
         entry = (model) -> new JobListEntryView(model: model).render().el
+        @$('h1').append(@refreshView.render().el)
         @$('tbody').html(entry(model) for model in models)
 
     render_filter: ->
@@ -113,6 +131,8 @@ class window.JobView extends Backbone.View
 
     initialize: (options) =>
         @listenTo(@model, "change", @render)
+        @refreshView = new RefreshToggleView(model: @model.refresh)
+        @listenTo(@refreshView.model, 'refresh', => @model.fetch())
 
     tagName: "div"
 
@@ -167,6 +187,7 @@ class window.JobView extends Backbone.View
         breadcrumbView.render @breadcrumb()
         entry = (jobrun) -> new JobRunListEntryView(model:new JobRun(jobrun)).render().el
         @$('tbody.jobruns').append(entry(model) for model in @model.get('runs'))
+        @$('h1').append(@refreshView.render().el)
         @
 
 
@@ -202,6 +223,8 @@ class window.JobRunView extends Backbone.View
 
     initialize: (options) =>
         @listenTo(@model, "change", @render)
+        @refreshView = new RefreshToggleView(model: @model.refresh)
+        @listenTo(@refreshView.model, 'refresh', => @model.fetch())
 
     tagName: "div"
 
@@ -219,8 +242,8 @@ class window.JobRunView extends Backbone.View
                     <tr><td>Node</td>           <td><%= node %></td></tr>
                     <tr><td>Manual</td>         <td><%= manual %></td></tr>
                     <tr><td>Scheduled</td>      <td><%= run_time %></td></tr>
-                    <tr><td>Start</td>          <td><%= start_time %></td></tr>
-                    <tr><td>End</td>            <td><%= end_time %> (<%= duration %>)</td></tr>
+                    <tr><td>Start</td>          <td><% print(dateFromNow(start_time, 'None')) %></td></tr>
+                    <tr><td>End</td>            <td><% print(dateFromNow(end_time, 'None')) %></td></tr>
                 </table>
             </div>
 
@@ -258,6 +281,8 @@ class window.JobRunView extends Backbone.View
         breadcrumbView.render @breadcrumb()
         entry = (run) -> new ActionRunListEntryView(model:new ActionRun(run)).render().el
         @$('tbody.actionruns').append(entry(model) for model in @model.get('runs'))
+        @$('h1').append(@refreshView.render().el)
+        makeTooltips(@$el)
         @
 
 
@@ -278,10 +303,10 @@ class ActionRunListEntryView extends Backbone.View
     template: _.template """
         <td><%= action_name %></td>
         <td><%= state %></td>
-        <td><%= command %></td>
+        <td><% print(command || raw_command) %></td>
         <td><%= exit_status %></td>
         <td><%= node %></td>
-        <td><% print(dateFromNow(start_time, "Unknown")) %></td>
+        <td><% print(dateFromNow(start_time, "None")) %></td>
         <td><% print(dateFromNow(end_time, "")) %></td>
         """
 

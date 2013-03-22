@@ -10,6 +10,11 @@ class window.Service extends Backbone.Model
 
 class window.ServiceCollection extends Backbone.Collection
 
+    initialize: (options) =>
+        super options
+        options = options || {}
+        @refresh = options.refresh
+
     model: Service
 
     url: "/services"
@@ -22,6 +27,8 @@ class window.ServiceListView extends Backbone.View
 
     initialize: (options) =>
         @listenTo(@model, "sync", @render)
+        @refreshView = new RefreshToggleView(model: @model.refresh)
+        @listenTo(@refreshView.model, 'refresh', => @model.fetch())
 
     tagName: "div"
 
@@ -48,6 +55,7 @@ class window.ServiceListView extends Backbone.View
         @$el.html @template()
         @render_filter()
         @render_list(@model.models)
+        @$('h1').append(@refreshView.render().el)
         @
 
     render_list: (models) ->

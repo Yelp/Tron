@@ -25,7 +25,7 @@ class window.RefreshModel extends Backbone.Model
             @schedule_refresh()
 
     disable_refresh: =>
-        console.log("Disabliong refresh ")
+        console.log("Disableing refresh ")
         @enabled = false
         @clear()
 
@@ -41,6 +41,6 @@ class window.RefreshModel extends Backbone.Model
             @schedule_refresh()
 
     schedule_refresh: =>
-        if not @timeout:
+        if not @timeout
             console.log("scheduled with " + @interval)
             @timeout = setTimeout(@do_refresh, @interval)
