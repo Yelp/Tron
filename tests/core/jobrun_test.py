@@ -567,7 +567,7 @@ class JobRunCollectionTestCase(TestCase):
         self.run_collection.run_limit = 1
         self.run_collection.remove_old_runs()
 
-        assert_length(self.run_collection.runs, 3)
+        assert_length(self.run_collection.runs, 1)
         assert_call(self.job_runs[-1].cleanup, 0)
         for job_run in self.run_collection.runs:
             assert_length(job_run.cancel.calls, 0)

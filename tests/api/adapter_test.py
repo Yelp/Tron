@@ -52,7 +52,7 @@ class RunAdapterTestCase(TestCase):
         self.adapter            = RunAdapter(self.original)
 
     def test_get_state(self):
-        assert_equal(self.adapter.get_state(), self.original.state.short_name)
+        assert_equal(self.adapter.get_state(), self.original.state.name)
 
     def test_get_node(self):
         assert_equal(self.adapter.get_node(), str(self.original.node))
