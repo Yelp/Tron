@@ -5,7 +5,7 @@ class TronRoutes extends Backbone.Router
 
     routes:
         "home":             "home"
-        "jobs":             "jobs"
+        "jobs(;*params)":   "jobs"
         "job/:name":        "job"
         "job/:name/:run":   "jobrun"
         "services":         "services"
@@ -34,9 +34,11 @@ class TronRoutes extends Backbone.Router
     service: (name) ->
         @updateMainView(new Service(name: name), ServiceView)
 
-    jobs: ->
+    jobs: (params) ->
+        params = getParamsMap(params)
         refreshModel = new RefreshModel()
-        @updateMainView(new JobCollection(refresh: refreshModel), JobListView)
+        collection = new JobCollection(refresh: refreshModel, nameFilter: params.nameFilter)
+        @updateMainView(collection, JobListView)
 
     job: (name) ->
         refreshModel = new RefreshModel()
@@ -59,6 +61,27 @@ class MainView extends Backbone.View
     clear: =>
         breadcrumbView.clear()
         @$el.empty()
+
+
+getParamsMap = (paramString) ->
+    paramString = paramString || ""
+    _.mash((param.split('=') for param in paramString.split(';')))
+
+
+getLocationParams = ->
+    parts = document.location.hash.split(';', 1)
+    [parts[0], getParamsMap(parts[1])]
+
+
+buildLocationString = (base, params) ->
+    params = (pair.join('=') for pair in _.pairs(params)).join(';')
+    "#{ base };#{ params }"
+
+
+window.updateLocationParam = (name, value) ->
+    [base, params] = getLocationParams()
+    params[name] = value
+    routes.navigate(buildLocationString(base, params))
 
 
 $(document).ready ->

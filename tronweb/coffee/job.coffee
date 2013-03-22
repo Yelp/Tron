@@ -21,6 +21,7 @@ class window.JobCollection extends Backbone.Collection
         super options
         options = options || {}
         @refresh = options.refresh
+        @nameFilter = options.nameFilter
 
     model: Job
 
@@ -82,7 +83,8 @@ class window.JobListView extends Backbone.View
     render: ->
         @$el.html @template()
         @render_filter()
-        @render_list(@model.models)
+        # TODO: cleanup
+        if @model.nameFilter then @filter(@model.nameFilter) else @render_list(@model.models)
         @
 
     render_list: (models) ->
@@ -91,13 +93,12 @@ class window.JobListView extends Backbone.View
         @$('tbody').html(entry(model) for model in models)
 
     render_filter: ->
-        filter = new FilterView()
+        filter = new FilterView(default: @model.nameFilter)
         @listenTo(filter, "filter_change", @filter)
         @$('#filter-bar').html(filter.render().el)
 
     filter: (prefix) ->
         @render_list @model.filter((job) -> _.str.startsWith(job.get('name'), prefix))
-
 
 
 class JobListEntryView extends Backbone.View

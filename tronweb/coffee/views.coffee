@@ -42,29 +42,43 @@ class window.BreadcrumbView extends Backbone.View
 
 class window.FilterView extends Backbone.View
 
+    # TODO: replace default with a model
+    initialize: (options) ->
+        options = options || {}
+        @default = options.default
+
     tagName: "form"
 
     className: "pull-right"
 
-    render: =>
-        @$el.html """
+    template: _.template """
             <div class="control-group">
                 <div class="controls">
                     <div class="input-prepend">
                         <span class="add-on"><i class="icon-filter"></i></span>
-                        <input type="text" placeholder="Filter by name">
+                        <input type="text" placeholder="Filter by name" value="<%= defaultValue %>">
                     </div>
                 </div>
             </div>
         """
+
+    render: =>
+        @$el.html @template(defaultValue: @default)
         @
 
     events:
-        "keyup input":  "filter_change"
+        "keyup input":  "filterChange"
         "submit":       "submit"
+        "change input": "filterDone"
 
-    filter_change: ->
+    # TODO: fix event name
+    filterChange: ->
         @trigger('filter_change', @$('input').val())
+
+    filterDone: ->
+        value = @$('input').val()
+        @trigger('filter:done', value)
+        updateLocationParam('nameFilter', value)
 
     submit: (event) ->
         event.preventDefault()
