@@ -8,3 +8,7 @@ body, input, button, select {
 .navbar .brand {
     font-weight: 800;
 }
+
+[class^="icon-"] {
+    margin-top: 3px
+}

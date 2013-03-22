@@ -4,7 +4,7 @@
 class window.Dashboard extends Backbone.Model
 
     initialize: ->
-        @eventList = new EventList()
+        @eventList = new EventList(refresh: new RefreshModel(interval: 10))
         @listenTo(@eventList, "sync", @change)
 
     fetch: ->
@@ -19,6 +19,10 @@ class Event extends Backbone.Model
 
 class window.EventList extends Backbone.Collection
 
+    initialize: (options) =>
+        super options
+        @refresh = options.refresh
+
     model: Event
 
     url: "/events"
@@ -29,11 +33,21 @@ class window.EventList extends Backbone.Collection
     comparator: (event) ->
         event.get('time')
 
+    recent: (seconds) ->
+        _.last(@models, 15).reverse()
+#        seconds = seconds || 5
+#        func = (event) ->
+#            moment().diff(moment(event.get('time')), 'seconds') < seconds
+#        _.takeWhile(@models.reverse(), func)
+
 
 class window.EventListView extends Backbone.View
 
     initialize: (options) =>
+        super options
+        @refreshView = new RefreshToggleView(model: @model.refresh)
         @listenTo(@model, "change", @render)
+        @listenTo(@refreshView.model, 'refresh', @update)
 
     tagName: "div"
 
@@ -54,14 +68,18 @@ class window.EventListView extends Backbone.View
         </table>
         """
 
-    render_list: (models) ->
+    update: (name) =>
+        @model.fetch()
+
+    render_list: (models) =>
         entry = (event) -> new EventListEntryView(model: event).render().el
         @$('tbody').html(entry(model) for model in models)
 
     # TODO: filter by time
-    render: ->
+    render: =>
         @$el.html @template()
-        @render_list _.last(@model.models, 10).reverse()
+        @render_list @model.recent()
+        @$('h2').append(@refreshView.render().el)
         @
 
 

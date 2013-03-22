@@ -47,7 +47,16 @@ class window.FilterView extends Backbone.View
     className: "pull-right"
 
     render: ->
-        @$el.html """ <input type="text" placeholder="Filter by name"> """
+        @$el.html """
+            <div class="control-group">
+                <div class="controls">
+                    <div class="input-prepend">
+                        <span class="add-on"><i class="icon-filter"></i></span>
+                        <input type="text" placeholder="Filter by name">
+                    </div>
+                </div>
+            </div>
+        """
         @
 
     events:
@@ -59,3 +68,29 @@ class window.FilterView extends Backbone.View
 
     submit: (event) ->
         event.preventDefault()
+
+
+class window.RefreshToggleView extends Backbone.View
+
+    initialize: ->
+        @listenTo(mainView, 'closeView', @model.disable_refresh)
+
+    tagName: "button"
+
+    className: =>
+        active = if @model.enabled then " active" else ""
+        "btn btn-default pull-right" + active
+
+    attributes:
+        "type":             "button"
+        "data-toggle":      "button"
+
+    render: =>
+        @$el.html """ <i class="icon-refresh"></i> """
+        @
+
+    events:
+        "click":        "toggle"
+
+    toggle: (event) =>
+        @model.toggle(event)

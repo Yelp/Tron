@@ -48,6 +48,7 @@ class MainView extends Backbone.View
     el: $("#main")
 
     render: (item) =>
+        @trigger('closeView')
         breadcrumbView.clear()
         @$el.html(item.el)
 
