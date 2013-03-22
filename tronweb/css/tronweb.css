@@ -1,0 +1,10 @@
+
+@import url(http://fonts.googleapis.com/css?family=Open+Sans:400,700,800);
+
+body, input, button, select {
+    font-family: "Open Sans";
+}
+
+.navbar .brand {
+    font-weight: 800;
+}

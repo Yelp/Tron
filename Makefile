@@ -51,7 +51,8 @@ clean:
 		fakeroot $(MAKE) -f $(CURDIR)/debian/rules clean
 
 coffee:
-		coffee -o tronweb/js/ -c tronweb/coffee/
+		mkdir -p tronweb/js/cs
+		coffee -o tronweb/js/cs/ -c tronweb/coffee/
 
 html:
 	$(PYTHON) tools/state_diagram.py
