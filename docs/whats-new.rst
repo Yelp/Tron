@@ -1,15 +1,24 @@
 What's New
 ==========
 
+0.6.0
+-----
+* `action.requires` must be a list (string has been deprecated since 0.3.3)
+* `tronctl zap` has been removed (it shouldn't be necessary anymore)
+* service monitoring code has been re-written (services should not longer get stuck in a stopping state)
+* hosts can not be validated by specifying a `known_hosts` file
+* additional validation for ssh options and context variables has been moved into configuration validation
+* tronview now displays additional details about jobs and services
+
 0.5.2
 -----
 * Tron now supports the ability to use different users per node connection.
 * Fragmented configuration is now possible by using namespaced config files.
 * Additional cleanup and stability patches have been applied.
 * State persistence configuration can now be changed without restarting `trond`
-* State saving now includes a namespace, you will need to run 
+* State saving now includes a namespace, you will need to run
   `tools/migration/migrate_state.py` to migrate old state.
-* `trond` now expects a configuration directory. Use 
+* `trond` now expects a configuration directory. Use
   `tools/migration/migrate_config_0.5.1_to_0.5.2.py` to convert your existing
   config to the new format.
 * Patched an issue with SSH connections that caused an exception on
