@@ -30,6 +30,9 @@ class window.JobCollection extends Backbone.Collection
     parse: (resp, options) =>
         resp['jobs']
 
+    comparator: (job) =>
+        job.get('name')
+
 
 class window.JobRun extends Backbone.Model
 
