@@ -232,6 +232,7 @@ class DisplayServices(TableDisplay):
         ('State',               'state'             ),
         ('Max instances',       'count'             ),
         ('Command',             'command'           ),
+        ('Pid Filename',        'pid_filename'      ),
         ('Node Pool',           'node_pool'         ),
         ('Restart interval',    'restart_interval'  ),
         ('Monitor interval',    'monitor_interval'  ),

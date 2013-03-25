@@ -1,5 +1,6 @@
 import mock
 from testify import TestCase, assert_equal, setup
+from testify.assertions import assert_not_equal
 from twisted.python import failure
 
 from tests.testingutils import autospec_method
@@ -42,3 +43,32 @@ class ClientTransportTestCase(TestCase):
         assert isinstance(conn, ssh.ClientConnection)
         auth_service  = self.transport.requestService.mock_calls[0][1][0]
         assert isinstance(auth_service, ssh.NoPasswordAuthClient)
+
+
+class SSHAuthOptionsTestCase(TestCase):
+
+    def test_from_config_none(self):
+        ssh_conf = mock.Mock(agent=False, identities=[])
+        ssh_options = ssh.SSHAuthOptions.from_config(ssh_conf)
+        assert_equal(ssh_options['noagent'], True)
+        assert_equal(ssh_options.identitys, [])
+
+    def test_from_config_both(self):
+        identities = ['one', 'two']
+        ssh_conf = mock.Mock(agent=True, identities=identities)
+        ssh_options = ssh.SSHAuthOptions.from_config(ssh_conf)
+        assert_equal(ssh_options['noagent'], False)
+        assert_equal(ssh_options.identitys, identities)
+
+    def test__eq__true(self):
+        config = mock.Mock(agent=True, identities=['one', 'two'])
+        assert_equal(
+            ssh.SSHAuthOptions.from_config(config),
+            ssh.SSHAuthOptions.from_config(config))
+
+    def test__eq__false(self):
+        config = mock.Mock(agent=True, identities=['one', 'two'])
+        second_config = mock.Mock(agent=True, identities=['two'])
+        assert_not_equal(
+            ssh.SSHAuthOptions.from_config(config),
+            ssh.SSHAuthOptions.from_config(second_config))
