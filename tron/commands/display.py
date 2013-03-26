@@ -80,8 +80,8 @@ class TableDisplay(object):
             self.out.append("No %s\n" % title)
 
     def header(self):
-        row = [
-            self.trim_value(i, label) for i, label in enumerate(self.columns)]
+        row = [label.ljust(self.get_field_width(i))
+               for i, label in enumerate(self.columns)]
         self.out.append(Color.set(self.header_color, "".join(row)))
 
     def footer(self):
@@ -258,7 +258,7 @@ class DisplayJobRuns(TableDisplay):
     """Format Job runs."""
 
     columns = ['Run ID',    'State',    'Node', 'Scheduled Time']
-    fields  = ['run_num',   'state',    'node', 'scheduled_time']
+    fields  = ['run_num',   'state',    'node', 'run_time']
     widths  = [10,          6,          30,     25              ]
     title = 'job runs'
 
@@ -289,13 +289,10 @@ class DisplayJobRuns(TableDisplay):
         if self.fields[field_idx] == 'run_num':
             value = '.' + str(value)
 
+        if self.fields[field_idx] == 'scheduled_time':
+            value = value or '-'
+
         return super(DisplayJobRuns, self).format_value(field_idx, value)
-
-    def sorted_fields(self, values):
-        """Build constructed fields and return fields in order."""
-        values['scheduled_time'] = values['run_time'] or "-"
-
-        return [values[name] for name in self.fields]
 
     def row_color(self, fields):
         return 'red' if fields['state'] == 'FAIL' else 'white'
@@ -306,8 +303,7 @@ class DisplayJobRuns(TableDisplay):
         duration = row['duration'][:-7] if row['duration'] else "-"
 
         row_data = "%sStart: %s  End: %s  (%s)" % (
-            ' ' * self.widths[0], start, end, duration
-        )
+            ' ' * self.widths[0], start, end, duration)
         self.out.append(Color.set('gray', row_data))
 
         if self.options.warn:
