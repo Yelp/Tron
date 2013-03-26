@@ -974,16 +974,25 @@ class ValidOutputStreamDirTestCase(TestCase):
         shutil.rmtree(self.dir)
 
     def test_valid_dir(self):
-        assert_equal(self.dir, valid_output_stream_dir(self.dir, None))
+        path = valid_output_stream_dir(self.dir, NullConfigContext)
+        assert_equal(self.dir, path)
 
     def test_missing_dir(self):
-        exception = assert_raises(ConfigError, valid_output_stream_dir, 'bogus-dir', None)
+        exception = assert_raises(ConfigError,
+            valid_output_stream_dir, 'bogus-dir', NullConfigContext)
         assert_in("is not a directory", str(exception))
 
     def test_no_ro_dir(self):
         os.chmod(self.dir, stat.S_IRUSR)
-        exception = assert_raises(ConfigError, valid_output_stream_dir, self.dir, None)
+        exception = assert_raises(ConfigError,
+            valid_output_stream_dir, self.dir, NullConfigContext)
         assert_in("is not writable", str(exception))
+
+    def test_missing_with_partial_context(self):
+        dir = '/bogus/path/does/not/exist'
+        context = config_utils.PartialConfigContext('path', 'MASTER')
+        path = config_parse.valid_output_stream_dir(dir, context)
+        assert_equal(path, dir)
 
 
 class BuildFormatStringValidatorTestCase(TestCase):
@@ -1127,6 +1136,37 @@ class ValidateIdentityFileTestCase(TestCase):
             fh_private.close()
             os.unlink(fh_private.name)
         assert_equal(config, filename)
+
+    def test_valid_identity_files_missing_with_partial_context(self):
+        path = '/bogus/file/does/not/exist'
+        context = config_utils.PartialConfigContext('path', 'MASTER')
+        file_path = config_parse.valid_identity_file(path, context)
+        assert_equal(path, file_path)
+
+
+class ValidKnownHostsFileTestCase(TestCase):
+
+    @setup
+    def setup_context(self):
+        self.context = config_utils.NullConfigContext
+        self.known_hosts_file = tempfile.NamedTemporaryFile()
+
+    def test_valid_known_hosts_file_exists(self):
+        filename = config_parse.valid_known_hosts_file(
+            self.known_hosts_file.name, self.context)
+        assert_equal(filename, self.known_hosts_file.name)
+
+    def test_valid_known_hosts_file_missing(self):
+        exception = assert_raises(ConfigError,
+            config_parse.valid_known_hosts_file, '/bogus/path', self.context)
+        assert_in('Known hosts file /bogus/path', str(exception))
+
+    def test_valid_known_hosts_file_missing_partial_context(self):
+        context = config_utils.PartialConfigContext
+        expected = '/bogus/does/not/exist'
+        filename = config_parse.valid_known_hosts_file(
+            expected, context)
+        assert_equal(filename, expected)
 
 
 if __name__ == '__main__':

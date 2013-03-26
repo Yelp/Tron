@@ -176,6 +176,9 @@ def valid_output_stream_dir(output_dir, config_context):
     if not output_dir:
         return
 
+    if config_context.partial:
+        return output_dir
+
     valid_string(output_dir, config_context)
     if not os.path.isdir(output_dir):
         msg = "output_stream_dir '%s' is not a directory"
@@ -190,6 +193,9 @@ def valid_output_stream_dir(output_dir, config_context):
 def valid_identity_file(file_path, config_context):
     valid_string(file_path, config_context)
 
+    if config_context.partial:
+        return file_path
+
     file_path = os.path.expanduser(file_path)
     if not os.path.exists(file_path):
         raise ConfigError("Private key file %s doesn't exist" % file_path)
@@ -202,6 +208,9 @@ def valid_identity_file(file_path, config_context):
 
 def valid_known_hosts_file(file_path, config_context):
     valid_string(file_path, config_context)
+
+    if config_context.partial:
+        return file_path
 
     file_path = os.path.expanduser(file_path)
     if not os.path.exists(file_path):
@@ -530,9 +539,6 @@ class ValidateConfig(Validator):
     }
     optional = False
 
-    def build_context(self, in_dict, _):
-        return config_utils.PartialConfigContext('config', MASTER_NAMESPACE)
-
     def validate_node_pool_nodes(self, config):
         """Validate that each node in a node_pool is in fact a node, and not
         another pool.
@@ -582,9 +588,9 @@ valid_named_config = ValidateNamedConfig()
 
 def validate_fragment(name, fragment):
     """Validate a fragment with a partial context."""
-    if name == MASTER_NAMESPACE:
-        return valid_config(fragment)
     config_context = PartialConfigContext(name, name)
+    if name == MASTER_NAMESPACE:
+        return valid_config(fragment, config_context=config_context)
     return valid_named_config(fragment, config_context=config_context)
 
 
