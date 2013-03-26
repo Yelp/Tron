@@ -9,6 +9,7 @@ What's New
 * hosts can not be validated by specifying a `known_hosts` file
 * additional validation for ssh options and context variables has been moved into configuration validation
 * tronview now displays additional details about jobs and services
+* the API has changed slightly (href is now url, service status is now state)
 
 0.5.2
 -----

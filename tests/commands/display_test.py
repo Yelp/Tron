@@ -36,6 +36,7 @@ class DisplayJobRunsTestCase(TestCase):
         self.data = [
             dict(
                 id='something.23', state='FAIL', node='machine4',
+                run_num=23,
                 run_time='2012-01-20 23:11:23',
                 start_time='2012-01-20 23:11:23',
                 end_time='2012-02-21 23:10:10',
@@ -44,6 +45,7 @@ class DisplayJobRunsTestCase(TestCase):
             ),
             dict(
                 id='something.55', state='QUE', node='machine3',
+                run_num=55,
                 run_time='2012-01-20 23:11:23',
                 start_time='2012-01-20 23:11:23',
                 end_time='',
