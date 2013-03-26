@@ -12,7 +12,7 @@ try:
 except ImportError:
     import json
 
-from twisted.web import http, resource, static
+from twisted.web import http, resource, static, server
 
 from tron import event
 from tron.api import adapter, controller
@@ -341,3 +341,32 @@ class RootResource(resource.Resource):
             'namespaces':       self.children['config'].get_namespaces()
         }
         return respond(request, response)
+
+
+class LogAdapter(object):
+
+    def __init__(self, logger):
+        self.logger = logger
+
+    def write(self, line):
+        self.logger.info(line.rstrip('\n'))
+
+    def close(self):
+        pass
+
+
+class TronSite(server.Site):
+    """Subclass of a twisted Site to customize logging."""
+
+    access_log = logging.getLogger('%s.access' % __name__)
+
+    @classmethod
+    def create(cls, mcp, web_path):
+        return cls(RootResource(mcp, web_path))
+
+    def startFactory(self):
+        server.Site.startFactory(self)
+        self.logFile = LogAdapter(self.access_log)
+
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__, self.resource)
