@@ -1,3 +1,9 @@
+tron (0.6.0.1) unstable; urgency=low
+
+  * minor visual improvements to tronview
+
+ -- Daniel Nephin <dnephin@yelp.com>  Tue, 26 Mar 2013 12:22:38 -0700
+
 tron (0.6.0) unstable; urgency=low
 
   * action.requires must be a list (string has been deprecated since 0.3.3)
