@@ -8,7 +8,7 @@ from testify.assertions import assert_raises, assert_in
 from tests import testingutils
 from tests.assertions import assert_length
 from tests.mocks import MockNode
-from tests.testingutils import Turtle
+from tests.testingutils import Turtle, autospec_method
 
 from tron import node
 from tron.core import jobrun, actiongraph
@@ -389,8 +389,8 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
 class ActionRunCollectionTestCase(TestCase):
 
     def _build_run(self, name):
-        anode = Turtle()
-        return ActionRun("id", name, anode, self.command,
+        mock_node = mock.create_autospec(node.Node)
+        return ActionRun("id", name, mock_node, self.command,
             output_path=self.output_path)
 
     @setup
@@ -398,7 +398,7 @@ class ActionRunCollectionTestCase(TestCase):
         action_names = ['action_name', 'second_name', 'cleanup']
 
         action_graph = [
-            Turtle(name=name, required_actions=[])
+            mock.Mock(name=name, required_actions=[])
             for name in action_names
         ]
         self.action_graph = actiongraph.ActionGraph(
@@ -480,13 +480,12 @@ class ActionRunCollectionTestCase(TestCase):
         assert not self.collection.is_done
 
     def test_is_done_true_because_blocked(self):
-        graph = self.collection.action_graph.graph
-        second_act = graph.pop(1)
-        second_act.required_actions.append(graph[0])
         self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
         self.run_map['second_name'].machine.state = ActionRun.STATE_QUEUED
+        autospec_method(self.collection._is_run_blocked)
+        blocked_second_action_run = lambda ar: ar == self.run_map['second_name']
+        self.collection._is_run_blocked.side_effect = blocked_second_action_run
         assert self.collection.is_done
-        # Also tests is_failed here
         assert self.collection.is_failed
 
     def test_is_done_true(self):
@@ -524,6 +523,24 @@ class ActionRunCollectionTestCase(TestCase):
         ]
         for expectation in expected:
             assert_in(expectation, str(self.collection))
+
+    def test_end_time(self):
+        max_end_time = datetime.datetime(2013, 6, 15)
+        self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
+        self.run_map['action_name'].end_time = datetime.datetime(2013, 5, 12)
+        self.run_map['second_name'].machine.state = ActionRun.STATE_SUCCEEDED
+        self.run_map['second_name'].end_time = max_end_time
+        assert_equal(self.collection.end_time, max_end_time)
+
+    def test_end_time_not_done(self):
+        self.run_map['action_name'].end_time = datetime.datetime(2013, 5, 12)
+        self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
+        self.run_map['second_name'].end_time = None
+        self.run_map['second_name'].machine.state = ActionRun.STATE_RUNNING
+        assert_equal(self.collection.end_time, None)
+
+    def test_end_time_not_started(self):
+        assert_equal(self.collection.end_time, None)
 
 
 class ActionRunCollectionIsRunBlockedTestCase(TestCase):
