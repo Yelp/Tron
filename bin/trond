@@ -56,7 +56,9 @@ def parse_options():
             help="Hostname to listen on, default %default",
             default=commands.DEFAULT_HOST)
 
+    requirement = pkg_resources.Requirement.parse("tron")
     api_group.add_option("--web-path",
+            default=pkg_resources.resource_filename(requirement, 'tronweb'),
             help="Path to static web resources.")
     parser.add_option_group(api_group)
 
