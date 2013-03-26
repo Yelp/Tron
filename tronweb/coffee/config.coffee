@@ -13,14 +13,15 @@ class window.Config extends Backbone.Model
         "/config?name=" + @get('name')
 
 
-class NamespaceListEntryView extends Backbone.View
+class NamespaceListEntryView extends ClickableListEntry
 
     tagName: "tr"
 
-    template: _.template '
+    template: _.template """
         <td>
             <a href="#config/<%= name %>"><%= name %></a>
-        </td>'
+        </td>
+        """
 
     render: ->
         @$el.html @template(name: @model)

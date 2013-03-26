@@ -121,3 +121,16 @@ class window.RefreshToggleView extends Backbone.View
     toggle: (event) =>
         @model.toggle(event)
         @render()
+
+
+class window.ClickableListEntry extends Backbone.View
+    # A ciew for an element in a list that is clickable
+
+    className: ->
+        "clickable"
+
+    events:
+        "click":    "propogateClick"
+
+    propogateClick: =>
+        document.location = @$('a').first().attr('href')

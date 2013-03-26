@@ -34,7 +34,7 @@ class window.ServiceListView extends Backbone.View
 
     className: "span12"
 
-    template: _.template '
+    template: _.template """
         <h1>Services</h1>
         <div id="filter-bar" class="row"></div>
         <table class="table table-hover">
@@ -48,7 +48,8 @@ class window.ServiceListView extends Backbone.View
             </thead>
             <tbody>
             </tbody>
-        <table>'
+        <table>
+        """
 
     # TODO: sort by name/state/node
     render: ->
@@ -71,7 +72,7 @@ class window.ServiceListView extends Backbone.View
         @render_list @model.filter((job) -> _.str.startsWith(job.get('name'), prefix))
 
 
-class ServiceListEntryView extends Backbone.View
+class ServiceListEntryView extends ClickableListEntry
 
     initialize: (options) =>
         @listenTo(@model, "change", @render)
@@ -79,17 +80,19 @@ class ServiceListEntryView extends Backbone.View
     tagName: "tr"
 
     className: =>
-        switch @model.attributes.state
+        stateName = switch @model.attributes.state
             when "disabled" then 'info'
             when "failed"   then 'error'
             when "degraded" then 'warning'
             when "up"       then 'success'
+        "#{ stateName } clickable"
 
-    template: _.template '
+    template: _.template """
         <td><a href="#service/<%= name %>"><%= name %></a></td>
         <td><%= state %>
         <td><%= live_count %> / <%= count %></td>
-        <td><%= node_pool %></td>'
+        <td><%= node_pool %></td>
+        """
 
     render: ->
         @$el.html @template(@model.attributes)

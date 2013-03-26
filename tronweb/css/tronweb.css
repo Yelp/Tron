@@ -19,3 +19,7 @@ div.refresh-view span {
     margin-right: 4px;
     font-weight: normal;
 }
+
+.clickable {
+    cursor: pointer;
+}

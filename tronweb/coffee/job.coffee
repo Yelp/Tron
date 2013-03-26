@@ -1,5 +1,4 @@
 
-
 # Jobs
 
 
@@ -65,7 +64,7 @@ class window.JobListView extends Backbone.View
 
     className: "span12"
 
-    template: _.template '
+    template: _.template """
         <h1>Jobs</h1>
         <div id="filter-bar" class="row"></div>
         <table class="table table-hover">
@@ -80,7 +79,7 @@ class window.JobListView extends Backbone.View
             </thead>
             <tbody>
             </tbody>
-        </table>'
+        </table>"""
 
     # TODO: sort by name/state/node
     render: ->
@@ -104,7 +103,7 @@ class window.JobListView extends Backbone.View
         @render_list @model.filter((job) -> _.str.startsWith(job.get('name'), prefix))
 
 
-class JobListEntryView extends Backbone.View
+class JobListEntryView extends ClickableListEntry
 
     initialize: (options) =>
         @listenTo(@model, "change", @render)
@@ -112,10 +111,11 @@ class JobListEntryView extends Backbone.View
     tagName: "tr"
 
     className: =>
-        switch @model.attributes.status
+        stateName = switch @model.attributes.status
             when "disabled" then 'warning'
             when "enabled"  then 'enabled'
             when "running"  then 'info'
+        "#{ stateName } clickable"
 
     template: _.template """
         <td><a href="#job/<%= name %>"><%= name %></a></td>
@@ -163,7 +163,7 @@ class window.JobView extends Backbone.View
 
             <div class="span12">
                 <h2>Job Runs</h2>
-                <table class="table">
+                <table class="table table-hover">
                     <thead>
                         <tr>
                             <th>Id</th>
@@ -195,7 +195,7 @@ class window.JobView extends Backbone.View
         @
 
 
-class JobRunListEntryView extends Backbone.View
+class JobRunListEntryView extends ClickableListEntry
 
     initialize: (options) =>
         @listenTo(@model, "change", @render)
@@ -203,10 +203,11 @@ class JobRunListEntryView extends Backbone.View
     tagName: "tr"
 
     className: ->
-        switch @model.get('state')
+        stateName = switch @model.get('state')
             when "running"      then 'info'
             when "failed"       then 'error'
             when "succeeded"    then 'success'
+        "#{ stateName } clickable"
 
     # TODO: add icon for manual run flag
     template: _.template """
@@ -253,7 +254,7 @@ class window.JobRunView extends Backbone.View
 
             <div class="span12">
                 <h2>Action Runs</h2>
-                <table class="table">
+                <table class="table table-hover">
                     <thead>
                         <tr>
                             <th>Name</th>
@@ -298,11 +299,10 @@ class ActionRunListEntryView extends Backbone.View
     tagName: "tr"
 
     className: =>
-         switch @model.get('state')
+        switch @model.get('state')
             when "running"      then 'info'
             when "failed"       then 'error'
             when "succeeded"    then 'success'
-
 
     template: _.template """
         <td><%= action_name %></td>
