@@ -32,14 +32,13 @@ from tron.utils import timeutils
 log = logging.getLogger(__name__)
 
 
-# TODO: set jitter
 def scheduler_from_config(config, time_zone):
     """A factory for creating a scheduler from a configuration object."""
     if isinstance(config, schedule_parse.ConfigConstantScheduler):
         return ConstantScheduler()
 
     if isinstance(config, schedule_parse.ConfigIntervalScheduler):
-        return IntervalScheduler(interval=config.timedelta)
+        return IntervalScheduler(config.timedelta, config.jitter)
 
     if isinstance(config, schedule_parse.ConfigGrocScheduler):
         return GeneralScheduler(
@@ -49,7 +48,8 @@ def scheduler_from_config(config, time_zone):
             monthdays=config.monthdays,
             months=config.months,
             weekdays=config.weekdays,
-            string_repr='GROC %s' % config.original)
+            string_repr='GROC %s' % config.original,
+            jitter=config.jitter)
 
     if isinstance(config, schedule_parse.ConfigCronScheduler):
         return GeneralScheduler(
@@ -60,7 +60,8 @@ def scheduler_from_config(config, time_zone):
             weekdays=config.weekdays,
             ordinals=config.ordinals,
             seconds=[0],
-            string_repr='CRON %s' % config.original)
+            string_repr='CRON %s' % config.original,
+            jitter=config.jitter)
 
     if isinstance(config, schedule_parse.ConfigDailyScheduler):
         return GeneralScheduler(
@@ -68,7 +69,8 @@ def scheduler_from_config(config, time_zone):
             minutes=[config.minute],
             seconds=[config.second],
             weekdays=config.days,
-            string_repr='DAILY %s' % config.original)
+            string_repr='DAILY %s' % config.original,
+            jitter=config.jitter)
 
 
 class ConstantScheduler(object):
@@ -95,7 +97,12 @@ def get_jitter(time_delta):
     return datetime.timedelta(seconds=random.randint(-seconds, seconds))
 
 
-# TODO: use jitter
+def get_jitter_str(time_delta):
+    if not time_delta:
+        return ''
+    return ' (+/- %s)' % time_delta
+
+
 class GeneralScheduler(object):
     """Scheduler which uses a TimeSpecification.
     """
@@ -111,7 +118,8 @@ class GeneralScheduler(object):
             hours=None,
             seconds=None,
             time_zone=None,
-            string_repr=None):
+            string_repr=None,
+            jitter=None):
         """Parameters:
           timestr     - the time of day to run, as 'HH:MM'
           ordinals    - first, second, third &c, as a set of integers in 1..5 to
@@ -128,6 +136,7 @@ class GeneralScheduler(object):
                         if applicable
         """
         self.time_zone      = time_zone
+        self.jitter         = jitter
         self.string_repr    = string_repr or "DAILY"
         self.time_spec      = trontimespec.TimeSpecification(
             ordinals=ordinals,
@@ -156,10 +165,10 @@ class GeneralScheduler(object):
                 # exist. Pretend like it's the later time, every time.
                 start_time = self.time_zone.localize(start_time, is_dst=True)
 
-        return self.time_spec.get_match(start_time)
+        return self.time_spec.get_match(start_time) + get_jitter(self.jitter)
 
     def __str__(self):
-        return self.string_repr
+        return self.string_repr + get_jitter_str(self.jitter)
 
     def __eq__(self, other):
         return hasattr(other, 'time_spec') and self.time_spec == other.time_spec
@@ -183,7 +192,7 @@ class IntervalScheduler(object):
         return last_run_time + self.interval + get_jitter(self.jitter)
 
     def __str__(self):
-        return "INTERVAL %s" % self.interval
+        return "INTERVAL %s" % self.interval + get_jitter_str(self.jitter)
 
     def __eq__(self, other):
         return (isinstance(other, IntervalScheduler) and
