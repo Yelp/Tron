@@ -50,29 +50,25 @@ class ScheduleConfigFromStringTestCase(TestCase):
 class ValidSchedulerTestCase(TestCase):
 
     @mock.patch('tron.config.schedule_parse.schedulers', autospec=True)
-    def test_cron_from_dict(self, mock_schedulers):
-        schedule = {'type': 'cron', 'value': '* * * * *'}
+    def assert_validation(self, schedule, expected, mock_schedulers):
         context = config_utils.NullConfigContext
         config = schedule_parse.valid_schedule(schedule, context)
         mock_schedulers.__getitem__.assert_called_with('cron')
         func = mock_schedulers.__getitem__.return_value
         assert_equal(config, func.return_value)
+        func.assert_called_with(expected, context)
+
+    def test_cron_from_dict(self):
+        schedule = {'type': 'cron', 'value': '* * * * *'}
         config = schedule_parse.ConfigGenericSchedule(
             'cron', schedule['value'], None)
-        func.assert_called_with(config, context)
+        self.assert_validation(schedule, config)
 
-    @mock.patch('tron.config.schedule_parse.schedulers', autospec=True)
-    def test_cron_from_dict_with_jitter(self, mock_schedulers):
+    def test_cron_from_dict_with_jitter(self):
         schedule = {'type': 'cron', 'value': '* * * * *', 'jitter': '5 min'}
-        jitter = 5 * 60
-        context = config_utils.NullConfigContext
-        config = schedule_parse.valid_schedule(schedule, context)
-        mock_schedulers.__getitem__.assert_called_with('cron')
-        func = mock_schedulers.__getitem__.return_value
-        assert_equal(config, func.return_value)
         config = schedule_parse.ConfigGenericSchedule(
-            'cron', schedule['value'], jitter)
-        func.assert_called_with(config, context)
+            'cron', schedule['value'], datetime.timedelta(minutes=5))
+        self.assert_validation(schedule, config)
 
 
 class ValidJitterTestCase(TestCase):
@@ -84,12 +80,14 @@ class ValidJitterTestCase(TestCase):
     def test_valid_jitter_seconds(self):
         context = config_utils.NullConfigContext
         for jitter in ['82s', '82 s', '82 sec', '82seconds']:
-            assert_equal(82, schedule_parse.valid_jitter(jitter, context))
+            delta = datetime.timedelta(seconds=82)
+            assert_equal(delta, schedule_parse.valid_jitter(jitter, context))
 
     def test_valid_jitter_minutes(self):
         context = config_utils.NullConfigContext
         for jitter in ['10m', '10 m', '10 min', '10minutes']:
-            assert_equal(600, schedule_parse.valid_jitter(jitter, context))
+            delta = datetime.timedelta(seconds=600)
+            assert_equal(delta, schedule_parse.valid_jitter(jitter, context))
 
     def test_valid_jitter_invalid_unit(self):
         context = config_utils.NullConfigContext

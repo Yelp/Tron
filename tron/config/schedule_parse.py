@@ -141,14 +141,8 @@ def valid_time_interval(interval, error_msg, config_context):
     return TimeInterval(int(matches.group('value')), TIME_INTERVAL_UNITS[units])
 
 
-def seconds_from_time_interval(time_interval):
-    time_factors = {
-        'seconds':  1,
-        'minutes':  60,
-        'hours':    60 * 60,
-        'days':     60 * 60 * 24,
-    }
-    return time_factors[time_interval.units] * time_interval.value
+def timedelta_from_time_interval(time_interval):
+    return datetime.timedelta(**{time_interval.units: time_interval.value})
 
 
 def valid_jitter(jitter, config_context):
@@ -161,7 +155,7 @@ def valid_jitter(jitter, config_context):
     if time_interval.units not in ('seconds', 'minutes'):
         msg = "Invalid time unit for jitter at %s: %s"
         raise ConfigError(msg % (config_context.path, time_interval.units))
-    return seconds_from_time_interval(time_interval)
+    return timedelta_from_time_interval(time_interval)
 
 
 # Shortcut values for intervals
@@ -174,10 +168,9 @@ def valid_interval_scheduler(config,  config_context):
     interval = ''.join(interval.split())
     error_msg   = 'Invalid interval specification at %s: %s'
 
-    def build_config(spec):
-        spec = {spec.units: spec.value}
-        return ConfigIntervalScheduler(
-            timedelta=datetime.timedelta(**spec), jitter=config.jitter)
+    def build_config(time_interval):
+        delta = timedelta_from_time_interval(time_interval)
+        return ConfigIntervalScheduler(timedelta=delta, jitter=config.jitter)
 
     if interval in TIME_INTERVAL_SHORTCUTS:
         return build_config(TIME_INTERVAL_SHORTCUTS[interval])

@@ -19,6 +19,8 @@ Tron schedulers
  end time of the previous run (False).
 """
 import logging
+import random
+import datetime
 
 from pytz import AmbiguousTimeError, NonExistentTimeError
 from tron.config import schedule_parse
@@ -30,6 +32,7 @@ from tron.utils import timeutils
 log = logging.getLogger(__name__)
 
 
+# TODO: set jitter
 def scheduler_from_config(config, time_zone):
     """A factory for creating a scheduler from a configuration object."""
     if isinstance(config, schedule_parse.ConfigConstantScheduler):
@@ -85,6 +88,14 @@ class ConstantScheduler(object):
         return not self == other
 
 
+def get_jitter(time_delta):
+    if not time_delta:
+        return datetime.timedelta()
+    seconds = timeutils.delta_total_seconds(time_delta)
+    return datetime.timedelta(seconds=random.randint(-seconds, seconds))
+
+
+# TODO: use jitter
 class GeneralScheduler(object):
     """Scheduler which uses a TimeSpecification.
     """
@@ -163,12 +174,13 @@ class IntervalScheduler(object):
     """
     schedule_on_complete = False
 
-    def __init__(self, interval=None):
+    def __init__(self, interval, jitter):
         self.interval = interval
+        self.jitter = jitter
 
     def next_run_time(self, last_run_time):
         last_run_time = last_run_time or timeutils.current_time()
-        return last_run_time + self.interval
+        return last_run_time + self.interval + get_jitter(self.jitter)
 
     def __str__(self):
         return "INTERVAL %s" % self.interval
