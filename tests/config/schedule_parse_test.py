@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 import datetime
+import mock
 from testify import TestCase, run, assert_equal, assert_raises
 from testify.test_case import setup
 
@@ -28,6 +29,64 @@ class PadSequenceTestCase(TestCase):
         assert_equal(schedule_parse.pad_sequence([], -2, "a"), [])
 
 
+class ScheduleConfigFromStringTestCase(TestCase):
+
+    @mock.patch('tron.config.schedule_parse.parse_groc_expression', autospec=True)
+    def test_groc_config(self, mock_parse_groc):
+        schedule = 'every Mon,Wed at 12:00'
+        context = config_utils.NullConfigContext
+        config = schedule_parse.schedule_config_from_string(schedule, context)
+        assert_equal(config, mock_parse_groc.return_value)
+        mock_parse_groc.assert_called_with(schedule, context)
+
+
+class ValidSchedulerTestCase(TestCase):
+
+    @mock.patch('tron.config.schedule_parse.schedulers', autospec=True)
+    def test_cron_from_dict(self, mock_schedulers):
+        schedule = {'type': 'cron', 'value': '* * * * *'}
+        context = config_utils.NullConfigContext
+        config = schedule_parse.valid_schedule(schedule, context)
+        mock_schedulers.__getitem__.assert_called_with('cron')
+        func = mock_schedulers.__getitem__.return_value
+        assert_equal(config, func.return_value)
+        func.assert_called_with(schedule['value'], context, jitter=None)
+
+    @mock.patch('tron.config.schedule_parse.schedulers', autospec=True)
+    def test_cron_from_dict_with_jitter(self, mock_schedulers):
+        schedule = {'type': 'cron', 'value': '* * * * *', 'jitter': '5 min'}
+        jitter = 5 * 60
+        context = config_utils.NullConfigContext
+        config = schedule_parse.valid_schedule(schedule, context)
+        mock_schedulers.__getitem__.assert_called_with('cron')
+        func = mock_schedulers.__getitem__.return_value
+        assert_equal(config, func.return_value)
+        func.assert_called_with(schedule['value'], context, jitter=jitter)
+
+
+class ValidJitterTestCase(TestCase):
+
+    def test_valid_jitter_none(self):
+        context = config_utils.NullConfigContext
+        assert_equal(None, schedule_parse.valid_jitter(None, context))
+
+    def test_valid_jitter_seconds(self):
+        context = config_utils.NullConfigContext
+        for jitter in ['82s', '82 s', '82 sec', '82seconds']:
+            assert_equal(82, schedule_parse.valid_jitter(jitter, context))
+
+    def test_valid_jitter_minutes(self):
+        context = config_utils.NullConfigContext
+        for jitter in ['10m', '10 m', '10 min', '10minutes']:
+            assert_equal(600, schedule_parse.valid_jitter(jitter, context))
+
+    def test_valid_jitter_invalid_unit(self):
+        context = config_utils.NullConfigContext
+        for jitter in ['1d', '3 mo', '3 months']:
+            assert_raises(ConfigError,
+                schedule_parse.valid_jitter,jitter, context)
+
+
 class ValidCronSchedulerTestCase(TestCase):
     _suites = ['integration']
 
@@ -36,7 +95,7 @@ class ValidCronSchedulerTestCase(TestCase):
         self.context = config_utils.NullConfigContext
 
     def test_valid_config(self):
-        line = '5 0 L * *'.split()
+        line = '5 0 L * *'
         config = schedule_parse.valid_cron_scheduler(line, self.context)
         assert_equal(config.minutes, [5])
         assert_equal(config.months, None)
@@ -55,34 +114,34 @@ class ValidDailySchedulerTestCase(TestCase):
 
     def assert_parse(self, config, expected):
         config = schedule_parse.valid_daily_scheduler(*config)
-        expected = schedule_parse.ConfigDailyScheduler(*expected)
+        expected = schedule_parse.ConfigDailyScheduler(*expected, jitter=None)
         assert_equal(config, expected)
 
     def test_valid_daily_scheduler_start_time(self):
         expected = ('14:32 ', 14, 32, 0, set())
-        self.assert_parse(('14:32', None, self.context), expected)
+        self.assert_parse(('14:32', self.context), expected)
 
     def test_valid_daily_scheduler_just_days(self):
         expected = ("00:00:00 MWS", 0, 0, 0, set([1, 3, 6]))
-        self.assert_parse((None, "MWS", self.context), expected)
+        self.assert_parse(("00:00:00 MWS", self.context), expected)
 
     def test_valid_daily_scheduler_time_and_day(self):
         expected = ("17:02:44 SU", 17, 2, 44, set([0, 6]))
-        self.assert_parse(("17:02:44", "SU", self.context), expected)
+        self.assert_parse(("17:02:44 SU", self.context), expected)
 
     def test_valid_daily_scheduler_invalid_start_time(self):
         assert_raises(ConfigError, schedule_parse.valid_daily_scheduler,
-            "5", "MWF", self.context)
+            "5 MWF", self.context)
         assert_raises(ConfigError, schedule_parse.valid_daily_scheduler,
-            "05:30:45:45", "MWF", self.context)
+            "05:30:45:45 MWF", self.context)
         assert_raises(ConfigError, schedule_parse.valid_daily_scheduler,
-            "25:30:45", "MWF", self.context)
+            "25:30:45 MWF", self.context)
 
     def test_valid_daily_scheduler_invalid_days(self):
         assert_raises(ConfigError, schedule_parse.valid_daily_scheduler,
-            None, "SUG", self.context)
+            "SUG", self.context)
         assert_raises(ConfigError, schedule_parse.valid_daily_scheduler,
-            None, "3", self.context)
+            "3", self.context)
 
 
 class ValidIntervalSchedulerTestCase(TestCase):
