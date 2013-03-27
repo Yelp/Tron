@@ -127,6 +127,7 @@ Scheduling
 ----------
 
 Tron supports four different kinds of schedules in config files.
+# TODO: docs about jitter and 'daily' instead of 'start_time'
 
 Interval
 ^^^^^^^^

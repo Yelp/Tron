@@ -219,7 +219,9 @@ class GrocSchedulerDSTTest(testingutils.MockTimeTestCase):
 
 
 def parse_groc(config):
+    config = schedule_parse.ConfigGenericSchedule('groc daily', config, None)
     return parse_groc_expression(config, NullConfigContext)
+
 
 def scheduler_from_config(config):
     return scheduler.scheduler_from_config(parse_groc(config), None)
