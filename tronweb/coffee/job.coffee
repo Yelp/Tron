@@ -7,7 +7,7 @@ class window.Job extends Backbone.Model
     initialize: (options) =>
         super options
         options = options || {}
-        @refresh = options.refresh
+        @refreshModel = options.refreshModel
 
     idAttribute: "name"
 
@@ -38,7 +38,7 @@ class window.JobRun extends Backbone.Model
     initialize: (options) =>
         super options
         options = options || {}
-        @refresh = options.refresh
+        @refreshModel = options.refreshModel
 
     idAttribute: "run_num"
 
@@ -136,8 +136,8 @@ class window.JobView extends Backbone.View
 
     initialize: (options) =>
         @listenTo(@model, "change", @render)
-        @refreshView = new RefreshToggleView(model: @model.refresh)
-        @listenTo(@refreshView.model, 'refresh', => @model.fetch())
+        @refreshView = new RefreshToggleView(model: @model.refreshModel)
+        @listenTo(@refreshView, 'refreshView', => @model.fetch())
 
     tagName: "div"
 
@@ -229,8 +229,8 @@ class window.JobRunView extends Backbone.View
 
     initialize: (options) =>
         @listenTo(@model, "change", @render)
-        @refreshView = new RefreshToggleView(model: @model.refresh)
-        @listenTo(@refreshView.model, 'refresh', => @model.fetch())
+        @refreshView = new RefreshToggleView(model: @model.refreshModel)
+        @listenTo(@refreshView, 'refreshView', => @model.fetch())
 
     tagName: "div"
 

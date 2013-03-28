@@ -44,11 +44,12 @@ class TronRoutes extends Backbone.Router
 
     job: (name) ->
         refreshModel = new RefreshModel()
-        @updateMainView(new Job(name: name, refresh: refreshModel), JobView)
+        @updateMainView(new Job(name: name, refreshModel: refreshModel), JobView)
 
     jobrun: (name, run) ->
-        refreshModel = new RefreshModel()
-        @updateMainView(new JobRun(name: name, run_num: run, refresh: refreshModel), JobRunView)
+        model = new JobRun(
+            name: name, run_num: run, refreshModel: new RefreshModel())
+        @updateMainView(model, JobRunView)
 
 
 class MainView extends Backbone.View
