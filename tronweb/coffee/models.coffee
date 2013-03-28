@@ -12,19 +12,19 @@ class window.RefreshModel extends Backbone.Model
 
     toggle: (event) =>
         if not @enabled
-            @enable_refresh()
+            @enableRefresh()
             @trigger('toggle:on')
         else
-            @disable_refresh()
+            @disableRefresh()
             @trigger('toggle:off')
 
-    enable_refresh: =>
+    enableRefresh: =>
         if not @enabled
             console.log("Enabling refresh")
             @enabled = true
-            @schedule_refresh()
+            @scheduleRefresh()
 
-    disable_refresh: =>
+    disableRefresh: =>
         console.log("Disableing refresh ")
         @enabled = false
         @clear()
@@ -33,14 +33,24 @@ class window.RefreshModel extends Backbone.Model
         clearTimeout(@timeout)
         @timeout = null
 
-    do_refresh: =>
+    doRefresh: =>
         @clear()
         if @enabled
             console.log("trigger refresh event")
             @trigger('refresh')
-            @schedule_refresh()
+            @scheduleRefresh()
 
-    schedule_refresh: =>
+    scheduleRefresh: =>
         if not @timeout
             console.log("scheduled with " + @interval)
-            @timeout = setTimeout(@do_refresh, @interval)
+            @timeout = setTimeout(@doRefresh, @interval)
+
+
+class window.FilterModel extends Backbone.Model
+
+    createFilter: =>
+        namePrefix = @get('nameFilter')
+        if namePrefix
+            (item) -> _.str.startsWith(item.get('name'), namePrefix)
+        else
+            (item) -> true

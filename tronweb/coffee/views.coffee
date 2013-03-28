@@ -1,6 +1,10 @@
 
 # Common view elements
 
+# Note about subciew
+# Subviews need to re-delegate events, because they are lost
+# when superviews re-render
+
 # Print the date as a string describing the elapsed time
 window.dateFromNow = (string, defaultString='never') ->
     template = _.template """
@@ -42,11 +46,6 @@ class window.BreadcrumbView extends Backbone.View
 
 class window.FilterView extends Backbone.View
 
-    # TODO: replace default with a model
-    initialize: (options) ->
-        options = options || {}
-        @default = options.default
-
     tagName: "form"
 
     className: "pull-right"
@@ -63,7 +62,8 @@ class window.FilterView extends Backbone.View
         """
 
     render: =>
-        @$el.html @template(defaultValue: @default)
+        @$el.html @template(defaultValue: @model.get('nameFilter'))
+        @delegateEvents()
         @
 
     events:
@@ -71,9 +71,10 @@ class window.FilterView extends Backbone.View
         "submit":       "submit"
         "change input": "filterDone"
 
-    # TODO: fix event name
     filterChange: ->
-        @trigger('filter_change', @$('input').val())
+        filterValue = @$('input').val()
+        @model.set('nameFilter', filterValue)
+        @trigger('filter:change', filterValue)
 
     filterDone: ->
         value = @$('input').val()
@@ -87,7 +88,8 @@ class window.FilterView extends Backbone.View
 class window.RefreshToggleView extends Backbone.View
 
     initialize: ->
-        @listenTo(mainView, 'closeView', @model.disable_refresh)
+        @listenTo(mainView, 'closeView', @model.disableRefresh)
+        @listenTo(@model, 'refresh', @triggerRefresh)
 
     tagName: "div"
 
@@ -104,15 +106,15 @@ class window.RefreshToggleView extends Backbone.View
         </button>
         """
 
-    # TODO: why does text get stuck after a couple refresh?
     render: =>
         if @model.enabled
-            seconds = @model.interval / 1000
-            text = _.template("Auto-refresh <%= seconds %>s ")(seconds:seconds)
+            text = "Auto-refresh #{ @model.interval / 1000 }s"
             active = "active"
         else
             text = active = ""
         @$el.html @template(text: text, active: active)
+        # See note about subview
+        @delegateEvents()
         @
 
     events:
@@ -121,6 +123,9 @@ class window.RefreshToggleView extends Backbone.View
     toggle: (event) =>
         @model.toggle(event)
         @render()
+
+    triggerRefresh: =>
+        @trigger('refreshView')
 
 
 class window.ClickableListEntry extends Backbone.View

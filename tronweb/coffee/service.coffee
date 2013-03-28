@@ -13,7 +13,8 @@ class window.ServiceCollection extends Backbone.Collection
     initialize: (options) =>
         super options
         options = options || {}
-        @refresh = options.refresh
+        @refreshModel = options.refreshModel
+        @filterModel = options.filterModel
 
     model: Service
 
@@ -27,8 +28,10 @@ class window.ServiceListView extends Backbone.View
 
     initialize: (options) =>
         @listenTo(@model, "sync", @render)
-        @refreshView = new RefreshToggleView(model: @model.refresh)
-        @listenTo(@refreshView.model, 'refresh', => @model.fetch())
+        @refreshView = new RefreshToggleView(model: @model.refreshModel)
+        @filterView = new FilterView(model: @model.filterModel)
+        @listenTo(@refreshView, 'refreshView', => @model.fetch())
+        @listenTo(@filterView, "filter:change", @renderList)
 
     tagName: "div"
 
@@ -54,22 +57,24 @@ class window.ServiceListView extends Backbone.View
     # TODO: sort by name/state/node
     render: ->
         @$el.html @template()
-        @render_filter()
-        @render_list(@model.models)
-        @$('h1').append(@refreshView.render().el)
+        @renderFilter()
+        @renderList()
+        @renderRefresh()
         @
 
-    render_list: (models) ->
+    renderList:  =>
+        models = @model.filter(@model.filterModel.createFilter())
         entry = (model) -> new ServiceListEntryView(model: model).render().el
         @$('tbody').html(entry(model) for model in models)
 
-    render_filter: ->
-        filter = new FilterView()
-        @listenTo(filter, "filter_change", @filter)
-        @$('#filter-bar').html(filter.render().el)
+    renderRefresh: ->
+        @$('h1').append(@refreshView.render().el)
+
+    renderFilter: ->
+        @$('#filter-bar').html(@filterView.render().el)
 
     filter: (prefix) ->
-        @render_list @model.filter((job) -> _.str.startsWith(job.get('name'), prefix))
+        @renderList @model.filter((job) -> _.str.startsWith(job.get('name'), prefix))
 
 
 class ServiceListEntryView extends ClickableListEntry
@@ -169,11 +174,12 @@ class ServiceInstanceView extends Backbone.View
             when "up"       then 'success'
             when "starting" then 'info'
 
-    template: _.template '
+    template: _.template """
         <td><%= id %></td>
         <td><%= state %></td>
         <td><%= node %></td>
-        <td><%= failures %></td>'
+        <td><%= failures %></td>
+        """
 
     render: ->
         @$el.html @template(@model)

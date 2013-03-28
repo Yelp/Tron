@@ -19,8 +19,8 @@ class window.JobCollection extends Backbone.Collection
     initialize: (options) =>
         super options
         options = options || {}
-        @refresh = options.refresh
-        @nameFilter = options.nameFilter
+        @refreshModel = options.refreshModel
+        @filterModel = options.filterModel
 
     model: Job
 
@@ -57,8 +57,10 @@ class window.JobListView extends Backbone.View
 
     initialize: (options) =>
         @listenTo(@model, "sync", @render)
-        @refreshView = new RefreshToggleView(model: @model.refresh)
-        @listenTo(@refreshView.model, 'refresh', => @model.fetch())
+        @refreshView = new RefreshToggleView(model: @model.refreshModel)
+        @filterView = new FilterView(model: @model.filterModel)
+        @listenTo(@refreshView, 'refreshView', => @model.fetch())
+        @listenTo(@filterView, "filter:change", @renderList)
 
     tagName: "div"
 
@@ -79,28 +81,27 @@ class window.JobListView extends Backbone.View
             </thead>
             <tbody>
             </tbody>
-        </table>"""
+        </table>
+        """
 
     # TODO: sort by name/state/node
     render: ->
         @$el.html @template()
-        @render_filter()
-        # TODO: cleanup
-        if @model.nameFilter then @filter(@model.nameFilter) else @render_list(@model.models)
+        @renderFilter()
+        @renderRefresh()
+        @renderList()
         @
 
-    render_list: (models) ->
+    renderList: =>
+        models = @model.filter(@model.filterModel.createFilter())
         entry = (model) -> new JobListEntryView(model: model).render().el
-        @$('h1').append(@refreshView.render().el)
         @$('tbody').html(entry(model) for model in models)
 
-    render_filter: ->
-        filter = new FilterView(default: @model.nameFilter)
-        @listenTo(filter, "filter_change", @filter)
-        @$('#filter-bar').html(filter.render().el)
+    renderRefresh: =>
+        @$('h1').append(@refreshView.render().el)
 
-    filter: (prefix) ->
-        @render_list @model.filter((job) -> _.str.startsWith(job.get('name'), prefix))
+    renderFilter: =>
+        @$('#filter-bar').html(@filterView.render().el)
 
 
 class JobListEntryView extends ClickableListEntry

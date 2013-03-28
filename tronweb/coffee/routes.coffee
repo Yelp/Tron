@@ -4,17 +4,17 @@
 class TronRoutes extends Backbone.Router
 
     routes:
-        "home":             "home"
-        "jobs(;*params)":   "jobs"
-        "job/:name":        "job"
-        "job/:name/:run":   "jobrun"
-        "services":         "services"
-        "service/:name":    "service"
-        "configs":          "configs"
-        "config/:name":     "config"
+        "home":                     "home"
+        "jobs(;*params)":           "jobs"
+        "job/:name":                "job"
+        "job/:name/:run":           "jobrun"
+        "services(;*params)":       "services"
+        "service/:name":            "service"
+        "configs":                  "configs"
+        "config/:name":             "config"
 
-    updateMainView: (model, view_type) ->
-        view = new view_type(model: model)
+    updateMainView: (model, viewType) ->
+        view = new viewType(model: model)
         model.fetch()
         mainView.render(view)
 
@@ -27,17 +27,19 @@ class TronRoutes extends Backbone.Router
     config: (name) ->
         @updateMainView(new Config(name: name), ConfigView)
 
-    services: ->
-        refreshModel = new RefreshModel()
-        @updateMainView(new ServiceCollection(refresh: refreshModel), ServiceListView)
+    services: (params) ->
+        collection = new ServiceCollection(
+            refreshModel: new RefreshModel(),
+            filterModel: new FilterModel(getParamsMap(params)))
+        @updateMainView(collection, ServiceListView)
 
     service: (name) ->
         @updateMainView(new Service(name: name), ServiceView)
 
     jobs: (params) ->
-        params = getParamsMap(params)
-        refreshModel = new RefreshModel()
-        collection = new JobCollection(refresh: refreshModel, nameFilter: params.nameFilter)
+        collection = new JobCollection(
+            refreshModel: new RefreshModel(),
+            filterModel: new FilterModel(getParamsMap(params)))
         @updateMainView(collection, JobListView)
 
     job: (name) ->
