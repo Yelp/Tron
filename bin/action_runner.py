@@ -10,13 +10,12 @@ import subprocess
 import sys
 import yaml
 
-logging.basicConfig()
 
-
-log = logging.getLogger("tron.job_wrapper")
+log = logging.getLogger("tron.action_runner")
 
 
 STATUS_FILE = 'status'
+
 
 opener = open
 
@@ -79,6 +78,7 @@ def run_command(command):
 
 
 if __name__ == "__main__":
+    logging.basicConfig()
     output_path, command = parse_args(sys.argv)
     proc = run_command(command)
     register(output_path, command, proc)
