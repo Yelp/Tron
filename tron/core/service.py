@@ -85,9 +85,9 @@ class Service(observer.Observer, observer.Observable):
         self.event_recorder.ok('enabled')
         self.repair()
 
-    def disable(self):
+    def disable(self, force=False):
         self.enabled = False
-        self.instances.stop()
+        (self.instances.kill if force else self.instances.stop)()
         self.repair_callback.cancel()
         self.event_recorder.ok('disabled')
 
