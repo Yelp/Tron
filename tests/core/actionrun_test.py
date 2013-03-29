@@ -10,7 +10,7 @@ from tests.assertions import assert_length
 from tests.mocks import MockNode
 from tests.testingutils import Turtle
 
-from tron import node
+from tron import node, actioncommand
 from tron.core import jobrun, actiongraph
 from tron.core.actionrun import ActionCommand, ActionRun
 from tron.core.actionrun import ActionRunCollection, ActionRunFactory
@@ -40,9 +40,11 @@ class ActionRunFactoryTestCase(TestCase):
             'command':          'do action1',
             'node_name':        'anode'
         }
+        self.action_runner = mock.create_autospec(actioncommand.SimpleActionRunnerFactory)
 
     def test_build_action_run_collection(self):
-        collection = ActionRunFactory.build_action_run_collection(self.job_run)
+        collection = ActionRunFactory.build_action_run_collection(
+            self.job_run, self.action_runner)
         assert_equal(collection.action_graph, self.action_graph)
         assert_in('act1', collection.run_map)
         assert_in('act2', collection.run_map)
@@ -72,7 +74,8 @@ class ActionRunFactoryTestCase(TestCase):
     def test_build_run_for_action(self):
         action = Turtle(
             name='theaction', node_pool=None, is_cleanup=False, command="doit")
-        action_run = ActionRunFactory.build_run_for_action(self.job_run, action)
+        action_run = ActionRunFactory.build_run_for_action(
+            self.job_run, action, self.action_runner)
 
         assert_equal(action_run.job_run_id, self.job_run.id)
         assert_equal(action_run.node, self.job_run.node)
@@ -82,7 +85,8 @@ class ActionRunFactoryTestCase(TestCase):
 
     def test_build_run_for_action_with_node(self):
         action = Turtle(name='theaction', is_cleanup=True, command="doit")
-        action_run = ActionRunFactory.build_run_for_action(self.job_run, action)
+        action_run = ActionRunFactory.build_run_for_action(
+            self.job_run, action, self.action_runner)
 
         assert_equal(action_run.job_run_id, self.job_run.id)
         assert_equal(action_run.node, action.node_pool.next.returns[0])

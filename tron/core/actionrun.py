@@ -224,6 +224,16 @@ class ActionRun(Observer):
 
         return True
 
+    def stop(self):
+        stop_command = self.action_runner.build_stop_action_command(
+            self.id, 'terminate')
+        self.node.submit_command(stop_command)
+
+    def kill(self):
+        kill_command = self.action_runner.build_stop_action_command(
+            self.id, 'kill')
+        self.node.submit_command(kill_command)
+
     def build_action_command(self):
         """Create a new ActionCommand instance to send to the node."""
         self.action_command = action_command = self.action_runner(

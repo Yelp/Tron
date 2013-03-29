@@ -33,7 +33,8 @@ class JobCollectionController(object):
 
 class ActionRunController(object):
 
-    mapped_commands = set(('start', 'success', 'cancel', 'fail', 'skip'))
+    mapped_commands = set(
+        ('start', 'success', 'cancel', 'fail', 'skip', 'stop', 'kill'))
 
     def __init__(self, action_run, job_run):
         self.action_run = action_run
