@@ -10,7 +10,7 @@ import pytz
 from tron import command_context
 
 from tron.config import ConfigError, config_utils
-from tron.config.config_utils import NullConfigContext, ConfigContext
+from tron.config.config_utils import ConfigContext, Validator
 from tron.config.config_utils import valid_string, valid_bool
 from tron.config.config_utils import valid_identifier
 from tron.config.config_utils import build_list_of_type_validator
@@ -19,7 +19,8 @@ from tron.config.config_utils import build_dict_name_validator
 from tron.config.config_utils import valid_int, valid_float, valid_dict
 from tron.config.config_utils import PartialConfigContext
 from tron.config.schedule_parse import valid_schedule
-from tron.config.schema import TronConfig, NamedTronConfig, NotificationOptions, CLEANUP_ACTION_NAME
+from tron.config.schema import TronConfig, NamedTronConfig, NotificationOptions
+from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import ConfigSSHOptions
 from tron.config.schema import ConfigNode, ConfigNodePool, ConfigState
 from tron.config.schema import ConfigJob, ConfigAction, ConfigCleanupAction
@@ -50,123 +51,6 @@ def build_format_string_validator(context_object):
             raise ConfigError(error_msg % (config_context.path, value))
 
     return validator
-
-
-
-# TODO: extract code
-class Validator(object):
-    """Base class for validating a collection and creating a mutable
-    collection from the source.
-    """
-    config_class            = None
-    defaults                = {}
-    validators              = {}
-    optional                = False
-
-    def validate(self, in_dict, config_context):
-        if self.optional and in_dict is None:
-            return None
-
-        if in_dict is None:
-            raise ConfigError("A %s is required." % self.type_name)
-
-        shortcut_value = self.do_shortcut(in_dict)
-        if shortcut_value:
-            return shortcut_value
-
-        config_context = self.build_context(in_dict, config_context)
-        in_dict = self.cast(in_dict, config_context)
-        self.validate_required_keys(in_dict)
-        self.validate_extra_keys(in_dict)
-        return self.build_config(in_dict, config_context)
-
-    def __call__(self, in_dict, config_context=NullConfigContext):
-        return self.validate(in_dict, config_context)
-
-    @property
-    def type_name(self):
-        """Return a string that represents the config_class being validated.
-        This name is used for error messages, so we strip off the word
-        Config so the name better matches what the user sees in the config.
-        """
-        return self.config_class.__name__.replace("Config", "")
-
-    def do_shortcut(self, in_dict):
-        """Override if your validator can skip most of the validation by
-        checking this condition.  If this returns a truthy value, the
-        validation will end immediately and return that value.
-        """
-        pass
-
-    def cast(self, in_dict, _):
-        """If your validator accepts input in different formations, override
-        this method to cast your input into a common format.
-        """
-        return in_dict
-
-    def build_context(self, in_dict, config_context):
-        path = self.path_name(in_dict.get('name'))
-        return config_context.build_child_context(path)
-
-    def validate_required_keys(self, in_dict):
-        """Check that all required keys are present."""
-        missing_keys = set(self.config_class.required_keys) - set(in_dict)
-        if not missing_keys:
-            return
-
-        keys = self.config_class.required_keys + self.config_class.optional_keys
-        missing_key_str = ', '.join(missing_keys)
-        if 'name' in keys and 'name' in in_dict:
-            msg  = "%s %s is missing options: %s"
-            name = in_dict['name']
-            raise ConfigError(msg % (self.type_name, name, missing_key_str))
-
-        msg = "Nameless %s is missing options: %s"
-        raise ConfigError(msg % (self.type_name, missing_key_str))
-
-    def validate_extra_keys(self, in_dict):
-        """Check that no unexpected keys are present."""
-        conf_class      = self.config_class
-        all_keys        = conf_class.required_keys + conf_class.optional_keys
-        extra_keys      = set(in_dict) - set(all_keys)
-        if not extra_keys:
-            return
-
-        msg             = "Unknown keys in %s %s: %s"
-        name            = in_dict.get('name', '')
-        raise ConfigError(msg % (self.type_name, name, ', '.join(extra_keys)))
-
-    def set_defaults(self, output_dict, _config_context):
-        """Set any default values for any optional values that were not
-        specified.
-        """
-        for key, value in self.defaults.iteritems():
-            if key not in output_dict:
-                output_dict[key] = value
-
-    def path_name(self, name=None):
-        return '%s.%s' % (self.type_name, name) if name else self.type_name
-
-    def post_validation(self, valid_input, config_context):
-        """Perform additional validation."""
-        pass
-
-    def build_config(self, in_dict, config_context):
-        output_dict = self.validate_contents(in_dict, config_context)
-        self.post_validation(output_dict, config_context)
-        self.set_defaults(output_dict, config_context)
-        return self.config_class(**output_dict)
-
-    def validate_contents(self, input, config_context):
-        """Override this to validate each value in the input."""
-        valid_input = {}
-        for key, value in input.iteritems():
-            if key in self.validators:
-                child_context = config_context.build_child_context(key)
-                valid_input[key] = self.validators[key](value, child_context)
-            else:
-                valid_input[key] = value
-        return valid_input
 
 
 def valid_output_stream_dir(output_dir, config_context):

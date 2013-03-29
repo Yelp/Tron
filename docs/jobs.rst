@@ -126,7 +126,10 @@ Example Actions
 Scheduling
 ----------
 
-Tron supports four different kinds of schedules in config files.
+Tron supports four methods for configuring the schedule of a job. Schedulers
+support a jitter parameter that allows them to vary their runtime by a
+random time delta.
+
 
 Interval
 ^^^^^^^^
@@ -135,34 +138,37 @@ Run the job every X seconds, minutes, hours, or days. The time expression
 is ``<interval> months|days|hours|minutes|seconds``, where the units can be
 abbreviated.
 
-::
+Short form::
 
-    schedule: "interval 20s"    # short form, requires 'interval'
+    schedule: "interval 20s"
 
-::
+Long form::
 
-    schedule:                   # long form
-        interval: "5 mins"
+    schedule:
+        type:   "interval"
+        value:  "5 mins"
+        jitter: "10 seconds"        # Optional
 
 Daily
 ^^^^^
 
-Run the job on specific weekdays at a specific time. The time expression is
-``HH:MM:SS[ [MTWRFSU]]``.
+Run the job on specific days at a specific time. The time expression is
+``HH:MM:SS[ MTWRFSU]``.
 
-::
+Short form::
 
-    schedule: "daily 04:00:00"      # short form without days
+    schedule: "daily 04:00:00"
 
-::
+Short form with days::
 
-    schedule: "daily 04:00:00 MWF"  # short form with days
+    schedule: "daily 04:00:00 MWF"
 
-::
+Long form::
 
-    schedule:                       # long form
-        start_time: "07:00:00"
-        days: "MWF"                 # this field is optional
+    schedule:
+        type:   "daily"
+        value:  "07:00:00 MWF"
+        jitter: "10 min"            # Optional
 
 Cron
 ^^^^
@@ -173,7 +179,7 @@ schedules the job on the last day of the month). Only one of the day fields
 (day of month and day of week) can have a value.
 
 
-::
+Short form::
 
     schedule: "cron */5 * * 7,8 *"  # Every 5 minutes in July and August
 
@@ -181,9 +187,11 @@ schedules the job on the last day of the month). Only one of the day fields
 
     schedule: "cron 0 3-6 * * *"    # Every hour between 3am and 6am
 
-::
+Long form::
 
-    schedule: "cron 30 4 L * *"     # The last day of the month at 4:30am
+    schedule:                       # long form
+        type: "cron"
+        value: "30 4 L * *"         # The last day of the month at 4:30am
 
 
 Complex
@@ -222,6 +230,13 @@ Some examples::
 In the config::
 
     schedule: "every monday at 09:00"
+
+::
+
+    schedule:
+        type: "groc daily"
+        value: "every day 11:22"
+        jitter: "5 min"
 
 .. _dst_notes:
 

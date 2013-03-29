@@ -19,6 +19,8 @@ Tron schedulers
  end time of the previous run (False).
 """
 import logging
+import random
+import datetime
 
 from pytz import AmbiguousTimeError, NonExistentTimeError
 from tron.config import schedule_parse
@@ -36,7 +38,7 @@ def scheduler_from_config(config, time_zone):
         return ConstantScheduler()
 
     if isinstance(config, schedule_parse.ConfigIntervalScheduler):
-        return IntervalScheduler(interval=config.timedelta)
+        return IntervalScheduler(config.timedelta, config.jitter)
 
     if isinstance(config, schedule_parse.ConfigGrocScheduler):
         return GeneralScheduler(
@@ -46,7 +48,8 @@ def scheduler_from_config(config, time_zone):
             monthdays=config.monthdays,
             months=config.months,
             weekdays=config.weekdays,
-            string_repr='GROC %s' % config.original)
+            string_repr='GROC %s' % config.original,
+            jitter=config.jitter)
 
     if isinstance(config, schedule_parse.ConfigCronScheduler):
         return GeneralScheduler(
@@ -57,7 +60,8 @@ def scheduler_from_config(config, time_zone):
             weekdays=config.weekdays,
             ordinals=config.ordinals,
             seconds=[0],
-            string_repr='CRON %s' % ' '.join(config.original))
+            string_repr='CRON %s' % config.original,
+            jitter=config.jitter)
 
     if isinstance(config, schedule_parse.ConfigDailyScheduler):
         return GeneralScheduler(
@@ -65,7 +69,8 @@ def scheduler_from_config(config, time_zone):
             minutes=[config.minute],
             seconds=[config.second],
             weekdays=config.days,
-            string_repr='DAILY %s' % config.original)
+            string_repr='DAILY %s' % config.original,
+            jitter=config.jitter)
 
 
 class ConstantScheduler(object):
@@ -85,6 +90,19 @@ class ConstantScheduler(object):
         return not self == other
 
 
+def get_jitter(time_delta):
+    if not time_delta:
+        return datetime.timedelta()
+    seconds = timeutils.delta_total_seconds(time_delta)
+    return datetime.timedelta(seconds=random.randint(-seconds, seconds))
+
+
+def get_jitter_str(time_delta):
+    if not time_delta:
+        return ''
+    return ' (+/- %s)' % time_delta
+
+
 class GeneralScheduler(object):
     """Scheduler which uses a TimeSpecification.
     """
@@ -100,7 +118,8 @@ class GeneralScheduler(object):
             hours=None,
             seconds=None,
             time_zone=None,
-            string_repr=None):
+            string_repr=None,
+            jitter=None):
         """Parameters:
           timestr     - the time of day to run, as 'HH:MM'
           ordinals    - first, second, third &c, as a set of integers in 1..5 to
@@ -117,6 +136,7 @@ class GeneralScheduler(object):
                         if applicable
         """
         self.time_zone      = time_zone
+        self.jitter         = jitter
         self.string_repr    = string_repr or "DAILY"
         self.time_spec      = trontimespec.TimeSpecification(
             ordinals=ordinals,
@@ -145,10 +165,10 @@ class GeneralScheduler(object):
                 # exist. Pretend like it's the later time, every time.
                 start_time = self.time_zone.localize(start_time, is_dst=True)
 
-        return self.time_spec.get_match(start_time)
+        return self.time_spec.get_match(start_time) + get_jitter(self.jitter)
 
     def __str__(self):
-        return self.string_repr
+        return self.string_repr + get_jitter_str(self.jitter)
 
     def __eq__(self, other):
         return hasattr(other, 'time_spec') and self.time_spec == other.time_spec
@@ -163,15 +183,16 @@ class IntervalScheduler(object):
     """
     schedule_on_complete = False
 
-    def __init__(self, interval=None):
+    def __init__(self, interval, jitter):
         self.interval = interval
+        self.jitter = jitter
 
     def next_run_time(self, last_run_time):
         last_run_time = last_run_time or timeutils.current_time()
-        return last_run_time + self.interval
+        return last_run_time + self.interval + get_jitter(self.jitter)
 
     def __str__(self):
-        return "INTERVAL %s" % self.interval
+        return "INTERVAL %s" % self.interval + get_jitter_str(self.jitter)
 
     def __eq__(self, other):
         return (isinstance(other, IntervalScheduler) and
