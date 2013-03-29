@@ -9,7 +9,7 @@ import os
 import pytz
 from tron import command_context
 
-from tron.config import ConfigError, config_utils
+from tron.config import ConfigError, config_utils, schema
 from tron.config.config_utils import ConfigContext, Validator
 from tron.config.config_utils import valid_string, valid_bool
 from tron.config.config_utils import valid_identifier
@@ -348,8 +348,23 @@ class ValidateService(Validator):
 valid_service = ValidateService()
 
 
+class ValidateActionRunner(Validator):
+    config_class =              schema.ConfigActionRunner
+    optional =                  True
+    defaults = {
+        'runner_type':          None,
+        'remote_path':          '/tmp',
+    }
+
+    runners =                   ['none', 'simple']
+    validators = {
+        'runner_type':          config_utils.build_enum_validator(runners),
+        'remote_path':          valid_string,
+    }
+
+
 class ValidateStatePersistence(Validator):
-    config_class                = ConfigState
+    config_class                = schema.ConfigState
     defaults = {
         'buffer_size':          1,
         'connection_details':   None,
@@ -398,6 +413,7 @@ class ValidateConfig(Validator):
     """
     config_class =              TronConfig
     defaults = {
+        'action_runner':        {},
         'output_stream_dir':    None,
         'command_context':      {},
         'ssh_options':          ValidateSSHOptions.defaults,
@@ -412,6 +428,7 @@ class ValidateConfig(Validator):
     node_pools  = build_dict_name_validator(valid_node_pool, allow_empty=True)
     nodes       = build_dict_name_validator(valid_node, allow_empty=True)
     validators = {
+        'action_runner':        ValidateActionRunner(),
         'output_stream_dir':    valid_output_stream_dir,
         'command_context':      valid_command_context,
         'ssh_options':          valid_ssh_options,

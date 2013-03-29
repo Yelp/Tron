@@ -4,8 +4,7 @@ Write pid and stdout/stderr to a standard location before execing a command.
 """
 import contextlib
 import logging
-import os.path
-import shlex
+import os
 import subprocess
 import sys
 import yaml
@@ -52,10 +51,14 @@ class NoFile(object):
         yield
 
 
+# TODO: new tests
 def get_status_file(output_path):
     if not os.path.isdir(output_path):
-        log.warn("Output path %s does not exist", output_path)
-        return NoFile()
+        try:
+            os.makedirs(output_path)
+        except OSError, e:
+            log.warn("Output path %s does not exist", output_path)
+            return NoFile()
     return StatusFile(os.path.join(output_path, STATUS_FILE))
 
 
@@ -73,8 +76,8 @@ def parse_args(args):
 
 
 def run_command(command):
-    return subprocess.Popen(shlex.split(command),
-        stdout=sys.stdout, stderr=sys.stderr)
+    return subprocess.Popen(
+        command, shell=True, stdout=sys.stdout, stderr=sys.stderr)
 
 
 if __name__ == "__main__":

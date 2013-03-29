@@ -45,7 +45,7 @@ class Job(Observable, Observer):
     def __init__(self, name, scheduler, queueing=True, all_nodes=False,
             node_pool=None, enabled=True, action_graph=None,
             run_collection=None, parent_context=None, output_path=None,
-            allow_overlap=None):
+            allow_overlap=None, action_runner=None):
         super(Job, self).__init__()
         self.name               = name
         self.action_graph       = action_graph
@@ -56,6 +56,7 @@ class Job(Observable, Observer):
         self.enabled            = enabled
         self.node_pool          = node_pool
         self.allow_overlap      = allow_overlap
+        self.action_runner      = action_runner
         self.output_path        = output_path or filehandler.OutputPath()
         self.output_path.append(name)
         self.event              = event.get_recorder(self.name)
@@ -63,7 +64,7 @@ class Job(Observable, Observer):
         self.event.ok('created')
 
     @classmethod
-    def from_config(cls, job_config, scheduler, parent_context, output_path):
+    def from_config(cls, job_config, scheduler, parent_context, output_path, action_runner):
         """Factory method to create a new Job instance from configuration."""
         action_graph = actiongraph.ActionGraph.from_config(
                 job_config.actions, job_config.cleanup_action)
@@ -81,7 +82,8 @@ class Job(Observable, Observer):
             action_graph        = action_graph,
             parent_context      = parent_context,
             output_path         = output_path,
-            allow_overlap       = job_config.allow_overlap
+            allow_overlap       = job_config.allow_overlap,
+            action_runner       = action_runner
         )
 
     def update_from_job(self, job):
@@ -350,16 +352,17 @@ class JobScheduler(Observer):
 class JobSchedulerFactory(object):
     """Construct JobScheduler instances from configuration."""
 
-    def __init__(self, context, output_stream_dir, time_zone):
+    def __init__(self, context, output_stream_dir, time_zone, action_runner):
         self.context            = context
         self.output_stream_dir  = output_stream_dir
         self.time_zone          = time_zone
+        self.action_runner      = action_runner
 
     def build(self, job_config):
         log.debug("Building new job %s", job_config.name)
         output_path = filehandler.OutputPath(self.output_stream_dir)
         scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
-        job = Job.from_config(job_config, scheduler, self.context, output_path)
+        job = Job.from_config(job_config, scheduler, self.context, output_path, self.action_runner)
         return JobScheduler(job)
 
 

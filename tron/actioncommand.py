@@ -1,4 +1,5 @@
 import logging
+import os
 from tron.serialize import filehandler
 
 from tron.utils import state, timeutils
@@ -132,3 +133,37 @@ class StringBufferStore(object):
 
     def get_stream(self, name):
         return self.buffers[name].get_value()
+
+
+# TODO: path to action_runner.py in config?
+# TODO: better name
+class SimpleActionRunnerFactory(object):
+    """Run actions by wrapping them in `action_runner.py`."""
+
+    runner_name = "action_runner.py"
+
+    def __init__(self, remote_path):
+        self.remote_path = remote_path
+
+    def __call__(self, id, command, serializer):
+        return ActionCommand(id, self.build_command(id, command), serializer)
+
+    def build_command(self, id, command):
+        status_path = os.path.join(self.remote_path, id)
+        return '''%s "%s" "%s"''' % (self.runner_name, status_path, command)
+
+
+# TODO: share enum with config
+class ActionCommandFactoryFactory(object):
+    """A factory-factory which returns a callable that can be used to
+    create ActionCommand objects. The factory definition should match the
+    constructor for ActionCommand.
+    """
+
+    @classmethod
+    def create(cls, config):
+        if not config or config.runner_type == 'none':
+            return ActionCommand
+
+        if config.runner_type == 'simple':
+            return SimpleActionRunnerFactory(config.remote_path)

@@ -22,10 +22,10 @@ class ActionRunFactory(object):
     """
 
     @classmethod
-    def build_action_run_collection(cls, job_run):
+    def build_action_run_collection(cls, job_run, action_runner):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
         action_run_map = dict(
-            (name, cls.build_run_for_action(job_run, action_inst))
+            (name, cls.build_run_for_action(job_run, action_inst, action_runner))
             for name, action_inst in job_run.action_graph.action_map.iteritems()
         )
         return ActionRunCollection(job_run.action_graph, action_run_map)
@@ -44,7 +44,7 @@ class ActionRunFactory(object):
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
     @classmethod
-    def build_run_for_action(cls, job_run, action):
+    def build_run_for_action(cls, job_run, action, action_runner):
         """Create an ActionRun for a JobRun and Action."""
         run_node = action.node_pool.next() if action.node_pool else job_run.node
 
@@ -55,7 +55,8 @@ class ActionRunFactory(object):
             action.command,
             parent_context=job_run.context,
             output_path=job_run.output_path.clone(),
-            cleanup=action.is_cleanup)
+            cleanup=action.is_cleanup,
+            action_runner=action_runner)
 
     @classmethod
     def action_run_from_state(cls, job_run, state_data, cleanup=False):
@@ -126,7 +127,7 @@ class ActionRun(Observer):
     def __init__(self, job_run_id, name, node, bare_command=None,
             parent_context=None, output_path=None, cleanup=False,
             start_time=None, end_time=None, run_state=STATE_SCHEDULED,
-            rendered_command=None):
+            rendered_command=None, action_runner=None):
         self.job_run_id         = job_run_id
         self.action_name        = name
         self.node               = node
@@ -135,6 +136,7 @@ class ActionRun(Observer):
         self.exit_status        = None
         self.bare_command       = bare_command
         self.rendered_command   = rendered_command
+        self.action_runner      = action_runner or ActionCommand
         self.machine            = state.StateMachine(
                     self.STATE_SCHEDULED, delegate=self, force_state=run_state)
         self.is_cleanup         = cleanup
@@ -224,11 +226,10 @@ class ActionRun(Observer):
 
     def build_action_command(self):
         """Create a new ActionCommand instance to send to the node."""
-        self.action_command = action_command = ActionCommand(
+        self.action_command = action_command = self.action_runner(
             self.id,
             self.command,
-            filehandler.OutputStreamSerializer(self.output_path)
-        )
+            filehandler.OutputStreamSerializer(self.output_path))
         self.watch(action_command)
         return action_command
 

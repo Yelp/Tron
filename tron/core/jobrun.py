@@ -61,7 +61,7 @@ class JobRun(Observable, Observer):
         run = cls(job.name, run_num, run_time, node, job.output_path.clone(),
                 job.context, action_graph=job.action_graph, manual=manual)
 
-        action_runs     = ActionRunFactory.build_action_run_collection(run)
+        action_runs     = ActionRunFactory.build_action_run_collection(run, job.action_runner)
         run.action_runs = action_runs
         return run
 

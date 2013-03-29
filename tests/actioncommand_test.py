@@ -1,7 +1,9 @@
 import mock
 from testify import TestCase, assert_equal, setup
+from tron import actioncommand
 
 from tron.actioncommand import ActionCommand
+from tron.config import schema
 from tron.serialize import filehandler
 
 class ActionCommandTestCase(TestCase):
@@ -88,3 +90,22 @@ class ActionCommandTestCase(TestCase):
     def test_is_complete_true(self):
         self.ac.machine.state = self.ac.COMPLETE
         assert self.ac.is_complete, self.ac.machine.state
+
+
+class ActionCommandFactoryFactoryTestCase(TestCase):
+
+    def test_create_default_action_command_no_config(self):
+        config = ()
+        factory = actioncommand.ActionCommandFactoryFactory.create(config)
+        assert_equal(factory, actioncommand.ActionCommand)
+
+    def test_create_default_action_command(self):
+        config = schema.ConfigActionRunner('none', None)
+        factory = actioncommand.ActionCommandFactoryFactory.create(config)
+        assert_equal(factory, actioncommand.ActionCommand)
+
+    def test_create_action_command_with_simple_runner(self):
+        path = '/tmp/what'
+        config = schema.ConfigActionRunner('simple', path)
+        factory = actioncommand.ActionCommandFactoryFactory.create(config)
+        assert_equal(factory.remote_path, path)
