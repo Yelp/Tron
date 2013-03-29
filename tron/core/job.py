@@ -64,7 +64,8 @@ class Job(Observable, Observer):
         self.event.ok('created')
 
     @classmethod
-    def from_config(cls, job_config, scheduler, parent_context, output_path, action_runner):
+    def from_config(cls,
+            job_config, scheduler, parent_context, output_path, action_runner):
         """Factory method to create a new Job instance from configuration."""
         action_graph = actiongraph.ActionGraph.from_config(
                 job_config.actions, job_config.cleanup_action)
@@ -98,6 +99,7 @@ class Job(Observable, Observer):
         self.all_nodes      = job.all_nodes
         self.action_graph   = job.action_graph
         self.output_path    = job.output_path
+        self.action_runner  = job.action_runner
         self.event.ok('reconfigured')
 
     @property
@@ -173,11 +175,10 @@ class Job(Observable, Observer):
                 'all_nodes',
                 'action_graph',
                 'output_path',
+                'action_runner',
         ]
-        return all(
-            getattr(other, attr, None) == getattr(self, attr, None)
-            for attr in attrs
-        )
+        return all(getattr(other, attr, None) == getattr(self, attr, None)
+                   for attr in attrs)
 
     def __ne__(self, other):
         return not self == other

@@ -3,6 +3,7 @@ import mock
 
 from testify import setup, teardown, TestCase, run, assert_equal
 from testify import setup_teardown
+from testify.assertions import assert_not_equal
 from tests import mocks
 from tests.assertions import assert_length, assert_call, assert_mock_calls
 from tests.testingutils import Turtle, autospec_method
@@ -62,10 +63,12 @@ class JobTestCase(TestCase):
         assert new_job.action_graph
 
     def test_update_from_job(self):
-        other_job = job.Job('otherjob', 'scheduler')
+        action_runner = mock.Mock()
+        other_job = job.Job('otherjob', 'scheduler', action_runner=action_runner)
         self.job.update_from_job(other_job)
         assert_equal(self.job.name, 'otherjob')
         assert_equal(self.job.scheduler, 'scheduler')
+        assert_equal(self.job, other_job)
         self.job.event.ok.assert_called_with('reconfigured')
 
     def test_status_disabled(self):
@@ -160,6 +163,17 @@ class JobTestCase(TestCase):
         assert self.job != other_job
         other_job.update_from_job(self.job)
         assert not self.job != other_job
+
+    def test__eq__true(self):
+        action_runner = mock.Mock()
+        first = job.Job("jobname", 'scheduler', action_runner=action_runner)
+        second = job.Job("jobname", 'scheduler', action_runner=action_runner)
+        assert_equal(first, second)
+
+    def test__eq__false(self):
+        first = job.Job("jobname", 'scheduler', action_runner=mock.Mock())
+        second = job.Job("jobname", 'scheduler', action_runner=mock.Mock())
+        assert_not_equal(first, second)
 
 
 class JobSchedulerTestCase(TestCase):

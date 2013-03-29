@@ -177,6 +177,14 @@ class SimpleActionRunnerFactory(object):
         run_id = '%s.%s' % (id, command)
         return ActionCommand(run_id, command, StringBufferStore())
 
+    def __eq__(self, other):
+        return (self.__class__ == other.__class__ and
+            self.status_path == other.status_path and
+            self.exec_path == other.exec_path)
+
+    def __ne__(self, other):
+        return not self == other
+
 
 # TODO: share constants with config
 def create_action_runner_factory_from_config(config):

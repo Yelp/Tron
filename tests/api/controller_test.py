@@ -56,6 +56,16 @@ class ActionRunControllerTestCase(TestCase):
         self.action_run.cancel.assert_called_with()
         assert_in("Failed to cancel", result)
 
+    def test_handle_termination_not_implemented(self):
+        self.action_run.stop.side_effect = NotImplementedError
+        result = self.controller.handle_termination('stop')
+        assert_in("Failed to stop", result)
+
+    def test_handle_termination_success(self):
+        result = self.controller.handle_termination('kill')
+        assert_in("Attempting to kill", result)
+
+
 
 class JobRunControllerTestCase(TestCase):
 

@@ -1,5 +1,6 @@
 import mock
 from testify import TestCase, assert_equal, setup
+from testify.assertions import assert_not_equal
 from tron import actioncommand
 
 from tron.actioncommand import ActionCommand
@@ -110,3 +111,15 @@ class CreateActionCommandFactoryFromConfigTestCase(TestCase):
         factory = actioncommand.create_action_runner_factory_from_config(config)
         assert_equal(factory.status_path, status_path)
         assert_equal(factory.exec_path, exec_path)
+
+    def test__eq__true(self):
+        first = actioncommand.SimpleActionRunnerFactory('a', 'b')
+        second = actioncommand.SimpleActionRunnerFactory('a', 'b')
+        assert_equal(first, second)
+
+    def test__eq__false(self):
+        first = actioncommand.SimpleActionRunnerFactory('a', 'b')
+        second = actioncommand.SimpleActionRunnerFactory('a', 'c')
+        assert_not_equal(first, second)
+        assert_not_equal(first, None)
+        assert_not_equal(first, actioncommand.NoActionRunnerFactory)
