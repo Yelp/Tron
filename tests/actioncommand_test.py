@@ -97,12 +97,12 @@ class CreateActionCommandFactoryFromConfigTestCase(TestCase):
     def test_create_default_action_command_no_config(self):
         config = ()
         factory = actioncommand.create_action_runner_factory_from_config(config)
-        assert_equal(factory, actioncommand.ActionCommand)
+        assert_equal(factory, actioncommand.NoActionRunnerFactory)
 
     def test_create_default_action_command(self):
         config = schema.ConfigActionRunner('none', None, None)
         factory = actioncommand.create_action_runner_factory_from_config(config)
-        assert_equal(factory, actioncommand.ActionCommand)
+        assert_equal(factory, actioncommand.NoActionRunnerFactory)
 
     def test_create_action_command_with_simple_runner(self):
         status_path, exec_path = '/tmp/what', '/remote/bin'

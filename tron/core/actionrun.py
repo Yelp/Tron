@@ -236,12 +236,11 @@ class ActionRun(Observer):
 
     def build_action_command(self):
         """Create a new ActionCommand instance to send to the node."""
-        self.action_command = action_command = self.action_runner(
-            self.id,
-            self.command,
-            filehandler.OutputStreamSerializer(self.output_path))
-        self.watch(action_command)
-        return action_command
+        serializer = filehandler.OutputStreamSerializer(self.output_path)
+        self.action_command = self.action_runner.create(
+            self.id, self.command, serializer)
+        self.watch(self.action_command)
+        return self.action_command
 
     def handle_action_command_state_change(self, action_command, event):
         """Observe ActionCommand state changes."""
@@ -296,7 +295,7 @@ class ActionRun(Observer):
             'end_time':         self.end_time,
             'command':          command,
             'rendered_command': self.rendered_command,
-            'node_name':        self.node.name if self.node else None
+            'node_name':        self.node.get_name() if self.node else None
         }
 
     def render_command(self):

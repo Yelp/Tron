@@ -7,8 +7,7 @@ from testify import run, setup, TestCase, assert_equal, turtle, teardown
 from testify.assertions import assert_raises, assert_in
 from tests import testingutils
 from tests.assertions import assert_length
-from tests.mocks import MockNode
-from tests.testingutils import Turtle
+from tests.testingutils import Turtle, autospec_method
 
 from tron import node, actioncommand
 from tron.core import jobrun, actiongraph
@@ -26,8 +25,8 @@ class ActionRunFactoryTestCase(TestCase):
         self.action_graph = actiongraph.ActionGraph(
                 actions, dict((a.name, a) for a in actions))
 
-        anode = MockNode('anode')
-        self.job_run = jobrun.JobRun('jobname', 7, self.run_time, anode,
+        mock_node = mock.create_autospec(node.Node)
+        self.job_run = jobrun.JobRun('jobname', 7, self.run_time, mock_node,
                 action_graph=self.action_graph)
 
         self.action_state_data = {
@@ -107,16 +106,18 @@ class ActionRunTestCase(TestCase):
 
     @setup
     def setup_action_run(self):
-        anode = turtle.Turtle()
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
+        self.action_runner = mock.create_autospec(
+            actioncommand.NoActionRunnerFactory)
         self.command = "do command %(actionname)s"
         self.rendered_command = "do command action_name"
         self.action_run = ActionRun(
                 "id",
                 "action_name",
-                anode,
+                mock.create_autospec(node.Node),
                 self.command,
-                output_path=self.output_path)
+                output_path=self.output_path,
+                action_runner=self.action_runner)
 
     @teardown
     def teardown_action_run(self):
@@ -151,14 +152,18 @@ class ActionRunTestCase(TestCase):
         assert_equal(self.action_run.exit_status, -2)
         assert self.action_run.is_failed
 
-    def test_build_action_command(self):
-        self.action_run.handler = handler = turtle.Turtle()
+    @mock.patch('tron.core.actionrun.filehandler', autospec=True)
+    def test_build_action_command(self, mock_filehandler):
+        autospec_method(self.action_run.watch)
+        serializer = mock_filehandler.OutputStreamSerializer.return_value
         action_command = self.action_run.build_action_command()
-        assert_equal(action_command.id, self.action_run.id)
-        assert_equal(action_command.command, self.action_run.rendered_command)
-        action_command.started()
-        assert_equal(handler.calls,
-            [((action_command, action_command.RUNNING), {})])
+        assert_equal(action_command, self.action_run.action_command)
+        assert_equal(action_command, self.action_runner.create.return_value)
+        self.action_runner.create.assert_called_with(
+            self.action_run.id, self.action_run.command, serializer)
+        mock_filehandler.OutputStreamSerializer.assert_called_with(
+            self.action_run.output_path)
+        self.action_run.watch.assert_called_with(action_command)
 
     def test_handler_running(self):
         self.action_run.build_action_command()
@@ -193,7 +198,8 @@ class ActionRunTestCase(TestCase):
         assert_equal(self.action_run.exit_status, 0)
 
     def test_handler_exiting_failunknown(self):
-        self.action_run.build_action_command()
+        self.action_run.action_command = mock.create_autospec(
+            actioncommand.ActionCommand, exit_status=None)
         self.action_run.machine.transition('start')
         self.action_run.machine.transition('started')
         assert self.action_run.handler(
@@ -533,8 +539,8 @@ class ActionRunCollectionTestCase(TestCase):
 class ActionRunCollectionIsRunBlockedTestCase(TestCase):
 
     def _build_run(self, name):
-        anode = Turtle()
-        return ActionRun("id", name, anode, self.command,
+        mock_node = mock.create_autospec(node.Node)
+        return ActionRun("id", name, mock_node, self.command,
             output_path=self.output_path)
 
     @setup
