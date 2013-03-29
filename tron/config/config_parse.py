@@ -266,7 +266,8 @@ class ValidateJob(Validator):
         'cleanup_action':       None,
         'enabled':              True,
         'queueing':             True,
-        'allow_overlap':        False
+        'allow_overlap':        False,
+        'max_runtime':          None,
     }
 
     validators = {
@@ -280,6 +281,7 @@ class ValidateJob(Validator):
         'queueing':             valid_bool,
         'enabled':              valid_bool,
         'allow_overlap':        valid_bool,
+        'max_runtime':          config_utils.valid_time_delta,
     }
 
     def cast(self, in_dict, config_context):

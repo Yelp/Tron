@@ -323,6 +323,7 @@ class DisplayJobs(TableDisplay):
         ('Job',                 'name'              ),
         ('State',               'status'            ),
         ('Scheduler',           'scheduler'         ),
+        ('Max runtime',         'max_runtime'       ),
         ('Node Pool',           'node_pool'         ),
         ('Run on all nodes',    'all_nodes'         ),
         ('Allow overlapping',   'allow_overlap'     ),

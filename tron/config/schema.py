@@ -98,6 +98,7 @@ ConfigJob = config_object_factory(
         'cleanup_action',       # ConfigAction
         'enabled',              # bool
         'allow_overlap',        # bool
+        'max_runtime',          # datetime.Timedelta
     ])
 
 

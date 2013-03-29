@@ -388,6 +388,7 @@ class ActionRunCollection(object):
                 proxy.func_proxy('fail',            iteration.list_all),
                 proxy.func_proxy('ready',           iteration.list_all),
                 proxy.func_proxy('cleanup',         iteration.list_all),
+                proxy.func_proxy('stop',            iteration.list_all),
                 proxy.attr_proxy('start_time',      iteration.min_filter),
                 proxy.attr_proxy('end_time',        iteration.max_filter),
             ])

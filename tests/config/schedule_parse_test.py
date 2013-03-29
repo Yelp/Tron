@@ -61,7 +61,7 @@ class ValidSchedulerTestCase(TestCase):
     def test_cron_from_dict(self):
         schedule = {'type': 'cron', 'value': '* * * * *'}
         config = schedule_parse.ConfigGenericSchedule(
-            'cron', schedule['value'], None)
+            'cron', schedule['value'], datetime.timedelta())
         self.assert_validation(schedule, config)
 
     def test_cron_from_dict_with_jitter(self):
@@ -69,31 +69,6 @@ class ValidSchedulerTestCase(TestCase):
         config = schedule_parse.ConfigGenericSchedule(
             'cron', schedule['value'], datetime.timedelta(minutes=5))
         self.assert_validation(schedule, config)
-
-
-class ValidJitterTestCase(TestCase):
-
-    def test_valid_jitter_none(self):
-        context = config_utils.NullConfigContext
-        assert_equal(None, schedule_parse.valid_jitter(None, context))
-
-    def test_valid_jitter_seconds(self):
-        context = config_utils.NullConfigContext
-        for jitter in ['82s', '82 s', '82 sec', '82seconds']:
-            delta = datetime.timedelta(seconds=82)
-            assert_equal(delta, schedule_parse.valid_jitter(jitter, context))
-
-    def test_valid_jitter_minutes(self):
-        context = config_utils.NullConfigContext
-        for jitter in ['10m', '10 m', '10 min', '10minutes']:
-            delta = datetime.timedelta(seconds=600)
-            assert_equal(delta, schedule_parse.valid_jitter(jitter, context))
-
-    def test_valid_jitter_invalid_unit(self):
-        context = config_utils.NullConfigContext
-        for jitter in ['1d', '3 mo', '3 months']:
-            assert_raises(ConfigError,
-                schedule_parse.valid_jitter,jitter, context)
 
 
 class ValidCronSchedulerTestCase(TestCase):

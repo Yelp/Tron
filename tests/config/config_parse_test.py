@@ -199,6 +199,7 @@ services:
                         command='test_command0.1',
                         node=None),
                     enabled=True,
+                    max_runtime=None,
                     allow_overlap=False),
                 'MASTER.test_job1': schema.ConfigJob(
                     name='MASTER.test_job1',
@@ -227,6 +228,7 @@ services:
                     run_limit=50,
                     all_nodes=False,
                     cleanup_action=None,
+                    max_runtime=None,
                     allow_overlap=True),
                 'MASTER.test_job2': schema.ConfigJob(
                     name='MASTER.test_job2',
@@ -250,6 +252,7 @@ services:
                     run_limit=50,
                     all_nodes=False,
                     cleanup_action=None,
+                    max_runtime=None,
                     allow_overlap=False),
                 'MASTER.test_job3': schema.ConfigJob(
                     name='MASTER.test_job3',
@@ -278,6 +281,7 @@ services:
                     run_limit=50,
                     all_nodes=False,
                     cleanup_action=None,
+                    max_runtime=None,
                     allow_overlap=False),
                 'MASTER.test_job4': schema.ConfigJob(
                     name='MASTER.test_job4',
@@ -300,6 +304,7 @@ services:
                     all_nodes=True,
                     cleanup_action=None,
                     enabled=False,
+                    max_runtime=None,
                     allow_overlap=False)
                 }),
                 services=FrozenDict({
@@ -333,9 +338,9 @@ services:
         assert_equal(test_config, expected)
         assert_equal(test_config.jobs['MASTER.test_job4'].enabled, False)
 
-
     def test_empty_node_test(self):
         valid_config_from_yaml("""nodes:""")
+
 
 class NamedConfigTestCase(TestCase):
     config = """
@@ -438,6 +443,7 @@ services:
                         command='test_command0.1',
                         node=None),
                     enabled=True,
+                    max_runtime=None,
                     allow_overlap=False),
                 'test_job1': schema.ConfigJob(
                     name='test_job1',
@@ -468,6 +474,7 @@ services:
                     run_limit=50,
                     all_nodes=False,
                     cleanup_action=None,
+                    max_runtime=None,
                     allow_overlap=True),
                 'test_job2': schema.ConfigJob(
                     name='test_job2',
@@ -493,6 +500,7 @@ services:
                     run_limit=50,
                     all_nodes=False,
                     cleanup_action=None,
+                    max_runtime=None,
                     allow_overlap=False),
                 'test_job3': schema.ConfigJob(
                     name='test_job3',
@@ -521,6 +529,7 @@ services:
                     run_limit=50,
                     all_nodes=False,
                     cleanup_action=None,
+                    max_runtime=None,
                     allow_overlap=False),
                 'test_job4': schema.ConfigJob(
                     name='test_job4',
@@ -543,6 +552,7 @@ services:
                     all_nodes=True,
                     cleanup_action=None,
                     enabled=False,
+                    max_runtime=None,
                     allow_overlap=False)
                 }),
                 services=FrozenDict({
@@ -915,7 +925,8 @@ class ValidateJobsAndServicesTestCase(TestCase):
                      name='cleanup',
                      node=None),
                 enabled=True,
-                allow_overlap=False)
+                allow_overlap=False,
+                max_runtime=None)
             }
 
         expected_services = {'MASTER.test_service0':

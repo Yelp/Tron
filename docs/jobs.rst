@@ -135,7 +135,7 @@ Interval
 ^^^^^^^^
 
 Run the job every X seconds, minutes, hours, or days. The time expression
-is ``<interval> months|days|hours|minutes|seconds``, where the units can be
+is ``<interval> days|hours|minutes|seconds``, where the units can be
 abbreviated.
 
 Short form::
