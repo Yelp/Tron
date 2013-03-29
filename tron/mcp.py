@@ -97,7 +97,7 @@ class MasterControlProgram(object):
 
     def build_job_scheduler_factory(self, master_config):
         output_stream_dir = master_config.output_stream_dir or self.working_dir
-        action_runner = actioncommand.ActionCommandFactoryFactory.create(
+        action_runner = actioncommand.create_action_runner_factory_from_config(
             master_config.action_runner)
         return job.JobSchedulerFactory(
             self.context,

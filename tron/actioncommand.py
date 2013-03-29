@@ -135,35 +135,38 @@ class StringBufferStore(object):
         return self.buffers[name].get_value()
 
 
-# TODO: path to action_runner.py in config?
+# TODO: is cleanup of status files required?
 # TODO: better name
 class SimpleActionRunnerFactory(object):
     """Run actions by wrapping them in `action_runner.py`."""
 
     runner_name = "action_runner.py"
 
-    def __init__(self, remote_path):
-        self.remote_path = remote_path
+    def __init__(self, status_path, exec_path):
+        self.status_path = status_path
+        self.exec_path = exec_path
+
+    @classmethod
+    def from_config(cls, config):
+        return cls(config.remote_status_path, config.remote_exec_path)
 
     def __call__(self, id, command, serializer):
         return ActionCommand(id, self.build_command(id, command), serializer)
 
     def build_command(self, id, command):
-        status_path = os.path.join(self.remote_path, id)
-        return '''%s "%s" "%s"''' % (self.runner_name, status_path, command)
+        status_path = os.path.join(self.status_path, id)
+        runner_path = os.path.join(self.exec_path, self.runner_name)
+        return '''%s "%s" "%s"''' % (runner_path, status_path, command)
 
 
-# TODO: share enum with config
-class ActionCommandFactoryFactory(object):
-    """A factory-factory which returns a callable that can be used to
+# TODO: share constants with config
+def create_action_runner_factory_from_config(config):
+    """A factory-factory method which returns a callable that can be used to
     create ActionCommand objects. The factory definition should match the
     constructor for ActionCommand.
     """
+    if not config or config.runner_type == 'none':
+        return ActionCommand
 
-    @classmethod
-    def create(cls, config):
-        if not config or config.runner_type == 'none':
-            return ActionCommand
-
-        if config.runner_type == 'simple':
-            return SimpleActionRunnerFactory(config.remote_path)
+    if config.runner_type == 'simple':
+        return SimpleActionRunnerFactory.from_config(config)

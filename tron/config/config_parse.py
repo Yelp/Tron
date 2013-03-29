@@ -353,13 +353,15 @@ class ValidateActionRunner(Validator):
     optional =                  True
     defaults = {
         'runner_type':          None,
-        'remote_path':          '/tmp',
+        'remote_exec_path':     '',
+        'remote_status_path':   '/tmp',
     }
 
     runners =                   ['none', 'simple']
     validators = {
         'runner_type':          config_utils.build_enum_validator(runners),
-        'remote_path':          valid_string,
+        'remote_status_path':   valid_string,
+        'remote_exec_path':     valid_string,
     }
 
 

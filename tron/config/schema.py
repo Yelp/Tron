@@ -58,7 +58,7 @@ NotificationOptions = config_object_factory(
 
 
 ConfigActionRunner = config_object_factory('ConfigActionRunner',
-    optional=['runner_type', 'remote_path'])
+    optional=['runner_type', 'remote_status_path', 'remote_exec_path'])
 
 
 ConfigSSHOptions = config_object_factory(

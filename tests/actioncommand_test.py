@@ -92,20 +92,21 @@ class ActionCommandTestCase(TestCase):
         assert self.ac.is_complete, self.ac.machine.state
 
 
-class ActionCommandFactoryFactoryTestCase(TestCase):
+class CreateActionCommandFactoryFromConfigTestCase(TestCase):
 
     def test_create_default_action_command_no_config(self):
         config = ()
-        factory = actioncommand.ActionCommandFactoryFactory.create(config)
+        factory = actioncommand.create_action_runner_factory_from_config(config)
         assert_equal(factory, actioncommand.ActionCommand)
 
     def test_create_default_action_command(self):
-        config = schema.ConfigActionRunner('none', None)
-        factory = actioncommand.ActionCommandFactoryFactory.create(config)
+        config = schema.ConfigActionRunner('none', None, None)
+        factory = actioncommand.create_action_runner_factory_from_config(config)
         assert_equal(factory, actioncommand.ActionCommand)
 
     def test_create_action_command_with_simple_runner(self):
-        path = '/tmp/what'
-        config = schema.ConfigActionRunner('simple', path)
-        factory = actioncommand.ActionCommandFactoryFactory.create(config)
-        assert_equal(factory.remote_path, path)
+        status_path, exec_path = '/tmp/what', '/remote/bin'
+        config = schema.ConfigActionRunner('simple', status_path, exec_path)
+        factory = actioncommand.create_action_runner_factory_from_config(config)
+        assert_equal(factory.status_path, status_path)
+        assert_equal(factory.exec_path, exec_path)
