@@ -24,6 +24,44 @@ div.refresh-view span {
     cursor: pointer;
 }
 
+.table-condensed td {
+    border: 0
+}
+
+table.details {
+    margin: 4px 0 0 0 ;
+}
+
+h1 {
+    font-size: 25px;
+}
+
+h1 .pull-right {
+    margin-top: -4px;
+}
+
+h1 small {
+    font-variant: small-caps;
+}
+
+h1 a {
+    color: inherit
+}
+
+h1 a:hover {
+    text-decoration: underline
+}
+
+h2 {
+    border-bottom: 1px #ccc solid;
+    text-align: left;
+    padding: 0 0 0 10px;
+    font-size: 16px;
+    font-weight: bold;
+    font-variant: small-caps;
+}
+
+
 #action_graph svg marker {
     fill: #ccc;
 }

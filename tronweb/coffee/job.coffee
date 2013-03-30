@@ -45,6 +45,10 @@ class window.JobRun extends Backbone.Model
     urlRoot: ->
         "/jobs/" + @get('name')
 
+    parse: (resp, options) =>
+        resp['job_url'] = "#job/" + resp['job_name']
+        resp
+
 
 class ActionRun extends Backbone.Model
 
@@ -67,7 +71,10 @@ class window.JobListView extends Backbone.View
     className: "span12"
 
     template: _.template """
-        <h1>Jobs</h1>
+        <h1>
+            Jobs
+            <span id="refresh"></span>
+        </h1>
         <div id="filter-bar" class="row"></div>
         <table class="table table-hover">
             <thead>
@@ -88,7 +95,7 @@ class window.JobListView extends Backbone.View
     render: ->
         @$el.html @template()
         @renderFilter()
-        @renderRefresh()
+        @$('#refresh').html(@refreshView.render().el)
         @renderList()
         @
 
@@ -97,8 +104,6 @@ class window.JobListView extends Backbone.View
         entry = (model) -> new JobListEntryView(model: model).render().el
         @$('tbody').html(entry(model) for model in models)
 
-    renderRefresh: =>
-        @$('h1').append(@refreshView.render().el)
 
     renderFilter: =>
         @$('#filter-bar').html(@filterView.render().el)
@@ -146,19 +151,29 @@ class window.JobView extends Backbone.View
     template: _.template """
         <div class="row">
             <div class="span12">
-                <h1>Job <%= name %></h1>
+                <h1>
+                    <small>Job</small>
+                    <%= name %>
+                    <span id="refresh"></span>
+                </h1>
             </div>
             <div class="span5">
                 <h2>Details</h2>
-                <table class="table">
-                    <tr><td>status</td>         <td><%= status %></td></tr>
+                <table class="table table-condensed details">
+                    <tbody>
+                    <tr><td>Status</td>         <td><%= status %></td></tr>
                     <tr><td>Node pool</td>      <td><%= node_pool %></td></tr>
-                    <tr><td>Schedule</td>       <td><code><%= scheduler %></code></td></tr>
-                    <tr><td>Allow overlap</td>  <td><%= allow_overlap %></td></tr>
+                    <tr><td>Schedule</td>
+                        <td><code><%= scheduler %></code></td></tr>
+                    <tr><td>Allow overlap</td>
+                        <td><%= allow_overlap %></td></tr>
                     <tr><td>Queueing</td>       <td><%= queueing %></td></tr>
                     <tr><td>All nodes</td>      <td><%= all_nodes %></td></tr>
-                    <tr><td>Last success</td>   <td><%= last_success %></td></tr>
-                    <tr><td>Next run</td>       <td><%= next_run %></td></tr>
+                    <tr><td>Last success</td>
+                        <td><% print(dateFromNow(last_success)) %></td></tr>
+                    <tr><td>Next run</td>
+                        <td><% print(dateFromNow( next_run)) %></td></tr>
+                    </tbody>
                 </table>
             </div>
             <div class="span7">
@@ -186,19 +201,14 @@ class window.JobView extends Backbone.View
         </div>
         """
 
-    breadcrumb: -> [
-            {url: "#jobs", name: "Jobs"},
-            {url: "", name: @model.get('name')},
-        ]
-
     render: ->
         @$el.html @template(@model.attributes)
-        breadcrumbView.render @breadcrumb()
         entry = (jobrun) -> new JobRunListEntryView(model:new JobRun(jobrun)).render().el
         @$('tbody.jobruns').append(entry(model) for model in @model.get('runs'))
-        @$('h1').append(@refreshView.render().el)
+        @$('#refresh').html(@refreshView.render().el)
         graph = new GraphView(model: @model.get('action_graph'))
         graph.render()
+        makeTooltips(@$el)
         @
 
 
@@ -251,7 +261,7 @@ class window.GraphView extends Backbone.View
             .attr("dy", "0.25em")
             .text((d) -> d.name)
 
-        @force.on "tick", ->
+        @force.on "tick", =>
             link.attr("x1", (d) -> d.source.x)
                 .attr("y1", (d) -> d.source.y)
                 .attr("x2", (d) -> d.target.x)
@@ -260,7 +270,7 @@ class window.GraphView extends Backbone.View
             node.attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
 
     render: =>
-        [width, height] = [$('#action_graph').width(), 300]
+        [width, height] = [$('#action_graph').width(), 250]
         # TODO: randomly move nodes when links cross
         @force = d3.layout.force()
             .charge(-500)
@@ -319,17 +329,27 @@ class window.JobRunView extends Backbone.View
     template: _.template """
          <div class="row">
             <div class="span12">
-                <h1>Job Run <%= id %></h1>
+                <h1>
+                    <small>Job Run</small>
+                    <a href="<%= job_url %>"><%= job_name %></a>.<%= run_num %>
+                    <span id="filter"</span>
+                </h1>
+
             </div>
-            <div class="span8">
+            <div class="span5">
                 <h2>Details</h2>
-                <table class="table">
-                    <tr><td>state</td>          <td><%= state %></td></tr>
+                <table class="table table-condensed details">
+                    <tr><td class="span2">State</td>
+                        <td><%= state %></td></tr>
                     <tr><td>Node</td>           <td><%= node %></td></tr>
                     <tr><td>Manual</td>         <td><%= manual %></td></tr>
                     <tr><td>Scheduled</td>      <td><%= run_time %></td></tr>
-                    <tr><td>Start</td>          <td><% print(dateFromNow(start_time, 'None')) %></td></tr>
-                    <tr><td>End</td>            <td><% print(dateFromNow(end_time, 'None')) %></td></tr>
+                    <tr><td>Start</td>
+                        <td><% print(dateFromNow(start_time, 'None')) %></td>
+                    </tr>
+                    <tr><td>End</td>
+                        <td><% print(dateFromNow(end_time, 'None')) %></td>
+                    </tr>
                 </table>
             </div>
 
@@ -355,19 +375,11 @@ class window.JobRunView extends Backbone.View
         </div>
         """
 
-    breadcrumb: -> [
-            {url: "#jobs", name: "Jobs"},
-            {url: "#job/" + @model.get('job_name'), name: @model.get('job_name')},
-            {url: "", name: @model.get('run_num')},
-        ]
-
-
     render: ->
         @$el.html @template(@model.attributes)
-        breadcrumbView.render @breadcrumb()
         entry = (run) -> new ActionRunListEntryView(model:new ActionRun(run)).render().el
         @$('tbody.actionruns').append(entry(model) for model in @model.get('runs'))
-        @$('h1').append(@refreshView.render().el)
+        @$('#filter').html(@refreshView.render().el)
         makeTooltips(@$el)
         @
 

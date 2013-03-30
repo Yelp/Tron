@@ -7,6 +7,11 @@ class window.Service extends Backbone.Model
 
     urlRoot: "/services"
 
+    initialize: (options) =>
+        super options
+        options = options || {}
+        @refreshModel = options.refreshModel
+
 
 class window.ServiceCollection extends Backbone.Collection
 
@@ -38,7 +43,10 @@ class window.ServiceListView extends Backbone.View
     className: "span12"
 
     template: _.template """
-        <h1>Services</h1>
+        <h1>
+            Services
+            <span id="refresh"></span>
+        </h1>
         <div id="filter-bar" class="row"></div>
         <table class="table table-hover">
             <thead>
@@ -68,7 +76,7 @@ class window.ServiceListView extends Backbone.View
         @$('tbody').html(entry(model) for model in models)
 
     renderRefresh: ->
-        @$('h1').append(@refreshView.render().el)
+        @$('#refresh').html(@refreshView.render().el)
 
     renderFilter: ->
         @$('#filter-bar').html(@filterView.render().el)
@@ -108,6 +116,8 @@ class window.ServiceView extends Backbone.View
 
     initialize: (options) =>
         @listenTo(@model, "change", @render)
+        @refreshView = new RefreshToggleView(model: @model.refreshModel)
+        @listenTo(@refreshView, 'refreshView', => @model.fetch())
 
     tagName: "div"
 
@@ -116,12 +126,17 @@ class window.ServiceView extends Backbone.View
     template: _.template """
         <div class="row">
             <div class="span12">
-                <h1>Service <%= name %></h1>
+                <h1>
+                    <small>Service</small>
+                    <%= name %>
+                    <span id="refresh"></span>
+                </h1>
             </div>
-            <div class="span8">
+            <div class="span12">
                 <h2>Details</h2>
-                <table class="table">
-                    <tr><td>Count</td>      <td><%= live_count %> / <%= count %></td></tr>
+                <table class="table table-condensed details">
+                    <tr><td class="span3">Count</td>
+                        <td><%= live_count %> / <%= count %></td></tr>
                     <tr><td>Node Pool</td>  <td><%= node_pool %></td></tr>
                     <tr><td>State</td>      <td><%= state %></td></tr>
                     <tr><td>Command</td>    <td><code><%= command %></code></td></tr>
@@ -151,16 +166,11 @@ class window.ServiceView extends Backbone.View
         </div>
         """
 
-    breadcrumb: -> [
-            {url: "#services", name: "Services"},
-            {url: "", name: @model.get('name')},
-        ]
-
     render: ->
         @$el.html @template(@model.attributes)
-        breadcrumbView.render @breadcrumb()
         entry = (inst) -> new ServiceInstanceView(model:inst).render().el
         @$('tbody.instances').append(entry(model) for model in @model.get('instances'))
+        @$('#refresh').html(@refreshView.render().el)
         @
 
 

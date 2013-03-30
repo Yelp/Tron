@@ -59,18 +59,12 @@ class window.ConfigView extends Backbone.View
     className: "span12"
 
     template: _.template '
-        <h1>Config: <%= name %></h1>
+        <h1><small>Config</small> <%= name %></h1>
         <form>
             <textarea><%= config %></textarea>
         </form>'
 
-    breadcrumb: -> [
-            {url: "#configs", name: "Configs"},
-            {url: "", name: @model.get('name')},
-        ]
-
     render: =>
         @$el.html @template(@model.attributes)
-        breadcrumbView.render @breadcrumb()
         CodeMirror.fromTextArea(@$('textarea').get(0), readOnly: true)
         @

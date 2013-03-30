@@ -4,6 +4,7 @@
 class TronRoutes extends Backbone.Router
 
     routes:
+        "":                         "index"
         "home":                     "home"
         "jobs(;*params)":           "jobs"
         "job/:name":                "job"
@@ -17,6 +18,9 @@ class TronRoutes extends Backbone.Router
         view = new viewType(model: model)
         model.fetch()
         mainView.render(view)
+
+    index: ->
+        @navigate('home', trigger: true)
 
     home: ->
         @updateMainView(new Dashboard(), DashboardView)
@@ -34,7 +38,10 @@ class TronRoutes extends Backbone.Router
         @updateMainView(collection, ServiceListView)
 
     service: (name) ->
-        @updateMainView(new Service(name: name), ServiceView)
+        refreshModel = new RefreshModel()
+        @updateMainView(
+            new Service(name: name, refreshModel: refreshModel),
+            ServiceView)
 
     jobs: (params) ->
         collection = new JobCollection(
@@ -58,12 +65,7 @@ class MainView extends Backbone.View
 
     render: (item) =>
         @trigger('closeView')
-        breadcrumbView.clear()
         @$el.html(item.el)
-
-    clear: =>
-        breadcrumbView.clear()
-        @$el.empty()
 
 
 getParamsMap = (paramString) ->
@@ -91,5 +93,4 @@ $(document).ready ->
 
     window.routes = new TronRoutes()
     window.mainView = new MainView()
-    window.breadcrumbView = new BreadcrumbView()
     Backbone.history.start(root: "/web/")
