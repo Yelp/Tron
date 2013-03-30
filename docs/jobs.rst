@@ -66,6 +66,12 @@ Optional Fields
     is only relevant when a Job is first added to the configuration, after
     which this value will be ignored.
 
+**max_runtime** (defailt **None**)
+    A time interval (ex: "2 hours") that limits the duration of each job run.
+    If the job run is still running after this duration, all of it's actions
+    are sent SIGTERM.
+
+
 .. _job_actions:
 
 Actions
