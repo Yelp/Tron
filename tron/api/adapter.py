@@ -108,6 +108,22 @@ class ActionRunAdapter(RunAdapter):
         return self._get_serializer().tail(filename, self.max_lines)
 
 
+class ActionGraphAdapter(object):
+
+    def __init__(self, action_graph):
+        self.action_graph = action_graph
+
+    def get_repr(self):
+        def build(action):
+            return {
+                'name':         action.name,
+                'command':      action.command,
+                'dependent':    [dep.name for dep in action.dependent_actions],
+            }
+
+        return [build(action) for action in self.action_graph.get_actions()]
+
+
 class JobRunAdapter(RunAdapter):
 
     field_names = [
@@ -139,6 +155,7 @@ class JobAdapter(ReprAdapter):
         'next_run',
         'url',
         'runs',
+        'action_graph',
     ]
 
     def __init__(self, job, include_job_runs=False, include_action_runs=False):
@@ -170,6 +187,10 @@ class JobAdapter(ReprAdapter):
         if not self.include_job_runs:
             return
         return adapt_many(JobRunAdapter, self._obj.runs, self.include_action_runs)
+
+    # TODO: create a flag to include/exclude this
+    def get_action_graph(self):
+        return ActionGraphAdapter(self._obj.action_graph).get_repr()
 
 
 class ServiceAdapter(ReprAdapter):

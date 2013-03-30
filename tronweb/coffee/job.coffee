@@ -148,7 +148,7 @@ class window.JobView extends Backbone.View
             <div class="span12">
                 <h1>Job <%= name %></h1>
             </div>
-            <div class="span8">
+            <div class="span5">
                 <h2>Details</h2>
                 <table class="table">
                     <tr><td>status</td>         <td><%= status %></td></tr>
@@ -160,6 +160,11 @@ class window.JobView extends Backbone.View
                     <tr><td>Last success</td>   <td><%= last_success %></td></tr>
                     <tr><td>Next run</td>       <td><%= next_run %></td></tr>
                 </table>
+            </div>
+            <div class="span7">
+                <h2>Action Graph</h2>
+
+                <div id="action_graph" class="graph"></div>
             </div>
 
             <div class="span12">
@@ -193,6 +198,67 @@ class window.JobView extends Backbone.View
         entry = (jobrun) -> new JobRunListEntryView(model:new JobRun(jobrun)).render().el
         @$('tbody.jobruns').append(entry(model) for model in @model.get('runs'))
         @$('h1').append(@refreshView.render().el)
+        graph = new GraphView(model: @model.get('action_graph'))
+        graph.render()
+        @
+
+
+class window.GraphView extends Backbone.View
+
+    tagName: "div"
+
+    addLinks: =>
+        nodes = {}
+        for node in @model
+            nodes[node.name] = node
+
+        nested = for node in @model
+            ({source: node, target: nodes[target]} for target in node.dependent)
+
+        @links = _.flatten(nested)
+        @force.links @links
+        @force.start()
+
+        link = @svg.selectAll(".link")
+                .data(@links)
+                .enter().append("line")
+                .attr("class", "link")
+
+        node = @svg.selectAll(".node")
+                .data(@model)
+                .enter().append("g")
+
+        node.append("svg:circle")
+                .attr("r", 20)
+                .attr("class", "node")
+
+        node.append("svg:text")
+            .attr("dx", 12)
+            .attr("dy", 12)
+            .text((d) -> d.name)
+
+        @force.on "tick", ->
+            link.attr("x1", (d) -> d.source.x)
+                .attr("y1", (d) -> d.source.y)
+                .attr("x2", (d) -> d.target.x)
+                .attr("y2", (d) -> d.target.y)
+
+#            node.attr("cx", (d) -> d.x)
+#               .attr("cy", (d) -> d.y)
+            node.attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
+
+    render: =>
+        @force = d3.layout.force()
+            .charge(-200)
+            .linkDistance(100)
+            .size([300, 300])
+
+        # TODO: fix how graph is attached
+        @svg = d3.select('#action_graph').append("svg")
+            .attr("width", 300)
+            .attr("height", 300)
+        @force.nodes @model
+        @addLinks()
         @
 
 

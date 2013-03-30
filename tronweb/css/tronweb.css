@@ -23,3 +23,14 @@ div.refresh-view span {
 .clickable {
     cursor: pointer;
 }
+
+.node {
+  stroke: #000;
+  stroke-width: 1.5px;
+  fill: #ddffff;
+}
+
+.link {
+  stroke: #ccc;
+  stroke-width: 1.5px;
+}
