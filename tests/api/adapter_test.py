@@ -5,6 +5,7 @@ from testify import TestCase, assert_equal, run, setup, teardown
 from tests import mocks
 from tests.assertions import assert_length
 from tests.testingutils import Turtle
+from tron.api import adapter
 from tron.api.adapter import ReprAdapter, RunAdapter, ActionRunAdapter
 from tron.api.adapter import JobRunAdapter, ServiceAdapter
 
@@ -42,6 +43,34 @@ class ReprAdapterTestCase(TestCase):
     def test_get_repr(self):
         expected = dict(one=1, two=2, three=3, four=4)
         assert_equal(self.adapter.get_repr(), expected)
+
+
+class SampleClassStub(object):
+
+    def __init__(self):
+        self.true_flag = True
+        self.false_flag = False
+
+    @adapter.toggle_flag('true_flag')
+    def expects_true(self):
+        return "This is true"
+
+    @adapter.toggle_flag('false_flag')
+    def expects_false(self):
+        return "This is false"
+
+
+class ToggleFlagTestCase(TestCase):
+
+    @setup
+    def setup_stub(self):
+        self.stub = SampleClassStub()
+
+    def test_toggle_flag_true(self):
+        assert_equal(self.stub.expects_true(), "This is true")
+
+    def test_toggle_flag_false(self):
+        assert not self.stub.expects_false()
 
 
 class RunAdapterTestCase(TestCase):

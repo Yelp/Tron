@@ -109,7 +109,12 @@ class Client(object):
         return self.request('%s%s' % (job_run_url, params))
 
     def action(self, action_run_url):
-        url = "%s?num_lines=%s" % (action_run_url, self.options.num_displays)
+        params = {
+            'num_lines':        self.options.num_displays,
+            'include_stdout':   1,
+            'include_stderr':   1,
+        }
+        url = "%s?%s" % (action_run_url, urllib.urlencode(params))
         return self.request(url)
 
     def object_events(self, item_url):

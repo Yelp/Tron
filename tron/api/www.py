@@ -73,8 +73,11 @@ class ActionRunResource(resource.Resource):
 
     def render_GET(self, request):
         num_lines = requestargs.get_integer(request, 'num_lines')
+        include_stdout = requestargs.get_bool(request, 'include_stdout')
+        include_stderr = requestargs.get_bool(request, 'include_stderr')
         run_adapter = adapter.ActionRunAdapter(
-            self.action_run, self.job_run, num_lines)
+            self.action_run, self.job_run, num_lines,
+            include_stdout=include_stdout, include_stderr=include_stderr)
         return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):

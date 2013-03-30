@@ -4,6 +4,7 @@
  act as an adapter between the data format api clients expect, and the internal
  data of an object.
 """
+import functools
 import urllib
 from tron import actioncommand
 from tron.serialize import filehandler
@@ -40,6 +41,21 @@ class ReprAdapter(object):
 
 def adapt_many(adapter_class, seq, *args):
     return [adapter_class(item, *args).get_repr() for item in seq]
+
+
+def toggle_flag(flag_name):
+    """Create a decorator which checks if flag_name is true before running
+    the wrapped function. If False returns None.
+    """
+
+    def wrap(f):
+        @functools.wraps(f)
+        def wrapper(self, *args, **kwargs):
+            if getattr(self, flag_name):
+                return f(self, *args, **kwargs)
+            return None
+        return wrapper
+    return wrap
 
 
 class RunAdapter(ReprAdapter):
@@ -79,10 +95,13 @@ class ActionRunAdapter(RunAdapter):
             'duration'
     ]
 
-    def __init__(self, action_run, job_run, max_lines=10):
+    def __init__(self, action_run, job_run,
+                 max_lines=10, include_stdout=False, include_stderr=False):
         super(ActionRunAdapter, self).__init__(action_run)
         self.job_run            = job_run
         self.max_lines          = max_lines
+        self.include_stdout     = include_stdout
+        self.include_stderr     = include_stderr
 
     def get_raw_command(self):
         return self._obj.bare_command
@@ -98,10 +117,12 @@ class ActionRunAdapter(RunAdapter):
     def _get_serializer(self):
         return filehandler.OutputStreamSerializer(self._obj.output_path)
 
+    @toggle_flag('include_stdout')
     def get_stdout(self):
         filename = actioncommand.ActionCommand.STDOUT
         return self._get_serializer().tail(filename, self.max_lines)
 
+    @toggle_flag('include_stderr')
     def get_stderr(self):
         filename = actioncommand.ActionCommand.STDERR
         return self._get_serializer().tail(filename, self.max_lines)
@@ -120,10 +141,8 @@ class JobRunAdapter(RunAdapter):
     def get_url(self):
         return '/jobs/%s/%s' % (self._obj.job_name, self._obj.run_num)
 
+    @toggle_flag('include_action_runs')
     def get_runs(self):
-        if not self.include_action_runs:
-            return None
-
         return adapt_many(ActionRunAdapter, self._obj.action_runs, self._obj)
 
 
@@ -160,9 +179,8 @@ class JobAdapter(ReprAdapter):
     def get_url(self):
         return '/jobs/%s' % urllib.quote(self._obj.name)
 
+    @toggle_flag('include_job_runs')
     def get_runs(self):
-        if not self.include_job_runs:
-            return
         return adapt_many(JobRunAdapter, self._obj.runs, self.include_action_runs)
 
 
