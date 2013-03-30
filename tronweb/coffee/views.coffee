@@ -137,5 +137,6 @@ class window.ClickableListEntry extends Backbone.View
     events:
         "click":    "propogateClick"
 
-    propogateClick: =>
-        document.location = @$('a').first().attr('href')
+    propogateClick: (event) =>
+        if event.button == 0
+            document.location = @$('a').first().attr('href')

@@ -163,7 +163,6 @@ class window.JobView extends Backbone.View
             </div>
             <div class="span7">
                 <h2>Action Graph</h2>
-
                 <div id="action_graph" class="graph"></div>
             </div>
 
@@ -219,22 +218,37 @@ class window.GraphView extends Backbone.View
         @force.links @links
         @force.start()
 
+        @svg.append("svg:defs")
+            .append("svg:marker")
+            .attr("id", "arrow")
+            .attr("viewBox", "0 0 10 10")
+            .attr("refX", 16)
+            .attr("refY", 5)
+            .attr("markerUnits", "strokeWidth")
+            .attr("markerWidth", 7)
+            .attr("markerHeight", 7)
+            .attr("orient", "auto")
+            .append("svg:path")
+            .attr("d", "M 0 0 L 10 5 L 0 10 z")
+
         link = @svg.selectAll(".link")
                 .data(@links)
                 .enter().append("line")
                 .attr("class", "link")
+                .attr("marker-end", "url(#arrow)")
 
         node = @svg.selectAll(".node")
                 .data(@model)
-                .enter().append("g")
+                .enter().append("svg:g")
+                .attr("class", "node")
+                .call(@force.drag)
 
         node.append("svg:circle")
-                .attr("r", 20)
-                .attr("class", "node")
+                .attr("r", "0.5em")
 
         node.append("svg:text")
             .attr("dx", 12)
-            .attr("dy", 12)
+            .attr("dy", "0.25em")
             .text((d) -> d.name)
 
         @force.on "tick", ->
@@ -243,20 +257,20 @@ class window.GraphView extends Backbone.View
                 .attr("x2", (d) -> d.target.x)
                 .attr("y2", (d) -> d.target.y)
 
-#            node.attr("cx", (d) -> d.x)
-#               .attr("cy", (d) -> d.y)
             node.attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
 
     render: =>
+        [width, height] = [$('#action_graph').width(), 300]
+        # TODO: randomly move nodes when links cross
         @force = d3.layout.force()
-            .charge(-200)
+            .charge(-500)
+            .theta(1)
             .linkDistance(100)
-            .size([300, 300])
+            .size([width, height])
 
         # TODO: fix how graph is attached
         @svg = d3.select('#action_graph').append("svg")
-            .attr("width", 300)
-            .attr("height", 300)
+            .attr("height", height)
         @force.nodes @model
         @addLinks()
         @
