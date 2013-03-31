@@ -86,8 +86,11 @@ h2 {
     font-variant: small-caps;
 }
 
+.graph {
+    position: relative;
+}
 
-#action_graph svg marker {
+.graph svg marker {
     fill: #ccc;
 }
 
@@ -109,11 +112,35 @@ h2 {
   stroke-width: 1.5px;
 }
 
+.popover {
+    max-width: 600px;
+}
+
+.popover .popover-title {
+    font-weight: bold;
+}
+
 .controls .input-prepend {
     margin-right: 20px;
 }
 
-.d3-tooltip {
-    background: "white";
+.top-right-corner {
+   position: absolute;
+   top: 2px;
+   right: 10px;
+}
 
+.modal-header h3 {
+    font-size: 16px;
+    font-weight: bold;
+    font-variant: small-caps;
+}
+
+.modal-body {
+ max-height: 650px
+}
+
+#action-graph .modal {
+    width: 950px;
+    margin-left: -475px;
 }

@@ -105,7 +105,9 @@ class window.RefreshToggleView extends Backbone.View
 
     template: _.template """
         <span class="muted"><%= text %></span>
-        <button class="btn btn-default <%= active %>">
+        <button class="btn btn-default tt-enable <%= active %>"
+            title="Toggle refresh"
+            data-placement="top">
             <i class="icon-refresh"></i>
         </button>
         """
@@ -119,6 +121,7 @@ class window.RefreshToggleView extends Backbone.View
         @$el.html @template(text: text, active: active)
         # See note about subview
         @delegateEvents()
+        makeTooltips(@$el)
         @
 
     events:

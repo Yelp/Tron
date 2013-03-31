@@ -176,7 +176,7 @@ class window.JobView extends Backbone.View
             </div>
             <div class="span7">
                 <h2>Action Graph</h2>
-                <div id="action_graph" class="graph"></div>
+                <div id="action-graph" class="graph job-view"></div>
             </div>
 
             <div class="span12">
@@ -212,7 +212,13 @@ class window.JobView extends Backbone.View
 
 class window.GraphView extends Backbone.View
 
-    tagName: "div"
+    el: "#action-graph"
+
+    initialize: (options) =>
+        options = options || {}
+        @height = options.height || 250
+        @width = options.width || @$el.width()
+        @showZoom = if options.showZoom? then options.showZoom else true
 
     buildNodeMap: (data) =>
         nodes = {}
@@ -226,10 +232,7 @@ class window.GraphView extends Backbone.View
             ({source: node, target: nodes[target]} for target in node.dependent)
         _.flatten(nested)
 
-    addLinks: (links) =>
-        @force.links links
-        @force.start()
-
+    buildSvgLinks: (links) =>
         @svg.append("svg:defs")
             .append("svg:marker")
             .attr("id", "arrow")
@@ -249,9 +252,9 @@ class window.GraphView extends Backbone.View
             .attr("class", "link")
             .attr("marker-end", "url(#arrow)")
 
-    buildSvgNodes: =>
+    buildSvgNodes: (data)=>
         @node = @svg.selectAll(".node")
-            .data(@model)
+            .data(data)
             .enter().append("svg:g")
             .call(@force.drag)
             .attr
@@ -264,18 +267,14 @@ class window.GraphView extends Backbone.View
             .attr("r", "0.5em")
 
         @node.append("svg:text")
-            .attr("dx", 12)
-            .attr("dy", "0.25em")
+            .attr(dx: 12, dy: "0.25em")
             .text((d) -> d.name)
 
     attachEvents: =>
         $('.node').popover
-            container: 'body'
+            container: @$el
             placement: 'top'
             trigger: 'hover'
-            delay:
-                show: 0
-                hide: 0
 
         @force.on "tick", =>
             @link.attr("x1", (d) -> d.source.x)
@@ -285,9 +284,13 @@ class window.GraphView extends Backbone.View
 
             @node.attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
 
+        @$('#view-full').click(@showModal)
+
     addNodes: (data) ->
         @force.nodes data
 
+    addLinks: (links) =>
+        @force.links links
 
     buildForce: (height, width) ->
         # TODO: randomly move nodes when links cross
@@ -298,19 +301,58 @@ class window.GraphView extends Backbone.View
             .size([width, height])
 
     buildSvg: (height, width) ->
-        # TODO: fix how graph is attached
-        @svg = d3.select('#action_graph').append("svg")
-            .attr("height", height)
+        @svg = d3.select(@el)
+            .append("svg")
+            .attr(height: height)
 
+    # TODO: extract modal view?
+    zoomTemplate: """
+        <div class="top-right-corner">
+        <button class="btn btn-default tt-enable"
+                title="Full view"
+                data-placement="top"
+                id="view-full"
+            >
+            <i class="icon-resize-full"></i>
+        </button>
+        </div>
+        <div class="modal hide fade">
+            <div class="modal-header">
+                <button type="button"
+                    class="close"
+                    data-dismiss="modal"
+                    aria-hidden="true">
+                    <i class="icon-remove-circle"></i>
+                </button>
+                <h3>Action Graph</h3>
+            </div>
+            <div class="modal-body graph job-view">
+            </div>
+        </div>
+        """
 
-    # TODO: support writing to a modal
+    showModal: =>
+        container = @$('.modal-body.graph').html('')
+        graph = new GraphView
+            model: @model
+            el: container.get()
+            height: 600
+            width: @$('.modal').width()
+            showZoom: false
+        .render()
+        $('.modal').modal()
+
     render: =>
-        [width, height] = [$('#action_graph').width(), 250]
-        @buildForce(height, width)
-        @buildSvg(height, width)
+        console.log([@height, @width])
+        @buildForce(@height, @width)
+        @buildSvg(@height, @width)
         @addNodes(@model)
-        @addLinks(@getLinks(@model))
-        @buildSvgNodes()
+        links = @getLinks(@model)
+        @addLinks(links)
+        @force.start()
+        @buildSvgLinks(links)
+        @buildSvgNodes(@model)
+        @$el.append(@zoomTemplate) if @showZoom
         @attachEvents()
         @
 
