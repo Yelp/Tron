@@ -27,14 +27,13 @@ class window.DashboardView extends Backbone.View
 
     tagName: "div"
 
-    # TODO: support full width
-    className: "span12"
+    className: "span12 dashboard-view"
 
     # TODO: filters
     template: _.template """
         <h1>
             <small>Tron</small>
-            Dashboard
+            <a href="#dashboard">Dashboard</a>
             <span id="refresh"></span>
         </h1>
         <div id="status-boxes">

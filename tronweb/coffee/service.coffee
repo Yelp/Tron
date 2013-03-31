@@ -107,7 +107,7 @@ class ServiceListEntryView extends ClickableListEntry
         "#{ stateName } clickable"
 
     template: _.template """
-        <td><a href="#service/<%= name %>"><%= name %></a></td>
+        <td><a href="#service/<%= name %>"><% print(formatName(name)) %></a></td>
         <td><%= state %>
         <td><%= live_count %> / <%= count %></td>
         <td><%= node_pool %></td>
@@ -208,7 +208,7 @@ class ServiceInstanceView extends Backbone.View
             when "starting" then 'info'
 
     template: _.template """
-        <td><%= id %></td>
+        <td><% print(formatName(id)) %></td>
         <td><%= state %></td>
         <td><%= node %></td>
         <td><%= failures %></td>

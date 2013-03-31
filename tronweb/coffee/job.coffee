@@ -77,7 +77,7 @@ class window.JobListView extends Backbone.View
         <table class="table table-hover">
             <thead>
                 <tr>
-                    <th>Name</td>
+                    <th class="span3">Name</td>
                     <th>Schedule</td>
                     <th>Node Pool</td>
                     <th>Last Success</td>
@@ -122,7 +122,7 @@ class JobListEntryView extends ClickableListEntry
         "#{ stateName } clickable"
 
     template: _.template """
-        <td><a href="#job/<%= name %>"><%= name %></a></td>
+        <td><a href="#job/<%= name %>"><% print(formatName(name)) %></a></td>
         <td><%= scheduler %></td>
         <td><%= node_pool %></td>
         <td><% print(dateFromNow(last_success, 'never')) %></td>
@@ -258,7 +258,8 @@ class window.JobRunView extends Backbone.View
             <div class="span12">
                 <h1>
                     <small>Job Run</small>
-                    <a href="<%= job_url %>"><%= job_name %></a>.<%= run_num %>
+                    <a href="<%= job_url %>">
+                        <% print(formatName(job_name)) %></a>.<%= run_num %>
                     <span id="filter"</span>
                 </h1>
 
@@ -291,7 +292,7 @@ class window.JobRunView extends Backbone.View
                         <tr>
                             <th>Name</th>
                             <th>State</th>
-                            <th>Command</th>
+                            <th class="span3">Command</th>
                             <th>Exit</th>
                             <th>Node</th>
                             <th>Start</th>

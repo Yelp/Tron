@@ -36,7 +36,7 @@ class window.ActionRunListEntryView extends ClickableListEntry
     template: _.template """
         <td>
             <a href="#job/<%= job_name %>/<%= run_num %>/<%= action_name %>">
-            <%= action_name %></a></td>
+            <% print(formatName(action_name)) %></a></td>
         <td><%= state %></td>
         <td><% print(command || raw_command) %></td>
         <td><%= exit_status %></td>
@@ -67,9 +67,9 @@ class window.ActionRunView extends Backbone.View
             <div class="span12">
                 <h1>
                     <small>Action Run</small>
-                    <a href="<%= job_url %>"><%= job_name %></a>.
+                    <a href="<%= job_url %>"><% print(formatName(job_name)) %></a>.
                     <a href="<%= job_run_url %>"><%= run_num %></a>.
-                    <%= action_name %>
+                    <% print(formatName(action_name)) %>
                     <span id="refresh"></span>
                 </h1>
             </div>

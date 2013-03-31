@@ -194,3 +194,8 @@ h2 {
 .status-box.info {
     background: #d9edf7;
 }
+
+#all-view > .dashboard-view {
+    width: auto;
+    margin-right: 20px;
+}
