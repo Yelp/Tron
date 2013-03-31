@@ -13,11 +13,36 @@ body, input, button, select {
     margin-top: 3px
 }
 
+.input-prepend span.add-on {
+    vertical-align: middle;
+}
+
+form.filter-form {
+    margin: 0
+}
+
+.outline {
+    border: 1px solid #ccc;
+    padding: 20px 0 0 20px;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+}
+
 div.refresh-view span {
     font-size: 14px;
     vertical-align: middle;
     margin-right: 4px;
     font-weight: normal;
+}
+
+.table td {
+    border: 0;
+}
+
+.table thead {
+    border-bottom: 1px solid #ccc
 }
 
 .clickable {
@@ -82,4 +107,13 @@ h2 {
 .link {
   stroke: #ccc;
   stroke-width: 1.5px;
+}
+
+.controls .input-prepend {
+    margin-right: 20px;
+}
+
+.d3-tooltip {
+    background: "white";
+
 }

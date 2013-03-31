@@ -50,6 +50,11 @@ class window.JobRun extends Backbone.Model
         resp
 
 
+class window.JobListFilterModel extends FilterModel
+
+    filterTypes: ['name', 'node_pool', 'status']
+
+
 class window.JobListView extends Backbone.View
 
     initialize: (options) =>
@@ -68,7 +73,7 @@ class window.JobListView extends Backbone.View
             Jobs
             <span id="refresh"></span>
         </h1>
-        <div id="filter-bar" class="row"></div>
+        <div id="filter-bar"></div>
         <table class="table table-hover">
             <thead>
                 <tr>
@@ -234,20 +239,37 @@ class window.GraphView extends Backbone.View
             .append("svg:path")
             .attr("d", "M 0 0 L 10 5 L 0 10 z")
 
+        # TODO: better tooltips
+        tooltip = @svg.append('g')
+            .attr(fill: "red")
+            .classed('d3-tooltip', true)
+            .attr(dx: 100, dy: "2em")
+            .append('text')
+            .attr(fill: "red")
+
         link = @svg.selectAll(".link")
-                .data(@links)
-                .enter().append("line")
-                .attr("class", "link")
-                .attr("marker-end", "url(#arrow)")
+            .data(@links)
+            .enter().append("line")
+            .attr("class", "link")
+            .attr("marker-end", "url(#arrow)")
 
         node = @svg.selectAll(".node")
-                .data(@model)
-                .enter().append("svg:g")
-                .attr("class", "node")
-                .call(@force.drag)
+            .data(@model)
+            .enter().append("svg:g")
+            .attr("class", "node")
+            .call(@force.drag)
+
+        node = node.on "mouseover", (d) ->
+            mousePos = d3.mouse(d3.select('svg')[0][0])
+            tooltip.attr(transform: "translate(#{mousePos})")
+            tooltip.text(d.command)
+            tooltip.style("display", "block")
+        node = node.on "mouseout", (d) ->
+            console.log($(tooltip))
+            tooltip.style("display", "none")
 
         node.append("svg:circle")
-                .attr("r", "0.5em")
+            .attr("r", "0.5em")
 
         node.append("svg:text")
             .attr("dx", 12)
@@ -262,6 +284,7 @@ class window.GraphView extends Backbone.View
 
             node.attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
 
+    # TODO: support writing to a modal
     render: =>
         [width, height] = [$('#action_graph').width(), 250]
         # TODO: randomly move nodes when links cross

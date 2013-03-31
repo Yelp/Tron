@@ -1,7 +1,7 @@
 
 # Common view elements
 
-# Note about subciew
+# Note about subview
 # Subviews need to re-delegate events, because they are lost
 # when superviews re-render
 
@@ -26,24 +26,43 @@ window.makeTooltips = (root) ->
 
 class window.FilterView extends Backbone.View
 
-    tagName: "form"
+    tagName: "div"
 
-    className: "pull-right"
+    className: "outline"
+
+    filterTemplate: _.template """
+        <div class="input-prepend">
+          <span class="add-on">
+            <i class="icon-filter"></i>
+            <% print(_.str.humanize(filterName)) %>
+          </span>
+          <input type="text" id="filter-<%= filterName %>"
+                 placeholder="filter"
+                 value="<%= defaultValue %>"
+                 class="span2"
+                 data-filter-name="<%= filterName %>Filter">
+        </div>
+    """
 
     template: _.template """
+        <form class="filter-form">
         <div class="control-group">
           <div class="controls">
-            <div class="input-prepend">
-              <span class="add-on"><i class="icon-filter"></i></span>
-              <input type="text" placeholder="Filter by name"
-                     value="<%= defaultValue %>">
-            </div>
+            <% print(filters.join('')) %>
           </div>
         </div>
+        </form>
         """
 
     render: =>
-        @$el.html @template(defaultValue: @model.get('nameFilter'))
+        createFilter = (typeName) =>
+            @filterTemplate(
+                defaultValue: @model.get("#{typeName}Filter")
+                filterName: typeName
+            )
+
+        filters = _.map(@model.filterTypes, createFilter)
+        @$el.html @template(filters: filters)
         @delegateEvents()
         @
 
@@ -52,15 +71,19 @@ class window.FilterView extends Backbone.View
         "submit":       "submit"
         "change input": "filterDone"
 
-    filterChange: ->
-        filterValue = @$('input').val()
-        @model.set('nameFilter', filterValue)
-        @trigger('filter:change', filterValue)
+    getFilterFromEvent: (event) =>
+        filterEle = $(event.target)
+        [filterEle.data('filterName'), filterEle.val()]
 
-    filterDone: ->
-        value = @$('input').val()
-        @trigger('filter:done', value)
-        updateLocationParam('nameFilter', value)
+    filterChange: (event) =>
+        [filterName, filterValue] = @getFilterFromEvent(event)
+        @model.set(filterName, filterValue)
+        @trigger('filter:change', filterName, filterValue)
+
+    filterDone: (event) ->
+        [filterName, filterValue] = @getFilterFromEvent(event)
+        @trigger('filter:done', filterName, filterValue)
+        updateLocationParam(filterName, filterValue)
 
     submit: (event) ->
         event.preventDefault()

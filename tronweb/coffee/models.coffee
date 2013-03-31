@@ -48,9 +48,15 @@ class window.RefreshModel extends Backbone.Model
 
 class window.FilterModel extends Backbone.Model
 
+    filterTypes: ['name', 'node_pool', 'state']
+
     createFilter: =>
-        namePrefix = @get('nameFilter')
-        if namePrefix
-            (item) -> _.str.startsWith(item.get('name'), namePrefix)
-        else
-            (item) -> true
+        filterFuncs = for type in @filterTypes
+            do (type) =>
+                filterValue = @get("#{type}Filter")
+                if filterValue
+                    (item) -> _.str.startsWith(item.get(type), filterValue)
+                else
+                    (item) -> true
+
+        (item) -> _.every(filterFuncs, (func) -> func(item))

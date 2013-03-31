@@ -47,7 +47,7 @@ class window.ServiceListView extends Backbone.View
             Services
             <span id="refresh"></span>
         </h1>
-        <div id="filter-bar" class="row"></div>
+        <div id="filter-bar"></div>
         <table class="table table-hover">
             <thead>
                 <tr>

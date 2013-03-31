@@ -47,7 +47,7 @@ class TronRoutes extends Backbone.Router
     jobs: (params) ->
         collection = new JobCollection(
             refreshModel: new RefreshModel(),
-            filterModel: new FilterModel(getParamsMap(params)))
+            filterModel: new JobListFilterModel(getParamsMap(params)))
         @updateMainView(collection, JobListView)
 
     job: (name) ->
@@ -77,18 +77,21 @@ class MainView extends Backbone.View
         @$el.html(item.el)
 
 
+splitKeyValuePairs = (pairs) ->
+    _.mash(param.split('=') for param in pairs)
+
 getParamsMap = (paramString) ->
     paramString = paramString || ""
-    _.mash((param.split('=') for param in paramString.split(';')))
+    splitKeyValuePairs(paramString.split(';'))
 
 
 getLocationParams = ->
-    parts = document.location.hash.split(';', 1)
-    [parts[0], getParamsMap(parts[1])]
+    parts = document.location.hash.split(';')
+    [parts[0], splitKeyValuePairs(parts[1..])]
 
 
 buildLocationString = (base, params) ->
-    params = (pair.join('=') for pair in _.pairs(params)).join(';')
+    params = (pair.join('=') for pair in _.pairs(params) when pair[1]).join(';')
     "#{ base };#{ params }"
 
 
