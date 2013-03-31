@@ -4,11 +4,15 @@
 class window.Dashboard extends Backbone.Model
 
     initialize: ->
-        @eventList = new EventList(refresh: new RefreshModel(interval: 10))
-        @listenTo(@eventList, "sync", @change)
+        @refreshModel = new RefreshModel(interval: 30)
+        @serviceList = new ServiceCollection()
+        @jobList = new JobCollection()
+        @listenTo(@serviceList, "sync", @change)
+        @listenTo(@jobList, "sync", @change)
 
-    fetch: ->
-        @eventList.fetch()
+    fetch: =>
+        @serviceList.fetch()
+        @jobList.fetch()
 
     change: (args) ->
         @trigger("change", args)
@@ -17,23 +21,88 @@ class window.Dashboard extends Backbone.Model
 class window.DashboardView extends Backbone.View
 
     initialize: (options) =>
+        @refreshView = new RefreshToggleView(model: @model.refreshModel)
+        @listenTo(@model, "change", @render)
+        @listenTo(@refreshView, 'refreshView', => @model.fetch())
+
+    tagName: "div"
+
+    # TODO: support full width
+    className: "span12"
+
+    # TODO: filters
+    template: _.template """
+        <h1>
+            <small>Tron</small>
+            Dashboard
+            <span id="refresh"></span>
+        </h1>
+        <div id="status-boxes">
+        </div>
+        """
+
+    renderServices: =>
+        entry = (model) -> new ServiceStatusBoxView(model: model).render().el
+        @$('#status-boxes').append(entry(model) for model in @model.serviceList.models)
+
+    renderJobs: =>
+        entry = (model) -> new JobStatusBoxView(model: model).render().el
+        @$('#status-boxes').append(entry(model) for model in @model.jobList.models)
+
+    renderRefresh: ->
+        @$('#refresh').html(@refreshView.render().el)
+
+    render: ->
+        @$el.html @template()
+        @renderServices()
+        @renderJobs()
+        @renderRefresh()
+        @
+
+
+class window.StatusBoxView extends ClickableListEntry
+
+    initialize: (options) =>
         @listenTo(@model, "change", @render)
 
     tagName: "div"
 
-    className: "row"
-
     template: _.template """
-        <div class="span12"><h1>Dashboard</h1></div>
-        <div class="span6"></div>
-        <div class="span6" id="events"></div>
+        <div class="status-header">
+            <a href="<%= url %>"><%= name %></a>
+        </div>
         """
 
-    renderEvents: ->
-        view = new EventListView(model: @model.eventList)
-        @$('#events').html(view.render().el)
-
-    render: ->
-        @$el.html @template()
-        @renderEvents()
+    render: =>
+        context = _.extend {},
+            url: @buildUrl()
+            name: formatName(@model.attributes.name)
+        @$el.html @template(context)
         @
+
+class window.ServiceStatusBoxView extends StatusBoxView
+
+    buildUrl: =>
+        "#service/#{@model.get('name')}"
+
+    className: =>
+        state = switch @model.get('state')
+            when "up"       then "success"
+            when "starting" then "info"
+            when "disabled" then "warning"
+            when "degraded" then "warning"
+            when "failed"   then "error"
+        "span2 clickable status-box #{state}"
+
+
+class window.JobStatusBoxView extends StatusBoxView
+
+    buildUrl: =>
+        "#job/#{@model.get('name')}"
+
+    className: =>
+        state = switch @model.get('status')
+            when "enabled"  then "success"
+            when "running"  then "info"
+            when "disabled" then "warning"
+        "span2 clickable status-box #{state}"

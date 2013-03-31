@@ -151,7 +151,7 @@ class window.JobView extends Backbone.View
             <div class="span12">
                 <h1>
                     <small>Job</small>
-                    <%= name %>
+                    <% print(formatName(name)) %>
                     <span id="refresh"></span>
                 </h1>
             </div>
@@ -229,7 +229,7 @@ class JobRunListEntryView extends ClickableListEntry
 
     # TODO: add icon for manual run flag
     template: _.template """
-        <td><a href="#job/<%= job_name %>/<%= run_num %>"><%= id %></a></td>
+        <td><a href="#job/<%= job_name %>/<%= run_num %>"><%= run_num %></a></td>
         <td><%= state %></td>
         <td><%= node %></td>
         <td><% print(dateFromNow(start_time || run_time, "Unknown")) %></td>

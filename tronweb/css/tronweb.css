@@ -159,3 +159,38 @@ h2 {
     width: 950px;
     margin-left: -475px;
 }
+
+/* Dashboard */
+
+.status-box {
+    padding: 20px;
+    margin: 0 5px 5px 0;
+    height: 100px;
+    width: 120px;
+    font-size: 12px;
+    font-weight: bold;
+    border: 1px solid #ccc;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+}
+
+.status-box a {
+    color: #333;
+}
+
+.status-box.success {
+    background: #dff0d8;
+}
+
+.status-box.error {
+    background: #f2dede;
+}
+
+.status-box.warning {
+    background: #fcf8e3;
+}
+
+.status-box.info {
+    background: #d9edf7;
+}

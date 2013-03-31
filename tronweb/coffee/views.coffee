@@ -24,6 +24,10 @@ window.makeTooltips = (root) ->
     root.find('.tt-enable').tooltip()
 
 
+window.formatName = (name) =>
+       name.replace(/\./g, '.<wbr/>').replace(/_/g, '_<wbr/>')
+
+
 class window.FilterView extends Backbone.View
 
     tagName: "div"

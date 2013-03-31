@@ -6,6 +6,7 @@ class TronRoutes extends Backbone.Router
     routes:
         "":                         "index"
         "home":                     "home"
+        "dashboard":                "dashboard"
         "jobs(;*params)":           "jobs"
         "job/:name":                "job"
         "job/:name/:run":           "jobrun"
@@ -25,6 +26,13 @@ class TronRoutes extends Backbone.Router
 
     home: ->
         @updateMainView(new Dashboard(), DashboardView)
+
+    dashboard: ->
+        mainView.close()
+        model = new Dashboard()
+        dashboard = new DashboardView(model: model)
+        model.fetch()
+        $('#all-view').html dashboard.render().el
 
     configs: ->
         @updateMainView(new NamespaceList(), NamespaceListView)
@@ -70,11 +78,33 @@ class TronRoutes extends Backbone.Router
 
 class MainView extends Backbone.View
 
-    el: $("#main")
+    el: $("body")
+
+    template: _.template """
+        <div id="menu" class="navbar">
+          <div class="navbar-inner">
+            <ul class="nav">
+              <li class="brand">Tronweb</li>
+              <li class="divider-vertical"></li>
+              <li><a href="#home">home</a></li>
+              <li><a href="#jobs">jobs</a></li>
+              <li><a href="#services">services</a></li>
+              <li><a href="#configs">config</a></li>
+            </ul>
+          </div>
+        </div>
+
+        <div id="main" class="container">
+        </div>
+    """
 
     render: (item) =>
+        @close()
+        @$('#all-view').html @template()
+        @$('#main').html item.el
+
+    close: =>
         @trigger('closeView')
-        @$el.html(item.el)
 
 
 splitKeyValuePairs = (pairs) ->
