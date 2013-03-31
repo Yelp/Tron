@@ -214,16 +214,20 @@ class window.GraphView extends Backbone.View
 
     tagName: "div"
 
-    addLinks: =>
+    buildNodeMap: (data) =>
         nodes = {}
-        for node in @model
+        for node in data
             nodes[node.name] = node
+        nodes
 
-        nested = for node in @model
+    getLinks: (data) =>
+        nodes = @buildNodeMap(data)
+        nested = for node in data
             ({source: node, target: nodes[target]} for target in node.dependent)
+        _.flatten(nested)
 
-        @links = _.flatten(nested)
-        @force.links @links
+    addLinks: (links) =>
+        @force.links links
         @force.start()
 
         @svg.append("svg:defs")
@@ -239,54 +243,53 @@ class window.GraphView extends Backbone.View
             .append("svg:path")
             .attr("d", "M 0 0 L 10 5 L 0 10 z")
 
-        # TODO: better tooltips
-        tooltip = @svg.append('g')
-            .attr(fill: "red")
-            .classed('d3-tooltip', true)
-            .attr(dx: 100, dy: "2em")
-            .append('text')
-            .attr(fill: "red")
-
-        link = @svg.selectAll(".link")
-            .data(@links)
+        @link = @svg.selectAll(".link")
+            .data(links)
             .enter().append("line")
             .attr("class", "link")
             .attr("marker-end", "url(#arrow)")
 
-        node = @svg.selectAll(".node")
+    buildSvgNodes: =>
+        @node = @svg.selectAll(".node")
             .data(@model)
             .enter().append("svg:g")
-            .attr("class", "node")
             .call(@force.drag)
+            .attr
+                class: "node"
+                'data-title': (d) -> d.name
+                'data-html': true
+                'data-content': (d) -> "<code>#{d.command}</code>"
 
-        node = node.on "mouseover", (d) ->
-            mousePos = d3.mouse(d3.select('svg')[0][0])
-            tooltip.attr(transform: "translate(#{mousePos})")
-            tooltip.text(d.command)
-            tooltip.style("display", "block")
-        node = node.on "mouseout", (d) ->
-            console.log($(tooltip))
-            tooltip.style("display", "none")
-
-        node.append("svg:circle")
+        @node.append("svg:circle")
             .attr("r", "0.5em")
 
-        node.append("svg:text")
+        @node.append("svg:text")
             .attr("dx", 12)
             .attr("dy", "0.25em")
             .text((d) -> d.name)
 
+    attachEvents: =>
+        $('.node').popover
+            container: 'body'
+            placement: 'top'
+            trigger: 'hover'
+            delay:
+                show: 0
+                hide: 0
+
         @force.on "tick", =>
-            link.attr("x1", (d) -> d.source.x)
+            @link.attr("x1", (d) -> d.source.x)
                 .attr("y1", (d) -> d.source.y)
                 .attr("x2", (d) -> d.target.x)
                 .attr("y2", (d) -> d.target.y)
 
-            node.attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
+            @node.attr("transform", (d) -> "translate(#{d.x}, #{d.y})")
 
-    # TODO: support writing to a modal
-    render: =>
-        [width, height] = [$('#action_graph').width(), 250]
+    addNodes: (data) ->
+        @force.nodes data
+
+
+    buildForce: (height, width) ->
         # TODO: randomly move nodes when links cross
         @force = d3.layout.force()
             .charge(-500)
@@ -294,11 +297,21 @@ class window.GraphView extends Backbone.View
             .linkDistance(100)
             .size([width, height])
 
+    buildSvg: (height, width) ->
         # TODO: fix how graph is attached
         @svg = d3.select('#action_graph').append("svg")
             .attr("height", height)
-        @force.nodes @model
-        @addLinks()
+
+
+    # TODO: support writing to a modal
+    render: =>
+        [width, height] = [$('#action_graph').width(), 250]
+        @buildForce(height, width)
+        @buildSvg(height, width)
+        @addNodes(@model)
+        @addLinks(@getLinks(@model))
+        @buildSvgNodes()
+        @attachEvents()
         @
 
 
