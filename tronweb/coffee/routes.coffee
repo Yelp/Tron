@@ -9,6 +9,7 @@ class TronRoutes extends Backbone.Router
         "jobs(;*params)":           "jobs"
         "job/:name":                "job"
         "job/:name/:run":           "jobrun"
+        "job/:name/:run/:action":   "actionrun"
         "services(;*params)":       "services"
         "service/:name":            "service"
         "configs":                  "configs"
@@ -57,6 +58,14 @@ class TronRoutes extends Backbone.Router
         model = new JobRun(
             name: name, run_num: run, refreshModel: new RefreshModel())
         @updateMainView(model, JobRunView)
+
+    actionrun: (name, run, action) ->
+        model = new ActionRun(
+            job_name: name
+            run_num: run
+            action_name: action
+            refreshModel: new RefreshModel())
+        @updateMainView(model, ActionRunView)
 
 
 class MainView extends Backbone.View

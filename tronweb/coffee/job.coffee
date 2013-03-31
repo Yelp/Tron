@@ -50,13 +50,6 @@ class window.JobRun extends Backbone.Model
         resp
 
 
-class ActionRun extends Backbone.Model
-
-    idAttribute: "action_name"
-
-    # TODO: urlRoot: ->
-
-
 class window.JobListView extends Backbone.View
 
     initialize: (options) =>
@@ -377,37 +370,11 @@ class window.JobRunView extends Backbone.View
 
     render: ->
         @$el.html @template(@model.attributes)
-        entry = (run) -> new ActionRunListEntryView(model:new ActionRun(run)).render().el
+        entry = (run) =>
+            run['job_name'] = @model.get('job_name')
+            run['run_num'] =  @model.get('run_num')
+            new ActionRunListEntryView(model:new ActionRun(run)).render().el
         @$('tbody.actionruns').append(entry(model) for model in @model.get('runs'))
         @$('#filter').html(@refreshView.render().el)
-        makeTooltips(@$el)
-        @
-
-
-class ActionRunListEntryView extends Backbone.View
-
-    initialize: (options) =>
-        @listenTo(@model, "change", @render)
-
-    tagName: "tr"
-
-    className: =>
-        switch @model.get('state')
-            when "running"      then 'info'
-            when "failed"       then 'error'
-            when "succeeded"    then 'success'
-
-    template: _.template """
-        <td><%= action_name %></td>
-        <td><%= state %></td>
-        <td><% print(command || raw_command) %></td>
-        <td><%= exit_status %></td>
-        <td><%= node %></td>
-        <td><% print(dateFromNow(start_time, "None")) %></td>
-        <td><% print(dateFromNow(end_time, "")) %></td>
-        """
-
-    render: ->
-        @$el.html @template(@model.attributes)
         makeTooltips(@$el)
         @
