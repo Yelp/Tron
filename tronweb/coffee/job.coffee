@@ -198,14 +198,18 @@ class window.JobView extends Backbone.View
 
         </div>
         """
+    renderGraph: =>
+        new GraphView(
+            model: @model.get('action_graph')
+            buildContent: (d) -> "<code>#{d.command}</code>"
+        ).render()
 
     render: ->
         @$el.html @template(@model.attributes)
         entry = (jobrun) -> new JobRunListEntryView(model:new JobRun(jobrun)).render().el
         @$('tbody.jobruns').append(entry(model) for model in @model.get('runs'))
         @$('#refresh').html(@refreshView.render().el)
-        graph = new GraphView(model: @model.get('action_graph'))
-        graph.render()
+        @renderGraph()
         makeTooltips(@$el)
         @
 
@@ -275,6 +279,10 @@ class window.JobRunView extends Backbone.View
                     </tr>
                 </table>
             </div>
+            <div class="span7">
+                <h2>Action Graph</h2>
+                <div id="action-graph" class="graph job-view"></div>
+            </div>
 
             <div class="span12">
                 <h2>Action Runs</h2>
@@ -298,13 +306,31 @@ class window.JobRunView extends Backbone.View
         </div>
         """
 
-    render: ->
-        @$el.html @template(@model.attributes)
+    renderList: =>
         entry = (run) =>
             run['job_name'] = @model.get('job_name')
             run['run_num'] =  @model.get('run_num')
             new ActionRunListEntryView(model:new ActionRun(run)).render().el
-        @$('tbody.actionruns').append(entry(model) for model in @model.get('runs'))
+        @$('tbody.actionruns').html(entry(model) for model in @model.get('runs'))
+
+    popupTemplate: _.template """
+        <ul class="unstyled">
+            <li><strong><%= state %></strong></li>
+            <li><code><% print(command || raw_command) %></code></li>
+        </ul>
+        """
+
+    renderGraph: =>
+        new GraphView(
+            model: @model.get('action_graph')
+            buildContent: @popupTemplate
+            nodeClass: (d) -> "node #{d.state}"
+        ).render()
+
+    render: =>
+        @$el.html @template(@model.attributes)
         @$('#filter').html(@refreshView.render().el)
+        @renderList()
+        @renderGraph()
         makeTooltips(@$el)
         @

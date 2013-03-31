@@ -100,6 +100,21 @@ h2 {
   fill: #aec7e8;
 }
 
+.node.failed circle {
+    fill: #ff9896;
+    stroke: #d62728;
+}
+
+.node.succeeded circle {
+    fill: #98df8a;
+    stroke: #2ca02c;
+}
+
+.node.queued circle, .node.scheduled circle {
+    fill: #ccc;
+    stroke: #7f7f7f;
+}
+
 .node text {
     stroke: #000;
     font-family: "Open Sans";

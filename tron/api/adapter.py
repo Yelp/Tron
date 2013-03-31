@@ -123,26 +123,68 @@ class ActionGraphAdapter(object):
 
         return [build(action) for action in self.action_graph.get_actions()]
 
+class ActionRunGraphAdapter(object):
+
+    def __init__(self, action_run_collection):
+        self.action_runs = action_run_collection
+
+    def get_repr(self):
+        def build(action_run):
+            deps = self.action_runs.action_graph.get_dependent_actions(
+                action_run.action_name)
+            return {
+                'id':           action_run.id,
+                'name':         action_run.action_name,
+                'command':      action_run.rendered_command,
+                'raw_command':  action_run.bare_command,
+                'state':        action_run.state.name,
+                'start_time':   action_run.start_time,
+                'end_time':     action_run.end_time,
+                'dependent':    [dep.name for dep in deps],
+            }
+
+        return [build(action_run) for action_run in self.action_runs]
+
 
 class JobRunAdapter(RunAdapter):
 
     field_names = [
-            'id', 'run_num', 'run_time', 'start_time', 'end_time', 'manual', 'job_name']
-    translated_field_names = ['state', 'node', 'duration', 'url', 'runs']
+       'id',
+        'run_num',
+        'run_time',
+        'start_time',
+        'end_time',
+        'manual',
+        'job_name',
+    ]
+    translated_field_names = [
+        'state',
+        'node',
+        'duration',
+        'url',
+        'runs',
+        'action_graph',
+    ]
 
-    def __init__(self, job_run, include_action_runs=False):
+    def __init__(self, job_run,
+            include_action_runs=False,
+            include_action_graph=False):
         super(JobRunAdapter, self).__init__(job_run)
         self.include_action_runs = include_action_runs
+        self.include_action_graph = include_action_graph
 
     def get_url(self):
         return '/jobs/%s/%s' % (self._obj.job_name, self._obj.run_num)
 
     def get_runs(self):
         if not self.include_action_runs:
-            return None
-
+            return
         return adapt_many(ActionRunAdapter, self._obj.action_runs, self._obj)
 
+    # TODO: convert to decorator
+    def get_action_graph(self):
+        if self.include_action_graph:
+            return ActionRunGraphAdapter(self._obj.action_runs).get_repr()
 
 class JobAdapter(ReprAdapter):
 

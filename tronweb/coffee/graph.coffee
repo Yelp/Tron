@@ -10,6 +10,8 @@ class window.GraphView extends Backbone.View
         @height = options.height || 250
         @width = options.width || @$el.width()
         @showZoom = if options.showZoom? then options.showZoom else true
+        @buildContent = options.buildContent
+        @nodeClass = options.nodeClass || "node"
 
     buildNodeMap: (data) =>
         nodes = {}
@@ -49,10 +51,10 @@ class window.GraphView extends Backbone.View
             .enter().append("svg:g")
             .call(@force.drag)
             .attr
-                class: "node"
+                class: @nodeClass
                 'data-title': (d) -> d.name
                 'data-html': true
-                'data-content': (d) -> "<code>#{d.command}</code>"
+                'data-content': @buildContent
 
         @node.append("svg:circle")
             .attr("r", "0.5em")
@@ -95,7 +97,6 @@ class window.GraphView extends Backbone.View
             .attr(height: height)
 
     render: =>
-        console.log([@height, @width])
         @buildForce(@height, @width)
         @buildSvg(@height, @width)
         @addNodes(@model)
@@ -104,12 +105,17 @@ class window.GraphView extends Backbone.View
         @force.start()
         @buildSvgLinks(links)
         @buildSvgNodes(@model)
-        new GraphModalView(el: @el, model: @model).render() if @showZoom
+        if @showZoom
+            new GraphModalView(el: @el, model: @model, graphOptions: this).render()
         @attachEvents()
         @
 
 
 class GraphModalView extends Backbone.View
+
+    initialize: (options) =>
+        options = options || {}
+        @graphOptions = options.graphOptions
 
     attachEvents: =>
         @$('#view-full').click(@showModal)
@@ -140,14 +146,15 @@ class GraphModalView extends Backbone.View
         """
 
     showModal: =>
-        container = @$('.modal-body.graph').html('')
-        graph = new GraphView
-            model: @model
-            el: container.get()
-            height: 600
-            width: @$('.modal').width()
-            showZoom: false
-        .render()
+        options = _.extend {},
+            @graphOptions,
+            model:      @model
+            el:         @$('.modal-body.graph').html('').get()
+            height:     600
+            width:      @$('.modal').width()
+            showZoom:   false
+
+        graph = new GraphView(options).render()
         $('.modal').modal()
 
     render: =>

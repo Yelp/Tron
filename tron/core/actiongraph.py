@@ -55,6 +55,9 @@ class ActionGraph(object):
             return []
         return self.action_map[name].required_actions
 
+    def get_dependent_actions(self, name):
+        return self.action_map[name].dependent_actions
+
     def get_actions(self):
         return self.action_map.itervalues()
 
