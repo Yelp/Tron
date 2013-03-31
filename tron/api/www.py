@@ -220,7 +220,10 @@ class ServiceResource(resource.Resource):
         return resource.NoResource("Cannot find service instance: %s" % name)
 
     def render_GET(self, request):
-        return respond(request, adapter.ServiceAdapter(self.service).get_repr())
+        include_events = requestargs.get_integer(request, 'include_events')
+        response = adapter.ServiceAdapter(self.service,
+            include_events=include_events).get_repr()
+        return respond(request, response)
 
     def render_POST(self, request):
         return handle_command(request, self.controller, self.service)

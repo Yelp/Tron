@@ -247,7 +247,12 @@ class ServiceAdapter(ReprAdapter):
         'node_pool',
         'live_count',
         'monitor_interval',
-        'restart_interval']
+        'restart_interval',
+        'events']
+
+    def __init__(self, service, include_events=False):
+        super(ServiceAdapter, self).__init__(service)
+        self.include_events = include_events
 
     def get_url(self):
         return "/services/%s" % urllib.quote(self._obj.get_name())
@@ -276,6 +281,11 @@ class ServiceAdapter(ReprAdapter):
     def get_restart_interval(self):
         return self._obj.config.restart_interval
 
+    # TODO: use decorator
+    def get_events(self):
+        if self.include_events:
+            events = adapt_many(EventAdapter, self._obj.event_recorder.list())
+            return events[:self.include_events]
 
 class ServiceInstanceAdapter(ReprAdapter):
 

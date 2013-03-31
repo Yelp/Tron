@@ -7,10 +7,16 @@ class window.Service extends Backbone.Model
 
     urlRoot: "/services"
 
+    url: =>
+        "#{@urlRoot}/#{@get(@idAttribute)}?include_events=6"
+
     initialize: (options) =>
         super options
         options = options || {}
         @refreshModel = options.refreshModel
+
+
+class window.ServiceInstance extends Backbone.Model
 
 
 class window.ServiceCollection extends Backbone.Collection
@@ -132,10 +138,10 @@ class window.ServiceView extends Backbone.View
                     <span id="refresh"></span>
                 </h1>
             </div>
-            <div class="span12">
+            <div class="span8">
                 <h2>Details</h2>
                 <table class="table table-condensed details">
-                    <tr><td class="span3">Count</td>
+                    <tr><td class="span2">Count</td>
                         <td><%= live_count %> / <%= count %></td></tr>
                     <tr><td>Node Pool</td>  <td><%= node_pool %></td></tr>
                     <tr><td>State</td>      <td><%= state %></td></tr>
@@ -143,6 +149,13 @@ class window.ServiceView extends Backbone.View
                     <tr><td>Restart Delay</td><td><%= restart_interval %></td></tr>
                     <tr><td>Monitor Interval</td><td><%= monitor_interval %></td></tr>
                 </table>
+            </div>
+            <div class="span4">
+               <h2>Events</h2>
+                 <table class="table table-hover event-list">
+                   <tbody>
+                   </tbody>
+                 </table>
             </div>
 
             <% if (instances.length > 0) { %>
@@ -166,10 +179,20 @@ class window.ServiceView extends Backbone.View
         </div>
         """
 
+    renderEvents: (data) =>
+        entry = (event) ->
+            new MinimalEventListEntryView(model: new TronEvent(event)).render().el
+        @$('.event-list tbody').html(entry(model) for model in data)
+
+    renderInstances: (data) =>
+        entry = (inst) ->
+            new ServiceInstanceView(model: new ServiceInstance(inst)).render().el
+        @$('tbody.instances').html(entry(model) for model in data)
+
     render: ->
         @$el.html @template(@model.attributes)
-        entry = (inst) -> new ServiceInstanceView(model:inst).render().el
-        @$('tbody.instances').append(entry(model) for model in @model.get('instances'))
+        @renderInstances(@model.get('instances'))
+        @renderEvents(@model.get('events'))
         @$('#refresh').html(@refreshView.render().el)
         @
 
@@ -179,7 +202,7 @@ class ServiceInstanceView extends Backbone.View
     tagName: "tr"
 
     className: ->
-        switch @model.state
+        switch @model.get('state')
             when "failed"   then 'error'
             when "up"       then 'success'
             when "starting" then 'info'
@@ -192,5 +215,5 @@ class ServiceInstanceView extends Backbone.View
         """
 
     render: ->
-        @$el.html @template(@model)
+        @$el.html @template(@model.attributes)
         @
