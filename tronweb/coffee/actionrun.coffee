@@ -38,7 +38,7 @@ class window.ActionRunListEntryView extends ClickableListEntry
             <a href="#job/<%= job_name %>/<%= run_num %>/<%= action_name %>">
             <% print(formatName(action_name)) %></a></td>
         <td><%= state %></td>
-        <td><% print(command || raw_command) %></td>
+        <td><code class="command"><% print(command || raw_command) %></code></td>
         <td><%= exit_status %></td>
         <td><%= node %></td>
         <td><% print(dateFromNow(start_time, "None")) %></td>
@@ -77,13 +77,13 @@ class window.ActionRunView extends Backbone.View
                 <h2>Details</h2>
                 <table class="table table-condensed details">
                     <tbody>
-                    <tr><td>State</td>          <td><%= state %></td></tr>
+                    <tr><td class="span2">State</td>          <td><%= state %></td></tr>
                     <tr><td>Node</td>           <td><%= node %></td></tr>
                     <tr><td>Raw command</td>
-                        <td><code><%= raw_command %></code></td></tr>
+                        <td><code class="command"><%= raw_command %></code></td></tr>
                     <% if (command) { %>
                     <tr><td>Command</td>
-                        <td><code><%= command %></code></td></tr>
+                        <td><code class="command"><%= command %></code></td></tr>
                     <% } %>
                     <tr><td>Exit</td>           <td><%= exit_status %></td></tr>
                     <tr><td>Start time</td>

@@ -201,7 +201,7 @@ class window.JobView extends Backbone.View
     renderGraph: =>
         new GraphView(
             model: @model.get('action_graph')
-            buildContent: (d) -> "<code>#{d.command}</code>"
+            buildContent: (d) -> """<code class="command">#{d.command}</code>"""
         ).render()
 
     render: ->
@@ -317,7 +317,7 @@ class window.JobRunView extends Backbone.View
     popupTemplate: _.template """
         <ul class="unstyled">
             <li><strong><%= state %></strong></li>
-            <li><code><% print(command || raw_command) %></code></li>
+            <li><code class="command"><% print(command || raw_command) %></code></li>
         </ul>
         """
 

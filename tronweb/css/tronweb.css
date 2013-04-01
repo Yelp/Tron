@@ -199,3 +199,8 @@ h2 {
     width: auto;
     margin-right: 20px;
 }
+
+code.command {
+    display: block;
+    white-space: pre-wrap;
+}
