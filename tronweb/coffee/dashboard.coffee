@@ -84,6 +84,7 @@ class window.ServiceStatusBoxView extends StatusBoxView
     buildUrl: =>
         "#service/#{@model.get('name')}"
 
+    #  TODO: this is duplicated with ServiceListEntryView
     className: =>
         state = switch @model.get('state')
             when "up"       then "success"
@@ -99,6 +100,7 @@ class window.JobStatusBoxView extends StatusBoxView
     buildUrl: =>
         "#job/#{@model.get('name')}"
 
+    # TODO: this is duplicated with JobListEntryView
     className: =>
         state = switch @model.get('status')
             when "enabled"  then "success"

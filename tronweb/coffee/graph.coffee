@@ -94,7 +94,9 @@ class window.GraphView extends Backbone.View
     buildSvg: (height, width) ->
         @svg = d3.select(@el)
             .append("svg")
-            .attr(height: height)
+            .attr
+                height: height
+                width: width
 
     render: =>
         @buildForce(@height, @width)
@@ -150,8 +152,8 @@ class GraphModalView extends Backbone.View
             @graphOptions,
             model:      @model
             el:         @$('.modal-body.graph').html('').get()
-            height:     600
-            width:      @$('.modal').width()
+            height:     $(document).height() - 130
+            width:      $(document).width() - 150
             showZoom:   false
 
         graph = new GraphView(options).render()

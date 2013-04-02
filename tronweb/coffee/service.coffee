@@ -100,9 +100,10 @@ class ServiceListEntryView extends ClickableListEntry
 
     className: =>
         stateName = switch @model.attributes.state
-            when "disabled" then 'info'
             when "failed"   then 'error'
+            when "starting" then "info"
             when "degraded" then 'warning'
+            when "disabled" then 'warning'
             when "up"       then 'success'
         "#{ stateName } clickable"
 

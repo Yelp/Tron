@@ -151,14 +151,17 @@ h2 {
     font-variant: small-caps;
 }
 
-.modal-body {
- max-height: 650px
+#action-graph .modal.fade.in {
+    top: 2%;
+    width: auto;
+    margin-left: 75px;
+    left: 0;
 }
 
-#action-graph .modal {
-    width: 950px;
-    margin-left: -475px;
+.modal-body {
+    max-height: none;
 }
+
 
 /* Dashboard */
 
