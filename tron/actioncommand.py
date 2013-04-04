@@ -11,6 +11,7 @@ class ActionState(state.NamedEventState):
 
 
 class CompletedActionCommand(object):
+    """This is a null object for ActionCommand."""
     is_complete = True
     is_done = True
     is_failed = False
