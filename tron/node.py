@@ -1,17 +1,20 @@
 import logging
 import itertools
-import os
 import random
+from twisted.conch.client.knownhosts import KnownHostsFile
 
 from twisted.internet import protocol, defer, reactor
 from twisted.python import failure
+from twisted.python.filepath import FilePath
 
-from tron import ssh
-from tron.utils import twistedutils
+from tron import ssh, eventloop
+from tron.utils import twistedutils, collections
 
 
 log = logging.getLogger(__name__)
 
+
+# TODO: make these configurable
 # We should also only wait a certain amount of time for a connection to be
 # established.
 CONNECT_TIMEOUT = 30
@@ -55,23 +58,17 @@ class ResultError(Error):
     pass
 
 
-class RunState(object):
-    def __init__(self, run):
-        self.run = run
-        self.state = RUN_STATE_CONNECTING
-        self.deferred = defer.Deferred()
-        self.channel = None
-
-
-class NodePoolStore(dict):
+class NodePoolRepository(object):
     """A Singleton to store Node and NodePool objects."""
 
     _instance = None
 
     def __init__(self):
         if self._instance is not None:
-            raise ValueError("NodePoolStore is already instantiated.")
-        super(NodePoolStore, self).__init__()
+            raise ValueError("NodePoolRepository is already instantiated.")
+        super(NodePoolRepository, self).__init__()
+        self.nodes = collections.MappingCollection('nodes')
+        self.pools = collections.MappingCollection('pools')
 
     @classmethod
     def get_instance(cls):
@@ -79,33 +76,71 @@ class NodePoolStore(dict):
             cls._instance = cls()
         return cls._instance
 
-    def put(self, node):
-        self[node.name] = node
+    def filter_by_name(self, node_configs, node_pool_configs):
+        self.nodes.filter_by_name(node_configs)
+        self.pools.filter_by_name(node_configs.keys() + node_pool_configs.keys())
 
-    def update(self, nodes):
-        super(NodePoolStore, self).update((node.name, node) for node in nodes)
+    @classmethod
+    def update_from_config(cls, node_configs, node_pool_configs, ssh_config):
+        instance = cls.get_instance()
+        ssh_options = ssh.SSHAuthOptions.from_config(ssh_config)
+        known_hosts = KnownHosts.from_path(ssh_config.known_hosts_file)
+        instance.filter_by_name(node_configs, node_pool_configs)
+
+        for config in node_configs.itervalues():
+            pub_key = known_hosts.get_public_key(config.hostname)
+            instance.add_node(Node.from_config(config, ssh_options, pub_key))
+
+        for config in node_pool_configs.itervalues():
+            nodes = instance._get_nodes_by_name(config.nodes)
+            pool  = NodePool.from_config(config, nodes)
+            instance.pools.replace(pool)
+
+    def add_node(self, node):
+        self.nodes.replace(node)
+        self.pools.replace(NodePool.from_node(node))
+
+    def get_node(self, node_name, default=None):
+        return self.nodes.get(node_name, default)
+
+    def __contains__(self, node):
+        return node.get_name() in self.pools
+
+    def get_by_name(self, name, default=None):
+        return self.pools.get(name, default)
+
+    def _get_nodes_by_name(self, names):
+        return [self.nodes[name] for name in names]
+
+    def clear(self):
+        self.nodes.clear()
+        self.pools.clear()
 
 
 class NodePool(object):
     """A pool of Node objects."""
-    def __init__(self, nodes, name=None):
-        self.nodes = nodes
-        self.name = name or '_'.join(n.name for n in nodes)
-        self.iter = itertools.cycle(self.nodes)
+    def __init__(self, nodes, name):
+        self.nodes      = nodes
+        self.disabled   = False
+        self.name       = name or '_'.join(n.get_name() for n in nodes)
+        self.iter       = itertools.cycle(self.nodes)
 
     @classmethod
-    def from_config(cls, node_pool_config):
-        nodes = NodePoolStore.get_instance()
-        return cls(
-            name=node_pool_config.name,
-            nodes=[nodes[n] for n in node_pool_config.nodes]
-        )
+    def from_config(cls, node_pool_config, nodes):
+        return cls(nodes, node_pool_config.name)
+
+    @classmethod
+    def from_node(cls, node):
+        return cls([node], node.get_name())
 
     def __eq__(self, other):
         return isinstance(other, NodePool) and self.nodes == other.nodes
 
     def __ne__(self, other):
         return not self == other
+
+    def get_name(self):
+        return self.name
 
     def next(self):
         """Return a random node from the pool."""
@@ -115,26 +150,54 @@ class NodePool(object):
         """Return the next node cycling in a consistent order."""
         return self.iter.next()
 
-    def __getitem__(self, value):
-        for node in self.nodes:
-            if node.hostname == value:
-                return node
-        raise KeyError(value)
+    def disable(self):
+        """Required for MappingCollection.Item interface."""
+        self.disabled = True
 
-    def repr_data(self):
-        """Returns a dict which is an external view of this object."""
-        return {
-            'name':         self.name,
-            'nodes':        [n.repr_data() for n in self.nodes]
-        }
+    def get_by_hostname(self, hostname):
+        for node in self.nodes:
+            if node.hostname == hostname:
+                return node
+
+    def __str__(self):
+        return "NodePool:%s" % self.name
+
+
+class KnownHosts(KnownHostsFile):
+    """Lookup host key for a hostname."""
+
+    @classmethod
+    def from_path(cls, file_path):
+        if not file_path:
+            return cls(None)
+        return cls.fromPath(FilePath(file_path))
+
+    def get_public_key(self, hostname):
+        for entry in self._entries:
+            if entry.matchesHost(hostname):
+                return entry.publicKey
+        log.warn("Missing host key for: %s", hostname)
+
+
+def determine_fudge_factor(count, min_count=4):
+    """Return a pseudo-random number. """
+    fudge_factor = max(0.0, count - min_count)
+    return random.random() * float(fudge_factor)
+
+
+class RunState(object):
+    def __init__(self, action_run):
+        self.run = action_run
+        self.state = RUN_STATE_CONNECTING
+        self.deferred = defer.Deferred()
+        self.channel = None
+
 
 class Node(object):
     """A node is tron's interface to communicating with an actual machine.
-    This class also supports the NodePool interface and can be used
-    directly as a NodePool of 1 Node.
     """
 
-    def __init__(self, hostname, ssh_options, username=None, name=None):
+    def __init__(self, hostname, ssh_options, username=None, name=None, pub_key=None):
 
         # Host we are to connect to
         self.hostname = hostname
@@ -158,53 +221,39 @@ class Node(object):
         # Map of run id to instance of RunState
         self.run_states = {}
 
-        self.idle_timeout = None
-        self.idle_timer = None
+        self.idle_timer = eventloop.NullCallback
+        self.disabled = False
+        self.pub_key = pub_key
 
     @classmethod
-    def from_config(cls, node_config, ssh_options):
+    def from_config(cls, node_config, ssh_options, pub_key):
         return cls(
             node_config.hostname,
             ssh_options,
             username=node_config.username,
-            name=node_config.name
-        )
+            name=node_config.name,
+            pub_key=pub_key)
 
-    def next(self):
-        """Required to support the NodePool interface."""
-        return self
+    def get_name(self):
+        return self.name
 
-    def next_round_robin(self):
-        """Required to support the NodePool interface."""
-        return self
+    def disable(self):
+        """Required for MappingCollection.Item interface."""
+        self.disabled = True
 
-    @property
-    def nodes(self):
-        """Required to support the NodePool interface."""
-        return [self]
-
-    def __getitem__(self, value):
-        """Required to support the NodePool interface."""
-        if self.hostname == value:
-            return self
-        raise KeyError(value)
-
-    def __cmp__(self, other):
+    # TODO: wrap conch_options for equality
+    def __eq__(self, other):
         if not isinstance(other, self.__class__):
-            return -1
+            return False
+        return (self.hostname == other.hostname and
+                self.username == other.username and
+                self.name == other.name and
+                self.conch_options == other.conch_options and
+                self.pub_key == other.pub_key)
 
-        return cmp(self.hostname, other.hostname)
 
-    def _determine_fudge_factor(self):
-        """We want to introduce some amount of delay to node exec commands
-
-        We see issues where a service may have many instances, and they all
-        start at once, and their monitor steps are blocked for ever. This
-        is bad.
-        """
-        outstanding_runs = len(self.run_states)
-        fudge_factor = max(0.0, outstanding_runs - 4)
-        return random.random() * float(fudge_factor)
+    def __ne__(self, other):
+        return not self == other
 
     # TODO: Test
     def submit_command(self, command):
@@ -233,20 +282,18 @@ class Node(object):
         if run.id in self.run_states:
             raise Error("Run %s already running !?!", run.id)
 
-        if self.idle_timer is not None:
+        if self.idle_timer.active():
             self.idle_timer.cancel()
-            self.idle_timer = None
-
-        fudge_factor = self._determine_fudge_factor()
 
         self.run_states[run.id] = RunState(run)
 
+        # TODO: have this return a runner instead of number
+        fudge_factor = determine_fudge_factor(len(self.run_states))
         if fudge_factor == 0.0:
             self._do_run(run)
         else:
-            log.info("Delaying execution of %s for %.2f secs",
-                     run.id, fudge_factor)
-            reactor.callLater(fudge_factor, self._do_run, run)
+            log.info("Delaying execution of %s for %.2f secs", run.id, fudge_factor)
+            eventloop.call_later(fudge_factor, self._do_run, run)
 
         # We return the deferred here, but really we're trying to keep the rest
         # of the world from getting too involved with twisted.
@@ -266,11 +313,12 @@ class Node(object):
             self._open_channel(run)
 
     def _cleanup(self, run):
+        # TODO: why set to None before deleting it?
         self.run_states[run.id].channel = None
         del self.run_states[run.id]
 
         if not self.run_states:
-            self.idle_timer = reactor.callLater(IDLE_CONNECTION_TIMEOUT,
+            self.idle_timer = eventloop.call_later(IDLE_CONNECTION_TIMEOUT,
                                                 self._connection_idle_timeout)
 
     def _connection_idle_timeout(self):
@@ -278,8 +326,6 @@ class Node(object):
             log.info("Connection to %s idle for %d secs. Closing.",
                      self.hostname, IDLE_CONNECTION_TIMEOUT)
             self.connection.transport.loseConnection()
-
-        self.idle_timer = None
 
     def _fail_run(self, run, result):
         """Indicate the run has failed, and cleanup state"""
@@ -364,9 +410,8 @@ class Node(object):
         #  2. Our transport is secure, and we can create our connection
         #  3. The connection service is started, so we can use it
 
-        client_creator = protocol.ClientCreator(reactor, ssh.ClientTransport,
-                                                username=self.username,
-                                                options=self.conch_options)
+        client_creator = protocol.ClientCreator(reactor,
+            ssh.ClientTransport, self.username, self.conch_options, self.pub_key)
         create_defer = client_creator.connectTCP(self.hostname, 22)
 
         # We're going to create a deferred, returned to the caller, that will
@@ -486,14 +531,6 @@ class Node(object):
         # come back thanks to the magic of TCP, but something is up, best to
         # fail right now then limp along for and unknown amount of time.
         #self.connection.transport.connectionLost(failure.Failure())
-
-    def repr_data(self):
-        """Returns a dict which is an external view of this object."""
-        return {
-            'name':             self.name,
-            'hostname':         self.hostname,
-            'username':         self.username
-        }
 
     def __str__(self):
         return "Node:%s@%s" % (self.username or "<default>", self.hostname)

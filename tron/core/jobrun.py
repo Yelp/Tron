@@ -7,7 +7,6 @@ import logging
 import itertools
 import operator
 from tron import node, command_context, event
-from tron.core import actionrun
 from tron.core.actionrun import ActionRun, ActionRunFactory
 from tron.serialize import filehandler
 from tron.utils import timeutils, proxy
@@ -19,23 +18,6 @@ class Error(Exception):
     pass
 
 
-class JobRunContext(object):
-
-    def __init__(self, job_run):
-        self.job_run = job_run
-
-    @property
-    def cleanup_job_status(self):
-        """Provide 'SUCCESS' or 'FAILURE' to a cleanup action context based on
-        the status of the other steps
-        """
-        if self.job_run.action_runs.is_failed:
-            return 'FAILURE'
-        elif self.job_run.action_runs.is_complete_without_cleanup:
-            return 'SUCCESS'
-        return 'UNKNOWN'
-
-
 class JobRun(Observable, Observer):
     """A JobRun is an execution of a Job.  It has a list of ActionRuns and is
     responsible for starting ActionRuns in the correct order and managing their
@@ -45,10 +27,7 @@ class JobRun(Observable, Observer):
     NOTIFY_DONE           = 'notify_done'
     NOTIFY_STATE_CHANGED  = 'notify_state_changed'
 
-    EVENT_START           = event.EventType(event.LEVEL_INFO, "start")
-    EVENT_STARTED         = event.EventType(event.LEVEL_INFO, "started")
-    EVENT_FAILED          = event.EventType(event.LEVEL_CRITICAL, "failed")
-    EVENT_SUCCEEDED       = event.EventType(event.LEVEL_OK, "succeeded")
+    context_class         = command_context.JobRunContext
 
     def __init__(self, job_name, run_num, run_time, node, output_path=None,
                 base_context=None, action_runs=None,
@@ -63,14 +42,14 @@ class JobRun(Observable, Observer):
         self.action_runs_proxy  = None
         self._action_runs       = None
         self.action_graph       = action_graph
-        # TODO: expose this through the api
         self.manual             = manual
+        self.event              = event.get_recorder(self.id)
+        self.event.ok('created')
 
         if action_runs:
             self.action_runs    = action_runs
 
-        context = JobRunContext(self)
-        self.context = command_context.CommandContext(context, base_context)
+        self.context = command_context.build_context(self, base_context)
 
     @property
     def id(self):
@@ -90,9 +69,8 @@ class JobRun(Observable, Observer):
     def from_state(cls, state_data, action_graph, output_path, context,
                 run_node):
         """Restore a JobRun from a serialized state."""
-        node_pools = node.NodePoolStore.get_instance()
-        if state_data.get('node_name'):
-            run_node = node_pools.get(state_data['node_name'])
+        pool_repo = node.NodePoolRepository.get_instance()
+        run_node  = pool_repo.get_node(state_data.get('node_name'), run_node)
 
         # TODO: remove in 0.6
         if 'job_name' not in state_data:
@@ -176,7 +154,7 @@ class JobRun(Observable, Observer):
 
     def start(self):
         """Start this JobRun as a scheduled run (not a manual run)."""
-        self.notify(self.EVENT_START)
+        self.event.info('start')
         if self.action_runs.has_startable_action_runs and self._do_start():
             return True
 
@@ -185,7 +163,7 @@ class JobRun(Observable, Observer):
 
         self.action_runs.ready()
         if any(self._start_action_runs()):
-            self.notify(self.EVENT_STARTED)
+            self.event.ok('started')
             return True
 
     def _start_action_runs(self):
@@ -194,11 +172,8 @@ class JobRun(Observable, Observer):
         """
         started_actions = []
         for action_run in self.action_runs.get_startable_action_runs():
-            try:
-                action_run.start()
+            if action_run.start():
                 started_actions.append(action_run)
-            except actionrun.Error, e:
-                log.warning("Failed to start actions: %r", e)
 
         return started_actions
 
@@ -238,18 +213,20 @@ class JobRun(Observable, Observer):
 
         Triggers an event to notifies the Job that is is done.
         """
-        failure = self.action_runs.is_failed
-        event = self.EVENT_FAILED if failure else self.EVENT_SUCCEEDED
-        self.notify(event)
+        if self.action_runs.is_failed:
+            self.event.critical('failed')
+        else:
+            self.event.ok('succeeded')
 
         # Notify Job that this JobRun is complete
         self.notify(self.NOTIFY_DONE)
 
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
+        self.event.notice('removed')
+        event.EventManager.get_instance().remove(str(self))
         self.clear_observers()
         self.action_runs.cleanup()
-        event.EventManager.get_instance().remove(self)
         self.node = None
         self.action_graph = None
         self._action_runs = None

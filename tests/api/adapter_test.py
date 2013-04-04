@@ -1,10 +1,12 @@
 import shutil
 import tempfile
+import mock
 from testify import TestCase, assert_equal, run, setup, teardown
 from tests import mocks
 from tests.assertions import assert_length
 from tests.testingutils import Turtle
-from tron.api.adapter import ReprAdapter, RunAdapter, ActionRunAdapter, JobRunAdapter
+from tron.api.adapter import ReprAdapter, RunAdapter, ActionRunAdapter
+from tron.api.adapter import JobRunAdapter, ServiceAdapter
 
 
 class MockAdapter(ReprAdapter):
@@ -46,15 +48,14 @@ class RunAdapterTestCase(TestCase):
 
     @setup
     def setup_adapter(self):
-        self.original           = Turtle()
+        self.original           = mock.Mock()
         self.adapter            = RunAdapter(self.original)
 
     def test_get_state(self):
         assert_equal(self.adapter.get_state(), self.original.state.short_name)
 
     def test_get_node(self):
-        hostname = self.adapter.get_node()
-        assert_equal(hostname, self.original.node.hostname)
+        assert_equal(self.adapter.get_node(), str(self.original.node))
 
     def test_get_duration(self):
         self.original.start_time = None
@@ -67,8 +68,8 @@ class ActionRunAdapterTestCase(TestCase):
     def setup_adapter(self):
         self.temp_dir = tempfile.mkdtemp()
         self.action_run = Turtle(output_path=[self.temp_dir])
-        self.original = Turtle(action_runs={'action_name': self.action_run})
-        self.adapter = ActionRunAdapter(self.original, 'action_name', 4)
+        self.job_run = Turtle(action_runs={'action_name': self.action_run})
+        self.adapter = ActionRunAdapter(self.action_run, self.job_run, 4)
 
     @teardown
     def teardown_adapter(self):
@@ -76,18 +77,17 @@ class ActionRunAdapterTestCase(TestCase):
 
     def test__init__(self):
         assert_equal(self.adapter.max_lines, 4)
-        assert_equal(self.adapter.job_run, self.original)
+        assert_equal(self.adapter.job_run, self.job_run)
         assert_equal(self.adapter._obj, self.action_run)
-        expected_path = "/".join(self.action_run.output_path)
-        assert_equal(self.adapter.serializer.base_path, expected_path)
 
 
 class JobRunAdapterTestCase(TestCase):
 
     @setup
     def setup_adapter(self):
-        action_runs = mocks.MockActionRunCollection(names=['one', 'two'])
-        self.job_run = Turtle(
+        action_runs = mock.MagicMock()
+        action_runs.__iter__.return_value = iter([mock.Mock(), mock.Mock()])
+        self.job_run = mock.Mock(
                 action_runs=action_runs, action_graph=mocks.MockActionGraph())
         self.adapter = JobRunAdapter(self.job_run, include_action_runs=True)
 
@@ -95,12 +95,25 @@ class JobRunAdapterTestCase(TestCase):
         assert self.adapter.include_action_runs
 
     def test_get_runs(self):
-        runs = self.adapter.get_runs()
-        assert_length(runs, 2)
+        with mock.patch('tron.api.adapter.ActionRunAdapter'):
+            assert_length(self.adapter.get_runs(), 2)
 
     def test_get_runs_without_action_runs(self):
         self.adapter.include_action_runs = False
         assert_equal(self.adapter.get_runs(), None)
+
+
+class ServiceAdapterTestCase(TestCase):
+
+    @setup
+    def setup_adapter(self):
+        self.service = mock.MagicMock()
+        self.adapter = ServiceAdapter(self.service)
+
+    def test_repr(self):
+        result = self.adapter.get_repr()
+        assert_equal(result['name'], self.service.name)
+        assert_equal(result['node_pool'], self.service.config.node)
 
 
 if __name__ == "__main__":

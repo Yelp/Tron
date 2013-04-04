@@ -12,19 +12,15 @@ class ActionGraph(object):
         self.action_map         = action_map
 
     @classmethod
-    def from_config(cls, actions_config, nodes, cleanup_action_config=None):
+    def from_config(cls, actions_config, cleanup_action_config=None):
         """Create this graph from a job config."""
-        actions = dict(
-            (name, action.Action.from_config(conf, nodes))
-            for name, conf in actions_config.iteritems()
-        )
+        actions = dict((name, action.Action.from_config(conf))
+                        for name, conf in actions_config.iteritems())
         if cleanup_action_config:
-            cleanup_action = action.Action.from_config(
-                    cleanup_action_config, nodes)
+            cleanup_action = action.Action.from_config(cleanup_action_config)
             actions[cleanup_action.name] = cleanup_action
 
-        graph = cls._build_dag(actions, actions_config)
-        return cls(graph, actions)
+        return cls(cls._build_dag(actions, actions_config), actions)
 
     @classmethod
     def _build_dag(cls, actions, actions_config):

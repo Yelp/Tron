@@ -82,9 +82,6 @@ start <service name>
 stop <service name>
     Stop the service.
 
-zap <service_id | service_instance_id>
-    Marks the specified service or service instance as **DOWN** without
-    taking any other action (such as actually stopping the service)
 
 Examples
 --------
@@ -106,7 +103,7 @@ Examples
     $ tronctl restart job0.4
     Job Run job0.4 now in state RUNN
 
-    $ tronctl succeed job0.5
+    $ tronctl success job0.5
     Job Run job0.5 now in state SUCC
 
 Bugs

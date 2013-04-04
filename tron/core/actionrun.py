@@ -16,43 +16,6 @@ from tron.utils.observer import Observer
 log = logging.getLogger(__name__)
 
 
-class Error(Exception):
-    pass
-
-
-class InvalidStartStateError(Error):
-    """Indicates the action can't start in the state it's in"""
-    pass
-
-
-class ActionRunContext(object):
-    """Context object that gives us access to data about the action run."""
-
-    def __init__(self, action_run):
-        self.action_run = action_run
-
-    @property
-    def runid(self):
-        return self.action_run.job_run_id
-
-    @property
-    def actionname(self):
-        return self.action_run.action_name
-
-    @property
-    def node(self):
-        return self.action_run.node.hostname
-
-    def __getitem__(self, name):
-        """Attempt to parse date arithmetic syntax and apply to run_time."""
-        run_time = self.action_run.job_run_time
-        time_value = timeutils.DateArithmetic.parse(name, run_time)
-        if time_value:
-            return time_value
-
-        raise KeyError(name)
-
-
 class ActionRunFactory(object):
     """Construct ActionRuns and ActionRunCollections for a JobRun and
     ActionGraph.
@@ -70,10 +33,8 @@ class ActionRunFactory(object):
     @classmethod
     def action_run_collection_from_state(cls, job_run, runs_state_data,
                 cleanup_action_state_data):
-        action_runs = [
-            cls.action_run_from_state(job_run, state_data)
-            for state_data in runs_state_data
-        ]
+        action_runs = [cls.action_run_from_state(job_run, state_data)
+                       for state_data in runs_state_data]
         if cleanup_action_state_data:
             action_runs.append(cls.action_run_from_state(
                 job_run, cleanup_action_state_data, cleanup=True))
@@ -91,12 +52,10 @@ class ActionRunFactory(object):
             job_run.id,
             action.name,
             run_node,
-            job_run.run_time,
             action.command,
             parent_context=job_run.context,
             output_path=job_run.output_path.clone(),
-            cleanup=action.is_cleanup
-        )
+            cleanup=action.is_cleanup)
 
     @classmethod
     def action_run_from_state(cls, job_run, state_data, cleanup=False):
@@ -106,8 +65,7 @@ class ActionRunFactory(object):
             job_run.context,
             job_run.output_path.clone(),
             job_run.node,
-            cleanup=cleanup
-        )
+            cleanup=cleanup)
 
 
 class ActionRun(Observer):
@@ -163,27 +121,26 @@ class ActionRun(Observer):
     # Failed render command is false to ensure that it will fail when run
     FAILED_RENDER = 'false'
 
-    def __init__(self, job_run_id, name, node, run_time, bare_command=None,
+    context_class               = command_context.ActionRunContext
+
+    def __init__(self, job_run_id, name, node, bare_command=None,
             parent_context=None, output_path=None, cleanup=False,
             start_time=None, end_time=None, run_state=STATE_SCHEDULED,
             rendered_command=None):
         self.job_run_id         = job_run_id
         self.action_name        = name
         self.node               = node
-        self.job_run_time       = run_time      # parent JobRun start time
-        self.start_time         = start_time    # ActionRun start time
+        self.start_time         = start_time
         self.end_time           = end_time
         self.exit_status        = None
         self.bare_command       = bare_command
         self.rendered_command   = rendered_command
         self.machine            = state.StateMachine(
                     self.STATE_SCHEDULED, delegate=self, force_state=run_state)
-        context                 = ActionRunContext(self)
-        self.context            = command_context.CommandContext(
-                                    context, parent_context)
         self.is_cleanup         = cleanup
         self.output_path        = output_path or filehandler.OutputPath()
         self.output_path.append(self.id)
+        self.context = command_context.build_context(self, parent_context)
 
     @property
     def state(self):
@@ -205,7 +162,7 @@ class ActionRun(Observer):
     def from_state(cls, state_data, parent_context, output_path,
                 job_run_node, cleanup=False):
         """Restore the state of this ActionRun from a serialized state."""
-        node_pools = node.NodePoolStore.get_instance()
+        pool_repo = node.NodePoolRepository.get_instance()
 
         # Support state from older version
         if 'id' in state_data:
@@ -214,15 +171,14 @@ class ActionRun(Observer):
             job_run_id = state_data['job_run_id']
             action_name = state_data['action_name']
 
-        if state_data.get('node_name'):
-            job_run_node = node_pools.get(state_data['node_name'])
+        job_run_node = pool_repo.get_node(
+            state_data.get('node_name'), job_run_node)
 
         rendered_command = state_data.get('rendered_command')
         run = cls(
             job_run_id,
             action_name,
             job_run_node,
-            state_data['run_time'],
             parent_context=parent_context,
             output_path=output_path,
             rendered_command=rendered_command,
@@ -244,7 +200,7 @@ class ActionRun(Observer):
     def start(self):
         """Start this ActionRun."""
         if not self.machine.check('start'):
-            raise InvalidStartStateError(self.state)
+            return False
 
         log.info("Starting action run %s", self.id)
         self.start_time = timeutils.current_time()
@@ -253,14 +209,16 @@ class ActionRun(Observer):
         if not self.is_valid_command:
             log.error("Command for action run %s is invalid: %r",
                 self.id, self.bare_command)
-            return self.fail(-1)
+            self.fail(-1)
+            return
 
         action_command = self.build_action_command()
         try:
             self.node.submit_command(action_command)
         except node.Error, e:
             log.warning("Failed to start %s: %r", self.id, e)
-            return self.fail(-2)
+            self.fail(-2)
+            return
 
         return True
 
@@ -323,7 +281,6 @@ class ActionRun(Observer):
             'job_run_id':       self.job_run_id,
             'action_name':      self.action_name,
             'state':            str(self.state),
-            'run_time':         self.job_run_time,
             'start_time':       self.start_time,
             'end_time':         self.end_time,
             'command':          command,
@@ -525,8 +482,7 @@ class ActionRunCollection(object):
 
         run_states = ', '.join(
             "%s(%s%s)" % (a.action_name, a.state, blocked_state(a))
-            for a in self.run_map.itervalues()
-        )
+            for a in self.run_map.itervalues())
         return "%s[%s]" % (self.__class__.__name__, run_states)
 
     def __getattr__(self, name):

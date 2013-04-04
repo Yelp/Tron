@@ -5,6 +5,18 @@ from tron.utils import state, timeutils
 
 log = logging.getLogger(__name__)
 
+
+class ActionState(state.NamedEventState):
+    pass
+
+
+class CompletedActionCommand(object):
+    """This is a null object for ActionCommand."""
+    is_complete = True
+    is_done = True
+    is_failed = False
+
+
 class ActionCommand(object):
     """An ActionCommand encapsulates a runnable task that is passed to a node
     for execution.
@@ -15,9 +27,6 @@ class ActionCommand(object):
       write_<channel> (when output is received)
       done      (when the command is finished)
     """
-
-    class ActionState(state.NamedEventState):
-        pass
 
     COMPLETE    = ActionState('complete')
     FAILSTART   = ActionState('failstart')
@@ -86,5 +95,52 @@ class ActionCommand(object):
         self.exited(result)
         self.done()
 
+    @property
+    def is_failed(self):
+        return bool(self.exit_status)
+
+    @property
+    def is_complete(self):
+        """Complete implies done and success."""
+        return self.machine.state == self.COMPLETE
+
+    @property
+    def is_done(self):
+        """Done implies no more work will be done, but might not be success."""
+        return self.machine.state in (self.COMPLETE, self.FAILSTART)
+
     def __repr__(self):
         return "ActionCommand %s %s: %s" % (self.id, self.command, self.state)
+
+
+class StringBuffer(object):
+    """An object which stores strings."""
+
+    def __init__(self):
+        self.buffer = []
+
+    def write(self, msg):
+        self.buffer.append(msg)
+
+    def get_value(self):
+        return ''.join(self.buffer).rstrip()
+
+    def close(self):
+        pass
+
+
+class StringBufferStore(object):
+    """A serializer object which can be passed to ActionCommand as a
+    serializer, but stores streams in memory.
+    """
+    def __init__(self):
+        self.buffers = {}
+
+    def open(self, name):
+        return self.buffers.setdefault(name, StringBuffer())
+
+    def get_stream(self, name):
+        return self.buffers[name].get_value()
+
+    def clear(self):
+        self.buffers.clear()

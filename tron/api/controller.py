@@ -10,20 +10,130 @@ from tron.config import schema
 log = logging.getLogger(__name__)
 
 
+class UnknownCommandError(Exception):
+    """Exception raised when a controller received an unknown command."""
+
+
+class JobCollectionController(object):
+
+    def __init__(self, job_collection):
+        self.job_collection = job_collection
+
+    def handle_command(self, command):
+        if command == 'disableall':
+            self.job_collection.disable()
+            return "Disabled all jobs."
+
+        if command == 'enableall':
+            self.job_collection.enable()
+            return "Enabled all jobs."
+
+        raise UnknownCommandError("Unknown command %s" % command)
+
+
+class ActionRunController(object):
+
+    mapped_commands = set(('start', 'success', 'cancel', 'fail', 'skip'))
+
+    def __init__(self, action_run, job_run):
+        self.action_run = action_run
+        self.job_run    = job_run
+
+    def handle_command(self, command):
+        if command not in self.mapped_commands:
+            raise UnknownCommandError("Unknown command %s" % command)
+
+        if command == 'start' and self.job_run.is_scheduled:
+            return ("Action run can not be started if it's job run is still "
+                    "scheduled.")
+
+        if getattr(self.action_run, command)():
+            msg = "%s now in state %s"
+            return msg % (self.action_run, self.action_run.state)
+
+        msg = "Failed to %s on %s. State is %s."
+        return msg % (command, self.action_run, self.action_run.state)
+
+
+class JobRunController(object):
+
+    mapped_commands = set(('start', 'success', 'cancel', 'fail'))
+
+    def __init__(self, job_run, job_scheduler):
+        self.job_run       = job_run
+        self.job_scheduler = job_scheduler
+
+    def handle_command(self, command):
+        if command == 'restart':
+            runs = self.job_scheduler.manual_start(self.job_run.run_time)
+            return "Created %s" % ",".join(str(run) for run in runs)
+
+        if command in self.mapped_commands:
+            if getattr(self.job_run, command)():
+                return "%s now in state %s" % (self.job_run, self.job_run.state)
+
+            msg = "Failed to %s, %s in state %s"
+            return msg % (command, self.job_run, self.job_run.state)
+
+        raise UnknownCommandError("Unknown command %s" % command)
+
+
 class JobController(object):
-    """Control Jobs."""
 
-    # TODO: just take a list of Jobs
-    def __init__(self, mcp):
-        self.mcp = mcp
+    def __init__(self, job_scheduler):
+        self.job_scheduler = job_scheduler
 
-    def disable_all(self):
-        for job_scheduler in self.mcp.get_jobs():
-            job_scheduler.disable()
+    def handle_command(self, command, run_time=None):
+        if command == 'enable':
+            self.job_scheduler.enable()
+            return "%s is enabled" % self.job_scheduler.get_job()
 
-    def enable_all(self):
-        for job_scheduler in self.mcp.get_jobs():
-            job_scheduler.enable()
+        elif command == 'disable':
+            self.job_scheduler.disable()
+            return "%s is disabled" % self.job_scheduler.get_job()
+
+        elif command == 'start':
+            runs = self.job_scheduler.manual_start(run_time=run_time)
+            return "Created %s" % ",".join(str(run) for run in runs)
+
+        raise UnknownCommandError("Unknown command %s" % command)
+
+
+class ServiceInstanceController(object):
+
+    def __init__(self, service_instance):
+        self.service_instance = service_instance
+
+    def handle_command(self, command):
+        error_msg = "Failed to %s from state %s."
+        if command == 'stop':
+            if self.service_instance.stop():
+                return "%s stopping." % self.service_instance
+            return error_msg % (command, self.service_instance.get_state())
+
+        if command == 'start':
+            if self.service_instance.start():
+                return "%s starting." % self.service_instance
+            return error_msg % (command, self.service_instance.get_state())
+
+        raise UnknownCommandError("Unknown command %s" % command)
+
+
+class ServiceController(object):
+
+    def __init__(self, service):
+        self.service = service
+
+    def handle_command(self, command):
+        if command == 'stop':
+            self.service.disable()
+            return "%s stopping." % self.service
+
+        if command == 'start':
+            self.service.enable()
+            return "%s starting." % self.service
+
+        raise UnknownCommandError("Unknown command %s" % command)
 
 
 def format_seq(seq):
@@ -92,3 +202,6 @@ class ConfigController(object):
         except Exception, e:
             log.error("Configuration update failed: %s" % e)
             return str(e)
+
+    def get_namespaces(self):
+        return self.config_manager.get_namespaces()

@@ -1,6 +1,18 @@
 """Data structures used in tron."""
+from __future__ import absolute_import
 from collections import Mapping
+import itertools
 
+
+def invert_dict_list(dictionary):
+    """Invert a dictionary of lists. All values in the lists should be unique.
+    """
+    def invert(key, seq):
+        for item in seq:
+            yield item, key
+
+    seq = (invert(k, v) for k, v in dictionary.iteritems())
+    return dict(itertools.chain.from_iterable(seq))
 
 class FrozenDict(Mapping):
     """Simple implementation of an immutable dictionary so we can freeze the

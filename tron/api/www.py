@@ -5,19 +5,17 @@ view current state, event history and send commands to trond.
 
 import datetime
 import logging
-import urllib
 
 try:
     import simplejson as json
-    assert json # pyflakes
+    _silence_pyflakes = [json]
 except ImportError:
     import json
 
 from twisted.web import http, resource
 
-from tron import service, event
+from tron import event
 from tron.api import adapter, controller
-from tron.core import actionrun
 from tron.api import requestargs
 
 
@@ -49,136 +47,82 @@ def respond(request, response_dict, code=http.OK, headers=None):
     return ""
 
 
+def handle_command(request, api_controller, obj, **kwargs):
+    """Handle a request to perform a command."""
+    command = requestargs.get_string(request, 'command')
+    log.info("Handling '%s' request on %s", command, obj)
+    try:
+        response = api_controller.handle_command(command, **kwargs)
+    except controller.UnknownCommandError, e:
+        log.warning("Unknown command %s for service %s", command, obj)
+        response = {'error': str(e)}
+        return respond(request, response, code=http.NOT_IMPLEMENTED)
+
+    return respond(request, {'result': response})
+
+
 class ActionRunResource(resource.Resource):
 
     isLeaf = True
 
-    def __init__(self, job_run, action_name):
+    def __init__(self, action_run, job_run):
         resource.Resource.__init__(self)
-        self._job_run           = job_run
-        self._action_name       = action_name
+        self.job_run    = job_run
+        self.action_run = action_run
+        self.controller = controller.ActionRunController(action_run, job_run)
 
     def render_GET(self, request):
         num_lines = requestargs.get_integer(request, 'num_lines')
         run_adapter = adapter.ActionRunAdapter(
-                self._job_run, self._action_name, num_lines)
+            self.action_run, self.job_run, num_lines)
         return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):
-        cmd = requestargs.get_string(request, 'command')
-        log.info("Handling '%s' request for action run %s.%s",
-                 cmd, self._job_run.id, self._action_name)
-
-        if cmd not in ('start', 'success', 'cancel', 'fail', 'skip'):
-            log.warning("Unknown request command %s", cmd)
-            return respond(request, None, code=http.NOT_IMPLEMENTED)
-
-        action_run = self._job_run.action_runs[self._action_name]
-
-        # An action can only be started if the job run has been started
-        if cmd == 'start' and self._job_run.is_scheduled:
-            resp = None
-        else:
-            try:
-                resp = getattr(action_run, cmd)()
-            except actionrun.Error:
-                resp = None
-
-        if not resp:
-            msg = "Failed to %s action run %s is in state %s." % (
-                    cmd, action_run, action_run.state)
-        else:
-            msg = "Action run now in state %s" % action_run.state.short_name
-        return respond(request, {'result': msg})
+        return handle_command(request, self.controller, self.action_run)
 
 
 class JobRunResource(resource.Resource):
 
-    isLeaf = False
-
-    def __init__(self, run, master_control):
+    def __init__(self, job_run, job_scheduler):
         resource.Resource.__init__(self)
-        self._run = run
-        self._master_control = master_control
+        self.job_run       = job_run
+        self.job_scheduler = job_scheduler
+        self.controller    = controller.JobRunController(job_run, job_scheduler)
 
-    def getChild(self, act_name, request):
-        if act_name == '':
+    def getChild(self, action_name, _):
+        if action_name == '':
             return self
-        if act_name == '_events':
-            return EventResource(self._run)
-        if act_name in self._run.action_runs:
-            return ActionRunResource(self._run, act_name)
+        if action_name == '_events':
+            return EventResource(self.job_run.id)
+        if action_name in self.job_run.action_runs:
+            action_run = self.job_run.action_runs[action_name]
+            return ActionRunResource(action_run, self.job_run)
 
-        return resource.NoResource("Cannot find action '%s' for job run '%s'" %
-                                   (act_name, self._run.id))
+        msg = "Cannot find action %s for %s"
+        return resource.NoResource(msg % (action_name, self.job_run))
 
     def render_GET(self, request):
-        run_adapter = adapter.JobRunAdapter(self._run, include_action_runs=True)
+        run_adapter = adapter.JobRunAdapter(self.job_run, include_action_runs=True)
         return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):
-        cmd = requestargs.get_string(request, 'command')
-        log.info("Handling '%s' request for job run %s", cmd, self._run.id)
-
-        if cmd not in ['start', 'restart', 'success', 'fail', 'cancel']:
-            log.warning("Unknown request command %s", cmd)
-            return respond(request, None, code=http.NOT_IMPLEMENTED)
-
-        getattr(self, '_%s' % cmd)()
-        return respond(request, {'result': "Job run now in state %s" %
-                                 self._run.state.short_name})
-
-    def _restart(self):
-        log.info("Resetting all action runs to scheduled state")
-        job_name = self._run.job_name
-        job_sched = self._master_control.jobs[job_name]
-        job_sched.manual_start(self._run.run_time)
-
-    def _start(self):
-        if self._run.start():
-            log.info("Starting job run %s", self._run.id)
-        else:
-            log.warning("Failed to start job run %s" % self._run)
-
-    def _success(self):
-        if self._run.success():
-            log.info("Marking job run %s for success", self._run.id)
-        else:
-            log.warning("Request to mark job run %s succeed when it has"
-                        " already", self._run.id)
-
-    def _cancel(self):
-        if self._run.cancel():
-            log.info("Cancelling job %s", self._run.id)
-            self._run.cancel()
-        else:
-            log.warning("Request to cancel job run %s when it's already"
-                        " cancelled", self._run.id)
-
-    def _fail(self):
-        if self._run.fail():
-            log.info("Marking job run %s as failed", self._run.id)
-        else:
-            log.warning("Request to fail job run %s when it's already running"
-                        " or done", self._run.id)
+        return handle_command(request, self.controller, self.job_run)
 
 
 class JobResource(resource.Resource):
     """A resource that describes a particular job"""
 
-    isLeaf = False
-
-    def __init__(self, job_sched, master_control):
-        self._job_sched         = job_sched
-        self._master_control    = master_control
+    def __init__(self, job_scheduler):
         resource.Resource.__init__(self)
+        self.job_scheduler = job_scheduler
+        self.controller    = controller.JobController(job_scheduler)
 
-    def getChild(self, run_id, request):
-        job = self._job_sched.job
+    def getChild(self, run_id, _):
+        job = self.job_scheduler.job
         if run_id == '':
             return self
         if run_id == '_events':
-            return EventResource(self._job_sched.job)
+            return EventResource(self.job_scheduler.get_name())
 
         run_id = run_id.upper()
         if run_id == 'HEAD':
@@ -189,64 +133,44 @@ class JobResource(resource.Resource):
             run = job.runs.get_run_by_state_short_name(run_id)
 
         if run:
-            return JobRunResource(run, self._master_control)
-        return resource.NoResource(
-                "Cannot find run number '%s' for job '%s'" % (run_id, job.name))
+            return JobRunResource(run, self.job_scheduler)
+        msg = "Cannot find job run '%s' for job '%s'"
+        return resource.NoResource(msg % (run_id, job))
 
     def render_GET(self, request):
         include_action_runs = requestargs.get_bool(request, 'include_action_runs')
         job_adapter = adapter.JobAdapter(
-                self._job_sched.job, True, include_action_runs)
+                self.job_scheduler.get_job(), True, include_action_runs)
         return respond(request, job_adapter.get_repr())
 
     def render_POST(self, request):
-        cmd = requestargs.get_string(request, 'command')
-        log.info("Handling '%s' request for job run %s",
-                cmd, self._job_sched.job.name)
-
-        if cmd == 'enable':
-            self._job_sched.enable()
-            msg = "Job %s is enabled" % self._job_sched.job.name
-
-        elif cmd == 'disable':
-            self._job_sched.disable()
-            msg = "Job %s is disabled" % self._job_sched.job.name
-
-        elif cmd == 'start':
-            run_time = requestargs.get_datetime(request, 'run_time')
-            runs = self._job_sched.manual_start(run_time=run_time)
-            msg = "New Job Runs %s created" % ",".join([r.id for r in runs])
-
-        else:
-            return respond(request, None, code=http.NOT_IMPLEMENTED)
-
-        return respond(request, {'result': msg})
+        run_time = requestargs.get_datetime(request, 'run_time')
+        return handle_command(request, self.controller, self.job_scheduler,
+            run_time=run_time)
 
 
-class JobsResource(resource.Resource):
+class JobCollectionResource(resource.Resource):
     """Resource for all our daemon's jobs"""
 
-    def __init__(self, master_control):
-        self.mcp                = master_control
-        self.controller         = controller.JobController(master_control)
+    def __init__(self, job_collection):
+        self.job_collection = job_collection
+        self.controller     = controller.JobCollectionController(job_collection)
         resource.Resource.__init__(self)
 
     def getChild(self, name, request):
         if name == '':
             return self
 
-        job_sched = self.mcp.get_job_by_name(name)
+        job_sched = self.job_collection.get_by_name(name)
         if job_sched is None:
             return resource.NoResource("Cannot find job '%s'" % name)
 
-        return JobResource(job_sched, self.mcp)
+        return JobResource(job_sched)
 
     def get_data(self, include_job_run=False, include_action_runs=False):
-        job_adapter = adapter.JobAdapter
-        return [
-            job_adapter(job.job, include_job_run, include_action_runs).get_repr()
-            for job in self.mcp.get_jobs()
-        ]
+        jobs = (sched.get_job() for sched in self.job_collection)
+        return adapter.adapt_many(adapter.JobAdapter, jobs,
+            include_job_run, include_action_runs)
 
     def render_GET(self, request):
         include_job_runs = requestargs.get_bool(request, 'include_job_runs')
@@ -255,172 +179,70 @@ class JobsResource(resource.Resource):
         return respond(request, output)
 
     def render_POST(self, request):
-        cmd = requestargs.get_string(request, 'command')
-        log.info("Handling '%s' request on all jobs", cmd)
-
-        if cmd == 'disableall':
-            self.controller.disable_all()
-            return respond(request, {'result': "All jobs are now disabled"})
-
-        if cmd == 'enableall':
-            self.controller.enable_all()
-            return respond(request, {'result': "All jobs are now enabled"})
-
-        log.warning("Unknown request command %s for all jobs", cmd)
-        return respond(request, None, code=http.NOT_IMPLEMENTED)
+        return handle_command(request, self.controller, self.job_collection)
 
 
 class ServiceInstanceResource(resource.Resource):
 
     isLeaf = True
 
-    def __init__(self, service_instance, master_control):
-        self._service_instance = service_instance
-        self._master_control = master_control
+    def __init__(self, service_instance):
         resource.Resource.__init__(self)
+        self.service_instance = service_instance
+        self.controller = controller.ServiceInstanceController(service_instance)
 
     def render_POST(self, request):
-        cmd = requestargs.get_string(request, 'command')
-        log.info("Handling '%s' request on service %s",
-                 cmd, self._service_instance.id)
-
-        if cmd == 'stop':
-            self._service_instance.stop()
-            return respond(request, {'result': "Service instance stopping"})
-
-        if cmd == 'zap':
-            self._service_instance.zap()
-            return respond(request, {'result': "Service instance zapped"})
-
-        if cmd == 'start':
-            try:
-                self._service_instance.start()
-            except service.InvalidStateError:
-                msg = ("Failed to start: Service is already %s" %
-                       self._service_instance.state)
-                return respond(request, {'result': msg})
-
-            return respond(request, {'result': "Service instance starting"})
-
-        log.warning("Unknown request command %s for service %s", cmd,
-                    self._service_instance.id)
-        return respond(request, None, code=http.NOT_IMPLEMENTED)
+        return handle_command(request, self.controller, self.service_instance)
 
 
 class ServiceResource(resource.Resource):
     """A resource that describes a particular service"""
-    def __init__(self, service, master_control):
-        self._service = service
-        self._master_control = master_control
+    def __init__(self, service):
         resource.Resource.__init__(self)
+        self.service    = service
+        self.controller = controller.ServiceController(self.service)
 
-    def getChild(self, name, request):
+    def getChild(self, name, _):
         if name == '':
             return self
         if name == '_events':
-            return EventResource(self._service)
+            return EventResource(str(self.service))
 
-        for instance in self._service.instances:
-            if str(instance.instance_number) == str(name):
-                return ServiceInstanceResource(instance, self._master_control)
-        else:
-            return resource.NoResource("Cannot find service '%s'" % name)
+        number = int(name) if name.isdigit() else None
+        instance = self.service.instances.get_by_number(number)
+        if instance:
+            return ServiceInstanceResource(instance)
 
-    def get_instance_data(self, instance):
-        return {
-            'id':           instance.id,
-            'node':         instance.node.hostname if instance.node else None,
-            'state':        instance.state.name,
-        }
+        return resource.NoResource("Cannot find service instance: %s" % name)
 
-    # TODO: create an adapter
     def render_GET(self, request):
-        instance_output = [
-            self.get_instance_data(instance)
-            for instance in self._service.instances
-        ]
-
-        output = {
-            'name':         self._service.name,
-            'state':        self._service.state.name.upper(),
-            'count':        self._service.count,
-            'command':      self._service.command,
-            'instances':    instance_output,
-            'node_pool':    [n.hostname for n in self._service.node_pool.nodes]
-        }
-        return respond(request, output)
+        return respond(request, adapter.ServiceAdapter(self.service).get_repr())
 
     def render_POST(self, request):
-        cmd = requestargs.get_string(request, 'command')
-        log.info("Handling '%s' request on service %s",
-                 cmd, self._service.name)
-
-        if cmd == 'stop':
-            self._service.stop()
-            return respond(request, {'result': "Service stopping"})
-
-        if cmd == 'zap':
-            self._service.zap()
-            return respond(request, {'result': "Service zapped"})
-
-        if cmd == 'start':
-            try:
-                self._service.start()
-            except service.InvalidStateError:
-                msg = ("Failed to start: Service is already %s" %
-                       self._service.state)
-                return respond(request, {'result': msg})
-
-            return respond(request, {'result': "Service starting"})
-
-        log.warning("Unknown request command %s for service %s",
-                    cmd, self._service.name)
-        return respond(request, None, code=http.NOT_IMPLEMENTED)
+        return handle_command(request, self.controller, self.service)
 
 
-class ServicesResource(resource.Resource):
-    """Resource for all our daemon's services"""
+class ServiceCollectionResource(resource.Resource):
+    """Resource for ServiceCollection."""
 
-    def __init__(self, master_control):
-        self._master_control = master_control
+    def __init__(self, service_collection):
+        self.collection = service_collection
         resource.Resource.__init__(self)
 
-    def getChild(self, name, request):
+    def getChild(self, name, _):
         if name == '':
             return self
 
-        found = self._master_control.services.get(name)
-        if found is None:
+        service = self.collection.get_by_name(name)
+        if service is None:
             return resource.NoResource("Cannot find service '%s'" % name)
 
-        return ServiceResource(found, self._master_control)
+        return ServiceResource(service)
 
     def get_data(self):
-        service_list = []
-        for current_service in self._master_control.services.itervalues():
-            try:
-                status = current_service.state.name.upper()
-            except Exception, e:
-                log.error("Unexpected service state: %s" % e)
-                status = "BROKEN"
-            try:
-                count = current_service.count
-            except Exception, e:
-                log.error("Unexpected service count: %s" % e)
-                count = -1
-
-            service_desc = {
-                'name': current_service.name,
-                'count': count,
-                'href': "/services/%s" % urllib.quote(current_service.name),
-                'status': status,
-            }
-            service_list.append(service_desc)
-
-        return service_list
+        return adapter.adapt_many(adapter.ServiceAdapter, self.collection)
 
     def render_GET(self, request):
-        request.setHeader("content-type", "text/json")
         return respond(request, dict(services=self.get_data()))
 
 
@@ -433,6 +255,9 @@ class ConfigResource(resource.Resource):
         self.controller = controller.ConfigController(master_control)
         resource.Resource.__init__(self)
 
+    def get_namespaces(self):
+        return self.controller.get_namespaces()
+
     def render_GET(self, request):
         config_name = requestargs.get_string(request, 'name')
         if not config_name:
@@ -440,16 +265,15 @@ class ConfigResource(resource.Resource):
         return respond(request, self.controller.read_config(config_name))
 
     def render_POST(self, request):
-        log.info("Handling reconfigure request")
         config_content = requestargs.get_string(request, 'config')
-        config_name = requestargs.get_string(request, 'name')
+        name = requestargs.get_string(request, 'name')
         config_hash = requestargs.get_string(request, 'hash')
-        if not config_name:
+        log.info("Handling reconfigure request: %s, %s" % (name, config_hash))
+        if not name:
             return respond(request, {'error': "'name' for config is required."})
 
         response = {'status': "Active"}
-        error = self.controller.update_config(
-            config_name, config_content, config_hash)
+        error = self.controller.update_config(name, config_content, config_hash)
         if error:
             response['error'] = error
         return respond(request, response)
@@ -471,60 +295,47 @@ class EventResource(resource.Resource):
 
     isLeaf = True
 
-    def __init__(self, recordable):
+    def __init__(self, entity_name):
         resource.Resource.__init__(self)
-        self._recordable = recordable
+        self.entity_name = entity_name
 
     def render_GET(self, request):
-        response_data = []
-
-        recorder = event.EventManager.get_instance().get(self._recordable)
-        if not recorder:
-            return respond(request, dict(data=[]))
-
-        for evt in recorder.list():
-            entity_desc = "UNKNOWN" if not evt.entity else str(evt.entity)
-            response_data.append({
-                'level':        evt.level,
-                'name':         evt.name,
-                'entity':       entity_desc,
-                'time':         evt.time
-            })
+        recorder      = event.get_recorder(self.entity_name)
+        response_data = adapter.adapt_many(adapter.EventAdapter, recorder.list())
         return respond(request, dict(data=response_data))
 
 
 class RootResource(resource.Resource):
-    def __init__(self, master_control):
-        self._master_control = master_control
+    def __init__(self, mcp):
+        self._master_control = mcp
         resource.Resource.__init__(self)
 
         # Setup children
-        self.putChild('jobs',       JobsResource(master_control))
-        self.putChild('services',   ServicesResource(master_control))
-        self.putChild('config',     ConfigResource(master_control))
-        self.putChild('status',     StatusResource(master_control))
-        self.putChild('events',     EventResource(master_control))
+        self.putChild('jobs',     JobCollectionResource(mcp.get_job_collection()))
+        self.putChild('services', ServiceCollectionResource(mcp.get_service_collection()))
+        self.putChild('config',   ConfigResource(mcp))
+        self.putChild('status',   StatusResource(mcp))
+        self.putChild('events',   EventResource(''))
 
     def getChild(self, name, request):
         if name == '':
             return self
         return resource.Resource.getChild(self, name, request)
 
+    def urls_from_child(self, child_name):
+        def name_url_dict(source):
+            return dict((i['name'], i['url']) for i in source)
+        return name_url_dict(self.children[child_name].get_data())
+
     def render_GET(self, request):
-        request.setHeader("content-type", "text/json")
-
-        # We're going to load a big response with a bunch of stuff we know
-        # about this tron instance
-
-        jobs_resource = self.children["jobs"]
-        services_resource = self.children["services"]
-
+        """Return an index of urls for resources."""
         response = {
-            'jobs':             jobs_resource.get_data(),
-            'jobs_href':        request.uri + request.childLink('jobs'),
-            'services':         services_resource.get_data(),
-            'services_href':    request.uri + request.childLink('services'),
-            'config_href':      request.uri + request.childLink('config'),
-            'status_href':      request.uri + request.childLink('status'),
+            'jobs':             self.urls_from_child('jobs'),
+            'services':         self.urls_from_child('services'),
+            'jobs_url':         request.uri + request.childLink('jobs'),
+            'services_url':     request.uri + request.childLink('services'),
+            'config_url':       request.uri + request.childLink('config'),
+            'status_url':       request.uri + request.childLink('status'),
+            'namespaces':       self.children['config'].get_namespaces()
         }
         return respond(request, response)

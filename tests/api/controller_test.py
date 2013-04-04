@@ -4,33 +4,150 @@ from testify import setup, TestCase, run, assert_equal
 from testify.assertions import assert_in
 from tests.testingutils import autospec_method
 from tron import mcp
+from tron.api import controller
 
-from tron.api.controller import JobController, ConfigController
+from tron.api.controller import JobCollectionController, ConfigController
 from tron.config import ConfigError, manager, config_parse
-from tron.core import job
+from tron.core import job, service, jobrun, actionrun
+
+
+class JobCollectionControllerTestCase(TestCase):
+
+    @setup
+    def setup_controller(self):
+        self.collection     = mock.create_autospec(job.JobCollection,
+                                enable=mock.Mock(), disable=mock.Mock())
+        self.controller     = JobCollectionController(self.collection)
+
+    def test_handle_command_enabled(self):
+        self.controller.handle_command('enableall')
+        self.collection.enable.assert_called_with()
+
+    def test_handle_command_disable(self):
+        self.controller.handle_command('disableall')
+        self.collection.disable.assert_called_with()
+
+
+class ActionRunControllerTestCase(TestCase):
+
+    @setup
+    def setup_controller(self):
+        self.action_run = mock.create_autospec(actionrun.ActionRun,
+            cancel=mock.Mock())
+        self.job_run = mock.create_autospec(jobrun.JobRun)
+        self.job_run.is_scheduled = False
+        self.controller = controller.ActionRunController(
+            self.action_run, self.job_run)
+
+    def test_handle_command_start_failed(self):
+        self.job_run.is_scheduled = True
+        result = self.controller.handle_command('start')
+        assert not self.action_run.start.mock_calls
+        assert_in("can not be started", result)
+
+    def test_handle_command_mapped_command(self):
+        result = self.controller.handle_command('cancel')
+        self.action_run.cancel.assert_called_with()
+        assert_in("now in state", result)
+
+    def test_handle_command_mapped_command_failed(self):
+        self.action_run.cancel.return_value = False
+        result = self.controller.handle_command('cancel')
+        self.action_run.cancel.assert_called_with()
+        assert_in("Failed to cancel", result)
+
+
+class JobRunControllerTestCase(TestCase):
+
+    @setup
+    def setup_controller(self):
+        self.job_run = mock.create_autospec(jobrun.JobRun,
+            run_time=mock.Mock(), cancel=mock.Mock())
+        self.job_scheduler = mock.create_autospec(job.JobScheduler)
+        self.controller = controller.JobRunController(
+            self.job_run, self.job_scheduler)
+
+    def test_handle_command_restart(self):
+        self.controller.handle_command('restart')
+        self.job_scheduler.manual_start.assert_called_with(self.job_run.run_time)
+
+    def test_handle_mapped_command(self):
+        result = self.controller.handle_command('start')
+        self.job_run.start.assert_called_with()
+        assert_in('now in state', result)
+
+    def test_handle_mapped_command_failure(self):
+        self.job_run.cancel.return_value = False
+        result = self.controller.handle_command('cancel')
+        self.job_run.cancel.assert_called_with()
+        assert_in('Failed to cancel', result)
 
 
 class JobControllerTestCase(TestCase):
 
     @setup
     def setup_controller(self):
-        self.jobs           = [mock.create_autospec(job.JobScheduler)]
-        self.mcp            = mock.create_autospec(mcp.MasterControlProgram)
-        self.controller     = JobController(self.mcp)
+        self.job_scheduler = mock.create_autospec(job.JobScheduler)
+        self.controller = controller.JobController(self.job_scheduler)
 
-    def test_disable_all(self):
-        self.mcp.get_jobs.return_value = self.jobs
-        self.controller.disable_all()
-        self.mcp.get_jobs.assert_called_with()
-        for job in self.jobs:
-            job.disable.assert_called_with()
+    def test_handle_command_enable(self):
+        self.controller.handle_command('enable')
+        self.job_scheduler.enable.assert_called_with()
 
-    def test_enable_all(self):
-        self.mcp.get_jobs.return_value = self.jobs
-        self.controller.enable_all()
-        self.mcp.get_jobs.assert_called_with()
-        for job in self.jobs:
-            job.enable.assert_called_with()
+    def test_handle_command_disable(self):
+        self.controller.handle_command('disable')
+        self.job_scheduler.disable.assert_called_with()
+
+    def test_handle_command_start(self):
+        run_time = mock.Mock()
+        self.controller.handle_command('start', run_time)
+        self.job_scheduler.manual_start.assert_called_with(run_time=run_time)
+
+
+class ServiceInstanceControllerTestCase(TestCase):
+
+    @setup
+    def setup_controller(self):
+        self.instance = mock.create_autospec(service.ServiceInstance)
+        self.controller = controller.ServiceInstanceController(self.instance)
+
+    def test_handle_command_stop(self):
+        response = self.controller.handle_command('stop')
+        self.instance.stop.assert_called_with()
+        assert_in("stopping", response)
+
+    def test_handle_command_stop_failure(self):
+        self.instance.stop.return_value = False
+        response = self.controller.handle_command('stop')
+        self.instance.stop.assert_called_with()
+        assert_in("Failed to stop", response)
+
+    def test_handle_command_start(self):
+        response = self.controller.handle_command('start')
+        self.instance.start.assert_called_with()
+        assert_in("starting", response)
+
+    def test_handle_command_start_failure(self):
+        self.instance.start.return_value = False
+        response = self.controller.handle_command('start')
+        self.instance.start.assert_called_with()
+        assert_in("Failed to start", response)
+
+
+class ServiceControllerTestCase(TestCase):
+
+    @setup
+    def setup_controller(self):
+        self.service = mock.create_autospec(service.Service)
+        self.controller = controller.ServiceController(self.service)
+
+    def test_handle_command_stop(self):
+        self.controller.handle_command('stop')
+        self.service.disable.assert_called_with()
+
+    def test_handle_command_start(self):
+        self.controller.handle_command('start')
+        self.service.enable.assert_called_with()
 
 
 class ConfigControllerTestCase(TestCase):
@@ -125,6 +242,11 @@ class ConfigControllerTestCase(TestCase):
         name, content, config_hash = None, mock.Mock(), mock.Mock()
         error = self.controller.update_config(name, content, config_hash)
         assert_equal(error, "Configuration has changed. Please try again.")
+
+    def test_get_namespaces(self):
+        result = self.controller.get_namespaces()
+        self.manager.get_namespaces.assert_called_with()
+        assert_equal(result, self.manager.get_namespaces.return_value)
 
 if __name__ == "__main__":
     run()

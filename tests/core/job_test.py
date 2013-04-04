@@ -1,10 +1,10 @@
 import datetime
 import mock
 
-from testify import setup, teardown, TestCase, run, assert_equal, assert_raises
+from testify import setup, teardown, TestCase, run, assert_equal
+from testify import setup_teardown
 from tests import mocks
-from tests.assertions import assert_length, assert_call
-from tests.mocks import MockNode
+from tests.assertions import assert_length, assert_call, assert_mock_calls
 from tests.testingutils import Turtle, autospec_method
 from tests import testingutils
 from tron import node, event
@@ -12,63 +12,24 @@ from tron.core import job, jobrun
 from tron.core.actionrun import ActionRun
 
 
-class JobContextTestCase(TestCase):
-
-    @setup
-    def setup_job(self):
-        self.last_success = mock.Mock(run_time=datetime.datetime(2012, 3, 14))
-        scheduler = mock.Mock()
-        run_collection = mock.Mock(last_success=self.last_success)
-        self.job = job.Job("jobname", scheduler, run_collection=run_collection)
-        self.context = job.JobContext(self.job)
-
-    def test_name(self):
-        assert_equal(self.context.name, self.job.name)
-
-    def test__getitem__last_success(self):
-        item = self.context["last_success:day-1"]
-        expected = (self.last_success.run_time - datetime.timedelta(days=1)).day
-        assert_equal(item, str(expected))
-
-        item = self.context["last_success:shortdate"]
-        assert_equal(item, "2012-03-14")
-
-    def test__getitem__last_success_bad_date_spec(self):
-        name = "last_success:beers-3"
-        assert_raises(KeyError, lambda: self.context[name])
-
-    def test__getitem__last_success_bad_date_name(self):
-        name = "first_success:shortdate-1"
-        assert_raises(KeyError, lambda: self.context[name])
-
-    def test__getitem__last_success_no_date_spec(self):
-        name = "last_success"
-        assert_raises(KeyError, lambda: self.context[name])
-
-    def test__getitem__missing(self):
-        assert_raises(KeyError, lambda: self.context['bogus'])
-
-
 class JobTestCase(TestCase):
 
-    @setup
+    @setup_teardown
     def setup_job(self):
         action_graph = mock.Mock(names=lambda: ['one', 'two'])
         scheduler = mock.Mock()
         run_collection = Turtle()
-        self.nodes = [MockNode("box1"), MockNode("box0")]
-        node_store = node.NodePoolStore.get_instance()
-        node_store.put(Turtle(name="thenodepool", nodes=self.nodes))
+        self.nodes = mock.create_autospec(node.NodePool)
 
-        self.job = job.Job("jobname", scheduler,
-                run_collection=run_collection, action_graph=action_graph,
-                node_pool=node_store.get('thenodepool'))
-        self.job.notify = mock.Mock()
-        self.job.watch = mock.Mock()
-
-    @teardown
-    def teardown_job(self):
-        node.NodePoolStore.get_instance().clear()
+        patcher = mock.patch('tron.core.job.node.NodePoolRepository')
+        with patcher as self.mock_node_repo:
+            self.job = job.Job("jobname", scheduler,
+                    run_collection=run_collection, action_graph=action_graph,
+                    node_pool=self.nodes)
+            autospec_method(self.job.notify)
+            autospec_method(self.job.watch)
+            self.job.event = mock.create_autospec(event.EventRecorder)
+            yield
 
     def test__init__(self):
         assert str(self.job.output_path).endswith(self.job.name)
@@ -95,7 +56,8 @@ class JobTestCase(TestCase):
 
         assert_equal(new_job.scheduler, scheduler)
         assert_equal(new_job.context.next, parent_context)
-        assert_equal(new_job.node_pool.nodes, self.nodes)
+        self.mock_node_repo.get_instance().get_by_name.assert_called_with(
+            job_config.node)
         assert_equal(new_job.enabled, True)
         assert new_job.action_graph
 
@@ -104,7 +66,7 @@ class JobTestCase(TestCase):
         self.job.update_from_job(other_job)
         assert_equal(self.job.name, 'otherjob')
         assert_equal(self.job.scheduler, 'scheduler')
-        self.job.notify.assert_called_with(self.job.EVENT_RECONFIGURED)
+        self.job.event.ok.assert_called_with('reconfigured')
 
     def test_status_disabled(self):
         self.job.enabled = False
@@ -141,14 +103,14 @@ class JobTestCase(TestCase):
         assert not self.job.enabled
         calls = [mock.call(job_runs[i]) for i in xrange(len(job_runs))]
         self.job.watch.assert_has_calls(calls)
-        self.job.notify.assert_called_with(self.job.EVENT_STATE_RESTORED)
+        self.job.event.ok.assert_called_with('restored')
 
     def test_build_new_runs(self):
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         runs = list(self.job.build_new_runs(run_time))
 
-        assert_call(self.job.node_pool.next, 0)
-        node = self.job.node_pool.next.returns[0]
+        self.job.node_pool.next.assert_called_with()
+        node = self.job.node_pool.next.return_value
         assert_call(self.job.runs.build_new_run,
                 0, self.job, run_time, node, manual=False)
         assert_length(runs, 1)
@@ -157,9 +119,11 @@ class JobTestCase(TestCase):
     def test_build_new_runs_all_nodes(self):
         self.job.all_nodes = True
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
+        node_count = 2
+        self.job.node_pool.nodes = [mock.Mock()] * node_count
         runs = list(self.job.build_new_runs(run_time))
 
-        assert_length(runs, 2)
+        assert_length(runs, node_count)
         for i in xrange(len(runs)):
             node = self.job.node_pool.nodes[i]
             assert_call(self.job.runs.build_new_run,
@@ -171,8 +135,8 @@ class JobTestCase(TestCase):
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         runs = list(self.job.build_new_runs(run_time, manual=True))
 
-        assert_call(self.job.node_pool.next, 0)
-        node = self.job.node_pool.next.returns[0]
+        self.job.node_pool.next.assert_called_with()
+        node = self.job.node_pool.next.return_value
         assert_length(runs, 1)
         assert_call(self.job.runs.build_new_run,
                 0, self.job, run_time, node, manual=True)
@@ -218,7 +182,7 @@ class JobSchedulerTestCase(TestCase):
         self.job_scheduler.job = Turtle(runs=run_collection)
         self.job_scheduler._set_callback = Turtle()
         state_data = 'state_data_token'
-        self.job_scheduler.restore_job_state(state_data)
+        self.job_scheduler.restore_state(state_data)
         assert_call(self.job_scheduler.job.restore_state, 0, state_data)
         assert_length(self.job_scheduler._set_callback.calls, 1)
         assert_call(self.job_scheduler._set_callback, 0, 'a')
@@ -408,9 +372,7 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
         self.manual_run.start.assert_called_once_with()
 
 
-class JobSchedulerScheduleTestCase(testingutils.MockReactorTestCase):
-
-    module_to_mock = job
+class JobSchedulerScheduleTestCase(TestCase):
 
     @setup
     def setup_job(self):
@@ -425,28 +387,34 @@ class JobSchedulerScheduleTestCase(testingutils.MockReactorTestCase):
         )
         self.job_scheduler = job.JobScheduler(self.job)
 
+    @setup_teardown
+    def mock_eventloop(self):
+        patcher = mock.patch('tron.core.job.eventloop', autospec=True)
+        with patcher as self.eventloop:
+            yield
+
     @teardown
     def teardown_job(self):
-        event.EventManager.get_instance().clear()
+        event.EventManager.reset()
 
     def test_enable(self):
         self.job.enabled = False
         self.job_scheduler.enable()
         assert self.job.enabled
-        assert_length(self.reactor.callLater.calls, 1)
+        assert_length(self.eventloop.call_later.mock_calls, 1)
 
     def test_enable_noop(self):
         self.job.enalbed = True
         self.job_scheduler.enable()
         assert self.job.enabled
-        assert_length(self.reactor.callLater.calls, 0)
+        assert_length(self.eventloop.call_later.mock_calls, 0)
 
     def test_schedule(self):
         self.job_scheduler.schedule()
-        assert_length(self.reactor.callLater.calls, 1)
+        assert_length(self.eventloop.call_later.mock_calls, 1)
 
         # Args passed to callLater
-        call_args = self.reactor.callLater.calls[0][0]
+        call_args = self.eventloop.call_later.mock_calls[0][1]
         assert_equal(call_args[1], self.job_scheduler.run_job)
         secs = call_args[0]
         run = call_args[2]
@@ -458,7 +426,7 @@ class JobSchedulerScheduleTestCase(testingutils.MockReactorTestCase):
     def test_schedule_disabled_job(self):
         self.job.enabled = False
         self.job_scheduler.schedule()
-        assert_length(self.reactor.callLater.calls, 0)
+        assert_length(self.eventloop.call_later.mock_calls, 0)
 
     def test_handle_job_events_no_schedule_on_complete(self):
         self.job_scheduler.run_job = mock.Mock()
@@ -466,7 +434,7 @@ class JobSchedulerScheduleTestCase(testingutils.MockReactorTestCase):
         queued_job_run = mock.Mock()
         self.job.runs.get_first_queued = lambda: queued_job_run
         self.job_scheduler.handle_job_events(self.job, job.Job.NOTIFY_RUN_DONE)
-        assert_call(self.reactor.callLater, 0, 0,
+        self.eventloop.call_later.assert_any_call(0,
             self.job_scheduler.run_job, queued_job_run, run_queued=True)
 
     def test_handle_job_events_schedule_on_complete(self):
@@ -488,6 +456,62 @@ class JobSchedulerScheduleTestCase(testingutils.MockReactorTestCase):
         self.job.runs.get_runs_by_state = get_queued
         self.job_scheduler.handler(self.job, job.Job.NOTIFY_RUN_DONE)
         self.job_scheduler.run_job.assert_not_called()
+
+
+class JobSchedulerFactoryTestCase(TestCase):
+
+    @setup
+    def setup_factory(self):
+        self.context = mock.Mock()
+        self.output_stream_dir = mock.Mock()
+        self.time_zone = mock.Mock()
+        self.factory = job.JobSchedulerFactory(
+            self.context, self.output_stream_dir, self.time_zone)
+
+    def test_build(self):
+        config = mock.Mock()
+        with mock.patch('tron.core.job.Job', autospec=True) as mock_job:
+            job_scheduler = self.factory.build(config)
+            args, _ = mock_job.from_config.call_args
+            job_config, scheduler, context, output_path = args
+            assert_equal(job_config, config)
+            assert_equal(job_scheduler.get_job(), mock_job.from_config.return_value)
+            assert_equal(context, self.context)
+            assert_equal(output_path.base, self.output_stream_dir)
+
+
+class JobCollectionTestCase(TestCase):
+
+    @setup
+    def setup_collection(self):
+        self.collection = job.JobCollection()
+
+    def test_load_from_config(self):
+        autospec_method(self.collection.jobs.filter_by_name)
+        autospec_method(self.collection.add)
+        factory = mock.create_autospec(job.JobSchedulerFactory)
+        job_configs = {'a': mock.Mock(), 'b': mock.Mock()}
+        result = self.collection.load_from_config(job_configs, factory, True)
+        result = list(result)
+        self.collection.jobs.filter_by_name.assert_called_with(job_configs)
+        expected_calls = [mock.call(v) for v in job_configs.itervalues()]
+        assert_mock_calls(expected_calls, factory.build.mock_calls)
+        assert_length(self.collection.add.mock_calls, len(job_configs) * 2)
+        assert_length(result, len(job_configs))
+        job_schedulers = [call[1][0] for call in self.collection.add.mock_calls[::2]]
+        for job_scheduler in job_schedulers:
+            job_scheduler.schedule.assert_called_with()
+            job_scheduler.get_job.assert_called_with()
+
+    def test_update(self):
+        mock_scheduler = mock.create_autospec(job.JobScheduler)
+        existing_scheduler = mock.create_autospec(job.JobScheduler)
+        autospec_method(self.collection.get_by_name, return_value=existing_scheduler)
+        assert self.collection.update(mock_scheduler)
+        self.collection.get_by_name.assert_called_with(mock_scheduler.get_name())
+        existing_scheduler.get_job().update_from_job.assert_called_with(
+            mock_scheduler.get_job.return_value)
+        existing_scheduler.schedule_reconfigured.assert_called_with()
 
 
 if __name__ == '__main__':

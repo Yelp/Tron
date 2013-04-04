@@ -29,13 +29,19 @@ class Observable(object):
 
     def clear_observers(self, watch_spec=None):
         """Remove all observers for a given watch_spec. Removes all
-        observers if listen_spec is None.
+        observers if listen_spec is None
         """
         if watch_spec is None or watch_spec is True:
             self._observers.clear()
             return
 
         del self._observers[watch_spec]
+
+    def remove_observer(self, observer):
+        """Remove an observer from all watch_specs."""
+        for observers in self._observers.values():
+            if observer in observers:
+                observers.remove(observer)
 
     def _get_handlers_for_event(self, event):
         """Returns the complete list of handlers for the event."""
@@ -58,6 +64,13 @@ class Observer(object):
         """Adds this Observer as a watcher of the observable."""
         observable.attach(event, self)
 
+    def watch_all(self, observables, event=True):
+        for observable in observables:
+            self.watch(observable, event)
+
     def handler(self, observable, event):
         """Override this method to call a method to handle events."""
         pass
+
+    def stop_watching(self, observable):
+        observable.remove_observer(self)

@@ -1,6 +1,7 @@
 import datetime
 import shutil
 import tempfile
+import mock
 
 from testify import run, setup, TestCase, assert_equal, turtle, teardown
 from testify.assertions import assert_raises, assert_in
@@ -11,34 +12,9 @@ from tests.testingutils import Turtle
 
 from tron import node
 from tron.core import jobrun, actiongraph
-from tron.core.actionrun import ActionCommand, ActionRunContext, ActionRun
+from tron.core.actionrun import ActionCommand, ActionRun
 from tron.core.actionrun import ActionRunCollection, ActionRunFactory
-from tron.core.actionrun import InvalidStartStateError
 from tron.serialize import filehandler
-from tron.utils import timeutils
-
-class ActionRunContextTestCase(testingutils.MockTimeTestCase):
-
-    now = datetime.datetime.now()
-
-    @setup
-    def build_context(self):
-        action_run = turtle.Turtle(
-            node=turtle.Turtle(hostname="nodename"),
-            job_run_time=self.now,
-            job_run_id='job_run_id'
-        )
-        self.context = ActionRunContext(action_run)
-
-    def test_runid(self):
-        assert_equal(self.context.runid, 'job_run_id')
-
-    def test_daynumber(self):
-        daynum = self.now.toordinal()
-        assert_equal(self.context['daynumber'], daynum)
-
-    def test_node_hostname(self):
-        assert_equal(self.context.node, 'nodename')
 
 
 class ActionRunFactoryTestCase(TestCase):
@@ -92,8 +68,6 @@ class ActionRunFactoryTestCase(TestCase):
         assert_length(collection.run_map, 2)
         assert_equal(collection.run_map['act1'].action_name, 'act1')
         assert_equal(collection.run_map['cleanup'].action_name, 'cleanup')
-        assert_equal(collection.run_map['act1'].job_run_time,
-                self.action_state_data['run_time'])
 
     def test_build_run_for_action(self):
         action = Turtle(
@@ -101,7 +75,6 @@ class ActionRunFactoryTestCase(TestCase):
         action_run = ActionRunFactory.build_run_for_action(self.job_run, action)
 
         assert_equal(action_run.job_run_id, self.job_run.id)
-        assert_equal(action_run.job_run_time, self.run_time)
         assert_equal(action_run.node, self.job_run.node)
         assert_equal(action_run.action_name, action.name)
         assert not action_run.is_cleanup
@@ -112,7 +85,6 @@ class ActionRunFactoryTestCase(TestCase):
         action_run = ActionRunFactory.build_run_for_action(self.job_run, action)
 
         assert_equal(action_run.job_run_id, self.job_run.id)
-        assert_equal(action_run.job_run_time, self.run_time)
         assert_equal(action_run.node, action.node_pool.next.returns[0])
         assert action_run.is_cleanup
         assert_equal(action_run.action_name, action.name)
@@ -124,7 +96,6 @@ class ActionRunFactoryTestCase(TestCase):
                 self.job_run, state_data)
 
         assert_equal(action_run.job_run_id, state_data['job_run_id'])
-        assert_equal(action_run.job_run_time, state_data['run_time'])
         assert not action_run.is_cleanup
 
 
@@ -140,7 +111,6 @@ class ActionRunTestCase(TestCase):
                 "id",
                 "action_name",
                 anode,
-                timeutils.current_time(),
                 self.command,
                 output_path=self.output_path)
 
@@ -159,12 +129,12 @@ class ActionRunTestCase(TestCase):
 
     def test_start_bad_state(self):
         self.action_run.fail()
-        assert_raises(InvalidStartStateError, self.action_run.start)
+        assert not self.action_run.start()
 
     def test_start_invalid_command(self):
         self.action_run.bare_command = "%(notfound)s"
         self.action_run.machine.transition('ready')
-        assert self.action_run.start()
+        assert not self.action_run.start()
         assert self.action_run.is_failed
         assert_equal(self.action_run.exit_status, -1)
 
@@ -173,7 +143,7 @@ class ActionRunTestCase(TestCase):
             raise node.Error("The error")
         self.action_run.node = turtle.Turtle(submit_command=raise_error)
         self.action_run.machine.transition('ready')
-        assert self.action_run.start()
+        assert not self.action_run.start()
         assert_equal(self.action_run.exit_status, -2)
         assert self.action_run.is_failed
 
@@ -343,7 +313,6 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             'job_run_id':       'theid',
             'action_name':      'theaction',
             'node_name':        'anode',
-            'run_time':         'run_time',
             'command':          'do things',
             'start_time':       'start_time',
             'end_time':         'end_time',
@@ -359,8 +328,6 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         for key, value in self.state_data.iteritems():
             if key in ['state', 'node_name']:
                 continue
-            if key == 'run_time':
-                key = 'job_run_time'
             assert_equal(getattr(action_run, key), value)
 
         assert action_run.is_succeeded
@@ -388,16 +355,12 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
                 self.parent_context, self.output_path, self.run_node)
         assert_equal(action_run.node, self.run_node)
 
-    def test_from_state_with_node_exists(self):
-        anode = turtle.Turtle(name="anode", hostname="box")
-        node_store = node.NodePoolStore.get_instance()
-        node_store.put(anode)
-
-        action_run = ActionRun.from_state(self.state_data,
+    @mock.patch('tron.core.actionrun.node.NodePoolRepository')
+    def test_from_state_with_node_exists(self, mock_store):
+        ActionRun.from_state(self.state_data,
                 self.parent_context, self.output_path, self.run_node)
-
-        assert_equal(action_run.node, anode)
-        node_store.clear()
+        mock_store.get_instance().get_node.assert_called_with(
+            self.state_data['node_name'], self.run_node)
 
     def test_from_state_before_rendered_command(self):
         self.state_data['command'] = 'do things %(actionname)s'
@@ -427,8 +390,8 @@ class ActionRunCollectionTestCase(TestCase):
 
     def _build_run(self, name):
         anode = Turtle()
-        return ActionRun("id", name, anode, timeutils.current_time(),
-            self.command, output_path=self.output_path)
+        return ActionRun("id", name, anode, self.command,
+            output_path=self.output_path)
 
     @setup
     def setup_runs(self):
@@ -567,8 +530,8 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
 
     def _build_run(self, name):
         anode = Turtle()
-        return ActionRun("id", name, anode, timeutils.current_time(),
-            self.command, output_path=self.output_path)
+        return ActionRun("id", name, anode, self.command,
+            output_path=self.output_path)
 
     @setup
     def setup_collection(self):

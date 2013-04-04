@@ -9,7 +9,7 @@ import sys
 import tron
 from tron import commands
 from tron import trondaemon
-from tron.config import manager, schema
+from tron.config import manager
 
 
 DEFAULT_CONF                = 'default_config.yaml'

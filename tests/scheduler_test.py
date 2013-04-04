@@ -8,8 +8,9 @@ from testify import assert_gte, assert_lte, assert_gt, assert_lt
 from tests import testingutils
 
 from tron import scheduler
-from tron.config import schedule_parse
-from tron.config.schedule_parse import parse_daily_expression as parse_daily
+from tron.config import schedule_parse, config_utils
+from tron.config.config_utils import NullConfigContext
+from tron.config.schedule_parse import parse_groc_expression
 from tron.utils import timeutils
 
 
@@ -17,11 +18,28 @@ class SchedulerFromConfigTestCase(TestCase):
 
     def test_cron_scheduler(self):
         line = "cron */5 * * 7,8 *"
-        config = schedule_parse.valid_schedule('test', line)
+        config_context = mock.Mock(path='test')
+        config = schedule_parse.valid_schedule(line, config_context)
         sched = scheduler.scheduler_from_config(config, mock.Mock())
         start_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         next_time = sched.next_run_time(start_time)
         assert_equal(next_time, datetime.datetime(2012, 7, 1, 0))
+        assert_equal(str(sched), "CRON */5 * * 7,8 *")
+
+    def test_daily_scheduler(self):
+        config_context = config_utils.NullConfigContext
+        line = "daily 17:32 MWF"
+        config = schedule_parse.valid_schedule(line, config_context)
+        sched = scheduler.scheduler_from_config(config, mock.Mock())
+        assert_equal(sched.time_spec.hours, [17])
+        assert_equal(sched.time_spec.minutes, [32])
+        start_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
+        for day in [14, 16, 19]:
+            next_time = sched.next_run_time(start_time)
+            assert_equal(next_time, datetime.datetime(2012, 3, day, 17, 32))
+            start_time = next_time
+
+        assert_equal(str(sched), "DAILY 17:32 MWF")
 
 
 class ConstantSchedulerTest(testingutils.MockTimeTestCase):
@@ -200,22 +218,30 @@ class GrocSchedulerDSTTest(testingutils.MockTimeTestCase):
         self._assert_range(s1a - s2a, -0.61, -0.59)
 
 
+def parse_groc(config):
+    return parse_groc_expression(config, NullConfigContext)
+
+def scheduler_from_config(config):
+    return scheduler.scheduler_from_config(parse_groc(config), None)
+
+
 class ComplexParserTest(testingutils.MockTimeTestCase):
 
     now = datetime.datetime(2011, 6, 1)
 
     def test_parse_all(self):
-        cfg = parse_daily('1st,2nd,3rd,4th monday,Tue of march,apr,September at 00:00')
+        config_string = '1st,2nd,3rd,4th monday,Tue of march,apr,September at 00:00'
+        cfg = parse_groc(config_string)
         assert_equal(cfg.ordinals, set((1, 2, 3, 4)))
         assert_equal(cfg.monthdays, None)
         assert_equal(cfg.weekdays, set((1, 2)))
         assert_equal(cfg.months, set((3, 4, 9)))
         assert_equal(cfg.timestr, '00:00')
-        assert_equal(scheduler.GeneralScheduler(**cfg._asdict()),
-                     scheduler.GeneralScheduler(**cfg._asdict()))
+        assert_equal(scheduler_from_config(config_string),
+                     scheduler_from_config(config_string))
 
     def test_parse_no_weekday(self):
-        cfg = parse_daily('1st,2nd,3rd,10th day of march,apr,September at 00:00')
+        cfg = parse_groc('1st,2nd,3rd,10th day of march,apr,September at 00:00')
         assert_equal(cfg.ordinals, None)
         assert_equal(cfg.monthdays, set((1,2,3,10)))
         assert_equal(cfg.weekdays, None)
@@ -223,7 +249,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         assert_equal(cfg.timestr, '00:00')
 
     def test_parse_no_month(self):
-        cfg = parse_daily('1st,2nd,3rd,10th day at 00:00')
+        cfg = parse_groc('1st,2nd,3rd,10th day at 00:00')
         assert_equal(cfg.ordinals, None)
         assert_equal(cfg.monthdays, set((1,2,3,10)))
         assert_equal(cfg.weekdays, None)
@@ -232,7 +258,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
 
     def test_parse_monthly(self):
         for test_str in ('1st day', '1st day of month'):
-            cfg = parse_daily(test_str)
+            cfg = parse_groc(test_str)
             assert_equal(cfg.ordinals, None)
             assert_equal(cfg.monthdays, set([1]))
             assert_equal(cfg.weekdays, None)
@@ -240,7 +266,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
             assert_equal(cfg.timestr, '00:00')
 
     def test_wildcards(self):
-        cfg = parse_daily('every day')
+        cfg = parse_groc('every day')
         assert_equal(cfg.ordinals, None)
         assert_equal(cfg.monthdays, None)
         assert_equal(cfg.weekdays, None)
@@ -248,8 +274,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         assert_equal(cfg.timestr, '00:00')
 
     def test_daily(self):
-        cfg = parse_daily('every day')
-        sch = scheduler.GeneralScheduler(**cfg._asdict())
+        sch = scheduler_from_config('every day')
         next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.now)
@@ -258,8 +283,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         assert_equal(next_run_date.hour, 0)
 
     def test_daily_with_time(self):
-        cfg = parse_daily('every day at 02:00')
-        sch = scheduler.GeneralScheduler(**cfg._asdict())
+        sch = scheduler_from_config('every day at 02:00')
         next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.now)
@@ -270,8 +294,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         assert_equal(next_run_date.minute, 0)
 
     def test_weekly(self):
-        cfg = parse_daily('every monday at 01:00')
-        sch = scheduler.GeneralScheduler(**cfg._asdict())
+        sch = scheduler_from_config('every monday at 01:00')
         next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.now)
@@ -280,8 +303,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
                                       next_run_date.day), 0)
 
     def test_weekly_in_month(self):
-        cfg = parse_daily('every monday of january at 00:01')
-        sch = scheduler.GeneralScheduler(**cfg._asdict())
+        sch = scheduler_from_config('every monday of january at 00:01')
         next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.now)
@@ -294,8 +316,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
                                       next_run_date.day), 0)
 
     def test_monthly(self):
-        cfg = parse_daily('1st day')
-        sch = scheduler.GeneralScheduler(**cfg._asdict())
+        sch = scheduler_from_config('1st day')
         next_run_date = sch.next_run_time(None)
 
         assert_gt(next_run_date, self.now)
@@ -316,7 +337,7 @@ class IntervalSchedulerTest(testingutils.MockTimeTestCase):
         assert_equal(self.now + self.interval, run_time)
 
     def test__str__(self):
-        assert_equal(str(self.scheduler), "INTERVAL:%s" % self.interval)
+        assert_equal(str(self.scheduler), "INTERVAL %s" % self.interval)
 
 
 if __name__ == '__main__':

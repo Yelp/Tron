@@ -1,8 +1,8 @@
 """
 Format and color output for tron commands.
 """
+from functools import partial
 from operator import itemgetter
-import os
 
 
 class Color(object):
@@ -10,19 +10,20 @@ class Color(object):
     enabled = None
     colors = {
         'gray':                 '\033[90m',
-        'cyan':                 '\033[91m',
+        'red':                  '\033[91m',
         'green':                '\033[92m',
         'yellow':               '\033[93m',
         'blue':                 '\033[94m',
-        'red':                  '\033[91m',
+        'purple':               '\033[95m',
+        'cyan':                 '\033[96m',
         'white':                '\033[99m',
         # h is for highlighted
         'hgray':                '\033[100m',
-        'hcyan':                '\033[101m',
+        'hred':                 '\033[101m',
         'hgreen':               '\033[102m',
         'hyellow':              '\033[103m',
         'hblue':                '\033[104m',
-        'hred':                 '\033[106m',
+        'hcyan':                '\033[106m',
         'end':                  '\033[0m',
     }
 
@@ -62,23 +63,13 @@ class TableDisplay(object):
     widths = None
     colors = None
     title = None
+    resize_fields = set()
 
     header_color = 'hgray'
-
-    @property
-    def max_first_col_width(self):
-        return max(self.num_cols - sum(self.widths[1:]), 10)
 
     def __init__(self, options=None):
         self.out = []
         self.options = options
-        self.num_cols = self.console_width()
-
-    def console_width(self):
-        console_sizes = os.popen('stty size', 'r').read().split()
-        if not console_sizes or len(console_sizes) != 2:
-            return 80
-        return int(console_sizes[1])
 
     def banner(self):
         if not self.title:
@@ -89,13 +80,9 @@ class TableDisplay(object):
             self.out.append("No %s\n" % title)
 
     def header(self):
-        row = [
-            self.format_header(i, label)
-            for i, label in enumerate(self.columns)
-        ]
-        self.out.append(
-            Color.set(self.header_color, "".join(row))
-        )
+        row = [label.ljust(self.get_field_width(i))
+               for i, label in enumerate(self.columns)]
+        self.out.append(Color.set(self.header_color, "".join(row)))
 
     def footer(self):
         pass
@@ -107,34 +94,24 @@ class TableDisplay(object):
         return [values[name] for name in self.fields]
 
     def format_row(self, fields):
-        row = []
-        for i, value in enumerate(self.sorted_fields(fields)):
-            row.append(
-                Color.set(self.color(i, value), self.format_value(i, value))
-            )
+        row = [
+            Color.set(self.color(i, value), self.trim_value(i, value))
+            for i, value in enumerate(self.sorted_fields(fields))
+        ]
         return Color.set(self.row_color(fields), "".join(row))
 
-    def format_value(self, field, value):
-        length = self.widths[field]
-        value = unicode(value)
+    def get_field_width(self, field_idx):
+        return self.widths[field_idx]
+
+    def trim_value(self, field_idx, value):
+        length = self.get_field_width(field_idx)
+        value = self.format_value(field_idx, value)
         if len(value) > length:
             return (value[:length - 3] + '...').ljust(length)
         return value.ljust(length)
 
-    format_header = format_value
-
-    def calculate_col_widths(self):
-        padding = 3
-        label_width = len(self.columns[0]) + 1
-        if not self.data:
-            max_name_width = 1
-        else:
-            max_name_width = max(len(item[self.fields[0]]) for item in self.data)
-            max_name_width += padding
-        self.widths[0] = min(
-            self.max_first_col_width,
-            max(label_width, max_name_width)
-        )
+    def format_value(self, field_idx, value):
+        return unicode(value)
 
     def output(self):
         out = "\n".join(self.out)
@@ -153,11 +130,27 @@ class TableDisplay(object):
     def store_data(self, data):
         self.data = data
 
+    def update_column_widths(self):
+        """Update column widths to fit the data."""
+        for field_idx, field in enumerate(self.fields):
+            if field in self.resize_fields:
+                self.widths[field_idx] = self.calculate_width(field_idx)
+
+    def calculate_width(self, field_idx):
+        default_width = self.widths[field_idx]
+        column = [
+            self.format_value(field_idx, row[self.fields[field_idx]])
+            for row in self.data]
+        if not column:
+            return default_width
+        max_value_width = max(len(value) for value in column)
+        return max(max_value_width + 1, default_width)
+
     def format(self, data):
         self.store_data(data)
+        self.update_column_widths()
         self.banner()
 
-        self.calculate_col_widths()
         if not self.rows():
             return self.output()
 
@@ -170,31 +163,120 @@ class TableDisplay(object):
         return self.output()
 
 
+def add_color_for_state(state):
+    if state.upper() in ('FAILED', 'FAIL'):
+        return Color.set('red', state)
+    if state.upper() in ('UP', 'ENABLED', 'RUNNING', 'SUCC'):
+        return Color.set('green', state)
+    if state.upper() in ('DISABLED', 'DOWN'):
+        return Color.set('blue', state)
+    return state
+
+
+def format_fields(display_obj, content):
+    """Format fields with some color."""
+    def add_color(field, field_value):
+        if field not in display_obj.colors:
+            return field_value
+        return display_obj.colors[field](field_value)
+
+    def build_field(label, field):
+        field_value = '' if content[field] is None else content[field]
+        return "%-20s: %s" % (label, add_color(field, field_value))
+
+    return "\n".join(build_field(*item) for item in display_obj.detail_labels)
+
+
+def format_service_details(service_content):
+    """Format details about a service."""
+
+    def format_instances(service_instances):
+        format_str = "    %s : %-30s %s%s"
+        def get_failure_messages(failures):
+            if not failures:
+                return ""
+            header = Color.set("red", "\n    stderr: ")
+            return header + Color.set("red", "\n".join(failures))
+
+        def format(inst):
+            state = add_color_for_state(inst['state'])
+            failures = get_failure_messages(inst['failures'])
+            return format_str % (inst['id'], inst['node'], state, failures)
+        return [format(instance) for instance in service_instances]
+
+    details     = format_fields(DisplayServices, service_content)
+    instances   = format_instances(service_content['instances'])
+    return details + '\n\nInstances:\n' + '\n'.join(instances)
+
+
+def format_job_details(job_content, options):
+    details = format_fields(DisplayJobs, job_content)
+    job_runs = DisplayJobRuns(options).format(job_content['runs'])
+    actions = "\n\nList of Actions:\n%s" % '\n'.join(job_content['action_names'])
+    return details + actions + "\n" + job_runs
+
+
+def format_action_run_details(content, stdout=True, stderr=True):
+    out = ["Requirements:"] + content['requirements'] + ['']
+    if stdout:
+        out.append("Stdout:\n%s\n" % '\n'.join(content['stdout']))
+
+    if stderr:
+        out.append("Stderr:\n%s\n" % '\n'.join(content['stderr']))
+
+    details = format_fields(DisplayActionRuns, content)
+    return details + '\n' + '\n'.join(out)
+
+
 class DisplayServices(TableDisplay):
 
-    columns = ['Name',  'State',    'Count' ]
-    fields  = ['name',  'status',   'count' ]
-    widths  = [None,    10,         10      ]
-    title = 'services'
+    columns = ['Name',  'State',    'Count'      ]
+    fields  = ['name',  'state',    'live_count' ]
+    widths  = [50,      12,          5           ]
+    title   = 'services'
+    resize_fields = ['name']
 
-    def format_details(self, service_content):
-        self.out = [
-            "Service: %s" % service_content['name'],
-            "State: %s" % service_content['state'],
-            "Instances: %r" % service_content['count'],
-        ] + [
-            "  %s : %s %s" % (serv['id'], serv['node'], serv['state'])
-            for serv in service_content['instances']
-        ]
-        return self.output()
+    detail_labels = [
+        ('Service',             'name'              ),
+        ('Enabled',             'enabled'           ),
+        ('State',               'state'             ),
+        ('Max instances',       'count'             ),
+        ('Command',             'command'           ),
+        ('Pid Filename',        'pid_filename'      ),
+        ('Node Pool',           'node_pool'         ),
+        ('Restart interval',    'restart_interval'  ),
+        ('Monitor interval',    'monitor_interval'  ),
+    ]
+
+    colors = {
+        'name':     partial(Color.set, 'yellow'),
+        'state':    add_color_for_state
+    }
+
 
 class DisplayJobRuns(TableDisplay):
     """Format Job runs."""
 
-    columns = ['Run ID', 'State',    'Node', 'Scheduled Time']
-    fields  = ['id',     'state',    'node', 'scheduled_time']
-    widths  = [None,     6,          20,     25              ]
+    columns = ['Run ID',    'State',    'Node', 'Scheduled Time']
+    fields  = ['run_num',   'state',    'node', 'run_time']
+    widths  = [10,          6,          30,     25              ]
     title = 'job runs'
+
+    detail_labels = [
+        ('Job Run',             'id'),
+        ('State',               'state'),
+        ('Node',                'node'),
+        ('Scheduled time',      'run_time'),
+        ('Start time',          'start_time'),
+        ('End time',            'end_time'),
+        ('Manual run',          'manual'),
+    ]
+
+    colors = {
+        'id':        partial(Color.set, 'yellow'),
+        'state':     add_color_for_state,
+        'manual':    lambda value: Color.set('cyan' if value else None, value),
+    }
 
     def rows(self):
         data_rows = self.data
@@ -203,18 +285,14 @@ class DisplayJobRuns(TableDisplay):
             data_rows = filter(warn_only_func, self.data)
         return data_rows[:self.options.num_displays]
 
-    def format_value(self, field, value):
-        if self.fields[field] == 'id':
-            value = '.' + '.'.join(value.split('.')[1:])
+    def format_value(self, field_idx, value):
+        if self.fields[field_idx] == 'run_num':
+            value = '.' + str(value)
 
-        return super(DisplayJobRuns, self).format_value(field, value)
+        if self.fields[field_idx] == 'scheduled_time':
+            value = value or '-'
 
-    def sorted_fields(self, values):
-        """Build constructed fields and return fields in order."""
-        run = values['run_time'] or "-"
-        values['scheduled_time'] = run
-
-        return [values[name] for name in self.fields]
+        return super(DisplayJobRuns, self).format_value(field_idx, value)
 
     def row_color(self, fields):
         return 'red' if fields['state'] == 'FAIL' else 'white'
@@ -225,12 +303,11 @@ class DisplayJobRuns(TableDisplay):
         duration = row['duration'][:-7] if row['duration'] else "-"
 
         row_data = "%sStart: %s  End: %s  (%s)" % (
-            ' ' * self.widths[0], start, end, duration
-        )
+            ' ' * self.widths[0], start, end, duration)
         self.out.append(Color.set('gray', row_data))
 
         if self.options.warn:
-            display_action = DisplayActions(self.options)
+            display_action = DisplayActionRuns(self.options)
             self.out.append(display_action.format(row))
 
 
@@ -238,74 +315,77 @@ class DisplayJobs(TableDisplay):
 
     columns = ['Name',  'State',    'Scheduler',    'Last Success']
     fields  = ['name',  'status',   'scheduler',    'last_success']
-    widths  = [None,    10,         20,             20            ]
+    widths  = [50,       10,         20,             20           ]
     title = 'jobs'
+    resize_fields = ['name']
 
-    def post_row(self, row):
-        if self.options.warn:
-            self.out.extend(self.do_format_job(row, True))
+    detail_labels = [
+        ('Job',                 'name'              ),
+        ('State',               'status'            ),
+        ('Scheduler',           'scheduler'         ),
+        ('Node Pool',           'node_pool'         ),
+        ('Run on all nodes',    'all_nodes'         ),
+        ('Allow overlapping',   'allow_overlap'     ),
+        ('Queue overlapping',   'queueing'          ),
+    ]
 
-    def format_job(self, job_details):
-        self.out = self.do_format_job(job_details)
-        return self.output()
-
-    def do_format_job(self, job_details, supress_preface=False):
-        out = []
-        if self.options.display_preface and not supress_preface:
-            out.extend([
-                job_details['name'] + ":",
-                "Scheduler: %s" % job_details['scheduler'],
-                "\nList of Actions (topological):",
-            ] + job_details['action_names'] + [
-                "\nNode Pool:"
-            ] + job_details['node_pool'] + [
-                "\nRun History: (%d total)" % len(job_details['runs'])
-            ])
-        job_runs = self.format_job_runs(job_details['runs'])
-        out.append(job_runs)
-        return out
-
-    def format_job_runs(self, runs):
-        return DisplayJobRuns(self.options).format(runs)
+    colors = {
+        'name':      partial(Color.set, 'yellow'),
+        'status':    add_color_for_state
+    }
 
 
-class DisplayActions(TableDisplay):
+class DisplayActionRuns(TableDisplay):
 
     columns = ['Action', 'State', 'Start Time', 'End Time', 'Duration']
     fields  = ['id',     'state', 'start_time', 'end_time', 'duration']
-    widths  = [None,     7,        22,          22,         10        ]
+    widths  = [40,         7,        22,          22,         10      ]
     title = 'actions'
+    resize_fields = ['id']
+
+    detail_labels = [
+        ('Action Run',          'id'),
+        ('State',               'state'),
+        ('Node',                'node'),
+        ('Command',             'command'),
+        ('Bare command',        'raw_command'),
+        ('Start time',          'start_time'),
+        ('End time',            'end_time'),
+        ('Exit status',         'exit_status'),
+    ]
+
+    colors = {
+        'id':           partial(Color.set, 'yellow'),
+        'state':        add_color_for_state,
+        'command':      partial(Color.set, 'gray'),
+    }
 
     def banner(self):
         if self.options.display_preface:
-            self.out.extend([
-                "Job Run: %s" % self.action['id'],
-                "State: %s" % self.action['state'],
-                "Node: %s" % self.action['node'],
-            ])
-        super(DisplayActions, self).banner()
+            self.out.append(format_fields(DisplayJobRuns, self.job_run))
+        super(DisplayActionRuns, self).banner()
 
     def footer(self):
         if len(self.rows()) < len(self.data) and not self.options.warn:
             self.out.append('...')
 
-    def format_value(self, field, value):
-        if self.fields[field] == 'id':
-            value = '.' + '.'.join(value.split('.')[2:])
-        if self.fields[field] in ('start_time', 'end_time'):
+    def format_value(self, field_idx, value):
+        if self.fields[field_idx] == 'id':
+            value = '.' + value.rsplit('.', 1)[-1]
+        if self.fields[field_idx] in ('start_time', 'end_time'):
             value = value or "-"
-        if self.fields[field] == 'duration':
+        if self.fields[field_idx] == 'duration':
             # Strip microseconds
             value = value[:-7] if value else "-"
 
-        return super(DisplayActions, self).format_value(field, value)
+        return super(DisplayActionRuns, self).format_value(field_idx, value)
 
     def row_color(self, fields):
         return 'red' if fields['state'] == 'FAIL' else 'white'
 
     def store_data(self, data):
         self.data = data['runs']
-        self.action = data
+        self.job_run = data
 
     def rows(self):
         data_rows = self.data
@@ -314,46 +394,6 @@ class DisplayActions(TableDisplay):
             data_rows = filter(warn_only_func, self.data)
         return data_rows[:self.options.num_displays]
 
-    def post_row(self, row):
-        if self.options.warn:
-            self.out.extend(self.do_format_action_run(row, True))
-
-    def format_action_run(self, content):
-        self.out = self.do_format_action_run(content)
-        return self.output()
-
-    def do_format_action_run(self, content, supress_preface=False):
-        out = []
-        if self.options.stdout:
-            out.extend(["Stdout: "] + content['stdout'])
-            return out
-
-        if self.options.stderr or self.options.warn:
-            out.extend(["Stderr: "] + content['stderr'])
-            return out
-
-        if self.options.display_preface and not supress_preface:
-            out.extend([
-                "Action Run: %s" % content['id'],
-                "State: %s" % content['state'],
-                "Node: %s" % content['node'],
-                ''
-            ])
-
-        # a raw command is without command context
-        if content['command'] != content['raw_command']:
-            if content['command'] == 'false':
-                out.append(Color.set("red", "Bad Command"))
-            else:
-                out.append(Color.set("gray", content['command']))
-
-        out.extend(
-            [Color.set("gray", content['raw_command'])] +
-            ["\nRequirements:"] + content['requirements'] +
-            ["\nStdout:"] + content['stdout'] +
-            ["\nStderr:"] + content['stderr']
-        )
-        return out
 
 
 class DisplayEvents(TableDisplay):
@@ -362,10 +402,7 @@ class DisplayEvents(TableDisplay):
     fields  = ['time', 'level', 'entity', 'name']
     widths  = [22,     12,       35,      20    ]
     title = 'events'
-
-    def calculate_col_widths(self):
-        # No need to calculate, it's fixed width.
-        pass
+    resize_fields = ['entity']
 
 
 def view_with_less(content, color=True):

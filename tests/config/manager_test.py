@@ -23,18 +23,24 @@ class FromStringTestCase(TestCase):
 
 class ReadWriteTestCase(TestCase):
 
+    @setup
+    def setup_tempfile(self):
+        self.filename = tempfile.NamedTemporaryFile().name
+
+    @teardown
+    def teardown_tempfile(self):
+        os.unlink(self.filename)
+
     def test_read_write(self):
-        filename = tempfile.NamedTemporaryFile().name
         content = {'one': 'stars', 'two': 'beers'}
-        manager.write(filename, content)
-        actual = manager.read(filename)
+        manager.write(self.filename, content)
+        actual = manager.read(self.filename)
         assert_equal(content, actual)
 
     def test_read_raw_write_raw(self):
-        filename = tempfile.NamedTemporaryFile().name
         content = "Some string"
-        manager.write_raw(filename, content)
-        actual = manager.read_raw(filename)
+        manager.write_raw(self.filename, content)
+        actual = manager.read_raw(self.filename)
         assert_equal(content, actual)
 
 class ManifestFileTestCase(TestCase):
@@ -111,30 +117,33 @@ class ConfigManagerTestCase(TestCase):
         name = 'filename'
         path = self.manager.build_file_path(name)
         self.manifest.get_file_name.return_value = path
-        autospec_method(self.manager.validate_fragment)
+        autospec_method(self.manager.validate_with_fragment)
         self.manager.write_config(name, self.raw_content)
         assert_equal(manager.read(path), self.content)
         self.manifest.get_file_name.assert_called_with(name)
         assert not self.manifest.add.call_count
-        self.manager.validate_fragment.assert_called_with(name, self.content)
+        self.manager.validate_with_fragment.assert_called_with(name, self.content)
 
     def test_write_config_new_name(self):
         name = 'filename2'
         path = self.manager.build_file_path(name)
         self.manifest.get_file_name.return_value = None
-        autospec_method(self.manager.validate_fragment)
+        autospec_method(self.manager.validate_with_fragment)
         self.manager.write_config(name, self.raw_content)
         assert_equal(manager.read(path), self.content)
         self.manifest.get_file_name.assert_called_with(name)
         self.manifest.add.assert_called_with(name, path)
 
-    def test_validate_fragment(self):
-        autospec_method(self.manager.load)
+    @mock.patch('tron.config.manager.config_parse.ConfigContainer', autospec=True)
+    def test_validate_with_fragment(self, mock_config_container):
         name = 'the_name'
-        self.manager.validate_fragment(name, self.content)
-        container = self.manager.load.return_value
-        container.add.assert_called_with(name, self.content)
-        container.validate.assert_called_with()
+        name_mapping = {'something': 'content', name: 'old_content'}
+        autospec_method(self.manager.get_config_name_mapping)
+        self.manager.get_config_name_mapping.return_value = name_mapping
+        self.manager.validate_with_fragment(name, self.content)
+        expected_mapping = dict(name_mapping)
+        expected_mapping[name] = self.content
+        mock_config_container.create.assert_called_with(expected_mapping)
 
     @mock.patch('tron.config.manager.read')
     @mock.patch('tron.config.manager.config_parse.ConfigContainer', autospec=True)

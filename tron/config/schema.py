@@ -5,6 +5,8 @@ from collections import namedtuple
 
 MASTER_NAMESPACE = "MASTER"
 
+CLEANUP_ACTION_NAME = 'cleanup'
+
 def config_object_factory(name, required=None, optional=None):
     """
     Creates a namedtuple which has two additional attributes:
@@ -29,7 +31,7 @@ TronConfig = config_object_factory(
         'output_stream_dir',   # str
         'state_persistence',   # ConfigState
         'command_context',     # FrozenDict of str
-        'ssh_options',         # ConchOptions
+        'ssh_options',         # ConfigSSHOptions
         'notification_options',# NotificationOptions or None
         'time_zone',           # pytz time zone
         'nodes',               # FrozenDict of ConfigNode
@@ -56,10 +58,7 @@ NotificationOptions = config_object_factory(
 
 ConfigSSHOptions = config_object_factory(
     'ConfigSSHOptions',
-    optional=[
-        'agent',                # bool
-        'identities',           # list of str
-    ])
+    optional=['agent', 'identities', 'known_hosts_file'])
 
 
 ConfigNode = config_object_factory('ConfigNode', ['hostname'], ['name', 'username'])
@@ -86,6 +85,7 @@ ConfigJob = config_object_factory(
         'node',                 # str
         'schedule',             # Config*Scheduler
         'actions',              # FrozenDict of ConfigAction
+        'namespace',            # str
     ],[
         'queueing',             # bool
         'run_limit',            # int
@@ -111,7 +111,6 @@ ConfigCleanupAction = config_object_factory(
     [
         'command',              # str
     ],[
-        'requires',             # tuple of str
         'name',                 # str
         'node',                 # str
     ])
@@ -125,6 +124,7 @@ ConfigService = config_object_factory(
         'pid_file',             # str
         'command',              # str
         'monitor_interval',     # float
+        'namespace',            # str
     ],[
         'restart_interval',     # float
         'count',                # int
