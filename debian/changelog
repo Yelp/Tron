@@ -1,3 +1,10 @@
+tron (0.6.0.2) unstable; urgency=low
+
+  * Allow serviceinstances to transition from unknown to down
+  * Better handling for serviceinstance monitor task failing
+
+ -- Daniel Nephin <dnephin@yelp.com>  Thu, 04 Apr 2013 12:47:14 -0700
+
 tron (0.6.0.1) unstable; urgency=low
 
   * minor visual improvements to tronview
