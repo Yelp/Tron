@@ -102,8 +102,6 @@ class JobRunResource(resource.Resource):
         return resource.NoResource(msg % (action_name, self.job_run))
 
     def render_GET(self, request):
-        #include_runs = requestargs.get_bool(request, 'include_action_runs')
-        #include_graph = requestargs.get_bool(request, 'include_action_graph')
         run_adapter = adapter.JobRunAdapter(self.job_run,
             include_action_runs=True,
             include_action_graph=True)
