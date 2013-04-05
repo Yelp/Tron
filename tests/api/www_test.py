@@ -228,7 +228,7 @@ class EventResourceTestCase(WWWTestCase):
         recorder.critical(critical_message)
         response = self.resource.render_GET(self.request())
         names = [e['name'] for e in response['data']]
-        assert_equal(names, [ok_message, critical_message])
+        assert_equal(names, [critical_message, ok_message])
 
 
 class ConfigResourceTestCase(TestCase):
