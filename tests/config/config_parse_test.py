@@ -311,7 +311,7 @@ services:
                         pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                         command='service_command0',
                         monitor_interval=20,
-                        restart_interval=None,
+                        restart_delay=None,
                         count=2)
                 }
             )
@@ -549,7 +549,7 @@ services:
                         pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                         command='service_command0',
                         monitor_interval=20,
-                        restart_interval=None,
+                        restart_delay=None,
                         count=2)
                 }
             )
@@ -920,7 +920,7 @@ class ValidateJobsAndServicesTestCase(TestCase):
                           pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                           command='service_command0',
                           monitor_interval=20,
-                          restart_interval=None,
+                          restart_delay=None,
                           count=2)
             }
 
@@ -1091,6 +1091,16 @@ class ConfigContainerTestCase(TestCase):
         node_names = self.container.get_node_names()
         expected = set(['node0', 'node1', 'NodePool'])
         assert_equal(node_names, expected)
+
+
+class ValidateServiceTestCase(TestCase):
+
+    def test_cast_restart_interval_deprecation(self):
+        config = {'restart_interval': 50.0}
+        context = config_utils.NullConfigContext
+        casted_config = config_parse.ValidateService().cast(config, context)
+        expected = {'restart_delay': 50.0, 'namespace': schema.MASTER_NAMESPACE}
+        assert_equal(casted_config, expected)
 
 
 class ValidateSSHOptionsTestCase(TestCase):

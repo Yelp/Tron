@@ -136,6 +136,6 @@ ConfigService = config_object_factory(
         'monitor_interval',     # float
         'namespace',            # str
     ],[
-        'restart_interval',     # float
+        'restart_delay',        # float
         'count',                # int
     ])

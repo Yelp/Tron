@@ -64,4 +64,4 @@ services:
     #   pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
     #   command: "run_service --pid-file=%(pid_file)s start"
     #   monitor_interval: 20
-    #   restart_interval: 60s
+    #   restart_delay: 60s

@@ -454,7 +454,7 @@ class ValidateService(Validator):
 
     defaults = {
         'count':                1,
-        'restart_interval':     None
+        'restart_delay':        None
     }
 
     validators = {
@@ -464,11 +464,18 @@ class ValidateService(Validator):
         'monitor_interval':     valid_float,
         'count':                valid_int,
         'node':                 valid_node_name,
-        'restart_interval':     valid_float,
+        'restart_delay':        valid_float,
     }
 
     def cast(self, in_dict, config_context):
         in_dict['namespace'] = config_context.namespace
+
+        # TODO: Deprecated - remove in 0.7
+        if 'restart_interval' in in_dict:
+            msg = ("restart_interval at %s is deprecated. It has been renamed "
+                   "restart_delay and will be removed in 0.7")
+            log.warn(msg % config_context.path)
+            in_dict['restart_delay'] = in_dict.pop('restart_interval')
         return in_dict
 
 valid_service = ValidateService()
