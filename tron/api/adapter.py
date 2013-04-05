@@ -243,6 +243,7 @@ class ServiceAdapter(ReprAdapter):
         'url',
         'state',
         'command',
+        'pid_filename',
         'instances',
         'node_pool',
         'live_count',
@@ -265,6 +266,9 @@ class ServiceAdapter(ReprAdapter):
 
     def get_command(self):
         return self._obj.config.command
+
+    def get_pid_filename(self):
+        return self._obj.config.pid_file
 
     def get_instances(self):
         return adapt_many(ServiceInstanceAdapter, self._obj.instances)

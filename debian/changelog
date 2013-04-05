@@ -1,3 +1,27 @@
+tron (0.6.0.2) unstable; urgency=low
+
+  * Allow serviceinstances to transition from unknown to down
+  * Better handling for serviceinstance monitor task failing
+
+ -- Daniel Nephin <dnephin@yelp.com>  Thu, 04 Apr 2013 12:47:14 -0700
+
+tron (0.6.0.1) unstable; urgency=low
+
+  * minor visual improvements to tronview
+
+ -- Daniel Nephin <dnephin@yelp.com>  Tue, 26 Mar 2013 12:22:38 -0700
+
+tron (0.6.0) unstable; urgency=low
+
+  * action.requires must be a list (string has been deprecated since 0.3.3)
+  * tronctl zap has been removed (it shouldn't be necessary anymore)
+  * service monitoring code has been re-written (services should not longer get stuck in a stopping state)
+  * hosts can not be validated by specifying a known_hosts file
+  * additional validation for ssh options and context variables has been moved into configuration validation
+  * tronview now displays additional details about jobs and services
+
+ -- Daniel Nephin <dnephin@yelp.com>  Mon, 25 Mar 2013 11:14:13 -0700
+
 tron (0.5.2.3) unstable; urgency=low
 
   * Fix a bug that was preventing nodes from connecting with provided username
