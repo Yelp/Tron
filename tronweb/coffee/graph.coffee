@@ -152,7 +152,7 @@ class GraphModalView extends Backbone.View
             @graphOptions,
             model:      @model
             el:         @$('.modal-body.graph').html('').get()
-            height:     $(document).height() - 130
+            height:     $(window).height() - 130
             width:      $(document).width() - 150
             showZoom:   false
 
