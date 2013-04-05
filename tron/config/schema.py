@@ -40,6 +40,7 @@ TronConfig = config_object_factory(
         'services'             # FrozenDict of ConfigService
     ])
 
+
 NamedTronConfig = config_object_factory(
     'NamedTronConfig',
     optional=[
@@ -58,7 +59,16 @@ NotificationOptions = config_object_factory(
 
 ConfigSSHOptions = config_object_factory(
     'ConfigSSHOptions',
-    optional=['agent', 'identities', 'known_hosts_file'])
+    optional=[
+        'agent',
+        'identities',
+        'known_hosts_file',
+        'connect_timeout',
+        'idle_connection_timeout',
+        'jitter_min_load',
+        'jitter_max_delay',
+        'jitter_load_factor',
+    ])
 
 
 ConfigNode = config_object_factory('ConfigNode', ['hostname'], ['name', 'username'])

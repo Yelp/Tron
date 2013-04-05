@@ -9,7 +9,7 @@ import os
 import pytz
 from tron import command_context
 
-from tron.config import ConfigError, config_utils
+from tron.config import ConfigError, config_utils, schema
 from tron.config.config_utils import NullConfigContext, ConfigContext
 from tron.config.config_utils import valid_string, valid_bool
 from tron.config.config_utils import valid_identifier
@@ -21,7 +21,7 @@ from tron.config.config_utils import PartialConfigContext
 from tron.config.schedule_parse import valid_schedule
 from tron.config.schema import TronConfig, NamedTronConfig, NotificationOptions, CLEANUP_ACTION_NAME
 from tron.config.schema import ConfigSSHOptions
-from tron.config.schema import ConfigNode, ConfigNodePool, ConfigState
+from tron.config.schema import ConfigState
 from tron.config.schema import ConfigJob, ConfigAction, ConfigCleanupAction
 from tron.config.schema import ConfigService
 from tron.config.schema import MASTER_NAMESPACE
@@ -243,19 +243,29 @@ def valid_node_name(value, config_context):
 
 class ValidateSSHOptions(Validator):
     """Validate SSH options."""
-    config_class =              ConfigSSHOptions
-    optional =                  True
+    config_class =                  ConfigSSHOptions
+    optional =                      True
     defaults = {
-        'agent':                False,
-        'identities':           (),
-        'known_hosts_file':     None,
+        'agent':                    False,
+        'identities':               (),
+        'known_hosts_file':         None,
+        'connect_timeout':          30,
+        'idle_connection_timeout':  3600,
+        'jitter_min_load':          4,
+        'jitter_max_delay':         20,
+        'jitter_load_factor':       1,
     }
 
     validators = {
-        'agent':                valid_bool,
-        'identities':           build_list_of_type_validator(
-                                    valid_identity_file, allow_empty=True),
-        'known_hosts_file':     valid_known_hosts_file
+        'agent':                    valid_bool,
+        'identities':               build_list_of_type_validator(
+                                        valid_identity_file, allow_empty=True),
+        'known_hosts_file':         valid_known_hosts_file,
+        'connect_timeout':          config_utils.valid_int,
+        'idle_connection_timeout':  config_utils.valid_int,
+        'jitter_min_load':          config_utils.valid_int,
+        'jitter_max_delay':         config_utils.valid_int,
+        'jitter_load_factor':       config_utils.valid_int,
     }
 
     def post_validation(self, valid_input, config_context):
@@ -278,7 +288,7 @@ valid_notification_options = ValidateNotificationOptions()
 
 
 class ValidateNode(Validator):
-    config_class =              ConfigNode
+    config_class =              schema.ConfigNode
     validators = {
         'name':                 valid_identifier,
         'username':             valid_string,
@@ -290,7 +300,7 @@ class ValidateNode(Validator):
     def do_shortcut(self, node):
         """Nodes can be specified with just a hostname string."""
         if isinstance(node, basestring):
-            return ConfigNode(
+            return schema.ConfigNode(
                         hostname=node, name=node, username=self.DEFAULT_USER)
 
     def set_defaults(self, output_dict, _):
@@ -301,7 +311,7 @@ valid_node = ValidateNode()
 
 
 class ValidateNodePool(Validator):
-    config_class =              ConfigNodePool
+    config_class =              schema.ConfigNodePool
     validators = {
         'name':                 valid_identifier,
         'nodes':                build_list_of_type_validator(valid_identifier),
@@ -503,7 +513,7 @@ def validate_jobs_and_services(config, config_context):
 
 
 DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1)
-DEFAULT_NODE = ConfigNode('localhost', 'localhost', 'tronuser')
+DEFAULT_NODE = schema.ConfigNode('localhost', 'localhost', 'tronuser')
 
 
 class ValidateConfig(Validator):
