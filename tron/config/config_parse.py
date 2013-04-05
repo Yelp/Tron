@@ -45,12 +45,11 @@ def build_format_string_validator(context_object):
         try:
             value % context
             return value
-        except (KeyError, ValueError):
-            error_msg = "Invalid template string at %s: %s"
-            raise ConfigError(error_msg % (config_context.path, value))
+        except (KeyError, ValueError), e:
+            error_msg = "Unknown context variable %s at %s: %s"
+            raise ConfigError(error_msg % (e, config_context.path, value))
 
     return validator
-
 
 
 # TODO: extract code

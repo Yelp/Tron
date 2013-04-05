@@ -1013,7 +1013,9 @@ class BuildFormatStringValidatorTestCase(TestCase):
 
     def test_validator_error(self):
         template = "The %(one)s thing I %(seven)s is %(unknown)s"
-        assert_raises(ConfigError, self.validator, template, NullConfigContext)
+        exception = assert_raises(ConfigError,
+            self.validator, template, NullConfigContext)
+        assert_in("Unknown context variable 'unknown'", str(exception))
 
     def test_validator_passes_with_context(self):
         template = "The %(one)s thing I %(seven)s is %(mars)s"
