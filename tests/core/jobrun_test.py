@@ -463,6 +463,22 @@ class JobRunCollectionTestCase(TestCase):
         run = self.run_collection.get_run_by_num(7)
         assert_equal(run, None)
 
+    def test_get_run_by_index(self):
+        run = self.run_collection.get_run_by_index(-1)
+        assert_equal(run, self.job_runs[0])
+        run = self.run_collection.get_run_by_index(-2)
+        assert_equal(run, self.job_runs[1])
+        run = self.run_collection.get_run_by_index(0)
+        assert_equal(run, self.job_runs[-1])
+        run = self.run_collection.get_run_by_index(1)
+        assert_equal(run, self.job_runs[-2])
+
+    def test_get_run_by_index_invalid_index(self):
+        run = self.run_collection.get_run_by_index(-5)
+        assert_equal(run, None)
+        run = self.run_collection.get_run_by_index(4)
+        assert_equal(run, None)
+
     def test_get_run_by_state_short_name(self):
         run = self.run_collection.get_run_by_state_short_name("RUNN")
         assert_equal(run, self.job_runs[1])

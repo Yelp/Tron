@@ -353,6 +353,14 @@ class JobRunCollection(object):
         """Return a the run with run number which matches num."""
         return self._get_run_using(lambda r: r.run_num == num)
 
+    def get_run_by_index(self, index):
+        """Return the job run at index. Jobs are indexed from oldest to newest.
+        """
+        try:
+            return self.runs[index * -1 - 1]
+        except IndexError:
+            return None
+
     def get_run_by_state_short_name(self, short_name):
         """Returns the most recent run which matches the state short name."""
         return self._get_run_using(lambda r: r.state.short_name == short_name)
