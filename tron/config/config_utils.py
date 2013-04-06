@@ -227,6 +227,10 @@ class Validator(object):
         """
         return self.config_class.__name__.replace("Config", "")
 
+    @property
+    def all_keys(self):
+        return self.config_class.required_keys + self.config_class.optional_keys
+
     def do_shortcut(self, in_dict):
         """Override if your validator can skip most of the validation by
         checking this condition.  If this returns a truthy value, the
@@ -250,9 +254,8 @@ class Validator(object):
         if not missing_keys:
             return
 
-        keys = self.config_class.required_keys + self.config_class.optional_keys
         missing_key_str = ', '.join(missing_keys)
-        if 'name' in keys and 'name' in in_dict:
+        if 'name' in self.all_keys and 'name' in in_dict:
             msg  = "%s %s is missing options: %s"
             name = in_dict['name']
             raise ConfigError(msg % (self.type_name, name, missing_key_str))
@@ -262,14 +265,12 @@ class Validator(object):
 
     def validate_extra_keys(self, in_dict):
         """Check that no unexpected keys are present."""
-        conf_class      = self.config_class
-        all_keys        = conf_class.required_keys + conf_class.optional_keys
-        extra_keys      = set(in_dict) - set(all_keys)
+        extra_keys = set(in_dict) - set(self.all_keys)
         if not extra_keys:
             return
 
-        msg             = "Unknown keys in %s %s: %s"
-        name            = in_dict.get('name', '')
+        msg  = "Unknown keys in %s %s: %s"
+        name = in_dict.get('name', '')
         raise ConfigError(msg % (self.type_name, name, ', '.join(extra_keys)))
 
     def set_defaults(self, output_dict, _config_context):
@@ -284,10 +285,15 @@ class Validator(object):
         return '%s.%s' % (self.type_name, name) if name else self.type_name
 
     def post_validation(self, valid_input, config_context):
-        """Perform additional validation."""
+        """Hook to perform additional validation steps after key validation
+        completes.
+        """
         pass
 
     def build_config(self, in_dict, config_context):
+        """Construct the configuration by validating the contents, setting
+        defaults, and returning an instance of the config_class.
+        """
         output_dict = self.validate_contents(in_dict, config_context)
         self.post_validation(output_dict, config_context)
         self.set_defaults(output_dict, config_context)
