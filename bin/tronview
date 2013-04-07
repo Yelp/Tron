@@ -81,7 +81,7 @@ def view_job_run(options, job_run_id, client):
 
 
 def view_action_run(options, act_run_id, client):
-    content = client.action_runs(act_run_id.url)
+    content = client.action_runs(act_run_id.url, num_lines=options.num_displays)
     return display.format_action_run_details(content)
 
 

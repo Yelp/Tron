@@ -81,7 +81,8 @@ class ActionRunResourceTestCase(WWWTestCase):
         self.resource = www.ActionRunResource(self.action_run, self.job_run)
 
     def test_render_GET(self):
-        response = self.resource.render_GET(self.request)
+        request = build_request(num_lines="12")
+        response = self.resource.render_GET(request)
         assert_equal(response['id'], self.action_run.id)
 
 

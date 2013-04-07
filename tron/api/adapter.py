@@ -83,7 +83,7 @@ class ActionRunAdapter(RunAdapter):
     def __init__(self, action_run, job_run, max_lines=10):
         super(ActionRunAdapter, self).__init__(action_run)
         self.job_run            = job_run
-        self.max_lines          = max_lines
+        self.max_lines          = max_lines or None
 
     def get_raw_command(self):
         return self._obj.bare_command
