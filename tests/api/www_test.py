@@ -85,6 +85,19 @@ class ActionRunResourceTestCase(WWWTestCase):
         assert_equal(response['id'], self.action_run.id)
 
 
+class JobrunResourceTestCase(WWWTestCase):
+
+    @setup
+    def setup_resource(self):
+        self.job_run = mock.MagicMock()
+        self.job_scheduler = mock.Mock()
+        self.resource = www.JobRunResource(self.job_run, self.job_scheduler)
+
+    def test_render_GET(self):
+        response = self.resource.render_GET(self.request)
+        assert_equal(response['id'], self.job_run.id)
+
+
 class RootResourceTestCase(WWWTestCase):
 
     @setup

@@ -102,9 +102,11 @@ class JobRunResource(resource.Resource):
         return resource.NoResource(msg % (action_name, self.job_run))
 
     def render_GET(self, request):
+        include_runs = requestargs.get_bool(request, 'include_action_runs')
+        include_graph = requestargs.get_bool(request, 'include_action_graph')
         run_adapter = adapter.JobRunAdapter(self.job_run,
-            include_action_runs=True,
-            include_action_graph=True)
+            include_action_runs=include_runs,
+            include_action_graph=include_graph)
         return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):
@@ -319,7 +321,6 @@ class RootResource(resource.Resource):
         self.putChild('jobs',     JobCollectionResource(mcp.get_job_collection()))
         self.putChild('services', ServiceCollectionResource(mcp.get_service_collection()))
         self.putChild('config',   ConfigResource(mcp))
-        # TODO: namespaces
         self.putChild('status',   StatusResource(mcp))
         self.putChild('events',   EventResource(''))
         self.putChild('web',      static.File(web_path))
