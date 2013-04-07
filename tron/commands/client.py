@@ -122,6 +122,7 @@ class Client(object):
         params = {'include_action_runs': int(include_action_runs)}
         return self.http_get(job_url, params)
 
+    # TODO: add count paramter
     def job_runs(self, url, include_runs=True, include_graph=False):
         params = {
             'include_action_runs': int(include_runs),
@@ -138,8 +139,8 @@ class Client(object):
         return self.request(build_get_url(url, data))
 
     def request(self, url, data=None):
+        log.info("Request: %s, %s, %s", self.url_base, url, data)
         uri = urlparse.urljoin(self.url_base, url)
-        log.info("Request: %s, %s", uri, data)
         response = request(uri, data)
         if response.error:
             raise RequestError("%s: %s" % (uri, response))

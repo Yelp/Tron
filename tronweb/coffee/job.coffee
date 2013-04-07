@@ -42,6 +42,7 @@ class window.JobRun extends Backbone.Model
 
     idAttribute: "run_num"
 
+    # TODO: add param to include action graph
     urlRoot: ->
         "/jobs/" + @get('name')
 
