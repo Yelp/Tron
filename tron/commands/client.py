@@ -118,11 +118,11 @@ class Client(object):
                   'include_action_runs': int(include_action_runs)}
         return self.http_get('/jobs', params).get('jobs')
 
-    def job(self, job_url, include_action_runs=False):
-        params = {'include_action_runs': int(include_action_runs)}
+    def job(self, job_url, include_action_runs=False, count=0):
+        params = {'include_action_runs': int(include_action_runs),
+                  'num_runs': count}
         return self.http_get(job_url, params)
 
-    # TODO: add count paramter
     def job_runs(self, url, include_runs=True, include_graph=False):
         params = {
             'include_action_runs': int(include_runs),

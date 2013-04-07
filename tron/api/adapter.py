@@ -200,10 +200,14 @@ class JobAdapter(ReprAdapter):
         'action_graph',
     ]
 
-    def __init__(self, job, include_job_runs=False, include_action_runs=False):
+    def __init__(self, job,
+             include_job_runs=False,
+             include_action_runs=False,
+             num_runs=None):
         super(JobAdapter, self).__init__(job)
         self.include_job_runs    = include_job_runs
         self.include_action_runs = include_action_runs
+        self.num_runs            = num_runs
 
     def get_scheduler(self):
         return str(self._obj.scheduler)
@@ -228,7 +232,8 @@ class JobAdapter(ReprAdapter):
     def get_runs(self):
         if not self.include_job_runs:
             return
-        return adapt_many(JobRunAdapter, self._obj.runs, self.include_action_runs)
+        runs = adapt_many(JobRunAdapter, self._obj.runs, self.include_action_runs)
+        return runs[:self.num_runs or None]
 
     # TODO: create a flag to include/exclude this
     def get_action_graph(self):

@@ -67,7 +67,7 @@ def view_job(options, job_id, client):
     if options.show_events:
         return display_events(client.object_events(job_id.url))
 
-    job_content = client.job(job_id.url)
+    job_content = client.job(job_id.url, count=options.num_displays)
     return display.format_job_details(job_content)
 
 

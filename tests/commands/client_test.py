@@ -126,9 +126,9 @@ class ClientTestCase(TestCase):
             '/jobs/name/0?include_action_runs=1&include_action_graph=0')
 
     def test_job(self):
-        self.client.job('/jobs/name')
+        self.client.job('/jobs/name', count=20)
         self.client.request.assert_called_with(
-            '/jobs/name?include_action_runs=0')
+            '/jobs/name?include_action_runs=0&num_runs=20')
 
     def test_jobs(self):
         self.client.jobs()
