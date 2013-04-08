@@ -129,8 +129,9 @@ class JobRunAdapter(RunAdapter):
 
 class JobAdapter(ReprAdapter):
 
-    field_names = ['name', 'status', 'all_nodes', 'allow_overlap', 'queueing']
+    field_names = ['status', 'all_nodes', 'allow_overlap', 'queueing']
     translated_field_names = [
+        'name',
         'scheduler',
         'action_names',
         'node_pool',
@@ -143,6 +144,9 @@ class JobAdapter(ReprAdapter):
         super(JobAdapter, self).__init__(job)
         self.include_job_runs    = include_job_runs
         self.include_action_runs = include_action_runs
+
+    def get_name(self):
+        return self._obj.get_name()
 
     def get_scheduler(self):
         return str(self._obj.scheduler)
@@ -158,7 +162,7 @@ class JobAdapter(ReprAdapter):
         return last_success.end_time if last_success else None
 
     def get_url(self):
-        return '/jobs/%s' % urllib.quote(self._obj.name)
+        return '/jobs/%s' % urllib.quote(self._obj.get_name())
 
     def get_runs(self):
         if not self.include_job_runs:
