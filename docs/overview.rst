@@ -112,7 +112,7 @@ work queue::
           node: pool
           count: 4
           monitor_interval: 60
-          restart_interval: 120
+          restart_delay: 120
           pid_file: "/var/run/batch/%(name)s-%(instance_number)s.pid"
           command: "/usr/local/bin/start_email_worker --pid_file=%(pid_file)s"
 
