@@ -164,11 +164,13 @@ class JobResource(resource.Resource):
 
     def render_GET(self, request):
         include_action_runs = requestargs.get_bool(request, 'include_action_runs')
+        include_graph = requestargs.get_bool(request, 'include_action_graph')
         num_runs = requestargs.get_integer(request, 'num_runs')
         job_adapter = adapter.JobAdapter(
                 self.job_scheduler.get_job(),
-                True,
-                include_action_runs,
+                include_job_runs=True,
+                include_action_runs=include_action_runs,
+                include_action_graph=include_graph,
                 num_runs=num_runs)
         return respond(request, job_adapter.get_repr())
 

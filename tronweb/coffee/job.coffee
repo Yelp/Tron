@@ -13,6 +13,9 @@ class window.Job extends Backbone.Model
 
     urlRoot: "/jobs"
 
+    url: ->
+        super() + "?include_action_graph=1"
+
 
 class window.JobCollection extends Backbone.Collection
 

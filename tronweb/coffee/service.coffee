@@ -147,7 +147,7 @@ class window.ServiceView extends Backbone.View
                     <tr><td>Node Pool</td>  <td><%= node_pool %></td></tr>
                     <tr><td>State</td>      <td><%= state %></td></tr>
                     <tr><td>Command</td>    <td><code><%= command %></code></td></tr>
-                    <tr><td>Restart Delay</td><td><%= restart_interval %></td></tr>
+                    <tr><td>Restart Delay</td><td><%= restart_delay %></td></tr>
                     <tr><td>Monitor Interval</td><td><%= monitor_interval %></td></tr>
                 </table>
             </div>
