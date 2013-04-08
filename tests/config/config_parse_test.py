@@ -162,6 +162,11 @@ services:
                 agent=False,
                 identities=('tests/test_id_rsa',),
                 known_hosts_file=None,
+                connect_timeout=30,
+                idle_connection_timeout=3600,
+                jitter_min_load=4,
+                jitter_max_delay=20,
+                jitter_load_factor=1,
             ),
             notification_options=None,
             time_zone=pytz.timezone("EST"),
@@ -306,7 +311,7 @@ services:
                         pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                         command='service_command0',
                         monitor_interval=20,
-                        restart_interval=None,
+                        restart_delay=None,
                         count=2)
                 }
             )
@@ -544,7 +549,7 @@ services:
                         pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                         command='service_command0',
                         monitor_interval=20,
-                        restart_interval=None,
+                        restart_delay=None,
                         count=2)
                 }
             )
@@ -915,7 +920,7 @@ class ValidateJobsAndServicesTestCase(TestCase):
                           pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                           command='service_command0',
                           monitor_interval=20,
-                          restart_interval=None,
+                          restart_delay=None,
                           count=2)
             }
 
@@ -1008,7 +1013,9 @@ class BuildFormatStringValidatorTestCase(TestCase):
 
     def test_validator_error(self):
         template = "The %(one)s thing I %(seven)s is %(unknown)s"
-        assert_raises(ConfigError, self.validator, template, NullConfigContext)
+        exception = assert_raises(ConfigError,
+            self.validator, template, NullConfigContext)
+        assert_in("Unknown context variable 'unknown'", str(exception))
 
     def test_validator_passes_with_context(self):
         template = "The %(one)s thing I %(seven)s is %(mars)s"
@@ -1086,6 +1093,16 @@ class ConfigContainerTestCase(TestCase):
         node_names = self.container.get_node_names()
         expected = set(['node0', 'node1', 'NodePool'])
         assert_equal(node_names, expected)
+
+
+class ValidateServiceTestCase(TestCase):
+
+    def test_cast_restart_interval_deprecation(self):
+        config = {'restart_interval': 50.0}
+        context = config_utils.NullConfigContext
+        casted_config = config_parse.ValidateService().cast(config, context)
+        expected = {'restart_delay': 50.0, 'namespace': schema.MASTER_NAMESPACE}
+        assert_equal(casted_config, expected)
 
 
 class ValidateSSHOptionsTestCase(TestCase):

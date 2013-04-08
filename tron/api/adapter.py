@@ -179,7 +179,7 @@ class ServiceAdapter(ReprAdapter):
         'node_pool',
         'live_count',
         'monitor_interval',
-        'restart_interval']
+        'restart_delay']
 
     def get_url(self):
         return "/services/%s" % urllib.quote(self._obj.get_name())
@@ -208,8 +208,8 @@ class ServiceAdapter(ReprAdapter):
     def get_monitor_interval(self):
         return self._obj.config.monitor_interval
 
-    def get_restart_interval(self):
-        return self._obj.config.restart_interval
+    def get_restart_delay(self):
+        return self._obj.config.restart_delay
 
 
 class ServiceInstanceAdapter(ReprAdapter):

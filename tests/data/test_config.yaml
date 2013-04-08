@@ -194,7 +194,7 @@ services:
         pid_file: "/tmp/%(name)s-%(instance_number)s.pid"
         command: "%(PYTHON)s ./tests/mock_daemon.py %(pid_file)s"
         monitor_interval: 12
-        restart_interval: 10
+        restart_delay: 10
 
     -   name: service_1
         node: pool2
@@ -208,5 +208,5 @@ services:
         pid_file: "/tmp/%(name)s-%(instance_number)s.pid"
         command: "%(PYTHON)s ./tests/mock_daemon.py %(pid_file)s"
         monitor_interval: 30
-        restart_interval: 40
+        restart_delay: 40
         count: 2
