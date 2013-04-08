@@ -52,7 +52,7 @@ Basic Example
 .. _command_context_variables:
 
 Command Context Variables
-^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
 
 **command** attribute values may contain **command context variables** that are
 inserted at runtime. The **command context** is populated both by Tron (see
@@ -73,20 +73,54 @@ SSH
 ---
 
 **ssh_options** (optional)
-    These options affect how Tron connects to the nodes.
+    Options for SSH connections to Tron nodes. When tron runs a job or service
+    on a node, it will add some jitter (random delay) to the run, which can be
+    configured with the options below.
 
     **agent** (optional, default ``False``)
-        Set to ``True`` if :command:`trond` should use an SSH agent
+        Set to ``True`` if :command:`trond` should use an SSH agent. This requires
+        that ``$SSH_AUTH_SOCK`` exists in the environment and points to the
+        correct socket.
 
     **identities** (optional, default ``[]``)
         List of paths to SSH identity files
 
+    **known_hosts_file** (optional, default ``None``)
+        The path to an ssh known hosts file
+
+    **connect_timeout** (optional, default ``30``)
+        Timeout in seconds when establishing an ssh connection
+
+    **idle_connection_timeout** (optional, default ``3600``)
+        Timeout in seconds that an ssh connection can remain idle after which
+        it is closed
+
+    **jitter_min_load** (optional, default ``4``)
+        Minimum `load` on a node before any jitter is introduced. See
+        `jitter_load_factor` for a description of how load is calculated
+
+    **jitter_max_delay** (optional, default ``20``)
+        Maximum number of seconds to add to a run
+
+    **jitter_load_factor** (optional, default ``1``)
+        Factor used to increment the count of running actions for determining
+        the upper bound of jitter to add (ex. A factor of 2 would increase the
+        upper bound by 2 seconds per running action)
+
 Example::
 
     ssh_options:
-        agent: false
+        agent:                    false
+        known_hosts_file:         /etc/ssh/known_hosts
         identities:
             - /home/batch/.ssh/id_dsa-nopasswd
+
+        connect_timeout:          30
+        idle_connection_timeout:  3600
+
+        jitter_min_load:          4
+        jitter_max_delay:         20
+        jitter_load_factor:       1
 
 Notification Options
 --------------------

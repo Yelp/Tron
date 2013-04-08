@@ -332,7 +332,7 @@ class ServiceEndToEndTestCase(sandbox.SandboxTestCase):
                     pid_file: "{wd}/%(name)s-%(instance_number)s.pid"
                     command: "{command}"
                     monitor_interval: {monitor_interval}
-                    restart_interval: 2
+                    restart_delay: 2
         """)
 
         command = ("cd {path} && PYTHONPATH=. python "
@@ -367,7 +367,7 @@ class ServiceEndToEndTestCase(sandbox.SandboxTestCase):
                     pid_file: "/tmp/file_dne"
                     command: "sleep 1; cat /bogus/file/DNE"
                     monitor_interval: 1
-                    restart_interval: 2
+                    restart_delay: 2
         """)
         self.start_with_config(config)
         service_name = 'MASTER.service_restart'

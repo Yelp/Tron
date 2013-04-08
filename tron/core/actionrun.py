@@ -24,9 +24,10 @@ class ActionRunFactory(object):
     @classmethod
     def build_action_run_collection(cls, job_run):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
+        action_map = job_run.action_graph.get_action_map().iteritems()
         action_run_map = dict(
             (name, cls.build_run_for_action(job_run, action_inst))
-            for name, action_inst in job_run.action_graph.action_map.iteritems()
+            for name, action_inst in action_map
         )
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
@@ -285,7 +286,7 @@ class ActionRun(Observer):
             'end_time':         self.end_time,
             'command':          command,
             'rendered_command': self.rendered_command,
-            'node_name':        self.node.name if self.node else None
+            'node_name':        self.node.get_name() if self.node else None
         }
 
     def render_command(self):
@@ -379,7 +380,6 @@ class ActionRunCollection(object):
                 proxy.func_proxy('ready',           iteration.list_all),
                 proxy.func_proxy('cleanup',         iteration.list_all),
                 proxy.attr_proxy('start_time',      iteration.min_filter),
-                proxy.attr_proxy('end_time',        iteration.max_filter),
             ])
 
     def action_runs_for_actions(self, actions):
@@ -475,6 +475,13 @@ class ActionRunCollection(object):
     @property
     def names(self):
         return self.run_map.keys()
+
+    @property
+    def end_time(self):
+        if not self.is_done:
+            return None
+        end_times = (run.end_time for run in self.get_action_runs_with_cleanup())
+        return iteration.max_filter(end_times)
 
     def __str__(self):
         def blocked_state(action_run):

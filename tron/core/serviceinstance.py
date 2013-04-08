@@ -14,7 +14,8 @@ log = logging.getLogger(__name__)
 
 
 MIN_HANG_CHECK_SECONDS  = 10
-HANG_CHECK_DELAY_RATIO = 0.8
+HANG_CHECK_DELAY_RATIO = 0.9
+
 
 def create_hang_check(delay, func):
     delay = max(delay * HANG_CHECK_DELAY_RATIO, MIN_HANG_CHECK_SECONDS)
@@ -85,7 +86,7 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
 
     def run(self):
         """Run the monitoring command."""
-        if not self.action.is_complete:
+        if not self.action.is_done:
             log.warn("%s: Monitor action already exists.", self)
             return
 
@@ -98,10 +99,17 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
     def command(self):
         return self.command_template % self.pid_filename
 
-    def handle_action_event(self, _action, event):
+    def handle_action_event(self, action, event):
+        if action != self.action:
+            msg = "Ignoring %s %s, action was cleared due to hang check."
+            log.warn(msg % (action, event))
+            return
+
         if event == ActionCommand.EXITING:
-            return self._handle_action_exit()
+            self.hang_check_callback.cancel()
+            self._handle_action_exit()
         if event == ActionCommand.FAILSTART:
+            self.hang_check_callback.cancel()
             self.notify(self.NOTIFY_FAILED)
             self.queue()
 
@@ -109,13 +117,13 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
 
     def _handle_action_exit(self):
         log.debug("%s exit, failure: %r", self, self.action.is_failed)
-        self.hang_check_callback.cancel()
         if self.action.is_failed:
             self.notify(self.NOTIFY_DOWN)
             return
 
         self.notify(self.NOTIFY_UP)
         self.queue()
+        self.buffer_store.clear()
 
     def cancel(self):
         """Cancel the monitor callback and hang check."""
@@ -123,8 +131,9 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
         self.hang_check_callback.cancel()
 
     def fail(self):
-        log.warning("%s is still running %s", self, self.action)
+        log.warning("%s is still running %s.", self, self.action)
         self.notify(self.NOTIFY_FAILED)
+        self.action = actioncommand.CompletedActionCommand
 
     def __str__(self):
         return "%s(%s)" % (self.__class__.__name__, self.id)
@@ -232,7 +241,8 @@ class ServiceInstance(observer.Observer):
                             monitor=STATE_MONITORING,
                             stop=STATE_STOPPING)
     STATE_UNKNOWN       = ServiceInstanceState("unknown",
-                            monitor=STATE_MONITORING)
+                            monitor=STATE_MONITORING,
+                            stop=STATE_DOWN)
 
     STATE_MONITORING['monitor_fail']    = STATE_UNKNOWN
     STATE_UP['stop']                    = STATE_STOPPING
@@ -315,6 +325,9 @@ class ServiceInstance(observer.Observer):
 
         if event == task.NOTIFY_FAILED:
             self.failures.append(get_failures_from_task(task))
+
+        if event == ServiceInstanceMonitorTask.NOTIFY_UP:
+            self.failures = []
 
     def _handle_start_task_complete(self):
         if self.machine.state != ServiceInstance.STATE_STARTING:

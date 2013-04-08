@@ -9,7 +9,7 @@ import os
 import pytz
 from tron import command_context
 
-from tron.config import ConfigError, config_utils
+from tron.config import ConfigError, config_utils, schema
 from tron.config.config_utils import ConfigContext, Validator
 from tron.config.config_utils import valid_string, valid_bool
 from tron.config.config_utils import valid_identifier
@@ -22,7 +22,7 @@ from tron.config.schedule_parse import valid_schedule
 from tron.config.schema import TronConfig, NamedTronConfig, NotificationOptions
 from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import ConfigSSHOptions
-from tron.config.schema import ConfigNode, ConfigNodePool, ConfigState
+from tron.config.schema import ConfigState
 from tron.config.schema import ConfigJob, ConfigAction, ConfigCleanupAction
 from tron.config.schema import ConfigService
 from tron.config.schema import MASTER_NAMESPACE
@@ -46,9 +46,9 @@ def build_format_string_validator(context_object):
         try:
             value % context
             return value
-        except (KeyError, ValueError):
-            error_msg = "Invalid template string at %s: %s"
-            raise ConfigError(error_msg % (config_context.path, value))
+        except (KeyError, ValueError), e:
+            error_msg = "Unknown context variable %s at %s: %s"
+            raise ConfigError(error_msg % (e, config_context.path, value))
 
     return validator
 
@@ -127,19 +127,29 @@ def valid_node_name(value, config_context):
 
 class ValidateSSHOptions(Validator):
     """Validate SSH options."""
-    config_class =              ConfigSSHOptions
-    optional =                  True
+    config_class =                  ConfigSSHOptions
+    optional =                      True
     defaults = {
-        'agent':                False,
-        'identities':           (),
-        'known_hosts_file':     None,
+        'agent':                    False,
+        'identities':               (),
+        'known_hosts_file':         None,
+        'connect_timeout':          30,
+        'idle_connection_timeout':  3600,
+        'jitter_min_load':          4,
+        'jitter_max_delay':         20,
+        'jitter_load_factor':       1,
     }
 
     validators = {
-        'agent':                valid_bool,
-        'identities':           build_list_of_type_validator(
-                                    valid_identity_file, allow_empty=True),
-        'known_hosts_file':     valid_known_hosts_file
+        'agent':                    valid_bool,
+        'identities':               build_list_of_type_validator(
+                                        valid_identity_file, allow_empty=True),
+        'known_hosts_file':         valid_known_hosts_file,
+        'connect_timeout':          config_utils.valid_int,
+        'idle_connection_timeout':  config_utils.valid_int,
+        'jitter_min_load':          config_utils.valid_int,
+        'jitter_max_delay':         config_utils.valid_int,
+        'jitter_load_factor':       config_utils.valid_int,
     }
 
     def post_validation(self, valid_input, config_context):
@@ -162,7 +172,7 @@ valid_notification_options = ValidateNotificationOptions()
 
 
 class ValidateNode(Validator):
-    config_class =              ConfigNode
+    config_class =              schema.ConfigNode
     validators = {
         'name':                 valid_identifier,
         'username':             valid_string,
@@ -174,7 +184,7 @@ class ValidateNode(Validator):
     def do_shortcut(self, node):
         """Nodes can be specified with just a hostname string."""
         if isinstance(node, basestring):
-            return ConfigNode(
+            return schema.ConfigNode(
                         hostname=node, name=node, username=self.DEFAULT_USER)
 
     def set_defaults(self, output_dict, _):
@@ -185,7 +195,7 @@ valid_node = ValidateNode()
 
 
 class ValidateNodePool(Validator):
-    config_class =              ConfigNodePool
+    config_class =              schema.ConfigNodePool
     validators = {
         'name':                 valid_identifier,
         'nodes':                build_list_of_type_validator(valid_identifier),
@@ -328,7 +338,7 @@ class ValidateService(Validator):
 
     defaults = {
         'count':                1,
-        'restart_interval':     None
+        'restart_delay':        None
     }
 
     validators = {
@@ -338,11 +348,18 @@ class ValidateService(Validator):
         'monitor_interval':     valid_float,
         'count':                valid_int,
         'node':                 valid_node_name,
-        'restart_interval':     valid_float,
+        'restart_delay':        valid_float,
     }
 
     def cast(self, in_dict, config_context):
         in_dict['namespace'] = config_context.namespace
+
+        # TODO: Deprecated - remove in 0.7
+        if 'restart_interval' in in_dict:
+            msg = ("restart_interval at %s is deprecated. It has been renamed "
+                   "restart_delay and will be removed in 0.7")
+            log.warn(msg % config_context.path)
+            in_dict['restart_delay'] = in_dict.pop('restart_interval')
         return in_dict
 
 valid_service = ValidateService()
@@ -387,7 +404,7 @@ def validate_jobs_and_services(config, config_context):
 
 
 DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1)
-DEFAULT_NODE = ConfigNode('localhost', 'localhost', 'tronuser')
+DEFAULT_NODE = schema.ConfigNode('localhost', 'localhost', 'tronuser')
 
 
 class ValidateConfig(Validator):

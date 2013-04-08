@@ -55,6 +55,9 @@ class ActionGraph(object):
             return []
         return self.action_map[name].required_actions
 
+    def get_action_map(self):
+        return self.action_map
+
     @property
     def names(self):
         return self.action_map.keys()

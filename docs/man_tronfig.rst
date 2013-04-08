@@ -87,7 +87,7 @@ Example Configuration
           node: pool
           count: 8
           monitor_interval: 60
-          restart_interval: 120
+          restart_delay: 120
           pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
           command: "/bin/myservice --pid-file=%(pid_file)s start"
 
