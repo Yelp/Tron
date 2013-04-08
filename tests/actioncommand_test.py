@@ -92,6 +92,12 @@ class ActionCommandTestCase(TestCase):
         self.ac.machine.state = self.ac.COMPLETE
         assert self.ac.is_complete, self.ac.machine.state
 
+    def test_is_done(self):
+        self.ac.machine.state = self.ac.FAILSTART
+        assert self.ac.is_done, self.ac.machine.state
+        self.ac.machine.state = self.ac.COMPLETE
+        assert self.ac.is_done, self.ac.machine.state
+
 
 class CreateActionCommandFactoryFromConfigTestCase(TestCase):
 

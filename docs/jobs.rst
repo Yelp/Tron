@@ -149,6 +149,12 @@ Long form::
         value:  "5 mins"
         jitter: "10 seconds"        # Optional
 
+With alias::
+
+    schedule:
+        type:   "interval"
+        value:  "hourly"
+
 Daily
 ^^^^^
 

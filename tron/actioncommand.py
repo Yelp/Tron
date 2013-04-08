@@ -12,7 +12,10 @@ class ActionState(state.NamedEventState):
 
 
 class CompletedActionCommand(object):
+    """This is a null object for ActionCommand."""
     is_complete = True
+    is_done = True
+    is_failed = False
 
 
 class ActionCommand(object):
@@ -99,7 +102,13 @@ class ActionCommand(object):
 
     @property
     def is_complete(self):
+        """Complete implies done and success."""
         return self.machine.state == self.COMPLETE
+
+    @property
+    def is_done(self):
+        """Done implies no more work will be done, but might not be success."""
+        return self.machine.state in (self.COMPLETE, self.FAILSTART)
 
     def __repr__(self):
         return "ActionCommand %s %s: %s" % (self.id, self.command, self.state)
@@ -133,6 +142,9 @@ class StringBufferStore(object):
 
     def get_stream(self, name):
         return self.buffers[name].get_value()
+
+    def clear(self):
+        self.buffers.clear()
 
 
 class NoActionRunnerFactory(object):

@@ -187,6 +187,11 @@ class ValidIntervalSchedulerTestCase(TestCase):
     def test_valid_interval_scheduler_unicode(self):
         assert_raises(ConfigError, self.validate, u"6 ຖminute")
 
+    def test_valid_interval_scheduler_alias(self):
+        config = self.validate("  hourly  ")
+        expected = datetime.timedelta(hours=1)
+        assert_equal(config.timedelta, expected)
+
 
 if __name__ == "__main__":
     run()

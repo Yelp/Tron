@@ -117,6 +117,9 @@ class Job(Observable, Observer):
         log.warn("%s in an unknown state: %s" % (self, self.runs))
         return self.STATUS_UNKNOWN
 
+    def get_name(self):
+        return self.name
+
     @property
     def state_data(self):
         """This data is used to serialize the state of this job."""
