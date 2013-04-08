@@ -57,8 +57,11 @@ class JobRun(Observable, Observer):
     @classmethod
     def for_job(cls, job, run_num, run_time, node, manual):
         """Create a JobRun for a job."""
-        run = cls(job.name, run_num, run_time, node, job.output_path.clone(),
-                job.context, action_graph=job.action_graph, manual=manual)
+        run = cls(job.get_name(), run_num, run_time, node,
+                job.output_path.clone(),
+                job.context,
+                action_graph=job.action_graph,
+                manual=manual)
 
         action_runs     = ActionRunFactory.build_action_run_collection(run)
         run.action_runs = action_runs
@@ -100,7 +103,7 @@ class JobRun(Observable, Observer):
             'job_name':         self.job_name,
             'run_num':          self.run_num,
             'run_time':         self.run_time,
-            'node_name':        self.node.name if self.node else None,
+            'node_name':        self.node.get_name() if self.node else None,
             'runs':             self.action_runs.state_data,
             'cleanup_run':      self.action_runs.cleanup_action_state_data,
             'manual':           self.manual,
@@ -351,6 +354,14 @@ class JobRunCollection(object):
     def get_run_by_num(self, num):
         """Return a the run with run number which matches num."""
         return self._get_run_using(lambda r: r.run_num == num)
+
+    def get_run_by_index(self, index):
+        """Return the job run at index. Jobs are indexed from oldest to newest.
+        """
+        try:
+            return self.runs[index * -1 - 1]
+        except IndexError:
+            return None
 
     def get_run_by_state_short_name(self, short_name):
         """Returns the most recent run which matches the state short name."""

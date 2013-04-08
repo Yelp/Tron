@@ -62,6 +62,6 @@ services:
     node: pool
     count: 10
     monitor_interval: 20
-    restart_interval: 60
+    restart_delay: 60
     pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
     command: "sleep 10; echo %! > %(pid_file)s"

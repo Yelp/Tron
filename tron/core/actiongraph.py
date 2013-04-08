@@ -61,6 +61,9 @@ class ActionGraph(object):
     def get_actions(self):
         return self.action_map.itervalues()
 
+    def get_action_map(self):
+        return self.action_map
+
     @property
     def names(self):
         return self.action_map.keys()
