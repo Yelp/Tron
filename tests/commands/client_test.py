@@ -118,7 +118,8 @@ class ClientTestCase(TestCase):
 
     def test_action_runs(self):
         self.client.action_runs('/jobs/name/0/act', num_lines=40)
-        self.client.request.assert_called_with('/jobs/name/0/act?num_lines=40')
+        self.client.request.assert_called_with(
+            '/jobs/name/0/act?include_stdout=1&num_lines=40&include_stderr=1')
 
     def test_job_runs(self):
         self.client.job_runs('/jobs/name/0')

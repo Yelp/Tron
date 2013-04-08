@@ -12,6 +12,9 @@ class window.ActionRun extends Backbone.Model
     urlRoot: ->
         "/jobs/#{ @get('job_name') }/#{ @get('run_num') }/"
 
+    url: =>
+        super() + "?include_stdout=1&include_stderr=1&num_lines=0"
+
     parse: (resp, options) =>
         resp['job_url'] = "#job/#{ @get('job_name') }"
         resp['job_run_url'] = "#{ resp['job_url'] }/#{ @get('run_num') }"

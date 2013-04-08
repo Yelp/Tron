@@ -130,7 +130,11 @@ class Client(object):
         return self.http_get(url, params)
 
     def action_runs(self, action_run_url, num_lines=0):
-        return self.http_get(action_run_url, dict(num_lines=num_lines))
+        params = {
+            'num_lines':        num_lines,
+            'include_stdout':   1,
+            'include_stderr':   1}
+        return self.http_get(action_run_url, params)
 
     def object_events(self, item_url):
         return self.http_get('%s/_events' % item_url)['data']
