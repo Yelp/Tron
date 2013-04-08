@@ -59,7 +59,7 @@ class Service(observer.Observer, observer.Observable):
         self.config             = config
         self.instances          = instance_collection
         self.enabled            = False
-        args                    = config.restart_interval, self.repair
+        args                    = config.restart_delay, self.repair
         self.repair_callback    = eventloop.UniqueCallback(*args)
         self.event_recorder     = event.get_recorder(str(self))
 

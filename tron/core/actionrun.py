@@ -24,9 +24,10 @@ class ActionRunFactory(object):
     @classmethod
     def build_action_run_collection(cls, job_run):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
+        action_map = job_run.action_graph.get_action_map().iteritems()
         action_run_map = dict(
             (name, cls.build_run_for_action(job_run, action_inst))
-            for name, action_inst in job_run.action_graph.action_map.iteritems()
+            for name, action_inst in action_map
         )
         return ActionRunCollection(job_run.action_graph, action_run_map)
 

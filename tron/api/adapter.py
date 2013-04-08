@@ -207,8 +207,9 @@ class JobRunAdapter(RunAdapter):
 
 class JobAdapter(ReprAdapter):
 
-    field_names = ['name', 'status', 'all_nodes', 'allow_overlap', 'queueing']
+    field_names = ['status', 'all_nodes', 'allow_overlap', 'queueing']
     translated_field_names = [
+        'name',
         'scheduler',
         'action_names',
         'node_pool',
@@ -230,6 +231,9 @@ class JobAdapter(ReprAdapter):
         self.include_action_graph = include_action_graph
         self.num_runs             = num_runs
 
+    def get_name(self):
+        return self._obj.get_name()
+
     def get_scheduler(self):
         return str(self._obj.scheduler)
 
@@ -248,7 +252,7 @@ class JobAdapter(ReprAdapter):
         return next_run.run_time if next_run else None
 
     def get_url(self):
-        return '/jobs/%s' % urllib.quote(self._obj.name)
+        return '/jobs/%s' % urllib.quote(self._obj.get_name())
 
     @toggle_flag('include_job_runs')
     def get_runs(self):
@@ -273,7 +277,7 @@ class ServiceAdapter(ReprAdapter):
         'node_pool',
         'live_count',
         'monitor_interval',
-        'restart_interval',
+        'restart_delay',
         'events']
 
     def __init__(self, service, include_events=False):
@@ -307,8 +311,8 @@ class ServiceAdapter(ReprAdapter):
     def get_monitor_interval(self):
         return self._obj.config.monitor_interval
 
-    def get_restart_interval(self):
-        return self._obj.config.restart_interval
+    def get_restart_delay(self):
+        return self._obj.config.restart_delay
 
     @toggle_flag('include_events')
     def get_events(self):

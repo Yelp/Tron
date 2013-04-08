@@ -249,8 +249,8 @@ class DisplayServices(TableDisplay):
         ('Command',             'command'           ),
         ('Pid Filename',        'pid_filename'      ),
         ('Node Pool',           'node_pool'         ),
-        ('Restart interval',    'restart_interval'  ),
         ('Monitor interval',    'monitor_interval'  ),
+        ('Restart delay',       'restart_delay'     ),
     ]
 
     colors = {

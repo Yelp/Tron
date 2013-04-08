@@ -61,6 +61,17 @@ def handle_command(request, api_controller, obj, **kwargs):
     return respond(request, {'result': response})
 
 
+def resource_from_collection(collection, name, child_resource):
+    """Return a child resource from a collection item by looking it up from
+    the name. If no item is found, return NoResource.
+    """
+    item = collection.get_by_name(name)
+    if item is None:
+        return resource.NoResource("Cannot find child %s" % name)
+
+    return child_resource(item)
+
+
 class ActionRunResource(resource.Resource):
 
     isLeaf = True
@@ -93,7 +104,7 @@ class JobRunResource(resource.Resource):
         self.controller    = controller.JobRunController(job_run, job_scheduler)
 
     def getChild(self, action_name, _):
-        if action_name == '':
+        if not action_name:
             return self
         if action_name == '_events':
             return EventResource(self.job_run.id)
@@ -116,6 +127,10 @@ class JobRunResource(resource.Resource):
         return handle_command(request, self.controller, self.job_run)
 
 
+def is_negative_int(string):
+    return string.startswith('-') and string[1:].isdigit()
+
+
 class JobResource(resource.Resource):
     """A resource that describes a particular job"""
 
@@ -124,25 +139,28 @@ class JobResource(resource.Resource):
         self.job_scheduler = job_scheduler
         self.controller    = controller.JobController(job_scheduler)
 
+    def get_run_from_identifier(self, run_id):
+        job = self.job_scheduler.get_job()
+        run_id = run_id.upper()
+        if run_id == 'HEAD':
+            return job.runs.get_newest()
+        if run_id.isdigit():
+            return job.runs.get_run_by_num(int(run_id))
+        if is_negative_int(run_id):
+            return job.runs.get_run_by_index(int(run_id))
+        return job.runs.get_run_by_state_short_name(run_id)
+
     def getChild(self, run_id, _):
-        job = self.job_scheduler.job
-        if run_id == '':
+        if not run_id:
             return self
         if run_id == '_events':
             return EventResource(self.job_scheduler.get_name())
 
-        run_id = run_id.upper()
-        if run_id == 'HEAD':
-            run = job.runs.get_newest()
-        elif run_id.isdigit():
-            run = job.runs.get_run_by_num(int(run_id))
-        else:
-            run = job.runs.get_run_by_state_short_name(run_id)
-
+        run = self.get_run_from_identifier(run_id)
         if run:
             return JobRunResource(run, self.job_scheduler)
-        msg = "Cannot find job run '%s' for job '%s'"
-        return resource.NoResource(msg % (run_id, job))
+        msg = "Cannot find job run %s for %s"
+        return resource.NoResource(msg % (run_id, self.job_scheduler.get_job()))
 
     def render_GET(self, request):
         include_action_runs = requestargs.get_bool(request, 'include_action_runs')
@@ -169,14 +187,9 @@ class JobCollectionResource(resource.Resource):
         resource.Resource.__init__(self)
 
     def getChild(self, name, request):
-        if name == '':
+        if not name:
             return self
-
-        job_sched = self.job_collection.get_by_name(name)
-        if job_sched is None:
-            return resource.NoResource("Cannot find job '%s'" % name)
-
-        return JobResource(job_sched)
+        return resource_from_collection(self.job_collection, name, JobResource)
 
     def get_data(self, include_job_run=False, include_action_runs=False):
         jobs = (sched.get_job() for sched in self.job_collection)
@@ -214,7 +227,7 @@ class ServiceResource(resource.Resource):
         self.controller = controller.ServiceController(self.service)
 
     def getChild(self, name, _):
-        if name == '':
+        if not name:
             return self
         if name == '_events':
             return EventResource(str(self.service))
@@ -244,14 +257,9 @@ class ServiceCollectionResource(resource.Resource):
         resource.Resource.__init__(self)
 
     def getChild(self, name, _):
-        if name == '':
+        if not name:
             return self
-
-        service = self.collection.get_by_name(name)
-        if service is None:
-            return resource.NoResource("Cannot find service '%s'" % name)
-
-        return ServiceResource(service)
+        return resource_from_collection(self.collection, name, ServiceResource)
 
     def get_data(self):
         return adapter.adapt_many(adapter.ServiceAdapter, self.collection)
@@ -333,9 +341,7 @@ class RootResource(resource.Resource):
         self.putChild('web',      static.File(web_path))
 
     def getChild(self, name, request):
-        if name == '':
-            return self
-        return resource.Resource.getChild(self, name, request)
+        return resource.Resource.getChild(self, name, request) if name else self
 
     def urls_from_child(self, child_name):
         def name_url_dict(source):
