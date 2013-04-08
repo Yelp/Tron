@@ -5,6 +5,7 @@ import pytz
 
 from testify import setup, run, assert_equal, TestCase
 from testify import assert_gte, assert_lte, assert_gt, assert_lt
+from testify import setup_teardown
 from tests import testingutils
 
 from tron import scheduler
@@ -58,31 +59,45 @@ class ConstantSchedulerTest(testingutils.MockTimeTestCase):
         assert_equal(str(self.scheduler), "CONSTANT")
 
 
-class GrocSchedulerTestCase(testingutils.MockTimeTestCase):
+class GeneralSchedulerTestCase(testingutils.MockTimeTestCase):
 
     now = datetime.datetime.now().replace(hour=15, minute=0)
+
+    def expected_time(self, date):
+        return datetime.datetime.combine(date, datetime.time(14, 30))
 
     @setup
     def build_scheduler(self):
         self.scheduler = scheduler.GeneralScheduler(timestr='14:30')
+        one_day = datetime.timedelta(days=1)
+        self.today = self.now.date()
+        self.yesterday = self.now - one_day
+        self.tomorrow = self.now + one_day
 
     def test_next_run_time(self):
-        one_day = datetime.timedelta(days=1)
-        today = self.now.date()
-        yesterday = self.now - one_day
-        tomorrow = today + one_day
-
         next_run = self.scheduler.next_run_time(timeutils.current_time())
-        assert_equal(tomorrow, next_run.date())
+        assert_equal(self.expected_time(self.tomorrow), next_run)
 
-        next_run = self.scheduler.next_run_time(yesterday)
-        assert_equal(today, next_run.date())
+        next_run = self.scheduler.next_run_time(self.yesterday)
+        assert_equal(self.expected_time(self.today), next_run)
+
+    @mock.patch('tron.scheduler.get_jitter', autospec=True)
+    def test_next_run_time_with_jitter(self, mock_jitter):
+        mock_jitter.return_value = delta = datetime.timedelta(seconds=-300)
+        self.scheduler.jitter = datetime.timedelta(seconds=400)
+        expected = self.expected_time(self.tomorrow) + delta
+        next_run_time = self.scheduler.next_run_time(None)
+        assert_equal(next_run_time, expected)
 
     def test__str__(self):
         assert_equal(str(self.scheduler), "DAILY")
 
+    def test__str__with_jitter(self):
+        self.scheduler.jitter = datetime.timedelta(seconds=300)
+        assert_equal(str(self.scheduler), "DAILY (+/- 0:05:00)")
 
-class GrocSchedulerTimeTestBase(testingutils.MockTimeTestCase):
+
+class GeneralSchedulerTimeTestBase(testingutils.MockTimeTestCase):
 
     now = datetime.datetime(2012, 3, 14, 15, 9, 26)
 
@@ -91,7 +106,7 @@ class GrocSchedulerTimeTestBase(testingutils.MockTimeTestCase):
         self.scheduler = scheduler.GeneralScheduler(timestr='14:30')
 
 
-class GrocSchedulerTodayTest(GrocSchedulerTimeTestBase):
+class GeneralSchedulerTodayTest(GeneralSchedulerTimeTestBase):
 
     now = datetime.datetime.now().replace(hour=12, minute=0)
 
@@ -106,7 +121,7 @@ class GrocSchedulerTodayTest(GrocSchedulerTimeTestBase):
         assert_lte(earlier_time, run_time)
 
 
-class GrocSchedulerTomorrowTest(GrocSchedulerTimeTestBase):
+class GeneralSchedulerTomorrowTest(GeneralSchedulerTimeTestBase):
 
     now = datetime.datetime.now().replace(hour=15, minute=0)
 
@@ -122,7 +137,7 @@ class GrocSchedulerTomorrowTest(GrocSchedulerTimeTestBase):
         assert_lte(earlier_time, run_time)
 
 
-class GrocSchedulerLongJobRunTest(GrocSchedulerTimeTestBase):
+class GeneralSchedulerLongJobRunTest(GeneralSchedulerTimeTestBase):
 
     now = datetime.datetime.now().replace(hour=12, minute=0)
 
@@ -140,7 +155,7 @@ class GrocSchedulerLongJobRunTest(GrocSchedulerTimeTestBase):
             last_run = next_run
 
 
-class GrocSchedulerDSTTest(testingutils.MockTimeTestCase):
+class GeneralSchedulerDSTTest(testingutils.MockTimeTestCase):
 
     now = datetime.datetime(2011, 11, 6, 1, 10, 0)
 
@@ -219,7 +234,9 @@ class GrocSchedulerDSTTest(testingutils.MockTimeTestCase):
 
 
 def parse_groc(config):
+    config = schedule_parse.ConfigGenericSchedule('groc daily', config, None)
     return parse_groc_expression(config, NullConfigContext)
+
 
 def scheduler_from_config(config):
     return scheduler.scheduler_from_config(parse_groc(config), None)
@@ -323,21 +340,47 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         assert_equal(next_run_date.month, 7)
 
 
-class IntervalSchedulerTest(testingutils.MockTimeTestCase):
+class IntervalSchedulerTestCase(TestCase):
 
     now = datetime.datetime(2012, 3, 14)
 
+    @setup_teardown
+    def patch_time(self):
+        with mock.patch('tron.scheduler.timeutils.current_time') as self.mock_now:
+            self.mock_now.return_value = self.now
+            yield
+
     @setup
     def build_scheduler(self):
-        self.interval = datetime.timedelta(seconds=1)
-        self.scheduler = scheduler.IntervalScheduler(self.interval)
+        self.seconds = 7
+        self.interval = datetime.timedelta(seconds=self.seconds)
+        self.scheduler = scheduler.IntervalScheduler(self.interval, None)
 
-    def test_next_run_time(self):
-        run_time = self.scheduler.next_run_time(self.now)
+    def test_next_run_time_no_jitter(self):
+        prev_run_time = datetime.datetime(2011, 5, 21)
+        run_time = self.scheduler.next_run_time(prev_run_time)
+        assert_equal(prev_run_time + self.interval, run_time)
+
+    def test_next_run_time_no_last_run_time_no_jitter(self):
+        run_time = self.scheduler.next_run_time(None)
         assert_equal(self.now + self.interval, run_time)
+
+    @mock.patch('tron.scheduler.random', autospec=True)
+    def test_next_run_time_with_jitter(self, mock_random):
+        jitter = datetime.timedelta(seconds=234)
+        mock_random.randint.return_value = random_jitter = -200
+        random_delta = datetime.timedelta(seconds=random_jitter)
+        prev_run_time = datetime.datetime(2011, 5, 21)
+        interval_sched = scheduler.IntervalScheduler(self.interval, jitter)
+        run_time = interval_sched.next_run_time(prev_run_time)
+        assert_equal(run_time, prev_run_time + random_delta + self.interval)
 
     def test__str__(self):
         assert_equal(str(self.scheduler), "INTERVAL %s" % self.interval)
+
+    def test__str__with_jitter(self):
+        self.scheduler.jitter = datetime.timedelta(seconds=300)
+        assert_equal(str(self.scheduler), "INTERVAL 0:00:07 (+/- 0:05:00)")
 
 
 if __name__ == '__main__':
