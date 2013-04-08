@@ -34,6 +34,7 @@ class MockReactorTestCase(TestCase):
         setattr(self.module_to_mock, 'reactor', self.reactor)
 
 
+# TODO: remove
 class MockTimeTestCase(TestCase):
 
     now = None
