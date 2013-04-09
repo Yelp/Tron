@@ -1,8 +1,10 @@
 """
 Format and color output for tron commands.
 """
+import contextlib
 from functools import partial
 from operator import itemgetter
+from tron.core import actionrun, job, service
 
 
 class Color(object):
@@ -26,6 +28,16 @@ class Color(object):
         'hcyan':                '\033[106m',
         'end':                  '\033[0m',
     }
+
+    @classmethod
+    @contextlib.contextmanager
+    def enable(cls):
+        old_val = cls.enabled
+        try:
+            cls.enabled = True
+            yield
+        finally:
+            cls.enabled = old_val
 
     @classmethod
     def set(cls, color_name, text):
@@ -164,11 +176,16 @@ class TableDisplay(object):
 
 
 def add_color_for_state(state):
-    if state in ('failed', ):
+    if state == actionrun.ActionRun.STATE_FAILED.name:
         return Color.set('red', state)
-    if state in ('up', 'enabled', 'running', 'success'):
+    if state in set((
+        actionrun.ActionRun.STATE_RUNNING.name,
+        actionrun.ActionRun.STATE_SUCCEEDED.name,
+        job.Job.STATUS_ENABLED,
+        service.ServiceState.UP
+    )):
         return Color.set('green', state)
-    if state in ('disabled', 'down'):
+    if state in set((job.Job.STATUS_DISABLED, service.ServiceState.DISABLED)):
         return Color.set('blue', state)
     return state
 
