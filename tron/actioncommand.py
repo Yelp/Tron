@@ -42,8 +42,7 @@ class ActionCommand(object):
     def __init__(self, id, command, serializer=None):
         self.id             = id
         self.command        = command
-        self.machine        = state.StateMachine(
-                                initial_state=self.PENDING, delegate=self)
+        self.machine        = state.StateMachine(self.PENDING, delegate=self)
         self.exit_status    = None
         self.start_time     = None
         self.end_time       = None
@@ -156,13 +155,11 @@ class NoActionRunnerFactory(object):
         return ActionCommand(id, command, serializer)
 
     @classmethod
-    def build_stop_action_command(cls, id, command):
+    def build_stop_action_command(cls, _id, _command):
         """It is not possible to stop action commands without a runner."""
         raise NotImplementedError("An action_runner is required to stop.")
 
 
-# TODO: tests
-# TODO: is cleanup of status files required?
 class SubprocessActionRunnerFactory(object):
     """Run actions by wrapping them in `action_runner.py`."""
 

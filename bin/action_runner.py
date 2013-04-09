@@ -46,19 +46,19 @@ class StatusFile(object):
 
 class NoFile(object):
 
+    @classmethod
     @contextlib.contextmanager
     def wrap(self, _command, _proc):
         yield
 
 
-# TODO: new tests
 def get_status_file(output_path):
     if not os.path.isdir(output_path):
         try:
             os.makedirs(output_path)
-        except OSError, e:
+        except OSError:
             log.warn("Output path %s does not exist", output_path)
-            return NoFile()
+            return NoFile
     return StatusFile(os.path.join(output_path, STATUS_FILE))
 
 

@@ -1,6 +1,7 @@
 import mock
 from testify import TestCase, assert_equal, setup
 from testify.assertions import assert_not_equal
+from tests.testingutils import autospec_method
 from tron import actioncommand
 
 from tron.actioncommand import ActionCommand
@@ -121,6 +122,46 @@ class CreateActionCommandFactoryFromConfigTestCase(TestCase):
 
 
 class SubprocessActionRunnerFactoryTestCase(TestCase):
+
+    @setup
+    def setup_factory(self):
+        self.status_path = 'status_path'
+        self.exec_path = 'exec_path'
+        self.factory = actioncommand.SubprocessActionRunnerFactory(
+            self.status_path, self.exec_path)
+
+    def test_from_config(self):
+        config = mock.Mock()
+        runner_factory = actioncommand.SubprocessActionRunnerFactory.from_config(
+            config)
+        assert_equal(runner_factory.status_path, config.remote_status_path)
+        assert_equal(runner_factory.exec_path, config.remote_exec_path)
+
+    def test_create(self):
+        serializer = mock.create_autospec(actioncommand.StringBufferStore)
+        id, command = 'id', 'do a thing'
+        autospec_method(self.factory.build_command)
+        action_command = self.factory.create(id, command, serializer)
+        assert_equal(action_command.id, id)
+        assert_equal(action_command.command, self.factory.build_command.return_value)
+        assert_equal(action_command.stdout, serializer.open.return_value)
+        assert_equal(action_command.stderr, serializer.open.return_value)
+
+    def test_build_command(self):
+        id, command, exec_name = 'id', 'do a thing', 'exec_name'
+        actual = self.factory.build_command(id, command, exec_name)
+        expected = '%s/%s "%s/%s" "%s"' % (
+            self.exec_path, exec_name, self.status_path, id, command)
+        assert_equal(actual, expected)
+
+    def test_build_stop_action_command(self):
+        id, command = 'id', 'do a thing'
+        autospec_method(self.factory.build_command)
+        action_command = self.factory.build_stop_action_command(id, command)
+        assert_equal(action_command.id,
+            '%s.%s' % (id, self.factory.build_command.return_value))
+        assert_equal(action_command.command,
+            self.factory.build_command.return_value)
 
     def test__eq__true(self):
         first = actioncommand.SubprocessActionRunnerFactory('a', 'b')
