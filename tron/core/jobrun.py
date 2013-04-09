@@ -433,7 +433,6 @@ class JobRunCollection(object):
     def last_success(self):
         return self.get_run_by_state(ActionRun.STATE_SUCCEEDED)
 
-    # TODO: this should actually use reverse
     @property
     def next_run(self):
         return self.get_run_by_state(ActionRun.STATE_SCHEDULED)
