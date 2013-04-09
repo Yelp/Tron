@@ -7,6 +7,7 @@ from tron.actioncommand import ActionCommand
 from tron.config import schema
 from tron.serialize import filehandler
 
+
 class ActionCommandTestCase(TestCase):
 
     @setup
@@ -113,19 +114,22 @@ class CreateActionCommandFactoryFromConfigTestCase(TestCase):
 
     def test_create_action_command_with_simple_runner(self):
         status_path, exec_path = '/tmp/what', '/remote/bin'
-        config = schema.ConfigActionRunner('simple', status_path, exec_path)
+        config = schema.ConfigActionRunner('subprocess', status_path, exec_path)
         factory = actioncommand.create_action_runner_factory_from_config(config)
         assert_equal(factory.status_path, status_path)
         assert_equal(factory.exec_path, exec_path)
 
+
+class SubprocessActionRunnerFactoryTestCase(TestCase):
+
     def test__eq__true(self):
-        first = actioncommand.SimpleActionRunnerFactory('a', 'b')
-        second = actioncommand.SimpleActionRunnerFactory('a', 'b')
+        first = actioncommand.SubprocessActionRunnerFactory('a', 'b')
+        second = actioncommand.SubprocessActionRunnerFactory('a', 'b')
         assert_equal(first, second)
 
     def test__eq__false(self):
-        first = actioncommand.SimpleActionRunnerFactory('a', 'b')
-        second = actioncommand.SimpleActionRunnerFactory('a', 'c')
+        first = actioncommand.SubprocessActionRunnerFactory('a', 'b')
+        second = actioncommand.SubprocessActionRunnerFactory('a', 'c')
         assert_not_equal(first, second)
         assert_not_equal(first, None)
         assert_not_equal(first, actioncommand.NoActionRunnerFactory)

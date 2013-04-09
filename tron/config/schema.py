@@ -2,6 +2,8 @@
  Immutable config schema objects.
 """
 from collections import namedtuple
+from tron.utils.collections import Enum
+
 
 MASTER_NAMESPACE = "MASTER"
 
@@ -144,3 +146,9 @@ ConfigService = config_object_factory(
         'restart_delay',        # float
         'count',                # int
     ])
+
+
+StatePersistenceTypes = Enum.create('shelve', 'sql', 'mongo', 'yaml')
+
+
+ActionRunnerTypes = Enum.create('none', 'subprocess')

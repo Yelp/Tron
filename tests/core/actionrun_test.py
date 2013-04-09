@@ -39,7 +39,7 @@ class ActionRunFactoryTestCase(TestCase):
             'command':          'do action1',
             'node_name':        'anode'
         }
-        self.action_runner = mock.create_autospec(actioncommand.SimpleActionRunnerFactory)
+        self.action_runner = mock.create_autospec(actioncommand.SubprocessActionRunnerFactory)
 
     def test_build_action_run_collection(self):
         collection = ActionRunFactory.build_action_run_collection(
