@@ -72,9 +72,9 @@ man:
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
 
 tests:
-	PYTHONPATH=. testify -x sandbox -x mongodb -x integration tests
+	PYTHONPATH=.:bin testify -x sandbox -x mongodb -x integration tests
 
 test: tests
 
 test_all:
-	PYTHONPATH=. testify tests --summary
+	PYTHONPATH=.:bin testify tests --summary

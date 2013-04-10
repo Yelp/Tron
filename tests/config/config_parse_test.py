@@ -153,6 +153,7 @@ services:
 
     def test_attributes(self):
         expected = schema.TronConfig(
+            action_runner=FrozenDict(),
             output_stream_dir='/tmp',
             command_context=FrozenDict({
                 'python': '/usr/bin/python',

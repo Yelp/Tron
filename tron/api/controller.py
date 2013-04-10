@@ -33,7 +33,8 @@ class JobCollectionController(object):
 
 class ActionRunController(object):
 
-    mapped_commands = set(('start', 'success', 'cancel', 'fail', 'skip'))
+    mapped_commands = set(
+        ('start', 'success', 'cancel', 'fail', 'skip', 'stop', 'kill'))
 
     def __init__(self, action_run, job_run):
         self.action_run = action_run
@@ -47,12 +48,25 @@ class ActionRunController(object):
             return ("Action run can not be started if it's job run is still "
                     "scheduled.")
 
+        if command in ('stop', 'kill'):
+            return self.handle_termination(command)
+
         if getattr(self.action_run, command)():
             msg = "%s now in state %s"
             return msg % (self.action_run, self.action_run.state)
 
         msg = "Failed to %s on %s. State is %s."
         return msg % (command, self.action_run, self.action_run.state)
+
+    def handle_termination(self, command):
+        try:
+            getattr(self.action_run, command)()
+            msg = "Attempting to %s %s"
+            return msg % (command, self.action_run)
+        except NotImplementedError, e:
+            msg = "Failed to %s: %s"
+            return msg % (command, e)
+
 
 
 class JobRunController(object):

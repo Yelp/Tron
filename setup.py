@@ -49,7 +49,9 @@ setup(
         'bin/trond',
         'bin/tronview',
         'bin/tronctl',
-        'bin/tronfig'
+        'bin/tronfig',
+        'bin/action_runner.py',
+        'bin/action_status.py',
     ],
     include_package_data=True,
     long_description="""Tron is a centralized system for managing periodic batch processes and services across a cluster. If you find cron or fcron to be insufficient for managing complex work flows across multiple computers, Tron might be for you.
