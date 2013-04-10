@@ -1,5 +1,6 @@
 import logging
 import os
+from tron.config import schema
 from tron.serialize import filehandler
 
 from tron.utils import state, timeutils
@@ -41,8 +42,7 @@ class ActionCommand(object):
     def __init__(self, id, command, serializer=None):
         self.id             = id
         self.command        = command
-        self.machine        = state.StateMachine(
-                                initial_state=self.PENDING, delegate=self)
+        self.machine        = state.StateMachine(self.PENDING, delegate=self)
         self.exit_status    = None
         self.start_time     = None
         self.end_time       = None
@@ -155,13 +155,12 @@ class NoActionRunnerFactory(object):
         return ActionCommand(id, command, serializer)
 
     @classmethod
-    def build_stop_action_command(cls, id, command):
+    def build_stop_action_command(cls, _id, _command):
         """It is not possible to stop action commands without a runner."""
         raise NotImplementedError("An action_runner is required to stop.")
 
-# TODO: is cleanup of status files required?
-# TODO: better name
-class SimpleActionRunnerFactory(object):
+
+class SubprocessActionRunnerFactory(object):
     """Run actions by wrapping them in `action_runner.py`."""
 
     runner_exec_name =  "action_runner.py"
@@ -198,14 +197,19 @@ class SimpleActionRunnerFactory(object):
         return not self == other
 
 
-# TODO: share constants with config
 def create_action_runner_factory_from_config(config):
     """A factory-factory method which returns a callable that can be used to
     create ActionCommand objects. The factory definition should match the
     constructor for ActionCommand.
     """
-    if not config or config.runner_type == 'none':
+    if not config:
         return NoActionRunnerFactory
 
-    if config.runner_type == 'simple':
-        return SimpleActionRunnerFactory.from_config(config)
+    if config.runner_type not in schema.ActionRunnerTypes:
+        raise ValueError("Unknown runner type: %s", config.runner_type)
+
+    if config.runner_type == schema.ActionRunnerTypes.none:
+        return NoActionRunnerFactory
+
+    if config.runner_type == schema.ActionRunnerTypes.subprocess:
+        return SubprocessActionRunnerFactory.from_config(config)

@@ -56,6 +56,7 @@ class MasterControlProgramTestCase(TestCase):
         master_config = config_container.get_master.return_value
         autospec_method(self.mcp.apply_collection_config)
         autospec_method(self.mcp.apply_notification_options)
+        autospec_method(self.mcp.build_job_scheduler_factory)
         self.mcp.apply_config(config_container)
         self.mcp.state_watcher.update_from_config.assert_called_with(
             master_config.state_persistence)
@@ -65,6 +66,7 @@ class MasterControlProgramTestCase(TestCase):
             master_config.notification_options)
         mock_repo.update_from_config.assert_called_with(master_config.nodes, 
             master_config.node_pools, master_config.ssh_options)
+        self.mcp.build_job_scheduler_factory(master_config)
 
     def test_update_state_watcher_config_changed(self):
         self.mcp.state_watcher.update_from_config.return_value = True

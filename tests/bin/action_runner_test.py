@@ -34,35 +34,42 @@ class StatusFileTestCase(TestCase):
 
 
 class RegisterTestCase(TestCase):
+    mock_isdir = mock_status_file = None
+    mock_makedirs = None
 
     @setup_teardown
     def patch_sys(self):
         with contextlib.nested(
-            mock.patch('action_runner.sys.exit', autospec=True),
             mock.patch('action_runner.os.path.isdir', autospec=True),
+            mock.patch('action_runner.os.makedirs', autospec=True),
             mock.patch('action_runner.StatusFile', autospec=True),
-            mock.patch('action_runner.NoFile', autospec=True)
-            ) as (self.mock_exit,
-                  self.mock_isdir,
-                  self.mock_status_file,
-                  self.mock_no_file):
+            ) as (self.mock_isdir,
+                  self.mock_makedirs,
+                  self.mock_status_file):
             self.output_path = '/bogus/path/does/not/exist'
             self.command = 'command'
             self.proc = mock.Mock()
             yield
 
-    def test_register_nodir(self):
+    def test_get_status_file_dir_does_not_exist_created(self):
         self.mock_isdir.return_value = False
-        action_runner.register(self.output_path, self.command, self.proc)
-        self.mock_no_file.assert_called_with()
-        self.mock_no_file.return_value.wrap.assert_called_with(
-            self.command, self.proc)
-        self.mock_exit.assert_called_with(self.proc.returncode)
+        status_file = action_runner.get_status_file(self.output_path)
+        assert_equal(status_file, self.mock_status_file.return_value)
+        self.mock_status_file.assert_called_with(
+            self.output_path + '/' + action_runner.STATUS_FILE)
 
-    def test_register_dir_exists(self):
+    def test_get_status_file_dir_does_not_exist_create_failed(self):
+        self.mock_isdir.return_value = False
+        self.mock_makedirs.side_effect = OSError
+        status_file = action_runner.get_status_file(self.output_path)
+        assert_equal(status_file, action_runner.NoFile)
+
+    @mock.patch('action_runner.sys.exit', autospec=True)
+    def test_register(self, mock_sys_exit):
         action_runner.register(self.output_path, self.command, self.proc)
         self.mock_status_file.assert_called_with(
             self.output_path + '/' + action_runner.STATUS_FILE)
         self.mock_status_file.return_value.wrap.assert_called_with(
             self.command, self.proc)
-        self.mock_exit.assert_called_with(self.proc.returncode)
+        self.proc.wait.assert_called_with()
+        mock_sys_exit.assert_called_with(self.proc.returncode)

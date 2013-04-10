@@ -4,7 +4,7 @@ import pytz
 from testify import TestCase, setup, assert_equal
 from testify.assertions import assert_in
 from tests.assertions import assert_length, assert_raises, assert_call
-from tron import node, event
+from tron import node, event, actioncommand
 from tron.core import jobrun, actionrun, actiongraph, job
 from tests.testingutils import Turtle, autospec_method
 from tron.serialize import filehandler
@@ -12,10 +12,12 @@ from tron.serialize import filehandler
 
 def build_mock_job():
     action_graph = mock.create_autospec(actiongraph.ActionGraph)
+    runner = mock.create_autospec(actioncommand.SubprocessActionRunnerFactory)
     return mock.create_autospec(job.Job,
         action_graph=action_graph,
         output_path=mock.Mock(),
-        context=mock.Mock())
+        context=mock.Mock(),
+        action_runner=runner)
 
 
 class JobRunTestCase(TestCase):

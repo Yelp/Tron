@@ -90,9 +90,8 @@ valid_bool = build_type_validator(
 
 def build_enum_validator(enum):
     enum = set(enum)
-    contains = enum.__contains__
     msg = 'Value at %%s is not in %s: %%s.' % str(enum)
-    return build_type_validator(contains, msg)
+    return build_type_validator(enum.__contains__, msg)
 
 
 def valid_time(value, config_context):

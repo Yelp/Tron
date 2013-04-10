@@ -376,9 +376,9 @@ class ValidateActionRunner(Validator):
         'remote_status_path':   '/tmp',
     }
 
-    runners =                   ['none', 'simple']
     validators = {
-        'runner_type':          config_utils.build_enum_validator(runners),
+        'runner_type':          config_utils.build_enum_validator(
+                                    schema.ActionRunnerTypes),
         'remote_status_path':   valid_string,
         'remote_exec_path':     valid_string,
     }
@@ -393,7 +393,8 @@ class ValidateStatePersistence(Validator):
 
     validators = {
         'name':                 valid_string,
-        'store_type':           valid_string,
+        'store_type':           config_utils.build_enum_validator(
+                                    schema.StatePersistenceTypes),
         'connection_details':   valid_string,
         'buffer_size':          valid_int,
     }

@@ -231,6 +231,45 @@ Example::
         buffer_size: 1 # No buffer
 
 
+Action Runners
+--------------
+
+**Note:** this is an experimental feature
+
+
+**action_runner**
+    Action runner configuration allows you to run Job actions through a script
+    which records it's pid. This provides support for a max_runtime option
+    on jobs, and allows you to stop or kill the action from :command:`tronctl`.
+
+    **runner_type**
+        Valid options are:
+            **none**
+                Run actions without a wrapper. This is the default
+
+            **subprocess**
+                Run actions with a script which records the pid and runs the
+                action command in a subprocess (on the remote node). This
+                requires that :command:`bin/action_runner.py` and
+                :command:`bin/action_status.py` are avialable on the remote
+                host.
+
+    **remote_status_path**
+        Path used to store status files. Defaults to `/tmp`.
+
+    **remote_exec_path**
+        Directory path which contains :command:`action_runner.py` and
+        :command:`action_status.py` scripts.
+
+
+Example::
+
+    action_runner:
+        runner_type:        "subprocess"
+        remote_status_path: "/tmp/tron"
+        remote_exec_path:   "/usr/local/bin"
+
+
 Nodes
 -----
 
