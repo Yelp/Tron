@@ -136,8 +136,7 @@ class JobResource(resource.Resource):
 
     def get_run_from_identifier(self, run_id):
         job = self.job_scheduler.get_job()
-        run_id = run_id.upper()
-        if run_id == 'HEAD':
+        if run_id.upper() == 'HEAD':
             return job.runs.get_newest()
         if run_id.isdigit():
             return job.runs.get_run_by_num(int(run_id))
