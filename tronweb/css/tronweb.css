@@ -1,0 +1,209 @@
+
+@import url(http://fonts.googleapis.com/css?family=Open+Sans:300,400,700,800);
+
+body, input, button, select {
+    font-family: "Open Sans";
+}
+
+.navbar .brand {
+    font-weight: 800;
+}
+
+[class^="icon-"] {
+    margin-top: 3px
+}
+
+.input-prepend span.add-on {
+    vertical-align: middle;
+}
+
+form.filter-form {
+    margin: 0
+}
+
+.outline {
+    border: 1px solid #ccc;
+    padding: 20px 0 0 20px;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+    margin-bottom: 5px;
+}
+
+div.refresh-view span {
+    font-size: 14px;
+    vertical-align: middle;
+    margin-right: 4px;
+    font-weight: normal;
+}
+
+.table td {
+    border: 0;
+}
+
+.table thead {
+    border-bottom: 1px solid #ccc
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+.table-condensed td {
+    border: 0
+}
+
+table.details {
+    margin: 4px 0 0 0 ;
+}
+
+h1 {
+    font-size: 25px;
+}
+
+h1 .pull-right {
+    margin-top: -4px;
+}
+
+h1 small {
+    font-variant: small-caps;
+}
+
+h1 a {
+    color: inherit
+}
+
+h1 a:hover {
+    text-decoration: underline
+}
+
+h2 {
+    border-bottom: 1px #ccc solid;
+    text-align: left;
+    padding: 0 0 0 10px;
+    font-size: 16px;
+    font-weight: bold;
+    font-variant: small-caps;
+}
+
+.graph {
+    position: relative;
+}
+
+.graph svg marker {
+    fill: #ccc;
+}
+
+.node circle {
+  stroke: #1f77b4;
+  stroke-width: 0.5px;
+  fill: #aec7e8;
+}
+
+.node.failed circle {
+    fill: #ff9896;
+    stroke: #d62728;
+}
+
+.node.succeeded circle {
+    fill: #98df8a;
+    stroke: #2ca02c;
+}
+
+.node.queued circle, .node.scheduled circle {
+    fill: #ccc;
+    stroke: #7f7f7f;
+}
+
+.node text {
+    stroke: #000;
+    font-family: "Open Sans";
+    font-weight: 300;
+    font-size: 12px;
+}
+
+.link {
+  stroke: #ccc;
+  stroke-width: 1.5px;
+}
+
+.popover {
+    max-width: 600px;
+}
+
+.popover .popover-title {
+    font-weight: bold;
+}
+
+.controls .input-prepend {
+    margin-right: 20px;
+}
+
+.top-right-corner {
+   position: absolute;
+   top: 2px;
+   right: 10px;
+}
+
+.modal-header h3 {
+    font-size: 16px;
+    font-weight: bold;
+    font-variant: small-caps;
+}
+
+#action-graph .modal.fade.in {
+    top: 2%;
+    width: auto;
+    margin-left: 75px;
+    left: 0;
+}
+
+.modal-body {
+    max-height: none;
+}
+
+
+/* Dashboard */
+
+.status-box {
+    padding: 20px;
+    margin: 0 5px 5px 0;
+    height: 100px;
+    width: 120px;
+    font-size: 12px;
+    font-weight: bold;
+    border: 1px solid #ccc;
+    -webkit-border-radius: 4px;
+    -moz-border-radius: 4px;
+    border-radius: 4px;
+}
+
+.status-box a {
+    color: #333;
+}
+
+.status-box.success {
+    background: #dff0d8;
+}
+
+.status-box.error {
+    background: #f2dede;
+}
+
+.status-box.warning {
+    background: #fcf8e3;
+}
+
+.status-box.info {
+    background: #d9edf7;
+}
+
+#all-view > .dashboard-view {
+    width: auto;
+    margin-right: 20px;
+}
+
+code.command {
+    display: block;
+    white-space: pre-wrap;
+}

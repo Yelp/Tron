@@ -90,10 +90,11 @@ class RootResourceTestCase(WWWTestCase):
     @setup
     def build_resource(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
-        self.resource = www.RootResource(self.mcp)
+        web_path = '/bogus/path'
+        self.resource = www.RootResource(self.mcp, web_path)
 
     def test__init__(self):
-        expected_children = ['jobs', 'services', 'config', 'status', 'events']
+        expected_children = ['jobs', 'services', 'config', 'status', 'events', 'web']
         assert_equal(set(expected_children), set(self.resource.children.keys()))
 
     def test_render_GET(self):
@@ -152,7 +153,7 @@ class JobResourceTestCase(WWWTestCase):
             all_nodes=False,
             allow_overlap=True,
             queueing=True,
-            action_graph=mock.Mock(),
+            action_graph=mock.MagicMock(),
             scheduler=mock.Mock(),
             node_pool=mock.Mock())
         self.job_scheduler.get_job.return_value = self.job
@@ -265,7 +266,7 @@ class EventResourceTestCase(WWWTestCase):
         recorder.critical(critical_message)
         response = self.resource.render_GET(self.request())
         names = [e['name'] for e in response['data']]
-        assert_equal(names, [ok_message, critical_message])
+        assert_equal(names, [critical_message, ok_message])
 
 
 class ConfigResourceTestCase(TestCase):

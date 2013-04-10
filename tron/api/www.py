@@ -12,7 +12,7 @@ try:
 except ImportError:
     import json
 
-from twisted.web import http, resource
+from twisted.web import http, resource, static, server
 
 from tron import event
 from tron.api import adapter, controller
@@ -113,7 +113,9 @@ class JobRunResource(resource.Resource):
         return resource.NoResource(msg % (action_name, self.job_run))
 
     def render_GET(self, request):
-        run_adapter = adapter.JobRunAdapter(self.job_run, include_action_runs=True)
+        run_adapter = adapter.JobRunAdapter(self.job_run,
+            include_action_runs=True,
+            include_action_graph=True)
         return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):
@@ -134,8 +136,7 @@ class JobResource(resource.Resource):
 
     def get_run_from_identifier(self, run_id):
         job = self.job_scheduler.get_job()
-        run_id = run_id.upper()
-        if run_id == 'HEAD':
+        if run_id.upper() == 'HEAD':
             return job.runs.get_newest()
         if run_id.isdigit():
             return job.runs.get_run_by_num(int(run_id))
@@ -229,7 +230,10 @@ class ServiceResource(resource.Resource):
         return resource.NoResource("Cannot find service instance: %s" % name)
 
     def render_GET(self, request):
-        return respond(request, adapter.ServiceAdapter(self.service).get_repr())
+        include_events = requestargs.get_integer(request, 'include_events')
+        response = adapter.ServiceAdapter(self.service,
+            include_events=include_events).get_repr()
+        return respond(request, response)
 
     def render_POST(self, request):
         return handle_command(request, self.controller, self.service)
@@ -314,7 +318,7 @@ class EventResource(resource.Resource):
 
 
 class RootResource(resource.Resource):
-    def __init__(self, mcp):
+    def __init__(self, mcp, web_path):
         self._master_control = mcp
         resource.Resource.__init__(self)
 
@@ -322,8 +326,10 @@ class RootResource(resource.Resource):
         self.putChild('jobs',     JobCollectionResource(mcp.get_job_collection()))
         self.putChild('services', ServiceCollectionResource(mcp.get_service_collection()))
         self.putChild('config',   ConfigResource(mcp))
+        # TODO: namespaces
         self.putChild('status',   StatusResource(mcp))
         self.putChild('events',   EventResource(''))
+        self.putChild('web',      static.File(web_path))
 
     def getChild(self, name, request):
         return resource.Resource.getChild(self, name, request) if name else self
@@ -345,3 +351,32 @@ class RootResource(resource.Resource):
             'namespaces':       self.children['config'].get_namespaces()
         }
         return respond(request, response)
+
+
+class LogAdapter(object):
+
+    def __init__(self, logger):
+        self.logger = logger
+
+    def write(self, line):
+        self.logger.info(line.rstrip('\n'))
+
+    def close(self):
+        pass
+
+
+class TronSite(server.Site):
+    """Subclass of a twisted Site to customize logging."""
+
+    access_log = logging.getLogger('%s.access' % __name__)
+
+    @classmethod
+    def create(cls, mcp, web_path):
+        return cls(RootResource(mcp, web_path))
+
+    def startFactory(self):
+        server.Site.startFactory(self)
+        self.logFile = LogAdapter(self.access_log)
+
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__, self.resource)
