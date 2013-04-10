@@ -4,37 +4,13 @@
 class window.TronEvent extends Backbone.Model
 
 
-class window.EventList extends Backbone.Collection
-
-    initialize: (options) =>
-        super options
-        @refresh = options.refresh
-
-    model: TronEvent
-
-    url: "/events"
-
-    parse: (resp, options) ->
-        resp['data']
-
-    comparator: (event) ->
-        event.get('time')
-
-    recent: (seconds) ->
-        _.last(@models, 15).reverse()
-#        seconds = seconds || 5
-#        func = (event) ->
-#            moment().diff(moment(event.get('time')), 'seconds') < seconds
-#        _.takeWhile(@models.reverse(), func)
-
-
 class window.EventListView extends Backbone.View
 
     initialize: (options) =>
         super options
         @refreshView = new RefreshToggleView(model: @model.refresh)
         @listenTo(@model, "sync", @render)
-        @listenTo(@refreshView.model, 'refresh', @update)
+        @listenTo(@refreshView.model, 'refresh', => @model.fetch())
 
     tagName: "div"
 
@@ -54,10 +30,6 @@ class window.EventListView extends Backbone.View
           </tbody>
         </table>
         """
-
-    # TODO: why doesn't this work directly ?
-    update: (name) =>
-        @model.fetch()
 
     render_list: (models) =>
         entry = (event) -> new EventListEntryView(model: event).render().el

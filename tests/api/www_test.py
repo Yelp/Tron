@@ -167,7 +167,7 @@ class JobResourceTestCase(WWWTestCase):
             all_nodes=False,
             allow_overlap=True,
             queueing=True,
-            action_graph=mock.Mock(),
+            action_graph=mock.MagicMock(),
             scheduler=mock.Mock(),
             node_pool=mock.Mock())
         self.job_scheduler.get_job.return_value = self.job

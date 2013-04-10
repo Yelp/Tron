@@ -27,7 +27,8 @@ COMMAND_HELP = (
     ('fail',            'Mark an UNKNOWN job as having failed'),
     ('success',         'Mark an UNKNOWN job as having succeeded'),
     ('skip',            'Skip a failed action, runs dependent actions.'),
-    ('stop',            'Stop the selected service'),
+    ('stop',            'Stop the service or action run (SIGTERM)'),
+    ('kill',            'Force kill the service or action run (SIGKILL)'),
 )
 
 

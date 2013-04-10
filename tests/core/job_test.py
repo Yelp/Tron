@@ -3,11 +3,12 @@ import mock
 
 from testify import setup, teardown, TestCase, run, assert_equal
 from testify import setup_teardown
+from testify.assertions import assert_not_equal
 from tests import mocks
 from tests.assertions import assert_length, assert_call, assert_mock_calls
 from tests.testingutils import Turtle, autospec_method
 from tests import testingutils
-from tron import node, event
+from tron import node, event, actioncommand
 from tron.core import job, jobrun
 from tron.core.actionrun import ActionRun
 
@@ -20,6 +21,8 @@ class JobTestCase(TestCase):
         scheduler = mock.Mock()
         run_collection = Turtle()
         self.nodes = mock.create_autospec(node.NodePool)
+        self.action_runner = mock.create_autospec(
+            actioncommand.SubprocessActionRunnerFactory)
 
         patcher = mock.patch('tron.core.job.node.NodePoolRepository')
         with patcher as self.mock_node_repo:
@@ -34,25 +37,23 @@ class JobTestCase(TestCase):
     def test__init__(self):
         assert str(self.job.output_path).endswith(self.job.name)
 
-    def test_from_config(self):
-        job_config = Turtle(
+    @mock.patch('tron.core.job.event', autospec=True)
+    def test_from_config(self, _mock_event):
+        action = mock.Mock(name='first', command='doit', node=None, requires=[])
+        job_config = mock.Mock(
             name='ajob',
             node='thenodepool',
             all_nodes=False,
             queueing=True,
             enabled=True,
             run_limit=20,
-            actions={
-                'first': Turtle(
-                    name='first', command='doit', node=None, requires=[])
-            },
-            cleanup_action=None,
-        )
+            actions={action.name: action},
+            cleanup_action=None)
         scheduler = 'scheduler_token'
         parent_context = 'parent_context_token'
         output_path = ["base_path"]
         new_job = job.Job.from_config(
-                job_config, scheduler, parent_context, output_path)
+            job_config, scheduler, parent_context, output_path, self.action_runner)
 
         assert_equal(new_job.scheduler, scheduler)
         assert_equal(new_job.context.next, parent_context)
@@ -62,10 +63,12 @@ class JobTestCase(TestCase):
         assert new_job.action_graph
 
     def test_update_from_job(self):
-        other_job = job.Job('otherjob', 'scheduler')
+        action_runner = mock.Mock()
+        other_job = job.Job('otherjob', 'scheduler', action_runner=action_runner)
         self.job.update_from_job(other_job)
         assert_equal(self.job.name, 'otherjob')
         assert_equal(self.job.scheduler, 'scheduler')
+        assert_equal(self.job, other_job)
         self.job.event.ok.assert_called_with('reconfigured')
 
     def test_status_disabled(self):
@@ -160,6 +163,17 @@ class JobTestCase(TestCase):
         assert self.job != other_job
         other_job.update_from_job(self.job)
         assert not self.job != other_job
+
+    def test__eq__true(self):
+        action_runner = mock.Mock()
+        first = job.Job("jobname", 'scheduler', action_runner=action_runner)
+        second = job.Job("jobname", 'scheduler', action_runner=action_runner)
+        assert_equal(first, second)
+
+    def test__eq__false(self):
+        first = job.Job("jobname", 'scheduler', action_runner=mock.Mock())
+        second = job.Job("jobname", 'scheduler', action_runner=mock.Mock())
+        assert_not_equal(first, second)
 
 
 class JobSchedulerTestCase(TestCase):
@@ -465,19 +479,22 @@ class JobSchedulerFactoryTestCase(TestCase):
         self.context = mock.Mock()
         self.output_stream_dir = mock.Mock()
         self.time_zone = mock.Mock()
+        self.action_runner = mock.create_autospec(
+            actioncommand.SubprocessActionRunnerFactory)
         self.factory = job.JobSchedulerFactory(
-            self.context, self.output_stream_dir, self.time_zone)
+            self.context, self.output_stream_dir, self.time_zone, self.action_runner)
 
     def test_build(self):
         config = mock.Mock()
         with mock.patch('tron.core.job.Job', autospec=True) as mock_job:
             job_scheduler = self.factory.build(config)
             args, _ = mock_job.from_config.call_args
-            job_config, scheduler, context, output_path = args
+            job_config, scheduler, context, output_path, action_runner = args
             assert_equal(job_config, config)
             assert_equal(job_scheduler.get_job(), mock_job.from_config.return_value)
             assert_equal(context, self.context)
             assert_equal(output_path.base, self.output_stream_dir)
+            assert_equal(action_runner, self.action_runner)
 
 
 class JobCollectionTestCase(TestCase):

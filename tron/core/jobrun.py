@@ -63,7 +63,7 @@ class JobRun(Observable, Observer):
                 action_graph=job.action_graph,
                 manual=manual)
 
-        action_runs     = ActionRunFactory.build_action_run_collection(run)
+        action_runs     = ActionRunFactory.build_action_run_collection(run, job.action_runner)
         run.action_runs = action_runs
         return run
 
@@ -433,7 +433,6 @@ class JobRunCollection(object):
     def last_success(self):
         return self.get_run_by_state(ActionRun.STATE_SUCCEEDED)
 
-    # TODO: this should actually use reverse
     @property
     def next_run(self):
         return self.get_run_by_state(ActionRun.STATE_SCHEDULED)

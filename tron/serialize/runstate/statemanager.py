@@ -3,6 +3,7 @@ import logging
 import time
 import itertools
 import tron
+from tron.config import schema
 from tron.core import job, service
 from tron.serialize import runstate
 from tron.serialize.runstate.mongostore import MongoStateStore
@@ -32,20 +33,20 @@ class PersistenceManagerFactory(object):
         buffer_size             = persistence_config.buffer_size
         store                   = None
 
-        if store_type == 'shelve':
+        if store_type not in schema.StatePersistenceTypes:
+            raise PersistenceStoreError("Unknown store type: %s" % store_type)
+
+        if store_type == schema.StatePersistenceTypes.shelve:
             store = ShelveStateStore(name)
 
-        if store_type == 'sql':
+        if store_type == schema.StatePersistenceTypes.sql:
             store = SQLAlchemyStateStore(name, connection_details)
 
-        if store_type == 'mongo':
+        if store_type == schema.StatePersistenceTypes.mongo:
             store = MongoStateStore(name, connection_details)
 
-        if store_type == 'yaml':
+        if store_type == schema.StatePersistenceTypes.yaml:
             store = YamlStateStore(name)
-
-        if not store:
-            raise PersistenceStoreError("Unknown store type: %s" % store_type)
 
         buffer = StateSaveBuffer(buffer_size)
         return PersistentStateManager(store, buffer)
