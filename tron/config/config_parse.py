@@ -365,8 +365,25 @@ class ValidateService(Validator):
 valid_service = ValidateService()
 
 
+class ValidateActionRunner(Validator):
+    config_class =              schema.ConfigActionRunner
+    optional =                  True
+    defaults = {
+        'runner_type':          None,
+        'remote_exec_path':     '',
+        'remote_status_path':   '/tmp',
+    }
+
+    validators = {
+        'runner_type':          config_utils.build_enum_validator(
+                                    schema.ActionRunnerTypes),
+        'remote_status_path':   valid_string,
+        'remote_exec_path':     valid_string,
+    }
+
+
 class ValidateStatePersistence(Validator):
-    config_class                = ConfigState
+    config_class                = schema.ConfigState
     defaults = {
         'buffer_size':          1,
         'connection_details':   None,
@@ -374,7 +391,8 @@ class ValidateStatePersistence(Validator):
 
     validators = {
         'name':                 valid_string,
-        'store_type':           valid_string,
+        'store_type':           config_utils.build_enum_validator(
+                                    schema.StatePersistenceTypes),
         'connection_details':   valid_string,
         'buffer_size':          valid_int,
     }
@@ -415,6 +433,7 @@ class ValidateConfig(Validator):
     """
     config_class =              TronConfig
     defaults = {
+        'action_runner':        {},
         'output_stream_dir':    None,
         'command_context':      {},
         'ssh_options':          ValidateSSHOptions.defaults,
@@ -429,6 +448,7 @@ class ValidateConfig(Validator):
     node_pools  = build_dict_name_validator(valid_node_pool, allow_empty=True)
     nodes       = build_dict_name_validator(valid_node, allow_empty=True)
     validators = {
+        'action_runner':        ValidateActionRunner(),
         'output_stream_dir':    valid_output_stream_dir,
         'command_context':      valid_command_context,
         'ssh_options':          valid_ssh_options,

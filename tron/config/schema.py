@@ -2,6 +2,8 @@
  Immutable config schema objects.
 """
 from collections import namedtuple
+from tron.utils.collections import Enum
+
 
 MASTER_NAMESPACE = "MASTER"
 
@@ -29,6 +31,7 @@ TronConfig = config_object_factory(
     'TronConfig',
     optional=[
         'output_stream_dir',   # str
+        'action_runner',       # ConfigActionRunner
         'state_persistence',   # ConfigState
         'command_context',     # FrozenDict of str
         'ssh_options',         # ConfigSSHOptions
@@ -37,7 +40,7 @@ TronConfig = config_object_factory(
         'nodes',               # FrozenDict of ConfigNode
         'node_pools',          # FrozenDict of ConfigNodePool
         'jobs',                # FrozenDict of ConfigJob
-        'services'             # FrozenDict of ConfigService
+        'services',            # FrozenDict of ConfigService
     ])
 
 
@@ -55,6 +58,10 @@ NotificationOptions = config_object_factory(
         'smtp_host',            # str
         'notification_addr',    # str
     ])
+
+
+ConfigActionRunner = config_object_factory('ConfigActionRunner',
+    optional=['runner_type', 'remote_status_path', 'remote_exec_path'])
 
 
 ConfigSSHOptions = config_object_factory(
@@ -139,3 +146,9 @@ ConfigService = config_object_factory(
         'restart_delay',        # float
         'count',                # int
     ])
+
+
+StatePersistenceTypes = Enum.create('shelve', 'sql', 'mongo', 'yaml')
+
+
+ActionRunnerTypes = Enum.create('none', 'subprocess')
