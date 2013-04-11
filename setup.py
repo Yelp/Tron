@@ -27,7 +27,7 @@ setup(
         "Development Status :: 4 - Beta",
     ],
     install_requires=[
-        'Twisted>=10.0.0',
+        'Twisted >=10.0.0, <=12.3',
         'PyYAML>=3.0',
         'pyasn1>=0.0.13',
         'pycrypto>=2.4',
