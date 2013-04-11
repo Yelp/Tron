@@ -1,3 +1,4 @@
+import datetime
 import mock
 from testify import TestCase, run, assert_equal, setup
 from testify.assertions import assert_in
@@ -95,6 +96,33 @@ class ValidTimeTestCase(TestCase):
         assert_raises(ConfigError, config_utils.valid_time,
             "14:32:12:34", self.context)
         assert_raises(ConfigError, config_utils.valid_time, None, self.context)
+
+
+class ValidTimeDeltaTestCase(TestCase):
+
+    @setup
+    def setup_config(self):
+        self.context = config_utils.NullConfigContext
+
+    def test_valid_time_delta_invalid(self):
+        exception = assert_raises(ConfigError,
+            config_utils.valid_time_delta,'no time', self.context)
+        assert_in('not a valid time delta: no time', str(exception))
+
+    def test_valid_time_delta_valid_seconds(self):
+        for jitter in [' 82s ', '82 s', '82 sec', '82seconds  ']:
+            delta = datetime.timedelta(seconds=82)
+            assert_equal(delta, config_utils.valid_time_delta(jitter, self.context))
+
+    def test_valid_time_delta_valid_minutes(self):
+        for jitter in ['10m', '10 m', '10   min', '  10minutes']:
+            delta = datetime.timedelta(seconds=600)
+            assert_equal(delta, config_utils.valid_time_delta(jitter, self.context))
+
+    def test_valid_time_delta_invalid_unit(self):
+        for jitter in ['1 year', '3 mo', '3 months']:
+            assert_raises(ConfigError,
+                config_utils.valid_time_delta, jitter, self.context)
 
 
 class ConfigContextTestCase(TestCase):

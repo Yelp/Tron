@@ -71,7 +71,7 @@ class ActionRunController(object):
 
 class JobRunController(object):
 
-    mapped_commands = set(('start', 'success', 'cancel', 'fail'))
+    mapped_commands = set(('start', 'success', 'cancel', 'fail', 'stop'))
 
     def __init__(self, job_run, job_scheduler):
         self.job_run       = job_run
