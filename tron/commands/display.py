@@ -281,7 +281,7 @@ class DisplayJobRuns(TableDisplay):
 
     columns = ['Run ID',    'State',    'Node', 'Scheduled Time']
     fields  = ['run_num',   'state',    'node', 'run_time']
-    widths  = [10,          12,          30,     25]
+    widths  = [10,          12,         30,     25]
     title = 'job runs'
     reversed = True
 
@@ -352,7 +352,7 @@ class DisplayActionRuns(TableDisplay):
 
     columns = ['Action', 'State', 'Start Time', 'End Time', 'Duration']
     fields  = ['id',     'state', 'start_time', 'end_time', 'duration']
-    widths  = [40,         12,        22,          22,         10     ]
+    widths  = [40,       12,      22,           22,         10     ]
     title = 'actions'
     resize_fields = ['id']
 
