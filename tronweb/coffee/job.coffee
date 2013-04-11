@@ -13,6 +13,9 @@ class window.Job extends Backbone.Model
 
     urlRoot: "/jobs"
 
+    url: ->
+        super() + "?include_action_graph=1"
+
 
 class window.JobCollection extends Backbone.Collection
 
@@ -44,6 +47,9 @@ class window.JobRun extends Backbone.Model
 
     urlRoot: ->
         "/jobs/" + @get('name')
+
+    url: =>
+        super() + "?include_action_graph=1&include_action_runs=1"
 
     parse: (resp, options) =>
         resp['job_url'] = "#job/" + resp['job_name']

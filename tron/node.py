@@ -79,16 +79,20 @@ class NodePoolRepository(object):
         ssh_options = ssh.SSHAuthOptions.from_config(ssh_config)
         known_hosts = KnownHosts.from_path(ssh_config.known_hosts_file)
         instance.filter_by_name(node_configs, node_pool_configs)
+        instance._update_nodes(node_configs, ssh_options, known_hosts, ssh_config)
+        instance._update_node_pools(node_pool_configs)
 
+    def _update_nodes(self, node_configs, ssh_options, known_hosts, ssh_config):
         for config in node_configs.itervalues():
             pub_key = known_hosts.get_public_key(config.hostname)
             node = Node.from_config(config, ssh_options, pub_key, ssh_config)
-            instance.add_node(node)
+            self.add_node(node)
 
+    def _update_node_pools(self, node_pool_configs):
         for config in node_pool_configs.itervalues():
-            nodes = instance._get_nodes_by_name(config.nodes)
+            nodes = self._get_nodes_by_name(config.nodes)
             pool  = NodePool.from_config(config, nodes)
-            instance.pools.replace(pool)
+            self.pools.replace(pool)
 
     def add_node(self, node):
         self.nodes.replace(node)
