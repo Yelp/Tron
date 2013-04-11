@@ -27,7 +27,7 @@ class ServiceState(object):
         if not service.enabled:
             return cls.disabled_states(service)
 
-        if service.instances.all(ServiceInstance.STATE_UP):
+        if service.instances.is_up():
             return cls.UP
 
         if service.instances.is_starting():

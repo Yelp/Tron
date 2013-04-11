@@ -25,12 +25,13 @@ class ServiceStateTestCase(TestCase):
         self.service.enabled = True
         state = service.ServiceState.from_service(self.service)
         assert_equal(state, service.ServiceState.UP)
-        self.instances.all.assert_called_with(ServiceInstance.STATE_UP)
+        self.instances.is_up.assert_called_with()
 
     def test_state_degraded(self):
         self.service.enabled = True
         self.instances.all.return_value = False
         self.instances.is_starting.return_value = False
+        self.instances.is_up.return_value = False
         state = service.ServiceState.from_service(self.service)
         assert_equal(state, service.ServiceState.DEGRADED)
 
