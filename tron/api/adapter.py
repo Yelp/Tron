@@ -46,7 +46,7 @@ class RunAdapter(ReprAdapter):
     """Base class for JobRun and ActionRun adapters."""
 
     def get_state(self):
-        return self._obj.state.short_name
+        return self._obj.state.name
 
     def get_node(self):
         return str(self._obj.node)
@@ -65,7 +65,8 @@ class ActionRunAdapter(RunAdapter):
             'id',
             'start_time',
             'end_time',
-            'exit_status'
+            'exit_status',
+            'action_name'
     ]
 
     translated_field_names = [
@@ -107,25 +108,83 @@ class ActionRunAdapter(RunAdapter):
         return self._get_serializer().tail(filename, self.max_lines)
 
 
+class ActionGraphAdapter(object):
+
+    def __init__(self, action_graph):
+        self.action_graph = action_graph
+
+    def get_repr(self):
+        def build(action):
+            return {
+                'name':         action.name,
+                'command':      action.command,
+                'dependent':    [dep.name for dep in action.dependent_actions],
+            }
+
+        return [build(action) for action in self.action_graph.get_actions()]
+
+class ActionRunGraphAdapter(object):
+
+    def __init__(self, action_run_collection):
+        self.action_runs = action_run_collection
+
+    def get_repr(self):
+        def build(action_run):
+            deps = self.action_runs.action_graph.get_dependent_actions(
+                action_run.action_name)
+            return {
+                'id':           action_run.id,
+                'name':         action_run.action_name,
+                'command':      action_run.rendered_command,
+                'raw_command':  action_run.bare_command,
+                'state':        action_run.state.name,
+                'start_time':   action_run.start_time,
+                'end_time':     action_run.end_time,
+                'dependent':    [dep.name for dep in deps],
+            }
+
+        return [build(action_run) for action_run in self.action_runs]
+
+
 class JobRunAdapter(RunAdapter):
 
     field_names = [
-            'id', 'run_num', 'run_time', 'start_time', 'end_time', 'manual']
-    translated_field_names = ['state', 'node', 'duration', 'url', 'runs']
+       'id',
+        'run_num',
+        'run_time',
+        'start_time',
+        'end_time',
+        'manual',
+        'job_name',
+    ]
+    translated_field_names = [
+        'state',
+        'node',
+        'duration',
+        'url',
+        'runs',
+        'action_graph',
+    ]
 
-    def __init__(self, job_run, include_action_runs=False):
+    def __init__(self, job_run,
+            include_action_runs=False,
+            include_action_graph=False):
         super(JobRunAdapter, self).__init__(job_run)
         self.include_action_runs = include_action_runs
+        self.include_action_graph = include_action_graph
 
     def get_url(self):
         return '/jobs/%s/%s' % (self._obj.job_name, self._obj.run_num)
 
     def get_runs(self):
         if not self.include_action_runs:
-            return None
-
+            return
         return adapt_many(ActionRunAdapter, self._obj.action_runs, self._obj)
 
+    # TODO: convert to decorator
+    def get_action_graph(self):
+        if self.include_action_graph:
+            return ActionRunGraphAdapter(self._obj.action_runs).get_repr()
 
 class JobAdapter(ReprAdapter):
 
@@ -136,9 +195,11 @@ class JobAdapter(ReprAdapter):
         'action_names',
         'node_pool',
         'last_success',
+        'next_run',
         'url',
         'runs',
         'max_runtime',
+        'action_graph',
     ]
 
     def __init__(self, job, include_job_runs=False, include_action_runs=False):
@@ -162,6 +223,10 @@ class JobAdapter(ReprAdapter):
         last_success = self._obj.runs.last_success
         return last_success.end_time if last_success else None
 
+    def get_next_run(self):
+        next_run = self._obj.runs.next_run
+        return next_run.run_time if next_run else None
+
     def get_url(self):
         return '/jobs/%s' % urllib.quote(self._obj.get_name())
 
@@ -172,6 +237,10 @@ class JobAdapter(ReprAdapter):
 
     def get_max_runtime(self):
         return str(self._obj.max_runtime)
+
+    # TODO: create a flag to include/exclude this
+    def get_action_graph(self):
+        return ActionGraphAdapter(self._obj.action_graph).get_repr()
 
 
 class ServiceAdapter(ReprAdapter):
@@ -187,7 +256,12 @@ class ServiceAdapter(ReprAdapter):
         'node_pool',
         'live_count',
         'monitor_interval',
-        'restart_delay']
+        'restart_delay',
+        'events']
+
+    def __init__(self, service, include_events=False):
+        super(ServiceAdapter, self).__init__(service)
+        self.include_events = include_events
 
     def get_url(self):
         return "/services/%s" % urllib.quote(self._obj.get_name())
@@ -219,6 +293,11 @@ class ServiceAdapter(ReprAdapter):
     def get_restart_delay(self):
         return self._obj.config.restart_delay
 
+    # TODO: use decorator
+    def get_events(self):
+        if self.include_events:
+            events = adapt_many(EventAdapter, self._obj.event_recorder.list())
+            return events[:self.include_events]
 
 class ServiceInstanceAdapter(ReprAdapter):
 
