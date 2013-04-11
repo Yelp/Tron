@@ -14,13 +14,6 @@ from tron.utils import twistedutils, collections
 log = logging.getLogger(__name__)
 
 
-# TODO: make these configurable
-# We should also only wait a certain amount of time for a connection to be
-# established.
-CONNECT_TIMEOUT = 30
-
-IDLE_CONNECTION_TIMEOUT = 3600
-
 # We should also only wait a certain amount of time for a new channel to be
 # established when we already have an open connection.  This timeout will
 # usually get triggered prior to even a TCP timeout, so essentially it's our
@@ -86,15 +79,20 @@ class NodePoolRepository(object):
         ssh_options = ssh.SSHAuthOptions.from_config(ssh_config)
         known_hosts = KnownHosts.from_path(ssh_config.known_hosts_file)
         instance.filter_by_name(node_configs, node_pool_configs)
+        instance._update_nodes(node_configs, ssh_options, known_hosts, ssh_config)
+        instance._update_node_pools(node_pool_configs)
 
+    def _update_nodes(self, node_configs, ssh_options, known_hosts, ssh_config):
         for config in node_configs.itervalues():
             pub_key = known_hosts.get_public_key(config.hostname)
-            instance.add_node(Node.from_config(config, ssh_options, pub_key))
+            node = Node.from_config(config, ssh_options, pub_key, ssh_config)
+            self.add_node(node)
 
+    def _update_node_pools(self, node_pool_configs):
         for config in node_pool_configs.itervalues():
-            nodes = instance._get_nodes_by_name(config.nodes)
+            nodes = self._get_nodes_by_name(config.nodes)
             pool  = NodePool.from_config(config, nodes)
-            instance.pools.replace(pool)
+            self.pools.replace(pool)
 
     def add_node(self, node):
         self.nodes.replace(node)
@@ -179,12 +177,6 @@ class KnownHosts(KnownHostsFile):
         log.warn("Missing host key for: %s", hostname)
 
 
-def determine_fudge_factor(count, min_count=4):
-    """Return a pseudo-random number. """
-    fudge_factor = max(0.0, count - min_count)
-    return random.random() * float(fudge_factor)
-
-
 class RunState(object):
     def __init__(self, action_run):
         self.run = action_run
@@ -193,20 +185,22 @@ class RunState(object):
         self.channel = None
 
 
+def determine_jitter(count, node_settings):
+    """Return a pseudo-random number of seconds to delay a run."""
+    count *= node_settings.jitter_load_factor
+    min_count = node_settings.jitter_min_load
+    max_jitter = max(0.0, count - min_count)
+    max_jitter = min(node_settings.jitter_max_delay, max_jitter)
+    return random.random() * float(max_jitter)
+
+
 class Node(object):
     """A node is tron's interface to communicating with an actual machine.
     """
 
-    def __init__(self, hostname, ssh_options, username=None, name=None, pub_key=None):
-
-        # Host we are to connect to
-        self.hostname = hostname
-
-        # Username to connect to the remote machine under
-        self.username = username
-
-        # Identifier for UI
-        self.name = name or hostname
+    def __init__(self, config, ssh_options, pub_key, node_settings):
+        self.config = config
+        self.node_settings = node_settings
 
         # SSH Options
         self.conch_options = ssh_options
@@ -225,31 +219,35 @@ class Node(object):
         self.disabled = False
         self.pub_key = pub_key
 
+    @property
+    def hostname(self):
+        return self.config.hostname
+
+    @property
+    def username(self):
+        return self.config.username
+
     @classmethod
-    def from_config(cls, node_config, ssh_options, pub_key):
-        return cls(
-            node_config.hostname,
-            ssh_options,
-            username=node_config.username,
-            name=node_config.name,
-            pub_key=pub_key)
+    def from_config(cls, node_config, ssh_options, pub_key, node_settings):
+        return cls(node_config, ssh_options, pub_key, node_settings)
+
 
     def get_name(self):
-        return self.name
+        return self.config.name
+
+    name = property(get_name)
 
     def disable(self):
         """Required for MappingCollection.Item interface."""
         self.disabled = True
 
-    # TODO: wrap conch_options for equality
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
-        return (self.hostname == other.hostname and
-                self.username == other.username and
-                self.name == other.name and
+        return (self.config == other.config and
                 self.conch_options == other.conch_options and
-                self.pub_key == other.pub_key)
+                self.pub_key == other.pub_key and
+                self.node_settings == other.node_settings)
 
 
     def __ne__(self, other):
@@ -288,7 +286,7 @@ class Node(object):
         self.run_states[run.id] = RunState(run)
 
         # TODO: have this return a runner instead of number
-        fudge_factor = determine_fudge_factor(len(self.run_states))
+        fudge_factor = determine_jitter(len(self.run_states), self.node_settings)
         if fudge_factor == 0.0:
             self._do_run(run)
         else:
@@ -318,13 +316,14 @@ class Node(object):
         del self.run_states[run.id]
 
         if not self.run_states:
-            self.idle_timer = eventloop.call_later(IDLE_CONNECTION_TIMEOUT,
-                                                self._connection_idle_timeout)
+            self.idle_timer = eventloop.call_later(
+                self.node_settings.idle_connection_timeout,
+                self._connection_idle_timeout)
 
     def _connection_idle_timeout(self):
         if self.connection:
             log.info("Connection to %s idle for %d secs. Closing.",
-                     self.hostname, IDLE_CONNECTION_TIMEOUT)
+                     self.hostname, self.node_settings.idle_connection_timeout)
             self.connection.transport.loseConnection()
 
     def _fail_run(self, run, result):
@@ -418,7 +417,7 @@ class Node(object):
         # be called back when we have an established, secure connection ready
         # for opening channels. The value will be this instance of node.
         connect_defer = defer.Deferred()
-        twistedutils.defer_timeout(connect_defer, CONNECT_TIMEOUT)
+        twistedutils.defer_timeout(connect_defer, self.node_settings.connect_timeout)
 
         def on_service_started(connection):
             # Booyah, time to start doing stuff

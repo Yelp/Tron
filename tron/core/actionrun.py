@@ -24,10 +24,10 @@ class ActionRunFactory(object):
     @classmethod
     def build_action_run_collection(cls, job_run, action_runner):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
+        action_map = job_run.action_graph.get_action_map().iteritems()
         action_run_map = dict(
             (name, cls.build_run_for_action(job_run, action_inst, action_runner))
-            for name, action_inst in job_run.action_graph.action_map.iteritems()
-        )
+            for name, action_inst in action_map)
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
     @classmethod
@@ -127,13 +127,13 @@ class ActionRun(Observer):
     def __init__(self, job_run_id, name, node, bare_command=None,
             parent_context=None, output_path=None, cleanup=False,
             start_time=None, end_time=None, run_state=STATE_SCHEDULED,
-            rendered_command=None, action_runner=None):
+            rendered_command=None, exit_status=None, action_runner=None):
         self.job_run_id         = job_run_id
         self.action_name        = name
         self.node               = node
         self.start_time         = start_time
         self.end_time           = end_time
-        self.exit_status        = None
+        self.exit_status        = exit_status
         self.bare_command       = bare_command
         self.rendered_command   = rendered_command
         self.action_runner      = action_runner or ActionCommand
@@ -189,7 +189,8 @@ class ActionRun(Observer):
             start_time=state_data['start_time'],
             end_time=state_data['end_time'],
             run_state=state.named_event_by_name(
-                    cls.STATE_SCHEDULED, state_data['state'])
+                    cls.STATE_SCHEDULED, state_data['state']),
+            exit_status=state_data.get('exit_status')
         )
 
         # Transition running to fail unknown because exit status was missed
@@ -295,7 +296,8 @@ class ActionRun(Observer):
             'end_time':         self.end_time,
             'command':          command,
             'rendered_command': self.rendered_command,
-            'node_name':        self.node.get_name() if self.node else None
+            'node_name':        self.node.get_name() if self.node else None,
+            'exit_status':      self.exit_status,
         }
 
     def render_command(self):
@@ -390,7 +392,6 @@ class ActionRunCollection(object):
                 proxy.func_proxy('cleanup',         iteration.list_all),
                 proxy.func_proxy('stop',            iteration.list_all),
                 proxy.attr_proxy('start_time',      iteration.min_filter),
-                proxy.attr_proxy('end_time',        iteration.max_filter),
             ])
 
     def action_runs_for_actions(self, actions):
@@ -486,6 +487,13 @@ class ActionRunCollection(object):
     @property
     def names(self):
         return self.run_map.keys()
+
+    @property
+    def end_time(self):
+        if not self.is_done:
+            return None
+        end_times = (run.end_time for run in self.get_action_runs_with_cleanup())
+        return iteration.max_filter(end_times)
 
     def __str__(self):
         def blocked_state(action_run):

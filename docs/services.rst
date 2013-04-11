@@ -5,7 +5,7 @@ A service is composed of several *service instances* which are either `up` or
 `down`. Service instances are daemon processes running on a node. Services
 are required to manage a pid file, which is used to determine the state of
 the service instance. Tron checks for the pid stored in the pid file every
-**monitor_interval** seconds and restarts it after **restart_interval** seconds
+**monitor_interval** seconds and restarts it after **restart_delay** seconds
 if the process is no longer running.
 
 
@@ -34,7 +34,7 @@ Required Fields
 Optional Fields
 ---------------
 
-**restart_interval** (default **never**)
+**restart_delay** (default **never**)
     Seconds to wait before restarting the service when it appears to be
     down. If not specified, service instances will not be restarted when down.
 
@@ -88,6 +88,6 @@ Here is the example from :ref:`Overview: Services <overview_services>`::
             node: service_pool
             count: 4
             monitor_interval: 60
-            restart_interval: 120
+            restart_delay: 120
             pid_file: "/var/run/batch/%(name)s-%(instance_number)s.pid"
             command: "/usr/local/bin/start_email_worker --pid_file=%(pid_file)s"

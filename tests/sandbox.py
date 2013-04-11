@@ -10,7 +10,7 @@ import time
 import contextlib
 import functools
 
-from testify import TestCase, setup, teardown, turtle
+from testify import TestCase, setup, teardown
 
 from tron.commands import client
 from tron.config import manager, schema
@@ -147,9 +147,7 @@ class TronSandbox(object):
         self.port           = find_unused_port()
         self.host           = 'localhost'
         self.api_uri        = 'http://%s:%s' % (self.host, self.port)
-        client_config       = turtle.Turtle(server=self.api_uri,
-                                warn=False, num_displays=100)
-        cclient             = client.Client(client_config)
+        cclient             = client.Client(self.api_uri)
         self.client         = ClientProxy(cclient, self.log_file)
         self.setup_logging_conf()
 

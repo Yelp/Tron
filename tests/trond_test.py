@@ -51,6 +51,7 @@ TOUCH_CLEANUP_FMT = """
       command: "echo 'at last'"
 """
 
+
 def summarize_events(events):
     return [(event['entity'], event['name']) for event in events]
 
@@ -84,18 +85,18 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
 
         def wait_on_cleanup():
             return (len(client.job(job_url)['runs']) >= 2 and
-                    client.action(action_url)['state'] ==
-                    actionrun.ActionRun.STATE_SUCCEEDED.short_name)
+                    client.action_runs(action_url)['state'] ==
+                    actionrun.ActionRun.STATE_SUCCEEDED.name)
         sandbox.wait_on_sandbox(wait_on_cleanup)
 
-        echo_action_run = client.action(action_url)
+        echo_action_run = client.action_runs(action_url)
         another_action_url = client.get_url('MASTER.echo_job.1.another_echo_action')
-        other_act_run = client.action(another_action_url)
+        other_act_run = client.action_runs(another_action_url)
         assert_equal(echo_action_run['state'],
-            actionrun.ActionRun.STATE_SUCCEEDED.short_name)
+            actionrun.ActionRun.STATE_SUCCEEDED.name)
         assert_equal(echo_action_run['stdout'], ['Echo!'])
         assert_equal(other_act_run['state'],
-            actionrun.ActionRun.STATE_FAILED.short_name)
+            actionrun.ActionRun.STATE_FAILED.name)
 
         now = datetime.datetime.now()
         stdout = now.strftime('Today is %Y-%m-%d, which is the same as %Y-%m-%d')
@@ -103,13 +104,13 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
 
         job_runs_url = client.get_url('%s.1' % echo_job_name)
         assert_equal(client.job_runs(job_runs_url)['state'],
-            actionrun.ActionRun.STATE_FAILED.short_name)
+            actionrun.ActionRun.STATE_FAILED.name)
 
     def test_tronview_basic(self):
         self.start_with_config(SINGLE_ECHO_CONFIG)
         expected = """\nServices:\nNo Services\n\n\nJobs:
             Name       State       Scheduler           Last Success
-            MASTER.echo_job   ENABLED     INTERVAL 1:00:00    None
+            MASTER.echo_job   enabled     INTERVAL 1:00:00    None
             """
 
         def remove_line_space(s):
@@ -123,16 +124,16 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         self.sandbox.tronctl_start('MASTER.echo_job')
 
         cleanup_url = self.client.get_url('MASTER.echo_job.1.cleanup')
-        sandbox.wait_on_state(self.client.action, cleanup_url,
-            actionrun.ActionRun.STATE_SUCCEEDED.short_name)
+        sandbox.wait_on_state(self.client.action_runs, cleanup_url,
+            actionrun.ActionRun.STATE_SUCCEEDED.name)
 
         action_run_url = self.client.get_url('MASTER.echo_job.1.echo_action')
-        assert_equal(self.client.action(action_run_url)['state'],
-            actionrun.ActionRun.STATE_SUCCEEDED.short_name)
+        assert_equal(self.client.action_runs(action_run_url)['state'],
+            actionrun.ActionRun.STATE_SUCCEEDED.name)
 
         job_run_url = self.client.get_url('MASTER.echo_job.1')
         assert_equal(self.client.job_runs(job_run_url)['state'],
-            actionrun.ActionRun.STATE_SUCCEEDED.short_name)
+            actionrun.ActionRun.STATE_SUCCEEDED.name)
 
     def test_node_reconfig(self):
         job_service_config = dedent("""
@@ -174,7 +175,7 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
 
         job_url = self.client.get_url('MASTER.a_job.0')
         sandbox.wait_on_state(self.client.job_runs, job_url,
-            actionrun.ActionRun.STATE_SUCCEEDED.short_name)
+            actionrun.ActionRun.STATE_SUCCEEDED.name)
 
         self.sandbox.tronfig(second_config)
 
@@ -204,12 +205,12 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         self.start_with_config(config)
 
         action_run_url = self.client.get_url('MASTER.failjob.0.failaction')
-        sandbox.wait_on_state(self.client.action, action_run_url,
-            actionrun.ActionRun.STATE_FAILED.short_name)
+        sandbox.wait_on_state(self.client.action_runs, action_run_url,
+            actionrun.ActionRun.STATE_FAILED.name)
 
         action_run_url = self.client.get_url('MASTER.failjob.1.cleanup')
-        sandbox.wait_on_state(self.client.action, action_run_url,
-            actionrun.ActionRun.STATE_SUCCEEDED.short_name)
+        sandbox.wait_on_state(self.client.action_runs, action_run_url,
+            actionrun.ActionRun.STATE_SUCCEEDED.name)
         job_runs = self.client.job(self.client.get_url('MASTER.failjob'))['runs']
         assert_gt(len(job_runs), 1)
 
@@ -228,19 +229,19 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         """)
         self.start_with_config(config)
         action_run_url = self.client.get_url('MASTER.multi_step_job.0.broken')
-        waiter = sandbox.build_waiter_func(self.client.action, action_run_url)
+        waiter = sandbox.build_waiter_func(self.client.action_runs, action_run_url)
 
-        waiter(actionrun.ActionRun.STATE_FAILED.short_name)
+        waiter(actionrun.ActionRun.STATE_FAILED.name)
         self.sandbox.tronctl(['skip', 'MASTER.multi_step_job.0.broken'])
-        waiter(actionrun.ActionRun.STATE_SKIPPED.short_name)
+        waiter(actionrun.ActionRun.STATE_SKIPPED.name)
 
         action_run_url = self.client.get_url('MASTER.multi_step_job.0.works')
-        sandbox.wait_on_state(self.client.action, action_run_url,
-            actionrun.ActionRun.STATE_SUCCEEDED.short_name)
+        sandbox.wait_on_state(self.client.action_runs, action_run_url,
+            actionrun.ActionRun.STATE_SUCCEEDED.name)
 
         job_run_url = self.client.get_url('MASTER.multi_step_job.0')
         sandbox.wait_on_state(self.client.job_runs, job_run_url,
-            actionrun.ActionRun.STATE_SUCCEEDED.short_name)
+            actionrun.ActionRun.STATE_SUCCEEDED.name)
 
     def test_failure_on_multi_step_job_doesnt_wedge_tron(self):
         config = BASIC_CONFIG + dedent("""
@@ -264,7 +265,8 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         sandbox.wait_on_sandbox(wait_on_random_failure_job)
 
         job_runs = self.client.job(job_url)['runs']
-        assert_equal([run['state'] for run in job_runs[-3:]], ['FAIL'] * 3)
+        expected = [actionrun.ActionRun.STATE_FAILED.name for _ in range(3)]
+        assert_equal([run['state'] for run in job_runs[-3:]], expected)
 
     def test_cancel_schedules_a_new_run(self):
         config = BASIC_CONFIG + dedent("""
@@ -286,7 +288,10 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         sandbox.wait_on_sandbox(wait_on_cancel)
 
         run_states = [run['state'] for run in self.client.job(job_url)['runs']]
-        assert_equal(run_states, ['SCHE', 'CANC'])
+        expected = [
+            actionrun.ActionRun.STATE_SCHEDULED.name,
+            actionrun.ActionRun.STATE_CANCELLED.name]
+        assert_equal(run_states, expected)
 
     def test_job_queueing_false_with_overlap(self):
         """Test that a job that has queueing false properly cancels an
@@ -315,11 +320,13 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         sandbox.wait_on_sandbox(wait_on_job_schedule)
 
         sandbox.wait_on_state(self.client.job, job_run_url,
-            actionrun.ActionRun.STATE_CANCELLED.short_name)
+            actionrun.ActionRun.STATE_CANCELLED.name)
 
         action_run_states = [action_run['state'] for action_run in
-                             self.client.job(job_run_url)['runs']]
-        assert_equal(action_run_states, ['CANC'] * len(action_run_states))
+                             self.client.job_runs(job_run_url)['runs']]
+        expected = [actionrun.ActionRun.STATE_CANCELLED.name
+                    for _ in xrange(len(action_run_states))]
+        assert_equal(action_run_states, expected)
 
 
 class ServiceEndToEndTestCase(sandbox.SandboxTestCase):
@@ -332,7 +339,7 @@ class ServiceEndToEndTestCase(sandbox.SandboxTestCase):
                     pid_file: "{wd}/%(name)s-%(instance_number)s.pid"
                     command: "{command}"
                     monitor_interval: {monitor_interval}
-                    restart_interval: 2
+                    restart_delay: 2
         """)
 
         command = ("cd {path} && PYTHONPATH=. python "
@@ -367,7 +374,7 @@ class ServiceEndToEndTestCase(sandbox.SandboxTestCase):
                     pid_file: "/tmp/file_dne"
                     command: "sleep 1; cat /bogus/file/DNE"
                     monitor_interval: 1
-                    restart_interval: 2
+                    restart_delay: 2
         """)
         self.start_with_config(config)
         service_name = 'MASTER.service_restart'

@@ -51,9 +51,6 @@ Options
 ``--server=SERVER``
     Server URL to connect to
 
-``-z, --hide-preface``
-    Don't display preface
-
 ``-c, --color``
     Display in color
 
@@ -66,11 +63,11 @@ Options
 ``-e, --stderr``
     Solely displays stderr
 
-``-w, --warn``
-    Solely displays warnings and errors
-
 ``--events``
     Show events for the specified entity
+
+``-s, --save``
+    Save server and color options to client config file (~/.tron)
 
 
 States

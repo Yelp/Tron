@@ -117,16 +117,15 @@ TIME_INTERVAL_SHORTCUTS = {
 }
 
 def valid_interval_scheduler(config,  config_context):
-    interval = config.value
-    interval = ''.join(interval.split())
-
     def build_config(delta):
         return ConfigIntervalScheduler(timedelta=delta, jitter=config.jitter)
 
-    if interval in TIME_INTERVAL_SHORTCUTS:
-        return build_config(TIME_INTERVAL_SHORTCUTS[interval])
+    interval_key = config.value.strip()
+    if interval_key in TIME_INTERVAL_SHORTCUTS:
+        return build_config(TIME_INTERVAL_SHORTCUTS[interval_key])
 
-    return build_config(config_utils.valid_time_delta(interval, config_context))
+    return build_config(
+        config_utils.valid_time_delta(config.value, config_context))
 
 
 def normalize_weekdays(seq):

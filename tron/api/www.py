@@ -12,7 +12,7 @@ try:
 except ImportError:
     import json
 
-from twisted.web import http, resource
+from twisted.web import http, resource, static, server
 
 from tron import event
 from tron.api import adapter, controller
@@ -61,6 +61,17 @@ def handle_command(request, api_controller, obj, **kwargs):
     return respond(request, {'result': response})
 
 
+def resource_from_collection(collection, name, child_resource):
+    """Return a child resource from a collection item by looking it up from
+    the name. If no item is found, return NoResource.
+    """
+    item = collection.get_by_name(name)
+    if item is None:
+        return resource.NoResource("Cannot find child %s" % name)
+
+    return child_resource(item)
+
+
 class ActionRunResource(resource.Resource):
 
     isLeaf = True
@@ -73,8 +84,11 @@ class ActionRunResource(resource.Resource):
 
     def render_GET(self, request):
         num_lines = requestargs.get_integer(request, 'num_lines')
+        include_stdout = requestargs.get_bool(request, 'include_stdout')
+        include_stderr = requestargs.get_bool(request, 'include_stderr')
         run_adapter = adapter.ActionRunAdapter(
-            self.action_run, self.job_run, num_lines)
+            self.action_run, self.job_run, num_lines,
+            include_stdout=include_stdout, include_stderr=include_stderr)
         return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):
@@ -90,7 +104,7 @@ class JobRunResource(resource.Resource):
         self.controller    = controller.JobRunController(job_run, job_scheduler)
 
     def getChild(self, action_name, _):
-        if action_name == '':
+        if not action_name:
             return self
         if action_name == '_events':
             return EventResource(self.job_run.id)
@@ -102,11 +116,19 @@ class JobRunResource(resource.Resource):
         return resource.NoResource(msg % (action_name, self.job_run))
 
     def render_GET(self, request):
-        run_adapter = adapter.JobRunAdapter(self.job_run, include_action_runs=True)
+        include_runs = requestargs.get_bool(request, 'include_action_runs')
+        include_graph = requestargs.get_bool(request, 'include_action_graph')
+        run_adapter = adapter.JobRunAdapter(self.job_run,
+            include_action_runs=include_runs,
+            include_action_graph=include_graph)
         return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):
         return handle_command(request, self.controller, self.job_run)
+
+
+def is_negative_int(string):
+    return string.startswith('-') and string[1:].isdigit()
 
 
 class JobResource(resource.Resource):
@@ -117,30 +139,38 @@ class JobResource(resource.Resource):
         self.job_scheduler = job_scheduler
         self.controller    = controller.JobController(job_scheduler)
 
+    def get_run_from_identifier(self, run_id):
+        job = self.job_scheduler.get_job()
+        if run_id.upper() == 'HEAD':
+            return job.runs.get_newest()
+        if run_id.isdigit():
+            return job.runs.get_run_by_num(int(run_id))
+        if is_negative_int(run_id):
+            return job.runs.get_run_by_index(int(run_id))
+        return job.runs.get_run_by_state_short_name(run_id)
+
     def getChild(self, run_id, _):
-        job = self.job_scheduler.job
-        if run_id == '':
+        if not run_id:
             return self
         if run_id == '_events':
             return EventResource(self.job_scheduler.get_name())
 
-        run_id = run_id.upper()
-        if run_id == 'HEAD':
-            run = job.runs.get_newest()
-        elif run_id.isdigit():
-            run = job.runs.get_run_by_num(int(run_id))
-        else:
-            run = job.runs.get_run_by_state_short_name(run_id)
-
+        run = self.get_run_from_identifier(run_id)
         if run:
             return JobRunResource(run, self.job_scheduler)
-        msg = "Cannot find job run '%s' for job '%s'"
-        return resource.NoResource(msg % (run_id, job))
+        msg = "Cannot find job run %s for %s"
+        return resource.NoResource(msg % (run_id, self.job_scheduler.get_job()))
 
     def render_GET(self, request):
         include_action_runs = requestargs.get_bool(request, 'include_action_runs')
+        include_graph = requestargs.get_bool(request, 'include_action_graph')
+        num_runs = requestargs.get_integer(request, 'num_runs')
         job_adapter = adapter.JobAdapter(
-                self.job_scheduler.get_job(), True, include_action_runs)
+                self.job_scheduler.get_job(),
+                include_job_runs=True,
+                include_action_runs=include_action_runs,
+                include_action_graph=include_graph,
+                num_runs=num_runs)
         return respond(request, job_adapter.get_repr())
 
     def render_POST(self, request):
@@ -158,14 +188,9 @@ class JobCollectionResource(resource.Resource):
         resource.Resource.__init__(self)
 
     def getChild(self, name, request):
-        if name == '':
+        if not name:
             return self
-
-        job_sched = self.job_collection.get_by_name(name)
-        if job_sched is None:
-            return resource.NoResource("Cannot find job '%s'" % name)
-
-        return JobResource(job_sched)
+        return resource_from_collection(self.job_collection, name, JobResource)
 
     def get_data(self, include_job_run=False, include_action_runs=False):
         jobs = (sched.get_job() for sched in self.job_collection)
@@ -203,7 +228,7 @@ class ServiceResource(resource.Resource):
         self.controller = controller.ServiceController(self.service)
 
     def getChild(self, name, _):
-        if name == '':
+        if not name:
             return self
         if name == '_events':
             return EventResource(str(self.service))
@@ -216,7 +241,10 @@ class ServiceResource(resource.Resource):
         return resource.NoResource("Cannot find service instance: %s" % name)
 
     def render_GET(self, request):
-        return respond(request, adapter.ServiceAdapter(self.service).get_repr())
+        include_events = requestargs.get_integer(request, 'include_events')
+        response = adapter.ServiceAdapter(self.service,
+            include_events=include_events).get_repr()
+        return respond(request, response)
 
     def render_POST(self, request):
         return handle_command(request, self.controller, self.service)
@@ -230,14 +258,9 @@ class ServiceCollectionResource(resource.Resource):
         resource.Resource.__init__(self)
 
     def getChild(self, name, _):
-        if name == '':
+        if not name:
             return self
-
-        service = self.collection.get_by_name(name)
-        if service is None:
-            return resource.NoResource("Cannot find service '%s'" % name)
-
-        return ServiceResource(service)
+        return resource_from_collection(self.collection, name, ServiceResource)
 
     def get_data(self):
         return adapter.adapt_many(adapter.ServiceAdapter, self.collection)
@@ -306,7 +329,7 @@ class EventResource(resource.Resource):
 
 
 class RootResource(resource.Resource):
-    def __init__(self, mcp):
+    def __init__(self, mcp, web_path):
         self._master_control = mcp
         resource.Resource.__init__(self)
 
@@ -316,11 +339,10 @@ class RootResource(resource.Resource):
         self.putChild('config',   ConfigResource(mcp))
         self.putChild('status',   StatusResource(mcp))
         self.putChild('events',   EventResource(''))
+        self.putChild('web',      static.File(web_path))
 
     def getChild(self, name, request):
-        if name == '':
-            return self
-        return resource.Resource.getChild(self, name, request)
+        return resource.Resource.getChild(self, name, request) if name else self
 
     def urls_from_child(self, child_name):
         def name_url_dict(source):
@@ -339,3 +361,32 @@ class RootResource(resource.Resource):
             'namespaces':       self.children['config'].get_namespaces()
         }
         return respond(request, response)
+
+
+class LogAdapter(object):
+
+    def __init__(self, logger):
+        self.logger = logger
+
+    def write(self, line):
+        self.logger.info(line.rstrip('\n'))
+
+    def close(self):
+        pass
+
+
+class TronSite(server.Site):
+    """Subclass of a twisted Site to customize logging."""
+
+    access_log = logging.getLogger('%s.access' % __name__)
+
+    @classmethod
+    def create(cls, mcp, web_path):
+        return cls(RootResource(mcp, web_path))
+
+    def startFactory(self):
+        server.Site.startFactory(self)
+        self.logFile = LogAdapter(self.access_log)
+
+    def __repr__(self):
+        return '%s(%s)' % (self.__class__.__name__, self.resource)

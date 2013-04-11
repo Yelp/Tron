@@ -110,7 +110,7 @@ class EventRecorder(object):
             events = self._events_with_child_events(min_level)
         else:
             events = self.events.get_events(min_level)
-        return sorted(events, key=operator.attrgetter('time'))
+        return sorted(events, key=operator.attrgetter('time'), reverse=True)
 
     def _events_with_child_events(self, min_level):
         """Yield all events and all child events which were recorded with a

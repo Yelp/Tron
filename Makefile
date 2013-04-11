@@ -50,8 +50,12 @@ clean:
 		rm -rf $(DOCS_STATICSDIR)/*
 		fakeroot $(MAKE) -f $(CURDIR)/debian/rules clean
 
+coffee:
+		mkdir -p tronweb/js/cs
+		coffee -o tronweb/js/cs/ -c tronweb/coffee/
+
 html:
-	$(PYTHON) tools/state_diagram.py
+	PYTHONPATH=. $(PYTHON) tools/state_diagram.py
 	mkdir -p $(DOCS_STATICSDIR)
 	$(DOT) -o$(DOCS_STATICSDIR)/action.png action.dot
 	$(DOT) -o$(DOCS_STATICSDIR)/service_instance.png service_instance.dot

@@ -5,8 +5,10 @@ from testify import TestCase, assert_equal, run, setup, teardown
 from tests import mocks
 from tests.assertions import assert_length
 from tests.testingutils import Turtle
+from tron.api import adapter
 from tron.api.adapter import ReprAdapter, RunAdapter, ActionRunAdapter
 from tron.api.adapter import JobRunAdapter, ServiceAdapter
+from tron.core import actionrun
 
 
 class MockAdapter(ReprAdapter):
@@ -44,6 +46,34 @@ class ReprAdapterTestCase(TestCase):
         assert_equal(self.adapter.get_repr(), expected)
 
 
+class SampleClassStub(object):
+
+    def __init__(self):
+        self.true_flag = True
+        self.false_flag = False
+
+    @adapter.toggle_flag('true_flag')
+    def expects_true(self):
+        return "This is true"
+
+    @adapter.toggle_flag('false_flag')
+    def expects_false(self):
+        return "This is false"
+
+
+class ToggleFlagTestCase(TestCase):
+
+    @setup
+    def setup_stub(self):
+        self.stub = SampleClassStub()
+
+    def test_toggle_flag_true(self):
+        assert_equal(self.stub.expects_true(), "This is true")
+
+    def test_toggle_flag_false(self):
+        assert not self.stub.expects_false()
+
+
 class RunAdapterTestCase(TestCase):
 
     @setup
@@ -52,7 +82,7 @@ class RunAdapterTestCase(TestCase):
         self.adapter            = RunAdapter(self.original)
 
     def test_get_state(self):
-        assert_equal(self.adapter.get_state(), self.original.state.short_name)
+        assert_equal(self.adapter.get_state(), self.original.state.name)
 
     def test_get_node(self):
         assert_equal(self.adapter.get_node(), str(self.original.node))
@@ -79,6 +109,23 @@ class ActionRunAdapterTestCase(TestCase):
         assert_equal(self.adapter.max_lines, 4)
         assert_equal(self.adapter.job_run, self.job_run)
         assert_equal(self.adapter._obj, self.action_run)
+
+
+class ActionRunGraphAdapterTestCase(TestCase):
+
+    @setup
+    def setup_adapter(self):
+        self.action_runs = mock.create_autospec(
+            actionrun.ActionRunCollection,
+            action_graph=mock.MagicMock())
+        self.adapter = adapter.ActionRunGraphAdapter(self.action_runs)
+        self.action_run = mock.MagicMock()
+        self.action_runs.__iter__.return_value = [self.action_run]
+
+    def test_get_repr(self):
+        result = self.adapter.get_repr()
+        assert_equal(len(result), 1)
+        assert_equal(self.action_run.id, result[0]['id'])
 
 
 class JobRunAdapterTestCase(TestCase):

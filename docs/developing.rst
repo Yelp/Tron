@@ -41,8 +41,11 @@ of Tron create a working directory and start
 :command:`trond` using the following::
 
     $ mkdir wd
-    $ bin/trond --working-dir=wd --pid-file=wd/tron.pid --nodaemon -l dev/dev-logging.conf --config-file=tests/data/test_config.yaml
+    $ cp dev/dev-logging.conf wd/
+    $ bin/trond -w wd --nodaemon -l dev-logging.conf
 
+
+A sample testing config file is available at ``tests/data/test_config.yaml``
 
 Running the Tests
 -----------------
@@ -54,12 +57,8 @@ Run the tests using ``make tests`` or ``testify tests``.  If you're using a
 virtualenv you may want to run ``python `which testify` test`` to have it
 use the correct environment.
 
-Under dev/ There is also a very useful test runner ``runtests.py``. This script
-uses the ``watchdog`` module to watch for file modifications, and then runs
-the appropriate unit tests.  This script is also a good way to verify that your
-test filenames match the proper convention.  If you don't see your tests run
-when you make a modification, it will print the expected filename for the
-test file.
+This package also includes a ``.pyautotest`` file which can be used with
+https://github.com/dnephin/PyAutoTest to auto run tests when you save a file.
 
 Contributing
 ------------

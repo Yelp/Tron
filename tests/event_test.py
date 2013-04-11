@@ -90,8 +90,8 @@ class EventRecorderTestCase(TestCase):
         self.recorder.info('five')
 
         events = self.recorder.list()
-        expected = ['one', 'two', 'three', 'four', 'five']
-        assert_equal([e.name for e in events], expected)
+        expected = reversed(['one', 'two', 'three', 'four', 'five'])
+        assert_equal([e.name for e in events], list(expected))
 
     def test_list_without_children(self):
         self.recorder.ok('one')
@@ -102,7 +102,7 @@ class EventRecorderTestCase(TestCase):
         self.recorder.info('five')
 
         events = self.recorder.list(child_events=False)
-        expected = ['one', 'two', 'five']
+        expected = ['five', 'two', 'one']
         assert_equal([e.name for e in events], expected)
 
     def test_list_no_events(self):

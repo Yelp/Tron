@@ -98,16 +98,35 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
             assert_equal(self.mock_eventloop.call_later.call_count, 0)
 
     def test_run_action_exists(self):
-        self.task.action = mock.create_autospec(ActionCommand, is_complete=False)
+        self.task.action = mock.create_autospec(ActionCommand, is_done=False)
         with mock.patch('tron.core.serviceinstance.log', autospec=True) as mock_log:
             self.task.run()
             assert_equal(mock_log.warn.call_count, 1)
 
     def test_handle_action_event_failstart(self):
         autospec_method(self.task.queue)
-        self.task.handle_action_event(None, ActionCommand.FAILSTART)
+        self.task.handle_action_event(self.task.action, ActionCommand.FAILSTART)
         self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
         self.task.queue.assert_called_with()
+        self.task.hang_check_callback.cancel.assert_called_with()
+
+    def test_handle_action_event_exit(self):
+        autospec_method(self.task._handle_action_exit)
+        self.task.handle_action_event(self.task.action, ActionCommand.EXITING)
+        self.task._handle_action_exit.assert_called_with()
+        self.task.hang_check_callback.cancel.assert_called_with()
+
+    def test_handle_action_running(self):
+        autospec_method(self.task.queue)
+        self.task.handle_action_event(self.task.action, ActionCommand.RUNNING)
+        assert not self.task.hang_check_callback.cancel.mock_calls
+        assert not self.task.queue.mock_calls
+
+    def test_handle_action_mismatching_action(self):
+        autospec_method(self.task._handle_action_exit)
+        action = mock.create_autospec(actioncommand.ActionCommand)
+        self.task.handle_action_event(action, ActionCommand.EXITING)
+        assert not self.task._handle_action_exit.mock_calls
 
     def test_handle_action_exit_up(self):
         self.task.action = mock.create_autospec(ActionCommand)
@@ -123,6 +142,12 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
         self.task._handle_action_exit()
         self.task.notify.assert_called_with(self.task.NOTIFY_DOWN)
         assert_equal(self.task.queue.call_count, 0)
+
+    def test_fail(self):
+        self.task.action = mock.create_autospec(actioncommand.ActionCommand)
+        self.task.fail()
+        self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
+        assert_equal(self.task.action, actioncommand.CompletedActionCommand)
 
 
 class ServiceInstanceStopTaskTestCase(TestCase):

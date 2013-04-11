@@ -12,13 +12,13 @@ log = logging.getLogger(__name__)
 
 class ServiceState(object):
     """Determine the state of a Service."""
-    DISABLED      = "DISABLED"
-    STARTING      = "STARTING"
-    UP            = "UP"
-    DEGRADED      = "DEGRADED"
-    FAILED        = "FAILED"
-    STOPPING      = "STOPPING"
-    UNKNOWN       = "UNKNOWN"
+    DISABLED      = "disabled"
+    STARTING      = "starting"
+    UP            = "up"
+    DEGRADED      = "degraded"
+    FAILED        = "failed"
+    STOPPING      = "stopping"
+    UNKNOWN       = "unknown"
 
     FAILURE_STATES = set([DEGRADED, FAILED])
 
@@ -27,7 +27,7 @@ class ServiceState(object):
         if not service.enabled:
             return cls.disabled_states(service)
 
-        if service.instances.all(ServiceInstance.STATE_UP):
+        if service.instances.is_up():
             return cls.UP
 
         if service.instances.is_starting():
@@ -59,7 +59,7 @@ class Service(observer.Observer, observer.Observable):
         self.config             = config
         self.instances          = instance_collection
         self.enabled            = False
-        args                    = config.restart_interval, self.repair
+        args                    = config.restart_delay, self.repair
         self.repair_callback    = eventloop.UniqueCallback(*args)
         self.event_recorder     = event.get_recorder(str(self))
 

@@ -15,8 +15,8 @@ from tests.assertions import assert_call
 from tron import event
 from tron import mcp
 from tron.api import www, controller
-from tests.testingutils import Turtle
-from tron.core import service, serviceinstance, job
+from tests.testingutils import Turtle, autospec_method
+from tron.core import service, serviceinstance, job, jobrun
 
 
 REQUEST = twisted.web.server.Request(mock.Mock(), None)
@@ -81,8 +81,22 @@ class ActionRunResourceTestCase(WWWTestCase):
         self.resource = www.ActionRunResource(self.action_run, self.job_run)
 
     def test_render_GET(self):
-        response = self.resource.render_GET(self.request)
+        request = build_request(num_lines="12")
+        response = self.resource.render_GET(request)
         assert_equal(response['id'], self.action_run.id)
+
+
+class JobrunResourceTestCase(WWWTestCase):
+
+    @setup
+    def setup_resource(self):
+        self.job_run = mock.MagicMock()
+        self.job_scheduler = mock.Mock()
+        self.resource = www.JobRunResource(self.job_run, self.job_scheduler)
+
+    def test_render_GET(self):
+        response = self.resource.render_GET(self.request)
+        assert_equal(response['id'], self.job_run.id)
 
 
 class RootResourceTestCase(WWWTestCase):
@@ -90,10 +104,11 @@ class RootResourceTestCase(WWWTestCase):
     @setup
     def build_resource(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
-        self.resource = www.RootResource(self.mcp)
+        web_path = '/bogus/path'
+        self.resource = www.RootResource(self.mcp, web_path)
 
     def test__init__(self):
-        expected_children = ['jobs', 'services', 'config', 'status', 'events']
+        expected_children = ['jobs', 'services', 'config', 'status', 'events', 'web']
         assert_equal(set(expected_children), set(self.resource.children.keys()))
 
     def test_render_GET(self):
@@ -146,11 +161,50 @@ class JobResourceTestCase(WWWTestCase):
     @setup
     def setup_resource(self):
         self.job_scheduler = mock.create_autospec(job.JobScheduler)
+        self.runs = mock.create_autospec(jobrun.JobRunCollection)
+        self.job = mock.create_autospec(job.Job,
+            runs=self.runs,
+            all_nodes=False,
+            allow_overlap=True,
+            queueing=True,
+            action_graph=mock.MagicMock(),
+            scheduler=mock.Mock(),
+            node_pool=mock.Mock(),
+            max_runtime=mock.Mock())
+        self.job_scheduler.get_job.return_value = self.job
         self.resource = www.JobResource(self.job_scheduler)
 
     def test_render_GET(self):
         result = self.resource.render_GET(self.request)
-        assert_equal(result['name'], self.job_scheduler.get_job().name)
+        assert_equal(result['name'], self.job_scheduler.get_job().get_name())
+
+    def test_get_run_from_identifier_HEAD(self):
+        job_run = self.resource.get_run_from_identifier('HEAD')
+        self.job_scheduler.get_job.assert_called_with()
+        assert_equal(job_run, self.job.runs.get_newest.return_value)
+
+    def test_get_run_from_identifier_number(self):
+        job_run = self.resource.get_run_from_identifier('3')
+        self.job_scheduler.get_job.assert_called_with()
+        assert_equal(job_run, self.job.runs.get_run_by_num.return_value)
+        self.job.runs.get_run_by_num.assert_called_with(3)
+
+    def test_get_run_from_identifier_state_name(self):
+        job_run = self.resource.get_run_from_identifier('SUCC')
+        assert_equal(job_run, self.job.runs.get_run_by_state_short_name.return_value)
+        self.job.runs.get_run_by_state_short_name.assert_called_with('SUCC')
+
+    def test_get_run_from_identifier_negative_index(self):
+        job_run = self.resource.get_run_from_identifier('-2')
+        assert_equal(job_run, self.job.runs.get_run_by_index.return_value)
+        self.job.runs.get_run_by_index.assert_called_with(-2)
+
+    def test_getChild(self):
+        autospec_method(self.resource.get_run_from_identifier)
+        identifier = 'identifier'
+        resource = self.resource.getChild(identifier, None)
+        assert_equal(resource.job_run,
+            self.resource.get_run_from_identifier.return_value)
 
 
 class ServiceResourceTestCase(WWWTestCase):
@@ -227,7 +281,7 @@ class EventResourceTestCase(WWWTestCase):
         recorder.critical(critical_message)
         response = self.resource.render_GET(self.request())
         names = [e['name'] for e in response['data']]
-        assert_equal(names, [ok_message, critical_message])
+        assert_equal(names, [critical_message, ok_message])
 
 
 class ConfigResourceTestCase(TestCase):

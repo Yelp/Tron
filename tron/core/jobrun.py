@@ -5,7 +5,6 @@
 from collections import deque
 import logging
 import itertools
-import operator
 from tron import node, command_context, event
 from tron.core.actionrun import ActionRun, ActionRunFactory
 from tron.serialize import filehandler
@@ -59,8 +58,11 @@ class JobRun(Observable, Observer):
     @classmethod
     def for_job(cls, job, run_num, run_time, node, manual):
         """Create a JobRun for a job."""
-        run = cls(job.name, run_num, run_time, node, job.output_path.clone(),
-                job.context, action_graph=job.action_graph, manual=manual)
+        run = cls(job.get_name(), run_num, run_time, node,
+                job.output_path.clone(),
+                job.context,
+                action_graph=job.action_graph,
+                manual=manual)
 
         action_runs     = ActionRunFactory.build_action_run_collection(run, job.action_runner)
         run.action_runs = action_runs
@@ -102,7 +104,7 @@ class JobRun(Observable, Observer):
             'job_name':         self.job_name,
             'run_num':          self.run_num,
             'run_time':         self.run_time,
-            'node_name':        self.node.name if self.node else None,
+            'node_name':        self.node.get_name() if self.node else None,
             'runs':             self.action_runs.state_data,
             'cleanup_run':      self.action_runs.cleanup_action_state_data,
             'manual':           self.manual,
@@ -359,6 +361,14 @@ class JobRunCollection(object):
         """Return a the run with run number which matches num."""
         return self._get_run_using(lambda r: r.run_num == num)
 
+    def get_run_by_index(self, index):
+        """Return the job run at index. Jobs are indexed from oldest to newest.
+        """
+        try:
+            return self.runs[index * -1 - 1]
+        except IndexError:
+            return None
+
     def get_run_by_state_short_name(self, short_name):
         """Returns the most recent run which matches the state short name."""
         return self._get_run_using(lambda r: r.state.short_name == short_name)
@@ -413,20 +423,10 @@ class JobRunCollection(object):
         return max(r.run_num for r in self.runs) + 1
 
     def remove_old_runs(self):
-        """Remove old runs to attempt to reduce the number of completed runs
+        """Remove old runs to reduce the number of completed runs
         to within RUN_LIMIT.
         """
-        if not self.last_success or not self.runs:
-            return
-
-        next_run = self.get_next_to_finish() or self.get_newest()
-        keep_run = min(next_run, self.last_success,
-                key=operator.attrgetter('run_num'))
-
-        while (
-            len(self.runs) > self.run_limit and
-            keep_run.run_num > self.runs[-1].run_num
-        ):
+        while len(self.runs) > self.run_limit:
             run = self.runs.pop()
             run.cleanup()
 
@@ -438,6 +438,10 @@ class JobRunCollection(object):
     @property
     def last_success(self):
         return self.get_run_by_state(ActionRun.STATE_SUCCEEDED)
+
+    @property
+    def next_run(self):
+        return self.get_run_by_state(ActionRun.STATE_SCHEDULED)
 
     def __iter__(self):
         return iter(self.runs)

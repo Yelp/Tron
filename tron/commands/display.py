@@ -1,8 +1,10 @@
 """
 Format and color output for tron commands.
 """
+import contextlib
 from functools import partial
 from operator import itemgetter
+from tron.core import actionrun, job, service
 
 
 class Color(object):
@@ -28,10 +30,24 @@ class Color(object):
     }
 
     @classmethod
+    @contextlib.contextmanager
+    def enable(cls):
+        old_val = cls.enabled
+        try:
+            cls.enabled = True
+            yield
+        finally:
+            cls.enabled = old_val
+
+    @classmethod
     def set(cls, color_name, text):
         if not cls.enabled or not color_name:
             return unicode(text)
         return cls.colors[color_name.lower()] + unicode(text) + cls.colors['end']
+
+    @classmethod
+    def toggle(cls, enable):
+        cls.enabled = enable
 
 
 class TableDisplay(object):
@@ -64,12 +80,12 @@ class TableDisplay(object):
     colors = None
     title = None
     resize_fields = set()
+    reversed = False
 
     header_color = 'hgray'
 
-    def __init__(self, options=None):
+    def __init__(self):
         self.out = []
-        self.options = options
 
     def banner(self):
         if not self.title:
@@ -125,7 +141,8 @@ class TableDisplay(object):
         return None
 
     def rows(self):
-        return sorted(self.data, key=itemgetter(self.fields[0]))
+        return sorted(self.data,
+            key=itemgetter(self.fields[0]), reverse=self.reversed)
 
     def store_data(self, data):
         self.data = data
@@ -164,11 +181,16 @@ class TableDisplay(object):
 
 
 def add_color_for_state(state):
-    if state.upper() in ('FAILED', 'FAIL'):
+    if state == actionrun.ActionRun.STATE_FAILED.name:
         return Color.set('red', state)
-    if state.upper() in ('UP', 'ENABLED', 'RUNNING', 'SUCC'):
+    if state in set((
+        actionrun.ActionRun.STATE_RUNNING.name,
+        actionrun.ActionRun.STATE_SUCCEEDED.name,
+        job.Job.STATUS_ENABLED,
+        service.ServiceState.UP
+    )):
         return Color.set('green', state)
-    if state.upper() in ('DISABLED', 'DOWN'):
+    if state in set((job.Job.STATUS_DISABLED, service.ServiceState.DISABLED)):
         return Color.set('blue', state)
     return state
 
@@ -209,9 +231,9 @@ def format_service_details(service_content):
     return details + '\n\nInstances:\n' + '\n'.join(instances)
 
 
-def format_job_details(job_content, options):
+def format_job_details(job_content):
     details = format_fields(DisplayJobs, job_content)
-    job_runs = DisplayJobRuns(options).format(job_content['runs'])
+    job_runs = DisplayJobRuns().format(job_content['runs'])
     actions = "\n\nList of Actions:\n%s" % '\n'.join(job_content['action_names'])
     return details + actions + "\n" + job_runs
 
@@ -244,8 +266,8 @@ class DisplayServices(TableDisplay):
         ('Command',             'command'           ),
         ('Pid Filename',        'pid_filename'      ),
         ('Node Pool',           'node_pool'         ),
-        ('Restart interval',    'restart_interval'  ),
         ('Monitor interval',    'monitor_interval'  ),
+        ('Restart delay',       'restart_delay'     ),
     ]
 
     colors = {
@@ -259,8 +281,9 @@ class DisplayJobRuns(TableDisplay):
 
     columns = ['Run ID',    'State',    'Node', 'Scheduled Time']
     fields  = ['run_num',   'state',    'node', 'run_time']
-    widths  = [10,          6,          30,     25              ]
+    widths  = [10,          12,         30,     25]
     title = 'job runs'
+    reversed = True
 
     detail_labels = [
         ('Job Run',             'id'),
@@ -277,13 +300,6 @@ class DisplayJobRuns(TableDisplay):
         'state':     add_color_for_state,
         'manual':    lambda value: Color.set('cyan' if value else None, value),
     }
-
-    def rows(self):
-        data_rows = self.data
-        if self.options.warn:
-            warn_only_func = lambda r: r['state'] in ['FAIL', 'UNKWN', 'QUE']
-            data_rows = filter(warn_only_func, self.data)
-        return data_rows[:self.options.num_displays]
 
     def format_value(self, field_idx, value):
         if self.fields[field_idx] == 'run_num':
@@ -305,10 +321,6 @@ class DisplayJobRuns(TableDisplay):
         row_data = "%sStart: %s  End: %s  (%s)" % (
             ' ' * self.widths[0], start, end, duration)
         self.out.append(Color.set('gray', row_data))
-
-        if self.options.warn:
-            display_action = DisplayActionRuns(self.options)
-            self.out.append(display_action.format(row))
 
 
 class DisplayJobs(TableDisplay):
@@ -340,7 +352,7 @@ class DisplayActionRuns(TableDisplay):
 
     columns = ['Action', 'State', 'Start Time', 'End Time', 'Duration']
     fields  = ['id',     'state', 'start_time', 'end_time', 'duration']
-    widths  = [40,         7,        22,          22,         10      ]
+    widths  = [40,       12,      22,           22,         10     ]
     title = 'actions'
     resize_fields = ['id']
 
@@ -362,13 +374,8 @@ class DisplayActionRuns(TableDisplay):
     }
 
     def banner(self):
-        if self.options.display_preface:
-            self.out.append(format_fields(DisplayJobRuns, self.job_run))
+        self.out.append(format_fields(DisplayJobRuns, self.job_run))
         super(DisplayActionRuns, self).banner()
-
-    def footer(self):
-        if len(self.rows()) < len(self.data) and not self.options.warn:
-            self.out.append('...')
 
     def format_value(self, field_idx, value):
         if self.fields[field_idx] == 'id':
@@ -387,14 +394,6 @@ class DisplayActionRuns(TableDisplay):
     def store_data(self, data):
         self.data = data['runs']
         self.job_run = data
-
-    def rows(self):
-        data_rows = self.data
-        if self.options.warn:
-            warn_only_func = lambda r: r['state'] in ['FAIL', 'UNKWN', 'QUE']
-            data_rows = filter(warn_only_func, self.data)
-        return data_rows[:self.options.num_displays]
-
 
 
 class DisplayEvents(TableDisplay):

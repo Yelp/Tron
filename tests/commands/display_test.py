@@ -1,20 +1,22 @@
-from testify import TestCase, run, setup, assert_equal, turtle
+from testify import TestCase, run, setup, assert_equal
+from testify import setup_teardown
+from tron.commands import display
 
-from tron.commands.display import Color, DisplayServices, DisplayJobRuns
+from tron.commands.display import DisplayServices, DisplayJobRuns
 from tron.commands.display import DisplayActionRuns, DisplayJobs
+from tron.core import actionrun, service
 
 
 class DisplayServicesTestCase(TestCase):
 
     @setup
     def setup_data(self):
-        Color.enabled = True
         self.data = [
             dict(name="My Service",      state="stopped", live_count="4", enabled=True),
             dict(name="Another Service", state="running", live_count="2", enabled=False),
             dict(name="Yet another",     state="running", live_count="1", enabled=True)
         ]
-        self.display = DisplayServices(80)
+        self.display = DisplayServices()
 
     def test_format(self):
         out = self.display.format(self.data)
@@ -69,33 +71,17 @@ class DisplayJobRunsTestCase(TestCase):
             stderr=[]
         )
 
-        Color.enabled = True
-        self.options = turtle.Turtle(warn=False, num_displays=4)
 
     def test_format(self):
-        display = DisplayJobRuns(options=self.options)
-        out = display.format(self.data)
+        out = DisplayJobRuns().format(self.data)
         lines = out.split('\n')
         assert_equal(len(lines), 7)
-
-    def test_format_with_warn(self):
-        self.options.warn = True
-        self.data = self.data[:1]
-        self.data[0]['runs'] = [self.action_run]
-
-        display = DisplayJobRuns(options=self.options)
-        out = display.format(self.data)
-        lines = out.split('\n')
-        assert_equal(len(lines), 16)
-        assert lines[13].startswith('Actions:'), lines[13]
 
 
 class DisplayJobsTestCase(TestCase):
 
     @setup
     def setup_data(self):
-        Color.enabled = True
-        self.options = turtle.Turtle(warn=False, num_displays=4)
         self.data = [
             dict(name='important_things', status='running',
                 scheduler='DailyJob', last_success='unknown'),
@@ -137,8 +123,7 @@ class DisplayJobsTestCase(TestCase):
         ]
 
     def do_format(self):
-        display = DisplayJobs(self.options).format(self.data)
-        out = display.format(self.data)
+        out = DisplayJobs().format(self.data)
         lines = out.split('\n')
         return lines
 
@@ -151,13 +136,6 @@ class DisplayActionsTestCase(TestCase):
 
     @setup
     def setup_data(self):
-        Color.enabled = True
-        self.options = turtle.Turtle(
-            warn=False,
-            num_displays=6,
-            stdout=False,
-            stderr=False
-        )
         self.data = {
             'id': 'something.23',
             'state': 'UNKWN',
@@ -205,20 +183,32 @@ class DisplayActionsTestCase(TestCase):
         }
 
     def format_lines(self):
-        display = DisplayActionRuns(options=self.options)
-        out = display.format(self.data)
+        out = DisplayActionRuns().format(self.data)
         return out.split('\n')
 
     def test_format(self):
         lines = self.format_lines()
         assert_equal(len(lines), 13)
 
-    def test_format_warn(self):
-        self.data['runs'] = [self.data['runs'][2]]
-        self.data['runs'][0].update(self.details)
-        self.options.warn = True
-        lines = self.format_lines()
-        assert_equal(len(lines), 11)
+
+class AddColorForStateTestCase(TestCase):
+
+    @setup_teardown
+    def enable_color(self):
+        with display.Color.enable():
+            yield
+
+    def test_add_red(self):
+        text = display.add_color_for_state(actionrun.ActionRun.STATE_FAILED.name)
+        assert text.startswith(display.Color.colors['red']), text
+
+    def test_add_green(self):
+        text = display.add_color_for_state(actionrun.ActionRun.STATE_RUNNING.name)
+        assert text.startswith(display.Color.colors['green']), text
+
+    def test_add_blue(self):
+        text = display.add_color_for_state(service.ServiceState.DISABLED)
+        assert text.startswith(display.Color.colors['blue']), text
 
 
 if __name__ == "__main__":
