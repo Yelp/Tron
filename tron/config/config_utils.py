@@ -5,6 +5,7 @@ import re
 import datetime
 from tron.config import ConfigError
 from tron.config.schema import MASTER_NAMESPACE
+from tron.utils import dicts
 from tron.utils.dicts import FrozenDict
 
 
@@ -103,6 +104,31 @@ def valid_time(value, config_context):
 
     msg = 'Value at %s is not a valid time: %s'
     raise ConfigError(msg % (config_context.path, exc))
+
+
+# Translations from possible configuration units to the argument to
+# datetime.timedelta
+TIME_INTERVAL_UNITS = dicts.invert_dict_list({
+    'days':     ['d', 'day', 'days'],
+    'hours':    ['h', 'hr', 'hrs', 'hour', 'hours'],
+    'minutes':  ['m', 'min', 'mins', 'minute', 'minutes'],
+    'seconds':  ['s', 'sec', 'secs', 'second', 'seconds']
+})
+
+TIME_INTERVAL_RE = re.compile(r"^\s*(?P<value>\d+)\s*(?P<units>[a-zA-Z]+)\s*$")
+
+def valid_time_delta(value, config_context):
+    error_msg = "Value at %s is not a valid time delta: %s"
+    matches = TIME_INTERVAL_RE.match(value)
+    if not matches:
+        raise ConfigError(error_msg % (config_context.path, value))
+
+    units = matches.group('units')
+    if units not in TIME_INTERVAL_UNITS:
+        raise ConfigError(error_msg % (config_context.path, value))
+
+    time_spec = {TIME_INTERVAL_UNITS[units]: int(matches.group('value'))}
+    return datetime.timedelta(**time_spec)
 
 
 def valid_name_identifier(value, config_context):

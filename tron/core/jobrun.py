@@ -28,9 +28,10 @@ class JobRun(Observable, Observer):
 
     context_class         = command_context.JobRunContext
 
+    # TODO: use config object
     def __init__(self, job_name, run_num, run_time, node, output_path=None,
-                base_context=None, action_runs=None,
-                action_graph=None, manual=None):
+                base_context=None, action_runs=None, action_graph=None,
+                manual=None):
         super(JobRun, self).__init__()
         self.job_name           = job_name
         self.run_num            = run_num
@@ -167,6 +168,11 @@ class JobRun(Observable, Observer):
         if any(self._start_action_runs()):
             self.event.ok('started')
             return True
+
+    def stop(self):
+        if self.action_runs.is_done:
+            return
+        self.action_runs.stop()
 
     def _start_action_runs(self):
         """Start all startable action runs, and return any that were

@@ -217,6 +217,7 @@ class JobAdapter(ReprAdapter):
         'next_run',
         'url',
         'runs',
+        'max_runtime',
         'action_graph',
     ]
 
@@ -258,6 +259,9 @@ class JobAdapter(ReprAdapter):
     def get_runs(self):
         runs = adapt_many(JobRunAdapter, self._obj.runs, self.include_action_runs)
         return runs[:self.num_runs or None]
+
+    def get_max_runtime(self):
+        return str(self._obj.max_runtime)
 
     @toggle_flag('include_action_graph')
     def get_action_graph(self):

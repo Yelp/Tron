@@ -454,6 +454,11 @@ class ServiceInstanceCollection(object):
                       ServiceInstance.STATE_UP])
         return self._all_states_match(states)
 
+    def is_up(self):
+        states = set([ServiceInstance.STATE_MONITORING,
+                     ServiceInstance.STATE_UP])
+        return self._all_states_match(states)
+
     def _all_states_match(self, states):
         return all(inst.get_state() in states for inst in self.instances)
 
