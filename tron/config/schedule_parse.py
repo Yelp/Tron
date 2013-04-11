@@ -7,7 +7,7 @@ import datetime
 import re
 
 from tron.config import ConfigError, config_utils, schema
-from tron.utils import crontab, dicts
+from tron.utils import crontab
 
 
 ConfigGenericSchedule = schema.config_object_factory(
@@ -111,72 +111,21 @@ def valid_daily_scheduler(config, config_context):
         jitter=config.jitter)
 
 
-# Translations from possible configuration units to the argument to
-# datetime.timedelta
-TIME_INTERVAL_UNITS = dicts.invert_dict_list({
-    'months':   ['mo', 'month', 'months'],
-    'days':     ['d', 'day', 'days'],
-    'hours':    ['h', 'hr', 'hrs', 'hour', 'hours'],
-    'minutes':  ['m', 'min', 'mins', 'minute', 'minutes'],
-    'seconds':  ['s', 'sec', 'secs', 'second', 'seconds']
-})
-
-
-# Split digits and characters into tokens
-TIME_INTERVAL_RE = re.compile(r"^(?P<value>\d+)(?P<units>[a-zA-Z]+)$")
-
-TimeInterval = namedtuple('TimeInterval', 'value units')
-
-
-def valid_time_interval(interval, error_msg, config_context):
-    interval = ''.join(interval.split())
-    matches = TIME_INTERVAL_RE.match(interval)
-    if not matches:
-        raise ConfigError(error_msg % (config_context.path, interval))
-
-    units = matches.group('units')
-    if units not in TIME_INTERVAL_UNITS:
-        raise ConfigError(error_msg % (config_context.path, interval))
-
-    return TimeInterval(int(matches.group('value')), TIME_INTERVAL_UNITS[units])
-
-
-def timedelta_from_time_interval(time_interval):
-    return datetime.timedelta(**{time_interval.units: time_interval.value})
-
-
-def valid_jitter(jitter, config_context):
-    """Return jitter in seconds."""
-    if not jitter:
-        return
-
-    error_msg   = 'Invalid jitter specification at %s: %s'
-    time_interval = valid_time_interval(jitter, error_msg, config_context)
-    if time_interval.units not in ('seconds', 'minutes'):
-        msg = "Invalid time unit for jitter at %s: %s"
-        raise ConfigError(msg % (config_context.path, time_interval.units))
-    return timedelta_from_time_interval(time_interval)
-
-
 # Shortcut values for intervals
 TIME_INTERVAL_SHORTCUTS = {
-    'hourly': TimeInterval(value=1, units='hours')
+    'hourly': datetime.timedelta(hours=1)
 }
 
 def valid_interval_scheduler(config,  config_context):
-    interval  = config.value
-    error_msg = 'Invalid interval specification at %s: %s'
-
-    def build_config(time_interval):
-        delta = timedelta_from_time_interval(time_interval)
+    def build_config(delta):
         return ConfigIntervalScheduler(timedelta=delta, jitter=config.jitter)
 
-    interval_key = interval.strip()
+    interval_key = config.value.strip()
     if interval_key in TIME_INTERVAL_SHORTCUTS:
         return build_config(TIME_INTERVAL_SHORTCUTS[interval_key])
 
-    time_interval = valid_time_interval(interval, error_msg, config_context)
-    return build_config(time_interval)
+    return build_config(
+        config_utils.valid_time_delta(config.value, config_context))
 
 
 def normalize_weekdays(seq):
@@ -349,9 +298,9 @@ class ScheduleValidator(config_utils.Validator):
     """Validate the structure of a scheduler config."""
     config_class = ConfigGenericSchedule
     defaults = {
-        'jitter':       None,
-        }
+        'jitter':       datetime.timedelta()
+    }
     validators = {
         'type':         config_utils.build_enum_validator(schedulers.keys()),
-        'jitter':       valid_jitter
+        'jitter':       config_utils.valid_time_delta
     }

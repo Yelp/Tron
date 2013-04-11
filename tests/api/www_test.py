@@ -155,7 +155,8 @@ class JobResourceTestCase(WWWTestCase):
             queueing=True,
             action_graph=mock.MagicMock(),
             scheduler=mock.Mock(),
-            node_pool=mock.Mock())
+            node_pool=mock.Mock(),
+            max_runtime=mock.Mock())
         self.job_scheduler.get_job.return_value = self.job
         self.resource = www.JobResource(self.job_scheduler)
 
