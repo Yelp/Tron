@@ -16,69 +16,91 @@ try:
 except ImportError:
     import json as simplejson
 
+
 log = logging.getLogger(__name__)
 
-USER_AGENT = "Tron Command/%s +http://github.com/Yelp/Tron" % tron.__version__
 
-# Result Codes
-OK          = "OK"
-ERROR       = "ERROR"
-
-
-def request(host, path, data=None):
-    enc_data = urllib.urlencode(data) if data else data
-
-    uri = urlparse.urljoin(host, path)
-    req = urllib2.Request(uri, enc_data)
-    log.info("Request to %r", uri)
-
-    req.add_header("User-Agent", USER_AGENT)
-    opener = urllib2.build_opener()
-    try:
-        page = opener.open(req)
-        contents = page.read()
-    except urllib2.HTTPError, e:
-        log.error("Received error response: %s" % e)
-        return ERROR, e.code
-    except urllib2.URLError, e:
-        log.error("Received error response: %s" % e)
-        return ERROR, e.reason
-
-    try:
-        result = simplejson.loads(contents)
-    except ValueError, e:
-        log.error("Failed to decode response: %s, %s" % (e, contents))
-        return ERROR, str(e)
-    return OK, result
+USER_AGENT   = "Tron Command/%s +http://github.com/Yelp/Tron" % tron.__version__
+DECODE_ERROR = "DECODE_ERROR"
+URL_ERROR    = 'URL_ERROR'
 
 
 class RequestError(ValueError):
-    """Raised when there is a connection failure."""
+    """Raised when the request to tron API fails."""
 
 
-# TODO: remove options, replace with explicit args
+Response = namedtuple('Response', 'error msg content')
+
+default_headers = {
+    "User-Agent": USER_AGENT
+}
+
+
+def build_url_request(uri, data, headers=None):
+    headers     = headers or default_headers
+    enc_data    = urllib.urlencode(data) if data else None
+    return urllib2.Request(uri, enc_data, headers)
+
+
+def load_response_content(http_response):
+    content = http_response.read()
+    try:
+        return Response(None, None, simplejson.loads(content))
+    except ValueError, e:
+        log.error("Failed to decode response: %s, %s", e, content)
+        return Response(DECODE_ERROR, str(e), content)
+
+
+def build_http_error_response(exc):
+    content = exc.read() if hasattr(exc, 'read') else None
+    return Response(exc.code, exc.reason, content)
+
+
+def request(uri, data=None):
+    log.info("Request to %s with %s", uri, data)
+    request = build_url_request(uri, data)
+    try:
+        response = urllib2.urlopen(request)
+    except urllib2.HTTPError, e:
+        log.error("Received error response: %s" % e)
+        return build_http_error_response(e)
+    except urllib2.URLError, e:
+        log.error("Received error response: %s" % e)
+        return Response(URL_ERROR, e.reason, None)
+
+    return load_response_content(response)
+
+
+def build_get_url(url, data=None):
+     return '%s?%s' % (url, urllib.urlencode(data)) if data else url
+
+
 class Client(object):
-    """A client used in commands to make requests to the tron.www """
+    """An HTTP client used to issue commands to the Tron API.
+    """
 
-    def __init__(self, options):
-        self.options = options
+    def __init__(self, url_base):
+        """Create a new client.
+            url_base - A url with a schema, hostname and port
+        """
+        self.url_base = url_base
 
     def status(self):
-        return self.request('/status')
+        return self.http_get('/status')
 
     def events(self):
-        return self.request('/events')['data']
+        return self.http_get('/events')['data']
 
     def config(self, config_name, config_data=None, config_hash=None):
-        """This may be a post or a get, depending on data."""
+        """Retrieve or update the configuration."""
         if config_data:
             request_data = dict(
                         config=config_data, name=config_name, hash=config_hash)
             return self.request('/config', request_data)
-        return self.request('/config?name=%s' % config_name)
+        return self.http_get('/config', dict(name=config_name))
 
     def home(self):
-        return self.request('/')
+        return self.http_get('/')
 
     index = home
 
@@ -86,49 +108,47 @@ class Client(object):
         return get_object_type_from_identifier(self.index(), identifier).url
 
     def services(self):
-        return self.request('/services').get('services')
+        return self.http_get('/services').get('services')
 
     def service(self, service_url):
-        return self.request(service_url)
+        return self.http_get(service_url)
 
-    def _get_job_params(self, include_job_runs=False, include_action_runs=False):
-        # TODO: remove
-        if self.options.warn:
-            return "?include_job_runs=1&include_action_runs=1"
-        # TODO: test, todo, parse bool
+    def jobs(self, include_job_runs=False, include_action_runs=False):
+        params = {'include_job_runs': int(include_job_runs),
+                  'include_action_runs': int(include_action_runs)}
+        return self.http_get('/jobs', params).get('jobs')
+
+    def job(self, job_url, include_action_runs=False, count=0):
+        params = {'include_action_runs': int(include_action_runs),
+                  'num_runs': count}
+        return self.http_get(job_url, params)
+
+    def job_runs(self, url, include_runs=True, include_graph=False):
         params = {
-            'include_job_runs': int(include_job_runs),
-            'include_action_runs': int(include_action_runs) }
-        return '?' + urllib.urlencode(params)
+            'include_action_runs': int(include_runs),
+            'include_action_graph': int(include_graph)}
+        return self.http_get(url, params)
 
-    def jobs(self):
-        params = self._get_job_params()
-        return self.request('/jobs' + params).get('jobs')
-
-    def job(self, job_url):
-        params = self._get_job_params(include_job_runs=True)
-        return self.request('%s%s' % (job_url, params))
-
-    def job_runs(self, job_run_url):
-        params = self._get_job_params()
-        return self.request('%s%s' % (job_run_url, params))
-
-    def action(self, action_run_url):
-        url = "%s?num_lines=%s" % (action_run_url, self.options.num_displays)
-        return self.request(url)
+    def action_runs(self, action_run_url, num_lines=0):
+        params = {
+            'num_lines':        num_lines,
+            'include_stdout':   1,
+            'include_stderr':   1}
+        return self.http_get(action_run_url, params)
 
     def object_events(self, item_url):
-        return self.request('%s/_events' % item_url)['data']
+        return self.http_get('%s/_events' % item_url)['data']
+
+    def http_get(self, url, data=None):
+        return self.request(build_get_url(url, data))
 
     def request(self, url, data=None):
-        server = self.options.server
-        log.info("Request: %s, %s, %s", server, url, data)
-        status, content = request(server, url, data)
-        if not status == OK:
-            err_msg = "%s%s: %s"
-            raise RequestError(err_msg % (server, url, content))
-        log.info("Response: %s", content)
-        return content
+        log.info("Request: %s, %s, %s", self.url_base, url, data)
+        uri = urlparse.urljoin(self.url_base, url)
+        response = request(uri, data)
+        if response.error:
+            raise RequestError("%s: %s" % (uri, response))
+        return response.content
 
 
 class TronObjectType(object):

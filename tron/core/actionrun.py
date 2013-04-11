@@ -297,7 +297,7 @@ class ActionRun(Observer):
             'command':          command,
             'rendered_command': self.rendered_command,
             'node_name':        self.node.get_name() if self.node else None,
-            'exit_status':      self.exit_status
+            'exit_status':      self.exit_status,
         }
 
     def render_command(self):

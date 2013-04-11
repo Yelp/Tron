@@ -4,6 +4,7 @@
  act as an adapter between the data format api clients expect, and the internal
  data of an object.
 """
+import functools
 import urllib
 from tron import actioncommand
 from tron.serialize import filehandler
@@ -40,6 +41,21 @@ class ReprAdapter(object):
 
 def adapt_many(adapter_class, seq, *args):
     return [adapter_class(item, *args).get_repr() for item in seq]
+
+
+def toggle_flag(flag_name):
+    """Create a decorator which checks if flag_name is true before running
+    the wrapped function. If False returns None.
+    """
+
+    def wrap(f):
+        @functools.wraps(f)
+        def wrapper(self, *args, **kwargs):
+            if getattr(self, flag_name):
+                return f(self, *args, **kwargs)
+            return None
+        return wrapper
+    return wrap
 
 
 class RunAdapter(ReprAdapter):
@@ -80,10 +96,13 @@ class ActionRunAdapter(RunAdapter):
             'duration'
     ]
 
-    def __init__(self, action_run, job_run, max_lines=10):
+    def __init__(self, action_run, job_run,
+                 max_lines=10, include_stdout=False, include_stderr=False):
         super(ActionRunAdapter, self).__init__(action_run)
         self.job_run            = job_run
-        self.max_lines          = max_lines
+        self.max_lines          = max_lines or None
+        self.include_stdout     = include_stdout
+        self.include_stderr     = include_stderr
 
     def get_raw_command(self):
         return self._obj.bare_command
@@ -99,10 +118,12 @@ class ActionRunAdapter(RunAdapter):
     def _get_serializer(self):
         return filehandler.OutputStreamSerializer(self._obj.output_path)
 
+    @toggle_flag('include_stdout')
     def get_stdout(self):
         filename = actioncommand.ActionCommand.STDOUT
         return self._get_serializer().tail(filename, self.max_lines)
 
+    @toggle_flag('include_stderr')
     def get_stderr(self):
         filename = actioncommand.ActionCommand.STDERR
         return self._get_serializer().tail(filename, self.max_lines)
@@ -176,15 +197,13 @@ class JobRunAdapter(RunAdapter):
     def get_url(self):
         return '/jobs/%s/%s' % (self._obj.job_name, self._obj.run_num)
 
+    @toggle_flag('include_action_runs')
     def get_runs(self):
-        if not self.include_action_runs:
-            return
         return adapt_many(ActionRunAdapter, self._obj.action_runs, self._obj)
 
-    # TODO: convert to decorator
+    @toggle_flag('include_action_graph')
     def get_action_graph(self):
-        if self.include_action_graph:
-            return ActionRunGraphAdapter(self._obj.action_runs).get_repr()
+        return ActionRunGraphAdapter(self._obj.action_runs).get_repr()
 
 class JobAdapter(ReprAdapter):
 
@@ -202,10 +221,16 @@ class JobAdapter(ReprAdapter):
         'action_graph',
     ]
 
-    def __init__(self, job, include_job_runs=False, include_action_runs=False):
+    def __init__(self, job,
+             include_job_runs=False,
+             include_action_runs=False,
+             include_action_graph=True,
+             num_runs=None):
         super(JobAdapter, self).__init__(job)
-        self.include_job_runs    = include_job_runs
-        self.include_action_runs = include_action_runs
+        self.include_job_runs     = include_job_runs
+        self.include_action_runs  = include_action_runs
+        self.include_action_graph = include_action_graph
+        self.num_runs             = num_runs
 
     def get_name(self):
         return self._obj.get_name()
@@ -230,15 +255,15 @@ class JobAdapter(ReprAdapter):
     def get_url(self):
         return '/jobs/%s' % urllib.quote(self._obj.get_name())
 
+    @toggle_flag('include_job_runs')
     def get_runs(self):
-        if not self.include_job_runs:
-            return
-        return adapt_many(JobRunAdapter, self._obj.runs, self.include_action_runs)
+        runs = adapt_many(JobRunAdapter, self._obj.runs, self.include_action_runs)
+        return runs[:self.num_runs or None]
 
     def get_max_runtime(self):
         return str(self._obj.max_runtime)
 
-    # TODO: create a flag to include/exclude this
+    @toggle_flag('include_action_graph')
     def get_action_graph(self):
         return ActionGraphAdapter(self._obj.action_graph).get_repr()
 
@@ -293,11 +318,10 @@ class ServiceAdapter(ReprAdapter):
     def get_restart_delay(self):
         return self._obj.config.restart_delay
 
-    # TODO: use decorator
+    @toggle_flag('include_events')
     def get_events(self):
-        if self.include_events:
-            events = adapt_many(EventAdapter, self._obj.event_recorder.list())
-            return events[:self.include_events]
+        events = adapt_many(EventAdapter, self._obj.event_recorder.list())
+        return events[:self.include_events]
 
 class ServiceInstanceAdapter(ReprAdapter):
 

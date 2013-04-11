@@ -84,8 +84,11 @@ class ActionRunResource(resource.Resource):
 
     def render_GET(self, request):
         num_lines = requestargs.get_integer(request, 'num_lines')
+        include_stdout = requestargs.get_bool(request, 'include_stdout')
+        include_stderr = requestargs.get_bool(request, 'include_stderr')
         run_adapter = adapter.ActionRunAdapter(
-            self.action_run, self.job_run, num_lines)
+            self.action_run, self.job_run, num_lines,
+            include_stdout=include_stdout, include_stderr=include_stderr)
         return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):
@@ -113,9 +116,11 @@ class JobRunResource(resource.Resource):
         return resource.NoResource(msg % (action_name, self.job_run))
 
     def render_GET(self, request):
+        include_runs = requestargs.get_bool(request, 'include_action_runs')
+        include_graph = requestargs.get_bool(request, 'include_action_graph')
         run_adapter = adapter.JobRunAdapter(self.job_run,
-            include_action_runs=True,
-            include_action_graph=True)
+            include_action_runs=include_runs,
+            include_action_graph=include_graph)
         return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):
@@ -158,8 +163,14 @@ class JobResource(resource.Resource):
 
     def render_GET(self, request):
         include_action_runs = requestargs.get_bool(request, 'include_action_runs')
+        include_graph = requestargs.get_bool(request, 'include_action_graph')
+        num_runs = requestargs.get_integer(request, 'num_runs')
         job_adapter = adapter.JobAdapter(
-                self.job_scheduler.get_job(), True, include_action_runs)
+                self.job_scheduler.get_job(),
+                include_job_runs=True,
+                include_action_runs=include_action_runs,
+                include_action_graph=include_graph,
+                num_runs=num_runs)
         return respond(request, job_adapter.get_repr())
 
     def render_POST(self, request):
@@ -326,7 +337,6 @@ class RootResource(resource.Resource):
         self.putChild('jobs',     JobCollectionResource(mcp.get_job_collection()))
         self.putChild('services', ServiceCollectionResource(mcp.get_service_collection()))
         self.putChild('config',   ConfigResource(mcp))
-        # TODO: namespaces
         self.putChild('status',   StatusResource(mcp))
         self.putChild('events',   EventResource(''))
         self.putChild('web',      static.File(web_path))
