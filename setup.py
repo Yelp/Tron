@@ -9,7 +9,7 @@ import tron
 setup(
     name="tron",
     version=tron.__version__,
-    provides=["tron"],
+    provides=['tron'],
     author="Yelp",
     author_email="yelplabs@yelp.com",
     url="http://github.com/Yelp/Tron",

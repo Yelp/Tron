@@ -91,17 +91,22 @@ class Client(object):
     def service(self, service_url):
         return self.request(service_url)
 
-    def _get_job_params(self):
+    def _get_job_params(self, include_job_runs=False, include_action_runs=False):
+        # TODO: remove
         if self.options.warn:
             return "?include_job_runs=1&include_action_runs=1"
-        return ''
+        # TODO: test, todo, parse bool
+        params = {
+            'include_job_runs': int(include_job_runs),
+            'include_action_runs': int(include_action_runs) }
+        return '?' + urllib.urlencode(params)
 
     def jobs(self):
         params = self._get_job_params()
         return self.request('/jobs' + params).get('jobs')
 
     def job(self, job_url):
-        params = self._get_job_params()
+        params = self._get_job_params(include_job_runs=True)
         return self.request('%s%s' % (job_url, params))
 
     def job_runs(self, job_run_url):

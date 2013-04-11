@@ -32,10 +32,10 @@ class Job(Observable, Observer):
     actions and their dependency graph.
     """
 
-    STATUS_DISABLED         = "DISABLED"
-    STATUS_ENABLED          = "ENABLED"
-    STATUS_UNKNOWN          = "UNKNOWN"
-    STATUS_RUNNING          = "RUNNING"
+    STATUS_DISABLED         = "disabled"
+    STATUS_ENABLED          = "enabled"
+    STATUS_UNKNOWN          = "unknown"
+    STATUS_RUNNING          = "running"
 
     NOTIFY_STATE_CHANGE     = 'notify_state_change'
     NOTIFY_RUN_DONE         = 'notify_run_done'

@@ -10,3 +10,4 @@ docs/_build/
 .idea
 docs/images/
 *.dot
+tronweb/js/cs/*.js

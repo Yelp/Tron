@@ -7,6 +7,8 @@ from tests.assertions import assert_length
 from tests.testingutils import Turtle
 from tron.api.adapter import ReprAdapter, RunAdapter, ActionRunAdapter
 from tron.api.adapter import JobRunAdapter, ServiceAdapter
+from tron.api import adapter
+from tron.core import actionrun
 
 
 class MockAdapter(ReprAdapter):
@@ -52,7 +54,7 @@ class RunAdapterTestCase(TestCase):
         self.adapter            = RunAdapter(self.original)
 
     def test_get_state(self):
-        assert_equal(self.adapter.get_state(), self.original.state.short_name)
+        assert_equal(self.adapter.get_state(), self.original.state.name)
 
     def test_get_node(self):
         assert_equal(self.adapter.get_node(), str(self.original.node))
@@ -79,6 +81,23 @@ class ActionRunAdapterTestCase(TestCase):
         assert_equal(self.adapter.max_lines, 4)
         assert_equal(self.adapter.job_run, self.job_run)
         assert_equal(self.adapter._obj, self.action_run)
+
+
+class ActionRunGraphAdapterTestCase(TestCase):
+
+    @setup
+    def setup_adapter(self):
+        self.action_runs = mock.create_autospec(
+            actionrun.ActionRunCollection,
+            action_graph=mock.MagicMock())
+        self.adapter = adapter.ActionRunGraphAdapter(self.action_runs)
+        self.action_run = mock.MagicMock()
+        self.action_runs.__iter__.return_value = [self.action_run]
+
+    def test_get_repr(self):
+        result = self.adapter.get_repr()
+        assert_equal(len(result), 1)
+        assert_equal(self.action_run.id, result[0]['id'])
 
 
 class JobRunAdapterTestCase(TestCase):

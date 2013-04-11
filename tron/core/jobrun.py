@@ -5,7 +5,6 @@
 from collections import deque
 import logging
 import itertools
-import operator
 from tron import node, command_context, event
 from tron.core.actionrun import ActionRun, ActionRunFactory
 from tron.serialize import filehandler
@@ -418,20 +417,10 @@ class JobRunCollection(object):
         return max(r.run_num for r in self.runs) + 1
 
     def remove_old_runs(self):
-        """Remove old runs to attempt to reduce the number of completed runs
+        """Remove old runs to reduce the number of completed runs
         to within RUN_LIMIT.
         """
-        if not self.last_success or not self.runs:
-            return
-
-        next_run = self.get_next_to_finish() or self.get_newest()
-        keep_run = min(next_run, self.last_success,
-                key=operator.attrgetter('run_num'))
-
-        while (
-            len(self.runs) > self.run_limit and
-            keep_run.run_num > self.runs[-1].run_num
-        ):
+        while len(self.runs) > self.run_limit:
             run = self.runs.pop()
             run.cleanup()
 
@@ -443,6 +432,10 @@ class JobRunCollection(object):
     @property
     def last_success(self):
         return self.get_run_by_state(ActionRun.STATE_SUCCEEDED)
+
+    @property
+    def next_run(self):
+        return self.get_run_by_state(ActionRun.STATE_SCHEDULED)
 
     def __iter__(self):
         return iter(self.runs)
