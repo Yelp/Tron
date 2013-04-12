@@ -76,7 +76,7 @@ class window.JobListView extends Backbone.View
 
     template: _.template """
         <h1>
-            Jobs
+            Scheduled Jobs
             <span id="refresh"></span>
         </h1>
         <div id="filter-bar"></div>

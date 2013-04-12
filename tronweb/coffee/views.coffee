@@ -32,16 +32,15 @@ class window.FilterView extends Backbone.View
 
     tagName: "div"
 
-    className: "outline"
+    className: ""
 
     filterTemplate: _.template """
         <div class="input-prepend">
           <span class="add-on">
-            <i class="icon-filter"></i>
+            <i class="icon-filter icon-white"></i>
             <% print(_.str.humanize(filterName)) %>
           </span>
           <input type="text" id="filter-<%= filterName %>"
-                 placeholder="filter"
                  value="<%= defaultValue %>"
                  class="span2"
                  data-filter-name="<%= filterName %>Filter">
@@ -51,9 +50,13 @@ class window.FilterView extends Backbone.View
     template: _.template """
         <form class="filter-form">
         <div class="control-group">
-          <div class="controls">
-            <% print(filters.join('')) %>
-          </div>
+          <fieldset>
+            <legend class="tt-enable clickable"
+                title="Toggle Filters">Filters</legend>
+            <div class="controls">
+                <% print(filters.join('')) %>
+            </div>
+          </fieldset>
         </div>
         </form>
         """
@@ -68,12 +71,14 @@ class window.FilterView extends Backbone.View
         filters = _.map(@model.filterTypes, createFilter)
         @$el.html @template(filters: filters)
         @delegateEvents()
+        makeTooltips(@$el)
         @
 
     events:
         "keyup input":  "filterChange"
         "submit":       "submit"
         "change input": "filterDone"
+        "click legend": "toggleVisible"
 
     getFilterFromEvent: (event) =>
         filterEle = $(event.target)
@@ -91,6 +96,10 @@ class window.FilterView extends Backbone.View
 
     submit: (event) ->
         event.preventDefault()
+
+    toggleVisible: (event) =>
+        @$('.filter-form .controls').toggle()
+        @$('.filter-form fieldset').toggleClass('plain')
 
 
 class window.RefreshToggleView extends Backbone.View
