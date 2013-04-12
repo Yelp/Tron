@@ -4,11 +4,6 @@
 /******************************************************************************
  *  Global
  *****************************************************************************/
-body, input, button, select {
-    font-family: "Open Sans";
-}
-
-
 [class^="icon-"] {
     margin-top: 2px
 }
@@ -74,12 +69,6 @@ h2 {
 /******************************************************************************
  *  Button
  *****************************************************************************/
-.btn-inverse {
-    -webkit-border-radius: 0px;
-    -moz-border-radius: 0px;
-    border-radius: 0px;
-}
-
 .btn-inverse.active {
     background: #080808;
 }
@@ -133,14 +122,8 @@ h2 {
     font-weight: bold;
     padding: 4px 8px;
     font-size: 12px;
-    -webkit-border-radius: 0px;
-    -moz-border-radius: 0px;
-    border-radius: 0px;
 }
 .filter-form input {
-    -webkit-border-radius: 0px;
-    -moz-border-radius: 0px;
-    border-radius: 0px;
 }
 
 .filter-form .add-on [class^="icon-"] {
