@@ -13,7 +13,14 @@ body, input, button, select {
     margin-top: 2px
 }
 
+h1 {
+    line-height: 45px;
+}
 
+code.command {
+    display: block;
+    white-space: pre-wrap;
+}
 
 /******************************************************************************
  *  Navbar
@@ -25,6 +32,20 @@ body, input, button, select {
 
 .nav li a i {
     margin-right: 7px;
+}
+
+
+/******************************************************************************
+ *  Button
+ *****************************************************************************/
+.btn-inverse {
+    -webkit-border-radius: 0px;
+    -moz-border-radius: 0px;
+    border-radius: 0px;
+}
+
+.btn-inverse.active {
+    background: #080808;
 }
 
 
@@ -180,47 +201,55 @@ h2 {
 }
 
 
-/* Dashboard */
+/******************************************************************************
+ *  Dashboard
+ *****************************************************************************/
 
 .status-box {
-    padding: 20px;
-    margin: 0 5px 5px 0;
+    padding: 2.2em 20px 20px;
+    margin: 0 10px 10px 0;
     height: 100px;
-    width: 120px;
+    width: 117px;
     font-size: 12px;
     font-weight: bold;
-    border: 1px solid #ccc;
-    -webkit-border-radius: 4px;
-    -moz-border-radius: 4px;
-    border-radius: 4px;
+    position: relative;
 }
 
 .status-box a {
-    color: #333;
+    color: #fff;
+}
+
+.status-box .count {
+    display: inline-block !important;
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 3px 7px;
+    background: #333;
+    color: white;
+}
+
+.status-box i[class^="icon-"] {
+    margin: 2px 5px 0 0;
 }
 
 .status-box.success {
-    background: #dff0d8;
+    background: #51a351;
 }
 
 .status-box.error {
-    background: #f2dede;
+    background: #bd362f;
 }
 
 .status-box.warning {
-    background: #fcf8e3;
+    background: #faa732;
 }
 
 .status-box.info {
-    background: #d9edf7;
+    background: #2f96b4;
 }
 
 #all-view > .dashboard-view {
     width: auto;
     margin-right: 20px;
-}
-
-code.command {
-    display: block;
-    white-space: pre-wrap;
 }

@@ -39,8 +39,8 @@ class ReprAdapter(object):
         return repr_data
 
 
-def adapt_many(adapter_class, seq, *args):
-    return [adapter_class(item, *args).get_repr() for item in seq]
+def adapt_many(adapter_class, seq, *args, **kwargs):
+    return [adapter_class(item, *args, **kwargs).get_repr() for item in seq]
 
 
 def toggle_flag(flag_name):

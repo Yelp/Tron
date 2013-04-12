@@ -40,21 +40,24 @@ class window.DashboardView extends Backbone.View
         </div>
         """
 
-    renderServices: =>
-        entry = (model) -> new ServiceStatusBoxView(model: model).render().el
-        @$('#status-boxes').append(entry(model) for model in @model.serviceList.models)
+    makeServiceViews: =>
+        entry = (model) -> new ServiceStatusBoxView(model: model)
+        entry(model) for model in @model.serviceList.models
 
-    renderJobs: =>
-        entry = (model) -> new JobStatusBoxView(model: model).render().el
-        @$('#status-boxes').append(entry(model) for model in @model.jobList.models)
+    makeJobViews: =>
+        entry = (model) -> new JobStatusBoxView(model: model)
+        entry(model) for model in @model.jobList.models
+
+    sortedViews: =>
+        allViews = @makeServiceViews().concat @makeJobViews()
+        _.sortBy(allViews, (item) -> item.model.get('name'))
 
     renderRefresh: ->
         @$('#refresh').html(@refreshView.render().el)
 
     render: ->
         @$el.html @template()
-        @renderServices()
-        @renderJobs()
+        @$('#status-boxes').append(item.render().el) for item in @sortedViews()
         @renderRefresh()
         @
 
@@ -66,15 +69,24 @@ class window.StatusBoxView extends ClickableListEntry
 
     tagName: "div"
 
+    className: =>
+        "span2 clickable status-box #{@getState()}"
+
     template: _.template """
         <div class="status-header">
-            <a href="<%= url %>"><%= name %></a>
+            <a href="<%= url %>">
+            <%= name %></a>
         </div>
+        <span class="count">
+          <i class="<%= icon %> icon-white"></i><%= count %>
+        </span>
         """
 
     render: =>
         context = _.extend {},
             url: @buildUrl()
+            icon: @icon
+            count: @count()
             name: formatName(@model.attributes.name)
         @$el.html @template(context)
         @
@@ -84,15 +96,19 @@ class window.ServiceStatusBoxView extends StatusBoxView
     buildUrl: =>
         "#service/#{@model.get('name')}"
 
+    icon: "icon-repeat"
+
     #  TODO: this is duplicated with ServiceListEntryView
-    className: =>
-        state = switch @model.get('state')
+    getState: =>
+        switch @model.get('state')
             when "up"       then "success"
             when "starting" then "info"
             when "disabled" then "warning"
             when "degraded" then "warning"
             when "failed"   then "error"
-        "span2 clickable status-box #{state}"
+
+    count: =>
+        @model.get('instances').length
 
 
 class window.JobStatusBoxView extends StatusBoxView
@@ -100,10 +116,16 @@ class window.JobStatusBoxView extends StatusBoxView
     buildUrl: =>
         "#job/#{@model.get('name')}"
 
+    icon: "icon-time"
+
+    # TODO: get state of last run if enabled
     # TODO: this is duplicated with JobListEntryView
-    className: =>
-        state = switch @model.get('status')
+    getState: =>
+        switch @model.get('status')
             when "enabled"  then "success"
             when "running"  then "info"
             when "disabled" then "warning"
-        "span2 clickable status-box #{state}"
+            when "unknown"  then "error"
+
+    count: =>
+        if @model.get('runs') then _.first(@model.get('runs')).run_num else 0

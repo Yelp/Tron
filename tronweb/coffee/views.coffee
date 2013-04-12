@@ -109,16 +109,16 @@ class window.RefreshToggleView extends Backbone.View
 
     template: _.template """
         <span class="muted"><%= text %></span>
-        <button class="btn btn-default tt-enable <%= active %>"
-            title="Toggle refresh"
+        <button class="btn btn-inverse tt-enable <%= active %>"
+            title="Toggle Refresh"
             data-placement="top">
-            <i class="icon-refresh"></i>
+            <i class="icon-refresh icon-white"></i>
         </button>
         """
 
     render: =>
         if @model.enabled
-            text = "Auto-refresh #{ @model.interval / 1000 }s"
+            text = "Refresh #{ @model.interval / 1000 }s"
             active = "active"
         else
             text = active = ""

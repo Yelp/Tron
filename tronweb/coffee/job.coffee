@@ -27,7 +27,7 @@ class window.JobCollection extends Backbone.Collection
 
     model: Job
 
-    url: "/jobs"
+    url: "/jobs?include_job_runs=1"
 
     parse: (resp, options) =>
         resp['jobs']
