@@ -168,11 +168,8 @@ div.refresh-view span {
 }
 
 .table.table-outline td a {
-    color: #333;
+    color: #fff;
 }
-
-
-
 
 
 
@@ -182,6 +179,10 @@ table.details {
     margin: 4px 0 0 0 ;
 }
 
+
+/******************************************************************************
+ *  Force Graph
+ *****************************************************************************/
 .graph {
     position: relative;
 }
@@ -286,20 +287,40 @@ table.details {
     margin: 2px 5px 0 0;
 }
 
-.status-box.success {
-    background: #51a351;
+
+@red: #bd362f;
+@green: #51a351;
+@blue: #2f96b4;
+@yellow: #faa732;
+@text: #fff;
+
+
+.success,
+.table tbody tr.success > td
+{
+    background: @green;
+    color: @text;
 }
 
-.status-box.error {
-    background: #bd362f;
+.warning,
+.table tbody tr.warning > td
+{
+    background: @yellow;
+    color: @text;
 }
 
-.status-box.warning {
-    background: #faa732;
+.error,
+.table tbody tr.error > td
+{
+    background: @red;
+    color: @text;
 }
 
-.status-box.info {
-    background: #2f96b4;
+.info,
+.table tbody tr.info > td
+{
+    background: @blue;
+    color: @text;
 }
 
 #all-view > .dashboard-view {

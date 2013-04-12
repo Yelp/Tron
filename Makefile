@@ -54,7 +54,9 @@ coffee:
 		mkdir -p tronweb/js/cs
 		coffee -o tronweb/js/cs/ -c tronweb/coffee/
 
-html:
+# TODO: add less target, and web target
+
+docs:
 	PYTHONPATH=. $(PYTHON) tools/state_diagram.py
 	mkdir -p $(DOCS_STATICSDIR)
 	$(DOT) -o$(DOCS_STATICSDIR)/action.png action.dot
@@ -63,8 +65,7 @@ html:
 	@echo
 	@echo "Build finished. The HTML pages are in $(DOCS_BUILDDIR)/html."
 
-doc: html
-docs: html
+doc: docs
 
 man: 
 	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_DIR)/man
