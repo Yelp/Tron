@@ -81,16 +81,26 @@ class MainView extends Backbone.View
     el: $("body")
 
     template: _.template """
-        <div id="menu" class="navbar">
+        <div id="menu" class="navbar navbar-inverse navbar-static-top">
           <div class="navbar-inner">
+            <div class="container">
             <ul class="nav">
               <li class="brand">Tronweb</li>
               <li class="divider-vertical"></li>
-              <li><a href="#home">home</a></li>
-              <li><a href="#jobs">jobs</a></li>
-              <li><a href="#services">services</a></li>
-              <li><a href="#configs">config</a></li>
+              <li><a href="#home">
+                <i class="icon-home icon-white"></i>Dashboard</a>
+              </li>
+              <li><a href="#jobs">
+                <i class="icon-time icon-white"></i>Scheduled Jobs</a>
+              </li>
+              <li><a href="#services">
+                <i class="icon-repeat icon-white"></i>Services</a>
+              </li>
+              <li><a href="#configs">
+                <i class="icon-wrench icon-white"></i>Config</a>
+              </li>
             </ul>
+            </div>
           </div>
         </div>
 
@@ -98,9 +108,15 @@ class MainView extends Backbone.View
         </div>
     """
 
+    setActive: =>
+        [path, params] = getLocationParams()
+        path = path.split('/')[0]
+        @$("a[href=#{path}]").parent('li').addClass 'active'
+
     render: (item) =>
         @close()
         @$('#all-view').html @template()
+        @setActive()
         @$('#main').html item.el
 
     close: =>
