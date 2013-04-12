@@ -54,7 +54,7 @@ class window.ServiceListView extends Backbone.View
             <span id="refresh"></span>
         </h1>
         <div id="filter-bar"></div>
-        <table class="table table-hover">
+        <table class="table table-hover table-outline">
             <thead>
                 <tr>
                     <th>Name</td>
@@ -162,7 +162,7 @@ class window.ServiceView extends Backbone.View
             <% if (instances.length > 0) { %>
             <div class="span12">
                 <h2>Instances</h2>
-                <table class="table">
+                <table class="table table-outline">
                     <thead>
                         <tr>
                             <th>Id</th>

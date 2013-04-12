@@ -80,10 +80,10 @@ class window.JobListView extends Backbone.View
             <span id="refresh"></span>
         </h1>
         <div id="filter-bar"></div>
-        <table class="table table-hover">
+        <table class="table table-hover table-outline">
             <thead>
                 <tr>
-                    <th class="span3">Name</td>
+                    <th class="span4">Name</td>
                     <th>Schedule</td>
                     <th>Node Pool</td>
                     <th>Last Success</td>
@@ -187,7 +187,7 @@ class window.JobView extends Backbone.View
 
             <div class="span12">
                 <h2>Job Runs</h2>
-                <table class="table table-hover">
+                <table class="table table-hover table-outline">
                     <thead>
                         <tr>
                             <th>Id</th>
@@ -293,7 +293,7 @@ class window.JobRunView extends Backbone.View
 
             <div class="span12">
                 <h2>Action Runs</h2>
-                <table class="table table-hover">
+                <table class="table table-hover table-outline">
                     <thead>
                         <tr>
                             <th>Name</th>

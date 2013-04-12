@@ -12,11 +12,21 @@ window.dateFromNow = (string, defaultString='never') ->
             <%= delta %>
         </span>
         """
+
+    label_template = _.template """
+        <span class="label label-<%= type %>"><%= delta %></span>
+        """
+
     if string
         formatted = moment(string).format('MMM, Do YYYY, h:mm:ss a')
-        delta = moment(string).fromNow()
+        delta = label_template
+            delta: moment(string).fromNow()
+            type: "inverse"
     else
-        formatted = delta = defaultString
+        formatted = defaultString
+        delta = label_template
+            delta: defaultString
+            type: "important"
     template(formatted: formatted, delta: delta)
 
 
@@ -97,6 +107,7 @@ class window.FilterView extends Backbone.View
     submit: (event) ->
         event.preventDefault()
 
+    # TODO: update model to store state
     toggleVisible: (event) =>
         @$('.filter-form .controls').toggle()
         @$('.filter-form fieldset').toggleClass('plain')

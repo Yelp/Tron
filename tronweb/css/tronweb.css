@@ -13,14 +13,50 @@ body, input, button, select {
     margin-top: 2px
 }
 
-h1 {
-    line-height: 45px;
-}
-
 code.command {
     display: block;
     white-space: pre-wrap;
 }
+
+.clickable {
+    cursor: pointer;
+}
+
+.table-condensed td {
+    border: 0
+}
+
+h1 {
+    font-size: 25px;
+    line-height: 45px;
+}
+
+h1 .pull-right {
+    margin-top: -4px;
+}
+
+h1 small {
+    font-variant: small-caps;
+}
+
+h1 a {
+    color: inherit
+}
+
+h1 a:hover {
+    text-decoration: underline
+}
+
+h2 {
+    border-bottom: 1px #ccc solid;
+    text-align: left;
+    padding: 0 0 0 10px;
+    font-size: 16px;
+    font-weight: bold;
+    font-variant: small-caps;
+}
+
+
 
 /******************************************************************************
  *  Navbar
@@ -65,6 +101,10 @@ code.command {
     border: 0px;
 }
 
+.filter-form .control-group {
+    margin-bottom: 20px;
+}
+
 .filter-form fieldset legend {
 	width: auto;
 	padding: 3px 10px;
@@ -103,8 +143,9 @@ form.filter-form {
 }
 
 
-
-
+/******************************************************************************
+ *  Refresh widget
+ *****************************************************************************/
 div.refresh-view span {
     font-size: 14px;
     vertical-align: middle;
@@ -112,53 +153,41 @@ div.refresh-view span {
     font-weight: normal;
 }
 
-.table td {
-    border: 0;
+
+
+/******************************************************************************
+ *  Outlined tables
+ *****************************************************************************/
+.table.table-outline thead {
+    border: #333 1px solid;
+}
+.table.table-outline tbody {
+    border: #ccc 1px solid;
 }
 
-.table thead {
-    border-bottom: 1px solid #ccc
+.table.table-outline th {
+    background: #333;
+    color: #eee;
 }
 
-.clickable {
-    cursor: pointer;
+.table.table-outline td {
+    border-top: 0;
+    padding: 10px;
 }
 
-.table-condensed td {
-    border: 0
+.table.table-outline td a {
+    color: #333;
 }
+
+
+
+
+
+
+
 
 table.details {
     margin: 4px 0 0 0 ;
-}
-
-h1 {
-    font-size: 25px;
-}
-
-h1 .pull-right {
-    margin-top: -4px;
-}
-
-h1 small {
-    font-variant: small-caps;
-}
-
-h1 a {
-    color: inherit
-}
-
-h1 a:hover {
-    text-decoration: underline
-}
-
-h2 {
-    border-bottom: 1px #ccc solid;
-    text-align: left;
-    padding: 0 0 0 10px;
-    font-size: 16px;
-    font-weight: bold;
-    font-variant: small-caps;
 }
 
 .graph {

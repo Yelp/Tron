@@ -18,13 +18,12 @@ class NamespaceListEntryView extends ClickableListEntry
     tagName: "tr"
 
     template: _.template """
-        <td>
-            <a href="#config/<%= name %>"><%= name %></a>
-        </td>
+        <td> <a href="#config/<%= name %>"><%= name %></a> </td>
         """
 
     render: ->
-        @$el.html @template(name: @model)
+        @$el.html @template
+            name: @model
         @
 
 
@@ -39,13 +38,20 @@ class window.NamespaceListView extends Backbone.View
 
     template: _.template '
         <h1>Configuration Namespaces</h1>
-        <table class="table table-hover">
+        <table class="table table-hover table-outline">
+          <thead>
+            <tr>
+              <th>Name</th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
         </table>'
 
     render: =>
         @$el.html @template()
         entry = (name) -> new NamespaceListEntryView(model: name).render().el
-        @$('table').append(entry(name) for name in @model.get('namespaces'))
+        @$('tbody').append(entry(name) for name in @model.get('namespaces'))
         @
 
 
