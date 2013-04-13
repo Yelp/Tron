@@ -5,6 +5,7 @@ from testify import TestCase, assert_equal, run, setup, teardown
 from tests import mocks
 from tests.assertions import assert_length
 from tests.testingutils import Turtle
+from tron import node
 from tron.api import adapter
 from tron.api.adapter import ReprAdapter, RunAdapter, ActionRunAdapter
 from tron.api.adapter import JobRunAdapter, ServiceAdapter
@@ -157,10 +158,40 @@ class ServiceAdapterTestCase(TestCase):
         self.service = mock.MagicMock()
         self.adapter = ServiceAdapter(self.service)
 
-    def test_repr(self):
+    @mock.patch('tron.api.adapter.NodePoolAdapter', autospec=True)
+    def test_repr(self, mock_node_pool_adapter):
         result = self.adapter.get_repr()
         assert_equal(result['name'], self.service.name)
-        assert_equal(result['node_pool'], self.service.config.node)
+        assert_equal(result['node_pool'],
+            mock_node_pool_adapter.return_value.get_repr.return_value)
+
+
+class NodeAdapterTestCase(TestCase):
+
+    @setup
+    def setup_adapter(self):
+        self.node = mock.create_autospec(node.Node)
+        self.adapter = adapter.NodeAdapter(self.node)
+
+    def test_repr(self):
+        result = self.adapter.get_repr()
+        assert_equal(result['hostname'], self.node.hostname)
+        assert_equal(result['username'], self.node.username)
+
+
+class NodePoolAdapterTestCase(TestCase):
+
+    @setup
+    def setup_adapter(self):
+        self.pool = mock.create_autospec(node.NodePool)
+        self.adapter = adapter.NodePoolAdapter(self.pool)
+
+    @mock.patch('tron.api.adapter.adapt_many', autospec=True)
+    def test_repr(self, mock_many):
+        result = self.adapter.get_repr()
+        assert_equal(result['name'], self.pool.get_name.return_value)
+        mock_many.assert_called_with(adapter.NodeAdapter,
+            self.pool.get_nodes.return_value)
 
 
 if __name__ == "__main__":

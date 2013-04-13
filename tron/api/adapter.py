@@ -350,8 +350,10 @@ class NodeAdapter(ReprAdapter):
 
 
 class NodePoolAdapter(ReprAdapter):
-    field_names = ['name']
-    translated_field_names = ['nodes']
+    translated_field_names = ['name', 'nodes']
+
+    def get_name(self):
+        return self._obj.get_name()
 
     def get_nodes(self):
-        return adapt_many(NodeAdapter, self._obj.nodes)
+        return adapt_many(NodeAdapter, self._obj.get_nodes())
