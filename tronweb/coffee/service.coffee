@@ -139,19 +139,22 @@ class window.ServiceView extends Backbone.View
                     <span id="refresh"></span>
                 </h1>
             </div>
-            <div class="span8">
+            <div class="span8 outline-block">
                 <h2>Details</h2>
-                <table class="table table-condensed details">
+                <table class="table details">
                     <tr><td class="span2">Count</td>
-                        <td><%= live_count %> / <%= count %></td></tr>
+                        <td><span class="label"><%= live_count %> / <%= count %></span></td></tr>
                     <tr><td>Node Pool</td>  <td><%= node_pool %></td></tr>
-                    <tr><td>State</td>      <td><%= state %></td></tr>
+                    <tr><td>State</td>
+                        <td><% print(formatState(state)) %></td></tr>
                     <tr><td>Command</td>    <td><code><%= command %></code></td></tr>
-                    <tr><td>Restart Delay</td><td><%= restart_delay %></td></tr>
-                    <tr><td>Monitor Interval</td><td><%= monitor_interval %></td></tr>
+                    <tr><td>Restart Delay</td>
+                        <td><span class="label"><%= restart_delay %></span></td></tr>
+                    <tr><td>Monitor Interval</td>
+                        <td><span class="label"><%= monitor_interval %></span></td></tr>
                 </table>
             </div>
-            <div class="span4">
+            <div class="span4 outline-block">
                <h2>Events</h2>
                  <table class="table table-hover event-list">
                    <tbody>
@@ -160,7 +163,7 @@ class window.ServiceView extends Backbone.View
             </div>
 
             <% if (instances.length > 0) { %>
-            <div class="span12">
+            <div class="span12 outline-block">
                 <h2>Instances</h2>
                 <table class="table table-outline">
                     <thead>

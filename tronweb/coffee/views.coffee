@@ -35,8 +35,11 @@ window.makeTooltips = (root) ->
 
 
 window.formatName = (name) =>
-       name.replace(/\./g, '.<wbr/>').replace(/_/g, '_<wbr/>')
+    name.replace(/\./g, '.<wbr/>').replace(/_/g, '_<wbr/>')
 
+
+window.formatState = (state) =>
+    """<span class="label #{state}">#{state}</span>"""
 
 class window.FilterView extends Backbone.View
 

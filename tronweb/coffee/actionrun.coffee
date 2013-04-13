@@ -63,7 +63,7 @@ class window.ActionRunView extends Backbone.View
 
     tagName: "div"
 
-    className: "span12"
+    className: ""
 
     template: _.template """
         <div class="row">
@@ -76,11 +76,12 @@ class window.ActionRunView extends Backbone.View
                     <span id="refresh"></span>
                 </h1>
             </div>
-            <div class="span12">
+            <div class="span12 outline-block">
                 <h2>Details</h2>
-                <table class="table table-condensed details">
+                <table class="table details">
                     <tbody>
-                    <tr><td class="span2">State</td>          <td><%= state %></td></tr>
+                    <tr><td class="span2">State</td>
+                        <td><% print(formatState(state)) %></td></tr>
                     <tr><td>Node</td>           <td><%= node %></td></tr>
                     <tr><td>Raw command</td>
                         <td><code class="command"><%= raw_command %></code></td></tr>
@@ -98,7 +99,7 @@ class window.ActionRunView extends Backbone.View
                     </tbody>
                 </table>
             </div>
-            <div class="span12">
+            <div class="span12 outline-block">
                 <h2>stdout</h2>
                 <pre><% print(stdout.join('\\n')) %></pre>
 

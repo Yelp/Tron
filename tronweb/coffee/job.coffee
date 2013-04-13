@@ -163,9 +163,10 @@ class window.JobView extends Backbone.View
             </div>
             <div class="span5 outline-block">
                 <h2>Details</h2>
-                <table class="table table-condensed details">
+                <table class="table details">
                     <tbody>
-                    <tr><td>Status</td>         <td><%= status %></td></tr>
+                    <tr><td>Status</td>
+                        <td><% print(formatState(status)) %></td></tr>
                     <tr><td>Node pool</td>      <td><%= node_pool %></td></tr>
                     <tr><td>Schedule</td>
                         <td><code><%= scheduler %></code></td></tr>
@@ -208,6 +209,7 @@ class window.JobView extends Backbone.View
         new GraphView(
             model: @model.get('action_graph')
             buildContent: (d) -> """<code class="command">#{d.command}</code>"""
+            height: $('table.details').height()
         ).render()
 
     render: ->
@@ -270,11 +272,11 @@ class window.JobRunView extends Backbone.View
                 </h1>
 
             </div>
-            <div class="span5">
+            <div class="span5 outline-block">
                 <h2>Details</h2>
-                <table class="table table-condensed details">
+                <table class="table details">
                     <tr><td class="span2">State</td>
-                        <td><%= state %></td></tr>
+                        <td><% print(formatState(state)) %></td></tr>
                     <tr><td>Node</td>           <td><%= node %></td></tr>
                     <tr><td>Manual</td>         <td><%= manual %></td></tr>
                     <tr><td>Scheduled</td>      <td><%= run_time %></td></tr>
@@ -286,12 +288,12 @@ class window.JobRunView extends Backbone.View
                     </tr>
                 </table>
             </div>
-            <div class="span7">
+            <div class="span7 outline-block">
                 <h2>Action Graph</h2>
                 <div id="action-graph" class="graph job-view"></div>
             </div>
 
-            <div class="span12">
+            <div class="span12 outline-block">
                 <h2>Action Runs</h2>
                 <table class="table table-hover table-outline">
                     <thead>
