@@ -161,7 +161,7 @@ class window.JobView extends Backbone.View
                     <span id="refresh"></span>
                 </h1>
             </div>
-            <div class="span5">
+            <div class="span5 outline-block">
                 <h2>Details</h2>
                 <table class="table table-condensed details">
                     <tbody>
@@ -180,12 +180,12 @@ class window.JobView extends Backbone.View
                     </tbody>
                 </table>
             </div>
-            <div class="span7">
+            <div class="span7 outline-block">
                 <h2>Action Graph</h2>
                 <div id="action-graph" class="graph job-view"></div>
             </div>
 
-            <div class="span12">
+            <div class="span12 outline-block">
                 <h2>Job Runs</h2>
                 <table class="table table-hover table-outline">
                     <thead>
@@ -320,9 +320,10 @@ class window.JobRunView extends Backbone.View
             new ActionRunListEntryView(model:new ActionRun(run)).render().el
         @$('tbody.actionruns').html(entry(model) for model in @model.get('runs'))
 
+    # TODO: add class for state
     popupTemplate: _.template """
         <ul class="unstyled">
-            <li><strong><%= state %></strong></li>
+            <li><span class="label"><%= state %></span></li>
             <li><code class="command"><% print(command || raw_command) %></code></li>
         </ul>
         """

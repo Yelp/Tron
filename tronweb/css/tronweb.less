@@ -1,16 +1,29 @@
 
 @import url(http://fonts.googleapis.com/css?family=Open+Sans:300,400,700,800);
+@import url(http://fonts.googleapis.com/css?family=Droid+Sans+Mono);
 
 /******************************************************************************
  *  Global
  *****************************************************************************/
 [class^="icon-"] {
-    margin-top: 2px
+    margin-top: 3px
+}
+
+.clear-border {
+    -webkit-border-radius: 0;
+    -moz-border-radius: 0;
+    border-radius: 0;
 }
 
 code.command {
     display: block;
     white-space: pre-wrap;
+    font-family: 'Droid Sans Mono', monospace;
+    border: 0;
+    background: #eee;
+    color: #000;
+    padding: 10px;
+    .clear-border;
 }
 
 .clickable {
@@ -43,7 +56,6 @@ h1 a:hover {
 }
 
 h2 {
-    border-bottom: 1px #ccc solid;
     text-align: left;
     padding: 0 0 0 10px;
     font-size: 16px;
@@ -51,6 +63,34 @@ h2 {
     font-variant: small-caps;
 }
 
+.block-header {
+    background: #333;
+    color: #eee;
+
+    h3, h2 {
+        font-size: 16px;
+        font-weight: bold;
+        font-variant: small-caps;
+    }
+}
+
+.outline-block {
+
+    h2 {
+        margin-bottom: 0;
+        text-align: left;
+        padding: 0 0 0 10px;
+        font-size: 16px;
+        font-weight: bold;
+        font-variant: small-caps;
+        border: #333 1px solid;
+    }
+    > table, > div {
+        border: #ccc 1px solid;
+        border-top: 0;
+    }
+    margin-bottom: 20px;
+}
 
 
 /******************************************************************************
@@ -174,12 +214,6 @@ div.refresh-view span {
 
 
 
-
-table.details {
-    margin: 4px 0 0 0 ;
-}
-
-
 /******************************************************************************
  *  Force Graph
  *****************************************************************************/
@@ -224,23 +258,48 @@ table.details {
   stroke-width: 1.5px;
 }
 
-.popover {
+
+
+/******************************************************************************
+ *  Popover
+ *****************************************************************************/
+.popover.top {
     max-width: 600px;
+    .clear-border;
+    border: #333 1px solid;
+    padding: 0;
+    background: #eee;
+
+    .arrow {
+        border-top-color: #333;
+    }
+    .arrow:after {
+        border-top-color: #eee;
+    }
 }
 
 .popover .popover-title {
     font-weight: bold;
+    .clear-border;
+    .block-header;
 }
 .top-right-corner {
    position: absolute;
-   top: 2px;
+   top: -35px;
    right: 10px;
 }
 
-.modal-header h3 {
-    font-size: 16px;
-    font-weight: bold;
-    font-variant: small-caps;
+
+/******************************************************************************
+ *  Modal
+ *****************************************************************************/
+.modal {
+    .clear-border;
+    border: #ccc 1px solid;
+}
+
+.modal-header {
+    .block-header;
 }
 
 #action-graph .modal.fade.in {
@@ -284,7 +343,7 @@ table.details {
 }
 
 .status-box i[class^="icon-"] {
-    margin: 2px 5px 0 0;
+    margin: 1px 5px 0 0;
 }
 
 
@@ -294,6 +353,11 @@ table.details {
 @yellow: #faa732;
 @text: #fff;
 
+.table tbody tr > td
+{
+    background: #777;
+    color: @text;
+}
 
 .success,
 .table tbody tr.success > td

@@ -124,12 +124,12 @@ class GraphModalView extends Backbone.View
 
     template: """
         <div class="top-right-corner">
-        <button class="btn btn-default tt-enable"
+        <button class="btn btn-inverse tt-enable"
                 title="Full view"
                 data-placement="top"
                 id="view-full"
             >
-            <i class="icon-resize-full"></i>
+            <i class="icon-fullscreen icon-white"></i>
         </button>
         </div>
         <div class="modal hide fade">
@@ -138,7 +138,7 @@ class GraphModalView extends Backbone.View
                     class="close"
                     data-dismiss="modal"
                     aria-hidden="true">
-                    <i class="icon-remove-circle"></i>
+                    <i class="icon-remove icon-white"></i>
                 </button>
                 <h3>Action Graph</h3>
             </div>
