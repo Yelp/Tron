@@ -214,7 +214,7 @@ class ServiceInstanceView extends Backbone.View
     template: _.template """
         <td><% print(formatName(id)) %></td>
         <td><%= state %></td>
-        <td><%= node %></td>
+        <td><% print(displayNode(node)) %></td>
         <td><%= failures %></td>
         """
 

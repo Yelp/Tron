@@ -41,6 +41,7 @@ window.formatName = (name) =>
 window.formatState = (state) =>
     """<span class="label #{state}">#{state}</span>"""
 
+
 class window.FilterView extends Backbone.View
 
     tagName: "div"

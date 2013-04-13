@@ -307,7 +307,7 @@ class ServiceAdapter(ReprAdapter):
         return adapt_many(ServiceInstanceAdapter, self._obj.instances)
 
     def get_node_pool(self):
-        return self._obj.config.node
+        return NodePoolAdapter(self._obj.instances.node_pool).get_repr()
 
     def get_live_count(self):
         return len(self._obj.instances)
@@ -323,6 +323,7 @@ class ServiceAdapter(ReprAdapter):
         events = adapt_many(EventAdapter, self._obj.event_recorder.list())
         return events[:self.include_events]
 
+
 class ServiceInstanceAdapter(ReprAdapter):
 
     field_names = ['id', 'failures']
@@ -332,7 +333,7 @@ class ServiceInstanceAdapter(ReprAdapter):
         return str(self._obj.get_state())
 
     def get_node(self):
-        return str(self._obj.node)
+        return NodeAdapter(self._obj.node).get_repr()
 
 
 class EventAdapter(ReprAdapter):
@@ -342,3 +343,15 @@ class EventAdapter(ReprAdapter):
 
     def get_level(self):
         return self._obj.level.label
+
+
+class NodeAdapter(ReprAdapter):
+    field_names = ['name', 'hostname', 'username']
+
+
+class NodePoolAdapter(ReprAdapter):
+    field_names = ['name']
+    translated_field_names = ['nodes']
+
+    def get_nodes(self):
+        return adapt_many(NodeAdapter, self._obj.nodes)
