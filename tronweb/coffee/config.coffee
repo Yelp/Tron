@@ -18,7 +18,11 @@ class NamespaceListEntryView extends ClickableListEntry
     tagName: "tr"
 
     template: _.template """
-        <td> <a href="#config/<%= name %>"><%= name %></a> </td>
+        <td>
+            <a href="#config/<%= name %>">
+                <span class="label label-inverse"><%= name %></span>
+            </a>
+        </td>
         """
 
     render: ->
@@ -36,17 +40,21 @@ class window.NamespaceListView extends Backbone.View
 
     className: "span8"
 
-    template: _.template '
+    template: _.template """
         <h1>Configuration Namespaces</h1>
+        <div class="outline-block">
         <table class="table table-hover table-outline">
-          <thead>
+          <thead class="header">
             <tr>
               <th>Name</th>
             </tr>
           </thead>
           <tbody>
           </tbody>
-        </table>'
+        </table>
+        </div>
+        """
+
 
     render: =>
         @$el.html @template()
@@ -64,11 +72,12 @@ class window.ConfigView extends Backbone.View
 
     className: "span12"
 
-    template: _.template '
+    template: _.template """
         <h1><small>Config</small> <%= name %></h1>
-        <form>
-            <textarea><%= config %></textarea>
-        </form>'
+        <div class="outline-block"><div class="border-top">
+            <textarea class="config-block"><%= config %></textarea>
+        </div></div>
+        """
 
     render: =>
         @$el.html @template(@model.attributes)

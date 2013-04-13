@@ -4,6 +4,7 @@
 class window.TronEvent extends Backbone.Model
 
 
+# TODO: delete, not used
 class window.EventListView extends Backbone.View
 
     initialize: (options) =>
@@ -43,6 +44,7 @@ class window.EventListView extends Backbone.View
         @
 
 
+# TODO: delete, not used
 class window.EventListEntryView extends Backbone.View
 
     tagName: "tr"
@@ -70,16 +72,13 @@ class window.MinimalEventListEntryView extends Backbone.View
 
     tagName: "tr"
 
-    className: ->
-        switch @model.get('level')
-            when "OK"       then "success"
-            when "INFO"     then "info"
-            when "NOTICE"   then "warning"
-            when "CRITICAL" then "error"
-
     template: _.template """
         <td><% print(dateFromNow(time)) %></td>
-        <td><%= name %></td>
+        <td>
+          <span class="label <%= level %>">
+            <%= name %>
+          </span>
+        </td>
         """
 
     render: ->

@@ -129,7 +129,7 @@ class GraphModalView extends Backbone.View
                 data-placement="top"
                 id="view-full"
             >
-            <i class="icon-fullscreen"></i>
+            <i class="icon-fullscreen icon-white"></i>
         </button>
         </div>
         <div class="modal hide fade">

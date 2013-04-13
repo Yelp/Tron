@@ -5,6 +5,12 @@
 /******************************************************************************
  *  Global
  *****************************************************************************/
+body {
+    background-image: url(../img/ui-bg_dots-medium_100_eee_4x4.png)
+}
+
+@text: #222;
+
 [class^="icon-"] {
     margin-top: 3px
 }
@@ -65,23 +71,33 @@ h1 a:hover {
     text-decoration: underline
 }
 
+.header {
+    background-image: url(../img/ui-bg_diagonals-small_15_333_40x40.png);
+    color: #fff;
+    border: #333 1px solid;
+}
+
 h2 {
     text-align: left;
     padding: 0 0 0 10px;
     font-size: 16px;
     font-weight: bold;
     font-variant: small-caps;
+    .header;
 }
 
 .block-header {
-    background: #333;
-    color: #eee;
+    .header;
 
     h3, h2 {
         font-size: 16px;
         font-weight: bold;
         font-variant: small-caps;
     }
+}
+
+.outline-border {
+    border: #999 1px solid;
 }
 
 .outline-block {
@@ -95,12 +111,19 @@ h2 {
         font-variant: small-caps;
         border: #333 1px solid;
     }
-    > table, > div {
-        border: #ccc 1px solid;
+
+    > table,
+    > div
+    {
+        .outline-border;
         border-top: 0;
     }
-    > table.table-outline {
-        border: 0;
+    .border-top {
+        border-top: #999 1px solid;
+    }
+
+    table td {
+       background: #fff;
     }
     margin-bottom: 20px;
 }
@@ -108,7 +131,6 @@ h2 {
 .table td {
     border-top: 0;
 }
-
 
 /******************************************************************************
  *  Navbar
@@ -126,6 +148,10 @@ h2 {
 /******************************************************************************
  *  Button
  *****************************************************************************/
+.btn-inverse {
+    .header;
+}
+
 .btn-inverse.active {
     background: #080808;
 }
@@ -136,6 +162,10 @@ h2 {
     .clear-box-shadow;
 }
 
+.btn-clear:hover {
+    background: #000;
+}
+
 
 /******************************************************************************
  *  Filters
@@ -143,7 +173,8 @@ h2 {
 
 .filter-form fieldset {
     padding: 0 20px;
-    background: #ccc;
+    background: #fff;
+    .outline-border;
 }
 
 .filter-form fieldset.plain {
@@ -162,14 +193,13 @@ h2 {
 
 .filter-form fieldset legend {
 	width: auto;
-	padding: 3px 10px;
+	padding: 8px 20px;
 	margin-bottom: 10px;
 	font-size: 12px;
 	font-weight: bold;
 	line-height: 20px;
-    background: #333;
-	color: #eee;
     border: 0;
+    .header;
 }
 
 .filter-form input {
@@ -208,29 +238,27 @@ div.refresh-view span {
 }
 
 
-
 /******************************************************************************
  *  Outlined tables
  *****************************************************************************/
-.table.table-outline thead {
-    border: 0;
-}
-.table.table-outline tbody {
-    border: 0;
-}
-
-.table.table-outline th {
-    background: #333;
-    color: #eee;
-}
-
-.table.table-outline td {
-    border-top: 0;
-    padding: 10px;
-}
-
 .table.table-outline td a {
-    color: #fff;
+    color: @text;
+}
+
+.table.table-outline tbody tr > td
+{
+    background: #fff;
+    color: @text;
+}
+
+.table.table-outline tbody tr:hover > td
+{
+    background: #eee;
+}
+
+.table.table-outline thead.sub-header {
+    background-color: #999;
+    color: @hl-text;
 }
 
 /******************************************************************************
@@ -239,8 +267,7 @@ div.refresh-view span {
 .table.details tbody tr {
 
     td {
-       background: #fff;
-       color: #111;
+       color: @text;
        border-top: 0;
     }
 
@@ -300,7 +327,7 @@ div.refresh-view span {
 
 
 /******************************************************************************
- *  Popover
+ *  Popover / Tooltips
  *****************************************************************************/
 
 @popup-bg: #f0f0f0;
@@ -329,6 +356,10 @@ div.refresh-view span {
    position: absolute;
    top: -35px;
    right: 10px;
+}
+
+.tooltip.top .tooltip-arrow {
+    border-width: 6px 5px 0;
 }
 
 
@@ -392,43 +423,64 @@ div.refresh-view span {
 @green: #51a351;
 @blue: #2f96b4;
 @yellow: #faa732;
-@text: #fff;
-
-.table tbody tr > td
-{
-    background: #777;
-    color: @text;
-}
+@hl-text: #fff;
 
 .success,
 .table tbody tr.success > td
 {
     background: @green;
-    color: @text;
+    color: @hl-text;
 }
 
 .warning,
 .table tbody tr.warning > td
 {
     background: @yellow;
-    color: @text;
+    color: @hl-text;
 }
 
 .error,
 .table tbody tr.error > td
 {
     background: @red;
-    color: @text;
+    color: @hl-text;
 }
 
 .info,
 .table tbody tr.info > td
 {
     background: @blue;
-    color: @text;
+    color: @hl-text;
 }
 
 #all-view > .dashboard-view {
     width: auto;
     margin-right: 20px;
+}
+
+
+/*****************************************************************************
+ *  States
+ *****************************************************************************/
+
+.up {
+    .success;
+}
+
+
+/*****************************************************************************
+ * Events
+ *****************************************************************************/
+
+.OK {
+    .success;
+}
+.INFO {
+    .info;
+}
+.NOTICE {
+    .warning;
+}
+.CRITICAL {
+    .error;
 }
