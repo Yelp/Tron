@@ -56,7 +56,7 @@ class window.ServiceListView extends Backbone.View
         <div id="filter-bar"></div>
 
         <div class="outline-block">
-        <table class="table table-hover table-outline">
+        <table class="table table-hover table-outline table-striped">
             <thead class="header">
                 <tr>
                     <th>Name</td>

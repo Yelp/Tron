@@ -98,14 +98,8 @@ class window.ServiceStatusBoxView extends StatusBoxView
 
     icon: "icon-repeat"
 
-    #  TODO: this is duplicated with ServiceListEntryView
     getState: =>
-        switch @model.get('state')
-            when "up"       then "success"
-            when "starting" then "info"
-            when "disabled" then "warning"
-            when "degraded" then "warning"
-            when "failed"   then "error"
+        @model.get('state')
 
     count: =>
         @model.get('instances').length
@@ -119,13 +113,8 @@ class window.JobStatusBoxView extends StatusBoxView
     icon: "icon-time"
 
     # TODO: get state of last run if enabled
-    # TODO: this is duplicated with JobListEntryView
     getState: =>
-        switch @model.get('status')
-            when "enabled"  then "success"
-            when "running"  then "info"
-            when "disabled" then "warning"
-            when "unknown"  then "error"
+        @model.get('status')
 
     count: =>
         if @model.get('runs') then _.first(@model.get('runs')).run_num else 0

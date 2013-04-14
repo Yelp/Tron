@@ -80,22 +80,24 @@ class window.JobListView extends Backbone.View
             <span id="refresh"></span>
         </h1>
         <div id="filter-bar"></div>
-        <table class="table table-hover table-outline">
-            <thead>
+        <div class="outline-block">
+        <table class="table table-hover table-outline table-striped">
+            <thead class="header">
                 <tr>
-                    <th class="span4">Name</td>
-                    <th>Schedule</td>
-                    <th>Node Pool</td>
-                    <th>Last Success</td>
-                    <th>Next Run</td>
+                    <th class="span4">Name</th>
+                    <th>State</th>
+                    <th>Schedule</th>
+                    <th>Node Pool</th>
+                    <th>Last Success</th>
+                    <th>Next Run</th>
                 </tr>
             </thead>
             <tbody>
             </tbody>
         </table>
+        </div>
         """
 
-    # TODO: sort by name/state/node
     render: ->
         @$el.html @template()
         @renderFilter()
@@ -120,17 +122,13 @@ class JobListEntryView extends ClickableListEntry
 
     tagName: "tr"
 
-    className: =>
-        stateName = switch @model.attributes.status
-            when "disabled" then 'warning'
-            when "enabled"  then 'enabled'
-            when "running"  then 'info'
-        "#{ stateName } clickable"
+    className: "clickable"
 
     template: _.template """
         <td><a href="#job/<%= name %>"><% print(formatName(name)) %></a></td>
+        <td><% print(formatState(status)) %></td>
         <td><%= scheduler %></td>
-        <td><%= node_pool %></td>
+        <td><% print(displayNodePool(node_pool)) %></td>
         <td><% print(dateFromNow(last_success, 'never')) %></td>
         <td><% print(dateFromNow(next_run, 'none')) %></td>
         """
@@ -167,7 +165,8 @@ class window.JobView extends Backbone.View
                     <tbody>
                     <tr><td>Status</td>
                         <td><% print(formatState(status)) %></td></tr>
-                    <tr><td>Node pool</td>      <td><%= node_pool %></td></tr>
+                    <tr><td>Node pool</td>
+                        <td><% print(displayNodePool(node_pool)) %></td></tr>
                     <tr><td>Schedule</td>
                         <td><code><%= scheduler %></code></td></tr>
                     <tr><td>Allow overlap</td>
@@ -188,8 +187,8 @@ class window.JobView extends Backbone.View
 
             <div class="span12 outline-block">
                 <h2>Job Runs</h2>
-                <table class="table table-hover table-outline">
-                    <thead>
+                <table class="table table-hover table-outline table-striped">
+                    <thead class="sub-header">
                         <tr>
                             <th>Id</th>
                             <th>State</th>
@@ -209,7 +208,7 @@ class window.JobView extends Backbone.View
         new GraphView(
             model: @model.get('action_graph')
             buildContent: (d) -> """<code class="command">#{d.command}</code>"""
-            height: $('table.details').height()
+            height: $('table.details').height() - 5 # TODO: why -5 to get it flush?
         ).render()
 
     render: ->
@@ -221,6 +220,18 @@ class window.JobView extends Backbone.View
         makeTooltips(@$el)
         @
 
+
+window.formatManualRun = (manual) ->
+    if ! manual then "" else """
+        <span class="label label-manual">
+            <i class="icon-hand-down icon-white tt-enable" title="Manual run"></i>
+        </span>
+    """
+
+window.formatScheduler = (scheduler) ->
+    """ """
+
+
 class JobRunListEntryView extends ClickableListEntry
 
     initialize: (options) =>
@@ -228,18 +239,16 @@ class JobRunListEntryView extends ClickableListEntry
 
     tagName: "tr"
 
-    className: ->
-        stateName = switch @model.get('state')
-            when "running"      then 'info'
-            when "failed"       then 'error'
-            when "succeeded"    then 'success'
-        "#{ stateName } clickable"
+    className: "clickable"
 
     # TODO: add icon for manual run flag
     template: _.template """
-        <td><a href="#job/<%= job_name %>/<%= run_num %>"><%= run_num %></a></td>
-        <td><%= state %></td>
-        <td><%= node %></td>
+        <td>
+            <a href="#job/<%= job_name %>/<%= run_num %>"><%= run_num %></a>
+            <% print(formatManualRun(manual)) %>
+        </td>
+        <td><% print(formatState(state)) %></td>
+        <td><% print(displayNode(node)) %></td>
         <td><% print(dateFromNow(start_time || run_time, "Unknown")) %></td>
         <td><% print(dateFromNow(end_time, "")) %></td>
         """
@@ -277,7 +286,8 @@ class window.JobRunView extends Backbone.View
                 <table class="table details">
                     <tr><td class="span2">State</td>
                         <td><% print(formatState(state)) %></td></tr>
-                    <tr><td>Node</td>           <td><%= node %></td></tr>
+                    <tr><td>Node</td>
+                        <td><% print(displayNode(node)) %></td></tr>
                     <tr><td>Manual</td>         <td><%= manual %></td></tr>
                     <tr><td>Scheduled</td>      <td><%= run_time %></td></tr>
                     <tr><td>Start</td>
@@ -296,7 +306,7 @@ class window.JobRunView extends Backbone.View
             <div class="span12 outline-block">
                 <h2>Action Runs</h2>
                 <table class="table table-hover table-outline">
-                    <thead>
+                    <thead class="sub-header">
                         <tr>
                             <th>Name</th>
                             <th>State</th>
@@ -325,7 +335,7 @@ class window.JobRunView extends Backbone.View
     # TODO: add class for state
     popupTemplate: _.template """
         <ul class="unstyled">
-            <li><span class="label"><%= state %></span></li>
+            <li><% print(formatState(state)) %></li>
             <li><code class="command"><% print(command || raw_command) %></code></li>
         </ul>
         """

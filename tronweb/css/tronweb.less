@@ -56,6 +56,7 @@ h1 {
     padding: 10px 20px;
     .header;
     font-variant: small-caps;
+    margin-bottom: 20px;
 
     .pull-right {
         margin-top: -4px;
@@ -119,6 +120,7 @@ h2 {
         .outline-border;
         border-top: 0;
         margin-bottom: 0;
+       background: #fff;
     }
     .border-top {
         border-top: #999 1px solid;
@@ -263,6 +265,10 @@ div.refresh-view span {
     color: @hl-text;
 }
 
+.table-striped tbody tr:nth-child(even) > td {
+    background: #f9f9f9;
+}
+
 /******************************************************************************
  *  Details tables
  *****************************************************************************/
@@ -294,28 +300,24 @@ div.refresh-view span {
 }
 
 .node circle {
-  stroke: #1f77b4;
-  stroke-width: 0.5px;
-  fill: #aec7e8;
+  stroke-width: 0;
+  fill: @blue;
 }
 
 .node.failed circle {
-    fill: #ff9896;
-    stroke: #d62728;
+    fill: @red;
 }
 
 .node.succeeded circle {
-    fill: #98df8a;
-    stroke: #2ca02c;
+    fill: @green;
 }
 
 .node.queued circle, .node.scheduled circle {
     fill: #ccc;
-    stroke: #7f7f7f;
 }
 
 .node text {
-    stroke: #000;
+    stroke: @text;
     font-family: "Open Sans";
     font-weight: 300;
     font-size: 12px;
@@ -421,35 +423,31 @@ div.refresh-view span {
 }
 
 
-@red: #bd362f;
+@red: #b52e19;
 @green: #51a351;
-@blue: #2f96b4;
+@blue: #295eb3;
 @yellow: #faa732;
 @hl-text: #fff;
 
-.success,
-.table tbody tr.success > td
+.success
 {
     background: @green;
     color: @hl-text;
 }
 
-.warning,
-.table tbody tr.warning > td
+.warning
 {
     background: @yellow;
     color: @hl-text;
 }
 
-.error,
-.table tbody tr.error > td
+.error
 {
     background: @red;
     color: @hl-text;
 }
 
-.info,
-.table tbody tr.info > td
+.info
 {
     background: @blue;
     color: @hl-text;
@@ -474,15 +472,42 @@ div.refresh-view span {
  * Events
  *****************************************************************************/
 
-.OK {
+.enabled,
+.OK,
+.up,
+.succeeded
+{
     .success;
 }
-.INFO {
+
+.INFO,
+.running,
+.starting,
+.cancelled
+{
     .info;
 }
-.NOTICE {
+
+.NOTICE,
+.disabled
+{
     .warning;
 }
-.CRITICAL {
+
+.CRITICAL,
+.unknown,
+.failed,
+.degraded,
+.label-important
+{
     .error;
+}
+
+/******************************************************************************
+ *  Label
+ *****************************************************************************/
+
+.label-manual {
+    margin-left: 10px;
+    background: @blue;
 }

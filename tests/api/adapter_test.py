@@ -85,8 +85,11 @@ class RunAdapterTestCase(TestCase):
     def test_get_state(self):
         assert_equal(self.adapter.get_state(), self.original.state.name)
 
-    def test_get_node(self):
-        assert_equal(self.adapter.get_node(), str(self.original.node))
+    @mock.patch('tron.api.adapter.NodeAdapter', autospec=True)
+    def test_get_node(self, mock_node_adapter):
+        assert_equal(self.adapter.get_node(),
+            mock_node_adapter.return_value.get_repr.return_value)
+        mock_node_adapter.assert_called_with(self.original.node)
 
     def test_get_duration(self):
         self.original.start_time = None

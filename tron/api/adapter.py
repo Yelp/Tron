@@ -65,7 +65,7 @@ class RunAdapter(ReprAdapter):
         return self._obj.state.name
 
     def get_node(self):
-        return str(self._obj.node)
+        return NodeAdapter(self._obj.node).get_repr()
 
     def get_duration(self):
         duration = timeutils.duration(self._obj.start_time, self._obj.end_time)
@@ -242,7 +242,7 @@ class JobAdapter(ReprAdapter):
         return self._obj.action_graph.names
 
     def get_node_pool(self):
-        return self._obj.node_pool.get_name()
+        return NodePoolAdapter(self._obj.node_pool).get_repr()
 
     def get_last_success(self):
         last_success = self._obj.runs.last_success
