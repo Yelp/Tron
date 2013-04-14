@@ -3,8 +3,10 @@
 
 class window.Dashboard extends Backbone.Model
 
-    initialize: ->
+    initialize: (options)->
+        options = options || {}
         @refreshModel = new RefreshModel(interval: 30)
+        @filterModel = options.filterModel
         @serviceList = new ServiceCollection()
         @jobList = new JobCollection()
         @listenTo(@serviceList, "sync", @change)
@@ -17,47 +19,73 @@ class window.Dashboard extends Backbone.Model
     change: (args) ->
         @trigger("change", args)
 
+    models: =>
+        @serviceList.models.concat @jobList.models
+
+    sorted: =>
+        _.sortBy(@models(), (item) -> item.get('name'))
+
+    filter: (filter) =>
+        _.filter(@sorted(), filter)
+
+
+matchType = (item, query) ->
+    console.log(item)
+    switch query
+        when 'service' then true if item instanceof Service
+        when 'job' then true if item instanceof Job
+
+
+class window.DashboardFilterModel extends FilterModel
+
+    filterTypes:
+        name:       buildMatcher(fieldGetter('name'), matchAny)
+        type:       buildMatcher(_.identity, matchType)
+
 
 class window.DashboardView extends Backbone.View
 
     initialize: (options) =>
         @refreshView = new RefreshToggleView(model: @model.refreshModel)
+        @filterView = new FilterView(model: @model.filterModel)
         @listenTo(@model, "change", @render)
         @listenTo(@refreshView, 'refreshView', => @model.fetch())
+        @listenTo(@filterView, "filter:change", @renderBoxes)
 
     tagName: "div"
 
     className: "span12 dashboard-view"
 
-    # TODO: filters
     template: _.template """
         <h1>
             <small>Tron</small>
             <a href="#dashboard">Dashboard</a>
             <span id="refresh"></span>
         </h1>
+        <div id="filter-bar"></div>
         <div id="status-boxes">
         </div>
         """
 
-    makeServiceViews: =>
-        entry = (model) -> new ServiceStatusBoxView(model: model)
-        entry(model) for model in @model.serviceList.models
-
-    makeJobViews: =>
-        entry = (model) -> new JobStatusBoxView(model: model)
-        entry(model) for model in @model.jobList.models
-
-    sortedViews: =>
-        allViews = @makeServiceViews().concat @makeJobViews()
-        _.sortBy(allViews, (item) -> item.model.get('name'))
+    makeView: (model) =>
+        switch model.constructor.name
+            when Service.name
+                new ServiceStatusBoxView(model: model)
+            when Job.name
+                new JobStatusBoxView(model: model)
 
     renderRefresh: ->
         @$('#refresh').html(@refreshView.render().el)
 
+    renderBoxes: =>
+        models = @model.filter(@model.filterModel.createFilter())
+        views = (@makeView(model) for model in models)
+        @$('#status-boxes').html(item.render().el for item in views)
+
     render: ->
         @$el.html @template()
-        @$('#status-boxes').append(item.render().el) for item in @sortedViews()
+        @$('#filter-bar').html(@filterView.render().el)
+        @renderBoxes()
         @renderRefresh()
         @
 

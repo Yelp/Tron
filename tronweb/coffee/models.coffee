@@ -46,28 +46,32 @@ class window.RefreshModel extends Backbone.Model
             @timeout = setTimeout(@doRefresh, @interval)
 
 
-/*    _.str.startsWith(item, query) */
-
 window.matchAny = (item, query) ->
     ~item.toLowerCase().indexOf(query.toLowerCase())
 
-window.matchName = (item, query) ->
-    _.str.startsWith(item['name'], query)
+window.buildMatcher = (getter, matcher) ->
+    (item, query) -> matcher(getter(item), query)
+
+window.fieldGetter = (name) ->
+    (item) -> item.get(name)
+
+window.nestedName = (field) ->
+    (item) -> item.get(field)['name']
 
 
 class window.FilterModel extends Backbone.Model
 
     filterTypes:
-        name: matchAny
-        node_pool: matchName
-        state: _.str.startsWith
+        name:       buildMatcher(fieldGetter('name'), matchAny)
+        node_pool:  buildMatcher(nestedName('node_pool'), _.str.startsWith)
+        state:      buildMatcher(fieldGetter('state'), _.str.startsWith)
 
     createFilter: =>
         filterFuncs = for type, func of @filterTypes
             do (type, func) =>
                 query = @get("#{type}Filter")
                 if query
-                    (item) -> func(item.get(type), query)
+                    (item) -> func(item, query)
                 else
                     (item) -> true
 

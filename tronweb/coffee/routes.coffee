@@ -5,8 +5,8 @@ class TronRoutes extends Backbone.Router
 
     routes:
         "":                         "index"
-        "home":                     "home"
-        "dashboard":                "dashboard"
+        "home(;*params)":           "home"
+        "dashboard(;*params)":      "dashboard"
         "jobs(;*params)":           "jobs"
         "job/:name":                "job"
         "job/:name/:run":           "jobrun"
@@ -24,12 +24,15 @@ class TronRoutes extends Backbone.Router
     index: ->
         @navigate('home', trigger: true)
 
-    home: ->
-        @updateMainView(new Dashboard(), DashboardView)
+    home: (params) ->
+        model = new Dashboard
+            filterModel: new DashboardFilterModel(getParamsMap(params))
+        @updateMainView(model, DashboardView)
 
-    dashboard: ->
+    dashboard: (params) ->
         mainView.close()
-        model = new Dashboard()
+        model = new Dashboard
+            filterModel: new DashboardFilterModel(getParamsMap(params))
         dashboard = new DashboardView(model: model)
         model.fetch()
         $('#all-view').html dashboard.render().el
