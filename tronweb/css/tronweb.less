@@ -86,6 +86,7 @@ h1 {
     background-image: url(../img/ui-bg_diagonals-small_15_333_40x40.png);
     color: #fff;
     border: #333 1px solid;
+    font-weight: bold;
 }
 
 h2 {
@@ -230,35 +231,13 @@ i.web-icon-white {
  *  Filters
  *****************************************************************************/
 
-.filter-form fieldset {
-    padding: 0 20px;
-    background: #fff;
-    .outline-border;
-}
-
-.filter-form fieldset.plain {
-    background: none;
-    border: 0px;
-}
-
-.filter-form .control-group {
-    margin-bottom: 20px;
-}
-
 .filter-form .controls .input-prepend {
-    margin: 0 20px 15px 0;
+    margin: 0 20px 0 0;
 }
 
-
-.filter-form fieldset legend {
-	width: auto;
-	padding: 8px 20px;
-	margin-bottom: 10px;
-	font-size: 12px;
-	font-weight: bold;
-	line-height: 20px;
-    border: 0;
-    .header;
+.filter-form .controls {
+    .outline-border;
+    padding: 10px;
 }
 
 .filter-form input {
@@ -273,8 +252,10 @@ i.web-icon-white {
     font-weight: bold;
     padding: 4px 8px;
     font-size: 12px;
-}
-.filter-form input {
+
+    i {
+        margin-top: 1px;
+    }
 }
 
 .filter-form .add-on [class^="icon-"] {
@@ -282,7 +263,19 @@ i.web-icon-white {
 }
 
 form.filter-form {
-    margin: 0
+
+    span.add-on,
+    input {
+        line-height: 15px;
+        height: 15px;
+        font-size: 12px;
+    }
+}
+
+.filter-form .toggle-header {
+    .header;
+    margin: 0 20px 0 0;
+    padding: 13px 10px 12px;
 }
 
 
@@ -422,6 +415,10 @@ div.refresh-view span {
     border-width: 6px 5px 0;
 }
 
+.tooltip.top {
+    border: 0 !important;
+    background: none !important;
+}
 
 /******************************************************************************
  *  Modal

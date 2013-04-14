@@ -58,7 +58,10 @@ class window.JobRun extends Backbone.Model
 
 class window.JobListFilterModel extends FilterModel
 
-    filterTypes: ['name', 'node_pool', 'status']
+    filterTypes:
+        name: matchAny
+        node_pool: matchName
+        status: _.str.startsWith
 
 
 class window.JobListView extends Backbone.View
@@ -85,7 +88,7 @@ class window.JobListView extends Backbone.View
             <thead class="header">
                 <tr>
                     <th class="span4">Name</th>
-                    <th>State</th>
+                    <th>Status</th>
                     <th>Schedule</th>
                     <th>Node Pool</th>
                     <th>Last Success</th>
@@ -109,7 +112,6 @@ class window.JobListView extends Backbone.View
         models = @model.filter(@model.filterModel.createFilter())
         entry = (model) -> new JobListEntryView(model: model).render().el
         @$('tbody').html(entry(model) for model in models)
-
 
     renderFilter: =>
         @$('#filter-bar').html(@filterView.render().el)

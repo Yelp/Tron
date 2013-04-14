@@ -46,16 +46,28 @@ class window.RefreshModel extends Backbone.Model
             @timeout = setTimeout(@doRefresh, @interval)
 
 
+/*    _.str.startsWith(item, query) */
+
+window.matchAny = (item, query) ->
+    ~item.toLowerCase().indexOf(query.toLowerCase())
+
+window.matchName = (item, query) ->
+    _.str.startsWith(item['name'], query)
+
+
 class window.FilterModel extends Backbone.Model
 
-    filterTypes: ['name', 'node_pool', 'state']
+    filterTypes:
+        name: matchAny
+        node_pool: matchName
+        state: _.str.startsWith
 
     createFilter: =>
-        filterFuncs = for type in @filterTypes
-            do (type) =>
-                filterValue = @get("#{type}Filter")
-                if filterValue
-                    (item) -> _.str.startsWith(item.get(type), filterValue)
+        filterFuncs = for type, func of @filterTypes
+            do (type, func) =>
+                query = @get("#{type}Filter")
+                if query
+                    (item) -> func(item.get(type), query)
                 else
                     (item) -> true
 

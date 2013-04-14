@@ -75,21 +75,20 @@ class window.FilterView extends Backbone.View
           <input type="text" id="filter-<%= filterName %>"
                  value="<%= defaultValue %>"
                  class="span2"
+                 autocomplete="off"
                  data-filter-name="<%= filterName %>Filter">
         </div>
     """
 
     template: _.template """
         <form class="filter-form">
-        <div class="control-group">
-          <fieldset>
-            <legend class="tt-enable clickable"
-                title="Toggle Filters">Filters</legend>
+          <div class="control-group outline-block">
+            <div class="span2 toggle-header"
+                title="Toggle Filters">Filters</div>
             <div class="controls">
                 <% print(filters.join('')) %>
             </div>
-          </fieldset>
-        </div>
+          </div>
         </form>
         """
 
@@ -100,7 +99,7 @@ class window.FilterView extends Backbone.View
                 filterName: typeName
             )
 
-        filters = _.map(@model.filterTypes, createFilter)
+        filters = _.map((k for k, v of @model.filterTypes), createFilter)
         @$el.html @template(filters: filters)
         @delegateEvents()
         makeTooltips(@$el)
@@ -110,7 +109,6 @@ class window.FilterView extends Backbone.View
         "keyup input":  "filterChange"
         "submit":       "submit"
         "change input": "filterDone"
-        "click legend": "toggleVisible"
 
     getFilterFromEvent: (event) =>
         filterEle = $(event.target)
@@ -128,11 +126,6 @@ class window.FilterView extends Backbone.View
 
     submit: (event) ->
         event.preventDefault()
-
-    # TODO: update model to store state
-    toggleVisible: (event) =>
-        @$('.filter-form .controls').toggle()
-        @$('.filter-form fieldset').toggleClass('plain')
 
 
 class window.RefreshToggleView extends Backbone.View
