@@ -168,19 +168,19 @@ i.web-icon-white {
 }
 
 .web-icon-all-nodes:before {
+    color: @dark-blue;
     content: '\f0ec';
 }
-.web-icon-hand:before {
-    content: '\f0de';
-}
 .web-icon-overlap:before {
+    color: @dark-blue;
     content: '\f1ca';
 }
 .web-icon-cancel:before {
     content: '\f470';
-    color: @red;
+    color: @dark-red;
 }
 .web-icon-queue:before {
+    color: @dark-blue;
     content: '\f565'
 }
 .web-icon-calendar:before {
@@ -351,12 +351,13 @@ div.refresh-view span {
 }
 
 .graph svg marker {
-    fill: #ccc;
+    fill: #555;
 }
 
 .node circle {
-  stroke-width: 0;
-  fill: @blue;
+  stroke-width: 4px;
+  stroke: #fff;
+  fill: @light-blue;
 }
 
 .node.failed circle {
@@ -379,8 +380,8 @@ div.refresh-view span {
 }
 
 .link {
-  stroke: #ccc;
-  stroke-width: 1.5px;
+  stroke: #555;
+  stroke-width: 0.8px;
 }
 
 
@@ -460,7 +461,7 @@ div.refresh-view span {
 }
 
 .status-box a {
-    color: #fff;
+    color: @hl-text;
 }
 
 .status-box .count {
@@ -470,19 +471,42 @@ div.refresh-view span {
     right: 0;
     padding: 3px 7px;
     background: #333;
-    color: white;
+    color: @hl-text;
 }
 
 .status-box i[class^="icon-"] {
     margin: 1px 5px 0 0;
 }
 
+.status-box.disabled {
+    background: @dark-yellow;
+}
+.status-box.unknown,
+.status-box.failed,
+.status-box.degraded
+{
+    background: @red;
+}
 
+
+/*
 @red: #b52e19;
 @green: #51a351;
 @blue: #295eb3;
 @yellow: #faa732;
+*/
+
+@green: #218E0B;
+@blue: #2F47B8;
+@yellow: #A6790D;
+@red: #BA434F;
+
 @hl-text: #fff;
+@dark-blue: #0F2277;
+@dark-yellow: #BF9B45;
+@dark-red: #A10C1A;
+
+@light-blue: #6177DB;
 
 .success
 {
@@ -498,7 +522,7 @@ div.refresh-view span {
 
 .error
 {
-    background: @red;
+    background: @dark-red;
     color: @hl-text;
 }
 

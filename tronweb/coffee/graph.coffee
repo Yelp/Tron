@@ -33,11 +33,11 @@ class window.GraphView extends Backbone.View
             .attr("refX", 16)
             .attr("refY", 5)
             .attr("markerUnits", "strokeWidth")
-            .attr("markerWidth", 7)
-            .attr("markerHeight", 7)
+            .attr("markerWidth",  15)
+            .attr("markerHeight", 30)
             .attr("orient", "auto")
             .append("svg:path")
-            .attr("d", "M 0 0 L 10 5 L 0 10 z")
+            .attr("d", "M 0 2 L 10 5 L 0 8 z")
 
         @link = @svg.selectAll(".link")
             .data(links)
@@ -57,7 +57,7 @@ class window.GraphView extends Backbone.View
                 'data-content': @buildContent
 
         @node.append("svg:circle")
-            .attr("r", "0.5em")
+            .attr("r", 6)
 
         @node.append("svg:text")
             .attr(dx: 12, dy: "0.25em")
@@ -86,9 +86,9 @@ class window.GraphView extends Backbone.View
     buildForce: (height, width) ->
         # TODO: randomly move nodes when links cross
         @force = d3.layout.force()
-            .charge(-500)
+            .charge(-120)
             .theta(1)
-            .linkDistance(100)
+            .linkDistance(80)
             .size([width, height])
 
     buildSvg: (height, width) ->
