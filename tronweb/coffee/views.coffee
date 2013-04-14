@@ -134,7 +134,7 @@ class window.FilterView extends Backbone.View
     filterDone: (event) ->
         [filterName, filterValue] = @getFilterFromEvent(event)
         @trigger('filter:done', filterName, filterValue)
-        updateLocationParam(filterName, filterValue)
+        window.modules.routes.updateLocationParam(filterName, filterValue)
 
     selectFilterChange: (event) =>
         @filterChange(event)

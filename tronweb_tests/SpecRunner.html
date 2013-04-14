@@ -1,0 +1,69 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
+  "http://www.w3.org/TR/html4/loose.dtd">
+<html>
+<head>
+  <title>tronweb test runner</title>
+
+  <link rel="stylesheet" type="text/css" href="lib/jasmine-1.3.1/jasmine.css">
+  <script type="text/javascript" src="lib/jasmine-1.3.1/jasmine.js"></script>
+  <script type="text/javascript" src="lib/jasmine-1.3.1/jasmine-html.js"></script>
+
+  <!-- depenedncies -->
+  <script src="http://ajax.googleapis.com/ajax/libs/jquery/1.9.0/jquery.min.js"></script>
+  <script src="../tronweb/js/underscore-min.js"></script>
+  <script src="../tronweb/js/underscore.string.js"></script>
+  <script src="../tronweb/js/underscore.extra.js"></script>
+  <script src="../tronweb/js/backbone-min.js"></script>
+  <script src="../tronweb/js/bootstrap.min.js"></script>
+  <script src="../tronweb/js/codemirror.js"></script>
+  <script src="../tronweb/js/yaml.js"></script>
+  <script src="../tronweb/js/moment.min.js"></script>
+  <script src="../tronweb/js/d3.v3.min.js"></script>
+
+  <!-- include source files here... -->
+  <script src="../tronweb/js/cs/models.js"></script>
+  <script src="../tronweb/js/cs/views.js"></script>
+  <script src="../tronweb/js/cs/events.js"></script>
+  <script src="../tronweb/js/cs/nodes.js"></script>
+  <script src="../tronweb/js/cs/graph.js"></script>
+  <script src="../tronweb/js/cs/config.js"></script>
+  <script src="../tronweb/js/cs/service.js"></script>
+  <script src="../tronweb/js/cs/actionrun.js"></script>
+  <script src="../tronweb/js/cs/job.js"></script>
+  <script src="../tronweb/js/cs/dashboard.js"></script>
+  <script src="../tronweb/js/cs/routes.js"></script>
+
+  <!-- include spec files here... -->
+  <script src="spec/routes_test.js"></script>
+
+  <script type="text/javascript">
+    (function() {
+      var jasmineEnv = jasmine.getEnv();
+      jasmineEnv.updateInterval = 200;
+
+      var htmlReporter = new jasmine.HtmlReporter();
+
+      jasmineEnv.addReporter(htmlReporter);
+
+      jasmineEnv.specFilter = function(spec) {
+        return htmlReporter.specFilter(spec);
+      };
+
+      var currentWindowOnload = window.onload;
+
+      window.onload = function() {
+        execJasmine();
+      };
+
+      function execJasmine() {
+        jasmineEnv.execute();
+      }
+
+    })();
+  </script>
+
+</head>
+
+<body>
+</body>
+</html>
