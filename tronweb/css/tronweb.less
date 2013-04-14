@@ -2,6 +2,11 @@
 @import url(http://fonts.googleapis.com/css?family=Open+Sans:300,400,700,800);
 @import url(http://fonts.googleapis.com/css?family=Droid+Sans+Mono);
 
+@font-face {
+    font-family: 'web glyphs';
+    src: url(../fonts/webhostinghub-glyphs.ttf) format('truetype');
+}
+
 /******************************************************************************
  *  Global
  *****************************************************************************/
@@ -138,6 +143,52 @@ h2 {
 
 .table td {
     border-top: 0;
+}
+
+
+/******************************************************************************
+ *  Icons
+ *****************************************************************************/
+.label-icon {
+    margin-right: 5px;
+    i {
+        font-size: 16px;
+    }
+}
+
+i[class^="web-icon-"] {
+    font-family: 'web glyphs';
+    font-style: normal;
+    vertical-align: middle;
+    color: #000;
+}
+
+i.web-icon-white {
+    color: #fff;
+}
+
+.web-icon-all-nodes:before {
+    content: '\f0ec';
+}
+.web-icon-hand:before {
+    content: '\f0de';
+}
+.web-icon-overlap:before {
+    content: '\f1ca';
+}
+.web-icon-cancel:before {
+    content: '\f470';
+    color: @red;
+}
+.web-icon-queue:before {
+    content: '\f565'
+}
+.web-icon-calendar:before {
+    content: '\f4d0';
+}
+.web-icon-repeat:before {
+    content: '\f196';
+    color: #333;
 }
 
 /******************************************************************************
@@ -514,6 +565,11 @@ div.refresh-view span {
 .label-manual {
     margin-left: 10px;
     background: @blue;
+    padding: 2px 4px;
+
+    i {
+        margin-top: 0;
+    }
 }
 
 

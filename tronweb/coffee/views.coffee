@@ -30,6 +30,24 @@ window.dateFromNow = (string, defaultString='never') ->
     template(formatted: formatted, delta: delta)
 
 
+window.getDuration = (time) ->
+    [time, ms] = time.split('.')
+    [hours, minutes, seconds] = time.split(':')
+    moment.duration
+        hours: parseInt(hours)
+        minutes: parseInt(minutes)
+        seconds: parseInt(seconds)
+
+window.formatDuration = (duration) ->
+    template = _.template """
+        <span class="label label-inverse tt-enable" title="<%= duration %>">
+          <%= humanized %>
+        </span>
+    """
+    humanize = getDuration(duration).humanize()
+    template(duration: duration, humanized: humanize)
+
+
 window.makeTooltips = (root) ->
     root.find('.tt-enable').tooltip()
 

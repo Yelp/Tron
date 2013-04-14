@@ -169,10 +169,8 @@ class window.JobView extends Backbone.View
                         <td><% print(displayNodePool(node_pool)) %></td></tr>
                     <tr><td>Schedule</td>
                         <td><% print(formatScheduler(scheduler)) %></td></tr>
-                    <tr><td>Allow overlap</td>
-                        <td><%= allow_overlap %></td></tr>
-                    <tr><td>Queueing</td>       <td><%= queueing %></td></tr>
-                    <tr><td>All nodes</td>      <td><%= all_nodes %></td></tr>
+                    <tr><td>Settings</td>
+                        <td><%= settings %></td></tr>
                     <tr><td>Last success</td>
                         <td><% print(dateFromNow(last_success)) %></td></tr>
                     <tr><td>Next run</td>
@@ -204,6 +202,7 @@ class window.JobView extends Backbone.View
 
         </div>
         """
+
     renderGraph: =>
         new GraphView(
             model: @model.get('action_graph')
@@ -211,8 +210,31 @@ class window.JobView extends Backbone.View
             height: $('table.details').height() - 5 # TODO: why -5 to get it flush?
         ).render()
 
+    formatSettings: (attrs) =>
+        template = _.template """
+            <span class="label-icon tt-enable" title="<%= title %>">
+                <i class="web-icon-<%= icon %>"></i>
+            </span>
+            """
+
+        [icon, title] = if attrs.allow_overlap
+            ['overlap', "Allow overlapping runs"]
+        else if attrs.queueing
+            ['queue', "Queue overlapping runs"]
+        else
+            ['cancel', "Cancel overlapping runs"]
+
+        content = if attrs.all_nodes
+            template(icon: 'all-nodes', title: "Run on all nodes")
+        else
+            ""
+        template(icon: icon, title: title) + content
+
     render: ->
-        @$el.html @template(@model.attributes)
+        @$el.html @template _.extend {},
+            @model.attributes,
+            settings: @formatSettings(@model.attributes)
+
         entry = (jobrun) -> new JobRunListEntryView(model:new JobRun(jobrun)).render().el
         @$('tbody.jobruns').append(entry(model) for model in @model.get('runs'))
         @$('#refresh').html(@refreshView.render().el)
@@ -228,16 +250,24 @@ window.formatManualRun = (manual) ->
         </span>
     """
 
+formatInterval = (interval) ->
+    humanized = getDuration(interval).humanize()
+    """
+        <span class="tt-enable" title="#{interval}">
+         #{humanized}
+        </span>
+    """
+
 window.formatScheduler = (scheduler) ->
     [icon, value] = switch scheduler.type
-        when 'constant' then ['repeat', 'constant']
-        when 'interval' then ['align-justify', scheduler.value]
-        when 'groc'     then ['cog', scheduler.value]
-        when 'daily'    then ['calendar', scheduler.value]
-        when 'cron'     then ['time', scheduler.value]
+        when 'constant' then ['web-icon-repeat', 'constant']
+        when 'interval' then ['icon-align-justify', formatInterval(scheduler.value)]
+        when 'groc'     then ['web-icon-calendar', scheduler.value]
+        when 'daily'    then ['icon-calendar', scheduler.value]
+        when 'cron'     then ['icon-time', scheduler.value]
 
     _.template("""
-            <i class="icon-<%= icon %> tt-enable"
+            <i class="<%= icon %> tt-enable"
                 title="<%= type %> scheduler"></i>
         <span class="scheduler">
             <%= value %>
@@ -311,10 +341,10 @@ class window.JobRunView extends Backbone.View
                     <tr><td>Manual</td>         <td><%= manual %></td></tr>
                     <tr><td>Scheduled</td>      <td><%= run_time %></td></tr>
                     <tr><td>Start</td>
-                        <td><% print(dateFromNow(start_time, 'None')) %></td>
+                        <td><% print(dateFromNow(start_time, '')) %></td>
                     </tr>
                     <tr><td>End</td>
-                        <td><% print(dateFromNow(end_time, 'None')) %></td>
+                        <td><% print(dateFromNow(end_time, '')) %></td>
                     </tr>
                 </table>
             </div>
@@ -331,7 +361,6 @@ class window.JobRunView extends Backbone.View
                             <th>Name</th>
                             <th>State</th>
                             <th class="span3">Command</th>
-                            <th>Exit</th>
                             <th>Node</th>
                             <th>Start</th>
                             <th>End</th>

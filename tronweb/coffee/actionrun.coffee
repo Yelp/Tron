@@ -37,7 +37,6 @@ class window.ActionRunListEntryView extends ClickableListEntry
             <% print(formatName(action_name)) %></a></td>
         <td><% print(formatState(state)) %></td>
         <td><code class="command"><% print(command || raw_command) %></code></td>
-        <td><%= exit_status %></td>
         <td><% print(displayNode(node)) %></td>
         <td><% print(dateFromNow(start_time, "None")) %></td>
         <td><% print(dateFromNow(end_time, "")) %></td>
@@ -93,7 +92,8 @@ class window.ActionRunView extends Backbone.View
                     <tr><td>End time</td>
                         <td><% print(dateFromNow(end_time, 'Unknown')) %></td></tr>
                     <tr><td>Duration</td>
-                        <td><%= duration %></td></tr>
+                        <td><% print(formatDuration(duration)) %>
+                        </td></tr>
                     </tbody>
                 </table>
             </div>
