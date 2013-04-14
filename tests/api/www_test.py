@@ -12,7 +12,7 @@ from testify import setup_teardown
 from tests import mocks
 from twisted.web import http
 from tests.assertions import assert_call
-from tron import event
+from tron import event, node
 from tron import mcp
 from tron.api import www, controller
 from tests.testingutils import Turtle, autospec_method
@@ -169,7 +169,7 @@ class JobResourceTestCase(WWWTestCase):
             queueing=True,
             action_graph=mock.MagicMock(),
             scheduler=mock.Mock(),
-            node_pool=mock.Mock(),
+            node_pool=mock.create_autospec(node.NodePool),
             max_runtime=mock.Mock())
         self.job_scheduler.get_job.return_value = self.job
         self.resource = www.JobResource(self.job_scheduler)
@@ -211,9 +211,13 @@ class ServiceResourceTestCase(WWWTestCase):
 
     @setup
     def setup_resource(self):
-        instances = mock.create_autospec(serviceinstance.ServiceInstanceCollection)
+        instances = mock.create_autospec(
+            serviceinstance.ServiceInstanceCollection,
+            node_pool=mock.create_autospec(node.NodePool))
         self.service = mock.create_autospec(service.Service,
-            instances=instances, enabled=True, config=mock.Mock())
+            instances=instances,
+            enabled=True,
+            config=mock.Mock())
         self.resource = www.ServiceResource(self.service)
         self.resource.controller = mock.create_autospec(
             controller.ServiceController)
