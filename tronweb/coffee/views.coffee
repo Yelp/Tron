@@ -48,6 +48,10 @@ window.formatDuration = (duration) ->
     template(duration: duration, humanized: humanize)
 
 
+# If params match, return "selected". Used for select boxes
+window.isSelected = (current, value) ->
+    if current == value then "selected" else ""
+
 window.makeTooltips = (root) ->
     root.find('.tt-enable').tooltip()
 
@@ -92,23 +96,31 @@ class window.FilterView extends Backbone.View
         </form>
         """
 
-    render: =>
-        createFilter = (typeName) =>
-            @filterTemplate(
-                defaultValue: @model.get("#{typeName}Filter")
-                filterName: typeName
-            )
+    getFilterTemplate: (filterName) =>
+        createName = "create#{filterName}"
+        if @[createName] then @[createName] else @filterTemplate
+
+    renderFilters: =>
+        createFilter = (filterName) =>
+            template = @getFilterTemplate(filterName)
+            template
+                defaultValue: @model.get("#{filterName}Filter")
+                filterName: filterName
 
         filters = _.map((k for k, v of @model.filterTypes), createFilter)
         @$el.html @template(filters: filters)
+
+    render: =>
+        @renderFilters()
         @delegateEvents()
         makeTooltips(@$el)
         @
 
     events:
-        "keyup input":  "filterChange"
-        "submit":       "submit"
-        "change input": "filterDone"
+        "keyup input":   "filterChange"
+        "submit":        "submit"
+        "change input":  "filterDone"
+        "change select": "selectFilterChange"
 
     getFilterFromEvent: (event) =>
         filterEle = $(event.target)
@@ -123,6 +135,10 @@ class window.FilterView extends Backbone.View
         [filterName, filterValue] = @getFilterFromEvent(event)
         @trigger('filter:done', filterName, filterValue)
         updateLocationParam(filterName, filterValue)
+
+    selectFilterChange: (event) =>
+        @filterChange(event)
+        @filterDone(event)
 
     submit: (event) ->
         event.preventDefault()

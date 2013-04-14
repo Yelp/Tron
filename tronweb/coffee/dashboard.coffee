@@ -30,7 +30,6 @@ class window.Dashboard extends Backbone.Model
 
 
 matchType = (item, query) ->
-    console.log(item)
     switch query
         when 'service' then true if item instanceof Service
         when 'job' then true if item instanceof Job
@@ -43,11 +42,32 @@ class window.DashboardFilterModel extends FilterModel
         type:       buildMatcher(_.identity, matchType)
 
 
+class window.DashboardFilterView extends FilterView
+
+    createtype: _.template """
+        <div class="input-prepend">
+          <span class="add-on">
+            <i class="icon-filter icon-white"></i>
+            <% print(_.str.humanize(filterName)) %>
+          </span>
+          <select id="filter-<%= filterName %>"
+                class="span2"
+                data-filter-name="<%= filterName %>Filter">
+            <option></option>
+            <option <% print(isSelected(defaultValue, 'job')) %>
+                value="job">Scheduled Jobs</option>
+            <option <% print(isSelected(defaultValue, 'service')) %>
+                value="service">Services</option>
+          </select>
+        </div>
+    """
+#                 value="<%= defaultValue %>"
+
 class window.DashboardView extends Backbone.View
 
     initialize: (options) =>
         @refreshView = new RefreshToggleView(model: @model.refreshModel)
-        @filterView = new FilterView(model: @model.filterModel)
+        @filterView = new DashboardFilterView(model: @model.filterModel)
         @listenTo(@model, "change", @render)
         @listenTo(@refreshView, 'refreshView', => @model.fetch())
         @listenTo(@filterView, "filter:change", @renderBoxes)
