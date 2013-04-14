@@ -7,6 +7,7 @@
 import functools
 import urllib
 from tron import actioncommand
+from tron import scheduler
 from tron.serialize import filehandler
 from tron.utils import timeutils
 
@@ -236,7 +237,7 @@ class JobAdapter(ReprAdapter):
         return self._obj.get_name()
 
     def get_scheduler(self):
-        return str(self._obj.scheduler)
+        return SchedulerAdapter(self._obj.scheduler).get_repr()
 
     def get_action_names(self):
         return self._obj.action_graph.names
@@ -267,6 +268,19 @@ class JobAdapter(ReprAdapter):
     def get_action_graph(self):
         return ActionGraphAdapter(self._obj.action_graph).get_repr()
 
+
+class SchedulerAdapter(ReprAdapter):
+
+    translated_field_names = ['value', 'type', 'jitter']
+
+    def get_value(self):
+        return self._obj.get_value()
+
+    def get_type(self):
+        return self._obj.get_name()
+
+    def get_jitter(self):
+        return scheduler.get_jitter_str(self._obj.get_jitter())
 
 class ServiceAdapter(ReprAdapter):
 

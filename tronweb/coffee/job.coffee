@@ -127,7 +127,7 @@ class JobListEntryView extends ClickableListEntry
     template: _.template """
         <td><a href="#job/<%= name %>"><% print(formatName(name)) %></a></td>
         <td><% print(formatState(status)) %></td>
-        <td><%= scheduler %></td>
+        <td><% print(formatScheduler(scheduler)) %></td>
         <td><% print(displayNodePool(node_pool)) %></td>
         <td><% print(dateFromNow(last_success, 'never')) %></td>
         <td><% print(dateFromNow(next_run, 'none')) %></td>
@@ -168,7 +168,7 @@ class window.JobView extends Backbone.View
                     <tr><td>Node pool</td>
                         <td><% print(displayNodePool(node_pool)) %></td></tr>
                     <tr><td>Schedule</td>
-                        <td><code><%= scheduler %></code></td></tr>
+                        <td><% print(formatScheduler(scheduler)) %></td></tr>
                     <tr><td>Allow overlap</td>
                         <td><%= allow_overlap %></td></tr>
                     <tr><td>Queueing</td>       <td><%= queueing %></td></tr>
@@ -229,7 +229,27 @@ window.formatManualRun = (manual) ->
     """
 
 window.formatScheduler = (scheduler) ->
-    """ """
+    [icon, value] = switch scheduler.type
+        when 'constant' then ['repeat', 'constant']
+        when 'interval' then ['align-justify', scheduler.value]
+        when 'groc'     then ['cog', scheduler.value]
+        when 'daily'    then ['calendar', scheduler.value]
+        when 'cron'     then ['time', scheduler.value]
+
+    _.template("""
+            <i class="icon-<%= icon %> tt-enable"
+                title="<%= type %> scheduler"></i>
+        <span class="scheduler">
+            <%= value %>
+        </span>
+        <% if (jitter) { %>
+            <i class="icon-random tt-enable" title="Jitter<%= jitter %>"></i>
+        <% } %>
+    """)(
+         icon: icon
+         type: scheduler.type
+         value: value
+         jitter: scheduler.jitter)
 
 
 class JobRunListEntryView extends ClickableListEntry

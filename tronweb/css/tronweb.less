@@ -27,11 +27,15 @@ body {
     box-shadow: none;
 }
 
+.mono-font {
+    font-family: 'Droid Sans Mono', monospace;
+}
+
 code {
     .clear-border;
     padding: 10px;
-    font-family: 'Droid Sans Mono', monospace;
     color: #000;
+    .mono-font;
 }
 
 code.command {
@@ -510,4 +514,13 @@ div.refresh-view span {
 .label-manual {
     margin-left: 10px;
     background: @blue;
+}
+
+
+/******************************************************************************
+ *  Misc
+ *****************************************************************************/
+
+.scheduler {
+    .mono-font;
 }

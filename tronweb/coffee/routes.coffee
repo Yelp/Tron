@@ -88,7 +88,7 @@ class MainView extends Backbone.View
               <li class="brand">Tronweb</li>
               <li class="divider-vertical"></li>
               <li><a href="#home">
-                <i class="icon-home icon-white"></i>Dashboard</a>
+                <i class="icon-th icon-white"></i>Dashboard</a>
               </li>
               <li><a href="#jobs">
                 <i class="icon-time icon-white"></i>Scheduled Jobs</a>

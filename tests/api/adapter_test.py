@@ -5,7 +5,7 @@ from testify import TestCase, assert_equal, run, setup, teardown
 from tests import mocks
 from tests.assertions import assert_length
 from tests.testingutils import Turtle
-from tron import node
+from tron import node, scheduler
 from tron.api import adapter
 from tron.api.adapter import ReprAdapter, RunAdapter, ActionRunAdapter
 from tron.api.adapter import JobRunAdapter, ServiceAdapter
@@ -196,6 +196,24 @@ class NodePoolAdapterTestCase(TestCase):
         mock_many.assert_called_with(adapter.NodeAdapter,
             self.pool.get_nodes.return_value)
 
+
+class SchedulerAdapterTestCase(TestCase):
+
+    @setup
+    def setup_adapter(self):
+        self.scheduler = mock.create_autospec(scheduler.GeneralScheduler)
+        self.adapter = adapter.SchedulerAdapter(self.scheduler)
+
+    @mock.patch('tron.api.adapter.scheduler.get_jitter_str', autospec=True)
+    def test_repr(self, mock_get_jitter):
+        result = self.adapter.get_repr()
+        expected = {
+            'type': self.scheduler.get_name.return_value,
+            'value': self.scheduler.get_value.return_value,
+            'jitter': mock_get_jitter.return_value
+        }
+        assert_equal(result, expected)
+        mock_get_jitter.assert_called_with(self.scheduler.get_jitter())
 
 if __name__ == "__main__":
     run()
