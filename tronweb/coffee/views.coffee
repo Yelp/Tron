@@ -60,6 +60,10 @@ window.makeTooltips = (root) ->
     root.find('.tt-enable').tooltip()
 
 
+module.makeSlider = (root, options) ->
+    root.find('.slider').slider(options)
+
+
 window.formatName = (name) =>
     name.replace(/\./g, '.<wbr/>').replace(/_/g, '_<wbr/>')
 

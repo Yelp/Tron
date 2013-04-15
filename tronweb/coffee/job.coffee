@@ -233,17 +233,21 @@ class window.JobView extends Backbone.View
 
 class module.JobRunListView extends Backbone.View
 
+    initialize: (options) =>
+        options = options || {}
+        @displayCount = options.displayCount || 10
+
     tagName: "div"
 
     className: "span12 outline-block"
 
     template: _.template """
         <h2>Job Runs</h2>
-        <div class="list-controls control-group">
-            <div class="slider-value span1">
-                <span class="label labe-inverse"></span>
+        <div class="list-controls controls-row">
+            <div class="span1">
+              <span id="display-count" class="label label-inverse"></span>
             </div>
-            <input type="text" class="slider span5">
+            <div class="slider span8"></div>
         </div>
         <table class="table table-hover table-outline table-striped">
             <thead class="sub-header">
@@ -260,11 +264,31 @@ class module.JobRunListView extends Backbone.View
         </table>
         """
 
-    render: =>
-        @$el.html @template(@model.attributes)
+    handleSliderMove: (event, ui) =>
+        @updateDisplayCount(ui.value)
+        @renderList()
+
+    updateDisplayCount: (count) =>
+        @displayCount = count
+        content = """#{count} / #{@model.get('runs').length}"""
+        @$('#display-count').html(content)
+
+    renderList: =>
         entry = (jobrun) ->
             new JobRunListEntryView(model:new JobRun(jobrun)).render().el
-        @$('tbody').html(entry(model) for model in @model.get('runs'))
+        models = @model.get('runs')[...@displayCount]
+        @$('tbody').html(entry(model) for model in models)
+
+    render: =>
+        @$el.html @template(@model.attributes)
+        @updateDisplayCount(_.min([@model.get('runs').length, @displayCount]))
+        @renderList()
+        modules.views.makeSlider @$el,
+            max: @model.get('runs').length
+            min: 0
+            range: 'min'
+            value: @displayCount
+            slide: @handleSliderMove
         @
 
 module.formatManualRun = (manual) ->
