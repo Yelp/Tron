@@ -9,6 +9,7 @@ class window.GraphView extends Backbone.View
         options = options || {}
         @height = options.height || 250
         @width = options.width || @$el.width()
+        @linkDistance = options.linkDistance || 80
         @showZoom = if options.showZoom? then options.showZoom else true
         @buildContent = options.buildContent
         @nodeClass = options.nodeClass || "node"
@@ -86,9 +87,9 @@ class window.GraphView extends Backbone.View
     buildForce: (height, width) ->
         # TODO: randomly move nodes when links cross
         @force = d3.layout.force()
-            .charge(-120)
+            .charge(-400)
             .theta(1)
-            .linkDistance(80)
+            .linkDistance(@linkDistance)
             .size([width, height])
 
     buildSvg: (height, width) ->
@@ -150,11 +151,12 @@ class GraphModalView extends Backbone.View
     showModal: =>
         options = _.extend {},
             @graphOptions,
-            model:      @model
-            el:         @$('.modal-body.graph').html('').get()
-            height:     $(window).height() - 130
-            width:      $(document).width() - 150
-            showZoom:   false
+            model:          @model
+            el:             @$('.modal-body.graph').html('').get()
+            height:         $(window).height() - 130
+            width:          $(document).width() - 150
+            linkDistance:   250
+            showZoom:       false
 
         graph = new GraphView(options).render()
         $('.modal').modal()
