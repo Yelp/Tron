@@ -1,5 +1,7 @@
 
 # Jobs
+window.modules = window.modules || {}
+window.modules.job = module = {}
 
 
 class window.Job extends Backbone.Model
@@ -146,6 +148,7 @@ class window.JobView extends Backbone.View
     initialize: (options) =>
         @listenTo(@model, "change", @render)
         @refreshView = new RefreshToggleView(model: @model.refreshModel)
+        @jobRunListView = new module.JobRunListView(model: @model)
         @listenTo(@refreshView, 'refreshView', => @model.fetch())
 
     tagName: "div"
@@ -185,23 +188,7 @@ class window.JobView extends Backbone.View
                 <div id="action-graph" class="graph job-view"></div>
             </div>
 
-            <div class="span12 outline-block">
-                <h2>Job Runs</h2>
-                <table class="table table-hover table-outline table-striped">
-                    <thead class="sub-header">
-                        <tr>
-                            <th>Id</th>
-                            <th>State</th>
-                            <th>Node</th>
-                            <th>Start</th>
-                            <th>End</th>
-                        </tr>
-                    </thead>
-                    <tbody class="jobruns">
-                    </tbody>
-                </table>
-            </div>
-
+            <div id="job-runs"></div>
         </div>
         """
 
@@ -237,15 +224,50 @@ class window.JobView extends Backbone.View
             @model.attributes,
             settings: @formatSettings(@model.attributes)
 
-        entry = (jobrun) -> new JobRunListEntryView(model:new JobRun(jobrun)).render().el
-        @$('tbody.jobruns').append(entry(model) for model in @model.get('runs'))
+        @$('#job-runs').html(@jobRunListView.render().el)
         @$('#refresh').html(@refreshView.render().el)
         @renderGraph()
         makeTooltips(@$el)
         @
 
 
-window.formatManualRun = (manual) ->
+class module.JobRunListView extends Backbone.View
+
+    tagName: "div"
+
+    className: "span12 outline-block"
+
+    template: _.template """
+        <h2>Job Runs</h2>
+        <div class="list-controls control-group">
+            <div class="slider-value span1">
+                <span class="label labe-inverse"></span>
+            </div>
+            <input type="text" class="slider span5">
+        </div>
+        <table class="table table-hover table-outline table-striped">
+            <thead class="sub-header">
+                <tr>
+                    <th>Id</th>
+                    <th>State</th>
+                    <th>Node</th>
+                    <th>Start</th>
+                    <th>End</th>
+                </tr>
+            </thead>
+            <tbody class="jobruns">
+            </tbody>
+        </table>
+        """
+
+    render: =>
+        @$el.html @template(@model.attributes)
+        entry = (jobrun) ->
+            new JobRunListEntryView(model:new JobRun(jobrun)).render().el
+        @$('tbody').html(entry(model) for model in @model.get('runs'))
+        @
+
+module.formatManualRun = (manual) ->
     if ! manual then "" else """
         <span class="label label-manual">
             <i class="icon-hand-down icon-white tt-enable" title="Manual run"></i>
@@ -297,7 +319,7 @@ class JobRunListEntryView extends ClickableListEntry
     template: _.template """
         <td>
             <a href="#job/<%= job_name %>/<%= run_num %>"><%= run_num %></a>
-            <% print(formatManualRun(manual)) %>
+            <% print(modules.job.formatManualRun(manual)) %>
         </td>
         <td><% print(formatState(state)) %></td>
         <td><% print(displayNode(node)) %></td>

@@ -1,5 +1,8 @@
 
 # Common view elements
+window.modules = window.modules || {}
+window.modules.views = module = {}
+
 
 # Note about subview
 # Subviews need to re-delegate events, because they are lost
@@ -37,6 +40,7 @@ window.getDuration = (time) ->
         hours: parseInt(hours)
         minutes: parseInt(minutes)
         seconds: parseInt(seconds)
+
 
 window.formatDuration = (duration) ->
     template = _.template """
