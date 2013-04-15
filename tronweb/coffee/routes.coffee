@@ -135,9 +135,11 @@ module.getParamsMap = (paramString) ->
     paramString = paramString || ""
     module.splitKeyValuePairs(paramString.split(';'))
 
+module.getLocationHash = ->
+    document.location.hash
 
 module.getLocationParams = ->
-    parts = document.location.hash.split(';')
+    parts = module.getLocationHash().split(';')
     [parts[0], module.splitKeyValuePairs(parts[1..])]
 
 
