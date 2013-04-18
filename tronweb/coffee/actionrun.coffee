@@ -29,21 +29,15 @@ class window.ActionRunListEntryView extends ClickableListEntry
 
     tagName: "tr"
 
-    className: =>
-        stateName = switch @model.get('state')
-            when "running"      then 'info'
-            when "failed"       then 'error'
-            when "succeeded"    then 'success'
-        "#{ stateName } clickable"
+    className: "clickable"
 
     template: _.template """
         <td>
             <a href="#job/<%= job_name %>/<%= run_num %>/<%= action_name %>">
             <% print(formatName(action_name)) %></a></td>
-        <td><%= state %></td>
+        <td><% print(formatState(state)) %></td>
         <td><code class="command"><% print(command || raw_command) %></code></td>
-        <td><%= exit_status %></td>
-        <td><%= node %></td>
+        <td><% print(displayNode(node)) %></td>
         <td><% print(dateFromNow(start_time, "None")) %></td>
         <td><% print(dateFromNow(end_time, "")) %></td>
         """
@@ -54,6 +48,7 @@ class window.ActionRunListEntryView extends ClickableListEntry
         @
 
 
+# TODO: add history
 class window.ActionRunView extends Backbone.View
 
     initialize: (options) =>
@@ -63,7 +58,7 @@ class window.ActionRunView extends Backbone.View
 
     tagName: "div"
 
-    className: "span12"
+    className: ""
 
     template: _.template """
         <div class="row">
@@ -76,29 +71,33 @@ class window.ActionRunView extends Backbone.View
                     <span id="refresh"></span>
                 </h1>
             </div>
-            <div class="span12">
+            <div class="span12 outline-block">
                 <h2>Details</h2>
-                <table class="table table-condensed details">
+                <table class="table details">
                     <tbody>
-                    <tr><td class="span2">State</td>          <td><%= state %></td></tr>
-                    <tr><td>Node</td>           <td><%= node %></td></tr>
+                    <tr><td class="span2">State</td>
+                        <td><% print(formatState(state)) %></td></tr>
+                    <tr><td>Node</td>
+                        <td><% print(displayNode(node)) %></td></tr>
                     <tr><td>Raw command</td>
                         <td><code class="command"><%= raw_command %></code></td></tr>
                     <% if (command) { %>
                     <tr><td>Command</td>
                         <td><code class="command"><%= command %></code></td></tr>
                     <% } %>
-                    <tr><td>Exit</td>           <td><%= exit_status %></td></tr>
+                    <tr><td>Exit code</td>
+                        <td><%= exit_status %></td></tr>
                     <tr><td>Start time</td>
                         <td><% print(dateFromNow(start_time, ''))  %></td></tr>
                     <tr><td>End time</td>
                         <td><% print(dateFromNow(end_time, 'Unknown')) %></td></tr>
                     <tr><td>Duration</td>
-                        <td><%= duration %></td></tr>
+                        <td><% print(formatDuration(duration)) %>
+                        </td></tr>
                     </tbody>
                 </table>
             </div>
-            <div class="span12">
+            <div class="span12 outline-block">
                 <h2>stdout</h2>
                 <pre><% print(stdout.join('\\n')) %></pre>
 

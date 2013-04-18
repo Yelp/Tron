@@ -7,6 +7,7 @@
 import functools
 import urllib
 from tron import actioncommand
+from tron import scheduler
 from tron.serialize import filehandler
 from tron.utils import timeutils
 
@@ -39,8 +40,8 @@ class ReprAdapter(object):
         return repr_data
 
 
-def adapt_many(adapter_class, seq, *args):
-    return [adapter_class(item, *args).get_repr() for item in seq]
+def adapt_many(adapter_class, seq, *args, **kwargs):
+    return [adapter_class(item, *args, **kwargs).get_repr() for item in seq]
 
 
 def toggle_flag(flag_name):
@@ -65,7 +66,7 @@ class RunAdapter(ReprAdapter):
         return self._obj.state.name
 
     def get_node(self):
-        return str(self._obj.node)
+        return NodeAdapter(self._obj.node).get_repr()
 
     def get_duration(self):
         duration = timeutils.duration(self._obj.start_time, self._obj.end_time)
@@ -236,13 +237,13 @@ class JobAdapter(ReprAdapter):
         return self._obj.get_name()
 
     def get_scheduler(self):
-        return str(self._obj.scheduler)
+        return SchedulerAdapter(self._obj.scheduler).get_repr()
 
     def get_action_names(self):
         return self._obj.action_graph.names
 
     def get_node_pool(self):
-        return self._obj.node_pool.get_name()
+        return NodePoolAdapter(self._obj.node_pool).get_repr()
 
     def get_last_success(self):
         last_success = self._obj.runs.last_success
@@ -267,6 +268,19 @@ class JobAdapter(ReprAdapter):
     def get_action_graph(self):
         return ActionGraphAdapter(self._obj.action_graph).get_repr()
 
+
+class SchedulerAdapter(ReprAdapter):
+
+    translated_field_names = ['value', 'type', 'jitter']
+
+    def get_value(self):
+        return self._obj.get_value()
+
+    def get_type(self):
+        return self._obj.get_name()
+
+    def get_jitter(self):
+        return scheduler.get_jitter_str(self._obj.get_jitter())
 
 class ServiceAdapter(ReprAdapter):
 
@@ -307,7 +321,7 @@ class ServiceAdapter(ReprAdapter):
         return adapt_many(ServiceInstanceAdapter, self._obj.instances)
 
     def get_node_pool(self):
-        return self._obj.config.node
+        return NodePoolAdapter(self._obj.instances.node_pool).get_repr()
 
     def get_live_count(self):
         return len(self._obj.instances)
@@ -323,6 +337,7 @@ class ServiceAdapter(ReprAdapter):
         events = adapt_many(EventAdapter, self._obj.event_recorder.list())
         return events[:self.include_events]
 
+
 class ServiceInstanceAdapter(ReprAdapter):
 
     field_names = ['id', 'failures']
@@ -332,7 +347,7 @@ class ServiceInstanceAdapter(ReprAdapter):
         return str(self._obj.get_state())
 
     def get_node(self):
-        return str(self._obj.node)
+        return NodeAdapter(self._obj.node).get_repr()
 
 
 class EventAdapter(ReprAdapter):
@@ -342,3 +357,17 @@ class EventAdapter(ReprAdapter):
 
     def get_level(self):
         return self._obj.level.label
+
+
+class NodeAdapter(ReprAdapter):
+    field_names = ['name', 'hostname', 'username']
+
+
+class NodePoolAdapter(ReprAdapter):
+    translated_field_names = ['name', 'nodes']
+
+    def get_name(self):
+        return self._obj.get_name()
+
+    def get_nodes(self):
+        return adapt_many(NodeAdapter, self._obj.get_nodes())

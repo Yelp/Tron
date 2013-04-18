@@ -5,8 +5,8 @@ class TronRoutes extends Backbone.Router
 
     routes:
         "":                         "index"
-        "home":                     "home"
-        "dashboard":                "dashboard"
+        "home(;*params)":           "home"
+        "dashboard(;*params)":      "dashboard"
         "jobs(;*params)":           "jobs"
         "job/:name":                "job"
         "job/:name/:run":           "jobrun"
@@ -24,12 +24,15 @@ class TronRoutes extends Backbone.Router
     index: ->
         @navigate('home', trigger: true)
 
-    home: ->
-        @updateMainView(new Dashboard(), DashboardView)
+    home: (params) ->
+        model = new Dashboard
+            filterModel: new DashboardFilterModel(getParamsMap(params))
+        @updateMainView(model, DashboardView)
 
-    dashboard: ->
+    dashboard: (params) ->
         mainView.close()
-        model = new Dashboard()
+        model = new Dashboard
+            filterModel: new DashboardFilterModel(getParamsMap(params))
         dashboard = new DashboardView(model: model)
         model.fetch()
         $('#all-view').html dashboard.render().el
@@ -81,16 +84,26 @@ class MainView extends Backbone.View
     el: $("body")
 
     template: _.template """
-        <div id="menu" class="navbar">
+        <div id="menu" class="navbar navbar-inverse navbar-static-top">
           <div class="navbar-inner">
+            <div class="container">
             <ul class="nav">
               <li class="brand">Tronweb</li>
               <li class="divider-vertical"></li>
-              <li><a href="#home">home</a></li>
-              <li><a href="#jobs">jobs</a></li>
-              <li><a href="#services">services</a></li>
-              <li><a href="#configs">config</a></li>
+              <li><a href="#home">
+                <i class="icon-th icon-white"></i>Dashboard</a>
+              </li>
+              <li><a href="#jobs">
+                <i class="icon-time icon-white"></i>Scheduled Jobs</a>
+              </li>
+              <li><a href="#services">
+                <i class="icon-repeat icon-white"></i>Services</a>
+              </li>
+              <li><a href="#configs">
+                <i class="icon-wrench icon-white"></i>Config</a>
+              </li>
             </ul>
+            </div>
           </div>
         </div>
 
@@ -98,9 +111,15 @@ class MainView extends Backbone.View
         </div>
     """
 
+    setActive: =>
+        [path, params] = getLocationParams()
+        path = path.split('/')[0]
+        @$("a[href=#{path}]").parent('li').addClass 'active'
+
     render: (item) =>
         @close()
         @$('#all-view').html @template()
+        @setActive()
         @$('#main').html item.el
 
     close: =>

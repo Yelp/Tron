@@ -3,8 +3,10 @@
 
 class window.Dashboard extends Backbone.Model
 
-    initialize: ->
+    initialize: (options)->
+        options = options || {}
         @refreshModel = new RefreshModel(interval: 30)
+        @filterModel = options.filterModel
         @serviceList = new ServiceCollection()
         @jobList = new JobCollection()
         @listenTo(@serviceList, "sync", @change)
@@ -17,44 +19,93 @@ class window.Dashboard extends Backbone.Model
     change: (args) ->
         @trigger("change", args)
 
+    models: =>
+        @serviceList.models.concat @jobList.models
+
+    sorted: =>
+        _.sortBy(@models(), (item) -> item.get('name'))
+
+    filter: (filter) =>
+        _.filter(@sorted(), filter)
+
+
+matchType = (item, query) ->
+    switch query
+        when 'service' then true if item instanceof Service
+        when 'job' then true if item instanceof Job
+
+
+class window.DashboardFilterModel extends FilterModel
+
+    filterTypes:
+        name:       buildMatcher(fieldGetter('name'), matchAny)
+        type:       buildMatcher(_.identity, matchType)
+
+
+class window.DashboardFilterView extends FilterView
+
+    createtype: _.template """
+        <div class="input-prepend">
+          <span class="add-on">
+            <i class="icon-filter icon-white"></i>
+            <% print(_.str.humanize(filterName)) %>
+          </span>
+          <select id="filter-<%= filterName %>"
+                class="span2"
+                data-filter-name="<%= filterName %>Filter">
+            <option></option>
+            <option <% print(isSelected(defaultValue, 'job')) %>
+                value="job">Scheduled Jobs</option>
+            <option <% print(isSelected(defaultValue, 'service')) %>
+                value="service">Services</option>
+          </select>
+        </div>
+    """
+#                 value="<%= defaultValue %>"
 
 class window.DashboardView extends Backbone.View
 
     initialize: (options) =>
         @refreshView = new RefreshToggleView(model: @model.refreshModel)
+        @filterView = new DashboardFilterView(model: @model.filterModel)
         @listenTo(@model, "change", @render)
         @listenTo(@refreshView, 'refreshView', => @model.fetch())
+        @listenTo(@filterView, "filter:change", @renderBoxes)
 
     tagName: "div"
 
     className: "span12 dashboard-view"
 
-    # TODO: filters
     template: _.template """
         <h1>
             <small>Tron</small>
             <a href="#dashboard">Dashboard</a>
             <span id="refresh"></span>
         </h1>
+        <div id="filter-bar"></div>
         <div id="status-boxes">
         </div>
         """
 
-    renderServices: =>
-        entry = (model) -> new ServiceStatusBoxView(model: model).render().el
-        @$('#status-boxes').append(entry(model) for model in @model.serviceList.models)
-
-    renderJobs: =>
-        entry = (model) -> new JobStatusBoxView(model: model).render().el
-        @$('#status-boxes').append(entry(model) for model in @model.jobList.models)
+    makeView: (model) =>
+        switch model.constructor.name
+            when Service.name
+                new ServiceStatusBoxView(model: model)
+            when Job.name
+                new JobStatusBoxView(model: model)
 
     renderRefresh: ->
         @$('#refresh').html(@refreshView.render().el)
 
+    renderBoxes: =>
+        models = @model.filter(@model.filterModel.createFilter())
+        views = (@makeView(model) for model in models)
+        @$('#status-boxes').html(item.render().el for item in views)
+
     render: ->
         @$el.html @template()
-        @renderServices()
-        @renderJobs()
+        @$('#filter-bar').html(@filterView.render().el)
+        @renderBoxes()
         @renderRefresh()
         @
 
@@ -66,15 +117,24 @@ class window.StatusBoxView extends ClickableListEntry
 
     tagName: "div"
 
+    className: =>
+        "span2 clickable status-box #{@getState()}"
+
     template: _.template """
         <div class="status-header">
-            <a href="<%= url %>"><%= name %></a>
+            <a href="<%= url %>">
+            <%= name %></a>
         </div>
+        <span class="count">
+          <i class="<%= icon %> icon-white"></i><%= count %>
+        </span>
         """
 
     render: =>
         context = _.extend {},
             url: @buildUrl()
+            icon: @icon
+            count: @count()
             name: formatName(@model.attributes.name)
         @$el.html @template(context)
         @
@@ -84,15 +144,13 @@ class window.ServiceStatusBoxView extends StatusBoxView
     buildUrl: =>
         "#service/#{@model.get('name')}"
 
-    #  TODO: this is duplicated with ServiceListEntryView
-    className: =>
-        state = switch @model.get('state')
-            when "up"       then "success"
-            when "starting" then "info"
-            when "disabled" then "warning"
-            when "degraded" then "warning"
-            when "failed"   then "error"
-        "span2 clickable status-box #{state}"
+    icon: "icon-repeat"
+
+    getState: =>
+        @model.get('state')
+
+    count: =>
+        @model.get('instances').length
 
 
 class window.JobStatusBoxView extends StatusBoxView
@@ -100,10 +158,11 @@ class window.JobStatusBoxView extends StatusBoxView
     buildUrl: =>
         "#job/#{@model.get('name')}"
 
-    # TODO: this is duplicated with JobListEntryView
-    className: =>
-        state = switch @model.get('status')
-            when "enabled"  then "success"
-            when "running"  then "info"
-            when "disabled" then "warning"
-        "span2 clickable status-box #{state}"
+    icon: "icon-time"
+
+    # TODO: get state of last run if enabled
+    getState: =>
+        @model.get('status')
+
+    count: =>
+        if @model.get('runs') then _.first(@model.get('runs')).run_num else 0

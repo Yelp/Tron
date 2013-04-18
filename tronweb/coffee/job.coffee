@@ -27,7 +27,7 @@ class window.JobCollection extends Backbone.Collection
 
     model: Job
 
-    url: "/jobs"
+    url: "/jobs?include_job_runs=1"
 
     parse: (resp, options) =>
         resp['jobs']
@@ -58,7 +58,10 @@ class window.JobRun extends Backbone.Model
 
 class window.JobListFilterModel extends FilterModel
 
-    filterTypes: ['name', 'node_pool', 'status']
+    filterTypes:
+        name:       buildMatcher(fieldGetter('name'), matchAny)
+        node_pool:  buildMatcher(nestedName('node_pool'), _.str.startsWith)
+        status:      buildMatcher(fieldGetter('status'), _.str.startsWith)
 
 
 class window.JobListView extends Backbone.View
@@ -76,26 +79,28 @@ class window.JobListView extends Backbone.View
 
     template: _.template """
         <h1>
-            Jobs
+            Scheduled Jobs
             <span id="refresh"></span>
         </h1>
         <div id="filter-bar"></div>
-        <table class="table table-hover">
-            <thead>
+        <div class="outline-block">
+        <table class="table table-hover table-outline table-striped">
+            <thead class="header">
                 <tr>
-                    <th class="span3">Name</td>
-                    <th>Schedule</td>
-                    <th>Node Pool</td>
-                    <th>Last Success</td>
-                    <th>Next Run</td>
+                    <th class="span4">Name</th>
+                    <th>Status</th>
+                    <th>Schedule</th>
+                    <th>Node Pool</th>
+                    <th>Last Success</th>
+                    <th>Next Run</th>
                 </tr>
             </thead>
             <tbody>
             </tbody>
         </table>
+        </div>
         """
 
-    # TODO: sort by name/state/node
     render: ->
         @$el.html @template()
         @renderFilter()
@@ -108,7 +113,6 @@ class window.JobListView extends Backbone.View
         entry = (model) -> new JobListEntryView(model: model).render().el
         @$('tbody').html(entry(model) for model in models)
 
-
     renderFilter: =>
         @$('#filter-bar').html(@filterView.render().el)
 
@@ -120,17 +124,13 @@ class JobListEntryView extends ClickableListEntry
 
     tagName: "tr"
 
-    className: =>
-        stateName = switch @model.attributes.status
-            when "disabled" then 'warning'
-            when "enabled"  then 'enabled'
-            when "running"  then 'info'
-        "#{ stateName } clickable"
+    className: "clickable"
 
     template: _.template """
         <td><a href="#job/<%= name %>"><% print(formatName(name)) %></a></td>
-        <td><%= scheduler %></td>
-        <td><%= node_pool %></td>
+        <td><% print(formatState(status)) %></td>
+        <td><% print(formatScheduler(scheduler)) %></td>
+        <td><% print(displayNodePool(node_pool)) %></td>
         <td><% print(dateFromNow(last_success, 'never')) %></td>
         <td><% print(dateFromNow(next_run, 'none')) %></td>
         """
@@ -161,18 +161,18 @@ class window.JobView extends Backbone.View
                     <span id="refresh"></span>
                 </h1>
             </div>
-            <div class="span5">
+            <div class="span5 outline-block">
                 <h2>Details</h2>
-                <table class="table table-condensed details">
+                <table class="table details">
                     <tbody>
-                    <tr><td>Status</td>         <td><%= status %></td></tr>
-                    <tr><td>Node pool</td>      <td><%= node_pool %></td></tr>
+                    <tr><td>Status</td>
+                        <td><% print(formatState(status)) %></td></tr>
+                    <tr><td>Node pool</td>
+                        <td><% print(displayNodePool(node_pool)) %></td></tr>
                     <tr><td>Schedule</td>
-                        <td><code><%= scheduler %></code></td></tr>
-                    <tr><td>Allow overlap</td>
-                        <td><%= allow_overlap %></td></tr>
-                    <tr><td>Queueing</td>       <td><%= queueing %></td></tr>
-                    <tr><td>All nodes</td>      <td><%= all_nodes %></td></tr>
+                        <td><% print(formatScheduler(scheduler)) %></td></tr>
+                    <tr><td>Settings</td>
+                        <td><%= settings %></td></tr>
                     <tr><td>Last success</td>
                         <td><% print(dateFromNow(last_success)) %></td></tr>
                     <tr><td>Next run</td>
@@ -180,15 +180,15 @@ class window.JobView extends Backbone.View
                     </tbody>
                 </table>
             </div>
-            <div class="span7">
+            <div class="span7 outline-block">
                 <h2>Action Graph</h2>
                 <div id="action-graph" class="graph job-view"></div>
             </div>
 
-            <div class="span12">
+            <div class="span12 outline-block">
                 <h2>Job Runs</h2>
-                <table class="table table-hover">
-                    <thead>
+                <table class="table table-hover table-outline table-striped">
+                    <thead class="sub-header">
                         <tr>
                             <th>Id</th>
                             <th>State</th>
@@ -204,20 +204,85 @@ class window.JobView extends Backbone.View
 
         </div>
         """
+
     renderGraph: =>
         new GraphView(
             model: @model.get('action_graph')
             buildContent: (d) -> """<code class="command">#{d.command}</code>"""
+            height: $('table.details').height() - 5 # TODO: why -5 to get it flush?
         ).render()
 
+    formatSettings: (attrs) =>
+        template = _.template """
+            <span class="label-icon tt-enable" title="<%= title %>">
+                <i class="web-icon-<%= icon %>"></i>
+            </span>
+            """
+
+        [icon, title] = if attrs.allow_overlap
+            ['overlap', "Allow overlapping runs"]
+        else if attrs.queueing
+            ['queue', "Queue overlapping runs"]
+        else
+            ['cancel', "Cancel overlapping runs"]
+
+        content = if attrs.all_nodes
+            template(icon: 'all-nodes', title: "Run on all nodes")
+        else
+            ""
+        template(icon: icon, title: title) + content
+
     render: ->
-        @$el.html @template(@model.attributes)
+        @$el.html @template _.extend {},
+            @model.attributes,
+            settings: @formatSettings(@model.attributes)
+
         entry = (jobrun) -> new JobRunListEntryView(model:new JobRun(jobrun)).render().el
         @$('tbody.jobruns').append(entry(model) for model in @model.get('runs'))
         @$('#refresh').html(@refreshView.render().el)
         @renderGraph()
         makeTooltips(@$el)
         @
+
+
+window.formatManualRun = (manual) ->
+    if ! manual then "" else """
+        <span class="label label-manual">
+            <i class="icon-hand-down icon-white tt-enable" title="Manual run"></i>
+        </span>
+    """
+
+formatInterval = (interval) ->
+    humanized = getDuration(interval).humanize()
+    """
+        <span class="tt-enable" title="#{interval}">
+         #{humanized}
+        </span>
+    """
+
+window.formatScheduler = (scheduler) ->
+    [icon, value] = switch scheduler.type
+        when 'constant' then ['web-icon-repeat', 'constant']
+        when 'interval' then ['icon-align-justify', formatInterval(scheduler.value)]
+        when 'groc'     then ['web-icon-calendar', scheduler.value]
+        when 'daily'    then ['icon-calendar', scheduler.value]
+        when 'cron'     then ['icon-time', scheduler.value]
+
+    _.template("""
+            <i class="<%= icon %> tt-enable"
+                title="<%= type %> scheduler"></i>
+        <span class="scheduler">
+            <%= value %>
+        </span>
+        <% if (jitter) { %>
+            <i class="icon-random tt-enable" title="Jitter<%= jitter %>"></i>
+        <% } %>
+    """)(
+         icon: icon
+         type: scheduler.type
+         value: value
+         jitter: scheduler.jitter)
+
 
 class JobRunListEntryView extends ClickableListEntry
 
@@ -226,18 +291,16 @@ class JobRunListEntryView extends ClickableListEntry
 
     tagName: "tr"
 
-    className: ->
-        stateName = switch @model.get('state')
-            when "running"      then 'info'
-            when "failed"       then 'error'
-            when "succeeded"    then 'success'
-        "#{ stateName } clickable"
+    className: "clickable"
 
     # TODO: add icon for manual run flag
     template: _.template """
-        <td><a href="#job/<%= job_name %>/<%= run_num %>"><%= run_num %></a></td>
-        <td><%= state %></td>
-        <td><%= node %></td>
+        <td>
+            <a href="#job/<%= job_name %>/<%= run_num %>"><%= run_num %></a>
+            <% print(formatManualRun(manual)) %>
+        </td>
+        <td><% print(formatState(state)) %></td>
+        <td><% print(displayNode(node)) %></td>
         <td><% print(dateFromNow(start_time || run_time, "Unknown")) %></td>
         <td><% print(dateFromNow(end_time, "")) %></td>
         """
@@ -270,36 +333,36 @@ class window.JobRunView extends Backbone.View
                 </h1>
 
             </div>
-            <div class="span5">
+            <div class="span5 outline-block">
                 <h2>Details</h2>
-                <table class="table table-condensed details">
+                <table class="table details">
                     <tr><td class="span2">State</td>
-                        <td><%= state %></td></tr>
-                    <tr><td>Node</td>           <td><%= node %></td></tr>
+                        <td><% print(formatState(state)) %></td></tr>
+                    <tr><td>Node</td>
+                        <td><% print(displayNode(node)) %></td></tr>
                     <tr><td>Manual</td>         <td><%= manual %></td></tr>
                     <tr><td>Scheduled</td>      <td><%= run_time %></td></tr>
                     <tr><td>Start</td>
-                        <td><% print(dateFromNow(start_time, 'None')) %></td>
+                        <td><% print(dateFromNow(start_time, '')) %></td>
                     </tr>
                     <tr><td>End</td>
-                        <td><% print(dateFromNow(end_time, 'None')) %></td>
+                        <td><% print(dateFromNow(end_time, '')) %></td>
                     </tr>
                 </table>
             </div>
-            <div class="span7">
+            <div class="span7 outline-block">
                 <h2>Action Graph</h2>
                 <div id="action-graph" class="graph job-view"></div>
             </div>
 
-            <div class="span12">
+            <div class="span12 outline-block">
                 <h2>Action Runs</h2>
-                <table class="table table-hover">
-                    <thead>
+                <table class="table table-hover table-outline">
+                    <thead class="sub-header">
                         <tr>
                             <th>Name</th>
                             <th>State</th>
                             <th class="span3">Command</th>
-                            <th>Exit</th>
                             <th>Node</th>
                             <th>Start</th>
                             <th>End</th>
@@ -320,9 +383,10 @@ class window.JobRunView extends Backbone.View
             new ActionRunListEntryView(model:new ActionRun(run)).render().el
         @$('tbody.actionruns').html(entry(model) for model in @model.get('runs'))
 
+    # TODO: add class for state
     popupTemplate: _.template """
         <ul class="unstyled">
-            <li><strong><%= state %></strong></li>
+            <li><% print(formatState(state)) %></li>
             <li><code class="command"><% print(command || raw_command) %></code></li>
         </ul>
         """
