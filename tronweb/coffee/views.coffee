@@ -107,7 +107,7 @@ class window.FilterView extends Backbone.View
                 defaultValue: @model.get("#{filterName}Filter")
                 filterName: filterName
 
-        filters = _.map((k for k, v of @model.filterTypes), createFilter)
+        filters = _.map((k for k of @model.filterTypes), createFilter)
         @$el.html @template(filters: filters)
 
     render: =>
