@@ -34,6 +34,8 @@ class window.ServiceCollection extends Backbone.Collection
     parse: (resp, options) =>
         resp['services']
 
+    comparator: (service) =>
+        service.get('name')
 
 class window.ServiceListView extends Backbone.View
 
