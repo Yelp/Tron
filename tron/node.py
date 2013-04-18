@@ -140,6 +140,9 @@ class NodePool(object):
     def get_name(self):
         return self.name
 
+    def get_nodes(self):
+        return self.nodes
+
     def next(self):
         """Return a random node from the pool."""
         return random.choice(self.nodes)

@@ -48,7 +48,8 @@ def scheduler_from_config(config, time_zone):
             monthdays=config.monthdays,
             months=config.months,
             weekdays=config.weekdays,
-            string_repr='GROC %s' % config.original,
+            name='groc',
+            original=config.original,
             jitter=config.jitter)
 
     if isinstance(config, schedule_parse.ConfigCronScheduler):
@@ -60,7 +61,8 @@ def scheduler_from_config(config, time_zone):
             weekdays=config.weekdays,
             ordinals=config.ordinals,
             seconds=[0],
-            string_repr='CRON %s' % config.original,
+            name='cron',
+            original=config.original,
             jitter=config.jitter)
 
     if isinstance(config, schedule_parse.ConfigDailyScheduler):
@@ -69,7 +71,8 @@ def scheduler_from_config(config, time_zone):
             minutes=[config.minute],
             seconds=[config.second],
             weekdays=config.days,
-            string_repr='DAILY %s' % config.original,
+            name='daily',
+            original=config.original,
             jitter=config.jitter)
 
 
@@ -81,13 +84,22 @@ class ConstantScheduler(object):
         return timeutils.current_time()
 
     def __str__(self):
-        return "CONSTANT"
+        return self.get_name()
 
     def __eq__(self, other):
         return isinstance(other, ConstantScheduler)
 
     def __ne__(self, other):
         return not self == other
+
+    def get_jitter(self):
+        pass
+
+    def get_name(self):
+        return 'constant'
+
+    def get_value(self):
+        return ''
 
 
 def get_jitter(time_delta):
@@ -118,7 +130,8 @@ class GeneralScheduler(object):
             hours=None,
             seconds=None,
             time_zone=None,
-            string_repr=None,
+            name=None,
+            original=None,
             jitter=None):
         """Parameters:
           timestr     - the time of day to run, as 'HH:MM'
@@ -132,12 +145,11 @@ class GeneralScheduler(object):
           timezone    - the optional timezone as a string for this specification.
                         Defaults to UTC - valid entries are things like
                         Australia/Victoria or PST8PDT.
-          string_repr - Original string representation this was parsed from,
-                        if applicable
         """
         self.time_zone      = time_zone
         self.jitter         = jitter
-        self.string_repr    = string_repr or "DAILY"
+        self.name           = name or 'daily'
+        self.original       = original or ''
         self.time_spec      = trontimespec.TimeSpecification(
             ordinals=ordinals,
             weekdays=weekdays,
@@ -168,13 +180,23 @@ class GeneralScheduler(object):
         return self.time_spec.get_match(start_time) + get_jitter(self.jitter)
 
     def __str__(self):
-        return self.string_repr + get_jitter_str(self.jitter)
+        return '%s %s%s' % (
+            self.name, self.original, get_jitter_str(self.jitter))
 
     def __eq__(self, other):
         return hasattr(other, 'time_spec') and self.time_spec == other.time_spec
 
     def __ne__(self, other):
         return not self == other
+
+    def get_jitter(self):
+        return self.jitter
+
+    def get_name(self):
+        return self.name
+
+    def get_value(self):
+        return self.original
 
 
 class IntervalScheduler(object):
@@ -192,7 +214,8 @@ class IntervalScheduler(object):
         return last_run_time + self.interval + get_jitter(self.jitter)
 
     def __str__(self):
-        return "INTERVAL %s" % self.interval + get_jitter_str(self.jitter)
+        return "%s %s%s" % (
+            self.get_name(), self.interval, get_jitter_str(self.jitter))
 
     def __eq__(self, other):
         return (isinstance(other, IntervalScheduler) and
@@ -200,3 +223,12 @@ class IntervalScheduler(object):
 
     def __ne__(self, other):
         return not self == other
+
+    def get_jitter(self):
+        return self.jitter
+
+    def get_name(self):
+        return "interval"
+
+    def get_value(self):
+        return str(self.interval)

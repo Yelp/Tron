@@ -194,8 +194,11 @@ class JobCollectionResource(resource.Resource):
 
     def get_data(self, include_job_run=False, include_action_runs=False):
         jobs = (sched.get_job() for sched in self.job_collection)
-        return adapter.adapt_many(adapter.JobAdapter, jobs,
-            include_job_run, include_action_runs)
+        return adapter.adapt_many(adapter.JobAdapter,
+            jobs,
+            include_job_run,
+            include_action_runs,
+            num_runs=5)
 
     def render_GET(self, request):
         include_job_runs = requestargs.get_bool(request, 'include_job_runs')
