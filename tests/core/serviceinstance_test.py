@@ -162,7 +162,7 @@ class ServiceInstanceStopTaskTestCase(TestCase):
         autospec_method(self.task.notify)
 
     def test_kill_task(self):
-        assert self.task.kill()
+        assert self.task.stop()
 
     def test_handle_action_event_complete(self):
         action = mock.create_autospec(ActionCommand)
@@ -283,7 +283,7 @@ class ServiceInstanceTestCase(TestCase):
 
     def test_stop(self):
         self.instance.stop()
-        self.instance.stop_task.kill.assert_called_with()
+        self.instance.stop_task.stop.assert_called_with()
         self.instance.machine.transition.assert_called_with('stop')
         self.instance.monitor_task.cancel.assert_called_with()
 
@@ -314,7 +314,7 @@ class ServiceInstanceTestCase(TestCase):
 
     def test_handle_start_task_complete_from_unknown(self):
         self.instance._handle_start_task_complete()
-        self.instance.stop_task.kill.assert_called_with()
+        self.instance.stop_task.stop.assert_called_with()
 
     def test_state_data(self):
         expected = {

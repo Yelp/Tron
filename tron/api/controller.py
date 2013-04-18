@@ -147,6 +147,10 @@ class ServiceController(object):
             self.service.enable()
             return "%s starting." % self.service
 
+        if command == 'kill':
+            self.service.disable(force=True)
+            return "Killing %s." % self.service
+
         raise UnknownCommandError("Unknown command %s" % command)
 
 
