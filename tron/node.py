@@ -357,7 +357,7 @@ class Node(object):
 
         def connect_fail(result):
             log.warning("Cannot run %s, Failed to connect to %s",
-                        run.id, self.hostname)
+                        run.run, self.hostname)
             self.connection_defer = None
             self._fail_run(run, failure.Failure(
                 exc_value=ConnectError("Connection to %s failed" %
