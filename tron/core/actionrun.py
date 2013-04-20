@@ -8,7 +8,7 @@ from tron import command_context
 from tron.core import action
 from tron.serialize import filehandler
 from tron import node
-from tron.actioncommand import ActionCommand
+from tron.actioncommand import ActionCommand, NoActionRunnerFactory
 
 from tron.utils import state, timeutils, proxy, iteration
 from tron.utils.observer import Observer
@@ -136,7 +136,7 @@ class ActionRun(Observer):
         self.exit_status        = exit_status
         self.bare_command       = bare_command
         self.rendered_command   = rendered_command
-        self.action_runner      = action_runner or ActionCommand
+        self.action_runner      = action_runner or NoActionRunnerFactory
         self.machine            = state.StateMachine(
                     self.STATE_SCHEDULED, delegate=self, force_state=run_state)
         self.is_cleanup         = cleanup

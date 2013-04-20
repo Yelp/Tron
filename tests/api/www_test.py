@@ -124,6 +124,18 @@ class RootResourceTestCase(WWWTestCase):
         assert_equal(set(response.keys()), set(expected_keys))
 
 
+class ActionRunHistoryResourceTestCase(WWWTestCase):
+
+    @setup
+    def setup_resource(self):
+        self.action_runs = [mock.MagicMock(), mock.MagicMock()]
+        self.resource = www.ActionRunHistoryResource(self.action_runs)
+
+    def test_render_GET(self):
+        response = self.resource.render_GET(self.request)
+        assert_equal(len(response), len(self.action_runs))
+
+
 class JobCollectionResourceTestCase(WWWTestCase):
 
     @class_setup
@@ -205,6 +217,16 @@ class JobResourceTestCase(WWWTestCase):
         resource = self.resource.getChild(identifier, None)
         assert_equal(resource.job_run,
             self.resource.get_run_from_identifier.return_value)
+
+    def test_getChild_action_run_history(self):
+        autospec_method(self.resource.get_run_from_identifier, return_value=None)
+        action_name = 'action_name'
+        action_runs = [mock.Mock(), mock.Mock()]
+        self.job.action_graph.names = [action_name]
+        self.job.runs.get_action_runs.return_value = action_runs
+        resource = self.resource.getChild(action_name, None)
+        assert_equal(resource.__class__, www.ActionRunHistoryResource)
+        assert_equal(resource.action_runs, action_runs)
 
 
 class ServiceResourceTestCase(WWWTestCase):
