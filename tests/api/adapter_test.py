@@ -4,7 +4,6 @@ import mock
 from testify import TestCase, assert_equal, run, setup, teardown
 from tests import mocks
 from tests.assertions import assert_length
-from tests.testingutils import Turtle
 from tron import node, scheduler
 from tron.api import adapter
 from tron.api.adapter import ReprAdapter, RunAdapter, ActionRunAdapter
@@ -28,7 +27,7 @@ class ReprAdapterTestCase(TestCase):
 
     @setup
     def setup_adapter(self):
-        self.original           = Turtle(one=1, two=2)
+        self.original           = mock.Mock(one=1, two=2)
         self.adapter            = MockAdapter(self.original)
 
     def test__init__(self):
@@ -101,8 +100,8 @@ class ActionRunAdapterTestCase(TestCase):
     @setup
     def setup_adapter(self):
         self.temp_dir = tempfile.mkdtemp()
-        self.action_run = Turtle(output_path=[self.temp_dir])
-        self.job_run = Turtle(action_runs={'action_name': self.action_run})
+        self.action_run = mock.MagicMock()
+        self.job_run = mock.MagicMock()
         self.adapter = ActionRunAdapter(self.action_run, self.job_run, 4)
 
     @teardown
@@ -113,6 +112,10 @@ class ActionRunAdapterTestCase(TestCase):
         assert_equal(self.adapter.max_lines, 4)
         assert_equal(self.adapter.job_run, self.job_run)
         assert_equal(self.adapter._obj, self.action_run)
+
+    def test_get_repr(self):
+        result = self.adapter.get_repr()
+        assert_equal(result['command'], self.action_run.rendered_command)
 
 
 class ActionRunGraphAdapterTestCase(TestCase):

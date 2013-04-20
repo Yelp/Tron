@@ -21,7 +21,7 @@ class window.ServiceInstance extends Backbone.Model
 
 class window.ServiceCollection extends Backbone.Collection
 
-    initialize: (options) =>
+    initialize: (models, options) =>
         super options
         options = options || {}
         @refreshModel = options.refreshModel

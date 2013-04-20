@@ -94,7 +94,9 @@ class ActionRunAdapter(RunAdapter):
             'requirements',
             'stdout',
             'stderr',
-            'duration'
+            'duration',
+            'job_name',
+            'run_num',
     ]
 
     def __init__(self, action_run, job_run=None,
@@ -129,6 +131,12 @@ class ActionRunAdapter(RunAdapter):
     def get_stderr(self):
         filename = actioncommand.ActionCommand.STDERR
         return self._get_serializer().tail(filename, self.max_lines)
+
+    def get_job_name(self):
+        return self._obj.job_run_id.rsplit('.', 1)[-2]
+
+    def get_run_num(self):
+        return self._obj.job_run_id.split('.')[-1]
 
 
 class ActionGraphAdapter(object):

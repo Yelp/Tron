@@ -124,6 +124,7 @@ class ActionRun(Observer):
 
     context_class               = command_context.ActionRunContext
 
+    # TODO: create a class for ActionRunId, JobRunId, Etc
     def __init__(self, job_run_id, name, node, bare_command=None,
             parent_context=None, output_path=None, cleanup=False,
             start_time=None, end_time=None, run_state=STATE_SCHEDULED,

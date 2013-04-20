@@ -46,7 +46,7 @@ class module.TronRoutes extends Backbone.Router
         @updateMainView(new Config(name: name), ConfigView)
 
     services: (params) ->
-        collection = new ServiceCollection(
+        collection = new ServiceCollection([],
             refreshModel: new RefreshModel(),
             filterModel: new FilterModel(module.getParamsMap(params)))
         @updateMainView(collection, ServiceListView)
@@ -58,7 +58,7 @@ class module.TronRoutes extends Backbone.Router
             ServiceView)
 
     jobs: (params) ->
-        collection = new JobCollection(
+        collection = new JobCollection([],
             refreshModel: new RefreshModel(),
             filterModel: new JobListFilterModel(module.getParamsMap(params)))
         @updateMainView(collection, JobListView)
@@ -73,12 +73,20 @@ class module.TronRoutes extends Backbone.Router
         @updateMainView(model, JobRunView)
 
     actionrun: (name, run, action) ->
-        model = new ActionRun(
+        model = new modules.actionrun.ActionRun(
             job_name: name
             run_num: run
             action_name: action
             refreshModel: new RefreshModel())
-        @updateMainView(model, ActionRunView)
+        historyCollection = new modules.actionrun.ActionRunHistory([],
+            job_name: name
+            action_name: action)
+        view = new modules.actionrun.ActionRunView(
+            model: model
+            history: historyCollection)
+        model.fetch()
+        historyCollection.fetch()
+        mainView.render(view)
 
 
 class MainView extends Backbone.View

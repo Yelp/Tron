@@ -21,7 +21,7 @@ class window.Job extends Backbone.Model
 
 class window.JobCollection extends Backbone.Collection
 
-    initialize: (options) =>
+    initialize: (models, options) =>
         super options
         options = options || {}
         @refreshModel = options.refreshModel
@@ -426,7 +426,8 @@ class window.JobRunView extends Backbone.View
         entry = (run) =>
             run['job_name'] = @model.get('job_name')
             run['run_num'] =  @model.get('run_num')
-            new ActionRunListEntryView(model:new ActionRun(run)).render().el
+            model = new modules.actionrun.ActionRun(run)
+            new modules.actionrun.ActionRunListEntryView(model: model).render().el
         @$('tbody.actionruns').html(entry(model) for model in @model.get('runs'))
 
     # TODO: add class for state
