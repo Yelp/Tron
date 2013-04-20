@@ -173,16 +173,27 @@ class module.ActionRunView extends Backbone.View
         makeTooltips(@$el)
         @
 
+class ActionRunHistorySliderModel
+
+    constructor: (@model) ->
+
+    length: =>
+        @model.models.length
+
 
 class module.ActionRunHistoryView extends Backbone.View
 
     initialize: (options) =>
         @listenTo(@model, "sync", @render)
+        sliderModel = new ActionRunHistorySliderModel(@model)
+        @sliderView = new modules.views.SliderView(model: sliderModel)
+        @listenTo(@sliderView, "slider:change", @renderList)
 
     tagName: "div"
 
     template: _.template """
           <h2>History</h2>
+          <div id="slider"></div>
           <table class="table table-hover table-outline table-striped">
             <thead class="sub-header">
               <tr>
@@ -199,9 +210,14 @@ class module.ActionRunHistoryView extends Backbone.View
           </table>
        """
 
-    render: =>
-        @$el.html @template()
+    renderList: =>
         view = (model) ->
             new module.ActionRunHistoryListEntryView(model: model).render().el
-        @$('tbody').html(view(model) for model in @model.models)
+        models = @model.models[...@sliderView.displayCount]
+        @$('tbody').html(view(model) for model in models)
+
+    render: =>
+        @$el.html @template()
+        @renderList()
+        @$('#slider').html @sliderView.render().el if @model.models.length
         @

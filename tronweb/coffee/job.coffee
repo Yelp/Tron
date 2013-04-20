@@ -231,11 +231,20 @@ class window.JobView extends Backbone.View
         @
 
 
+class JobRunListSliderModel
+
+    constructor: (@model) ->
+
+    length: =>
+        @model.get('runs').length
+
+
 class module.JobRunListView extends Backbone.View
 
     initialize: (options) =>
-        options = options || {}
-        @displayCount = options.displayCount || 10
+        sliderModel = new JobRunListSliderModel(@model)
+        @sliderView = new modules.views.SliderView(model: sliderModel)
+        @listenTo(@sliderView, "slider:change", @renderList)
 
     tagName: "div"
 
@@ -243,12 +252,7 @@ class module.JobRunListView extends Backbone.View
 
     template: _.template """
         <h2>Job Runs</h2>
-        <div class="list-controls controls-row">
-            <div class="span1">
-              <span id="display-count" class="label label-inverse"></span>
-            </div>
-            <div class="slider span8"></div>
-        </div>
+        <div id="slider"></div>
         <table class="table table-hover table-outline table-striped">
             <thead class="sub-header">
                 <tr>
@@ -264,31 +268,16 @@ class module.JobRunListView extends Backbone.View
         </table>
         """
 
-    handleSliderMove: (event, ui) =>
-        @updateDisplayCount(ui.value)
-        @renderList()
-
-    updateDisplayCount: (count) =>
-        @displayCount = count
-        content = """#{count} / #{@model.get('runs').length}"""
-        @$('#display-count').html(content)
-
     renderList: =>
         entry = (jobrun) ->
             new JobRunListEntryView(model:new JobRun(jobrun)).render().el
-        models = @model.get('runs')[...@displayCount]
+        models = @model.get('runs')[...@sliderView.displayCount]
         @$('tbody').html(entry(model) for model in models)
 
     render: =>
         @$el.html @template(@model.attributes)
-        @updateDisplayCount(_.min([@model.get('runs').length, @displayCount]))
+        @$('#slider').html @sliderView.render().el
         @renderList()
-        modules.views.makeSlider @$el,
-            max: @model.get('runs').length
-            min: 0
-            range: 'min'
-            value: @displayCount
-            slide: @handleSliderMove
         @
 
 module.formatManualRun = (manual) ->
