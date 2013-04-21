@@ -607,12 +607,12 @@ div.refresh-view span {
 .INFO,
 .running,
 .starting,
-.cancelled
 {
     .info;
 }
 
 .NOTICE,
+.cancelled,
 .disabled
 {
     .warning;
@@ -652,9 +652,55 @@ div.refresh-view span {
 
 
 /******************************************************************************
- *  stdout / stderr
+ *  Stdout / Stderr
  *****************************************************************************/
 
 pre.stdout, pre.stderr {
     margin-bottom: 0;
+}
+
+
+/******************************************************************************
+ * Timeline
+ *****************************************************************************/
+
+#timeline-graph {
+
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+    }
+
+    .axis.y path,
+    .axis.y line {
+        display: none;
+    }
+
+
+    .bar {
+      stroke-width: 0;
+      fill: @light-blue;
+      shape-rendering: crispEdges;
+    }
+
+    .bar.failed {
+        fill: @red;
+    }
+
+    .bar.succeeded {
+        fill: @green;
+    }
+
+    .bar.queued,
+    .bar.scheduled {
+        fill: #ccc;
+    }
+
+    .bar.cancelled {
+        fill: @yellow;
+    }
+
+
 }

@@ -188,6 +188,11 @@ class window.JobView extends Backbone.View
                 <div id="action-graph" class="graph job-view"></div>
             </div>
 
+            <div class="span12 outline-block">
+              <h2>Timeline</h2>
+              <div id="timeline-graph"></div>
+            </div>
+
             <div id="job-runs"></div>
         </div>
         """
@@ -196,8 +201,16 @@ class window.JobView extends Backbone.View
         new GraphView(
             model: @model.get('action_graph')
             buildContent: (d) -> """<code class="command">#{d.command}</code>"""
-            height: $('table.details').height() - 5 # TODO: why -5 to get it flush?
+            height: @$('table.details').height() - 5 # TODO: why -5 to get it flush?
         ).render()
+
+    renderTimeline: =>
+        new modules.timeline.TimelineView(
+            model: @model.get('runs')[...10]
+            nameField: 'run_num'
+            width: @$('#timeline-graph').innerWidth()
+        ).render()
+
 
     formatSettings: (attrs) =>
         template = _.template """
@@ -227,6 +240,7 @@ class window.JobView extends Backbone.View
         @$('#job-runs').html(@jobRunListView.render().el)
         @$('#refresh').html(@refreshView.render().el)
         @renderGraph()
+        @renderTimeline()
         makeTooltips(@$el)
         @
 

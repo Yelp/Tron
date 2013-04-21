@@ -241,7 +241,6 @@ class module.SliderView extends Backbone.View
     render: ->
         @$el.html @template
         @updateDisplayCount(_.min([@model.length(), @displayCount]))
-        console.log("Rendering with #{@displayCount}")
         module.makeSlider @$el,
             max: @model.length()
             min: 0
