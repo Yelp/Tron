@@ -150,6 +150,10 @@ class window.JobView extends Backbone.View
         @refreshView = new RefreshToggleView(model: @model.refreshModel)
         @jobRunListView = new module.JobRunListView(model: @model)
         @listenTo(@refreshView, 'refreshView', => @model.fetch())
+        sliderModel = new JobRunListSliderModel(@model)
+        @sliderView = new modules.views.SliderView(model: sliderModel)
+        @listenTo(@sliderView, "slider:change", @renderTimeline)
+        @currentDate = new Date()
 
     tagName: "div"
 
@@ -192,13 +196,17 @@ class window.JobView extends Backbone.View
 
             <div class="span12 outline-block">
               <h2>Timeline</h2>
-              <div id="timeline-graph"></div>
+              <div>
+                <div id="slider-chart"></div>
+                <div id="timeline-graph"></div>
+              </div>
             </div>
 
             <div id="job-runs"></div>
         </div>
         """
 
+    # TODO: move to JobActionGraphView
     renderGraph: =>
         new GraphView(
             model: @model.get('action_graph')
@@ -206,16 +214,16 @@ class window.JobView extends Backbone.View
             height: @$('table.details').height() - 5 # TODO: why -5 to get it flush?
         ).render()
 
-    # TODO: add slider
+    # TODO: move to JobTimelineView
     renderTimeline: =>
-        job_runs = @model.get('runs')[...10]
+        job_runs = @model.get('runs')[...@sliderView.displayCount]
         new modules.timeline.TimelineView(
             model: job_runs
             nameField: 'run_num'
             width: @$('#timeline-graph').innerWidth()
             height: job_runs.length * 30 + 60
+            maxDate: @currentDate
         ).render()
-
 
     formatSettings: (attrs) =>
         template = _.template """
@@ -246,6 +254,7 @@ class window.JobView extends Backbone.View
         @$('#refresh').html(@refreshView.render().el)
         @renderGraph()
         @renderTimeline()
+        @$('#slider-chart').html @sliderView.render().el
         makeTooltips(@$el)
         modules.views.makeHeaderToggle(@$el)
         @
@@ -273,7 +282,7 @@ class module.JobRunListView extends Backbone.View
     template: _.template """
         <h2>Job Runs</h2>
         <div>
-        <div id="slider"></div>
+        <div id="slider-table"></div>
         <table class="table table-hover table-outline table-striped">
             <thead class="sub-header">
                 <tr>
@@ -298,7 +307,7 @@ class module.JobRunListView extends Backbone.View
 
     render: =>
         @$el.html @template(@model.attributes)
-        @$('#slider').html @sliderView.render().el
+        @$('#slider-table').html @sliderView.render().el
         @renderList()
         @
 

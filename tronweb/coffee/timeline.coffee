@@ -3,15 +3,23 @@ window.modules = window.modules || {}
 module = window.modules.timeline = {}
 
 
-startTime = (item) ->
-    new Date(item.start_time || item.run_time)
+buildStartTime = ->
+    (item) -> new Date(item.start_time || item.run_time)
 
-endTime = (item) ->
-    return new Date() if item.state == 'running'
-    new Date(item.end_time || item.start_time || item.run_time)
+
+buildEndTime = (maxDate, useMaxDate) ->
+    (item) ->
+        return maxDate if useMaxDate(item)
+        new Date(item.end_time || item.start_time || item.run_time)
+
+
+isRunningState = (item) ->
+    item.state == 'running'
+
 
 getState = (item) ->
     return item.state
+
 
 class module.TimelineView extends Backbone.View
 
@@ -19,13 +27,14 @@ class module.TimelineView extends Backbone.View
 
     initialize: (options) =>
         @margins = _.extend(
-            {top: 40, right: 40, bottom: 20, left: 60},
+            {top: 30, right: 40, bottom: 20, left: 60},
             options.margins)
         @height = options.height || 500
         @width = options.width || 1000
         @nameField = options.nameField
-        @startTime = options.startTime || startTime
-        @endTime = options.endTime || endTime
+        @startTime = options.startTime || buildStartTime()
+        @maxDate = options.maxDate || new Date()
+        @endTime = options.endTime || buildEndTime(@maxDate, isRunningState)
         @getClass = options.getClass || getState
         @minBarWidth = options.minBarWidth || 5
 
@@ -36,8 +45,7 @@ class module.TimelineView extends Backbone.View
         @width - @margins.left - @margins.right
 
     buildX: (data) =>
-        domain = [ d3.min(data, @startTime),
-                   d3.max(data, @endTime)]
+        domain = [d3.min(data, @startTime), d3.max(data, @endTime)]
         d3.time.scale().domain(domain)
             .rangeRound([0, @innerWidth()])
 
@@ -83,6 +91,7 @@ class module.TimelineView extends Backbone.View
                 height: (d) => y.rangeBand()
 
     render: =>
+        @$el.html('')
         data = @model
         [x, y] = [@buildX(data), @buildY(data)]
         [xAxis, yAxis] = @buildAxis(x, y)

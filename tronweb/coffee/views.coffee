@@ -71,8 +71,8 @@ window.formatState = (state) =>
 module.makeHeaderToggle = (root) ->
     headers = root.find('.outline-block h2')
     headers.click (event) -> $(event.target).nextAll().slideToggle()
-    console.log(headers)
     headers.addClass('clickable')
+
 
 class window.FilterView extends Backbone.View
 
@@ -215,7 +215,7 @@ class window.ClickableListEntry extends Backbone.View
 
 
 module.makeSlider = (root, options) ->
-    root.find('.slider').slider(options)
+    root.find('.slider-bar').slider(options)
 
 
 class module.SliderView extends Backbone.View
@@ -232,7 +232,7 @@ class module.SliderView extends Backbone.View
             <div class="span1">
               <span id="display-count" class="label label-inverse"></span>
             </div>
-            <div class="slider span8"></div>
+            <div class="slider-bar span10"></div>
         """
 
     handleSliderMove: (event, ui) =>
