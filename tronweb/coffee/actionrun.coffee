@@ -163,7 +163,7 @@ class module.ActionRunView extends Backbone.View
                 <pre class="stderr"><% print(stderr.join('\\n')) %></pre>
             </div>
 
-            <div class="span12 outline-block" id="action-run-history">
+            <div id="action-run-history">
             </div>
         </div>
         """
@@ -193,6 +193,8 @@ class module.ActionRunHistoryView extends Backbone.View
         @listenTo(@sliderView, "slider:change", @renderList)
 
     tagName: "div"
+
+    className: "span12 outline-block"
 
     template: _.template """
           <h2>History</h2>
@@ -225,5 +227,5 @@ class module.ActionRunHistoryView extends Backbone.View
         @$el.html @template()
         @renderList()
         @$('#slider').html @sliderView.render().el if @model.models.length
-        modules.views.makeHeaderToggle(@$el.parent().parent())
+        modules.views.makeHeaderToggle(@$el.parent())
         @

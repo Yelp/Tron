@@ -3,7 +3,7 @@ window.modules = window.modules || {}
 module = window.modules.timeline = {}
 
 
-buildStartTime = ->
+buildStartTime = (maxDate) ->
     (item) -> new Date(item.start_time || item.run_time)
 
 
@@ -32,8 +32,8 @@ class module.TimelineView extends Backbone.View
         @height = options.height || 500
         @width = options.width || 1000
         @nameField = options.nameField
-        @startTime = options.startTime || buildStartTime()
         @maxDate = options.maxDate || new Date()
+        @startTime = options.startTime || buildStartTime(@maxDate)
         @endTime = options.endTime || buildEndTime(@maxDate, isRunningState)
         @getClass = options.getClass || getState
         @minBarWidth = options.minBarWidth || 5
@@ -73,6 +73,7 @@ class module.TimelineView extends Backbone.View
             .append("g").attr
                 transform: "translate(#{@margins.left}, #{@margins.top})"
 
+    # TODO: make links
     buildSvgAxis: (svg, xAxis, yAxis) =>
         svg.append("g").attr(class: "x axis").call(xAxis)
         svg.append("g").attr(class: "y axis").call(yAxis)

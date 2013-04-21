@@ -424,6 +424,14 @@ class window.JobRunView extends Backbone.View
             </div>
 
             <div class="span12 outline-block">
+              <h2>Timeline</h2>
+              <div>
+                <div id="slider-chart"></div>
+                <div id="timeline-graph"></div>
+              </div>
+            </div>
+
+            <div class="span12 outline-block">
                 <h2>Action Runs</h2>
                 <div>
                 <table class="table table-hover table-outline">
@@ -453,7 +461,34 @@ class window.JobRunView extends Backbone.View
             new modules.actionrun.ActionRunListEntryView(model: model).render().el
         @$('tbody.actionruns').html(entry(model) for model in @model.get('runs'))
 
-    # TODO: add class for state
+    getMaxDate: =>
+        actionRuns = @model.get('runs')
+        dates = (r.end_time || r.start_time for r in actionRuns)
+        dates = (new Date(date) for date in dates when date?)
+        dates.push(new Date(@model.get('run_time')))
+        _.max(dates)
+
+    renderTimeline: =>
+        actionRuns = @model.get('runs')
+        maxDate = @getMaxDate()
+
+        startTime = (item) ->
+            if item.start_time then new Date(item.start_time) else maxDate
+
+        endTime = (item) ->
+            if item.end_time then new Date(item.end_time) else maxDate
+
+        new modules.timeline.TimelineView(
+            model: actionRuns
+            nameField: 'action_name'
+            width: @$('#timeline-graph').innerWidth()
+            height: actionRuns.length * 30 + 60
+            maxDate: @currentDate
+            startTime: startTime
+            endTime: endTime
+            margins: left: 100
+        ).render()
+
     popupTemplate: _.template """
         <ul class="unstyled">
             <li><% print(formatState(state)) %></li>
@@ -473,6 +508,7 @@ class window.JobRunView extends Backbone.View
         @$('#filter').html(@refreshView.render().el)
         @renderList()
         @renderGraph()
+        @renderTimeline()
         makeTooltips(@$el)
         modules.views.makeHeaderToggle(@$el)
         @
