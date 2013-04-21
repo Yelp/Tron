@@ -128,6 +128,7 @@ class module.ActionRunView extends Backbone.View
             </div>
             <div class="span12 outline-block">
                 <h2>Details</h2>
+                <div>
                 <table class="table details">
                     <tbody>
                     <tr><td class="span2">State</td>
@@ -151,6 +152,7 @@ class module.ActionRunView extends Backbone.View
                         </td></tr>
                     </tbody>
                 </table>
+                </div>
             </div>
             <div class="span12 outline-block">
                 <h2>stdout</h2>
@@ -171,6 +173,7 @@ class module.ActionRunView extends Backbone.View
         @$('#refresh').html(@refreshView.render().el)
         @$('#action-run-history').html(@historyView.render().el)
         makeTooltips(@$el)
+        modules.views.makeHeaderToggle(@$el)
         @
 
 class ActionRunHistorySliderModel
@@ -193,6 +196,7 @@ class module.ActionRunHistoryView extends Backbone.View
 
     template: _.template """
           <h2>History</h2>
+          <div>
           <div id="slider"></div>
           <table class="table table-hover table-outline table-striped">
             <thead class="sub-header">
@@ -208,6 +212,7 @@ class module.ActionRunHistoryView extends Backbone.View
             <tbody>
             </tbody>
           </table>
+          </div>
        """
 
     renderList: =>
@@ -220,4 +225,5 @@ class module.ActionRunHistoryView extends Backbone.View
         @$el.html @template()
         @renderList()
         @$('#slider').html @sliderView.render().el if @model.models.length
+        modules.views.makeHeaderToggle(@$el.parent().parent())
         @

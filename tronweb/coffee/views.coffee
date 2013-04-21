@@ -68,6 +68,12 @@ window.formatState = (state) =>
     """<span class="label #{state}">#{state}</span>"""
 
 
+module.makeHeaderToggle = (root) ->
+    headers = root.find('.outline-block h2')
+    headers.click (event) -> $(event.target).nextAll().slideToggle()
+    console.log(headers)
+    headers.addClass('clickable')
+
 class window.FilterView extends Backbone.View
 
     tagName: "div"

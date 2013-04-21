@@ -166,6 +166,7 @@ class window.JobView extends Backbone.View
             </div>
             <div class="span5 outline-block">
                 <h2>Details</h2>
+                <div>
                 <table class="table details">
                     <tbody>
                     <tr><td>Status</td>
@@ -182,6 +183,7 @@ class window.JobView extends Backbone.View
                         <td><% print(dateFromNow( next_run)) %></td></tr>
                     </tbody>
                 </table>
+                </div>
             </div>
             <div class="span7 outline-block">
                 <h2>Action Graph</h2>
@@ -245,6 +247,7 @@ class window.JobView extends Backbone.View
         @renderGraph()
         @renderTimeline()
         makeTooltips(@$el)
+        modules.views.makeHeaderToggle(@$el)
         @
 
 
@@ -269,6 +272,7 @@ class module.JobRunListView extends Backbone.View
 
     template: _.template """
         <h2>Job Runs</h2>
+        <div>
         <div id="slider"></div>
         <table class="table table-hover table-outline table-striped">
             <thead class="sub-header">
@@ -283,6 +287,7 @@ class module.JobRunListView extends Backbone.View
             <tbody class="jobruns">
             </tbody>
         </table>
+        </div>
         """
 
     renderList: =>
@@ -387,6 +392,7 @@ class window.JobRunView extends Backbone.View
             </div>
             <div class="span5 outline-block">
                 <h2>Details</h2>
+                <div>
                 <table class="table details">
                     <tr><td class="span2">State</td>
                         <td><% print(formatState(state)) %></td></tr>
@@ -401,6 +407,7 @@ class window.JobRunView extends Backbone.View
                         <td><% print(dateFromNow(end_time, '')) %></td>
                     </tr>
                 </table>
+                </div>
             </div>
             <div class="span7 outline-block">
                 <h2>Action Graph</h2>
@@ -409,6 +416,7 @@ class window.JobRunView extends Backbone.View
 
             <div class="span12 outline-block">
                 <h2>Action Runs</h2>
+                <div>
                 <table class="table table-hover table-outline">
                     <thead class="sub-header">
                         <tr>
@@ -423,8 +431,8 @@ class window.JobRunView extends Backbone.View
                     <tbody class="actionruns">
                     </tbody>
                 </table>
+                </div>
             </div>
-
         </div>
         """
 
@@ -457,4 +465,5 @@ class window.JobRunView extends Backbone.View
         @renderList()
         @renderGraph()
         makeTooltips(@$el)
+        modules.views.makeHeaderToggle(@$el)
         @
