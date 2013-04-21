@@ -204,11 +204,14 @@ class window.JobView extends Backbone.View
             height: @$('table.details').height() - 5 # TODO: why -5 to get it flush?
         ).render()
 
+    # TODO: add slider
     renderTimeline: =>
+        job_runs = @model.get('runs')[...10]
         new modules.timeline.TimelineView(
-            model: @model.get('runs')[...10]
+            model: job_runs
             nameField: 'run_num'
             width: @$('#timeline-graph').innerWidth()
+            height: job_runs.length * 30 + 60
         ).render()
 
 

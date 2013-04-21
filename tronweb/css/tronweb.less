@@ -673,7 +673,21 @@ pre.stdout, pre.stderr {
         shape-rendering: crispEdges;
     }
 
-    .axis.y path,
+    .axis.x .tick.major line {
+        stroke-width: 0;
+
+    }
+    .axis.x g.tick.major:nth-child(2n+2) line {
+        stroke: #ddd;
+        stroke-width: 1px;
+        shape-rendering: crispEdges;
+    }
+
+    .axis text {
+        font-weight: bold;
+        font-size: 12px;
+    }
+
     .axis.y line {
         display: none;
     }
@@ -681,12 +695,12 @@ pre.stdout, pre.stderr {
 
     .bar {
       stroke-width: 0;
-      fill: @light-blue;
+      fill: @blue;
       shape-rendering: crispEdges;
     }
 
     .bar.failed {
-        fill: @red;
+        fill: @dark-red;
     }
 
     .bar.succeeded {

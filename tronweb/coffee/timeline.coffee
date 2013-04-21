@@ -3,14 +3,15 @@ window.modules = window.modules || {}
 module = window.modules.timeline = {}
 
 
-
-start_time = (item) ->
+startTime = (item) ->
     new Date(item.start_time || item.run_time)
 
-end_time = (item) ->
+endTime = (item) ->
     return new Date() if item.state == 'running'
     new Date(item.end_time || item.start_time || item.run_time)
 
+getState = (item) ->
+    return item.state
 
 class module.TimelineView extends Backbone.View
 
@@ -18,12 +19,15 @@ class module.TimelineView extends Backbone.View
 
     initialize: (options) =>
         @margins = _.extend(
-            {top: 40, right: 20, bottom: 20, left: 80},
+            {top: 40, right: 40, bottom: 20, left: 60},
             options.margins)
         @height = options.height || 500
         @width = options.width || 1000
         @nameField = options.nameField
-        @minBarWidth = 5
+        @startTime = options.startTime || startTime
+        @endTime = options.endTime || endTime
+        @getClass = options.getClass || getState
+        @minBarWidth = options.minBarWidth || 5
 
     innerHeight: =>
         @height - @margins.bottom - @margins.top
@@ -31,10 +35,9 @@ class module.TimelineView extends Backbone.View
     innerWidth: =>
         @width - @margins.left - @margins.right
 
-    # TODO: parameterise these lookups
     buildX: (data) =>
-        domain = [ d3.min(data, start_time),
-                   d3.max(data, end_time)]
+        domain = [ d3.min(data, @startTime),
+                   d3.max(data, @endTime)]
         d3.time.scale().domain(domain)
             .rangeRound([0, @innerWidth()])
 
@@ -45,10 +48,14 @@ class module.TimelineView extends Backbone.View
 
     buildAxis: (x, y) =>
         xAxis = d3.svg.axis().scale(x).orient("top")
+            .ticks([10])
+            .tickSize(-@innerHeight(), 0, 0)
+            .tickPadding(5)
         yAxis = d3.svg.axis().scale(y).orient("left")
+            .tickSize(0)
+            .tickPadding(5)
         [xAxis, yAxis]
 
-    # TODO: add some guidelines (x, or y?)
     # TODO: add mouseover for bars
     buildSvg: =>
         d3.select(@el).append("svg").attr
@@ -63,17 +70,17 @@ class module.TimelineView extends Backbone.View
         svg.append("g").attr(class: "y axis").call(yAxis)
 
     buildSvgBars: (svg, data, x, y) =>
-        width = (d) =>
-            _.max([@minBarWidth, x(end_time(d)) - x(start_time(d))])
+        getWidth = (d) =>
+            _.max([@minBarWidth, x(@endTime(d)) - x(@startTime(d))])
 
         svg.selectAll('.timeline-chart').data(data).enter()
             .append('rect')
             .attr
-                class:  (d) -> "bar #{d.state}"
-                x:      (d) -> x(start_time(d))
-                width:  width
+                class:  (d) => "bar #{@getClass(d)}"
+                x:      (d) => x(@startTime(d))
+                width:  getWidth
                 y:      (d) => y(d[@nameField])
-                height: (d) -> y.rangeBand()
+                height: (d) => y.rangeBand()
 
     render: =>
         data = @model
