@@ -23,11 +23,11 @@ describe "actionrun.coffee", ->
             expect(resp['job_run_url']).toEqual('#job/job_name/run_num')
             expect(resp['url']).toEqual('#job/job_name/run_num/action_name')
 
-    describe "ActionRunHiustory Model", ->
+    describe "ActionRunHistory Model", ->
         self = this
 
         beforeEach ->
-            self.collection = new module.ActionRunHistory
+            self.collection = new module.ActionRunHistory [],
                 job_name: 'job_name'
                 action_name: 'action_name'
 

@@ -21,6 +21,13 @@ getState = (item) ->
     return item.state
 
 
+module.padMaxDate = (dateRange, padding) ->
+    [minDate, maxDate] = (moment(date) for date in dateRange)
+    delta = maxDate.diff(minDate)
+    maxDate.add('ms', delta * padding)
+    [minDate.toDate(), maxDate.toDate()]
+
+
 class module.TimelineView extends Backbone.View
 
     el: "#timeline-graph"
@@ -46,6 +53,8 @@ class module.TimelineView extends Backbone.View
 
     buildX: (data) =>
         domain = [d3.min(data, @startTime), d3.max(data, @endTime)]
+        domain = module.padMaxDate(domain, 0.02)
+
         d3.time.scale().domain(domain)
             .rangeRound([0, @innerWidth()])
 

@@ -486,7 +486,8 @@ class window.JobRunView extends Backbone.View
             maxDate: @currentDate
             startTime: startTime
             endTime: endTime
-            margins: left: 100
+            margins:
+                left: 150
         ).render()
 
     popupTemplate: _.template """
