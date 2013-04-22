@@ -11,7 +11,7 @@ class module.TronRoutes extends Backbone.Router
         "dashboard(;*params)":      "dashboard"
         "jobs(;*params)":           "jobs"
         "job/:name":                "job"
-        "job/:name/:run":           "jobrun"
+        "job/:job_name/:run_num":   "jobrun"
         "job/:name/:run/:action":   "actionrun"
         "services(;*params)":       "services"
         "service/:name":            "service"
@@ -165,6 +165,6 @@ module.updateLocationParam = (name, value) ->
 window.attachRouter = () ->
     $(document).ready ->
 
-        window.routes = new window.modules.routes.TronRoutes()
+        window.routes = new modules.routes.TronRoutes()
         window.mainView = new MainView()
         Backbone.history.start(root: "/web/")

@@ -143,6 +143,30 @@ class JobListEntryView extends ClickableListEntry
         @
 
 
+class JobRunTimelineEntry
+
+    constructor: (@jobRun, @maxDate) ->
+
+    toString: =>
+        @jobRun.run_num
+
+    getYAxisLink: =>
+        "#job/#{@jobRun.job_name}/#{@jobRun.run_num}"
+
+    getYAxisText: =>
+        @jobRun.run_num
+
+    getBarClass: =>
+        @jobRun.state
+
+    getStart: =>
+        new Date(@jobRun.start_time || @jobRun.run_time)
+
+    getEnd: =>
+        return @maxDate if @jobRun.state == 'running'
+        new Date(@jobRun.end_time || @jobRun.start_time || @jobRun.run_time)
+
+
 class window.JobView extends Backbone.View
 
     initialize: (options) =>
@@ -216,14 +240,9 @@ class window.JobView extends Backbone.View
 
     # TODO: move to JobTimelineView
     renderTimeline: =>
-        job_runs = @model.get('runs')[...@sliderView.displayCount]
-        new modules.timeline.TimelineView(
-            model: job_runs
-            nameField: 'run_num'
-            width: @$('#timeline-graph').innerWidth()
-            height: job_runs.length * 30 + 60
-            maxDate: @currentDate
-        ).render()
+        jobRuns = @model.get('runs')[...@sliderView.displayCount]
+        jobRuns = (new JobRunTimelineEntry(run, @currentDate) for run in jobRuns)
+        new modules.timeline.TimelineView(model: jobRuns).render()
 
     formatSettings: (attrs) =>
         template = _.template """
@@ -359,7 +378,6 @@ class JobRunListEntryView extends ClickableListEntry
 
     className: "clickable"
 
-    # TODO: add icon for manual run flag
     template: _.template """
         <td>
             <a href="#job/<%= job_name %>/<%= run_num %>"><%= run_num %></a>
@@ -469,23 +487,12 @@ class window.JobRunView extends Backbone.View
         _.max(dates)
 
     renderTimeline: =>
-        actionRuns = @model.get('runs')
         maxDate = @getMaxDate()
-
-        startTime = (item) ->
-            if item.start_time then new Date(item.start_time) else maxDate
-
-        endTime = (item) ->
-            if item.end_time then new Date(item.end_time) else maxDate
+        actionRuns = for actionRun in @model.get('runs')
+            new modules.actionrun.ActionRunTimelineEntry(actionRun, maxDate)
 
         new modules.timeline.TimelineView(
             model: actionRuns
-            nameField: 'action_name'
-            width: @$('#timeline-graph').innerWidth()
-            height: actionRuns.length * 30 + 60
-            maxDate: @currentDate
-            startTime: startTime
-            endTime: endTime
             margins:
                 left: 150
         ).render()

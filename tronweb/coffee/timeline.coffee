@@ -3,29 +3,14 @@ window.modules = window.modules || {}
 module = window.modules.timeline = {}
 
 
-buildStartTime = (maxDate) ->
-    (item) -> new Date(item.start_time || item.run_time)
-
-
-buildEndTime = (maxDate, useMaxDate) ->
-    (item) ->
-        return maxDate if useMaxDate(item)
-        new Date(item.end_time || item.start_time || item.run_time)
-
-
-isRunningState = (item) ->
-    item.state == 'running'
-
-
-getState = (item) ->
-    return item.state
-
-
 module.padMaxDate = (dateRange, padding) ->
     [minDate, maxDate] = (moment(date) for date in dateRange)
     delta = maxDate.diff(minDate)
     maxDate.add('ms', delta * padding)
     [minDate.toDate(), maxDate.toDate()]
+
+
+call = (field) -> (item) -> item[field]()
 
 
 class module.TimelineView extends Backbone.View
@@ -36,13 +21,9 @@ class module.TimelineView extends Backbone.View
         @margins = _.extend(
             {top: 30, right: 40, bottom: 20, left: 60},
             options.margins)
-        @height = options.height || 500
-        @width = options.width || 1000
-        @nameField = options.nameField
-        @maxDate = options.maxDate || new Date()
-        @startTime = options.startTime || buildStartTime(@maxDate)
-        @endTime = options.endTime || buildEndTime(@maxDate, isRunningState)
-        @getClass = options.getClass || getState
+        verticalMargins = @margins.top + @margins.bottom
+        @height = options.height || @model.length * 30 + verticalMargins
+        @width = options.width || @$el.innerWidth()
         @minBarWidth = options.minBarWidth || 5
 
     innerHeight: =>
@@ -52,7 +33,7 @@ class module.TimelineView extends Backbone.View
         @width - @margins.left - @margins.right
 
     buildX: (data) =>
-        domain = [d3.min(data, @startTime), d3.max(data, @endTime)]
+        domain = [ d3.min(data, call('getStart')), d3.max(data, call('getEnd'))]
         domain = module.padMaxDate(domain, 0.02)
 
         d3.time.scale().domain(domain)
@@ -60,7 +41,7 @@ class module.TimelineView extends Backbone.View
 
     buildY: (data) =>
         d3.scale.ordinal()
-            .domain(_.map(data, (item) => item[@nameField]))
+            .domain(data)
             .rangeBands([0, @innerHeight()], 0.1)
 
     buildAxis: (x, y) =>
@@ -82,22 +63,31 @@ class module.TimelineView extends Backbone.View
             .append("g").attr
                 transform: "translate(#{@margins.left}, #{@margins.top})"
 
-    # TODO: make links
     buildSvgAxis: (svg, xAxis, yAxis) =>
+        self = @
         svg.append("g").attr(class: "x axis").call(xAxis)
         svg.append("g").attr(class: "y axis").call(yAxis)
+            .selectAll('g').each (d) ->
+                ele = d3.select(this)
+                ele.selectAll('text').remove()
+                ele.selectAll('line').remove()
+                ele.append('a')
+                    .attr('xlink:href': d.getYAxisLink())
+                    .append('text').attr( x: -5, y: 0, dy: ".32em")
+                    .text(d.getYAxisText())
+
 
     buildSvgBars: (svg, data, x, y) =>
         getWidth = (d) =>
-            _.max([@minBarWidth, x(@endTime(d)) - x(@startTime(d))])
+            _.max([@minBarWidth, x(d.getEnd()) - x(d.getStart())])
 
         svg.selectAll('.timeline-chart').data(data).enter()
             .append('rect')
             .attr
-                class:  (d) => "bar #{@getClass(d)}"
-                x:      (d) => x(@startTime(d))
+                class:  (d) => "bar #{d.getBarClass()}"
+                x:      (d) => x(d.getStart())
                 width:  getWidth
-                y:      (d) => y(d[@nameField])
+                y:      (d) => y(d)
                 height: (d) => y.rangeBand()
 
     render: =>

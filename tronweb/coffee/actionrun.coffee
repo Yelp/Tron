@@ -79,6 +79,32 @@ class module.ActionRunHistoryListEntryView extends ClickableListEntry
         @
 
 
+class module.ActionRunTimelineEntry
+
+    constructor: (@actionRun, @maxDate) ->
+
+    toString: =>
+        @actionRun.action_name
+
+    getYAxisLink: =>
+        "#job/#{@actionRun.job_name}/#{@actionRun.run_num}/#{@actionRun.action_name}"
+
+    getYAxisText: =>
+        @actionRun.action_name
+
+    getBarClass: =>
+        @actionRun.state
+
+    getStart: =>
+        @getDate(@actionRun.start_time)
+
+    getEnd: =>
+        @getDate(@actionRun.end_time)
+
+    getDate: (date) ->
+        if date then new Date(date) else @maxDate
+
+
 class module.ActionRunListEntryView extends ClickableListEntry
 
     initialize: (options) =>

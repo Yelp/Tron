@@ -65,7 +65,7 @@ h1 {
     padding: 10px 20px;
     .header;
     font-variant: small-caps;
-    margin-bottom: 20px;
+    margin: 20px 0;
 
     .pull-right {
         margin-top: -4px;
@@ -688,7 +688,13 @@ pre.stdout, pre.stderr {
         font-size: 12px;
     }
 
-    .axis.y line {
+    .axis.y text {
+        text-anchor: end;
+    }
+
+    .axis.y line,
+    .axis.y > g > text
+    {
         display: none;
     }
 
