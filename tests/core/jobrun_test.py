@@ -628,3 +628,12 @@ class JobRunCollectionTestCase(TestCase):
     def test__str__(self):
         expected = "JobRunCollection[4(queued), 3(running), 2(succeeded), 1(succeeded)]"
         assert_equal(str(self.run_collection), expected)
+
+    def test_get_action_runs(self):
+        action_name = 'action_name'
+        self.run_collection.runs = job_runs = [mock.Mock(), mock.Mock()]
+        runs = self.run_collection.get_action_runs(action_name)
+        expected = [job_run.get_action_run.return_value for job_run in job_runs]
+        assert_equal(runs, expected)
+        for job_run in job_runs:
+            job_run.get_action_run.assert_called_with(action_name)

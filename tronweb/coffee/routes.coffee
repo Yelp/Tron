@@ -1,7 +1,9 @@
 
 # Routes
+window.modules = window.modules || {}
+module = window.modules.routes = {}
 
-class TronRoutes extends Backbone.Router
+class module.TronRoutes extends Backbone.Router
 
     routes:
         "":                         "index"
@@ -26,13 +28,13 @@ class TronRoutes extends Backbone.Router
 
     home: (params) ->
         model = new Dashboard
-            filterModel: new DashboardFilterModel(getParamsMap(params))
+            filterModel: new DashboardFilterModel(module.getParamsMap(params))
         @updateMainView(model, DashboardView)
 
     dashboard: (params) ->
         mainView.close()
         model = new Dashboard
-            filterModel: new DashboardFilterModel(getParamsMap(params))
+            filterModel: new DashboardFilterModel(module.getParamsMap(params))
         dashboard = new DashboardView(model: model)
         model.fetch()
         $('#all-view').html dashboard.render().el
@@ -44,9 +46,9 @@ class TronRoutes extends Backbone.Router
         @updateMainView(new Config(name: name), ConfigView)
 
     services: (params) ->
-        collection = new ServiceCollection(
+        collection = new ServiceCollection([],
             refreshModel: new RefreshModel(),
-            filterModel: new FilterModel(getParamsMap(params)))
+            filterModel: new FilterModel(module.getParamsMap(params)))
         @updateMainView(collection, ServiceListView)
 
     service: (name) ->
@@ -56,9 +58,9 @@ class TronRoutes extends Backbone.Router
             ServiceView)
 
     jobs: (params) ->
-        collection = new JobCollection(
+        collection = new JobCollection([],
             refreshModel: new RefreshModel(),
-            filterModel: new JobListFilterModel(getParamsMap(params)))
+            filterModel: new JobListFilterModel(module.getParamsMap(params)))
         @updateMainView(collection, JobListView)
 
     job: (name) ->
@@ -71,12 +73,20 @@ class TronRoutes extends Backbone.Router
         @updateMainView(model, JobRunView)
 
     actionrun: (name, run, action) ->
-        model = new ActionRun(
+        model = new modules.actionrun.ActionRun(
             job_name: name
             run_num: run
             action_name: action
             refreshModel: new RefreshModel())
-        @updateMainView(model, ActionRunView)
+        historyCollection = new modules.actionrun.ActionRunHistory([],
+            job_name: name
+            action_name: action)
+        view = new modules.actionrun.ActionRunView(
+            model: model
+            history: historyCollection)
+        model.fetch()
+        historyCollection.fetch()
+        mainView.render(view)
 
 
 class MainView extends Backbone.View
@@ -112,7 +122,7 @@ class MainView extends Backbone.View
     """
 
     setActive: =>
-        [path, params] = getLocationParams()
+        [path, params] = module.getLocationParams()
         path = path.split('/')[0]
         @$("a[href=#{path}]").parent('li').addClass 'active'
 
@@ -126,32 +136,35 @@ class MainView extends Backbone.View
         @trigger('closeView')
 
 
-splitKeyValuePairs = (pairs) ->
+module.splitKeyValuePairs = (pairs) ->
     _.mash(param.split('=') for param in pairs)
 
-getParamsMap = (paramString) ->
+module.getParamsMap = (paramString) ->
     paramString = paramString || ""
-    splitKeyValuePairs(paramString.split(';'))
+    module.splitKeyValuePairs(paramString.split(';'))
+
+module.getLocationHash = ->
+    document.location.hash
+
+module.getLocationParams = ->
+    parts = module.getLocationHash().split(';')
+    [parts[0], module.splitKeyValuePairs(parts[1..])]
 
 
-getLocationParams = ->
-    parts = document.location.hash.split(';')
-    [parts[0], splitKeyValuePairs(parts[1..])]
-
-
-buildLocationString = (base, params) ->
+module.buildLocationString = (base, params) ->
     params = (pair.join('=') for pair in _.pairs(params) when pair[1]).join(';')
     "#{ base };#{ params }"
 
 
-window.updateLocationParam = (name, value) ->
-    [base, params] = getLocationParams()
+module.updateLocationParam = (name, value) ->
+    [base, params] = module.getLocationParams()
     params[name] = value
-    routes.navigate(buildLocationString(base, params))
+    routes.navigate(module.buildLocationString(base, params))
 
 
-$(document).ready ->
+window.attachRouter = () ->
+    $(document).ready ->
 
-    window.routes = new TronRoutes()
-    window.mainView = new MainView()
-    Backbone.history.start(root: "/web/")
+        window.routes = new window.modules.routes.TronRoutes()
+        window.mainView = new MainView()
+        Backbone.history.start(root: "/web/")
