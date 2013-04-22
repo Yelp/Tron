@@ -11,3 +11,5 @@ docs/_build/
 docs/images/
 *.dot
 tronweb/js/cs/*.js
+tronweb_tests/spec/*.js
+tronweb_tests/lib/

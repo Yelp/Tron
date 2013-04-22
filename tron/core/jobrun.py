@@ -240,6 +240,9 @@ class JobRun(Observable, Observer):
         self._action_runs = None
         self.output_path.delete()
 
+    def get_action_run(self, action_name):
+        return self.action_runs.get(action_name)
+
     @property
     def state(self):
         """The overall state of this job run. Based on the state of its actions.
@@ -429,6 +432,9 @@ class JobRunCollection(object):
         while len(self.runs) > self.run_limit:
             run = self.runs.pop()
             run.cleanup()
+
+    def get_action_runs(self, action_name):
+        return [job_run.get_action_run(action_name) for job_run in self]
 
     @property
     def state_data(self):

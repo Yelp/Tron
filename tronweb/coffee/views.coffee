@@ -1,5 +1,8 @@
 
 # Common view elements
+window.modules = window.modules || {}
+window.modules.views = module = {}
+
 
 # Note about subview
 # Subviews need to re-delegate events, because they are lost
@@ -37,6 +40,7 @@ window.getDuration = (time) ->
         hours: parseInt(hours)
         minutes: parseInt(minutes)
         seconds: parseInt(seconds)
+
 
 window.formatDuration = (duration) ->
     template = _.template """
@@ -134,7 +138,7 @@ class window.FilterView extends Backbone.View
     filterDone: (event) ->
         [filterName, filterValue] = @getFilterFromEvent(event)
         @trigger('filter:done', filterName, filterValue)
-        updateLocationParam(filterName, filterValue)
+        window.modules.routes.updateLocationParam(filterName, filterValue)
 
     selectFilterChange: (event) =>
         @filterChange(event)
@@ -202,3 +206,46 @@ class window.ClickableListEntry extends Backbone.View
     propogateClick: (event) =>
         if event.button == 0
             document.location = @$('a').first().attr('href')
+
+
+module.makeSlider = (root, options) ->
+    root.find('.slider').slider(options)
+
+
+class module.SliderView extends Backbone.View
+
+    initialize: (options) ->
+        options = options || {}
+        @displayCount = options.displayCount || 10
+
+    tagName: "div"
+
+    className: "list-controls controls-row"
+
+    template: """
+            <div class="span1">
+              <span id="display-count" class="label label-inverse"></span>
+            </div>
+            <div class="slider span8"></div>
+        """
+
+    handleSliderMove: (event, ui) =>
+        @updateDisplayCount(ui.value)
+        @trigger('slider:change', ui.value)
+
+    updateDisplayCount: (count) =>
+        @displayCount = count
+        content = """#{count} / #{@model.length()}"""
+        @$('#display-count').html(content)
+
+    render: ->
+        @$el.html @template
+        @updateDisplayCount(_.min([@model.length(), @displayCount]))
+        console.log("Rendering with #{@displayCount}")
+        module.makeSlider @$el,
+            max: @model.length()
+            min: 0
+            range: 'min'
+            value: @displayCount
+            slide: @handleSliderMove
+        @

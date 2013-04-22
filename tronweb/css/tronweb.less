@@ -283,6 +283,45 @@ form.filter-form {
     padding: 13px 10px 12px;
 }
 
+/******************************************************************************
+ *  Slider
+ *****************************************************************************/
+.list-controls {
+    padding: 12px 0;
+}
+
+.ui-slider {
+    position: relative;
+    border: #333 1px solid;
+    background-color: @dark-yellow;
+    margin-top: 4px;
+}
+.ui-slider-handle {
+    position: absolute;
+    z-index: 2;
+    padding-left: 1px;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+.ui-slider-handle:hover {
+    background-color: #333;
+}
+.ui-slider-handle.ui-state-focus {
+    background-color: #333;
+}
+.ui-slider-horizontal {
+    height: 10px;
+}
+.ui-slider-horizontal .ui-slider-handle {
+    width: 20px;
+    height: 18px;
+    top: -4px;
+    margin-left: -5px;
+}
+
+.ui-slider-range {
+      background: rgba(0, 0, 0, 0.5);
+      height: 100%;
+}
 
 /******************************************************************************
  *  Refresh widget
@@ -298,6 +337,9 @@ div.refresh-view span {
 /******************************************************************************
  *  Outlined tables
  *****************************************************************************/
+.table.table-outline {
+    margin-bottom: 0;
+}
 .table.table-outline td a {
     color: @text;
 }
@@ -606,4 +648,13 @@ div.refresh-view span {
 
 .scheduler {
     .mono-font;
+}
+
+
+/******************************************************************************
+ *  stdout / stderr
+ *****************************************************************************/
+
+pre.stdout, pre.stderr {
+    margin-bottom: 0;
 }
