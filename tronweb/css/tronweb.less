@@ -109,7 +109,7 @@ h2 {
 }
 
 .outline-border {
-    border: #999 1px solid;
+    border: @medium-grey 1px solid;
 }
 
 .outline-block {
@@ -133,7 +133,7 @@ h2 {
        background: #fff;
     }
     .border-top {
-        border-top: #999 1px solid;
+        border-top: @medium-grey 1px solid;
     }
 
     table td {
@@ -145,6 +145,26 @@ h2 {
 .table td {
     border-top: 0;
 }
+
+
+/******************************************************************************
+ *  Colors
+ *****************************************************************************/
+@green: #218E0B;
+@blue: #2F47B8;
+@yellow: #A6790D;
+@red: #BA434F;
+
+@hl-text: #fff;
+@dark-blue: #0F2277;
+@dark-yellow: #faa732;
+@dark-red: #A10C1A;
+
+@light-blue: #6177DB;
+@light-yellow: #FFDC88;
+
+@medium-grey: #999;
+
 
 
 /******************************************************************************
@@ -245,13 +265,13 @@ i.web-icon-white {
 }
 
 .filter-form .input-prepend span.add-on {
-    vertical-align: middle;
-    background: #363636;
-    color: #eee;
+    background: @medium-grey;
+    color: #fff;
     text-shadow: none;
     font-weight: bold;
     padding: 4px 8px;
     font-size: 12px;
+    border-color: @medium-grey;
 
     i {
         margin-top: 1px;
@@ -268,19 +288,17 @@ form.filter-form {
     input,
     select
     {
-        line-height: 15px;
-        height: 15px;
-        font-size: 12px;
-    }
-    select {
-        height: 25px;
+        border-color: @medium-grey;
     }
 }
 
 .filter-form .toggle-header {
     .header;
     margin: 0 20px 0 0;
-    padding: 13px 10px 12px;
+    padding: 0 20px;
+    display: inline-block;
+    line-height: 50px;
+    height: 50px;
 }
 
 /******************************************************************************
@@ -356,7 +374,7 @@ div.refresh-view span {
 }
 
 .table.table-outline thead.sub-header {
-    background-color: #999;
+    background-color: @medium-grey;
     color: @hl-text;
 }
 
@@ -531,27 +549,6 @@ div.refresh-view span {
 {
     background: @dark-red;
 }
-
-
-/*
-@red: #b52e19;
-@green: #51a351;
-@blue: #295eb3;
-@yellow: #faa732;
-*/
-
-@green: #218E0B;
-@blue: #2F47B8;
-@yellow: #A6790D;
-@red: #BA434F;
-
-@hl-text: #fff;
-@dark-blue: #0F2277;
-@dark-yellow: #faa732;
-@dark-red: #A10C1A;
-
-@light-blue: #6177DB;
-@light-yellow: #FFDC88;
 
 .success
 {
