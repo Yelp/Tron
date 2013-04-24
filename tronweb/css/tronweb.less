@@ -124,7 +124,7 @@ h2 {
         border: #333 1px solid;
     }
 
-    > table,
+    > table tbody,
     > div
     {
         .outline-border;
@@ -268,6 +268,7 @@ i.web-icon-white {
 .filter-form .controls {
     .outline-border;
     padding: 10px;
+    background: #eee;
 }
 
 .filter-form input {
@@ -462,13 +463,16 @@ div.refresh-view span {
 
 .popover.top {
     max-width: 600px;
+    min-width: 400px;
     .clear-border;
-    border: #333 1px solid;
+    .clear-box-shadow;
+    .outline-border;
     padding: 0;
     background: @popup-bg;
 
     .arrow {
-        border-top-color: #333;
+        border-top-color: @medium-grey;
+        display: none;
     }
     .arrow:after {
         border-top-color: @popup-bg;
@@ -476,12 +480,25 @@ div.refresh-view span {
     code {
         background: none;
     }
-}
-
-.popover .popover-title {
-    font-weight: bold;
-    .clear-border;
-    .block-header;
+    .popover-title {
+        font-weight: bold;
+        .clear-border;
+        background: @medium-grey;
+        color: white;
+        font-size: 12px;
+        border: 0;
+    }
+    .popover-content {
+        font-size: 12px;
+        padding: 20px;
+        code, ul {
+            padding: 0;
+        }
+        .top-right-corner {
+            top: 7px;
+            right: 10px;
+        }
+    }
 }
 
 .tooltip.top .tooltip-arrow {

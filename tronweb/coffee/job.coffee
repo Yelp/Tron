@@ -498,10 +498,8 @@ class window.JobRunView extends Backbone.View
         ).render()
 
     popupTemplate: _.template """
-        <ul class="unstyled">
-            <li><% print(formatState(state)) %></li>
-            <li><code class="command"><% print(command || raw_command) %></code></li>
-        </ul>
+        <div class="top-right-corner"><% print(formatState(state)) %></div>
+        <code class="command"><% print(command || raw_command) %></code>
         """
 
     renderGraph: =>
