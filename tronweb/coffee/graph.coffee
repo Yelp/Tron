@@ -135,8 +135,7 @@ class GraphModalView extends Backbone.View
         </div>
         <div class="modal hide fade">
             <div class="modal-header">
-                <button type="button"
-                    class="close"
+                <button class="btn btn-inverse"
                     data-dismiss="modal"
                     aria-hidden="true">
                     <i class="icon-remove icon-white"></i>

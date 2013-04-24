@@ -229,11 +229,21 @@ i.web-icon-white {
  *  Button
  *****************************************************************************/
 .btn-inverse {
-    .header;
+    background: #333;
+    border: #222 1px solid;
+    .clear-box-shadow;
 }
 
 .btn-inverse.active {
     background: #080808;
+}
+
+.modal-header button.btn-inverse {
+    float: right;
+}
+
+.modal-header button.close:hover {
+    background: #222;
 }
 
 .btn-clear {
@@ -243,7 +253,7 @@ i.web-icon-white {
 }
 
 .btn-clear:hover {
-    background: #000;
+    background: #222;
 }
 
 
@@ -448,7 +458,7 @@ div.refresh-view span {
  *  Popover / Tooltips
  *****************************************************************************/
 
-@popup-bg: #f0f0f0;
+@popup-bg: #fff;
 
 .popover.top {
     max-width: 600px;
@@ -463,17 +473,15 @@ div.refresh-view span {
     .arrow:after {
         border-top-color: @popup-bg;
     }
+    code {
+        background: none;
+    }
 }
 
 .popover .popover-title {
     font-weight: bold;
     .clear-border;
     .block-header;
-}
-.top-right-corner {
-   position: absolute;
-   top: -35px;
-   right: 10px;
 }
 
 .tooltip.top .tooltip-arrow {
@@ -505,6 +513,12 @@ div.refresh-view span {
 
 .modal-body {
     max-height: none;
+}
+
+.top-right-corner {
+   position: absolute;
+   top: -35px;
+   right: 10px;
 }
 
 
