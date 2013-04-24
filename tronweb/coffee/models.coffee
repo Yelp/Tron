@@ -1,6 +1,8 @@
 
-
 # Generic models
+window.modules = window.modules || {}
+module = window.modules.models = {}
+
 
 class window.RefreshModel extends Backbone.Model
 
@@ -76,3 +78,43 @@ class window.FilterModel extends Backbone.Model
                     (item) -> true
 
         (item) -> _.every(filterFuncs, (func) -> func(item))
+
+
+class IndexEntry
+
+    constructor: (@name) ->
+
+    toLowerCase: =>
+        @name.toLowerCase()
+
+    replace: (args...) =>
+        @name.replace(args...)
+
+    indexOf: (args...) =>
+        @name.indexOf(args...)
+
+    toString: =>
+       @name
+
+
+class JobIndexEntry extends IndexEntry
+
+    getUrl: =>
+        "#job/#{@name}"
+
+
+class ServiceIndexEntry extends IndexEntry
+
+    getUrl: =>
+        "#service/#{@name}"
+
+
+class module.QuickFindModel extends Backbone.Model
+
+    url: "/"
+
+    # TODO: add commands and namespaces
+    parse: (resp, options) =>
+        index: _.extend(
+            new JobIndexEntry name for name of resp['jobs'],
+            new ServiceIndexEntry name for name of resp['services'])

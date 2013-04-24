@@ -21,7 +21,7 @@ class module.TronRoutes extends Backbone.Router
     updateMainView: (model, viewType) ->
         view = new viewType(model: model)
         model.fetch()
-        mainView.render(view)
+        mainView.updateMain(view)
 
     index: ->
         @navigate('home', trigger: true)
@@ -37,7 +37,7 @@ class module.TronRoutes extends Backbone.Router
             filterModel: new DashboardFilterModel(module.getParamsMap(params))
         dashboard = new DashboardView(model: model)
         model.fetch()
-        $('#all-view').html dashboard.render().el
+        mainView.updateFullView dashboard.render()
 
     configs: ->
         @updateMainView(new NamespaceList(), NamespaceListView)
@@ -86,15 +86,22 @@ class module.TronRoutes extends Backbone.Router
             history: historyCollection)
         model.fetch()
         historyCollection.fetch()
-        mainView.render(view)
+        mainView.updateMain(view)
 
 
-class MainView extends Backbone.View
+class NavView extends Backbone.View
 
-    el: $("body")
+    initialize: (options) ->
+        @listenTo(@model, "sync", @setTypeahead)
 
-    template: _.template """
-        <div id="menu" class="navbar navbar-inverse navbar-static-top">
+    tagName: "div"
+
+    className: "navbar navbar-inverse navbar-static-top"
+
+    attributes:
+        id: "menu"
+
+    template: """
           <div class="navbar-inner">
             <div class="container">
             <ul class="nav">
@@ -113,24 +120,71 @@ class MainView extends Backbone.View
                 <i class="icon-wrench icon-white"></i>Config</a>
               </li>
             </ul>
+
+            <form class="navbar-search pull-right">
+              <input type="text" class="input-medium search-query typeahead"
+                placeholder="search"
+                autocomplete="off"
+                data-provide="typeahead">
+              <div class="icon-search"></div>
+            </form>
+
             </div>
           </div>
-        </div>
-
-        <div id="main" class="container">
-        </div>
     """
+
+    render: =>
+        @$el.html @template
+        @
+
+    updater: (item) ->
+        item = _.find(@source, (e) -> e.name == item)
+        routes.navigate(item.getUrl(), trigger: true)
+        item.name
+
+    # TODO: this breaks if search is used before it has data
+    setTypeahead: =>
+        @$('.typeahead').typeahead(
+            source: @model.get('index'),
+            updater: @updater)
+        @
+
+
+class MainView extends Backbone.View
+
+    el: $("#all-view")
+
+    template: """
+        <div id="nav"></div>
+        <div class="container">
+            <div id="main" class="row">
+            </div>
+        </div>
+        """
 
     setActive: =>
         [path, params] = module.getLocationParams()
         path = path.split('/')[0]
         @$("a[href=#{path}]").parent('li').addClass 'active'
 
-    render: (item) =>
+    updateMain: (view) =>
         @close()
-        @$('#all-view').html @template()
+        @renderNav() if @$('#nav').html() == ''
         @setActive()
-        @$('#main').html item.el
+        @$('#main').html view.el
+
+    updateFullView: (view) =>
+        @$('#nav').html ''
+        @$('#main').html view.el
+
+    render: =>
+        @$el.html @template
+        @renderNav()
+        @
+
+    renderNav: =>
+        console.log('rendering nav')
+        @$('#nav').html new NavView(model: @model).render().el
 
     close: =>
         @trigger('closeView')
@@ -166,5 +220,7 @@ window.attachRouter = () ->
     $(document).ready ->
 
         window.routes = new modules.routes.TronRoutes()
-        window.mainView = new MainView()
+        model = modules.models = new modules.models.QuickFindModel()
+        window.mainView = new MainView(model: model).render()
+        model.fetch()
         Backbone.history.start(root: "/web/")

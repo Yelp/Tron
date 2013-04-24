@@ -142,7 +142,6 @@ class module.ActionRunView extends Backbone.View
     tagName: "div"
 
     template: _.template """
-        <div class="row">
             <div class="span12">
                 <h1>
                     <small>Action Run</small>
@@ -191,7 +190,6 @@ class module.ActionRunView extends Backbone.View
 
             <div id="action-run-history">
             </div>
-        </div>
         """
 
     render: ->
