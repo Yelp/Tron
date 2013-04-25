@@ -1,0 +1,660 @@
+
+@import url(http://fonts.googleapis.com/css?family=Open+Sans:300,400,700,800);
+@import url(http://fonts.googleapis.com/css?family=Droid+Sans+Mono);
+
+@font-face {
+    font-family: 'web glyphs';
+    src: url(../fonts/webhostinghub-glyphs.ttf) format('truetype');
+}
+
+/******************************************************************************
+ *  Global
+ *****************************************************************************/
+body {
+    background-image: url(../img/ui-bg_dots-medium_100_eee_4x4.png);
+}
+
+@text: #222;
+
+[class^="icon-"] {
+    margin-top: 3px
+}
+
+.clear-border {
+    -webkit-border-radius: 0;
+    -moz-border-radius: 0;
+    border-radius: 0;
+}
+
+.clear-box-shadow {
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none;
+}
+
+.mono-font {
+    font-family: 'Droid Sans Mono', monospace;
+}
+
+code {
+    .clear-border;
+    padding: 10px;
+    color: #000;
+    .mono-font;
+}
+
+code.command {
+    display: block;
+    white-space: pre-wrap;
+    background: #f0f0f0;
+    color: #000;
+    border: 0;
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+.table-condensed td {
+    border: 0
+}
+
+h1 {
+    font-size: 25px;
+    line-height: 45px;
+    padding: 10px 20px;
+    .header;
+    font-variant: small-caps;
+    margin-bottom: 20px;
+
+    .pull-right {
+        margin-top: -4px;
+    }
+    small {
+        color: #ddd;
+    }
+    a {
+        color: inherit;
+    }
+    a:hover {
+        text-decoration: underline;
+        color: inherit;
+    }
+}
+
+.header {
+    background-image: url(../img/ui-bg_diagonals-small_15_333_40x40.png);
+    color: #fff;
+    border: #333 1px solid;
+    font-weight: bold;
+}
+
+h2 {
+    text-align: left;
+    padding: 0 0 0 10px;
+    font-size: 16px;
+    font-weight: bold;
+    font-variant: small-caps;
+    .header;
+}
+
+.block-header {
+    .header;
+
+    h3, h2 {
+        font-size: 16px;
+        font-weight: bold;
+        font-variant: small-caps;
+    }
+}
+
+.outline-border {
+    border: #999 1px solid;
+}
+
+.outline-block {
+
+    h2 {
+        margin: 0;
+        text-align: left;
+        padding: 0 0 0 10px;
+        font-size: 16px;
+        font-weight: bold;
+        font-variant: small-caps;
+        border: #333 1px solid;
+    }
+
+    > table,
+    > div
+    {
+        .outline-border;
+        border-top: 0;
+        margin-bottom: 0;
+       background: #fff;
+    }
+    .border-top {
+        border-top: #999 1px solid;
+    }
+
+    table td {
+       background: #fff;
+    }
+    margin-bottom: 20px;
+}
+
+.table td {
+    border-top: 0;
+}
+
+
+/******************************************************************************
+ *  Icons
+ *****************************************************************************/
+.label-icon {
+    margin-right: 5px;
+    i {
+        font-size: 16px;
+    }
+}
+
+i[class^="web-icon-"] {
+    font-family: 'web glyphs';
+    font-style: normal;
+    vertical-align: middle;
+    color: #000;
+}
+
+i.web-icon-white {
+    color: #fff;
+}
+
+.web-icon-all-nodes:before {
+    color: @dark-blue;
+    content: '\f0ec';
+}
+.web-icon-overlap:before {
+    color: @dark-blue;
+    content: '\f1ca';
+}
+.web-icon-cancel:before {
+    content: '\f470';
+    color: @dark-red;
+}
+.web-icon-queue:before {
+    color: @dark-blue;
+    content: '\f565'
+}
+.web-icon-calendar:before {
+    content: '\f4d0';
+}
+.web-icon-repeat:before {
+    content: '\f196';
+    color: #333;
+}
+
+/******************************************************************************
+ *  Navbar
+ *****************************************************************************/
+.navbar .brand {
+    font-weight: 700;
+    color: #eee;
+}
+
+.nav li a i {
+    margin-right: 7px;
+}
+
+
+/******************************************************************************
+ *  Button
+ *****************************************************************************/
+.btn-inverse {
+    .header;
+}
+
+.btn-inverse.active {
+    background: #080808;
+}
+
+.btn-clear {
+    background: none;
+    border: 0;
+    .clear-box-shadow;
+}
+
+.btn-clear:hover {
+    background: #000;
+}
+
+
+/******************************************************************************
+ *  Filters
+ *****************************************************************************/
+
+.filter-form .controls .input-prepend {
+    margin: 0 20px 0 0;
+}
+
+.filter-form .controls {
+    .outline-border;
+    padding: 10px;
+}
+
+.filter-form input {
+    border-left: 0;
+}
+
+.filter-form .input-prepend span.add-on {
+    vertical-align: middle;
+    background: #363636;
+    color: #eee;
+    text-shadow: none;
+    font-weight: bold;
+    padding: 4px 8px;
+    font-size: 12px;
+
+    i {
+        margin-top: 1px;
+    }
+}
+
+.filter-form .add-on [class^="icon-"] {
+    margin-right: 2px;
+}
+
+form.filter-form {
+
+    span.add-on,
+    input,
+    select
+    {
+        line-height: 15px;
+        height: 15px;
+        font-size: 12px;
+    }
+    select {
+        height: 25px;
+    }
+}
+
+.filter-form .toggle-header {
+    .header;
+    margin: 0 20px 0 0;
+    padding: 13px 10px 12px;
+}
+
+/******************************************************************************
+ *  Slider
+ *****************************************************************************/
+.list-controls {
+    padding: 12px 0;
+}
+
+.ui-slider {
+    position: relative;
+    border: #333 1px solid;
+    background-color: @dark-yellow;
+    margin-top: 4px;
+}
+.ui-slider-handle {
+    position: absolute;
+    z-index: 2;
+    padding-left: 1px;
+    background-color: rgba(0, 0, 0, 0.8);
+}
+.ui-slider-handle:hover {
+    background-color: #333;
+}
+.ui-slider-handle.ui-state-focus {
+    background-color: #333;
+}
+.ui-slider-horizontal {
+    height: 10px;
+}
+.ui-slider-horizontal .ui-slider-handle {
+    width: 20px;
+    height: 18px;
+    top: -4px;
+    margin-left: -5px;
+}
+
+.ui-slider-range {
+      background: rgba(0, 0, 0, 0.5);
+      height: 100%;
+}
+
+/******************************************************************************
+ *  Refresh widget
+ *****************************************************************************/
+div.refresh-view span {
+    font-size: 14px;
+    vertical-align: middle;
+    margin-right: 4px;
+    font-weight: normal;
+}
+
+
+/******************************************************************************
+ *  Outlined tables
+ *****************************************************************************/
+.table.table-outline {
+    margin-bottom: 0;
+}
+.table.table-outline td a {
+    color: @text;
+}
+
+.table.table-outline tbody tr > td
+{
+    background: #fff;
+    color: @text;
+}
+
+.table.table-outline tbody tr:hover > td
+{
+    background: @light-yellow;
+}
+
+.table.table-outline thead.sub-header {
+    background-color: #999;
+    color: @hl-text;
+}
+
+.table-striped tbody tr:nth-child(even) > td {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+/******************************************************************************
+ *  Details tables
+ *****************************************************************************/
+.table.details tbody tr {
+
+    td {
+       color: @text;
+       border-top: 0;
+    }
+
+    td:first-child {
+        font-weight: bold;
+    }
+}
+
+.table.details {
+    margin-bottom: 0;
+}
+
+/******************************************************************************
+ *  Force Graph
+ *****************************************************************************/
+.graph {
+    position: relative;
+}
+
+.graph svg marker {
+    fill: #555;
+}
+
+.node circle {
+  stroke-width: 4px;
+  stroke: #fff;
+  fill: @light-blue;
+}
+
+.node.failed circle {
+    fill: @red;
+}
+
+.node.succeeded circle {
+    fill: @green;
+}
+
+.node.queued circle, .node.scheduled circle {
+    fill: #ccc;
+}
+
+.node text {
+    stroke: @text;
+    font-family: "Open Sans";
+    font-weight: 300;
+    font-size: 12px;
+}
+
+.link {
+  stroke: #555;
+  stroke-width: 0.8px;
+}
+
+
+
+/******************************************************************************
+ *  Popover / Tooltips
+ *****************************************************************************/
+
+@popup-bg: #f0f0f0;
+
+.popover.top {
+    max-width: 600px;
+    .clear-border;
+    border: #333 1px solid;
+    padding: 0;
+    background: @popup-bg;
+
+    .arrow {
+        border-top-color: #333;
+    }
+    .arrow:after {
+        border-top-color: @popup-bg;
+    }
+}
+
+.popover .popover-title {
+    font-weight: bold;
+    .clear-border;
+    .block-header;
+}
+.top-right-corner {
+   position: absolute;
+   top: -35px;
+   right: 10px;
+}
+
+.tooltip.top .tooltip-arrow {
+    border-width: 6px 5px 0;
+}
+
+.tooltip.top {
+    border: 0 !important;
+    background: none !important;
+}
+
+/******************************************************************************
+ *  Modal
+ *****************************************************************************/
+.modal {
+    .clear-border;
+}
+
+.modal-header {
+    .block-header;
+}
+
+#action-graph .modal.fade.in {
+    top: 2%;
+    width: auto;
+    margin-left: 75px;
+    left: 0;
+}
+
+.modal-body {
+    max-height: none;
+}
+
+
+/******************************************************************************
+ *  Dashboard
+ *****************************************************************************/
+
+.status-box {
+    padding: 2.2em 20px 20px;
+    margin: 0 10px 10px 0;
+    height: 100px;
+    width: 117px;
+    font-size: 12px;
+    font-weight: bold;
+    position: relative;
+}
+
+.status-box a {
+    color: @hl-text;
+}
+
+.status-box .count {
+    display: inline-block !important;
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 3px 7px;
+    background: #333;
+    color: @hl-text;
+}
+
+.status-box i[class^="icon-"] {
+    margin: 1px 5px 0 0;
+}
+
+.status-box.disabled {
+    background: @dark-yellow;
+}
+.status-box.unknown,
+.status-box.failed,
+.status-box.degraded
+{
+    background: @dark-red;
+}
+
+
+/*
+@red: #b52e19;
+@green: #51a351;
+@blue: #295eb3;
+@yellow: #faa732;
+*/
+
+@green: #218E0B;
+@blue: #2F47B8;
+@yellow: #A6790D;
+@red: #BA434F;
+
+@hl-text: #fff;
+@dark-blue: #0F2277;
+@dark-yellow: #faa732;
+@dark-red: #A10C1A;
+
+@light-blue: #6177DB;
+@light-yellow: #FFDC88;
+
+.success
+{
+    background: @green;
+    color: @hl-text;
+}
+
+.warning
+{
+    background: @yellow;
+    color: @hl-text;
+}
+
+.error
+{
+    background: @dark-red;
+    color: @hl-text;
+}
+
+.info
+{
+    background: @blue;
+    color: @hl-text;
+}
+
+#all-view > .dashboard-view {
+    width: auto;
+    margin-right: 20px;
+}
+
+
+/*****************************************************************************
+ *  States
+ *****************************************************************************/
+
+.up {
+    .success;
+}
+
+
+/*****************************************************************************
+ * Events
+ *****************************************************************************/
+
+.enabled,
+.OK,
+.up,
+.succeeded
+{
+    .success;
+}
+
+.INFO,
+.running,
+.starting,
+.cancelled
+{
+    .info;
+}
+
+.NOTICE,
+.disabled
+{
+    .warning;
+}
+
+.CRITICAL,
+.unknown,
+.failed,
+.degraded,
+.label-important
+{
+    .error;
+}
+
+/******************************************************************************
+ *  Label
+ *****************************************************************************/
+
+.label-manual {
+    margin-left: 10px;
+    background: @blue;
+    padding: 2px 4px;
+
+    i {
+        margin-top: 0;
+    }
+}
+
+
+/******************************************************************************
+ *  Misc
+ *****************************************************************************/
+
+.scheduler {
+    .mono-font;
+}
+
+
+/******************************************************************************
+ *  stdout / stderr
+ *****************************************************************************/
+
+pre.stdout, pre.stderr {
+    margin-bottom: 0;
+}

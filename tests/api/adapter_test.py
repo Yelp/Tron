@@ -4,7 +4,7 @@ import mock
 from testify import TestCase, assert_equal, run, setup, teardown
 from tests import mocks
 from tests.assertions import assert_length
-from tests.testingutils import Turtle
+from tron import node, scheduler
 from tron.api import adapter
 from tron.api.adapter import ReprAdapter, RunAdapter, ActionRunAdapter
 from tron.api.adapter import JobRunAdapter, ServiceAdapter
@@ -27,7 +27,7 @@ class ReprAdapterTestCase(TestCase):
 
     @setup
     def setup_adapter(self):
-        self.original           = Turtle(one=1, two=2)
+        self.original           = mock.Mock(one=1, two=2)
         self.adapter            = MockAdapter(self.original)
 
     def test__init__(self):
@@ -84,8 +84,11 @@ class RunAdapterTestCase(TestCase):
     def test_get_state(self):
         assert_equal(self.adapter.get_state(), self.original.state.name)
 
-    def test_get_node(self):
-        assert_equal(self.adapter.get_node(), str(self.original.node))
+    @mock.patch('tron.api.adapter.NodeAdapter', autospec=True)
+    def test_get_node(self, mock_node_adapter):
+        assert_equal(self.adapter.get_node(),
+            mock_node_adapter.return_value.get_repr.return_value)
+        mock_node_adapter.assert_called_with(self.original.node)
 
     def test_get_duration(self):
         self.original.start_time = None
@@ -97,8 +100,8 @@ class ActionRunAdapterTestCase(TestCase):
     @setup
     def setup_adapter(self):
         self.temp_dir = tempfile.mkdtemp()
-        self.action_run = Turtle(output_path=[self.temp_dir])
-        self.job_run = Turtle(action_runs={'action_name': self.action_run})
+        self.action_run = mock.MagicMock()
+        self.job_run = mock.MagicMock()
         self.adapter = ActionRunAdapter(self.action_run, self.job_run, 4)
 
     @teardown
@@ -109,6 +112,10 @@ class ActionRunAdapterTestCase(TestCase):
         assert_equal(self.adapter.max_lines, 4)
         assert_equal(self.adapter.job_run, self.job_run)
         assert_equal(self.adapter._obj, self.action_run)
+
+    def test_get_repr(self):
+        result = self.adapter.get_repr()
+        assert_equal(result['command'], self.action_run.rendered_command)
 
 
 class ActionRunGraphAdapterTestCase(TestCase):
@@ -157,11 +164,59 @@ class ServiceAdapterTestCase(TestCase):
         self.service = mock.MagicMock()
         self.adapter = ServiceAdapter(self.service)
 
-    def test_repr(self):
+    @mock.patch('tron.api.adapter.NodePoolAdapter', autospec=True)
+    def test_repr(self, mock_node_pool_adapter):
         result = self.adapter.get_repr()
         assert_equal(result['name'], self.service.name)
-        assert_equal(result['node_pool'], self.service.config.node)
+        assert_equal(result['node_pool'],
+            mock_node_pool_adapter.return_value.get_repr.return_value)
 
+
+class NodeAdapterTestCase(TestCase):
+
+    @setup
+    def setup_adapter(self):
+        self.node = mock.create_autospec(node.Node)
+        self.adapter = adapter.NodeAdapter(self.node)
+
+    def test_repr(self):
+        result = self.adapter.get_repr()
+        assert_equal(result['hostname'], self.node.hostname)
+        assert_equal(result['username'], self.node.username)
+
+
+class NodePoolAdapterTestCase(TestCase):
+
+    @setup
+    def setup_adapter(self):
+        self.pool = mock.create_autospec(node.NodePool)
+        self.adapter = adapter.NodePoolAdapter(self.pool)
+
+    @mock.patch('tron.api.adapter.adapt_many', autospec=True)
+    def test_repr(self, mock_many):
+        result = self.adapter.get_repr()
+        assert_equal(result['name'], self.pool.get_name.return_value)
+        mock_many.assert_called_with(adapter.NodeAdapter,
+            self.pool.get_nodes.return_value)
+
+
+class SchedulerAdapterTestCase(TestCase):
+
+    @setup
+    def setup_adapter(self):
+        self.scheduler = mock.create_autospec(scheduler.GeneralScheduler)
+        self.adapter = adapter.SchedulerAdapter(self.scheduler)
+
+    @mock.patch('tron.api.adapter.scheduler.get_jitter_str', autospec=True)
+    def test_repr(self, mock_get_jitter):
+        result = self.adapter.get_repr()
+        expected = {
+            'type': self.scheduler.get_name.return_value,
+            'value': self.scheduler.get_value.return_value,
+            'jitter': mock_get_jitter.return_value
+        }
+        assert_equal(result, expected)
+        mock_get_jitter.assert_called_with(self.scheduler.get_jitter())
 
 if __name__ == "__main__":
     run()

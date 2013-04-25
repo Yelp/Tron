@@ -72,6 +72,18 @@ fail <job_run_id | action_run_id>
     Marks the specified job run or action run as failed.  This behaves the same
     as the job actually failing.
 
+stop <action_run_id>
+    Stop an action run
+
+stop <service>
+    Stop (SIGTERM) a service
+
+kill <service>
+    Force stop (SIGKILL) a service
+
+kill <action_run_id>
+    Force stop (SIGKILL) an action run
+
 
 Service Commands
 ----------------

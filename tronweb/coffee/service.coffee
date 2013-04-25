@@ -21,7 +21,7 @@ class window.ServiceInstance extends Backbone.Model
 
 class window.ServiceCollection extends Backbone.Collection
 
-    initialize: (options) =>
+    initialize: (models, options) =>
         super options
         options = options || {}
         @refreshModel = options.refreshModel
@@ -34,6 +34,8 @@ class window.ServiceCollection extends Backbone.Collection
     parse: (resp, options) =>
         resp['services']
 
+    comparator: (service) =>
+        service.get('name')
 
 class window.ServiceListView extends Backbone.View
 
@@ -54,8 +56,10 @@ class window.ServiceListView extends Backbone.View
             <span id="refresh"></span>
         </h1>
         <div id="filter-bar"></div>
-        <table class="table table-hover">
-            <thead>
+
+        <div class="outline-block">
+        <table class="table table-hover table-outline table-striped">
+            <thead class="header">
                 <tr>
                     <th>Name</td>
                     <th>State</th>
@@ -66,6 +70,7 @@ class window.ServiceListView extends Backbone.View
             <tbody>
             </tbody>
         <table>
+        </div>
         """
 
     # TODO: sort by name/state/node
@@ -74,6 +79,7 @@ class window.ServiceListView extends Backbone.View
         @renderFilter()
         @renderList()
         @renderRefresh()
+        makeTooltips(@$el)
         @
 
     renderList:  =>
@@ -98,20 +104,16 @@ class ServiceListEntryView extends ClickableListEntry
 
     tagName: "tr"
 
-    className: =>
-        stateName = switch @model.attributes.state
-            when "failed"   then 'error'
-            when "starting" then "info"
-            when "degraded" then 'warning'
-            when "disabled" then 'warning'
-            when "up"       then 'success'
-        "#{ stateName } clickable"
+    className: "clickable"
 
     template: _.template """
         <td><a href="#service/<%= name %>"><% print(formatName(name)) %></a></td>
-        <td><%= state %>
-        <td><%= live_count %> / <%= count %></td>
-        <td><%= node_pool %></td>
+        <td><% print(formatState(state)) %></td>
+        <td>
+            <span class="label label-inverse">
+                <%= live_count %> / <%= count %></span>
+        </td>
+        <td><% print(displayNodePool(node_pool)) %></td>
         """
 
     render: ->
@@ -139,31 +141,47 @@ class window.ServiceView extends Backbone.View
                     <span id="refresh"></span>
                 </h1>
             </div>
-            <div class="span8">
+            <div class="span8 outline-block">
                 <h2>Details</h2>
-                <table class="table table-condensed details">
+                <table class="table details">
                     <tr><td class="span2">Count</td>
-                        <td><%= live_count %> / <%= count %></td></tr>
-                    <tr><td>Node Pool</td>  <td><%= node_pool %></td></tr>
-                    <tr><td>State</td>      <td><%= state %></td></tr>
+                        <td><span class="label label-inverse">
+                            <%= live_count %> / <%= count %></span>
+                        </td></tr>
+                    <tr><td>Node Pool</td>
+                        <td><% print(displayNodePool(node_pool)) %></td></tr>
+                    <tr><td>State</td>
+                        <td><% print(formatState(state)) %></td></tr>
                     <tr><td>Command</td>    <td><code><%= command %></code></td></tr>
-                    <tr><td>Restart Delay</td><td><%= restart_delay %></td></tr>
-                    <tr><td>Monitor Interval</td><td><%= monitor_interval %></td></tr>
+                    <tr><td>Restart Delay</td>
+                        <td>
+                            <% if (restart_delay) { %>
+                                <span class=""><%= restart_delay %></span>
+                                seconds
+                            <% } else { %>
+                                <span class="label info">none</span>
+                            <% } %>
+                        </td></tr>
+                    <tr><td>Monitor Interval</td>
+                        <td>
+                            <span class=""><%= monitor_interval %></span>
+                            seconds
+                        </td></tr>
                 </table>
             </div>
-            <div class="span4">
+            <div class="span4 outline-block">
                <h2>Events</h2>
-                 <table class="table table-hover event-list">
+                 <table id="event-list" class="table table-hover">
                    <tbody>
                    </tbody>
                  </table>
             </div>
 
             <% if (instances.length > 0) { %>
-            <div class="span12">
+            <div class="span12 outline-block">
                 <h2>Instances</h2>
-                <table class="table">
-                    <thead>
+                <table class="table table-outline">
+                    <thead class="sub-header">
                         <tr>
                             <th>Id</th>
                             <th>State</th>
@@ -183,7 +201,7 @@ class window.ServiceView extends Backbone.View
     renderEvents: (data) =>
         entry = (event) ->
             new MinimalEventListEntryView(model: new TronEvent(event)).render().el
-        @$('.event-list tbody').html(entry(model) for model in data)
+        @$('#event-list tbody').html(entry(model) for model in data)
 
     renderInstances: (data) =>
         entry = (inst) ->
@@ -195,6 +213,7 @@ class window.ServiceView extends Backbone.View
         @renderInstances(@model.get('instances'))
         @renderEvents(@model.get('events'))
         @$('#refresh').html(@refreshView.render().el)
+        makeTooltips(@$el)
         @
 
 
@@ -202,17 +221,15 @@ class ServiceInstanceView extends Backbone.View
 
     tagName: "tr"
 
-    className: ->
-        switch @model.get('state')
-            when "failed"   then 'error'
-            when "up"       then 'success'
-            when "starting" then 'info'
-
     template: _.template """
         <td><% print(formatName(id)) %></td>
-        <td><%= state %></td>
-        <td><%= node %></td>
-        <td><%= failures %></td>
+        <td><% print(formatState(state)) %></td>
+        <td><% print(displayNode(node)) %></td>
+        <td>
+        <% if (failures.length) { %>
+          <pre><%= failures %></pre>
+        <% } %>
+        </td>
         """
 
     render: ->

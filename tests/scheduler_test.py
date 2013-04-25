@@ -25,7 +25,7 @@ class SchedulerFromConfigTestCase(TestCase):
         start_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         next_time = sched.next_run_time(start_time)
         assert_equal(next_time, datetime.datetime(2012, 7, 1, 0))
-        assert_equal(str(sched), "CRON */5 * * 7,8 *")
+        assert_equal(str(sched), "cron */5 * * 7,8 *")
 
     def test_daily_scheduler(self):
         config_context = config_utils.NullConfigContext
@@ -40,7 +40,7 @@ class SchedulerFromConfigTestCase(TestCase):
             assert_equal(next_time, datetime.datetime(2012, 3, day, 17, 32))
             start_time = next_time
 
-        assert_equal(str(sched), "DAILY 17:32 MWF")
+        assert_equal(str(sched), "daily 17:32 MWF")
 
 
 class ConstantSchedulerTest(testingutils.MockTimeTestCase):
@@ -56,7 +56,7 @@ class ConstantSchedulerTest(testingutils.MockTimeTestCase):
         assert_equal(scheduled_time, self.now)
 
     def test__str__(self):
-        assert_equal(str(self.scheduler), "CONSTANT")
+        assert_equal(str(self.scheduler), 'constant')
 
 
 class GeneralSchedulerTestCase(testingutils.MockTimeTestCase):
@@ -90,11 +90,11 @@ class GeneralSchedulerTestCase(testingutils.MockTimeTestCase):
         assert_equal(next_run_time, expected)
 
     def test__str__(self):
-        assert_equal(str(self.scheduler), "DAILY")
+        assert_equal(str(self.scheduler), "daily ")
 
     def test__str__with_jitter(self):
         self.scheduler.jitter = datetime.timedelta(seconds=300)
-        assert_equal(str(self.scheduler), "DAILY (+/- 0:05:00)")
+        assert_equal(str(self.scheduler), "daily  (+/- 0:05:00)")
 
 
 class GeneralSchedulerTimeTestBase(testingutils.MockTimeTestCase):
@@ -376,11 +376,11 @@ class IntervalSchedulerTestCase(TestCase):
         assert_equal(run_time, prev_run_time + random_delta + self.interval)
 
     def test__str__(self):
-        assert_equal(str(self.scheduler), "INTERVAL %s" % self.interval)
+        assert_equal(str(self.scheduler), "interval %s" % self.interval)
 
     def test__str__with_jitter(self):
         self.scheduler.jitter = datetime.timedelta(seconds=300)
-        assert_equal(str(self.scheduler), "INTERVAL 0:00:07 (+/- 0:05:00)")
+        assert_equal(str(self.scheduler), "interval 0:00:07 (+/- 0:05:00)")
 
 
 if __name__ == '__main__':

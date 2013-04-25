@@ -158,8 +158,13 @@ class JobResource(resource.Resource):
         run = self.get_run_from_identifier(run_id)
         if run:
             return JobRunResource(run, self.job_scheduler)
+
+        job = self.job_scheduler.get_job()
+        if run_id in job.action_graph.names:
+            action_runs = job.runs.get_action_runs(run_id)
+            return ActionRunHistoryResource(action_runs)
         msg = "Cannot find job run %s for %s"
-        return resource.NoResource(msg % (run_id, self.job_scheduler.get_job()))
+        return resource.NoResource(msg % (run_id, job))
 
     def render_GET(self, request):
         include_action_runs = requestargs.get_bool(request, 'include_action_runs')
@@ -179,6 +184,20 @@ class JobResource(resource.Resource):
             run_time=run_time)
 
 
+class ActionRunHistoryResource(resource.Resource):
+
+    isLeaf = True
+
+    def __init__(self, action_runs):
+        resource.Resource.__init__(self)
+        self.action_runs = action_runs
+
+    def render_GET(self, request):
+        action_runs = adapter.adapt_many(
+            adapter.ActionRunAdapter, self.action_runs)
+        return respond(request, action_runs)
+
+
 class JobCollectionResource(resource.Resource):
     """Resource for all our daemon's jobs"""
 
@@ -194,8 +213,11 @@ class JobCollectionResource(resource.Resource):
 
     def get_data(self, include_job_run=False, include_action_runs=False):
         jobs = (sched.get_job() for sched in self.job_collection)
-        return adapter.adapt_many(adapter.JobAdapter, jobs,
-            include_job_run, include_action_runs)
+        return adapter.adapt_many(adapter.JobAdapter,
+            jobs,
+            include_job_run,
+            include_action_runs,
+            num_runs=5)
 
     def render_GET(self, request):
         include_job_runs = requestargs.get_bool(request, 'include_job_runs')
