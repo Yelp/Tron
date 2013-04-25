@@ -92,7 +92,7 @@ class module.TronRoutes extends Backbone.Router
 class NavView extends Backbone.View
 
     initialize: (options) ->
-        @listenTo(@model, "sync", @setTypeahead)
+        #@listenTo(@model, "sync", @renderTypeahead)
 
     tagName: "div"
 
@@ -122,31 +122,49 @@ class NavView extends Backbone.View
             </ul>
 
             <form class="navbar-search pull-right">
-              <input type="text" class="input-medium search-query typeahead"
-                placeholder="search"
-                autocomplete="off"
-                data-provide="typeahead">
-              <div class="icon-search"></div>
             </form>
 
             </div>
           </div>
     """
 
+    typeaheadTemplate: """
+        <input type="text" class="input-medium search-query typeahead"
+            placeholder="Jump to view"
+            autocomplete="off"
+            data-provide="typeahead">
+        <div class="icon-search"></div>
+    """
+
     render: =>
         @$el.html @template
+        @renderTypeahead()
         @
 
-    updater: (item) ->
-        item = _.find(@source, (e) -> e.name == item)
-        routes.navigate(item.getUrl(), trigger: true)
-        item.name
+    updater: (item) =>
+        entry = @model.get(item)
+        routes.navigate(entry.getUrl(), trigger: true)
+        entry.name
 
-    # TODO: this breaks if search is used before it has data
-    setTypeahead: =>
-        @$('.typeahead').typeahead(
-            source: @model.get('index'),
-            updater: @updater)
+    source: (query, process) =>
+        (entry.name for _, entry of @model.attributes)
+
+    highlighter: (item) =>
+        typeahead = @$('.typeahead').data().typeahead
+        name = module.typeahead_hl.call(typeahead, item)
+        console.log(item)
+        entry = @model.get(item)
+        # TODO: truncate sides if name is too long
+        "<small>#{entry.type}</small> #{name}"
+
+    # TODO: new sorter which sorts shorter names first
+    # TODO: move all typeahead to its own module (maybe nav too)
+    renderTypeahead: =>
+        @$('.navbar-search').html @typeaheadTemplate
+        @$('.typeahead').typeahead
+            source: @source,
+            updater: @updater
+            highlighter: @highlighter
         @
 
     setActive: =>
@@ -154,6 +172,16 @@ class NavView extends Backbone.View
         [path, params] = module.getLocationParams()
         path = path.split('/')[0]
         @$("a[href=#{path}]").parent('li').addClass 'active'
+
+Typeahead = $.fn.typeahead.Constructor.prototype
+
+Typeahead.show = ->
+    top = @$element.position().top + @$element[0].offsetHeight + 1
+    @$menu.insertAfter(@$element).css(top: top).show()
+    @shown = true
+    @
+
+module.typeahead_hl = $.fn.typeahead.Constructor.prototype.highlighter
 
 
 class MainView extends Backbone.View
