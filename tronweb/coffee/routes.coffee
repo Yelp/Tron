@@ -149,8 +149,17 @@ class NavView extends Backbone.View
             updater: @updater)
         @
 
+    setActive: =>
+        @$('li').removeClass 'active'
+        [path, params] = module.getLocationParams()
+        path = path.split('/')[0]
+        @$("a[href=#{path}]").parent('li').addClass 'active'
+
 
 class MainView extends Backbone.View
+
+    initialize: (options) ->
+       @navView = new NavView(model: @model)
 
     el: $("#all-view")
 
@@ -162,15 +171,10 @@ class MainView extends Backbone.View
         </div>
         """
 
-    setActive: =>
-        [path, params] = module.getLocationParams()
-        path = path.split('/')[0]
-        @$("a[href=#{path}]").parent('li').addClass 'active'
-
     updateMain: (view) =>
         @close()
         @renderNav() if @$('#nav').html() == ''
-        @setActive()
+        @navView.setActive()
         @$('#main').html view.el
 
     updateFullView: (view) =>
@@ -184,7 +188,7 @@ class MainView extends Backbone.View
 
     renderNav: =>
         console.log('rendering nav')
-        @$('#nav').html new NavView(model: @model).render().el
+        @$('#nav').html @navView.render().el
 
     close: =>
         @trigger('closeView')
