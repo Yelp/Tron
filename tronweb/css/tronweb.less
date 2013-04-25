@@ -242,13 +242,17 @@ i.web-icon-white {
         margin-top: 2px;
         line-height: 20px;
     }
-    .search-query {
-        background: @medium-grey;
-    }
+    .search-query:focus ~ .icon-search,
+    .search-query.focused ~ .icon-search {
+        background-image: url(../img/glyphicons-halflings.png);
 
+    }
+    .search-query {
+        background: none;
+    }
     .icon-search {
         position: absolute;
-        top: 5px;
+        top: 4px;
         left: 7px;
     }
 
@@ -265,6 +269,7 @@ i.web-icon-white {
     .clear-box-shadow;
     border: 1px solid #333;
     max-width: 600px;
+    right: -1px;
 
     a {
         padding: 3px 10px;

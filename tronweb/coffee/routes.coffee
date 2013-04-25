@@ -130,10 +130,10 @@ class NavView extends Backbone.View
 
     typeaheadTemplate: """
         <input type="text" class="input-medium search-query typeahead"
-            placeholder="Jump to view"
+            placeholder="Search"
             autocomplete="off"
             data-provide="typeahead">
-        <div class="icon-search"></div>
+        <div class="icon-search icon-white"></div>
     """
 
     render: =>
@@ -152,7 +152,6 @@ class NavView extends Backbone.View
     highlighter: (item) =>
         typeahead = @$('.typeahead').data().typeahead
         name = module.typeahead_hl.call(typeahead, item)
-        console.log(item)
         entry = @model.get(item)
         # TODO: truncate sides if name is too long
         "<small>#{entry.type}</small> #{name}"
