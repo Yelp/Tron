@@ -82,15 +82,13 @@ class window.FilterView extends Backbone.View
 
     filterTemplate: _.template """
         <div class="input-prepend">
-          <span class="add-on">
-            <i class="icon-filter icon-white"></i>
-            <% print(_.str.humanize(filterName)) %>
-          </span>
           <input type="text" id="filter-<%= filterName %>"
                  value="<%= defaultValue %>"
-                 class="span2"
+                 class="input-medium"
                  autocomplete="off"
+                 placeholder="<% print(_.str.humanize(filterName)) %>"
                  data-filter-name="<%= filterName %>Filter">
+          <i class="icon-filter icon-white"></i>
         </div>
     """
 

@@ -216,6 +216,10 @@ i.web-icon-white {
     color: #333;
 }
 
+.icon-black {
+    background-image: url(../img/glyphicons-halflings.png);
+}
+
 /******************************************************************************
  *  Navbar
  *****************************************************************************/
@@ -244,8 +248,7 @@ i.web-icon-white {
     }
     .search-query:focus ~ .icon-search,
     .search-query.focused ~ .icon-search {
-        background-image: url(../img/glyphicons-halflings.png);
-
+        .icon-black;
     }
     .search-query {
         background: none;
@@ -320,50 +323,77 @@ i.web-icon-white {
 }
 
 .filter-form .controls {
-    .outline-border;
-    padding: 10px;
-    background: #eee;
-}
-
-.filter-form input {
-    border-left: 0;
-}
-
-.filter-form .input-prepend span.add-on {
     background: @medium-grey;
-    color: #fff;
-    text-shadow: none;
-    font-weight: bold;
-    padding: 4px 8px;
-    font-size: 12px;
-    border-color: @medium-grey;
-
-    i {
-        margin-top: 1px;
-    }
+    border: 0;
+    padding: 4px 0;
 }
 
-.filter-form .add-on [class^="icon-"] {
-    margin-right: 2px;
+.placeholder {
+    color: white;
+    padding-left: 10px;
 }
 
 form.filter-form {
+    .input-prepend {
+        position: relative;
+    }
 
-    span.add-on,
     input,
     select
     {
         border-color: @medium-grey;
+        .clear-box-shadow;
+        border-left: 0;
     }
+
+    input,
+    select
+    {
+        background: none;
+        color: #fff;
+        padding-left: 25px;
+    }
+
+    input:focus,
+    select:focus,
+    input:active,
+    select:active
+    {
+        background: #fff;
+        color: #333;
+    }
+
+
+    input:-moz-placeholder {
+        .placeholder;
+    }
+
+    input::-webkit-input-placeholder {
+        .placeholder;
+    }
+
+    // TODO: why not working?
+    input:focus ~ [class^="icon-"]
+    {
+        .icon-black !important;
+        background: red;
+    }
+
+    i {
+        position: absolute;
+        top: 5px;
+        left: 7px;
+    }
+
 }
 
 .filter-form .toggle-header {
     .header;
     margin: 0 20px 0 0;
-    padding: 0 20px;
+    padding: 8px 20px;
     display: inline-block;
-    line-height: 50px;
-    height: 50px;
+    line-height: 20px;
+    height: 20px;
 }
 
 /******************************************************************************
@@ -462,6 +492,7 @@ div.refresh-view span {
     }
 }
 
+#event-list,
 .table.details {
     margin-bottom: 0;
 }
