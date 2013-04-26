@@ -3,11 +3,9 @@ from __future__ import with_statement
 import logging
 import os
 import tempfile
-import optparse
 import sys
 
-import tron
-from tron import commands
+from tron.commands import cmd_utils
 from tron.commands.client import Client
 from tron.config import config_parse
 from tron.config import schema, manager, ConfigError
@@ -27,20 +25,13 @@ def set_options_from_args(options, args):
 
 
 def parse_options():
-    parser = optparse.OptionParser("usage: %prog [<name>] [options] [-]",
-                                   version="%%prog %s" % tron.__version__)
+    usage  = "usage: %prog [<name>] [options] [-]"
+    parser = cmd_utils.build_option_parser(usage)
 
     parser.add_option("-p", "--print", action="store_true", dest="print_config",
                       help="Print config to stdout, rather than uploading")
     parser.add_option("-n", "--no-header", action="store_true", default=False,
                       help="Print named config without a header")
-    parser.add_option("--verbose", "-v", action="count",
-                      help="Verbose logging", default=0)
-    #TODO: move options to commands lib
-    parser.add_option("--server", default=commands.DEFAULT_CONFIG['server'],
-                help="Url including scheme, host and port, Default: %default")
-    parser.add_option("-s", "--save", action="store_true", dest="save_config",
-                      help="Save options used on this job for next time.")
 
     options, args = parser.parse_args()
     set_options_from_args(options, args)
@@ -120,8 +111,8 @@ def update_with_editor(client, config_name):
 
 if __name__ == '__main__':
     options = parse_options()
-    commands.setup_logging(options)
-    commands.load_config(options)
+    cmd_utils.setup_logging(options)
+    cmd_utils.load_config(options)
     client = Client(options.server)
     config_name = options.config_name
 
