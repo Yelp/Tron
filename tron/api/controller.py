@@ -201,11 +201,11 @@ class ConfigController(object):
             return self.DEFAULT_NAMED_CONFIG
         return self.config_manager.read_raw_config(name)
 
-    def read_config(self, name):
+    def read_config(self, name, add_header=True):
         config_content = self._get_config_content(name)
         config_hash = self.config_manager.get_hash(name)
 
-        if name != schema.MASTER_NAMESPACE:
+        if name != schema.MASTER_NAMESPACE and add_header:
             config_content = self.render_template(config_content)
         return dict(config=config_content, hash=config_hash)
 

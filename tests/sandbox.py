@@ -9,6 +9,7 @@ import tempfile
 import time
 import contextlib
 import functools
+import mock
 
 from testify import TestCase, setup, teardown
 
@@ -51,10 +52,11 @@ def handle_output(cmd, (stdout, stderr), returncode):
     """Log process output before it is parsed. Raise exception if exit code
     is nonzero.
     """
+    cmd = ' '.join(cmd)
     if stdout:
-        log.warn("%s: %s", cmd, stdout)
+        log.warn("%s STDOUT: %s", cmd, stdout)
     if stderr:
-        log.warn("%s: %s", cmd, stderr)
+        log.warn("%s STDERR: %s", cmd, stderr)
     if returncode:
         raise CalledProcessError(returncode, cmd)
 
@@ -110,12 +112,15 @@ class ClientProxy(object):
             return f.read()
 
     def wrap(self, func, *args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except (client.RequestError, ValueError), e:
-            # ValueError for JSONDecode errors
-            log.warn("%r, Log:\n%s" % (e, self.log_contents()))
-            return False
+        with mock.patch('tron.commands.client.log'):
+            try:
+                return func(*args, **kwargs)
+            except (client.RequestError, ValueError), e:
+                # ValueError for JSONDecode errors
+                log_contents = self.log_contents()
+                if log_contents:
+                    log.warn("%r, Log:\n%s" % (e, log_contents))
+                return False
 
     def __getattr__(self, name):
         attr = getattr(self.client, name)
@@ -209,7 +214,12 @@ class TronSandbox(object):
         self.run_command('trond', args)
         wait_on_sandbox(lambda: bool(self.client.home()))
 
-    def tronfig(self, config_content=None, name=schema.MASTER_NAMESPACE):
+    def tronfig(self,
+                config_content=None,
+                name=schema.MASTER_NAMESPACE,
+                no_header=False):
         args = ['--server', self.api_uri, name]
+        if no_header:
+            args += ['--no-header']
         args += ['-'] if config_content else ['-p']
         return self.run_command('tronfig', args, stdin_lines=config_content)
