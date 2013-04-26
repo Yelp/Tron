@@ -1,12 +1,6 @@
 Configuration
 =============
 
-.. note::
-
-    **The configuration system has changed significantly since version 0.2.10.**
-    All existing configurations should still work, but new configurations
-    should follow the new conventions.
-
 .. _config_syntax:
 
 Syntax

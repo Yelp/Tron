@@ -1,3 +1,4 @@
+import mock
 from testify import TestCase, run, setup, assert_equal
 from testify import setup_teardown
 from tron.commands import display
@@ -37,7 +38,7 @@ class DisplayJobRunsTestCase(TestCase):
     def setup_data(self):
         self.data = [
             dict(
-                id='something.23', state='FAIL', node='machine4',
+                id='something.23', state='FAIL', node=mock.MagicMock(),
                 run_num=23,
                 run_time='2012-01-20 23:11:23',
                 start_time='2012-01-20 23:11:23',
@@ -46,7 +47,7 @@ class DisplayJobRunsTestCase(TestCase):
                 manual=False,
             ),
             dict(
-                id='something.55', state='QUE', node='machine3',
+                id='something.55', state='QUE', node=mock.MagicMock(),
                 run_num=55,
                 run_time='2012-01-20 23:11:23',
                 start_time='2012-01-20 23:11:23',
@@ -60,7 +61,7 @@ class DisplayJobRunsTestCase(TestCase):
             id='something.23.other',
             name='other',
             state='FAIL',
-            node='machine4',
+            node=mock.MagicMock(),
             command='echo 123',
             raw_command='echo 123',
             run_time='2012-01-20 23:11:23',
@@ -84,9 +85,9 @@ class DisplayJobsTestCase(TestCase):
     def setup_data(self):
         self.data = [
             dict(name='important_things', status='running',
-                scheduler='DailyJob', last_success='unknown'),
+                scheduler=mock.MagicMock(), last_success='unknown'),
             dict(name='other_thing', status='success',
-                scheduler='DailyJob', last_success='2012-01-23 10:23:23',
+                scheduler=mock.MagicMock(), last_success='2012-01-23 10:23:23',
                 action_names=['other', 'first'],
                 node_pool=['blam']),
         ]
@@ -101,7 +102,7 @@ class DisplayJobsTestCase(TestCase):
                     id='something.23.other',
                     name='other',
                     state='FAIL',
-                    node='machine4',
+                    node=mock.MagicMock(),
                     command='echo 123',
                     raw_command='echo 123',
                     run_time='2012-01-20 23:11:23',
@@ -139,7 +140,7 @@ class DisplayActionsTestCase(TestCase):
         self.data = {
             'id': 'something.23',
             'state': 'UNKWN',
-            'node': 'something',
+            'node': {'hostname': 'something', 'username': 'a'},
             'run_time': 'sometime',
             'start_time': 'sometime',
             'end_time': 'sometime',
@@ -209,6 +210,39 @@ class AddColorForStateTestCase(TestCase):
     def test_add_blue(self):
         text = display.add_color_for_state(service.ServiceState.DISABLED)
         assert text.startswith(display.Color.colors['blue']), text
+
+
+class DisplayNodeTestCase(TestCase):
+
+    node_source = {
+        'name': 'name',
+        'hostname': 'hostname',
+        'username': 'username'}
+
+    def test_display_node(self):
+        result = display.display_node(self.node_source)
+        assert_equal(result, 'username@hostname')
+
+    def test_display_node_pool(self):
+        source = {'name': 'name', 'nodes': [self.node_source]}
+        result = display.display_node_pool(source)
+        assert_equal(result, 'name (1 node(s))')
+
+class DisplaySchedulerTestCase(TestCase):
+
+    def test_display_scheduler_no_jitter(self):
+        source = {'value': '5 minutes', 'type': 'interval', 'jitter': ''}
+        result = display.display_scheduler(source)
+        assert_equal(result, 'interval 5 minutes')
+
+    def test_display_scheduler_with_jitter(self):
+        source = {
+            'value': '5 minutes',
+            'type': 'interval',
+            'jitter': ' (+/- 2 min)'}
+        result = display.display_scheduler(source)
+        assert_equal(result, 'interval 5 minutes%s' % (source['jitter']))
+
 
 
 if __name__ == "__main__":

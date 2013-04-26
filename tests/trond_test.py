@@ -110,7 +110,7 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         self.start_with_config(SINGLE_ECHO_CONFIG)
         expected = """\nServices:\nNo Services\n\n\nJobs:
             Name       State       Scheduler           Last Success
-            MASTER.echo_job   enabled     INTERVAL 1:00:00    None
+            MASTER.echo_job   enabled     interval 1:00:00    None
             """
 
         def remove_line_space(s):
@@ -185,7 +185,7 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         job_url = self.client.get_url('MASTER.a_job')
         def wait_on_next_run():
             last_run = self.client.job(job_url)['runs'][0]
-            return last_run['node'].endswith('127.0.0.1')
+            return last_run['node']['hostname'] == '127.0.0.1'
 
         sandbox.wait_on_sandbox(wait_on_next_run)
 
