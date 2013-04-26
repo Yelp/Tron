@@ -78,7 +78,6 @@ def validate(config_name, config_content):
         log.error(e)
 
 
-
 def print_config(client, config_name):
     print client.config(config_name)['config']
 
@@ -87,7 +86,9 @@ def update_from_stdin(client, config_name):
     config_content = sys.stdin.read()
     config_hash = client.config(config_name)['hash']
     if validate(config_name, config_content):
-        upload_config(client, config_name, config_content, config_hash)
+        if upload_config(client, config_name, config_content, config_hash):
+            return
+    raise SystemExit("tronfig failed")
 
 
 def update_with_editor(client, config_name):

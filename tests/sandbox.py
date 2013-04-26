@@ -35,10 +35,10 @@ def wait_on_sandbox(func, delay=0.1, max_wait=5.0):
     raise TronSandboxException("Failed %s" % func.__name__)
 
 
-def wait_on_state(client_func, url, state):
+def wait_on_state(client_func, url, state, field='state'):
     """Use client_func(url) to wait until the resource changes to state."""
     def wait_func():
-        return client_func(url)['state'] == state
+        return client_func(url)[field] == state
     wait_func.__name__ = '%s wait on %s' % (url, state)
     wait_on_sandbox(wait_func)
 
@@ -188,22 +188,16 @@ class TronSandbox(object):
             raise
         return streams
 
-    def tronctl(self, args=None):
+    def tronctl(self, *args):
         args = list(args) if args else []
         return self.run_command('tronctl', args + ['--server', self.api_uri])
 
-    def tronctl_start(self, name):
-        self.tronctl(['start', name])
-
-    def tronctl_stop(self, name):
-        self.tronctl(['stop', name])
-
-    def tronview(self, args=None):
+    def tronview(self, *args):
         args = list(args) if args else []
         args += ['--nocolor', '--server', self.api_uri]
         return self.run_command('tronview', args)
 
-    def trond(self, args=None):
+    def trond(self, *args):
         args = list(args) if args else []
         args += ['--working-dir=%s'     % self.tmp_dir,
                    '--pid-file=%s'      % self.pid_file,
@@ -215,6 +209,7 @@ class TronSandbox(object):
         self.run_command('trond', args)
         wait_on_sandbox(lambda: bool(self.client.home()))
 
-    def tronfig(self, config_content, name=schema.MASTER_NAMESPACE):
-        args = ['--server', self.api_uri, name, '-']
+    def tronfig(self, config_content=None, name=schema.MASTER_NAMESPACE):
+        args = ['--server', self.api_uri, name]
+        args += ['-'] if config_content else ['-p']
         return self.run_command('tronfig', args, stdin_lines=config_content)
