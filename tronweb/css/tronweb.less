@@ -11,13 +11,13 @@
  *  Global
  *****************************************************************************/
 body {
-    background-image: url(../img/ui-bg_dots-medium_100_eee_4x4.png);
+    background: #f0f0f0;
 }
 
 @text: #222;
 
 [class^="icon-"] {
-    margin-top: 3px
+    margin-top: 2px
 }
 
 .clear-border {
@@ -150,6 +150,25 @@ h2 {
     border-top: 0;
 }
 
+input,
+.input
+{
+    outline: 0;
+    .clear-box-shadow;
+    .round-corners(3px, 3px, 3px, 3px);
+    border: 1px solid transparent;
+    background: none;
+}
+
+input:focus,
+input.focused,
+.input-focus
+{
+    background: white;
+    border-color: #aaa;
+}
+
+
 
 /******************************************************************************
  *  Colors
@@ -223,40 +242,66 @@ i.web-icon-white {
 /******************************************************************************
  *  Navbar
  *****************************************************************************/
-.navbar .brand {
-    font-weight: 700;
-    color: #eee;
+.navbar {
+    .brand {
+        color: #333;
+        font-weight: 800;
+        span {
+            color: @dark-yellow;
+        }
+    }
+
+    .navbar-inner {
+        .clear-box-shadow;
+        border: 0;
+        background: none;
+    }
+
+    .nav > li.active {
+        > a,
+        > a:hover,
+        > a:active {
+            .clear-box-shadow;
+            text-shadow: none;
+            color: #000;
+            background: @light-yellow;
+        }
+    }
+    .nav > li {
+
+        > a {
+            color: #333;
+        }
+        > a:hover {
+            color: #000;
+            text-shadow: -1px -1px 0 #ddd;
+        }
+    }
 }
 
 .nav li a i {
     margin-right: 7px;
 }
-
-.navbar-inverse .navbar-search {
+.navbar-search {
     position: relative;
 
     .search-query,
     .search-query:focus,
     .search-query.focused {
-        border: 0;
-        outline: 0;
-        .clear-box-shadow;
-        .round-corners(15px, 0, 0, 15px);
         padding: 2px 10px 2px 27px;
         margin-top: 2px;
         line-height: 20px;
+        border: 1px solid #eee;
+        .input;
     }
-    .search-query:focus ~ .icon-search,
-    .search-query.focused ~ .icon-search {
-        .icon-black;
-    }
-    .search-query {
-        background: none;
+    .search-query:focus,
+    .search-query.focused {
+        .input-focus;
     }
     .icon-search {
         position: absolute;
-        top: 4px;
-        left: 7px;
+        top: 6px;
+        left: 8px;
     }
 
 }
@@ -285,6 +330,12 @@ i.web-icon-white {
 /******************************************************************************
  *  Button
  *****************************************************************************/
+.btn {
+    padding: 0;
+    line-height: 30px;
+    width: 32px;
+}
+
 .btn-inverse {
     background: #333;
     border: #222 1px solid;
@@ -323,35 +374,27 @@ i.web-icon-white {
 }
 
 .filter-form .controls {
-    background: @medium-grey;
+    background: none;
     border: 0;
-    padding: 4px 0;
+    padding: 0;
 }
 
 .placeholder {
-    color: white;
-    padding-left: 10px;
+    color: #999;
+    font-size: 13px;
 }
 
 form.filter-form {
     .input-prepend {
         position: relative;
+        .round-corners(3px, 3px, 3px, 3px)
     }
 
     input,
     select
     {
-        border-color: @medium-grey;
-        .clear-box-shadow;
-        border-left: 0;
-    }
-
-    input,
-    select
-    {
-        background: none;
-        color: #fff;
-        padding-left: 25px;
+        .input;
+        padding: 3px 10px 3px 26px;
     }
 
     input:focus,
@@ -359,10 +402,17 @@ form.filter-form {
     input:active,
     select:active
     {
-        background: #fff;
-        color: #333;
+        .input-focus;
     }
 
+    select {
+        color: #999;
+        font-size: 13px;
+
+        option {
+            color: #333;
+        }
+    }
 
     input:-moz-placeholder {
         .placeholder;
@@ -372,28 +422,20 @@ form.filter-form {
         .placeholder;
     }
 
-    // TODO: why not working?
-    input:focus ~ [class^="icon-"]
-    {
-        .icon-black !important;
-        background: red;
-    }
-
     i {
         position: absolute;
-        top: 5px;
+        top: 6px;
         left: 7px;
+        z-index: 3;
     }
 
 }
 
 .filter-form .toggle-header {
-    .header;
-    margin: 0 20px 0 0;
-    padding: 8px 20px;
+    margin: 0 40px 0 0 ;
+    padding: 4px 0 4px 5px;
     display: inline-block;
-    line-height: 20px;
-    height: 20px;
+    font-weight: bold;
 }
 
 /******************************************************************************
@@ -468,7 +510,8 @@ div.refresh-view span {
     background: @light-yellow;
 }
 
-.table.table-outline thead.sub-header {
+.table.table-outline thead.sub-header,
+.sub-header {
     background-color: @medium-grey;
     color: @hl-text;
 }

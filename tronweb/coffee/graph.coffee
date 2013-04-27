@@ -120,15 +120,22 @@ class GraphModalView extends Backbone.View
         options = options || {}
         @graphOptions = options.graphOptions
 
+    events:
+        'click #view-full-screen':   'toggleModal'
+
+    toggleModal: (event) ->
+        $('.modal').modal('toggle')
+
     attachEvents: =>
-        @$('#view-full').click(@showModal)
+        @$('.modal').on('show', @showModal)
+        @$('.modal').on('hide', @removeGraph)
 
     template: """
         <div class="top-right-corner">
         <button class="btn btn-clear tt-enable"
                 title="Full view"
                 data-placement="top"
-                id="view-full"
+                id="view-full-screen"
             >
             <i class="icon-fullscreen icon-white"></i>
         </button>
@@ -148,6 +155,7 @@ class GraphModalView extends Backbone.View
         """
 
     showModal: =>
+        console.log "show"
         options = _.extend {},
             @graphOptions,
             model:          @model
@@ -158,9 +166,12 @@ class GraphModalView extends Backbone.View
             showZoom:       false
 
         graph = new GraphView(options).render()
-        $('.modal').modal()
+
+    removeGraph: =>
+        @$('.modal-body.graph').empty()
 
     render: =>
         @$el.append(@template)
         @attachEvents()
+        @delegateEvents()
         @

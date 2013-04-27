@@ -96,7 +96,7 @@ class NavView extends Backbone.View
 
     tagName: "div"
 
-    className: "navbar navbar-inverse navbar-static-top"
+    className: "navbar navbar-static-top"
 
     attributes:
         id: "menu"
@@ -105,19 +105,18 @@ class NavView extends Backbone.View
           <div class="navbar-inner">
             <div class="container">
             <ul class="nav">
-              <li class="brand">Tronweb</li>
-              <li class="divider-vertical"></li>
+              <li class="brand">tron<span>web</span></li>
               <li><a href="#home">
-                <i class="icon-th icon-white"></i>Dashboard</a>
+                <i class="icon-th"></i>Dashboard</a>
               </li>
               <li><a href="#jobs">
-                <i class="icon-time icon-white"></i>Scheduled Jobs</a>
+                <i class="icon-time"></i>Scheduled Jobs</a>
               </li>
               <li><a href="#services">
-                <i class="icon-repeat icon-white"></i>Services</a>
+                <i class="icon-repeat"></i>Services</a>
               </li>
               <li><a href="#configs">
-                <i class="icon-wrench icon-white"></i>Config</a>
+                <i class="icon-wrench"></i>Config</a>
               </li>
             </ul>
 
@@ -133,7 +132,7 @@ class NavView extends Backbone.View
             placeholder="Search"
             autocomplete="off"
             data-provide="typeahead">
-        <div class="icon-search icon-white"></div>
+        <div class="icon-search"></div>
     """
 
     render: =>

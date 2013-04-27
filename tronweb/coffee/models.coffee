@@ -65,8 +65,8 @@ class window.FilterModel extends Backbone.Model
 
     filterTypes:
         name:       buildMatcher(fieldGetter('name'), matchAny)
-        node_pool:  buildMatcher(nestedName('node_pool'), _.str.startsWith)
         state:      buildMatcher(fieldGetter('state'), _.str.startsWith)
+        node_pool:  buildMatcher(nestedName('node_pool'), _.str.startsWith)
 
     createFilter: =>
         filterFuncs = for type, func of @filterTypes

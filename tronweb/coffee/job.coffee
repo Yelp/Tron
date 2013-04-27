@@ -62,8 +62,8 @@ class window.JobListFilterModel extends FilterModel
 
     filterTypes:
         name:       buildMatcher(fieldGetter('name'), matchAny)
-        node_pool:  buildMatcher(nestedName('node_pool'), _.str.startsWith)
         status:      buildMatcher(fieldGetter('status'), _.str.startsWith)
+        node_pool:  buildMatcher(nestedName('node_pool'), _.str.startsWith)
 
 
 class window.JobListView extends Backbone.View

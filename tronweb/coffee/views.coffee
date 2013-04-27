@@ -88,16 +88,16 @@ class window.FilterView extends Backbone.View
                  autocomplete="off"
                  placeholder="<% print(_.str.humanize(filterName)) %>"
                  data-filter-name="<%= filterName %>Filter">
-          <i class="icon-filter icon-white"></i>
+          <i class="icon-filter"></i>
         </div>
     """
 
     template: _.template """
         <form class="filter-form">
           <div class="control-group outline-block">
-            <div class="span2 toggle-header"
-                title="Toggle Filters">Filters</div>
             <div class="controls">
+            <div class="span1 toggle-header"
+                title="Toggle Filters">Filters</div>
                 <% print(filters.join('')) %>
             </div>
           </div>
