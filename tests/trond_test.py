@@ -52,6 +52,17 @@ TOUCH_CLEANUP_FMT = """
       command: "echo 'at last'"
 """
 
+SINGLE_SERVICE_CONFIG = """
+
+services:
+  - name: service_0
+    node: local
+    pid_file: "/tmp/%(name)s-%(instance_number)s.pid"
+    command: "python ./tests/mock_daemon.py %(pid_file)s"
+    monitor_interval: 12
+    restart_interval: 10
+"""
+
 
 def summarize_events(events):
     return [(event['entity'], event['name']) for event in events]
@@ -160,6 +171,22 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
             return last_run['node']['hostname'] == '127.0.0.1'
 
         sandbox.wait_on_sandbox(wait_on_next_run)
+
+    def test_trond_restart(self):
+        self.start_with_config(SINGLE_ECHO_CONFIG + SINGLE_SERVICE_CONFIG)
+        job_name = 'MASTER.echo_job'
+        self.sandbox.tronctl('start', job_name)
+        # TODO: start a slow job with dependencies
+
+        cleanup_url = self.client.get_url('MASTER.echo_job.1.echo_action')
+        sandbox.wait_on_state(self.client.action_runs, cleanup_url,
+            actionrun.ActionRun.STATE_SUCCEEDED.name)
+
+        self.sandbox.shutdown_trond()
+        sandbox.wait_on_proc_terminate(self.sandbox.get_trond_pid())
+
+        self.sandbox.trond()
+        # TODO: assert state is correct
 
 
 class TronCommandsTestCase(sandbox.SandboxTestCase):

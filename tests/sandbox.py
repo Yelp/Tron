@@ -43,6 +43,16 @@ def wait_on_state(client_func, url, state, field='state'):
     wait_on_sandbox(wait_func)
 
 
+def wait_on_proc_terminate(pid):
+    def wait_on_terminate():
+        try:
+            os.kill(pid, 0)
+        except:
+            return True
+    wait_on_terminate.__name__ = "Wait on %s to terminate" % pid
+    wait_on_sandbox(wait_on_terminate)
+
+
 def build_waiter_func(client_func, url):
     return functools.partial(wait_on_state, client_func, url)
 
@@ -165,9 +175,7 @@ class TronSandbox(object):
 
     def delete(self):
         """Delete the temp directory and shutdown trond."""
-        if os.path.exists(self.pid_file):
-            with open(self.pid_file, 'r') as f:
-                os.kill(int(f.read()), signal.SIGKILL)
+        self.shutdown_trond(sig_num=signal.SIGKILL)
         shutil.rmtree(self.tmp_dir)
 
     def save_config(self, config_text):
@@ -213,3 +221,14 @@ class TronSandbox(object):
         args = ['--server', self.api_uri, name]
         args += ['-'] if config_content else ['-p']
         return self.run_command('tronfig', args, stdin_lines=config_content)
+
+    def get_trond_pid(self):
+        if not os.path.exists(self.pid_file):
+            return None
+        with open(self.pid_file, 'r') as f:
+            return int(f.read())
+
+    def shutdown_trond(self, sig_num=signal.SIGTERM):
+        trond_pid = self.get_trond_pid()
+        if trond_pid:
+            os.kill(trond_pid, sig_num)
