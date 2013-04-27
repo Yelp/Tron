@@ -471,13 +471,13 @@ class window.JobRunView extends Backbone.View
         </div>
         """
 
-    renderList: =>
+    renderList: (actionRuns) =>
         entry = (run) =>
             run['job_name'] = @model.get('job_name')
             run['run_num'] =  @model.get('run_num')
             model = new modules.actionrun.ActionRun(run)
             new modules.actionrun.ActionRunListEntryView(model: model).render().el
-        @$('tbody.actionruns').html(entry(model) for model in @model.get('runs'))
+        @$('tbody.actionruns').html(entry(model) for model in actionRuns)
 
     getMaxDate: =>
         actionRuns = @model.get('runs')
@@ -486,9 +486,9 @@ class window.JobRunView extends Backbone.View
         dates.push(new Date(@model.get('run_time')))
         _.max(dates)
 
-    renderTimeline: =>
+    renderTimeline: (actionRuns) =>
         maxDate = @getMaxDate()
-        actionRuns = for actionRun in @model.get('runs')
+        actionRuns = for actionRun in actionRuns
             new modules.actionrun.ActionRunTimelineEntry(actionRun, maxDate)
 
         new modules.timeline.TimelineView(
@@ -507,14 +507,22 @@ class window.JobRunView extends Backbone.View
             model: @model.get('action_graph')
             buildContent: @popupTemplate
             nodeClass: (d) -> "node #{d.state}"
+            height: @$('table.details').height() - 5 # TODO: why -5 to get it flush?
         ).render()
+
+    sortActionRuns: =>
+        maxDate = @getMaxDate()
+        getStart = (item) ->
+            if item.start_time then new Date(item.start_time) else maxDate
+        _.sortBy @model.get('runs'), getStart
 
     render: =>
         @$el.html @template(@model.attributes)
         @$('#filter').html(@refreshView.render().el)
-        @renderList()
+        actionRuns = @sortActionRuns()
+        @renderList(actionRuns)
         @renderGraph()
-        @renderTimeline()
+        @renderTimeline(actionRuns)
         makeTooltips(@$el)
         modules.views.makeHeaderToggle(@$el)
         @

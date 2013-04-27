@@ -155,14 +155,21 @@ class NavView extends Backbone.View
         # TODO: truncate sides if name is too long
         "<small>#{entry.type}</small> #{name}"
 
-    # TODO: new sorter which sorts shorter names first
+    # TODO: test for this
+    sorter: (items) ->
+        score = (item) ->
+            score = if _.str.startsWith(item, @query) then - @query.length else 0
+            score + item.length
+        _.sortBy items, score
+
     # TODO: move all typeahead to its own module (maybe nav too)
     renderTypeahead: =>
         @$('.navbar-search').html @typeaheadTemplate
         @$('.typeahead').typeahead
             source: @source,
             updater: @updater
-            highlighter: @highlighter
+            highlighter: @highlighter,
+            sorter: @sorter
         @
 
     setActive: =>

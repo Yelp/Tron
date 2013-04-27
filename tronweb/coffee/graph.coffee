@@ -154,8 +154,9 @@ class GraphModalView extends Backbone.View
         </div>
         """
 
-    showModal: =>
-        console.log "show"
+    showModal: (event) =>
+        # prevent firing on child events
+        return if event.target != $('.modal')[0]
         options = _.extend {},
             @graphOptions,
             model:          @model
@@ -167,7 +168,8 @@ class GraphModalView extends Backbone.View
 
         graph = new GraphView(options).render()
 
-    removeGraph: =>
+    removeGraph: (event) =>
+        return if event.target != $('.modal')[0]
         @$('.modal-body.graph').empty()
 
     render: =>

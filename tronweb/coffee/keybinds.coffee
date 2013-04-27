@@ -11,7 +11,7 @@ isInputField = (event) ->
 setFocusBinds = (el) ->
     el.bind 'keydown', (event) ->
         return if isInputField(event)
-        console.log(event.keyCode)
+        #console.log(event.keyCode)
         switch event.keyCode
             when 70 then $('#view-full-screen').click()  # f
             when 82 then $('.refresh-view .btn').click() # r
