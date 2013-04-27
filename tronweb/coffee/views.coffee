@@ -168,7 +168,7 @@ class window.RefreshToggleView extends Backbone.View
 
     template: _.template """
         <span class="muted"><%= text %></span>
-        <button class="btn btn-inverse tt-enable <%= active %>"
+        <button class="btn btn-clear tt-enable <%= active %>"
             title="Toggle Refresh"
             data-placement="top">
             <i class="icon-refresh icon-white"></i>

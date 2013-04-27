@@ -64,17 +64,18 @@ code.command {
 }
 
 h1 {
-    font-size: 25px;
-    line-height: 45px;
+    font-size: 20px;
+    line-height: 40px;
     padding: 10px 20px;
     .header;
     font-variant: small-caps;
     margin: 20px 0;
 
     .pull-right {
-        margin-top: -4px;
+        margin-top: -1px;
     }
     small {
+        font-size: 20px;
         color: #ddd;
     }
     a {
@@ -87,9 +88,9 @@ h1 {
 }
 
 .header {
-    background-image: url(../img/ui-bg_diagonals-small_15_333_40x40.png);
+    background-image: url(../img/ui-bg_diagonals-small_10_555_40x40.png);
     color: #fff;
-    border: #333 1px solid;
+    border: #555 1px solid;
     font-weight: bold;
 }
 
@@ -125,7 +126,6 @@ h2 {
         font-size: 16px;
         font-weight: bold;
         font-variant: small-caps;
-        border: #333 1px solid;
     }
 
     > table tbody,
@@ -334,11 +334,11 @@ i.web-icon-white {
     padding: 0;
     line-height: 30px;
     width: 32px;
+    border: 0;
 }
 
 .btn-inverse {
     background: #333;
-    border: #222 1px solid;
     .clear-box-shadow;
 }
 
@@ -356,11 +356,14 @@ i.web-icon-white {
 
 .btn-clear {
     background: none;
-    border: 0;
     .clear-box-shadow;
 }
 
 .btn-clear:hover {
+    background: #222;
+}
+
+.btn-clear.active {
     background: #222;
 }
 
