@@ -3,8 +3,6 @@
 @import url(http://fonts.googleapis.com/css?family=Droid+Sans+Mono);
 
 @font-face {
-    font-family: 'web glyphs';
-    src: url(../fonts/webhostinghub-glyphs.ttf) format('truetype');
 }
 
 /******************************************************************************
@@ -15,10 +13,6 @@ body {
 }
 
 @text: #222;
-
-[class^="icon-"] {
-    margin-top: 2px
-}
 
 .clear-border {
     .round-corners()
@@ -34,6 +28,9 @@ body {
     -webkit-box-shadow: none;
     -moz-box-shadow: none;
     box-shadow: none;
+}
+.clear-text-shadow {
+    text-shadow: none;
 }
 
 .mono-font {
@@ -84,6 +81,9 @@ h1 {
     a:hover {
         text-decoration: underline;
         color: inherit;
+    }
+    > i[class^="icon-"] {
+        margin: 8px 5px 0 0;
     }
 }
 
@@ -200,43 +200,31 @@ input.focused,
     }
 }
 
-i[class^="web-icon-"] {
-    font-family: 'web glyphs';
+i[class^="icon-"] {
+    margin-top: 2px;
     font-style: normal;
-    vertical-align: middle;
-    color: #000;
-}
-
-i.web-icon-white {
-    color: #fff;
-}
-
-.web-icon-all-nodes:before {
-    color: @dark-blue;
-    content: '\f0ec';
-}
-.web-icon-overlap:before {
-    color: @dark-blue;
-    content: '\f1ca';
-}
-.web-icon-cancel:before {
-    content: '\f470';
-    color: @dark-red;
-}
-.web-icon-queue:before {
-    color: @dark-blue;
-    content: '\f565'
-}
-.web-icon-calendar:before {
-    content: '\f4d0';
-}
-.web-icon-repeat:before {
-    content: '\f196';
     color: #333;
 }
 
-.icon-black {
-    background-image: url(../img/glyphicons-halflings.png);
+i[class^="icon-"].icon-white {
+    color: white;
+    .clear-text-shadow;
+}
+i[class^="icon-"].icon-grey {
+    color: #555;
+    .clear-text-shadow;
+}
+
+.icon-circlepauseempty:before,
+.icon-layers:before,
+.icon-treediagram:before {
+    color: @dark-blue;
+}
+.icon-remove-circle:before {
+    color: @dark-red;
+}
+.icon-repeatone:before {
+    color: #333;
 }
 
 /******************************************************************************
@@ -262,7 +250,7 @@ i.web-icon-white {
         > a:hover,
         > a:active {
             .clear-box-shadow;
-            text-shadow: none;
+            .clear-text-shadow;
             color: #000;
             background: @light-yellow;
         }
@@ -346,8 +334,14 @@ i.web-icon-white {
     background: #080808;
 }
 
-.modal-header button.btn-inverse {
-    float: right;
+.modal-header {
+    h3 > i[class^="icon-"] {
+        font-weight: normal;
+        margin: 4px 5px 0 0;
+    }
+    button.btn-clear {
+        float: right;
+    }
 }
 
 .modal-header button.close:hover {
@@ -374,6 +368,10 @@ i.web-icon-white {
 
 .filter-form .controls .input-prepend {
     margin: 0 20px 0 0;
+
+    i[class^="icon-"] {
+        font-size: 12px;
+    }
 }
 
 .filter-form .controls {
@@ -408,12 +406,18 @@ form.filter-form {
         .input-focus;
     }
 
-    select {
-        color: #999;
-        font-size: 13px;
+    .filter-select {
+        select {
+            background: transparent;
+            -webkit-appearance: none;
+            padding: 0 0 0 20px;
+            color: #999;
+            font-size: 13px;
+            line-height: 13px;
 
-        option {
-            color: #333;
+            option {
+                color: #333;
+            }
         }
     }
 

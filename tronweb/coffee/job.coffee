@@ -81,7 +81,7 @@ class window.JobListView extends Backbone.View
 
     template: _.template """
         <h1>
-            Scheduled Jobs
+            <i class="icon-time icon-white"></i> Scheduled Jobs
             <span id="refresh"></span>
         </h1>
         <div id="filter-bar"></div>
@@ -247,19 +247,19 @@ class window.JobView extends Backbone.View
     formatSettings: (attrs) =>
         template = _.template """
             <span class="label-icon tt-enable" title="<%= title %>">
-                <i class="web-icon-<%= icon %>"></i>
+                <i class="icon-<%= icon %>"></i>
             </span>
             """
 
         [icon, title] = if attrs.allow_overlap
-            ['overlap', "Allow overlapping runs"]
+            ['layers', "Allow overlapping runs"]
         else if attrs.queueing
-            ['queue', "Queue overlapping runs"]
+            ['circlepauseempty', "Queue overlapping runs"]
         else
-            ['cancel', "Cancel overlapping runs"]
+            ['remove-circle', "Cancel overlapping runs"]
 
         content = if attrs.all_nodes
-            template(icon: 'all-nodes', title: "Run on all nodes")
+            template(icon: 'treediagram', title: "Run on all nodes")
         else
             ""
         template(icon: icon, title: title) + content
@@ -347,9 +347,9 @@ formatInterval = (interval) ->
 
 window.formatScheduler = (scheduler) ->
     [icon, value] = switch scheduler.type
-        when 'constant' then ['web-icon-repeat', 'constant']
-        when 'interval' then ['icon-align-justify', formatInterval(scheduler.value)]
-        when 'groc'     then ['web-icon-calendar', scheduler.value]
+        when 'constant' then ['icon-repeatone', 'constant']
+        when 'interval' then ['icon-slidersfull', formatInterval(scheduler.value)]
+        when 'groc'     then ['icon-calendarthree', scheduler.value]
         when 'daily'    then ['icon-calendar', scheduler.value]
         when 'cron'     then ['icon-time', scheduler.value]
 

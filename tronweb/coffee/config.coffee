@@ -41,7 +41,10 @@ class window.NamespaceListView extends Backbone.View
     className: "span8"
 
     template: _.template """
-        <h1>Configuration Namespaces</h1>
+        <h1>
+            <i class="icon-wrench icon-white"></i>
+            Configuration Namespaces
+        </h1>
         <div class="outline-block">
         <table class="table table-hover table-outline">
           <thead class="header">

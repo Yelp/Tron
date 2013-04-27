@@ -46,16 +46,18 @@ class window.DashboardFilterView extends FilterView
 
     createtype: _.template """
         <div class="input-prepend">
-           <i class="icon-filter"></i>
-          <select id="filter-<%= filterName %>"
-                class="span3"
-                data-filter-name="<%= filterName %>Filter">
-            <option value="">Type</option>
-            <option <% print(isSelected(defaultValue, 'job')) %>
-                value="job">Scheduled Jobs</option>
-            <option <% print(isSelected(defaultValue, 'service')) %>
-                value="service">Services</option>
-          </select>
+           <i class="icon-markerright icon-grey"></i>
+           <div class="filter-select">
+             <select id="filter-<%= filterName %>"
+                  class="span3"
+                  data-filter-name="<%= filterName %>Filter">
+              <option value="">Type</option>
+              <option <% print(isSelected(defaultValue, 'job')) %>
+                  value="job">Scheduled Jobs</option>
+              <option <% print(isSelected(defaultValue, 'service')) %>
+                  value="service">Services</option>
+            </select>
+          </div>
         </div>
     """
 
@@ -74,6 +76,7 @@ class window.DashboardView extends Backbone.View
 
     template: _.template """
         <h1>
+            <i class="icon-th icon-white"></i>
             <small>Tron</small>
             <a href="#dashboard">Dashboard</a>
             <span id="refresh"></span>

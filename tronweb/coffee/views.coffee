@@ -80,6 +80,14 @@ class window.FilterView extends Backbone.View
 
     className: ""
 
+    defaultIcon: "icon-filter"
+
+    filterIcons:
+        name:       "icon-query"
+        node_pool:  "icon-connected"
+        state:      "icon-switchon"
+        status:     "icon-switchon"
+
     filterTemplate: _.template """
         <div class="input-prepend">
           <input type="text" id="filter-<%= filterName %>"
@@ -88,7 +96,7 @@ class window.FilterView extends Backbone.View
                  autocomplete="off"
                  placeholder="<% print(_.str.humanize(filterName)) %>"
                  data-filter-name="<%= filterName %>Filter">
-          <i class="icon-filter"></i>
+          <i class="<%= icon %> icon-grey"></i>
         </div>
     """
 
@@ -114,6 +122,7 @@ class window.FilterView extends Backbone.View
             template
                 defaultValue: @model.get("#{filterName}Filter")
                 filterName: filterName
+                icon: @filterIcons[filterName] || @defaultIcon
 
         filters = _.map((k for k of @model.filterTypes), createFilter)
         @$el.html @template(filters: filters)

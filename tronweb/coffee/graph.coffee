@@ -137,17 +137,20 @@ class GraphModalView extends Backbone.View
                 data-placement="top"
                 id="view-full-screen"
             >
-            <i class="icon-fullscreen icon-white"></i>
+            <i class="icon-opennewwindow icon-white"></i>
         </button>
         </div>
         <div class="modal hide fade">
             <div class="modal-header">
-                <button class="btn btn-inverse"
+                <button class="btn btn-clear"
                     data-dismiss="modal"
                     aria-hidden="true">
-                    <i class="icon-remove icon-white"></i>
+                    <i class="icon-circledown icon-white"></i>
                 </button>
-                <h3>Action Graph</h3>
+                <h3>
+                    <i class="icon-barchart icon-white"></i>
+                    Action Graph
+                </h3>
             </div>
             <div class="modal-body graph job-view">
             </div>
