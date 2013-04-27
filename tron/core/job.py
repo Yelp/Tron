@@ -43,7 +43,7 @@ class Job(Observable, Observer):
     context_class           = command_context.JobContext
 
     # These attributes determine equality between two Job objects
-    equality_attrs = [
+    equality_attributes = [
         'name',
         'queueing',
         'scheduler',
@@ -53,6 +53,7 @@ class Job(Observable, Observer):
         'output_path',
         'action_runner',
         'max_runtime',
+        'allow_overlap',
     ]
 
     # TODO: use config object
@@ -107,7 +108,7 @@ class Job(Observable, Observer):
         actually takes an already constructed job and copies out its
         configuration data.
         """
-        for attr in self.equality_attrs:
+        for attr in self.equality_attributes:
             setattr(self, attr, getattr(job, attr))
         self.event.ok('reconfigured')
 
@@ -180,7 +181,7 @@ class Job(Observable, Observer):
 
     def __eq__(self, other):
         return all(getattr(other, attr, None) == getattr(self, attr, None)
-                   for attr in self.equality_attrs)
+                   for attr in self.equality_attributes)
 
     def __ne__(self, other):
         return not self == other
