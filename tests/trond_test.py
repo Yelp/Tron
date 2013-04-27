@@ -1,10 +1,11 @@
 import datetime
 import os
+from subprocess import CalledProcessError
 from textwrap import dedent
 
 from testify import assert_equal
 from testify import assert_gt
-from testify.assertions import assert_in
+from testify.assertions import assert_in, assert_raises_such_that
 from tests import sandbox
 from tron.core import service, actionrun
 
@@ -81,7 +82,7 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         job_url = client.get_url(echo_job_name)
         action_url = client.get_url('MASTER.echo_job.1.echo_action')
 
-        self.sandbox.tronctl_start(echo_job_name)
+        self.sandbox.tronctl('start', echo_job_name)
 
         def wait_on_cleanup():
             return (len(client.job(job_url)['runs']) >= 2 and
@@ -105,35 +106,6 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         job_runs_url = client.get_url('%s.1' % echo_job_name)
         assert_equal(client.job_runs(job_runs_url)['state'],
             actionrun.ActionRun.STATE_FAILED.name)
-
-    def test_tronview_basic(self):
-        self.start_with_config(SINGLE_ECHO_CONFIG)
-        expected = """\nServices:\nNo Services\n\n\nJobs:
-            Name       State       Scheduler           Last Success
-            MASTER.echo_job   enabled     INTERVAL 1:00:00    None
-            """
-
-        def remove_line_space(s):
-            return [l.replace(' ', '') for l in s.split('\n')]
-
-        actual = self.sandbox.tronview()[0]
-        assert_equal(remove_line_space(actual), remove_line_space(expected))
-
-    def test_tronctl_basic(self):
-        self.start_with_config(SINGLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT)
-        self.sandbox.tronctl_start('MASTER.echo_job')
-
-        cleanup_url = self.client.get_url('MASTER.echo_job.1.cleanup')
-        sandbox.wait_on_state(self.client.action_runs, cleanup_url,
-            actionrun.ActionRun.STATE_SUCCEEDED.name)
-
-        action_run_url = self.client.get_url('MASTER.echo_job.1.echo_action')
-        assert_equal(self.client.action_runs(action_run_url)['state'],
-            actionrun.ActionRun.STATE_SUCCEEDED.name)
-
-        job_run_url = self.client.get_url('MASTER.echo_job.1')
-        assert_equal(self.client.job_runs(job_run_url)['state'],
-            actionrun.ActionRun.STATE_SUCCEEDED.name)
 
     def test_node_reconfig(self):
         job_service_config = dedent("""
@@ -169,7 +141,7 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
 
         service_name = 'MASTER.a_service'
         service_url = self.client.get_url(service_name)
-        self.sandbox.tronctl_start(service_name)
+        self.sandbox.tronctl('start', service_name)
         sandbox.wait_on_state(self.client.service, service_url,
             service.ServiceState.FAILED)
 
@@ -185,9 +157,67 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         job_url = self.client.get_url('MASTER.a_job')
         def wait_on_next_run():
             last_run = self.client.job(job_url)['runs'][0]
-            return last_run['node'].endswith('127.0.0.1')
+            return last_run['node']['hostname'] == '127.0.0.1'
 
         sandbox.wait_on_sandbox(wait_on_next_run)
+
+
+class TronCommandsTestCase(sandbox.SandboxTestCase):
+
+    def test_tronview(self):
+        self.start_with_config(SINGLE_ECHO_CONFIG)
+        expected = """\nServices:\nNo Services\n\n\nJobs:
+            Name       State       Scheduler           Last Success
+            MASTER.echo_job   enabled     interval 1:00:00    None
+            """
+
+        def remove_line_space(s):
+            return [l.replace(' ', '') for l in s.split('\n')]
+
+        actual = self.sandbox.tronview()[0]
+        assert_equal(remove_line_space(actual), remove_line_space(expected))
+
+    def test_tronctl_with_job(self):
+        self.start_with_config(SINGLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT)
+        job_name = 'MASTER.echo_job'
+        job_url = self.client.get_url(job_name)
+        self.sandbox.tronctl('start', job_name)
+
+        cleanup_url = self.client.get_url('MASTER.echo_job.1.cleanup')
+        sandbox.wait_on_state(self.client.action_runs, cleanup_url,
+            actionrun.ActionRun.STATE_SUCCEEDED.name)
+
+        action_run_url = self.client.get_url('MASTER.echo_job.1.echo_action')
+        assert_equal(self.client.action_runs(action_run_url)['state'],
+            actionrun.ActionRun.STATE_SUCCEEDED.name)
+
+        job_run_url = self.client.get_url('MASTER.echo_job.1')
+        assert_equal(self.client.job_runs(job_run_url)['state'],
+            actionrun.ActionRun.STATE_SUCCEEDED.name)
+
+        assert_equal(self.client.job(job_url)['status'], 'enabled')
+        self.sandbox.tronctl('disable', job_name)
+        sandbox.wait_on_state(self.client.job, job_url, 'disabled', 'status')
+
+    def test_tronfig(self):
+        self.start_with_config(SINGLE_ECHO_CONFIG)
+        stdout, stderr = self.sandbox.tronfig()
+        assert_equal(stdout.rstrip(), SINGLE_ECHO_CONFIG.rstrip())
+
+    def test_tronfig_failure(self):
+        self.start_with_config(SINGLE_ECHO_CONFIG)
+        bad_config = 'this is not valid: yaml: is it?'
+        def test_return_code(exc):
+            assert_equal(exc.returncode, 1)
+        assert_raises_such_that(CalledProcessError, test_return_code,
+            self.sandbox.tronfig, bad_config)
+
+    def test_tronfig_no_header(self):
+        self.start_with_config(SINGLE_ECHO_CONFIG)
+        namespace = 'second'
+        self.sandbox.tronfig(ALT_NAMESPACED_ECHO_CONFIG, name=namespace)
+        stdout, stderr = self.sandbox.tronfig(name=namespace, no_header=True)
+        assert_equal(stdout.rstrip(), ALT_NAMESPACED_ECHO_CONFIG.rstrip())
 
 
 class JobEndToEndTestCase(sandbox.SandboxTestCase):
@@ -232,7 +262,7 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         waiter = sandbox.build_waiter_func(self.client.action_runs, action_run_url)
 
         waiter(actionrun.ActionRun.STATE_FAILED.name)
-        self.sandbox.tronctl(['skip', 'MASTER.multi_step_job.0.broken'])
+        self.sandbox.tronctl('skip', 'MASTER.multi_step_job.0.broken')
         waiter(actionrun.ActionRun.STATE_SKIPPED.name)
 
         action_run_url = self.client.get_url('MASTER.multi_step_job.0.works')
@@ -282,7 +312,7 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         job_name = 'MASTER.a_job'
         job_url = self.client.get_url(job_name)
 
-        self.sandbox.tronctl(['cancel', '%s.0' % job_name])
+        self.sandbox.tronctl('cancel', '%s.0' % job_name)
         def wait_on_cancel():
             return len(self.client.job(job_url)['runs']) == 2
         sandbox.wait_on_sandbox(wait_on_cancel)
@@ -352,7 +382,7 @@ class ServiceEndToEndTestCase(sandbox.SandboxTestCase):
         service_name = 'MASTER.a_service'
         service_url = self.client.get_url(service_name)
 
-        self.sandbox.tronctl_start(service_name)
+        self.sandbox.tronctl('start', service_name)
         waiter = sandbox.build_waiter_func(self.client.service, service_url)
         waiter(service.ServiceState.UP)
 
@@ -361,9 +391,9 @@ class ServiceEndToEndTestCase(sandbox.SandboxTestCase):
         self.sandbox.tronfig(new_config)
 
         waiter(service.ServiceState.DISABLED)
-        self.sandbox.tronctl_start(service_name)
+        self.sandbox.tronctl('start', service_name)
         waiter(service.ServiceState.UP)
-        self.sandbox.tronctl_stop(service_name)
+        self.sandbox.tronctl('stop', service_name)
         waiter(service.ServiceState.DISABLED)
 
     def test_service_failed_restart(self):
@@ -379,7 +409,7 @@ class ServiceEndToEndTestCase(sandbox.SandboxTestCase):
         self.start_with_config(config)
         service_name = 'MASTER.service_restart'
         service_url = self.client.get_url(service_name)
-        self.sandbox.tronctl_start(service_name)
+        self.sandbox.tronctl('start', service_name)
 
         waiter = sandbox.build_waiter_func(self.client.service, service_url)
         waiter(service.ServiceState.FAILED)

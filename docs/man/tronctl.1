@@ -1,4 +1,4 @@
-.TH "TRONCTL" "1" "June 11, 2012" "0.5" "Tron"
+.TH "TRONCTL" "1" "April 24, 2013" "0.6" "Tron"
 .SH NAME
 tronctl \- control Tron jobs and services
 .
@@ -94,6 +94,18 @@ to run.
 .B fail <job_run_id | action_run_id>
 Marks the specified job run or action run as failed.  This behaves the same
 as the job actually failing.
+.TP
+.B stop <action_run_id>
+Stop an action run
+.TP
+.B stop <service>
+Stop (SIGTERM) a service
+.TP
+.B kill <service>
+Force stop (SIGKILL) a service
+.TP
+.B kill <action_run_id>
+Force stop (SIGKILL) an action run
 .UNINDENT
 .SH SERVICE COMMANDS
 .INDENT 0.0
@@ -103,10 +115,6 @@ Start the service.
 .TP
 .B stop <service name>
 Stop the service.
-.TP
-.B zap <service_id | service_instance_id>
-Marks the specified service or service instance as \fBDOWN\fP without
-taking any other action (such as actually stopping the service)
 .UNINDENT
 .SH EXAMPLES
 .sp
@@ -127,7 +135,7 @@ Job Run job0.4 now in state FAIL
 $ tronctl restart job0.4
 Job Run job0.4 now in state RUNN
 
-$ tronctl succeed job0.5
+$ tronctl success job0.5
 Job Run job0.5 now in state SUCC
 .ft P
 .fi

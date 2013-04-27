@@ -291,6 +291,7 @@ class SchedulerAdapter(ReprAdapter):
     def get_jitter(self):
         return scheduler.get_jitter_str(self._obj.get_jitter())
 
+
 class ServiceAdapter(ReprAdapter):
 
     field_names = ['name', 'enabled']

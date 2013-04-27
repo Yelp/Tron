@@ -9,6 +9,7 @@ import tempfile
 import time
 import contextlib
 import functools
+import mock
 
 from testify import TestCase, setup, teardown
 
@@ -35,10 +36,10 @@ def wait_on_sandbox(func, delay=0.1, max_wait=5.0):
     raise TronSandboxException("Failed %s" % func.__name__)
 
 
-def wait_on_state(client_func, url, state):
+def wait_on_state(client_func, url, state, field='state'):
     """Use client_func(url) to wait until the resource changes to state."""
     def wait_func():
-        return client_func(url)['state'] == state
+        return client_func(url)[field] == state
     wait_func.__name__ = '%s wait on %s' % (url, state)
     wait_on_sandbox(wait_func)
 
@@ -51,10 +52,11 @@ def handle_output(cmd, (stdout, stderr), returncode):
     """Log process output before it is parsed. Raise exception if exit code
     is nonzero.
     """
+    cmd = ' '.join(cmd)
     if stdout:
-        log.warn("%s: %s", cmd, stdout)
+        log.warn("%s STDOUT: %s", cmd, stdout)
     if stderr:
-        log.warn("%s: %s", cmd, stderr)
+        log.warn("%s STDERR: %s", cmd, stderr)
     if returncode:
         raise CalledProcessError(returncode, cmd)
 
@@ -110,12 +112,15 @@ class ClientProxy(object):
             return f.read()
 
     def wrap(self, func, *args, **kwargs):
-        try:
-            return func(*args, **kwargs)
-        except (client.RequestError, ValueError), e:
-            # ValueError for JSONDecode errors
-            log.warn("%r, Log:\n%s" % (e, self.log_contents()))
-            return False
+        with mock.patch('tron.commands.client.log'):
+            try:
+                return func(*args, **kwargs)
+            except (client.RequestError, ValueError), e:
+                # ValueError for JSONDecode errors
+                log_contents = self.log_contents()
+                if log_contents:
+                    log.warn("%r, Log:\n%s" % (e, log_contents))
+                return False
 
     def __getattr__(self, name):
         attr = getattr(self.client, name)
@@ -188,22 +193,16 @@ class TronSandbox(object):
             raise
         return streams
 
-    def tronctl(self, args=None):
+    def tronctl(self, *args):
         args = list(args) if args else []
         return self.run_command('tronctl', args + ['--server', self.api_uri])
 
-    def tronctl_start(self, name):
-        self.tronctl(['start', name])
-
-    def tronctl_stop(self, name):
-        self.tronctl(['stop', name])
-
-    def tronview(self, args=None):
+    def tronview(self, *args):
         args = list(args) if args else []
         args += ['--nocolor', '--server', self.api_uri]
         return self.run_command('tronview', args)
 
-    def trond(self, args=None):
+    def trond(self, *args):
         args = list(args) if args else []
         args += ['--working-dir=%s'     % self.tmp_dir,
                    '--pid-file=%s'      % self.pid_file,
@@ -215,6 +214,12 @@ class TronSandbox(object):
         self.run_command('trond', args)
         wait_on_sandbox(lambda: bool(self.client.home()))
 
-    def tronfig(self, config_content, name=schema.MASTER_NAMESPACE):
-        args = ['--server', self.api_uri, name, '-']
+    def tronfig(self,
+                config_content=None,
+                name=schema.MASTER_NAMESPACE,
+                no_header=False):
+        args = ['--server', self.api_uri, name]
+        if no_header:
+            args += ['--no-header']
+        args += ['-'] if config_content else ['-p']
         return self.run_command('tronfig', args, stdin_lines=config_content)

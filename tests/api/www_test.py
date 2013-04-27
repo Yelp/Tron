@@ -323,9 +323,9 @@ class ConfigResourceTestCase(TestCase):
 
     def test_render_GET(self):
         name = 'the_nane'
-        request = build_request(name=name)
+        request = build_request(name=name, no_header='1')
         self.resource.render_GET(request)
-        self.controller.read_config.assert_called_with(name)
+        self.controller.read_config.assert_called_with(name, add_header=False)
         self.respond.assert_called_with(request,
                 self.resource.controller.read_config.return_value)
 
