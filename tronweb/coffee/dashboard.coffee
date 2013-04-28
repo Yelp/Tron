@@ -51,7 +51,7 @@ class window.DashboardFilterView extends FilterView
              <select id="filter-<%= filterName %>"
                   class="span3"
                   data-filter-name="<%= filterName %>Filter">
-              <option value="">Type</option>
+              <option value="">All</option>
               <option <% print(isSelected(defaultValue, 'job')) %>
                   value="job">Scheduled Jobs</option>
               <option <% print(isSelected(defaultValue, 'service')) %>

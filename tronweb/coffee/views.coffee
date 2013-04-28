@@ -83,7 +83,7 @@ class window.FilterView extends Backbone.View
     defaultIcon: "icon-filter"
 
     filterIcons:
-        name:       "icon-query"
+        name:       "icon-stacks"
         node_pool:  "icon-connected"
         state:      "icon-switchon"
         status:     "icon-switchon"
