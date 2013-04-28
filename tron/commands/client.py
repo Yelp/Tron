@@ -86,21 +86,21 @@ class Client(object):
         self.url_base = url_base
 
     def status(self):
-        return self.http_get('/status')
+        return self.http_get('/api/status')
 
     def events(self):
-        return self.http_get('/events')['data']
+        return self.http_get('/api/events')['data']
 
     def config(self, config_name, config_data=None, config_hash=None):
         """Retrieve or update the configuration."""
         if config_data:
             request_data = dict(
                         config=config_data, name=config_name, hash=config_hash)
-            return self.request('/config', request_data)
-        return self.http_get('/config', dict(name=config_name))
+            return self.request('/api/config', request_data)
+        return self.http_get('/api/config', dict(name=config_name))
 
     def home(self):
-        return self.http_get('/')
+        return self.http_get('/api/')
 
     index = home
 
@@ -108,7 +108,7 @@ class Client(object):
         return get_object_type_from_identifier(self.index(), identifier).url
 
     def services(self):
-        return self.http_get('/services').get('services')
+        return self.http_get('/api/services').get('services')
 
     def service(self, service_url):
         return self.http_get(service_url)
@@ -116,7 +116,7 @@ class Client(object):
     def jobs(self, include_job_runs=False, include_action_runs=False):
         params = {'include_job_runs': int(include_job_runs),
                   'include_action_runs': int(include_action_runs)}
-        return self.http_get('/jobs', params).get('jobs')
+        return self.http_get('/api/jobs', params).get('jobs')
 
     def job(self, job_url, include_action_runs=False, count=0):
         params = {'include_action_runs': int(include_action_runs),
@@ -151,6 +151,22 @@ class Client(object):
         return response.content
 
 
+def build_api_url(resource, identifier_parts):
+    return '/api/%s/%s' % (resource, '/'.join(identifier_parts))
+
+
+def split_identifier(identifier):
+    return identifier.rsplit('.', identifier.count('.') - 1)
+
+
+def get_job_url(identifier):
+    return build_api_url('jobs', split_identifier(identifier))
+
+
+def get_service_url(identifier):
+    return build_api_url('services', split_identifier(identifier))
+
+
 class TronObjectType(object):
     """Constants to identify a Tron object type."""
     job              = 'JOB'
@@ -159,15 +175,25 @@ class TronObjectType(object):
     service          = 'SERVICE'
     service_instance = 'SERVICE_INSTANCE'
 
+    url_builders = {
+        'jobs':     get_job_url,
+        'services': get_service_url
+    }
+
     groups = {
         'jobs':     [job, job_run, action_run],
         'services': [service, service_instance]
     }
 
 
-TronObjectIdentifier = namedtuple('TronObjectIdentifier', 'type name url')
+TronObjectIdentifier = namedtuple('TronObjectIdentifier', 'type url')
 
-IdentifierParts = namedtuple('IdentifierParts', 'name path length')
+IdentifierParts = namedtuple('IdentifierParts', 'name full_id length')
+
+
+def first(seq):
+    for item in itertools.ifilter(None, seq):
+        return item
 
 
 def get_object_type_from_identifier(url_index, identifier):
@@ -180,23 +206,18 @@ def get_object_type_from_identifier(url_index, identifier):
         name_elements       = identifier.split('.')
         name                = '.'.join(name_elements[:2])
         length              = len(name_elements) - 2
-        relative_path       = '/'.join(name_elements[2:])
-        return IdentifierParts(name, relative_path, length)
+        return IdentifierParts(name, identifier, length)
 
     def find_by_type(id_parts, index_name):
         url_type_index = url_index[index_name]
         if id_parts.name in url_type_index:
             tron_type = TronObjectType.groups[index_name][id_parts.length]
-            url = '%s/%s' % (url_type_index[id_parts.name], id_parts.path)
-            return TronObjectIdentifier(tron_type, id_parts.name, url)
+            url = TronObjectType.url_builders[index_name](id_parts.full_id)
+            return TronObjectIdentifier(tron_type, url)
 
     def find_by_name(name, namespace=None):
         id = get_name_parts(name, namespace)
         return find_by_type(id, 'jobs') or find_by_type(id, 'services')
-
-    def first(seq):
-        for item in itertools.ifilter(None, seq):
-            return item
 
     namespaces = [None, MASTER_NAMESPACE] + url_index['namespaces']
     id_obj = first(find_by_name(identifier, name) for name in namespaces)
