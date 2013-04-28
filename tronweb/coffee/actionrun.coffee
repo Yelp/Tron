@@ -68,7 +68,7 @@ class module.ActionRunHistoryListEntryView extends ClickableListEntry
             <%= run_num %></a></td>
         <td><% print(formatState(state)) %></td>
         <td><% print(displayNode(node)) %></td>
-        <td><%= exit_status %></td>
+        <td><% print(modules.actionrun.formatExit(exit_status)) %></td>
         <td><% print(dateFromNow(start_time, "None")) %></td>
         <td><% print(dateFromNow(end_time, "")) %></td>
     """
@@ -129,6 +129,14 @@ class module.ActionRunListEntryView extends ClickableListEntry
         @
 
 
+module.formatExit = (exit) ->
+    return '' if not exit? or exit == ''
+    template = _.template """
+        <span class="badge badge-<%= type %>"><%= exit %></span>
+    """
+    template(exit: exit, type: if not exit then "success" else "important")
+
+
 class module.ActionRunView extends Backbone.View
 
     initialize: (options) =>
@@ -167,7 +175,7 @@ class module.ActionRunView extends Backbone.View
                         <td><code class="command"><%= command %></code></td></tr>
                     <% } %>
                     <tr><td>Exit code</td>
-                        <td><%= exit_status %></td></tr>
+                        <td><% print(modules.actionrun.formatExit(exit_status)) %></td></tr>
                     <tr><td>Start time</td>
                         <td><% print(dateFromNow(start_time, ''))  %></td></tr>
                     <tr><td>End time</td>

@@ -24,7 +24,7 @@ window.dateFromNow = (string, defaultString='never') ->
         formatted = moment(string).format('MMM, Do YYYY, h:mm:ss a')
         delta = label_template
             delta: moment(string).fromNow()
-            type: "inverse"
+            type: "clear"
     else
         formatted = defaultString
         delta = label_template
@@ -44,7 +44,7 @@ window.getDuration = (time) ->
 
 window.formatDuration = (duration) ->
     template = _.template """
-        <span class="label label-inverse tt-enable" title="<%= duration %>">
+        <span class="label label-clear tt-enable" title="<%= duration %>">
           <%= humanized %>
         </span>
     """

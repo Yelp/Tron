@@ -157,16 +157,17 @@ class window.ServiceView extends Backbone.View
                     <tr><td>Restart Delay</td>
                         <td>
                             <% if (restart_delay) { %>
-                                <span class=""><%= restart_delay %></span>
-                                seconds
+                                <span class="label label-clear">
+                                    <%= restart_delay %> seconds</span>
                             <% } else { %>
                                 <span class="label info">none</span>
                             <% } %>
                         </td></tr>
                     <tr><td>Monitor Interval</td>
                         <td>
-                            <span class=""><%= monitor_interval %></span>
-                            seconds
+                            <span class="label label-clear">
+                                <%= monitor_interval %> seconds
+                            </span>
                         </td></tr>
                 </table>
             </div>

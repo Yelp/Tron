@@ -407,7 +407,7 @@ class LogAdapter(object):
 class TronSite(server.Site):
     """Subclass of a twisted Site to customize logging."""
 
-    access_log = logging.getLogger('%s.access' % __name__)
+    access_log = logging.getLogger('tron.api.www.access')
 
     @classmethod
     def create(cls, mcp, web_path):

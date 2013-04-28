@@ -356,7 +356,7 @@ window.formatScheduler = (scheduler) ->
     _.template("""
             <i class="<%= icon %> tt-enable"
                 title="<%= type %> scheduler"></i>
-        <span class="scheduler">
+        <span class="scheduler label label-clear">
             <%= value %>
         </span>
         <% if (jitter) { %>
@@ -425,8 +425,11 @@ class window.JobRunView extends Backbone.View
                         <td><% print(formatState(state)) %></td></tr>
                     <tr><td>Node</td>
                         <td><% print(displayNode(node)) %></td></tr>
-                    <tr><td>Manual</td>         <td><%= manual %></td></tr>
-                    <tr><td>Scheduled</td>      <td><%= run_time %></td></tr>
+                    <tr><td>Scheduled</td>
+                        <td>
+                            <% print(modules.job.formatManualRun(manual)) %>
+                            <span class="label label-clear"><%= run_time %></span>
+                        </td></tr>
                     <tr><td>Start</td>
                         <td><% print(dateFromNow(start_time, '')) %></td>
                     </tr>
