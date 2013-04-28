@@ -146,10 +146,7 @@ class module.QuickFindModel extends Backbone.Model
 
         nested = for name, actions of jobs
             [new JobIndexEntry(name), buildActions(actions)]
-        console.log nested
-        flat = _.flatten(nested)
-        console.log flat
-        flat
+        _.flatten(nested)
 
     parse: (resp, options) =>
         index = [].concat(

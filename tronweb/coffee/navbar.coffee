@@ -15,6 +15,12 @@ class module.NavView extends Backbone.View
     attributes:
         id: "menu"
 
+    events:
+        ".search-query click":  "handleClick"
+
+    handleClick: (event) ->
+       console.log(event)
+
     template: """
           <div class="navbar-inner">
             <div class="container">
