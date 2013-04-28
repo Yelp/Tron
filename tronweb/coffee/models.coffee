@@ -4,6 +4,13 @@ window.modules = window.modules || {}
 module = window.modules.models = {}
 
 
+backboneSync = Backbone.sync
+
+Backbone.sync = (method, model, options) ->
+    options.url = '/api' + _.result(model, 'url')
+    backboneSync(method, model, options)
+
+
 class window.RefreshModel extends Backbone.Model
 
     initialize: (options) =>
