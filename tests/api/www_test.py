@@ -99,17 +99,16 @@ class JobrunResourceTestCase(WWWTestCase):
         assert_equal(response['id'], self.job_run.id)
 
 
-class RootResourceTestCase(WWWTestCase):
+class ApiRootResourceTestCase(WWWTestCase):
 
     @setup
     def build_resource(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
-        web_path = '/bogus/path'
-        self.resource = www.RootResource(self.mcp, web_path)
+        self.resource = www.ApiRootResource(self.mcp)
 
     def test__init__(self):
-        expected_children = ['jobs', 'services', 'config', 'status', 'events', 'web']
-        assert_equal(set(expected_children), set(self.resource.children.keys()))
+        expected_children = ['jobs', 'services', 'config', 'status', 'events', '']
+        assert_equal(set(expected_children), set(self.resource.children))
 
     def test_render_GET(self):
         expected_keys = [
@@ -122,6 +121,25 @@ class RootResourceTestCase(WWWTestCase):
             'status_url']
         response = self.resource.render_GET(build_request())
         assert_equal(set(response.keys()), set(expected_keys))
+
+
+class RootResourceTestCase(WWWTestCase):
+
+    @setup
+    def build_resource(self):
+        self.web_path = '/bogus/path'
+        self.mcp = mock.create_autospec(mcp.MasterControlProgram)
+        self.resource = www.RootResource(self.mcp, self.web_path)
+
+    def test_render_GET(self):
+        request = build_request()
+        response = self.resource.render_GET(request)
+        assert_equal(response, 1)
+        assert_equal(request.redirect.call_count, 1)
+        request.finish.assert_called_with()
+
+    def test_get_children(self):
+        assert_equal(set(self.resource.children), set(['api', 'web', '']))
 
 
 class ActionRunHistoryResourceTestCase(WWWTestCase):

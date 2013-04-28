@@ -350,21 +350,21 @@ class EventResource(resource.Resource):
         return respond(request, dict(data=response_data))
 
 
-class RootResource(resource.Resource):
-    def __init__(self, mcp, web_path):
+class ApiRootResource(resource.Resource):
+
+    def __init__(self, mcp):
         self._master_control = mcp
         resource.Resource.__init__(self)
 
         # Setup children
-        self.putChild('jobs',     JobCollectionResource(mcp.get_job_collection()))
-        self.putChild('services', ServiceCollectionResource(mcp.get_service_collection()))
+        self.putChild('jobs',
+            JobCollectionResource(mcp.get_job_collection()))
+        self.putChild('services',
+            ServiceCollectionResource(mcp.get_service_collection()))
         self.putChild('config',   ConfigResource(mcp))
         self.putChild('status',   StatusResource(mcp))
         self.putChild('events',   EventResource(''))
-        self.putChild('web',      static.File(web_path))
-
-    def getChild(self, name, request):
-        return resource.Resource.getChild(self, name, request) if name else self
+        self.putChild('', self)
 
     def urls_from_child(self, child_name):
         def name_url_dict(source):
@@ -383,6 +383,21 @@ class RootResource(resource.Resource):
             'namespaces':       self.children['config'].get_namespaces()
         }
         return respond(request, response)
+
+
+class RootResource(resource.Resource):
+
+    def __init__(self, mcp, web_path):
+        resource.Resource.__init__(self)
+        self.mcp = mcp
+        self.putChild('api', ApiRootResource(self.mcp))
+        self.putChild('web', static.File(web_path))
+        self.putChild('', self)
+
+    def render_GET(self, request):
+        request.redirect(request.prePathURL() + 'web')
+        request.finish()
+        return server.NOT_DONE_YET
 
 
 class LogAdapter(object):
