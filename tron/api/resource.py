@@ -39,12 +39,9 @@ def respond(request, response_dict, code=http.OK, headers=None):
     """Helper to generate a json response"""
     request.setResponseCode(code)
     request.setHeader('content-type', 'text/json')
-    if headers:
-        for key, val in headers.iteritems():
-            request.setHeader(key, val)
-    if response_dict:
-        return json.dumps(response_dict, cls=JSONEncoder)
-    return ""
+    for key, val in (headers or {}).iteritems():
+        request.setHeader(key, val)
+    return json.dumps(response_dict, cls=JSONEncoder) if response_dict else ""
 
 
 def handle_command(request, api_controller, obj, **kwargs):
@@ -53,22 +50,19 @@ def handle_command(request, api_controller, obj, **kwargs):
     log.info("Handling '%s' request on %s", command, obj)
     try:
         response = api_controller.handle_command(command, **kwargs)
+        return respond(request, {'result': response})
     except controller.UnknownCommandError, e:
-        log.warning("Unknown command %s for service %s", command, obj)
-        response = {'error': str(e)}
-        return respond(request, response, code=http.NOT_IMPLEMENTED)
-
-    return respond(request, {'result': response})
+        log.warning("Unknown command %s for %s", command, obj)
+        return respond(request, {'error': str(e)}, code=http.NOT_IMPLEMENTED)
 
 
 def resource_from_collection(collection, name, child_resource):
-    """Return a child resource from a collection item by looking it up from
-    the name. If no item is found, return NoResource.
+    """Return a child resource from a collection by name.  If no item is found,
+    return NoResource.
     """
     item = collection.get_by_name(name)
     if item is None:
         return resource.NoResource("Cannot find child %s" % name)
-
     return child_resource(item)
 
 
@@ -78,17 +72,17 @@ class ActionRunResource(resource.Resource):
 
     def __init__(self, action_run, job_run):
         resource.Resource.__init__(self)
-        self.job_run    = job_run
         self.action_run = action_run
+        self.job_run    = job_run
         self.controller = controller.ActionRunController(action_run, job_run)
 
     def render_GET(self, request):
-        num_lines = requestargs.get_integer(request, 'num_lines')
-        include_stdout = requestargs.get_bool(request, 'include_stdout')
-        include_stderr = requestargs.get_bool(request, 'include_stderr')
         run_adapter = adapter.ActionRunAdapter(
-            self.action_run, self.job_run, num_lines,
-            include_stdout=include_stdout, include_stderr=include_stderr)
+            self.action_run,
+            self.job_run,
+            requestargs.get_integer(request, 'num_lines'),
+            include_stdout=requestargs.get_bool(request, 'include_stdout'),
+            include_stderr=requestargs.get_bool(request, 'include_stderr'))
         return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):
@@ -132,7 +126,6 @@ def is_negative_int(string):
 
 
 class JobResource(resource.Resource):
-    """A resource that describes a particular job"""
 
     def __init__(self, job_scheduler):
         resource.Resource.__init__(self)
@@ -140,14 +133,14 @@ class JobResource(resource.Resource):
         self.controller    = controller.JobController(job_scheduler)
 
     def get_run_from_identifier(self, run_id):
-        job = self.job_scheduler.get_job()
+        job_runs = self.job_scheduler.get_job_runs()
         if run_id.upper() == 'HEAD':
-            return job.runs.get_newest()
+            return job_runs.get_newest()
         if run_id.isdigit():
-            return job.runs.get_run_by_num(int(run_id))
+            return job_runs.get_run_by_num(int(run_id))
         if is_negative_int(run_id):
-            return job.runs.get_run_by_index(int(run_id))
-        return job.runs.get_run_by_state_short_name(run_id)
+            return job_runs.get_run_by_index(int(run_id))
+        return job_runs.get_run_by_state_short_name(run_id)
 
     def getChild(self, run_id, _):
         if not run_id:
@@ -180,7 +173,10 @@ class JobResource(resource.Resource):
 
     def render_POST(self, request):
         run_time = requestargs.get_datetime(request, 'run_time')
-        return handle_command(request, self.controller, self.job_scheduler,
+        return handle_command(
+            request,
+            self.controller,
+            self.job_scheduler,
             run_time=run_time)
 
 
@@ -193,13 +189,11 @@ class ActionRunHistoryResource(resource.Resource):
         self.action_runs = action_runs
 
     def render_GET(self, request):
-        action_runs = adapter.adapt_many(
-            adapter.ActionRunAdapter, self.action_runs)
-        return respond(request, action_runs)
+        return respond(request,
+            adapter.adapt_many(adapter.ActionRunAdapter, self.action_runs))
 
 
 class JobCollectionResource(resource.Resource):
-    """Resource for all our daemon's jobs"""
 
     def __init__(self, job_collection):
         self.job_collection = job_collection
@@ -212,12 +206,16 @@ class JobCollectionResource(resource.Resource):
         return resource_from_collection(self.job_collection, name, JobResource)
 
     def get_data(self, include_job_run=False, include_action_runs=False):
-        jobs = (sched.get_job() for sched in self.job_collection)
         return adapter.adapt_many(adapter.JobAdapter,
-            jobs,
+            self.job_collection.get_jobs(),
             include_job_run,
             include_action_runs,
             num_runs=5)
+
+    def get_job_index(self):
+        jobs = adapter.adapt_many(
+            adapter.JobIndexAdapter, self.job_collection.get_jobs())
+        return dict((job['name'], job['actions']) for job in jobs)
 
     def render_GET(self, request):
         include_job_runs = requestargs.get_bool(request, 'include_job_runs')
@@ -287,6 +285,9 @@ class ServiceCollectionResource(resource.Resource):
     def get_data(self):
         return adapter.adapt_many(adapter.ServiceAdapter, self.collection)
 
+    def get_service_index(self):
+        return self.collection.get_names()
+
     def render_GET(self, request):
         return respond(request, dict(services=self.get_data()))
 
@@ -300,7 +301,7 @@ class ConfigResource(resource.Resource):
         self.controller = controller.ConfigController(master_control)
         resource.Resource.__init__(self)
 
-    def get_namespaces(self):
+    def get_config_index(self):
         return self.controller.get_namespaces()
 
     def render_GET(self, request):
@@ -366,21 +367,12 @@ class ApiRootResource(resource.Resource):
         self.putChild('events',   EventResource(''))
         self.putChild('', self)
 
-    def urls_from_child(self, child_name):
-        def name_url_dict(source):
-            return dict((i['name'], i['url']) for i in source)
-        return name_url_dict(self.children[child_name].get_data())
-
     def render_GET(self, request):
         """Return an index of urls for resources."""
         response = {
-            'jobs':             self.urls_from_child('jobs'),
-            'services':         self.urls_from_child('services'),
-            'jobs_url':         request.uri + request.childLink('jobs'),
-            'services_url':     request.uri + request.childLink('services'),
-            'config_url':       request.uri + request.childLink('config'),
-            'status_url':       request.uri + request.childLink('status'),
-            'namespaces':       self.children['config'].get_namespaces()
+            'jobs':             self.children['jobs'].get_job_index(),
+            'services':         self.children['services'].get_service_index(),
+            'namespaces':       self.children['config'].get_config_index()
         }
         return respond(request, response)
 

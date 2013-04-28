@@ -278,6 +278,21 @@ class JobAdapter(ReprAdapter):
         return ActionGraphAdapter(self._obj.action_graph).get_repr()
 
 
+class JobIndexAdapter(ReprAdapter):
+
+    translated_field_names = ['name', 'actions']
+
+    def get_name(self):
+        return self._obj.get_name()
+
+    def get_actions(self):
+        def adapt_run(run):
+            return {'name': run.action_name, 'command': run.bare_command}
+
+        job_run = self._obj.runs.get_newest()
+        return [adapt_run(action_run) for action_run in job_run.action_runs]
+
+
 class SchedulerAdapter(ReprAdapter):
 
     translated_field_names = ['value', 'type', 'jitter']
@@ -290,6 +305,7 @@ class SchedulerAdapter(ReprAdapter):
 
     def get_jitter(self):
         return scheduler.get_jitter_str(self._obj.get_jitter())
+
 
 class ServiceAdapter(ReprAdapter):
 

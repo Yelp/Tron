@@ -63,6 +63,7 @@ class module.NavView extends Backbone.View
         (entry.name for _, entry of @model.attributes)
 
     highlighter: (item) =>
+        # Also formats the item for display
         typeahead = @$('.typeahead').data().typeahead
         name = module.typeahead_hl.call(typeahead, item)
         entry = @model.get(item)
@@ -73,10 +74,8 @@ class module.NavView extends Backbone.View
         query = @query.toLowerCase()
         for item in items
             uncasedItem = item.toLowerCase()
-            if _.str.startsWith(uncasedItem, query)
-                startsWithQuery.push item
-            else if _.str.include(uncasedItem, query)
-                containsQuery.push item
+            if _.str.startsWith(uncasedItem, query) then startsWithQuery.push item
+            else if _.str.include(uncasedItem, query) then containsQuery.push item
 
         lengthSort = (item) -> item.length
         _.sortBy(startsWithQuery, lengthSort)

@@ -197,8 +197,11 @@ def first(seq):
 
 
 def get_object_type_from_identifier(url_index, identifier):
-    """Given a string identifier, return a TronObjectIdentifier.
-    """
+    """Given a string identifier, return a TronObjectIdentifier. """
+    name_mapping = {
+        'jobs':     set(url_index['jobs']),
+        'services': set(url_index['services'])
+    }
     def get_name_parts(identifier, namespace=None):
         if namespace:
             identifier = '%s.%s' % (namespace, identifier)
@@ -209,7 +212,7 @@ def get_object_type_from_identifier(url_index, identifier):
         return IdentifierParts(name, identifier, length)
 
     def find_by_type(id_parts, index_name):
-        url_type_index = url_index[index_name]
+        url_type_index = name_mapping[index_name]
         if id_parts.name in url_type_index:
             tron_type = TronObjectType.groups[index_name][id_parts.length]
             url = TronObjectType.url_builders[index_name](id_parts.full_id)

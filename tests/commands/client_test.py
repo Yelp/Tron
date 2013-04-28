@@ -160,13 +160,11 @@ class GetContentFromIdentifierTestCase(TestCase):
         self.index = {
             'namespaces': ['OTHER', 'MASTER'],
             'jobs': {
-                'MASTER.namea': '/jobs/MASTER.namea',
-                'MASTER.nameb': '/jobs/MASTER.nameb',
-                'OTHER.nameg':  '/jobs/OTHER.nameg',
+                'MASTER.namea': '',
+                'MASTER.nameb': '',
+                'OTHER.nameg':  '',
             },
-            'services': {
-                'MASTER.foo': '/services/MASTER.foo'
-            }
+            'services': ['MASTER.foo']
         }
 
     def test_get_url_from_identifier_job_no_namespace(self):

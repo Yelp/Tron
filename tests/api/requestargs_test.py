@@ -4,6 +4,7 @@ from tests.testingutils import Turtle
 
 from tron.api.requestargs import get_integer, get_string, get_bool, get_datetime
 
+
 class RequestArgsTestCase(TestCase):
 
     @setup
