@@ -370,7 +370,7 @@ class EventAdapter(ReprAdapter):
 
 
 class NodeAdapter(ReprAdapter):
-    field_names = ['name', 'hostname', 'username']
+    field_names = ['name', 'hostname', 'username', 'port']
 
 
 class NodePoolAdapter(ReprAdapter):

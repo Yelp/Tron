@@ -174,22 +174,25 @@ valid_notification_options = ValidateNotificationOptions()
 class ValidateNode(Validator):
     config_class =              schema.ConfigNode
     validators = {
-        'name':                 valid_identifier,
-        'username':             valid_string,
-        'hostname':             valid_string,
+        'name':                 config_utils.valid_identifier,
+        'username':             config_utils.valid_string,
+        'hostname':             config_utils.valid_string,
+        'port':                 config_utils.valid_int,
     }
 
-    DEFAULT_USER =              os.environ['USER']
+    defaults = {
+        'port':                 22,
+        'username':             os.environ['USER'],
+    }
 
     def do_shortcut(self, node):
         """Nodes can be specified with just a hostname string."""
         if isinstance(node, basestring):
-            return schema.ConfigNode(
-                        hostname=node, name=node, username=self.DEFAULT_USER)
+            return schema.ConfigNode(hostname=node, name=node, **self.defaults)
 
-    def set_defaults(self, output_dict, _):
+    def set_defaults(self, output_dict, config_context):
+        super(ValidateNode, self).set_defaults(output_dict, config_context)
         output_dict.setdefault('name', output_dict['hostname'])
-        output_dict.setdefault('username', self.DEFAULT_USER)
 
 valid_node = ValidateNode()
 
@@ -424,7 +427,7 @@ def validate_jobs_and_services(config, config_context):
 
 
 DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1)
-DEFAULT_NODE = schema.ConfigNode('localhost', 'localhost', 'tronuser')
+DEFAULT_NODE = ValidateNode().do_shortcut('localhost')
 
 
 class ValidateConfig(Validator):
