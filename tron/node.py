@@ -300,6 +300,11 @@ class Node(object):
         # of the world from getting too involved with twisted.
         return self.run_states[run.id].deferred
 
+    def stop(self, run):
+        """Close the channel the runs channel, which should remove this run from
+        the tracked runs."""
+        run.channel.loseConnection()
+
     def _do_run(self, run):
         """Finish starting to execute a run
 
