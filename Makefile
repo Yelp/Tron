@@ -11,7 +11,7 @@ DOCS_BUILDDIR=docs/_build
 DOCS_STATICSDIR=$(DOCS_DIR)/images
 ALLSPHINXOPTS=-d $(DOCS_BUILDDIR)/doctrees $(SPHINXOPTS)
 
-.PHONY : all source install clean tests
+.PHONY : all source install clean tests docs
 
 all:
 		@echo "make source - Create source package"

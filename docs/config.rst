@@ -1,12 +1,6 @@
 Configuration
 =============
 
-.. note::
-
-    **The configuration system has changed significantly since version 0.2.10.**
-    All existing configurations should still work, but new configurations
-    should follow the new conventions.
-
 .. _config_syntax:
 
 Syntax
@@ -330,3 +324,16 @@ handler that rotates files each day. The default log directory is
 To configure logging pass -l <logging.conf> to trond. You can modify the
 default logging.conf by copying it from tron/logging.conf. See
 http://docs.python.org/howto/logging.html#configuring-logging
+
+Interesting logs
+~~~~~~~~~~~~~~~~
+
+Most tron logs are named by using pythons `__file__` which uses the modules
+name.  There are a couple special cases:
+
+**twisted**
+    Twisted sends its logs to the `twisted` log
+
+**tron.api.www.access**
+    API access logs are sent to this log at the INFO log level.  They follow
+    a standard apache combined log format.

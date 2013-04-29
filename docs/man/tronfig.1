@@ -1,4 +1,4 @@
-.TH "TRONFIG" "1" "June 11, 2012" "0.5" "Tron"
+.TH "TRONFIG" "1" "April 24, 2013" "0.6" "Tron"
 .SH NAME
 tronfig \- tronfig documentation
 .
@@ -32,7 +32,7 @@ level margin: \\n[rst2man-indent\\n[rst2man-indent-level]]
 .
 .SH SYNOPSYS
 .sp
-\fBtronfig [\-\-server server_name ] [\-\-verbose | \-v] [\-]\fP
+\fBtronfig [\-\-server server_name ] [\-\-verbose | \-v] [<namespace>] [\-p] [\-]\fP
 .SH DESCRIPTION
 .sp
 \fBtronfig\fP allows live editing of the Tron configuration.  It retrieves
@@ -51,74 +51,20 @@ Displays status messages along the way
 .B \fB\-\-version\fP
 Displays version string
 .TP
+.B \fB\-p\fP
+Print the configuration
+.TP
+.B \fBnamespace\fP
+The configuration namespace to edit. Defaults to MASTER
+.TP
 .B \fB\-\fP
 Read new config from \fBstdin\fP.
 .UNINDENT
 .SH CONFIGURATION
 .sp
-By default tron will run with a blank configuration file. Get the full
-configuration docs at \fI\%http://packages.python.org/tron/config.html\fP.
-.SH EXAMPLE CONFIGURATION
-.sp
-.nf
-.ft C
-ssh_options:
-  agent: true
-
-nodes:
-    \- name: node1
-      hostname: \(aqmachine1\(aq
-    \- name: node2
-      hostname: \(aqmachine2\(aq
-
-node_pools:
-    \- name: pool
-      nodes: [node1, node2]
-
-command_context:
-    PYTHON: /usr/bin/python
-
-jobs:
-    \- name: "job0"
-      node: pool
-      all_nodes: True
-      schedule: "daily 12:00 MWF"
-      queueing: False
-      actions:
-        \- name: "start"
-          command: "echo number 9"
-          node: node1
-        \- name: "end"
-          command: "echo love me do"
-          requires: [start]
-
-    \- name: "job1"
-      node: node1
-      schedule: "interval 20s"
-      queueing: False
-      actions:
-        \- name: "echo"
-          command: "echo %(PYTHON)s"
-      cleanup_action:
-        command: "echo \(aqcleaning up job1\(aq"
-
-services:
-    \- name: "testserv"
-      node: pool
-      count: 8
-      monitor_interval: 60
-      restart_interval: 120
-      pid_file: "/var/run/%(name)s\-%(instance_number)s.pid"
-      command: "/bin/myservice \-\-pid\-file=%(pid_file)s start"
-.ft P
-.fi
-.SH FILES
-.INDENT 0.0
-.TP
-.B /var/lib/tron/tron_config.yaml
-Default path to the config file. May be changed by passing the \fB\-c\fP
-option to \fBtrond\fP.
-.UNINDENT
+By default tron will run with a blank configuration file. The config file is
+saved to \fB<working_dir>/config/\fP by default. See the full documentation at
+\fI\%http://pythonhosted.org/tron/config.html\fP.
 .SH BUGS
 .sp
 Post bugs to \fI\%http://www.github.com/yelp/tron/issues\fP.

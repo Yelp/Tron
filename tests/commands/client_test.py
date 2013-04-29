@@ -110,7 +110,8 @@ class ClientTestCase(TestCase):
 
     def test_config_get_default(self):
         self.client.config('config_name')
-        self.client.request.assert_called_with('/config?name=config_name')
+        self.client.request.assert_called_with(
+            '/config?name=config_name&no_header=0')
 
     def test_http_get(self):
         self.client.http_get('/jobs', {'include': 1})
