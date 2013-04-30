@@ -62,7 +62,7 @@ class window.JobListFilterModel extends FilterModel
 
     filterTypes:
         name:       buildMatcher(fieldGetter('name'), matchAny)
-        status:      buildMatcher(fieldGetter('status'), _.str.startsWith)
+        status:     buildMatcher(fieldGetter('status'), _.str.startsWith)
         node_pool:  buildMatcher(nestedName('node_pool'), _.str.startsWith)
 
 
@@ -348,10 +348,10 @@ formatInterval = (interval) ->
 window.formatScheduler = (scheduler) ->
     [icon, value] = switch scheduler.type
         when 'constant' then ['icon-repeatone', 'constant']
-        when 'interval' then ['icon-wave-sea', formatInterval(scheduler.value)]
+        when 'interval' then ['icon-time', formatInterval(scheduler.value)]
         when 'groc'     then ['icon-calendarthree', scheduler.value]
-        when 'daily'    then ['icon-calendar', scheduler.value]
-        when 'cron'     then ['icon-time', scheduler.value]
+        when 'daily'    then ['icon-notestasks', scheduler.value]
+        when 'cron'     then ['icon-calendaralt-cronjobs', scheduler.value]
 
     _.template("""
             <i class="<%= icon %> tt-enable"
