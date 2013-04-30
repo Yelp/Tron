@@ -12,6 +12,7 @@ import functools
 import mock
 
 from testify import TestCase, setup, teardown
+from testify.assertions import assert_not_equal
 
 from tron.commands import client
 from tron.config import manager, schema
@@ -105,6 +106,14 @@ class SandboxTestCase(TestCase):
     def start_with_config(self, config):
         self.sandbox.save_config(config)
         self.sandbox.trond()
+
+    def restart_trond(self):
+        old_pid = self.sandbox.get_trond_pid()
+        self.sandbox.shutdown_trond()
+        wait_on_proc_terminate(self.sandbox.get_trond_pid())
+
+        self.sandbox.trond()
+        assert_not_equal(old_pid, self.sandbox.get_trond_pid())
 
 
 class ClientProxy(object):

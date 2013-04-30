@@ -2,6 +2,7 @@ import datetime
 import os
 from subprocess import CalledProcessError
 from textwrap import dedent
+import textwrap
 
 from testify import assert_equal
 from testify import assert_gt
@@ -171,22 +172,6 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
             return last_run['node']['hostname'] == '127.0.0.1'
 
         sandbox.wait_on_sandbox(wait_on_next_run)
-
-    def test_trond_restart(self):
-        self.start_with_config(SINGLE_ECHO_CONFIG + SINGLE_SERVICE_CONFIG)
-        job_name = 'MASTER.echo_job'
-        self.sandbox.tronctl('start', job_name)
-        # TODO: start a slow job with dependencies
-
-        cleanup_url = self.client.get_url('MASTER.echo_job.1.echo_action')
-        sandbox.wait_on_state(self.client.action_runs, cleanup_url,
-            actionrun.ActionRun.STATE_SUCCEEDED.name)
-
-        self.sandbox.shutdown_trond()
-        sandbox.wait_on_proc_terminate(self.sandbox.get_trond_pid())
-
-        self.sandbox.trond()
-        # TODO: assert state is correct
 
 
 class TronCommandsTestCase(sandbox.SandboxTestCase):
@@ -384,6 +369,65 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         expected = [actionrun.ActionRun.STATE_CANCELLED.name
                     for _ in xrange(len(action_run_states))]
         assert_equal(action_run_states, expected)
+
+    def test_trond_restart_job_with_run_history(self):
+        config = BASIC_CONFIG + textwrap.dedent("""
+           jobs:
+              - name: fast_job
+                node: local
+                schedule: constant
+                actions:
+                  - name: single_act
+                    command: "sleep 20 && echo good"
+        """)
+        self.start_with_config(config)
+
+        action_run_url = self.client.get_url('MASTER.fast_job.0.single_act')
+        sandbox.wait_on_state(self.client.action_runs, action_run_url,
+            actionrun.ActionRun.STATE_RUNNING.name)
+
+        self.restart_trond()
+
+        assert_equal(self.client.job_runs(action_run_url)['state'],
+            actionrun.ActionRun.STATE_UNKNOWN.name)
+
+        next_run_url = self.client.get_url('MASTER.fast_job.-1.single_act')
+        sandbox.wait_on_state(self.client.action_runs, next_run_url,
+            actionrun.ActionRun.STATE_RUNNING.name)
+
+    def test_trond_restart_job_running_with_dependencies(self):
+        config = BASIC_CONFIG + textwrap.dedent("""
+            jobs:
+                - name: complex_job
+                  node: local
+                  schedule: interval 10min
+                  actions:
+                    - name: first_act
+                      command: sleep 20 && echo "I'm waiting"
+                    - name: following_act
+                      command: echo "thing"
+                      requires: ['first_act']
+                    - name: last_act
+                      command: echo foo
+                      requires: ['following_act']
+        """)
+        self.start_with_config(config)
+        job_name = 'MASTER.complex_job'
+        self.sandbox.tronctl('start', job_name)
+
+        action_run_url = self.client.get_url('MASTER.complex_job.1.first_act')
+        sandbox.wait_on_state(self.client.action_runs, action_run_url,
+            actionrun.ActionRun.STATE_RUNNING.name)
+
+        self.restart_trond()
+
+        assert_equal(self.client.job_runs(action_run_url)['state'],
+            actionrun.ActionRun.STATE_UNKNOWN.name)
+
+        for followup_action_run in ('following_act', 'last_act'):
+            url = self.client.get_url('%s.1.%s' % (job_name, followup_action_run))
+            assert_equal(self.client.action_runs(url)['state'],
+                actionrun.ActionRun.STATE_QUEUED.name)
 
 
 class ServiceEndToEndTestCase(sandbox.SandboxTestCase):

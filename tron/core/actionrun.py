@@ -137,8 +137,7 @@ class ActionRun(Observer):
         self.exit_status        = exit_status
         self.bare_command       = bare_command
         self.rendered_command   = rendered_command
-        # TODO: revert
-        self.action_runner      = action_runner or ActionCommand
+        self.action_runner      = action_runner or NoActionRunnerFactory
         self.machine            = state.StateMachine(
                     self.STATE_SCHEDULED, delegate=self, force_state=run_state)
         self.is_cleanup         = cleanup
