@@ -230,10 +230,13 @@ class Node(object):
     def username(self):
         return self.config.username
 
+    @property
+    def port(self):
+        return self.config.port
+
     @classmethod
     def from_config(cls, node_config, ssh_options, pub_key, node_settings):
         return cls(node_config, ssh_options, pub_key, node_settings)
-
 
     def get_name(self):
         return self.config.name
@@ -299,6 +302,11 @@ class Node(object):
         # We return the deferred here, but really we're trying to keep the rest
         # of the world from getting too involved with twisted.
         return self.run_states[run.id].deferred
+
+    def stop(self, command):
+        """Stop this command by marking it as failed."""
+        exc = failure.Failure(exc_value=ResultError("Run stopped"))
+        self._fail_run(command, exc)
 
     def _do_run(self, run):
         """Finish starting to execute a run
@@ -414,7 +422,7 @@ class Node(object):
 
         client_creator = protocol.ClientCreator(reactor,
             ssh.ClientTransport, self.username, self.conch_options, self.pub_key)
-        create_defer = client_creator.connectTCP(self.hostname, 22)
+        create_defer = client_creator.connectTCP(self.hostname, self.config.port)
 
         # We're going to create a deferred, returned to the caller, that will
         # be called back when we have an established, secure connection ready
@@ -476,6 +484,10 @@ class Node(object):
         twistedutils.defer_timeout(chan.start_defer, RUN_START_TIMEOUT)
 
         self.run_states[run.id].channel = chan
+        # TODO: I believe this needs to be checking the health of the connection
+        # before trying to open a new channel.  If the connection is gone it
+        # needs to re-establish, or if the connection is not responding
+        # we shouldn't create this new channel
         self.connection.openChannel(chan)
 
     def _channel_complete(self, channel, run):
@@ -524,7 +536,8 @@ class Node(object):
 
         # We clear out the deferred that likely called us because there are
         # actually more than one error paths because of user timeouts.
-        self.run_states[run.id].channel.start_defer = None
+        if run.id in self.run_states:
+            self.run_states[run.id].channel.start_defer = None
 
         self._fail_run(run, failure.Failure(
             exc_value=ConnectError("Connection to %s failed" % self.hostname)))
@@ -535,7 +548,8 @@ class Node(object):
         #self.connection.transport.connectionLost(failure.Failure())
 
     def __str__(self):
-        return "Node:%s@%s" % (self.username or "<default>", self.hostname)
+        return "Node:%s@%s:%s" % (
+            self.username or "<default>", self.hostname, self.config.port)
 
     def __repr__(self):
         return self.__str__()
