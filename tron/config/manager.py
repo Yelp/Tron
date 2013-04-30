@@ -128,11 +128,10 @@ class ConfigManager(object):
         return self.manifest.get_file_mapping().keys()
 
 
-def create_new_config(path, master_content, master_filename='master'):
+def create_new_config(path, master_content):
     """Create a new configuration directory with master config."""
     os.makedirs(path)
     manager = ConfigManager(path)
-    master_filename = manager.build_file_path(master_filename)
-    write_raw(master_filename, master_content)
     manager.manifest.create()
-    manager.manifest.add(schema.MASTER_NAMESPACE, master_filename)
+    filename = manager.get_filename_from_manifest(schema.MASTER_NAMESPACE)
+    write_raw(filename , master_content)

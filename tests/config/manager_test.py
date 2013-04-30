@@ -6,7 +6,7 @@ from testify import TestCase, assert_equal, run, setup, teardown
 import yaml
 from tests.assertions import assert_raises
 from tests.testingutils import autospec_method
-from tron.config import manager, ConfigError
+from tron.config import manager, ConfigError, schema
 
 
 class FromStringTestCase(TestCase):
@@ -169,6 +169,24 @@ class ConfigManagerTestCase(TestCase):
         self.manifest.__contains__.return_value = True
         hash_digest = self.manager.get_hash('name')
         assert_equal(hash_digest, manager.hash_digest(content))
+
+
+class CreateNewConfigTestCase(TestCase):
+
+    @mock.patch('tron.config.manager.os.makedirs', autospec=True)
+    @mock.patch('tron.config.manager.ManifestFile', autospec=True)
+    @mock.patch('tron.config.manager.write_raw', autospec=True)
+    def test_create_new_config(self, mock_write, mock_manifest, mock_makedirs):
+        path, master_content = '/bogus/path/', mock.Mock()
+        filename = '/bogus/path/MASTER.yaml'
+        manifest = mock_manifest.return_value
+        manifest.get_file_name.return_value = None
+
+        manager.create_new_config(path, master_content)
+        mock_makedirs.assert_called_with(path)
+        mock_write.assert_called_with(filename, master_content)
+        manifest.create.assert_called_with()
+        manifest.add.assert_called_with(schema.MASTER_NAMESPACE, filename)
 
 
 if __name__ == "__main__":
