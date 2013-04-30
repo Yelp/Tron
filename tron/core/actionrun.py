@@ -197,7 +197,7 @@ class ActionRun(Observer):
         # Transition running to fail unknown because exit status was missed
         if run.is_running:
             run._done('fail_unknown')
-        if run.is_queued or run.is_starting:
+        if run.is_starting:
             run.fail(None)
         return run
 
