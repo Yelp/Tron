@@ -53,17 +53,6 @@ TOUCH_CLEANUP_FMT = """
       command: "echo 'at last'"
 """
 
-SINGLE_SERVICE_CONFIG = """
-
-services:
-  - name: service_0
-    node: local
-    pid_file: "/tmp/%(name)s-%(instance_number)s.pid"
-    command: "python ./tests/mock_daemon.py %(pid_file)s"
-    monitor_interval: 12
-    restart_interval: 10
-"""
-
 
 def summarize_events(events):
     return [(event['entity'], event['name']) for event in events]
