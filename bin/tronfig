@@ -3,11 +3,9 @@ from __future__ import with_statement
 import logging
 import os
 import tempfile
-import optparse
 import sys
 
-import tron
-from tron import commands
+from tron.commands import cmd_utils
 from tron.commands.client import Client
 from tron.config import config_parse
 from tron.config import schema, manager, ConfigError
@@ -16,30 +14,27 @@ from tron.config import schema, manager, ConfigError
 log = logging.getLogger('tronfig')
 
 
-def parse_options():
-    parser = optparse.OptionParser("usage: %prog [<name>] [options] [-]",
-                                   version="%%prog %s" % tron.__version__)
-
-    parser.add_option("--print", "-p", action="store_true",
-                      dest="print_config",
-                      help="Print config to stdout, rather than uploading",
-                      default=False)
-    parser.add_option("--verbose", "-v", action="count", dest="verbose",
-                      help="Verbose logging", default=0)
-    parser.add_option("--server", default=commands.DEFAULT_CONFIG['server'],
-                help="Url including scheme, host and port, Default: %default")
-    parser.add_option("--save", "-s", action="store_true", dest="save_config",
-                      help="Save options used on this job for next time.",
-                      default=False)
-
-    options, args = parser.parse_args(sys.argv)
-    if args[-1] == '-':
+def set_options_from_args(options, args):
+    if args and args[-1] == '-':
         options.from_stdin = True
         args = args[:-1]
     else:
         options.from_stdin = False
 
-    options.config_name = args[1] if len(args) > 1 else schema.MASTER_NAMESPACE
+    options.config_name = args[0] if args else schema.MASTER_NAMESPACE
+
+
+def parse_options():
+    usage  = "usage: %prog [<name>] [options] [-]"
+    parser = cmd_utils.build_option_parser(usage)
+
+    parser.add_option("-p", "--print", action="store_true", dest="print_config",
+                      help="Print config to stdout, rather than uploading")
+    parser.add_option("-n", "--no-header", action="store_true", default=False,
+                      help="Print named config without a header")
+
+    options, args = parser.parse_args()
+    set_options_from_args(options, args)
     return options
 
 
@@ -78,8 +73,8 @@ def validate(config_name, config_content):
         log.error(e)
 
 
-def print_config(client, config_name):
-    print client.config(config_name)['config']
+def print_config(client, config_name, no_header):
+    print client.config(config_name, no_header=no_header)['config']
 
 
 def update_from_stdin(client, config_name):
@@ -116,13 +111,13 @@ def update_with_editor(client, config_name):
 
 if __name__ == '__main__':
     options = parse_options()
-    commands.setup_logging(options)
-    commands.load_config(options)
+    cmd_utils.setup_logging(options)
+    cmd_utils.load_config(options)
     client = Client(options.server)
     config_name = options.config_name
 
     if options.print_config:
-        print_config(client, config_name)
+        print_config(client, config_name, options.no_header)
 
     elif options.from_stdin:
         update_from_stdin(client, config_name)
