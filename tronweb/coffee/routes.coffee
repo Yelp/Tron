@@ -11,7 +11,7 @@ class module.TronRoutes extends Backbone.Router
         "dashboard(;*params)":      "dashboard"
         "jobs(;*params)":           "jobs"
         "job/:name":                "job"
-        "job/:name/:run":           "jobrun"
+        "job/:job_name/:run_num":   "jobrun"
         "job/:name/:run/:action":   "actionrun"
         "services(;*params)":       "services"
         "service/:name":            "service"
@@ -21,7 +21,7 @@ class module.TronRoutes extends Backbone.Router
     updateMainView: (model, viewType) ->
         view = new viewType(model: model)
         model.fetch()
-        mainView.render(view)
+        mainView.updateMain(view)
 
     index: ->
         @navigate('home', trigger: true)
@@ -37,7 +37,7 @@ class module.TronRoutes extends Backbone.Router
             filterModel: new DashboardFilterModel(module.getParamsMap(params))
         dashboard = new DashboardView(model: model)
         model.fetch()
-        $('#all-view').html dashboard.render().el
+        mainView.updateFullView dashboard.render()
 
     configs: ->
         @updateMainView(new NamespaceList(), NamespaceListView)
@@ -86,51 +86,42 @@ class module.TronRoutes extends Backbone.Router
             history: historyCollection)
         model.fetch()
         historyCollection.fetch()
-        mainView.render(view)
+        mainView.updateMain(view)
 
 
 class MainView extends Backbone.View
 
-    el: $("body")
+    initialize: (options) ->
+       @navView = new modules.navbar.NavView(model: @model)
 
-    template: _.template """
-        <div id="menu" class="navbar navbar-inverse navbar-static-top">
-          <div class="navbar-inner">
-            <div class="container">
-            <ul class="nav">
-              <li class="brand">Tronweb</li>
-              <li class="divider-vertical"></li>
-              <li><a href="#home">
-                <i class="icon-th icon-white"></i>Dashboard</a>
-              </li>
-              <li><a href="#jobs">
-                <i class="icon-time icon-white"></i>Scheduled Jobs</a>
-              </li>
-              <li><a href="#services">
-                <i class="icon-repeat icon-white"></i>Services</a>
-              </li>
-              <li><a href="#configs">
-                <i class="icon-wrench icon-white"></i>Config</a>
-              </li>
-            </ul>
+    el: $("#all-view")
+
+    template: """
+        <div id="nav"></div>
+        <div class="container">
+            <div id="main" class="row">
             </div>
-          </div>
         </div>
+        """
 
-        <div id="main" class="container">
-        </div>
-    """
-
-    setActive: =>
-        [path, params] = module.getLocationParams()
-        path = path.split('/')[0]
-        @$("a[href=#{path}]").parent('li').addClass 'active'
-
-    render: (item) =>
+    updateMain: (view) =>
         @close()
-        @$('#all-view').html @template()
-        @setActive()
-        @$('#main').html item.el
+        @renderNav() if @$('#nav').html() == ''
+        @navView.setActive()
+        @$('#main').html view.el
+
+    updateFullView: (view) =>
+        @$('#nav').html ''
+        @$('#main').html view.el
+
+    render: =>
+        @$el.html @template
+        @renderNav()
+        @
+
+    renderNav: =>
+        console.log('rendering nav')
+        @$('#nav').html @navView.render().el
 
     close: =>
         @trigger('closeView')
@@ -165,6 +156,8 @@ module.updateLocationParam = (name, value) ->
 window.attachRouter = () ->
     $(document).ready ->
 
-        window.routes = new window.modules.routes.TronRoutes()
-        window.mainView = new MainView()
+        window.routes = new modules.routes.TronRoutes()
+        model = modules.models = new modules.models.QuickFindModel()
+        window.mainView = new MainView(model: model).render()
+        model.fetch()
         Backbone.history.start(root: "/web/")

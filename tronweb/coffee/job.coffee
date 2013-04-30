@@ -62,8 +62,8 @@ class window.JobListFilterModel extends FilterModel
 
     filterTypes:
         name:       buildMatcher(fieldGetter('name'), matchAny)
-        node_pool:  buildMatcher(nestedName('node_pool'), _.str.startsWith)
         status:      buildMatcher(fieldGetter('status'), _.str.startsWith)
+        node_pool:  buildMatcher(nestedName('node_pool'), _.str.startsWith)
 
 
 class window.JobListView extends Backbone.View
@@ -81,7 +81,7 @@ class window.JobListView extends Backbone.View
 
     template: _.template """
         <h1>
-            Scheduled Jobs
+            <i class="icon-time icon-white"></i> Scheduled Jobs
             <span id="refresh"></span>
         </h1>
         <div id="filter-bar"></div>
@@ -143,6 +143,30 @@ class JobListEntryView extends ClickableListEntry
         @
 
 
+class JobRunTimelineEntry
+
+    constructor: (@jobRun, @maxDate) ->
+
+    toString: =>
+        @jobRun.run_num
+
+    getYAxisLink: =>
+        "#job/#{@jobRun.job_name}/#{@jobRun.run_num}"
+
+    getYAxisText: =>
+        @jobRun.run_num
+
+    getBarClass: =>
+        @jobRun.state
+
+    getStart: =>
+        new Date(@jobRun.start_time || @jobRun.run_time)
+
+    getEnd: =>
+        return @maxDate if @jobRun.state == 'running'
+        new Date(@jobRun.end_time || @jobRun.start_time || @jobRun.run_time)
+
+
 class window.JobView extends Backbone.View
 
     initialize: (options) =>
@@ -150,6 +174,10 @@ class window.JobView extends Backbone.View
         @refreshView = new RefreshToggleView(model: @model.refreshModel)
         @jobRunListView = new module.JobRunListView(model: @model)
         @listenTo(@refreshView, 'refreshView', => @model.fetch())
+        sliderModel = new JobRunListSliderModel(@model)
+        @sliderView = new modules.views.SliderView(model: sliderModel)
+        @listenTo(@sliderView, "slider:change", @renderTimeline)
+        @currentDate = new Date()
 
     tagName: "div"
 
@@ -166,6 +194,7 @@ class window.JobView extends Backbone.View
             </div>
             <div class="span5 outline-block">
                 <h2>Details</h2>
+                <div>
                 <table class="table details">
                     <tbody>
                     <tr><td>Status</td>
@@ -182,39 +211,55 @@ class window.JobView extends Backbone.View
                         <td><% print(dateFromNow( next_run)) %></td></tr>
                     </tbody>
                 </table>
+                </div>
             </div>
             <div class="span7 outline-block">
                 <h2>Action Graph</h2>
                 <div id="action-graph" class="graph job-view"></div>
             </div>
 
+            <div class="span12 outline-block">
+              <h2>Timeline</h2>
+              <div>
+                <div id="slider-chart"></div>
+                <div id="timeline-graph"></div>
+              </div>
+            </div>
+
             <div id="job-runs"></div>
         </div>
         """
 
+    # TODO: move to JobActionGraphView
     renderGraph: =>
         new GraphView(
             model: @model.get('action_graph')
             buildContent: (d) -> """<code class="command">#{d.command}</code>"""
-            height: $('table.details').height() - 5 # TODO: why -5 to get it flush?
+            height: @$('table.details').height() - 5 # TODO: why -5 to get it flush?
         ).render()
+
+    # TODO: move to JobTimelineView
+    renderTimeline: =>
+        jobRuns = @model.get('runs')[...@sliderView.displayCount]
+        jobRuns = (new JobRunTimelineEntry(run, @currentDate) for run in jobRuns)
+        new modules.timeline.TimelineView(model: jobRuns).render()
 
     formatSettings: (attrs) =>
         template = _.template """
             <span class="label-icon tt-enable" title="<%= title %>">
-                <i class="web-icon-<%= icon %>"></i>
+                <i class="icon-<%= icon %>"></i>
             </span>
             """
 
         [icon, title] = if attrs.allow_overlap
-            ['overlap', "Allow overlapping runs"]
+            ['layers', "Allow overlapping runs"]
         else if attrs.queueing
-            ['queue', "Queue overlapping runs"]
+            ['circlepauseempty', "Queue overlapping runs"]
         else
-            ['cancel', "Cancel overlapping runs"]
+            ['remove-circle', "Cancel overlapping runs"]
 
         content = if attrs.all_nodes
-            template(icon: 'all-nodes', title: "Run on all nodes")
+            template(icon: 'treediagram', title: "Run on all nodes")
         else
             ""
         template(icon: icon, title: title) + content
@@ -227,7 +272,10 @@ class window.JobView extends Backbone.View
         @$('#job-runs').html(@jobRunListView.render().el)
         @$('#refresh').html(@refreshView.render().el)
         @renderGraph()
+        @renderTimeline()
+        @$('#slider-chart').html @sliderView.render().el
         makeTooltips(@$el)
+        modules.views.makeHeaderToggle(@$el)
         @
 
 
@@ -252,7 +300,8 @@ class module.JobRunListView extends Backbone.View
 
     template: _.template """
         <h2>Job Runs</h2>
-        <div id="slider"></div>
+        <div>
+        <div id="slider-table"></div>
         <table class="table table-hover table-outline table-striped">
             <thead class="sub-header">
                 <tr>
@@ -266,6 +315,7 @@ class module.JobRunListView extends Backbone.View
             <tbody class="jobruns">
             </tbody>
         </table>
+        </div>
         """
 
     renderList: =>
@@ -276,7 +326,7 @@ class module.JobRunListView extends Backbone.View
 
     render: =>
         @$el.html @template(@model.attributes)
-        @$('#slider').html @sliderView.render().el
+        @$('#slider-table').html @sliderView.render().el
         @renderList()
         @
 
@@ -297,9 +347,9 @@ formatInterval = (interval) ->
 
 window.formatScheduler = (scheduler) ->
     [icon, value] = switch scheduler.type
-        when 'constant' then ['web-icon-repeat', 'constant']
-        when 'interval' then ['icon-align-justify', formatInterval(scheduler.value)]
-        when 'groc'     then ['web-icon-calendar', scheduler.value]
+        when 'constant' then ['icon-repeatone', 'constant']
+        when 'interval' then ['icon-slidersfull', formatInterval(scheduler.value)]
+        when 'groc'     then ['icon-calendarthree', scheduler.value]
         when 'daily'    then ['icon-calendar', scheduler.value]
         when 'cron'     then ['icon-time', scheduler.value]
 
@@ -328,7 +378,6 @@ class JobRunListEntryView extends ClickableListEntry
 
     className: "clickable"
 
-    # TODO: add icon for manual run flag
     template: _.template """
         <td>
             <a href="#job/<%= job_name %>/<%= run_num %>"><%= run_num %></a>
@@ -370,6 +419,7 @@ class window.JobRunView extends Backbone.View
             </div>
             <div class="span5 outline-block">
                 <h2>Details</h2>
+                <div>
                 <table class="table details">
                     <tr><td class="span2">State</td>
                         <td><% print(formatState(state)) %></td></tr>
@@ -384,6 +434,7 @@ class window.JobRunView extends Backbone.View
                         <td><% print(dateFromNow(end_time, '')) %></td>
                     </tr>
                 </table>
+                </div>
             </div>
             <div class="span7 outline-block">
                 <h2>Action Graph</h2>
@@ -391,7 +442,16 @@ class window.JobRunView extends Backbone.View
             </div>
 
             <div class="span12 outline-block">
+              <h2>Timeline</h2>
+              <div>
+                <div id="slider-chart"></div>
+                <div id="timeline-graph"></div>
+              </div>
+            </div>
+
+            <div class="span12 outline-block">
                 <h2>Action Runs</h2>
+                <div>
                 <table class="table table-hover table-outline">
                     <thead class="sub-header">
                         <tr>
@@ -406,25 +466,40 @@ class window.JobRunView extends Backbone.View
                     <tbody class="actionruns">
                     </tbody>
                 </table>
+                </div>
             </div>
-
         </div>
         """
 
-    renderList: =>
+    renderList: (actionRuns) =>
         entry = (run) =>
             run['job_name'] = @model.get('job_name')
             run['run_num'] =  @model.get('run_num')
             model = new modules.actionrun.ActionRun(run)
             new modules.actionrun.ActionRunListEntryView(model: model).render().el
-        @$('tbody.actionruns').html(entry(model) for model in @model.get('runs'))
+        @$('tbody.actionruns').html(entry(model) for model in actionRuns)
 
-    # TODO: add class for state
+    getMaxDate: =>
+        actionRuns = @model.get('runs')
+        dates = (r.end_time || r.start_time for r in actionRuns)
+        dates = (new Date(date) for date in dates when date?)
+        dates.push(new Date(@model.get('run_time')))
+        _.max(dates)
+
+    renderTimeline: (actionRuns) =>
+        maxDate = @getMaxDate()
+        actionRuns = for actionRun in actionRuns
+            new modules.actionrun.ActionRunTimelineEntry(actionRun, maxDate)
+
+        new modules.timeline.TimelineView(
+            model: actionRuns
+            margins:
+                left: 150
+        ).render()
+
     popupTemplate: _.template """
-        <ul class="unstyled">
-            <li><% print(formatState(state)) %></li>
-            <li><code class="command"><% print(command || raw_command) %></code></li>
-        </ul>
+        <div class="top-right-corner"><% print(formatState(state)) %></div>
+        <code class="command"><% print(command || raw_command) %></code>
         """
 
     renderGraph: =>
@@ -432,12 +507,22 @@ class window.JobRunView extends Backbone.View
             model: @model.get('action_graph')
             buildContent: @popupTemplate
             nodeClass: (d) -> "node #{d.state}"
+            height: @$('table.details').height() - 5 # TODO: why -5 to get it flush?
         ).render()
+
+    sortActionRuns: =>
+        maxDate = @getMaxDate()
+        getStart = (item) ->
+            if item.start_time then new Date(item.start_time) else maxDate
+        _.sortBy @model.get('runs'), getStart
 
     render: =>
         @$el.html @template(@model.attributes)
         @$('#filter').html(@refreshView.render().el)
-        @renderList()
+        actionRuns = @sortActionRuns()
+        @renderList(actionRuns)
         @renderGraph()
+        @renderTimeline(actionRuns)
         makeTooltips(@$el)
+        modules.views.makeHeaderToggle(@$el)
         @

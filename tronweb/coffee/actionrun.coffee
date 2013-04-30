@@ -79,6 +79,32 @@ class module.ActionRunHistoryListEntryView extends ClickableListEntry
         @
 
 
+class module.ActionRunTimelineEntry
+
+    constructor: (@actionRun, @maxDate) ->
+
+    toString: =>
+        @actionRun.action_name
+
+    getYAxisLink: =>
+        "#job/#{@actionRun.job_name}/#{@actionRun.run_num}/#{@actionRun.action_name}"
+
+    getYAxisText: =>
+        @actionRun.action_name
+
+    getBarClass: =>
+        @actionRun.state
+
+    getStart: =>
+        @getDate(@actionRun.start_time)
+
+    getEnd: =>
+        @getDate(@actionRun.end_time)
+
+    getDate: (date) ->
+        if date then new Date(date) else @maxDate
+
+
 class module.ActionRunListEntryView extends ClickableListEntry
 
     initialize: (options) =>
@@ -116,7 +142,6 @@ class module.ActionRunView extends Backbone.View
     tagName: "div"
 
     template: _.template """
-        <div class="row">
             <div class="span12">
                 <h1>
                     <small>Action Run</small>
@@ -128,6 +153,7 @@ class module.ActionRunView extends Backbone.View
             </div>
             <div class="span12 outline-block">
                 <h2>Details</h2>
+                <div>
                 <table class="table details">
                     <tbody>
                     <tr><td class="span2">State</td>
@@ -151,6 +177,7 @@ class module.ActionRunView extends Backbone.View
                         </td></tr>
                     </tbody>
                 </table>
+                </div>
             </div>
             <div class="span12 outline-block">
                 <h2>stdout</h2>
@@ -161,9 +188,8 @@ class module.ActionRunView extends Backbone.View
                 <pre class="stderr"><% print(stderr.join('\\n')) %></pre>
             </div>
 
-            <div class="span12 outline-block" id="action-run-history">
+            <div id="action-run-history">
             </div>
-        </div>
         """
 
     render: ->
@@ -171,6 +197,7 @@ class module.ActionRunView extends Backbone.View
         @$('#refresh').html(@refreshView.render().el)
         @$('#action-run-history').html(@historyView.render().el)
         makeTooltips(@$el)
+        modules.views.makeHeaderToggle(@$el)
         @
 
 class ActionRunHistorySliderModel
@@ -191,8 +218,11 @@ class module.ActionRunHistoryView extends Backbone.View
 
     tagName: "div"
 
+    className: "span12 outline-block"
+
     template: _.template """
           <h2>History</h2>
+          <div>
           <div id="slider"></div>
           <table class="table table-hover table-outline table-striped">
             <thead class="sub-header">
@@ -208,6 +238,7 @@ class module.ActionRunHistoryView extends Backbone.View
             <tbody>
             </tbody>
           </table>
+          </div>
        """
 
     renderList: =>
@@ -220,4 +251,5 @@ class module.ActionRunHistoryView extends Backbone.View
         @$el.html @template()
         @renderList()
         @$('#slider').html @sliderView.render().el if @model.models.length
+        modules.views.makeHeaderToggle(@$el.parent())
         @

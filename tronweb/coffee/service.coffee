@@ -52,6 +52,7 @@ class window.ServiceListView extends Backbone.View
 
     template: _.template """
         <h1>
+            <i class="icon-repeat icon-white"></i>
             Services
             <span id="refresh"></span>
         </h1>

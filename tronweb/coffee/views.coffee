@@ -68,32 +68,44 @@ window.formatState = (state) =>
     """<span class="label #{state}">#{state}</span>"""
 
 
+module.makeHeaderToggle = (root) ->
+    headers = root.find('.outline-block h2')
+    headers.click (event) -> $(event.target).nextAll().slideToggle()
+    headers.addClass('clickable')
+
+
 class window.FilterView extends Backbone.View
 
     tagName: "div"
 
     className: ""
 
+    defaultIcon: "icon-filter"
+
+    filterIcons:
+        name:       "icon-query"
+        node_pool:  "icon-connected"
+        state:      "icon-switchon"
+        status:     "icon-switchon"
+
     filterTemplate: _.template """
         <div class="input-prepend">
-          <span class="add-on">
-            <i class="icon-filter icon-white"></i>
-            <% print(_.str.humanize(filterName)) %>
-          </span>
           <input type="text" id="filter-<%= filterName %>"
                  value="<%= defaultValue %>"
-                 class="span2"
+                 class="input-medium"
                  autocomplete="off"
+                 placeholder="<% print(_.str.humanize(filterName)) %>"
                  data-filter-name="<%= filterName %>Filter">
+          <i class="<%= icon %> icon-grey"></i>
         </div>
     """
 
     template: _.template """
         <form class="filter-form">
           <div class="control-group outline-block">
-            <div class="span2 toggle-header"
-                title="Toggle Filters">Filters</div>
             <div class="controls">
+            <div class="span1 toggle-header"
+                title="Toggle Filters">Filters</div>
                 <% print(filters.join('')) %>
             </div>
           </div>
@@ -110,6 +122,7 @@ class window.FilterView extends Backbone.View
             template
                 defaultValue: @model.get("#{filterName}Filter")
                 filterName: filterName
+                icon: @filterIcons[filterName] || @defaultIcon
 
         filters = _.map((k for k of @model.filterTypes), createFilter)
         @$el.html @template(filters: filters)
@@ -164,7 +177,7 @@ class window.RefreshToggleView extends Backbone.View
 
     template: _.template """
         <span class="muted"><%= text %></span>
-        <button class="btn btn-inverse tt-enable <%= active %>"
+        <button class="btn btn-clear tt-enable <%= active %>"
             title="Toggle Refresh"
             data-placement="top">
             <i class="icon-refresh icon-white"></i>
@@ -209,7 +222,7 @@ class window.ClickableListEntry extends Backbone.View
 
 
 module.makeSlider = (root, options) ->
-    root.find('.slider').slider(options)
+    root.find('.slider-bar').slider(options)
 
 
 class module.SliderView extends Backbone.View
@@ -226,7 +239,7 @@ class module.SliderView extends Backbone.View
             <div class="span1">
               <span id="display-count" class="label label-inverse"></span>
             </div>
-            <div class="slider span8"></div>
+            <div class="slider-bar span10"></div>
         """
 
     handleSliderMove: (event, ui) =>
@@ -241,7 +254,6 @@ class module.SliderView extends Backbone.View
     render: ->
         @$el.html @template
         @updateDisplayCount(_.min([@model.length(), @displayCount]))
-        console.log("Rendering with #{@displayCount}")
         module.makeSlider @$el,
             max: @model.length()
             min: 0
