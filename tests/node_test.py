@@ -3,8 +3,9 @@ from testify import setup, TestCase, assert_equal, run
 from testify import assert_in, assert_raises
 from testify.assertions import assert_not_in, assert_not_equal
 from testify.test_case import teardown, setup_teardown
+from tests.testingutils import autospec_method
 
-from tron import node, ssh
+from tron import node, ssh, actioncommand
 from tron.config import schema
 from tron.core import actionrun
 from tron.serialize import filehandler
@@ -184,6 +185,19 @@ class NodeTestCase(TestCase):
         other_node = build_node()
         other_node.conch_options = mock.create_autospec(ssh.SSHAuthOptions)
         assert_not_equal(other_node, self.node)
+
+    def test_stop_not_tracked(self):
+        action_command = mock.create_autospec(actioncommand.ActionCommand,
+            id=mock.Mock())
+        self.node.stop(action_command)
+
+    def test_stop(self):
+        autospec_method(self.node._fail_run)
+        action_command = mock.create_autospec(actioncommand.ActionCommand,
+            id=mock.Mock())
+        self.node.run_states[action_command.id] = mock.Mock()
+        self.node.stop(action_command)
+        assert_equal(self.node._fail_run.call_count, 1)
 
 
 class NodePoolTestCase(TestCase):

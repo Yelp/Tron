@@ -18,6 +18,10 @@ class CompletedActionCommand(object):
     is_done = True
     is_failed = False
 
+    @staticmethod
+    def write_stderr(_):
+        pass
+
 
 class ActionCommand(object):
     """An ActionCommand encapsulates a runnable task that is passed to a node
