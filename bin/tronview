@@ -1,26 +1,19 @@
 #!/usr/bin/env python
 import os
-import optparse
 import sys
 
-import tron
-from tron import commands
-from tron.commands import display, ExitCode
+from tron.commands import cmd_utils
+from tron.commands import display
+from tron.commands.cmd_utils import ExitCode
 from tron.commands.client import Client, get_object_type_from_identifier
 from tron.commands.client import TronObjectType
 
 
 def parse_options():
-    parser = optparse.OptionParser(
-        "usage: %prog [options] [<job | job run | action | service>]",
-        version="%%prog %s" % tron.__version__)
-    parser.add_option("--verbose", "-v", action="count", dest="verbose",
-                      help="Verbose logging", default=0)
+    usage  = "usage: %prog [options] [<job | job run | action | service>]"
+    parser = cmd_utils.build_option_parser(usage)
     parser.add_option("--numshown", "-n", type="int", dest="num_displays",
                       help="Max number of jobs/job-runs shown", default=10)
-    parser.add_option("--server", default=commands.DEFAULT_CONFIG['server'],
-                      help="Url including scheme, host and port, "
-                      "Default: %default")
     parser.add_option("--color", "-c", action="store_true",
                       dest="display_color", help="Display in color",
                       default=None)
@@ -34,11 +27,8 @@ def parse_options():
     parser.add_option("--events", action="store_true", dest="show_events",
                       help="Show events for the specified entity",
                       default=False)
-    parser.add_option("--save", "-s", action="store_true", dest="save_config",
-                      help="Save options used on this job for next time.",
-                      default=False)
 
-    (options, args) = parser.parse_args(sys.argv)
+    options, args = parser.parse_args(sys.argv)
     return options, args[1:]
 
 
@@ -113,8 +103,8 @@ def get_view_output(name, options, client):
 def main():
     """run tronview"""
     options, args = parse_options()
-    commands.setup_logging(options)
-    commands.load_config(options)
+    cmd_utils.setup_logging(options)
+    cmd_utils.load_config(options)
 
     display.Color.toggle(options.display_color)
     client = Client(options.server)

@@ -226,6 +226,14 @@ class ConfigControllerTestCase(TestCase):
         assert_equal(resp['config'], self.controller.render_template.return_value)
         assert_equal(resp['hash'], self.manager.get_hash.return_value)
 
+    def test_read_config_no_header(self):
+        name = 'some_name'
+        autospec_method(self.controller._get_config_content)
+        autospec_method(self.controller.render_template)
+        resp = self.controller.read_config(name, add_header=False)
+        assert not self.controller.render_template.called
+        assert_equal(resp['config'], self.controller._get_config_content.return_value)
+
     def test_update_config(self):
         autospec_method(self.controller.strip_header)
         name, content, config_hash = None, mock.Mock(), mock.Mock()

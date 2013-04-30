@@ -91,13 +91,15 @@ class Client(object):
     def events(self):
         return self.http_get('/api/events')['data']
 
-    def config(self, config_name, config_data=None, config_hash=None):
+    def config(self,
+              config_name, config_data=None, config_hash=None, no_header=False):
         """Retrieve or update the configuration."""
         if config_data:
             request_data = dict(
                         config=config_data, name=config_name, hash=config_hash)
             return self.request('/api/config', request_data)
-        return self.http_get('/api/config', dict(name=config_name))
+        request_data = dict(name=config_name, no_header=int(no_header))
+        return self.http_get('/api/config', request_data)
 
     def home(self):
         return self.http_get('/api/')

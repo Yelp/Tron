@@ -332,20 +332,6 @@ class JobRunFromStateTestCase(TestCase):
         assert_equal(run.run_time, self.run_time)
         assert_equal(run.node, self.node_pool)
 
-    def test_from_state_old_state_data(self):
-        del self.state_data['manual']
-        del self.state_data['job_name']
-        del self.state_data['node_name']
-        self.state_data['id'] = 'thejobname.22'
-
-        run = jobrun.JobRun.from_state(self.state_data, self.action_graph,
-            self.output_path, self.context, self.node_pool)
-        assert_length(run.action_runs.run_map, 1)
-        assert_equal(run.job_name, 'thejobname')
-        assert_equal(run.run_time, self.run_time)
-        assert not run.manual
-        assert_equal(run.node, self.node_pool)
-
 
 class MockJobRun(Turtle):
 

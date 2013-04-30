@@ -202,9 +202,14 @@ def format_fields(display_obj, content):
             return field_value
         return display_obj.colors[field](field_value)
 
+    def format_field(field):
+        value = content[field]
+        if value is None:
+            return ''
+        return field_display_mapping.get(field, lambda f: f)(value)
+
     def build_field(label, field):
-        field_value = '' if content[field] is None else content[field]
-        return "%-20s: %s" % (label, add_color(field, field_value))
+        return "%-20s: %s" % (label, add_color(field, format_field(field)))
 
     return "\n".join(build_field(*item) for item in display_obj.detail_labels)
 
@@ -223,7 +228,8 @@ def format_service_details(service_content):
         def format(inst):
             state = add_color_for_state(inst['state'])
             failures = get_failure_messages(inst['failures'])
-            return format_str % (inst['id'], inst['node'], state, failures)
+            node = display_node(inst['node'])
+            return format_str % (inst['id'], node, state, failures)
         return [format(instance) for instance in service_instances]
 
     details     = format_fields(DisplayServices, service_content)
@@ -308,6 +314,9 @@ class DisplayJobRuns(TableDisplay):
         if self.fields[field_idx] == 'scheduled_time':
             value = value or '-'
 
+        if self.fields[field_idx] == 'node':
+            value = display_node(value)
+
         return super(DisplayJobRuns, self).format_value(field_idx, value)
 
     def row_color(self, fields):
@@ -346,6 +355,12 @@ class DisplayJobs(TableDisplay):
         'name':      partial(Color.set, 'yellow'),
         'status':    add_color_for_state
     }
+
+    def format_value(self, field_idx, value):
+        if self.fields[field_idx] == 'scheduler':
+            value = display_scheduler(value)
+
+        return super(DisplayJobs, self).format_value(field_idx, value)
 
 
 class DisplayActionRuns(TableDisplay):
@@ -403,6 +418,25 @@ class DisplayEvents(TableDisplay):
     widths  = [22,     12,       35,      20    ]
     title = 'events'
     resize_fields = ['entity']
+
+
+def display_node(source):
+    return '%s@%s' % (source['username'], source['hostname'])
+
+
+def display_node_pool(source):
+    return "%s (%d node(s))" % (source['name'], len(source['nodes']))
+
+
+def display_scheduler(source):
+    return "%s %s%s" % (source['type'], source['value'], source['jitter'])
+
+
+field_display_mapping = {
+    'node':             display_node,
+    'node_pool':        display_node_pool,
+    'scheduler':        display_scheduler,
+}
 
 
 def view_with_less(content, color=True):

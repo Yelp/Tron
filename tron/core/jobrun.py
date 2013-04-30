@@ -74,13 +74,7 @@ class JobRun(Observable, Observer):
         """Restore a JobRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
         run_node  = pool_repo.get_node(state_data.get('node_name'), run_node)
-
-        # TODO: remove in 0.6
-        if 'job_name' not in state_data:
-            # This is only to support old state files.
-            job_name = state_data['id'].split('.')[0]
-        else:
-            job_name = state_data['job_name']
+        job_name  = state_data['job_name']
 
         job_run =  cls(
             job_name,
