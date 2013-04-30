@@ -303,10 +303,10 @@ class Node(object):
         # of the world from getting too involved with twisted.
         return self.run_states[run.id].deferred
 
-    def stop(self, run):
-        """Close the channel the runs channel, which should remove this run from
-        the tracked runs."""
-        run.channel.loseConnection()
+    def stop(self, command):
+        """Stop this command by marking it as failed."""
+        exc = failure.Failure(exc_value=ResultError("Run stopped"))
+        self._fail_run(command, exc)
 
     def _do_run(self, run):
         """Finish starting to execute a run
@@ -484,6 +484,10 @@ class Node(object):
         twistedutils.defer_timeout(chan.start_defer, RUN_START_TIMEOUT)
 
         self.run_states[run.id].channel = chan
+        # TODO: I believe this needs to be checking the health of the connection
+        # before trying to open a new channel.  If the connection is gone it
+        # needs to re-establish, or if the connection is not responding
+        # we shouldn't create this new channel
         self.connection.openChannel(chan)
 
     def _channel_complete(self, channel, run):
@@ -532,7 +536,8 @@ class Node(object):
 
         # We clear out the deferred that likely called us because there are
         # actually more than one error paths because of user timeouts.
-        self.run_states[run.id].channel.start_defer = None
+        if run.id in self.run_states:
+            self.run_states[run.id].channel.start_defer = None
 
         self._fail_run(run, failure.Failure(
             exc_value=ConnectError("Connection to %s failed" % self.hostname)))

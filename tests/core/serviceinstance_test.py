@@ -150,6 +150,7 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
         self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
         self.task.node.stop.assert_called_with(original_action)
         assert_equal(self.task.action, actioncommand.CompletedActionCommand)
+        assert_equal(original_action.write_stderr.call_count, 1)
 
 
 class ServiceInstanceStopTaskTestCase(TestCase):

@@ -135,6 +135,7 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
     def fail(self):
         log.warning("%s is still running %s.", self, self.action)
         self.node.stop(self.action)
+        self.action.write_stderr("Monitoring failed")
         self.notify(self.NOTIFY_FAILED)
         self.action = actioncommand.CompletedActionCommand
 
