@@ -12,6 +12,7 @@ import functools
 import mock
 
 from testify import TestCase, setup, teardown
+from testify.assertions import assert_not_equal
 
 from tron.commands import client
 from tron.config import manager, schema
@@ -42,6 +43,16 @@ def wait_on_state(client_func, url, state, field='state'):
         return client_func(url)[field] == state
     wait_func.__name__ = '%s wait on %s' % (url, state)
     wait_on_sandbox(wait_func)
+
+
+def wait_on_proc_terminate(pid):
+    def wait_on_terminate():
+        try:
+            os.kill(pid, 0)
+        except:
+            return True
+    wait_on_terminate.__name__ = "Wait on %s to terminate" % pid
+    wait_on_sandbox(wait_on_terminate)
 
 
 def build_waiter_func(client_func, url):
@@ -95,6 +106,14 @@ class SandboxTestCase(TestCase):
     def start_with_config(self, config):
         self.sandbox.save_config(config)
         self.sandbox.trond()
+
+    def restart_trond(self):
+        old_pid = self.sandbox.get_trond_pid()
+        self.sandbox.shutdown_trond()
+        wait_on_proc_terminate(self.sandbox.get_trond_pid())
+
+        self.sandbox.trond()
+        assert_not_equal(old_pid, self.sandbox.get_trond_pid())
 
 
 class ClientProxy(object):
@@ -170,9 +189,7 @@ class TronSandbox(object):
 
     def delete(self):
         """Delete the temp directory and shutdown trond."""
-        if os.path.exists(self.pid_file):
-            with open(self.pid_file, 'r') as f:
-                os.kill(int(f.read()), signal.SIGKILL)
+        self.shutdown_trond(sig_num=signal.SIGKILL)
         shutil.rmtree(self.tmp_dir)
 
     def save_config(self, config_text):
@@ -223,3 +240,14 @@ class TronSandbox(object):
             args += ['--no-header']
         args += ['-'] if config_content else ['-p']
         return self.run_command('tronfig', args, stdin_lines=config_content)
+
+    def get_trond_pid(self):
+        if not os.path.exists(self.pid_file):
+            return None
+        with open(self.pid_file, 'r') as f:
+            return int(f.read())
+
+    def shutdown_trond(self, sig_num=signal.SIGTERM):
+        trond_pid = self.get_trond_pid()
+        if trond_pid:
+            os.kill(trond_pid, sig_num)
