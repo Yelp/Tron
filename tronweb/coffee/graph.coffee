@@ -120,35 +120,46 @@ class GraphModalView extends Backbone.View
         options = options || {}
         @graphOptions = options.graphOptions
 
+    events:
+        'click #view-full-screen':   'toggleModal'
+
+    toggleModal: (event) ->
+        $('.modal').modal('toggle')
+
     attachEvents: =>
-        @$('#view-full').click(@showModal)
+        @$('.modal').on('show', @showModal)
+        @$('.modal').on('hide', @removeGraph)
 
     template: """
         <div class="top-right-corner">
         <button class="btn btn-clear tt-enable"
                 title="Full view"
                 data-placement="top"
-                id="view-full"
+                id="view-full-screen"
             >
-            <i class="icon-fullscreen icon-white"></i>
+            <i class="icon-opennewwindow icon-white"></i>
         </button>
         </div>
         <div class="modal hide fade">
             <div class="modal-header">
-                <button type="button"
-                    class="close"
+                <button class="btn btn-clear"
                     data-dismiss="modal"
                     aria-hidden="true">
-                    <i class="icon-remove icon-white"></i>
+                    <i class="icon-circledown icon-white"></i>
                 </button>
-                <h3>Action Graph</h3>
+                <h3>
+                    <i class="icon-barchart icon-white"></i>
+                    Action Graph
+                </h3>
             </div>
             <div class="modal-body graph job-view">
             </div>
         </div>
         """
 
-    showModal: =>
+    showModal: (event) =>
+        # prevent firing on child events
+        return if event.target != $('.modal')[0]
         options = _.extend {},
             @graphOptions,
             model:          @model
@@ -159,9 +170,13 @@ class GraphModalView extends Backbone.View
             showZoom:       false
 
         graph = new GraphView(options).render()
-        $('.modal').modal()
+
+    removeGraph: (event) =>
+        return if event.target != $('.modal')[0]
+        @$('.modal-body.graph').empty()
 
     render: =>
         @$el.append(@template)
         @attachEvents()
+        @delegateEvents()
         @
