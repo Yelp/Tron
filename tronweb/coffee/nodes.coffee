@@ -13,7 +13,7 @@ class NodeInlineView extends Backbone.View
     tagName: "span"
 
     template: _.template """
-        <span class="tt-enable" title="<%= username %>@<%= hostname %>">
+        <span class="tt-enable" title="<%= username %>@<%= hostname %>:<%= port %>">
             <%= name %>
         </span>
     """

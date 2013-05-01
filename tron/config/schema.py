@@ -78,7 +78,8 @@ ConfigSSHOptions = config_object_factory(
     ])
 
 
-ConfigNode = config_object_factory('ConfigNode', ['hostname'], ['name', 'username'])
+ConfigNode = config_object_factory('ConfigNode',
+    ['hostname'], ['name', 'username', 'port'])
 
 
 ConfigNodePool = config_object_factory('ConfigNodePool', ['nodes'], ['name'])

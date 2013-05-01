@@ -303,8 +303,7 @@ class Validator(object):
         specified.
         """
         for key, value in self.defaults.iteritems():
-            if key not in output_dict:
-                output_dict[key] = value
+            output_dict.setdefault(key, value)
 
     def path_name(self, name=None):
         return '%s.%s' % (self.type_name, name) if name else self.type_name

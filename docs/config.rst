@@ -270,9 +270,20 @@ Nodes
 -----
 
 **nodes**
-    List of nodes, each with a ``name`` and a ``hostname``.  ``name`` defaults
-    to ``hostname``. Each of these nodes should be configured to allow SSH
-    connections from :command:`trond`.
+    List of nodes. Each node has the following options:
+
+    **hostname** (required)
+        The hostname or IP address of the node
+
+    **name** (optional, defaults to ``hostname``)
+        A name to refer to this node
+
+    **username** (optional, defaults to current user)
+        The name of the user to connect with
+
+    **port** (optional, defaults to 22)
+        The port number of the node
+
 
 Example::
 
