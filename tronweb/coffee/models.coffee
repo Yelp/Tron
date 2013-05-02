@@ -4,6 +4,13 @@ window.modules = window.modules || {}
 module = window.modules.models = {}
 
 
+backboneSync = Backbone.sync
+
+Backbone.sync = (method, model, options) ->
+    options.url = '/api' + _.result(model, 'url')
+    backboneSync(method, model, options)
+
+
 class window.RefreshModel extends Backbone.Model
 
     initialize: (options) =>
@@ -118,15 +125,33 @@ class ConfigIndexEntry extends IndexEntry
     getUrl: =>
         "#config/#{@name}"
 
+class CommandIndexEntry extends IndexEntry
+
+    constructor: (@name, @job_name, @action_name) ->
+
+    type: "command"
+
+    getUrl: =>
+        "#job/#{@job_name}/-1/#{@action_name}"
+
 
 class module.QuickFindModel extends Backbone.Model
 
     url: "/"
 
-    # TODO: add commands
+    getJobEntries: (jobs) =>
+        buildActions = (actions) ->
+            for action in actions
+                new CommandIndexEntry(action.command, name, action.name)
+
+        nested = for name, actions of jobs
+            [new JobIndexEntry(name), buildActions(actions)]
+        _.flatten(nested)
+
     parse: (resp, options) =>
         index = [].concat(
-            new JobIndexEntry name for name of resp['jobs'],
-            new ServiceIndexEntry name for name of resp['services'],
+            @getJobEntries(resp['jobs']),
+            new ServiceIndexEntry name for name in resp['services'],
             new ConfigIndexEntry name for name in resp['namespaces'])
+
         _.mash([entry.name, entry] for entry in index)

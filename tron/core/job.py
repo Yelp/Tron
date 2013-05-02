@@ -353,6 +353,9 @@ class JobScheduler(Observer):
     def get_job(self):
         return self.job
 
+    def get_job_runs(self):
+        return self.job.runs
+
     def __eq__(self, other):
         return bool(other and self.get_job() == other.get_job())
 
@@ -423,6 +426,12 @@ class JobCollection(object):
 
     def get_names(self):
         return self.jobs.keys()
+
+    def get_jobs(self):
+        return [sched.get_job() for sched in self]
+
+    def get_job_run_collections(self):
+        return [sched.get_job_runs() for sched in self]
 
     def __iter__(self):
         return self.jobs.itervalues()

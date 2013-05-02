@@ -106,37 +106,51 @@ class ClientTestCase(TestCase):
         name, data, hash = 'name', 'stuff', 'hash'
         self.client.config(name, config_data=data, config_hash=hash)
         expected_data =  {'config': data, 'name': name, 'hash': hash}
-        self.client.request.assert_called_with('/config', expected_data)
+        self.client.request.assert_called_with('/api/config', expected_data)
 
     def test_config_get_default(self):
         self.client.config('config_name')
         self.client.request.assert_called_with(
-            '/config?name=config_name&no_header=0')
+            '/api/config?name=config_name&no_header=0')
 
     def test_http_get(self):
-        self.client.http_get('/jobs', {'include': 1})
-        self.client.request.assert_called_with('/jobs?include=1')
+        self.client.http_get('/api/jobs', {'include': 1})
+        self.client.request.assert_called_with('/api/jobs?include=1')
 
     def test_action_runs(self):
-        self.client.action_runs('/jobs/name/0/act', num_lines=40)
+        self.client.action_runs('/api/jobs/name/0/act', num_lines=40)
         self.client.request.assert_called_with(
-            '/jobs/name/0/act?include_stdout=1&num_lines=40&include_stderr=1')
+            '/api/jobs/name/0/act?include_stdout=1&num_lines=40&include_stderr=1')
 
     def test_job_runs(self):
-        self.client.job_runs('/jobs/name/0')
+        self.client.job_runs('/api/jobs/name/0')
         self.client.request.assert_called_with(
-            '/jobs/name/0?include_action_runs=1&include_action_graph=0')
+            '/api/jobs/name/0?include_action_runs=1&include_action_graph=0')
 
     def test_job(self):
-        self.client.job('/jobs/name', count=20)
+        self.client.job('/api/jobs/name', count=20)
         self.client.request.assert_called_with(
-            '/jobs/name?include_action_runs=0&num_runs=20')
+            '/api/jobs/name?include_action_runs=0&num_runs=20')
 
     def test_jobs(self):
         self.client.jobs()
         self.client.request.assert_called_with(
-            '/jobs?include_job_runs=0&include_action_runs=0')
+            '/api/jobs?include_job_runs=0&include_action_runs=0')
 
+
+class GetUrlTestCase(TestCase):
+
+    def test_get_job_url_for_action_run(self):
+        url = client.get_job_url('MASTER.name.1.act')
+        assert_equal(url, '/api/jobs/MASTER.name/1/act')
+
+    def test_get_job_url_for_job(self):
+        url = client.get_job_url('MASTER.name')
+        assert_equal(url, '/api/jobs/MASTER.name')
+
+    def test_get_service_url(self):
+        url = client.get_service_url('MASTER.name.2')
+        assert_equal(url, '/api/services/MASTER.name/2')
 
 
 class GetContentFromIdentifierTestCase(TestCase):
@@ -147,58 +161,52 @@ class GetContentFromIdentifierTestCase(TestCase):
         self.index = {
             'namespaces': ['OTHER', 'MASTER'],
             'jobs': {
-                'MASTER.namea': '/jobs/MASTER.namea',
-                'MASTER.nameb': '/jobs/MASTER.nameb',
-                'OTHER.nameg':  '/jobs/MASTER.nameb',
+                'MASTER.namea': '',
+                'MASTER.nameb': '',
+                'OTHER.nameg':  '',
             },
-            'services': {
-                'MASTER.foo': '/services/MASTER.foo'
-            }
+            'services': ['MASTER.foo']
         }
 
     def test_get_url_from_identifier_job_no_namespace(self):
         identifier = get_object_type_from_identifier(self.index, 'namea')
-        assert_equal(identifier.url, self.index['jobs']['MASTER.namea'] + '/')
+        assert_equal(identifier.url, '/api/jobs/MASTER.namea')
         assert_equal(identifier.type, TronObjectType.job)
-        assert_equal(identifier.name, 'MASTER.namea')
 
     def test_get_url_from_identifier_service_no_namespace(self):
         identifier = get_object_type_from_identifier(self.index, 'foo')
-        assert_equal(identifier.url, self.index['services']['MASTER.foo'] + '/')
+        assert_equal(identifier.url, '/api/services/MASTER.foo')
         assert_equal(identifier.type, TronObjectType.service)
-        assert_equal(identifier.name, 'MASTER.foo')
 
     def test_get_url_from_identifier_job(self):
         identifier = get_object_type_from_identifier(self.index, 'MASTER.namea')
-        assert_equal(identifier.url, self.index['jobs']['MASTER.namea'] + '/')
+        assert_equal(identifier.url, '/api/jobs/MASTER.namea')
         assert_equal(identifier.type, TronObjectType.job)
-        assert_equal(identifier.name, 'MASTER.namea')
 
     def test_get_url_from_identifier_service(self):
         identifier = get_object_type_from_identifier(self.index, 'MASTER.foo')
-        assert_equal(identifier.url, self.index['services']['MASTER.foo'] + '/')
+        assert_equal(identifier.url, '/api/services/MASTER.foo')
         assert_equal(identifier.type, TronObjectType.service)
 
     def test_get_url_from_identifier_service_instance(self):
         identifier = get_object_type_from_identifier(self.index, 'MASTER.foo.1')
-        assert_equal(identifier.url, self.index['services']['MASTER.foo'] + '/1')
+        assert_equal(identifier.url, '/api/services/MASTER.foo/1')
         assert_equal(identifier.type, TronObjectType.service_instance)
 
     def test_get_url_from_identifier_job_run(self):
         identifier = get_object_type_from_identifier(self.index, 'MASTER.nameb.7')
-        assert_equal(identifier.url, self.index['jobs']['MASTER.nameb'] + '/7')
+        assert_equal(identifier.url, '/api/jobs/MASTER.nameb/7')
         assert_equal(identifier.type, TronObjectType.job_run)
 
     def test_get_url_from_identifier_action_run(self):
         identifier = get_object_type_from_identifier(self.index, 'MASTER.nameb.7.run')
-        assert_equal(identifier.url, self.index['jobs']['MASTER.nameb'] + '/7/run')
+        assert_equal(identifier.url, '/api/jobs/MASTER.nameb/7/run')
         assert_equal(identifier.type, TronObjectType.action_run)
 
     def test_get_url_from_identifier_job_no_namespace_not_master(self):
         identifier = get_object_type_from_identifier(self.index, 'nameg')
-        assert_equal(identifier.url, self.index['jobs']['OTHER.nameg'] + '/')
+        assert_equal(identifier.url, '/api/jobs/OTHER.nameg')
         assert_equal(identifier.type, TronObjectType.job)
-        assert_equal(identifier.name, 'OTHER.nameg')
 
     def test_get_url_from_identifier_no_match(self):
         exc = assert_raises(ValueError,

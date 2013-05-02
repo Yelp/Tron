@@ -54,7 +54,6 @@ class module.TimelineView extends Backbone.View
             .tickPadding(5)
         [xAxis, yAxis]
 
-    # TODO: add mouseover for bars
     buildSvg: =>
         d3.select(@el).append("svg").attr
                 height: @height

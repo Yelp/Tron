@@ -108,13 +108,13 @@ class ServiceListEntryView extends ClickableListEntry
     className: "clickable"
 
     template: _.template """
-        <td><a href="#service/<%= name %>"><% print(formatName(name)) %></a></td>
-        <td><% print(formatState(state)) %></td>
+        <td><a href="#service/<%= name %>"><%= formatName(name) %></a></td>
+        <td><%= formatState(state) %></td>
         <td>
             <span class="label label-inverse">
                 <%= live_count %> / <%= count %></span>
         </td>
-        <td><% print(displayNodePool(node_pool)) %></td>
+        <td><%= displayNodePool(node_pool) %></td>
         """
 
     render: ->
@@ -150,23 +150,24 @@ class window.ServiceView extends Backbone.View
                             <%= live_count %> / <%= count %></span>
                         </td></tr>
                     <tr><td>Node Pool</td>
-                        <td><% print(displayNodePool(node_pool)) %></td></tr>
+                        <td><%= displayNodePool(node_pool) %></td></tr>
                     <tr><td>State</td>
-                        <td><% print(formatState(state)) %></td></tr>
+                        <td><%= formatState(state) %></td></tr>
                     <tr><td>Command</td>    <td><code><%= command %></code></td></tr>
                     <tr><td>Restart Delay</td>
                         <td>
                             <% if (restart_delay) { %>
-                                <span class=""><%= restart_delay %></span>
-                                seconds
+                                <span class="label label-clear">
+                                    <%= restart_delay %> seconds</span>
                             <% } else { %>
                                 <span class="label info">none</span>
                             <% } %>
                         </td></tr>
                     <tr><td>Monitor Interval</td>
                         <td>
-                            <span class=""><%= monitor_interval %></span>
-                            seconds
+                            <span class="label label-clear">
+                                <%= monitor_interval %> seconds
+                            </span>
                         </td></tr>
                 </table>
             </div>
@@ -223,9 +224,9 @@ class ServiceInstanceView extends Backbone.View
     tagName: "tr"
 
     template: _.template """
-        <td><% print(formatName(id)) %></td>
-        <td><% print(formatState(state)) %></td>
-        <td><% print(displayNode(node)) %></td>
+        <td><%= formatName(id) %></td>
+        <td><%= formatState(state) %></td>
+        <td><%= displayNode(node) %></td>
         <td>
         <% if (failures.length) { %>
           <pre><%= failures %></pre>

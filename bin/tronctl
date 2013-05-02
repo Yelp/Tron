@@ -107,7 +107,7 @@ def main():
     if not args:
         # our only non-object commands are for enabling and disabling jobs, so
         # just direct those commands here
-        if not edit(options, command, '/jobs'):
+        if not edit(options, command, client.get_job_url('')):
             sys.exit(ExitCode.fail)
     else:
         if not all(control_objects(options, command, args)):
