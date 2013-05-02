@@ -129,12 +129,12 @@ class JobListEntryView extends ClickableListEntry
     className: "clickable"
 
     template: _.template """
-        <td><a href="#job/<%= name %>"><% print(formatName(name)) %></a></td>
-        <td><% print(formatState(status)) %></td>
-        <td><% print(formatScheduler(scheduler)) %></td>
-        <td><% print(displayNodePool(node_pool)) %></td>
-        <td><% print(dateFromNow(last_success, 'never')) %></td>
-        <td><% print(dateFromNow(next_run, 'none')) %></td>
+        <td><a href="#job/<%= name %>"><%= formatName(name) %></a></td>
+        <td><%= formatState(status) %></td>
+        <td><%= formatScheduler(scheduler) %></td>
+        <td><%= displayNodePool(node_pool) %></td>
+        <td><%= dateFromNow(last_success, 'never') %></td>
+        <td><%= dateFromNow(next_run, 'none') %></td>
         """
 
     render: ->
@@ -188,7 +188,7 @@ class window.JobView extends Backbone.View
             <div class="span12">
                 <h1>
                     <small>Job</small>
-                    <% print(formatName(name)) %>
+                    <%= formatName(name) %>
                     <span id="refresh"></span>
                 </h1>
             </div>
@@ -198,17 +198,17 @@ class window.JobView extends Backbone.View
                 <table class="table details">
                     <tbody>
                     <tr><td>Status</td>
-                        <td><% print(formatState(status)) %></td></tr>
+                        <td><%= formatState(status) %></td></tr>
                     <tr><td>Node pool</td>
-                        <td><% print(displayNodePool(node_pool)) %></td></tr>
+                        <td><%= displayNodePool(node_pool) %></td></tr>
                     <tr><td>Schedule</td>
-                        <td><% print(formatScheduler(scheduler)) %></td></tr>
+                        <td><%= formatScheduler(scheduler) %></td></tr>
                     <tr><td>Settings</td>
                         <td><%= settings %></td></tr>
                     <tr><td>Last success</td>
-                        <td><% print(dateFromNow(last_success)) %></td></tr>
+                        <td><%= dateFromNow(last_success) %></td></tr>
                     <tr><td>Next run</td>
-                        <td><% print(dateFromNow( next_run)) %></td></tr>
+                        <td><%= dateFromNow( next_run) %></td></tr>
                     </tbody>
                 </table>
                 </div>
@@ -381,12 +381,12 @@ class JobRunListEntryView extends ClickableListEntry
     template: _.template """
         <td>
             <a href="#job/<%= job_name %>/<%= run_num %>"><%= run_num %></a>
-            <% print(modules.job.formatManualRun(manual)) %>
+            <%= modules.job.formatManualRun(manual) %>
         </td>
-        <td><% print(formatState(state)) %></td>
-        <td><% print(displayNode(node)) %></td>
-        <td><% print(dateFromNow(start_time || run_time, "Unknown")) %></td>
-        <td><% print(dateFromNow(end_time, "")) %></td>
+        <td><%= formatState(state) %></td>
+        <td><%= displayNode(node) %></td>
+        <td><%= dateFromNow(start_time || run_time, "Unknown") %></td>
+        <td><%= dateFromNow(end_time, "") %></td>
         """
 
     render: ->
@@ -412,7 +412,7 @@ class window.JobRunView extends Backbone.View
                 <h1>
                     <small>Job Run</small>
                     <a href="<%= job_url %>">
-                        <% print(formatName(job_name)) %></a>.<%= run_num %>
+                        <%= formatName(job_name) %></a>.<%= run_num %>
                     <span id="filter"</span>
                 </h1>
 
@@ -422,19 +422,19 @@ class window.JobRunView extends Backbone.View
                 <div>
                 <table class="table details">
                     <tr><td class="span2">State</td>
-                        <td><% print(formatState(state)) %></td></tr>
+                        <td><%= formatState(state) %></td></tr>
                     <tr><td>Node</td>
-                        <td><% print(displayNode(node)) %></td></tr>
+                        <td><%= displayNode(node) %></td></tr>
                     <tr><td>Scheduled</td>
                         <td>
-                            <% print(modules.job.formatManualRun(manual)) %>
+                            <%= modules.job.formatManualRun(manual) %>
                             <span class="label label-clear"><%= run_time %></span>
                         </td></tr>
                     <tr><td>Start</td>
-                        <td><% print(dateFromNow(start_time, '')) %></td>
+                        <td><%= dateFromNow(start_time, '') %></td>
                     </tr>
                     <tr><td>End</td>
-                        <td><% print(dateFromNow(end_time, '')) %></td>
+                        <td><%= dateFromNow(end_time, '') %></td>
                     </tr>
                 </table>
                 </div>
@@ -501,8 +501,8 @@ class window.JobRunView extends Backbone.View
         ).render()
 
     popupTemplate: _.template """
-        <div class="top-right-corner"><% print(formatState(state)) %></div>
-        <code class="command"><% print(command || raw_command) %></code>
+        <div class="top-right-corner"><%= formatState(state) %></div>
+        <code class="command"><%= command || raw_command %></code>
         """
 
     renderGraph: =>

@@ -52,9 +52,9 @@ class window.DashboardFilterView extends FilterView
                   class="span3"
                   data-filter-name="<%= filterName %>Filter">
               <option value="">All</option>
-              <option <% print(isSelected(defaultValue, 'job')) %>
+              <option <%= isSelected(defaultValue, 'job') %>
                   value="job">Scheduled Jobs</option>
-              <option <% print(isSelected(defaultValue, 'service')) %>
+              <option <%= isSelected(defaultValue, 'service') %>
                   value="service">Services</option>
             </select>
           </div>

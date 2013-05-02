@@ -94,7 +94,7 @@ class window.FilterView extends Backbone.View
                  value="<%= defaultValue %>"
                  class="input-medium"
                  autocomplete="off"
-                 placeholder="<% print(_.str.humanize(filterName)) %>"
+                 placeholder="<%= _.str.humanize(filterName) %>"
                  data-filter-name="<%= filterName %>Filter">
           <i class="<%= icon %> icon-grey"></i>
         </div>
@@ -106,7 +106,7 @@ class window.FilterView extends Backbone.View
             <div class="controls">
             <div class="span1 toggle-header"
                 title="Toggle Filters">Filters</div>
-                <% print(filters.join('')) %>
+                <%= filters.join('') %>
             </div>
           </div>
         </form>
