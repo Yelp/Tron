@@ -404,7 +404,7 @@ class JobRunCollection(object):
 
     def get_next_to_finish(self, node=None):
         """Return the most recent run which is either running or scheduled. If
-        node is None, than only looks for runs on that node.
+        node is not None, then only looks for runs on that node.
         """
         def compare(run):
             if node and run.node != node:
