@@ -10,7 +10,7 @@ class window.MinimalEventListEntryView extends Backbone.View
     tagName: "tr"
 
     template: _.template """
-        <td><% print(dateFromNow(time)) %></td>
+        <td><%= dateFromNow(time) %></td>
         <td>
           <span class="label <%= level %>">
             <%= name %>

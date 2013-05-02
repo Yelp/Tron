@@ -66,11 +66,11 @@ class module.ActionRunHistoryListEntryView extends ClickableListEntry
         <td>
             <a href="#job/<%= job_name %>/<%= run_num %>/<%= action_name %>">
             <%= run_num %></a></td>
-        <td><% print(formatState(state)) %></td>
-        <td><% print(displayNode(node)) %></td>
-        <td><%= exit_status %></td>
-        <td><% print(dateFromNow(start_time, "None")) %></td>
-        <td><% print(dateFromNow(end_time, "")) %></td>
+        <td><%= formatState(state) %></td>
+        <td><%= displayNode(node) %></td>
+        <td><%= modules.actionrun.formatExit(exit_status) %></td>
+        <td><%= dateFromNow(start_time, "None") %></td>
+        <td><%= dateFromNow(end_time, "") %></td>
     """
 
     render: ->
@@ -115,18 +115,26 @@ class module.ActionRunListEntryView extends ClickableListEntry
     template: _.template """
         <td>
             <a href="#job/<%= job_name %>/<%= run_num %>/<%= action_name %>">
-            <% print(formatName(action_name)) %></a></td>
-        <td><% print(formatState(state)) %></td>
-        <td><code class="command"><% print(command || raw_command) %></code></td>
-        <td><% print(displayNode(node)) %></td>
-        <td><% print(dateFromNow(start_time, "None")) %></td>
-        <td><% print(dateFromNow(end_time, "")) %></td>
+            <%= formatName(action_name) %></a></td>
+        <td><%= formatState(state) %></td>
+        <td><code class="command"><%= command || raw_command %></code></td>
+        <td><%= displayNode(node) %></td>
+        <td><%= dateFromNow(start_time, "None") %></td>
+        <td><%= dateFromNow(end_time, "") %></td>
         """
 
     render: ->
         @$el.html @template(@model.attributes)
         makeTooltips(@$el)
         @
+
+
+module.formatExit = (exit) ->
+    return '' if not exit? or exit == ''
+    template = _.template """
+        <span class="badge badge-<%= type %>"><%= exit %></span>
+    """
+    template(exit: exit, type: if not exit then "success" else "important")
 
 
 class module.ActionRunView extends Backbone.View
@@ -145,9 +153,9 @@ class module.ActionRunView extends Backbone.View
             <div class="span12">
                 <h1>
                     <small>Action Run</small>
-                    <a href="<%= job_url %>"><% print(formatName(job_name)) %></a>.
+                    <a href="<%= job_url %>"><%= formatName(job_name) %></a>.
                     <a href="<%= job_run_url %>"><%= run_num %></a>.
-                    <% print(formatName(action_name)) %>
+                    <%= formatName(action_name) %>
                     <span id="refresh"></span>
                 </h1>
             </div>
@@ -157,9 +165,9 @@ class module.ActionRunView extends Backbone.View
                 <table class="table details">
                     <tbody>
                     <tr><td class="span2">State</td>
-                        <td><% print(formatState(state)) %></td></tr>
+                        <td><%= formatState(state) %></td></tr>
                     <tr><td>Node</td>
-                        <td><% print(displayNode(node)) %></td></tr>
+                        <td><%= displayNode(node) %></td></tr>
                     <tr><td>Raw command</td>
                         <td><code class="command"><%= raw_command %></code></td></tr>
                     <% if (command) { %>
@@ -167,13 +175,13 @@ class module.ActionRunView extends Backbone.View
                         <td><code class="command"><%= command %></code></td></tr>
                     <% } %>
                     <tr><td>Exit code</td>
-                        <td><%= exit_status %></td></tr>
+                        <td><%= modules.actionrun.formatExit(exit_status) %></td></tr>
                     <tr><td>Start time</td>
                         <td><% print(dateFromNow(start_time, ''))  %></td></tr>
                     <tr><td>End time</td>
-                        <td><% print(dateFromNow(end_time, 'Unknown')) %></td></tr>
+                        <td><%= dateFromNow(end_time, 'Unknown') %></td></tr>
                     <tr><td>Duration</td>
-                        <td><% print(formatDuration(duration)) %>
+                        <td><%= formatDuration(duration) %>
                         </td></tr>
                     </tbody>
                 </table>
@@ -181,11 +189,11 @@ class module.ActionRunView extends Backbone.View
             </div>
             <div class="span12 outline-block">
                 <h2>stdout</h2>
-                <pre class="stdout"><% print(stdout.join('\\n')) %></pre>
+                <pre class="stdout"><%= stdout.join('\\n') %></pre>
             </div>
             <div class="span12 outline-block">
                 <h2>stderr</h2>
-                <pre class="stderr"><% print(stderr.join('\\n')) %></pre>
+                <pre class="stderr"><%= stderr.join('\\n') %></pre>
             </div>
 
             <div id="action-run-history">

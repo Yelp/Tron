@@ -178,8 +178,8 @@ class TronDaemon(object):
 
     def _run_www_api(self):
         # Local import required because of reactor import in server and www
-        from tron.api import www
-        site = www.TronSite.create(self.mcp, self.options.web_path)
+        from tron.api import resource
+        site = resource.TronSite.create(self.mcp, self.options.web_path)
         port = self.options.listen_port
         self.reactor.listenTCP(port, site, interface=self.options.listen_host)
 

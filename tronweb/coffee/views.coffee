@@ -24,7 +24,7 @@ window.dateFromNow = (string, defaultString='never') ->
         formatted = moment(string).format('MMM, Do YYYY, h:mm:ss a')
         delta = label_template
             delta: moment(string).fromNow()
-            type: "inverse"
+            type: "clear"
     else
         formatted = defaultString
         delta = label_template
@@ -44,7 +44,7 @@ window.getDuration = (time) ->
 
 window.formatDuration = (duration) ->
     template = _.template """
-        <span class="label label-inverse tt-enable" title="<%= duration %>">
+        <span class="label label-clear tt-enable" title="<%= duration %>">
           <%= humanized %>
         </span>
     """
@@ -83,7 +83,7 @@ class window.FilterView extends Backbone.View
     defaultIcon: "icon-filter"
 
     filterIcons:
-        name:       "icon-query"
+        name:       "icon-filter"
         node_pool:  "icon-connected"
         state:      "icon-switchon"
         status:     "icon-switchon"
@@ -94,7 +94,7 @@ class window.FilterView extends Backbone.View
                  value="<%= defaultValue %>"
                  class="input-medium"
                  autocomplete="off"
-                 placeholder="<% print(_.str.humanize(filterName)) %>"
+                 placeholder="<%= _.str.humanize(filterName) %>"
                  data-filter-name="<%= filterName %>Filter">
           <i class="<%= icon %> icon-grey"></i>
         </div>
@@ -106,7 +106,7 @@ class window.FilterView extends Backbone.View
             <div class="controls">
             <div class="span1 toggle-header"
                 title="Toggle Filters">Filters</div>
-                <% print(filters.join('')) %>
+                <%= filters.join('') %>
             </div>
           </div>
         </form>
