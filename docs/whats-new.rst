@@ -1,6 +1,14 @@
 What's New
 ==========
 
+0.6.1
+-----
+* tronweb was replaced with a clientside version
+* more ssh options are now configurable
+* adding an experimental feature to support a max_runtime on jobs
+* adding tronctl kill to SIGKILL a service
+* add a `--no-header` option to tronfig
+
 0.6.0
 -----
 * `action.requires` must be a list (string has been deprecated since 0.3.3)
