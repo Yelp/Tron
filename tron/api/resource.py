@@ -384,6 +384,7 @@ class RootResource(resource.Resource):
 
     def __init__(self, mcp, web_path):
         resource.Resource.__init__(self)
+        self.web_path = web_path
         self.mcp = mcp
         self.putChild('api', ApiRootResource(self.mcp))
         self.putChild('web', static.File(web_path))
@@ -394,6 +395,8 @@ class RootResource(resource.Resource):
         request.finish()
         return server.NOT_DONE_YET
 
+    def __str__(self):
+        return "%s(%s, %s)" % (type(self).__name__, self.mcp, self.web_path)
 
 class LogAdapter(object):
 

@@ -59,7 +59,7 @@ def parse_options():
     requirement = pkg_resources.Requirement.parse("tron")
     api_group.add_option("--web-path",
             default=pkg_resources.resource_filename(requirement, 'tronweb'),
-            help="Path to static web resources.")
+            help="Path to static web resources, default %default.")
     parser.add_option_group(api_group)
 
     options, args       = parser.parse_args(sys.argv)
