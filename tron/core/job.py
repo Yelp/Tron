@@ -130,6 +130,9 @@ class Job(Observable, Observer):
     def get_name(self):
         return self.name
 
+    def get_runs(self):
+        return self.runs
+
     @property
     def state_data(self):
         """This data is used to serialize the state of this job."""

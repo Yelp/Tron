@@ -289,7 +289,9 @@ class JobIndexAdapter(ReprAdapter):
         def adapt_run(run):
             return {'name': run.action_name, 'command': run.bare_command}
 
-        job_run = self._obj.runs.get_newest()
+        job_run = self._obj.get_runs().get_newest()
+        if not job_run:
+            return []
         return [adapt_run(action_run) for action_run in job_run.action_runs]
 
 

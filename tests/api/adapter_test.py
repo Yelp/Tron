@@ -8,7 +8,7 @@ from tron import node, scheduler
 from tron.api import adapter
 from tron.api.adapter import ReprAdapter, RunAdapter, ActionRunAdapter
 from tron.api.adapter import JobRunAdapter, ServiceAdapter
-from tron.core import actionrun
+from tron.core import actionrun, job
 
 
 class MockAdapter(ReprAdapter):
@@ -199,6 +199,40 @@ class NodePoolAdapterTestCase(TestCase):
         mock_many.assert_called_with(adapter.NodeAdapter,
             self.pool.get_nodes.return_value)
 
+
+class JobIndexAdapterTestCase(TestCase):
+
+    @setup
+    def setup_adapter(self):
+        self.job = mock.create_autospec(job.Job)
+        self.adapter = adapter.JobIndexAdapter(self.job)
+
+    def test_repr(self):
+        result = self.adapter.get_repr()
+        self.job.get_runs.assert_called_with()
+        runs = self.job.get_runs.return_value
+        runs.get_newest.assert_called_with()
+        expected = {
+            'name': self.job.get_name.return_value,
+            'actions': [],
+        }
+        assert_equal(result, expected)
+
+    def test_get_actions(self):
+        action_run = mock.Mock()
+        job_run = self.job.get_runs.return_value.get_newest.return_value
+        job_run.action_runs.__iter__.return_value = [action_run]
+        result = self.adapter.get_actions()
+        expected = {
+            'name': action_run.action_name,
+            'command': action_run.bare_command
+        }
+        assert_equal(result, [expected])
+
+    def test_get_actions_no_runs(self):
+        self.job.get_runs.return_value.get_newest.return_value = None
+        result = self.adapter.get_actions()
+        assert_equal(result, [])
 
 class SchedulerAdapterTestCase(TestCase):
 
