@@ -6,7 +6,7 @@ tron (0.6.1) unstable; urgency=low
   * adding tronctl kill to SIGKILL a service
   * add a `--no-header` option to tronfig
 
- -- Daniel Nephin <dnephin@yelp-dnephin>  Thu, 02 May 2013 17:34:46 -0700
+ -- Daniel Nephin <dnephin@yelp.com>  Thu, 02 May 2013 17:34:46 -0700
 
 tron (0.6.0.2) unstable; urgency=low
 
