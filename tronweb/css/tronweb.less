@@ -232,17 +232,18 @@ i[class^="icon-"].icon-grey {
  *****************************************************************************/
 .navbar {
     .brand {
-        color: #333;
+        color: white;
         font-weight: 800;
+        .clear-text-shadow;
         span {
-            color: @dark-yellow;
+            color: @light-yellow;
         }
     }
 
     .navbar-inner {
         .clear-box-shadow;
+        background: @medium-grey;
         border: 0;
-        background: none;
     }
 
     .nav > li.active {
@@ -251,25 +252,39 @@ i[class^="icon-"].icon-grey {
         > a:active {
             .clear-box-shadow;
             .clear-text-shadow;
-            color: #000;
             background: @light-yellow;
+            color: #333;
+            i {
+                color: #333;
+            }
         }
     }
     .nav > li {
 
         > a {
-            color: #333;
+            color: white;
+            .clear-text-shadow;
+            font-weight: bold;
+            i {
+                color: white;
+                .clear-text-shadow;
+                font-weight: normal;
+                margin-right: 7px;
+            }
         }
+
         > a:hover {
-            color: #000;
-            text-shadow: -1px -1px 0 #ddd;
+            color: white;
+            .clear-text-shadow;
         }
     }
 }
 
-.nav li a i {
-    margin-right: 7px;
+
+.search-placeholder {
+    color: #ddd;
 }
+
 .navbar-search {
     position: relative;
 
@@ -282,14 +297,30 @@ i[class^="icon-"].icon-grey {
         border: 1px solid #eee;
         .input;
     }
+    .search-query {
+        color: #eee;
+    }
     .search-query:focus,
     .search-query.focused {
+        color: #333;
         .input-focus;
+        ~ .icon-search {
+            color: #333;
+        }
     }
+
     .icon-search {
         position: absolute;
         top: 6px;
         left: 8px;
+        color: white;
+    }
+    input:-moz-placeholder {
+        .search-placeholder;
+    }
+
+    input::-webkit-input-placeholder {
+        .search-placeholder
     }
 
 }
@@ -298,7 +329,8 @@ i[class^="icon-"].icon-grey {
 .dropdown-menu > .active > a:hover,
 .dropdown-menu > .active > a:focus
 {
-    background: @dark-yellow;
+    background: @light-yellow;
+    color: #000;
 }
 
 .dropdown-menu > li > a:hover,
