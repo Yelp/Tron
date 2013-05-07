@@ -1,5 +1,7 @@
 
 # Dashboard
+window.modules = window.modules || {}
+window.modules.dashboard = module = {}
 
 class window.Dashboard extends Backbone.Model
 
@@ -88,10 +90,8 @@ class window.DashboardView extends Backbone.View
 
     makeView: (model) =>
         switch model.constructor.name
-            when Service.name
-                new ServiceStatusBoxView(model: model)
-            when Job.name
-                new JobStatusBoxView(model: model)
+            when Service.name then new module.ServiceStatusBoxView(model: model)
+            when Job.name then new module.JobStatusBoxView(model: model)
 
     renderRefresh: ->
         @$('#refresh').html(@refreshView.render().el)
@@ -138,7 +138,7 @@ class window.StatusBoxView extends ClickableListEntry
         @$el.html @template(context)
         @
 
-class window.ServiceStatusBoxView extends StatusBoxView
+class module.ServiceStatusBoxView extends StatusBoxView
 
     buildUrl: =>
         "#service/#{@model.get('name')}"
@@ -152,7 +152,7 @@ class window.ServiceStatusBoxView extends StatusBoxView
         @model.get('instances').length
 
 
-class window.JobStatusBoxView extends StatusBoxView
+class module.JobStatusBoxView extends StatusBoxView
 
     buildUrl: =>
         "#job/#{@model.get('name')}"
@@ -164,4 +164,4 @@ class window.JobStatusBoxView extends StatusBoxView
         @model.get('status')
 
     count: =>
-        if @model.get('runs') then _.first(@model.get('runs')).run_num else 0
+        if _.isEmpty(@model.get('runs')) then 0 else _.first(@model.get('runs')).run_num

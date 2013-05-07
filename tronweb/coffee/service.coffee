@@ -153,7 +153,8 @@ class window.ServiceView extends Backbone.View
                         <td><%= displayNodePool(node_pool) %></td></tr>
                     <tr><td>State</td>
                         <td><%= formatState(state) %></td></tr>
-                    <tr><td>Command</td>    <td><code><%= command %></code></td></tr>
+                    <tr><td>Command</td>    <td>
+                        <code class="command"><%= command %></code></td></tr>
                     <tr><td>Restart Delay</td>
                         <td>
                             <% if (restart_delay) { %>
