@@ -4,29 +4,39 @@ import pytz
 from testify import TestCase, setup, assert_equal
 from testify.assertions import assert_in
 from tests.assertions import assert_length, assert_raises, assert_call
-from tests.mocks import MockNode
-from tron.core import jobrun, actionrun
+from tron import node, event, actioncommand
+from tron.core import jobrun, actionrun, actiongraph, job
 from tests.testingutils import Turtle, autospec_method
-from tests import testingutils
+from tron.serialize import filehandler
 
 
-class JobRunTestCase(testingutils.MockTimeTestCase):
+def build_mock_job():
+    action_graph = mock.create_autospec(actiongraph.ActionGraph)
+    runner = mock.create_autospec(actioncommand.SubprocessActionRunnerFactory)
+    return mock.create_autospec(job.Job,
+        action_graph=action_graph,
+        output_path=mock.Mock(),
+        context=mock.Mock(),
+        action_runner=runner)
+
+
+class JobRunTestCase(TestCase):
 
     now = datetime.datetime(2012, 3, 14, 15, 9, 20)
 
     @setup
     def setup_jobrun(self):
-        self.action_graph = Turtle(action_map=dict(anaction=Turtle()))
-        self.job = Turtle(name="aname", action_graph=self.action_graph)
+        self.job = build_mock_job()
+        self.action_graph = self.job.action_graph
         self.run_time = datetime.datetime(2012, 3, 14, 15, 9 ,26)
-        node = MockNode('thenode')
-        self.job_run = jobrun.JobRun('jobname', 7, self.run_time, node,
+        mock_node = mock.create_autospec(node.Node)
+        self.job_run = jobrun.JobRun('jobname', 7, self.run_time, mock_node,
                 action_runs=Turtle(
                     action_runs_with_cleanup=[],
                     get_startable_action_runs=lambda: []))
-        self.job_run.watch = Turtle()
-        self.job_run.notify = Turtle()
-        self.job_run.event = Turtle()
+        autospec_method(self.job_run.watch)
+        autospec_method(self.job_run.notify)
+        self.job_run.event = mock.create_autospec(event.EventRecorder)
         self.action_run = mock.create_autospec(actionrun.ActionRun)
 
     def test__init__(self):
@@ -36,22 +46,22 @@ class JobRunTestCase(testingutils.MockTimeTestCase):
 
     def test_for_job(self):
         run_num = 6
-        node = MockNode('anode')
+        mock_node = mock.create_autospec(node.Node)
         run = jobrun.JobRun.for_job(
-                self.job, run_num, self.run_time, node, False)
+                self.job, run_num, self.run_time, mock_node, False)
 
-        assert run.action_runs.run_map
-        assert_equal(run.job_name, self.job.name)
+        assert_equal(run.action_runs.action_graph, self.action_graph)
+        assert_equal(run.job_name, self.job.get_name.return_value)
         assert_equal(run.run_num, run_num)
-        assert_equal(run.node, node)
+        assert_equal(run.node, mock_node)
         assert not run.manual
 
     def test_for_job_manual(self):
         run_num = 6
-        node = MockNode('anode')
+        mock_node = mock.create_autospec(node.Node)
         run = jobrun.JobRun.for_job(
-                self.job, run_num, self.run_time, node, True)
-        assert run.action_runs.run_map
+                self.job, run_num, self.run_time, mock_node, True)
+        assert_equal(run.action_runs.action_graph, self.action_graph)
         assert run.manual
 
     def test_state_data(self):
@@ -62,104 +72,115 @@ class JobRunTestCase(testingutils.MockTimeTestCase):
 
     def test_set_action_runs(self):
         self.job_run._action_runs = None
-        action_runs = [Turtle(), Turtle()]
-        run_collection = Turtle(action_runs_with_cleanup=action_runs)
+        count = 2
+        action_runs = [
+            mock.create_autospec(actionrun.ActionRun) for _ in xrange(count)]
+        run_collection = mock.create_autospec(actionrun.ActionRunCollection,
+            action_runs_with_cleanup=action_runs)
         self.job_run._set_action_runs(run_collection)
-        assert_length(self.job_run.watch.calls, 2)
-        for i in xrange(2):
-            assert_call(self.job_run.watch, i, action_runs[i])
+        assert_equal(self.job_run.watch.call_count, count)
+
+        expected = [mock.call(run) for run in action_runs]
+        assert_equal(self.job_run.watch.mock_calls, expected)
         assert_equal(self.job_run.action_runs, run_collection)
         assert self.job_run.action_runs_proxy
 
     def test_set_action_runs_none(self):
         self.job_run._action_runs = None
-        run_collection = Turtle(action_runs_with_cleanup=[])
+        run_collection = mock.create_autospec(actionrun.ActionRunCollection)
         self.job_run._set_action_runs(run_collection)
-        assert_length(self.job_run.watch.calls, 0)
+        assert not self.job_run.watch.mock_calls
         assert_equal(self.job_run.action_runs, run_collection)
 
     def test_set_action_runs_duplicate(self):
-        run_collection = Turtle(action_runs_with_cleanup=[])
+        run_collection = mock.create_autospec(actionrun.ActionRunCollection)
         assert_raises(ValueError,
             self.job_run._set_action_runs, run_collection)
 
-    def test_seconds_until_run_time(self):
+    @mock.patch('tron.core.jobrun.timeutils.current_time', autospec=True)
+    def test_seconds_until_run_time(self, mock_current_time):
+        mock_current_time.return_value = self.now
         seconds = self.job_run.seconds_until_run_time()
         assert_equal(seconds, 6)
 
-    def test_seconds_until_run_time_with_tz(self):
+    @mock.patch('tron.core.jobrun.timeutils.current_time', autospec=True)
+    def test_seconds_until_run_time_with_tz(self, mock_current_time):
+        mock_current_time.return_value = self.now
         self.job_run.run_time = self.run_time.replace(tzinfo=pytz.utc)
         seconds = self.job_run.seconds_until_run_time()
         assert_equal(seconds, 6)
 
     def test_start(self):
-        self.job_run._do_start = Turtle()
+        autospec_method(self.job_run._do_start)
         assert self.job_run.start()
-        assert_call(self.job_run.event.info, 0, 'start')
-        assert_call(self.job_run._do_start, 0)
+        self.job_run.event.info.assert_called_with('start')
+        self.job_run._do_start.assert_called_with()
 
     def test_start_failed(self):
-        self.job_run._do_start = lambda: False
+        autospec_method(self.job_run._do_start, return_value=False)
         assert not self.job_run.start()
-        assert_call(self.job_run.event.info, 0, 'start')
-        assert_length(self.job_run.event.ok.calls, 0)
+        self.job_run.event.info.assert_called_with('start')
+        assert not self.job_run.event.ok.mock_calls
 
     def test_start_no_startable_action_runs(self):
-        self.job_run._do_start = Turtle()
+        autospec_method(self.job_run._do_start)
         self.job_run.action_runs.has_startable_action_runs = False
 
         assert not self.job_run.start()
-        assert_call(self.job_run.event.info, 0, 'start')
-        assert_length(self.job_run.event.ok.calls, 0)
+        self.job_run.event.info.assert_called_with('start')
+        assert not self.job_run.event.ok.mock_calls
 
     def test_do_start(self):
-        startable_runs = [Turtle(), Turtle(), Turtle()]
+        startable_runs = [
+            mock.create_autospec(actionrun.ActionRun) for _ in xrange(3)]
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
         assert self.job_run._do_start()
-        assert_call(self.job_run.action_runs.ready, 0)
-        for i, startable_run in enumerate(startable_runs):
-            assert_call(startable_run.start, 0)
+        self.job_run.action_runs.ready.assert_called_with()
+        for startable_run in startable_runs:
+            startable_run.start.assert_called_with()
 
-        assert_length(self.job_run.event.ok.calls, 1)
-        assert_call(self.job_run.event.ok, 0, 'started')
+        assert_equal(self.job_run.event.ok.call_count, 1)
+        self.job_run.event.ok.assert_called_with('started')
 
     def test_do_start_all_failed(self):
-        self.job_run._start_action_runs = lambda: [None]
-
+        autospec_method(self.job_run._start_action_runs, return_value=[None])
         assert not self.job_run._do_start()
-        assert_length(self.job_run.event.ok.calls, 0)
+        assert not self.job_run.event.ok.mock_calls
 
     def test_do_start_some_failed(self):
-        self.job_run._start_action_runs = lambda: [True, None]
+        returns = [True, None]
+        autospec_method(self.job_run._start_action_runs, return_value=returns)
 
         assert self.job_run._do_start()
-        assert_length(self.job_run.event.ok.calls, 1)
-        assert_call(self.job_run.event.ok, 0, 'started')
+        assert_equal(self.job_run.event.ok.call_count, 1)
+        self.job_run.event.ok.assert_called_with('started')
 
     def test_do_start_no_runs(self):
         assert not self.job_run._do_start()
 
     def test_start_action_runs(self):
-        startable_runs = [Turtle(), Turtle(), Turtle()]
+        startable_runs = [
+            mock.create_autospec(actionrun.ActionRun) for _ in xrange(3)]
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
         started_runs = self.job_run._start_action_runs()
         assert_equal(started_runs, startable_runs)
 
     def test_start_action_runs_failed(self):
-        def failing():
-            return False
-        startable_runs = [Turtle(start=failing), Turtle(), Turtle()]
+        startable_runs = [
+            mock.create_autospec(actionrun.ActionRun) for _ in xrange(3)]
+        startable_runs[0].start.return_value = False
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
         started_runs = self.job_run._start_action_runs()
         assert_equal(started_runs, startable_runs[1:])
 
     def test_start_action_runs_all_failed(self):
-        def failing():
-            return False
-        startable_runs = [Turtle(start=failing), Turtle(start=failing)]
+        startable_runs = [
+            mock.create_autospec(actionrun.ActionRun) for _ in xrange(2)]
+        for startable_run in startable_runs:
+            startable_run.start.return_value = False
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
         started_runs = self.job_run._start_action_runs()
@@ -180,7 +201,7 @@ class JobRunTestCase(testingutils.MockTimeTestCase):
         self.action_run.is_broken = False
 
         self.job_run.handler(self.action_run, mock.Mock())
-        assert_call(self.job_run.notify, 0, self.job_run.NOTIFY_STATE_CHANGED)
+        self.job_run.notify.assert_called_with(self.job_run.NOTIFY_STATE_CHANGED)
         startable_run.start.assert_called_with()
         assert not self.job_run.finalize.mock_calls
 
@@ -232,21 +253,21 @@ class JobRunTestCase(testingutils.MockTimeTestCase):
     def test_finalize(self):
         self.job_run.action_runs.is_failed = False
         self.job_run.finalize()
-        assert_call(self.job_run.event.ok, 0, 'succeeded')
-        assert_call(self.job_run.notify, 0, self.job_run.NOTIFY_DONE)
+        self.job_run.event.ok.assert_called_with('succeeded')
+        self.job_run.notify.assert_called_with(self.job_run.NOTIFY_DONE)
 
     def test_finalize_failure(self):
         self.job_run.finalize()
-        assert_call(self.job_run.event.critical, 0, 'failed')
-        assert_call(self.job_run.notify, 0, self.job_run.NOTIFY_DONE)
+        self.job_run.event.critical.assert_called_with('failed')
+        self.job_run.notify.assert_called_with(self.job_run.NOTIFY_DONE)
 
     def test_cleanup(self):
-        self.job_run.clear_observers = Turtle()
-        self.job_run.output_path = Turtle()
+        autospec_method(self.job_run.clear_observers)
+        self.job_run.output_path = mock.create_autospec(filehandler.OutputPath)
         self.job_run.cleanup()
 
-        assert_call(self.job_run.clear_observers, 0)
-        assert_call(self.job_run.output_path.delete, 0)
+        self.job_run.clear_observers.assert_called_with()
+        self.job_run.output_path.delete.assert_called_with()
         assert not self.job_run.node
         assert not self.job_run.action_graph
         assert not self.job_run.action_runs
@@ -264,11 +285,11 @@ class JobRunFromStateTestCase(TestCase):
 
     @setup
     def setup_jobrun(self):
-        self.action_graph = Turtle(action_map=dict(anaction=Turtle()))
+        self.action_graph = mock.create_autospec(actiongraph.ActionGraph)
         self.run_time = datetime.datetime(2012, 3, 14, 15, 9 ,26)
         self.path = ['base', 'path']
-        self.output_path = Turtle(clone=lambda: self.path)
-        self.node_pool = Turtle()
+        self.output_path = mock.create_autospec(filehandler.OutputPath)
+        self.node_pool = mock.create_autospec(node.NodePool)
         self.action_run_state_data = [{
             'job_run_id':       'thejobname.22',
             'action_name':      'blingaction',
@@ -290,7 +311,7 @@ class JobRunFromStateTestCase(TestCase):
             'cleanup_run':      None,
             'manual':           True
         }
-        self.context = Turtle()
+        self.context = mock.Mock()
 
     def test_from_state(self):
         run = jobrun.JobRun.from_state(self.state_data, self.action_graph,
@@ -309,20 +330,6 @@ class JobRunFromStateTestCase(TestCase):
         assert_length(run.action_runs.run_map, 1)
         assert_equal(run.job_name, 'thejobname')
         assert_equal(run.run_time, self.run_time)
-        assert_equal(run.node, self.node_pool)
-
-    def test_from_state_old_state_data(self):
-        del self.state_data['manual']
-        del self.state_data['job_name']
-        del self.state_data['node_name']
-        self.state_data['id'] = 'thejobname.22'
-
-        run = jobrun.JobRun.from_state(self.state_data, self.action_graph,
-            self.output_path, self.context, self.node_pool)
-        assert_length(run.action_runs.run_map, 1)
-        assert_equal(run.job_name, 'thejobname')
-        assert_equal(run.run_time, self.run_time)
-        assert not run.manual
         assert_equal(run.node, self.node_pool)
 
 
@@ -368,12 +375,13 @@ class JobRunCollectionTestCase(TestCase):
             for i in xrange(2,0,-1)
         ]
         self.run_collection.runs.extend(self.job_runs)
+        self.mock_node = mock.create_autospec(node.Node)
 
     def test__init__(self):
         assert_equal(self.run_collection.run_limit, 5)
 
     def test_from_config(self):
-        job_config = Turtle(run_limit=20)
+        job_config = mock.Mock(run_limit=20)
         runs = jobrun.JobRunCollection.from_config(job_config)
         assert_equal(runs.run_limit, 20)
 
@@ -390,12 +398,13 @@ class JobRunCollectionTestCase(TestCase):
                 runs=[]
             ) for i in xrange(3,-1,-1)
         ]
-        action_graph = [Turtle()]
-        output_path = Turtle()
-        context = Turtle()
+        action_graph = mock.create_autospec(actiongraph.ActionGraph)
+        output_path = mock.create_autospec(filehandler.OutputPath)
+        context = mock.Mock()
+        node_pool = mock.create_autospec(node.NodePool)
 
         restored_runs = run_collection.restore_state(
-                state_data, action_graph, output_path, context, Turtle())
+                state_data, action_graph, output_path, context, node_pool)
         assert_equal(run_collection.runs[0].run_num, 3)
         assert_equal(run_collection.runs[3].run_num, 0)
         assert_length(restored_runs, 4)
@@ -405,38 +414,37 @@ class JobRunCollectionTestCase(TestCase):
                 self.run_collection.restore_state, None, None, None, None, None)
 
     def test_build_new_run(self):
-        self.run_collection.remove_old_runs = Turtle()
+        autospec_method(self.run_collection.remove_old_runs)
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
-        job = Turtle(name="thejob")
-        job.action_graph.action_map = {}
-        node = MockNode("thenode")
-        job_run = self.run_collection.build_new_run(job, run_time, node)
+        mock_job = build_mock_job()
+        job_run = self.run_collection.build_new_run(
+            mock_job, run_time, self.mock_node)
         assert_in(job_run, self.run_collection.runs)
-        assert_call(self.run_collection.remove_old_runs, 0)
+        self.run_collection.remove_old_runs.assert_called_with()
         assert_equal(job_run.run_num, 5)
-        assert_equal(job_run.job_name, "thejob")
+        assert_equal(job_run.job_name, mock_job.get_name.return_value)
 
     def test_build_new_run_manual(self):
-        self.run_collection.remove_old_runs = Turtle()
+        autospec_method(self.run_collection.remove_old_runs)
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
-        job = Turtle(name="thejob")
-        job.action_graph.action_map = {}
-        node = MockNode("thenode")
-        job_run = self.run_collection.build_new_run(job, run_time, node, True)
+        mock_job = build_mock_job()
+        job_run = self.run_collection.build_new_run(
+            mock_job, run_time, self.mock_node, True)
         assert_in(job_run, self.run_collection.runs)
-        assert_call(self.run_collection.remove_old_runs, 0)
+        self.run_collection.remove_old_runs.assert_called_with()
         assert_equal(job_run.run_num, 5)
         assert job_run.manual
 
     def test_cancel_pending(self):
-        pending_runs = [Turtle(), Turtle()]
-        self.run_collection.get_pending = lambda: pending_runs
+        pending_runs = [mock.Mock() for _ in xrange(2)]
+        autospec_method(self.run_collection.get_pending,
+            return_value=pending_runs)
         self.run_collection.cancel_pending()
-        for i in xrange(len(pending_runs)):
-            assert_call(pending_runs[i].cancel, 0)
+        for pending_run in pending_runs:
+            pending_run.cancel.assert_called_with()
 
     def test_cancel_pending_no_pending(self):
-        self.run_collection.get_pending = lambda: []
+        autospec_method(self.run_collection.get_pending, return_value=[])
         self.run_collection.cancel_pending()
 
     def test_remove_pending(self):
@@ -461,6 +469,22 @@ class JobRunCollectionTestCase(TestCase):
 
     def test_get_run_by_num_no_match(self):
         run = self.run_collection.get_run_by_num(7)
+        assert_equal(run, None)
+
+    def test_get_run_by_index(self):
+        run = self.run_collection.get_run_by_index(-1)
+        assert_equal(run, self.job_runs[0])
+        run = self.run_collection.get_run_by_index(-2)
+        assert_equal(run, self.job_runs[1])
+        run = self.run_collection.get_run_by_index(0)
+        assert_equal(run, self.job_runs[-1])
+        run = self.run_collection.get_run_by_index(1)
+        assert_equal(run, self.job_runs[-2])
+
+    def test_get_run_by_index_invalid_index(self):
+        run = self.run_collection.get_run_by_index(-5)
+        assert_equal(run, None)
+        run = self.run_collection.get_run_by_index(4)
         assert_equal(run, None)
 
     def test_get_run_by_state_short_name(self):
@@ -567,7 +591,7 @@ class JobRunCollectionTestCase(TestCase):
         self.run_collection.run_limit = 1
         self.run_collection.remove_old_runs()
 
-        assert_length(self.run_collection.runs, 3)
+        assert_length(self.run_collection.runs, 1)
         assert_call(self.job_runs[-1].cleanup, 0)
         for job_run in self.run_collection.runs:
             assert_length(job_run.cancel.calls, 0)
@@ -590,3 +614,12 @@ class JobRunCollectionTestCase(TestCase):
     def test__str__(self):
         expected = "JobRunCollection[4(queued), 3(running), 2(succeeded), 1(succeeded)]"
         assert_equal(str(self.run_collection), expected)
+
+    def test_get_action_runs(self):
+        action_name = 'action_name'
+        self.run_collection.runs = job_runs = [mock.Mock(), mock.Mock()]
+        runs = self.run_collection.get_action_runs(action_name)
+        expected = [job_run.get_action_run.return_value for job_run in job_runs]
+        assert_equal(runs, expected)
+        for job_run in job_runs:
+            job_run.get_action_run.assert_called_with(action_name)

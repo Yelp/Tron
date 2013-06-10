@@ -56,6 +56,16 @@ class ActionRunControllerTestCase(TestCase):
         self.action_run.cancel.assert_called_with()
         assert_in("Failed to cancel", result)
 
+    def test_handle_termination_not_implemented(self):
+        self.action_run.stop.side_effect = NotImplementedError
+        result = self.controller.handle_termination('stop')
+        assert_in("Failed to stop", result)
+
+    def test_handle_termination_success(self):
+        result = self.controller.handle_termination('kill')
+        assert_in("Attempting to kill", result)
+
+
 
 class JobRunControllerTestCase(TestCase):
 
@@ -215,6 +225,14 @@ class ConfigControllerTestCase(TestCase):
             self.controller._get_config_content.return_value)
         assert_equal(resp['config'], self.controller.render_template.return_value)
         assert_equal(resp['hash'], self.manager.get_hash.return_value)
+
+    def test_read_config_no_header(self):
+        name = 'some_name'
+        autospec_method(self.controller._get_config_content)
+        autospec_method(self.controller.render_template)
+        resp = self.controller.read_config(name, add_header=False)
+        assert not self.controller.render_template.called
+        assert_equal(resp['config'], self.controller._get_config_content.return_value)
 
     def test_update_config(self):
         autospec_method(self.controller.strip_header)

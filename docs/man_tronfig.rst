@@ -6,7 +6,7 @@ tronfig
 Synopsys
 --------
 
-``tronfig [--server server_name ] [--verbose | -v] [-]``
+``tronfig [--server server_name ] [--verbose | -v] [<namespace>] [-p] [-]``
 
 Description
 -----------
@@ -28,75 +28,22 @@ Options
 ``--version``
     Displays version string
 
+``-p``
+    Print the configuration
+
+``namespace``
+    The configuration namespace to edit. Defaults to MASTER
+
 ``-``
     Read new config from ``stdin``.
 
 Configuration
 -------------
 
-By default tron will run with a blank configuration file. Get the full
-configuration docs at http://packages.python.org/tron/config.html.
+By default tron will run with a blank configuration file. The config file is
+saved to ``<working_dir>/config/`` by default. See the full documentation at
+http://pythonhosted.org/tron/config.html.
 
-Example Configuration
----------------------
-
-::
-
-    ssh_options:
-      agent: true
-
-    nodes:
-        - name: node1
-          hostname: 'machine1'
-        - name: node2
-          hostname: 'machine2'
-
-    node_pools:
-        - name: pool
-          nodes: [node1, node2]
-
-    command_context:
-        PYTHON: /usr/bin/python
-
-    jobs:
-        - name: "job0"
-          node: pool
-          all_nodes: True
-          schedule: "daily 12:00 MWF"
-          queueing: False
-          actions:
-            - name: "start"
-              command: "echo number 9"
-              node: node1
-            - name: "end"
-              command: "echo love me do"
-              requires: [start]
-
-        - name: "job1"
-          node: node1
-          schedule: "interval 20s"
-          queueing: False
-          actions:
-            - name: "echo"
-              command: "echo %(PYTHON)s"
-          cleanup_action:
-            command: "echo 'cleaning up job1'"
-
-    services:
-        - name: "testserv"
-          node: pool
-          count: 8
-          monitor_interval: 60
-          restart_interval: 120
-          pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
-          command: "/bin/myservice --pid-file=%(pid_file)s start"
-
-Files
------
-
-/var/lib/tron/tron_config.yaml
-    Default path to the config file. May be changed by passing the ``-c``
-    option to **trond**.
 
 Bugs
 ----

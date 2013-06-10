@@ -9,12 +9,12 @@ import datetime
 import logging
 import optparse
 import sys
+import urlparse
 
 import tron
-from tron import commands
-from tron.commands import ExitCode
-from tron.commands.client import Client, OK, request
-from tron.commands.client import get_object_type_from_identifier
+from tron.commands import cmd_utils
+from tron.commands.cmd_utils import ExitCode
+from tron.commands import client
 
 
 COMMAND_HELP = (
@@ -27,7 +27,8 @@ COMMAND_HELP = (
     ('fail',            'Mark an UNKNOWN job as having failed'),
     ('success',         'Mark an UNKNOWN job as having succeeded'),
     ('skip',            'Skip a failed action, runs dependent actions.'),
-    ('stop',            'Stop the selected service'),
+    ('stop',            'Stop the service or action run (SIGTERM)'),
+    ('kill',            'Force kill the service or action run (SIGKILL)'),
 )
 
 
@@ -53,23 +54,15 @@ def parse_date(option, opt_str, value, parser):
 
 
 def parse_options():
-    parser = TronCtlOptionParser(
-        "usage: %prog [options] <command> [<job | job run | action>]",
-        version="%%prog %s" % tron.__version__)
+    usage = "usage: %prog [options] <command> [<job | job run | action>]"
+    parser = cmd_utils.build_option_parser(
+                usage, parser_class=TronCtlOptionParser)
 
-    parser.add_option("--server", action="store", dest="server", default=None,
-                      help="Server URL to connect to")
-    parser.add_option("--verbose", "-v", action="count", dest="verbose",
-                      default=0, help="Verbose logging")
     parser.add_option("--run-date", action="callback", callback=parse_date,
                       type="string", dest="run_date",
                       help="For job starts, what should run date be set to")
-    parser.add_option("--save", "-s", action="store_true", dest="save_config",
-                      help="Save options used on this job for next time.",
-                      default=False)
 
     options, args = parser.parse_args(sys.argv)
-
     if len(args) < 2:
         parser.error("Missing command")
 
@@ -81,21 +74,23 @@ def edit(options, command, uri):
     if command == "start" and options.run_date:
         data['run_time'] = str(options.run_date)
 
-    status, content = request(options.server, uri, data=data)
+    uri = urlparse.urljoin(options.server, uri)
+    response = client.request(uri, data=data)
 
-    if status == OK:
-        log.info(content['result'])
-        print content['result']
-        return True
-    else:
-        return False
+    if response.error:
+        return
+
+    print response.content['result']
+    return True
+
 
 def control_objects(options, command, object_identifiers):
-    client = Client(options)
-    url_index = client.index()
+    tron_client = client.Client(options.server)
+    url_index = tron_client.index()
     for identifier in object_identifiers:
         try:
-            tron_id = get_object_type_from_identifier(url_index, identifier)
+            tron_id = client.get_object_type_from_identifier(
+                url_index, identifier)
         except ValueError, e:
             raise SystemExit("Error: %s" % e)
 
@@ -105,14 +100,14 @@ def control_objects(options, command, object_identifiers):
 def main():
     """run tronctl"""
     options, args = parse_options()
-    commands.setup_logging(options)
-    commands.load_config(options)
+    cmd_utils.setup_logging(options)
+    cmd_utils.load_config(options)
 
     command = args.pop(0)
     if not args:
         # our only non-object commands are for enabling and disabling jobs, so
         # just direct those commands here
-        if not edit(options, command, '/jobs'):
+        if not edit(options, command, client.get_job_url('')):
             sys.exit(ExitCode.fail)
     else:
         if not all(control_objects(options, command, args)):

@@ -19,6 +19,8 @@ Tron schedulers
  end time of the previous run (False).
 """
 import logging
+import random
+import datetime
 
 from pytz import AmbiguousTimeError, NonExistentTimeError
 from tron.config import schedule_parse
@@ -36,7 +38,7 @@ def scheduler_from_config(config, time_zone):
         return ConstantScheduler()
 
     if isinstance(config, schedule_parse.ConfigIntervalScheduler):
-        return IntervalScheduler(interval=config.timedelta)
+        return IntervalScheduler(config.timedelta, config.jitter)
 
     if isinstance(config, schedule_parse.ConfigGrocScheduler):
         return GeneralScheduler(
@@ -46,7 +48,9 @@ def scheduler_from_config(config, time_zone):
             monthdays=config.monthdays,
             months=config.months,
             weekdays=config.weekdays,
-            string_repr='GROC %s' % config.original)
+            name='groc',
+            original=config.original,
+            jitter=config.jitter)
 
     if isinstance(config, schedule_parse.ConfigCronScheduler):
         return GeneralScheduler(
@@ -57,7 +61,9 @@ def scheduler_from_config(config, time_zone):
             weekdays=config.weekdays,
             ordinals=config.ordinals,
             seconds=[0],
-            string_repr='CRON %s' % ' '.join(config.original))
+            name='cron',
+            original=config.original,
+            jitter=config.jitter)
 
     if isinstance(config, schedule_parse.ConfigDailyScheduler):
         return GeneralScheduler(
@@ -65,7 +71,9 @@ def scheduler_from_config(config, time_zone):
             minutes=[config.minute],
             seconds=[config.second],
             weekdays=config.days,
-            string_repr='DAILY %s' % config.original)
+            name='daily',
+            original=config.original,
+            jitter=config.jitter)
 
 
 class ConstantScheduler(object):
@@ -76,13 +84,35 @@ class ConstantScheduler(object):
         return timeutils.current_time()
 
     def __str__(self):
-        return "CONSTANT"
+        return self.get_name()
 
     def __eq__(self, other):
         return isinstance(other, ConstantScheduler)
 
     def __ne__(self, other):
         return not self == other
+
+    def get_jitter(self):
+        pass
+
+    def get_name(self):
+        return 'constant'
+
+    def get_value(self):
+        return ''
+
+
+def get_jitter(time_delta):
+    if not time_delta:
+        return datetime.timedelta()
+    seconds = timeutils.delta_total_seconds(time_delta)
+    return datetime.timedelta(seconds=random.randint(-seconds, seconds))
+
+
+def get_jitter_str(time_delta):
+    if not time_delta:
+        return ''
+    return ' (+/- %s)' % time_delta
 
 
 class GeneralScheduler(object):
@@ -100,7 +130,9 @@ class GeneralScheduler(object):
             hours=None,
             seconds=None,
             time_zone=None,
-            string_repr=None):
+            name=None,
+            original=None,
+            jitter=None):
         """Parameters:
           timestr     - the time of day to run, as 'HH:MM'
           ordinals    - first, second, third &c, as a set of integers in 1..5 to
@@ -113,11 +145,11 @@ class GeneralScheduler(object):
           timezone    - the optional timezone as a string for this specification.
                         Defaults to UTC - valid entries are things like
                         Australia/Victoria or PST8PDT.
-          string_repr - Original string representation this was parsed from,
-                        if applicable
         """
         self.time_zone      = time_zone
-        self.string_repr    = string_repr or "DAILY"
+        self.jitter         = jitter
+        self.name           = name or 'daily'
+        self.original       = original or ''
         self.time_spec      = trontimespec.TimeSpecification(
             ordinals=ordinals,
             weekdays=weekdays,
@@ -145,16 +177,26 @@ class GeneralScheduler(object):
                 # exist. Pretend like it's the later time, every time.
                 start_time = self.time_zone.localize(start_time, is_dst=True)
 
-        return self.time_spec.get_match(start_time)
+        return self.time_spec.get_match(start_time) + get_jitter(self.jitter)
 
     def __str__(self):
-        return self.string_repr
+        return '%s %s%s' % (
+            self.name, self.original, get_jitter_str(self.jitter))
 
     def __eq__(self, other):
         return hasattr(other, 'time_spec') and self.time_spec == other.time_spec
 
     def __ne__(self, other):
         return not self == other
+
+    def get_jitter(self):
+        return self.jitter
+
+    def get_name(self):
+        return self.name
+
+    def get_value(self):
+        return self.original
 
 
 class IntervalScheduler(object):
@@ -163,15 +205,17 @@ class IntervalScheduler(object):
     """
     schedule_on_complete = False
 
-    def __init__(self, interval=None):
+    def __init__(self, interval, jitter):
         self.interval = interval
+        self.jitter = jitter
 
     def next_run_time(self, last_run_time):
         last_run_time = last_run_time or timeutils.current_time()
-        return last_run_time + self.interval
+        return last_run_time + self.interval + get_jitter(self.jitter)
 
     def __str__(self):
-        return "INTERVAL %s" % self.interval
+        return "%s %s%s" % (
+            self.get_name(), self.interval, get_jitter_str(self.jitter))
 
     def __eq__(self, other):
         return (isinstance(other, IntervalScheduler) and
@@ -179,3 +223,12 @@ class IntervalScheduler(object):
 
     def __ne__(self, other):
         return not self == other
+
+    def get_jitter(self):
+        return self.jitter
+
+    def get_name(self):
+        return "interval"
+
+    def get_value(self):
+        return str(self.interval)
