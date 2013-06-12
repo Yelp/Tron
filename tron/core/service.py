@@ -181,6 +181,13 @@ class ServiceCollection(object):
     def get_by_name(self, name):
         return self.services.get(name)
 
+    def get_by_namespace(self, namespace):
+        ret_list = []
+        for service in self:
+            if service.config.namespace == namespace:
+                ret_list.append(service)
+        return ret_list
+
     def get_names(self):
         return self.services.keys()
 
