@@ -192,6 +192,27 @@ class ServiceCollectionTestCase(TestCase):
             service = self.collection.services[name]
             service.restore_state.assert_called_with(state_data[name])
 
+    def test_get_services_by_namespace(self):
+        fake_service_uno = service.Service(mock.MagicMock(), mock.Mock())
+        fake_service_dos = service.Service(mock.MagicMock(), mock.Mock())
+        fake_service_uno.config = mock.Mock()
+        fake_service_dos.config = mock.Mock()
+        fake_service_uno.config.namespace = 'uno'
+        fake_service_dos.config.namespace = 'dos'
+        fake_services = [fake_service_uno, fake_service_dos]
+        # we need this to get a new iterator each time
+        def fake_services_iter():
+            return iter(fake_services)
+        with mock.patch.object(self.collection.services, 'itervalues',
+        side_effect=fake_services_iter):
+            should_be_uno =\
+                self.collection.get_services_by_namespace('uno')[0]
+            should_be_dos =\
+                self.collection.get_services_by_namespace('dos')[0]
+            assert should_be_uno is fake_service_uno
+            assert should_be_dos is fake_service_dos
+
+
 
 if __name__ == "__main__":
     run()
