@@ -27,7 +27,7 @@ def parse_options():
     parser.add_option("--events", action="store_true", dest="show_events",
                       help="Show events for the specified entity",
                       default=False)
-    parser.add_option("--namespace", type="string", dest="namespace",
+    parser.add_option("--namespace", type="string",
                       help="Show jobs/services for the specified namespace",
                       default=None)
 
@@ -48,21 +48,11 @@ def view_all(options, client):
     if options.show_events:
         return display_events(client.events())
 
-    if options.namespace:
-        return "".join([
-            display.DisplayServices().format(client.services(namespace=options.namespace)),
-            '\n',
-            display.DisplayJobs().format(client.jobs(namespace=options.namespace))
-        ])
-    else:
-        return "".join([
-            display.DisplayServices().format(client.services()),
-            '\n',
-            display.DisplayJobs().format(client.jobs())
-        ])
-
-
-
+    return "".join([
+        display.DisplayServices().format(client.services(namespace=options.namespace)),
+        '\n',
+        display.DisplayJobs().format(client.jobs(namespace=options.namespace))
+    ])
 
 def view_job(options, job_id, client):
     """Retrieve details of the specified job and display"""

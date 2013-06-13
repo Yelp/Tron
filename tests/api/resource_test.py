@@ -278,9 +278,8 @@ class ServiceCollectionResourceTestCase(TestCase):
 
     @setup
     def build_resource(self):
-        self.mcp = mock.create_autospec(mcp.MasterControlProgram)
-        self.resource = www.ServiceCollectionResource(self.mcp)
-        self.resource.collection = mock.create_autospec(service.ServiceCollection)
+        self.collection = mock.create_autospec(service.ServiceCollection)
+        self.resource = www.ServiceCollectionResource(self.collection)
 
     def test_getChild(self):
         child = self.resource.collection.get_by_name.return_value = mock.Mock()

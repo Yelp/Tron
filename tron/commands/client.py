@@ -110,9 +110,7 @@ class Client(object):
         return get_object_type_from_identifier(self.index(), identifier).url
 
     def services(self, namespace=None):
-        params = {}
-        if namespace:
-            params['namespace'] = namespace
+        params = {'namespace': namespace} if namespace else {}
         return self.http_get('/api/services', params).get('services')
 
     def service(self, service_url):

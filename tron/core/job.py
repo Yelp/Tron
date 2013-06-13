@@ -430,12 +430,9 @@ class JobCollection(object):
     def get_by_name(self, name):
         return self.jobs.get(name)
 
-    def get_by_namespace(self, namespace):
-        ret_list = []
-        for job in self.get_jobs():
-            if job.config.namespace == namespace:
-                ret_list.append(job)
-        return ret_list
+    def get_jobs_by_namespace(self, namespace):
+        return [job for job in self.get_jobs()
+            if job.config.namespace == namespace]
 
     def get_names(self):
         return self.jobs.keys()
