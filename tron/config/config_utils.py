@@ -5,6 +5,7 @@ import re
 import datetime
 from tron.config import ConfigError
 from tron.config.schema import MASTER_NAMESPACE
+from tron.utils import dicts
 from tron.utils.dicts import FrozenDict
 
 
@@ -87,6 +88,12 @@ valid_bool = build_type_validator(
     lambda s: isinstance(s, bool), 'Value at %s is not a boolean: %s')
 
 
+def build_enum_validator(enum):
+    enum = set(enum)
+    msg = 'Value at %%s is not in %s: %%s.' % str(enum)
+    return build_type_validator(enum.__contains__, msg)
+
+
 def valid_time(value, config_context):
     valid_string(value, config_context)
     for format in ['%H:%M', '%H:%M:%S']:
@@ -97,6 +104,31 @@ def valid_time(value, config_context):
 
     msg = 'Value at %s is not a valid time: %s'
     raise ConfigError(msg % (config_context.path, exc))
+
+
+# Translations from possible configuration units to the argument to
+# datetime.timedelta
+TIME_INTERVAL_UNITS = dicts.invert_dict_list({
+    'days':     ['d', 'day', 'days'],
+    'hours':    ['h', 'hr', 'hrs', 'hour', 'hours'],
+    'minutes':  ['m', 'min', 'mins', 'minute', 'minutes'],
+    'seconds':  ['s', 'sec', 'secs', 'second', 'seconds']
+})
+
+TIME_INTERVAL_RE = re.compile(r"^\s*(?P<value>\d+)\s*(?P<units>[a-zA-Z]+)\s*$")
+
+def valid_time_delta(value, config_context):
+    error_msg = "Value at %s is not a valid time delta: %s"
+    matches = TIME_INTERVAL_RE.match(value)
+    if not matches:
+        raise ConfigError(error_msg % (config_context.path, value))
+
+    units = matches.group('units')
+    if units not in TIME_INTERVAL_UNITS:
+        raise ConfigError(error_msg % (config_context.path, value))
+
+    time_spec = {TIME_INTERVAL_UNITS[units]: int(matches.group('value'))}
+    return datetime.timedelta(**time_spec)
 
 
 def valid_name_identifier(value, config_context):
@@ -180,3 +212,124 @@ class NullConfigContext(object):
     @staticmethod
     def build_child_context(_):
         return NullConfigContext
+
+
+# TODO: extract code
+class Validator(object):
+    """Base class for validating a collection and creating a mutable
+    collection from the source.
+    """
+    config_class            = None
+    defaults                = {}
+    validators              = {}
+    optional                = False
+
+    def validate(self, in_dict, config_context):
+        if self.optional and in_dict is None:
+            return None
+
+        if in_dict is None:
+            raise ConfigError("A %s is required." % self.type_name)
+
+        shortcut_value = self.do_shortcut(in_dict)
+        if shortcut_value:
+            return shortcut_value
+
+        config_context = self.build_context(in_dict, config_context)
+        in_dict = self.cast(in_dict, config_context)
+        self.validate_required_keys(in_dict)
+        self.validate_extra_keys(in_dict)
+        return self.build_config(in_dict, config_context)
+
+    def __call__(self, in_dict, config_context=NullConfigContext):
+        return self.validate(in_dict, config_context)
+
+    @property
+    def type_name(self):
+        """Return a string that represents the config_class being validated.
+        This name is used for error messages, so we strip off the word
+        Config so the name better matches what the user sees in the config.
+        """
+        return self.config_class.__name__.replace("Config", "")
+
+    @property
+    def all_keys(self):
+        return self.config_class.required_keys + self.config_class.optional_keys
+
+    def do_shortcut(self, in_dict):
+        """Override if your validator can skip most of the validation by
+        checking this condition.  If this returns a truthy value, the
+        validation will end immediately and return that value.
+        """
+        pass
+
+    def cast(self, in_dict, _):
+        """If your validator accepts input in different formations, override
+        this method to cast your input into a common format.
+        """
+        return in_dict
+
+    def build_context(self, in_dict, config_context):
+        path = self.path_name(in_dict.get('name'))
+        return config_context.build_child_context(path)
+
+    def validate_required_keys(self, in_dict):
+        """Check that all required keys are present."""
+        missing_keys = set(self.config_class.required_keys) - set(in_dict)
+        if not missing_keys:
+            return
+
+        missing_key_str = ', '.join(missing_keys)
+        if 'name' in self.all_keys and 'name' in in_dict:
+            msg  = "%s %s is missing options: %s"
+            name = in_dict['name']
+            raise ConfigError(msg % (self.type_name, name, missing_key_str))
+
+        msg = "Nameless %s is missing options: %s"
+        raise ConfigError(msg % (self.type_name, missing_key_str))
+
+    def validate_extra_keys(self, in_dict):
+        """Check that no unexpected keys are present."""
+        extra_keys = set(in_dict) - set(self.all_keys)
+        if not extra_keys:
+            return
+
+        msg  = "Unknown keys in %s %s: %s"
+        name = in_dict.get('name', '')
+        raise ConfigError(msg % (self.type_name, name, ', '.join(extra_keys)))
+
+    def set_defaults(self, output_dict, _config_context):
+        """Set any default values for any optional values that were not
+        specified.
+        """
+        for key, value in self.defaults.iteritems():
+            output_dict.setdefault(key, value)
+
+    def path_name(self, name=None):
+        return '%s.%s' % (self.type_name, name) if name else self.type_name
+
+    def post_validation(self, valid_input, config_context):
+        """Hook to perform additional validation steps after key validation
+        completes.
+        """
+        pass
+
+    def build_config(self, in_dict, config_context):
+        """Construct the configuration by validating the contents, setting
+        defaults, and returning an instance of the config_class.
+        """
+        output_dict = self.validate_contents(in_dict, config_context)
+        self.post_validation(output_dict, config_context)
+        self.set_defaults(output_dict, config_context)
+        return self.config_class(**output_dict)
+
+    def validate_contents(self, input, config_context):
+        """Override this to validate each value in the input."""
+        valid_input = {}
+        for key, value in input.iteritems():
+            if key in self.validators:
+                child_context = config_context.build_child_context(key)
+                valid_input[key] = self.validators[key](value, child_context)
+            else:
+                valid_input[key] = value
+        return valid_input

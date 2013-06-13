@@ -7,7 +7,7 @@ import pkg_resources
 import sys
 
 import tron
-from tron import commands
+from tron.commands import cmd_utils
 from tron import trondaemon
 from tron.config import manager
 
@@ -50,11 +50,16 @@ def parse_options():
     api_group = optparse.OptionGroup(parser, "Web Service API")
     api_group.add_option("--port", "-P", dest="listen_port", type=int,
             help="TCP port number to listen on, default %default",
-            default=commands.DEFAULT_PORT)
+            default=cmd_utils.DEFAULT_PORT)
 
     api_group.add_option("--host", "-H", dest="listen_host",
             help="Hostname to listen on, default %default",
-            default=commands.DEFAULT_HOST)
+            default=cmd_utils.DEFAULT_HOST)
+
+    requirement = pkg_resources.Requirement.parse("tron")
+    api_group.add_option("--web-path",
+            default=pkg_resources.resource_filename(requirement, 'tronweb'),
+            help="Path to static web resources, default %default.")
     parser.add_option_group(api_group)
 
     options, args       = parser.parse_args(sys.argv)

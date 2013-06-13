@@ -228,4 +228,6 @@ class ExecChannel(channel.SSHChannel):
 
         for callback in self.end_callbacks:
             callback()
+        # TODO: this is triggered by loseConnection, we shouldn't need to call it
+        # again here
         self.loseConnection()

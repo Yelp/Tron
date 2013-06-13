@@ -1,6 +1,7 @@
 import logging
 
 import operator
+import signal
 
 from tron import command_context, actioncommand
 from tron import eventloop
@@ -47,6 +48,7 @@ def run_action(task, action):
         stream = task.buffer_store.open(actioncommand.ActionCommand.STDERR)
         stream.write("Node run failure for %s: %s" % (task.task_name, e))
         task.notify(task.NOTIFY_FAILED)
+
 
 def get_failures_from_task(task):
     return task.buffer_store.get_stream(actioncommand.ActionCommand.STDERR)
@@ -132,6 +134,8 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
 
     def fail(self):
         log.warning("%s is still running %s.", self, self.action)
+        self.node.stop(self.action)
+        self.action.write_stderr("Monitoring failed")
         self.notify(self.NOTIFY_FAILED)
         self.action = actioncommand.CompletedActionCommand
 
@@ -145,7 +149,7 @@ class ServiceInstanceStopTask(observer.Observable, observer.Observer):
     NOTIFY_SUCCESS              = 'stop_task_notify_success'
     NOTIFY_FAILED               = 'stop_task_notify_fail'
 
-    command_template            = "cat %s | xargs kill"
+    command_template            = "cat %s | xargs kill -%s"
     task_name                   = 'stop'
 
     def __init__(self, id, node, pid_filename):
@@ -154,12 +158,17 @@ class ServiceInstanceStopTask(observer.Observable, observer.Observer):
         self.node           = node
         self.pid_filename   = pid_filename
         self.buffer_store   = actioncommand.StringBufferStore()
+        self.command        = None
 
-    @property
-    def command(self):
-        return self.command_template % self.pid_filename
+    def get_command(self, signal):
+        return self.command_template % (self.pid_filename, signal)
+
+    def stop(self):
+        self.command = self.get_command(signal.SIGTERM)
+        return run_action(self, build_action(self))
 
     def kill(self):
+        self.command = self.get_command(signal.SIGKILL)
         return run_action(self, build_action(self))
 
     def handle_action_event(self, action, event):
@@ -297,8 +306,14 @@ class ServiceInstance(observer.Observer):
         return self.start_task.start(self.command)
 
     def stop(self):
+        return self.perform_stop_task(self.stop_task.stop)
+
+    def kill(self):
+        return self.perform_stop_task(self.stop_task.kill)
+
+    def perform_stop_task(self, method):
         if self.machine.check('stop'):
-            self.stop_task.kill()
+            method()
             self.monitor_task.cancel()
             return self.machine.transition('stop')
 
@@ -331,7 +346,7 @@ class ServiceInstance(observer.Observer):
 
     def _handle_start_task_complete(self):
         if self.machine.state != ServiceInstance.STATE_STARTING:
-            self.stop_task.kill()
+            self.stop_task.stop()
             return
 
         log.info("Start for %s complete, starting monitor" % self.id)
@@ -378,6 +393,7 @@ class ServiceInstanceCollection(object):
         self.instances_proxy    = proxy.CollectionProxy(
             lambda: self.instances, [
                 proxy.func_proxy('stop',    iteration.list_all),
+                proxy.func_proxy('kill',    iteration.list_all),
                 proxy.func_proxy('start',   iteration.list_all),
                 proxy.func_proxy('restore', iteration.list_all),
                 proxy.attr_proxy('state_data', list)
@@ -452,6 +468,11 @@ class ServiceInstanceCollection(object):
         states = set([ServiceInstance.STATE_STARTING,
                       ServiceInstance.STATE_MONITORING,
                       ServiceInstance.STATE_UP])
+        return self._all_states_match(states)
+
+    def is_up(self):
+        states = set([ServiceInstance.STATE_MONITORING,
+                     ServiceInstance.STATE_UP])
         return self._all_states_match(states)
 
     def _all_states_match(self, states):

@@ -1,12 +1,6 @@
 Configuration
 =============
 
-.. note::
-
-    **The configuration system has changed significantly since version 0.2.10.**
-    All existing configurations should still work, but new configurations
-    should follow the new conventions.
-
 .. _config_syntax:
 
 Syntax
@@ -52,7 +46,7 @@ Basic Example
 .. _command_context_variables:
 
 Command Context Variables
-^^^^^^^^^^^^^^^^^^^^^^^^^
+-------------------------
 
 **command** attribute values may contain **command context variables** that are
 inserted at runtime. The **command context** is populated both by Tron (see
@@ -73,20 +67,54 @@ SSH
 ---
 
 **ssh_options** (optional)
-    These options affect how Tron connects to the nodes.
+    Options for SSH connections to Tron nodes. When tron runs a job or service
+    on a node, it will add some jitter (random delay) to the run, which can be
+    configured with the options below.
 
     **agent** (optional, default ``False``)
-        Set to ``True`` if :command:`trond` should use an SSH agent
+        Set to ``True`` if :command:`trond` should use an SSH agent. This requires
+        that ``$SSH_AUTH_SOCK`` exists in the environment and points to the
+        correct socket.
 
     **identities** (optional, default ``[]``)
         List of paths to SSH identity files
 
+    **known_hosts_file** (optional, default ``None``)
+        The path to an ssh known hosts file
+
+    **connect_timeout** (optional, default ``30``)
+        Timeout in seconds when establishing an ssh connection
+
+    **idle_connection_timeout** (optional, default ``3600``)
+        Timeout in seconds that an ssh connection can remain idle after which
+        it is closed
+
+    **jitter_min_load** (optional, default ``4``)
+        Minimum `load` on a node before any jitter is introduced. See
+        `jitter_load_factor` for a description of how load is calculated
+
+    **jitter_max_delay** (optional, default ``20``)
+        Maximum number of seconds to add to a run
+
+    **jitter_load_factor** (optional, default ``1``)
+        Factor used to increment the count of running actions for determining
+        the upper bound of jitter to add (ex. A factor of 2 would increase the
+        upper bound by 2 seconds per running action)
+
 Example::
 
     ssh_options:
-        agent: false
+        agent:                    false
+        known_hosts_file:         /etc/ssh/known_hosts
         identities:
             - /home/batch/.ssh/id_dsa-nopasswd
+
+        connect_timeout:          30
+        idle_connection_timeout:  3600
+
+        jitter_min_load:          4
+        jitter_max_delay:         20
+        jitter_load_factor:       1
 
 Notification Options
 --------------------
@@ -197,13 +225,65 @@ Example::
         buffer_size: 1 # No buffer
 
 
+.. _action_runners:
+
+Action Runners
+--------------
+
+**Note:** this is an experimental feature
+
+
+**action_runner**
+    Action runner configuration allows you to run Job actions through a script
+    which records it's pid. This provides support for a max_runtime option
+    on jobs, and allows you to stop or kill the action from :command:`tronctl`.
+
+    **runner_type**
+        Valid options are:
+            **none**
+                Run actions without a wrapper. This is the default
+
+            **subprocess**
+                Run actions with a script which records the pid and runs the
+                action command in a subprocess (on the remote node). This
+                requires that :command:`bin/action_runner.py` and
+                :command:`bin/action_status.py` are avialable on the remote
+                host.
+
+    **remote_status_path**
+        Path used to store status files. Defaults to `/tmp`.
+
+    **remote_exec_path**
+        Directory path which contains :command:`action_runner.py` and
+        :command:`action_status.py` scripts.
+
+
+Example::
+
+    action_runner:
+        runner_type:        "subprocess"
+        remote_status_path: "/tmp/tron"
+        remote_exec_path:   "/usr/local/bin"
+
+
 Nodes
 -----
 
 **nodes**
-    List of nodes, each with a ``name`` and a ``hostname``.  ``name`` defaults
-    to ``hostname``. Each of these nodes should be configured to allow SSH
-    connections from :command:`trond`.
+    List of nodes. Each node has the following options:
+
+    **hostname** (required)
+        The hostname or IP address of the node
+
+    **name** (optional, defaults to ``hostname``)
+        A name to refer to this node
+
+    **username** (optional, defaults to current user)
+        The name of the user to connect with
+
+    **port** (optional, defaults to 22)
+        The port number of the node
+
 
 Example::
 
@@ -255,3 +335,16 @@ handler that rotates files each day. The default log directory is
 To configure logging pass -l <logging.conf> to trond. You can modify the
 default logging.conf by copying it from tron/logging.conf. See
 http://docs.python.org/howto/logging.html#configuring-logging
+
+Interesting logs
+~~~~~~~~~~~~~~~~
+
+Most tron logs are named by using pythons `__file__` which uses the modules
+name.  There are a couple special cases:
+
+**twisted**
+    Twisted sends its logs to the `twisted` log
+
+**tron.api.www.access**
+    API access logs are sent to this log at the INFO log level.  They follow
+    a standard apache combined log format.

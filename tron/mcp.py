@@ -1,7 +1,7 @@
 from __future__ import with_statement
 import logging
 
-from tron import command_context
+from tron import command_context, actioncommand
 from tron import event
 from tron import crash_reporter
 from tron import node
@@ -97,8 +97,13 @@ class MasterControlProgram(object):
 
     def build_job_scheduler_factory(self, master_config):
         output_stream_dir = master_config.output_stream_dir or self.working_dir
-        args = self.context, output_stream_dir, master_config.time_zone
-        return job.JobSchedulerFactory(*args)
+        action_runner = actioncommand.create_action_runner_factory_from_config(
+            master_config.action_runner)
+        return job.JobSchedulerFactory(
+            self.context,
+            output_stream_dir,
+            master_config.time_zone,
+            action_runner)
 
     def update_state_watcher_config(self, state_config):
         """Update the StateChangeWatcher, and save all state if the state config

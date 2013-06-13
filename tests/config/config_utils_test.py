@@ -1,9 +1,12 @@
+import datetime
 import mock
 from testify import TestCase, run, assert_equal, setup
-from testify.assertions import assert_in, assert_raises
-from tron.config import config_utils, ConfigError
+from testify.assertions import assert_in
+from tests.assertions import assert_raises
+from tron.config import config_utils, ConfigError, schema
 from tron.config.config_utils import build_list_of_type_validator, ConfigContext
 from tron.config.config_utils import valid_identifier
+
 
 class UniqueNameDictTestCase(TestCase):
 
@@ -54,6 +57,23 @@ class BuildListOfTypeValidatorTestCase(TestCase):
         assert_raises(ConfigError, self.validator, items, context)
 
 
+class BuildEnumValidatorTestCase(TestCase):
+
+    @setup
+    def setup_enum_validator(self):
+        self.enum = dict(a=1, b=2)
+        self.validator = config_utils.build_enum_validator(self.enum)
+        self.context = config_utils.NullConfigContext
+
+    def test_validate(self):
+        assert_equal(self.validator('a', self.context), 'a')
+        assert_equal(self.validator('b', self.context), 'b')
+
+    def test_invalid(self):
+        exception = assert_raises(ConfigError, self.validator, 'c', self.context)
+        assert_in('Value at  is not in %s: ' % str(set(self.enum)), str(exception))
+
+
 class ValidTimeTestCase(TestCase):
 
     @setup
@@ -78,6 +98,33 @@ class ValidTimeTestCase(TestCase):
         assert_raises(ConfigError, config_utils.valid_time, None, self.context)
 
 
+class ValidTimeDeltaTestCase(TestCase):
+
+    @setup
+    def setup_config(self):
+        self.context = config_utils.NullConfigContext
+
+    def test_valid_time_delta_invalid(self):
+        exception = assert_raises(ConfigError,
+            config_utils.valid_time_delta,'no time', self.context)
+        assert_in('not a valid time delta: no time', str(exception))
+
+    def test_valid_time_delta_valid_seconds(self):
+        for jitter in [' 82s ', '82 s', '82 sec', '82seconds  ']:
+            delta = datetime.timedelta(seconds=82)
+            assert_equal(delta, config_utils.valid_time_delta(jitter, self.context))
+
+    def test_valid_time_delta_valid_minutes(self):
+        for jitter in ['10m', '10 m', '10   min', '  10minutes']:
+            delta = datetime.timedelta(seconds=600)
+            assert_equal(delta, config_utils.valid_time_delta(jitter, self.context))
+
+    def test_valid_time_delta_invalid_unit(self):
+        for jitter in ['1 year', '3 mo', '3 months']:
+            assert_raises(ConfigError,
+                config_utils.valid_time_delta, jitter, self.context)
+
+
 class ConfigContextTestCase(TestCase):
 
     def test_build_config_context(self):
@@ -93,6 +140,32 @@ class ConfigContextTestCase(TestCase):
         assert_equal(child.command_context, command_context)
         assert not child.partial
 
+
+StubConfigObject = schema.config_object_factory(
+    'StubConfigObject',
+    ['req1', 'req2'],
+    ['opt1', 'opt2']
+)
+
+class StubValidator(config_utils.Validator):
+    config_class = StubConfigObject
+
+class ValidatorTestCase(TestCase):
+
+    @setup
+    def setup_validator(self):
+        self.validator = StubValidator()
+
+    def test_validate_with_none(self):
+        expected_msg = "A StubObject is required"
+        exception = assert_raises(ConfigError,
+            self.validator.validate, None, config_utils.NullConfigContext)
+        assert_in(expected_msg, str(exception))
+
+    def test_validate_optional_with_none(self):
+        self.validator.optional = True
+        config = self.validator.validate(None, config_utils.NullConfigContext)
+        assert_equal(config, None)
 
 if __name__ == "__main__":
     run()
