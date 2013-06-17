@@ -60,7 +60,8 @@ class Job(Observable, Observer):
     def __init__(self, name, scheduler, queueing=True, all_nodes=False,
             node_pool=None, enabled=True, action_graph=None,
             run_collection=None, parent_context=None, output_path=None,
-            allow_overlap=None, action_runner=None, max_runtime=None):
+            allow_overlap=None, action_runner=None, max_runtime=None,
+            config=None):
         super(Job, self).__init__()
         self.name               = name
         self.action_graph       = action_graph
@@ -73,6 +74,7 @@ class Job(Observable, Observer):
         self.allow_overlap      = allow_overlap
         self.action_runner      = action_runner
         self.max_runtime        = max_runtime
+        self.config             = config
         self.output_path        = output_path or filehandler.OutputPath()
         self.output_path.append(name)
         self.event              = event.get_recorder(self.name)
@@ -101,7 +103,8 @@ class Job(Observable, Observer):
             output_path         = output_path,
             allow_overlap       = job_config.allow_overlap,
             action_runner       = action_runner,
-            max_runtime         = job_config.max_runtime)
+            max_runtime         = job_config.max_runtime,
+            config              = job_config)
 
     def update_from_job(self, job):
         """Update this Jobs configuration from a new config. This method
@@ -426,6 +429,10 @@ class JobCollection(object):
 
     def get_by_name(self, name):
         return self.jobs.get(name)
+
+    def get_jobs_by_namespace(self, namespace):
+        return [job for job in self.get_jobs()
+            if job.config.namespace == namespace]
 
     def get_names(self):
         return self.jobs.keys()
