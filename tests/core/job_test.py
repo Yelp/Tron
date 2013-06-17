@@ -533,16 +533,15 @@ class JobCollectionTestCase(TestCase):
     def test_get_jobs_from_namespace(self):
         fake_job_uno = job.Job(mock.MagicMock(), mock.Mock())
         fake_job_dos = job.Job(mock.MagicMock(), mock.Mock())
-        fake_job_uno.config = mock.Mock()
-        fake_job_dos.config = mock.Mock()
-        fake_job_uno.config.namespace = 'uno'
-        fake_job_dos.config.namespace = 'dos'
+        fake_job_uno.config = mock.Mock(namespace='uno')
+        fake_job_dos.config = mock.Mock(namespace='dos')
         fake_jobs = [fake_job_uno, fake_job_dos]
-        with mock.patch.object(self.collection, 'get_jobs', return_value=fake_jobs):
-            should_be_uno = self.collection.get_jobs_by_namespace('uno')[0]
-            should_be_dos = self.collection.get_jobs_by_namespace('dos')[0]
-            assert should_be_uno is fake_job_uno
-            assert should_be_dos is fake_job_dos
+        with mock.patch.object(self.collection, 'get_jobs',
+        return_value=fake_jobs):
+            assert_equal(self.collection.get_jobs_by_namespace('uno'),
+                [fake_job_uno])
+            assert_equal(self.collection.get_jobs_by_namespace('dos'),
+                [fake_job_dos])
 
 
 if __name__ == '__main__':
