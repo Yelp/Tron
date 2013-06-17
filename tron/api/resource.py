@@ -205,9 +205,10 @@ class JobCollectionResource(resource.Resource):
             return self
         return resource_from_collection(self.job_collection, name, JobResource)
 
-    def get_data(self, include_job_run=False, include_action_runs=False):
+    def get_data(self, include_job_run=False, include_action_runs=False, namespace=None):
         return adapter.adapt_many(adapter.JobAdapter,
-            self.job_collection.get_jobs(),
+            self.job_collection.get_jobs_by_namespace(namespace) if namespace
+            else self.job_collection.get_jobs(),
             include_job_run,
             include_action_runs,
             num_runs=5)
@@ -220,7 +221,9 @@ class JobCollectionResource(resource.Resource):
     def render_GET(self, request):
         include_job_runs = requestargs.get_bool(request, 'include_job_runs')
         include_action_runs = requestargs.get_bool(request, 'include_action_runs')
-        output = dict(jobs=self.get_data(include_job_runs, include_action_runs))
+        namespace = requestargs.get_string(request, 'namespace')
+        output = dict(jobs=self.get_data(include_job_runs, include_action_runs,
+            namespace))
         return respond(request, output)
 
     def render_POST(self, request):
@@ -282,14 +285,17 @@ class ServiceCollectionResource(resource.Resource):
             return self
         return resource_from_collection(self.collection, name, ServiceResource)
 
-    def get_data(self):
-        return adapter.adapt_many(adapter.ServiceAdapter, self.collection)
+    def get_data(self, namespace=None):
+        return adapter.adapt_many(adapter.ServiceAdapter,
+            self.collection.get_services_by_namespace(namespace) if namespace
+            else self.collection)
 
     def get_service_index(self):
         return self.collection.get_names()
 
     def render_GET(self, request):
-        return respond(request, dict(services=self.get_data()))
+        namespace = requestargs.get_string(request, 'namespace')
+        return respond(request, dict(services=self.get_data(namespace)))
 
 
 class ConfigResource(resource.Resource):
