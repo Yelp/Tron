@@ -4,7 +4,7 @@ import time
 import itertools
 import tron
 from tron.config import schema
-from tron.core import job, service
+from tron.core import job, jobrun, service
 from tron.serialize import runstate
 from tron.serialize.runstate.mongostore import MongoStateStore
 from tron.serialize.runstate.shelvestore import ShelveStateStore
@@ -241,16 +241,21 @@ class StateChangeWatcher(observer.Observer):
 
     def handler(self, observable, _event):
         """Handle a state change in an observable by saving its state."""
-        if isinstance(observable, job.Job):
+        if isinstance(observable, job.JobState):
             self.save_job(observable)
         if isinstance(observable, service.Service):
             self.save_service(observable)
+        if isinstance(observable, jobrun.JobRun):
+            self.save_job_run(observable)
 
     def save_job(self, job):
         self._save_object(runstate.JOB_STATE, job)
 
     def save_service(self, service):
         self._save_object(runstate.SERVICE_STATE, service)
+
+    def save_job_run(self, job_run):
+        self._save_object(runstate.JOB_RUN_STATE, job_run)
 
     def save_metadata(self):
         self._save_object(runstate.MCP_STATE, StateMetadata())

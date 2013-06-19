@@ -255,11 +255,11 @@ class JobAdapter(ReprAdapter):
         return NodePoolAdapter(self._obj.node_pool).get_repr()
 
     def get_last_success(self):
-        last_success = self._obj.runs.last_success
+        last_success = self._obj.job_runs.last_success
         return last_success.end_time if last_success else None
 
     def get_next_run(self):
-        next_run = self._obj.runs.next_run
+        next_run = self._obj.job_runs.next_run
         return next_run.run_time if next_run else None
 
     def get_url(self):
@@ -267,7 +267,7 @@ class JobAdapter(ReprAdapter):
 
     @toggle_flag('include_job_runs')
     def get_runs(self):
-        runs = adapt_many(JobRunAdapter, self._obj.runs, self.include_action_runs)
+        runs = adapt_many(JobRunAdapter, self._obj.job_runs, self.include_action_runs)
         return runs[:self.num_runs or None]
 
     def get_max_runtime(self):
