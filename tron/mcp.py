@@ -146,8 +146,8 @@ class MasterControlProgram(object):
         """
         self.event_recorder.notice('restoring')
         job_states, service_states = self.state_watcher.restore(
-                self.jobs.get_names(), self.services.get_names())
-
+                self.jobs.get_names(),
+                self.services.get_names())
         self.jobs.restore_state(job_states)
         self.services.restore_state(service_states)
         self.state_watcher.save_metadata()

@@ -133,7 +133,7 @@ class JobResource(resource.Resource):
         self.controller    = controller.JobController(job_container)
 
     def get_run_from_identifier(self, run_id):
-        job_runs = self.job_container.get_job_runs()
+        job_runs = self.job_container.get_runs()
         if run_id.upper() == 'HEAD':
             return job_runs.get_newest()
         if run_id.isdigit():

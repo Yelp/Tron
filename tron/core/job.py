@@ -86,7 +86,8 @@ class JobState(Observable):
     def __init__(self, enabled, name):
         super(JobState, self).__init__()
         self.enabled = enabled
-        self.name = name
+        self.name = name  #this is just a ref for state saving purposes (see .id)
+        self.run_ids = []
 
     # @classmethod
     # def from_config(cls,
@@ -144,8 +145,9 @@ class JobState(Observable):
         log.warn("%s in an unknown state: %s" % (self, self.runs))
         return self.STATUS_UNKNOWN
 
-    # def get_name(self):
-    #     return self.name
+    @property
+    def id(self):
+        return self.name
 
     # def get_runs(self):
     #     return self.runs
@@ -156,12 +158,18 @@ class JobState(Observable):
         return {
             #'runs':             self.runs.state_data,
             'enabled':          self.enabled,
-            'name':             self.name
+            'run_ids':          self.run_ids
+            #'name':             self.name
         }
+
+    @property
+    def is_enabled(self):
+        return self.enabled
 
     def restore_state(self, state_data):
         """Apply a previous state to this Job."""
         self.enabled = state_data['enabled']
+        self.run_ids = state_data['run_ids']
         # job_runs = self.runs.restore_state(
         #         state_data['runs'],
         #         self.action_graph,
@@ -172,6 +180,10 @@ class JobState(Observable):
         #     self.watch(run)
 
         # self.event.ok('restored')
+
+    def set_run_ids(self, new_run_ids):
+        self.run_ids = new_run_ids
+        self.notify(self.NOTIFY_STATUS_CHANGE)
 
     # def build_new_runs(self, run_time, manual=False):
     #     """Uses its JobCollection to build new JobRuns. If all_nodes is set,
@@ -216,10 +228,11 @@ class JobScheduler(Observer):
     x seconds into the future.
     """
 
-    def __init__(self, job_runs, job_config, scheduler, actiongraph, nodes, path, context, watcher, actionrunner):
+    def __init__(self, job_runs, job_config, job_state, scheduler, actiongraph,
+    nodes, path, context, watcher, actionrunner):
         self.job_runs           = job_runs
         self.config             = job_config
-        self.enabled            = job_config.enabled
+        self.job_state          = job_state
         self.scheduler          = scheduler
         self.action_graph       = actiongraph
         self.action_runner      = actionrunner
@@ -238,10 +251,9 @@ class JobScheduler(Observer):
             ])
         #self.watch(job)
 
-    def restore_state(self, job_state_data):
+    def restore_state(self):
         """Restore the job state and schedule any JobRuns."""
         #self.job.restore_state(job_state_data)
-        self.enabled = job_state_data['enabled']
         scheduled = self.job_runs.get_scheduled()
         for job_run in scheduled:
             self._set_callback(job_run)
@@ -250,10 +262,8 @@ class JobScheduler(Observer):
 
     def enable(self):
         """Enable the job and start its scheduling cycle."""
-        if self.enabled:
-            return
-
-        self.enabled = True
+        # if self.enabled:
+        #     return
         self.create_and_schedule_runs(ignore_last_run_time=True)
 
     def create_and_schedule_runs(self, ignore_last_run_time=False):
@@ -262,13 +272,16 @@ class JobScheduler(Observer):
 
     def disable(self):
         """Disable the job and cancel and pending scheduled jobs."""
-        self.enabled = False
         self.job_runs.cancel_pending()
 
     @property
     def is_shutdown(self):
         """Return True if there are no running or starting runs."""
         return not any(self.job_runs.get_active())
+
+    @property
+    def enabled(self):
+        return self.job_state.is_enabled
 
     def manual_start(self, run_time=None):
         """Trigger a job run manually (instead of from the scheduler)."""
@@ -286,8 +299,9 @@ class JobScheduler(Observer):
         nodes = pool.nodes if self.config.all_nodes else [pool.next()]
         for node in nodes:
             run = self.job_runs.build_new_run(self, run_time, node, manual=manual)
-            self.watcher.watch(run, jobrun.JobRun.NOTIFY_STATE_CHANGED)
+            self.watcher.watch(run)#jobrun.JobRun.NOTIFY_STATE_CHANGED)
             self.watch(run, jobrun.JobRun.NOTIFY_DONE)
+            self.job_state.set_run_ids(self.job_runs.get_run_numbers())
             yield run
 
     def schedule_reconfigured(self):
@@ -357,7 +371,7 @@ class JobScheduler(Observer):
         log.info("Job:%s still running, cancelling %s." % (self.config.name, job_run))
         job_run.cancel()
         self.schedule()
-    # This is now also called when a JobRun does a .notify
+    # This is now called when a JobRun does a .notify
     def handle_job_events(self, _observable, event):
         """Handle notifications from observables. If a JobRun has completed
         look for queued JobRuns that may need to start now.
@@ -428,13 +442,13 @@ class JobSchedulerFactory(object):
         self.time_zone          = time_zone
         self.action_runner      = action_runner
 
-    def build(self, job_config, job_runs, actiongraph, nodes, watcher, actionrunner):
+    def build(self, job_config, job_runs, job_state, actiongraph, nodes, watcher, actionrunner):
         log.debug("Building new job %s", job_config.name)
         output_path = filehandler.OutputPath(self.output_stream_dir)
         scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
         context = command_context.build_context(self, self.context)
         #job = Job.from_config(job_config, scheduler, self.context, output_path, self.action_runner)
-        return JobScheduler(job_runs, job_config, scheduler, actiongraph,
+        return JobScheduler(job_runs, job_config, job_state, scheduler, actiongraph,
             nodes, output_path, context, watcher, actionrunner)
 
 
@@ -461,7 +475,7 @@ class JobCollection(object):
             for job_container in job_containers:
                 if reconfigure:
                     job_container.schedule()
-                yield job_container.get_job_state()
+                yield job_container.get_job_state() # why? JobScheduler takes care of watching JobRuns!
 
         seq = (JobContainer.from_config(config, factory, state_watcher) for config in job_configs.itervalues())
         return map_to_job_and_schedule(itertools.ifilter(self.add, seq))
@@ -476,8 +490,8 @@ class JobCollection(object):
         job_container.schedule_reconfigured()
         return True
 
-    def restore_state(self, job_state_data):
-        self.jobs.restore_state(job_state_data)
+    def restore_state(self, state_data):
+        self.jobs.restore_state(state_data)
 
     def get_by_name(self, name):
         return self.jobs.get(name)
@@ -488,6 +502,13 @@ class JobCollection(object):
 
     def get_names(self):
         return self.jobs.keys()
+
+    def get_run_names(self):
+        def gen():
+            for container in self:
+                for run in container.job_runs:
+                    yield run.name
+        return list(gen())
 
     def get_jobs(self):
         return [container for container in self]
@@ -508,6 +529,7 @@ class JobCollection(object):
 class JobContainer(object):
 
     equality_attributes = [
+        'name',
         'config',
         'scheduler',
         'node_pool',
@@ -525,7 +547,8 @@ class JobContainer(object):
 
     # context_class           = command_context.JobContext
 
-    def __init__(self, jobstate, jobruns, jobscheduler, statewatcher):
+    def __init__(self, name, jobstate, jobruns, jobscheduler, statewatcher):
+        self.name            = name
         self.job_state       = jobstate
         self.job_runs        = jobruns
         self.job_scheduler   = jobscheduler
@@ -543,35 +566,37 @@ class JobContainer(object):
             'all_nodes',
             'allow_overlap',
             'max_runtime',
-            'name',
             'queueing',
             'scheduler',
             'action_runner',
-            'enabled'
+            'enabled',
+            'config',
+            'context'
         ])
 
     @classmethod
     def from_config(cls, config, factory, statewatcher):
+        job_state = JobState(config.enabled, config.name)
         runs = jobrun.JobRunCollection.from_config(config)
         action_graph = actiongraph.ActionGraph.from_config(
             config.actions, config.cleanup_action)
         node_pool = node.NodePoolRepository.get_instance().get_by_name(config.node)
-        scheduler = factory.build(config, runs, action_graph, node_pool, statewatcher, factory.action_runner)
-        job_state = JobState(config.enabled, config.name)
+        scheduler = factory.build(config, runs, job_state, action_graph, node_pool, statewatcher, factory.action_runner)
         statewatcher.watch(job_state)
-        return cls(job_state, runs, scheduler, statewatcher)
+        return cls(config.name, job_state, runs, scheduler, statewatcher)
 
-    def restore_state(self, job_state_data):
+    def restore_state(self, state_data):
+        job_state_data, run_state_data = state_data
         job_runs = self.job_runs.restore_state(
-            job_state_data['runs'],
+            run_state_data,
             self.action_graph,
             self.output_path.clone(),
             self.context,
             self.node_pool)
         for run in job_runs:
             self.watcher.watch(run)
-        self.job_scheduler.restore_state(job_state_data)
-        self.job_state.restore_state(job_state_data) #just make sure flag is changed
+        self.job_state.restore_state(job_state_data)
+        self.job_scheduler.restore_state()
         self.event.ok('reconfigured')
 
     def update_from_job(self, job):
@@ -584,10 +609,14 @@ class JobContainer(object):
         self.event.ok('reconfigured')
 
     def enable(self):
+        if self.job_state.is_enabled:
+            return
         self.job_state.enable()
         self.job_scheduler.enable()
 
     def disable(self):
+        if not self.job_state.is_enabled:
+            return  # Not sure about this, but it seems intuitive...
         self.job_state.disable()
         self.job_scheduler.disable()
 
@@ -600,10 +629,13 @@ class JobContainer(object):
         return self.job_state.status(self.job_runs)
 
     def get_name(self):
-        return self.job_state.name
+        return self.name
 
     def get_job_runs(self):
         return [run for run in self.job_runs]
+
+    def get_runs(self):
+        return self.job_runs
 
     def get_job_state(self):
         return self.job_state

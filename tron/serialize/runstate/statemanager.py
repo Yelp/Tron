@@ -65,6 +65,10 @@ class StateMetadata(object):
             'create_time':          time.time(),
         }
 
+    @property
+    def id(self):
+        return self.name
+
     @classmethod
     def validate_metadata(cls, metadata):
         """Raises an exception if the metadata version is newer then
@@ -135,13 +139,27 @@ class PersistentStateManager(object):
         self.metadata_key       = self._impl.build_key(
                                     runstate.MCP_STATE, StateMetadata.name)
 
+    def _collapse_runs_into_job_state(self, job_state_data):
+        """Collapses the JobRun state data into a tuple along with the state
+        data for a JobState, based on the saved run numbers in the JobState's
+        state_data.
+        """
+        for name, job_state in job_state_data.iteritems():
+            run_names = []
+            for run_num in job_state['run_ids']:
+                run_names.append(name + ('.%s' % run_num))
+            run_dict = self._restore_dicts(runstate.JOB_RUN_STATE, run_names)
+            yield (name, (job_state, run_dict.values()))
+
     def restore(self, job_names, service_names, skip_validation=False):
         """Return the most recent serialized state."""
         log.debug("Restoring state.")
         if not skip_validation:
             self._restore_metadata()
 
-        return (self._restore_dicts(runstate.JOB_STATE, job_names),
+        job_dict = self._restore_dicts(runstate.JOB_STATE, job_names)
+
+        return (dict(self._collapse_runs_into_job_state(job_dict)),
                 self._restore_dicts(runstate.SERVICE_STATE, service_names))
 
     def _restore_metadata(self):
@@ -261,7 +279,7 @@ class StateChangeWatcher(observer.Observer):
         self._save_object(runstate.MCP_STATE, StateMetadata())
 
     def _save_object(self, state_type, obj):
-        self.state_manager.save(state_type, obj.name, obj.state_data)
+        self.state_manager.save(state_type, obj.id, obj.state_data)
 
     def shutdown(self):
         self.state_manager.enabled = False
