@@ -40,11 +40,12 @@ sample configuration file with a few test cases. To run a development intsance
 of Tron create a working directory and start
 :command:`trond` using the following::
 
-    $ export PYTHONPATH=.
-    $ mkdir wd
-    $ cp dev/dev-logging.conf wd/
-    $ bin/trond -w wd --nodaemon -l dev-logging.conf
-    $ bin/tronfig - < test/data/test_config.yaml
+    python setup.py sdist
+    export PYTHONPATH=.
+    mkdir wd
+    cp dev/dev-logging.conf wd/
+    bin/trond -w wd -l dev-logging.conf
+    bin/tronfig - < test/data/test_config.yaml
 
 
 A sample testing config file is available at ``tests/data/test_config.yaml``
