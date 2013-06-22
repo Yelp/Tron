@@ -260,28 +260,23 @@ class JobScheduler(Observer):
         # Ensure we have at least 1 scheduled run
         self.schedule()
 
-    def enable(self):
-        """Enable the job and start its scheduling cycle."""
-        # if self.enabled:
-        #     return
-        self.create_and_schedule_runs(ignore_last_run_time=True)
+    # def enable(self):
+    #     """Enable the job and start its scheduling cycle."""
+    #     # if self.enabled:
+    #     #     return
+    #     self.create_and_schedule_runs(ignore_last_run_time=True)
 
     def create_and_schedule_runs(self, ignore_last_run_time=False):
         for job_run in self.get_runs_to_schedule(ignore_last_run_time):
             self._set_callback(job_run)
 
-    def disable(self):
-        """Disable the job and cancel and pending scheduled jobs."""
-        self.job_runs.cancel_pending()
+    # def disable(self):
+    #     """Disable the job and cancel and pending scheduled jobs."""
+    #     self.job_runs.cancel_pending()
 
-    @property
-    def is_shutdown(self):
-        """Return True if there are no running or starting runs."""
-        return not any(self.job_runs.get_active())
-
-    @property
-    def enabled(self):
-        return self.job_state.is_enabled
+    # @property
+    # def enabled(self):
+    #     return self.job_state.is_enabled
 
     def manual_start(self, run_time=None):
         """Trigger a job run manually (instead of from the scheduler)."""
@@ -314,7 +309,7 @@ class JobScheduler(Observer):
         """Schedule the next run for this job by setting a callback to fire
         at the appropriate time.
         """
-        if not self.enabled:
+        if not self.job_state.is_enabled:
             return
         self.create_and_schedule_runs()
 
@@ -334,7 +329,7 @@ class JobScheduler(Observer):
 
         # If the Job has been disabled after this run was scheduled, then cancel
         # the JobRun and do not schedule another
-        if not self.enabled:
+        if not self.job_state.is_enabled:
             log.info("%s cancelled because job has been disabled." % job_run)
             return job_run.cancel()
 
@@ -497,21 +492,18 @@ class JobCollection(object):
         return self.jobs.get(name)
 
     def get_jobs_by_namespace(self, namespace):
-        return [job for job in self.get_jobs()
+        return [job for job in self #.get_jobs()
             if job.namespace == namespace]
 
     def get_names(self):
         return self.jobs.keys()
 
     def get_run_names(self):
-        def gen():
-            for container in self:
-                for run in container.job_runs:
-                    yield run.name
-        return list(gen())
+        return list(itertools.chain.from_iterable
+            (container.get_run_names() for container in self))
 
-    def get_jobs(self):
-        return [container for container in self]
+    # def get_jobs(self):
+    #     return [container for container in self]
 
     def get_job_run_collections(self):
         return [container.get_job_runs() for container in self]
@@ -559,7 +551,6 @@ class JobContainer(object):
             'schedule_reconfigured',
             'request_shutdown',
             'manual_start',
-            'is_shutdown',
             'action_graph',
             'node_pool',
             'output_path',
@@ -612,13 +603,13 @@ class JobContainer(object):
         if self.job_state.is_enabled:
             return
         self.job_state.enable()
-        self.job_scheduler.enable()
+        self.job_scheduler.create_and_schedule_runs(ignore_last_run_time=True)
 
     def disable(self):
         if not self.job_state.is_enabled:
             return  # Not sure about this, but it seems intuitive...
         self.job_state.disable()
-        self.job_scheduler.disable()
+        self.job_runs.cancel_pending()
 
     @property
     def namespace(self):
@@ -627,6 +618,11 @@ class JobContainer(object):
     @property
     def status(self):
         return self.job_state.status(self.job_runs)
+
+    @property
+    def is_shutdown(self):
+        """Return True if there are no running or starting runs."""
+        return not any(self.job_runs.get_active())
 
     def get_name(self):
         return self.name

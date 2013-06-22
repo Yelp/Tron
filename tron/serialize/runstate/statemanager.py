@@ -139,17 +139,16 @@ class PersistentStateManager(object):
         self.metadata_key       = self._impl.build_key(
                                     runstate.MCP_STATE, StateMetadata.name)
 
-    def _collapse_runs_into_job_state(self, job_state_data):
+    def _build_runs_into_job_state(self, job_state_data):
         """Collapses the JobRun state data into a tuple along with the state
         data for a JobState, based on the saved run numbers in the JobState's
         state_data.
         """
         for name, job_state in job_state_data.iteritems():
-            run_names = []
-            for run_num in job_state['run_ids']:
-                run_names.append(name + ('.%s' % run_num))
-            run_dict = self._restore_dicts(runstate.JOB_RUN_STATE, run_names)
-            yield (name, (job_state, run_dict.values()))
+            run_names = ['%s.%s' % (name, run_num)
+            for run_num in job_state['run_ids']]
+            yield (name, (job_state,
+                self._restore_dicts(runstate.JOB_RUN_STATE, run_names).values()))
 
     def restore(self, job_names, service_names, skip_validation=False):
         """Return the most recent serialized state."""
@@ -159,7 +158,7 @@ class PersistentStateManager(object):
 
         job_dict = self._restore_dicts(runstate.JOB_STATE, job_names)
 
-        return (dict(self._collapse_runs_into_job_state(job_dict)),
+        return (dict(self._build_runs_into_job_state(job_dict)),
                 self._restore_dicts(runstate.SERVICE_STATE, service_names))
 
     def _restore_metadata(self):

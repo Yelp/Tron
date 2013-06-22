@@ -208,14 +208,14 @@ class JobCollectionResource(resource.Resource):
     def get_data(self, include_job_run=False, include_action_runs=False, namespace=None):
         return adapter.adapt_many(adapter.JobAdapter,
             self.job_collection.get_jobs_by_namespace(namespace) if namespace
-            else self.job_collection.get_jobs(),
+            else self.job_collection,
             include_job_run,
             include_action_runs,
             num_runs=5)
 
     def get_job_index(self):
         jobs = adapter.adapt_many(
-            adapter.JobIndexAdapter, self.job_collection.get_jobs())
+            adapter.JobIndexAdapter, self.job_collection)
         return dict((job['name'], job['actions']) for job in jobs)
 
     def render_GET(self, request):
