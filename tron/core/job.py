@@ -142,7 +142,7 @@ class JobState(Observable):
                 job_runs.get_run_by_state(ActionRun.STATE_QUEUED)):
             return self.STATUS_ENABLED
 
-        log.warn("%s in an unknown state: %s" % (self, self.runs))
+        log.warn("%s in an unknown state: %s" % (self, job_runs))
         return self.STATUS_UNKNOWN
 
     @property
@@ -284,6 +284,7 @@ class JobScheduler(Observer):
         manual_runs = list(self.build_new_runs(run_time, manual=True))
         for r in manual_runs:
             r.start()
+        return manual_runs
 
     def build_new_runs(self, run_time, manual=False):
         """Uses its JobCollection to build new JobRuns. If all_nodes is set,
@@ -437,14 +438,14 @@ class JobSchedulerFactory(object):
         self.time_zone          = time_zone
         self.action_runner      = action_runner
 
-    def build(self, job_config, job_runs, job_state, actiongraph, nodes, watcher, actionrunner):
+    def build(self, job_config, job_runs, job_state, actiongraph, nodes, watcher):
         log.debug("Building new job %s", job_config.name)
         output_path = filehandler.OutputPath(self.output_stream_dir)
         scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
         context = command_context.build_context(self, self.context)
         #job = Job.from_config(job_config, scheduler, self.context, output_path, self.action_runner)
         return JobScheduler(job_runs, job_config, job_state, scheduler, actiongraph,
-            nodes, output_path, context, watcher, actionrunner)
+            nodes, output_path, context, watcher, self.action_runner)
 
 
 class JobCollection(object):
@@ -527,6 +528,8 @@ class JobContainer(object):
         'node_pool',
         'action_graph',
         'output_path',
+        'action_runner',
+        'job_state'
     ]
 
     # STATUS_DISABLED         = "disabled"
@@ -545,7 +548,7 @@ class JobContainer(object):
         self.job_runs        = jobruns
         self.job_scheduler   = jobscheduler
         self.watcher         = statewatcher
-        self.event           = event.get_recorder(jobscheduler.config.name)
+        self.event           = event.get_recorder(self.name)
         self.proxy           = proxy.AttributeProxy(self.job_scheduler, [
             'schedule',
             'schedule_reconfigured',
@@ -560,7 +563,6 @@ class JobContainer(object):
             'queueing',
             'scheduler',
             'action_runner',
-            'enabled',
             'config',
             'context'
         ])
@@ -572,7 +574,7 @@ class JobContainer(object):
         action_graph = actiongraph.ActionGraph.from_config(
             config.actions, config.cleanup_action)
         node_pool = node.NodePoolRepository.get_instance().get_by_name(config.node)
-        scheduler = factory.build(config, runs, job_state, action_graph, node_pool, statewatcher, factory.action_runner)
+        scheduler = factory.build(config, runs, job_state, action_graph, node_pool, statewatcher)
         statewatcher.watch(job_state)
         return cls(config.name, job_state, runs, scheduler, statewatcher)
 
@@ -588,7 +590,7 @@ class JobContainer(object):
             self.watcher.watch(run)
         self.job_state.restore_state(job_state_data)
         self.job_scheduler.restore_state()
-        self.event.ok('reconfigured')
+        self.event.ok('restored')
 
     def update_from_job(self, job):
         """Update this Job's configuration from a new config. This method
@@ -624,6 +626,10 @@ class JobContainer(object):
         """Return True if there are no running or starting runs."""
         return not any(self.job_runs.get_active())
 
+    @property
+    def enabled(self):
+        return self.job_state.is_enabled
+
     def get_name(self):
         return self.name
 
@@ -642,6 +648,9 @@ class JobContainer(object):
     def __eq__(self, other):
         return all(getattr(self, attr, None) == getattr(other, attr, None)
             for attr in self.equality_attributes)
+
+    def __ne__(self, other):
+        return not self == other
 
     def __str__(self):
         return "%s" % self.job_scheduler
