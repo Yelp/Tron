@@ -540,7 +540,7 @@ class JobContainer(object):
     # NOTIFY_STATE_CHANGE     = 'notify_state_change'
     # NOTIFY_RUN_DONE         = 'notify_run_done'
 
-    # context_class           = command_context.JobContext
+    context_class           = command_context.JobContext
 
     def __init__(self, name, jobstate, jobruns, jobscheduler, statewatcher):
         self.name            = name

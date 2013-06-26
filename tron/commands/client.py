@@ -53,7 +53,10 @@ def load_response_content(http_response):
 
 def build_http_error_response(exc):
     content = exc.read() if hasattr(exc, 'read') else None
-    return Response(exc.code, exc.reason, content)
+    # This should probably ALWAYS be exc.msg, as exc.reason is not actually
+    # created in the HTTPError constructor, and is an inherited attribute
+    # from URLError that's not actually set.
+    return Response(exc.code, exc.reason if hasattr(exc, 'reason') else exc.msg, content)
 
 
 def request(uri, data=None):
