@@ -29,21 +29,13 @@ class JobContainerTestCase(TestCase):
 
         patch_node = mock.patch('tron.core.job.node.NodePoolRepository')
         patch_event = mock.patch('tron.core.job.event', autospec=True)
-        # Sorry about the \, I couldn't get the with block to take a parenthesis
-        # encapsulation without complaining
         with contextlib.nested(patch_node, patch_event) \
         as (self.mock_node_repo, self.mock_event):
             self.job = job.JobContainer("jobname", self.job_state,
                     self.run_collection, self.job_scheduler, self.watcher)
-            #autospec_method(self.job.job_state.notify)
-            #autospec_method(self.job.job_scheduler.watch)
             self.job.event = mock.create_autospec(event.EventRecorder)
             yield
 
-    # def test__init__(self):
-    #     assert str(self.job.output_path).endswith(self.job.name)
-
-    #@mock.patch('tron.core.job.event', autospec=True)
     def test_from_config(self):
         action = mock.Mock(name='first', command='doit', node=None, requires=[])
         job_config = mock.Mock(
@@ -108,15 +100,6 @@ class JobContainerTestCase(TestCase):
         return_value=None):
             assert_equal(self.job.status, job.JobState.STATUS_UNKNOWN)
 
-    # Other state_data properties should be tested, but JobContainer doesn't
-    # actually have one. Make sure JobScheduler and JobState have tests
-    # for their respective state_data attributes.
-    #
-    # def test_state_data(self):
-    #     state_data = self.job.state_data
-    #     assert_equal(state_data['runs'], self.job.runs.state_data)
-    #     assert state_data['enabled']
-
     def test_restore_state(self):
         run_data = ['one', 'two']
         job_runs = [mock.Mock(), mock.Mock()]
@@ -131,15 +114,6 @@ class JobContainerTestCase(TestCase):
             assert_equal(self.job.job_state.state_data, state_data[0])
             self.job.job_scheduler.restore_state.assert_called_once_with()
             self.job.event.ok.assert_called_with('restored')
-
-    # No handler here anymore...
-
-    # def test_handler(self):
-    #     self.job.handler(None, jobrun.JobRun.NOTIFY_STATE_CHANGED)
-    #     self.job.notify.assert_called_with(self.job.NOTIFY_STATE_CHANGE)
-
-    #     self.job.handler(None, jobrun.JobRun.NOTIFY_DONE)
-    #     self.job.notify.assert_called_with(self.job.NOTIFY_RUN_DONE)
 
     def test__eq__(self):
         other_job = job.JobContainer("jobname",
@@ -259,11 +233,6 @@ class JobSchedulerTestCase(TestCase):
             sched_patch.assert_called_once_with()
             callback_patch.assert_called_once_with('a')
 
-    # def test_disable(self):
-    #     self.job_scheduler.disable()
-    #     assert not self.job_scheduler.enabled
-    #     assert_length(self.job.runs.cancel_pending.calls, 1)
-
     def test_schedule_reconfigured(self):
         autospec_method(self.job_scheduler.create_and_schedule_runs)
         self.job_scheduler.schedule_reconfigured()
@@ -346,19 +315,6 @@ class JobSchedulerTestCase(TestCase):
             self.job_scheduler.run_job(job_run)
             job_run.start.assert_called_once_with()
             stop_patch.assert_called_once_with(job_run)
-
-    # I honestly can't tell how this test is different than the test above
-    # that's already testing what should happen if a job is in get_active.
-    # The test I'm referring to is test_run_job_already_running_queuing.
-
-    # def test_run_job_has_starting_queueing(self):
-    #     self.job_scheduler.schedule = Turtle()
-    #     self.job.runs.get_active = lambda s: [Turtle()]
-    #     job_run = Turtle(is_cancelled=False)
-    #     self.job_scheduler.run_job(job_run)
-    #     assert_length(job_run.start.calls, 0)
-    #     assert_length(job_run.queue.calls, 1)
-    #     assert_length(self.job_scheduler.schedule.calls, 0)
 
     def test_run_job_schedule_on_complete(self):
         self.scheduler.schedule_on_complete = True
@@ -515,18 +471,6 @@ class JobSchedulerScheduleTestCase(TestCase):
     @teardown
     def teardown_job(self):
         event.EventManager.reset()
-
-    # def test_enable(self):
-    #     self.job_scheduler.job_state.enabled = False
-    #     self.job_scheduler.enable()
-    #     assert self.job.enabled
-    #     assert_length(self.eventloop.call_later.mock_calls, 1)
-
-    # def test_enable_noop(self):
-    #     self.job.enalbed = True
-    #     self.job_scheduler.enable()
-    #     assert self.job.enabled
-    #     assert_length(self.eventloop.call_later.mock_calls, 0)
 
     def test_schedule(self):
         with mock.patch.object(self.job_scheduler.job_state, 'is_enabled',
@@ -756,6 +700,13 @@ class JobStateTestCase(TestCase):
         fake_state.restore_state(self.state.state_data)
         assert_equal(fake_state.is_enabled, self.state.is_enabled)
         assert_equal(fake_state.run_ids, self.state.run_ids)
+
+    def test_state_data(self):
+        fake_state = job.JobState(False, 'test_state')
+        fake_state.run_ids = [1, 2, 3, 4, 5]
+        assert_equal(fake_state.state_data['enabled'], False)
+        assert_equal(fake_state.state_data['run_ids'], [1, 2, 3, 4, 5])
+        assert_equal(len(fake_state.state_data), 2)
 
     def test_set_run_ids(self):
         with mock.patch.object(self.state, 'notify') as notify_patch:

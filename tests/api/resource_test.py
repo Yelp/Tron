@@ -220,14 +220,14 @@ class JobResourceTestCase(WWWTestCase):
         with mock.patch.object(self.job_container, 'get_runs') as job_patch:
             job_run = self.resource.get_run_from_identifier('HEAD')
             job_patch.assert_called_with()
-            assert_equal(job_run, self.job_container.get_runs().get_newest.return_value)
+            assert_equal(job_run, self.job_container.get_runs.return_value.get_newest.return_value)
 
     def test_get_run_from_identifier_number(self):
         with mock.patch.object(self.job_container, 'get_runs') as job_patch:
             job_run = self.resource.get_run_from_identifier('3')
             job_patch.assert_called_with()
-            assert_equal(job_run, self.job_container.get_runs().get_run_by_num.return_value)
-            self.job_container.get_runs().get_run_by_num.assert_called_with(3)
+            assert_equal(job_run, self.job_container.get_runs.return_value.get_run_by_num.return_value)
+            self.job_container.get_runs.return_value.get_run_by_num.assert_called_with(3)
 
     def test_get_run_from_identifier_state_name(self):
         job_run = self.resource.get_run_from_identifier('SUCC')
