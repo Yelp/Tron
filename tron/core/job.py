@@ -609,7 +609,7 @@ class JobContainer(object):
 
     def disable(self):
         if not self.job_state.is_enabled:
-            return  # Not sure about this, but it seems intuitive...
+            return
         self.job_state.disable()
         self.job_runs.cancel_pending()
 
