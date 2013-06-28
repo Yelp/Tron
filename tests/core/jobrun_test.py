@@ -28,7 +28,8 @@ def build_mock_job():
         context=mock.Mock(),
         watcher=mock_watcher,
         actionrunner=runner)
-    job_container = job.JobContainer("jobname", mock_state, run_collection, job_scheduler, mock_watcher)
+    job_container = job.JobContainer("jobname", mock_state, run_collection,
+        job_scheduler, mock_watcher)
     job_container.event = mock.Mock()
     return job_container
 
