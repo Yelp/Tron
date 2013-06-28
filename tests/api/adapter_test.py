@@ -1,20 +1,19 @@
-import shutil
-import tempfile
 import mock
-from testify import TestCase, assert_equal, run, setup, teardown
+from testify import TestCase, assert_equal, run, setup
 from tests import mocks
 from tests.assertions import assert_length
-from tron import node, scheduler
 from tron.api import adapter
-from tron.api.adapter import ReprAdapter, RunAdapter, ActionRunAdapter
+from tron.api.adapter import RunAdapter, ActionRunAdapter
+from tron import node, scheduler
 from tron.api.adapter import JobRunAdapter, ServiceAdapter
 from tron.core import actionrun, job
 
 
-class MockAdapter(ReprAdapter):
+class MockAdapter(adapter.ConfigObjReprAdapter):
 
-    field_names = ['one', 'two']
-    translated_field_names = ['three', 'four']
+    field_names                 = ['one', 'two']
+    translated_field_names      = ['three', 'four']
+    config_field_names          = ['seven', 'nine']
 
     def get_three(self):
         return 3
@@ -27,12 +26,12 @@ class ReprAdapterTestCase(TestCase):
 
     @setup
     def setup_adapter(self):
-        self.original           = mock.Mock(one=1, two=2)
+        self.config             = mock.Mock(seven=7, nine=9)
+        self.original           = mock.Mock(one=1, two=2, config=self.config)
         self.adapter            = MockAdapter(self.original)
 
     def test__init__(self):
         assert_equal(self.adapter._obj, self.original)
-        assert_equal(self.adapter.fields, MockAdapter.field_names)
 
     def test_get_translation_mapping(self):
         expected = {
@@ -42,7 +41,7 @@ class ReprAdapterTestCase(TestCase):
         assert_equal(self.adapter.translators, expected)
 
     def test_get_repr(self):
-        expected = dict(one=1, two=2, three=3, four=4)
+        expected = dict(one=1, two=2, three=3, four=4, seven=7, nine=9)
         assert_equal(self.adapter.get_repr(), expected)
 
 
@@ -99,14 +98,9 @@ class ActionRunAdapterTestCase(TestCase):
 
     @setup
     def setup_adapter(self):
-        self.temp_dir = tempfile.mkdtemp()
         self.action_run = mock.MagicMock()
         self.job_run = mock.MagicMock()
         self.adapter = ActionRunAdapter(self.action_run, self.job_run, 4)
-
-    @teardown
-    def teardown_adapter(self):
-        shutil.rmtree(self.temp_dir)
 
     def test__init__(self):
         assert_equal(self.adapter.max_lines, 4)

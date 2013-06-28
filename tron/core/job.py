@@ -242,13 +242,6 @@ class JobScheduler(Observer):
         self.context            = context
         self.watcher            = watcher
         self.shutdown_requested = False
-        self.proxy              = proxy.AttributeProxy(self.config,[
-            'all_nodes',
-            'allow_overlap',
-            'name',
-            'queueing',
-            'max_runtime'
-            ])
         #self.watch(job)
 
     def restore_state(self):
@@ -409,15 +402,13 @@ class JobScheduler(Observer):
 
     def get_name(self):
         return self.config.name
+    name = property(get_name)
 
     # def get_job(self):
     #     return self.job
 
     def get_job_runs(self):
         return self.job_runs
-
-    def __getattr__(self, name):
-        return self.proxy.perform(name)
 
     # TODO: needs a bit stronger comparison
     def __eq__(self, other):
@@ -557,10 +548,6 @@ class JobContainer(object):
             'action_graph',
             'node_pool',
             'output_path',
-            'all_nodes',
-            'allow_overlap',
-            'max_runtime',
-            'queueing',
             'scheduler',
             'action_runner',
             'config',
@@ -580,6 +567,7 @@ class JobContainer(object):
 
     def restore_state(self, state_data):
         job_state_data, run_state_data = state_data
+        run_state_data = sorted(run_state_data, key=lambda data: data['run_num'], reverse=True)
         job_runs = self.job_runs.restore_state(
             run_state_data,
             self.action_graph,

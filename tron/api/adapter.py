@@ -12,32 +12,50 @@ from tron.serialize import filehandler
 from tron.utils import timeutils
 
 
+def dict_from_seq(seq, getter):
+    """Return a generator of pairs of (item, getter(item) from seq."""
+    return ((field, getter(field)) for field in seq)
+
+
+def repr_from_mappings(directives):
+    """Return a generator of (field, value) pairs from a list of directives.
+    """
+    for seq, func in directives:
+        for field, value in dict_from_seq(seq, func):
+            yield field, value
+
+
 class ReprAdapter(object):
     """Creates a dictionary from the given object for a set of rules."""
 
-    field_names = []
-    translated_field_names = []
+    field_names                 = []
+    translated_field_names      = []
+    config_field_names          = []
 
     def __init__(self, internal_obj):
         self._obj               = internal_obj
-        self.fields             = self._get_field_names()
         self.translators        = self._get_translation_mapping()
-
-    def _get_field_names(self):
-        return self.field_names
 
     def _get_translation_mapping(self):
         return dict(
             (field_name, getattr(self, 'get_%s' % field_name))
             for field_name in self.translated_field_names)
 
+    def get_directives(self):
+        return [
+            (self.field_names,        functools.partial(getattr, self._obj)),
+            (self.translators,        lambda field: self.translators[field]()),
+        ]
+
     def get_repr(self):
-        repr_data = dict(
-                (field, getattr(self._obj, field)) for field in self.fields)
-        translated = dict(
-                (field, func()) for field, func in self.translators.iteritems())
-        repr_data.update(translated)
-        return repr_data
+        return dict(repr_from_mappings(self.get_directives()))
+
+
+class ConfigObjReprAdapter(ReprAdapter):
+
+    def get_directives(self):
+        return super(ConfigObjReprAdapter, self).get_directives() + [
+            (self.config_field_names, functools.partial(getattr, self._obj.config))]
 
 
 def adapt_many(adapter_class, seq, *args, **kwargs):
@@ -215,9 +233,15 @@ class JobRunAdapter(RunAdapter):
     def get_action_graph(self):
         return ActionRunGraphAdapter(self._obj.action_runs).get_repr()
 
-class JobAdapter(ReprAdapter):
+class JobAdapter(ConfigObjReprAdapter):
 
-    field_names = ['status', 'all_nodes', 'allow_overlap', 'queueing']
+    field_names = ['status']
+    config_field_names = [
+        'all_nodes',
+        'allow_overlap',
+        'queueing',
+        'max_runtime'
+    ]
     translated_field_names = [
         'name',
         'scheduler',
@@ -227,7 +251,6 @@ class JobAdapter(ReprAdapter):
         'next_run',
         'url',
         'runs',
-        'max_runtime',
         'action_graph',
     ]
 
@@ -309,21 +332,23 @@ class SchedulerAdapter(ReprAdapter):
         return scheduler.get_jitter_str(self._obj.get_jitter())
 
 
-class ServiceAdapter(ReprAdapter):
+class ServiceAdapter(ConfigObjReprAdapter):
 
     field_names = ['name', 'enabled']
     translated_field_names = [
-        'count',
         'url',
         'state',
-        'command',
         'pid_filename',
         'instances',
         'node_pool',
         'live_count',
-        'monitor_interval',
-        'restart_delay',
         'events']
+
+    config_field_names = [
+        'count',
+        'command',
+        'monitor_interval',
+        'restart_delay']
 
     def __init__(self, service, include_events=False):
         super(ServiceAdapter, self).__init__(service)
@@ -332,14 +357,8 @@ class ServiceAdapter(ReprAdapter):
     def get_url(self):
         return "/services/%s" % urllib.quote(self._obj.get_name())
 
-    def get_count(self):
-        return self._obj.config.count
-
     def get_state(self):
         return self._obj.get_state()
-
-    def get_command(self):
-        return self._obj.config.command
 
     def get_pid_filename(self):
         return self._obj.config.pid_file
@@ -352,12 +371,6 @@ class ServiceAdapter(ReprAdapter):
 
     def get_live_count(self):
         return len(self._obj.instances)
-
-    def get_monitor_interval(self):
-        return self._obj.config.monitor_interval
-
-    def get_restart_delay(self):
-        return self._obj.config.restart_delay
 
     @toggle_flag('include_events')
     def get_events(self):

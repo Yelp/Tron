@@ -101,7 +101,7 @@ class JobContainerTestCase(TestCase):
             assert_equal(self.job.status, job.JobState.STATUS_UNKNOWN)
 
     def test_restore_state(self):
-        run_data = ['one', 'two']
+        run_data = [{'run_num': 1}, {'run_num': 2}]
         job_runs = [mock.Mock(), mock.Mock()]
         state_data = ({'enabled': False, 'run_ids': [1, 2]}, run_data)
 
@@ -112,6 +112,13 @@ class JobContainerTestCase(TestCase):
             calls = [mock.call(job_runs[i]) for i in xrange(len(job_runs))]
             self.job.watcher.watch.assert_has_calls(calls)
             assert_equal(self.job.job_state.state_data, state_data[0])
+            self.job.job_runs.restore_state.assert_called_once_with(
+                sorted(run_data, key=lambda data: data['run_num'], reverse=True),
+                self.job.action_graph,
+                self.job.output_path.clone(),
+                self.job.context,
+                self.job.node_pool
+            )
             self.job.job_scheduler.restore_state.assert_called_once_with()
             self.job.event.ok.assert_called_with('restored')
 
