@@ -146,7 +146,7 @@ class PersistentStateManager(object):
         """
         for name, job_state in job_state_data.iteritems():
             run_names = ['%s.%s' % (name, run_num)
-            for run_num in job_state['run_ids']]
+                for run_num in job_state['run_ids']]
             yield (name, (job_state,
                 self._restore_dicts(runstate.JOB_RUN_STATE, run_names).values()))
 
