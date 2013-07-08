@@ -379,8 +379,7 @@ class JobContainer(object):
         'node_pool',
         'action_graph',
         'output_path',
-        'action_runner',
-        'job_state'
+        'action_runner'
     ]
 
     context_class           = command_context.JobContext
