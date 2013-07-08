@@ -1,0 +1,90 @@
+#!/usr/bin/env python
+import sys
+import os
+import signal
+import time
+from threading import Thread
+from Queue import Queue, Empty
+
+from tron.serialize.runstate.tronstore.messages import StoreRequestFactory, StoreResponseFactory
+import tron.serialize.runstate.tronstore.store
+import tron.serialize.runstate.tronstore.msg_enums
+from tron.serialize.tronstore.chunking import StoreChunkHandler
+
+is_shutdown = False
+
+def shutdown_handler():
+    is_shutdown = True
+
+def parse_args():
+    name = sys.argv[1]
+    transport_method = sys.argv[2]
+    store_type = sys.argv[3]
+    connection_details = sys.argv[4]
+    db_store_method = sys.argv[5]
+
+    return (transport_method, store.build_store(name, store_type, connection_details, db_store_method))
+
+def enqueue_input(stdin, queue):
+    try:
+        for line in stdin:
+            queue.put(line)
+        stdin.close()
+    except Exception, e:  # something happened, finish up and exit
+        stdin.close()
+        is_shutdown = True
+
+def start_stdin_thread():
+    stdin_queue = Queue()
+    stdin_thread = Thread(target=enqueue_input, args=(sys.stdin, stdin_queue))
+    stdin_thread.daemon = True
+    stdin_thread.start()
+    return stdin_queue
+
+def get_all_from_queue(queue):
+    tmp_str = ''
+    while not queue.empty():
+        try:
+            tmp_str += queue.get_nowait()
+        except Empty:
+            break
+    return tmp_str
+
+def handle_request(request, store_class):
+    if request.req_type == msg_enums.REQUEST_SAVE:
+        success = store_class.save(request.data[0], request.data[1], request.data_type)
+        return (success, request.id, '')
+    elif request.req_type == msg_enums.REQUEST_RESTORE:
+        success, data = store_class.restore(request.data, request.data_type)
+        return (success, request.id, data)
+    else:
+        return (False, request.id, '')
+
+def main():
+    (transport_method, store_class) = parse_args()
+    request_factory = StoreRequestFactory(transport_method)
+    response_factory = StoreResponseFactory(transport_method)
+    chunk_handler = StoreChunkHandler()
+    stdin_queue = start_stdin_thread()
+
+    signal.signal(signal.SIGINT, shutdown_handler)
+
+    while True:
+        if is_shutdown:
+            if stdin_queue.empty():
+                time.sleep(0.5)
+                if stdin_queue.empty():
+                    store_class.cleanup()
+                    break
+
+        requests = chunk_handler.handle(get_all_from_queue(stdin_queue))
+        requests = map(request_factory.rebuild, requests)
+        for request in requests:
+            request = request_factory.rebuild(request)
+            response = handle_request(request, store_class)
+            response = response_factory.build(response[0], response[1], response[2])
+            sys.stdout.write(chunk_handler.sign(response.serialized))
+
+
+if __name__ == '__main__':
+    main()

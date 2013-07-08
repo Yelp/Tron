@@ -21,7 +21,9 @@ class PersistenceManagerFactoryTestCase(TestCase):
         thefilename = 'thefilename'
         config = schema.ConfigState(
             store_type='shelve', name=thefilename, buffer_size=0,
-            connection_details=None)
+            transport_method='pickle',
+            connection_details=None,
+            db_store_method=None)
         manager = PersistenceManagerFactory.from_config(config)
         store = manager._impl
         assert_equal(store.filename, config.name)
