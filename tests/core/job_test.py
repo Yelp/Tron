@@ -67,7 +67,6 @@ class JobContainerTestCase(TestCase):
             self.run_collection, job_scheduler, self.watcher)
         self.job.update_from_job(other_job)
         assert_equal(self.job.name, 'otherjob')
-        assert_equal(self.job.job_state, job_state)
         assert_equal(self.job.action_runner, other_job.action_runner)
         assert_equal(self.job.config, job_scheduler.config)
         assert_equal(self.job, other_job)
