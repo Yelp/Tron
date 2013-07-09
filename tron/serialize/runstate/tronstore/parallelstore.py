@@ -82,7 +82,7 @@ class ParallelStore(object):
     # PersistentStateManager whenever the config is updated, which removes
     # the need for changing config related things here (since a new instance
     # of this class will be created anyway).
-    def config(self, new_config):
+    def load_config(self, new_config):
         """Reconfigure the storing mechanism to use a new configuration."""
         self.config = new_config
         self.request_factory.update_method(new_config.transport_method)
