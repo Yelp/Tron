@@ -1,4 +1,19 @@
 #!/usr/bin/env python
+"""This process is spawned by trond in order to offload state save/load
+operations such that trond can focus on the more important things without
+blocking for large chunks of time. It takes command line arguments (the order
+of which is specifically hardcoded) in order to configure itself and use
+the correct methods for state saving and message transport with trond.
+
+Messages are sent via stdin/out, as the twisted framework that provides
+management of child processes uses it for communication. Because the core
+Python stdin reader is blocking, a separate thread is spawned in tronstore
+to buffer all messages that come via stdin.
+
+The process gracefully shuts down whenever it recieves a SIGINT by first
+processing all requests it has already read from stdin. trond capitalizes on
+this behavior by propagating any SIGINT signals it receives to tronstore.
+"""
 import sys
 import os
 import signal
@@ -14,9 +29,13 @@ from tron.serialize.tronstore.chunking import StoreChunkHandler
 is_shutdown = False
 
 def shutdown_handler():
+    """Signal the process to shut down, finishing any requests it already had."""
     is_shutdown = True
 
 def parse_args():
+    """Parse the command line arguments. THIS MUST MATCH THE ORDER GIVEN BY
+    parallelstore.py when it initializes the tronstore process.
+    """
     name = sys.argv[1]
     transport_method = sys.argv[2]
     store_type = sys.argv[3]
@@ -26,6 +45,8 @@ def parse_args():
     return (transport_method, store.build_store(name, store_type, connection_details, db_store_method))
 
 def enqueue_input(stdin, queue):
+    """Enqueue anything read by stdin into a queue. This is run in a separate
+    thread such that requests can be processed without blocking."""
     try:
         for line in stdin:
             queue.put(line)
@@ -35,6 +56,7 @@ def enqueue_input(stdin, queue):
         is_shutdown = True
 
 def start_stdin_thread():
+    """Starts the thread that will enqueue all stdin data into the stdin_queue."""
     stdin_queue = Queue()
     stdin_thread = Thread(target=enqueue_input, args=(sys.stdin, stdin_queue))
     stdin_thread.daemon = True
@@ -42,6 +64,7 @@ def start_stdin_thread():
     return stdin_queue
 
 def get_all_from_queue(queue):
+    """Gets all of the requests from the stdin_queue, returning one long string."""
     tmp_str = ''
     while not queue.empty():
         try:
@@ -51,6 +74,7 @@ def get_all_from_queue(queue):
     return tmp_str
 
 def handle_request(request, store_class):
+    """Handle a request by acting on store_class with the appropriate action."""
     if request.req_type == msg_enums.REQUEST_SAVE:
         success = store_class.save(request.data[0], request.data[1], request.data_type)
         return (success, request.id, '')
@@ -61,6 +85,10 @@ def handle_request(request, store_class):
         return (False, request.id, '')
 
 def main():
+    """The main run loop for tronstore. This loop sets up everything
+    based on the command line arguments tronstore got, and then simply
+    waits for requests to handle from stdin, and writes responses to
+    stdout. The process will run until an error or SIGINT occurs."""
     (transport_method, store_class) = parse_args()
     request_factory = StoreRequestFactory(transport_method)
     response_factory = StoreResponseFactory(transport_method)

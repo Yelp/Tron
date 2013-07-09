@@ -1,3 +1,10 @@
+"""Message transport modules for tronstore. This allows for simple writing
+of stdin/out with strings that can then be put back into tuples of data
+for rebuilding messages.
+
+This is also used by the SQLAlchemy store object, an option for saving state
+with tronstore, by serializing the state data into a string that's saved in
+a SQL database, or by deserializing strings that are saved into state data."""
 import simplejson as json
 import cPickle as pickle
 

@@ -17,10 +17,13 @@ class TronStoreError(Exception):
 
 class StoreProcessProtocol(ProcessProtocol):
     """The class that actually communicates with tronstore. This is a subclass
-    of the twisted ProcessProtocol class, which can run and asynchronously
-    communicate with a child proccess. The requests and responses are matched
-    together by the unique integer ids assigned to each request (which are also
-    present in responses).
+    of the twisted ProcessProtocol class, which has a set of internals that can
+    communicate with a child proccess via stdin/stdout via interrupts.
+
+    Because of this I/O structure imposed by twisted, there are two types of
+    messages: requests and responses. Responses are always of the same form,
+    while requests have an enumerator (see msg_enums.py) to identify the
+    type of request.
     """
 
     SHUTDOWN_TIMEOUT = 5.0
@@ -35,9 +38,21 @@ class StoreProcessProtocol(ProcessProtocol):
         self.is_shutdown = False
 
     def outRecieved(self, data):
+        """Called via interrupt whenever twisted sees something written by the
+        process into stdout, where data is whatever the process wrote.
+        Since the only thing written to stdout are serialized responses from
+        tronstore, this method deals with matching the response to the
+        appropriate request if the request needed it.
+
+        As some requests actually require a response (see: restore requests),
+        this method also wakes up the main trond thread if it was blocking on a
+        response from tronstore.
+        """
         responses = self.chunker.handle(data)
         for response_str in responses:
             response = self.response_factory.rebuild(response_str)
+            # Requests that don't actually require a response don't put
+            # themselves inside of the requests dict.
             if response.id in self.requests:
                 if not response.success:
                     log.warn("tronstore request #%d failed. Request type was %d." % (response.id, self.requests[response.id].req_type))
@@ -47,10 +62,15 @@ class StoreProcessProtocol(ProcessProtocol):
                 del self.requests[response.id]
 
     def processExited(self, reason):
+        """Called by twisted whenever the process exits.
+        If the process didn't exit cleanly (we didn't shut it down),
+        then we need to raise an exception.
+        """
         if not self.is_shutdown:
             raise TronStoreError(reason.getErrorMessage())
 
     def processEnded(self, reason):
+        """Called by twisted whenever the process ends. Cleans up."""
         if not self.is_shutdown:
             self.transport.loseConnection()
             reactor.stop()

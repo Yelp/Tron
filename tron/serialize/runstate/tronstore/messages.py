@@ -6,17 +6,25 @@ transport_class_map = {
     'msgpack': MsgPackTransport,
     'yaml': YamlTransport
 }
-
+# a simple max integer to prevent ids from growing indefinitely
 MAX_MSG_ID = 2**32 - 1
 
 
 class StoreRequestFactory(object):
+    """A factory to generate requests that need to be converted to serialized
+    strings and back. All the factory itself does is keep track of what
+    serialization method was set by the configuration, and then constructs
+    specific StoreRequest objects using that method.
+    """
 
     def __init__(self, method):
         self.serializer = transport_class_map[method]
         self.id_counter = 1
 
     def _increment_counter(self):
+        """A simple method to make sure that we don't indefinitely increase
+        the id assigned to StoreRequests.
+        """
         return self.id+1 if not self.id == MAX_MSG_ID else 0
 
     def build(self, req_type, data_type, data):
@@ -36,6 +44,11 @@ class StoreRequestFactory(object):
 
 
 class StoreResponseFactory(object):
+    """A factory to generate responses that need to be converted to serialized
+    strings and back. The factory itself just keeps track of what serialization
+    method was specified by the configuration, and then constructs specific
+    StoreResponse objects using that method.
+    """
 
     def __init__(self, method):
         self.serializer = transport_class_map[method]
@@ -56,13 +69,21 @@ class StoreResponseFactory(object):
 
 
 class StoreRequest(object):
+    """An object representing a request to tronstore. The request has four
+    essential attributes:
+        id - an integer identifier, used for matching requests with responses
+        req_type - the request type from msg_enums.py, such as save/restore
+        data_type - the type of data the request is for. there are four kinds
+            of saved state_data: job, jobrun, service, and meta state_data.
+        data - the data required for the request, like a name or state_data
+    """
 
     def __init__(self, req_id, req_type, data_type, data, method):
-        self.id = req_id
-        self.req_type = req_type
-        self.data = data
-        self.data_type = data_type
-        self.method = method
+        self.id         = req_id
+        self.req_type   = req_type
+        self.data       = data
+        self.data_type  = data_type
+        self.method     = method
         self.serialized = self.get_serialized()
 
     @classmethod
@@ -80,6 +101,12 @@ class StoreRequest(object):
 
 
 class StoreResponse(object):
+    """An object representing a response from tronstore. The response has three
+    essential attributes:
+        id - matches the id of some request so this can be matched with it
+        success - shows if the request matching this response was successful
+        data - data requested by a request, if any
+    """
 
     def __init__(self, req_id, success, data, method):
         self.id = req_id

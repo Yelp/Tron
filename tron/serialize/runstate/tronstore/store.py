@@ -32,7 +32,7 @@ class ShelveStore(object):
 
 
 class SQLStore(object):
-    """Store state using SQLAlchemy."""
+    """Store state using SQLAlchemy. Creates tables if needed."""
 
     def __init__(self, name, connection_details, serializer):
         import sqlalchemy as sql
