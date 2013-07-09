@@ -41,7 +41,7 @@ class StoreProcessProtocol(ProcessProtocol):
             if response.id in self.requests:
                 if not response.success:
                     log.warn("tronstore request #%d failed. Request type was %d." % (response.id, self.requests[response.id].req_type))
-                if response.id in self.monitors:
+                if response.id in self.semaphores:
                     self.responses[response.id] = response
                     self.semaphores[response.id].release()
                 del self.requests[response.id]
@@ -77,7 +77,7 @@ class StoreProcessProtocol(ProcessProtocol):
         self.semaphores[request.id].acquire()
         del self.semaphores[request.id]
         response = self.responses[request.id]
-        del self.responses[requests.id]
+        del self.responses[request.id]
         return response.data if response.success else None
 
     def shutdown(self):
@@ -91,8 +91,8 @@ class StoreProcessProtocol(ProcessProtocol):
         self.is_shutdown = True
         time_waited = 0
         while (not len(self.requests.items()) == 0) and time_waited < self.SHUTDOWN_TIMEOUT:
-            time.sleep(SHUTDOWN_SLEEP)  # wait for all pending requests to finish
-            time_waited += SHUTDOWN_SLEEP
+            time.sleep(self.SHUTDOWN_SLEEP)  # wait for all pending requests to finish
+            time_waited += self.SHUTDOWN_SLEEP
         self.transport.signalProcess("INT")
         self.transport.loseConnection()
-        self.reactor.stop()
+        reactor.stop()

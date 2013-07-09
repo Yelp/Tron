@@ -110,4 +110,5 @@ class ParallelStoreTestCase(TestCase):
             response_patch.assert_called_once_with(new_config.transport_method)
             shutdown_patch.assert_called_once_with()
             self.process_patch.assert_any_call(self.store.response_factory)
+            start_patch.assert_called_once_with()
             assert_equal(self.store.config, new_config)
