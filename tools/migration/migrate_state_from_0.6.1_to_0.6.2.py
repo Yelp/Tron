@@ -29,21 +29,24 @@ Command line options:
     -c str   Set new connection details to str for SQL/MongoDB storing. This
              is REQUIRED for using SQL/MongoDB as the new state store.
 
-    -m       Set a new mechanism for storing the new state objects.
+    -m str   Set a new mechanism for storing the new state objects.
              Defaults to whatever store_type was set to in the Tron
              configuration file.
-             Options are sql, mongo, yaml, and shelve.
+             Options for str are sql, mongo, yaml, and shelve.
 
-    -t       Set a new method for transporting the new state objects to
+    -t str   Set a new method for transporting the new state objects to
              tronstore. Defaults to whatever was set to transport_method in the
              Tron configuration file, or pickle if it isn't set.
-             Options are pickle, yaml, msgpack, and json.
+             Options for str are pickle, yaml, msgpack, and json.
 
-    -d       Set a new method for storing state data within an SQL database.
+    -d str   Set a new method for storing state data within an SQL database.
              Defaults to whatever was set to db_store_method in the Tron
              configuration file, or json if it isn't set. Only used if
              SQLAlchemy is the storing mechanism.
-             Options are pickle, yaml, msgpack, and json.
+             Options for str are pickle, yaml, msgpack, and json.
+
+    -f str   Set the path for the configuration file to str. This defaults to
+             <working_dir>/config
 """
 
 import sys
@@ -77,17 +80,17 @@ def parse_options():
     parser.add_option("-d", type="string",
                       help="Set new SQL db serialization method (db_store_method)",
                       dest="db_store_method", default=None)
+    parser.add_option("-f", type="string",
+                      help="Set path to Tron configuration file",
+                      dest="conf_dir", default=None)
     options, args = parser.parse_args(sys.argv)
     return options, args[1], args[2]
 
-def parse_config(working_dir):
-    # This shouldn't happen, but hey, sanity checks never hurt anyone
-    if working_dir.endswith('/'):
-        conf_dir = working_dir + "config"
+def parse_config(conf_dir):
+    if conf_dir:
+        manager = ConfigManager(conf_dir)
     else:
-        conf_dir = working_dir + "/config"
-
-    manager = ConfigManager(conf_dir)
+        manager = ConfigManager('config')
     return manager.load()
 
 def get_old_state_store(state_info):
@@ -163,7 +166,8 @@ def copy_jobs(old_store, new_store, job_names):
 
 def main():
     (options, working_dir, new_fname) = parse_options()
-    config = parse_config(working_dir)
+    os.chdir(working_dir)
+    config = parse_config(options.conf_dir)
     state_info = config.get_master().state_persistence
     old_store = get_old_state_store(state_info)
     new_state_info = compile_new_info(options, state_info, new_fname)
