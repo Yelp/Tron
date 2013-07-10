@@ -1,0 +1,944 @@
+
+@import url(http://fonts.googleapis.com/css?family=Open+Sans:300,400,700,800);
+@import url(http://fonts.googleapis.com/css?family=Droid+Sans+Mono);
+
+@font-face {
+}
+
+/******************************************************************************
+ *  Global
+ *****************************************************************************/
+body {
+    background: #f0f0f0;
+}
+
+@text: #222;
+
+.clear-border {
+    .round-corners()
+}
+
+.round-corners (@top-left: 0, @top-right: 0, @bottom-right: 0, @bottom-left: 0) {
+  -webkit-border-radius: @top-left @top-right @bottom-right @bottom-left;
+  -moz-border-radius:    @top-left @top-right @bottom-right @bottom-left;
+  border-radius:         @top-left @top-right @bottom-right @bottom-left;
+}
+
+.clear-box-shadow {
+    -webkit-box-shadow: none;
+    -moz-box-shadow: none;
+    box-shadow: none;
+}
+.clear-text-shadow {
+    text-shadow: none;
+}
+
+.mono-font {
+    font-family: 'Droid Sans Mono', monospace;
+}
+
+code {
+    .clear-border;
+    padding: 10px;
+    color: #000;
+    .mono-font;
+}
+
+code.command {
+    display: block;
+    white-space: pre-wrap;
+    background: #f0f0f0;
+    color: #000;
+    border: 0;
+}
+
+.clickable {
+    cursor: pointer;
+}
+
+.table-condensed td {
+    border: 0
+}
+
+h1 {
+    font-size: 20px;
+    line-height: 40px;
+    padding: 10px 20px;
+    .header;
+    font-variant: small-caps;
+    margin: 20px 0;
+
+    .pull-right {
+        margin-top: -1px;
+    }
+    small {
+        font-size: 20px;
+        color: #ddd;
+    }
+    a {
+        color: inherit;
+    }
+    a:hover {
+        text-decoration: underline;
+        color: inherit;
+    }
+    > i[class^="icon-"] {
+        margin: 8px 5px 0 0;
+    }
+}
+
+.header {
+    background-image: url(../img/ui-bg_diagonals-small_10_555_40x40.png);
+    color: #fff;
+    border: #555 1px solid;
+    font-weight: bold;
+}
+
+h2 {
+    text-align: left;
+    padding: 0 0 0 10px;
+    font-size: 16px;
+    font-weight: bold;
+    font-variant: small-caps;
+    .header;
+}
+
+.block-header {
+    .header;
+
+    h3, h2 {
+        font-size: 16px;
+        font-weight: bold;
+        font-variant: small-caps;
+    }
+}
+
+.outline-border {
+    border: @medium-grey 1px solid;
+}
+
+.outline-block {
+
+    h2 {
+        margin: 0;
+        text-align: left;
+        padding: 0 0 0 10px;
+        font-size: 16px;
+        font-weight: bold;
+        font-variant: small-caps;
+    }
+
+    > table tbody,
+    > div
+    {
+        .outline-border;
+        border-top: 0;
+        margin-bottom: 0;
+       background: #fff;
+    }
+    .border-top {
+        border-top: @medium-grey 1px solid;
+    }
+
+    table td {
+       background: #fff;
+    }
+    margin-bottom: 20px;
+}
+
+.table td {
+    border-top: 0;
+}
+
+input,
+.input
+{
+    outline: 0;
+    .clear-box-shadow;
+    .round-corners(3px, 3px, 3px, 3px);
+    border: 1px solid transparent;
+    background: none;
+}
+
+input:focus,
+input.focused,
+.input-focus
+{
+    background: white;
+    border-color: #aaa;
+}
+
+
+
+/******************************************************************************
+ *  Colors
+ *****************************************************************************/
+@green: #218E0B;
+@blue: #2F47B8;
+@yellow: #A6790D;
+@red: #BA434F;
+
+@hl-text: #fff;
+@dark-blue: #0F2277;
+@dark-yellow: #faa732;
+@dark-red: #A10C1A;
+
+@light-blue: #6177DB;
+@light-yellow: #FFDC88;
+
+@medium-grey: #999;
+
+
+
+/******************************************************************************
+ *  Icons
+ *****************************************************************************/
+.label-icon {
+    margin-right: 5px;
+    i {
+        font-size: 16px;
+    }
+}
+
+i[class^="icon-"] {
+    margin-top: 2px;
+    font-style: normal;
+    color: #333;
+}
+
+i[class^="icon-"].icon-white {
+    color: white;
+    .clear-text-shadow;
+}
+i[class^="icon-"].icon-grey {
+    color: #aaa;
+    .clear-text-shadow;
+}
+
+.icon-circlepauseempty:before,
+.icon-layers:before,
+.icon-treediagram:before {
+    color: @dark-blue;
+}
+.icon-remove-circle:before {
+    color: @dark-red;
+}
+.icon-repeatone:before {
+    color: #333;
+}
+
+/******************************************************************************
+ *  Navbar
+ *****************************************************************************/
+.navbar {
+    .brand {
+        color: white;
+        font-weight: 800;
+        .clear-text-shadow;
+        span {
+            color: @light-yellow;
+        }
+    }
+
+    .navbar-inner {
+        .clear-box-shadow;
+        background: @medium-grey;
+        border: 0;
+    }
+
+    .nav > li.active {
+        > a,
+        > a:hover,
+        > a:active {
+            .clear-box-shadow;
+            .clear-text-shadow;
+            background: @light-yellow;
+            color: white;
+        }
+    }
+    .nav > li {
+
+        > a {
+            color: white;
+            .clear-text-shadow;
+            font-weight: bold;
+            i {
+                color: white;
+                .clear-text-shadow;
+                font-weight: normal;
+                margin-right: 7px;
+            }
+        }
+
+        > a:hover {
+            color: white;
+            .clear-text-shadow;
+        }
+    }
+}
+
+
+.search-placeholder {
+    color: #ddd;
+}
+
+.navbar-search {
+    position: relative;
+
+    .search-query,
+    .search-query:focus,
+    .search-query.focused {
+        padding: 2px 10px 2px 27px;
+        margin-top: 2px;
+        line-height: 20px;
+        border: 1px solid #eee;
+        .input;
+    }
+    .search-query {
+        color: #eee;
+    }
+    .search-query:focus,
+    .search-query.focused {
+        color: #333;
+        .input-focus;
+        ~ .icon-search {
+            color: #333;
+        }
+    }
+
+    .icon-search {
+        position: absolute;
+        top: 6px;
+        left: 8px;
+        color: white;
+    }
+    input:-moz-placeholder {
+        .search-placeholder;
+    }
+
+    input::-webkit-input-placeholder {
+        .search-placeholder
+    }
+
+}
+
+.dropdown-menu > .active > a,
+.dropdown-menu > .active > a:hover,
+.dropdown-menu > .active > a:focus
+{
+    background: @light-yellow;
+    color: #000;
+}
+
+.dropdown-menu > li > a:hover,
+.dropdown-menu > li > a:focus
+{
+    background: white;
+    color: #333;
+}
+
+.typeahead.dropdown-menu {
+    .clear-box-shadow;
+    border: 1px solid #333;
+    max-width: 600px;
+    right: -1px;
+
+    a {
+        padding: 3px 10px;
+        text-align: right;
+        overflow: hidden;
+    }
+}
+
+
+/******************************************************************************
+ *  Button
+ *****************************************************************************/
+.btn {
+    padding: 0;
+    line-height: 30px;
+    width: 32px;
+    border: 0;
+}
+
+.btn-inverse {
+    background: #333;
+    .clear-box-shadow;
+}
+
+.btn-inverse.active {
+    background: #080808;
+}
+
+.modal-header {
+    h3 > i[class^="icon-"] {
+        font-weight: normal;
+        margin: 4px 5px 0 0;
+    }
+    button.btn-clear {
+        float: right;
+    }
+}
+
+.modal-header button.close:hover {
+    background: #222;
+}
+
+.btn-clear {
+    background: none;
+    .clear-box-shadow;
+}
+
+.btn-clear:hover {
+    background: #222;
+}
+
+.btn-clear.active {
+    background: #222;
+}
+
+
+/******************************************************************************
+ *  Filters
+ *****************************************************************************/
+
+.filter-form .controls .input-prepend {
+    margin: 0 20px 0 0;
+
+    i[class^="icon-"] {
+        font-size: 12px;
+    }
+}
+
+.filter-form .controls {
+    background: none;
+    border: 0;
+    padding: 0;
+}
+
+.placeholder {
+    color: #999;
+    font-size: 13px;
+}
+
+form.filter-form {
+    .input-prepend {
+        position: relative;
+        .round-corners(3px, 3px, 3px, 3px)
+    }
+
+    input,
+    select
+    {
+        .input;
+        padding: 3px 10px 3px 26px;
+    }
+
+    input:focus,
+    select:focus,
+    input:active,
+    select:active
+    {
+        .input-focus;
+    }
+
+    .filter-select {
+        select {
+            background: transparent;
+            -webkit-appearance: none;
+            padding: 0 0 0 20px;
+            color: #999;
+            font-size: 13px;
+            line-height: 13px;
+
+            option {
+                color: #333;
+            }
+        }
+    }
+
+    input:-moz-placeholder {
+        .placeholder;
+    }
+
+    input::-webkit-input-placeholder {
+        .placeholder;
+    }
+
+    i {
+        position: absolute;
+        top: 6px;
+        left: 7px;
+        z-index: 3;
+    }
+
+}
+
+.filter-form .toggle-header {
+    margin: 0 40px 0 0 ;
+    padding: 4px 0 4px 5px;
+    display: inline-block;
+    font-weight: bold;
+}
+
+/******************************************************************************
+ *  Slider
+ *****************************************************************************/
+.list-controls {
+    padding: 12px 0;
+}
+
+.ui-slider {
+    position: relative;
+    background-color: @medium-grey;
+    margin-top: 8px;
+}
+.ui-slider-handle {
+    position: absolute;
+    z-index: 2;
+    padding-left: 1px;
+    background-color: @dark-yellow;
+    border: @yellow 1px solid;
+}
+.ui-slider-handle:hover {
+}
+.ui-slider-handle.ui-state-focus {
+}
+.ui-slider-horizontal {
+    height: 5px;
+}
+.ui-slider-horizontal .ui-slider-handle {
+    width: 17px;
+    height: 14px;
+    top: -5px;
+    margin-left: -8px;
+}
+
+.ui-slider-range {
+      background: @dark-yellow;
+      height: 100%;
+}
+
+/******************************************************************************
+ *  Refresh widget
+ *****************************************************************************/
+div.refresh-view span {
+    font-size: 14px;
+    vertical-align: middle;
+    margin-right: 4px;
+    font-weight: normal;
+}
+
+
+/******************************************************************************
+ *  Outlined tables
+ *****************************************************************************/
+.table.table-outline {
+    margin-bottom: 0;
+}
+.table.table-outline td a {
+    color: @text;
+}
+
+.table.table-outline tbody tr > td
+{
+    background: #fff;
+    color: @text;
+}
+
+.table.table-outline tbody tr:hover > td
+{
+    background: @light-yellow;
+}
+
+.table.table-outline thead.sub-header,
+.sub-header {
+    background-color: @medium-grey;
+    color: @hl-text;
+}
+
+.table-striped tbody tr:nth-child(even) > td {
+    background-color: rgba(0, 0, 0, 0.06);
+}
+
+/******************************************************************************
+ *  Details tables
+ *****************************************************************************/
+.table.details tbody tr {
+
+    td {
+       color: @text;
+       border-top: 0;
+    }
+
+    td:first-child {
+        font-weight: bold;
+    }
+}
+
+#event-list,
+.table.details {
+    margin-bottom: 0;
+}
+
+/******************************************************************************
+ *  Force Graph
+ *****************************************************************************/
+.graph {
+    position: relative;
+
+    .node {
+        cursor: default;
+    }
+}
+
+.graph svg marker {
+    fill: #555;
+}
+
+.node circle {
+  stroke-width: 4px;
+  stroke: #fff;
+  fill: @light-blue;
+}
+
+.node.failed circle {
+    fill: @red;
+}
+
+.node.succeeded circle {
+    fill: @green;
+}
+
+.node.queued circle, .node.scheduled circle {
+    fill: #ccc;
+}
+
+.node text {
+    stroke: @text;
+    font-family: "Open Sans";
+    font-weight: 300;
+    font-size: 12px;
+}
+
+.link {
+  stroke: #555;
+  stroke-width: 0.8px;
+}
+
+
+
+/******************************************************************************
+ *  Popover / Tooltips
+ *****************************************************************************/
+
+@popup-bg: #fff;
+
+.popover.top {
+    max-width: 600px;
+    min-width: 400px;
+    .clear-border;
+    .clear-box-shadow;
+    .outline-border;
+    padding: 0;
+    background: @popup-bg;
+
+    .arrow {
+        border-top-color: @medium-grey;
+        display: none;
+    }
+    .arrow:after {
+        border-top-color: @popup-bg;
+    }
+    code {
+        background: none;
+    }
+    .popover-title {
+        font-weight: bold;
+        .clear-border;
+        background: @medium-grey;
+        color: white;
+        font-size: 12px;
+        border: 0;
+    }
+    .popover-content {
+        font-size: 12px;
+        padding: 20px;
+        code, ul {
+            padding: 0;
+        }
+        .top-right-corner {
+            top: 7px;
+            right: 10px;
+        }
+    }
+}
+
+.tooltip.top .tooltip-arrow {
+    border-width: 6px 5px 0;
+}
+
+.tooltip.top {
+    border: 0 !important;
+    background: none !important;
+}
+
+/******************************************************************************
+ *  Modal
+ *****************************************************************************/
+.modal {
+    .clear-border;
+}
+
+.modal-header {
+    .block-header;
+}
+
+#action-graph .modal.fade.in {
+    top: 2%;
+    width: auto;
+    margin-left: 75px;
+    left: 0;
+}
+
+.modal-body {
+    max-height: none;
+}
+
+.top-right-corner {
+   position: absolute;
+   top: -35px;
+   right: 10px;
+}
+
+
+/******************************************************************************
+ *  Dashboard
+ *****************************************************************************/
+
+.status-box {
+    padding: 2.2em 20px 20px;
+    margin: 0 10px 10px 0;
+    height: 100px;
+    width: 117px;
+    font-size: 12px;
+    font-weight: bold;
+    position: relative;
+}
+
+.status-box a {
+    color: @hl-text;
+}
+
+.status-box .count {
+    display: inline-block !important;
+    position: absolute;
+    top: 0;
+    right: 0;
+    padding: 3px 7px;
+    background: #333;
+    color: @hl-text;
+}
+
+.status-box i[class^="icon-"] {
+    margin: 1px 5px 0 0;
+}
+
+.status-box.disabled {
+    background: @dark-yellow;
+}
+.status-box.unknown,
+.status-box.failed,
+.status-box.degraded
+{
+    background: @dark-red;
+}
+
+.success
+{
+    background: @green;
+    color: @hl-text;
+}
+
+.warning
+{
+    background: @yellow;
+    color: @hl-text;
+}
+
+.error
+{
+    background: @dark-red;
+    color: @hl-text;
+}
+
+.info
+{
+    background: @blue;
+    color: @hl-text;
+}
+
+#all-view > .dashboard-view {
+    width: auto;
+    margin-right: 20px;
+}
+
+
+/*****************************************************************************
+ *  States
+ *****************************************************************************/
+
+.up {
+    .success;
+}
+
+
+/*****************************************************************************
+ * Events
+ *****************************************************************************/
+
+.enabled,
+.OK,
+.up,
+.succeeded
+{
+    .success;
+}
+
+.INFO,
+.running,
+.starting,
+{
+    .info;
+}
+
+.NOTICE,
+.cancelled,
+.disabled
+{
+    .warning;
+}
+
+.CRITICAL,
+.unknown,
+.failed,
+.degraded,
+.label-important
+{
+    .error;
+}
+
+/******************************************************************************
+ *  Label
+ *****************************************************************************/
+
+.label-manual {
+    background: @blue;
+    padding: 2px 4px;
+
+    i {
+        margin-top: 0;
+    }
+}
+
+.jobruns .label-manual {
+    margin-left: 10px;
+}
+
+.label.label-clear {
+    background: none;
+    color: #333;
+    .clear-text-shadow;
+}
+
+.badge.badge-success {
+    .success
+}
+
+.badge.badge-important {
+    .error
+}
+
+
+/******************************************************************************
+ *  Misc
+ *****************************************************************************/
+
+.scheduler {
+    .mono-font;
+}
+
+
+/******************************************************************************
+ *  Stdout / Stderr
+ *****************************************************************************/
+
+pre.stdout, pre.stderr {
+    margin-bottom: 0;
+}
+
+
+/******************************************************************************
+ * Timeline
+ *****************************************************************************/
+
+#timeline-graph {
+
+    .axis path,
+    .axis line {
+        fill: none;
+        stroke: #000;
+        shape-rendering: crispEdges;
+    }
+
+    .axis.x .tick.major line {
+        stroke-width: 0;
+
+    }
+    .axis.x g.tick.major:nth-child(2n+2) line {
+        stroke: #ddd;
+        stroke-width: 1px;
+        shape-rendering: crispEdges;
+    }
+
+    .axis text {
+        font-weight: bold;
+        font-size: 12px;
+    }
+
+    .axis.y text {
+        text-anchor: end;
+    }
+
+    .axis.y line,
+    .axis.y > g > text
+    {
+        display: none;
+    }
+
+
+    .bar {
+      stroke-width: 0;
+      fill: @blue;
+      shape-rendering: crispEdges;
+    }
+
+    .bar.failed {
+        fill: @dark-red;
+    }
+
+    .bar.succeeded {
+        fill: @green;
+    }
+
+    .bar.queued,
+    .bar.scheduled {
+        fill: #ccc;
+    }
+
+    .bar.cancelled {
+        fill: @yellow;
+    }
+
+
+}

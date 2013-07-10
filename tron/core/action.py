@@ -5,8 +5,6 @@ from tron.config.schema import CLEANUP_ACTION_NAME
 log = logging.getLogger(__name__)
 
 
-
-
 class Action(object):
     """A configurable data object for an Action."""
 

@@ -2,6 +2,8 @@
  Immutable config schema objects.
 """
 from collections import namedtuple
+from tron.utils.collections import Enum
+
 
 MASTER_NAMESPACE = "MASTER"
 
@@ -29,6 +31,7 @@ TronConfig = config_object_factory(
     'TronConfig',
     optional=[
         'output_stream_dir',   # str
+        'action_runner',       # ConfigActionRunner
         'state_persistence',   # ConfigState
         'command_context',     # FrozenDict of str
         'ssh_options',         # ConfigSSHOptions
@@ -37,8 +40,9 @@ TronConfig = config_object_factory(
         'nodes',               # FrozenDict of ConfigNode
         'node_pools',          # FrozenDict of ConfigNodePool
         'jobs',                # FrozenDict of ConfigJob
-        'services'             # FrozenDict of ConfigService
+        'services',            # FrozenDict of ConfigService
     ])
+
 
 NamedTronConfig = config_object_factory(
     'NamedTronConfig',
@@ -56,12 +60,26 @@ NotificationOptions = config_object_factory(
     ])
 
 
+ConfigActionRunner = config_object_factory('ConfigActionRunner',
+    optional=['runner_type', 'remote_status_path', 'remote_exec_path'])
+
+
 ConfigSSHOptions = config_object_factory(
     'ConfigSSHOptions',
-    optional=['agent', 'identities', 'known_hosts_file'])
+    optional=[
+        'agent',
+        'identities',
+        'known_hosts_file',
+        'connect_timeout',
+        'idle_connection_timeout',
+        'jitter_min_load',
+        'jitter_max_delay',
+        'jitter_load_factor',
+    ])
 
 
-ConfigNode = config_object_factory('ConfigNode', ['hostname'], ['name', 'username'])
+ConfigNode = config_object_factory('ConfigNode',
+    ['hostname'], ['name', 'username', 'port'])
 
 
 ConfigNodePool = config_object_factory('ConfigNodePool', ['nodes'], ['name'])
@@ -93,6 +111,7 @@ ConfigJob = config_object_factory(
         'cleanup_action',       # ConfigAction
         'enabled',              # bool
         'allow_overlap',        # bool
+        'max_runtime',          # datetime.Timedelta
     ])
 
 
@@ -126,6 +145,12 @@ ConfigService = config_object_factory(
         'monitor_interval',     # float
         'namespace',            # str
     ],[
-        'restart_interval',     # float
+        'restart_delay',        # float
         'count',                # int
     ])
+
+
+StatePersistenceTypes = Enum.create('shelve', 'sql', 'mongo', 'yaml')
+
+
+ActionRunnerTypes = Enum.create('none', 'subprocess')

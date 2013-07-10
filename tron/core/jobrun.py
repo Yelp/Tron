@@ -5,7 +5,6 @@
 from collections import deque
 import logging
 import itertools
-import operator
 from tron import node, command_context, event
 from tron.core.actionrun import ActionRun, ActionRunFactory
 from tron.serialize import filehandler
@@ -29,9 +28,10 @@ class JobRun(Observable, Observer):
 
     context_class         = command_context.JobRunContext
 
+    # TODO: use config object
     def __init__(self, job_name, run_num, run_time, node, output_path=None,
-                base_context=None, action_runs=None,
-                action_graph=None, manual=None):
+                base_context=None, action_runs=None, action_graph=None,
+                manual=None):
         super(JobRun, self).__init__()
         self.job_name           = job_name
         self.run_num            = run_num
@@ -58,10 +58,13 @@ class JobRun(Observable, Observer):
     @classmethod
     def for_job(cls, job, run_num, run_time, node, manual):
         """Create a JobRun for a job."""
-        run = cls(job.name, run_num, run_time, node, job.output_path.clone(),
-                job.context, action_graph=job.action_graph, manual=manual)
+        run = cls(job.get_name(), run_num, run_time, node,
+                job.output_path.clone(),
+                job.context,
+                action_graph=job.action_graph,
+                manual=manual)
 
-        action_runs     = ActionRunFactory.build_action_run_collection(run)
+        action_runs     = ActionRunFactory.build_action_run_collection(run, job.action_runner)
         run.action_runs = action_runs
         return run
 
@@ -71,13 +74,7 @@ class JobRun(Observable, Observer):
         """Restore a JobRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
         run_node  = pool_repo.get_node(state_data.get('node_name'), run_node)
-
-        # TODO: remove in 0.6
-        if 'job_name' not in state_data:
-            # This is only to support old state files.
-            job_name = state_data['id'].split('.')[0]
-        else:
-            job_name = state_data['job_name']
+        job_name  = state_data['job_name']
 
         job_run =  cls(
             job_name,
@@ -101,7 +98,7 @@ class JobRun(Observable, Observer):
             'job_name':         self.job_name,
             'run_num':          self.run_num,
             'run_time':         self.run_time,
-            'node_name':        self.node.name if self.node else None,
+            'node_name':        self.node.get_name() if self.node else None,
             'runs':             self.action_runs.state_data,
             'cleanup_run':      self.action_runs.cleanup_action_state_data,
             'manual':           self.manual,
@@ -165,6 +162,11 @@ class JobRun(Observable, Observer):
         if any(self._start_action_runs()):
             self.event.ok('started')
             return True
+
+    def stop(self):
+        if self.action_runs.is_done:
+            return
+        self.action_runs.stop()
 
     def _start_action_runs(self):
         """Start all startable action runs, and return any that were
@@ -231,6 +233,9 @@ class JobRun(Observable, Observer):
         self.action_graph = None
         self._action_runs = None
         self.output_path.delete()
+
+    def get_action_run(self, action_name):
+        return self.action_runs.get(action_name)
 
     @property
     def state(self):
@@ -353,6 +358,14 @@ class JobRunCollection(object):
         """Return a the run with run number which matches num."""
         return self._get_run_using(lambda r: r.run_num == num)
 
+    def get_run_by_index(self, index):
+        """Return the job run at index. Jobs are indexed from oldest to newest.
+        """
+        try:
+            return self.runs[index * -1 - 1]
+        except IndexError:
+            return None
+
     def get_run_by_state_short_name(self, short_name):
         """Returns the most recent run which matches the state short name."""
         return self._get_run_using(lambda r: r.state.short_name == short_name)
@@ -391,7 +404,7 @@ class JobRunCollection(object):
 
     def get_next_to_finish(self, node=None):
         """Return the most recent run which is either running or scheduled. If
-        node is none None, then only looks for runs on that node.
+        node is not None, then only looks for runs on that node.
         """
         def compare(run):
             if node and run.node != node:
@@ -407,22 +420,15 @@ class JobRunCollection(object):
         return max(r.run_num for r in self.runs) + 1
 
     def remove_old_runs(self):
-        """Remove old runs to attempt to reduce the number of completed runs
+        """Remove old runs to reduce the number of completed runs
         to within RUN_LIMIT.
         """
-        if not self.last_success or not self.runs:
-            return
-
-        next_run = self.get_next_to_finish() or self.get_newest()
-        keep_run = min(next_run, self.last_success,
-                key=operator.attrgetter('run_num'))
-
-        while (
-            len(self.runs) > self.run_limit and
-            keep_run.run_num > self.runs[-1].run_num
-        ):
+        while len(self.runs) > self.run_limit:
             run = self.runs.pop()
             run.cleanup()
+
+    def get_action_runs(self, action_name):
+        return [job_run.get_action_run(action_name) for job_run in self]
 
     @property
     def state_data(self):
@@ -432,6 +438,10 @@ class JobRunCollection(object):
     @property
     def last_success(self):
         return self.get_run_by_state(ActionRun.STATE_SUCCEEDED)
+
+    @property
+    def next_run(self):
+        return self.get_run_by_state(ActionRun.STATE_SCHEDULED)
 
     def __iter__(self):
         return iter(self.runs)

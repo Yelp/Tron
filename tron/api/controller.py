@@ -33,7 +33,8 @@ class JobCollectionController(object):
 
 class ActionRunController(object):
 
-    mapped_commands = set(('start', 'success', 'cancel', 'fail', 'skip'))
+    mapped_commands = set(
+        ('start', 'success', 'cancel', 'fail', 'skip', 'stop', 'kill'))
 
     def __init__(self, action_run, job_run):
         self.action_run = action_run
@@ -47,6 +48,9 @@ class ActionRunController(object):
             return ("Action run can not be started if it's job run is still "
                     "scheduled.")
 
+        if command in ('stop', 'kill'):
+            return self.handle_termination(command)
+
         if getattr(self.action_run, command)():
             msg = "%s now in state %s"
             return msg % (self.action_run, self.action_run.state)
@@ -54,10 +58,20 @@ class ActionRunController(object):
         msg = "Failed to %s on %s. State is %s."
         return msg % (command, self.action_run, self.action_run.state)
 
+    def handle_termination(self, command):
+        try:
+            getattr(self.action_run, command)()
+            msg = "Attempting to %s %s"
+            return msg % (command, self.action_run)
+        except NotImplementedError, e:
+            msg = "Failed to %s: %s"
+            return msg % (command, e)
+
+
 
 class JobRunController(object):
 
-    mapped_commands = set(('start', 'success', 'cancel', 'fail'))
+    mapped_commands = set(('start', 'success', 'cancel', 'fail', 'stop'))
 
     def __init__(self, job_run, job_scheduler):
         self.job_run       = job_run
@@ -133,6 +147,10 @@ class ServiceController(object):
             self.service.enable()
             return "%s starting." % self.service
 
+        if command == 'kill':
+            self.service.disable(force=True)
+            return "Killing %s." % self.service
+
         raise UnknownCommandError("Unknown command %s" % command)
 
 
@@ -183,11 +201,11 @@ class ConfigController(object):
             return self.DEFAULT_NAMED_CONFIG
         return self.config_manager.read_raw_config(name)
 
-    def read_config(self, name):
+    def read_config(self, name, add_header=True):
         config_content = self._get_config_content(name)
         config_hash = self.config_manager.get_hash(name)
 
-        if name != schema.MASTER_NAMESPACE:
+        if name != schema.MASTER_NAMESPACE and add_header:
             config_content = self.render_template(config_content)
         return dict(config=config_content, hash=config_hash)
 

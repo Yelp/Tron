@@ -1,28 +1,19 @@
 #!/usr/bin/env python
 import os
-import optparse
 import sys
 
-import tron
-from tron import commands
-from tron.commands import display, ExitCode
+from tron.commands import cmd_utils
+from tron.commands import display
+from tron.commands.cmd_utils import ExitCode
 from tron.commands.client import Client, get_object_type_from_identifier
 from tron.commands.client import TronObjectType
 
 
 def parse_options():
-    parser = optparse.OptionParser(
-        "usage: %prog [options] [<job | job run | action>]",
-        version="%%prog %s" % tron.__version__)
-    parser.add_option("--verbose", "-v", action="count", dest="verbose",
-                      help="Verbose logging", default=0)
+    usage  = "usage: %prog [options] [<job | job run | action | service>]"
+    parser = cmd_utils.build_option_parser(usage)
     parser.add_option("--numshown", "-n", type="int", dest="num_displays",
                       help="Max number of jobs/job-runs shown", default=10)
-    parser.add_option("--server", action="store", dest="server",
-                      help="Server URL to connect to", default=None)
-    parser.add_option("--hide-preface", "-z", action="store_false",
-                      dest="display_preface", help="Don't display preface",
-                      default=True)
     parser.add_option("--color", "-c", action="store_true",
                       dest="display_color", help="Display in color",
                       default=None)
@@ -33,16 +24,11 @@ def parse_options():
                       help="Solely displays stdout", default=0)
     parser.add_option("--stderr", "-e", action="count", dest="stderr",
                       help="Solely displays stderr", default=0)
-    parser.add_option("--warn", "-w", action="count", dest="warn",
-                      help="Solely displays warnings and errors", default=0)
     parser.add_option("--events", action="store_true", dest="show_events",
                       help="Show events for the specified entity",
                       default=False)
-    parser.add_option("--save", "-s", action="store_true", dest="save_config",
-                      help="Save options used on this job for next time.",
-                      default=False)
 
-    (options, args) = parser.parse_args(sys.argv)
+    options, args = parser.parse_args(sys.argv)
     return options, args[1:]
 
 
@@ -62,7 +48,7 @@ def view_all(options, client):
     return "".join([
         display.DisplayServices().format(client.services()),
         '\n',
-        display.DisplayJobs(options).format(client.jobs())
+        display.DisplayJobs().format(client.jobs())
     ])
 
 
@@ -71,8 +57,8 @@ def view_job(options, job_id, client):
     if options.show_events:
         return display_events(client.object_events(job_id.url))
 
-    job_content = client.job(job_id.url)
-    return display.format_job_details(job_content, options)
+    job_content = client.job(job_id.url, count=options.num_displays)
+    return display.format_job_details(job_content)
 
 
 def view_job_run(options, job_run_id, client):
@@ -80,12 +66,12 @@ def view_job_run(options, job_run_id, client):
         return display_events(client.object_events(job_run_id.url))
 
     actions = client.job_runs(job_run_id.url)
-    display_action = display.DisplayActionRuns(options)
+    display_action = display.DisplayActionRuns()
     return display_action.format(actions)
 
 
 def view_action_run(options, act_run_id, client):
-    content = client.action(act_run_id.url)
+    content = client.action_runs(act_run_id.url, num_lines=options.num_displays)
     return display.format_action_run_details(content)
 
 
@@ -105,8 +91,7 @@ obj_type_to_view_map = {
     TronObjectType.service:     view_service,
 }
 
-def get_view_output(name, options):
-    client      = Client(options)
+def get_view_output(name, options, client):
     url_index   = client.index()
     tron_id     = get_object_type_from_identifier(url_index, name)
 
@@ -118,17 +103,16 @@ def get_view_output(name, options):
 def main():
     """run tronview"""
     options, args = parse_options()
-    commands.setup_logging(options)
-    commands.load_config(options)
+    cmd_utils.setup_logging(options)
+    cmd_utils.load_config(options)
 
-    display.Color.enabled = options.display_color
-    client = Client(options)
-    client.status()
+    display.Color.toggle(options.display_color)
+    client = Client(options.server)
 
     if not args:
         output = view_all(options, client)
     else:
-        output = get_view_output(args[0], options)
+        output = get_view_output(args[0], options, client)
 
     if not output:
         print >>sys.stderr, "Unrecognized identifier: %s" % args[0]

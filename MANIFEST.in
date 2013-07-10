@@ -4,6 +4,7 @@ include Makefile
 include tron/default_config.yaml
 include tron/logging.conf
 include tron/named_config_template.yaml
-recursive-include debian *
 recursive-include tests *.py *.yaml
-recursive-include docs *.txt *.rst *.yaml *.1 *.8
+recursive-include docs *.rst *.yaml *.1 *.8
+recursive-include tronweb *
+recursive-exclude tronweb *.coffee
