@@ -382,6 +382,20 @@ class JobContainer(object):
         'action_runner'
     ]
 
+    proxy_attributes = [
+        'schedule',
+        'schedule_reconfigured',
+        'request_shutdown',
+        'manual_start',
+        'action_graph',
+        'node_pool',
+        'output_path',
+        'scheduler',
+        'action_runner',
+        'config',
+        'context'
+    ]
+
     context_class           = command_context.JobContext
 
     def __init__(self, name, jobstate, jobruns, jobscheduler, statewatcher):
@@ -391,19 +405,8 @@ class JobContainer(object):
         self.job_scheduler   = jobscheduler
         self.watcher         = statewatcher
         self.event           = event.get_recorder(self.name)
-        self.proxy           = proxy.AttributeProxy(self.job_scheduler, [
-            'schedule',
-            'schedule_reconfigured',
-            'request_shutdown',
-            'manual_start',
-            'action_graph',
-            'node_pool',
-            'output_path',
-            'scheduler',
-            'action_runner',
-            'config',
-            'context'
-        ])
+        self.proxy           = proxy.AttributeProxy(self.job_scheduler,
+                                  self.proxy_attributes)
 
     @classmethod
     def from_config(cls, config, factory, statewatcher):
@@ -447,7 +450,10 @@ class JobContainer(object):
         configuration data.
         """
         for attr in self.equality_attributes:
-            setattr(self, attr, getattr(job, attr))
+            if attr not in self.proxy_attributes:
+                setattr(self, attr, getattr(job, attr))
+            else:
+                setattr(self.job_scheduler, attr, getattr(job.job_scheduler, attr))
         self.event.ok('reconfigured')
 
     def enable(self):
