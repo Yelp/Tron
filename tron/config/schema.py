@@ -90,11 +90,11 @@ ConfigState = config_object_factory(
     [
         'name',
         'store_type',
-        'transport_method',
         ],[
         'connection_details',
         'buffer_size',
         'db_store_method',
+        'transport_method',
     ])
 
 

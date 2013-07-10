@@ -393,6 +393,7 @@ class ValidateStatePersistence(Validator):
         'buffer_size':          1,
         'connection_details':   None,
         'db_store_method':      'msgpack',
+        'transport_method':     'pickle',
     }
 
     validators = {
