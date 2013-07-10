@@ -392,7 +392,13 @@ class ValidateStatePersistence(Validator):
     defaults = {
         'buffer_size':          1,
         'connection_details':   None,
-        'db_store_method':      'msgpack',
+        # This is a tricky one. MessagePack isn't a default python library,
+        # so it feels a bit wrong to make it a configuration default. However,
+        # Yaml's terrible and simplejson is slower than both msgpack and
+        # pickle. Pickle MIGHT be an okay default, but I'm nervous about
+        # defaulting people into using a Turing Complete serialization method
+        # for SQL storing.
+        'db_store_method':      'json',
         'transport_method':     'pickle',
     }
 
