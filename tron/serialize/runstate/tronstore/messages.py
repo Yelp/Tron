@@ -25,10 +25,10 @@ class StoreRequestFactory(object):
         """A simple method to make sure that we don't indefinitely increase
         the id assigned to StoreRequests.
         """
-        return self.id+1 if not self.id == MAX_MSG_ID else 0
+        return self.id_counter+1 if not self.id_counter == MAX_MSG_ID else 0
 
     def build(self, req_type, data_type, data):
-        new_request = StoreRequest(self.id_counter, req_type, data, self.serializer)
+        new_request = StoreRequest(self.id_counter, req_type, data_type, data, self.serializer)
         self.id_counter = self._increment_counter()
         return new_request
 

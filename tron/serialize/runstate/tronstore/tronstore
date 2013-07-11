@@ -22,14 +22,15 @@ from threading import Thread
 from Queue import Queue, Empty
 
 from tron.serialize.runstate.tronstore.messages import StoreRequestFactory, StoreResponseFactory
-import tron.serialize.runstate.tronstore.store
-import tron.serialize.runstate.tronstore.msg_enums
-from tron.serialize.tronstore.chunking import StoreChunkHandler
+from tron.serialize.runstate.tronstore import store
+from tron.serialize.runstate.tronstore import msg_enums
+from tron.serialize.runstate.tronstore.chunking import StoreChunkHandler
 
 is_shutdown = False
 
-def shutdown_handler():
+def shutdown_handler(signum, frame):
     """Signal the process to shut down, finishing any requests it already had."""
+    global is_shutdown
     is_shutdown = True
 
 def parse_args():
@@ -53,6 +54,7 @@ def enqueue_input(stdin, queue):
         stdin.close()
     except Exception, e:  # something happened, finish up and exit
         stdin.close()
+        global is_shutdown
         is_shutdown = True
 
 def start_stdin_thread():
@@ -95,6 +97,7 @@ def main():
     chunk_handler = StoreChunkHandler()
     stdin_queue = start_stdin_thread()
 
+    global is_shutdown
     signal.signal(signal.SIGINT, shutdown_handler)
 
     while True:
@@ -103,7 +106,7 @@ def main():
                 time.sleep(0.5)
                 if stdin_queue.empty():
                     store_class.cleanup()
-                    break
+                    return
 
         requests = chunk_handler.handle(get_all_from_queue(stdin_queue))
         requests = map(request_factory.rebuild, requests)

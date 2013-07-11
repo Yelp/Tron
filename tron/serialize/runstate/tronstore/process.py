@@ -70,7 +70,7 @@ class StoreProcessProtocol(ProcessProtocol):
             raise TronStoreError(reason.getErrorMessage())
 
     def processEnded(self, reason):
-        """Called by twisted whenever the process ends. Cleans up."""
+        """Called by twisted whenever the process ends. Cleans up if needed."""
         if not self.is_shutdown:
             self.transport.loseConnection()
             reactor.stop()

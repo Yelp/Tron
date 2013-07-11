@@ -57,7 +57,7 @@ from tron.commands import cmd_utils
 from tron.config import ConfigError
 from tron.config.schema import StatePersistenceTypes, StateTransportTypes
 from tron.config.manager import ConfigManager
-import tron.serialize.runstate
+from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 from tron.serialize.runstate.mongostore import MongoStateStore
 from tron.serialize.runstate.yamlstore import YamlStateStore
@@ -113,20 +113,20 @@ def get_old_state_store(state_info):
 def compile_new_info(options, state_info, new_file):
     new_state_info = copy.deepcopy(state_info)
 
-    new_state_info.name = new_file
+    new_state_info._replace(name=new_file)
 
     if options.store_method:
-        new_state_info.store_method = options.store_method
+        new_state_info._replace(store_method=options.store_method)
 
     if options.transport_method:
-        new_state_info.transport_method = options.transport_method
+        new_state_info._replace(transport_method=options.transport_method)
 
     if options.db_store_method:
-        new_state_info.db_store_method = options.db_store_method
+        new_state_info._replace(db_store_method=options.db_store_method)
 
     if options.new_connection_details \
     and options.new_connection_details != state_info.connection_details:
-        new_state_info.connection_details = options.new_connection_details
+        new_state_info._replace(connection_details=options.new_connection_details)
     elif new_state_info.store_type in ('sql', 'mongo'):
         raise ConfigError('Must specify new connection_details using -c to use %s'
             % new_state_info.store_type)
@@ -135,47 +135,63 @@ def compile_new_info(options, state_info, new_file):
 
 def copy_metadata(old_store, new_store):
     meta_key_old = old_store.build_key(runstate.MCP_STATE, StateMetadata.name)
-    old_metadata = old_store.restore([meta_key_old])[meta_key_old]
-    meta_key_new = new_store.build_key(runstate.MCP_STATE, StateMetadata.name)
-    new_store.save([(meta_key_new, old_metadata)])
+    old_metadata_dict = old_store.restore([meta_key_old])
+    if old_metadata_dict:
+        old_metadata = old_metadata_dict[meta_key_old]
+        meta_key_new = new_store.build_key(runstate.MCP_STATE, StateMetadata.name)
+        new_store.save([(meta_key_new, old_metadata)])
+    assert old_metadata == new_store.restore([meta_key_new])
 
 def copy_services(old_store, new_store, service_names):
     for service in service_names:
         service_key_old = old_store.build_key(runstate.SERVICE_STATE, service)
-        old_service_data = old_store.restore([service_key_old])[service_key_old]
-        service_key_new = new_store.build_key(runstate.SERVICE_STATE, service)
-        new_store.save([(service_key_new, old_service_data)])
+        import ipdb; ipdb.set_trace()
+        old_service_dict = old_store.restore([service_key_old])
+        if old_service_dict:
+            old_service_data = old_service_dict[service_key_old]
+            service_key_new = new_store.build_key(runstate.SERVICE_STATE, service)
+            new_store.save([(service_key_new, old_service_data)])
 
 def copy_jobs(old_store, new_store, job_names):
     for job in job_names:
         job_key_old = old_store.build_key(runstate.JOB_STATE, job)
-        old_job_data = old_store.restore([job_key_old])[job_key_old]
-        job_state_key = new_store.build_key(runstate.JOB_STATE, job)
+        old_job_dict = old_store.restore([job_key_old])
+        if old_job_dict:
+            old_job_data = old_job_dict[job_key_old]
+            job_state_key = new_store.build_key(runstate.JOB_STATE, job)
 
-        run_ids = []
-        for job_run in old_job_data['runs']:
-            run_ids.append(job_run.run_num)
-            job_run_key = new_store.build_key(runstate.JOB_RUN_STATE,
-                job + ('.%s' % job_run.run_num))
-            new_store.save([(job_run_key, job_run)])
+            run_ids = []
+            for job_run in old_job_data['runs']:
+                run_ids.append(job_run.run_num)
+                job_run_key = new_store.build_key(runstate.JOB_RUN_STATE,
+                    job + ('.%s' % job_run.run_num))
+                new_store.save([(job_run_key, job_run)])
 
-        run_ids = sorted(run_ids, reverse=True)
-        job_state_data = {'enabled': old_job_data['enabled'], 'run_ids': run_ids}
-        new_store.save([(job_state_key, job_state_data)])
+            run_ids = sorted(run_ids, reverse=True)
+            job_state_data = {'enabled': old_job_data['enabled'], 'run_ids': run_ids}
+            new_store.save([(job_state_key, job_state_data)])
 
 
 def main():
+    print('Parsing options...')
     (options, working_dir, new_fname) = parse_options()
     os.chdir(working_dir)
+    print('Parsing configuration file...')
     config = parse_config(options.conf_dir)
     state_info = config.get_master().state_persistence
+    print('Setting up the old state storing object...')
     old_store = get_old_state_store(state_info)
+    print('Setting up the new state storing object...')
     new_state_info = compile_new_info(options, state_info, new_fname)
     new_store = ParallelStore(new_state_info)
 
+    print('Copying metadata...')
     copy_metadata(old_store, new_store)
+    print('Copying service data...')
     copy_services(old_store, new_store, config.get_services().keys())
+    print('Converting job data...')
     copy_jobs(old_store, new_store, config.get_jobs().keys())
+    print('...done.')
 
 if __name__ == "__main__":
     main()

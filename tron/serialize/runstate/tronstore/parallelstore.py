@@ -1,6 +1,7 @@
 import itertools
 import operator
 import logging
+import os
 
 from twisted.internet import reactor
 from tron.serialize.runstate.tronstore.process import StoreProcessProtocol
@@ -51,15 +52,35 @@ class ParallelStore(object):
         The command line arguments given to spawnProcess are in a
         HARDCODED ORDER that MUST match the order that tronstore parses them.
         """
-        reactor.spawnProcess(self.process, "serialize/runstate/tronstore/tronstore",
-            ["tronstore",
+        path = os.path.dirname(msg_enums.__file__) + "/tronstore"
+
+        pre_args = ["tronstore",
             self.config.name,
             self.config.transport_method,
             self.config.store_type,
             self.config.connection_details,
             self.config.db_store_method]
+        post_args = []
+        for arg in pre_args:
+            post_args.append(arg if arg else 'None')
+
+        # We need to make sure that the PYTHONPATH environment variable ISN'T
+        # relative! The working dir will be fine, the other environment
+        # variables either don't matter/are fine, but PYTHONPATH HAS to be
+        # set properly to avoid import errors!
+        # We can't use an absolute path conversion on ., as Tron changes the
+        # working directory to a specified (or default) parameter on startup.
+        environment = os.environ
+        real_pypath = msg_enums.__file__.split('/tron/serialize/runstate/tronstore/')[0]
+        environment['PYTHONPATH'] = real_pypath
+
+        reactor.spawnProcess(self.process,
+            path,
+            args=post_args,
+            env=environment,
+            childFDs={0: "w", 1: "r", 2: 2}
         )
-        reactor.run()
+        # reactor.run()
 
     def build_key(self, type, iden):
         return ParallelKey(type, iden)
