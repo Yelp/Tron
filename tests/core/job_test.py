@@ -207,6 +207,29 @@ class JobSchedulerBuildRunsTestCase(TestCase):
                 self.job_scheduler, run_time, node, manual=True)
         self.job_scheduler.watch.assert_called_with(runs[0], 'notify_done')
 
+class JobSchedulerContextTestCase(TestCase):
+    @setup_teardown
+    def setup_job(self):
+        self.context = mock.Mock()
+        with mock.patch('tron.command_context.build_context', autospec=True) \
+        as self.build_patch:
+            self.job_scheduler = job.JobScheduler(
+                mock.Mock(),
+                mock.Mock(),
+                mock.Mock(),
+                mock.Mock(),
+                mock.Mock(),
+                mock.Mock(),
+                mock.Mock(),
+                self.context,
+                mock.Mock(),
+                mock.Mock()
+            )
+            yield
+
+    def test_build_context(self):
+        self.build_patch.assert_called_once_with(self.job_scheduler, self.context)
+
 class JobSchedulerTestCase(TestCase):
 
     @setup
