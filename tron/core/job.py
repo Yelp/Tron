@@ -109,6 +109,8 @@ class JobScheduler(Observer):
     x seconds into the future.
     """
 
+    context_class           = command_context.JobContext
+
     def __init__(self, job_runs, job_config, job_state, scheduler, actiongraph,
     nodes, path, context, watcher, actionrunner):
         self.job_runs           = job_runs
@@ -120,7 +122,7 @@ class JobScheduler(Observer):
         self.node_pool          = nodes
         self.output_path        = path or filehandler.OutputPath()
         self.output_path.append(job_config.name)
-        self.context            = context
+        self.context            = command_context.build_context(self, context)
         self.watcher            = watcher
         self.shutdown_requested = False
 
@@ -283,8 +285,6 @@ class JobScheduler(Observer):
 class JobSchedulerFactory(object):
     """Construct JobScheduler instances from configuration."""
 
-    context_class           = command_context.JobContext
-
     def __init__(self, context, output_stream_dir, time_zone, action_runner):
         self.context            = context
         self.output_stream_dir  = output_stream_dir
@@ -295,9 +295,8 @@ class JobSchedulerFactory(object):
         log.debug("Building new job %s", job_config.name)
         output_path = filehandler.OutputPath(self.output_stream_dir)
         scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
-        context = command_context.build_context(self, self.context)
         return JobScheduler(job_runs, job_config, job_state, scheduler, actiongraph,
-            nodes, output_path, context, watcher, self.action_runner)
+            nodes, output_path, self.context, watcher, self.action_runner)
 
 
 class JobCollection(object):
