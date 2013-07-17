@@ -5,7 +5,7 @@ class StoreChunkHandler(object):
     messaging. Works by one end using the sign() function to sign the
     serialized string and then using handle() on the opposite end of the wire.
 
-    This is used by tronstore, as the twisted stdin/out handler chunks."""
+    This is used by tronstore, as the pipes can get muddled."""
 
     def __init__(self):
         self.chunk = ''

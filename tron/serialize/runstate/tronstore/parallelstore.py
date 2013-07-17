@@ -3,7 +3,7 @@ import operator
 import logging
 import os
 
-from twisted.internet import reactor
+# from twisted.internet import reactor
 from tron.serialize.runstate.tronstore.process import StoreProcessProtocol
 from tron.serialize.runstate.tronstore.messages import StoreRequestFactory, StoreResponseFactory
 from tron.serialize.runstate.tronstore import msg_enums
@@ -40,47 +40,10 @@ class ParallelStore(object):
     to tronstore based on requests given by the MCP."""
 
     def __init__(self, config):
-        self.config = config
         self.request_factory = StoreRequestFactory(config.transport_method)
         self.response_factory = StoreResponseFactory(config.transport_method)
-        self.process = StoreProcessProtocol(self.response_factory)
-        self.start_process()
-
-    def start_process(self):
-        """Use twisted to spawn the tronstore process.
-
-        The command line arguments given to spawnProcess are in a
-        HARDCODED ORDER that MUST match the order that tronstore parses them.
-        """
-        path = os.path.dirname(msg_enums.__file__) + "/tronstore"
-
-        pre_args = ["tronstore",
-            self.config.name,
-            self.config.transport_method,
-            self.config.store_type,
-            self.config.connection_details,
-            self.config.db_store_method]
-        post_args = []
-        for arg in pre_args:
-            post_args.append(arg if arg else 'None')
-
-        # We need to make sure that the PYTHONPATH environment variable ISN'T
-        # relative! The working dir will be fine, the other environment
-        # variables either don't matter/are fine, but PYTHONPATH HAS to be
-        # set properly to avoid import errors!
-        # We can't use an absolute path conversion on ., as Tron changes the
-        # working directory to a specified (or default) parameter on startup.
-        environment = os.environ
-        real_pypath = msg_enums.__file__.split('/tron/serialize/runstate/tronstore/')[0]
-        environment['PYTHONPATH'] = real_pypath
-
-        reactor.spawnProcess(self.process,
-            path,
-            args=post_args,
-            env=environment,
-            childFDs={0: "w", 1: "r", 2: 2}
-        )
-        # reactor.run()
+        self.path = os.path.dirname(msg_enums.__file__) + "/tronstore"
+        self.process = StoreProcessProtocol(self.path, config, self.response_factory)
 
     def build_key(self, type, iden):
         return ParallelKey(type, iden)
@@ -93,30 +56,24 @@ class ParallelStore(object):
     def restore_single(self, key):
         request = self.request_factory.build(msg_enums.REQUEST_RESTORE, key.type, key.key)
         response = self.process.send_request_get_response(request)
-        return response.data if response.successful else None
+        return response.data if response.success else None
 
     def restore(self, keys):
         items = itertools.izip(keys, (self.restore_single(key) for key in keys))
         return dict(itertools.ifilter(operator.itemgetter(1), items))
 
     def cleanup(self):
-        self.process.shutdown()
+        shutdown_req = self.request_factory.build(msg_enums.REQUEST_SHUTDOWN, '', '')
+        self.process.send_request_shutdown(shutdown_req)
     shutdown = cleanup
 
-    # This method may not be needed. From looking at the StateChangeWatcher
-    # implementation, it looks like it makes a completely new instance of a
-    # PersistentStateManager whenever the config is updated, which removes
-    # the need for changing config related things here (since a new instance
-    # of this class will be created anyway).
     def load_config(self, new_config):
         """Reconfigure the storing mechanism to use a new configuration
         by shutting down and restarting tronstore."""
-        self.config = new_config
+        config_req = self.request_factory.build(msg_enums.REQUEST_CONFIG, '', new_config)
+        self.process.update_config(new_config, config_req)
         self.request_factory.update_method(new_config.transport_method)
-        self.process.shutdown()
         self.response_factory.update_method(new_config.transport_method)
-        self.process = StoreProcessProtocol(self.response_factory)
-        self.start_process()
 
     def __repr__(self):
         return "ParallelStore"

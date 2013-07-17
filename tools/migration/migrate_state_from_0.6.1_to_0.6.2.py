@@ -113,20 +113,20 @@ def get_old_state_store(state_info):
 def compile_new_info(options, state_info, new_file):
     new_state_info = copy.deepcopy(state_info)
 
-    new_state_info._replace(name=new_file)
+    new_state_info = new_state_info._replace(name=new_file)
 
     if options.store_method:
-        new_state_info._replace(store_method=options.store_method)
+        new_state_info = new_state_info._replace(store_method=options.store_method)
 
     if options.transport_method:
-        new_state_info._replace(transport_method=options.transport_method)
+        new_state_info = new_state_info._replace(transport_method=options.transport_method)
 
     if options.db_store_method:
-        new_state_info._replace(db_store_method=options.db_store_method)
+        new_state_info = new_state_info._replace(db_store_method=options.db_store_method)
 
     if options.new_connection_details \
     and options.new_connection_details != state_info.connection_details:
-        new_state_info._replace(connection_details=options.new_connection_details)
+        new_state_info = new_state_info._replace(connection_details=options.new_connection_details)
     elif new_state_info.store_type in ('sql', 'mongo'):
         raise ConfigError('Must specify new connection_details using -c to use %s'
             % new_state_info.store_type)
@@ -140,17 +140,17 @@ def copy_metadata(old_store, new_store):
         old_metadata = old_metadata_dict[meta_key_old]
         meta_key_new = new_store.build_key(runstate.MCP_STATE, StateMetadata.name)
         new_store.save([(meta_key_new, old_metadata)])
-    assert old_metadata == new_store.restore([meta_key_new])
+    assert old_metadata == new_store.restore([meta_key_new])[meta_key_new]
 
 def copy_services(old_store, new_store, service_names):
     for service in service_names:
         service_key_old = old_store.build_key(runstate.SERVICE_STATE, service)
-        import ipdb; ipdb.set_trace()
         old_service_dict = old_store.restore([service_key_old])
         if old_service_dict:
             old_service_data = old_service_dict[service_key_old]
             service_key_new = new_store.build_key(runstate.SERVICE_STATE, service)
             new_store.save([(service_key_new, old_service_data)])
+            assert old_service_data == new_store.restore([service_key_new])[service_key_new]
 
 def copy_jobs(old_store, new_store, job_names):
     for job in job_names:
@@ -162,14 +162,16 @@ def copy_jobs(old_store, new_store, job_names):
 
             run_ids = []
             for job_run in old_job_data['runs']:
-                run_ids.append(job_run.run_num)
+                run_ids.append(job_run['run_num'])
                 job_run_key = new_store.build_key(runstate.JOB_RUN_STATE,
-                    job + ('.%s' % job_run.run_num))
+                    job + ('.%s' % job_run['run_num']))
                 new_store.save([(job_run_key, job_run)])
+                assert job_run == new_store.restore([job_run_key])[job_run_key]
 
             run_ids = sorted(run_ids, reverse=True)
             job_state_data = {'enabled': old_job_data['enabled'], 'run_ids': run_ids}
             new_store.save([(job_state_key, job_state_data)])
+            assert job_state_data == new_store.restore([job_state_key])[job_state_key]
 
 
 def main():
@@ -192,6 +194,8 @@ def main():
     print('Converting job data...')
     copy_jobs(old_store, new_store, config.get_jobs().keys())
     print('...done.')
+    old_store.cleanup()
+    new_store.cleanup()
 
 if __name__ == "__main__":
     main()

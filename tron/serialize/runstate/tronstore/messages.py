@@ -11,11 +11,7 @@ MAX_MSG_ID = 2**32 - 1
 
 
 class StoreRequestFactory(object):
-    """A factory to generate requests that need to be converted to serialized
-    strings and back. All the factory itself does is keep track of what
-    serialization method was set by the configuration, and then constructs
-    specific StoreRequest objects using that method.
-    """
+    """A factory to generate requests by giving each a unique id."""
 
     def __init__(self, method):
         self.serializer = transport_class_map[method]
@@ -79,12 +75,12 @@ class StoreRequest(object):
     """
 
     def __init__(self, req_id, req_type, data_type, data, method):
-        self.id         = req_id
-        self.req_type   = req_type
-        self.data       = data
-        self.data_type  = data_type
-        self.method     = method
-        self.serialized = self.get_serialized()
+        self.id          = req_id
+        self.req_type    = req_type
+        self.data        = data
+        self.data_type   = data_type
+        self.method      = method
+        self.serialized  = self.get_serialized()
 
     @classmethod
     def from_message(cls, msg_data, method):
@@ -97,7 +93,11 @@ class StoreRequest(object):
         self.serialized = self.get_serialized()
 
     def get_serialized(self):
-        return self.method.serialize((self.id, self.req_type, self.data_type, self.data))
+        return self.method.serialize((
+            self.id,
+            self.req_type,
+            self.data_type,
+            self.data))
 
 
 class StoreResponse(object):
@@ -109,10 +109,10 @@ class StoreResponse(object):
     """
 
     def __init__(self, req_id, success, data, method):
-        self.id = req_id
-        self.success = success
-        self.data = data
-        self.method = method
+        self.id         = req_id
+        self.success    = success
+        self.data       = data
+        self.method     = method
         self.serialized = self.get_serialized()
 
     @classmethod

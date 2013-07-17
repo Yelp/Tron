@@ -1,10 +1,10 @@
 import time
 import logging
-from threading import Semaphore
+# import os
+from multiprocessing import Process, Pipe
 
-from twisted.internet.protocol import ProcessProtocol
-from twisted.internet import reactor
-from tron.serialize.runstate.tronstore.chunking import StoreChunkHandler
+from tron.serialize.runstate.tronstore import tronstore
+# from tron.serialize.runstate.tronstore.chunking import StoreChunkHandler
 
 log = logging.getLogger(__name__)
 
@@ -15,7 +15,7 @@ class TronStoreError(Exception):
     def __str__(self):
         return repr(self.code)
 
-class StoreProcessProtocol(ProcessProtocol):
+class StoreProcessProtocol(object):
     """The class that actually communicates with tronstore. This is a subclass
     of the twisted ProcessProtocol class, which has a set of internals that can
     communicate with a child proccess via stdin/stdout via interrupts.
@@ -25,94 +25,114 @@ class StoreProcessProtocol(ProcessProtocol):
     while requests have an enumerator (see msg_enums.py) to identify the
     type of request.
     """
+    # This timeout MUST be longer than the one in tronstore!
+    SHUTDOWN_TIMEOUT = 100.0
+    POLL_TIMEOUT = 10.0
 
-    SHUTDOWN_TIMEOUT = 5.0
-    SHUTDOWN_SLEEP = 0.5
-
-    def __init__(self, response_factory):
+    def __init__(self, path, config, response_factory):
+        self.config = config
         self.response_factory = response_factory
-        self.chunker = StoreChunkHandler()
-        self.requests = {}
-        self.responses = {}
-        self.semaphores = {}  # semaphores used for synchronization
+        self.orphaned_responses = {}
+        self.path = path
         self.is_shutdown = False
+        self._start_process()
 
-    def outRecieved(self, data):
-        """Called via interrupt whenever twisted sees something written by the
-        process into stdout, where data is whatever the process wrote.
-        Since the only thing written to stdout are serialized responses from
-        tronstore, this method deals with matching the response to the
-        appropriate request if the request needed it.
-
-        As some requests actually require a response (see: restore requests),
-        this method also wakes up the main trond thread if it was blocking on a
-        response from tronstore.
+    def _start_process(self):
+        """Spawn the tronstore process. The arguments given to tronstore must
+        match the signature for tronstore.main.
         """
-        responses = self.chunker.handle(data)
-        for response_str in responses:
-            response = self.response_factory.rebuild(response_str)
-            # Requests that don't actually require a response don't put
-            # themselves inside of the requests dict.
-            if response.id in self.requests:
-                if not response.success:
-                    log.warn("tronstore request #%d failed. Request type was %d." % (response.id, self.requests[response.id].req_type))
-                if response.id in self.semaphores:
-                    self.responses[response.id] = response
-                    self.semaphores[response.id].release()
-                del self.requests[response.id]
+        self.pipe, child_pipe = Pipe()
+        store_args = (self.config, child_pipe)
 
-    def processExited(self, reason):
-        """Called by twisted whenever the process exits.
-        If the process didn't exit cleanly (we didn't shut it down),
-        then we need to raise an exception.
-        """
-        if not self.is_shutdown:
-            raise TronStoreError(reason.getErrorMessage())
+        self.process = Process(target=tronstore.main, args=store_args)
+        self.process.daemon = True
+        self.process.start()
 
-    def processEnded(self, reason):
-        """Called by twisted whenever the process ends. Cleans up if needed."""
-        if not self.is_shutdown:
-            self.transport.loseConnection()
-            reactor.stop()
+    def _verify_is_alive(self):
+        """A check to verify that tronstore is alive. Attempts to restart
+        tronstore if it finds that it exited for some reason."""
+        if not self.process.is_alive():
+            code = self.process.exitcode
+            log.warn("tronstore exited prematurely with status code %d. Attempting to restart." % code)
+            self._start_process()
+            if not self.process.is_alive():
+                raise TronStoreError("tronstore crashed with status code %d and failed to restart" % code)
 
     def send_request(self, request):
-        """Send a request to tronstore and immediately return without
+        """Send a StoreRequest to tronstore and immediately return without
         waiting for tronstore's response.
         """
         if self.is_shutdown:
             return
-        self.requests[request.id] = request
-        self.transport.write(self.chunker.sign(request.serialized))
+        self._verify_is_alive()
+
+        self.pipe.send_bytes(request.serialized)
+        # self.transport.write(self.chunker.sign(request.serialized))
+
+    def _poll_for_response(self, id, timeout):
+        """Polls for a response to the request with identifier id. Throws
+        any responses that it isn't looking for into a dict, and tries to
+        retrieve a matching response from this dict before pulling new
+        responses.
+
+        If Tron is extended into a synchronous program, simply just add a
+        lock around this function ( with mutex.lock(): ) and everything'll
+        be fine.
+        """
+        if id in self.orphaned_responses:
+            response = self.orphaned_responses[id]
+            del self.orphaned_responses[id]
+            return response
+
+        while self.pipe.poll(timeout):
+            response = self.response_factory.rebuild(self.pipe.recv_bytes())
+            if response.id == id:
+                return response
+            else:
+                self.orphaned_responses[response.id] = response
+        return None
 
     def send_request_get_response(self, request):
-        """Send a request to tronstore, and block until tronstore responds
-        with the appropriate data. If the request was successful, we return
-        whatever data tronstore sent us, otherwise, None is returned.
+        """Send a StoreRequest to tronstore, and block until tronstore responds
+        with the appropriate data. The StoreResponse is returned as is, with no
+        modifications. Blocks for POLL_TIMEOUT seconds until returning None.
         """
+
         if self.is_shutdown:
-            return None
-        self.requests[request.id] = request
-        self.semaphores[request.id] = Semaphore(0)
-        self.transport.write(self.chunker.sign(request.serialized))
-        self.semaphores[request.id].acquire()
-        del self.semaphores[request.id]
-        response = self.responses[request.id]
-        del self.responses[request.id]
-        return response.data if response.success else None
+            return self.response_factory.build(False, request.id, '')
+        self._verify_is_alive()
 
-    def shutdown(self):
+        self.pipe.send_bytes(request.serialized)
+        response = self._poll_for_response(request.id, self.POLL_TIMEOUT)
+        if not response:
+            log.warn("tronstore took longer than %d seconds to respond to a request, and it was dropped." % self.POLL_TIMEOUT)
+            return self.response_factory.build(False, request.id, '')
+        else:
+            return response
+
+    def send_request_shutdown(self, request):
         """Shut down the process protocol. Waits for SHUTDOWN_TIMEOUT seconds
-        for all pending requests to get responses from tronstore, after which
-        it cuts the connection. It checks if all requests have been completed
-        every SHUTDOWN_SLEEP seconds.
+        for tronstore to send a response, after which it kills both pipes
+        and the process itself.
 
-        Calling this prevents ANY further requests being made to tronstore.
+        Calling this prevents ANY further requests being made to tronstore, as
+        the process will be terminated.
         """
+        if self.is_shutdown or not self.process.is_alive():
+            self.pipe.close()
+            self.is_shutdown = True
+            return
         self.is_shutdown = True
-        time_waited = 0
-        while (not len(self.requests.items()) == 0) and time_waited < self.SHUTDOWN_TIMEOUT:
-            time.sleep(self.SHUTDOWN_SLEEP)  # wait for all pending requests to finish
-            time_waited += self.SHUTDOWN_SLEEP
-        self.transport.signalProcess("INT")
-        self.transport.loseConnection()
-        reactor.stop()
+
+        self.pipe.send_bytes(request.serialized)
+        response = self._poll_for_response(request.id, self.SHUTDOWN_TIMEOUT)
+
+        if not response or not response.success:
+            log.error("tronstore failed to shut down successfully.")
+
+        self.pipe.close()
+        self.process.terminate()
+
+    def update_config(self, new_config, config_request):
+        self.send_request(config_request)
+        self.config = new_config

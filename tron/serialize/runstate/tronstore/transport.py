@@ -33,7 +33,7 @@ class TransportModuleError(Exception):
 class JSONTransport(object):
     @classmethod
     def serialize(cls, data):
-        return json.dumps(data)
+        return json.dumps(data, tuple_as_array=False)
 
     @classmethod
     def deserialize(cls, data_str):
@@ -55,7 +55,7 @@ class MsgPackTransport(object):
     def serialize(cls, data):
         if no_msgpack:
             raise TransportModuleError('MessagePack not installed.')
-        return msgpack.packb(data, use_list=False)
+        return msgpack.packb(data)
 
     @classmethod
     def deserialize(cls, data_str):
