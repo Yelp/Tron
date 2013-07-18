@@ -133,6 +133,19 @@ def compile_new_info(options, state_info, new_file):
 
     return new_state_info
 
+def assert_copied(new_store, data, key):
+    """A small function to counter race conditions. It's possible that
+    tronstore will serve the restore request BEFORE the save request, which
+    will result in an Exception. We simply retry 5 times (which should be more
+    than enough time for tronstore to serve the save request)."""
+    for i in range(5):
+        try:
+            assert data == new_store.restore([key])[key]
+            return
+        except Exception, e:
+            continue
+    raise AssertionError('The value %s failed to copy.' % key.iden)
+
 def copy_metadata(old_store, new_store):
     meta_key_old = old_store.build_key(runstate.MCP_STATE, StateMetadata.name)
     old_metadata_dict = old_store.restore([meta_key_old])
@@ -140,7 +153,7 @@ def copy_metadata(old_store, new_store):
         old_metadata = old_metadata_dict[meta_key_old]
         meta_key_new = new_store.build_key(runstate.MCP_STATE, StateMetadata.name)
         new_store.save([(meta_key_new, old_metadata)])
-    assert old_metadata == new_store.restore([meta_key_new])[meta_key_new]
+    assert_copied(new_store, old_metadata, meta_key_new)
 
 def copy_services(old_store, new_store, service_names):
     for service in service_names:
@@ -150,7 +163,7 @@ def copy_services(old_store, new_store, service_names):
             old_service_data = old_service_dict[service_key_old]
             service_key_new = new_store.build_key(runstate.SERVICE_STATE, service)
             new_store.save([(service_key_new, old_service_data)])
-            assert old_service_data == new_store.restore([service_key_new])[service_key_new]
+            assert_copied(new_store, old_service_data, service_key_new)
 
 def copy_jobs(old_store, new_store, job_names):
     for job in job_names:
@@ -166,12 +179,12 @@ def copy_jobs(old_store, new_store, job_names):
                 job_run_key = new_store.build_key(runstate.JOB_RUN_STATE,
                     job + ('.%s' % job_run['run_num']))
                 new_store.save([(job_run_key, job_run)])
-                assert job_run == new_store.restore([job_run_key])[job_run_key]
+                assert_copied(new_store, job_run, job_run_key)
 
             run_ids = sorted(run_ids, reverse=True)
             job_state_data = {'enabled': old_job_data['enabled'], 'run_ids': run_ids}
             new_store.save([(job_state_key, job_state_data)])
-            assert job_state_data == new_store.restore([job_state_key])[job_state_key]
+            assert_copied(new_store, job_state_data, job_state_key)
 
 
 def main():
@@ -193,7 +206,8 @@ def main():
     copy_services(old_store, new_store, config.get_services().keys())
     print('Converting job data...')
     copy_jobs(old_store, new_store, config.get_jobs().keys())
-    print('...done.')
+    print('Done copying. All data has been verified.')
+    print('Cleaning up, just a sec...')
     old_store.cleanup()
     new_store.cleanup()
 
