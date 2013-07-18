@@ -248,3 +248,16 @@ class StoreProcessProtocolTestCase(TestCase):
 			assert not rebuild_patch.called
 
 	def test_poll_for_response_no_response(self):
+		fake_id = 77
+		fake_timeout = 0.05
+		self.process.orphaned_responses = {}
+		with contextlib.nested(
+			mock.patch.object(self.process.pipe, 'poll', return_value=False),
+			mock.patch.object(self.process.pipe, 'recv_bytes'),
+			mock.patch.object(self.process.response_factory, 'rebuild')
+		) as (poll_patch, recv_patch, rebuild_patch):
+			assert_equal(self.process._poll_for_response(fake_id, fake_timeout), None)
+			assert_equal(self.process.orphaned_responses, {})
+			poll_patch.assert_called_once_with(fake_timeout)
+			assert not recv_patch.called
+			assert not rebuild_patch.called

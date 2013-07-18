@@ -22,13 +22,19 @@ from tron.serialize.runstate.tronstore.messages import StoreRequestFactory, Stor
 from tron.serialize.runstate.tronstore import store
 from tron.serialize.runstate.tronstore import msg_enums
 
+# This timeout MUST BE SHORTER than the one in process.py!
+# Seriously, if this is longer, everything will break!
+SHUTDOWN_TIMEOUT = 3.0
+POOL_SIZE = 35
+
+
 def shutdown_handler(signum, frame):
     """This is just here to stop tronstore from exiting early. The process
     will be terminated from the main tron daemon when all requests have been
     finished. This is needed because Python propogates signals to
     spawned processes, and tronstore is going to get a TON of requests whenever
     a SIGINT is sent to the main daemon, as it has to save everything before
-    it can shut down."""
+    it can gracefully shut down."""
     pass
 
 
@@ -41,30 +47,6 @@ def parse_config(config):
     db_store_method = config.db_store_method
 
     return (store.build_store(name, store_type, connection_details, db_store_method), transport_method)
-
-# def enqueue_input(stdin, queue):
-#     """Enqueue anything read by stdin into a queue. This is run in a separate
-#     thread such that requests can be processed without blocking."""
-#     open('tronstore_is_running.test', 'w')
-#     try:
-#         for line in stdin:
-#             open('tronstore_got_a_line.test', 'w')
-#             f.write('I read a line!')
-#         f.close()
-#         stdin.close()
-#     except Exception, e:  # something happened, finish up and exit
-#         open('tronstore_stdin_crashed.test', 'w')
-#         stdin.close()
-#         global is_shutdown
-#         is_shutdown = True
-
-# def start_stdin_thread():
-#     """Starts the thread that will enqueue all stdin data into the stdin_queue."""
-#     stdin_queue = Queue()
-#     stdin_thread = Thread(target=enqueue_input, args=(sys.stdin, stdin_queue))
-#     stdin_thread.daemon = True
-#     stdin_thread.start()
-#     return stdin_queue
 
 def get_all_from_pipe(pipe):
     """Gets all of the requests from the pipe, returning an array of serialized
@@ -94,6 +76,20 @@ def handle_request(request, store_class, pipe, factory, save_lock, restore_lock)
     else:
         pipe.send_bytes(factory.build(False, request.id, '').serialized)
 
+
+def _remove_finished_threads(running_threads):
+    """A small helper function to clean out the running_threads array.
+    Doesn't actually create a new instance of a list; it modifies
+    the existing list as a side effect, and returns the number
+    of running threads that it cleaned up."""
+    counter = 0
+    for i in range(len(running_threads) - 1, -1, -1):
+        if not running_threads[i].is_alive():
+            running_threads.pop(i)
+            counter += 1
+    return counter
+
+
 def thread_starter(queue, running_threads):
     """A method to start threads that have been queued up in queue. Also takes
     a reference to a list (running_threads) that this function will store any
@@ -105,19 +101,9 @@ def thread_starter(queue, running_threads):
     allow the main thread to know what's running. As such, all operations on
     running_threads must be method calls to modify the list instance given
     to this thread."""
-    global is_shutdown
-    POOL_SIZE = 35
+    global is_shutdown, POOL_SIZE
 
     pool_counter = POOL_SIZE
-
-    def _remove_finished_threads(running_threads):
-        # A small helper function to clean out the running_threads array.
-        counter = 0
-        for thread in running_threads:
-            if not thread.is_alive():
-                running_threads.remove(thread)
-                counter += 1
-        return counter
 
     while not is_shutdown or not queue.empty():
         pool_counter += _remove_finished_threads(running_threads)
@@ -144,10 +130,7 @@ def main(config, pipe):
     waits for requests to handle from pipe. It spawns threads for
     save and restore requests, which will send responses back over
     the pipe once completed."""
-    global is_shutdown
-    # This timeout MUST BE SHORTER than the one in process.py!
-    # Seriously, if this is longer, everything will break!
-    SHUTDOWN_TIMEOUT = 3.0
+    global is_shutdown, SHUTDOWN_TIMEOUT
     is_shutdown = False
 
     store_class, transport_method = parse_config(config)
