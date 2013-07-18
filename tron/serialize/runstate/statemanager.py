@@ -4,7 +4,7 @@ import time
 import itertools
 import tron
 from tron.config import schema
-from tron.core import job, service
+from tron.core import job, jobrun, service
 from tron.serialize import runstate
 from tron.serialize.runstate.mongostore import MongoStateStore
 from tron.serialize.runstate.shelvestore import ShelveStateStore
@@ -64,6 +64,10 @@ class StateMetadata(object):
             'version':              self.version,
             'create_time':          time.time(),
         }
+
+    @property
+    def id(self):
+        return self.name
 
     @classmethod
     def validate_metadata(cls, metadata):
@@ -135,13 +139,26 @@ class PersistentStateManager(object):
         self.metadata_key       = self._impl.build_key(
                                     runstate.MCP_STATE, StateMetadata.name)
 
+    def _build_runs_into_job_state(self, job_state_data):
+        """Collapses the JobRun state data into a tuple along with the state
+        data for a JobState, based on the saved run numbers in the JobState's
+        state_data.
+        """
+        for name, job_state in job_state_data.iteritems():
+            run_names = ['%s.%s' % (name, run_num)
+                for run_num in job_state['run_ids']]
+            yield (name, (job_state,
+                self._restore_dicts(runstate.JOB_RUN_STATE, run_names).values()))
+
     def restore(self, job_names, service_names, skip_validation=False):
         """Return the most recent serialized state."""
         log.debug("Restoring state.")
         if not skip_validation:
             self._restore_metadata()
 
-        return (self._restore_dicts(runstate.JOB_STATE, job_names),
+        job_dict = self._restore_dicts(runstate.JOB_STATE, job_names)
+
+        return (dict(self._build_runs_into_job_state(job_dict)),
                 self._restore_dicts(runstate.SERVICE_STATE, service_names))
 
     def _restore_metadata(self):
@@ -241,10 +258,12 @@ class StateChangeWatcher(observer.Observer):
 
     def handler(self, observable, _event):
         """Handle a state change in an observable by saving its state."""
-        if isinstance(observable, job.Job):
+        if isinstance(observable, job.JobState):
             self.save_job(observable)
         if isinstance(observable, service.Service):
             self.save_service(observable)
+        if isinstance(observable, jobrun.JobRun):
+            self.save_job_run(observable)
 
     def save_job(self, job):
         self._save_object(runstate.JOB_STATE, job)
@@ -252,11 +271,14 @@ class StateChangeWatcher(observer.Observer):
     def save_service(self, service):
         self._save_object(runstate.SERVICE_STATE, service)
 
+    def save_job_run(self, job_run):
+        self._save_object(runstate.JOB_RUN_STATE, job_run)
+
     def save_metadata(self):
         self._save_object(runstate.MCP_STATE, StateMetadata())
 
     def _save_object(self, state_type, obj):
-        self.state_manager.save(state_type, obj.name, obj.state_data)
+        self.state_manager.save(state_type, obj.id, obj.state_data)
 
     def shutdown(self):
         self.state_manager.enabled = False

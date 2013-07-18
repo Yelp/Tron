@@ -86,7 +86,8 @@ class MasterControlProgram(object):
         # TODO: unify NOTIFY_STATE_CHANGE and simplify this
         factory = self.build_job_scheduler_factory(master_config)
         self.apply_collection_config(config_container.get_jobs(),
-            self.jobs, job.Job.NOTIFY_STATE_CHANGE, factory, reconfigure)
+            self.jobs, job.JobState.NOTIFY_STATUS_CHANGE, factory, reconfigure,
+            self.state_watcher)
 
         self.apply_collection_config(config_container.get_services(),
             self.services, service.Service.NOTIFY_STATE_CHANGE, self.context)
@@ -110,8 +111,9 @@ class MasterControlProgram(object):
         changed.
         """
         if self.state_watcher.update_from_config(state_config):
-            for job_scheduler in self.jobs:
-                self.state_watcher.save_job(job_scheduler.get_job())
+            for job_container in self.jobs:
+                self.state_watcher.save_job_run(job_container.get_job_runs())
+                self.state_watcher.save_job(job_container.get_job_state())
             for service in self.services:
                 self.state_watcher.save_service(service)
 
@@ -144,8 +146,8 @@ class MasterControlProgram(object):
         """
         self.event_recorder.notice('restoring')
         job_states, service_states = self.state_watcher.restore(
-                self.jobs.get_names(), self.services.get_names())
-
+                self.jobs.get_names(),
+                self.services.get_names())
         self.jobs.restore_state(job_states)
         self.services.restore_state(service_states)
         self.state_watcher.save_metadata()

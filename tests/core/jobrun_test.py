@@ -4,20 +4,34 @@ import pytz
 from testify import TestCase, setup, assert_equal
 from testify.assertions import assert_in
 from tests.assertions import assert_length, assert_raises, assert_call
-from tron import node, event, actioncommand
+from tron import node, event, actioncommand, scheduler
 from tron.core import jobrun, actionrun, actiongraph, job
 from tests.testingutils import Turtle, autospec_method
 from tron.serialize import filehandler
 
 
 def build_mock_job():
+    mock_state = mock.create_autospec(job.JobState)
+    mock_scheduler = mock.create_autospec(scheduler.ConstantScheduler)
+    run_collection = mock.create_autospec(jobrun.JobRunCollection)
+    mock_watcher = mock.Mock()
     action_graph = mock.create_autospec(actiongraph.ActionGraph)
     runner = mock.create_autospec(actioncommand.SubprocessActionRunnerFactory)
-    return mock.create_autospec(job.Job,
-        action_graph=action_graph,
-        output_path=mock.Mock(),
+    job_scheduler = job.JobScheduler(
+        job_runs=run_collection,
+        job_config=mock.Mock(),
+        job_state=mock_state,
+        scheduler=mock_scheduler,
+        actiongraph=action_graph,
+        nodes=mock.Mock(),
+        path=mock.Mock(),
         context=mock.Mock(),
-        action_runner=runner)
+        watcher=mock_watcher,
+        actionrunner=runner)
+    job_container = job.JobContainer("jobname", mock_state, run_collection,
+        job_scheduler, mock_watcher)
+    job_container.event = mock.Mock()
+    return job_container
 
 
 class JobRunTestCase(TestCase):
@@ -51,7 +65,7 @@ class JobRunTestCase(TestCase):
                 self.job, run_num, self.run_time, mock_node, False)
 
         assert_equal(run.action_runs.action_graph, self.action_graph)
-        assert_equal(run.job_name, self.job.get_name.return_value)
+        assert_equal(run.job_name, self.job.get_name())
         assert_equal(run.run_num, run_num)
         assert_equal(run.node, mock_node)
         assert not run.manual
@@ -422,7 +436,7 @@ class JobRunCollectionTestCase(TestCase):
         assert_in(job_run, self.run_collection.runs)
         self.run_collection.remove_old_runs.assert_called_with()
         assert_equal(job_run.run_num, 5)
-        assert_equal(job_run.job_name, mock_job.get_name.return_value)
+        assert_equal(job_run.job_name, mock_job.get_name())
 
     def test_build_new_run_manual(self):
         autospec_method(self.run_collection.remove_old_runs)

@@ -76,6 +76,10 @@ class Service(observer.Observer, observer.Observable):
 
     name = property(get_name)
 
+    @property
+    def id(self):
+        return self.name
+
     def get_state(self):
         return ServiceState.from_service(self)
 

@@ -358,6 +358,9 @@ class JobRunCollection(object):
         """Return a the run with run number which matches num."""
         return self._get_run_using(lambda r: r.run_num == num)
 
+    def get_run_numbers(self):
+        return [run.run_num for run in self]
+
     def get_run_by_index(self, index):
         """Return the job run at index. Jobs are indexed from oldest to newest.
         """
