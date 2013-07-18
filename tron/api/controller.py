@@ -73,13 +73,13 @@ class JobRunController(object):
 
     mapped_commands = set(('start', 'success', 'cancel', 'fail', 'stop'))
 
-    def __init__(self, job_run, job_scheduler):
+    def __init__(self, job_run, job_container):
         self.job_run       = job_run
-        self.job_scheduler = job_scheduler
+        self.job_container = job_container
 
     def handle_command(self, command):
         if command == 'restart':
-            runs = self.job_scheduler.manual_start(self.job_run.run_time)
+            runs = self.job_container.manual_start(self.job_run.run_time)
             return "Created %s" % ",".join(str(run) for run in runs)
 
         if command in self.mapped_commands:
@@ -94,20 +94,20 @@ class JobRunController(object):
 
 class JobController(object):
 
-    def __init__(self, job_scheduler):
-        self.job_scheduler = job_scheduler
+    def __init__(self, job_container):
+        self.job_container = job_container
 
     def handle_command(self, command, run_time=None):
         if command == 'enable':
-            self.job_scheduler.enable()
-            return "%s is enabled" % self.job_scheduler.get_job()
+            self.job_container.enable()
+            return "%s is enabled" % self.job_container
 
         elif command == 'disable':
-            self.job_scheduler.disable()
-            return "%s is disabled" % self.job_scheduler.get_job()
+            self.job_container.disable()
+            return "%s is disabled" % self.job_container
 
         elif command == 'start':
-            runs = self.job_scheduler.manual_start(run_time=run_time)
+            runs = self.job_container.manual_start(run_time=run_time)
             return "Created %s" % ",".join(str(run) for run in runs)
 
         raise UnknownCommandError("Unknown command %s" % command)

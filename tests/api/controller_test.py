@@ -97,21 +97,22 @@ class JobControllerTestCase(TestCase):
 
     @setup
     def setup_controller(self):
-        self.job_scheduler = mock.create_autospec(job.JobScheduler)
-        self.controller = controller.JobController(self.job_scheduler)
+        self.job_container = mock.create_autospec(job.JobContainer)
+        self.job_container.manual_start = mock.Mock(return_value=[1, 2])
+        self.controller = controller.JobController(self.job_container)
 
     def test_handle_command_enable(self):
         self.controller.handle_command('enable')
-        self.job_scheduler.enable.assert_called_with()
+        self.job_container.enable.assert_called_with()
 
     def test_handle_command_disable(self):
         self.controller.handle_command('disable')
-        self.job_scheduler.disable.assert_called_with()
+        self.job_container.disable.assert_called_with()
 
     def test_handle_command_start(self):
         run_time = mock.Mock()
         self.controller.handle_command('start', run_time)
-        self.job_scheduler.manual_start.assert_called_with(run_time=run_time)
+        self.job_container.manual_start.assert_called_with(run_time=run_time)
 
 
 class ServiceInstanceControllerTestCase(TestCase):
