@@ -90,11 +90,8 @@ def convert_state(opts):
         job_states      = add_namespaces(job_states)
         service_states  = add_namespaces(service_states)
 
-    for name, (job_state, run_list) in job_states.iteritems():
-        dest_manager.save(runstate.JOB_STATE, name, job_state)
-        for run_data in run_list:
-            run_name = '%s.%s' % (run_data['job_name'], run_data['run_num'])
-            dest_manager.save(runstate.JOB_RUN_STATE, run_name, run_data)
+    for name, job in job_states.iteritems():
+        dest_manager.save(runstate.JOB_STATE, name, job)
     print "Migrated %s jobs." % len(job_states)
 
     for name, service in service_states.iteritems():

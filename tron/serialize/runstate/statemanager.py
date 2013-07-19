@@ -6,10 +6,11 @@ import tron
 from tron.config import schema
 from tron.core import job, jobrun, service
 from tron.serialize import runstate
-from tron.serialize.runstate.mongostore import MongoStateStore
-from tron.serialize.runstate.shelvestore import ShelveStateStore
-from tron.serialize.runstate.sqlalchemystore import SQLAlchemyStateStore
-from tron.serialize.runstate.yamlstore import YamlStateStore
+# from tron.serialize.runstate.mongostore import MongoStateStore
+# from tron.serialize.runstate.shelvestore import ShelveStateStore
+# from tron.serialize.runstate.sqlalchemystore import SQLAlchemyStateStore
+# from tron.serialize.runstate.yamlstore import YamlStateStore
+from tron.serialize.runstate.tronstore.parallelstore import ParallelStore
 from tron.utils import observer
 
 log = logging.getLogger(__name__)
@@ -24,30 +25,39 @@ class PersistenceStoreError(ValueError):
 
 class PersistenceManagerFactory(object):
     """Create a PersistentStateManager."""
+    # TODO: Remove this class, it's somewhat pointless now
 
     @classmethod
     def from_config(cls, persistence_config):
         store_type              = persistence_config.store_type
-        name                    = persistence_config.name
-        connection_details      = persistence_config.connection_details
+        transport_method        = persistence_config.transport_method
+        db_store_method         = persistence_config.db_store_method
         buffer_size             = persistence_config.buffer_size
-        store                   = None
+        # name                    = persistence_config.name
+        # connection_details      = persistence_config.connection_details
 
         if store_type not in schema.StatePersistenceTypes:
             raise PersistenceStoreError("Unknown store type: %s" % store_type)
 
-        if store_type == schema.StatePersistenceTypes.shelve:
-            store = ShelveStateStore(name)
+        if transport_method not in schema.StateTransportTypes:
+            raise PersistenceStoreError("Unknown transport type: %s" % transport_method)
 
-        if store_type == schema.StatePersistenceTypes.sql:
-            store = SQLAlchemyStateStore(name, connection_details)
+        if db_store_method not in schema.StateTransportTypes and store_type in ('sql', 'mongo'):
+            raise PersistenceStoreError("Unknown db store method: %s" % db_store_method)
 
-        if store_type == schema.StatePersistenceTypes.mongo:
-            store = MongoStateStore(name, connection_details)
+        # if store_type == schema.StatePersistenceTypes.shelve:
+        #     store = ShelveStateStore(name)
 
-        if store_type == schema.StatePersistenceTypes.yaml:
-            store = YamlStateStore(name)
+        # if store_type == schema.StatePersistenceTypes.sql:
+        #     store = SQLAlchemyStateStore(name, connection_details)
 
+        # if store_type == schema.StatePersistenceTypes.mongo:
+        #     store = MongoStateStore(name, connection_details)
+
+        # if store_type == schema.StatePersistenceTypes.yaml:
+        #     store = YamlStateStore(name)
+
+        store = ParallelStore(persistence_config)
         buffer = StateSaveBuffer(buffer_size)
         return PersistentStateManager(store, buffer)
 
@@ -127,10 +137,14 @@ class PersistentStateManager(object):
         def save(self, key, state_data):
             pass
 
+        def load_config(self, new_config):
+            pass
+
         def cleanup(self):
             pass
 
     """
+    # TODO: Rename things here, as ParallelStore is always used
 
     def __init__(self, persistence_impl, buffer):
         self.enabled            = True
@@ -200,6 +214,10 @@ class PersistentStateManager(object):
                 log.warn(msg)
                 raise PersistenceStoreError(msg)
 
+    def update_from_config(self, new_state_config):
+        self._save_from_buffer()
+        self._impl.load_config(new_state_config)
+
     def cleanup(self):
         self._save_from_buffer()
         self._impl.cleanup()
@@ -251,8 +269,12 @@ class StateChangeWatcher(observer.Observer):
         if self.config == state_config:
             return False
 
-        self.shutdown()
-        self.state_manager = PersistenceManagerFactory.from_config(state_config)
+        if self.state_manager is NullStateManager:
+            self.state_manager = PersistenceManagerFactory.from_config(state_config)
+        # self.shutdown()
+        # self.state_manager = PersistenceManagerFactory.from_config(state_config)
+        else:
+            self.state_manager.update_from_config(state_config)
         self.config = state_config
         return True
 

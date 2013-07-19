@@ -25,16 +25,14 @@ class StoreProcessProtocolTestCase(TestCase):
 				db_store_method=None,
 				buffer_size=1
 			)
-			self.path = 'gaben/at/valve/software/dot/com'
 			self.factory = mock.Mock()
-			self.process = StoreProcessProtocol(self.path, self.config, self.factory)
+			self.process = StoreProcessProtocol(self.config, self.factory)
 			yield
 
 	def test__init__(self):
 		assert_equal(self.process.response_factory, self.factory)
 		assert_equal(self.process.config, self.config)
 		assert_equal(self.process.orphaned_responses, {})
-		assert_equal(self.process.path, self.path)
 		assert not self.process.is_shutdown
 
 	def test_start_process(self):

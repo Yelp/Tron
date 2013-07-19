@@ -42,8 +42,7 @@ class ParallelStore(object):
     def __init__(self, config):
         self.request_factory = StoreRequestFactory(config.transport_method)
         self.response_factory = StoreResponseFactory(config.transport_method)
-        self.path = os.path.dirname(msg_enums.__file__) + "/tronstore"
-        self.process = StoreProcessProtocol(self.path, config, self.response_factory)
+        self.process = StoreProcessProtocol(config, self.response_factory)
 
     def build_key(self, type, iden):
         return ParallelKey(type, iden)

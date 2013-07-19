@@ -140,46 +140,52 @@ def main(config, pipe):
     save_lock = Lock()
     restore_lock = Lock()
 
-    running_threads = []
-    thread_queue = Queue()
-    thread_pool = Thread(target=thread_starter, args=(thread_queue, running_threads))
-    thread_pool.start()
-
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
 
+    running_threads = []
+    thread_queue = Queue()
+    thread_pool = Thread(target=thread_starter, args=(thread_queue, running_threads))
+    thread_pool.daemon = True
+    thread_pool.start()
+
     while True:
         timeout = SHUTDOWN_TIMEOUT if is_shutdown else None
-        if pipe.poll(timeout):
-            requests = get_all_from_pipe(pipe)
-            requests = map(request_factory.rebuild, requests)
-            for request in requests:
-                if request.req_type == msg_enums.REQUEST_SHUTDOWN:
-                    is_shutdown = True
-                    shutdown_req_id = request.id
+        try:
+            if pipe.poll(timeout):
+                requests = get_all_from_pipe(pipe)
+                requests = map(request_factory.rebuild, requests)
+                for request in requests:
+                    if request.req_type == msg_enums.REQUEST_SHUTDOWN:
+                        is_shutdown = True
+                        shutdown_req_id = request.id
 
-                elif request.req_type == msg_enums.REQUEST_CONFIG:
-                    while len(running_threads) != 0:
-                        time.sleep(0.5)
-                    store_class.cleanup()
-                    store_class, transport_method = parse_config(request.data)
-                    request_factory.update_method(transport_method)
-                    response_factory.update_method(transport_method)
+                    elif request.req_type == msg_enums.REQUEST_CONFIG:
+                        while len(running_threads) != 0:
+                            time.sleep(0.5)
+                        store_class.cleanup()
+                        store_class, transport_method = parse_config(request.data)
+                        request_factory.update_method(transport_method)
+                        response_factory.update_method(transport_method)
 
-                else:
-                    request_thread = Thread(target=handle_request,
-                        args=(
-                            request,
-                            store_class,
-                            pipe,
-                            response_factory,
-                            save_lock,
-                            restore_lock))
-                    thread_queue.put(request_thread)
-        else:
-            # We have to wait for all requests to clean up first.
-            while len(running_threads) != 0:
-                time.sleep(0.5)
-            store_class.cleanup()
-            pipe.send_bytes(response_factory.build(True, shutdown_req_id, '').serialized)
-            return
+                    else:
+                        request_thread = Thread(target=handle_request,
+                            args=(
+                                request,
+                                store_class,
+                                pipe,
+                                response_factory,
+                                save_lock,
+                                restore_lock))
+                        request_thread.daemon = True
+                        thread_queue.put(request_thread)
+            else:
+                # We have to wait for all requests to clean up first.
+                while len(running_threads) != 0:
+                    time.sleep(0.5)
+                store_class.cleanup()
+                pipe.send_bytes(response_factory.build(True, shutdown_req_id, '').serialized)
+                return
+        # Signals cause pipe.poll to throw IOErrors...
+        except IOError:
+            continue

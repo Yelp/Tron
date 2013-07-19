@@ -24,19 +24,7 @@ class ParallelStoreTestCase(TestCase):
             yield
 
     def test__init__(self):
-        self.process_patch.assert_called_once_with(self.store.path, self.config, self.store.response_factory)
-
-    # def test_start_process(self):
-    #     self.spawn_patch.assert_called_once_with(
-    #         self.store.process,
-    #         "serialize/runstate/tronstore/tronstore",
-    #         ["tronstore",
-    #         self.config.name,
-    #         self.config.transport_method,
-    #         self.config.store_type,
-    #         self.config.connection_details,
-    #         self.config.db_store_method])
-    #     self.run_patch.assert_called_once_with()
+        self.process_patch.assert_called_once_with(self.config, self.store.response_factory)
 
     def test_build_key(self):
         key_type = runstate.JOB_STATE

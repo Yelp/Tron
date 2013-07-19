@@ -29,11 +29,10 @@ class StoreProcessProtocol(object):
     SHUTDOWN_TIMEOUT = 100.0
     POLL_TIMEOUT = 10.0
 
-    def __init__(self, path, config, response_factory):
+    def __init__(self, config, response_factory):
         self.config = config
         self.response_factory = response_factory
         self.orphaned_responses = {}
-        self.path = path
         self.is_shutdown = False
         self._start_process()
 
