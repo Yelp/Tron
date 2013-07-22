@@ -190,12 +190,9 @@ class StoreProcessProtocolTestCase(TestCase):
 			assert not terminate_patch.called
 
 	def test_update_config(self):
-		request = mock.Mock()
 		new_config = mock.Mock()
-		with mock.patch.object(self.process, 'send_request') as send_patch:
-			self.process.update_config(new_config, request)
-			send_patch.assert_called_once_with(request)
-			assert_equal(self.process.config, new_config)
+		self.process.update_config(new_config)
+		assert_equal(self.process.config, new_config)
 
 	def test_poll_for_response_has_response_makes_orphaned(self):
 		self.process.orphaned_responses = {}

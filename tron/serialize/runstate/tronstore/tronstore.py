@@ -159,12 +159,22 @@ def main(config, pipe):
                         shutdown_req_id = request.id
 
                     elif request.req_type == msg_enums.REQUEST_CONFIG:
-                        while len(running_threads) != 0:
+                        while len(running_threads) != 0 or not thread_queue.empty():
                             time.sleep(0.5)
                         store_class.cleanup()
-                        store_class, transport_method = parse_config(request.data)
-                        request_factory.update_method(transport_method)
-                        response_factory.update_method(transport_method)
+                        try:
+                            # Try to set up with the new configuration
+                            store_class, transport_method = parse_config(request.data)
+                            pipe.send_bytes(response_factory.build(True, request.id, '').serialized)
+                            request_factory.update_method(transport_method)
+                            response_factory.update_method(transport_method)
+                            config = request.data
+                        except:
+                            # Failed, go back to what we had
+                            store_class, transport_method = parse_config(config)
+                            request_factory.update_method(transport_method)
+                            response_factory.update_method(transport_method)
+                            pipe.send_bytes(response_factory.build(False, request.id, '').serialized)
 
                     else:
                         request_thread = Thread(target=handle_request,
@@ -178,7 +188,7 @@ def main(config, pipe):
                         request_thread.daemon = True
                         thread_queue.put(request_thread)
             elif is_shutdown:
-                # We have to wait for all requests to clean up first.
+                # We have to wait for all threads to clean up first.
                 while len(running_threads) != 0 or thread_pool.is_alive():
                     time.sleep(0.5)
                 store_class.cleanup()

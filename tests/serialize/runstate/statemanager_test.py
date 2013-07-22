@@ -177,6 +177,15 @@ class PersistentStateManagerTestCase(TestCase):
             pass
         assert not self.manager.enabled
 
+    def test_update_config(self):
+        new_config = mock.Mock()
+        fake_return = 'reelin_in_the_years'
+        self.store.load_config.configure_mock(return_value=fake_return)
+        with mock.patch.object(self.manager, '_save_from_buffer') as save_patch:
+            assert_equal(self.manager.update_from_config(new_config), fake_return)
+            save_patch.assert_called_once_with()
+            self.store.load_config.assert_called_once_with(new_config)
+
 
 class StateChangeWatcherTestCase(TestCase):
 
@@ -204,11 +213,19 @@ class StateChangeWatcherTestCase(TestCase):
             mock_factory.from_config.return_value)
         mock_factory.from_config.assert_called_with(state_config)
 
-    def test_update_from_config_with_state_manager(self):
+    def test_update_from_config_with_state_manager_success(self):
         state_config = mock.Mock()
         assert self.watcher.update_from_config(state_config)
         assert_equal(self.watcher.config, state_config)
         self.state_manager.update_from_config.assert_called_once_with(state_config)
+
+    def test_update_from_config_failure(self):
+        self.state_manager.update_from_config.configure_mock(return_value=False)
+        state_config = self.watcher.config
+        fake_config = mock.Mock()
+        assert not self.watcher.update_from_config(fake_config)
+        assert_equal(self.watcher.config, state_config)
+        self.state_manager.update_from_config.assert_called_once_with(fake_config)
 
     def test_save_job(self):
         mock_job = mock.Mock()

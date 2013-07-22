@@ -81,17 +81,38 @@ class ParallelStoreTestCase(TestCase):
             self.store.cleanup()
             clean_patch.assert_called_once_with()
 
-    def test_load_config(self):
+    def test_load_config_success(self):
         new_config = mock.Mock()
         config_req = mock.Mock()
         with contextlib.nested(
             mock.patch.object(self.store.request_factory, 'update_method'),
             mock.patch.object(self.store.response_factory, 'update_method'),
             mock.patch.object(self.store.process, 'update_config'),
-            mock.patch.object(self.store.request_factory, 'build', return_value=config_req)
-        ) as (request_patch, response_patch, update_patch, build_patch):
+            mock.patch.object(self.store.request_factory, 'build', return_value=config_req),
+            mock.patch.object(self.store.process, 'send_request_get_response',
+                return_value=mock.Mock(success=True))
+        ) as (request_patch, response_patch, update_patch, build_patch, send_patch):
             self.store.load_config(new_config)
             build_patch.assert_called_once_with(msg_enums.REQUEST_CONFIG, '', new_config)
+            send_patch.assert_called_once_with(config_req)
             request_patch.assert_called_once_with(new_config.transport_method)
             response_patch.assert_called_once_with(new_config.transport_method)
             update_patch.assert_called_once_with(new_config, config_req)
+
+    def test_load_config_failure(self):
+        new_config = mock.Mock()
+        config_req = mock.Mock()
+        with contextlib.nested(
+            mock.patch.object(self.store.request_factory, 'update_method'),
+            mock.patch.object(self.store.response_factory, 'update_method'),
+            mock.patch.object(self.store.process, 'update_config'),
+            mock.patch.object(self.store.request_factory, 'build', return_value=config_req),
+            mock.patch.object(self.store.process, 'send_request_get_response',
+                return_value=mock.Mock(success=False))
+        ) as (request_patch, response_patch, update_patch, build_patch, send_patch):
+            self.store.load_config(new_config)
+            build_patch.assert_called_once_with(msg_enums.REQUEST_CONFIG, '', new_config)
+            send_patch.assert_called_once_with(config_req)
+            assert not update_patch.called
+            assert not request_patch.called
+            assert not response_patch.called

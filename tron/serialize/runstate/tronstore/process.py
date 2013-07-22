@@ -113,8 +113,8 @@ class StoreProcessProtocol(object):
         for tronstore to send a response, after which it kills both pipes
         and the process itself.
 
-        Calling this prevents ANY further requests being made to tronstore, as
-        the process will be terminated.
+        Calling this prevents ANY further requests from being made to tronstore
+        as the process will be killed.
         """
         if self.is_shutdown or not self.process.is_alive():
             self.pipe.close()
@@ -133,9 +133,11 @@ class StoreProcessProtocol(object):
         # to the process, which unfortunately is registered to do nothing
         # (as the process depends on trond to shut itself down, and shuts
         # itself down if trond is dead anyway.)
-        # We want a hard kill anyway.
+        # We want a hard kill regardless.
         os.kill(self.process.pid, signal.SIGKILL)
 
-    def update_config(self, new_config, config_request):
-        self.send_request(config_request)
+    def update_config(self, new_config):
+        """Update the configuration. Needed to make sure that tronstore
+        is restarted with the correct configuration upon exiting
+        prematurely."""
         self.config = new_config

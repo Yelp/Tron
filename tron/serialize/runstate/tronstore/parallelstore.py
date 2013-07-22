@@ -69,9 +69,14 @@ class ParallelStore(object):
         """Reconfigure the storing mechanism to use a new configuration
         by shutting down and restarting tronstore."""
         config_req = self.request_factory.build(msg_enums.REQUEST_CONFIG, '', new_config)
-        self.process.update_config(new_config, config_req)
-        self.request_factory.update_method(new_config.transport_method)
-        self.response_factory.update_method(new_config.transport_method)
+        response = self.process.send_request_get_response(config_req)
+        if response.success:
+            self.process.update_config(new_config, config_req)
+            self.request_factory.update_method(new_config.transport_method)
+            self.response_factory.update_method(new_config.transport_method)
+            return True
+        else:
+            return False
 
     def __repr__(self):
         return "ParallelStore"

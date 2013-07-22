@@ -202,7 +202,7 @@ class PersistentStateManager(object):
 
     def update_from_config(self, new_state_config):
         self._save_from_buffer()
-        self._impl.load_config(new_state_config)
+        return self._impl.load_config(new_state_config)
 
     def cleanup(self):
         self._save_from_buffer()
@@ -257,8 +257,8 @@ class StateChangeWatcher(observer.Observer):
 
         if self.state_manager is NullStateManager:
             self.state_manager = PersistenceManagerFactory.from_config(state_config)
-        else:
-            self.state_manager.update_from_config(state_config)
+        elif not self.state_manager.update_from_config(state_config):
+            return False
         self.config = state_config
         return True
 

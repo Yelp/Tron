@@ -90,7 +90,7 @@ class TronstoreMainTestCase(TestCase):
 		self.response_factory.build.assert_called_once_with(True, fake_id, '')
 		self.pipe.send_bytes.assert_called_once_with(self.response_factory.build().serialized)
 
-	def test_config_request(self):
+	def test_config_request_success(self):
 		fake_id = 77
 		fake_shutdown_id = 88
 		self.requests = [mock.Mock(req_type=msg_enums.REQUEST_CONFIG, id=fake_id),
@@ -102,8 +102,34 @@ class TronstoreMainTestCase(TestCase):
 		assert_equal(self.store_class.cleanup.call_count, 2)
 		self.store_class.cleanup.assert_any_call()
 		assert_equal(self.parse_patch.call_count, 2)
+		self.queue.empty.assert_called_once_with()
+		self.response_factory.build.assert_any_call(True, fake_id, '')
+		self.pipe.send_bytes.assert_any_call(self.response_factory.build().serialized)
 		self.request_factory.update_method.assert_called_once_with(self.trans_method)
 		self.response_factory.update_method.assert_called_once_with(self.trans_method)
+
+	def test_config_request_exception(self):
+		fake_id = 77
+		fake_shutdown_id = 88
+		some_fake_store = mock.Mock()
+		some_fake_trans = mock.Mock()
+		self.requests = [mock.Mock(req_type=msg_enums.REQUEST_CONFIG, id=fake_id),
+			mock.Mock(req_type=msg_enums.REQUEST_SHUTDOWN, id=fake_shutdown_id)]
+		item_iter = iter([(self.store_class, self.trans_method), 'breakit',
+			(some_fake_store, some_fake_trans)])
+		self.parse_patch.configure_mock(side_effect=item_iter)
+		assert_raises(SystemError, tronstore.main, self.config, self.pipe)
+
+		self.assert_main_startup()
+		assert tronstore.is_shutdown
+		self.store_class.cleanup.assert_called_once_with()
+		some_fake_store.cleanup.assert_called_once_with()
+		assert_equal(self.parse_patch.call_count, 3)
+		self.queue.empty.assert_called_once_with()
+		self.response_factory.build.assert_any_call(False, fake_id, '')
+		self.pipe.send_bytes.assert_any_call(self.response_factory.build().serialized)
+		self.request_factory.update_method.assert_called_once_with(some_fake_trans)
+		self.response_factory.update_method.assert_called_once_with(some_fake_trans)
 
 	def test_save_request(self):
 		fake_id = 77
