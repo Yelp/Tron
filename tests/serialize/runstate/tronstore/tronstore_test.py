@@ -14,14 +14,14 @@ class TronstoreMainTestCase(TestCase):
 		self.pipe             = mock.Mock()
 		self.store_class      = mock.Mock()
 		self.trans_method     = mock.Mock()
-		self.mock_thread      = mock.Mock()
+		self.mock_thread      = mock.Mock(is_alive=lambda: False)
 		self.request_factory  = mock.Mock()
 		self.response_factory = mock.Mock()
 		self.lock             = mock.Mock()
 		self.queue            = mock.Mock()
 
 		def poll_patch(timeout):
-			return False if timeout else True
+			return False if tronstore.is_shutdown else True
 		self.pipe.poll = poll_patch
 
 		def echo_single_request(request):
@@ -30,6 +30,9 @@ class TronstoreMainTestCase(TestCase):
 
 		def echo_requests(not_used):
 			return self.requests
+
+		def raise_to_exit(exitcode):
+			raise SystemError
 
 		with contextlib.nested(
 			mock.patch.object(tronstore, 'parse_config',
@@ -46,7 +49,9 @@ class TronstoreMainTestCase(TestCase):
 			mock.patch('tron.serialize.runstate.tronstore.tronstore.Lock',
 				new=mock.Mock(return_value=self.lock)),
 			mock.patch('tron.serialize.runstate.tronstore.tronstore.Queue',
-				new=mock.Mock(return_value=self.queue))
+				new=mock.Mock(return_value=self.queue)),
+			mock.patch.object(tronstore.os, '_exit',
+				side_effect=raise_to_exit)
 		) as (
 			self.parse_patch,
 			self.thread_patch,
@@ -55,7 +60,8 @@ class TronstoreMainTestCase(TestCase):
 			self.request_patch,
 			self.response_patch,
 			self.lock_patch,
-			self.queue_patch
+			self.queue_patch,
+			self.exit_patch
 		):
 			yield
 
@@ -67,13 +73,15 @@ class TronstoreMainTestCase(TestCase):
 		self.queue_patch.assert_called_once_with()
 		self.thread_patch.assert_any_call(target=tronstore.thread_starter, args=(self.queue, []))
 		self.mock_thread.start.assert_called_once_with()
-		self.signal_patch.assert_any_call(signal.SIGINT, tronstore.shutdown_handler)
-		self.signal_patch.assert_any_call(signal.SIGTERM, tronstore.shutdown_handler)
+		self.signal_patch.assert_any_call(signal.SIGINT, tronstore._discard_signal)
+		self.signal_patch.assert_any_call(signal.SIGHUP, tronstore._discard_signal)
+		self.signal_patch.assert_any_call(signal.SIGTERM, tronstore._discard_signal)
+		self.exit_patch.assert_called_once_with(0)
 
 	def test_shutdown_request(self):
 		fake_id = 77
 		self.requests = [mock.Mock(req_type=msg_enums.REQUEST_SHUTDOWN, id=fake_id)]
-		tronstore.main(self.config, self.pipe)
+		assert_raises(SystemError, tronstore.main, self.config, self.pipe)
 
 		self.assert_main_startup()
 		assert tronstore.is_shutdown
@@ -87,7 +95,7 @@ class TronstoreMainTestCase(TestCase):
 		fake_shutdown_id = 88
 		self.requests = [mock.Mock(req_type=msg_enums.REQUEST_CONFIG, id=fake_id),
 			mock.Mock(req_type=msg_enums.REQUEST_SHUTDOWN, id=fake_shutdown_id)]
-		tronstore.main(self.config, self.pipe)
+		assert_raises(SystemError, tronstore.main, self.config, self.pipe)
 
 		self.assert_main_startup()
 		assert tronstore.is_shutdown
@@ -102,7 +110,7 @@ class TronstoreMainTestCase(TestCase):
 		fake_shutdown_id = 88
 		self.requests = [mock.Mock(req_type=msg_enums.REQUEST_SAVE, id=fake_id),
 			mock.Mock(req_type=msg_enums.REQUEST_SHUTDOWN, id=fake_shutdown_id)]
-		tronstore.main(self.config, self.pipe)
+		assert_raises(SystemError, tronstore.main, self.config, self.pipe)
 
 		self.assert_main_startup()
 		assert tronstore.is_shutdown
@@ -121,7 +129,7 @@ class TronstoreMainTestCase(TestCase):
 		fake_shutdown_id = 88
 		self.requests = [mock.Mock(req_type=msg_enums.REQUEST_RESTORE, id=fake_id),
 			mock.Mock(req_type=msg_enums.REQUEST_SHUTDOWN, id=fake_shutdown_id)]
-		tronstore.main(self.config, self.pipe)
+		assert_raises(SystemError, tronstore.main, self.config, self.pipe)
 
 		self.assert_main_startup()
 		assert tronstore.is_shutdown

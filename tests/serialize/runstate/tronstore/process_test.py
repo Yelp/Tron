@@ -1,6 +1,8 @@
 import contextlib
 import mock
-from testify import TestCase, run, assert_equal, assert_raises, setup_teardown
+import signal
+import os
+from testify import TestCase, assert_equal, assert_raises, setup_teardown
 from tron.serialize.runstate.tronstore import tronstore
 from tron.serialize.runstate.tronstore.process import StoreProcessProtocol, TronStoreError
 
@@ -139,15 +141,15 @@ class StoreProcessProtocolTestCase(TestCase):
 			mock.patch.object(self.process.pipe, 'close'),
 			mock.patch.object(self.process.pipe, 'send_bytes'),
 			mock.patch.object(self.process, '_poll_for_response', return_value=mock.Mock()),
-			mock.patch.object(self.process.process, 'terminate')
-		) as (alive_patch, close_patch, send_patch, poll_patch, terminate_patch):
+			mock.patch.object(os, 'kill')
+		) as (alive_patch, close_patch, send_patch, poll_patch, kill_patch):
 			self.process.send_request_shutdown(test_request)
 			alive_patch.assert_called_once_with()
 			assert self.process.is_shutdown
 			send_patch.assert_called_once_with(test_request.serialized)
 			poll_patch.assert_called_once_with(fake_id, self.process.SHUTDOWN_TIMEOUT)
 			close_patch.assert_called_once_with()
-			terminate_patch.assert_called_once_with()
+			kill_patch.assert_called_once_with(self.process.process.pid, signal.SIGKILL)
 
 	def test_send_request_shutdown_is_shutdown(self):
 		self.process.is_shutdown = True

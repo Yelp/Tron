@@ -15,6 +15,7 @@ as this is a child process.)
 """
 import time
 import signal
+import os
 from threading import Thread, Lock
 from Queue import Queue, Empty
 
@@ -24,17 +25,14 @@ from tron.serialize.runstate.tronstore import msg_enums
 
 # This timeout MUST BE SHORTER than the one in process.py!
 # Seriously, if this is longer, everything will break!
-SHUTDOWN_TIMEOUT = 3.0
+SHUTDOWN_TIMEOUT = 1.0
+# this can be rather long- it's only real use it to clean up tronstore
+# in case it's zombied
+POLL_TIMEOUT = 2.0
 POOL_SIZE = 35
 
 
-def shutdown_handler(signum, frame):
-    """This is just here to stop tronstore from exiting early. The process
-    will be terminated from the main tron daemon when all requests have been
-    finished. This is needed because Python propogates signals to
-    spawned processes, and tronstore is going to get a TON of requests whenever
-    a SIGINT is sent to the main daemon, as it has to save everything before
-    it can gracefully shut down."""
+def _discard_signal(signum, frame):
     pass
 
 
@@ -130,8 +128,10 @@ def main(config, pipe):
     waits for requests to handle from pipe. It spawns threads for
     save and restore requests, which will send responses back over
     the pipe once completed."""
-    global is_shutdown, SHUTDOWN_TIMEOUT
+    global is_shutdown, SHUTDOWN_TIMEOUT, POLL_TIMEOUT
+
     is_shutdown = False
+    shutdown_req_id = None
 
     store_class, transport_method = parse_config(config)
 
@@ -140,19 +140,19 @@ def main(config, pipe):
     save_lock = Lock()
     restore_lock = Lock()
 
-    signal.signal(signal.SIGINT, shutdown_handler)
-    signal.signal(signal.SIGTERM, shutdown_handler)
+    signal.signal(signal.SIGINT, _discard_signal)
+    signal.signal(signal.SIGHUP, _discard_signal)
+    signal.signal(signal.SIGTERM, _discard_signal)
 
     running_threads = []
     thread_queue = Queue()
     thread_pool = Thread(target=thread_starter, args=(thread_queue, running_threads))
-    thread_pool.daemon = True
+    thread_pool.daemon = False
     thread_pool.start()
 
     while True:
-        timeout = SHUTDOWN_TIMEOUT if is_shutdown else None
         try:
-            if pipe.poll(timeout):
+            if pipe.poll(POLL_TIMEOUT):
                 requests = get_all_from_pipe(pipe)
                 requests = map(request_factory.rebuild, requests)
                 for request in requests:
@@ -179,13 +179,21 @@ def main(config, pipe):
                                 restore_lock))
                         request_thread.daemon = True
                         thread_queue.put(request_thread)
-            else:
+            elif is_shutdown:
                 # We have to wait for all requests to clean up first.
-                while len(running_threads) != 0:
+                while len(running_threads) != 0 or thread_pool.is_alive():
                     time.sleep(0.5)
                 store_class.cleanup()
-                pipe.send_bytes(response_factory.build(True, shutdown_req_id, '').serialized)
-                return
-        # Signals cause pipe.poll to throw IOErrors...
-        except IOError:
-            continue
+                if shutdown_req_id:
+                    pipe.send_bytes(response_factory.build(True, shutdown_req_id, '').serialized)
+                os._exit(0)
+            else:
+                # Did tron die?
+                try:
+                    os.kill(os.getppid(), 0)
+                except:
+                    is_shutdown = True
+        except IOError, e:
+            # Error #4 is a system interrupt, caused by ^C
+            if e.errno != 4:
+                raise e

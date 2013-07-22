@@ -271,8 +271,6 @@ class StateChangeWatcher(observer.Observer):
 
         if self.state_manager is NullStateManager:
             self.state_manager = PersistenceManagerFactory.from_config(state_config)
-        # self.shutdown()
-        # self.state_manager = PersistenceManagerFactory.from_config(state_config)
         else:
             self.state_manager.update_from_config(state_config)
         self.config = state_config
