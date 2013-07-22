@@ -33,8 +33,6 @@ class PersistenceManagerFactory(object):
         transport_method        = persistence_config.transport_method
         db_store_method         = persistence_config.db_store_method
         buffer_size             = persistence_config.buffer_size
-        # name                    = persistence_config.name
-        # connection_details      = persistence_config.connection_details
 
         if store_type not in schema.StatePersistenceTypes:
             raise PersistenceStoreError("Unknown store type: %s" % store_type)
@@ -44,18 +42,6 @@ class PersistenceManagerFactory(object):
 
         if db_store_method not in schema.StateTransportTypes and store_type in ('sql', 'mongo'):
             raise PersistenceStoreError("Unknown db store method: %s" % db_store_method)
-
-        # if store_type == schema.StatePersistenceTypes.shelve:
-        #     store = ShelveStateStore(name)
-
-        # if store_type == schema.StatePersistenceTypes.sql:
-        #     store = SQLAlchemyStateStore(name, connection_details)
-
-        # if store_type == schema.StatePersistenceTypes.mongo:
-        #     store = MongoStateStore(name, connection_details)
-
-        # if store_type == schema.StatePersistenceTypes.yaml:
-        #     store = YamlStateStore(name)
 
         store = ParallelStore(persistence_config)
         buffer = StateSaveBuffer(buffer_size)
