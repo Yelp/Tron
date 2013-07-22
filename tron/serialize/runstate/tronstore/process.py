@@ -1,11 +1,9 @@
-# import time
 import signal
 import logging
 import os
 from multiprocessing import Process, Pipe
 
 from tron.serialize.runstate.tronstore import tronstore
-# from tron.serialize.runstate.tronstore.chunking import StoreChunkHandler
 
 log = logging.getLogger(__name__)
 
@@ -26,7 +24,7 @@ class StoreProcessProtocol(object):
     while requests have an enumerator (see msg_enums.py) to identify the
     type of request.
     """
-    # This timeout MUST be longer than the one in tronstore!
+    # This timeout MUST be longer than the POLL_TIMEOUT in tronstore!
     SHUTDOWN_TIMEOUT = 100.0
     POLL_TIMEOUT = 10.0
 
@@ -43,12 +41,6 @@ class StoreProcessProtocol(object):
         """
         self.pipe, child_pipe = Pipe()
         store_args = (self.config, child_pipe)
-
-        # See the long comment in tronstore.main() as to why we have to do this
-        # if not signal.getsignal(signal.SIGCHLD):
-        #     print('registering child signal handler')
-        #     signal.signal(signal.SIGCHLD, signal.getsignal(signal.SIGTERM))
-        #     print('registered to %s' % signal.getsignal(signal.SIGCHLD))
 
         self.process = Process(target=tronstore.main, args=store_args)
         self.process.daemon = True
@@ -138,21 +130,10 @@ class StoreProcessProtocol(object):
 
         self.pipe.close()
         # We can't actually use process.terminate(), as that sends a SIGTERM
-        # to the process, which unfortunately is registered to call the same
-        # handler as trond due to how Python copies its environment over
-        # to new processes. In addition, using process.terminate causes
-        # SIGTERMs to get sent to everything that process spawns in its
-        # route to shutting down- and when the trond event handler calls some
-        # stuff that tronstore would never actually touch, and these calls
-        # start some initialization related call stacks, this results in a
-        # bunch of really strange call stacks all getting SIGTERMs that ALL end
-        # up calling the trond signal handler, ending in this horrible
-        # unclean shutdown.
-        #
-        # Using os.kill has the effect we actually want, which is to just
-        # kill tronstore completely. We can do this safely at this point, as
-        # tronstore ONLY sends the shutdown response when it's finished
-        # all of its requests and shutting down the store object.
+        # to the process, which unfortunately is registered to do nothing
+        # (as the process depends on trond to shut itself down, and shuts
+        # itself down if trond is dead anyway.)
+        # We want a hard kill anyway.
         os.kill(self.process.pid, signal.SIGKILL)
 
     def update_config(self, new_config, config_request):

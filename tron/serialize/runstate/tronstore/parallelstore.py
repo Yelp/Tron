@@ -3,7 +3,6 @@ import operator
 import logging
 import os
 
-# from twisted.internet import reactor
 from tron.serialize.runstate.tronstore.process import StoreProcessProtocol
 from tron.serialize.runstate.tronstore.messages import StoreRequestFactory, StoreResponseFactory
 from tron.serialize.runstate.tronstore import msg_enums

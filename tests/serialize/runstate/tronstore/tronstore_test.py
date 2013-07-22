@@ -2,7 +2,7 @@ import contextlib
 import mock
 import signal
 from Queue import Queue
-from testify import TestCase, run, assert_equal, assert_raises, setup_teardown, setup
+from testify import TestCase, assert_equal, assert_raises, setup_teardown, setup
 
 from tron.serialize.runstate.tronstore import tronstore, msg_enums
 

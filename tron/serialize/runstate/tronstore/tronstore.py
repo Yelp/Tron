@@ -23,11 +23,9 @@ from tron.serialize.runstate.tronstore.messages import StoreRequestFactory, Stor
 from tron.serialize.runstate.tronstore import store
 from tron.serialize.runstate.tronstore import msg_enums
 
-# This timeout MUST BE SHORTER than the one in process.py!
-# Seriously, if this is longer, everything will break!
-SHUTDOWN_TIMEOUT = 1.0
 # this can be rather long- it's only real use it to clean up tronstore
-# in case it's zombied
+# in case it's zombied... however, it should be SHORTER than
+# SHUTDOWN_TIMEOUT in process.py
 POLL_TIMEOUT = 2.0
 POOL_SIZE = 35
 
@@ -128,7 +126,7 @@ def main(config, pipe):
     waits for requests to handle from pipe. It spawns threads for
     save and restore requests, which will send responses back over
     the pipe once completed."""
-    global is_shutdown, SHUTDOWN_TIMEOUT, POLL_TIMEOUT
+    global is_shutdown, POLL_TIMEOUT
 
     is_shutdown = False
     shutdown_req_id = None
