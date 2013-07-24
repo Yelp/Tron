@@ -1,4 +1,7 @@
-from tron.serialize.runstate.tronstore.transport import JSONTransport, cPickleTransport, MsgPackTransport, YamlTransport
+from tron.serialize.runstate.tronstore.transport import JSONTransport
+from tron.serialize.runstate.tronstore.transport import cPickleTransport
+from tron.serialize.runstate.tronstore.transport import MsgPackTransport
+from tron.serialize.runstate.tronstore.transport import YamlTransport
 
 transport_class_map = {
     'json': JSONTransport,

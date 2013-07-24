@@ -25,7 +25,6 @@ class PersistenceStoreError(ValueError):
 
 class PersistenceManagerFactory(object):
     """Create a PersistentStateManager."""
-    # TODO: Remove this class, it's somewhat pointless now
 
     @classmethod
     def from_config(cls, persistence_config):

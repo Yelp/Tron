@@ -438,7 +438,7 @@ def validate_jobs_and_services(config, config_context):
     config_utils.unique_names(fmt_string, config['jobs'], config['services'])
 
 
-DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', 'pickle', 1, 'json', 'pickle')
+DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1, 'json', 'pickle')
 DEFAULT_NODE = ValidateNode().do_shortcut('localhost')
 
 
