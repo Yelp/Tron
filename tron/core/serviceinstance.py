@@ -48,6 +48,7 @@ def run_action(task, action):
         stream = task.buffer_store.open(actioncommand.ActionCommand.STDERR)
         stream.write("Node run failure for %s: %s" % (task.task_name, e))
         task.notify(task.NOTIFY_FAILED)
+        return False
 
 
 def get_failures_from_task(task):
@@ -133,11 +134,13 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
         self.hang_check_callback.cancel()
 
     def fail(self):
+        old_action = self.action
+        self.action = actioncommand.CompletedActionCommand
         log.warning("%s is still running %s.", self, self.action)
-        self.node.stop(self.action)
+        self.node.stop(old_action)
         self.action.write_stderr("Monitoring failed")
         self.notify(self.NOTIFY_FAILED)
-        self.action = actioncommand.CompletedActionCommand
+        self.queue()
 
     def __str__(self):
         return "%s(%s)" % (self.__class__.__name__, self.id)
