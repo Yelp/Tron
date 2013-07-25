@@ -25,7 +25,7 @@ class StoreRequestFactory(object):
         self.id_counter = self._increment_counter()
         return new_request
 
-    def rebuild(self, msg):
+    def from_msg(self, msg):
         return StoreRequest.from_message(self.serializer.deserialize(msg), self.serializer)
 
     # def update_method(self, new_method):
@@ -50,7 +50,7 @@ class StoreResponseFactory(object):
         new_request = StoreResponse(req_id, success, data, self.serializer)
         return new_request
 
-    def rebuild(self, msg):
+    def from_msg(self, msg):
         return StoreResponse.from_message(self.serializer.deserialize(msg), self.serializer)
 
     # def update_method(self, new_method):

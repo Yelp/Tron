@@ -26,7 +26,7 @@ class TronstoreMainTestCase(TestCase):
 
 		def echo_single_request(request):
 			return request
-		self.request_factory.rebuild = echo_single_request
+		self.request_factory.from_msg = echo_single_request
 
 		def echo_requests(not_used):
 			return self.requests

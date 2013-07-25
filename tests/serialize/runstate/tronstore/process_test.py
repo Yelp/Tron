@@ -217,16 +217,16 @@ class StoreProcessProtocolTestCase(TestCase):
 		with contextlib.nested(
 			mock.patch.object(self.process.pipe, 'poll', return_value=True),
 			mock.patch.object(self.process.pipe, 'recv_bytes', side_effect=recv_change_response),
-			mock.patch.object(self.process.response_factory, 'rebuild', side_effect=get_fake_response)
-		) as (poll_patch, recv_patch, rebuild_patch):
+			mock.patch.object(self.process.response_factory, 'from_msg', side_effect=get_fake_response)
+		) as (poll_patch, recv_patch, from_msg_patch):
 			assert_equal(self.process._poll_for_response(fake_id, fake_timeout), fake_response_matching)
 			assert_equal(self.process.orphaned_responses, {fake_id_other: fake_response_other})
 			poll_patch.assert_called_with(fake_timeout)
 			assert_equal(poll_patch.call_count, 2)
 			recv_patch.assert_called_with()
 			assert_equal(recv_patch.call_count, 2)
-			rebuild_patch.assert_called_with('second')
-			assert_equal(rebuild_patch.call_count, 2)
+			from_msg_patch.assert_called_with('second')
+			assert_equal(from_msg_patch.call_count, 2)
 
 	def test_poll_for_response_has_orphaned(self):
 		fake_id = 77
@@ -236,13 +236,13 @@ class StoreProcessProtocolTestCase(TestCase):
 		with contextlib.nested(
 			mock.patch.object(self.process.pipe, 'poll', return_value=True),
 			mock.patch.object(self.process.pipe, 'recv_bytes'),
-			mock.patch.object(self.process.response_factory, 'rebuild')
-		) as (poll_patch, recv_patch, rebuild_patch):
+			mock.patch.object(self.process.response_factory, 'from_msg')
+		) as (poll_patch, recv_patch, from_msg_patch):
 			assert_equal(self.process._poll_for_response(fake_id, fake_timeout), fake_response)
 			assert_equal(self.process.orphaned_responses, {})
 			assert not poll_patch.called
 			assert not recv_patch.called
-			assert not rebuild_patch.called
+			assert not from_msg_patch.called
 
 	def test_poll_for_response_no_response(self):
 		fake_id = 77
@@ -251,10 +251,10 @@ class StoreProcessProtocolTestCase(TestCase):
 		with contextlib.nested(
 			mock.patch.object(self.process.pipe, 'poll', return_value=False),
 			mock.patch.object(self.process.pipe, 'recv_bytes'),
-			mock.patch.object(self.process.response_factory, 'rebuild')
-		) as (poll_patch, recv_patch, rebuild_patch):
+			mock.patch.object(self.process.response_factory, 'from_msg')
+		) as (poll_patch, recv_patch, from_msg_patch):
 			assert_equal(self.process._poll_for_response(fake_id, fake_timeout), None)
 			assert_equal(self.process.orphaned_responses, {})
 			poll_patch.assert_called_once_with(fake_timeout)
 			assert not recv_patch.called
-			assert not rebuild_patch.called
+			assert not from_msg_patch.called

@@ -155,7 +155,7 @@ def main(config, pipe):
         try:
             if pipe.poll(POLL_TIMEOUT):
                 requests = get_all_from_pipe(pipe)
-                requests = map(request_factory.rebuild, requests)
+                requests = map(request_factory.from_msg, requests)
                 for request in requests:
                     if request.req_type == msg_enums.REQUEST_SHUTDOWN:
                         is_shutdown = True

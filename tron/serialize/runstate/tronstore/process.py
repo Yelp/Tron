@@ -86,7 +86,7 @@ class StoreProcessProtocol(object):
             return self.orphaned_responses.pop(id)
 
         while self.pipe.poll(timeout):
-            response = self.response_factory.rebuild(self.pipe.recv_bytes())
+            response = self.response_factory.from_msg(self.pipe.recv_bytes())
             if response.id == id:
                 return response
             else:
