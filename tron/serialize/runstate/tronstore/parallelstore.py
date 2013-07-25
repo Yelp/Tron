@@ -4,7 +4,7 @@ import logging
 import os
 
 from tron.serialize.runstate.tronstore.process import StoreProcessProtocol
-from tron.serialize.runstate.tronstore.messages import StoreRequestFactory, StoreResponseFactory
+from tron.serialize.runstate.tronstore.messages import StoreRequestFactory
 from tron.serialize.runstate.tronstore import msg_enums
 
 log = logging.getLogger(__name__)
@@ -30,6 +30,7 @@ class ParallelKey(object):
     def __hash__(self):
         return hash(self.key)
 
+
 class ParallelStore(object):
     """Persist state using a paralleled storing mechanism, tronstore. This uses
     the Twisted library to run the tronstore executable in a separate
@@ -38,10 +39,9 @@ class ParallelStore(object):
     This class handles construction of all messages that need to be sent
     to tronstore based on requests given by the MCP."""
 
-    def __init__(self, config):
-        self.request_factory = StoreRequestFactory(config.transport_method)
-        self.response_factory = StoreResponseFactory(config.transport_method)
-        self.process = StoreProcessProtocol(config, self.response_factory)
+    def __init__(self):
+        self.request_factory = StoreRequestFactory()
+        self.process = StoreProcessProtocol()
 
     def build_key(self, type, iden):
         return ParallelKey(type, iden)
@@ -72,8 +72,8 @@ class ParallelStore(object):
         response = self.process.send_request_get_response(config_req)
         if response.success:
             self.process.update_config(new_config, config_req)
-            self.request_factory.update_method(new_config.transport_method)
-            self.response_factory.update_method(new_config.transport_method)
+            # self.request_factory.update_method(new_config.transport_method)
+            # self.response_factory.update_method(new_config.transport_method)
             return True
         else:
             return False

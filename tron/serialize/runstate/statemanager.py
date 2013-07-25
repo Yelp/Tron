@@ -23,28 +23,28 @@ class PersistenceStoreError(ValueError):
     """Raised if the store can not be created or fails a read or write."""
 
 
-class PersistenceManagerFactory(object):
-    """Create a PersistentStateManager."""
+# class PersistenceManagerFactory(object):
+#     """Create a PersistentStateManager."""
 
-    @classmethod
-    def from_config(cls, persistence_config):
-        store_type              = persistence_config.store_type
-        transport_method        = persistence_config.transport_method
-        db_store_method         = persistence_config.db_store_method
-        buffer_size             = persistence_config.buffer_size
+#     @classmethod
+#     def from_config(cls, persistence_config):
+#         store_type              = persistence_config.store_type
+#         # transport_method        = persistence_config.transport_method
+#         db_store_method         = persistence_config.db_store_method
+#         buffer_size             = persistence_config.buffer_size
 
-        if store_type not in schema.StatePersistenceTypes:
-            raise PersistenceStoreError("Unknown store type: %s" % store_type)
+#         if store_type not in schema.StatePersistenceTypes:
+#             raise PersistenceStoreError("Unknown store type: %s" % store_type)
 
-        if transport_method not in schema.StateTransportTypes:
-            raise PersistenceStoreError("Unknown transport type: %s" % transport_method)
+#         # if transport_method not in schema.StateTransportTypes:
+#         #     raise PersistenceStoreError("Unknown transport type: %s" % transport_method)
 
-        if db_store_method not in schema.StateTransportTypes and store_type in ('sql', 'mongo'):
-            raise PersistenceStoreError("Unknown db store method: %s" % db_store_method)
+#         if db_store_method not in schema.StateSerializationTypes and store_type in ('sql', 'mongo'):
+#             raise PersistenceStoreError("Unknown db store method: %s" % db_store_method)
 
-        store = ParallelStore(persistence_config)
-        buffer = StateSaveBuffer(buffer_size)
-        return PersistentStateManager(store, buffer)
+#         store = ParallelStore(persistence_config)
+#         buffer = StateSaveBuffer(buffer_size)
+#         return PersistentStateManager(store, buffer)
 
 
 class StateMetadata(object):
@@ -105,6 +105,18 @@ class StateSaveBuffer(object):
         self.buffer.clear()
 
 
+class NullSaveBuffer(object):
+    buffer_size = 0
+    buffer = {}
+    counter = 0
+
+    def save(self, key, state_data):
+        return False
+
+    def __iter__(self):
+        return iter([])
+
+
 class PersistentStateManager(object):
     """Provides an interface to persist the state of Tron.
 
@@ -131,10 +143,10 @@ class PersistentStateManager(object):
     """
     # TODO: Rename things here, as ParallelStore is always used
 
-    def __init__(self, persistence_impl, buffer):
+    def __init__(self):
         self.enabled            = True
-        self._buffer            = buffer
-        self._impl              = persistence_impl
+        self._buffer            = NullSaveBuffer()
+        self._impl              = ParallelStore()
         self.metadata_key       = self._impl.build_key(
                                     runstate.MCP_STATE, StateMetadata.name)
 
@@ -201,7 +213,11 @@ class PersistentStateManager(object):
 
     def update_from_config(self, new_state_config):
         self._save_from_buffer()
-        return self._impl.load_config(new_state_config)
+        if self._impl.load_config(new_state_config):
+            self._buffer = StateSaveBuffer(new_state_config.buffer_size)
+            return True
+        else:
+            return False
 
     def cleanup(self):
         self._save_from_buffer()
@@ -247,19 +263,27 @@ class StateChangeWatcher(observer.Observer):
     """Observer of stateful objects."""
 
     def __init__(self):
-        self.state_manager = NullStateManager
+        self.state_manager = PersistentStateManager()
         self.config        = None
 
     def update_from_config(self, state_config):
         if self.config == state_config:
             return False
 
-        if self.state_manager is NullStateManager:
-            self.state_manager = PersistenceManagerFactory.from_config(state_config)
-        elif not self.state_manager.update_from_config(state_config):
+        if state_config.store_type not in schema.StatePersistenceTypes:
+            raise PersistenceStoreError("Unknown store type: %s" % store_type)
+
+        if state_config.db_store_method not in schema.StateSerializationTypes \
+        and store_type in ('sql', 'mongo'):
+            raise PersistenceStoreError("Unknown db store method: %s" % db_store_method)
+
+        # if self.state_manager is NullStateManager:
+        #     self.state_manager = PersistenceManagerFactory.from_config(state_config)
+        if not self.state_manager.update_from_config(state_config):
             return False
-        self.config = state_config
-        return True
+        else:
+            self.config = state_config
+            return True
 
     def handler(self, observable, _event):
         """Handle a state change in an observable by saving its state."""

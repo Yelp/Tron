@@ -34,11 +34,6 @@ Command line options:
              configuration file.
              Options for str are sql, mongo, yaml, and shelve.
 
-    -t str   Set a new method for transporting the new state objects to
-             tronstore. Defaults to whatever was set to transport_method in the
-             Tron configuration file, or pickle if it isn't set.
-             Options for str are pickle, yaml, msgpack, and json.
-
     -d str   Set a new method for storing state data within an SQL database.
              Defaults to whatever was set to db_store_method in the Tron
              configuration file, or json if it isn't set. Only used if
@@ -55,7 +50,7 @@ import copy
 
 from tron.commands import cmd_utils
 from tron.config import ConfigError
-from tron.config.schema import StatePersistenceTypes, StateTransportTypes
+from tron.config.schema import StatePersistenceTypes
 from tron.config.manager import ConfigManager
 from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
@@ -74,9 +69,9 @@ def parse_options():
     parser.add_option("-m", type="string",
                       help="Set new state storing mechanism (store_type)",
                       dest="store_method", default=None)
-    parser.add_option("-t", type="string",
-                      help="Set new transport method",
-                      dest="transport_method", default=None)
+    # parser.add_option("-t", type="string",
+    #                   help="Set new transport method",
+    #                   dest="transport_method", default=None)
     parser.add_option("-d", type="string",
                       help="Set new SQL db serialization method (db_store_method)",
                       dest="db_store_method", default=None)
@@ -118,8 +113,8 @@ def compile_new_info(options, state_info, new_file):
     if options.store_method:
         new_state_info = new_state_info._replace(store_method=options.store_method)
 
-    if options.transport_method:
-        new_state_info = new_state_info._replace(transport_method=options.transport_method)
+    # if options.transport_method:
+    #     new_state_info = new_state_info._replace(transport_method=options.transport_method)
 
     if options.db_store_method:
         new_state_info = new_state_info._replace(db_store_method=options.db_store_method)

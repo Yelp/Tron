@@ -399,19 +399,16 @@ class ValidateStatePersistence(Validator):
         # defaulting people into using a Turing Complete serialization method
         # for SQL storing.
         'db_store_method':      'json',
-        'transport_method':     'pickle',
     }
 
     validators = {
         'name':                 valid_string,
         'store_type':           config_utils.build_enum_validator(
                                     schema.StatePersistenceTypes),
-        'transport_method':     config_utils.build_enum_validator(
-                                    schema.StateTransportTypes),
         'connection_details':   valid_string,
         'buffer_size':          valid_int,
         'db_store_method':      config_utils.build_enum_validator(
-                                    schema.StateTransportTypes),
+                                    schema.StateSerializationTypes),
     }
 
     def post_validation(self, config, config_context):
@@ -438,7 +435,7 @@ def validate_jobs_and_services(config, config_context):
     config_utils.unique_names(fmt_string, config['jobs'], config['services'])
 
 
-DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1, 'json', 'pickle')
+DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1, 'json')
 DEFAULT_NODE = ValidateNode().do_shortcut('localhost')
 
 

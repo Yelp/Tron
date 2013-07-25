@@ -1,4 +1,4 @@
-"""Message transport modules for tronstore. This allows for simple writing
+"""Message serialization modules for tronstore. This allows for simple writing
 of stdin/out with strings that can then be put back into tuples of data
 for rebuilding messages.
 
@@ -21,8 +21,8 @@ except ImportError:
     no_yaml = True
 
 
-class TransportModuleError(Exception):
-    """Raised if a transport module is used without it being installed."""
+class SerializerModuleError(Exception):
+    """Raised if a serialization module is used without it being installed."""
     def __init__(self, code):
         self.code = code
 
@@ -30,7 +30,7 @@ class TransportModuleError(Exception):
         return repr(self.code)
 
 
-class JSONTransport(object):
+class JSONSerializer(object):
     @classmethod
     def serialize(cls, data):
         return json.dumps(data, tuple_as_array=False)
@@ -40,7 +40,7 @@ class JSONTransport(object):
         return json.loads(data_str)
 
 
-class cPickleTransport(object):
+class cPickleSerializer(object):
     @classmethod
     def serialize(cls, data):
         return pickle.dumps(data)
@@ -50,29 +50,37 @@ class cPickleTransport(object):
         return pickle.loads(data_str)
 
 
-class MsgPackTransport(object):
+class MsgPackSerializer(object):
     @classmethod
     def serialize(cls, data):
         if no_msgpack:
-            raise TransportModuleError('MessagePack not installed.')
+            raise SerializerModuleError('MessagePack not installed.')
         return msgpack.packb(data)
 
     @classmethod
     def deserialize(cls, data_str):
         if no_msgpack:
-            raise TransportModuleError('MessagePack not installed.')
+            raise SerializerModuleError('MessagePack not installed.')
         return msgpack.unpackb(data_str, use_list=False)
 
 
-class YamlTransport(object):
+class YamlSerializer(object):
     @classmethod
     def serialize(cls, data):
         if no_yaml:
-            raise TransportModuleError('PyYaml not installed.')
+            raise SerializerModuleError('PyYaml not installed.')
         return yaml.dump(data)
 
     @classmethod
     def deserialize(cls, data_str):
         if no_yaml:
-            raise TransportModuleError('PyYaml not installed.')
+            raise SerializerModuleError('PyYaml not installed.')
         return yaml.load(data_str)
+
+
+serialize_class_map = {
+    'json': JSONSerializer,
+    'pickle': cPickleSerializer,
+    'msgpack': MsgPackSerializer,
+    'yaml': YamlSerializer
+}

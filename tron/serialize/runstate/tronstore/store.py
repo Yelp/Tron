@@ -3,9 +3,24 @@ import urlparse
 import os
 from contextlib import contextmanager
 
-from tron.serialize.runstate.tronstore.messages import transport_class_map
+from tron.serialize.runstate.tronstore.transport import serialize_class_map
 from tron.serialize import runstate
 from tron.config.config_utils import MAX_IDENTIFIER_LENGTH
+
+
+class NullStore(object):
+
+    def save(self, key, state_data, data_type):
+        return False
+
+    def restore(self, key, data_type):
+        return (False, None)
+
+    def cleanup(self):
+        pass
+
+    def __repr__(self):
+        return "NullStateStore"
 
 
 class ShelveStore(object):
@@ -170,6 +185,7 @@ class MongoStore(object):
 
 
 class YamlStore(object):
+    # TODO: Deprecate this, it's bad
     """Store state in a local YAML file.
 
     WARNING: Using this is NOT recommended, even moreso than the previous
@@ -228,5 +244,5 @@ store_class_map = {
 
 
 def build_store(name, store_type, connection_details, db_store_method):
-    trans_class = transport_class_map[db_store_method] if db_store_method != "None" else None
-    return store_class_map[store_type](name, connection_details, trans_class)
+    serial_class = serialize_class_map[db_store_method] if db_store_method != "None" else None
+    return store_class_map[store_type](name, connection_details, serial_class)

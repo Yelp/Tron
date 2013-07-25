@@ -4,15 +4,19 @@ import os
 from multiprocessing import Process, Pipe
 
 from tron.serialize.runstate.tronstore import tronstore
+from tron.serialize.runstate.tronstore.messages import StoreResponseFactory
 
 log = logging.getLogger(__name__)
+
 
 class TronStoreError(Exception):
     """Raised whenever tronstore exits for an unknown reason."""
     def __init__(self, code):
         self.code = code
+
     def __str__(self):
         return repr(self.code)
+
 
 class StoreProcessProtocol(object):
     """The class that actually communicates with tronstore. This is a subclass
@@ -28,9 +32,9 @@ class StoreProcessProtocol(object):
     SHUTDOWN_TIMEOUT = 100.0
     POLL_TIMEOUT = 10.0
 
-    def __init__(self, config, response_factory):
-        self.config = config
-        self.response_factory = response_factory
+    def __init__(self):
+        self.config = None
+        self.response_factory = StoreResponseFactory()
         self.orphaned_responses = {}
         self.is_shutdown = False
         self._start_process()
@@ -65,7 +69,6 @@ class StoreProcessProtocol(object):
         self._verify_is_alive()
 
         self.pipe.send_bytes(request.serialized)
-        # self.transport.write(self.chunker.sign(request.serialized))
 
     def _poll_for_response(self, id, timeout):
         """Polls for a response to the request with identifier id. Throws
@@ -78,9 +81,9 @@ class StoreProcessProtocol(object):
         be fine.
         """
         if id in self.orphaned_responses:
-            response = self.orphaned_responses[id]
-            del self.orphaned_responses[id]
-            return response
+            # response = self.orphaned_responses[id]
+            # del self.orphaned_responses[id]
+            return self.orphaned_responses.pop(id)
 
         while self.pipe.poll(timeout):
             response = self.response_factory.rebuild(self.pipe.recv_bytes())
@@ -103,7 +106,8 @@ class StoreProcessProtocol(object):
         self.pipe.send_bytes(request.serialized)
         response = self._poll_for_response(request.id, self.POLL_TIMEOUT)
         if not response:
-            log.warn("tronstore took longer than %d seconds to respond to a request, and it was dropped." % self.POLL_TIMEOUT)
+            log.warn(("tronstore took longer than %d seconds to respond to a"
+                     "request, and it was dropped.") % self.POLL_TIMEOUT)
             return self.response_factory.build(False, request.id, '')
         else:
             return response
@@ -134,7 +138,10 @@ class StoreProcessProtocol(object):
         # (as the process depends on trond to shut itself down, and shuts
         # itself down if trond is dead anyway.)
         # We want a hard kill regardless.
-        os.kill(self.process.pid, signal.SIGKILL)
+        try:
+            os.kill(self.process.pid, signal.SIGKILL)
+        except:
+            pass
 
     def update_config(self, new_config):
         """Update the configuration. Needed to make sure that tronstore

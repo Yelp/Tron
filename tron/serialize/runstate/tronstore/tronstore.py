@@ -36,13 +36,16 @@ def _discard_signal(signum, frame):
 
 def parse_config(config):
     """Parse the configuration file and set up the store class."""
+    if not config:
+        return store.NullStore()
+
     name = config.name
-    transport_method = config.transport_method
+    # transport_method = config.transport_method
     store_type = config.store_type
     connection_details = config.connection_details
     db_store_method = config.db_store_method
 
-    return (store.build_store(name, store_type, connection_details, db_store_method), transport_method)
+    return store.build_store(name, store_type, connection_details, db_store_method) #, transport_method)
 
 def get_all_from_pipe(pipe):
     """Gets all of the requests from the pipe, returning an array of serialized
@@ -131,10 +134,10 @@ def main(config, pipe):
     is_shutdown = False
     shutdown_req_id = None
 
-    store_class, transport_method = parse_config(config)
+    store_class = parse_config(config)
 
-    request_factory = StoreRequestFactory(transport_method)
-    response_factory = StoreResponseFactory(transport_method)
+    request_factory = StoreRequestFactory()
+    response_factory = StoreResponseFactory()
     save_lock = Lock()
     restore_lock = Lock()
 
@@ -164,16 +167,16 @@ def main(config, pipe):
                         store_class.cleanup()
                         try:
                             # Try to set up with the new configuration
-                            store_class, transport_method = parse_config(request.data)
+                            store_class = parse_config(request.data)
                             pipe.send_bytes(response_factory.build(True, request.id, '').serialized)
-                            request_factory.update_method(transport_method)
-                            response_factory.update_method(transport_method)
+                            # request_factory.update_method(transport_method)
+                            # response_factory.update_method(transport_method)
                             config = request.data
                         except:
                             # Failed, go back to what we had
-                            store_class, transport_method = parse_config(config)
-                            request_factory.update_method(transport_method)
-                            response_factory.update_method(transport_method)
+                            store_class = parse_config(config)
+                            # request_factory.update_method(transport_method)
+                            # response_factory.update_method(transport_method)
                             pipe.send_bytes(response_factory.build(False, request.id, '').serialized)
 
                     else:
@@ -185,7 +188,7 @@ def main(config, pipe):
                                 response_factory,
                                 save_lock,
                                 restore_lock))
-                        request_thread.daemon = True
+                        request_thread.daemon = False
                         thread_queue.put(request_thread)
             elif is_shutdown:
                 # We have to wait for all threads to clean up first.
@@ -194,6 +197,7 @@ def main(config, pipe):
                 store_class.cleanup()
                 if shutdown_req_id:
                     pipe.send_bytes(response_factory.build(True, shutdown_req_id, '').serialized)
+                # TODO: Do we need a forceful kill? Can we just return here?
                 os._exit(0)
             else:
                 # Did tron die?
@@ -204,4 +208,4 @@ def main(config, pipe):
         except IOError, e:
             # Error #4 is a system interrupt, caused by ^C
             if e.errno != 4:
-                raise e
+                raise

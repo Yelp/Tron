@@ -94,7 +94,6 @@ ConfigState = config_object_factory(
         'connection_details',
         'buffer_size',
         'db_store_method',
-        'transport_method',
     ])
 
 
@@ -153,7 +152,7 @@ ConfigService = config_object_factory(
 
 
 StatePersistenceTypes = Enum.create('shelve', 'sql', 'mongo', 'yaml')
-StateTransportTypes = Enum.create('json', 'pickle', 'msgpack', 'yaml')
+StateSerializationTypes = Enum.create('json', 'pickle', 'msgpack', 'yaml')
 
 
 ActionRunnerTypes = Enum.create('none', 'subprocess')
