@@ -71,7 +71,7 @@ class ParallelStore(object):
         config_req = self.request_factory.build(msg_enums.REQUEST_CONFIG, '', new_config)
         response = self.process.send_request_get_response(config_req)
         if response.success:
-            self.process.update_config(new_config, config_req)
+            self.process.update_config(new_config)
             # self.request_factory.update_method(new_config.transport_method)
             # self.response_factory.update_method(new_config.transport_method)
             return True

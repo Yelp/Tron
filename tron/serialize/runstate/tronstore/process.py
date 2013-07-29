@@ -65,6 +65,7 @@ class StoreProcessProtocol(object):
         waiting for tronstore's response.
         """
         if self.is_shutdown:
+            log.warn('attempted to send a request of type %s while shut down!' % request.req_type)
             return
         self._verify_is_alive()
 
@@ -100,6 +101,7 @@ class StoreProcessProtocol(object):
         """
 
         if self.is_shutdown:
+            log.warn('attempted to send a request of type %s while shut down!' % request.req_type)
             return self.response_factory.build(False, request.id, '')
         self._verify_is_alive()
 
@@ -137,7 +139,8 @@ class StoreProcessProtocol(object):
         # to the process, which unfortunately is registered to do nothing
         # (as the process depends on trond to shut itself down, and shuts
         # itself down if trond is dead anyway.)
-        # We want a hard kill regardless.
+        # We want a hard kill regardless. The only way we should get to
+        # this code is if tronstore is about to call os._exit(0) itself.
         try:
             os.kill(self.process.pid, signal.SIGKILL)
         except:

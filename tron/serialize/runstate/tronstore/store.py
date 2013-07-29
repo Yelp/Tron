@@ -2,8 +2,9 @@ import shelve
 import urlparse
 import os
 from contextlib import contextmanager
+from threading import Lock
 
-from tron.serialize.runstate.tronstore.transport import serialize_class_map
+from tron.serialize.runstate.tronstore.serialize import serialize_class_map
 from tron.serialize import runstate
 from tron.config.config_utils import MAX_IDENTIFIER_LENGTH
 
@@ -246,3 +247,39 @@ store_class_map = {
 def build_store(name, store_type, connection_details, db_store_method):
     serial_class = serialize_class_map[db_store_method] if db_store_method != "None" else None
     return store_class_map[store_type](name, connection_details, serial_class)
+
+
+class SyncStore(object):
+    """A store object that synchronizes all save/restore operations on the
+    store implementation, as we have no idea what could happen due to its
+    modular nature.
+    """
+
+    def __init__(self, config):
+        """Parse the configuration file and set up the store class."""
+        self.lock = Lock()
+        if not config:
+            self.store = NullStore()
+
+        else:
+            name = config.name
+            store_type = config.store_type
+            connection_details = config.connection_details
+            db_store_method = config.db_store_method
+
+            self.store = build_store(name, store_type, connection_details,
+                db_store_method)
+
+    def save(self, *args, **kwargs):
+        with self.lock:
+            return self.store.save(*args, **kwargs)
+
+    def restore(self, *args, **kwargs):
+        with self.lock:
+            return self.store.restore(*args, **kwargs)
+
+    def cleanup(self):
+        self.store.cleanup()
+
+    def __repr__(self):
+        return "SyncStore('%s')" % self.store.__repr__()

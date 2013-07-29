@@ -441,6 +441,7 @@ class JobContainer(object):
             self.watcher.watch(run)
         self.job_state.restore_state(job_state_data)
         self.job_scheduler.restore_state()
+        self.job_state.set_run_ids(self.job_runs.get_run_numbers())  # consistency
         self.event.ok('restored')
 
     def update_from_job(self, job):

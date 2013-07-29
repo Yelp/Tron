@@ -10,8 +10,8 @@ This allows for easy polling and no need to handle chunking of messages.
 
 The process intercepts the two shutdown signals (SIGINT and SIGTERM) in order
 to prevent the process from exiting early when trond wants to do some final
-shutdown things (realistically, it should be handling all shutdown operations
-as this is a child process.)
+shutdown things (realistically, trond should be handling all shutdown
+operations, as this is a child process.)
 """
 import time
 import signal
@@ -23,189 +23,256 @@ from tron.serialize.runstate.tronstore.messages import StoreRequestFactory, Stor
 from tron.serialize.runstate.tronstore import store
 from tron.serialize.runstate.tronstore import msg_enums
 
-# this can be rather long- it's only real use it to clean up tronstore
-# in case it's zombied... however, it should be SHORTER than
-# SHUTDOWN_TIMEOUT in process.py
-POLL_TIMEOUT = 2.0
-POOL_SIZE = 35
-
 
 def _discard_signal(signum, frame):
     pass
 
 
-def parse_config(config):
-    """Parse the configuration file and set up the store class."""
-    if not config:
-        return store.NullStore()
-
-    name = config.name
-    # transport_method = config.transport_method
-    store_type = config.store_type
-    connection_details = config.connection_details
-    db_store_method = config.db_store_method
-
-    return store.build_store(name, store_type, connection_details, db_store_method) #, transport_method)
-
-def get_all_from_pipe(pipe):
-    """Gets all of the requests from the pipe, returning an array of serialized
-    requests (they still need to be decoded).
-    """
-    requests = []
-    while pipe.poll():
-        requests.append(pipe.recv_bytes())
-    return requests
-
-def handle_request(request, store_class, pipe, factory, save_lock, restore_lock):
-    """Handle a request by acting on store_class with the appropriate action.
-
-    This is run in a separate thread. As such, there's two mutexes here- one
-    for the save requests, and one for the restore requests."""
-
-    if request.req_type == msg_enums.REQUEST_SAVE:
-        with save_lock:
-            success = store_class.save(request.data[0], request.data[1], request.data_type)
-        pipe.send_bytes(factory.build(success, request.id, '').serialized)
-
-    elif request.req_type == msg_enums.REQUEST_RESTORE:
-        with restore_lock:
-            success, data = store_class.restore(request.data, request.data_type)
-        pipe.send_bytes(factory.build(success, request.id, data).serialized)
-
-    else:
-        pipe.send_bytes(factory.build(False, request.id, '').serialized)
-
-
-def _remove_finished_threads(running_threads):
-    """A small helper function to clean out the running_threads array.
-    Doesn't actually create a new instance of a list; it modifies
-    the existing list as a side effect, and returns the number
-    of running threads that it cleaned up."""
-    counter = 0
-    for i in range(len(running_threads) - 1, -1, -1):
-        if not running_threads[i].is_alive():
-            running_threads.pop(i)
-            counter += 1
-    return counter
-
-
-def thread_starter(queue, running_threads):
-    """A method to start threads that have been queued up in queue. Also takes
-    a reference to a list (running_threads) that this function will store any
-    threads it has started in, so the main method knows if there's still
-    currently executing requests.
-
-    Keep in mind because running_threads is a reference to a single instance
-    of a list object, it CANNOT be reassigned to another instance in order to
-    allow the main thread to know what's running. As such, all operations on
-    running_threads must be method calls to modify the list instance given
-    to this thread."""
-    global is_shutdown, POOL_SIZE
-
-    pool_counter = POOL_SIZE
-
-    while not is_shutdown or not queue.empty():
-        pool_counter += _remove_finished_threads(running_threads)
-
-        if pool_counter <= 0:
-            time.sleep(0.5)
-            continue
-
-        try:
-            thread = queue.get(timeout=0.5)
-            thread.start()
-            pool_counter -= 1
-            running_threads.append(thread)
-        except Empty:
-            continue
-
-    while len(running_threads) != 0:
-        _remove_finished_threads(running_threads)
-
-
-def main(config, pipe):
-    """The main run loop for tronstore. This loop sets up everything
-    based on the configuration tronstore got, and then simply
-    waits for requests to handle from pipe. It spawns threads for
-    save and restore requests, which will send responses back over
-    the pipe once completed."""
-    global is_shutdown, POLL_TIMEOUT
-
-    is_shutdown = False
-    shutdown_req_id = None
-
-    store_class = parse_config(config)
-
-    request_factory = StoreRequestFactory()
-    response_factory = StoreResponseFactory()
-    save_lock = Lock()
-    restore_lock = Lock()
-
+def _register_null_handlers():
     signal.signal(signal.SIGINT, _discard_signal)
     signal.signal(signal.SIGHUP, _discard_signal)
     signal.signal(signal.SIGTERM, _discard_signal)
 
-    running_threads = []
-    thread_queue = Queue()
-    thread_pool = Thread(target=thread_starter, args=(thread_queue, running_threads))
-    thread_pool.daemon = False
-    thread_pool.start()
 
-    while True:
+def handle_requests(request_queue, resp_factory, pipe, store_class, do_work):
+    """Handle requests by acting on store_class with the appropriate action.
+    Requests are taken from request_queue until do_work.val (it should be a
+    PoolBool) is False.
+    This is run in a separate thread.
+    """
+
+    # This should probably be lower rather than higher
+    WORK_TIMEOUT = 1.0
+
+    while do_work.val or not request_queue.empty():
         try:
-            if pipe.poll(POLL_TIMEOUT):
-                requests = get_all_from_pipe(pipe)
-                requests = map(request_factory.from_msg, requests)
-                for request in requests:
-                    if request.req_type == msg_enums.REQUEST_SHUTDOWN:
-                        is_shutdown = True
-                        shutdown_req_id = request.id
+            request = request_queue.get(block=True, timeout=WORK_TIMEOUT)
 
-                    elif request.req_type == msg_enums.REQUEST_CONFIG:
-                        while len(running_threads) != 0 or not thread_queue.empty():
-                            time.sleep(0.5)
-                        store_class.cleanup()
-                        try:
-                            # Try to set up with the new configuration
-                            store_class = parse_config(request.data)
-                            pipe.send_bytes(response_factory.build(True, request.id, '').serialized)
-                            # request_factory.update_method(transport_method)
-                            # response_factory.update_method(transport_method)
-                            config = request.data
-                        except:
-                            # Failed, go back to what we had
-                            store_class = parse_config(config)
-                            # request_factory.update_method(transport_method)
-                            # response_factory.update_method(transport_method)
-                            pipe.send_bytes(response_factory.build(False, request.id, '').serialized)
+            if request.req_type == msg_enums.REQUEST_SAVE:
+                store_class.save(request.data[0], request.data[1], request.data_type)
+                # pipe.send_bytes(resp_factory.build(success, request.id, '').serialized)
 
-                    else:
-                        request_thread = Thread(target=handle_request,
-                            args=(
-                                request,
-                                store_class,
-                                pipe,
-                                response_factory,
-                                save_lock,
-                                restore_lock))
-                        request_thread.daemon = False
-                        thread_queue.put(request_thread)
-            elif is_shutdown:
-                # We have to wait for all threads to clean up first.
-                while len(running_threads) != 0 or thread_pool.is_alive():
-                    time.sleep(0.5)
-                store_class.cleanup()
-                if shutdown_req_id:
-                    pipe.send_bytes(response_factory.build(True, shutdown_req_id, '').serialized)
-                # TODO: Do we need a forceful kill? Can we just return here?
-                os._exit(0)
+            elif request.req_type == msg_enums.REQUEST_RESTORE:
+                success, data = store_class.restore(request.data, request.data_type)
+                pipe.send_bytes(resp_factory.build(success, request.id, data).serialized)
+
             else:
-                # Did tron die?
-                try:
-                    os.kill(os.getppid(), 0)
-                except:
-                    is_shutdown = True
-        except IOError, e:
-            # Error #4 is a system interrupt, caused by ^C
-            if e.errno != 4:
-                raise
+                pipe.send_bytes(resp_factory.build(False, request.id, '').serialized)
+
+        except Empty:
+            continue
+
+
+class SyncPipe(object):
+    """An object to handle synchronization over pipe operations. In particular,
+    the send and recv functions should have mutexes as they are subject to
+    race conditions.
+    """
+
+    def __init__(self, pipe):
+        self.lock = Lock()
+        self.pipe = pipe
+
+    # None is actually a valid timeout (blocks forever), so we need to use
+    # something different for checking for a non-supplied kwarg
+    def poll(self, *args, **kwargs):
+        return self.pipe.poll(*args, **kwargs)
+
+    def send_bytes(self, *args, **kwargs):
+        with self.lock:
+            return self.pipe.send_bytes(*args, **kwargs)
+
+    def recv_bytes(self, *args, **kwargs):
+        with self.lock:
+            return self.pipe.recv_bytes(*args, **kwargs)
+
+
+class PoolBool(object):
+    """The PoolBool(TM) is a mutable boolean wrapper used for signaling."""
+
+    def __init__(self, value=True):
+        if not value in (True, False):
+            raise TypeError('expected boolean, got %r' % value)
+        self._val = value
+
+    @property
+    def value(self):
+        return self._val
+    val = value
+
+    def set(self, value):
+        if not value in (True, False):
+            raise TypeError('expected boolean, got %r' % value)
+        self._val = value
+
+
+class TronstorePool(object):
+    """A thread pool with POOL_SIZE workers for handling requests. Enqueues
+    save and restore requests into a queue that is then consumed by the
+    workers, which send an appropriate response.
+    """
+
+    POOL_SIZE = 35
+
+    def __init__(self, resp_fact, pipe, store):
+        """Initialize the thread pool. Please make a new pool if any of the
+        objects passed to __init__ change.
+        """
+        self.request_queue    = Queue()
+        self.response_factory = resp_fact
+        self.pipe             = pipe
+        self.store_class      = store
+        self.keep_working     = PoolBool(True)
+        self.thread_pool      = [Thread(target=handle_requests,
+                                args=(
+                                    self.request_queue,
+                                    self.response_factory,
+                                    self.pipe,
+                                    self.store_class,
+                                    self.keep_working
+                                )) for i in range(self.POOL_SIZE)]
+
+    def start(self):
+        """Start the thread pool."""
+        self.keep_working.set(True)
+        for thread in self.thread_pool:
+            thread.daemon = False
+            thread.start()
+
+    def stop(self):
+        """Stop the thread pool."""
+        self.keep_working.set(False)
+        while self.has_work() \
+        or any([thread.is_alive() for thread in self.thread_pool]):
+            time.sleep(0.5)
+
+    def enqueue_work(self, work):
+        """Enqueue a request for the workers to consume and process."""
+        self.request_queue.put(work)
+
+    def has_work(self):
+        """Returns whether there is still work to be consumed by workers."""
+        return not self.request_queue.empty()
+
+
+class TronstoreMain(object):
+    """The main Tronstore class. Initializes a bunch of stuff and then has a
+    main_loop function that loops and handles requests from trond.
+    """
+
+    # this can be rather long- it's only real use it to clean up tronstore
+    # in case it's zombied... however, it should be SHORTER than
+    # SHUTDOWN_TIMEOUT in process.py. in addition, making this longer
+    # can cause trond to take longer to fully shutdown.
+    POLL_TIMEOUT = 2.0
+
+    def __init__(self, config, pipe):
+        """Sets up the needed objects for Tronstore, including message
+        factories, a synchronized pipe and store object, a thread pool for
+        handling requests, and some internal invariants.
+        """
+        self.pipe             = SyncPipe(pipe)
+        self.request_factory  = StoreRequestFactory()
+        self.response_factory = StoreResponseFactory()
+        self.store_class      = store.SyncStore(config)
+        self.thread_pool      = TronstorePool(self.response_factory, self.pipe,
+                                    self.store_class)
+        self.is_shutdown      = False
+        self.shutdown_req_id  = None
+        self.config           = config
+
+    def _get_all_from_pipe(self):
+        """Gets all of the requests from the pipe, returning an array of serialized
+        requests (they still need to be decoded).
+        """
+        requests = []
+        while self.pipe.poll():
+            requests.append(self.pipe.recv_bytes())
+        return requests
+
+    def _reconfigure(self, request):
+        """Reconfigures Tronstore by attempting to make a new store object
+        from the recieved configuration. If anything goes wrong, we revert
+        back to the old configuration.
+        """
+        self.thread_pool.stop()
+        self.store_class.cleanup()
+        try:
+            self.store_class = store.SyncStore(request.data)
+            self.thread_pool = TronstorePool(self.response_factory, self.pipe,
+                                    self.store_class)
+            self.thread_pool.start()
+            self.config = request.data
+            self.pipe.send_bytes(self.response_factory.build(True, request.id, '').serialized)
+        except:
+            self.store_class = store.SyncStore(self.config)
+            self.thread_pool = TronstorePool(self.response_factory, self.pipe,
+                                    self.store_class)
+            self.thread_pool.start()
+            self.pipe.send_bytes(self.response_factory.build(False, request.id, '').serialized)
+
+    def _handle_request(self, request):
+        """Handle a request by either doing something with it ourselves
+        (in the case of shutdown/config), or passing it to a worker in the
+        thread pool (for save/restore).
+        """
+        if request.req_type == msg_enums.REQUEST_SHUTDOWN:
+            self.is_shutdown = True
+            self.shutdown_req_id = request.id
+
+        elif request.req_type == msg_enums.REQUEST_CONFIG:
+            self._reconfigure(request)
+
+        else:
+            self.thread_pool.enqueue_work(request)
+
+    def _shutdown(self):
+        """Shutdown Tronstore. Calls os._exit, and should only be called
+        once all work has been completed.
+        """
+        self.thread_pool.stop()
+        self.store_class.cleanup()
+        if self.shutdown_req_id:
+            shutdown_resp = self.response_factory.build(True, self.shutdown_req_id, '')
+            self.pipe.send_bytes(shutdown_resp.serialized)
+        os._exit(0)  # Hard exit- should kill everything.
+
+    def main_loop(self):
+        """The main Tronstore event loop. Starts the thread pool and then
+        simply polls for requests until a shutdown request is recieved, after
+        which it cleans up and exits.
+        """
+        self.thread_pool.start()
+
+        while True:
+            try:
+                if self.pipe.poll(self.POLL_TIMEOUT):
+                    requests = self._get_all_from_pipe()
+                    requests = map(self.request_factory.from_msg, requests)
+                    for request in requests:
+                        self._handle_request(request)
+
+                elif self.is_shutdown:
+                    self._shutdown()
+
+                else:
+                    # Did tron die?
+                    try:
+                        os.kill(os.getppid(), 0)
+                    except:
+                        self.is_shutdown = True
+            except IOError, e:
+                # Error #4 is a system interrupt, caused by ^C
+                if e.errno != 4:
+                    raise
+
+
+def main(config, pipe):
+    """The main method to start Tronstore with. Simply takes the configuration
+    and pipe objects, and then registers some null signal handlers before
+    passing everything off to TronstoreMain.
+    """
+
+    _register_null_handlers()
+    tronstore = TronstoreMain(config, pipe)
+    tronstore.main_loop()
