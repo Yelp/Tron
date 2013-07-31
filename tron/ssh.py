@@ -94,6 +94,7 @@ class ClientConnection(connection.SSHConnection):
 
     service_start_defer = None
     service_stop_defer = None
+    is_closed = False
 
     def serviceStarted(self):
         log.info("Service started")
@@ -103,6 +104,7 @@ class ClientConnection(connection.SSHConnection):
 
     def serviceStopped(self):
         log.info("Service stopped")
+        self.is_closed = True
         connection.SSHConnection.serviceStopped(self)
         if not self.service_stop_defer.called:
             self.service_stop_defer.callback(self)
