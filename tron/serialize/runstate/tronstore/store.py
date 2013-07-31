@@ -279,7 +279,8 @@ class SyncStore(object):
             return self.store.restore(*args, **kwargs)
 
     def cleanup(self):
-        self.store.cleanup()
+        with self.lock:
+            self.store.cleanup()
 
     def __repr__(self):
         return "SyncStore('%s')" % self.store.__repr__()

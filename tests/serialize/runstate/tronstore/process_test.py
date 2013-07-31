@@ -17,29 +17,23 @@ class StoreProcessProtocolTestCase(TestCase):
 			mock.patch('tron.serialize.runstate.tronstore.process.Process',
 				autospec=True),
 			mock.patch('tron.serialize.runstate.tronstore.process.Pipe',
-				new=pipe_return)
-		) as (self.process_patch, self.pipe_setup_patch):
-			self.config = mock.Mock(
-				name='test_config',
-				transport_method='pickle',
-				store_type='shelve',
-				connection_details=None,
-				db_store_method=None,
-				buffer_size=1
-			)
-			self.factory = mock.Mock()
-			self.process = StoreProcessProtocol(self.config, self.factory)
+				new=pipe_return),
+			mock.patch('tron.serialize.runstate.tronstore.process.StoreResponseFactory')
+		) as (self.process_patch, self.pipe_setup_patch, self.factory_patch):
+			self.factory = self.factory_patch.return_value
+			self.process = StoreProcessProtocol()
 			yield
 
 	def test__init__(self):
-		assert_equal(self.process.response_factory, self.factory)
-		assert_equal(self.process.config, self.config)
+		assert not self.process.config
+		self.factory_patch.assert_called_once_with()
 		assert_equal(self.process.orphaned_responses, {})
 		assert not self.process.is_shutdown
+		assert self.process.pipe
 
 	def test_start_process(self):
 		self.pipe_setup_patch.assert_called_once_with()
-		self.process_patch.assert_called_once_with(target=tronstore.main, args=(self.config, self.test_pipe_b))
+		self.process_patch.assert_called_once_with(target=tronstore.main, args=(self.process.config, self.test_pipe_b))
 		assert self.process_patch.daemon
 		self.process.process.start.assert_called_once_with()
 

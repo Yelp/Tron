@@ -20,10 +20,9 @@ class MasterControlProgramTestCase(TestCase):
     def setup_mcp(self):
         self.working_dir    = tempfile.mkdtemp()
         self.config_path    = tempfile.mkdtemp()
-        self.mcp            = mcp.MasterControlProgram(
+        with mock.patch('tron.serialize.runstate.statemanager.StateChangeWatcher', autospec=True):
+            self.mcp        = mcp.MasterControlProgram(
                                 self.working_dir, self.config_path)
-        self.mcp.state_watcher = mock.create_autospec(
-                                statemanager.StateChangeWatcher)
 
     @teardown
     def teardown_mcp(self):
@@ -64,7 +63,7 @@ class MasterControlProgramTestCase(TestCase):
         assert_equal(len(self.mcp.apply_collection_config.mock_calls), 2)
         self.mcp.apply_notification_options.assert_called_with(
             master_config.notification_options)
-        mock_repo.update_from_config.assert_called_with(master_config.nodes, 
+        mock_repo.update_from_config.assert_called_with(master_config.nodes,
             master_config.node_pools, master_config.ssh_options)
         self.mcp.build_job_scheduler_factory(master_config)
 
@@ -98,11 +97,12 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
     def setup_mcp(self):
         self.working_dir        = tempfile.mkdtemp()
         self.config_path        = tempfile.mkdtemp()
-        self.mcp                = mcp.MasterControlProgram(
-                                    self.working_dir, self.config_path)
-        self.mcp.jobs           = mock.create_autospec(job.JobCollection)
-        self.mcp.services       = mock.create_autospec(service.ServiceCollection)
-        self.mcp.state_watcher  = mock.create_autospec(statemanager.StateChangeWatcher)
+        with mock.patch('tron.serialize.runstate.statemanager.StateChangeWatcher', autospec=True):
+            self.mcp               = mcp.MasterControlProgram(
+                                        self.working_dir, self.config_path)
+            self.mcp.jobs          = mock.create_autospec(job.JobCollection)
+            self.mcp.services      = mock.create_autospec(service.ServiceCollection)
+            self.mcp.state_watcher = mock.create_autospec(statemanager.StateChangeWatcher)
 
     @teardown
     def teardown_mcp(self):

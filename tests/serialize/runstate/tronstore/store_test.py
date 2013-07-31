@@ -1,8 +1,10 @@
 import os
 import shelve
 import tempfile
+import mock
+import contextlib
 from testify import TestCase, run, setup, assert_equal, teardown
-from tron.serialize.runstate.tronstore.store import ShelveStore, SQLStore, MongoStore, YamlStore
+from tron.serialize.runstate.tronstore.store import ShelveStore, SQLStore, MongoStore, YamlStore, SyncStore, NullStore
 from tron.serialize.runstate.tronstore.transport import JSONTransport
 from tron.serialize import runstate
 
@@ -239,6 +241,61 @@ class YamlStoreTestCase(TestCase):
         with open(self.filename, 'r') as fh:
             actual = yaml.load(fh)
         assert_equal(actual, expected)
+
+
+class SyncStoreTestCase(TestCase):
+
+    @setup
+    def setup_sync_store(self):
+        self.fake_config = mock.Mock(
+            name='we_must_be_swift_as_a_coursing_river',
+            store_type='with_all_the_force_of_a_great_typhoon',
+            connection_details='with_all_the_strength_of_a_raging_fire',
+            db_store_method='mysterious_as_the_dark_side_of_the_moon')
+        self.store_class = mock.Mock()
+        with contextlib.nested(
+            mock.patch.object(runstate.tronstore.store, 'build_store', return_value=self.store_class),
+            mock.patch('tron.serialize.runstate.tronstore.store.Lock', autospec=True)
+        ) as (self.build_patch, self.lock_patch):
+            self.store = SyncStore(self.fake_config)
+            self.lock = self.lock_patch.return_value
+
+    def test__init__(self):
+        self.lock_patch.assert_called_once_with()
+        self.build_patch.assert_called_once_with(
+            self.fake_config.name,
+            self.fake_config.store_type,
+            self.fake_config.connection_details,
+            self.fake_config.db_store_method
+        )
+        assert_equal(self.store_class, self.store.store)
+
+    def test__init__null_config(self):
+        store = SyncStore(None)
+        assert isinstance(store.store, NullStore)
+
+    def test_save(self):
+        fake_arg = 'catch_a_ride'
+        fake_kwarg = 'no_refunds'
+        self.store.save(fake_arg, fake_kwarg=fake_kwarg)
+        self.lock.__enter__.assert_called_once_with()
+        self.lock.__exit__.assert_called_once_with(None, None, None)
+        self.store_class.save.assert_called_once_with(fake_arg, fake_kwarg=fake_kwarg)
+
+    def test_restore(self):
+        fake_arg = 'catch_a_ride'
+        fake_kwarg = 'no_refunds'
+        self.store.restore(fake_arg, fake_kwarg=fake_kwarg)
+        self.lock.__enter__.assert_called_once_with()
+        self.lock.__exit__.assert_called_once_with(None, None, None)
+        self.store_class.restore.assert_called_once_with(fake_arg, fake_kwarg=fake_kwarg)
+
+    def test_cleanup(self):
+        self.store.cleanup()
+        self.lock.__enter__.assert_called_once_with()
+        self.lock.__exit__.assert_called_once_with(None, None, None)
+        self.store_class.cleanup.assert_called_once_with()
+
 
 if __name__ == "__main__":
     run()

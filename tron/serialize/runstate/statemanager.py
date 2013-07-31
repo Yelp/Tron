@@ -271,14 +271,12 @@ class StateChangeWatcher(observer.Observer):
             return False
 
         if state_config.store_type not in schema.StatePersistenceTypes:
-            raise PersistenceStoreError("Unknown store type: %s" % store_type)
+            raise PersistenceStoreError("Unknown store type: %s" % state_config.store_type)
 
         if state_config.db_store_method not in schema.StateSerializationTypes \
-        and store_type in ('sql', 'mongo'):
-            raise PersistenceStoreError("Unknown db store method: %s" % db_store_method)
+        and state_config.store_type in ('sql', 'mongo'):
+            raise PersistenceStoreError("Unknown db store method: %s" % state_config.db_store_method)
 
-        # if self.state_manager is NullStateManager:
-        #     self.state_manager = PersistenceManagerFactory.from_config(state_config)
         if not self.state_manager.update_from_config(state_config):
             return False
         else:

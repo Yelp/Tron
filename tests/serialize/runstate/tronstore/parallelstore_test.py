@@ -20,11 +20,12 @@ class ParallelStoreTestCase(TestCase):
         )
         with mock.patch('tron.serialize.runstate.tronstore.parallelstore.StoreProcessProtocol', autospec=True) \
         as (self.process_patch):
-            self.store = ParallelStore(self.config)
+            self.store = ParallelStore()
             yield
 
     def test__init__(self):
-        self.process_patch.assert_called_once_with(self.config, self.store.response_factory)
+        self.process_patch.assert_called_once_with()
+        assert self.store.request_factory
 
     def test_build_key(self):
         key_type = runstate.JOB_STATE
@@ -85,34 +86,26 @@ class ParallelStoreTestCase(TestCase):
         new_config = mock.Mock()
         config_req = mock.Mock()
         with contextlib.nested(
-            mock.patch.object(self.store.request_factory, 'update_method'),
-            mock.patch.object(self.store.response_factory, 'update_method'),
             mock.patch.object(self.store.process, 'update_config'),
             mock.patch.object(self.store.request_factory, 'build', return_value=config_req),
             mock.patch.object(self.store.process, 'send_request_get_response',
                 return_value=mock.Mock(success=True))
-        ) as (request_patch, response_patch, update_patch, build_patch, send_patch):
+        ) as (update_patch, build_patch, send_patch):
             self.store.load_config(new_config)
             build_patch.assert_called_once_with(msg_enums.REQUEST_CONFIG, '', new_config)
             send_patch.assert_called_once_with(config_req)
-            request_patch.assert_called_once_with(new_config.transport_method)
-            response_patch.assert_called_once_with(new_config.transport_method)
-            update_patch.assert_called_once_with(new_config, config_req)
+            update_patch.assert_called_once_with(new_config)
 
     def test_load_config_failure(self):
         new_config = mock.Mock()
         config_req = mock.Mock()
         with contextlib.nested(
-            mock.patch.object(self.store.request_factory, 'update_method'),
-            mock.patch.object(self.store.response_factory, 'update_method'),
             mock.patch.object(self.store.process, 'update_config'),
             mock.patch.object(self.store.request_factory, 'build', return_value=config_req),
             mock.patch.object(self.store.process, 'send_request_get_response',
                 return_value=mock.Mock(success=False))
-        ) as (request_patch, response_patch, update_patch, build_patch, send_patch):
+        ) as (update_patch, build_patch, send_patch):
             self.store.load_config(new_config)
             build_patch.assert_called_once_with(msg_enums.REQUEST_CONFIG, '', new_config)
             send_patch.assert_called_once_with(config_req)
             assert not update_patch.called
-            assert not request_patch.called
-            assert not response_patch.called

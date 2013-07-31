@@ -104,7 +104,10 @@ class JobContainerTestCase(TestCase):
         job_runs = [mock.Mock(), mock.Mock()]
         state_data = ({'enabled': False, 'run_ids': [1, 2]}, run_data)
 
-        with mock.patch.object(self.job.job_runs, 'restore_state', return_value=job_runs):
+        with contextlib.nested(
+            mock.patch.object(self.job.job_runs, 'restore_state', return_value=job_runs),
+            mock.patch.object(self.job.job_runs, 'get_run_numbers', return_value=state_data[0]['run_ids'])
+        ):
             self.job.restore_state(state_data)
 
             assert not self.job.enabled
@@ -118,6 +121,7 @@ class JobContainerTestCase(TestCase):
                 self.job.context,
                 self.job.node_pool
             )
+            self.job.job_runs.get_run_numbers.assert_called_once_with()
             self.job.job_scheduler.restore_state.assert_called_once_with()
             self.job.event.ok.assert_called_with('restored')
 

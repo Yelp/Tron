@@ -1,72 +1,15 @@
-import os
 import mock
 import contextlib
-from testify import TestCase, assert_equal, setup, run, setup_teardown
+from testify import TestCase, assert_equal, setup, run
 
 from tests.assertions import assert_raises
 from tests.testingutils import autospec_method
-from tron.config import schema
 from tron.serialize import runstate
-from tron.serialize.runstate.shelvestore import ShelveStateStore
 from tron.serialize.runstate.statemanager import PersistentStateManager, StateChangeWatcher
 from tron.serialize.runstate.statemanager import StateSaveBuffer
 from tron.serialize.runstate.statemanager import StateMetadata
 from tron.serialize.runstate.statemanager import PersistenceStoreError
 from tron.serialize.runstate.statemanager import VersionMismatchError
-from tron.serialize.runstate.statemanager import PersistenceManagerFactory
-from tron.serialize.runstate.statemanager import NullStateManager
-
-
-class PersistenceManagerFactoryTestCase(TestCase):
-
-    @setup_teardown
-    def setup_factory_and_enumerate(self):
-        self.mock_buffer_size = 25
-        self.mock_config = mock.Mock(buffer_size=self.mock_buffer_size)
-        with contextlib.nested(
-            mock.patch('tron.serialize.runstate.statemanager.ParallelStore',
-                autospec=True),
-            mock.patch('%s.%s' % (PersistentStateManager.__module__, PersistentStateManager.__name__),
-                autospec=True),
-            mock.patch('%s.%s' % (StateSaveBuffer.__module__, StateSaveBuffer.__name__),
-                autospec=True)
-        ) as (self.parallel_patch, self.state_patch, self.buffer_patch):
-            yield
-
-    def test_from_config_all_valid_enum_types(self):
-        for store_type in schema.StatePersistenceTypes.values:
-            self.mock_config.configure_mock(store_type=store_type)
-            for transport_method in schema.StateTransportTypes.values:
-                self.mock_config.configure_mock(transport_method=transport_method)
-                if store_type in ('sql', 'mongo'):
-                    self.mock_config.configure_mock(db_store_method=transport_method)
-
-                assert_equal(PersistenceManagerFactory.from_config(self.mock_config),
-                    self.state_patch(self.parallel_patch, self.buffer_patch))
-                self.parallel_patch.assert_called_with(self.mock_config)
-                self.buffer_patch.assert_called_with(self.mock_buffer_size)
-
-    def test_from_config_invalid_store_type(self):
-        self.mock_config.configure_mock(store_type='play_the_game')
-        for transport_method in schema.StateTransportTypes.values:
-            self.mock_config.configure_mock(transport_method=transport_method)
-            assert_raises(PersistenceStoreError, PersistenceManagerFactory.from_config, self.mock_config)
-
-    def test_from_config_invalid_transport_type(self):
-        self.mock_config.configure_mock(transport_method='ghosts_cant_eat')
-        for store_type in schema.StatePersistenceTypes.values:
-            self.mock_config.configure_mock(store_type=store_type)
-            if store_type in ('sql', 'mongo'):
-                self.mock_config.configure_mock(db_store_method='json')
-            assert_raises(PersistenceStoreError, PersistenceManagerFactory.from_config, self.mock_config)
-
-    def test_from_config_invalid_db_store_method(self):
-        self.mock_config.configure_mock(db_store_method='im_running_out_of_strs')
-        for store_type in ('sql', 'mongo'):
-            self.mock_config.configure_mock(store_type=store_type)
-            for transport_method in schema.StateTransportTypes.values:
-                self.mock_config.configure_mock(transport_method=transport_method)
-                assert_raises(PersistenceStoreError, PersistenceManagerFactory.from_config, self.mock_config)
 
 
 class StateMetadataTestCase(TestCase):
@@ -113,13 +56,19 @@ class PersistentStateManagerTestCase(TestCase):
 
     @setup
     def setup_manager(self):
-        self.store = mock.Mock()
-        self.store.build_key.side_effect = lambda t, i: '%s%s' % (t, i)
-        self.buffer = StateSaveBuffer(1)
-        self.manager = PersistentStateManager(self.store, self.buffer)
+        with mock.patch('tron.serialize.runstate.statemanager.ParallelStore', autospec=True) \
+        as self.store_patch:
+            self.store = self.store_patch.return_value
+            self.build_patch = mock.Mock(side_effect=lambda t, i: '%s%s' % (t, i))
+            self.store_patch.return_value.configure_mock(build_key=self.build_patch)
+            self.buffer = StateSaveBuffer(1)
+            self.manager = PersistentStateManager()
+            self.manager._buffer = self.buffer
 
     def test__init__(self):
-        assert_equal(self.manager._impl, self.store)
+        self.store_patch.assert_called_once_with()
+        self.build_patch.assert_called_once_with(runstate.MCP_STATE, StateMetadata.name)
+        assert_equal(self.manager.metadata_key, self.manager._impl.build_key(runstate.MCP_STATE, StateMetadata.name))
 
     def test_keys_for_items(self):
         names = ['namea', 'nameb']
@@ -177,23 +126,43 @@ class PersistentStateManagerTestCase(TestCase):
             pass
         assert not self.manager.enabled
 
-    def test_update_config(self):
-        new_config = mock.Mock()
-        fake_return = 'reelin_in_the_years'
-        self.store.load_config.configure_mock(return_value=fake_return)
-        with mock.patch.object(self.manager, '_save_from_buffer') as save_patch:
-            assert_equal(self.manager.update_from_config(new_config), fake_return)
+    def test_update_config_success(self):
+        new_config = mock.Mock(buffer_size=5)
+        self.store.load_config.configure_mock(return_value=True)
+        with contextlib.nested(
+            mock.patch.object(self.manager, '_save_from_buffer'),
+            mock.patch('tron.serialize.runstate.statemanager.StateSaveBuffer', autospec=True)
+        ) as (save_patch, buffer_patch):
+            assert_equal(self.manager.update_from_config(new_config), True)
             save_patch.assert_called_once_with()
             self.store.load_config.assert_called_once_with(new_config)
+            buffer_patch.assert_called_once_with(new_config.buffer_size)
+
+    def test_update_config_failure(self):
+        new_config = mock.Mock(buffer_size=5)
+        self.store.load_config.configure_mock(return_value=False)
+        with contextlib.nested(
+            mock.patch.object(self.manager, '_save_from_buffer'),
+            mock.patch('tron.serialize.runstate.statemanager.StateSaveBuffer', autospec=True)
+        ) as (save_patch, buffer_patch):
+            assert_equal(self.manager.update_from_config(new_config), False)
+            save_patch.assert_called_once_with()
+            self.store.load_config.assert_called_once_with(new_config)
+            assert not buffer_patch.called
 
 
 class StateChangeWatcherTestCase(TestCase):
 
     @setup
     def setup_watcher(self):
-        self.watcher = StateChangeWatcher()
-        self.state_manager = mock.create_autospec(PersistentStateManager)
-        self.watcher.state_manager = self.state_manager
+        with mock.patch('tron.serialize.runstate.statemanager.PersistentStateManager', autospec=True) \
+        as self.persistence_patch:
+            self.watcher = StateChangeWatcher()
+            self.state_manager = mock.create_autospec(PersistentStateManager)
+            self.watcher.state_manager = self.state_manager
+
+    def test__init__(self):
+        self.persistence_patch.assert_called_once_with()
 
     def test_update_from_config_no_change(self):
         self.watcher.config = state_config = mock.Mock()
@@ -202,30 +171,39 @@ class StateChangeWatcherTestCase(TestCase):
         assert_equal(self.watcher.state_manager, self.state_manager)
         assert not self.watcher.shutdown.mock_calls
 
-    @mock.patch('tron.serialize.runstate.statemanager.PersistenceManagerFactory',
-    autospec=True)
-    def test_update_from_config_no_state_manager(self, mock_factory):
-        state_config = mock.Mock()
-        self.watcher.state_manager = NullStateManager
-        assert self.watcher.update_from_config(state_config)
-        assert_equal(self.watcher.config, state_config)
-        assert_equal(self.watcher.state_manager,
-            mock_factory.from_config.return_value)
-        mock_factory.from_config.assert_called_with(state_config)
-
-    def test_update_from_config_with_state_manager_success(self):
-        state_config = mock.Mock()
+    def test_update_from_config_success(self):
+        state_config = mock.Mock(store_type="shelve")
         assert self.watcher.update_from_config(state_config)
         assert_equal(self.watcher.config, state_config)
         self.state_manager.update_from_config.assert_called_once_with(state_config)
 
-    def test_update_from_config_failure(self):
+    def test_update_from_config_failure_same_config(self):
+        state_config = self.watcher.config
+        assert not self.watcher.update_from_config(state_config)
+        assert_equal(self.watcher.config, state_config)
+        assert not self.state_manager.update_from_config.called
+
+    def test_update_from_config_failure_from_state_manager(self):
         self.state_manager.update_from_config.configure_mock(return_value=False)
         state_config = self.watcher.config
-        fake_config = mock.Mock()
+        fake_config = mock.Mock(store_type="shelve")
         assert not self.watcher.update_from_config(fake_config)
         assert_equal(self.watcher.config, state_config)
         self.state_manager.update_from_config.assert_called_once_with(fake_config)
+
+    def test_update_from_config_failure_bad_store_type(self):
+        state_config = self.watcher.config
+        fake_config = mock.Mock(store_type="hue_hue_hue")
+        assert_raises(PersistenceStoreError, self.watcher.update_from_config, fake_config)
+        assert_equal(self.watcher.config, state_config)
+        assert not self.state_manager.update_from_config.called
+
+    def test_update_from_config_failure_bad_db_type(self):
+        state_config = self.watcher.config
+        fake_config = mock.Mock(store_type="sql", store_method="make_it_rain")
+        assert_raises(PersistenceStoreError, self.watcher.update_from_config, fake_config)
+        assert_equal(self.watcher.config, state_config)
+        assert not self.state_manager.update_from_config.called
 
     def test_save_job(self):
         mock_job = mock.Mock()
