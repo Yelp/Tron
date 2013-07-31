@@ -69,9 +69,6 @@ def parse_options():
     parser.add_option("-m", type="string",
                       help="Set new state storing mechanism (store_type)",
                       dest="store_method", default=None)
-    # parser.add_option("-t", type="string",
-    #                   help="Set new transport method",
-    #                   dest="transport_method", default=None)
     parser.add_option("-d", type="string",
                       help="Set new SQL db serialization method (db_store_method)",
                       dest="db_store_method", default=None)
@@ -112,9 +109,6 @@ def compile_new_info(options, state_info, new_file):
 
     if options.store_method:
         new_state_info = new_state_info._replace(store_method=options.store_method)
-
-    # if options.transport_method:
-    #     new_state_info = new_state_info._replace(transport_method=options.transport_method)
 
     if options.db_store_method:
         new_state_info = new_state_info._replace(db_store_method=options.db_store_method)
