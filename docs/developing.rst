@@ -30,7 +30,7 @@ test coverage, and bug fixes should include a test which reproduces the
 reported issue.
 
 Running ``make style`` will perform a PyFlakes and PEP8 check on all .py files
-in Tron.
+in the bin, tools, tests, and tron folders.
 
 This documentation must also be kept up to date with any changes in functionality.
 

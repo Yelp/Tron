@@ -15,6 +15,7 @@ PYFLAKES=pyflakes
 PEP8=pep8
 PEP8IGNORE=E22,E23,E24,E302,E401
 PEP8MAXLINE=100
+SOURCES=bin tools tests tron
 
 .PHONY : all source install clean tests docs
 
@@ -79,9 +80,9 @@ man:
 
 style:
 	@echo "PyFlakes check:"
-	-$(PYFLAKES) .
+	-$(PYFLAKES) $(SOURCES)
 	@echo "\nPEP8 check:"
-	-$(PEP8) --ignore=$(PEP8IGNORE) --max-line-length=$(PEP8MAXLINE) .
+	-$(PEP8) --ignore=$(PEP8IGNORE) --max-line-length=$(PEP8MAXLINE) $(SOURCES)
 
 tests:
 	PYTHONPATH=.:bin testify -x sandbox -x mongodb -x integration tests
