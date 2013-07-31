@@ -322,7 +322,7 @@ class ServiceInstanceTestCase(TestCase):
     def test_state_data(self):
         expected = {
             'instance_number': self.number,
-            'node': self.node.hostname
+            'node': self.node.name
         }
         assert_equal(self.instance.state_data, expected)
 
@@ -337,16 +337,23 @@ class NodeSelectorTestCase(TestCase):
         selected_node = serviceinstance.node_selector(self.node_pool)
         assert_equal(selected_node, self.node_pool.next_round_robin())
 
-    def test_node_selector_hostname_not_in_pool(self):
+    def test_node_selector_name_not_in_pool(self):
         hostname = 'hostname'
+        self.node_pool.get_by_name.return_value = None
         self.node_pool.get_by_hostname.return_value = None
         selected_node = serviceinstance.node_selector(self.node_pool, hostname)
         assert_equal(selected_node, self.node_pool.next_round_robin.return_value)
 
     def test_node_selector_hostname_found(self):
         hostname = 'hostname'
+        self.node_pool.get_by_name.return_value = None
         selected_node = serviceinstance.node_selector(self.node_pool, hostname)
         assert_equal(selected_node, self.node_pool.get_by_hostname.return_value)
+
+    def test_node_selector_name_found(self):
+        hostname = 'hostname'
+        selected_node = serviceinstance.node_selector(self.node_pool, hostname)
+        assert_equal(selected_node, self.node_pool.get_by_name.return_value)
 
 
 def create_mock_instance(**kwargs):
@@ -419,7 +426,7 @@ class ServiceInstanceCollectionTestCase(TestCase):
         assert_length(created, count)
         assert_equal(set(created), set(self.collection.instances))
         expected = [
-            mock.call(self.node_pool.get_by_hostname.return_value,
+            mock.call(self.node_pool.get_by_name.return_value,
                 d['instance_number'])
             for d in state_data]
         for expected_call in expected:
