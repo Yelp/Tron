@@ -358,7 +358,7 @@ class ServiceInstance(observer.Observer):
     @property
     def state_data(self):
         return dict(instance_number=self.instance_number,
-                    node=self.node.hostname)
+                    node=self.node.name)
 
     def get_observable(self):
         return self.machine
@@ -381,7 +381,7 @@ def node_selector(node_pool, hostname=None):
     if not hostname:
         return next_node()
 
-    return node_pool.get_by_hostname(hostname) or next_node()
+    return node_pool.get_by_hostname(hostname) or node_pool.get_by_name(hostname) or next_node()
 
 
 class ServiceInstanceCollection(object):
