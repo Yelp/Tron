@@ -373,16 +373,18 @@ class ServiceInstance(observer.Observer):
 # TODO: shouldn't this check which nodes are not used to properly
 # balance across nodes? But doing this makes it less resilient to
 # failures of a node
-def node_selector(node_pool, hostname=None):
-    """Attempt to retrieve the node by hostname.  If that node is not
-    available, or hostname is None, then pick one the next node.
+def node_selector(node_pool, name=None):
+    """Attempt to retrieve the node by name.  If that node is not
+    available, or name is None, then pick one the next node.
     """
     next_node = node_pool.next_round_robin
-    if not hostname:
+    if not name:
         return next_node()
 
     # TODO: remove lookup by hostname once Tron is sufficiently migrated
-    return node_pool.get_by_name(hostname) or node_pool.get_by_hostname(hostname) or next_node()
+    return node_pool.get_by_name(name) \
+    or node_pool.get_by_hostname(name) \
+    or next_node()
 
 
 class ServiceInstanceCollection(object):
