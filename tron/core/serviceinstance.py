@@ -381,7 +381,7 @@ def node_selector(node_pool, hostname=None):
     if not hostname:
         return next_node()
 
-    return node_pool.get_by_hostname(hostname) or node_pool.get_by_name(hostname) or next_node()
+    return node_pool.get_by_name(hostname) or node_pool.get_by_hostname(hostname) or next_node()
 
 
 class ServiceInstanceCollection(object):
