@@ -235,6 +235,10 @@ class NodePoolTestCase(TestCase):
         ]
         assert_equal(node_order, self.nodes + self.nodes)
 
+    def test_get_by_name(self):
+        found_node = self.node_pool.get_by_name(self.nodes[0].name)
+        assert_equal(found_node, self.nodes[0])
+
 
 if __name__ == '__main__':
     run()

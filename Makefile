@@ -11,6 +11,12 @@ DOCS_BUILDDIR=docs/_build
 DOCS_STATICSDIR=$(DOCS_DIR)/images
 ALLSPHINXOPTS=-d $(DOCS_BUILDDIR)/doctrees $(SPHINXOPTS)
 
+PYFLAKES=pyflakes
+PEP8=pep8
+PEP8IGNORE=E22,E23,E24,E302,E401
+PEP8MAXLINE=100
+SOURCES=bin tools tests tron
+
 .PHONY : all source install clean tests docs
 
 all:
@@ -67,10 +73,16 @@ docs:
 
 doc: docs
 
-man: 
+man:
 	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_DIR)/man
 	@echo
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
+
+style:
+	@echo "PyFlakes check:"
+	-$(PYFLAKES) $(SOURCES)
+	@echo "\nPEP8 check:"
+	-$(PEP8) --ignore=$(PEP8IGNORE) --max-line-length=$(PEP8MAXLINE) $(SOURCES)
 
 tests:
 	PYTHONPATH=.:bin testify -x sandbox -x mongodb -x integration tests
