@@ -29,6 +29,9 @@ and should pass pyflakes without warnings. All new code should include full
 test coverage, and bug fixes should include a test which reproduces the
 reported issue.
 
+Running make style will perform a PyFlakes and PEP8 check on all .py files in
+the Tron folder.
+
 This documentation must also be kept up to date with any changes in functionality.
 
 
