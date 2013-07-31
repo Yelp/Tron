@@ -75,12 +75,9 @@ man:
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
 
 style:
-	@echo "PyFlakes check:"
-	@echo
+	@echo "PyFlakes check:\n"
 	-pyflakes .
-	@echo
-	@echo "PEP8 check:"
-	@echo
+	@echo "\nPEP8 check:\n"
 	-pep8 --ignore=$(PEP8IGNORE) --max-line-length=120 .
 
 tests:
