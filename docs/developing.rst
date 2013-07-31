@@ -29,8 +29,8 @@ and should pass pyflakes without warnings. All new code should include full
 test coverage, and bug fixes should include a test which reproduces the
 reported issue.
 
-Running make style will perform a PyFlakes and PEP8 check on all .py files in
-the Tron folder.
+Running ``make style`` will perform a PyFlakes and PEP8 check on all .py files
+in Tron.
 
 This documentation must also be kept up to date with any changes in functionality.
 
@@ -39,7 +39,7 @@ Running Tron in a Sandbox
 -------------------------
 
 The source package includes a development logging.conf and a
-sample configuration file with a few test cases. To run a development intsance
+sample configuration file with a few test cases. To run a development instance
 of Tron create a working directory and start
 :command:`trond` using the following::
 
