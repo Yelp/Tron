@@ -160,6 +160,11 @@ class NodePool(object):
             if node.hostname == hostname:
                 return node
 
+    def get_by_name(self, name):
+        for node in self.nodes:
+            if node.name == name:
+                return node
+
     def __str__(self):
         return "NodePool:%s" % self.name
 
