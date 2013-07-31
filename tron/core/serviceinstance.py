@@ -381,6 +381,7 @@ def node_selector(node_pool, hostname=None):
     if not hostname:
         return next_node()
 
+    # TODO: remove lookup by hostname once Tron is sufficiently migrated
     return node_pool.get_by_name(hostname) or node_pool.get_by_hostname(hostname) or next_node()
 
 
