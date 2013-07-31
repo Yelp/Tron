@@ -382,9 +382,9 @@ def node_selector(node_pool, name=None):
         return next_node()
 
     # TODO: remove lookup by hostname once Tron is sufficiently migrated
-    return node_pool.get_by_name(name) \
-    or node_pool.get_by_hostname(name) \
-    or next_node()
+    return (node_pool.get_by_name(name) or
+            node_pool.get_by_hostname(name) or
+            next_node())
 
 
 class ServiceInstanceCollection(object):
