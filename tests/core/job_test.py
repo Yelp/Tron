@@ -6,8 +6,8 @@ from testify import setup, teardown, TestCase, run, assert_equal
 from testify import setup_teardown
 from testify.assertions import assert_not_equal
 from tests import mocks
-from tests.assertions import assert_length, assert_call, assert_mock_calls
-from tests.testingutils import Turtle, autospec_method
+from tests.assertions import assert_length, assert_mock_calls
+from tests.testingutils import autospec_method
 from tests import testingutils
 from tron import node, event, actioncommand
 from tron.core import job, jobrun
@@ -18,7 +18,6 @@ class JobContainerTestCase(TestCase):
 
     @setup_teardown
     def setup_job(self):
-        action_graph = mock.Mock(names=lambda: ['one', 'two'])
         self.job_state = job.JobState(True, 'test')
         self.run_collection = mock.Mock()
         self.nodes = mock.create_autospec(node.NodePool)
@@ -300,7 +299,7 @@ class JobSchedulerTestCase(TestCase):
         self.job_scheduler.job_state.is_enabled = False
         with mock.patch.object(self.job_scheduler, 'schedule') as sched_patch:
             self.job_scheduler.run_job(job_run)
-            assert not self.job_scheduler.schedule.called
+            assert not sched_patch.called
             assert not job_run.start.called
             job_run.cancel.assert_called_once_with()
 
@@ -588,7 +587,7 @@ class JobSchedulerFactoryTestCase(TestCase):
         nodes = mock.Mock()
         watcher = mock.Mock()
         with mock.patch('tron.core.job.JobScheduler', autospec=True) as mock_job:
-            job_scheduler = self.factory.build(config, runs, state, graph, nodes, watcher)
+            self.factory.build(config, runs, state, graph, nodes, watcher)
             args, _ = mock_job.call_args
             (job_runs,
             job_config,
