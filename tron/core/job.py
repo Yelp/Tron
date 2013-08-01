@@ -153,8 +153,8 @@ class JobScheduler(Observer):
         """
         pool = self.node_pool
         nodes = pool.nodes if self.config.all_nodes else [pool.next()]
-        for node in nodes:
-            run = self.job_runs.build_new_run(self, run_time, node, manual=manual)
+        for _node in nodes:
+            run = self.job_runs.build_new_run(self, run_time, _node, manual=manual)
             self.watcher.watch(run)
             self.watch(run, jobrun.JobRun.NOTIFY_DONE)
             self.job_state.set_run_ids(self.job_runs.get_run_numbers())
@@ -203,9 +203,9 @@ class JobScheduler(Observer):
                     job_run, job_run.state))
             return self.schedule()
 
-        node = job_run.node if self.config.all_nodes else None
+        _node = job_run.node if self.config.all_nodes else None
         # If there is another job run still running, queue or cancel this one
-        if not self.config.allow_overlap and any(self.job_runs.get_active(node)):
+        if not self.config.allow_overlap and any(self.job_runs.get_active(_node)):
             self._queue_or_cancel_active(job_run)
             return
 
