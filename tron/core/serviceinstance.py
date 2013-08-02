@@ -472,8 +472,8 @@ class ServiceInstanceCollection(object):
             needs_new_node = []
 
             for instance in self.instances:
-                old_node = self.node_pool.get_by_name(instance.node)
-                if old_node != instance.node:
+                new_node = self.node_pool.get_by_name(instance.node.name)
+                if new_node != instance.node:
                     instance.stop()
                     needs_new_node.append(instance)
 
