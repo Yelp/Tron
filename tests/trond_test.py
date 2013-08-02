@@ -153,7 +153,7 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         self.sandbox.tronfig(second_config)
 
         sandbox.wait_on_state(self.client.service, service_url,
-            service.ServiceState.STARTING)
+            service.ServiceState.FAILED)
 
         job_url = self.client.get_url('MASTER.a_job')
         def wait_on_next_run():

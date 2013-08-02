@@ -172,18 +172,20 @@ class ServiceCollection(object):
     def __init__(self):
         self.services = collections.MappingCollection('services')
 
-    def _build(self, config, context):
-        old_service = self.get_by_name(config.name)
-        if old_service and old_service.config.count != config.count:
-            old_service.config.count = config.count
+    def _build(self, new_service):
+        old_service = self.get_by_name(new_service.config.name)
+        if old_service and old_service.config.count != new_service.config.count:
+            old_service.config.count = new_service.config.count
 
-        if old_service and old_service.config == config:
-            log.debug("Updating service %s\'s node pool" % config.name)
+        if old_service and old_service.config == new_service.config:
+            log.debug("Updating service %s\'s node pool" % new_service.config.name)
+            old_service.instances.context = new_service.instances.context
             old_service.update_node_pool()
-            return old_service
+            return True
         else:
-            log.debug("Building new service %s", config.name)
-            return Service.from_config(config, context)
+            log.debug("Building new service %s", new_service.config.name)
+            old_service.disable()
+            return False
 
     def load_from_config(self, service_configs, context):
         """Apply a configuration to this collection and return a generator of
@@ -191,9 +193,9 @@ class ServiceCollection(object):
         """
         self.services.filter_by_name(service_configs.keys())
 
-        seq = (self._build(config, context)
+        seq = (Service.from_config(config, context)
             for config in service_configs.itervalues())
-        return itertools.ifilter(self.services.replace, seq)
+        return itertools.ifilter(lambda e: self.services.add(e, self._build), seq)
 
     def restore_state(self, service_state_data):
         self.services.restore_state(service_state_data)
