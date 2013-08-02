@@ -503,12 +503,8 @@ class ServiceInstanceCollectionTestCase(TestCase):
         assert_equal(instance, instances[3])
 
     def test_update_node_pool_same_pool(self):
-        with mock.patch('tron.node.NodePoolRepository', autospec=True) as pool_patch:
-            get_mock = pool_patch.get_instance().get_by_name
-            get_mock.configure_mock(return_value=self.collection.node_pool)
-            self.collection.update_node_pool()
-            assert_equal(pool_patch.get_instance.call_count, 2)
-            get_mock.assert_called_once_with(self.collection.config.node)
+        self.collection.update_node_pool(self.collection.node_pool)
+        assert not self.collection.node_pool.get_by_name.called
 
     def test_update_node_pool_diff_pool_same_nodes(self):
         new_instances = [mock.Mock(), mock.Mock()]
@@ -516,19 +512,13 @@ class ServiceInstanceCollectionTestCase(TestCase):
         nodes = [instance.node for instance in new_instances]
         node_pool = mock.Mock(get_by_name=mock.Mock(side_effect=iter(nodes)))
 
-        with mock.patch('tron.node.NodePoolRepository', autospec=True) as pool_patch:
-            get_mock = pool_patch.get_instance().get_by_name
-            get_mock.configure_mock(return_value=node_pool)
+        self.collection.update_node_pool(node_pool)
 
-            self.collection.update_node_pool()
-
-            assert_equal(pool_patch.get_instance.call_count, 2)
-            get_mock.assert_called_once_with(self.collection.config.node)
-            assert_equal(self.collection.node_pool, node_pool)
-            calls = [mock.call(instance.node.name) for instance in new_instances]
-            node_pool.get_by_name.assert_calls(calls)
-            assert not any([instance.stop.called for instance in new_instances])
-            assert_equal(self.collection.instances, new_instances)
+        assert_equal(self.collection.node_pool, node_pool)
+        calls = [mock.call(instance.node.name) for instance in new_instances]
+        node_pool.get_by_name.assert_calls(calls)
+        assert not any([instance.stop.called for instance in new_instances])
+        assert_equal(self.collection.instances, new_instances)
 
     def test_update_node_pool_diff_everything(self):
         new_instances = [mock.Mock(), mock.Mock()]
@@ -536,19 +526,13 @@ class ServiceInstanceCollectionTestCase(TestCase):
         nodes = [instance.node for instance in new_instances]
         node_pool = mock.Mock(get_by_name=mock.Mock(side_effect=iter(nodes)))
 
-        with mock.patch('tron.node.NodePoolRepository', autospec=True) as pool_patch:
-            get_mock = pool_patch.get_instance().get_by_name
-            get_mock.configure_mock(return_value=node_pool)
+        self.collection.update_node_pool(node_pool)
 
-            self.collection.update_node_pool()
-
-            assert_equal(pool_patch.get_instance.call_count, 2)
-            get_mock.assert_called_once_with(self.collection.config.node)
-            assert_equal(self.collection.node_pool, node_pool)
-            calls = [mock.call(instance.node.name) for instance in self.collection.instances]
-            node_pool.get_by_name.assert_calls(calls)
-            assert all([instance.stop.called for instance in self.collection.instances])
-            assert_equal(self.collection.instances, [])
+        assert_equal(self.collection.node_pool, node_pool)
+        calls = [mock.call(instance.node.name) for instance in self.collection.instances]
+        node_pool.get_by_name.assert_calls(calls)
+        assert all([instance.stop.called for instance in self.collection.instances])
+        assert_equal(self.collection.instances, [])
 
     def test_clear_extra(self):
         instance_a = mock.Mock()

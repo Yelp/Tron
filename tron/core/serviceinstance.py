@@ -461,12 +461,9 @@ class ServiceInstanceCollection(object):
             if instance.instance_number == instance_number:
                 return instance
 
-    def update_node_pool(self):
+    def update_node_pool(self, node_pool):
         """Attempt to load a new node pool from the NodePoolRepository, and
         remove instances that no longer have their node in the NodePool."""
-        node_repo = node.NodePoolRepository.get_instance()
-        node_pool = node_repo.get_by_name(self.config.node)
-
         if node_pool != self.node_pool:
             self.node_pool = node_pool
             needs_new_node = []

@@ -152,18 +152,36 @@ class ServiceTestCase(TestCase):
     def test_update_node_pool_enabled(self):
         autospec_method(self.service.repair)
         self.service.enabled = True
-        self.service.update_node_pool()
-        self.service.instances.update_node_pool.assert_called_once_with()
-        self.service.instances.clear_extra.assert_called_once_with()
-        self.service.repair.assert_called_once_with()
+        node_pool = mock.Mock()
+
+        with mock.patch('tron.node.NodePoolRepository', autospec=True) as pool_patch:
+            get_mock = pool_patch.get_instance().get_by_name
+            get_mock.configure_mock(return_value=node_pool)
+
+            self.service.update_node_pool()
+
+            assert_equal(pool_patch.get_instance.call_count, 2)
+            get_mock.assert_called_once_with(self.service.config.node)
+            self.service.instances.update_node_pool.assert_called_once_with(node_pool)
+            self.service.instances.clear_extra.assert_called_once_with()
+            self.service.repair.assert_called_once_with()
 
     def test_update_node_pool_disabled(self):
         autospec_method(self.service.repair)
         self.service.enabled = False
-        self.service.update_node_pool()
-        self.service.instances.update_node_pool.assert_called_once_with()
-        self.service.instances.clear_extra.assert_called_once_with()
-        assert not self.service.repair.called
+        node_pool = mock.Mock()
+
+        with mock.patch('tron.node.NodePoolRepository', autospec=True) as pool_patch:
+            get_mock = pool_patch.get_instance().get_by_name
+            get_mock.configure_mock(return_value=node_pool)
+
+            self.service.update_node_pool()
+
+            assert_equal(pool_patch.get_instance.call_count, 2)
+            get_mock.assert_called_once_with(self.service.config.node)
+            self.service.instances.update_node_pool.assert_called_once_with(node_pool)
+            self.service.instances.clear_extra.assert_called_once_with()
+            assert not self.service.repair.called
 
 
 class ServiceCollectionTestCase(TestCase):
@@ -227,7 +245,7 @@ class ServiceCollectionTestCase(TestCase):
 
     def test_load_from_config(self):
         autospec_method(self.collection.get_names)
-        autospec_method(self.collection.add)
+        autospec_method(self.collection.services.replace)
         autospec_method(self.collection._build)
         service_configs = {'a': mock.Mock(), 'b': mock.Mock()}
         context = mock.create_autospec(command_context.CommandContext)
@@ -237,14 +255,7 @@ class ServiceCollectionTestCase(TestCase):
                         for config in service_configs.itervalues()]
             build_patch.assert_calls(expected)
             expected = [mock.call(s) for s in result]
-            assert_mock_calls(expected, self.collection.add.mock_calls)
-
-    def test_add(self):
-        self.collection.services = mock.MagicMock()
-        service = mock.Mock()
-        result = self.collection.add(service)
-        self.collection.services.replace.assert_called_with(service)
-        assert_equal(result, self.collection.services.replace.return_value)
+            assert_mock_calls(expected, self.collection.services.replace.mock_calls)
 
     def test_restore_state(self):
         state_count = 2

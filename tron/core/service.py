@@ -157,7 +157,10 @@ class Service(observer.Observer, observer.Observable):
         self.event_recorder.info("restored")
 
     def update_node_pool(self):
-        self.instances.update_node_pool()
+        node_repo = node.NodePoolRepository.get_instance()
+        node_pool = node_repo.get_by_name(self.config.node)
+
+        self.instances.update_node_pool(node_pool)
         self.instances.clear_extra()
         if self.enabled:
             self.repair()
@@ -190,10 +193,7 @@ class ServiceCollection(object):
 
         seq = (self._build(config, context)
             for config in service_configs.itervalues())
-        return itertools.ifilter(self.add, seq)
-
-    def add(self, service):
-        return self.services.replace(service)
+        return itertools.ifilter(self.services.replace, seq)
 
     def restore_state(self, service_state_data):
         self.services.restore_state(service_state_data)
