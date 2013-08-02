@@ -149,6 +149,20 @@ class ServiceTestCase(TestCase):
             self.instances.restore_state.return_value)
         self.service.enable.assert_called_with()
 
+    def test_update_node_pool_enabled(self):
+        autospec_method(self.service.repair)
+        self.service.enabled = True
+        self.service.update_node_pool()
+        self.service.instances.update_node_pool.assert_called_once_with()
+        self.service.repair.assert_called_once_with()
+
+    def test_update_node_pool_disabled(self):
+        autospec_method(self.service.repair)
+        self.service.enabled = False
+        self.service.update_node_pool()
+        self.service.instances.update_node_pool.assert_called_once_with()
+        assert not self.service.repair.called
+
 
 class ServiceCollectionTestCase(TestCase):
 
@@ -163,17 +177,65 @@ class ServiceCollectionTestCase(TestCase):
             (serv.name, serv) for serv in self.service_list)
 
     @mock.patch('tron.core.service.Service', autospec=True)
-    def test_load_from_config(self, mock_service):
+    def test_build_with_new_config(self, service_patch):
+        new_config = mock.Mock(
+            name='i_come_from_the_land_of_ice_and_snow',
+            count=42)
+        old_service = mock.Mock(config=mock.Mock())
+        context = mock.create_autospec(command_context.CommandContext)
+        with mock.patch.object(self.collection, 'get_by_name', return_value=old_service) \
+        as get_patch:
+            assert_equal(self.collection._build(new_config, context), service_patch.from_config('', ''))
+            service_patch.from_config.assert_any_call(new_config, context)
+            assert_equal(service_patch.from_config.call_count, 2)
+            get_patch.assert_called_once_with(new_config.name)
+
+    def test_build_with_same_config(self):
+        config = mock.Mock(
+            name='hamsteak',
+            count=413)
+        old_service = mock.Mock(config=config)
+        context = mock.create_autospec(command_context.CommandContext)
+        with mock.patch.object(self.collection, 'get_by_name', return_value=old_service) \
+        as get_patch:
+            assert_equal(self.collection._build(config, context), old_service)
+            get_patch.assert_called_once_with(config.name)
+            old_service.update_node_pool.assert_called_once_with()
+
+    def test_build_with_diff_count(self):
+        name = 'ni'
+        old_config = mock.Mock(
+            count=77)
+        new_config = mock.Mock(
+            count=1111111111111)
+        new_eq = lambda s, o: (s.name == o.name and s.count == o.count)
+        old_config.__eq__ = new_eq
+        new_config.__eq__ = new_eq
+        # We have to do this, since name is an actual kwarg for mock.Mock().
+        old_config.name = name
+        new_config.name = name
+        old_service = mock.Mock(config=old_config)
+        context = mock.create_autospec(command_context.CommandContext)
+        with mock.patch.object(self.collection, 'get_by_name', return_value=old_service) \
+        as get_patch:
+            assert_equal(self.collection._build(new_config, context), old_service)
+            get_patch.assert_called_once_with(name)
+            old_service.update_node_pool.assert_called_once_with()
+
+
+    def test_load_from_config(self):
         autospec_method(self.collection.get_names)
         autospec_method(self.collection.add)
+        autospec_method(self.collection._build)
         service_configs = {'a': mock.Mock(), 'b': mock.Mock()}
         context = mock.create_autospec(command_context.CommandContext)
-        result = list(self.collection.load_from_config(service_configs, context))
-        expected = [mock.call(config, context)
-                    for config in service_configs.itervalues()]
-        assert_mock_calls(expected, mock_service.from_config.mock_calls)
-        expected = [mock.call(s) for s in result]
-        assert_mock_calls(expected, self.collection.add.mock_calls)
+        with mock.patch.object(self.collection, '_build') as build_patch:
+            result = list(self.collection.load_from_config(service_configs, context))
+            expected = [mock.call(config, context)
+                        for config in service_configs.itervalues()]
+            build_patch.assert_calls(expected)
+            expected = [mock.call(s) for s in result]
+            assert_mock_calls(expected, self.collection.add.mock_calls)
 
     def test_add(self):
         self.collection.services = mock.MagicMock()

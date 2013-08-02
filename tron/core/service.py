@@ -156,6 +156,11 @@ class Service(observer.Observer, observer.Observable):
         (self.enable if state_data.get('enabled') else self.disable)()
         self.event_recorder.info("restored")
 
+    def update_node_pool(self):
+        self.instances.update_node_pool()
+        if self.enabled:
+            self.repair()
+
 
 class ServiceCollection(object):
     """A collection of services."""
@@ -163,17 +168,27 @@ class ServiceCollection(object):
     def __init__(self):
         self.services = collections.MappingCollection('services')
 
+    def _build(self, config, context):
+        old_service = self.get_by_name(config.name)
+        if old_service and old_service.config.count != config.count:
+            old_service.config.count = config.count
+
+        if old_service and old_service.config == config:
+            log.debug("Updating service %s\'s node pool" % config.name)
+            old_service.update_node_pool()
+            return old_service
+        else:
+            log.debug("Building new service %s", config.name)
+            return Service.from_config(config, context)
+
     def load_from_config(self, service_configs, context):
         """Apply a configuration to this collection and return a generator of
         services which were added.
         """
         self.services.filter_by_name(service_configs.keys())
 
-        def build(config):
-            log.debug("Building new service %s", config.name)
-            return Service.from_config(config, context)
-
-        seq = (build(config) for config in service_configs.itervalues())
+        seq = (self._build(config, context)
+            for config in service_configs.itervalues())
         return itertools.ifilter(self.add, seq)
 
     def add(self, service):
