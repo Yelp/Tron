@@ -158,6 +158,7 @@ class Service(observer.Observer, observer.Observable):
 
     def update_node_pool(self):
         self.instances.update_node_pool()
+        self.instances.clear_extra()
         if self.enabled:
             self.repair()
 

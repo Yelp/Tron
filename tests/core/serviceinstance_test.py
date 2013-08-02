@@ -550,6 +550,16 @@ class ServiceInstanceCollectionTestCase(TestCase):
             assert all([instance.stop.called for instance in self.collection.instances])
             assert_equal(self.collection.instances, [])
 
+    def test_clear_extra(self):
+        instance_a = mock.Mock()
+        instance_b = mock.Mock()
+        instance_c = mock.Mock()
+        self.collection.instances = [instance_a, instance_b, instance_c]
+        self.collection.config.count = 2
+        self.collection.clear_extra()
+        assert_equal(self.collection.instances, [instance_a, instance_b])
+        instance_c.stop.assert_called_once_with()
+
 
 if __name__ == "__main__":
     run()

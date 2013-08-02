@@ -154,6 +154,7 @@ class ServiceTestCase(TestCase):
         self.service.enabled = True
         self.service.update_node_pool()
         self.service.instances.update_node_pool.assert_called_once_with()
+        self.service.instances.clear_extra.assert_called_once_with()
         self.service.repair.assert_called_once_with()
 
     def test_update_node_pool_disabled(self):
@@ -161,6 +162,7 @@ class ServiceTestCase(TestCase):
         self.service.enabled = False
         self.service.update_node_pool()
         self.service.instances.update_node_pool.assert_called_once_with()
+        self.service.instances.clear_extra.assert_called_once_with()
         assert not self.service.repair.called
 
 

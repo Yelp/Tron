@@ -480,6 +480,12 @@ class ServiceInstanceCollection(object):
             self.instances = [i for i in self.instances if
                               i not in needs_new_node]
 
+    def clear_extra(self):
+        """Clear out instances if too many exist."""
+        for i in range(0, self.missing, -1):
+            instance = self.instances.pop()
+            instance.stop()
+
     @property
     def missing(self):
         return self.config.count - len(self.instances)
