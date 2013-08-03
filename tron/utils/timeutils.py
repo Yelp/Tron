@@ -41,8 +41,15 @@ def macro_timedelta(start_date, years=0, months=0, days=0):
         new_month += 12
         years -= 1
 
-    end_date = datetime.datetime(
-        start_date.year + years, new_month, start_date.day)
+    try:
+        end_date = datetime.datetime(
+            start_date.year + years, new_month, start_date.day)
+    except ValueError:
+        if start_date.day == 31:
+            end_date = datetime.datetime(
+                start_date.year + years, new_month, 30)
+        else:
+            raise
     delta += end_date - start_date
 
     return delta
