@@ -1,6 +1,7 @@
 """Functions for working with dates and timestamps."""
 from __future__ import division
 import datetime
+import calendar
 import re
 import time
 
@@ -45,9 +46,10 @@ def macro_timedelta(start_date, years=0, months=0, days=0):
         end_date = datetime.datetime(
             start_date.year + years, new_month, start_date.day)
     except ValueError:
-        if start_date.day == 31:
+        max_day = calendar.monthrange(start_date.year + years, new_month)[1]
+        if start_date.day > max_day:
             end_date = datetime.datetime(
-                start_date.year + years, new_month, 30)
+                start_date.year + years, new_month, max_day)
         else:
             raise
     delta += end_date - start_date
