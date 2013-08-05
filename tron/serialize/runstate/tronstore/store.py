@@ -58,7 +58,10 @@ class SQLStore(object):
         self.name = name
         self._connection = None
         self.serializer = serializer
-        self.engine = sql.create_engine(connection_details)
+        self.engine = sql.create_engine(connection_details,
+            connect_args={'check_same_thread': False},
+            poolclass=sql.pool.StaticPool)
+        # self.engine.raw_connection().connection.text_factory = str
         self._setup_tables()
 
     def _setup_tables(self):
@@ -101,7 +104,7 @@ class SQLStore(object):
             table = self._get_table(data_type)
             if table is None:
                 return False
-            state_data = self.serializer.serialize(state_data)
+            state_data = unicode(repr(self.serializer.serialize(state_data)))
             update_result = conn.execute(
                 table.update()
                 .where(table.c.key == key)
@@ -121,7 +124,7 @@ class SQLStore(object):
                 [table.c.state_data],
                 table.c.key == key)
             ).fetchone()
-            return (True, self.serializer.deserialize(result[0])) if result else (False, None)
+            return (True, self.serializer.deserialize(eval(str(result[0])))) if result else (False, None)
 
     def cleanup(self):
         if self._connection:
