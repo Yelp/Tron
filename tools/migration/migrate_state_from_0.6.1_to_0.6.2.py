@@ -40,7 +40,7 @@ Command line options:
              SQLAlchemy is the storing mechanism.
              Options for str are pickle, yaml, msgpack, and json.
 
-    -f str   Set the path for the configuration file to str. This defaults to
+    -f str   Set the path for the configuration dir to str. This defaults to
              <working_dir>/config
 """
 
@@ -68,7 +68,7 @@ def parse_options():
                       dest="new_connection_details", default=None)
     parser.add_option("-m", type="string",
                       help="Set new state storing mechanism (store_type)",
-                      dest="store_method", default=None)
+                      dest="store_type", default=None)
     parser.add_option("-d", type="string",
                       help="Set new SQL db serialization method (db_store_method)",
                       dest="db_store_method", default=None)
@@ -107,8 +107,8 @@ def compile_new_info(options, state_info, new_file):
 
     new_state_info = new_state_info._replace(name=new_file)
 
-    if options.store_method:
-        new_state_info = new_state_info._replace(store_method=options.store_method)
+    if options.store_type:
+        new_state_info = new_state_info._replace(store_type=options.store_type)
 
     if options.db_store_method:
         new_state_info = new_state_info._replace(db_store_method=options.db_store_method)
@@ -187,7 +187,9 @@ def main():
     old_store = get_old_state_store(state_info)
     print('Setting up the new state storing object...')
     new_state_info = compile_new_info(options, state_info, new_fname)
-    new_store = ParallelStore(new_state_info)
+    new_store = ParallelStore()
+    if not new_store.load_config(new_state_info):
+        raise AssertionError("Invalid configuration.")
 
     print('Copying metadata...')
     copy_metadata(old_store, new_store)
