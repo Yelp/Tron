@@ -22,31 +22,6 @@ class VersionMismatchError(ValueError):
 class PersistenceStoreError(ValueError):
     """Raised if the store can not be created or fails a read or write."""
 
-
-# class PersistenceManagerFactory(object):
-#     """Create a PersistentStateManager."""
-
-#     @classmethod
-#     def from_config(cls, persistence_config):
-#         store_type              = persistence_config.store_type
-#         # transport_method        = persistence_config.transport_method
-#         db_store_method         = persistence_config.db_store_method
-#         buffer_size             = persistence_config.buffer_size
-
-#         if store_type not in schema.StatePersistenceTypes:
-#             raise PersistenceStoreError("Unknown store type: %s" % store_type)
-
-#         # if transport_method not in schema.StateTransportTypes:
-#         #     raise PersistenceStoreError("Unknown transport type: %s" % transport_method)
-
-#         if db_store_method not in schema.StateSerializationTypes and store_type in ('sql', 'mongo'):
-#             raise PersistenceStoreError("Unknown db store method: %s" % db_store_method)
-
-#         store = ParallelStore(persistence_config)
-#         buffer = StateSaveBuffer(buffer_size)
-#         return PersistentStateManager(store, buffer)
-
-
 class StateMetadata(object):
     """A data object for saving state metadata. Conforms to the same
     RunState interface as Jobs and Services.
