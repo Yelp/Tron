@@ -140,7 +140,7 @@ def copy_metadata(old_store, new_store):
     old_metadata_dict = old_store.restore([meta_key_old])
     if old_metadata_dict:
         if 'version' in old_metadata_dict:
-            old_metadata_dict['version'] = (0, 6, 0, 2)
+            old_metadata_dict['version'] = (0, 6, 2, 0)
         old_metadata = old_metadata_dict[meta_key_old]
         meta_key_new = new_store.build_key(runstate.MCP_STATE, StateMetadata.name)
         new_store.save([(meta_key_new, old_metadata)])
