@@ -193,7 +193,11 @@ class YamlStore(object):
     version of this (yamlstore.py), since key/value pairs are now saved
     INDIVIDUALLY rather than in batches, meaning saves are SLOOOOOOOW.
 
-    Seriously, you probably shouldn't use this unless you're doing something
+    How slow, you ask? Converting a standard Shelve store from 0.6.1 into
+    this object with test_config.yaml (and service_0 enabled) took about 4
+    minutes. Going to a Shelve object instead took less than 5 seconds.
+
+    Seriously, you shouldn't use this unless you're doing something
     really trivial and/or want a readable Yaml file.
     """
 

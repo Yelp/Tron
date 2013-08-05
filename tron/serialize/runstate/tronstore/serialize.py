@@ -33,7 +33,7 @@ class SerializerModuleError(Exception):
 class JSONSerializer(object):
     @classmethod
     def serialize(cls, data):
-        return json.dumps(data, tuple_as_array=False)
+        return json.dumps(data)
 
     @classmethod
     def deserialize(cls, data_str):
@@ -61,7 +61,7 @@ class MsgPackSerializer(object):
     def deserialize(cls, data_str):
         if no_msgpack:
             raise SerializerModuleError('MessagePack not installed.')
-        return msgpack.unpackb(data_str, use_list=False)
+        return msgpack.unpackb(data_str)
 
 
 class YamlSerializer(object):

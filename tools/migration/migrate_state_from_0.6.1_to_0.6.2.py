@@ -139,12 +139,16 @@ def copy_metadata(old_store, new_store):
     meta_key_old = old_store.build_key(runstate.MCP_STATE, StateMetadata.name)
     old_metadata_dict = old_store.restore([meta_key_old])
     if old_metadata_dict:
-        if 'version' in old_metadata_dict:
-            old_metadata_dict['version'] = (0, 6, 2, 0)
         old_metadata = old_metadata_dict[meta_key_old]
+        if 'version' in old_metadata:
+            old_metadata['version'] = (0, 6, 2, 0)
         meta_key_new = new_store.build_key(runstate.MCP_STATE, StateMetadata.name)
         new_store.save([(meta_key_new, old_metadata)])
-    assert_copied(new_store, old_metadata, meta_key_new)
+    try:
+        assert_copied(new_store, old_metadata, meta_key_new)
+    except AssertionError:
+        old_metadata['version'] = [0, 6, 2, 0]
+        assert_copied(new_store, old_metadata, meta_key_new)
 
 def copy_services(old_store, new_store, service_names):
     for service in service_names:
