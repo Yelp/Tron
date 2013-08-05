@@ -73,6 +73,11 @@ class StateMetadata(object):
             return
 
         version = metadata['version']
+        if not isinstance(version, tuple):
+            try:
+                version = tuple(version)
+            except:
+                raise PersistenceStoreError("Stored metadata looks corrupted.")
         # Names (and state keys) changed in 0.5.2, requires migration
         # see tools/migration/migrate_state_to_namespace
         if version > cls.version or version < (0, 5, 2):
