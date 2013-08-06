@@ -112,7 +112,8 @@ class MasterControlProgram(object):
         """
         if self.state_watcher.update_from_config(state_config):
             for job_container in self.jobs:
-                self.state_watcher.save_job_run(job_container.get_job_runs())
+                for job_run in job_container.get_job_runs():
+                    self.state_watcher.save_job_run(job_run)
                 self.state_watcher.save_job(job_container.get_job_state())
             for service in self.services:
                 self.state_watcher.save_service(service)
