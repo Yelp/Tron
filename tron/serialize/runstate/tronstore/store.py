@@ -61,7 +61,6 @@ class SQLStore(object):
         self.engine = sql.create_engine(connection_details,
             connect_args={'check_same_thread': False},
             poolclass=sql.pool.StaticPool)
-        # self.engine.raw_connection().connection.text_factory = str
         self._setup_tables()
 
     def _setup_tables(self):

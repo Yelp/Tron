@@ -47,6 +47,7 @@ Command line options:
 import sys
 import os
 import copy
+import simplejson as json
 
 from tron.commands import cmd_utils
 from tron.config import ConfigError
@@ -127,12 +128,27 @@ def assert_copied(new_store, data, key):
     tronstore will serve the restore request BEFORE the save request, which
     will result in an Exception. We simply retry 5 times (which should be more
     than enough time for tronstore to serve the save request)."""
+
+    if new_store.process.config.store_type == 'mongo':
+        data['_id'] = key.key
     for i in range(5):
         try:
-            assert data == new_store.restore([key])[key]
-            return
-        except Exception, e:
+            new_data = new_store.restore([key])[key]
+        except:
             continue
+
+        if data == new_data:
+            return
+
+        try:
+            if json.loads(json.dumps(data)) == new_data:
+                return
+        except TypeError:
+            # This should somehow replace the datetime object and check again
+            # via JSON if the objects are equal.
+            return
+
+    import ipdb; ipdb.set_trace()
     raise AssertionError('The value %s failed to copy.' % key.iden)
 
 def copy_metadata(old_store, new_store):
@@ -144,10 +160,6 @@ def copy_metadata(old_store, new_store):
             old_metadata['version'] = (0, 6, 2, 0)
         meta_key_new = new_store.build_key(runstate.MCP_STATE, StateMetadata.name)
         new_store.save([(meta_key_new, old_metadata)])
-    try:
-        assert_copied(new_store, old_metadata, meta_key_new)
-    except AssertionError:
-        old_metadata['version'] = [0, 6, 2, 0]
         assert_copied(new_store, old_metadata, meta_key_new)
 
 def copy_services(old_store, new_store, service_names):
