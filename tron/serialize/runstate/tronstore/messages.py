@@ -1,7 +1,4 @@
-# from tron.serialize.runstate.tronstore.transport import JSONTransport
 from tron.serialize.runstate.tronstore.serialize import cPickleSerializer
-# from tron.serialize.runstate.tronstore.transport import MsgPackTransport
-# from tron.serialize.runstate.tronstore.transport import YamlTransport
 
 # a simple max integer to prevent ids from growing indefinitely
 MAX_MSG_ID = 2**32 - 1
@@ -28,10 +25,6 @@ class StoreRequestFactory(object):
     def from_msg(self, msg):
         return StoreRequest.from_message(self.serializer.deserialize(msg), self.serializer)
 
-    # def update_method(self, new_method):
-    #     """Update the method used for message serialization."""
-    #     self.serializer = transport_class_map[new_method]
-
     def get_method(self):
         return self.serializer
 
@@ -53,10 +46,6 @@ class StoreResponseFactory(object):
     def from_msg(self, msg):
         return StoreResponse.from_message(self.serializer.deserialize(msg), self.serializer)
 
-    # def update_method(self, new_method):
-    #     """Update the method used for message serialization."""
-    #     self.serializer = transport_class_map[new_method]
-
     def get_method(self):
         return self.serializer
 
@@ -77,7 +66,6 @@ class StoreRequest(object):
         self.data        = data
         self.data_type   = data_type
         self.method      = method
-        # self.serialized  = self.get_serialized()
 
     @classmethod
     def from_message(cls, msg_data, method):
@@ -91,18 +79,6 @@ class StoreRequest(object):
             self.req_type,
             self.data_type,
             self.data))
-
-    # def update_method(self, new_method):
-    #     """Update the method used for message serialization."""
-    #     self.method = transport_class_map['new_method']
-    #     self.serialized = self.get_serialized()
-
-    # def get_serialized(self):
-    #     return self.method.serialize((
-    #         self.id,
-    #         self.req_type,
-    #         self.data_type,
-    #         self.data))
 
 
 class StoreResponse(object):
@@ -128,11 +104,3 @@ class StoreResponse(object):
     @property
     def serialized(self):
         return self.method.serialize((self.id, self.success, self.data))
-
-    # def update_method(self, new_method):
-    #     """Update the method used for message serialization."""
-    #     self.method = transport_class_map['new_method']
-    #     self.serialized = self.get_serialized()
-
-    # def get_serialized(self):
-    #     return self.method.serialize((self.id, self.success, self.data))

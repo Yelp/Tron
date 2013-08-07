@@ -5,7 +5,7 @@ import mock
 import contextlib
 from testify import TestCase, run, setup, assert_equal, teardown
 from tron.serialize.runstate.tronstore.store import ShelveStore, SQLStore, MongoStore, YamlStore, SyncStore, NullStore
-from tron.serialize.runstate.tronstore.transport import JSONTransport
+from tron.serialize.runstate.tronstore.serialize import cPickleSerializer
 from tron.serialize import runstate
 
 
@@ -60,7 +60,7 @@ class SQLStoreTestCase(TestCase):
     @setup
     def setup_store(self):
         details = 'sqlite:///:memory:'
-        self.store = SQLStore('name', details, JSONTransport)
+        self.store = SQLStore('name', details, cPickleSerializer)
 
     @teardown
     def teardown_store(self):
@@ -82,7 +82,7 @@ class SQLStoreTestCase(TestCase):
         self.store.save(key, state_data, data_type)
 
         rows = self.store.engine.execute(self.store.service_table.select())
-        assert_equal(rows.fetchone(), ('dotes', self.store.serializer.serialize(state_data)))
+        assert_equal(rows.fetchone(), (u'dotes', unicode(repr(self.store.serializer.serialize(state_data)))))
 
     def test_restore_success(self):
         data_type = runstate.JOB_STATE
