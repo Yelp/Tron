@@ -65,7 +65,7 @@ def handle_requests(request_queue, resp_factory, pipe, store_class, do_work):
 
 class SyncPipe(object):
     """An object to handle synchronization over pipe operations. In particular,
-    the send and recv functions should have mutexes as they are subject to
+    the send and recv functions have a mutex as they are subject to
     race conditions.
     """
 
