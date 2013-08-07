@@ -149,6 +149,28 @@ class ServiceTestCase(TestCase):
             self.instances.restore_state.return_value)
         self.service.enable.assert_called_with()
 
+    def test_update_node_pool_enabled(self):
+        autospec_method(self.service.repair)
+        self.service.enabled = True
+        node_pool = mock.Mock()
+
+        self.service.update_node_pool(node_pool)
+
+        self.service.instances.update_node_pool.assert_called_once_with(node_pool)
+        self.service.instances.clear_extra.assert_called_once_with()
+        self.service.repair.assert_called_once_with()
+
+    def test_update_node_pool_disabled(self):
+        autospec_method(self.service.repair)
+        self.service.enabled = False
+        node_pool = mock.Mock()
+
+        self.service.update_node_pool(node_pool)
+
+        self.service.instances.update_node_pool.assert_called_once_with(node_pool)
+        self.service.instances.clear_extra.assert_called_once_with()
+        assert not self.service.repair.called
+
 
 class ServiceCollectionTestCase(TestCase):
 
@@ -162,25 +184,64 @@ class ServiceCollectionTestCase(TestCase):
         self.collection.services.update(
             (serv.name, serv) for serv in self.service_list)
 
+    def test_build_with_new_config(self):
+        new_config = mock.Mock(
+            name='i_come_from_the_land_of_ice_and_snow',
+            count=42)
+        new_service = mock.Mock(config=new_config)
+        old_service = mock.Mock()
+        with mock.patch.object(self.collection, 'get_by_name', return_value=old_service) \
+        as get_patch:
+            assert not self.collection._build(new_service)
+            assert not old_service.update_node_pool.called
+            get_patch.assert_called_once_with(new_config.name)
+
+    def test_build_with_same_config(self):
+        config = mock.Mock(
+            name='hamsteak',
+            count=413)
+        old_service = mock.Mock(config=config)
+        new_service = mock.Mock(config=config)
+        with mock.patch.object(self.collection, 'get_by_name', return_value=old_service) \
+        as get_patch:
+            assert self.collection._build(new_service)
+            get_patch.assert_called_once_with(config.name)
+            old_service.update_node_pool.assert_called_once_with(new_service.instances.node_pool)
+            assert_equal(old_service.instances.context, new_service.instances.context)
+
+    def test_build_with_diff_count(self):
+        name = 'ni'
+        old_config = mock.Mock(
+            count=77)
+        new_config = mock.Mock(
+            count=1111111111111)
+        new_eq = lambda s, o: (s.name == o.name and s.count == o.count)
+        old_config.__eq__ = new_eq
+        new_config.__eq__ = new_eq
+        # We have to do this, since name is an actual kwarg for mock.Mock().
+        old_config.name = name
+        new_config.name = name
+        old_service = mock.Mock(config=old_config)
+        new_service = mock.Mock(config=new_config)
+        with mock.patch.object(self.collection, 'get_by_name', return_value=old_service) \
+        as get_patch:
+            assert self.collection._build(new_service)
+            get_patch.assert_called_once_with(new_service.config.name)
+            old_service.update_node_pool.assert_called_once_with(new_service.instances.node_pool)
+            assert_equal(old_service.instances.context, new_service.instances.context)
+
     @mock.patch('tron.core.service.Service', autospec=True)
     def test_load_from_config(self, mock_service):
         autospec_method(self.collection.get_names)
-        autospec_method(self.collection.add)
+        autospec_method(self.collection.services.add)
         service_configs = {'a': mock.Mock(), 'b': mock.Mock()}
         context = mock.create_autospec(command_context.CommandContext)
         result = list(self.collection.load_from_config(service_configs, context))
         expected = [mock.call(config, context)
                     for config in service_configs.itervalues()]
         assert_mock_calls(expected, mock_service.from_config.mock_calls)
-        expected = [mock.call(s) for s in result]
-        assert_mock_calls(expected, self.collection.add.mock_calls)
-
-    def test_add(self):
-        self.collection.services = mock.MagicMock()
-        service = mock.Mock()
-        result = self.collection.add(service)
-        self.collection.services.replace.assert_called_with(service)
-        assert_equal(result, self.collection.services.replace.return_value)
+        expected = [mock.call(s, self.collection._build) for s in result]
+        assert_mock_calls(expected, self.collection.services.add.mock_calls)
 
     def test_restore_state(self):
         state_count = 2

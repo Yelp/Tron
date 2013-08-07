@@ -461,6 +461,30 @@ class ServiceInstanceCollection(object):
             if instance.instance_number == instance_number:
                 return instance
 
+    def update_node_pool(self, node_pool):
+        """Attempt to load a new node pool from the NodePoolRepository, and
+        remove instances that no longer have their node in the NodePool."""
+        if node_pool == self.node_pool:
+            return
+
+        self.node_pool = node_pool
+
+        def _trim_old_nodes():
+            for instance in self.instances:
+                new_node = self.node_pool.get_by_name(instance.node.name)
+                if new_node != instance.node:
+                    instance.stop()
+                else:
+                    yield instance
+
+        self.instances = list(_trim_old_nodes())
+
+    def clear_extra(self):
+        """Clear out instances if too many exist."""
+        for i in range(0, self.missing, -1):
+            instance = self.instances.pop()
+            instance.stop()
+
     @property
     def missing(self):
         return self.config.count - len(self.instances)
