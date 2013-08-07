@@ -156,6 +156,12 @@ class Service(observer.Observer, observer.Observable):
         (self.enable if state_data.get('enabled') else self.disable)()
         self.event_recorder.info("restored")
 
+    def update_node_pool(self, node_pool):
+        self.instances.update_node_pool(node_pool)
+        self.instances.clear_extra()
+        if self.enabled:
+            self.repair()
+
 
 class ServiceCollection(object):
     """A collection of services."""
@@ -163,21 +169,46 @@ class ServiceCollection(object):
     def __init__(self):
         self.services = collections.MappingCollection('services')
 
+    def _build(self, new_service):
+        """A method to be used as an update function for MappingCollection.add.
+        This function attempts to load an old Service object, and if one
+        exists, see if we don't actually have to use an entirely new
+        Service object on reconfiguration.
+
+        To do this, we first check if the number of instances (config.count) is
+        different, as we have a method to fix this when updating the service's
+        node pool. Then, if the configs are now equal, we can simply update
+        the node pool of the old Service object and be done- no need for the
+        new Service object. Otherwise, we use the new object as normal.
+        """
+        old_service = self.get_by_name(new_service.config.name)
+
+        if not old_service:
+            log.debug("Building new service %s", new_service.config.name)
+            return False
+
+        if old_service.config.count != new_service.config.count:
+            old_service.config.count = new_service.config.count
+
+        if old_service.config == new_service.config:
+            log.debug("Updating service %s\'s node pool" % new_service.config.name)
+            old_service.instances.context = new_service.instances.context
+            old_service.update_node_pool(new_service.instances.node_pool)
+            return True
+        else:
+            log.debug("Building new service %s", new_service.config.name)
+            old_service.disable()
+            return False
+
     def load_from_config(self, service_configs, context):
         """Apply a configuration to this collection and return a generator of
         services which were added.
         """
         self.services.filter_by_name(service_configs.keys())
 
-        def build(config):
-            log.debug("Building new service %s", config.name)
-            return Service.from_config(config, context)
-
-        seq = (build(config) for config in service_configs.itervalues())
-        return itertools.ifilter(self.add, seq)
-
-    def add(self, service):
-        return self.services.replace(service)
+        seq = (Service.from_config(config, context)
+            for config in service_configs.itervalues())
+        return itertools.ifilter(lambda e: self.services.add(e, self._build), seq)
 
     def restore_state(self, service_state_data):
         self.services.restore_state(service_state_data)
