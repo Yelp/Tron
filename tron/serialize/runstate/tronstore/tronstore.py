@@ -50,7 +50,6 @@ def handle_requests(request_queue, resp_factory, pipe, store_class, do_work):
 
             if request.req_type == msg_enums.REQUEST_SAVE:
                 store_class.save(request.data[0], request.data[1], request.data_type)
-                # pipe.send_bytes(resp_factory.build(success, request.id, '').serialized)
 
             elif request.req_type == msg_enums.REQUEST_RESTORE:
                 success, data = store_class.restore(request.data, request.data_type)

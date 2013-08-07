@@ -82,8 +82,6 @@ class StoreProcessProtocol(object):
         be fine.
         """
         if id in self.orphaned_responses:
-            # response = self.orphaned_responses[id]
-            # del self.orphaned_responses[id]
             return self.orphaned_responses.pop(id)
 
         while self.pipe.poll(timeout):

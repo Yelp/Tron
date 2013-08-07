@@ -94,7 +94,6 @@ class StoreResponse(object):
         self.success    = success
         self.data       = data
         self.method     = method
-        # self.serialized = self.get_serialized()
 
     @classmethod
     def from_message(cls, msg_data, method):

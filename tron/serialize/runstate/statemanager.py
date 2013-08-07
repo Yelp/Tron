@@ -6,10 +6,6 @@ import tron
 from tron.config import schema
 from tron.core import job, jobrun, service
 from tron.serialize import runstate
-# from tron.serialize.runstate.mongostore import MongoStateStore
-# from tron.serialize.runstate.shelvestore import ShelveStateStore
-# from tron.serialize.runstate.sqlalchemystore import SQLAlchemyStateStore
-# from tron.serialize.runstate.yamlstore import YamlStateStore
 from tron.serialize.runstate.tronstore.parallelstore import ParallelStore
 from tron.utils import observer
 
