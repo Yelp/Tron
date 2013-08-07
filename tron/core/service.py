@@ -156,10 +156,7 @@ class Service(observer.Observer, observer.Observable):
         (self.enable if state_data.get('enabled') else self.disable)()
         self.event_recorder.info("restored")
 
-    def update_node_pool(self):
-        node_repo = node.NodePoolRepository.get_instance()
-        node_pool = node_repo.get_by_name(self.config.node)
-
+    def update_node_pool(self, node_pool):
         self.instances.update_node_pool(node_pool)
         self.instances.clear_extra()
         if self.enabled:
@@ -173,14 +170,30 @@ class ServiceCollection(object):
         self.services = collections.MappingCollection('services')
 
     def _build(self, new_service):
+        """A method to be used as an update function for MappingCollection.add.
+        This function attempts to load an old Service object, and if one
+        exists, see if we don't actually have to use an entirely new
+        Service object on reconfiguration.
+
+        To do this, we first check if the number of instances (config.count) is
+        different, as we have a method to fix this when updating the service's
+        node pool. Then, if the configs are now equal, we can simply update
+        the node pool of the old Service object and be done- no need for the
+        new Service object. Otherwise, we use the new object as normal.
+        """
         old_service = self.get_by_name(new_service.config.name)
-        if old_service and old_service.config.count != new_service.config.count:
+
+        if not old_service:
+            log.debug("Building new service %s", new_service.config.name)
+            return False
+
+        if old_service.config.count != new_service.config.count:
             old_service.config.count = new_service.config.count
 
-        if old_service and old_service.config == new_service.config:
+        if old_service.config == new_service.config:
             log.debug("Updating service %s\'s node pool" % new_service.config.name)
             old_service.instances.context = new_service.instances.context
-            old_service.update_node_pool()
+            old_service.update_node_pool(new_service.instances.node_pool)
             return True
         else:
             log.debug("Building new service %s", new_service.config.name)

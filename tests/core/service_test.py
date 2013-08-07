@@ -154,34 +154,22 @@ class ServiceTestCase(TestCase):
         self.service.enabled = True
         node_pool = mock.Mock()
 
-        with mock.patch('tron.node.NodePoolRepository', autospec=True) as pool_patch:
-            get_mock = pool_patch.get_instance().get_by_name
-            get_mock.configure_mock(return_value=node_pool)
+        self.service.update_node_pool(node_pool)
 
-            self.service.update_node_pool()
-
-            assert_equal(pool_patch.get_instance.call_count, 2)
-            get_mock.assert_called_once_with(self.service.config.node)
-            self.service.instances.update_node_pool.assert_called_once_with(node_pool)
-            self.service.instances.clear_extra.assert_called_once_with()
-            self.service.repair.assert_called_once_with()
+        self.service.instances.update_node_pool.assert_called_once_with(node_pool)
+        self.service.instances.clear_extra.assert_called_once_with()
+        self.service.repair.assert_called_once_with()
 
     def test_update_node_pool_disabled(self):
         autospec_method(self.service.repair)
         self.service.enabled = False
         node_pool = mock.Mock()
 
-        with mock.patch('tron.node.NodePoolRepository', autospec=True) as pool_patch:
-            get_mock = pool_patch.get_instance().get_by_name
-            get_mock.configure_mock(return_value=node_pool)
+        self.service.update_node_pool(node_pool)
 
-            self.service.update_node_pool()
-
-            assert_equal(pool_patch.get_instance.call_count, 2)
-            get_mock.assert_called_once_with(self.service.config.node)
-            self.service.instances.update_node_pool.assert_called_once_with(node_pool)
-            self.service.instances.clear_extra.assert_called_once_with()
-            assert not self.service.repair.called
+        self.service.instances.update_node_pool.assert_called_once_with(node_pool)
+        self.service.instances.clear_extra.assert_called_once_with()
+        assert not self.service.repair.called
 
 
 class ServiceCollectionTestCase(TestCase):
@@ -218,7 +206,7 @@ class ServiceCollectionTestCase(TestCase):
         as get_patch:
             assert self.collection._build(new_service)
             get_patch.assert_called_once_with(config.name)
-            old_service.update_node_pool.assert_called_once_with()
+            old_service.update_node_pool.assert_called_once_with(new_service.instances.node_pool)
             assert_equal(old_service.instances.context, new_service.instances.context)
 
     def test_build_with_diff_count(self):
@@ -239,7 +227,7 @@ class ServiceCollectionTestCase(TestCase):
         as get_patch:
             assert self.collection._build(new_service)
             get_patch.assert_called_once_with(new_service.config.name)
-            old_service.update_node_pool.assert_called_once_with()
+            old_service.update_node_pool.assert_called_once_with(new_service.instances.node_pool)
             assert_equal(old_service.instances.context, new_service.instances.context)
 
     @mock.patch('tron.core.service.Service', autospec=True)

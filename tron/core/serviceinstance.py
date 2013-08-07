@@ -464,18 +464,20 @@ class ServiceInstanceCollection(object):
     def update_node_pool(self, node_pool):
         """Attempt to load a new node pool from the NodePoolRepository, and
         remove instances that no longer have their node in the NodePool."""
-        if node_pool != self.node_pool:
-            self.node_pool = node_pool
-            needs_new_node = []
+        if node_pool == self.node_pool:
+            return
 
+        self.node_pool = node_pool
+
+        def _trim_old_nodes():
             for instance in self.instances:
                 new_node = self.node_pool.get_by_name(instance.node.name)
                 if new_node != instance.node:
                     instance.stop()
-                    needs_new_node.append(instance)
+                else:
+                    yield instance
 
-            self.instances = [i for i in self.instances if
-                              i not in needs_new_node]
+        self.instances = list(_trim_old_nodes())
 
     def clear_extra(self):
         """Clear out instances if too many exist."""
