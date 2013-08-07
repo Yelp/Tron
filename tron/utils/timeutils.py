@@ -1,6 +1,7 @@
 """Functions for working with dates and timestamps."""
 from __future__ import division
 import datetime
+import calendar
 import re
 import time
 
@@ -27,6 +28,20 @@ def delta_total_seconds(td):
     return (microseconds + (seconds + days * 24 * 3600) * 10**6) / 10**6
 
 
+def get_end_date(year, month, day):
+    """Get a datetime object for the inputted values, switching day to
+    the last day of the month if it is too large.
+    """
+    try:
+        return datetime.datetime(year, month, day)
+    except ValueError:
+        _, max_day = calendar.monthrange(year, month)
+        if day > max_day:
+            return datetime.datetime(year, month, max_day)
+        else:
+            raise
+
+
 def macro_timedelta(start_date, years=0, months=0, days=0):
     """Since datetime doesn't provide timedeltas at the year or month level,
     this function generates timedeltas of the appropriate sizes.
@@ -41,8 +56,7 @@ def macro_timedelta(start_date, years=0, months=0, days=0):
         new_month += 12
         years -= 1
 
-    end_date = datetime.datetime(
-        start_date.year + years, new_month, start_date.day)
+    end_date = get_end_date(start_date.year + years, new_month, start_date.day)
     delta += end_date - start_date
 
     return delta
