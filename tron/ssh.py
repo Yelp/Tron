@@ -28,7 +28,7 @@ class SSHAuthOptions(object):
     def __init__(self, identitys, use_agent, config):
         self.use_agent = use_agent
         self.identitys = identitys
-        self.config    = config
+        self._config    = config
 
     @classmethod
     def from_config(cls, ssh_config):
@@ -40,7 +40,7 @@ class SSHAuthOptions(object):
         return not self.use_agent
 
     def __eq__(self, other):
-        return other and other.config == self.config
+        return other and other._config == self._config
 
     def __ne__(self, other):
         return not self == other
