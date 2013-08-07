@@ -76,7 +76,7 @@ class MasterControlProgramTestCase(TestCase):
         manager.create_new_config(temp_dir, self.TEST_CONFIG_MONTH_DELTA)
 
         with mock.patch.object(timeutils, 'current_time',
-        return_value=datetime.datetime(2013, 7, 31)) as now_patch:
+                return_value=datetime.datetime(2013, 7, 31)) as now_patch:
             self.mcp.config = manager.ConfigManager(temp_dir)
             self.mcp._load_config()
             now_patch.assert_any_call()
