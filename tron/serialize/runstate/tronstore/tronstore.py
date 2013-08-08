@@ -97,7 +97,7 @@ class TronstorePool(object):
     workers, which send an appropriate response.
     """
 
-    POOL_SIZE = 35
+    POOL_SIZE = 16
 
     def __init__(self, resp_fact, pipe, store):
         """Initialize the thread pool. Please make a new pool if any of the
