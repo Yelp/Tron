@@ -58,7 +58,9 @@ class JobState(Observable):
         """Current status of the job. Takes a JobRunCollection as an argument."""
         if not self.enabled:
             return self.STATUS_DISABLED
-        if job_runs.get_run_by_state(ActionRun.STATE_RUNNING):
+
+        if (job_runs.get_run_by_state(ActionRun.STATE_RUNNING) or
+                job_runs.get_run_by_state(ActionRun.STATE_STARTING)):
             return self.STATUS_RUNNING
 
         if (job_runs.get_run_by_state(ActionRun.STATE_SCHEDULED) or
