@@ -17,7 +17,7 @@
 import optparse
 from tron.config import manager, schema
 from tron.serialize import runstate
-from tron.serialize.runstate.statemanager import PersistenceManagerFactory
+from tron.serialize.runstate.statemanager import PersistentStateManager
 from tron.utils import tool_utils
 
 
@@ -49,11 +49,16 @@ def parse_options():
 def get_state_manager_from_config(config_path, working_dir):
     """Return a state manager from the configuration.
     """
+    if not working_dir:
+        working_dir = config_path
     config_manager = manager.ConfigManager(config_path)
     config_container = config_manager.load()
     state_config = config_container.get_master().state_persistence
     with tool_utils.working_dir(working_dir):
-        return PersistenceManagerFactory.from_config(state_config)
+        ret = PersistentStateManager()
+        if not ret.update_from_config(state_config):
+            raise SystemError("%s failed to load." % config_path)
+        return ret
 
 
 def get_current_config(config_path):
@@ -102,6 +107,8 @@ def convert_state(opts):
     print "Migrated %s services." % len(service_states)
 
     dest_manager.cleanup()
+
+    print "Hang on, saving everything to the destination object..."
 
 
 if __name__ == "__main__":

@@ -77,4 +77,5 @@ class ParallelStore(object):
             return False
 
     def __repr__(self):
-        return "ParallelStore"
+        store = self.process.config.store_type if self.process.config else None
+        return "ParallelStore(%s)" % store

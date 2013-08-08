@@ -60,6 +60,7 @@ from tron.serialize.runstate.yamlstore import YamlStateStore
 from tron.serialize.runstate.sqlalchemystore import SQLAlchemyStateStore
 from tron.serialize.runstate.tronstore.parallelstore import ParallelStore
 from tron.serialize.runstate.statemanager import StateMetadata
+from tron.serialize.runstate.tronstore.serialize import MsgPackSerializer
 
 def parse_options():
     usage = "usage: %prog [options] <working dir> <new filename>"
@@ -126,12 +127,12 @@ def compile_new_info(options, state_info, new_file):
 def assert_copied(new_store, data, key):
     """A small function to counter race conditions. It's possible that
     tronstore will serve the restore request BEFORE the save request, which
-    will result in an Exception. We simply retry 5 times (which should be more
+    will result in an Exception. We simply retry 10 times (which should be more
     than enough time for tronstore to serve the save request)."""
 
     if new_store.process.config.store_type == 'mongo':
         data['_id'] = key.key
-    for i in range(5):
+    for i in range(10):
         try:
             new_data = new_store.restore([key])[key]
         except:
@@ -141,14 +142,11 @@ def assert_copied(new_store, data, key):
             return
 
         try:
-            if json.loads(json.dumps(data)) == new_data:
+            if MsgPackSerializer.deserialize(MsgPackSerializer.serialize(data)) == new_data:
                 return
-        except TypeError:
-            # This should somehow replace the datetime object and check again
-            # via JSON if the objects are equal.
-            return
+        except:
+            continue
 
-    import ipdb; ipdb.set_trace()
     raise AssertionError('The value %s failed to copy.' % key.iden)
 
 def copy_metadata(old_store, new_store):
