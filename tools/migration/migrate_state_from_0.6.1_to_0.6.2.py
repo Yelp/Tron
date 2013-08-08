@@ -2,27 +2,31 @@
 
 This is a script to convert old state storing containers into the new
 objects used by Tron v0.6.2 and tronstore. The script will use the same
-mechanism for storing state as specified in the Tron configuration file
-(except for SQL, which will default to using simplejson for serializing
-state data into its database). This can be overriden via command line
-options, which allow for full configuration of the mechanisms used to store
-the new state objects.
+mechanism for storing state as specified in the Tron configuration file.
+Config elements can be overriden via command line options, which allows for
+full configuration of the mechanism used to store the new state object.
 
-Please upgrade to Tron v0.6.2 before running this script. Also note that
-migrate_state.py will NOT work until running this script, as it has been
-changed to work with v0.6.2's version of state storing.
+Please ensure that you have Tron v0.6.2 before running this script. Also note
+that migrate_state.py will NOT work again until running this script, as it has
+been changed to work with v0.6.2's method of state storing.
 
-Make sure that the working dir is the same as the one used in your Tron
-configuration! Otherwise, this script won't be able to load the config file
-and make the magic happen.
+The working dir should generally be the same as the one used when launching
+trond, but should contain the file pointed to by the configuration file.
+The script attempts to load a configuration from <working dir>/config by
+default, or whatever -f was set to.
 
 ***IMPORTANT***
 When using SQLAlchemy/MongoDB storing mechanisms, the -c option for setting
-NEW connection detail parameters MUST be set. Because we don't want to clobber
-the old data, this script requires that there is a new database for saving
-the new state data, meaning new connection parameters. This script
-doesn't check rigorously that the new connection details given are valid;
-however, it does verify that the details aren't exactly the same.
+connection detail parameters MUST be set.
+
+HOWEVER, THE SCRIPT DOES NOT CHECK WHETHER OR NOT THE CONNECTION DETAILS
+ARE THE SAME, NOR IF YOU ARE GOING TO CLOBBER YOUR OLD DATABASE WITH THE GIVEN
+CONNECTION AND CONFIGURATION PARAMETERS.
+
+Please especially ensure that you are not connecting to the exact
+same SQL database that holds your old state_data, or you are likely to run
+into a large number of strange problems and inconsistencies.
+***IMPORTANT***
 
 
 Command line options:
@@ -47,7 +51,6 @@ Command line options:
 import sys
 import os
 import copy
-import simplejson as json
 
 from tron.commands import cmd_utils
 from tron.config import ConfigError
@@ -115,11 +118,10 @@ def compile_new_info(options, state_info, new_file):
     if options.db_store_method:
         new_state_info = new_state_info._replace(db_store_method=options.db_store_method)
 
-    if options.new_connection_details \
-    and options.new_connection_details != state_info.connection_details:
+    if options.new_connection_details:
         new_state_info = new_state_info._replace(connection_details=options.new_connection_details)
     elif new_state_info.store_type in ('sql', 'mongo'):
-        raise ConfigError('Must specify new connection_details using -c to use %s'
+        raise ConfigError('Must specify connection_details using -c to use %s'
             % new_state_info.store_type)
 
     return new_state_info

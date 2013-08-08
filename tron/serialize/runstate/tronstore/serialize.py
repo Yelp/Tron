@@ -23,6 +23,10 @@ except ImportError:
 
 
 def custom_decode(obj):
+    """A custom decoder for datetime and tuple objects.
+    The tuple part only works for JSON, as MsgPack handles tuples and lists
+    itself no matter what.
+    """
     try:
         if b'__tuple__' in obj:
             return tuple(custom_decode(o) for o in obj['items'])
@@ -34,6 +38,7 @@ def custom_decode(obj):
 
 
 def custom_encode(obj):
+    """A custom encoder for datetime and tuple objects."""
     if isinstance(obj, tuple):
         return {'__tuple__': True, 'items': [custom_encode(e) for e in obj]}
     elif isinstance(obj, datetime.datetime):

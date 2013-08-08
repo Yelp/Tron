@@ -19,14 +19,21 @@ class TronStoreError(Exception):
 
 
 class StoreProcessProtocol(object):
-    """The class that actually communicates with tronstore. This is a subclass
-    of the twisted ProcessProtocol class, which has a set of internals that can
-    communicate with a child proccess via stdin/stdout via interrupts.
+    """The class that actually spawns and handles the tronstore process.
 
-    Because of this I/O structure imposed by twisted, there are two types of
-    messages: requests and responses. Responses are always of the same form,
-    while requests have an enumerator (see msg_enums.py) to identify the
-    type of request.
+    This class uses the python multiprocessing module. Upon creation, it
+    starts tronstore with a null configuration. A reconfiguration request
+    must be sent to tronstore via one of the supplied object methods before
+    it will be able to actually perform saves and restores. Calling
+    update_config on this object will simply update the saved configuration
+    object- it won't actually update the configuration that the tronstore
+    process itself is using unless a _verify_is_alive fails and tronstore is
+    restarted.
+
+    Communication with the process is handled by a Pipe object, which can
+    simply pass entire Python objects via Pickle. Despite this, we still
+    serialize all requests with cPickle before sending them, as cPickle
+    is much faster and effectively the same as cPickle.
     """
     # This timeout MUST be longer than the POLL_TIMEOUT in tronstore!
     SHUTDOWN_TIMEOUT = 100.0
@@ -40,9 +47,7 @@ class StoreProcessProtocol(object):
         self._start_process()
 
     def _start_process(self):
-        """Spawn the tronstore process. The arguments given to tronstore must
-        match the signature for tronstore.main.
-        """
+        """Spawn the tronstore process with the saved configuration."""
         self.pipe, child_pipe = Pipe()
         store_args = (self.config, child_pipe)
 
@@ -52,7 +57,8 @@ class StoreProcessProtocol(object):
 
     def _verify_is_alive(self):
         """A check to verify that tronstore is alive. Attempts to restart
-        tronstore if it finds that it exited for some reason."""
+        tronstore if it finds that it exited for some reason.
+        """
         if not self.process.is_alive():
             code = self.process.exitcode
             log.warn("tronstore exited prematurely with status code %d. Attempting to restart." % code)
@@ -76,10 +82,6 @@ class StoreProcessProtocol(object):
         any responses that it isn't looking for into a dict, and tries to
         retrieve a matching response from this dict before pulling new
         responses.
-
-        If Tron is extended into a synchronous program, simply just add a
-        lock around this function ( with mutex.lock(): ) and everything'll
-        be fine.
         """
         if id in self.orphaned_responses:
             return self.orphaned_responses.pop(id)
@@ -114,8 +116,8 @@ class StoreProcessProtocol(object):
 
     def send_request_shutdown(self, request):
         """Shut down the process protocol. Waits for SHUTDOWN_TIMEOUT seconds
-        for tronstore to send a response, after which it kills both pipes
-        and the process itself.
+        for tronstore to send a shutdown response, killing both pipes and the
+        process itself if no shutdown response was returned.
 
         Calling this prevents ANY further requests from being made to tronstore
         as the process will be killed.

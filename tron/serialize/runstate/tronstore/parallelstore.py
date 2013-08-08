@@ -32,12 +32,12 @@ class ParallelKey(object):
 
 
 class ParallelStore(object):
-    """Persist state using a paralleled storing mechanism, tronstore. This uses
-    the Twisted library to run the tronstore executable in a separate
-    process, and handles all communication between trond and tronstore.
+    """Persist state using a parallel storing mechanism, tronstore. This uses
+    the python mulitprocessing module to run the tronstore executable in
+    another process, and handles all communication between trond and tronstore.
 
     This class handles construction of all messages that need to be sent
-    to tronstore based on requests given by the MCP."""
+    to tronstore based on whatever method was called."""
 
     def __init__(self):
         self.request_factory = StoreRequestFactory()
@@ -67,7 +67,9 @@ class ParallelStore(object):
 
     def load_config(self, new_config):
         """Reconfigure the storing mechanism to use a new configuration
-        by shutting down and restarting tronstore."""
+        by shutting down and restarting tronstore. THIS MUST BE CALLED
+        AT LEAST ONCE, as tronstore is started with a null configuration
+        whenever a ParallelStore object is created."""
         config_req = self.request_factory.build(msg_enums.REQUEST_CONFIG, '', new_config)
         response = self.process.send_request_get_response(config_req)
         if response.success:

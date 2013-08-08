@@ -5,7 +5,11 @@ MAX_MSG_ID = 2**32 - 1
 
 
 class StoreRequestFactory(object):
-    """A factory to generate requests by giving each a unique id."""
+    """A factory to generate requests by giving each a unique id.
+    The serialization method should usually be cPickle. However, you can simply
+    change what serialization class is used in the __init__ method- just
+    make sure to change it in the StoreResponseFactory as well!
+    """
 
     def __init__(self):
         self.serializer = cPickleSerializer
@@ -31,9 +35,7 @@ class StoreRequestFactory(object):
 
 class StoreResponseFactory(object):
     """A factory to generate responses that need to be converted to serialized
-    strings and back. The factory itself just keeps track of what serialization
-    method was specified by the configuration, and then constructs specific
-    StoreResponse objects using that method.
+    strings and back..
     """
 
     def __init__(self):

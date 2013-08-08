@@ -1,18 +1,4 @@
 #!/usr/bin/env python
-"""This process is spawned by trond in order to offload state save/load
-operations such that trond can focus on the more important things without
-blocking for large chunks of time. It takes arguments in the main method
-passed by python's multiprocessing module in order to configure itself and use
-the correct methods for state saving and message transport with trond.
-
-Messages are sent via Pipes (also part of python's multiprocessing module).
-This allows for easy polling and no need to handle chunking of messages.
-
-The process intercepts the two shutdown signals (SIGINT and SIGTERM) in order
-to prevent the process from exiting early when trond wants to do some final
-shutdown things (realistically, trond should be handling all shutdown
-operations, as this is a child process.)
-"""
 import time
 import signal
 import os
@@ -270,6 +256,18 @@ def main(config, pipe):
     """The main method to start Tronstore with. Simply takes the configuration
     and pipe objects, and then registers some null signal handlers before
     passing everything off to TronstoreMain.
+
+    This process is spawned by trond in order to offload state save/load
+    operations such that trond can focus on the more important things without
+    blocking for chunks of time.
+
+    Messages are sent via Pipes (also part of python's multiprocessing module).
+    This allows for easy polling and no need to handle chunking of messages.
+
+    The process intercepts the two shutdown signals (SIGINT and SIGTERM) in order
+    to prevent the process from exiting early when trond wants to do some final
+    shutdown things (realistically, trond should be handling all shutdown
+    operations, as this is a child process.)
     """
 
     _register_null_handlers()
