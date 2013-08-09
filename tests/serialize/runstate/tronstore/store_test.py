@@ -13,13 +13,13 @@ class ShelveStoreTestCase(TestCase):
 
     @setup
     def setup_store(self):
-        self.filename = os.path.join(tempfile.gettempdir(), 'state')
+        self.filename = os.path.join(tempfile.gettempdir(), 'tmp_shelve.state')
         self.store = ShelveStore(self.filename, None, None)
 
     @teardown
     def teardown_store(self):
-        os.unlink(self.filename)
         self.store.cleanup()
+        os.unlink(self.filename)
 
     def test__init__(self):
         assert_equal(self.filename, self.store.fname)
@@ -82,7 +82,7 @@ class SQLStoreTestCase(TestCase):
         self.store.save(key, state_data, data_type)
 
         rows = self.store.engine.execute(self.store.service_table.select())
-        assert_equal(rows.fetchone(), (u'dotes', unicode(repr(self.store.serializer.serialize(state_data)))))
+        assert_equal(rows.fetchone(), (u'dotes', unicode(repr(self.store.serializer.serialize(state_data))), u'pickle'))
 
     def test_restore_success(self):
         data_type = runstate.JOB_STATE

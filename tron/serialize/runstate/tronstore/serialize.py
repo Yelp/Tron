@@ -56,6 +56,8 @@ class SerializerModuleError(Exception):
 
 
 class JSONSerializer(object):
+    name = 'json'
+
     @classmethod
     def serialize(cls, data):
         return json.dumps(data, default=custom_encode, tuple_as_array=False)
@@ -66,6 +68,8 @@ class JSONSerializer(object):
 
 
 class cPickleSerializer(object):
+    name = 'pickle'
+
     @classmethod
     def serialize(cls, data):
         return pickle.dumps(data)
@@ -76,6 +80,8 @@ class cPickleSerializer(object):
 
 
 class MsgPackSerializer(object):
+    name = 'msgpack'
+
     @classmethod
     def serialize(cls, data):
         if no_msgpack:
@@ -90,6 +96,8 @@ class MsgPackSerializer(object):
 
 
 class YamlSerializer(object):
+    name = 'yaml'
+
     @classmethod
     def serialize(cls, data):
         if no_yaml:

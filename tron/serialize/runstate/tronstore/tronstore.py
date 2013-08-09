@@ -146,7 +146,7 @@ class TronstoreMain(object):
     """
 
     # this can be rather long- it's only real use it to clean up tronstore
-    # in case it's zombied... however, it should be SHORTER than
+    # in case it's orphaned... however, it should be SHORTER than
     # SHUTDOWN_TIMEOUT in process.py. in addition, making this longer
     # can cause trond to take longer to fully shutdown.
     POLL_TIMEOUT = 2.0
