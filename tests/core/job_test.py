@@ -112,6 +112,8 @@ class JobContainerTestCase(TestCase):
             assert not self.job.enabled
             calls = [mock.call(job_runs[i]) for i in xrange(len(job_runs))]
             self.job.watcher.watch.assert_has_calls(calls)
+            calls = [mock.call(job_runs[i], jobrun.JobRun.NOTIFY_DONE) for i in xrange(len(job_runs))]
+            self.job_scheduler.watch.assert_has_calls(calls)
             assert_equal(self.job.job_state.state_data, state_data[0])
             self.job.job_runs.restore_state.assert_called_once_with(
                 sorted(run_data, key=lambda data: data['run_num'], reverse=True),
