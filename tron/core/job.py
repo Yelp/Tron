@@ -446,6 +446,7 @@ class JobContainer(object):
             self.node_pool)
         for run in job_runs:
             self.watcher.watch(run)
+            self.job_scheduler.watch(run, jobrun.JobRun.NOTIFY_DONE)
         self.job_state.restore_state(job_state_data)
         self.job_scheduler.restore_state()
         self.job_state.set_run_ids(self.job_runs.get_run_numbers())  # consistency
