@@ -82,7 +82,7 @@ class SQLStoreTestCase(TestCase):
         self.store.save(key, state_data, data_type)
 
         rows = self.store.engine.execute(self.store.service_table.select())
-        assert_equal(rows.fetchone(), (u'dotes', unicode(repr(self.store.serializer.serialize(state_data))), u'pickle'))
+        assert_equal(rows.fetchone(), ('dotes', self.store.serializer.serialize(state_data), 'pickle'))
 
     def test_restore_success(self):
         data_type = runstate.JOB_STATE

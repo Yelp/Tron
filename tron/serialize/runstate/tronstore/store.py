@@ -60,26 +60,28 @@ class SQLStore(object):
         self.serializer = serializer
         self.engine = sql.create_engine(connection_details,
             connect_args={'check_same_thread': False},
-            poolclass=sql.pool.StaticPool)
+            poolclass=sql.pool.StaticPool,
+            encoding='ascii')
+        self.engine.raw_connection().connection.text_factory = str
         self._setup_tables()
 
     def _setup_tables(self):
         self._metadata = sql.MetaData()
         self.job_state_table = sql.Table('job_state_data', self._metadata,
             sql.Column('key', sql.String(MAX_IDENTIFIER_LENGTH), primary_key=True),
-            sql.Column('state_data', sql.Text),
+            sql.Column('state_data', sql.LargeBinary),
             sql.Column('serial_method', sql.String(MAX_IDENTIFIER_LENGTH)))
         self.service_table = sql.Table('service_data', self._metadata,
             sql.Column('key', sql.String(MAX_IDENTIFIER_LENGTH), primary_key=True),
-            sql.Column('state_data', sql.Text),
+            sql.Column('state_data', sql.LargeBinary),
             sql.Column('serial_method', sql.String(MAX_IDENTIFIER_LENGTH)))
         self.job_run_table = sql.Table('job_run_data', self._metadata,
             sql.Column('key', sql.String(MAX_IDENTIFIER_LENGTH), primary_key=True),
-            sql.Column('state_data', sql.Text),
+            sql.Column('state_data', sql.LargeBinary),
             sql.Column('serial_method', sql.String(MAX_IDENTIFIER_LENGTH)))
         self.metadata_table = sql.Table('metadata_table', self._metadata,
             sql.Column('key', sql.String(MAX_IDENTIFIER_LENGTH), primary_key=True),
-            sql.Column('state_data', sql.Text),
+            sql.Column('state_data', sql.LargeBinary),
             sql.Column('serial_method', sql.String(MAX_IDENTIFIER_LENGTH)))
 
         self._metadata.create_all(self.engine)
@@ -107,7 +109,7 @@ class SQLStore(object):
             table = self._get_table(data_type)
             if table is None:
                 return False
-            state_data = unicode(repr(self.serializer.serialize(state_data)))
+            state_data = self.serializer.serialize(state_data)
             serial_method = self.serializer.name
             update_result = conn.execute(
                 table.update()
@@ -132,13 +134,13 @@ class SQLStore(object):
             ).fetchone()
             if not result:
                 return (False, None)
-            elif str(result[1]) != self.serializer.name:
+            elif result[1] != self.serializer.name:
                 # TODO: If/when we have logging in the Tronstore process,
                 #       log here that the db_store_method was different
-                serializer = serialize_class_map[str(result[1])]
-                return (True, serializer.deserialize(eval(str(result[0]))))
+                serializer = serialize_class_map[result[1]]
+                return (True, serializer.deserialize(result[0]))
             else:
-                return (True, self.serializer.deserialize(eval(str(result[0]))))
+                return (True, self.serializer.deserialize(result[0]))
 
     def cleanup(self):
         if self._connection:
