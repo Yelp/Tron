@@ -137,7 +137,7 @@ class JobScheduler(Observer):
         else:
             queued_run = self.job_runs.get_first_queued()
             if queued_run:
-                self._set_callback(queued_run, run_queued=True)
+                eventloop.call_later(0, self.run_job, queued_run, run_queued=True)
         # Ensure we have at least 1 scheduled run
         self.schedule()
 
@@ -181,11 +181,11 @@ class JobScheduler(Observer):
             return
         self.create_and_schedule_runs()
 
-    def _set_callback(self, job_run, run_queued=False):
+    def _set_callback(self, job_run):
         """Set a callback for JobRun to fire at the appropriate time."""
         log.info("Scheduling next Jobrun for %s", self.config.name)
         seconds = job_run.seconds_until_run_time()
-        eventloop.call_later(seconds, self.run_job, job_run, run_queued=run_queued)
+        eventloop.call_later(seconds, self.run_job, job_run)
 
     # TODO: new class for this method
     def run_job(self, job_run, run_queued=False):

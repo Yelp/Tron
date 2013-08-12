@@ -528,11 +528,11 @@ class JobSchedulerScheduleTestCase(TestCase):
             mock.patch.object(self.job_scheduler.job_runs, 'get_first_queued',
                 return_value=queued),
             mock.patch.object(self.job_scheduler, 'schedule'),
-            mock.patch.object(self.job_scheduler, '_set_callback')
-        ) as (get_patch, queue_patch, sched_patch, back_patch):
+            mock.patch.object(job.eventloop, 'call_later')
+        ) as (get_patch, queue_patch, sched_patch, later_patch):
             self.job_scheduler.restore_state()
             get_patch.assert_called_once_with()
-            back_patch.assert_called_once_with(queued, run_queued=True)
+            later_patch.assert_called_once_with(0, self.job_scheduler.run_job, queued, run_queued=True)
             sched_patch.assert_called_once_with()
 
     def test_schedule(self):
