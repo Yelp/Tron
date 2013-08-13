@@ -392,6 +392,7 @@ class ValidateStatePersistence(Validator):
     defaults = {
         'buffer_size':          1,
         'connection_details':   None,
+        'db_store_method':      'json',
     }
 
     validators = {
@@ -400,6 +401,8 @@ class ValidateStatePersistence(Validator):
                                     schema.StatePersistenceTypes),
         'connection_details':   valid_string,
         'buffer_size':          valid_int,
+        'db_store_method':      config_utils.build_enum_validator(
+                                    schema.StateSerializationTypes),
     }
 
     def post_validation(self, config, config_context):
@@ -426,7 +429,7 @@ def validate_jobs_and_services(config, config_context):
     config_utils.unique_names(fmt_string, config['jobs'], config['services'])
 
 
-DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1)
+DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1, 'json')
 DEFAULT_NODE = ValidateNode().do_shortcut('localhost')
 
 

@@ -103,12 +103,17 @@ class JobContainerTestCase(TestCase):
         job_runs = [mock.Mock(), mock.Mock()]
         state_data = ({'enabled': False, 'run_ids': [1, 2]}, run_data)
 
-        with mock.patch.object(self.job.job_runs, 'restore_state', return_value=job_runs):
+        with contextlib.nested(
+            mock.patch.object(self.job.job_runs, 'restore_state', return_value=job_runs),
+            mock.patch.object(self.job.job_runs, 'get_run_numbers', return_value=state_data[0]['run_ids'])
+        ):
             self.job.restore_state(state_data)
 
             assert not self.job.enabled
             calls = [mock.call(job_runs[i]) for i in xrange(len(job_runs))]
             self.job.watcher.watch.assert_has_calls(calls)
+            calls = [mock.call(job_runs[i], jobrun.JobRun.NOTIFY_DONE) for i in xrange(len(job_runs))]
+            self.job_scheduler.watch.assert_has_calls(calls)
             assert_equal(self.job.job_state.state_data, state_data[0])
             self.job.job_runs.restore_state.assert_called_once_with(
                 sorted(run_data, key=lambda data: data['run_num'], reverse=True),
@@ -117,6 +122,7 @@ class JobContainerTestCase(TestCase):
                 self.job.context,
                 self.job.node_pool
             )
+            self.job.job_runs.get_run_numbers.assert_called_once_with()
             self.job.job_scheduler.restore_state.assert_called_once_with()
             self.job.event.ok.assert_called_with('restored')
 
@@ -499,6 +505,35 @@ class JobSchedulerScheduleTestCase(TestCase):
     @teardown
     def teardown_job(self):
         event.EventManager.reset()
+
+    def test_restore_state_scheduled(self):
+        mock_scheduled = [mock.Mock(), mock.Mock()]
+        with contextlib.nested(
+            mock.patch.object(self.job_scheduler.job_runs, 'get_scheduled',
+                return_value=iter(mock_scheduled)),
+            mock.patch.object(self.job_scheduler, 'schedule'),
+            mock.patch.object(self.job_scheduler, '_set_callback')
+        ) as (get_patch, sched_patch, back_patch):
+            self.job_scheduler.restore_state()
+            get_patch.assert_called_once_with()
+            calls = [mock.call(m) for m in mock_scheduled]
+            back_patch.assert_has_calls(calls)
+            sched_patch.assert_called_once_with()
+
+    def test_restore_state_queued(self):
+        queued = mock.Mock()
+        with contextlib.nested(
+            mock.patch.object(self.job_scheduler.job_runs, 'get_scheduled',
+                return_value=iter([])),
+            mock.patch.object(self.job_scheduler.job_runs, 'get_first_queued',
+                return_value=queued),
+            mock.patch.object(self.job_scheduler, 'schedule'),
+            mock.patch.object(job.eventloop, 'call_later')
+        ) as (get_patch, queue_patch, sched_patch, later_patch):
+            self.job_scheduler.restore_state()
+            get_patch.assert_called_once_with()
+            later_patch.assert_called_once_with(0, self.job_scheduler.run_job, queued, run_queued=True)
+            sched_patch.assert_called_once_with()
 
     def test_schedule(self):
         with mock.patch.object(self.job_scheduler.job_state, 'is_enabled',

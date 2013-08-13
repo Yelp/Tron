@@ -58,7 +58,9 @@ class JobState(Observable):
         """Current status of the job. Takes a JobRunCollection as an argument."""
         if not self.enabled:
             return self.STATUS_DISABLED
-        if job_runs.get_run_by_state(ActionRun.STATE_RUNNING):
+
+        if (job_runs.get_run_by_state(ActionRun.STATE_RUNNING) or
+                job_runs.get_run_by_state(ActionRun.STATE_STARTING)):
             return self.STATUS_RUNNING
 
         if (job_runs.get_run_by_state(ActionRun.STATE_SCHEDULED) or
@@ -128,9 +130,12 @@ class JobScheduler(Observer):
 
     def restore_state(self):
         """Restore the job state and schedule any JobRuns."""
-        scheduled = self.job_runs.get_scheduled()
-        for job_run in scheduled:
-            self._set_callback(job_run)
+        scheduled = list(self.job_runs.get_scheduled())
+        if scheduled:
+            for job_run in scheduled:
+                self._set_callback(job_run)
+        else:
+            self._run_first_queued()
         # Ensure we have at least 1 scheduled run
         self.schedule()
 
@@ -228,6 +233,13 @@ class JobScheduler(Observer):
         job_run.cancel()
         self.schedule()
 
+    def _run_first_queued(self):
+        # TODO: this should only start runs on the same node if this is an
+        # all_nodes job, but that is currently not possible
+        queued_run = self.job_runs.get_first_queued()
+        if queued_run:
+            eventloop.call_later(0, self.run_job, queued_run, run_queued=True)
+
     def handle_job_events(self, _observable, event):
         """Handle notifications from observables. If a JobRun has completed
         look for queued JobRuns that may need to start now.
@@ -235,11 +247,7 @@ class JobScheduler(Observer):
         if event != jobrun.JobRun.NOTIFY_DONE:
             return
 
-        # TODO: this should only start runs on the same node if this is an
-        # all_nodes job, but that is currently not possible
-        queued_run = self.job_runs.get_first_queued()
-        if queued_run:
-            eventloop.call_later(0, self.run_job, queued_run, run_queued=True)
+        self._run_first_queued()
 
         # Attempt to schedule a new run.  This will only schedule a run if the
         # previous run was cancelled from a scheduled state, or if the job
@@ -439,8 +447,10 @@ class JobContainer(object):
             self.node_pool)
         for run in job_runs:
             self.watcher.watch(run)
+            self.job_scheduler.watch(run, jobrun.JobRun.NOTIFY_DONE)
         self.job_state.restore_state(job_state_data)
         self.job_scheduler.restore_state()
+        self.job_state.set_run_ids(self.job_runs.get_run_numbers())  # consistency
         self.event.ok('restored')
 
     def update_from_job(self, job):

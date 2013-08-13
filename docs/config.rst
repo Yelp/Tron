@@ -215,6 +215,18 @@ State Persistence
         The number of save calls to buffer before writing the state.  Defaults to 1,
         which is no buffering.
 
+    **db_store_method**
+        The method to use for saving state information to a SQL database. Only used if store_type is sql.
+
+        Valid options are:
+            **json** - uses the `simplejson` module.
+
+            **msgpack** - uses the `msgpack` module, from the msgpack-python package (tested with version 0.3.0).
+
+            **pickle** - uses the `cPickle` module. be careful with this one, as pickle is Turing complete.
+
+            **yaml** - uses the `yaml` module, from the PyYaml package (tested with version 3.10).
+
 
 Example::
 
@@ -223,6 +235,7 @@ Example::
         name: local_sqlite
         connection_details: "sqlite:///dest_state.db"
         buffer_size: 1 # No buffer
+        db_store_method: json
 
 
 .. _action_runners:

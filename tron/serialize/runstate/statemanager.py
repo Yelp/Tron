@@ -6,10 +6,7 @@ import tron
 from tron.config import schema
 from tron.core import job, jobrun, service
 from tron.serialize import runstate
-from tron.serialize.runstate.mongostore import MongoStateStore
-from tron.serialize.runstate.shelvestore import ShelveStateStore
-from tron.serialize.runstate.sqlalchemystore import SQLAlchemyStateStore
-from tron.serialize.runstate.yamlstore import YamlStateStore
+from tron.serialize.runstate.tronstore.parallelstore import ParallelStore
 from tron.utils import observer
 
 log = logging.getLogger(__name__)
@@ -20,37 +17,6 @@ class VersionMismatchError(ValueError):
 
 class PersistenceStoreError(ValueError):
     """Raised if the store can not be created or fails a read or write."""
-
-
-class PersistenceManagerFactory(object):
-    """Create a PersistentStateManager."""
-
-    @classmethod
-    def from_config(cls, persistence_config):
-        store_type              = persistence_config.store_type
-        name                    = persistence_config.name
-        connection_details      = persistence_config.connection_details
-        buffer_size             = persistence_config.buffer_size
-        store                   = None
-
-        if store_type not in schema.StatePersistenceTypes:
-            raise PersistenceStoreError("Unknown store type: %s" % store_type)
-
-        if store_type == schema.StatePersistenceTypes.shelve:
-            store = ShelveStateStore(name)
-
-        if store_type == schema.StatePersistenceTypes.sql:
-            store = SQLAlchemyStateStore(name, connection_details)
-
-        if store_type == schema.StatePersistenceTypes.mongo:
-            store = MongoStateStore(name, connection_details)
-
-        if store_type == schema.StatePersistenceTypes.yaml:
-            store = YamlStateStore(name)
-
-        buffer = StateSaveBuffer(buffer_size)
-        return PersistentStateManager(store, buffer)
-
 
 class StateMetadata(object):
     """A data object for saving state metadata. Conforms to the same
@@ -78,6 +44,11 @@ class StateMetadata(object):
             return
 
         version = metadata['version']
+        if not isinstance(version, tuple):
+            try:
+                version = tuple(version)
+            except:
+                raise PersistenceStoreError("Stored metadata looks corrupted.")
         # Names (and state keys) changed in 0.5.2, requires migration
         # see tools/migration/migrate_state_to_namespace
         if version > cls.version or version < (0, 5, 2):
@@ -110,6 +81,18 @@ class StateSaveBuffer(object):
         self.buffer.clear()
 
 
+class NullSaveBuffer(object):
+    buffer_size = 0
+    buffer = {}
+    counter = 0
+
+    def save(self, key, state_data):
+        return False
+
+    def __iter__(self):
+        return iter([])
+
+
 class PersistentStateManager(object):
     """Provides an interface to persist the state of Tron.
 
@@ -127,15 +110,19 @@ class PersistentStateManager(object):
         def save(self, key, state_data):
             pass
 
+        def load_config(self, new_config):
+            pass
+
         def cleanup(self):
             pass
 
     """
+    # TODO: Rename things here, as ParallelStore is always used
 
-    def __init__(self, persistence_impl, buffer):
+    def __init__(self):
         self.enabled            = True
-        self._buffer            = buffer
-        self._impl              = persistence_impl
+        self._buffer            = NullSaveBuffer()
+        self._impl              = ParallelStore()
         self.metadata_key       = self._impl.build_key(
                                     runstate.MCP_STATE, StateMetadata.name)
 
@@ -200,6 +187,14 @@ class PersistentStateManager(object):
                 log.warn(msg)
                 raise PersistenceStoreError(msg)
 
+    def update_from_config(self, new_state_config):
+        self._save_from_buffer()
+        if self._impl.load_config(new_state_config):
+            self._buffer = StateSaveBuffer(new_state_config.buffer_size)
+            return True
+        else:
+            return False
+
     def cleanup(self):
         self._save_from_buffer()
         self._impl.cleanup()
@@ -244,17 +239,25 @@ class StateChangeWatcher(observer.Observer):
     """Observer of stateful objects."""
 
     def __init__(self):
-        self.state_manager = NullStateManager
+        self.state_manager = PersistentStateManager()
         self.config        = None
 
     def update_from_config(self, state_config):
         if self.config == state_config:
             return False
 
-        self.shutdown()
-        self.state_manager = PersistenceManagerFactory.from_config(state_config)
-        self.config = state_config
-        return True
+        if state_config.store_type not in schema.StatePersistenceTypes:
+            raise PersistenceStoreError("Unknown store type: %s" % state_config.store_type)
+
+        if state_config.db_store_method not in schema.StateSerializationTypes \
+        and state_config.store_type in ('sql', 'mongo'):
+            raise PersistenceStoreError("Unknown db store method: %s" % state_config.db_store_method)
+
+        if not self.state_manager.update_from_config(state_config):
+            return False
+        else:
+            self.config = state_config
+            return True
 
     def handler(self, observable, _event):
         """Handle a state change in an observable by saving its state."""
