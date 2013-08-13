@@ -58,7 +58,7 @@ class JSONSerializer(object):
 
     @classmethod
     def serialize(cls, data):
-        return json.dumps(data, default=custom_encode, tuple_as_array=False)
+        return json.dumps(data, default=custom_encode)
 
     @classmethod
     def deserialize(cls, data_str):

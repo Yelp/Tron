@@ -51,6 +51,7 @@ Command line options:
 import sys
 import os
 import copy
+import logging
 
 from tron.commands import cmd_utils
 from tron.config import ConfigError
@@ -63,7 +64,7 @@ from tron.serialize.runstate.yamlstore import YamlStateStore
 from tron.serialize.runstate.sqlalchemystore import SQLAlchemyStateStore
 from tron.serialize.runstate.tronstore.parallelstore import ParallelStore
 from tron.serialize.runstate.statemanager import StateMetadata
-from tron.serialize.runstate.tronstore.serialize import MsgPackSerializer
+from tron.serialize.runstate.tronstore import serialize
 
 def parse_options():
     usage = "usage: %prog [options] <working dir> <new filename>"
@@ -143,11 +144,14 @@ def assert_copied(new_store, data, key):
         if data == new_data:
             return
 
-        try:
-            if MsgPackSerializer.deserialize(MsgPackSerializer.serialize(data)) == new_data:
-                return
-        except:
-            continue
+        method = new_store.process.config.db_store_method
+        if method:
+            try:
+                serial_class = serialize.serialize_class_map[method]
+                if serial_class.deserialize(serial_class.serialize(data)) == new_data:
+                    return
+            except:
+                continue
 
     raise AssertionError('The value %s failed to copy.' % key.iden)
 
@@ -195,6 +199,7 @@ def copy_jobs(old_store, new_store, job_names):
 
 
 def main():
+    logging.basicConfig(level=logging.ERROR)
     print('Parsing options...')
     (options, working_dir, new_fname) = parse_options()
     os.chdir(working_dir)
