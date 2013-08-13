@@ -1,3 +1,9 @@
+tron (0.6.2.1) lucid; urgency=low
+
+  * bug fix for config migration
+
+ -- Daniel Nephin <dnephin@yelp.com>  Tue, 13 Aug 2013 16:34:39 -0700
+
 tron (0.6.2) unstable; urgency=low
 
   * Large refactor of state saving
