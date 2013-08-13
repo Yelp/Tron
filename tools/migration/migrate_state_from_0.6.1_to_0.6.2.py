@@ -51,6 +51,7 @@ Command line options:
 import sys
 import os
 import copy
+import logging
 
 from tron.commands import cmd_utils
 from tron.config import ConfigError
@@ -64,6 +65,7 @@ from tron.serialize.runstate.sqlalchemystore import SQLAlchemyStateStore
 from tron.serialize.runstate.tronstore.parallelstore import ParallelStore
 from tron.serialize.runstate.statemanager import StateMetadata
 from tron.serialize.runstate.tronstore.serialize import MsgPackSerializer
+from tron.serialize.runstate.tronstore.serialize import JSONSerializer
 
 def parse_options():
     usage = "usage: %prog [options] <working dir> <new filename>"
@@ -144,6 +146,8 @@ def assert_copied(new_store, data, key):
             return
 
         try:
+            if JSONSerializer.deserialize(JSONSerializer.serialize(data)) == new_data:
+                return
             if MsgPackSerializer.deserialize(MsgPackSerializer.serialize(data)) == new_data:
                 return
         except:
@@ -195,6 +199,7 @@ def copy_jobs(old_store, new_store, job_names):
 
 
 def main():
+    logging.basicConfig(level=logging.ERROR)
     print('Parsing options...')
     (options, working_dir, new_fname) = parse_options()
     os.chdir(working_dir)
