@@ -143,6 +143,7 @@ class MCPReconfigureTestCase(TestCase):
         event.EventManager.reset()
         filehandler.OutputPath(self.test_dir).delete()
         filehandler.FileHandleManager.reset()
+        self.mcp.state_watcher.shutdown()
 
     def reconfigure(self):
         config = {schema.MASTER_NAMESPACE: self._get_config(1, self.test_dir)}

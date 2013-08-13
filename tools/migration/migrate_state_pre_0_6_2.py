@@ -17,7 +17,7 @@
 import optparse
 from tron.config import manager, schema
 from tron.serialize import runstate
-from tron.serialize.runstate.statemanager import PersistentStateManager
+from tron.serialize.runstate.statemanager import PersistenceManagerFactory
 from tron.utils import tool_utils
 
 
@@ -49,16 +49,11 @@ def parse_options():
 def get_state_manager_from_config(config_path, working_dir):
     """Return a state manager from the configuration.
     """
-    if not working_dir:
-        working_dir = config_path
     config_manager = manager.ConfigManager(config_path)
     config_container = config_manager.load()
     state_config = config_container.get_master().state_persistence
     with tool_utils.working_dir(working_dir):
-        ret = PersistentStateManager()
-        if not ret.update_from_config(state_config):
-            raise SystemError("%s failed to load." % config_path)
-        return ret
+        return PersistenceManagerFactory.from_config(state_config)
 
 
 def get_current_config(config_path):
@@ -95,11 +90,8 @@ def convert_state(opts):
         job_states      = add_namespaces(job_states)
         service_states  = add_namespaces(service_states)
 
-    for name, (job_state, run_list) in job_states.iteritems():
-        dest_manager.save(runstate.JOB_STATE, name, job_state)
-        for run_data in run_list:
-            run_name = '%s.%s' % (run_data['job_name'], run_data['run_num'])
-            dest_manager.save(runstate.JOB_RUN_STATE, run_name, run_data)
+    for name, job in job_states.iteritems():
+        dest_manager.save(runstate.JOB_STATE, name, job)
     print "Migrated %s jobs." % len(job_states)
 
     for name, service in service_states.iteritems():
@@ -107,8 +99,6 @@ def convert_state(opts):
     print "Migrated %s services." % len(service_states)
 
     dest_manager.cleanup()
-
-    print "Hang on, saving everything to the destination object..."
 
 
 if __name__ == "__main__":

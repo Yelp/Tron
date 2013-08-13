@@ -45,10 +45,9 @@ class MasterControlProgramTestCase(TestCase):
     def setup_mcp(self):
         self.working_dir    = tempfile.mkdtemp()
         self.config_path    = tempfile.mkdtemp()
-        self.mcp            = mcp.MasterControlProgram(
+        with mock.patch('tron.serialize.runstate.statemanager.StateChangeWatcher', autospec=True):
+            self.mcp        = mcp.MasterControlProgram(
                                 self.working_dir, self.config_path)
-        self.mcp.state_watcher = mock.create_autospec(
-                                statemanager.StateChangeWatcher)
 
     @teardown
     def teardown_mcp(self):
@@ -134,11 +133,12 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
     def setup_mcp(self):
         self.working_dir        = tempfile.mkdtemp()
         self.config_path        = tempfile.mkdtemp()
-        self.mcp                = mcp.MasterControlProgram(
-                                    self.working_dir, self.config_path)
-        self.mcp.jobs           = mock.create_autospec(job.JobCollection)
-        self.mcp.services       = mock.create_autospec(service.ServiceCollection)
-        self.mcp.state_watcher  = mock.create_autospec(statemanager.StateChangeWatcher)
+        with mock.patch('tron.serialize.runstate.statemanager.StateChangeWatcher', autospec=True):
+            self.mcp               = mcp.MasterControlProgram(
+                                        self.working_dir, self.config_path)
+            self.mcp.jobs          = mock.create_autospec(job.JobCollection)
+            self.mcp.services      = mock.create_autospec(service.ServiceCollection)
+            self.mcp.state_watcher = mock.create_autospec(statemanager.StateChangeWatcher)
 
     @teardown
     def teardown_mcp(self):
