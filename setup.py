@@ -37,6 +37,14 @@ setup(
     ],
     packages=[
         "tron",
+        "tron.api",
+        "tron.commands",
+        "tron.config",
+        "tron.core",
+        "tron.serialize",
+        "tron.serialize.runstate",
+        "tron.serialize.runstate.tronstore",
+        "tron.utils",
         "tronweb",
     ],
     scripts=[
