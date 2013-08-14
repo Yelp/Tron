@@ -1,6 +1,7 @@
-tron (0.6.2.1) lucid; urgency=low
+tron (0.6.2.2) lucid; urgency=low
 
-  * bug fix for config migration
+  * bug fix for config migrationi
+  * fix packaging
 
  -- Daniel Nephin <dnephin@yelp.com>  Tue, 13 Aug 2013 16:34:39 -0700
 
