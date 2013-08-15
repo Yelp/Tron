@@ -9,7 +9,7 @@ from tron.serialize.runstate.tronstore.messages import StoreResponseFactory
 log = logging.getLogger(__name__)
 
 
-class TronStoreError(Exception):
+class TronstoreError(Exception):
     """Raised whenever tronstore exits for an unknown reason."""
     def __init__(self, code):
         self.code = code
@@ -49,11 +49,12 @@ class StoreProcessProtocol(object):
     def _start_process(self):
         """Spawn the tronstore process with the saved configuration."""
         self.pipe, child_pipe = Pipe()
-        store_args = (self.config, child_pipe)
+        store_args = (self.config, child_pipe, logging.getLogger('tronstore'))
 
         self.process = Process(target=tronstore.main, args=store_args)
         self.process.daemon = True
         self.process.start()
+        log.info('Tronstore is starting.')
 
     def _verify_is_alive(self):
         """A check to verify that tronstore is alive. Attempts to restart
@@ -61,17 +62,20 @@ class StoreProcessProtocol(object):
         """
         if not self.process.is_alive():
             code = self.process.exitcode
-            log.warn("tronstore exited prematurely with status code %d. Attempting to restart." % code)
+            log.warn(("Tronstore exited prematurely with status code %d. "
+                "Attempting to restart.") % code)
             self._start_process()
             if not self.process.is_alive():
-                raise TronStoreError("tronstore crashed with status code %d and failed to restart" % code)
+                raise TronstoreError(("Tronstore crashed with status code %d "
+                    "and failed to restart.") % code)
 
     def send_request(self, request):
         """Send a StoreRequest to tronstore and immediately return without
         waiting for tronstore's response.
         """
         if self.is_shutdown:
-            log.warn('attempted to send a request of type %s while shut down!' % request.req_type)
+            log.warn('Attempted to send a store request of type %s while shut down!'
+                % request.req_type)
             return
         self._verify_is_alive()
 
@@ -101,14 +105,15 @@ class StoreProcessProtocol(object):
         """
 
         if self.is_shutdown:
-            log.warn('attempted to send a request of type %s while shut down!' % request.req_type)
+            log.warn('Attempted to send a request of type %s while shut down!'
+                % request.req_type)
             return self.response_factory.build(False, request.id, '')
         self._verify_is_alive()
 
         self.pipe.send_bytes(request.serialized)
         response = self._poll_for_response(request.id, self.POLL_TIMEOUT)
         if not response:
-            log.warn(("tronstore took longer than %d seconds to respond to a"
+            log.warn(("Tronstore took longer than %d seconds to respond to a "
                      "request, and it was dropped.") % self.POLL_TIMEOUT)
             return self.response_factory.build(False, request.id, '')
         else:
@@ -122,7 +127,9 @@ class StoreProcessProtocol(object):
         Calling this prevents ANY further requests from being made to tronstore
         as the process will be killed.
         """
+        log.info('Shutting down tronstore...')
         if self.is_shutdown or not self.process.is_alive():
+            log.warn("Tried to shutdown Tronstore while it was already shut down!")
             self.pipe.close()
             self.is_shutdown = True
             return
@@ -132,7 +139,9 @@ class StoreProcessProtocol(object):
         response = self._poll_for_response(request.id, self.SHUTDOWN_TIMEOUT)
 
         if not response or not response.success:
-            log.error("tronstore failed to shut down cleanly.")
+            log.error("Tronstore failed to shut down cleanly.")
+        else:
+            log.info('Tronstore is shut down.')
 
         self.pipe.close()
         # We can't actually use process.terminate(), as that sends a SIGTERM

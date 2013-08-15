@@ -2,9 +2,11 @@ import contextlib
 import mock
 import signal
 import os
+import logging
 from testify import TestCase, assert_equal, assert_raises, setup_teardown
 from tron.serialize.runstate.tronstore import tronstore
-from tron.serialize.runstate.tronstore.process import StoreProcessProtocol, TronStoreError
+from tron.serialize.runstate.tronstore.process import StoreProcessProtocol, TronstoreError
+
 
 class StoreProcessProtocolTestCase(TestCase):
 
@@ -33,7 +35,8 @@ class StoreProcessProtocolTestCase(TestCase):
 
 	def test_start_process(self):
 		self.pipe_setup_patch.assert_called_once_with()
-		self.process_patch.assert_called_once_with(target=tronstore.main, args=(self.process.config, self.test_pipe_b))
+		self.process_patch.assert_called_once_with(target=tronstore.main,
+			args=(self.process.config, self.test_pipe_b, logging.getLogger('tronstore')))
 		assert self.process_patch.daemon
 		self.process.process.start.assert_called_once_with()
 
@@ -42,7 +45,7 @@ class StoreProcessProtocolTestCase(TestCase):
 			mock.patch.object(self.process.process, 'is_alive', return_value=False),
 			mock.patch.object(self.process, '_start_process'),
 		) as (alive_patch, start_patch):
-			assert_raises(TronStoreError, self.process._verify_is_alive)
+			assert_raises(TronstoreError, self.process._verify_is_alive)
 			alive_patch.assert_called_with()
 			assert_equal(alive_patch.call_count, 2)
 			start_patch.assert_called_once_with()

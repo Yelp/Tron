@@ -16,6 +16,9 @@ class TronstoreMainTestCase(TestCase):
 		self.thread_pool      = mock.Mock()
 		self.request_factory  = mock.Mock()
 		self.response_factory = mock.Mock()
+		self.log              = mock.Mock()
+
+		self.thread_pool.work_size = lambda: 5
 
 		def echo_single_request(request):
 			return request
@@ -48,11 +51,11 @@ class TronstoreMainTestCase(TestCase):
 			self.response_patch,
 			self.exit_patch
 		):
-			self.main = tronstore.TronstoreMain(self.config, self.pipe)
+			self.main = tronstore.TronstoreMain(self.config, self.pipe, self.log)
 			yield
 
 	def test__init__(self):
-		self.store_patch.assert_called_once_with(self.config)
+		self.store_patch.assert_called_once_with(self.config, self.log)
 		self.request_patch.assert_called_once_with()
 		self.pipe_patch.assert_called_once_with(self.pipe)
 		self.response_patch.assert_called_once_with()
@@ -78,7 +81,7 @@ class TronstoreMainTestCase(TestCase):
 		self.thread_pool.stop.assert_called_once_with()
 		self.thread_pool.start.assert_called_once_with()
 		self.store_class.cleanup.assert_called_once_with()
-		self.store_patch.assert_any_call(fake_data)
+		self.store_patch.assert_any_call(fake_data, self.log)
 		self.thread_patch.assert_any_call(self.response_factory, self.pipe, self.store_class)
 		assert_equal(self.thread_patch.call_count, 2)
 		assert_equal(self.main.config, fake_data)
@@ -93,8 +96,8 @@ class TronstoreMainTestCase(TestCase):
 
 		self.main._reconfigure(request)
 		assert_equal(self.store_patch.call_count, 3)
-		self.store_patch.assert_any_call(fake_data)
-		self.store_patch.assert_any_call(self.config)
+		self.store_patch.assert_any_call(fake_data, self.log)
+		self.store_patch.assert_any_call(self.config, self.log)
 		self.thread_patch.assert_any_call(self.response_factory, self.pipe,
 			self.store_class)
 		assert_equal(self.thread_patch.call_count, 2)
@@ -269,13 +272,14 @@ class TronstoreOtherTestCase(TestCase):
 	def test_main(self):
 		config = mock.Mock()
 		pipe = mock.Mock()
+		log = mock.Mock()
 		with contextlib.nested(
 			mock.patch.object(tronstore, '_register_null_handlers'),
 			mock.patch('tron.serialize.runstate.tronstore.tronstore.TronstoreMain', autospec=True)
 		) as (handler_patch, tronstore_patch):
-			tronstore.main(config, pipe)
+			tronstore.main(config, pipe, log)
 			handler_patch.assert_called_once_with()
-			tronstore_patch.assert_called_once_with(config, pipe)
+			tronstore_patch.assert_called_once_with(config, pipe, log)
 			tronstore_patch.return_value.main_loop.assert_called_once_with()
 
 	def test_register_null_handlers(self):
