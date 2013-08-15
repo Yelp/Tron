@@ -47,7 +47,7 @@ class RequestTestCase(TestCase):
         http_response = build_file_mock(content)
         response = client.load_response_content(http_response)
         assert_equal(response.error, client.DECODE_ERROR)
-        assert_in('No JSON object', response.msg)
+        assert_in('Expecting value', response.msg)
         assert_equal(response.content, content)
 
     def test_request_http_error(self):

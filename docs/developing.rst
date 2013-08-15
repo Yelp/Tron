@@ -29,6 +29,9 @@ and should pass pyflakes without warnings. All new code should include full
 test coverage, and bug fixes should include a test which reproduces the
 reported issue.
 
+Running ``make style`` will perform a PyFlakes and PEP8 check on all .py files
+in the bin, tools, tests, and tron folders.
+
 This documentation must also be kept up to date with any changes in functionality.
 
 
@@ -36,13 +39,16 @@ Running Tron in a Sandbox
 -------------------------
 
 The source package includes a development logging.conf and a
-sample configuration file with a few test cases. To run a development intsance
+sample configuration file with a few test cases. To run a development instance
 of Tron create a working directory and start
 :command:`trond` using the following::
 
-    $ mkdir wd
-    $ cp dev/dev-logging.conf wd/
-    $ bin/trond -w wd --nodaemon -l dev-logging.conf
+    python setup.py sdist
+    export PYTHONPATH=.
+    mkdir wd
+    cp dev/dev-logging.conf wd/
+    bin/trond -w wd -l dev-logging.conf
+    bin/tronfig - < test/data/test_config.yaml
 
 
 A sample testing config file is available at ``tests/data/test_config.yaml``
@@ -53,9 +59,7 @@ Tron uses the `Testify <https://github.com/Yelp/Testify>`_ unit testing
 framework.
 
 
-Run the tests using ``make tests`` or ``testify tests``.  If you're using a
-virtualenv you may want to run ``python `which testify` test`` to have it
-use the correct environment.
+Run the tests using ``make tests`` or ``testify tests``.
 
 This package also includes a ``.pyautotest`` file which can be used with
 https://github.com/dnephin/PyAutoTest to auto run tests when you save a file.

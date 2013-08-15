@@ -69,6 +69,9 @@ Options
 ``-s, --save``
     Save server and color options to client config file (~/.tron)
 
+``--namespace``
+    Only show jobs and services from the specified namespace
+
 
 States
 ----------

@@ -48,6 +48,7 @@ def run_action(task, action):
         stream = task.buffer_store.open(actioncommand.ActionCommand.STDERR)
         stream.write("Node run failure for %s: %s" % (task.task_name, e))
         task.notify(task.NOTIFY_FAILED)
+        return False
 
 
 def get_failures_from_task(task):
@@ -133,11 +134,13 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
         self.hang_check_callback.cancel()
 
     def fail(self):
-        log.warning("%s is still running %s.", self, self.action)
-        self.node.stop(self.action)
-        self.action.write_stderr("Monitoring failed")
-        self.notify(self.NOTIFY_FAILED)
+        old_action = self.action
         self.action = actioncommand.CompletedActionCommand
+        log.warning("%s is still running %s.", self, self.action)
+        old_action.write_stderr("Monitoring failed")
+        self.node.stop(old_action)
+        self.notify(self.NOTIFY_FAILED)
+        self.queue()
 
     def __str__(self):
         return "%s(%s)" % (self.__class__.__name__, self.id)
@@ -355,7 +358,7 @@ class ServiceInstance(observer.Observer):
     @property
     def state_data(self):
         return dict(instance_number=self.instance_number,
-                    node=self.node.hostname)
+                    node=self.node.name)
 
     def get_observable(self):
         return self.machine
@@ -370,15 +373,18 @@ class ServiceInstance(observer.Observer):
 # TODO: shouldn't this check which nodes are not used to properly
 # balance across nodes? But doing this makes it less resilient to
 # failures of a node
-def node_selector(node_pool, hostname=None):
-    """Attempt to retrieve the node by hostname.  If that node is not
-    available, or hostname is None, then pick one the next node.
+def node_selector(node_pool, name=None):
+    """Attempt to retrieve the node by name.  If that node is not
+    available, or name is None, then pick one the next node.
     """
     next_node = node_pool.next_round_robin
-    if not hostname:
+    if not name:
         return next_node()
 
-    return node_pool.get_by_hostname(hostname) or next_node()
+    # TODO: remove lookup by hostname once Tron is sufficiently migrated
+    return (node_pool.get_by_name(name) or
+            node_pool.get_by_hostname(name) or
+            next_node())
 
 
 class ServiceInstanceCollection(object):
@@ -454,6 +460,30 @@ class ServiceInstanceCollection(object):
         for instance in self.instances:
             if instance.instance_number == instance_number:
                 return instance
+
+    def update_node_pool(self, node_pool):
+        """Attempt to load a new node pool from the NodePoolRepository, and
+        remove instances that no longer have their node in the NodePool."""
+        if node_pool == self.node_pool:
+            return
+
+        self.node_pool = node_pool
+
+        def _trim_old_nodes():
+            for instance in self.instances:
+                new_node = self.node_pool.get_by_name(instance.node.name)
+                if new_node != instance.node:
+                    instance.stop()
+                else:
+                    yield instance
+
+        self.instances = list(_trim_old_nodes())
+
+    def clear_extra(self):
+        """Clear out instances if too many exist."""
+        for i in range(0, self.missing, -1):
+            instance = self.instances.pop()
+            instance.stop()
 
     @property
     def missing(self):

@@ -1,5 +1,5 @@
 import datetime
-from testify import TestCase, assert_equal, setup
+from testify import TestCase, assert_equal, assert_raises, setup
 from tests import testingutils
 
 from tron.utils import timeutils
@@ -167,6 +167,11 @@ class DateArithmeticTestCase(testingutils.MockTimeTestCase):
             dt = self.now - timeutils.macro_timedelta(self.now, months=i)
             self._cmp_month('month-%s' % i, dt)
 
+    def test_month_minus_day_out_of_range(self):
+        somewhat_now = datetime.datetime(2013, 7, 31)
+        dt = somewhat_now - timeutils.macro_timedelta(somewhat_now, months=1)
+        assert_equal(DateArithmetic.parse('month-1', dt=somewhat_now), dt.strftime("%m"))
+
     def test_year(self):
         self._cmp_year('year', self.now)
 
@@ -206,3 +211,31 @@ class DateArithmeticTestCase(testingutils.MockTimeTestCase):
 
     def test_bad_date_format(self):
         assert DateArithmetic.parse('~~') is None
+
+
+class TimeDeltaEdgeCaseTest(TestCase):
+
+    def test_macro_timedelta_end_of_month(self):
+        time = datetime.datetime(2013, 7, 31)
+        dt = time - timeutils.macro_timedelta(time, months=1)
+        assert_equal(dt, datetime.datetime(2013, 6, 30))
+
+    def test_macro_timedelta_leap_year(self):
+        time = datetime.datetime(2012, 2, 29)
+        dt = time + timeutils.macro_timedelta(time, years=1)
+        assert_equal(dt, datetime.datetime(2013, 2, 28))
+
+
+class GetEndDateTestCase(TestCase):
+
+    def test_get_end_date_invalid(self):
+        assert_raises(ValueError, timeutils.get_end_date, 2013, 13, 31)
+
+    def test_get_end_date_valid(self):
+        assert_equal(timeutils.get_end_date(2013, 5, 20), datetime.datetime(2013, 5, 20))
+
+    def test_get_end_date_day_over(self):
+        assert_equal(timeutils.get_end_date(2013, 6, 31), datetime.datetime(2013, 6, 30))
+
+    def test_get_end_date_day_invalid(self):
+        assert_raises(ValueError, timeutils.get_end_date, 2013, 6, -1)

@@ -25,13 +25,14 @@ class SSHAuthOptions(object):
     """An options class which can be used by NoPasswordAuthClient. This supports
     the interface provided by: twisted.conch.client.options.ConchOptions.
     """
-    def __init__(self, identitys, use_agent):
+    def __init__(self, identitys, use_agent, config):
         self.use_agent = use_agent
         self.identitys = identitys
+        self._config    = config
 
     @classmethod
     def from_config(cls, ssh_config):
-        return cls(ssh_config.identities, ssh_config.agent)
+        return cls(ssh_config.identities, ssh_config.agent, ssh_config)
 
     def __getitem__(self, item):
         if item != 'noagent':
@@ -39,9 +40,7 @@ class SSHAuthOptions(object):
         return not self.use_agent
 
     def __eq__(self, other):
-        return other and (
-            self.use_agent == other.use_agent and
-            self.identitys == other.identitys)
+        return other and other._config == self._config
 
     def __ne__(self, other):
         return not self == other
@@ -94,6 +93,7 @@ class ClientConnection(connection.SSHConnection):
 
     service_start_defer = None
     service_stop_defer = None
+    is_closed = False
 
     def serviceStarted(self):
         log.info("Service started")
@@ -103,6 +103,7 @@ class ClientConnection(connection.SSHConnection):
 
     def serviceStopped(self):
         log.info("Service stopped")
+        self.is_closed = True
         connection.SSHConnection.serviceStopped(self)
         if not self.service_stop_defer.called:
             self.service_stop_defer.callback(self)
