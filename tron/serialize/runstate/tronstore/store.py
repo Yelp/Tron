@@ -297,27 +297,25 @@ class SyncStore(object):
         with self.lock:
             try:
                 return self.store.save(*args, **kwargs)
-            except Exception, e:
-                self.log.error('Error encountered while saving data:\n %s'
-                    % traceback.print_exc(e))
+            except:
+                self.log.exception('Exception encountered while saving data')
                 return False
 
     def restore(self, *args, **kwargs):
         with self.lock:
             try:
                 return self.store.restore(*args, **kwargs)
-            except Exception, e:
-                self.log.error('Error encountered while restoring data:\n %s'
-                    % traceback.print_exc(e))
+            except:
+                self.log.exception('Exception encountered while restoring data')
                 return (False, None)
 
     def cleanup(self):
         with self.lock:
             try:
                 self.store.cleanup()
-            except Exception, e:
-                self.log.error('Error encountered while cleaning up %s:\n %s'
-                    % (self.store, traceback.print_exc(e)))
+            except:
+                self.log.exception('Exception encountered while cleaning up %r'
+                    % self.store)
 
     def __repr__(self):
         return "SyncStore('%s')" % self.store.__repr__()

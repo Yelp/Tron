@@ -205,9 +205,8 @@ class TronstoreMain(object):
             self.config = request.data
             self.pipe.send_bytes(self.response_factory.build(True, request.id, '').serialized)
             self.log.info('Configuration loaded successfully.')
-        except Exception, e:
-            self.log.error('Error encountered when loading config:\n %s'
-                % traceback.print_exc(e))
+        except:
+            self.log.exception('Error encountered when loading config')
 
             self.log.debug('Recreating old store object...')
             self.store_class = store.SyncStore(self.config, self.log)
