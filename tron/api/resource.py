@@ -91,11 +91,11 @@ class ActionRunResource(resource.Resource):
 
 class JobRunResource(resource.Resource):
 
-    def __init__(self, job_run, job_scheduler):
+    def __init__(self, job_run, job_container):
         resource.Resource.__init__(self)
         self.job_run       = job_run
-        self.job_scheduler = job_scheduler
-        self.controller    = controller.JobRunController(job_run, job_scheduler)
+        self.job_container = job_container
+        self.controller    = controller.JobRunController(job_run, job_container)
 
     def getChild(self, action_name, _):
         if not action_name:
@@ -127,13 +127,13 @@ def is_negative_int(string):
 
 class JobResource(resource.Resource):
 
-    def __init__(self, job_scheduler):
+    def __init__(self, job_container):
         resource.Resource.__init__(self)
-        self.job_scheduler = job_scheduler
-        self.controller    = controller.JobController(job_scheduler)
+        self.job_container = job_container
+        self.controller    = controller.JobController(job_container)
 
     def get_run_from_identifier(self, run_id):
-        job_runs = self.job_scheduler.get_job_runs()
+        job_runs = self.job_container.get_runs()
         if run_id.upper() == 'HEAD':
             return job_runs.get_newest()
         if run_id.isdigit():
@@ -146,15 +146,15 @@ class JobResource(resource.Resource):
         if not run_id:
             return self
         if run_id == '_events':
-            return EventResource(self.job_scheduler.get_name())
+            return EventResource(self.job_container.get_name())
 
         run = self.get_run_from_identifier(run_id)
         if run:
-            return JobRunResource(run, self.job_scheduler)
+            return JobRunResource(run, self.job_container)
 
-        job = self.job_scheduler.get_job()
+        job = self.job_container
         if run_id in job.action_graph.names:
-            action_runs = job.runs.get_action_runs(run_id)
+            action_runs = job.job_runs.get_action_runs(run_id)
             return ActionRunHistoryResource(action_runs)
         msg = "Cannot find job run %s for %s"
         return resource.NoResource(msg % (run_id, job))
@@ -164,7 +164,7 @@ class JobResource(resource.Resource):
         include_graph = requestargs.get_bool(request, 'include_action_graph')
         num_runs = requestargs.get_integer(request, 'num_runs')
         job_adapter = adapter.JobAdapter(
-                self.job_scheduler.get_job(),
+                self.job_container,
                 include_job_runs=True,
                 include_action_runs=include_action_runs,
                 include_action_graph=include_graph,
@@ -176,7 +176,7 @@ class JobResource(resource.Resource):
         return handle_command(
             request,
             self.controller,
-            self.job_scheduler,
+            self.job_container,
             run_time=run_time)
 
 
@@ -205,22 +205,33 @@ class JobCollectionResource(resource.Resource):
             return self
         return resource_from_collection(self.job_collection, name, JobResource)
 
-    def get_data(self, include_job_run=False, include_action_runs=False):
+    def get_data(self, include_job_run=False, include_action_runs=False, namespace=None, hostname=None):
+        collection = self.job_collection
+        if namespace:
+            collection = [job for job in collection if job in
+                          self.job_collection.get_jobs_by_namespace(namespace)]
+        if hostname:
+            collection = [job for job in collection if job in
+                          self.job_collection.get_jobs_by_hostname(hostname)]
+
         return adapter.adapt_many(adapter.JobAdapter,
-            self.job_collection.get_jobs(),
+            collection,
             include_job_run,
             include_action_runs,
             num_runs=5)
 
     def get_job_index(self):
         jobs = adapter.adapt_many(
-            adapter.JobIndexAdapter, self.job_collection.get_jobs())
+            adapter.JobIndexAdapter, self.job_collection)
         return dict((job['name'], job['actions']) for job in jobs)
 
     def render_GET(self, request):
         include_job_runs = requestargs.get_bool(request, 'include_job_runs')
         include_action_runs = requestargs.get_bool(request, 'include_action_runs')
-        output = dict(jobs=self.get_data(include_job_runs, include_action_runs))
+        namespace = requestargs.get_string(request, 'namespace')
+        hostname = requestargs.get_string(request, 'hostname')
+        output = dict(jobs=self.get_data(include_job_runs, include_action_runs,
+            namespace, hostname))
         return respond(request, output)
 
     def render_POST(self, request):
@@ -282,14 +293,24 @@ class ServiceCollectionResource(resource.Resource):
             return self
         return resource_from_collection(self.collection, name, ServiceResource)
 
-    def get_data(self):
-        return adapter.adapt_many(adapter.ServiceAdapter, self.collection)
+    def get_data(self, namespace=None, hostname=None):
+        collection = self.collection
+        if namespace:
+            collection = [job for job in collection if job in
+                          self.collection.get_services_by_namespace(namespace)]
+        if hostname:
+            collection = [job for job in collection if job in
+                          self.collection.get_services_by_hostname(hostname)]
+
+        return adapter.adapt_many(adapter.ServiceAdapter, collection)
 
     def get_service_index(self):
         return self.collection.get_names()
 
     def render_GET(self, request):
-        return respond(request, dict(services=self.get_data()))
+        namespace = requestargs.get_string(request, 'namespace')
+        hostname = requestargs.get_string(request, 'hostname')
+        return respond(request, dict(services=self.get_data(namespace, hostname)))
 
 
 class ConfigResource(resource.Resource):

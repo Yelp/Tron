@@ -114,7 +114,7 @@ class ApiRootResourceTestCase(WWWTestCase):
         expected_keys = [ 'jobs', 'services', 'namespaces', ]
         response = self.resource.render_GET(build_request())
         assert_equal(set(response.keys()), set(expected_keys))
-        self.mcp.get_job_collection().get_jobs.assert_called_with()
+        self.mcp.get_job_collection.assert_called_with()
         self.mcp.get_service_collection.return_value.get_names.assert_called_with()
 
 
@@ -167,7 +167,7 @@ class JobCollectionResourceTestCase(WWWTestCase):
     def test_render_GET(self):
         self.resource.get_data = Turtle()
         result = self.resource.render_GET(REQUEST)
-        assert_call(self.resource.get_data, 0, False, False)
+        assert_call(self.resource.get_data, 0, False, False, None, None)
         assert 'jobs' in result
 
     def test_getChild(self):
@@ -185,35 +185,51 @@ class JobResourceTestCase(WWWTestCase):
 
     @setup
     def setup_resource(self):
-        self.job_scheduler = mock.create_autospec(job.JobScheduler)
-        self.job_runs = mock.create_autospec(jobrun.JobRunCollection)
-        self.job = mock.create_autospec(job.Job,
-            runs=self.job_runs,
+        mock_config = mock.Mock(
             all_nodes=False,
             allow_overlap=True,
             queueing=True,
-            action_graph=mock.MagicMock(),
-            scheduler=mock.Mock(),
-            node_pool=mock.create_autospec(node.NodePool),
             max_runtime=mock.Mock())
-        self.job_scheduler.get_job.return_value = self.job
-        self.job_scheduler.get_job_runs.return_value = self.job_runs
-        self.resource = www.JobResource(self.job_scheduler)
+        self.job_runs = mock.create_autospec(jobrun.JobRunCollection)
+        job_state = mock.create_autospec(job.JobState)
+        watcher = mock.Mock()
+        self.job_scheduler = job.JobScheduler(
+            job_state=job_state,
+            nodes=mock.create_autospec(node.NodePool),
+            job_config=mock_config,
+            scheduler=mock.Mock(),
+            job_runs=self.job_runs,
+            actiongraph=mock.MagicMock(),
+            path=mock.Mock(),
+            context=mock.Mock(),
+            watcher=watcher,
+            actionrunner=mock.Mock())
+        self.job_container = job.JobContainer(
+            name='test_job',
+            jobruns=self.job_runs,
+            jobstate=job_state,
+            jobscheduler=self.job_scheduler,
+            statewatcher=watcher)
+        self.resource = www.JobResource(self.job_container)
 
     def test_render_GET(self):
         result = self.resource.render_GET(self.request)
-        assert_equal(result['name'], self.job_scheduler.get_job().get_name())
+        assert_equal(result['name'], self.job_container.get_name())
 
     def test_get_run_from_identifier_HEAD(self):
-        job_run = self.resource.get_run_from_identifier('HEAD')
-        self.job_scheduler.get_job_runs.assert_called_with()
-        assert_equal(job_run, self.job_runs.get_newest.return_value)
+        with mock.patch.object(self.job_container, 'get_runs') as job_patch:
+            job_run = self.resource.get_run_from_identifier('HEAD')
+            job_patch.assert_called_with()
+            assert_equal(job_run,
+                self.job_container.get_runs.return_value.get_newest.return_value)
 
     def test_get_run_from_identifier_number(self):
-        job_run = self.resource.get_run_from_identifier('3')
-        self.job_scheduler.get_job_runs.assert_called_with()
-        assert_equal(job_run, self.job_runs.get_run_by_num.return_value)
-        self.job_runs.get_run_by_num.assert_called_with(3)
+        with mock.patch.object(self.job_container, 'get_runs') as job_patch:
+            job_run = self.resource.get_run_from_identifier('3')
+            job_patch.assert_called_with()
+            assert_equal(job_run,
+                self.job_container.get_runs.return_value.get_run_by_num.return_value)
+            self.job_container.get_runs.return_value.get_run_by_num.assert_called_with(3)
 
     def test_get_run_from_identifier_state_name(self):
         job_run = self.resource.get_run_from_identifier('SUCC')
@@ -236,8 +252,8 @@ class JobResourceTestCase(WWWTestCase):
         autospec_method(self.resource.get_run_from_identifier, return_value=None)
         action_name = 'action_name'
         action_runs = [mock.Mock(), mock.Mock()]
-        self.job.action_graph.names = [action_name]
-        self.job.runs.get_action_runs.return_value = action_runs
+        self.job_container.action_graph.names = [action_name]
+        self.job_container.job_runs.get_action_runs.return_value = action_runs
         resource = self.resource.getChild(action_name, None)
         assert_equal(resource.__class__, www.ActionRunHistoryResource)
         assert_equal(resource.action_runs, action_runs)
@@ -278,9 +294,8 @@ class ServiceCollectionResourceTestCase(TestCase):
 
     @setup
     def build_resource(self):
-        self.mcp = mock.create_autospec(mcp.MasterControlProgram)
-        self.resource = www.ServiceCollectionResource(self.mcp)
-        self.resource.collection = mock.create_autospec(service.ServiceCollection)
+        self.collection = mock.create_autospec(service.ServiceCollection)
+        self.resource = www.ServiceCollectionResource(self.collection)
 
     def test_getChild(self):
         child = self.resource.collection.get_by_name.return_value = mock.Mock()

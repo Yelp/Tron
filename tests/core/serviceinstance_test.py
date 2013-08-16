@@ -322,7 +322,7 @@ class ServiceInstanceTestCase(TestCase):
     def test_state_data(self):
         expected = {
             'instance_number': self.number,
-            'node': self.node.hostname
+            'node': self.node.name
         }
         assert_equal(self.instance.state_data, expected)
 
@@ -337,16 +337,23 @@ class NodeSelectorTestCase(TestCase):
         selected_node = serviceinstance.node_selector(self.node_pool)
         assert_equal(selected_node, self.node_pool.next_round_robin())
 
-    def test_node_selector_hostname_not_in_pool(self):
+    def test_node_selector_name_not_in_pool(self):
         hostname = 'hostname'
+        self.node_pool.get_by_name.return_value = None
         self.node_pool.get_by_hostname.return_value = None
         selected_node = serviceinstance.node_selector(self.node_pool, hostname)
         assert_equal(selected_node, self.node_pool.next_round_robin.return_value)
 
     def test_node_selector_hostname_found(self):
         hostname = 'hostname'
+        self.node_pool.get_by_name.return_value = None
         selected_node = serviceinstance.node_selector(self.node_pool, hostname)
         assert_equal(selected_node, self.node_pool.get_by_hostname.return_value)
+
+    def test_node_selector_name_found(self):
+        hostname = 'hostname'
+        selected_node = serviceinstance.node_selector(self.node_pool, hostname)
+        assert_equal(selected_node, self.node_pool.get_by_name.return_value)
 
 
 def create_mock_instance(**kwargs):
@@ -419,7 +426,7 @@ class ServiceInstanceCollectionTestCase(TestCase):
         assert_length(created, count)
         assert_equal(set(created), set(self.collection.instances))
         expected = [
-            mock.call(self.node_pool.get_by_hostname.return_value,
+            mock.call(self.node_pool.get_by_name.return_value,
                 d['instance_number'])
             for d in state_data]
         for expected_call in expected:
@@ -494,6 +501,48 @@ class ServiceInstanceCollectionTestCase(TestCase):
                     create_mock_instance(instance_number=i) for i in range(5)]
         instance = self.collection.get_by_number(3)
         assert_equal(instance, instances[3])
+
+    def test_update_node_pool_same_pool(self):
+        self.collection.update_node_pool(self.collection.node_pool)
+        assert not self.collection.node_pool.get_by_name.called
+
+    def test_update_node_pool_diff_pool_same_nodes(self):
+        new_instances = [mock.Mock(), mock.Mock()]
+        self.collection.instances = new_instances
+        nodes = [instance.node for instance in new_instances]
+        node_pool = mock.Mock(get_by_name=mock.Mock(side_effect=iter(nodes)))
+
+        self.collection.update_node_pool(node_pool)
+
+        assert_equal(self.collection.node_pool, node_pool)
+        calls = [mock.call(instance.node.name) for instance in new_instances]
+        node_pool.get_by_name.assert_calls(calls)
+        assert not any([instance.stop.called for instance in new_instances])
+        assert_equal(self.collection.instances, new_instances)
+
+    def test_update_node_pool_diff_everything(self):
+        new_instances = [mock.Mock(), mock.Mock()]
+        self.collection.instances = [mock.Mock(), mock.Mock()]
+        nodes = [instance.node for instance in new_instances]
+        node_pool = mock.Mock(get_by_name=mock.Mock(side_effect=iter(nodes)))
+
+        self.collection.update_node_pool(node_pool)
+
+        assert_equal(self.collection.node_pool, node_pool)
+        calls = [mock.call(instance.node.name) for instance in self.collection.instances]
+        node_pool.get_by_name.assert_calls(calls)
+        assert all([instance.stop.called for instance in self.collection.instances])
+        assert_equal(self.collection.instances, [])
+
+    def test_clear_extra(self):
+        instance_a = mock.Mock()
+        instance_b = mock.Mock()
+        instance_c = mock.Mock()
+        self.collection.instances = [instance_a, instance_b, instance_c]
+        self.collection.config.count = 2
+        self.collection.clear_extra()
+        assert_equal(self.collection.instances, [instance_a, instance_b])
+        instance_c.stop.assert_called_once_with()
 
 
 if __name__ == "__main__":

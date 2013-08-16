@@ -186,11 +186,11 @@ def add_color_for_state(state):
     if state in set((
         actionrun.ActionRun.STATE_RUNNING.name,
         actionrun.ActionRun.STATE_SUCCEEDED.name,
-        job.Job.STATUS_ENABLED,
+        job.JobState.STATUS_ENABLED,
         service.ServiceState.UP
     )):
         return Color.set('green', state)
-    if state in set((job.Job.STATUS_DISABLED, service.ServiceState.DISABLED)):
+    if state in set((job.JobState.STATUS_DISABLED, service.ServiceState.DISABLED)):
         return Color.set('blue', state)
     return state
 

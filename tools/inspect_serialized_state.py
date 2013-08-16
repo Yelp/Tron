@@ -34,9 +34,13 @@ def get_container(config_path):
 
 def get_state(container):
     config          = container.get_master().state_persistence
-    state_manager   = statemanager.PersistenceManagerFactory.from_config(config)
+    state_manager   = statemanager.PersistentStateManager()
     names           = container.get_job_and_service_names()
-    return state_manager.restore(*names)
+    if not state_manager.update_from_config(config):
+        raise SystemError('Configuration failed to load correctly.')
+    data = state_manager.restore(*names)
+    state_manager.cleanup()
+    return data
 
 
 def format_date(date_string):
@@ -52,10 +56,10 @@ def format_jobs(job_states):
         return max(start_time) if start_time else None
 
     def build(name, job):
-        start_times = (max_run(job_run['runs']) for job_run in job['runs'])
+        start_times = (max_run(job_run['runs']) for job_run in job[1])
         start_times = filter(None, start_times)
         last_run = format_date(max(start_times)) if start_times else None
-        return format % (name, job['enabled'], len(job['runs']), last_run)
+        return format % (name, job[0]['enabled'], len(job[1]), last_run)
     seq = sorted(build(*item) for item in job_states.iteritems())
     return header + "".join(seq)
 

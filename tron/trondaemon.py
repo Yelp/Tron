@@ -154,6 +154,7 @@ class TronDaemon(object):
             signal.SIGINT:  self._handle_graceful_shutdown,
             signal.SIGTERM: self._handle_shutdown,
         }
+
         pidfile = PIDFile(options.pid_file)
         return context_class(
             working_directory=options.working_dir,
@@ -199,7 +200,8 @@ class TronDaemon(object):
 
     def _run_reactor(self):
         """Run the twisted reactor."""
-        self.reactor.run()
+        # Not setting this flag caused me 9 painful hours of debugging =(
+        self.reactor.run(installSignalHandlers=0)
 
     def _handle_shutdown(self, sig_num, stack_frame):
         log.info("Shutdown requested: sig %s" % sig_num)

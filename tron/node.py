@@ -160,6 +160,11 @@ class NodePool(object):
             if node.hostname == hostname:
                 return node
 
+    def get_by_name(self, name):
+        for node in self.nodes:
+            if node.name == name:
+                return node
+
     def __str__(self):
         return "NodePool:%s" % self.name
 
@@ -316,7 +321,7 @@ class Node(object):
 
         # Now let's see if we need to start this off by establishing a
         # connection or if we are already connected
-        if self.connection is None:
+        if self.connection is None or self.connection.is_closed:
             self._connect_then_run(run)
         else:
             self._open_channel(run)

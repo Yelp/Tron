@@ -109,15 +109,24 @@ class Client(object):
     def get_url(self, identifier):
         return get_object_type_from_identifier(self.index(), identifier).url
 
-    def services(self):
-        return self.http_get('/api/services').get('services')
+    def services(self, namespace=None, hostname=None):
+        params = {}
+        if namespace:
+            params['namespace'] = namespace
+        if hostname:
+            params['hostname'] = hostname
+        return self.http_get('/api/services', params).get('services')
 
     def service(self, service_url):
         return self.http_get(service_url)
 
-    def jobs(self, include_job_runs=False, include_action_runs=False):
+    def jobs(self, include_job_runs=False, include_action_runs=False, namespace=None, hostname=None):
         params = {'include_job_runs': int(include_job_runs),
                   'include_action_runs': int(include_action_runs)}
+        if namespace:
+            params['namespace'] = namespace
+        if hostname:
+            params['hostname'] = hostname
         return self.http_get('/api/jobs', params).get('jobs')
 
     def job(self, job_url, include_action_runs=False, count=0):

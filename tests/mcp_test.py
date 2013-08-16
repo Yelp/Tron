@@ -1,29 +1,53 @@
 import shutil
 import tempfile
+import datetime
+import os
+from textwrap import dedent
 
 import mock
 from testify import TestCase, setup, teardown
-from testify import  assert_equal, run
+from testify import assert_equal, run
 from tests.testingutils import autospec_method
 
 from tron import mcp, event
 from tron.core import service, job
 from tron.serialize.runstate import statemanager
 from tron.config import config_parse, manager
+from tron.utils import timeutils
 
 
 class MasterControlProgramTestCase(TestCase):
 
     TEST_CONFIG = 'tests/data/test_config.yaml'
 
+    TEST_CONFIG_MONTH_DELTA = dedent("""
+        ssh_options:
+            agent: true
+
+        nodes:
+          - name: local
+            hostname: 'localhost'
+
+        state_persistence:
+            name: "state_data.shelve"
+            store_type: shelve
+
+        jobs:
+            - name: a_job
+              node: local
+              schedule: "interval 10s"
+              actions:
+                - name: first_action
+                  command: "echo %(month-1)s"
+    """)
+
     @setup
     def setup_mcp(self):
         self.working_dir    = tempfile.mkdtemp()
         self.config_path    = tempfile.mkdtemp()
-        self.mcp            = mcp.MasterControlProgram(
+        with mock.patch('tron.serialize.runstate.statemanager.StateChangeWatcher', autospec=True):
+            self.mcp        = mcp.MasterControlProgram(
                                 self.working_dir, self.config_path)
-        self.mcp.state_watcher = mock.create_autospec(
-                                statemanager.StateChangeWatcher)
 
     @teardown
     def teardown_mcp(self):
@@ -45,6 +69,17 @@ class MasterControlProgramTestCase(TestCase):
         self.mcp.apply_config.assert_called_with(
             self.mcp.config.load.return_value, reconfigure=False)
 
+    def test_load_config_edged_date(self):
+        autospec_method(self.mcp.apply_config)
+        temp_dir = os.path.join(tempfile.mkdtemp(prefix='tron-'), 'config/')
+        manager.create_new_config(temp_dir, self.TEST_CONFIG_MONTH_DELTA)
+
+        with mock.patch.object(timeutils, 'current_time',
+                return_value=datetime.datetime(2013, 7, 31)) as now_patch:
+            self.mcp.config = manager.ConfigManager(temp_dir)
+            self.mcp._load_config()
+            now_patch.assert_any_call()
+
     def test_graceful_shutdown(self):
         self.mcp.graceful_shutdown()
         for job_sched in self.mcp.get_job_collection():
@@ -64,7 +99,7 @@ class MasterControlProgramTestCase(TestCase):
         assert_equal(len(self.mcp.apply_collection_config.mock_calls), 2)
         self.mcp.apply_notification_options.assert_called_with(
             master_config.notification_options)
-        mock_repo.update_from_config.assert_called_with(master_config.nodes, 
+        mock_repo.update_from_config.assert_called_with(master_config.nodes,
             master_config.node_pools, master_config.ssh_options)
         self.mcp.build_job_scheduler_factory(master_config)
 
@@ -98,11 +133,12 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
     def setup_mcp(self):
         self.working_dir        = tempfile.mkdtemp()
         self.config_path        = tempfile.mkdtemp()
-        self.mcp                = mcp.MasterControlProgram(
-                                    self.working_dir, self.config_path)
-        self.mcp.jobs           = mock.create_autospec(job.JobCollection)
-        self.mcp.services       = mock.create_autospec(service.ServiceCollection)
-        self.mcp.state_watcher  = mock.create_autospec(statemanager.StateChangeWatcher)
+        with mock.patch('tron.serialize.runstate.statemanager.StateChangeWatcher', autospec=True):
+            self.mcp               = mcp.MasterControlProgram(
+                                        self.working_dir, self.config_path)
+            self.mcp.jobs          = mock.create_autospec(job.JobCollection)
+            self.mcp.services      = mock.create_autospec(service.ServiceCollection)
+            self.mcp.state_watcher = mock.create_autospec(statemanager.StateChangeWatcher)
 
     @teardown
     def teardown_mcp(self):
