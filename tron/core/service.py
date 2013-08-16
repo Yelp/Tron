@@ -220,6 +220,10 @@ class ServiceCollection(object):
         return [service for service in self
             if service.config.namespace == namespace]
 
+    def get_services_by_hostname(self, hostname):
+        return [service for service in self
+            if service.instances.node_pool.get_by_hostname(hostname)]
+
     def get_names(self):
         return self.services.keys()
 

@@ -269,6 +269,23 @@ class ServiceCollectionTestCase(TestCase):
             assert_equal(self.collection.get_services_by_namespace('dos'),
                 [fake_service_dos])
 
+    def test_get_services_by_hostname(self):
+        fake_service_uno = service.Service(mock.MagicMock(), mock.Mock())
+        fake_service_dos = service.Service(mock.MagicMock(), mock.Mock())
+        fake_service_uno.instances.node_pool = mock.Mock(
+            get_by_hostname=lambda x: x == 'uno')
+        fake_service_dos.instances.node_pool = mock.Mock(
+            get_by_hostname=lambda x: x == 'dos')
+        fake_services = [fake_service_uno, fake_service_dos]
+        def fake_services_iter():
+            return iter(fake_services)
+        with mock.patch.object(self.collection.services, 'itervalues',
+        side_effect=fake_services_iter):
+            assert_equal(self.collection.get_services_by_hostname('uno'),
+                [fake_service_uno])
+            assert_equal(self.collection.get_services_by_hostname('dos'),
+                [fake_service_dos])
+
 
 
 if __name__ == "__main__":
