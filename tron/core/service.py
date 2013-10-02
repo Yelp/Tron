@@ -188,7 +188,8 @@ class ServiceCollection(object):
             return False
 
         if old_service.config.count != new_service.config.count:
-            old_service.config.count = new_service.config.count
+            old_service.config = old_service.config._replace(
+                                    count=new_service.config.count)
 
         if old_service.config == new_service.config:
             log.debug("Updating service %s\'s node pool" % new_service.config.name)
