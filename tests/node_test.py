@@ -2,7 +2,7 @@ import mock
 from testify import setup, TestCase, assert_equal, run
 from testify import assert_in, assert_raises
 from testify.assertions import assert_not_in, assert_not_equal
-from testify.test_case import teardown, setup_teardown
+from testify import teardown, setup_teardown
 from tests.testingutils import autospec_method
 
 from tron import node, ssh, actioncommand
