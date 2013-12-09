@@ -343,6 +343,7 @@ class ValidateService(Validator):
 
     defaults = {
         'count':                1,
+        'monitor_retries':      3,
         'restart_delay':        None
     }
 
@@ -351,6 +352,7 @@ class ValidateService(Validator):
         'pid_file':             build_format_string_validator(service_pid_context),
         'command':              build_format_string_validator(service_context),
         'monitor_interval':     valid_float,
+        'monitor_retries':      valid_int,
         'count':                valid_int,
         'node':                 valid_node_name,
         'restart_delay':        valid_float,

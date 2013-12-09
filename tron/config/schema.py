@@ -146,6 +146,7 @@ ConfigService = config_object_factory(
         'namespace',            # str
     ],[
         'restart_delay',        # float
+        'monitor_retries',      # int
         'count',                # int
     ])
 

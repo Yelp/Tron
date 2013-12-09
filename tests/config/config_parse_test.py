@@ -320,6 +320,7 @@ services:
                         pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                         command='service_command0',
                         monitor_interval=20,
+                        monitor_retries=3,
                         restart_delay=None,
                         count=2)
                 }
@@ -568,6 +569,7 @@ services:
                         pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                         command='service_command0',
                         monitor_interval=20,
+                        monitor_retries=3,
                         restart_delay=None,
                         count=2)
                 }
@@ -941,6 +943,7 @@ class ValidateJobsAndServicesTestCase(TestCase):
                           pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                           command='service_command0',
                           monitor_interval=20,
+                          monitor_retries=3,
                           restart_delay=None,
                           count=2)
             }
