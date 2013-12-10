@@ -332,6 +332,7 @@ class ServiceInstance(observer.Observer):
 
     def handler(self, task, event):
         """Handle events from ServiceInstance tasks."""
+        log.debug("Service instance event %s on task %s" % (event, task))
         if event in self.event_to_transition_map:
             self.machine.transition(self.event_to_transition_map[event])
 
@@ -340,6 +341,11 @@ class ServiceInstance(observer.Observer):
 
         if event == task.NOTIFY_FAILED:
             self.failures.append(get_failures_from_task(task))
+
+        if event == ServiceInstanceMonitorTask.NOTIFY_FAILED and self.config.monitor_retries and self.config.monitor_retries < len(self.failures):
+            log.info("Too many monitor failures(%d) of %s" % (len(self.failures), task))
+            self.monitor_task.cancel()
+            self.machine.transition('stop')
 
         if event == ServiceInstanceMonitorTask.NOTIFY_UP:
             self.failures = []

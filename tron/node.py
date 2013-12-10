@@ -354,7 +354,7 @@ class Node(object):
         self._cleanup(run)
 
         log.info("Calling fail_run callbacks")
-        run.exited(None)
+        run.exited(result)
         cb(result)
 
     def _connect_then_run(self, run):
@@ -368,7 +368,7 @@ class Node(object):
 
         def connect_fail(result):
             log.warning("Cannot run %s, Failed to connect to %s",
-                        run.run, self.hostname)
+                        run, self.hostname)
             self.connection_defer = None
             self._fail_run(run, failure.Failure(
                 exc_value=ConnectError("Connection to %s failed" %
@@ -454,6 +454,7 @@ class Node(object):
 
         def on_transport_fail(fail):
             log.warning("Cannot connect to %s", self.hostname)
+            connect_defer.errback(fail)
 
         create_defer.addCallback(on_transport_create)
         create_defer.addErrback(on_transport_fail)
