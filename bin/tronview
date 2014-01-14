@@ -30,6 +30,9 @@ def parse_options():
     parser.add_option("--namespace", type="string",
                       help="Show jobs/services for the specified namespace",
                       default=None)
+    parser.add_option("--hostname", type="string",
+                      help="Show jobs/services for the specified hostname",
+                      default=None)
 
     options, args = parser.parse_args(sys.argv)
     return options, args[1:]
@@ -49,9 +52,11 @@ def view_all(options, client):
         return display_events(client.events())
 
     return "".join([
-        display.DisplayServices().format(client.services(namespace=options.namespace)),
+        display.DisplayServices().format(
+            client.services(namespace=options.namespace, hostname=options.hostname)),
         '\n',
-        display.DisplayJobs().format(client.jobs(namespace=options.namespace))
+        display.DisplayJobs().format(
+            client.jobs(namespace=options.namespace, hostname=options.hostname))
     ])
 
 def view_job(options, job_id, client):

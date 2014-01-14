@@ -678,8 +678,6 @@ class JobCollectionTestCase(TestCase):
     def test_get_jobs_from_namespace(self):
         fake_job_uno = mock.create_autospec(job.JobContainer)
         fake_job_dos = mock.create_autospec(job.JobContainer)
-        #fake_job_uno.namespace = 'uno'
-        #fake_job_dos.namespace = 'dos'
         uno_patch = mock.patch.object(fake_job_uno, 'namespace', new='uno')
         dos_patch = mock.patch.object(fake_job_dos, 'namespace', new='dos')
         fake_jobs = [fake_job_uno, fake_job_dos]
@@ -694,6 +692,23 @@ class JobCollectionTestCase(TestCase):
             assert_equal(self.collection.get_jobs_by_namespace('uno'),
                 [fake_job_uno])
             assert_equal(self.collection.get_jobs_by_namespace('dos'),
+                [fake_job_dos])
+
+    def test_get_jobs_from_hostname(self):
+        fake_job_uno = mock.create_autospec(job.JobContainer)
+        fake_job_dos = mock.create_autospec(job.JobContainer)
+        fake_job_uno.node_pool = mock.Mock(
+            get_by_hostname=lambda x: x == 'uno')
+        fake_job_dos.node_pool = mock.Mock(
+            get_by_hostname=lambda x: x == 'dos')
+        fake_jobs = [fake_job_uno, fake_job_dos]
+        def fake_jobs_iter():
+            return iter(fake_jobs)
+        with mock.patch.object(self.collection.jobs, 'itervalues',
+                               side_effect=fake_jobs_iter):
+            assert_equal(self.collection.get_jobs_by_hostname('uno'),
+                [fake_job_uno])
+            assert_equal(self.collection.get_jobs_by_hostname('dos'),
                 [fake_job_dos])
 
 

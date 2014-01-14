@@ -205,10 +205,17 @@ class JobCollectionResource(resource.Resource):
             return self
         return resource_from_collection(self.job_collection, name, JobResource)
 
-    def get_data(self, include_job_run=False, include_action_runs=False, namespace=None):
+    def get_data(self, include_job_run=False, include_action_runs=False, namespace=None, hostname=None):
+        collection = self.job_collection
+        if namespace:
+            collection = [job for job in collection if job in
+                          self.job_collection.get_jobs_by_namespace(namespace)]
+        if hostname:
+            collection = [job for job in collection if job in
+                          self.job_collection.get_jobs_by_hostname(hostname)]
+
         return adapter.adapt_many(adapter.JobAdapter,
-            self.job_collection.get_jobs_by_namespace(namespace) if namespace
-            else self.job_collection,
+            collection,
             include_job_run,
             include_action_runs,
             num_runs=5)
@@ -222,8 +229,9 @@ class JobCollectionResource(resource.Resource):
         include_job_runs = requestargs.get_bool(request, 'include_job_runs')
         include_action_runs = requestargs.get_bool(request, 'include_action_runs')
         namespace = requestargs.get_string(request, 'namespace')
+        hostname = requestargs.get_string(request, 'hostname')
         output = dict(jobs=self.get_data(include_job_runs, include_action_runs,
-            namespace))
+            namespace, hostname))
         return respond(request, output)
 
     def render_POST(self, request):
@@ -285,17 +293,24 @@ class ServiceCollectionResource(resource.Resource):
             return self
         return resource_from_collection(self.collection, name, ServiceResource)
 
-    def get_data(self, namespace=None):
-        return adapter.adapt_many(adapter.ServiceAdapter,
-            self.collection.get_services_by_namespace(namespace) if namespace
-            else self.collection)
+    def get_data(self, namespace=None, hostname=None):
+        collection = self.collection
+        if namespace:
+            collection = [job for job in collection if job in
+                          self.collection.get_services_by_namespace(namespace)]
+        if hostname:
+            collection = [job for job in collection if job in
+                          self.collection.get_services_by_hostname(hostname)]
+
+        return adapter.adapt_many(adapter.ServiceAdapter, collection)
 
     def get_service_index(self):
         return self.collection.get_names()
 
     def render_GET(self, request):
         namespace = requestargs.get_string(request, 'namespace')
-        return respond(request, dict(services=self.get_data(namespace)))
+        hostname = requestargs.get_string(request, 'hostname')
+        return respond(request, dict(services=self.get_data(namespace, hostname)))
 
 
 class ConfigResource(resource.Resource):

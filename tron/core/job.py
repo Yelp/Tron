@@ -356,6 +356,10 @@ class JobCollection(object):
         return [job for job in self
             if job.namespace == namespace]
 
+    def get_jobs_by_hostname(self, hostname):
+        return [job for job in self
+            if job.node_pool.get_by_hostname(hostname)]
+
     def get_names(self):
         return self.jobs.keys()
 
