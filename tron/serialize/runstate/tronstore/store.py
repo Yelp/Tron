@@ -1,6 +1,7 @@
 import shelve
 import urlparse
 import os
+import traceback
 from contextlib import contextmanager
 from threading import Lock
 
@@ -44,7 +45,7 @@ class ShelveStore(object):
         self.shelve.close()
 
     def __repr__(self):
-        return "ShelveStateStore('%s')" % self.filename
+        return "ShelveStateStore('%s')" % self.fname
 
 
 class SQLStore(object):
@@ -135,8 +136,6 @@ class SQLStore(object):
             if not result:
                 return (False, None)
             elif result[1] != self.serializer.name:
-                # TODO: If/when we have logging in the Tronstore process,
-                #       log here that the db_store_method was different
                 serializer = serialize_class_map[result[1]]
                 return (True, serializer.deserialize(result[0]))
             else:
@@ -278,8 +277,9 @@ class SyncStore(object):
     modular nature.
     """
 
-    def __init__(self, config):
+    def __init__(self, config, log):
         """Parse the configuration file and set up the store class."""
+        self.log = log
         self.lock = Lock()
         if not config:
             self.store = NullStore()
@@ -295,15 +295,27 @@ class SyncStore(object):
 
     def save(self, *args, **kwargs):
         with self.lock:
-            return self.store.save(*args, **kwargs)
+            try:
+                return self.store.save(*args, **kwargs)
+            except:
+                self.log.exception('Exception encountered while saving data')
+                return False
 
     def restore(self, *args, **kwargs):
         with self.lock:
-            return self.store.restore(*args, **kwargs)
+            try:
+                return self.store.restore(*args, **kwargs)
+            except:
+                self.log.exception('Exception encountered while restoring data')
+                return (False, None)
 
     def cleanup(self):
         with self.lock:
-            self.store.cleanup()
+            try:
+                self.store.cleanup()
+            except:
+                self.log.exception('Exception encountered while cleaning up %r'
+                    % self.store)
 
     def __repr__(self):
         return "SyncStore('%s')" % self.store.__repr__()

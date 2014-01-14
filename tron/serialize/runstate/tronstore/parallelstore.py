@@ -70,12 +70,15 @@ class ParallelStore(object):
         by shutting down and restarting tronstore. THIS MUST BE CALLED
         AT LEAST ONCE, as tronstore is started with a null configuration
         whenever a ParallelStore object is created."""
+        log.info("Loading new state persistence configuration into Tronstore...")
         config_req = self.request_factory.build(msg_enums.REQUEST_CONFIG, '', new_config)
         response = self.process.send_request_get_response(config_req)
         if response.success:
+            log.info('Successfully loaded new configuration into Tronstore.')
             self.process.update_config(new_config)
             return True
         else:
+            log.warn("Failed to load new configuration into Tronstore.")
             return False
 
     def __repr__(self):

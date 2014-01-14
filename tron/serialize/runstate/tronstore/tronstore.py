@@ -2,6 +2,7 @@
 import time
 import signal
 import os
+import traceback
 from threading import Thread, Lock
 from Queue import Queue, Empty
 
@@ -91,15 +92,57 @@ class PoolBool(object):
         self._val = value
 
 
+class PoolWatcher(Thread):
+    """A watcher that periodically (every second) checks the amount of work
+    in the TronstorePool. It performs some simple math to determine if the
+    average measured growth rate of work_size over the last NUM_MEASUREMENTS
+    checks (which means the last NUM_MEASUREMENTS-1 velocity measurements) is
+    greater than 0. If it is, we write a warning in the Tronstore log about it.
+    """
+
+    # Threshold for work sizes. If the average work size over the past set of
+    # measurements is lower than this value, we won't check if we're falling
+    # behind.
+    LOW_THRESHOLD = 50
+
+    # Number of measurements to save and compare against.
+    NUM_MEASUREMENTS = 7
+
+    def __init__(self, pool, logger):
+        self.log         = logger
+        self.pool        = pool
+        self.last_sizes  = []
+        self.last_diffs  = []
+        super(PoolWatcher, self).__init__()
+
+    def run(self):
+        while self.pool.keep_working.val:
+            time.sleep(1.0)
+            new_size = self.pool.work_size()
+            self.last_sizes = self.last_sizes[-(self.NUM_MEASUREMENTS-1):] + [new_size]
+            try:
+                new_diff = self.last_sizes[-1] - self.last_sizes[-2]
+                self.last_diffs = self.last_diffs[-(self.NUM_MEASUREMENTS-2):] + [new_diff]
+                if (sum(self.last_sizes) >= self.LOW_THRESHOLD * len(self.last_sizes)
+                and sum(self.last_diffs) > 0):
+                    self.log.warn(("Tronstore is falling behind in handling requests!\n"
+                        "Current # of queued requests: %d requests\n"
+                        "Current average velocity of queue size: +%.3f requests/second")
+                        % (self.pool.work_size(),
+                           float(sum(self.last_diffs))/float(len(self.last_diffs))))
+            except IndexError:
+                continue
+
+
 class TronstorePool(object):
     """A thread pool with POOL_SIZE workers for handling requests. Enqueues
     save and restore requests into a queue that is then consumed by the
     workers, which send an appropriate response.
     """
 
-    POOL_SIZE = 16
+    POOL_SIZE = 2
 
-    def __init__(self, resp_fact, pipe, store):
+    def __init__(self, resp_fact, pipe, store, logger):
         """Initialize the thread pool. Please make a new pool if any of the
         objects passed to __init__ change.
         """
@@ -108,6 +151,7 @@ class TronstorePool(object):
         self.pipe             = pipe
         self.store_class      = store
         self.keep_working     = PoolBool(True)
+        self.watcher          = PoolWatcher(self, logger)
         self.thread_pool      = [Thread(target=handle_requests,
                                 args=(
                                     self.request_queue,
@@ -123,12 +167,15 @@ class TronstorePool(object):
         for thread in self.thread_pool:
             thread.daemon = False
             thread.start()
+        self.watcher.daemon = False
+        self.watcher.start()
 
     def stop(self):
         """Stop the thread pool."""
         self.keep_working.set(False)
         while self.has_work() \
-        or any([thread.is_alive() for thread in self.thread_pool]):
+        or any([thread.is_alive() for thread in self.thread_pool]) \
+        or self.watcher.is_alive():
             time.sleep(0.5)
 
     def enqueue_work(self, work):
@@ -138,6 +185,10 @@ class TronstorePool(object):
     def has_work(self):
         """Returns whether there is still work to be consumed by workers."""
         return not self.request_queue.empty()
+
+    def work_size(self):
+        """Returns the amount of work left to be consumed."""
+        return self.request_queue.qsize()
 
 
 class TronstoreMain(object):
@@ -151,17 +202,18 @@ class TronstoreMain(object):
     # can cause trond to take longer to fully shutdown.
     POLL_TIMEOUT = 2.0
 
-    def __init__(self, config, pipe):
+    def __init__(self, config, pipe, logger):
         """Sets up the needed objects for Tronstore, including message
         factories, a synchronized pipe and store object, a thread pool for
         handling requests, and some internal invariants.
         """
+        self.log              = logger
         self.pipe             = SyncPipe(pipe)
         self.request_factory  = StoreRequestFactory()
         self.response_factory = StoreResponseFactory()
-        self.store_class      = store.SyncStore(config)
+        self.store_class      = store.SyncStore(config, logger)
         self.thread_pool      = TronstorePool(self.response_factory, self.pipe,
-                                    self.store_class)
+                                    self.store_class, self.log)
         self.is_shutdown      = False
         self.shutdown_req_id  = None
         self.config           = config
@@ -180,21 +232,41 @@ class TronstoreMain(object):
         from the recieved configuration. If anything goes wrong, we revert
         back to the old configuration.
         """
+        self.log.warn('Loading new configuration...')
         self.thread_pool.stop()
         self.store_class.cleanup()
+        self.log.info('Cleaned up old store objects.')
         try:
-            self.store_class = store.SyncStore(request.data)
+            self.log.debug('Attempting to create new store object...')
+            self.store_class = store.SyncStore(request.data, self.log)
+            self.log.debug('Created %r.' % self.store_class)
+
+            self.log.debug('Creating new thread pool...')
             self.thread_pool = TronstorePool(self.response_factory, self.pipe,
-                                    self.store_class)
+                                    self.store_class, self.log)
             self.thread_pool.start()
+            self.log.debug('Thread pool is running.')
+
+            self.log.debug('Sending response that configuration was successful...')
             self.config = request.data
             self.pipe.send_bytes(self.response_factory.build(True, request.id, '').serialized)
+            self.log.info('Configuration loaded successfully.')
         except:
-            self.store_class = store.SyncStore(self.config)
+            self.log.exception('Exception encountered when loading config')
+
+            self.log.debug('Recreating old store object...')
+            self.store_class = store.SyncStore(self.config, self.log)
+            self.log.debug('Created %r.' % self.store_class)
+
+            self.log.debug('Recreating old thread pool...')
             self.thread_pool = TronstorePool(self.response_factory, self.pipe,
-                                    self.store_class)
+                                    self.store_class, self.log)
             self.thread_pool.start()
+            self.log.debug('Thread pool is running.')
+
+            self.log.debug('Sending response that configuration failed...')
             self.pipe.send_bytes(self.response_factory.build(False, request.id, '').serialized)
+            self.log.error('Failed to load configuration, reverted to old config.')
 
     def _handle_request(self, request):
         """Handle a request by either doing something with it ourselves
@@ -202,6 +274,7 @@ class TronstoreMain(object):
         thread pool (for save/restore).
         """
         if request.req_type == msg_enums.REQUEST_SHUTDOWN:
+            self.log.warn('Got a shutdown request, shutting down...')
             self.is_shutdown = True
             self.shutdown_req_id = request.id
 
@@ -215,8 +288,12 @@ class TronstoreMain(object):
         """Shutdown Tronstore. Calls os._exit, and should only be called
         once all work has been completed.
         """
+        self.log.info('Shutting down. There are still %s requests to handle.'
+            % self.thread_pool.work_size())
         self.thread_pool.stop()
         self.store_class.cleanup()
+
+        self.log.info('Tronstore is exiting, notifying trond.')
         if self.shutdown_req_id:
             shutdown_resp = self.response_factory.build(True, self.shutdown_req_id, '')
             self.pipe.send_bytes(shutdown_resp.serialized)
@@ -227,6 +304,7 @@ class TronstoreMain(object):
         simply polls for requests until a shutdown request is recieved, after
         which it cleans up and exits.
         """
+        self.log.info('Tronstore is starting.')
         self.thread_pool.start()
 
         while True:
@@ -234,6 +312,7 @@ class TronstoreMain(object):
                 if self.pipe.poll(self.POLL_TIMEOUT):
                     requests = self._get_all_from_pipe()
                     requests = map(self.request_factory.from_msg, requests)
+                    self.log.debug('Received %s requests.' % len(requests))
                     for request in requests:
                         self._handle_request(request)
 
@@ -245,14 +324,16 @@ class TronstoreMain(object):
                     try:
                         os.kill(os.getppid(), 0)
                     except:
+                        self.log.error('trond appears to have died. Shutting down...')
                         self.is_shutdown = True
+
             except IOError, e:
                 # Error #4 is a system interrupt, caused by ^C
                 if e.errno != 4:
                     raise
 
 
-def main(config, pipe):
+def main(config, pipe, logger):
     """The main method to start Tronstore with. Simply takes the configuration
     and pipe objects, and then registers some null signal handlers before
     passing everything off to TronstoreMain.
@@ -269,7 +350,6 @@ def main(config, pipe):
     shutdown things (realistically, trond should be handling all shutdown
     operations, as this is a child process.)
     """
-
     _register_null_handlers()
-    tronstore = TronstoreMain(config, pipe)
+    tronstore = TronstoreMain(config, pipe, logger)
     tronstore.main_loop()

@@ -253,11 +253,12 @@ class SyncStoreTestCase(TestCase):
             connection_details='with_all_the_strength_of_a_raging_fire',
             db_store_method='mysterious_as_the_dark_side_of_the_moon')
         self.store_class = mock.Mock()
+        self.log = mock.Mock()
         with contextlib.nested(
             mock.patch.object(runstate.tronstore.store, 'build_store', return_value=self.store_class),
             mock.patch('tron.serialize.runstate.tronstore.store.Lock', autospec=True)
         ) as (self.build_patch, self.lock_patch):
-            self.store = SyncStore(self.fake_config)
+            self.store = SyncStore(self.fake_config, self.log)
             self.lock = self.lock_patch.return_value
 
     def test__init__(self):
@@ -271,7 +272,7 @@ class SyncStoreTestCase(TestCase):
         assert_equal(self.store_class, self.store.store)
 
     def test__init__null_config(self):
-        store = SyncStore(None)
+        store = SyncStore(None, self.log)
         assert isinstance(store.store, NullStore)
 
     def test_save(self):
@@ -283,8 +284,8 @@ class SyncStoreTestCase(TestCase):
         self.store_class.save.assert_called_once_with(fake_arg, fake_kwarg=fake_kwarg)
 
     def test_restore(self):
-        fake_arg = 'catch_a_ride'
-        fake_kwarg = 'no_refunds'
+        fake_arg = 'ill_make_a_man'
+        fake_kwarg = 'out_of_you'
         self.store.restore(fake_arg, fake_kwarg=fake_kwarg)
         self.lock.__enter__.assert_called_once_with()
         self.lock.__exit__.assert_called_once_with(None, None, None)

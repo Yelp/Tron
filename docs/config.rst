@@ -343,11 +343,17 @@ As of v0.3.3 Logging is no longer configured in the tron configuration file.
 
 Tron uses Python's standard logging and by default uses a rotating log file
 handler that rotates files each day. The default log directory is
-``/var/log/tron/tron.log``.
+``/var/log/tron/tron.log`` for trond logging and ``/var/log/tron/tronstore.log``
+for tronstore logging.
 
 To configure logging pass -l <logging.conf> to trond. You can modify the
 default logging.conf by copying it from tron/logging.conf. See
 http://docs.python.org/howto/logging.html#configuring-logging
+
+PLEASE ENSURE THAT ``logger_tronstore`` HAS A HANDLER THAT WRITES TO A SEPARATE
+FILE THAN THE OTHER LOGGERS. TRONSTORE RUNS IN A SEPARATE PROCESS, MEANING
+IT CANNOT WRITE TO THE SAME LOG FILE OR YOU WILL LIKELY GET UNREADABLE LOG
+ENTRIES. In addition, ``logger_tronstore`` MUST have ``qualname=tronstore``.
 
 Interesting logs
 ~~~~~~~~~~~~~~~~
@@ -357,6 +363,10 @@ name.  There are a couple special cases:
 
 **twisted**
     Twisted sends its logs to the `twisted` log
+
+**tronstore**
+    Tronstore sends its logs to the `tronstore` log
+    Please ensure that the handler for this logger writes to a separate file.
 
 **tron.api.www.access**
     API access logs are sent to this log at the INFO log level.  They follow

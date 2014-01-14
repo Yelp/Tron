@@ -16,6 +16,9 @@ class TronstoreMainTestCase(TestCase):
 		self.thread_pool      = mock.Mock()
 		self.request_factory  = mock.Mock()
 		self.response_factory = mock.Mock()
+		self.log              = mock.Mock()
+
+		self.thread_pool.work_size = lambda: 5
 
 		def echo_single_request(request):
 			return request
@@ -48,15 +51,16 @@ class TronstoreMainTestCase(TestCase):
 			self.response_patch,
 			self.exit_patch
 		):
-			self.main = tronstore.TronstoreMain(self.config, self.pipe)
+			self.main = tronstore.TronstoreMain(self.config, self.pipe, self.log)
 			yield
 
 	def test__init__(self):
-		self.store_patch.assert_called_once_with(self.config)
+		self.store_patch.assert_called_once_with(self.config, self.log)
 		self.request_patch.assert_called_once_with()
 		self.pipe_patch.assert_called_once_with(self.pipe)
 		self.response_patch.assert_called_once_with()
-		self.thread_patch.assert_called_once_with(self.response_factory, self.pipe, self.store_class)
+		self.thread_patch.assert_called_once_with(self.response_factory, self.pipe,
+			self.store_class, self.log)
 		assert_equal(self.main.config, self.config)
 		assert not self.main.is_shutdown
 		assert not self.main.shutdown_req_id
@@ -78,8 +82,9 @@ class TronstoreMainTestCase(TestCase):
 		self.thread_pool.stop.assert_called_once_with()
 		self.thread_pool.start.assert_called_once_with()
 		self.store_class.cleanup.assert_called_once_with()
-		self.store_patch.assert_any_call(fake_data)
-		self.thread_patch.assert_any_call(self.response_factory, self.pipe, self.store_class)
+		self.store_patch.assert_any_call(fake_data, self.log)
+		self.thread_patch.assert_any_call(self.response_factory, self.pipe,
+			self.store_class, self.log)
 		assert_equal(self.thread_patch.call_count, 2)
 		assert_equal(self.main.config, fake_data)
 		self.response_factory.build.assert_called_once_with(True, fake_id, '')
@@ -93,10 +98,10 @@ class TronstoreMainTestCase(TestCase):
 
 		self.main._reconfigure(request)
 		assert_equal(self.store_patch.call_count, 3)
-		self.store_patch.assert_any_call(fake_data)
-		self.store_patch.assert_any_call(self.config)
+		self.store_patch.assert_any_call(fake_data, self.log)
+		self.store_patch.assert_any_call(self.config, self.log)
 		self.thread_patch.assert_any_call(self.response_factory, self.pipe,
-			self.store_class)
+			self.store_class, self.log)
 		assert_equal(self.thread_patch.call_count, 2)
 		self.thread_pool.stop.assert_called_once_with()
 		self.store_class.cleanup.assert_called_once_with()
@@ -269,13 +274,14 @@ class TronstoreOtherTestCase(TestCase):
 	def test_main(self):
 		config = mock.Mock()
 		pipe = mock.Mock()
+		log = mock.Mock()
 		with contextlib.nested(
 			mock.patch.object(tronstore, '_register_null_handlers'),
 			mock.patch('tron.serialize.runstate.tronstore.tronstore.TronstoreMain', autospec=True)
 		) as (handler_patch, tronstore_patch):
-			tronstore.main(config, pipe)
+			tronstore.main(config, pipe, log)
 			handler_patch.assert_called_once_with()
-			tronstore_patch.assert_called_once_with(config, pipe)
+			tronstore_patch.assert_called_once_with(config, pipe, log)
 			tronstore_patch.return_value.main_loop.assert_called_once_with()
 
 	def test_register_null_handlers(self):
@@ -365,9 +371,12 @@ class TronstorePoolTestCase(TestCase):
 		self.factory = mock.Mock()
 		self.pipe = mock.Mock()
 		self.store = mock.Mock()
-		with mock.patch('tron.serialize.runstate.tronstore.tronstore.Thread', autospec=True) \
-		as self.thread_patch:
-			self.pool = tronstore.TronstorePool(self.factory, self.pipe, self.store)
+		self.log = mock.Mock()
+		with contextlib.nested(
+			mock.patch('tron.serialize.runstate.tronstore.tronstore.Thread', autospec=True),
+			mock.patch('tron.serialize.runstate.tronstore.tronstore.PoolWatcher', autospec=True)
+		) as (self.thread_patch, self.watch_patch):
+			self.pool = tronstore.TronstorePool(self.factory, self.pipe, self.store, self.log)
 			yield
 
 	def test__init__(self):
@@ -386,6 +395,7 @@ class TronstorePoolTestCase(TestCase):
 				self.store,
 				self.pool.keep_working
 			))
+		self.watch_patch.assert_called_once_with(self.pool, self.log)
 
 	def test_start(self):
 		self.pool.keep_working.set(False)
@@ -393,10 +403,13 @@ class TronstorePoolTestCase(TestCase):
 		assert self.pool.keep_working.value
 		assert not self.thread_patch.return_value.daemon
 		assert_equal(self.thread_patch.return_value.start.call_count, self.pool.POOL_SIZE)
+		assert not self.watch_patch.return_value.daemon
+		self.watch_patch.return_value.start.assert_called_once_with()
 
 	def test_stop(self):
 		self.pool.keep_working.set(True)
 		self.thread_patch.return_value.is_alive.return_value = False
+		self.watch_patch.return_value.is_alive.return_value = False
 		with mock.patch.object(self.pool, 'has_work', return_value=False) \
 		as work_patch:
 			self.pool.stop()
@@ -415,6 +428,40 @@ class TronstorePoolTestCase(TestCase):
 		as empty_patch:
 			assert not self.pool.has_work()
 			empty_patch.assert_called_once_with()
+
+
+class PoolWatcherTestCase(TestCase):
+
+	@setup_teardown
+	def setup_pool_watcher(self):
+		self.pool = mock.Mock(keep_working=mock.Mock(val=True))
+		self.log = mock.Mock()
+		with contextlib.nested(
+			mock.patch('tron.serialize.runstate.tronstore.tronstore.Thread', autospec=True),
+			mock.patch.object(tronstore.time, 'sleep')
+		) as (_, self.sleep_patch):
+			self.watcher = tronstore.PoolWatcher(self.pool, self.log)
+			yield
+
+	def test__init__(self):
+		assert_equal(self.watcher.pool, self.pool)
+		assert_equal(self.watcher.log, self.log)
+		assert_equal(self.watcher.last_sizes, [])
+		assert_equal(self.watcher.last_diffs, [])
+
+	def test_run_falling_behind(self):
+		work_sizes = [1, 10, 100, 1000, 10000, 100000, 1000000, ValueError]
+		self.pool.work_size = mock.Mock(side_effect=iter(work_sizes))
+		assert_raises(ValueError, self.watcher.run)
+		self.sleep_patch.assert_any_call(1.0)
+		assert self.log.warn.call_count
+
+	def test_run_not_falling_behind(self):
+		work_sizes = [1000000, 100000, 10000, 1000, 100, 10, 1, ValueError]
+		self.pool.work_size = mock.Mock(side_effect=iter(work_sizes))
+		assert_raises(ValueError, self.watcher.run)
+		self.sleep_patch.assert_any_call(1.0)
+		assert_equal(self.log.warn.call_count, 0)
 
 
 if __name__ == "__main__":
