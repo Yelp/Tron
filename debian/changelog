@@ -1,3 +1,10 @@
+tron (0.6.1ubuntu1) lucid; urgency=low
+
+  * Fix bug prevent reconnection
+  * Add new config monitor_retries 
+
+ -- Yejun Yang <yejun@yelp.com>  Wed, 05 Feb 2014 10:29:59 -0800
+
 tron (0.6.1) unstable; urgency=low
 
   * tronweb was replaced with a clientside version
