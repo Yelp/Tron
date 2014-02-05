@@ -1,4 +1,4 @@
-tron (0.6.1ubuntu1) lucid; urgency=low
+tron (0.6.1.2) lucid; urgency=low
 
   * Fix bug prevent reconnection
   * Add new config monitor_retries 
