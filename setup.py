@@ -1,5 +1,5 @@
 try:
-    from setuptools import setup
+    from setuptools import setup, find_packages
     assert setup
 except ImportError:
     from distutils.core import setup
@@ -35,10 +35,7 @@ setup(
         'python-daemon>=1.5.2',
         'lockfile>=0.7',
     ],
-    packages=[
-        "tron",
-        "tronweb",
-    ],
+    packages=find_packages(exclude=['tests.*','tests'])+['tronweb'],
     scripts=[
         'bin/trond',
         'bin/tronview',
