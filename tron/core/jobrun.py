@@ -187,7 +187,17 @@ class JobRun(Observable, Observer):
         if not action_run.is_done:
             return
 
-        if not action_run.is_broken and any(self._start_action_runs()):
+        # Skipping is manual and may occur before the job's scheduled time.
+        # If it is skipped after the run has started, start_time will be set.
+        is_skipped_before_start = (action_run.is_skipped
+                                   and action_run.start_time is None)
+
+        # If the action_run is skipped before the start, any startable
+        # (including dependent) actions will be run at the scheduled
+        # time, so don't start them now.
+        if (not action_run.is_broken
+            and not is_skipped_before_start
+            and any(self._start_action_runs())):
             log.info("Action runs started for %s." % self)
             return
 
