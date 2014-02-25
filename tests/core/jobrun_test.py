@@ -8,7 +8,6 @@ from tron import node, event, actioncommand
 from tron.core import jobrun, actionrun, actiongraph, job
 from tests.testingutils import Turtle, autospec_method
 from tron.serialize import filehandler
-from tron.utils import timeutils
 
 
 def build_mock_job():
@@ -247,18 +246,10 @@ class JobRunTestCase(TestCase):
     def test_handler_action_run_skipped(self):
         self.action_run.is_broken = False
         self.action_run.is_skipped = True
-        self.action_run.start_time = None
+        self.job_run.action_runs.is_scheduled = True
         autospec_method(self.job_run._start_action_runs)
         self.job_run.handler(self.action_run, mock.Mock())
         assert not self.job_run._start_action_runs.mock_calls
-
-    def test_handler_action_run_skipped_after_start(self):
-        self.action_run.is_broken = False
-        self.action_run.is_skipped = True
-        self.action_run.start_time = timeutils.current_time()
-        autospec_method(self.job_run._start_action_runs)
-        self.job_run.handler(self.action_run, mock.Mock())
-        assert self.job_run._start_action_runs.mock_calls
 
     def test_state(self):
         assert_equal(self.job_run.state, actionrun.ActionRun.STATE_SUCCEEDED)
