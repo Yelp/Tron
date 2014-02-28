@@ -343,7 +343,7 @@ class ValidateService(Validator):
 
     defaults = {
         'count':                1,
-        'monitor_retries':      3,
+        'monitor_retries':      5,
         'restart_delay':        None
     }
 
