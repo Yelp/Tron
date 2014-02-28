@@ -523,7 +523,7 @@ class Node(object):
         log.info("Run %s started for %s", run.id, self.hostname)
         channel.start_defer = None
         if run.id not in self.run_states:
-            log.warning("Run %s no longer tracked (_fail_run)", run.id)
+            log.warning("Run %s no longer tracked (_run_started)", run.id)
             return
         assert self.run_states[run.id].state == RUN_STATE_STARTING
         self.run_states[run.id].state = RUN_STATE_RUNNING
