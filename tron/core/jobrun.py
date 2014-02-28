@@ -187,6 +187,9 @@ class JobRun(Observable, Observer):
         if not action_run.is_done:
             return
 
+        if action_run.is_skipped and self.action_runs.is_scheduled:
+            return
+
         if not action_run.is_broken and any(self._start_action_runs()):
             log.info("Action runs started for %s." % self)
             return
