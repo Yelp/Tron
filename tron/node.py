@@ -391,9 +391,9 @@ class Node(object):
         for run_id, run in self.run_states.iteritems():
             if run.state == RUN_STATE_CONNECTING:
                 # Now we can trigger a reconnect and re-start any waiting runs.
-                self._connect_then_run(run)
+                self._connect_then_run(run.run)
             elif run.state == RUN_STATE_RUNNING:
-                self._fail_run(run, None)
+                self._fail_run(run.run, None)
             elif run.state == RUN_STATE_STARTING:
                 if run.channel and run.channel.start_defer is not None:
 
@@ -405,7 +405,7 @@ class Node(object):
                     # Doesn't seem like this should ever happen.
                     log.warning("Run %r caught in starting state, but"
                                 " start_defer is over.", run_id)
-                    self._fail_run(run, None)
+                    self._fail_run(run.run, None)
             else:
                 # Service ended. The open channels should know how to handle
                 # this (and cleanup) themselves, so if there should not be any
@@ -522,6 +522,9 @@ class Node(object):
         """Our run is actually a running process now, update the state"""
         log.info("Run %s started for %s", run.id, self.hostname)
         channel.start_defer = None
+        if run.id not in self.run_states:
+            log.warning("Run %s no longer tracked (_run_started)", run.id)
+            return
         assert self.run_states[run.id].state == RUN_STATE_STARTING
         self.run_states[run.id].state = RUN_STATE_RUNNING
 
