@@ -327,8 +327,8 @@ class ServiceInstanceTestCase(TestCase):
         assert_equal(self.instance.state_data, expected)
 
     def test_handler_many_monitor_failure(self):
-        self.instance.failures = [1]*4
-        self.instance.config.monitor_retries = 3
+        self.instance.failures = [1]*6
+        self.instance.config.monitor_retries = 5
         self.instance.handler(self.instance.monitor_task,  serviceinstance.ServiceInstanceMonitorTask.NOTIFY_FAILED)
         self.instance.monitor_task.cancel.assert_called_with()
         self.instance.machine.transition.assert_called_with('stop')
