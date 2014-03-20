@@ -354,7 +354,9 @@ class Node(object):
         self._cleanup(run)
 
         log.info("Calling fail_run callbacks")
-        run.exited(result if isinstance(result, (int, long)) else str(result))
+        if not isinstance(result, (int, long)):
+            result = str(result)
+        run.exited(result)
         cb(result)
 
     def _connect_then_run(self, run):
