@@ -471,6 +471,17 @@ class JobSchedulerScheduleTestCase(TestCase):
         self.job_scheduler.handler(self.job, job.Job.NOTIFY_RUN_DONE)
         self.job_scheduler.run_job.assert_not_called()
 
+    def test_run_queue_schedule(self):
+        with mock.patch.object(self.job_scheduler, 'schedule') as mock_schedule:
+            self.job_scheduler.run_job = mock.Mock()
+            self.job.scheduler.schedule_on_complete = False
+            queued_job_run = mock.Mock()
+            self.job.runs.get_first_queued = lambda: queued_job_run
+            self.job_scheduler.run_queue_schedule()
+            self.eventloop.call_later.assert_called_once_with(0,
+                self.job_scheduler.run_job, queued_job_run, run_queued=True) 
+            mock_schedule.called_once_with()
+
 
 class JobSchedulerFactoryTestCase(TestCase):
 
