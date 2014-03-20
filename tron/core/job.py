@@ -120,8 +120,7 @@ class Job(Observable, Observer):
         if self.runs.get_run_by_state(ActionRun.STATE_RUNNING):
             return self.STATUS_RUNNING
 
-        if (self.runs.get_run_by_state(ActionRun.STATE_SCHEDULED) or
-                self.runs.get_run_by_state(ActionRun.STATE_QUEUED)):
+        if self.runs.get_run_by_state(ActionRun.STATE_SCHEDULED):
             return self.STATUS_ENABLED
 
         log.warn("%s in an unknown state: %s" % (self, self.runs))
