@@ -480,7 +480,7 @@ class JobSchedulerScheduleTestCase(TestCase):
             self.job_scheduler.run_queue_schedule()
             self.eventloop.call_later.assert_called_once_with(0,
                 self.job_scheduler.run_job, queued_job_run, run_queued=True) 
-            mock_schedule.called_once_with()
+            mock_schedule.assert_called_once_with()
 
 
 class JobSchedulerFactoryTestCase(TestCase):
