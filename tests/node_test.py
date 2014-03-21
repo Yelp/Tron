@@ -202,11 +202,9 @@ class NodeTestCase(TestCase):
             mock_cleanup.assert_called_once_with(action_command)
             action_command.exited.assert_called_once_with(1)
             action_command.exited.reset_mock()
-            self.node._fail_run(action_command, failure.Failure(
-                                exc_value=Exception("Test Failure")))
-            action_command.exited.assert_called_once_with(
-                                "[Failure instance: Traceback (failure with no frames):"
-                                " <type 'exceptions.Exception'>: Test Failure\n]")
+            error = failure.Failure(exc_value=Exception("Test Failure"))
+            self.node._fail_run(action_command, error)
+            action_command.exited.assert_called_once_with(error)
 
     def test_stop(self):
         autospec_method(self.node._fail_run)

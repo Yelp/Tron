@@ -354,8 +354,6 @@ class Node(object):
         self._cleanup(run)
 
         log.info("Calling fail_run callbacks")
-        if not isinstance(result, (int, long)):
-            result = str(result)
         run.exited(result)
         cb(result)
 

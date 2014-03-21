@@ -74,7 +74,8 @@ class ActionCommand(object):
         if not self.machine.check('exit'):
             return False
         self.end_time    = timeutils.current_timestamp()
-        self.exit_status = exit_status
+        self.exit_status = exit_status if isinstance(exit_status,
+                                              (int, long)) else str(exit_status)
         return self.machine.transition('exit')
 
     def write_stderr(self, value):
