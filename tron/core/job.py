@@ -120,8 +120,7 @@ class Job(Observable, Observer):
         if self.runs.get_run_by_state(ActionRun.STATE_RUNNING):
             return self.STATUS_RUNNING
 
-        if (self.runs.get_run_by_state(ActionRun.STATE_SCHEDULED) or
-                self.runs.get_run_by_state(ActionRun.STATE_QUEUED)):
+        if self.runs.get_run_by_state(ActionRun.STATE_SCHEDULED):
             return self.STATUS_ENABLED
 
         log.warn("%s in an unknown state: %s" % (self, self.runs))
@@ -317,7 +316,9 @@ class JobScheduler(Observer):
         """
         if event != Job.NOTIFY_RUN_DONE:
             return
+        self.run_queue_schedule()
 
+    def run_queue_schedule(self):
         # TODO: this should only start runs on the same node if this is an
         # all_nodes job, but that is currently not possible
         queued_run = self.job.runs.get_first_queued()
@@ -328,6 +329,7 @@ class JobScheduler(Observer):
         # previous run was cancelled from a scheduled state, or if the job
         # scheduler is `schedule_on_complete`.
         self.schedule()
+
     handler = handle_job_events
 
     def get_runs_to_schedule(self, ignore_last_run_time):
@@ -393,6 +395,7 @@ class JobCollection(object):
             proxy.func_proxy('enable',              iteration.list_all),
             proxy.func_proxy('disable',             iteration.list_all),
             proxy.func_proxy('schedule',            iteration.list_all),
+            proxy.func_proxy('run_queue_schedule',  iteration.list_all),
             proxy.attr_proxy('is_shutdown',         all)
         ])
 
