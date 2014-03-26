@@ -74,8 +74,7 @@ class ActionCommand(object):
         if not self.machine.check('exit'):
             return False
         self.end_time    = timeutils.current_timestamp()
-        self.exit_status = exit_status if isinstance(exit_status,
-                                              (int, long)) else str(exit_status)
+        self.exit_status = exit_status
         return self.machine.transition('exit')
 
     def write_stderr(self, value):
@@ -98,7 +97,7 @@ class ActionCommand(object):
         """
         log.error("Unknown failure for ActionCommand run %s: %s\n%s",
                 self.id, self.command, str(result))
-        self.exited(result)
+        self.exited(str(result))
         self.done()
 
     @property
