@@ -43,9 +43,6 @@ class ActionCommandTestCase(TestCase):
         assert_equal(self.ac.exit_status, 123)
         assert self.ac.end_time is not None
         self.ac = ActionCommand("action.1.do", "do", self.serializer)
-        assert self.ac.exited(failure.Failure(exc_value=Exception("Test Failure")))
-        assert_equal(self.ac.exit_status, "[Failure instance: Traceback (failure with no frames): "
-                     "<type 'exceptions.Exception'>: Test Failure\n]")
 
     def test_exited_from_pending(self):
         assert self.ac.exited(123)
@@ -80,9 +77,11 @@ class ActionCommandTestCase(TestCase):
         assert not self.ac.done()
 
     def test_handle_errback(self):
-        message = "something went wrong"
+        message = failure.Failure(exc_value=Exception("Test Failure"))
         self.ac.handle_errback(message)
         assert_equal(self.ac.state, ActionCommand.FAILSTART)
+        assert_equal(self.ac.exit_status, "[Failure instance: Traceback"
+            " (failure with no frames): <type 'exceptions.Exception'>: Test Failure\n]")
         assert self.ac.end_time
 
     def test_is_failed(self):

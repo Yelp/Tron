@@ -200,11 +200,8 @@ class NodeTestCase(TestCase):
             self.node._fail_run(action_command, 1)
             mock_state.deferred.errback.assert_called_once_with(1)
             mock_cleanup.assert_called_once_with(action_command)
-            action_command.exited.assert_called_once_with(1)
-            action_command.exited.reset_mock()
             error = failure.Failure(exc_value=Exception("Test Failure"))
             self.node._fail_run(action_command, error)
-            action_command.exited.assert_called_once_with(error)
 
     def test_stop(self):
         autospec_method(self.node._fail_run)
