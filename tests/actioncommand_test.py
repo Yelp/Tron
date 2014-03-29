@@ -80,11 +80,11 @@ class ActionCommandTestCase(TestCase):
         message = failure.Failure(exc_value=Exception("Test Failure"))
         self.ac.handle_errback(message)
         assert_equal(self.ac.state, ActionCommand.FAILSTART)
-        assert_equal(self.ac.exit_status, "[Failure instance: Traceback"
-            " (failure with no frames): <type 'exceptions.Exception'>: Test Failure\n]")
+        assert_equal(self.ac.exit_status, None)
         assert self.ac.end_time
 
     def test_is_failed(self):
+        self.ac.exit_status = 0
         assert not self.ac.is_failed
 
     def test_is_failed_true(self):
