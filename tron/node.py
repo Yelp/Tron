@@ -344,17 +344,11 @@ class Node(object):
             log.warning("Run %s no longer tracked (_fail_run)", run.id)
             return
 
-        # Add a dummy errback handler to prevent Unhandled error messages.
-        # Unless somone is explicitly caring about this defer the error will
-        # have been reported elsewhere.
-        self.run_states[run.id].deferred.addErrback(lambda failure: None)
-
         cb = self.run_states[run.id].deferred.errback
 
         self._cleanup(run)
 
         log.info("Calling fail_run callbacks")
-        run.exited(result)
         cb(result)
 
     def _connect_then_run(self, run):

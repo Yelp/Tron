@@ -2,8 +2,9 @@ import mock
 from testify import TestCase, assert_equal, setup
 from testify.assertions import assert_not_equal
 from tests.testingutils import autospec_method
-from tron import actioncommand
+from twisted.python import failure
 
+from tron import actioncommand
 from tron.actioncommand import ActionCommand
 from tron.config import schema
 from tron.serialize import filehandler
@@ -41,6 +42,7 @@ class ActionCommandTestCase(TestCase):
         assert self.ac.exited(123)
         assert_equal(self.ac.exit_status, 123)
         assert self.ac.end_time is not None
+        self.ac = ActionCommand("action.1.do", "do", self.serializer)
 
     def test_exited_from_pending(self):
         assert self.ac.exited(123)
@@ -75,12 +77,14 @@ class ActionCommandTestCase(TestCase):
         assert not self.ac.done()
 
     def test_handle_errback(self):
-        message = "something went wrong"
+        message = failure.Failure(exc_value=Exception("Test Failure"))
         self.ac.handle_errback(message)
         assert_equal(self.ac.state, ActionCommand.FAILSTART)
+        assert_equal(self.ac.exit_status, None)
         assert self.ac.end_time
 
     def test_is_failed(self):
+        self.ac.exit_status = 0
         assert not self.ac.is_failed
 
     def test_is_failed_true(self):

@@ -4,6 +4,7 @@ from testify import assert_in, assert_raises
 from testify.assertions import assert_not_in, assert_not_equal
 from testify import teardown, setup_teardown
 from tests.testingutils import autospec_method
+from twisted.python import failure
 
 from tron import node, ssh, actioncommand
 from tron.config import schema
@@ -190,6 +191,17 @@ class NodeTestCase(TestCase):
         action_command = mock.create_autospec(actioncommand.ActionCommand,
             id=mock.Mock())
         self.node.stop(action_command)
+
+    def test_fail_run(self):
+        with mock.patch.object(self.node, '_cleanup') as mock_cleanup:
+            action_command = mock.create_autospec(actioncommand.ActionCommand,
+                id=mock.Mock())
+            mock_state = self.node.run_states[action_command.id] = mock.Mock()
+            error = failure.Failure(exc_value=Exception("Test Failure"))
+            self.node._fail_run(action_command, error)
+            mock_state.deferred.errback.assert_called_once_with(error)
+            mock_cleanup.assert_called_once_with(action_command)
+            self.node.run_states[action_command.id].deferred.errback.assert_called_once_with(error)
 
     def test_stop(self):
         autospec_method(self.node._fail_run)
