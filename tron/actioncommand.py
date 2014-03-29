@@ -97,12 +97,12 @@ class ActionCommand(object):
         """
         log.error("Unknown failure for ActionCommand run %s: %s\n%s",
                 self.id, self.command, str(result))
-        self.exited(str(result))
+        self.exited(None)
         self.done()
 
     @property
     def is_failed(self):
-        return bool(self.exit_status)
+        return self.exit_status != 0
 
     @property
     def is_complete(self):
