@@ -354,7 +354,7 @@ class Node(object):
         self._cleanup(run)
 
         log.info("Calling fail_run callbacks")
-        run.exited(result)
+        run.exited(None)
         cb(result)
 
     def _connect_then_run(self, run):
