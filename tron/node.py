@@ -354,7 +354,7 @@ class Node(object):
         self._cleanup(run)
 
         log.info("Calling fail_run callbacks")
-        run.exited(result)
+        run.exited(None)
         cb(result)
 
     def _connect_then_run(self, run):
@@ -391,9 +391,9 @@ class Node(object):
         for run_id, run in self.run_states.iteritems():
             if run.state == RUN_STATE_CONNECTING:
                 # Now we can trigger a reconnect and re-start any waiting runs.
-                self._connect_then_run(run.run)
+                self._connect_then_run(run)
             elif run.state == RUN_STATE_RUNNING:
-                self._fail_run(run.run, None)
+                self._fail_run(run, None)
             elif run.state == RUN_STATE_STARTING:
                 if run.channel and run.channel.start_defer is not None:
 
@@ -405,7 +405,7 @@ class Node(object):
                     # Doesn't seem like this should ever happen.
                     log.warning("Run %r caught in starting state, but"
                                 " start_defer is over.", run_id)
-                    self._fail_run(run.run, None)
+                    self._fail_run(run, None)
             else:
                 # Service ended. The open channels should know how to handle
                 # this (and cleanup) themselves, so if there should not be any
