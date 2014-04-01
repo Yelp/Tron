@@ -68,7 +68,7 @@ class MasterControlProgram(object):
         self.restore_state()
         # Any job with existing state would have been scheduled already. Jobs
         # without any state will be scheduled here.
-        self.jobs.schedule()
+        self.jobs.run_queue_schedule()
 
     def apply_config(self, config_container, reconfigure=False):
         """Apply a configuration."""
