@@ -388,6 +388,31 @@ class Node(object):
 
         log.info("Service to %s stopped", self.hostname)
 
+        for run_id, run in self.run_states.iteritems():
+            if run.state == RUN_STATE_CONNECTING:
+                # Now we can trigger a reconnect and re-start any waiting runs.
+                self._connect_then_run(run)
+            elif run.state == RUN_STATE_RUNNING:
+                self._fail_run(run, None)
+            elif run.state == RUN_STATE_STARTING:
+                if run.channel and run.channel.start_defer is not None:
+
+                    # This means our run IS still waiting to start. There
+                    # should be an outstanding timeout sitting on this guy as
+                    # well. We'll just short circut it.
+                    twistedutils.defer_timeout(run.channel.start_defer, 0)
+                else:
+                    # Doesn't seem like this should ever happen.
+                    log.warning("Run %r caught in starting state, but"
+                                " start_defer is over.", run_id)
+                    self._fail_run(run, None)
+            else:
+                # Service ended. The open channels should know how to handle
+                # this (and cleanup) themselves, so if there should not be any
+                # runs except those waiting to connect
+                raise Error("Run %s in state %s when service stopped",
+                            run_id, run.state)
+
     def _connect(self):
         # This is complicated because we have to deal with a few different
         # steps before our connection is really available for us:
