@@ -230,17 +230,7 @@ class ServiceInstanceStartTaskTestCase(TestCase):
         patcher = mock.patch('tron.core.serviceinstance.log', autospec=True)
         with patcher as mock_log:
             self.task.handle_action_event(action, event)
-            assert_equal(mock_log.warn.call_count, 1)
-
-    def test_handle_action_exit_fail(self):
-        action = mock.create_autospec(ActionCommand, is_failed=True)
-        self.task._handle_action_exit(action)
-        self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
-
-    def test_handle_action_exit_success(self):
-        action = mock.create_autospec(ActionCommand, is_failed=False)
-        self.task._handle_action_exit(action)
-        self.task.notify.assert_called_with(self.task.NOTIFY_STARTED)
+            assert_equal(mock_log.warn.call_count, 0)
 
 
 class ServiceInstanceTestCase(TestCase):
