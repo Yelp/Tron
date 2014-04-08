@@ -211,7 +211,7 @@ class ServiceInstanceStartTask(observer.Observable, observer.Observer):
 
     def handle_action_event(self, action, event):
         """Watch for events from the ActionCommand."""
-        if event == ActionCommand.EXITING or ActionCommand.FAILSTART:
+        if event == ActionCommand.EXITING or event == ActionCommand.FAILSTART:
             self.notify(self.NOTIFY_STARTED)
 
     handler = handle_action_event
