@@ -230,7 +230,7 @@ class ServiceInstanceStartTaskTestCase(TestCase):
         patcher = mock.patch('tron.core.serviceinstance.log', autospec=True)
         with patcher as mock_log:
             self.task.handle_action_event(action, event)
-            assert_equal(mock_log.warn.call_count, 0)
+            assert_equal(mock_log.warn.call_count, 1)
 
 
 class ServiceInstanceTestCase(TestCase):
