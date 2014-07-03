@@ -1,3 +1,10 @@
+tron (0.6.1.5) lucid; urgency=low
+
+  * Increase channel start timeout
+  * Fix service monitor restart too soon
+
+ -- Yejun Yang <yejun@yelp.com>  Thu, 03 Jul 2014 10:28:45 -0700
+
 tron (0.6.1.4) lucid; urgency=low
 
   * Remove incorrectly fixed dead code
