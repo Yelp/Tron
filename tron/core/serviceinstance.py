@@ -119,8 +119,12 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
 
     def _handle_action_exit(self):
         log.debug("%s exit, failure: %r", self, self.action.is_failed)
+        if self.action.is_unknown:
+            self.notify(self.NOTIFY_FAILED)
+            self.queue()
+            return
         if self.action.is_failed:
-            self.fail()
+            self.notify(self.NOTIFY_DOWN)
             return
 
         self.notify(self.NOTIFY_UP)
@@ -318,7 +322,7 @@ class ServiceInstance(observer.Observer):
             return self.machine.transition('stop')
 
     def restore(self):
-        self.monitor_task.run()
+        self.monitor_task.queue()
 
     event_to_transition_map = {
         ServiceInstanceMonitorTask.NOTIFY_START:        'monitor',

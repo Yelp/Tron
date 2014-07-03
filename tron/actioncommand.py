@@ -101,8 +101,12 @@ class ActionCommand(object):
         self.done()
 
     @property
+    def is_unknown(self):
+        return self.exit_status is None
+
+    @property
     def is_failed(self):
-        return self.exit_status != 0
+        return bool(self.exit_status)
 
     @property
     def is_complete(self):
