@@ -18,7 +18,7 @@ log = logging.getLogger(__name__)
 # established when we already have an open connection.  This timeout will
 # usually get triggered prior to even a TCP timeout, so essentially it's our
 # shortcut to discovering the connection died.
-RUN_START_TIMEOUT = 20
+RUN_START_TIMEOUT = 120
 
 # Love to run this, but we need to finish connecting to our node first
 RUN_STATE_CONNECTING = 0
