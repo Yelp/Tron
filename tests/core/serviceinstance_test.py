@@ -140,7 +140,7 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
         self.task.action = mock.create_autospec(ActionCommand)
         autospec_method(self.task.queue)
         self.task._handle_action_exit()
-        self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
+        self.task.notify.assert_called_with(self.task.NOTIFY_DOWN)
         assert_equal(self.task.queue.call_count, 0)
 
     def test_fail(self):
