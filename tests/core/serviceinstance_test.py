@@ -131,6 +131,7 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
     def test_handle_action_exit_up(self):
         self.task.action = mock.create_autospec(ActionCommand)
         self.task.action.is_failed = False
+        self.task.action.is_unknown = False
         autospec_method(self.task.queue)
         self.task._handle_action_exit()
         self.task.notify.assert_called_with(self.task.NOTIFY_UP)
@@ -138,10 +139,19 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
 
     def test_handle_action_exit_down(self):
         self.task.action = mock.create_autospec(ActionCommand)
+        self.task.action.is_unknown = False
         autospec_method(self.task.queue)
         self.task._handle_action_exit()
         self.task.notify.assert_called_with(self.task.NOTIFY_DOWN)
         assert_equal(self.task.queue.call_count, 0)
+
+    def test_handle_action_unknown(self):
+        self.task.action = mock.create_autospec(ActionCommand)
+        self.task.action.is_unknown = True
+        autospec_method(self.task.queue)
+        self.task._handle_action_exit()
+        self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
+        assert_equal(self.task.queue.call_count, 1)
 
     def test_fail(self):
         self.task.action = mock.create_autospec(actioncommand.ActionCommand)

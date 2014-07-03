@@ -80,6 +80,9 @@ class ActionCommandTestCase(TestCase):
         assert_equal(self.ac.state, ActionCommand.FAILSTART)
         assert self.ac.end_time
 
+    def test_is_unknown(self):
+        assert self.ac.is_unknown
+
     def test_is_failed(self):
         assert not self.ac.is_failed
 
