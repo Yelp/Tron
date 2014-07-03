@@ -120,7 +120,7 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
     def _handle_action_exit(self):
         log.debug("%s exit, failure: %r", self, self.action.is_failed)
         if self.action.is_failed:
-            self.notify(self.NOTIFY_FAILED)
+            self.notify(self.NOTIFY_DOWN)
             return
 
         self.notify(self.NOTIFY_UP)

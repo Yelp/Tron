@@ -102,7 +102,7 @@ class ActionCommand(object):
 
     @property
     def is_failed(self):
-        return self.exit_status != 0
+        return bool(self.exit_status)
 
     @property
     def is_complete(self):
