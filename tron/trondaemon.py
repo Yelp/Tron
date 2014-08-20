@@ -44,9 +44,13 @@ class PIDFile(object):
             self._try_unlock()
             raise SystemExit("Daemon running as %s" % pid)
 
+        # We have a pid file, but we're not running, just remove it
         if pid:
             self._try_unlock()
-            raise SystemExit("Daemon was running as %s. Remove PID file." % pid)
+            try:
+                os.unlink(self.filename)
+            except OSError:
+                raise SystemExit("Failed to remove pidfile: %s" % self.filename)
 
     def is_process_running(self, pid):
         """Return True if the process is still running."""
