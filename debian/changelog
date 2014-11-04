@@ -1,3 +1,9 @@
+tron (0.6.1.8) lucid; urgency=low
+
+  * Fix service instance restore state, run monitor instead of queue.
+
+ -- Yejun Yang <yejun@yelp.com>  Tue, 04 Nov 2014 14:14:29 -0800
+
 tron (0.6.1.7) lucid; urgency=low
 
   * Display error message when instance start fail
