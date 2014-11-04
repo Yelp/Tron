@@ -216,12 +216,15 @@ class ServiceInstanceStartTask(observer.Observable, observer.Observer):
     def handle_action_event(self, action, event):
         """Watch for events from the ActionCommand."""
         if event == ActionCommand.EXITING:
-            self.notify(self.NOTIFY_STARTED)
+            return self._handle_action_exit(action)
         if event == ActionCommand.FAILSTART:
             log.warn("Failed to start service %s on %s.", self.id, self.node)
             self.notify(self.NOTIFY_FAILED)
-
     handler = handle_action_event
+
+    def _handle_action_exit(self, action):
+        event = self.NOTIFY_FAILED if action.is_failed else self.NOTIFY_STARTED
+        self.notify(event)
 
     def __str__(self):
         return "%s(%s)" % (self.__class__.__name__, self.id)
@@ -328,7 +331,6 @@ class ServiceInstance(observer.Observer):
         ServiceInstanceMonitorTask.NOTIFY_UP:           'up',
         ServiceInstanceStopTask.NOTIFY_FAILED:          'stop_fail',
         ServiceInstanceStopTask.NOTIFY_SUCCESS:         'down',
-        ServiceInstanceStartTask.NOTIFY_FAILED:         'down',
     }
 
     def handler(self, task, event):
@@ -337,7 +339,7 @@ class ServiceInstance(observer.Observer):
         if event in self.event_to_transition_map:
             self.machine.transition(self.event_to_transition_map[event])
 
-        if event == ServiceInstanceStartTask.NOTIFY_STARTED:
+        if event in (ServiceInstanceStartTask.NOTIFY_STARTED, ServiceInstanceStartTask.NOTIFY_FAILED):
             self._handle_start_task_complete()
 
         if event == task.NOTIFY_FAILED:

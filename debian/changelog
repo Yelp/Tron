@@ -1,3 +1,9 @@
+tron (0.6.1.7) lucid; urgency=low
+
+  * Display error message when instance start fail
+
+ -- Yejun Yang <yejun@yelp.com>  Tue, 04 Nov 2014 10:18:12 -0800
+
 tron (0.6.1.6) lucid; urgency=low
 
   * Ignore service instance start error
