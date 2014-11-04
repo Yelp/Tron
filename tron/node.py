@@ -187,6 +187,9 @@ class RunState(object):
         self.deferred = defer.Deferred()
         self.channel = None
 
+    def __repr__(self):
+        return "RunState(run: %r, state: %r, channel: %r)" % (self.run, self.state, self.channel)
+
 
 def determine_jitter(count, node_settings):
     """Return a pseudo-random number of seconds to delay a run."""
