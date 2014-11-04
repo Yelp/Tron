@@ -322,7 +322,7 @@ class ServiceInstance(observer.Observer):
             return self.machine.transition('stop')
 
     def restore(self):
-        self.monitor_task.queue()
+        self.monitor_task.run()
 
     event_to_transition_map = {
         ServiceInstanceMonitorTask.NOTIFY_START:        'monitor',
