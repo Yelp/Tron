@@ -187,6 +187,9 @@ class RunState(object):
         self.deferred = defer.Deferred()
         self.channel = None
 
+    def __repr__(self):
+        return "RunState(run: %r, state: %r, channel: %r)" % (self.run, self.state, self.channel)
+
 
 def determine_jitter(count, node_settings):
     """Return a pseudo-random number of seconds to delay a run."""
@@ -284,7 +287,7 @@ class Node(object):
         # those functions will eventually be called back
 
         if run.id in self.run_states:
-            raise Error("Run %s already running !?!", run.id)
+            log.warning("Run %s(%r) already running !?!", run.id, self.run_states[run.id])
 
         if self.idle_timer.active():
             self.idle_timer.cancel()

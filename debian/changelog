@@ -1,3 +1,10 @@
+tron (0.6.1.6) lucid; urgency=low
+
+  * Ignore service instance start error
+  * Ignore duplicated run id
+
+ -- Yejun Yang <yejun@yelp.com>  Mon, 03 Nov 2014 17:21:24 -0800
+
 tron (0.6.1.5) lucid; urgency=low
 
   * Increase channel start timeout
