@@ -284,7 +284,7 @@ class Node(object):
         # those functions will eventually be called back
 
         if run.id in self.run_states:
-            raise Error("Run %s already running !?!", run.id)
+            log.warning("Run %s(%s) already running !?!" % (run.id, self.run_states[run.id].run))
 
         if self.idle_timer.active():
             self.idle_timer.cancel()
