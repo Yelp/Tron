@@ -331,7 +331,6 @@ class ServiceInstance(observer.Observer):
         ServiceInstanceMonitorTask.NOTIFY_UP:           'up',
         ServiceInstanceStopTask.NOTIFY_FAILED:          'stop_fail',
         ServiceInstanceStopTask.NOTIFY_SUCCESS:         'down',
-        ServiceInstanceStartTask.NOTIFY_FAILED:         'down',
     }
 
     def handler(self, task, event):
@@ -340,7 +339,7 @@ class ServiceInstance(observer.Observer):
         if event in self.event_to_transition_map:
             self.machine.transition(self.event_to_transition_map[event])
 
-        if event == ServiceInstanceStartTask.NOTIFY_STARTED:
+        if event in (ServiceInstanceStartTask.NOTIFY_STARTED, ServiceInstanceStartTask.NOTIFY_FAILED):
             self._handle_start_task_complete()
 
         if event == task.NOTIFY_FAILED:
