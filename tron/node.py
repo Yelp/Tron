@@ -440,6 +440,8 @@ class Node(object):
 
         def on_service_started(connection):
             # Booyah, time to start doing stuff
+            if self.connection:
+                log.error("Host %s service started called before disconnect(%s, %s)", self.hostname, self.connection, connection)
             self.connection = connection
             self.connection_defer = None
 
