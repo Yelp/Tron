@@ -361,7 +361,7 @@ class Node(object):
         cb(result)
 
     def _is_same_run(self, run):
-        return run.id in self.run_states and self.run_states[run.id] is run
+        return run.id in self.run_states and self.run_states[run.id].run is run
 
     def _connect_then_run(self, run):
         # Have we started the connection process ?

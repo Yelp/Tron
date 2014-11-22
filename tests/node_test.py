@@ -146,6 +146,7 @@ class NodeTestCase(TestCase):
         test_node.connection = self.TestConnection()
         test_node.run_states = {action_cmd.id: mock.Mock(state=0)}
         test_node.run_states[action_cmd.id].state = node.RUN_STATE_CONNECTING
+        test_node.run_states[action_cmd.id].run = action_cmd
 
         test_node._open_channel(action_cmd)
         assert test_node.connection.chan is not None
