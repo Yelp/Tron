@@ -472,7 +472,7 @@ class Node(object):
     def _open_channel(self, run):
         assert self.connection
         if not self._is_same_run(run):
-            log.warning("Cannot open channel %s, because RunState has changed", run.id)
+            log.warning("Run %s no longer tracked (_open_channel)", run.id)
             return
         assert self.run_states[run.id].state < RUN_STATE_RUNNING
 
