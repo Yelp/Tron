@@ -343,7 +343,7 @@ class Node(object):
     def _fail_run(self, run, result):
         """Indicate the run has failed, and cleanup state"""
         log.debug("Run %s has failed", run.id)
-        if run.id not in self.run_states or not self._is_same_run(run):
+        if not self._is_same_run(run):
             log.warning("Run %s no longer tracked (_fail_run)", run.id)
             return
 
@@ -508,7 +508,7 @@ class Node(object):
         This is how we let our run know that we succeeded or failed.
         """
         log.info("Run %s has completed with %r", run.id, channel.exit_status)
-        if run.id not in self.run_states or not self._is_same_run(run):
+        if not self._is_same_run(run):
             log.warning("Run %s no longer tracked", run.id)
             return
 
@@ -533,7 +533,7 @@ class Node(object):
         """Our run is actually a running process now, update the state"""
         log.info("Run %s started for %s", run.id, self.hostname)
         channel.start_defer = None
-        if run.id not in self.run_states:
+        if not self._is_same_run(run):
             log.warning("Run %s no longer tracked (_run_started)", run.id)
             return
         assert self.run_states[run.id].state == RUN_STATE_STARTING
