@@ -343,7 +343,7 @@ class Node(object):
     def _fail_run(self, run, result):
         """Indicate the run has failed, and cleanup state"""
         log.debug("Run %s has failed", run.id)
-        if not self._is_same_run(run):
+        if not self._is_run_id_tracked(run):
             log.warning("Run %s no longer tracked (_fail_run)", run.id)
             return
 
@@ -360,7 +360,7 @@ class Node(object):
         run.exited(None)
         cb(result)
 
-    def _is_same_run(self, run):
+    def _is_run_id_tracked(self, run):
         return run.id in self.run_states and self.run_states[run.id].run is run
 
     def _connect_then_run(self, run):
@@ -473,7 +473,7 @@ class Node(object):
 
     def _open_channel(self, run):
         assert self.connection
-        if not self._is_same_run(run):
+        if not self._is_run_id_tracked(run):
             log.warning("Run %s no longer tracked (_open_channel)", run.id)
             return
         assert self.run_states[run.id].state < RUN_STATE_RUNNING
@@ -510,7 +510,7 @@ class Node(object):
         This is how we let our run know that we succeeded or failed.
         """
         log.info("Run %s has completed with %r", run.id, channel.exit_status)
-        if not self._is_same_run(run):
+        if not self._is_run_id_tracked(run):
             log.warning("Run %s no longer tracked", run.id)
             return
 
@@ -535,7 +535,7 @@ class Node(object):
         """Our run is actually a running process now, update the state"""
         log.info("Run %s started for %s", run.id, self.hostname)
         channel.start_defer = None
-        if not self._is_same_run(run):
+        if not self._is_run_id_tracked(run):
             log.warning("Run %s no longer tracked (_run_started)", run.id)
             return
         assert self.run_states[run.id].state == RUN_STATE_STARTING
