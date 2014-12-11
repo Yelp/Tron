@@ -1,3 +1,10 @@
+tron (0.6.1.9) lucid; urgency=low
+
+  * Log some known exceptions
+  * Check overlapped run id with instance
+
+ -- Yejun Yang <yejun@yelp.com>  Thu, 11 Dec 2014 11:54:32 -0800
+
 tron (0.6.1.8) lucid; urgency=low
 
   * Fix service instance restore state, run monitor instead of queue.
