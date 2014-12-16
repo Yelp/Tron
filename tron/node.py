@@ -343,7 +343,7 @@ class Node(object):
     def _fail_run(self, run, result):
         """Indicate the run has failed, and cleanup state"""
         log.debug("Run %s has failed", run.id)
-        if run.id not in self.run_states:
+        if not self._is_run_id_tracked(run):
             log.warning("Run %s no longer tracked (_fail_run)", run.id)
             return
 
@@ -359,6 +359,9 @@ class Node(object):
         log.info("Calling fail_run callbacks")
         run.exited(None)
         cb(result)
+
+    def _is_run_id_tracked(self, run):
+        return run.id in self.run_states and self.run_states[run.id].run is run
 
     def _connect_then_run(self, run):
         # Have we started the connection process ?
@@ -386,7 +389,9 @@ class Node(object):
         We should be in a state where we know there are no runs in progress
         because all the SSH channels should have disconnected them.
         """
-        assert self.connection is connection
+        if self.connection is not connection:
+            log.warning("Service stop has been called twice")
+            return
         self.connection = None
 
         log.info("Service to %s stopped", self.hostname)
@@ -435,6 +440,8 @@ class Node(object):
 
         def on_service_started(connection):
             # Booyah, time to start doing stuff
+            if self.connection:
+                log.error("Host %s service started called before disconnect(%s, %s)", self.hostname, self.connection, connection)
             self.connection = connection
             self.connection_defer = None
 
@@ -466,6 +473,9 @@ class Node(object):
 
     def _open_channel(self, run):
         assert self.connection
+        if not self._is_run_id_tracked(run):
+            log.warning("Run %s no longer tracked (_open_channel)", run.id)
+            return
         assert self.run_states[run.id].state < RUN_STATE_RUNNING
 
         self.run_states[run.id].state = RUN_STATE_STARTING
@@ -500,7 +510,7 @@ class Node(object):
         This is how we let our run know that we succeeded or failed.
         """
         log.info("Run %s has completed with %r", run.id, channel.exit_status)
-        if run.id not in self.run_states:
+        if not self._is_run_id_tracked(run):
             log.warning("Run %s no longer tracked", run.id)
             return
 
@@ -525,7 +535,7 @@ class Node(object):
         """Our run is actually a running process now, update the state"""
         log.info("Run %s started for %s", run.id, self.hostname)
         channel.start_defer = None
-        if run.id not in self.run_states:
+        if not self._is_run_id_tracked(run):
             log.warning("Run %s no longer tracked (_run_started)", run.id)
             return
         assert self.run_states[run.id].state == RUN_STATE_STARTING
@@ -543,7 +553,7 @@ class Node(object):
 
         # We clear out the deferred that likely called us because there are
         # actually more than one error paths because of user timeouts.
-        if run.id in self.run_states:
+        if run.id in self.run_states and self.run_states[run.id].channel:
             self.run_states[run.id].channel.start_defer = None
 
         self._fail_run(run, failure.Failure(

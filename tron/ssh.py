@@ -130,7 +130,7 @@ class ClientConnection(connection.SSHConnection):
         localChannel = struct.unpack('>L', packet[: 4])[0]
         if localChannel not in self.channels:
             requestType, _ = common.getNS(packet[4:])
-            host = self.transport.transport.getHost()
+            host = self.transport.transport.getPeer()
             msg = "Missing channel: %s, request_type: %s, host: %s"
             log.warn(msg, localChannel, requestType, host)
             return
