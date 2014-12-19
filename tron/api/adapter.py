@@ -267,8 +267,8 @@ class JobAdapter(ReprAdapter):
 
     @toggle_flag('include_job_runs')
     def get_runs(self):
-        runs = adapt_many(JobRunAdapter, self._obj.runs, self.include_action_runs)
-        return runs[:self.num_runs or None]
+        runs = adapt_many(JobRunAdapter, list(self._obj.runs)[:self.num_runs or None], self.include_action_runs)
+        return runs
 
     def get_max_runtime(self):
         return str(self._obj.max_runtime)
