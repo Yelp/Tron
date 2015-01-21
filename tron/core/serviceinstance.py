@@ -112,16 +112,16 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
             self._handle_action_exit()
         if event == ActionCommand.FAILSTART:
             self.hang_check_callback.cancel()
-            self.notify(self.NOTIFY_FAILED)
             self.queue()
+            self.notify(self.NOTIFY_FAILED)
 
     handler = handle_action_event
 
     def _handle_action_exit(self):
         log.debug("%s exit, failure: %r", self, self.action.is_failed)
         if self.action.is_unknown:
-            self.notify(self.NOTIFY_FAILED)
             self.queue()
+            self.notify(self.NOTIFY_FAILED)
             return
         if self.action.is_failed:
             self.notify(self.NOTIFY_DOWN)
