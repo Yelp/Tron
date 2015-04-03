@@ -13,3 +13,6 @@ docs/images/
 tronweb/js/cs/*.js
 tronweb_tests/spec/*.js
 tronweb_tests/lib/
+.vagrant/
+vagrant/insecure_tron_key
+vagrant/insecure_tron_key.pub

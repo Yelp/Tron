@@ -68,7 +68,7 @@ docs:
 doc: docs
 
 man: 
-	$(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_DIR)/man
+	which $(SPHINXBUILD) >/dev/null && $(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_DIR)/man || true
 	@echo
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
 
