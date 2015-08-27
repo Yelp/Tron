@@ -94,6 +94,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
       vm_config.vm.provision :shell, privileged: false, inline: "cat /vagrant/vagrant/insecure_tron_key.pub >> /home/vagrant/.ssh/authorized_keys"
       vm_config.vm.provision :shell, inline: "install -m 644 /vagrant/vagrant/hosts /etc/hosts"
+      vm_config.vm.provision :shell, inline: "install -m 644 /vagrant/vagrant/sshd_config /etc/ssh/sshd_config"
+      vm_config.vm.provision :shell, inline: "/etc/init.d/ssh reload"
 
     end
 

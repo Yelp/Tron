@@ -1,0 +1,62 @@
+---
+
+command_context:
+  TEST_VAR: wibble
+  EMAIL_USER: vagrant@localhost
+
+ssh_options:
+  agent: false
+  identities:
+    - /vagrant/vagrant/insecure_tron_key
+
+notification_options:
+  smtp_host: localhost
+  notification_addr: vagrant@localhost
+
+nodes:
+  - hostname: 'batch-01'
+    username: vagrant
+  - hostname: 'batch-02'
+    username: vagrant
+  - hostname: 'batch-03'
+    username: vagrant
+
+node_pools:
+  - name: all_pool
+    nodes: [ 'batch-01', 'batch-02', 'batch-03' ]
+  - name: pool_a
+    nodes: [ 'batch-01' ]
+  - name: pool_b
+    nodes: [ 'batch-02', 'batch-03' ]
+  - name: weighted_pool
+    nodes:
+     - 'batch-01'
+     - 'batch-01'
+     - 'batch-01'
+     - 'batch-01'
+     - 'batch-02'
+     - 'batch-02'
+     - 'batch-03'
+
+jobs:
+  - name: "hostname_test"
+    node: all_pool
+    schedule: "interval 1 mins"
+    actions:
+      - name: "hostname"
+        command: "hostname -f"
+  - name: "sleep_test"
+    node: all_pool
+    schedule: "interval 1 mins"
+    actions:
+      - name: "sleep_a_minute"
+        command: "sleep 60"
+
+services:
+  -  name: "watch_test"
+     node: "weighted_pool"
+     count: 20
+     monitor_interval: 30
+     restart_delay: 60
+     pid_file: "/tmp/%(name)s-%(instance_number)s.pid"
+     command: "watch -n 10 ls /tmp"
