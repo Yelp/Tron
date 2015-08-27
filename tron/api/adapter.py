@@ -323,6 +323,9 @@ class ServiceAdapter(ReprAdapter):
         'live_count',
         'monitor_interval',
         'restart_delay',
+        'owner',
+        'summary',
+        'notes',
         'events']
 
     def __init__(self, service, include_events=False):
@@ -334,6 +337,15 @@ class ServiceAdapter(ReprAdapter):
 
     def get_count(self):
         return self._obj.config.count
+
+    def get_owner(self):
+        return self._obj.config.owner
+
+    def get_summary(self):
+        return self._obj.config.summary
+
+    def get_notes(self):
+        return self._obj.config.notes
 
     def get_state(self):
         return self._obj.get_state()

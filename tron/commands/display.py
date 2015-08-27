@@ -258,14 +258,16 @@ def format_action_run_details(content, stdout=True, stderr=True):
 
 class DisplayServices(TableDisplay):
 
-    columns = ['Name',  'State',    'Count'      ]
-    fields  = ['name',  'state',    'live_count' ]
-    widths  = [50,      12,          5           ]
+    columns = ['Name',  'State',    'Count',      'Owner']
+    fields  = ['name',  'state',    'live_count', 'owner']
+    widths  = [50,      12,          7,           30     ]
     title   = 'services'
     resize_fields = ['name']
 
     detail_labels = [
         ('Service',             'name'              ),
+        ('Owner',               'owner'             ),
+        ('Summary',             'summary'           ),
         ('Enabled',             'enabled'           ),
         ('State',               'state'             ),
         ('Max instances',       'count'             ),
@@ -274,6 +276,8 @@ class DisplayServices(TableDisplay):
         ('Node Pool',           'node_pool'         ),
         ('Monitor interval',    'monitor_interval'  ),
         ('Restart delay',       'restart_delay'     ),
+        ('Restart delay',       'restart_delay'     ),
+        ('Notes',               'notes'             ),
     ]
 
     colors = {
