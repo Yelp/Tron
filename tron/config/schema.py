@@ -105,6 +105,9 @@ ConfigJob = config_object_factory(
         'actions',              # FrozenDict of ConfigAction
         'namespace',            # str
     ],[
+        'owner',                # str
+        'summary',              # str
+        'notes',                # str
         'queueing',             # bool
         'run_limit',            # int
         'all_nodes',            # bool
@@ -145,6 +148,9 @@ ConfigService = config_object_factory(
         'monitor_interval',     # float
         'namespace',            # str
     ],[
+        'owner',                # str
+        'summary',              # str
+        'notes',                # str
         'restart_delay',        # float
         'monitor_retries',      # int
         'count',                # int

@@ -187,6 +187,9 @@ services:
                     name='MASTER.test_job0',
                     namespace='MASTER',
                     node='node0',
+                    owner='',
+                    summary='',
+                    notes='',
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20), jitter=None),
                     actions=FrozenDict({
@@ -211,6 +214,9 @@ services:
                     namespace='MASTER',
                     node='node0',
                     enabled=True,
+                    owner='',
+                    summary='',
+                    notes='',
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set([1, 3, 5]),
                         hour=0, minute=30, second=0,
@@ -240,6 +246,9 @@ services:
                     namespace='MASTER',
                     node='node1',
                     enabled=True,
+                    owner='',
+                    summary='',
+                    notes='',
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=16, minute=30, second=0,
@@ -265,6 +274,9 @@ services:
                     node='node1',
                     schedule=ConfigConstantScheduler(),
                     enabled=True,
+                    owner='',
+                    summary='',
+                    notes='',
                     actions=FrozenDict({
                         'action3_1': schema.ConfigAction(
                             name='action3_1',
@@ -292,6 +304,9 @@ services:
                     name='MASTER.test_job4',
                     namespace='MASTER',
                     node='nodePool',
+                    owner='',
+                    summary='',
+                    notes='',
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=0, minute=0, second=0,
@@ -322,6 +337,9 @@ services:
                         monitor_interval=20,
                         monitor_retries=5,
                         restart_delay=None,
+                        owner='',
+                        summary='',
+                        notes='',
                         count=2)
                 }
             )
@@ -380,6 +398,13 @@ jobs:
         name: "test_job2"
         node: node1
         schedule: "daily 16:30:00"
+        owner: "bob@example.com"
+        summary: "Flobbles the jibber service into submission"
+        notes: |
+          This is a multiple line notes section for
+          giving information about this job.
+
+          Second sentence.
         actions:
             -
                 name: "action2_0"
@@ -421,6 +446,20 @@ services:
         count: 2
         pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
         monitor_interval: 20
+    -
+        name: "service1"
+        node: NodePool
+        command: "service_command1"
+        count: 20
+        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
+        monitor_interval: 40
+        owner: "bob@example.com"
+        summary: "Jibber service, handles dequeueing submitted flobbles"
+        notes: |
+          This is a multiple line notes section for
+          giving information about this job.
+
+          Second sentence.
 """
 
     def test_attributes(self):
@@ -430,6 +469,9 @@ services:
                     name='test_job0',
                     namespace='test_namespace',
                     node='node0',
+                    owner='',
+                    summary='',
+                    notes='',
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20),
                         jitter=None,
@@ -456,6 +498,9 @@ services:
                     namespace='test_namespace',
                     node='node0',
                     enabled=True,
+                    owner='',
+                    summary='',
+                    notes='',
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set([1, 3, 5]),
                         hour=0,
@@ -487,6 +532,9 @@ services:
                     namespace='test_namespace',
                     node='node1',
                     enabled=True,
+                    owner='bob@example.com',
+                    summary='Flobbles the jibber service into submission',
+                    notes='This is a multiple line notes section for\ngiving information about this job.\n\nSecond sentence.\n',
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=16,
@@ -514,6 +562,9 @@ services:
                     node='node1',
                     schedule=ConfigConstantScheduler(),
                     enabled=True,
+                    owner='',
+                    summary='',
+                    notes='',
                     actions=FrozenDict({
                         'action3_1': schema.ConfigAction(
                             name='action3_1',
@@ -541,6 +592,9 @@ services:
                     name='test_job4',
                     namespace='test_namespace',
                     node='NodePool',
+                    owner='',
+                    summary='',
+                    notes='',
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=0, minute=0, second=0,
@@ -566,12 +620,28 @@ services:
                         namespace='test_namespace',
                         name='service0',
                         node='NodePool',
+                        owner='',
+                        summary='',
+                        notes='',
                         pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                         command='service_command0',
                         monitor_interval=20,
                         monitor_retries=5,
                         restart_delay=None,
-                        count=2)
+                        count=2),
+                    'service1': schema.ConfigService(
+                        namespace='test_namespace',
+                        name='service1',
+                        node='NodePool',
+                        owner='bob@example.com',
+                        summary='Jibber service, handles dequeueing submitted flobbles',
+                        notes='This is a multiple line notes section for\ngiving information about this job.\n\nSecond sentence.\n',
+                        pid_file='/var/run/%(name)s-%(instance_number)s.pid',
+                        command='service_command1',
+                        monitor_interval=40.0,
+                        monitor_retries=5,
+                        restart_delay=None,
+                        count=20),
                 }
             )
         )
@@ -582,6 +652,8 @@ services:
         assert_equal(test_config.jobs['test_job2'], expected.jobs['test_job2'])
         assert_equal(test_config.jobs['test_job3'], expected.jobs['test_job3'])
         assert_equal(test_config.jobs['test_job4'], expected.jobs['test_job4'])
+        assert_equal(test_config.services['service0'], expected.services['service0'])
+        assert_equal(test_config.services['service1'], expected.services['service1'])
         assert_equal(test_config.jobs, expected.jobs)
         assert_equal(test_config.services, expected.services)
         assert_equal(test_config, expected)
@@ -918,6 +990,9 @@ class ValidateJobsAndServicesTestCase(TestCase):
             schema.ConfigJob(name='MASTER.test_job0',
                 namespace='MASTER',
                 node='node0',
+                owner='',
+                summary='',
+                notes='',
                 schedule=ConfigIntervalScheduler(
                     timedelta=datetime.timedelta(0, 20), jitter=None),
                 actions=FrozenDict({'action0_0':
@@ -940,6 +1015,9 @@ class ValidateJobsAndServicesTestCase(TestCase):
             schema.ConfigService(name='MASTER.test_service0',
                           namespace='MASTER',
                           node='node0',
+                          owner='',
+                          summary='',
+                          notes='',
                           pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                           command='service_command0',
                           monitor_interval=20,
@@ -1078,14 +1156,14 @@ class ConfigContainerTestCase(TestCase):
         job_names, service_names = self.container.get_job_and_service_names()
         expected = ['test_job1', 'test_job0', 'test_job3', 'test_job2', 'test_job4']
         assert_equal(job_names, expected)
-        assert_equal(service_names, ['service0'])
+        assert_equal(service_names, ['service1', 'service0'])
 
     def test_get_jobs(self):
         expected = ['test_job1', 'test_job0', 'test_job3', 'test_job2', 'test_job4']
         assert_equal(expected, self.container.get_jobs().keys())
 
     def test_get_services(self):
-        assert_equal(self.container.get_services().keys(), ['service0'])
+        assert_equal(self.container.get_services().keys(), ['service1', 'service0'])
 
     def test_get_node_names(self):
         node_names = self.container.get_node_names()
