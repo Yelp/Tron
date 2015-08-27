@@ -245,6 +245,15 @@ class JobAdapter(ReprAdapter):
     def get_name(self):
         return self._obj.get_name()
 
+    def get_owner(self):
+        return self._obj.get_owner()
+
+    def get_summary(self):
+        return self._obj.get_summary()
+
+    def get_notes(self):
+        return self._obj.get_notes()
+
     def get_scheduler(self):
         return SchedulerAdapter(self._obj.scheduler).get_repr()
 

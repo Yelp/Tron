@@ -90,6 +90,9 @@ class Job(Observable, Observer):
 
         return cls(
             name                = job_config.name,
+            owner               = job_config.owner,
+            summary             = job_config.summary,
+            notes               = job_config.notes,
             queueing            = job_config.queueing,
             all_nodes           = job_config.all_nodes,
             node_pool           = node_repo.get_by_name(job_config.node),
@@ -128,6 +131,15 @@ class Job(Observable, Observer):
 
     def get_name(self):
         return self.name
+
+    def get_owner(self):
+        return 'OWNER'
+
+    def get_summary(self):
+        return 'SUMMARY'
+
+    def get_notes(self):
+        return 'NOTES'
 
     def get_runs(self):
         return self.runs
