@@ -338,14 +338,16 @@ class DisplayJobRuns(TableDisplay):
 
 class DisplayJobs(TableDisplay):
 
-    columns = ['Name',  'State',    'Scheduler',    'Last Success']
-    fields  = ['name',  'status',   'scheduler',    'last_success']
-    widths  = [50,       10,         20,             20           ]
+    columns = ['Name',  'State',    'Scheduler',    'Last Success',  'Owner']
+    fields  = ['name',  'status',   'scheduler',    'last_success',  'owner']
+    widths  = [50,       10,         20,             22,             30]
     title = 'jobs'
     resize_fields = ['name']
 
     detail_labels = [
         ('Job',                 'name'              ),
+        ('Owner',               'owner'             ),
+        ('Summary',             'summary'           ),
         ('State',               'status'            ),
         ('Scheduler',           'scheduler'         ),
         ('Max runtime',         'max_runtime'       ),
@@ -353,6 +355,7 @@ class DisplayJobs(TableDisplay):
         ('Run on all nodes',    'all_nodes'         ),
         ('Allow overlapping',   'allow_overlap'     ),
         ('Queue overlapping',   'queueing'          ),
+        ('Notes',               'notes'             ),
     ]
 
     colors = {

@@ -229,6 +229,9 @@ class JobAdapter(ReprAdapter):
         'runs',
         'max_runtime',
         'action_graph',
+        'owner',
+        'summary',
+        'notes',
     ]
 
     def __init__(self, job,

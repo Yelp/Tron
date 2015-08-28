@@ -41,12 +41,19 @@ node_pools:
 jobs:
   - name: "hostname_test"
     node: all_pool
+    owner: 'bob'
+    summary: 'should run hostname on each node every minute'
+    notes: 'Is PATH required?'
     schedule: "interval 1 mins"
     actions:
       - name: "hostname"
         command: "hostname -f"
   - name: "sleep_test"
     node: all_pool
+    summary: 'should run sleep 60 on each node every minute'
+    owner: 'longish_name'
+    notes: 'Is PATH required?'
+    schedule: "interval 1 mins"
     schedule: "interval 1 mins"
     actions:
       - name: "sleep_a_minute"
