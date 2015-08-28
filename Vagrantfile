@@ -72,7 +72,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     master.vm.provision :shell, privileged: false, inline: "killall -9 trond >/dev/null && sleep 1 || true"
     master.vm.provision :shell, privileged: false, inline: "rm -f /var/lib/tron/tron.pid"
     master.vm.provision :shell, inline: "DEBIAN_FRONTEND=noninteractive dpkg --force-confold -i /home/vagrant/tron_*deb"
-    master.vm.provision :shell, privileged: false, inline: ". /var/lib/tron/ssh-agent.sh && /usr/bin/trond"
+    master.vm.provision :shell, privileged: false, inline: ". /var/lib/tron/ssh-agent.sh && /usr/bin/trond -H 0.0.0.0"
 
   end
 
