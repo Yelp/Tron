@@ -63,6 +63,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     master.vm.provision :shell, inline: "cp /vagrant/vagrant/tron.default /etc/default/tron"
     master.vm.provision :shell, privileged: false, inline: "install -m 600 /vagrant/vagrant/insecure_tron_key /home/vagrant/.ssh/id_rsa"
     master.vm.provision :shell, inline: "install -m 644 /vagrant/vagrant/hosts /etc/hosts"
+    master.vm.provision :shell, inline: "install -m 644 /vagrant/vagrant/sshd_config /etc/ssh/sshd_config"
+    master.vm.provision :shell, inline: "/etc/init.d/ssh reload"
 
     # Fire up the requisite ssh-agent and load our private key.
     master.vm.provision :shell, privileged: false, inline: "ssh-agent > /var/lib/tron/ssh-agent.sh"
