@@ -63,6 +63,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     master.vm.provision :shell, inline: "cp /vagrant/vagrant/tron.default /etc/default/tron"
     master.vm.provision :shell, privileged: false, inline: "install -m 600 /vagrant/vagrant/insecure_tron_key /home/vagrant/.ssh/id_rsa"
     master.vm.provision :shell, inline: "install -m 644 /vagrant/vagrant/hosts /etc/hosts"
+    master.vm.provision :shell, inline: "install -m 644 /vagrant/vagrant/sshd_config /etc/ssh/sshd_config"
+    master.vm.provision :shell, inline: "/etc/init.d/ssh reload"
 
     # Fire up the requisite ssh-agent and load our private key.
     master.vm.provision :shell, privileged: false, inline: "ssh-agent > /var/lib/tron/ssh-agent.sh"
@@ -72,7 +74,7 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
     master.vm.provision :shell, privileged: false, inline: "killall -9 trond >/dev/null && sleep 1 || true"
     master.vm.provision :shell, privileged: false, inline: "rm -f /var/lib/tron/tron.pid"
     master.vm.provision :shell, inline: "DEBIAN_FRONTEND=noninteractive dpkg --force-confold -i /home/vagrant/tron_*deb"
-    master.vm.provision :shell, privileged: false, inline: ". /var/lib/tron/ssh-agent.sh && /usr/bin/trond"
+    master.vm.provision :shell, privileged: false, inline: ". /var/lib/tron/ssh-agent.sh && /usr/bin/trond -H 0.0.0.0"
 
   end
 
@@ -94,6 +96,8 @@ Vagrant.configure(VAGRANTFILE_API_VERSION) do |config|
 
       vm_config.vm.provision :shell, privileged: false, inline: "cat /vagrant/vagrant/insecure_tron_key.pub >> /home/vagrant/.ssh/authorized_keys"
       vm_config.vm.provision :shell, inline: "install -m 644 /vagrant/vagrant/hosts /etc/hosts"
+      vm_config.vm.provision :shell, inline: "install -m 644 /vagrant/vagrant/sshd_config /etc/ssh/sshd_config"
+      vm_config.vm.provision :shell, inline: "/etc/init.d/ssh reload"
 
     end
 
