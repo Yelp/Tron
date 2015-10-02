@@ -1,3 +1,9 @@
+tron (0.6.1.11) lucid; urgency=low
+
+  * Add job and service support fields: owner, summary, notes
+
+ -- Yejun Yang <yejun@yelp.com>  Fri, 02 Oct 2015 11:38:26 -0700
+
 tron (0.6.1.10) lucid; urgency=low
 
   * Optimize tronweb dashboard performance
