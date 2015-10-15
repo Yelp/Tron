@@ -85,11 +85,11 @@ class DisplayJobsTestCase(TestCase):
     def setup_data(self):
         self.data = [
             dict(name='important_things', status='running',
-                scheduler=mock.MagicMock(), last_success='unknown'),
+                scheduler=mock.MagicMock(), last_success='unknown', owner='alice'),
             dict(name='other_thing', status='success',
                 scheduler=mock.MagicMock(), last_success='2012-01-23 10:23:23',
                 action_names=['other', 'first'],
-                node_pool=['blam']),
+                node_pool=['blam'], owner=['bob', 'ted']),
         ]
         self.run_data = [
             dict(
