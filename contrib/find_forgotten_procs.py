@@ -200,13 +200,14 @@ def main(command, tron_base, *target_service_names, **options):
     )
 
     pprint(results)
-    print "Total instances", sum(
+    forgotten_count = sum(
         len(pids)
         for service_pid_pairs in results.itervalues()
         for _, pids in service_pid_pairs
     )
+    print "Total instances", forgotten_count
 
-    if command == 'kill':
+    if forgotten_count and command == 'kill':
         execute(
             parallel(kill_forgotten),
             results,
