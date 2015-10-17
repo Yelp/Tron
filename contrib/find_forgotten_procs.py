@@ -5,6 +5,7 @@ import json
 import optparse
 import sys
 import urllib2
+from fnmatch import fnmatch
 from pprint import pprint
 
 try:
@@ -186,7 +187,7 @@ def main(command, tron_base, *target_service_names, **options):
         target_services = [
             service
             for service in services
-            if service['name'] in target_service_names
+            if any(fnmatch(service['name'], t) for t in target_service_names)
         ]
     else:
         target_services = services
