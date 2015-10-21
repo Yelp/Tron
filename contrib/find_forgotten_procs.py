@@ -24,6 +24,19 @@ COMMANDS = (
 )
 
 
+def _ssh_atoms(host, user, forward_ssh_agent):
+    result = ['ssh']
+
+    if forward_ssh_agent:
+        result.append('-A')
+
+    if user:
+        host = '@'.join([user, host])
+    result.append(host)
+
+    return result
+
+
 def _check_output(*popenargs, **kwargs):
     if 'stdout' in kwargs:
         raise ValueError('stdout argument not allowed, it will be overridden.')
@@ -68,9 +81,9 @@ def pidfiles_for_host(hostname, services):
     ]
 
 
-def ssh_get_instances(host, service_to_target):
+def ssh_get_instances(host, service_to_target, user, forward_ssh_agent):
     remote_output = _check_output(
-        ['ssh', host, 'bash'],
+        _ssh_atoms(host, user, forward_ssh_agent) + ['bash'],
         stdin="""
             OUT_LOCK=$(mktemp)
             declare -A services=( %(bash_hash)s )
@@ -110,7 +123,7 @@ def ssh_get_instances(host, service_to_target):
     return found_processes
 
 
-def find_forgotten(host, services):
+def find_forgotten(host, services, user, forward_ssh_agent):
     sys.stdout.write('.')
     sys.stdout.flush()
     service_names = []
@@ -129,6 +142,8 @@ def find_forgotten(host, services):
     for service_name, pid_command_pairs in ssh_get_instances(
         host,
         service_to_target,
+        user,
+        forward_ssh_agent,
     ).iteritems():
         lost = [
             pid
@@ -150,6 +165,8 @@ def find_forgotten(host, services):
 def kill_forgotten(
     host,
     results,
+    user,
+    forward_ssh_agent,
     signal=DEFAULT_SIGNAL,
     kill_prefix=DEFAULT_KILL_PREFIX,
 ):
@@ -159,7 +176,7 @@ def kill_forgotten(
         return
 
     return _check_output(
-        ['ssh', '-A', host, 'bash'],
+        _ssh_atoms(host, user, forward_ssh_agent) + ['bash'],
         stdin=' '.join(
             [kill_prefix, 'kill -s {0} {1} || true'],
         ).strip().format(
@@ -182,6 +199,30 @@ def main(command, tron_base, *target_service_names, **options):
     options.setdefault('signal', DEFAULT_SIGNAL)
     options.setdefault('kill_prefix', DEFAULT_KILL_PREFIX)
     options.setdefault('max_threads', DEFAULT_MAX_THREADS)
+    options.setdefault('all_services', False)
+    options.setdefault('forward_ssh_agent', False)
+    options.setdefault('user', '')
+
+    if options['all_services']:
+        if target_service_names:
+            raise Exception(
+                "You passed in both --all-services and some service globs. "
+                "That's confusing, and I'm refusing to operate. Use one or "
+                "the other."
+            )
+
+        target_services_filterer = lambda service: True
+    else:
+        if not target_service_names:
+            raise Exception(
+                "You need to specify at least one expression to glob services "
+                "or use the --all-services flag to confirm you want them all."
+            )
+
+        target_services_filterer = lambda service: any(
+            fnmatch(service['name'], t)
+            for t in target_service_names,
+        )
 
     print "Getting services"
     services = _get_services_from_tron(tron_base)
@@ -192,19 +233,26 @@ def main(command, tron_base, *target_service_names, **options):
         for service in services
         for node in service['node_pool']['nodes']
     ])
-    if target_service_names:
-        target_services = [
-            service
-            for service in services
-            if any(fnmatch(service['name'], t) for t in target_service_names)
-        ]
-    else:
-        target_services = services
+
+    target_services = [
+        service
+        for service in services
+        if target_services_filterer(service)
+    ]
+
     pool = ThreadPool(min(len(all_hosts), options['max_threads']))
 
     results = dict(
         pool.imap_unordered(
-            lambda host: (host, find_forgotten(host, target_services),),
+            lambda host: (
+                host,
+                find_forgotten(
+                    host,
+                    target_services,
+                    options['user'],
+                    options['forward_ssh_agent'],
+                ),
+            ),
             all_hosts,
         ),
     )
@@ -224,6 +272,8 @@ def main(command, tron_base, *target_service_names, **options):
                     kill_forgotten(
                     host,
                     results,
+                    options['user'],
+                    options['forward_ssh_agent'],
                     options['signal'],
                     options['kill_prefix'],
                 ),
@@ -243,12 +293,35 @@ def _make_opts():
         usage='usage: %prog [options] <command> <tron_base> <target_service_name>*'
     )
     parser.add_option(
+        '-a',
+        '--all-services',
+        action="store_true",
+        dest="all_services",
+        help="Consider every service.",
+    )
+    parser.add_option(
         '-j',
         '--max-threads',
         default=DEFAULT_MAX_THREADS,
         type=int,
         help="Max number of local threads to use to span ssh connections.",
     )
+
+    ssh_group = optparse.OptionGroup(parser, 'ssh options')
+    ssh_group.add_option(
+        '-A',
+        action="store_true",
+        dest="forward_ssh_agent",
+        help="Forward the ssh agent when connecting.",
+    )
+    ssh_group.add_option(
+        '-u',
+        '--user',
+        default='',
+        help="The user to use when ssh'ing into machines.",
+    )
+    parser.add_option_group(ssh_group)
+
     kill_group = optparse.OptionGroup(parser, 'kill options')
     kill_group.add_option(
         '-s',
@@ -262,6 +335,7 @@ def _make_opts():
         help="What to prepend to kill invocations. Useful for things like "
              "sudo'ing.",
     )
+    parser.add_option_group(kill_group)
 
     options, positional = parser.parse_args()
 
