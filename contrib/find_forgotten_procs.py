@@ -1,16 +1,17 @@
+#!/usr/bin/env python
 """
 Find processes missing from Tron.
 """
 import json
 import optparse
 import subprocess
-import urllib2
 import sys
+import time
+import traceback
+import urllib2
 from fnmatch import fnmatch
 from multiprocessing.pool import ThreadPool
-from pprint import pprint
 from tempfile import TemporaryFile
-
 
 
 DEFAULT_SIGNAL = 'TERM'
@@ -22,6 +23,11 @@ COMMANDS = (
     'list',
     'kill',
 )
+
+
+def _print_event(contents):
+    contents.setdefault('time', time.time())
+    print json.dumps(contents)
 
 
 def _ssh_atoms(host, user, forward_ssh_agent):
@@ -56,7 +62,7 @@ def _check_output(*popenargs, **kwargs):
         cmd = kwargs.get("args")
         if cmd is None:
             cmd = popenargs[0]
-        raise subprocess.CalledProcessError(retcode, cmd, output=output)
+        raise subprocess.CalledProcessError(retcode, cmd)
     return output
 
 
@@ -84,6 +90,7 @@ def pidfiles_for_host(hostname, services):
 def ssh_get_instances(host, service_to_target, user, forward_ssh_agent):
     remote_output = _check_output(
         _ssh_atoms(host, user, forward_ssh_agent) + ['bash'],
+
         stdin="""
             OUT_LOCK=$(mktemp)
             declare -A services=( %(bash_hash)s )
@@ -105,7 +112,7 @@ def ssh_get_instances(host, service_to_target, user, forward_ssh_agent):
             'bash_hash': ' '.join([
                 '["%s"]="%s"' % (s, t,)
                 for s, t in service_to_target.iteritems()
-            ])
+            ]),
         },
     )
 
@@ -123,9 +130,30 @@ def ssh_get_instances(host, service_to_target, user, forward_ssh_agent):
     return found_processes
 
 
-def find_forgotten(host, services, user, forward_ssh_agent):
-    sys.stdout.write('.')
-    sys.stdout.flush()
+def kill_pids(
+    host,
+    pids,
+    user,
+    forward_ssh_agent,
+    signal=DEFAULT_SIGNAL,
+    kill_prefix=DEFAULT_KILL_PREFIX,
+):
+    if not pids:
+        return
+
+    return _check_output(
+        _ssh_atoms(host, user, forward_ssh_agent) + ['bash'],
+        stdin=' '.join(
+            [kill_prefix, 'kill -s {0} {1} || true'],
+        ).strip().format(
+            signal,
+            ' '.join(pids),
+        ),
+        stderr=None,
+    )
+
+
+def find_forgotten(host, services, user, forward_ssh_agent, signal=None, kill_prefix=''):
     service_names = []
     service_to_target = {}
     serivce_to_expecteds = {}
@@ -157,33 +185,19 @@ def find_forgotten(host, services, user, forward_ssh_agent):
         if lost:
             lost_pids[service_name] = lost
 
+            if signal is not None:
+                kill_pids(
+                    host,
+                    lost,
+                    user,
+                    forward_ssh_agent,
+                    signal,
+                    kill_prefix,
+                )
+
     sys.stdout.write('\b \b')
     sys.stdout.flush()
     return lost_pids.items()
-
-
-def kill_forgotten(
-    host,
-    results,
-    user,
-    forward_ssh_agent,
-    signal=DEFAULT_SIGNAL,
-    kill_prefix=DEFAULT_KILL_PREFIX,
-):
-    my_targets = sum((pids for _, pids in results[host]), [])
-
-    if not my_targets:
-        return
-
-    return _check_output(
-        _ssh_atoms(host, user, forward_ssh_agent) + ['bash'],
-        stdin=' '.join(
-            [kill_prefix, 'kill -s {0} {1} || true'],
-        ).strip().format(
-            signal,
-            ' '.join(my_targets),
-        ),
-    )
 
 
 def _get_services_from_tron(tron_base):
@@ -224,9 +238,11 @@ def main(command, tron_base, *target_service_names, **options):
             for t in target_service_names,
         )
 
-    print "Getting services"
+    _print_event(contents={
+        'event': 'get_services_from_tron_about_to_begin',
+        'tron_base': tron_base,
+    })
     services = _get_services_from_tron(tron_base)
-    print "done!"
 
     all_hosts = set([
         node['hostname']
@@ -239,10 +255,17 @@ def main(command, tron_base, *target_service_names, **options):
         for service in services
         if target_services_filterer(service)
     ]
+    found_service_names = [s['name'] for s in target_services]
+    _print_event(contents={
+        'event': 'target_services_identified',
+        'command': command,
+        'globs': target_service_names,
+        'targets': found_service_names,
+    })
 
     pool = ThreadPool(min(len(all_hosts), options['max_threads']))
 
-    results = dict(
+    results = list(
         pool.imap_unordered(
             lambda host: (
                 host,
@@ -251,42 +274,33 @@ def main(command, tron_base, *target_service_names, **options):
                     target_services,
                     options['user'],
                     options['forward_ssh_agent'],
+                    options['signal'] if command == 'kill' else None,
+                    options['kill_prefix'],
                 ),
             ),
             all_hosts,
         ),
     )
 
-    pprint(results)
+    _print_event(contents={
+        'event': 'discovery_result',
+        'command': command,
+        'targets': found_service_names,
+        'data': results,
+    })
+
     forgotten_count = sum(
         len(pids)
-        for service_pid_pairs in results.itervalues()
+        for _, service_pid_pairs in results
         for _, pids in service_pid_pairs
     )
-    print "Total instances", forgotten_count
-
-    if forgotten_count and command == 'kill':
-        for host, output in pool.imap_unordered(
-            lambda host: (
-                host,
-                    kill_forgotten(
-                    host,
-                    results,
-                    options['user'],
-                    options['forward_ssh_agent'],
-                    options['signal'],
-                    options['kill_prefix'],
-                ),
-            ),
-            set([
-                hostname
-                for hostname, pairs in results.iteritems()
-                if pairs
-            ]),
-        ):
-            if not output:
-                continue
-            print host, 'said: ', output
+    if forgotten_count:
+        _print_event(contents={
+            'event': 'discovery_result_count',
+            'command': command,
+            'targets': found_service_names,
+            'count': forgotten_count,
+        })
 
 def _make_opts():
     parser = optparse.OptionParser(
@@ -349,5 +363,13 @@ def _make_opts():
 
 
 if __name__ == "__main__":
-    args, kwargs = _make_opts()
-    main(*args, **kwargs)
+    try:
+        args, kwargs = _make_opts()
+        main(*args, **kwargs)
+    except BaseException as ex:
+        _print_event(contents={
+            'event': 'uncaught_exception',
+            'ex_type': str(type(ex).__name__),
+            'ex_message': str(ex),
+            'ex_traceback': ''.join(traceback.format_tb(sys.exc_info()[-1])),
+        })
