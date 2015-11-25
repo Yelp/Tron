@@ -195,8 +195,6 @@ def find_forgotten(host, services, user, forward_ssh_agent, signal=None, kill_pr
                     kill_prefix,
                 )
 
-    sys.stdout.write('\b \b')
-    sys.stdout.flush()
     return lost_pids.items()
 
 
