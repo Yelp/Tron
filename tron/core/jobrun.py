@@ -43,7 +43,7 @@ class JobRun(Observable, Observer):
         self._action_runs       = None
         self.action_graph       = action_graph
         self.manual             = manual
-        self.event              = event.get_recorder(self.id)
+        self.event              = event.get_recorder(str(self))
         self.event.ok('created')
 
         if action_runs:
