@@ -43,7 +43,7 @@ class JobRun(Observable, Observer):
         self._action_runs       = None
         self.action_graph       = action_graph
         self.manual             = manual
-        self.event              = event.get_recorder(self.id)
+        self.event              = event.get_recorder(self.full_id)
         self.event.ok('created')
 
         if action_runs:
@@ -229,7 +229,7 @@ class JobRun(Observable, Observer):
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
         self.event.notice('removed')
-        event.EventManager.get_instance().remove(str(self))
+        event.EventManager.get_instance().remove(self.full_id)
         self.clear_observers()
         self.action_runs.cleanup()
         self.node = None
@@ -266,13 +266,17 @@ class JobRun(Observable, Observer):
         log.info("%s in an unknown state: %s" % (self, self.action_runs))
         return ActionRun.STATE_UNKNOWN
 
+    @property
+    def full_id(self):
+        return "JobRun:%s" % self.id
+
     def __getattr__(self, name):
         if self.action_runs_proxy:
             return self.action_runs_proxy.perform(name)
         raise AttributeError(name)
 
     def __str__(self):
-        return "JobRun:%s" % self.id
+        return self.full_id
 
 
 class JobRunCollection(object):
