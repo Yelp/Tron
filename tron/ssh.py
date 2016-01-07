@@ -116,6 +116,8 @@ class ClientConnection(connection.SSHConnection):
             channel.openFailed(None)
 
         connection.SSHConnection.channelClosed(self, channel)
+        if channel.id in self.deferreds:
+            del self.deferreds[channel.id]
 
     def ssh_CHANNEL_REQUEST(self, packet):
         """
