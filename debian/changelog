@@ -1,3 +1,9 @@
+tron (0.6.1.12) lucid; urgency=low
+
+  * Fix memory leaks from event recorder and twisted
+
+ -- Yejun Yang <yejun@yelp.com>  Wed, 06 Jan 2016 18:07:37 -0800
+
 tron (0.6.1.11) lucid; urgency=low
 
   * Add job and service support fields: owner, summary, notes
