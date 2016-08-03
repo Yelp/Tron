@@ -27,11 +27,11 @@ def delta_total_seconds(td):
     return (microseconds + (seconds + days * 24 * 3600) * 10**6) / 10**6
 
 
-def macro_timedelta(start_date, years=0, months=0, days=0):
+def macro_timedelta(start_date, years=0, months=0, days=0, hours=0):
     """Since datetime doesn't provide timedeltas at the year or month level,
     this function generates timedeltas of the appropriate sizes.
     """
-    delta = datetime.timedelta(days=days)
+    delta = datetime.timedelta(days=days, hours=hours)
 
     new_month = start_date.month + months
     while new_month > 12:
@@ -42,7 +42,7 @@ def macro_timedelta(start_date, years=0, months=0, days=0):
         years -= 1
 
     end_date = datetime.datetime(
-        start_date.year + years, new_month, start_date.day)
+        start_date.year + years, new_month, start_date.day, start_date.hour)
     delta += end_date - start_date
 
     return delta
@@ -69,6 +69,7 @@ class DateArithmetic(object):
         'year':                 '%Y',
         'month':                '%m',
         'day':                  '%d',
+        'hour':                 '%H',
         'shortdate':            '%Y-%m-%d'
     }
 
@@ -86,7 +87,7 @@ class DateArithmetic(object):
         attr, value = match.groups()
         delta = int(value) if value else 0
 
-        if attr in ('shortdate', 'year', 'month', 'day'):
+        if attr in ('shortdate', 'year', 'month', 'day', 'hour'):
             if delta:
                 kwargs = {'days' if attr == 'shortdate' else attr + 's': delta}
                 dt += macro_timedelta(dt, **kwargs)
