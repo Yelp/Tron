@@ -204,5 +204,17 @@ class DateArithmeticTestCase(testingutils.MockTimeTestCase):
         daynum = self.now.toordinal() - 1
         assert_equal(DateArithmetic.parse('daynumber-1'), daynum)
 
+    def test_hour(self):
+        hour = self.now.strftime("%H")
+        assert_equal(DateArithmetic.parse('hour'), hour)
+
+    def test_hour_plus(self):
+        hour = "%02d" % ((int(self.now.strftime("%H")) + 1) % 24)
+        assert_equal(DateArithmetic.parse('hour+1'), hour)
+
+    def test_hour_minus(self):
+        hour = "%02d" % ((int(self.now.strftime("%H")) - 1) % 24)
+        assert_equal(DateArithmetic.parse('hour-1'), hour)
+
     def test_bad_date_format(self):
         assert DateArithmetic.parse('~~') is None

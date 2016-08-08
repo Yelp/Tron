@@ -28,6 +28,11 @@ command configuration (as well as pid_file_template for services).
     as `shortdate`. For example, ``%(day+1)s`` would return the day after the
     run date.
 
+**hour**
+    Current hour in `HH` (0-23) format. Supports the same arithmetic operations
+    as `shortdate`. For example, ``%(hour+1)s`` would return the hour after the
+    run hour (mod 24).
+
 **unixtime**
     Current timestamp. Supports addition and subtraction of seconds. For
     example ``%(unixtime+20)s`` would return the timestamp 20 seconds after
