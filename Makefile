@@ -14,45 +14,50 @@ ALLSPHINXOPTS=-d $(DOCS_BUILDDIR)/doctrees $(SPHINXOPTS)
 .PHONY : all source install clean tests docs
 
 all:
-		@echo "make source - Create source package"
-		@echo "make build - Build from source"
-		@echo "make install - Install on local system"
-		@echo "make rpm - Generate a rpm package"
-		@echo "make deb - Generate a deb package"
-		@echo "make clean - Get rid of scratch and byte files"
+	@echo "make source - Create source package"
+	@echo "make build - Build from source"
+	@echo "make install - Install on local system"
+	@echo "make rpm - Generate a rpm package"
+	@echo "make deb - Generate a deb package"
+	@echo "make clean - Get rid of scratch and byte files"
+	@echo "make publish - publish to pypi.python.org"
 
 source:
-		$(PYTHON) setup.py sdist $(COMPILE)
+	$(PYTHON) setup.py sdist $(COMPILE)
 
 build:
-		$(PYTHON) setup.py build $(COMPILE)
+	$(PYTHON) setup.py build $(COMPILE)
 
 install:
-		$(PYTHON) setup.py install --root $(DESTDIR) $(COMPILE)
+	$(PYTHON) setup.py install --root $(DESTDIR) $(COMPILE)
 
 rpm:
-		$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall
+	$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall
 
 deb: man
-		# build the source package in the parent directory
-		# then rename it to project_version.orig.tar.gz
-		$(PYTHON) setup.py sdist $(COMPILE) --dist-dir=../
-		rename -f 's/$(PROJECT)-(.*)\.tar\.gz/$(PROJECT)_$$1\.orig\.tar\.gz/' ../*
-		# build the package
-		dpkg-buildpackage -i -I -rfakeroot -uc -us
+	# build the source package in the parent directory
+	# then rename it to project_version.orig.tar.gz
+	$(PYTHON) setup.py sdist $(COMPILE) --dist-dir=../
+	rename -f 's/$(PROJECT)-(.*)\.tar\.gz/$(PROJECT)_$$1\.orig\.tar\.gz/' ../*
+	# build the package
+	dpkg-buildpackage -i -I -rfakeroot -uc -us
+
+publish:
+	python setup.py sdist bdist_wheel	
+	twine upload dist/*
 
 clean:
-		$(PYTHON) setup.py clean
-		rm -rf build/ MANIFEST
-		find . -name '*.pyc' -delete
-		find . -name "._*" -delete
-		rm -rf $(DOCS_BUILDDIR)/*
-		rm -rf $(DOCS_STATICSDIR)/*
-		fakeroot $(MAKE) -f $(CURDIR)/debian/rules clean
+	$(PYTHON) setup.py clean
+	rm -rf build/ MANIFEST
+	find . -name '*.pyc' -delete
+	find . -name "._*" -delete
+	rm -rf $(DOCS_BUILDDIR)/*
+	rm -rf $(DOCS_STATICSDIR)/*
+	fakeroot $(MAKE) -f $(CURDIR)/debian/rules clean
 
 coffee:
-		mkdir -p tronweb/js/cs
-		coffee -o tronweb/js/cs/ -c tronweb/coffee/
+	mkdir -p tronweb/js/cs
+	coffee -o tronweb/js/cs/ -c tronweb/coffee/
 
 # TODO: add less target, and web target
 
