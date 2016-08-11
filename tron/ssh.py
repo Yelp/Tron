@@ -206,12 +206,12 @@ class ExecChannel(channel.SSHChannel):
         return True
 
     def dataReceived(self, data):
-        self.data.append(data)
+        self.data = [data]
         for callback in self.output_callbacks:
             callback(data)
 
     def extReceived(self, dataType, data):
-        self.data.append(data)
+        self.data = [data]
         for callback in self.error_callbacks:
             callback(data)
 
