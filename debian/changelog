@@ -1,3 +1,9 @@
+tron (0.6.2.1) lucid; urgency=low
+
+  * Only keep last buffer from ssh connection
+
+ -- Federico Giraud <fgiraud@yelp.com>  Mon, 15 Aug 2016 10:15:56 -0700
+
 tron (0.6.1.12) lucid; urgency=low
 
   * Fix memory leaks from event recorder and twisted
