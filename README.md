@@ -1,6 +1,8 @@
 Tron - Batch Scheduling System
 ==============================
 
+[![Build Status](https://travis-ci.org/Yelp/Tron.svg?branch=master)](https://travis-ci.org/Yelp/Tron)
+
 Tron is a centralized system for managing periodic batch processes and services
 across a cluster. If you find [cron](http://en.wikipedia.org/wiki/Cron) or
 [fcron](http://fcron.free.fr/) to be insufficient for managing complex work
