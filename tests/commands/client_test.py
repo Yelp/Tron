@@ -120,12 +120,12 @@ class ClientTestCase(TestCase):
     def test_action_runs(self):
         self.client.action_runs('/api/jobs/name/0/act', num_lines=40)
         self.client.request.assert_called_with(
-            '/api/jobs/name/0/act?include_stdout=1&num_lines=40&include_stderr=1')
+            '/api/jobs/name/0/act?num_lines=40&include_stdout=1&include_stderr=1')
 
     def test_job_runs(self):
         self.client.job_runs('/api/jobs/name/0')
         self.client.request.assert_called_with(
-            '/api/jobs/name/0?include_action_runs=1&include_action_graph=0')
+            '/api/jobs/name/0?include_action_graph=0&include_action_runs=1')
 
     def test_job(self):
         self.client.job('/api/jobs/name', count=20)

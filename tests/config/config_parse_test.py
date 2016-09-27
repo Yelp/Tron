@@ -1155,15 +1155,15 @@ class ConfigContainerTestCase(TestCase):
     def test_get_job_and_service_names(self):
         job_names, service_names = self.container.get_job_and_service_names()
         expected = ['test_job1', 'test_job0', 'test_job3', 'test_job2', 'test_job4']
-        assert_equal(job_names, expected)
-        assert_equal(service_names, ['service1', 'service0'])
+        assert_equal(set(job_names), set(expected))
+        assert_equal(set(service_names), set(['service1', 'service0']))
 
     def test_get_jobs(self):
         expected = ['test_job1', 'test_job0', 'test_job3', 'test_job2', 'test_job4']
-        assert_equal(expected, self.container.get_jobs().keys())
+        assert_equal(set(expected), set(self.container.get_jobs().keys()))
 
     def test_get_services(self):
-        assert_equal(self.container.get_services().keys(), ['service1', 'service0'])
+        assert_equal(set(self.container.get_services().keys()), set(['service1', 'service0']))
 
     def test_get_node_names(self):
         node_names = self.container.get_node_names()
