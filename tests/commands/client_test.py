@@ -120,7 +120,7 @@ class ClientTestCase(TestCase):
     def test_action_runs(self):
         self.client.action_runs('/api/jobs/name/0/act', num_lines=40)
         self.client.request.assert_called_with(
-            '/api/jobs/name/0/act?num_lines=40&include_stdout=1&include_stderr=1')
+            '/api/jobs/name/0/act?include_stderr=1&include_stdout=1&num_lines=40')
 
     def test_job_runs(self):
         self.client.job_runs('/api/jobs/name/0')
@@ -135,7 +135,7 @@ class ClientTestCase(TestCase):
     def test_jobs(self):
         self.client.jobs()
         self.client.request.assert_called_with(
-            '/api/jobs?include_job_runs=0&include_action_runs=0')
+            '/api/jobs?include_action_runs=0&include_job_runs=0')
 
 
 class GetUrlTestCase(TestCase):
