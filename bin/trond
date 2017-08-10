@@ -1,74 +1,102 @@
 #!/usr/bin/env python
 """ Start the Tron server daemon."""
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import optparse
 import os
-import pkg_resources
 import sys
 
+import pkg_resources
+
 import tron
-from tron.commands import cmd_utils
 from tron import trondaemon
+from tron.commands import cmd_utils
 from tron.config import manager
 
 
-DEFAULT_CONF                = 'default_config.yaml'
-DEFAULT_CONF_PATH           = 'config/'
-DEFAULT_WORKING_DIR         = '/var/lib/tron/'
-DEFAULT_PIDFILE             =  'tron.pid'
-DEFAULT_PIDPATH             = '/var/run/' + DEFAULT_PIDFILE
+DEFAULT_CONF = 'default_config.yaml'
+DEFAULT_CONF_PATH = 'config/'
+DEFAULT_WORKING_DIR = '/var/lib/tron/'
+DEFAULT_PIDFILE = 'tron.pid'
+DEFAULT_PIDPATH = '/var/run/' + DEFAULT_PIDFILE
 
 
 def parse_options():
     parser = optparse.OptionParser(version="%%prog %s" % tron.__version__)
 
-    parser.add_option("-w", "--working-dir", default=DEFAULT_WORKING_DIR,
-            help="Working directory for the Tron daemon, default %default")
+    parser.add_option(
+        "-w", "--working-dir", default=DEFAULT_WORKING_DIR,
+        help="Working directory for the Tron daemon, default %default",
+    )
 
-    parser.add_option("-c", "--config-path", default=DEFAULT_CONF_PATH,
-            help="File path to the Tron configuration file")
+    parser.add_option(
+        "-c", "--config-path", default=DEFAULT_CONF_PATH,
+        help="File path to the Tron configuration file",
+    )
 
-    parser.add_option("--nodaemon", action="store_true", default=False,
-            help="Disable daemonizing, default %default")
+    parser.add_option(
+        "--nodaemon", action="store_true", default=False,
+        help="Disable daemonizing, default %default",
+    )
 
-    parser.add_option("--pid-file",
-            help="File path to PID file, defaults to %s if working directory "
-                 "is default. Otherwise defaults to <working dir>/%s" %
-                 (DEFAULT_PIDPATH, DEFAULT_PIDFILE))
+    parser.add_option(
+        "--pid-file",
+        help="File path to PID file, defaults to %s if working directory "
+        "is default. Otherwise defaults to <working dir>/%s" %
+        (DEFAULT_PIDPATH, DEFAULT_PIDFILE),
+    )
 
     logging_group = optparse.OptionGroup(parser, "Logging")
-    logging_group.add_option("--log-conf", "-l",
-            help="File path to a custom logging.conf")
+    logging_group.add_option(
+        "--log-conf", "-l",
+        help="File path to a custom logging.conf",
+    )
 
-    logging_group.add_option("-v", "--verbose", action="count", default=0,
-            help="Verbose logging. Repeat for more verbosity.")
+    logging_group.add_option(
+        "-v", "--verbose", action="count", default=0,
+        help="Verbose logging. Repeat for more verbosity.",
+    )
 
-    logging_group.add_option("--debug", action="store_true",
-            help="Debug mode, extra error reporting, no daemonizing")
+    logging_group.add_option(
+        "--debug", action="store_true",
+        help="Debug mode, extra error reporting, no daemonizing",
+    )
     parser.add_option_group(logging_group)
 
     api_group = optparse.OptionGroup(parser, "Web Service API")
-    api_group.add_option("--port", "-P", dest="listen_port", type=int,
-            help="TCP port number to listen on, default %default",
-            default=cmd_utils.DEFAULT_PORT)
+    api_group.add_option(
+        "--port", "-P", dest="listen_port", type=int,
+        help="TCP port number to listen on, default %default",
+        default=cmd_utils.DEFAULT_PORT,
+    )
 
-    api_group.add_option("--host", "-H", dest="listen_host",
-            help="Hostname to listen on, default %default",
-            default=cmd_utils.DEFAULT_HOST)
+    api_group.add_option(
+        "--host", "-H", dest="listen_host",
+        help="Hostname to listen on, default %default",
+        default=cmd_utils.DEFAULT_HOST,
+    )
 
     requirement = pkg_resources.Requirement.parse("tron")
-    api_group.add_option("--web-path",
-            default=pkg_resources.resource_filename(requirement, 'tronweb'),
-            help="Path to static web resources, default %default.")
+    api_group.add_option(
+        "--web-path",
+        default=pkg_resources.resource_filename(
+            requirement, 'tronweb',
+        ),
+        help="Path to static web resources, default %default.",
+    )
     parser.add_option_group(api_group)
 
-    options, args       = parser.parse_args(sys.argv)
+    options, args = parser.parse_args(sys.argv)
     options.working_dir = os.path.abspath(options.working_dir)
 
     if options.log_conf:
         options.log_conf = os.path.join(options.working_dir, options.log_conf)
         if not os.path.exists(options.log_conf):
-            parser.error("Logging config file not found: %s" % options.log_conf)
+            parser.error(
+                "Logging config file not found: %s" %
+                options.log_conf,
+            )
 
     if not options.pid_file:
         if options.working_dir == DEFAULT_WORKING_DIR:
@@ -76,8 +104,10 @@ def parse_options():
         else:
             options.pid_file = DEFAULT_PIDFILE
 
-    options.pid_file    = os.path.join(options.working_dir, options.pid_file)
-    options.config_path = os.path.join(options.working_dir, options.config_path)
+    options.pid_file = os.path.join(options.working_dir, options.pid_file)
+    options.config_path = os.path.join(
+        options.working_dir, options.config_path,
+    )
 
     if options.debug:
         options.nodaemon = True
@@ -97,7 +127,7 @@ def setup_environment(options):
         os.makedirs(options.working_dir)
 
     if (not os.path.isdir(options.working_dir) or
-        not os.access(options.working_dir, os.R_OK | os.W_OK | os.X_OK)):
+            not os.access(options.working_dir, os.R_OK | os.W_OK | os.X_OK)):
         msg = "Error, can't access working directory %s" % options.working_dir
         raise SystemExit(msg)
 
@@ -120,6 +150,7 @@ def main():
     setup_environment(options)
     trond = trondaemon.TronDaemon(options)
     trond.run()
+
 
 if __name__ == '__main__':
     main()

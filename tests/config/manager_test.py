@@ -1,12 +1,23 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import os
 import shutil
 import tempfile
+
 import mock
-from testify import TestCase, assert_equal, run, setup, teardown
 import yaml
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import teardown
+from testify import TestCase
+
 from tests.assertions import assert_raises
 from tests.testingutils import autospec_method
-from tron.config import manager, ConfigError, schema
+from tron.config import ConfigError
+from tron.config import manager
+from tron.config import schema
 
 
 class FromStringTestCase(TestCase):
@@ -20,6 +31,7 @@ class FromStringTestCase(TestCase):
     def test_from_string_invalid(self):
         content = "{} asdf"
         assert_raises(ConfigError, manager.from_string, content)
+
 
 class ReadWriteTestCase(TestCase):
 
@@ -42,6 +54,7 @@ class ReadWriteTestCase(TestCase):
         manager.write_raw(self.filename, content)
         actual = manager.read_raw(self.filename)
         assert_equal(content, actual)
+
 
 class ManifestFileTestCase(TestCase):
 
@@ -103,7 +116,11 @@ class ConfigManagerTestCase(TestCase):
         path = self.manager.build_file_path('/etc/passwd')
         assert_equal(path, os.path.join(self.temp_dir, '_etc_passwd.yaml'))
         path = self.manager.build_file_path('../../etc/passwd')
-        assert_equal(path, os.path.join(self.temp_dir, '______etc_passwd.yaml'))
+        assert_equal(
+            path, os.path.join(
+                self.temp_dir, '______etc_passwd.yaml',
+            ),
+        )
 
     def test_read_raw_config(self):
         name = 'name'
@@ -122,7 +139,9 @@ class ConfigManagerTestCase(TestCase):
         assert_equal(manager.read(path), self.content)
         self.manifest.get_file_name.assert_called_with(name)
         assert not self.manifest.add.call_count
-        self.manager.validate_with_fragment.assert_called_with(name, self.content)
+        self.manager.validate_with_fragment.assert_called_with(
+            name, self.content,
+        )
 
     def test_write_config_new_name(self):
         name = 'filename2'
@@ -154,8 +173,8 @@ class ConfigManagerTestCase(TestCase):
         self.manifest.get_file_mapping.assert_called_with()
         assert_equal(container, mock_config_container.create.return_value)
 
-        expected = dict((name, call.return_value)
-            for ((name, _), call) in zip(content_items, mock_read.mock_calls))
+        expected = {name: call.return_value
+                    for ((name, _), call) in zip(content_items, mock_read.mock_calls)}
         mock_config_container.create.assert_called_with(expected)
 
     def test_get_hash_default(self):

@@ -4,8 +4,12 @@
  act as an adapter between the data format api clients expect, and the internal
  data of an object.
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import functools
 import urllib
+
 from tron import actioncommand
 from tron import scheduler
 from tron.serialize import filehandler
@@ -19,23 +23,26 @@ class ReprAdapter(object):
     translated_field_names = []
 
     def __init__(self, internal_obj):
-        self._obj               = internal_obj
-        self.fields             = self._get_field_names()
-        self.translators        = self._get_translation_mapping()
+        self._obj = internal_obj
+        self.fields = self._get_field_names()
+        self.translators = self._get_translation_mapping()
 
     def _get_field_names(self):
         return self.field_names
 
     def _get_translation_mapping(self):
-        return dict(
-            (field_name, getattr(self, 'get_%s' % field_name))
-            for field_name in self.translated_field_names)
+        return {
+            field_name: getattr(self, 'get_%s' % field_name)
+            for field_name in self.translated_field_names
+        }
 
     def get_repr(self):
-        repr_data = dict(
-                (field, getattr(self._obj, field)) for field in self.fields)
-        translated = dict(
-                (field, func()) for field, func in self.translators.iteritems())
+        repr_data = {
+            field: getattr(self._obj, field) for field in self.fields
+        }
+        translated = {
+            field: func() for field, func in self.translators.iteritems()
+        }
         repr_data.update(translated)
         return repr_data
 
@@ -79,33 +86,35 @@ class ActionRunAdapter(RunAdapter):
     """
 
     field_names = [
-            'id',
-            'start_time',
-            'end_time',
-            'exit_status',
-            'action_name'
+        'id',
+        'start_time',
+        'end_time',
+        'exit_status',
+        'action_name',
     ]
 
     translated_field_names = [
-            'state',
-            'node',
-            'command',
-            'raw_command',
-            'requirements',
-            'stdout',
-            'stderr',
-            'duration',
-            'job_name',
-            'run_num',
+        'state',
+        'node',
+        'command',
+        'raw_command',
+        'requirements',
+        'stdout',
+        'stderr',
+        'duration',
+        'job_name',
+        'run_num',
     ]
 
-    def __init__(self, action_run, job_run=None,
-                 max_lines=10, include_stdout=False, include_stderr=False):
+    def __init__(
+        self, action_run, job_run=None,
+        max_lines=10, include_stdout=False, include_stderr=False,
+    ):
         super(ActionRunAdapter, self).__init__(action_run)
-        self.job_run            = job_run
-        self.max_lines          = max_lines or None
-        self.include_stdout     = include_stdout
-        self.include_stderr     = include_stderr
+        self.job_run = job_run
+        self.max_lines = max_lines or None
+        self.include_stdout = include_stdout
+        self.include_stderr = include_stderr
 
     def get_raw_command(self):
         return self._obj.bare_command
@@ -154,6 +163,7 @@ class ActionGraphAdapter(object):
 
         return [build(action) for action in self.action_graph.get_actions()]
 
+
 class ActionRunGraphAdapter(object):
 
     def __init__(self, action_run_collection):
@@ -162,7 +172,8 @@ class ActionRunGraphAdapter(object):
     def get_repr(self):
         def build(action_run):
             deps = self.action_runs.action_graph.get_dependent_actions(
-                action_run.action_name)
+                action_run.action_name,
+            )
             return {
                 'id':           action_run.id,
                 'name':         action_run.action_name,
@@ -180,7 +191,7 @@ class ActionRunGraphAdapter(object):
 class JobRunAdapter(RunAdapter):
 
     field_names = [
-       'id',
+        'id',
         'run_num',
         'run_time',
         'start_time',
@@ -197,9 +208,11 @@ class JobRunAdapter(RunAdapter):
         'action_graph',
     ]
 
-    def __init__(self, job_run,
-            include_action_runs=False,
-            include_action_graph=False):
+    def __init__(
+        self, job_run,
+        include_action_runs=False,
+        include_action_graph=False,
+    ):
         super(JobRunAdapter, self).__init__(job_run)
         self.include_action_runs = include_action_runs
         self.include_action_graph = include_action_graph
@@ -214,6 +227,7 @@ class JobRunAdapter(RunAdapter):
     @toggle_flag('include_action_graph')
     def get_action_graph(self):
         return ActionRunGraphAdapter(self._obj.action_runs).get_repr()
+
 
 class JobAdapter(ReprAdapter):
 
@@ -234,16 +248,18 @@ class JobAdapter(ReprAdapter):
         'notes',
     ]
 
-    def __init__(self, job,
-             include_job_runs=False,
-             include_action_runs=False,
-             include_action_graph=True,
-             num_runs=None):
+    def __init__(
+        self, job,
+        include_job_runs=False,
+        include_action_runs=False,
+        include_action_graph=True,
+        num_runs=None,
+    ):
         super(JobAdapter, self).__init__(job)
-        self.include_job_runs     = include_job_runs
-        self.include_action_runs  = include_action_runs
+        self.include_job_runs = include_job_runs
+        self.include_action_runs = include_action_runs
         self.include_action_graph = include_action_graph
-        self.num_runs             = num_runs
+        self.num_runs = num_runs
 
     def get_name(self):
         return self._obj.get_name()
@@ -279,7 +295,11 @@ class JobAdapter(ReprAdapter):
 
     @toggle_flag('include_job_runs')
     def get_runs(self):
-        runs = adapt_many(JobRunAdapter, list(self._obj.runs)[:self.num_runs or None], self.include_action_runs)
+        runs = adapt_many(
+            JobRunAdapter, list(self._obj.runs)[
+                :self.num_runs or None
+            ], self.include_action_runs,
+        )
         return runs
 
     def get_max_runtime(self):
@@ -338,7 +358,8 @@ class ServiceAdapter(ReprAdapter):
         'owner',
         'summary',
         'notes',
-        'events']
+        'events',
+    ]
 
     def __init__(self, service, include_events=False):
         super(ServiceAdapter, self).__init__(service)

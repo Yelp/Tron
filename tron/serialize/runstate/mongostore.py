@@ -2,13 +2,16 @@
  State storage using mongoDB.
  Tested with pymongo 2.2
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
-from collections import namedtuple
-import urlparse
 import itertools
 import operator
+import urlparse
+from collections import namedtuple
+
 from tron.serialize import runstate
-pymongo = None # pyflakes
+pymongo = None  # pyflakes
 
 
 MongoStateKey = namedtuple('MongoStateKey', ['collection', 'key'])
@@ -16,14 +19,14 @@ MongoStateKey = namedtuple('MongoStateKey', ['collection', 'key'])
 
 class MongoStateStore(object):
 
-    JOB_COLLECTION              = 'job_state_collection'
-    SERVICE_COLLECTION          = 'service_state_collection'
-    METADATA_COLLECTION         = 'metadata_collection'
+    JOB_COLLECTION = 'job_state_collection'
+    SERVICE_COLLECTION = 'service_state_collection'
+    METADATA_COLLECTION = 'metadata_collection'
 
     TYPE_TO_COLLECTION_MAP = {
         runstate.JOB_STATE:     JOB_COLLECTION,
         runstate.SERVICE_STATE: SERVICE_COLLECTION,
-        runstate.MCP_STATE:     METADATA_COLLECTION
+        runstate.MCP_STATE:     METADATA_COLLECTION,
     }
 
     def __init__(self, db_name, connection_details):
@@ -31,18 +34,18 @@ class MongoStateStore(object):
         global pymongo
         assert pymongo
 
-        self.db_name        = db_name
-        connection_params   = self._parse_connection_details(connection_details)
+        self.db_name = db_name
+        connection_params = self._parse_connection_details(connection_details)
         self._connect(db_name, connection_params)
 
     def _connect(self, db_name, params):
         """Connect to MongoDB."""
-        hostname            = params.get('hostname')
-        port                = params.get('port')
-        username            = params.get('username')
-        password            = params.get('password')
-        self.connection     = pymongo.Connection(hostname, port)
-        self.db             = self.connection[db_name]
+        hostname = params.get('hostname')
+        port = params.get('port')
+        username = params.get('username')
+        password = params.get('password')
+        self.connection = pymongo.Connection(hostname, port)
+        self.db = self.connection[db_name]
         if username and password:
             self.db.authenticate(username, password)
 
@@ -62,7 +65,8 @@ class MongoStateStore(object):
 
     def restore(self, keys):
         items = [
-            (key, self.db[key.collection].find_one(key.key)) for key in keys]
+            (key, self.db[key.collection].find_one(key.key)) for key in keys
+        ]
         return dict(itertools.ifilter(operator.itemgetter(1), items))
 
     def cleanup(self):

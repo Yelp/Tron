@@ -1,14 +1,28 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import os
 import shutil
 import time
-from tempfile import NamedTemporaryFile, mkdtemp
+from tempfile import mkdtemp
+from tempfile import NamedTemporaryFile
 
-from testify import TestCase, run, assert_equal, assert_not_in, assert_in
-from testify import assert_not_equal, turtle
-from testify import setup, teardown, suite
+from testify import assert_equal
+from testify import assert_in
+from testify import assert_not_equal
+from testify import assert_not_in
+from testify import run
+from testify import setup
+from testify import suite
+from testify import teardown
+from testify import TestCase
+from testify import turtle
 
-from tron.serialize.filehandler import FileHandleManager, OutputStreamSerializer
-from tron.serialize.filehandler import OutputPath, NullFileHandle
+from tron.serialize.filehandler import FileHandleManager
+from tron.serialize.filehandler import NullFileHandle
+from tron.serialize.filehandler import OutputPath
+from tron.serialize.filehandler import OutputStreamSerializer
+
 
 class FileHandleWrapperTestCase(TestCase):
 
@@ -120,7 +134,8 @@ class FileHandleManagerTestCase(TestCase):
     def test_cleanup_single(self):
         fh_wrapper = self.manager.open(self.file1.name)
         fh_wrapper.last_accessed = 123456
-        time_func = lambda: 123458.1
+
+        def time_func(): return 123458.1
         self.manager.cleanup(time_func)
         assert_not_in(fh_wrapper.name, self.manager.cache)
         assert_equal(len(self.manager.cache), 0)
@@ -136,7 +151,7 @@ class FileHandleManagerTestCase(TestCase):
         for i, fh_wrapper in enumerate(fh_wrappers):
             fh_wrapper.last_accessed = 123456 + i
 
-        time_func = lambda: 123460.1
+        def time_func(): return 123460.1
         self.manager.cleanup(time_func)
         assert_equal(len(self.manager.cache), 2)
 
@@ -151,7 +166,8 @@ class FileHandleManagerTestCase(TestCase):
         fh_wrapper.write("Some things")
 
         fh_wrapper.last_accessed = 123456
-        time_func = lambda: 123458.1
+
+        def time_func(): return 123458.1
         self.manager.cleanup(time_func)
         assert_not_in(fh_wrapper.name, self.manager.cache)
         assert_equal(len(self.manager.cache), 0)
@@ -187,10 +203,18 @@ class FileHandleManagerTestCase(TestCase):
     def test_update(self):
         fh_wrapper1 = self.manager.open(self.file1.name)
         fh_wrapper2 = self.manager.open(self.file2.name)
-        assert_equal(self.manager.cache.keys(), [fh_wrapper1.name, fh_wrapper2.name])
+        assert_equal(
+            self.manager.cache.keys(), [
+                fh_wrapper1.name, fh_wrapper2.name,
+            ],
+        )
 
         self.manager.update(fh_wrapper1)
-        assert_equal(self.manager.cache.keys(), [fh_wrapper2.name, fh_wrapper1.name])
+        assert_equal(
+            self.manager.cache.keys(), [
+                fh_wrapper2.name, fh_wrapper1.name,
+            ],
+        )
 
 
 class OutputStreamSerializerTestCase(TestCase):
@@ -289,6 +313,7 @@ class OutputPathTestCase(TestCase):
     def test__ne__(self):
         other = turtle.Turtle(base='one/two', parts=['three'])
         assert_not_equal(self.path, other)
+
 
 if __name__ == "__main__":
     run()

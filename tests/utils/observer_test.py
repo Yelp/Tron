@@ -1,6 +1,15 @@
-from testify import run, setup, assert_equal, TestCase, turtle
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import TestCase
+from testify import turtle
+
 from tests.assertions import assert_length
-from tron.utils.observer import Observable, Observer
+from tron.utils.observer import Observable
+from tron.utils.observer import Observer
 
 
 class ObservableTestCase(TestCase):
@@ -10,13 +19,13 @@ class ObservableTestCase(TestCase):
         self.obs = Observable()
 
     def test_attach(self):
-        func = lambda: 1
+        def func(): return 1
         self.obs.attach('a', func)
         assert_equal(len(self.obs._observers), 1)
         assert_equal(self.obs._observers['a'], [func])
 
     def test_listen_seq(self):
-        func = lambda: 1
+        def func(): return 1
         self.obs.attach(['a', 'b'], func)
         assert_equal(len(self.obs._observers), 2)
         assert_equal(self.obs._observers['a'], [func])
@@ -36,7 +45,8 @@ class ObserverClearTestCase(TestCase):
     @setup
     def setup_observer(self):
         self.obs = Observable()
-        func = lambda: 1
+
+        def func(): return 1
         self.obs.attach('a', func)
         self.obs.attach('b', func)
         self.obs.attach(True, func)
@@ -49,18 +59,18 @@ class ObserverClearTestCase(TestCase):
     def test_clear_listeners_some(self):
         self.obs.clear_observers('a')
         assert_equal(len(self.obs._observers), 2)
-        assert_equal(set(self.obs._observers.keys()), set([True, 'b']))
+        assert_equal(set(self.obs._observers.keys()), {True, 'b'})
 
     def test_remove_observer_none(self):
-        observer = lambda: 2
+        def observer(): return 2
         self.obs.remove_observer(observer)
-        assert_equal(set(self.obs._observers.keys()), set([True, 'a', 'b']))
+        assert_equal(set(self.obs._observers.keys()), {True, 'a', 'b'})
         assert_length(self.obs._observers['a'], 2)
         assert_length(self.obs._observers['b'], 2)
         assert_length(self.obs._observers[True], 1)
 
     def test_remove_observer(self):
-        observer = lambda: 2
+        def observer(): return 2
         self.obs.attach('a', observer)
         self.obs.attach('c', observer)
         self.obs.remove_observer(observer)
@@ -100,9 +110,6 @@ class ObserverTestCase(TestCase):
         assert_equal(handler.has_watched, 1)
         self.obs.notify(event)
         assert_equal(handler.has_watched, 2)
-
-
-
 
 
 if __name__ == "__main__":

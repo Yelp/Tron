@@ -1,7 +1,11 @@
 """Implements the Observer/Observable pattern,"""
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import logging
 
 log = logging.getLogger(__name__)
+
 
 class Observable(object):
     """An Observable in the Observer/Observable pattern. It stores

@@ -1,7 +1,15 @@
-from testify import TestCase, run, setup, assert_equal, teardown
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import teardown
+from testify import TestCase
+
 from tests.assertions import assert_length
 from tron.serialize import runstate
-sqlalchemystore = None # pyflakes
+sqlalchemystore = None  # pyflakes
 
 
 class SQLAlchmeyStateStoreTestCase(TestCase):
@@ -11,7 +19,7 @@ class SQLAlchmeyStateStoreTestCase(TestCase):
     def setup_store(self):
         from tron.serialize.runstate import sqlalchemystore
         global sqlalchemystore
-        assert sqlalchemystore # pyflakes
+        assert sqlalchemystore  # pyflakes
         details = 'sqlite:///:memory:'
         self.store = sqlalchemystore.SQLAlchemyStateStore('name', details)
         self.store.create_tables()
@@ -50,11 +58,11 @@ class SQLAlchmeyStateStoreTestCase(TestCase):
     def test_restore_many(self):
         keys = [
             sqlalchemystore.SQLStateKey(self.store.job_table, 'stars'),
-            sqlalchemystore.SQLStateKey(self.store.service_table, 'foo')
+            sqlalchemystore.SQLStateKey(self.store.service_table, 'foo'),
         ]
         items = [
             {'docs': 'builder', 'a': 'b'},
-            {'docks': 'helper', 'c': 'd'}
+            {'docks': 'helper', 'c': 'd'},
         ]
         self.store.save(zip(keys, items))
 
@@ -65,7 +73,7 @@ class SQLAlchmeyStateStoreTestCase(TestCase):
     def test_restore_partial(self):
         keys = [
             sqlalchemystore.SQLStateKey(self.store.job_table, 'stars'),
-            sqlalchemystore.SQLStateKey(self.store.service_table, 'foo')
+            sqlalchemystore.SQLStateKey(self.store.service_table, 'foo'),
         ]
         item = {'docs': 'builder', 'a': 'b'}
         self.store.save([(keys[0], item)])

@@ -2,6 +2,9 @@
 """
 Find processes missing from Tron.
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import json
 import optparse
 import subprocess
@@ -123,8 +126,8 @@ def ssh_get_instances(host, service_to_target, user, forward_ssh_agent):
         rest = lines[1:]
 
         found_processes[service_name] = [
-           line.split(None, 1)
-           for line in rest
+            line.split(None, 1)
+            for line in rest
         ]
 
     return found_processes
@@ -220,18 +223,18 @@ def main(command, tron_base, *target_service_names, **options):
             raise Exception(
                 "You passed in both --all-services and some service globs. "
                 "That's confusing, and I'm refusing to operate. Use one or "
-                "the other."
+                "the other.",
             )
 
-        target_services_filterer = lambda service: True
+        def target_services_filterer(service): return True
     else:
         if not target_service_names:
             raise Exception(
                 "You need to specify at least one expression to glob services "
-                "or use the --all-services flag to confirm you want them all."
+                "or use the --all-services flag to confirm you want them all.",
             )
 
-        target_services_filterer = lambda service: any(
+        def target_services_filterer(service): return any(
             fnmatch(service['name'], t)
             for t in target_service_names,
         )
@@ -242,11 +245,11 @@ def main(command, tron_base, *target_service_names, **options):
     })
     services = _get_services_from_tron(tron_base)
 
-    all_hosts = set([
+    all_hosts = {
         node['hostname']
         for service in services
         for node in service['node_pool']['nodes']
-    ])
+    }
 
     target_services = [
         service
@@ -300,9 +303,10 @@ def main(command, tron_base, *target_service_names, **options):
             'count': forgotten_count,
         })
 
+
 def _make_opts():
     parser = optparse.OptionParser(
-        usage='usage: %prog [options] <command> <tron_base> <target_service_name>*'
+        usage='usage: %prog [options] <command> <tron_base> <target_service_name>*',
     )
     parser.add_option(
         '-a',

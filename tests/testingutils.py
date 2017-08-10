@@ -1,17 +1,25 @@
-import logging
-import functools
-import mock
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
-from testify import  TestCase, setup
-from testify import class_setup, class_teardown
-from testify import teardown
+import functools
+import logging
 import time
+
+import mock
+from testify import class_setup
+from testify import class_teardown
+from testify import setup
+from testify import teardown
+from testify import TestCase
+
 from tron.utils import timeutils
 
 
 log = logging.getLogger(__name__)
 
 # TODO: remove when replaced with tron.eventloop
+
+
 class MockReactorTestCase(TestCase):
     """Patch the reactor to a MockReactor."""
 
@@ -42,7 +50,7 @@ class MockTimeTestCase(TestCase):
     @setup
     def setup_current_time(self):
         assert self.now, "%s must set a now field" % self.__class__
-        self.old_current_time  = timeutils.current_time
+        self.old_current_time = timeutils.current_time
         timeutils.current_time = lambda: self.now
 
     @teardown
@@ -73,6 +81,7 @@ def retry(max_tries=3, delay=0.1, exceptions=(KeyError, IndexError)):
 # TODO: remove when replaced with mock
 class Turtle(object):
     """A more complete Mock implementation."""
+
     def __init__(self, *args, **kwargs):
         self.__dict__.update(kwargs)
         self.calls = []

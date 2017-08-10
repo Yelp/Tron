@@ -10,7 +10,8 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 """A complete time specification based on the Google App Engine GROC spec."""
-
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import calendar
 import datetime
@@ -99,12 +100,12 @@ def get_time(time_string):
 
 TOKEN_LAST = 'LAST'
 
-ordinal_range  = range(1, 6)
-weekday_range  = range(0, 7)
-month_range    = range(1, 13)
+ordinal_range = range(1, 6)
+weekday_range = range(0, 7)
+month_range = range(1, 13)
 monthday_range = range(1, 32)
-hour_range     = range(0, 24)
-minute_range   = second_range = range(0, 60)
+hour_range = range(0, 24)
+minute_range = second_range = range(0, 60)
 
 
 def validate_spec(source, value_range, type, default=None, allow_last=False):
@@ -125,16 +126,18 @@ class TimeSpecification(object):
     configured pattern.
     """
 
-    def __init__(self,
-            ordinals=None,
-            weekdays=None,
-            months=None,
-            monthdays=None,
-            timestr=None,
-            timezone=None,
-            minutes=None,
-            hours=None,
-            seconds=None):
+    def __init__(
+        self,
+        ordinals=None,
+        weekdays=None,
+        months=None,
+        monthdays=None,
+        timestr=None,
+        timezone=None,
+        minutes=None,
+        hours=None,
+        seconds=None,
+    ):
 
         if weekdays and monthdays:
             raise ValueError('cannot supply both monthdays and weekdays')
@@ -146,35 +149,44 @@ class TimeSpecification(object):
             timestr = '00:00'
 
         if timestr:
-            time    = get_time(timestr)
-            hours   = [time.hour]
+            time = get_time(timestr)
+            hours = [time.hour]
             minutes = [time.minute]
             seconds = [0]
 
-        self.hours      = validate_spec(hours, hour_range, 'hour')
-        self.minutes    = validate_spec(minutes, minute_range, 'minute')
-        self.seconds    = validate_spec(seconds, second_range, 'second')
-        self.ordinals   = validate_spec(ordinals, ordinal_range, 'ordinal')
-        self.weekdays   = validate_spec(
-            weekdays, weekday_range, 'weekdays', allow_last=True)
-        self.months     = validate_spec(months, month_range, 'month')
-        self.monthdays  = validate_spec(
-            monthdays, monthday_range, 'monthdays', [], True)
-        self.timezone   = get_timezone(timezone)
+        self.hours = validate_spec(hours, hour_range, 'hour')
+        self.minutes = validate_spec(minutes, minute_range, 'minute')
+        self.seconds = validate_spec(seconds, second_range, 'second')
+        self.ordinals = validate_spec(ordinals, ordinal_range, 'ordinal')
+        self.weekdays = validate_spec(
+            weekdays, weekday_range, 'weekdays', allow_last=True,
+        )
+        self.months = validate_spec(months, month_range, 'month')
+        self.monthdays = validate_spec(
+            monthdays, monthday_range, 'monthdays', [], True,
+        )
+        self.timezone = get_timezone(timezone)
 
     def next_day(self, first_day, year, month):
         """Returns matching days for the given year and month.
         """
-        first_day_of_month, last_day_of_month = calendar.monthrange(year, month)
+        first_day_of_month, last_day_of_month = calendar.monthrange(
+            year, month,
+        )
 
-        map_last   = lambda day: last_day_of_month if day == TOKEN_LAST else day
-        day_filter = lambda day: first_day <= day <= last_day_of_month
-        sort_days  = lambda days: sorted(itertools.ifilter(day_filter, days))
+        def map_last(
+            day,
+        ): return last_day_of_month if day == TOKEN_LAST else day
+
+        def day_filter(day): return first_day <= day <= last_day_of_month
+
+        def sort_days(days): return sorted(itertools.ifilter(day_filter, days))
 
         if self.monthdays:
             return sort_days(map_last(day) for day in self.monthdays)
 
         start_day = (first_day_of_month + 1) % 7
+
         def days_from_weekdays():
             for ordinal in self.ordinals:
                 week = (ordinal - 1) * 7
@@ -186,9 +198,9 @@ class TimeSpecification(object):
     def next_month(self, start_date):
         """Create a generator which yields valid months after the start month.
         """
-        current     = start_date.month
-        potential   = [m for m in self.months if m >= current]
-        year_wraps   = 0
+        current = start_date.month
+        potential = [m for m in self.months if m >= current]
+        year_wraps = 0
 
         while True:
             if not potential:
@@ -199,8 +211,9 @@ class TimeSpecification(object):
 
     def next_time(self, start_date, is_start_day):
         """Return the next valid time."""
-        start_hour   = start_date.time().hour
-        hour_filter  = lambda hour: not is_start_day or hour >= start_hour
+        start_hour = start_date.time().hour
+
+        def hour_filter(hour): return not is_start_day or hour >= start_hour
 
         for hour in itertools.ifilter(hour_filter, self.hours):
             for minute in self.minutes:
@@ -214,7 +227,7 @@ class TimeSpecification(object):
 
     def get_match(self, start):
         """Returns the next datetime match after start."""
-        start_date  = to_timezone(start, self.timezone).replace(tzinfo=None)
+        start_date = to_timezone(start, self.timezone).replace(tzinfo=None)
 
         def get_first_day(month, year):
             if (month, year) != (start_date.month, start_date.year):
@@ -231,8 +244,10 @@ class TimeSpecification(object):
                 if time is None:
                     continue
 
-                candidate = start_date.replace(year, month, day, time.hour,
-                    time.minute, second=time.second, microsecond=0)
+                candidate = start_date.replace(
+                    year, month, day, time.hour,
+                    time.minute, second=time.second, microsecond=0,
+                )
                 candidate = self.handle_timezone(candidate, start.tzinfo)
                 if not candidate:
                     continue
@@ -264,10 +279,12 @@ class TimeSpecification(object):
             'weekdays',
             'months',
             'monthdays',
-            'timezone']
+            'timezone',
+        ]
         return all(
             getattr(other, attr, None) == getattr(self, attr, None)
-                for attr in attrs)
+            for attr in attrs
+        )
 
     def __ne__(self, other):
         return not self == other

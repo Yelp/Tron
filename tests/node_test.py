@@ -1,11 +1,22 @@
-import mock
-from testify import setup, TestCase, assert_equal, run
-from testify import assert_in, assert_raises
-from testify.assertions import assert_not_in, assert_not_equal
-from testify import teardown, setup_teardown
-from tests.testingutils import autospec_method
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
-from tron import node, ssh, actioncommand
+import mock
+from testify import assert_equal
+from testify import assert_in
+from testify import assert_raises
+from testify import run
+from testify import setup
+from testify import setup_teardown
+from testify import teardown
+from testify import TestCase
+from testify.assertions import assert_not_equal
+from testify.assertions import assert_not_in
+
+from tests.testingutils import autospec_method
+from tron import actioncommand
+from tron import node
+from tron import ssh
 from tron.config import schema
 from tron.core import actionrun
 from tron.serialize import filehandler
@@ -57,9 +68,14 @@ class NodePoolRepositoryTestCase(TestCase):
         node_pool_config = {'c': mock.Mock(nodes=['a', 'b'])}
         ssh_options = mock.Mock(identities=[], known_hosts_file=None)
         node.NodePoolRepository.update_from_config(
-            node_config, node_pool_config, ssh_options)
+            node_config, node_pool_config, ssh_options,
+        )
         node_names = [node_config['a'].name, node_config['b'].name]
-        assert_equal(set(self.repo.pools), set(node_names + [node_pool_config['c'].name]))
+        assert_equal(
+            set(self.repo.pools), set(
+                node_names + [node_pool_config['c'].name],
+            ),
+        )
         assert_equal(set(self.repo.nodes), set(node_names + mock_nodes.keys()))
 
     def test_nodes_by_name(self):
@@ -97,7 +113,8 @@ class DetermineJitterTestCase(TestCase):
     @setup
     def setup_node_settings(self):
         self.settings = mock.Mock(
-                jitter_load_factor=1, jitter_min_load=4, jitter_max_delay=20)
+            jitter_load_factor=1, jitter_min_load=4, jitter_max_delay=20,
+        )
 
     @setup_teardown
     def patch_random(self):
@@ -121,7 +138,8 @@ class DetermineJitterTestCase(TestCase):
 
 
 def build_node(
-        hostname='localhost', username='theuser', name='thename', pub_key=None):
+        hostname='localhost', username='theuser', name='thename', pub_key=None,
+):
     config = mock.Mock(hostname=hostname, username=username, name=name)
     ssh_opts = mock.create_autospec(ssh.SSHAuthOptions)
     node_settings = mock.create_autospec(schema.ConfigSSHOptions)
@@ -155,12 +173,16 @@ class NodeTestCase(TestCase):
 
     def test_from_config(self):
         ssh_options = self.node.conch_options
-        node_config = mock.Mock(hostname='localhost', username='theuser', name='thename')
+        node_config = mock.Mock(
+            hostname='localhost',
+            username='theuser', name='thename',
+        )
         ssh_options.__getitem__.return_value = 'something'
         public_key = mock.Mock()
         node_settings = mock.Mock()
         new_node = node.Node.from_config(
-                node_config, ssh_options, public_key, node_settings)
+            node_config, ssh_options, public_key, node_settings,
+        )
         assert_equal(new_node.name, node_config.name)
         assert_equal(new_node.hostname, node_config.hostname)
         assert_equal(new_node.username, node_config.username)
@@ -188,14 +210,18 @@ class NodeTestCase(TestCase):
         assert_not_equal(other_node, self.node)
 
     def test_stop_not_tracked(self):
-        action_command = mock.create_autospec(actioncommand.ActionCommand,
-            id=mock.Mock())
+        action_command = mock.create_autospec(
+            actioncommand.ActionCommand,
+            id=mock.Mock(),
+        )
         self.node.stop(action_command)
 
     def test_stop(self):
         autospec_method(self.node._fail_run)
-        action_command = mock.create_autospec(actioncommand.ActionCommand,
-            id=mock.Mock())
+        action_command = mock.create_autospec(
+            actioncommand.ActionCommand,
+            id=mock.Mock(),
+        )
         self.node.run_states[action_command.id] = mock.Mock()
         self.node.stop(action_command)
         assert_equal(self.node._fail_run.call_count, 1)

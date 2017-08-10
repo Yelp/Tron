@@ -6,8 +6,12 @@
     service.dot
 
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 from tron.core.actionrun import ActionRun
 from tron.core.service import ServiceInstance
+
 
 def traverse_graph(starting_state, func=lambda f, a, t: None, seen_states=None):
     """Traverse the graph depth-first without cycling."""
@@ -29,7 +33,7 @@ def build_diagram(states, starting_state):
     def build_node(state):
         return '%s[label="state: %s"];' % (
             state.name,
-            state.name
+            state.name,
         )
 
     def build_edges(starting_state):
@@ -44,13 +48,14 @@ def build_diagram(states, starting_state):
 
     return "digraph g{%s\n%s}" % (
         '\n'.join(build_node(state) for state in states),
-        '\n'.join(build_edges(starting_state))
+        '\n'.join(build_edges(starting_state)),
     )
 
 
 def dot_from_starting_state(starting_state):
     state_data = traverse_graph(starting_state)
     return build_diagram(state_data, starting_state)
+
 
 machines = {
     'action':           ActionRun.STATE_SCHEDULED,

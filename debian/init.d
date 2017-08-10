@@ -26,7 +26,7 @@
 # Provides:          tron
 # Required-Start:    $network $local_fs
 # Required-Stop:
-# Should-Start:      
+# Should-Start:
 # Should-Stop:
 # Default-Start:     2 3 4 5
 # Default-Stop:      0 1 6
@@ -198,7 +198,7 @@ case "$1" in
             # NOTE: Some servers might die some time after they start,
             # this code will detect this issue if STARTTIME is set
             # to a reasonable value
-            [ -n "$STARTTIME" ] && sleep $STARTTIME # Wait some time 
+            [ -n "$STARTTIME" ] && sleep $STARTTIME # Wait some time
             if  running ;  then
                 # It's ok, the server started and is running
                 log_end_msg 0

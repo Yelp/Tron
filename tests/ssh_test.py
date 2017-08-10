@@ -1,5 +1,10 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import mock
-from testify import TestCase, assert_equal, setup
+from testify import assert_equal
+from testify import setup
+from testify import TestCase
 from testify.assertions import assert_not_equal
 from twisted.python import failure
 
@@ -14,7 +19,9 @@ class ClientTransportTestCase(TestCase):
         self.username = 'username'
         self.options = mock.Mock()
         self.expected_pub_key = mock.Mock()
-        self.transport = ssh.ClientTransport(self.username, self.options, self.expected_pub_key)
+        self.transport = ssh.ClientTransport(
+            self.username, self.options, self.expected_pub_key,
+        )
 
     def test_verifyHostKey_missing_pub_key(self):
         self.transport.expected_pub_key = None
@@ -41,7 +48,7 @@ class ClientTransportTestCase(TestCase):
         self.transport.connectionSecure()
         conn = self.transport.connection_defer.mock_calls[0][1][0]
         assert isinstance(conn, ssh.ClientConnection)
-        auth_service  = self.transport.requestService.mock_calls[0][1][0]
+        auth_service = self.transport.requestService.mock_calls[0][1][0]
         assert isinstance(auth_service, ssh.NoPasswordAuthClient)
 
 
@@ -64,11 +71,13 @@ class SSHAuthOptionsTestCase(TestCase):
         config = mock.Mock(agent=True, identities=['one', 'two'])
         assert_equal(
             ssh.SSHAuthOptions.from_config(config),
-            ssh.SSHAuthOptions.from_config(config))
+            ssh.SSHAuthOptions.from_config(config),
+        )
 
     def test__eq__false(self):
         config = mock.Mock(agent=True, identities=['one', 'two'])
         second_config = mock.Mock(agent=True, identities=['two'])
         assert_not_equal(
             ssh.SSHAuthOptions.from_config(config),
-            ssh.SSHAuthOptions.from_config(second_config))
+            ssh.SSHAuthOptions.from_config(second_config),
+        )

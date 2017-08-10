@@ -2,30 +2,43 @@
 Parse a dictionary structure and return an immutable structure that
 contain a validated configuration.
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import itertools
 import logging
 import os
 
 import pytz
-from tron import command_context
 
-from tron.config import ConfigError, config_utils, schema
-from tron.config.config_utils import ConfigContext, Validator
-from tron.config.config_utils import valid_string, valid_bool
-from tron.config.config_utils import valid_identifier
-from tron.config.config_utils import build_list_of_type_validator
-from tron.config.config_utils import valid_name_identifier
+from tron import command_context
+from tron.config import config_utils
+from tron.config import ConfigError
+from tron.config import schema
 from tron.config.config_utils import build_dict_name_validator
-from tron.config.config_utils import valid_int, valid_float, valid_dict
+from tron.config.config_utils import build_list_of_type_validator
+from tron.config.config_utils import ConfigContext
 from tron.config.config_utils import PartialConfigContext
+from tron.config.config_utils import valid_bool
+from tron.config.config_utils import valid_dict
+from tron.config.config_utils import valid_float
+from tron.config.config_utils import valid_identifier
+from tron.config.config_utils import valid_int
+from tron.config.config_utils import valid_name_identifier
+from tron.config.config_utils import valid_string
+from tron.config.config_utils import Validator
 from tron.config.schedule_parse import valid_schedule
-from tron.config.schema import TronConfig, NamedTronConfig, NotificationOptions
 from tron.config.schema import CLEANUP_ACTION_NAME
+from tron.config.schema import ConfigAction
+from tron.config.schema import ConfigCleanupAction
+from tron.config.schema import ConfigJob
+from tron.config.schema import ConfigService
 from tron.config.schema import ConfigSSHOptions
 from tron.config.schema import ConfigState
-from tron.config.schema import ConfigJob, ConfigAction, ConfigCleanupAction
-from tron.config.schema import ConfigService
 from tron.config.schema import MASTER_NAMESPACE
+from tron.config.schema import NamedTronConfig
+from tron.config.schema import NotificationOptions
+from tron.config.schema import TronConfig
 from tron.utils.dicts import FrozenDict
 
 
@@ -41,7 +54,8 @@ def build_format_string_validator(context_object):
             return valid_string(value, config_context)
 
         context = command_context.CommandContext(
-                    context_object, config_context.command_context)
+            context_object, config_context.command_context,
+        )
 
         try:
             value % context
@@ -69,7 +83,9 @@ def valid_output_stream_dir(output_dir, config_context):
         raise ConfigError(msg % output_dir)
 
     if not os.access(output_dir, os.W_OK):
-        raise ConfigError("output_stream_dir '%s' is not writable" % output_dir)
+        raise ConfigError(
+            "output_stream_dir '%s' is not writable" % output_dir,
+        )
 
     return output_dir
 
@@ -127,8 +143,8 @@ def valid_node_name(value, config_context):
 
 class ValidateSSHOptions(Validator):
     """Validate SSH options."""
-    config_class =                  ConfigSSHOptions
-    optional =                      True
+    config_class = ConfigSSHOptions
+    optional = True
     defaults = {
         'agent':                    False,
         'identities':               (),
@@ -143,7 +159,8 @@ class ValidateSSHOptions(Validator):
     validators = {
         'agent':                    valid_bool,
         'identities':               build_list_of_type_validator(
-                                        valid_identity_file, allow_empty=True),
+            valid_identity_file, allow_empty=True,
+        ),
         'known_hosts_file':         valid_known_hosts_file,
         'connect_timeout':          config_utils.valid_int,
         'idle_connection_timeout':  config_utils.valid_int,
@@ -165,14 +182,15 @@ valid_ssh_options = ValidateSSHOptions()
 
 class ValidateNotificationOptions(Validator):
     """Validate notification options."""
-    config_class =              NotificationOptions
-    optional =                  True
+    config_class = NotificationOptions
+    optional = True
+
 
 valid_notification_options = ValidateNotificationOptions()
 
 
 class ValidateNode(Validator):
-    config_class =              schema.ConfigNode
+    config_class = schema.ConfigNode
     validators = {
         'name':                 config_utils.valid_identifier,
         'username':             config_utils.valid_string,
@@ -194,11 +212,12 @@ class ValidateNode(Validator):
         super(ValidateNode, self).set_defaults(output_dict, config_context)
         output_dict.setdefault('name', output_dict['hostname'])
 
+
 valid_node = ValidateNode()
 
 
 class ValidateNodePool(Validator):
-    config_class =              schema.ConfigNodePool
+    config_class = schema.ConfigNodePool
     validators = {
         'name':                 valid_identifier,
         'nodes':                build_list_of_type_validator(valid_identifier),
@@ -223,27 +242,32 @@ def valid_action_name(value, config_context):
         raise ConfigError(error_msg % (value, config_context.path))
     return value
 
+
 action_context = command_context.build_filled_context(
-        command_context.JobContext,
-        command_context.JobRunContext,
-        command_context.ActionRunContext)
+    command_context.JobContext,
+    command_context.JobRunContext,
+    command_context.ActionRunContext,
+)
 
 
 class ValidateAction(Validator):
     """Validate an action."""
-    config_class =              ConfigAction
+    config_class = ConfigAction
 
     defaults = {
         'node':                 None,
         'requires':             (),
     }
-    requires = build_list_of_type_validator(valid_action_name, allow_empty=True)
+    requires = build_list_of_type_validator(
+        valid_action_name, allow_empty=True,
+    )
     validators = {
         'name':                 valid_action_name,
         'command':              build_format_string_validator(action_context),
         'node':                 valid_node_name,
         'requires':             requires,
     }
+
 
 valid_action = ValidateAction()
 
@@ -256,7 +280,7 @@ def valid_cleanup_action_name(value, config_context):
 
 
 class ValidateCleanupAction(Validator):
-    config_class =              ConfigCleanupAction
+    config_class = ConfigCleanupAction
     defaults = {
         'node':                 None,
         'name':                 CLEANUP_ACTION_NAME,
@@ -267,12 +291,13 @@ class ValidateCleanupAction(Validator):
         'node':                 valid_node_name,
     }
 
+
 valid_cleanup_action = ValidateCleanupAction()
 
 
 class ValidateJob(Validator):
     """Validate jobs."""
-    config_class =              ConfigJob
+    config_class = ConfigJob
     defaults = {
         'run_limit':            50,
         'all_nodes':            False,
@@ -308,8 +333,10 @@ class ValidateJob(Validator):
         return in_dict
 
     # TODO: extract common code to a util function
-    def _validate_dependencies(self, job, actions,
-        base_action, current_action=None, stack=None):
+    def _validate_dependencies(
+        self, job, actions,
+        base_action, current_action=None, stack=None,
+    ):
         """Check for circular or misspelled dependencies."""
         stack = stack or []
         current_action = current_action or base_action
@@ -323,9 +350,11 @@ class ValidateJob(Validator):
                 raise ConfigError(
                     'Action jobs.%s.%s has a dependency "%s"'
                     ' that is not in the same job!' %
-                    (job['name'], current_action.name, dep))
+                    (job['name'], current_action.name, dep),
+                )
             self._validate_dependencies(
-                job, actions, base_action, actions[dep], stack)
+                job, actions, base_action, actions[dep], stack,
+            )
 
         stack.pop()
 
@@ -334,18 +363,21 @@ class ValidateJob(Validator):
         for action in job['actions'].itervalues():
             self._validate_dependencies(job, job['actions'], action)
 
+
 valid_job = ValidateJob()
 
 
 class ValidateService(Validator):
     """Validate a services configuration."""
-    config_class =              ConfigService
+    config_class = ConfigService
 
-    service_context =           command_context.build_filled_context(
-                                    command_context.ServiceInstanceContext)
+    service_context = command_context.build_filled_context(
+        command_context.ServiceInstanceContext,
+    )
 
-    service_pid_context =       command_context.build_filled_context(
-                                    command_context.ServiceInstancePidContext)
+    service_pid_context = command_context.build_filled_context(
+        command_context.ServiceInstancePidContext,
+    )
 
     defaults = {
         'count':                1,
@@ -375,18 +407,21 @@ class ValidateService(Validator):
 
         # TODO: Deprecated - remove in 0.7
         if 'restart_interval' in in_dict:
-            msg = ("restart_interval at %s is deprecated. It has been renamed "
-                   "restart_delay and will be removed in 0.7")
+            msg = (
+                "restart_interval at %s is deprecated. It has been renamed "
+                "restart_delay and will be removed in 0.7"
+            )
             log.warn(msg % config_context.path)
             in_dict['restart_delay'] = in_dict.pop('restart_interval')
         return in_dict
+
 
 valid_service = ValidateService()
 
 
 class ValidateActionRunner(Validator):
-    config_class =              schema.ConfigActionRunner
-    optional =                  True
+    config_class = schema.ConfigActionRunner
+    optional = True
     defaults = {
         'runner_type':          None,
         'remote_exec_path':     '',
@@ -395,14 +430,15 @@ class ValidateActionRunner(Validator):
 
     validators = {
         'runner_type':          config_utils.build_enum_validator(
-                                    schema.ActionRunnerTypes),
+            schema.ActionRunnerTypes,
+        ),
         'remote_status_path':   valid_string,
         'remote_exec_path':     valid_string,
     }
 
 
 class ValidateStatePersistence(Validator):
-    config_class                = schema.ConfigState
+    config_class = schema.ConfigState
     defaults = {
         'buffer_size':          1,
         'connection_details':   None,
@@ -411,7 +447,8 @@ class ValidateStatePersistence(Validator):
     validators = {
         'name':                 valid_string,
         'store_type':           config_utils.build_enum_validator(
-                                    schema.StatePersistenceTypes),
+            schema.StatePersistenceTypes,
+        ),
         'connection_details':   valid_string,
         'buffer_size':          valid_int,
     }
@@ -423,14 +460,15 @@ class ValidateStatePersistence(Validator):
             path = config_context.path
             raise ConfigError("%s buffer_size must be >= 1." % path)
 
+
 valid_state_persistence = ValidateStatePersistence()
 
 
 def validate_jobs_and_services(config, config_context):
     """Validate jobs and services."""
-    valid_jobs      = build_dict_name_validator(valid_job, allow_empty=True)
-    valid_services  = build_dict_name_validator(valid_service, allow_empty=True)
-    validation      = [('jobs', valid_jobs), ('services', valid_services)]
+    valid_jobs = build_dict_name_validator(valid_job, allow_empty=True)
+    valid_services = build_dict_name_validator(valid_service, allow_empty=True)
+    validation = [('jobs', valid_jobs), ('services', valid_services)]
 
     for config_name, valid in validation:
         child_context = config_context.build_child_context(config_name)
@@ -450,7 +488,7 @@ class ValidateConfig(Validator):
     FrozenDicts with all defaults filled in, all valid values, and no unused
     values. Throws a ConfigError if any part of the input dict is invalid.
     """
-    config_class =              TronConfig
+    config_class = TronConfig
     defaults = {
         'action_runner':        {},
         'output_stream_dir':    None,
@@ -464,8 +502,8 @@ class ValidateConfig(Validator):
         'jobs':                 (),
         'services':             (),
     }
-    node_pools  = build_dict_name_validator(valid_node_pool, allow_empty=True)
-    nodes       = build_dict_name_validator(valid_node, allow_empty=True)
+    node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
+    nodes = build_dict_name_validator(valid_node, allow_empty=True)
     validators = {
         'action_runner':        ValidateActionRunner(),
         'output_stream_dir':    valid_output_stream_dir,
@@ -494,13 +532,16 @@ class ValidateConfig(Validator):
         """Validate a non-named config."""
         node_names = config_utils.unique_names(
             'Node and NodePool names must be unique %s',
-            config['nodes'], config.get('node_pools', []))
+            config['nodes'], config.get('node_pools', []),
+        )
 
         if config.get('node_pools'):
             self.validate_node_pool_nodes(config)
 
-        config_context = ConfigContext('config', node_names,
-            config.get('command_context'), MASTER_NAMESPACE)
+        config_context = ConfigContext(
+            'config', node_names,
+            config.get('command_context'), MASTER_NAMESPACE,
+        )
         validate_jobs_and_services(config, config_context)
 
 
@@ -509,11 +550,11 @@ class ValidateNamedConfig(Validator):
     jobs and services to be defined as configuration fragments that
     are, in turn, reconciled by Tron.
     """
-    config_class =              NamedTronConfig
-    type_name =                 "NamedConfigFragment"
+    config_class = NamedTronConfig
+    type_name = "NamedConfigFragment"
     defaults = {
         'jobs':                 (),
-        'services':             ()
+        'services':             (),
     }
 
     optional = False
@@ -575,11 +616,13 @@ class ConfigContainer(object):
 
     def get_jobs(self):
         return dict(itertools.chain.from_iterable(
-            config.jobs.iteritems() for config in self.configs.itervalues()))
+            config.jobs.iteritems() for config in self.configs.itervalues()
+        ))
 
     def get_services(self):
         return dict(itertools.chain.from_iterable(
-            config.services.iteritems() for config in self.configs.itervalues()))
+            config.services.iteritems() for config in self.configs.itervalues()
+        ))
 
     def get_master(self):
         return self.configs[MASTER_NAMESPACE]

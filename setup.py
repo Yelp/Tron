@@ -1,3 +1,5 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
 try:
     from setuptools import setup, find_packages
     assert setup
@@ -36,7 +38,7 @@ setup(
         'lockfile>=0.7',
         'SQLAlchemy>=1.0.15',
     ],
-    packages=find_packages(exclude=['tests.*','tests'])+['tronweb'],
+    packages=find_packages(exclude=['tests.*', 'tests']) + ['tronweb'],
     scripts=[
         'bin/trond',
         'bin/tronview',

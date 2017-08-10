@@ -1,18 +1,24 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import fcntl
-import lockfile
 import logging
 import os
 
+import lockfile
+
 log = logging.getLogger(__name__)
+
 
 class FlockFile(object):
     """
     A lockfile (matching the specification of the builtin lockfile class)
     based off of flock. Single lockfile per process (no thread support)..
     """
+
     def __init__(self, path):
-        self.path       = path
-        self.lock_file  = None
+        self.path = path
+        self.lock_file = None
         try:
             self.lock_file = open(self.path, 'a')
         except (IOError, OSError), e:
@@ -27,7 +33,7 @@ class FlockFile(object):
     def acquire(self):
         log.debug("Locking %s", self.path)
         try:
-            fcntl.flock(self.lock_file.fileno(), fcntl.LOCK_EX|fcntl.LOCK_NB)
+            fcntl.flock(self.lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             self._has_lock = True
         except IOError, e:
             raise lockfile.AlreadyLocked(e, self.path)
@@ -45,7 +51,7 @@ class FlockFile(object):
         if self._has_lock:
             return True
         try:
-            fcntl.flock(self.lock_file.fileno(), fcntl.LOCK_EX|fcntl.LOCK_NB)
+            fcntl.flock(self.lock_file.fileno(), fcntl.LOCK_EX | fcntl.LOCK_NB)
             fcntl.flock(self.lock_file.fileno(), fcntl.LOCK_UN)
             return False
         except IOError:

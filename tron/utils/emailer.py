@@ -1,10 +1,12 @@
 """General email sending utilities"""
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
+import getpass
 import logging
 import smtplib
-from email.mime.text import MIMEText
-import getpass
 import socket
+from email.mime.text import MIMEText
 
 log = logging.getLogger("tron.emailer")
 

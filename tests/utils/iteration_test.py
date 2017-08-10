@@ -1,6 +1,16 @@
-from testify import TestCase, assert_equal, setup, run
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import TestCase
+
 from tests.assertions import assert_raises
-from tron.utils.iteration import min_filter, max_filter, list_all
+from tron.utils.iteration import list_all
+from tron.utils.iteration import max_filter
+from tron.utils.iteration import min_filter
+
 
 class FilterFuncTestCase(TestCase):
 
@@ -51,7 +61,7 @@ class FilteredMaxTestCase(FilterFuncTestCase):
 class ListAllTestCase(TestCase):
 
     def test_all_true(self):
-        assert list_all(range(1,5))
+        assert list_all(range(1, 5))
 
     def test_all_false(self):
         assert not list_all(0 for _ in xrange(7))
@@ -60,6 +70,7 @@ class ListAllTestCase(TestCase):
         seq = iter([1, 0, 3, 0, 5])
         assert not list_all(seq)
         assert_raises(StopIteration, seq.next)
+
 
 if __name__ == "__main__":
     run()

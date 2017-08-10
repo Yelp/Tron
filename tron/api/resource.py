@@ -2,6 +2,8 @@
 Web Services Interface used by command-line clients and web frontend to
 view current state, event history and send commands to trond.
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import datetime
 import logging
@@ -73,7 +75,7 @@ class ActionRunResource(resource.Resource):
     def __init__(self, action_run, job_run):
         resource.Resource.__init__(self)
         self.action_run = action_run
-        self.job_run    = job_run
+        self.job_run = job_run
         self.controller = controller.ActionRunController(action_run, job_run)
 
     def render_GET(self, request):
@@ -82,7 +84,8 @@ class ActionRunResource(resource.Resource):
             self.job_run,
             requestargs.get_integer(request, 'num_lines'),
             include_stdout=requestargs.get_bool(request, 'include_stdout'),
-            include_stderr=requestargs.get_bool(request, 'include_stderr'))
+            include_stderr=requestargs.get_bool(request, 'include_stderr'),
+        )
         return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):
@@ -93,9 +96,9 @@ class JobRunResource(resource.Resource):
 
     def __init__(self, job_run, job_scheduler):
         resource.Resource.__init__(self)
-        self.job_run       = job_run
+        self.job_run = job_run
         self.job_scheduler = job_scheduler
-        self.controller    = controller.JobRunController(job_run, job_scheduler)
+        self.controller = controller.JobRunController(job_run, job_scheduler)
 
     def getChild(self, action_name, _):
         if not action_name:
@@ -112,9 +115,11 @@ class JobRunResource(resource.Resource):
     def render_GET(self, request):
         include_runs = requestargs.get_bool(request, 'include_action_runs')
         include_graph = requestargs.get_bool(request, 'include_action_graph')
-        run_adapter = adapter.JobRunAdapter(self.job_run,
+        run_adapter = adapter.JobRunAdapter(
+            self.job_run,
             include_action_runs=include_runs,
-            include_action_graph=include_graph)
+            include_action_graph=include_graph,
+        )
         return respond(request, run_adapter.get_repr())
 
     def render_POST(self, request):
@@ -130,7 +135,7 @@ class JobResource(resource.Resource):
     def __init__(self, job_scheduler):
         resource.Resource.__init__(self)
         self.job_scheduler = job_scheduler
-        self.controller    = controller.JobController(job_scheduler)
+        self.controller = controller.JobController(job_scheduler)
 
     def get_run_from_identifier(self, run_id):
         job_runs = self.job_scheduler.get_job_runs()
@@ -160,15 +165,18 @@ class JobResource(resource.Resource):
         return resource.NoResource(msg % (run_id, job))
 
     def render_GET(self, request):
-        include_action_runs = requestargs.get_bool(request, 'include_action_runs')
+        include_action_runs = requestargs.get_bool(
+            request, 'include_action_runs',
+        )
         include_graph = requestargs.get_bool(request, 'include_action_graph')
         num_runs = requestargs.get_integer(request, 'num_runs')
         job_adapter = adapter.JobAdapter(
-                self.job_scheduler.get_job(),
-                include_job_runs=True,
-                include_action_runs=include_action_runs,
-                include_action_graph=include_graph,
-                num_runs=num_runs)
+            self.job_scheduler.get_job(),
+            include_job_runs=True,
+            include_action_runs=include_action_runs,
+            include_action_graph=include_graph,
+            num_runs=num_runs,
+        )
         return respond(request, job_adapter.get_repr())
 
     def render_POST(self, request):
@@ -177,7 +185,8 @@ class JobResource(resource.Resource):
             request,
             self.controller,
             self.job_scheduler,
-            run_time=run_time)
+            run_time=run_time,
+        )
 
 
 class ActionRunHistoryResource(resource.Resource):
@@ -189,15 +198,17 @@ class ActionRunHistoryResource(resource.Resource):
         self.action_runs = action_runs
 
     def render_GET(self, request):
-        return respond(request,
-            adapter.adapt_many(adapter.ActionRunAdapter, self.action_runs))
+        return respond(
+            request,
+            adapter.adapt_many(adapter.ActionRunAdapter, self.action_runs),
+        )
 
 
 class JobCollectionResource(resource.Resource):
 
     def __init__(self, job_collection):
         self.job_collection = job_collection
-        self.controller     = controller.JobCollectionController(job_collection)
+        self.controller = controller.JobCollectionController(job_collection)
         resource.Resource.__init__(self)
 
     def getChild(self, name, request):
@@ -206,21 +217,28 @@ class JobCollectionResource(resource.Resource):
         return resource_from_collection(self.job_collection, name, JobResource)
 
     def get_data(self, include_job_run=False, include_action_runs=False):
-        return adapter.adapt_many(adapter.JobAdapter,
+        return adapter.adapt_many(
+            adapter.JobAdapter,
             self.job_collection.get_jobs(),
             include_job_run,
             include_action_runs,
-            num_runs=5)
+            num_runs=5,
+        )
 
     def get_job_index(self):
         jobs = adapter.adapt_many(
-            adapter.JobIndexAdapter, self.job_collection.get_jobs())
-        return dict((job['name'], job['actions']) for job in jobs)
+            adapter.JobIndexAdapter, self.job_collection.get_jobs(),
+        )
+        return {job['name']: job['actions'] for job in jobs}
 
     def render_GET(self, request):
         include_job_runs = requestargs.get_bool(request, 'include_job_runs')
-        include_action_runs = requestargs.get_bool(request, 'include_action_runs')
-        output = dict(jobs=self.get_data(include_job_runs, include_action_runs))
+        include_action_runs = requestargs.get_bool(
+            request, 'include_action_runs',
+        )
+        output = dict(jobs=self.get_data(
+            include_job_runs, include_action_runs,
+        ))
         return respond(request, output)
 
     def render_POST(self, request):
@@ -234,7 +252,9 @@ class ServiceInstanceResource(resource.Resource):
     def __init__(self, service_instance):
         resource.Resource.__init__(self)
         self.service_instance = service_instance
-        self.controller = controller.ServiceInstanceController(service_instance)
+        self.controller = controller.ServiceInstanceController(
+            service_instance,
+        )
 
     def render_POST(self, request):
         return handle_command(request, self.controller, self.service_instance)
@@ -242,9 +262,10 @@ class ServiceInstanceResource(resource.Resource):
 
 class ServiceResource(resource.Resource):
     """A resource that describes a particular service"""
+
     def __init__(self, service):
         resource.Resource.__init__(self)
-        self.service    = service
+        self.service = service
         self.controller = controller.ServiceController(self.service)
 
     def getChild(self, name, _):
@@ -262,8 +283,10 @@ class ServiceResource(resource.Resource):
 
     def render_GET(self, request):
         include_events = requestargs.get_integer(request, 'include_events')
-        response = adapter.ServiceAdapter(self.service,
-            include_events=include_events).get_repr()
+        response = adapter.ServiceAdapter(
+            self.service,
+            include_events=include_events,
+        ).get_repr()
         return respond(request, response)
 
     def render_POST(self, request):
@@ -310,7 +333,8 @@ class ConfigResource(resource.Resource):
         if not config_name:
             return respond(request, {'error': "'name' for config is required."})
         response = self.controller.read_config(
-                config_name, add_header=not no_header)
+            config_name, add_header=not no_header,
+        )
         return respond(request, response)
 
     def render_POST(self, request):
@@ -322,7 +346,9 @@ class ConfigResource(resource.Resource):
             return respond(request, {'error': "'name' for config is required."})
 
         response = {'status': "Active"}
-        error = self.controller.update_config(name, config_content, config_hash)
+        error = self.controller.update_config(
+            name, config_content, config_hash,
+        )
         if error:
             response['error'] = error
         return respond(request, response)
@@ -349,8 +375,10 @@ class EventResource(resource.Resource):
         self.entity_name = entity_name
 
     def render_GET(self, request):
-        recorder      = event.get_recorder(self.entity_name)
-        response_data = adapter.adapt_many(adapter.EventAdapter, recorder.list())
+        recorder = event.get_recorder(self.entity_name)
+        response_data = adapter.adapt_many(
+            adapter.EventAdapter, recorder.list(),
+        )
         return respond(request, dict(data=response_data))
 
 
@@ -361,10 +389,14 @@ class ApiRootResource(resource.Resource):
         resource.Resource.__init__(self)
 
         # Setup children
-        self.putChild('jobs',
-            JobCollectionResource(mcp.get_job_collection()))
-        self.putChild('services',
-            ServiceCollectionResource(mcp.get_service_collection()))
+        self.putChild(
+            'jobs',
+            JobCollectionResource(mcp.get_job_collection()),
+        )
+        self.putChild(
+            'services',
+            ServiceCollectionResource(mcp.get_service_collection()),
+        )
         self.putChild('config',   ConfigResource(mcp))
         self.putChild('status',   StatusResource(mcp))
         self.putChild('events',   EventResource(''))
@@ -375,7 +407,7 @@ class ApiRootResource(resource.Resource):
         response = {
             'jobs':             self.children['jobs'].get_job_index(),
             'services':         self.children['services'].get_service_index(),
-            'namespaces':       self.children['config'].get_config_index()
+            'namespaces':       self.children['config'].get_config_index(),
         }
         return respond(request, response)
 
@@ -397,6 +429,7 @@ class RootResource(resource.Resource):
 
     def __str__(self):
         return "%s(%s, %s)" % (type(self).__name__, self.mcp, self.web_path)
+
 
 class LogAdapter(object):
 

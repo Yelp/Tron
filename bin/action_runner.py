@@ -2,11 +2,15 @@
 """
 Write pid and stdout/stderr to a standard location before execing a command.
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import contextlib
 import logging
 import os
 import subprocess
 import sys
+
 import yaml
 
 
@@ -21,6 +25,7 @@ opener = open
 
 class StatusFile(object):
     """Manage a status file."""
+
     def __init__(self, filename):
         self.filename = filename
 
@@ -32,7 +37,7 @@ class StatusFile(object):
         return {
             'command':      command,
             'pid':          proc.pid,
-            'return_code':  proc.returncode
+            'return_code':  proc.returncode,
         }
 
     @contextlib.contextmanager
@@ -77,7 +82,8 @@ def parse_args(args):
 
 def run_command(command):
     return subprocess.Popen(
-        command, shell=True, stdout=sys.stdout, stderr=sys.stderr)
+        command, shell=True, stdout=sys.stdout, stderr=sys.stderr,
+    )
 
 
 if __name__ == "__main__":

@@ -1,4 +1,8 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import logging
+
 from tron.core import action
 
 log = logging.getLogger(__name__)
@@ -8,14 +12,16 @@ class ActionGraph(object):
     """A directed graph of actions and their requirements."""
 
     def __init__(self, graph, action_map):
-        self.graph              = graph
-        self.action_map         = action_map
+        self.graph = graph
+        self.action_map = action_map
 
     @classmethod
     def from_config(cls, actions_config, cleanup_action_config=None):
         """Create this graph from a job config."""
-        actions = dict((name, action.Action.from_config(conf))
-                        for name, conf in actions_config.iteritems())
+        actions = {
+            name: action.Action.from_config(conf)
+            for name, conf in actions_config.iteritems()
+        }
         if cleanup_action_config:
             cleanup_action = action.Action.from_config(cleanup_action_config)
             actions[cleanup_action.name] = cleanup_action

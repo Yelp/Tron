@@ -1,11 +1,16 @@
-import struct
-import logging
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
-from twisted.internet import defer
-from twisted.conch.ssh import channel, common, keys
-from twisted.conch.ssh import connection
-from twisted.conch.ssh import transport
+import logging
+import struct
+
 from twisted.conch.client import default
+from twisted.conch.ssh import channel
+from twisted.conch.ssh import common
+from twisted.conch.ssh import connection
+from twisted.conch.ssh import keys
+from twisted.conch.ssh import transport
+from twisted.internet import defer
 from twisted.python import failure
 
 log = logging.getLogger('tron.ssh')
@@ -25,6 +30,7 @@ class SSHAuthOptions(object):
     """An options class which can be used by NoPasswordAuthClient. This supports
     the interface provided by: twisted.conch.client.options.ConchOptions.
     """
+
     def __init__(self, identitys, use_agent):
         self.use_agent = use_agent
         self.identitys = identitys
@@ -41,7 +47,8 @@ class SSHAuthOptions(object):
     def __eq__(self, other):
         return other and (
             self.use_agent == other.use_agent and
-            self.identitys == other.identitys)
+            self.identitys == other.identitys
+        )
 
     def __ne__(self, other):
         return not self == other
@@ -53,9 +60,9 @@ class SSHAuthOptions(object):
 
 class NoPasswordAuthClient(default.SSHUserAuthClient):
     """Only support passwordless auth."""
-    preferredOrder              = ['publickey']
-    auth_password               = None
-    auth_keyboard_interactive   = None
+    preferredOrder = ['publickey']
+    auth_password = None
+    auth_keyboard_interactive = None
 
 
 class ClientTransport(transport.SSHClientTransport):
@@ -63,8 +70,8 @@ class ClientTransport(transport.SSHClientTransport):
     connection_defer = None
 
     def __init__(self, username, options, expected_pub_key):
-        self.username         = username
-        self.options          = options
+        self.username = username
+        self.options = options
         self.expected_pub_key = expected_pub_key
 
     def verifyHostKey(self, public_key, fingerprint):
@@ -75,7 +82,8 @@ class ClientTransport(transport.SSHClientTransport):
             return defer.succeed(2)
 
         msg = "Public key mismatch got %s expected %s" % (
-            fingerprint, self.expected_pub_key.fingerprint())
+            fingerprint, self.expected_pub_key.fingerprint(),
+        )
         log.error(msg)
         return defer.fail(ValueError(msg))
 
@@ -138,6 +146,7 @@ class ClientConnection(connection.SSHConnection):
             return
         connection.SSHConnection.ssh_CHANNEL_REQUEST(self, packet)
 
+
 class ExecChannel(channel.SSHChannel):
 
     name = 'session'
@@ -166,9 +175,11 @@ class ExecChannel(channel.SSHChannel):
             # Unicode commands will cause the connection to fail
             self.command = str(self.command)
 
-            req = self.conn.sendRequest(self, 'exec',
-                                        common.NS(self.command),
-                                        wantReply=True)
+            req = self.conn.sendRequest(
+                self, 'exec',
+                common.NS(self.command),
+                wantReply=True,
+            )
             req.addCallback(self._cbExecSendRequest)
         else:
             # A missing start defer means that we are no longer expected to do
@@ -219,12 +230,16 @@ class ExecChannel(channel.SSHChannel):
         return "".join(self.data)
 
     def closed(self):
-        if (self.exit_status is None and
+        if (
+            self.exit_status is None and
             self.running and
             self.exit_defer and
-            not self.exit_defer.called):
-            log.warning("Channel has been closed without receiving an exit"
-                        " status")
+                not self.exit_defer.called
+        ):
+            log.warning(
+                "Channel has been closed without receiving an exit"
+                " status",
+            )
             f = failure.Failure(exc_value=ChannelClosedEarlyError())
             self.exit_defer.errback(f)
 

@@ -1,7 +1,10 @@
-from collections import deque
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+import itertools
 import logging
 import operator
-import itertools
+from collections import deque
 
 from tron.utils import timeutils
 
@@ -17,8 +20,8 @@ class EventLevel(object):
     __slots__ = ('order', 'label')
 
     def __init__(self, order, label):
-        self.order          = order
-        self.label          = label
+        self.order = order
+        self.label = label
 
     def __eq__(self, other):
         return self.order == other.order
@@ -30,18 +33,18 @@ class EventLevel(object):
         return hash(self.order)
 
 
-LEVEL_INFO      = EventLevel(0, "INFO")         # Troubleshooting information
-LEVEL_OK        = EventLevel(1, "OK")           # Expected behaviour
-LEVEL_NOTICE    = EventLevel(2, "NOTICE")       # Troubling behaviour
-LEVEL_CRITICAL  = EventLevel(3, "CRITICAL")     # Major Failure
+LEVEL_INFO = EventLevel(0, "INFO")         # Troubleshooting information
+LEVEL_OK = EventLevel(1, "OK")           # Expected behaviour
+LEVEL_NOTICE = EventLevel(2, "NOTICE")       # Troubling behaviour
+LEVEL_CRITICAL = EventLevel(3, "CRITICAL")     # Major Failure
 
 
 class EventStore(object):
     """An index of event level to a circular buffer of events. Supports
     retrieving events which with a minimal level.
     """
-    DEFAULT_LIMIT   = 10
-    NO_LEVEL        = EventLevel(None, None)
+    DEFAULT_LIMIT = 10
+    NO_LEVEL = EventLevel(None, None)
 
     def __init__(self, limits=None):
         self.limits = limits or dict()
@@ -58,9 +61,9 @@ class EventStore(object):
         self.events[level].append(event)
 
     def get_events(self, min_level=None):
-        min_level       = min_level or self.NO_LEVEL
-        event_iterable  = self.events.iteritems()
-        groups          = (e for key, e in event_iterable if key >= min_level)
+        min_level = min_level or self.NO_LEVEL
+        event_iterable = self.events.iteritems()
+        groups = (e for key, e in event_iterable if key >= min_level)
         return itertools.chain.from_iterable(groups)
     __iter__ = get_events
 
@@ -70,11 +73,11 @@ class Event(object):
     __slots__ = ('entity', 'time', 'level', 'name', 'data')
 
     def __init__(self, entity, level, name, **data):
-        self.entity     = entity
-        self.time       = timeutils.current_time()
-        self.level      = level
-        self.name       = name
-        self.data       = data
+        self.entity = entity
+        self.time = timeutils.current_time()
+        self.level = level
+        self.name = name
+        self.data = data
 
 
 class EventRecorder(object):
@@ -84,18 +87,18 @@ class EventRecorder(object):
     __slots__ = ('name', 'children', 'events')
 
     def __init__(self, name):
-        self.name           = name
-        self.children       = {}
-        self.events         = EventStore()
+        self.name = name
+        self.children = {}
+        self.events = EventStore()
 
     def get_child(self, child_key):
         if child_key in self.children:
             return self.children[child_key]
 
-        split_char      = NAME_CHARACTER
-        name_parts      = [self.name, child_key] if self.name else [child_key]
-        child_name      = split_char.join(name_parts)
-        child           = EventRecorder(child_name)
+        split_char = NAME_CHARACTER
+        name_parts = [self.name, child_key] if self.name else [child_key]
+        child_name = split_char.join(name_parts)
+        child = EventRecorder(child_name)
         return self.children.setdefault(child_key, child)
 
     def remove_child(self, child_key):
@@ -178,8 +181,8 @@ class EventManager(object):
 
     def remove(self, entity_name):
         """Remove an event recorder."""
-        recorder        = self.root_recorder
-        name_parts      = self._get_name_parts(entity_name)
+        recorder = self.root_recorder
+        name_parts = self._get_name_parts(entity_name)
         for child_key in name_parts[:-1]:
             recorder = recorder.get_child(child_key)
 

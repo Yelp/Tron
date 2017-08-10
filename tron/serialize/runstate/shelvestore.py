@@ -1,16 +1,20 @@
-import logging
-import shelve
-import operator
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import itertools
+import logging
+import operator
+import shelve
 
 log = logging.getLogger(__name__)
+
 
 class ShelveKey(object):
     __slots__ = ['type', 'iden']
 
     def __init__(self, type, iden):
-        self.type               = type
-        self.iden               = iden
+        self.type = type
+        self.iden = iden
 
     @property
     def key(self):
@@ -24,6 +28,7 @@ class ShelveKey(object):
 
     def __hash__(self):
         return hash(self.key)
+
 
 class ShelveStateStore(object):
     """Persist state using `shelve`."""
@@ -41,7 +46,12 @@ class ShelveStateStore(object):
         self.shelve.sync()
 
     def restore(self, keys):
-        items = itertools.izip(keys, (self.shelve.get(key.key) for key in keys))
+        items = itertools.izip(
+            keys, (
+                self.shelve.get(key.key)
+                for key in keys
+            ),
+        )
         return dict(itertools.ifilter(operator.itemgetter(1), items))
 
     def cleanup(self):

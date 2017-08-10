@@ -1,8 +1,18 @@
-import datetime
-from testify import TestCase, run, assert_equal, setup
-from tests.testingutils import Turtle
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
-from tron.api.requestargs import get_integer, get_string, get_bool, get_datetime
+import datetime
+
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import TestCase
+
+from tests.testingutils import Turtle
+from tron.api.requestargs import get_bool
+from tron.api.requestargs import get_datetime
+from tron.api.requestargs import get_integer
+from tron.api.requestargs import get_string
 
 
 class RequestArgsTestCase(TestCase):
@@ -13,7 +23,7 @@ class RequestArgsTestCase(TestCase):
             'number':   ['123'],
             'string':   ['astring'],
             'boolean':  ['1'],
-            'datetime': ['2012-03-14 15:09:26']
+            'datetime': ['2012-03-14 15:09:26'],
         }
         self.datetime = datetime.datetime(2012, 3, 14, 15, 9, 26)
         self.request = Turtle(args=self.args)

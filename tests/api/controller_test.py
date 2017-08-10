@@ -1,23 +1,36 @@
-import mock
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
-from testify import setup, TestCase, run, assert_equal
+import mock
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import TestCase
 from testify.assertions import assert_in
+
 from tests.testingutils import autospec_method
 from tron import mcp
 from tron.api import controller
-
-from tron.api.controller import JobCollectionController, ConfigController
-from tron.config import ConfigError, manager, config_parse
-from tron.core import job, service, jobrun, actionrun
+from tron.api.controller import ConfigController
+from tron.api.controller import JobCollectionController
+from tron.config import config_parse
+from tron.config import ConfigError
+from tron.config import manager
+from tron.core import actionrun
+from tron.core import job
+from tron.core import jobrun
+from tron.core import service
 
 
 class JobCollectionControllerTestCase(TestCase):
 
     @setup
     def setup_controller(self):
-        self.collection     = mock.create_autospec(job.JobCollection,
-                                enable=mock.Mock(), disable=mock.Mock())
-        self.controller     = JobCollectionController(self.collection)
+        self.collection = mock.create_autospec(
+            job.JobCollection,
+            enable=mock.Mock(), disable=mock.Mock(),
+        )
+        self.controller = JobCollectionController(self.collection)
 
     def test_handle_command_enabled(self):
         self.controller.handle_command('enableall')
@@ -32,12 +45,15 @@ class ActionRunControllerTestCase(TestCase):
 
     @setup
     def setup_controller(self):
-        self.action_run = mock.create_autospec(actionrun.ActionRun,
-            cancel=mock.Mock())
+        self.action_run = mock.create_autospec(
+            actionrun.ActionRun,
+            cancel=mock.Mock(),
+        )
         self.job_run = mock.create_autospec(jobrun.JobRun)
         self.job_run.is_scheduled = False
         self.controller = controller.ActionRunController(
-            self.action_run, self.job_run)
+            self.action_run, self.job_run,
+        )
 
     def test_handle_command_start_failed(self):
         self.job_run.is_scheduled = True
@@ -66,20 +82,24 @@ class ActionRunControllerTestCase(TestCase):
         assert_in("Attempting to kill", result)
 
 
-
 class JobRunControllerTestCase(TestCase):
 
     @setup
     def setup_controller(self):
-        self.job_run = mock.create_autospec(jobrun.JobRun,
-            run_time=mock.Mock(), cancel=mock.Mock())
+        self.job_run = mock.create_autospec(
+            jobrun.JobRun,
+            run_time=mock.Mock(), cancel=mock.Mock(),
+        )
         self.job_scheduler = mock.create_autospec(job.JobScheduler)
         self.controller = controller.JobRunController(
-            self.job_run, self.job_scheduler)
+            self.job_run, self.job_scheduler,
+        )
 
     def test_handle_command_restart(self):
         self.controller.handle_command('restart')
-        self.job_scheduler.manual_start.assert_called_with(self.job_run.run_time)
+        self.job_scheduler.manual_start.assert_called_with(
+            self.job_run.run_time,
+        )
 
     def test_handle_mapped_command(self):
         result = self.controller.handle_command('start')
@@ -172,7 +192,8 @@ class ConfigControllerTestCase(TestCase):
     def test_render_template(self):
         config_content = "asdf asdf"
         container = self.manager.load.return_value = mock.create_autospec(
-            config_parse.ConfigContainer)
+            config_parse.ConfigContainer,
+        )
         container.get_node_names.return_value = ['one', 'two', 'three']
         container.get_master.return_value.command_context = {'zing': 'stars'}
         content = self.controller.render_template(config_content)
@@ -222,8 +243,12 @@ class ConfigControllerTestCase(TestCase):
         resp = self.controller.read_config(name)
         self.controller._get_config_content.assert_called_with(name)
         self.controller.render_template.assert_called_with(
-            self.controller._get_config_content.return_value)
-        assert_equal(resp['config'], self.controller.render_template.return_value)
+            self.controller._get_config_content.return_value,
+        )
+        assert_equal(
+            resp['config'],
+            self.controller.render_template.return_value,
+        )
         assert_equal(resp['hash'], self.manager.get_hash.return_value)
 
     def test_read_config_no_header(self):
@@ -232,7 +257,10 @@ class ConfigControllerTestCase(TestCase):
         autospec_method(self.controller.render_template)
         resp = self.controller.read_config(name, add_header=False)
         assert not self.controller.render_template.called
-        assert_equal(resp['config'], self.controller._get_config_content.return_value)
+        assert_equal(
+            resp['config'],
+            self.controller._get_config_content.return_value,
+        )
 
     def test_update_config(self):
         autospec_method(self.controller.strip_header)
@@ -251,7 +279,9 @@ class ConfigControllerTestCase(TestCase):
         name, content, config_hash = None, mock.Mock(), mock.Mock()
         self.manager.get_hash.return_value = config_hash
         self.manager.write_config.side_effect = ConfigError("It broke")
-        error = self.controller.update_config(name, striped_content, config_hash)
+        error = self.controller.update_config(
+            name, striped_content, config_hash,
+        )
         assert_equal(error, "It broke")
         self.manager.write_config.assert_called_with(name, striped_content)
         assert not self.mcp.reconfigure.call_count
@@ -265,6 +295,7 @@ class ConfigControllerTestCase(TestCase):
         result = self.controller.get_namespaces()
         self.manager.get_namespaces.assert_called_with()
         assert_equal(result, self.manager.get_namespaces.return_value)
+
 
 if __name__ == "__main__":
     run()

@@ -1,15 +1,24 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import shutil
 import tempfile
 
 import mock
-from testify import TestCase, setup, teardown
-from testify import  assert_equal, run
-from tests.testingutils import autospec_method
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import teardown
+from testify import TestCase
 
-from tron import mcp, event
-from tron.core import service, job
+from tests.testingutils import autospec_method
+from tron import event
+from tron import mcp
+from tron.config import config_parse
+from tron.config import manager
+from tron.core import job
+from tron.core import service
 from tron.serialize.runstate import statemanager
-from tron.config import config_parse, manager
 
 
 class MasterControlProgramTestCase(TestCase):
@@ -18,12 +27,14 @@ class MasterControlProgramTestCase(TestCase):
 
     @setup
     def setup_mcp(self):
-        self.working_dir    = tempfile.mkdtemp()
-        self.config_path    = tempfile.mkdtemp()
-        self.mcp            = mcp.MasterControlProgram(
-                                self.working_dir, self.config_path)
+        self.working_dir = tempfile.mkdtemp()
+        self.config_path = tempfile.mkdtemp()
+        self.mcp = mcp.MasterControlProgram(
+            self.working_dir, self.config_path,
+        )
         self.mcp.state_watcher = mock.create_autospec(
-                                statemanager.StateChangeWatcher)
+            statemanager.StateChangeWatcher,
+        )
 
     @teardown
     def teardown_mcp(self):
@@ -43,7 +54,8 @@ class MasterControlProgramTestCase(TestCase):
         self.mcp._load_config()
         self.mcp.state_watcher.disabled.assert_called_with()
         self.mcp.apply_config.assert_called_with(
-            self.mcp.config.load.return_value, reconfigure=False)
+            self.mcp.config.load.return_value, reconfigure=False,
+        )
 
     def test_graceful_shutdown(self):
         self.mcp.graceful_shutdown()
@@ -59,30 +71,42 @@ class MasterControlProgramTestCase(TestCase):
         autospec_method(self.mcp.build_job_scheduler_factory)
         self.mcp.apply_config(config_container)
         self.mcp.state_watcher.update_from_config.assert_called_with(
-            master_config.state_persistence)
+            master_config.state_persistence,
+        )
         assert_equal(self.mcp.context.base, master_config.command_context)
         assert_equal(len(self.mcp.apply_collection_config.mock_calls), 2)
         self.mcp.apply_notification_options.assert_called_with(
-            master_config.notification_options)
-        mock_repo.update_from_config.assert_called_with(master_config.nodes, 
-            master_config.node_pools, master_config.ssh_options)
+            master_config.notification_options,
+        )
+        mock_repo.update_from_config.assert_called_with(
+            master_config.nodes,
+            master_config.node_pools, master_config.ssh_options,
+        )
         self.mcp.build_job_scheduler_factory(master_config)
 
     def test_update_state_watcher_config_changed(self):
         self.mcp.state_watcher.update_from_config.return_value = True
         self.mcp.jobs = mock.create_autospec(job.JobCollection)
-        self.mcp.jobs.__iter__.return_values = {'a': mock.Mock(), 'b': mock.Mock()}
+        self.mcp.jobs.__iter__.return_values = {
+            'a': mock.Mock(), 'b': mock.Mock(),
+        }
         self.mcp.services = mock.create_autospec(service.ServiceCollection)
-        self.mcp.services.__iter__.return_value = {'c': mock.Mock(), 'd': mock.Mock()}
+        self.mcp.services.__iter__.return_value = {
+            'c': mock.Mock(), 'd': mock.Mock(),
+        }
         state_config = mock.Mock()
         self.mcp.update_state_watcher_config(state_config)
-        self.mcp.state_watcher.update_from_config.assert_called_with(state_config)
+        self.mcp.state_watcher.update_from_config.assert_called_with(
+            state_config,
+        )
         assert_equal(
             self.mcp.state_watcher.save_job.mock_calls,
-            [mock.call(j.job) for j in self.mcp.jobs])
+            [mock.call(j.job) for j in self.mcp.jobs],
+        )
         assert_equal(
             self.mcp.state_watcher.save_service.mock_calls,
-            [mock.call(s) for s in self.mcp.services])
+            [mock.call(s) for s in self.mcp.services],
+        )
 
     def test_update_state_watcher_config_no_change(self):
         self.mcp.state_watcher.update_from_config.return_value = False
@@ -96,13 +120,16 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
 
     @setup
     def setup_mcp(self):
-        self.working_dir        = tempfile.mkdtemp()
-        self.config_path        = tempfile.mkdtemp()
-        self.mcp                = mcp.MasterControlProgram(
-                                    self.working_dir, self.config_path)
-        self.mcp.jobs           = mock.create_autospec(job.JobCollection)
-        self.mcp.services       = mock.create_autospec(service.ServiceCollection)
-        self.mcp.state_watcher  = mock.create_autospec(statemanager.StateChangeWatcher)
+        self.working_dir = tempfile.mkdtemp()
+        self.config_path = tempfile.mkdtemp()
+        self.mcp = mcp.MasterControlProgram(
+            self.working_dir, self.config_path,
+        )
+        self.mcp.jobs = mock.create_autospec(job.JobCollection)
+        self.mcp.services = mock.create_autospec(service.ServiceCollection)
+        self.mcp.state_watcher = mock.create_autospec(
+            statemanager.StateChangeWatcher,
+        )
 
     @teardown
     def teardown_mcp(self):

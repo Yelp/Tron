@@ -1,14 +1,19 @@
 #!/usr/bin/env python
+from __future__ import absolute_import
+from __future__ import unicode_literals
 from __future__ import with_statement
+
 import logging
 import os
-import tempfile
 import sys
+import tempfile
 
 from tron.commands import cmd_utils
 from tron.commands.client import Client
 from tron.config import config_parse
-from tron.config import schema, manager, ConfigError
+from tron.config import ConfigError
+from tron.config import manager
+from tron.config import schema
 
 
 log = logging.getLogger('tronfig')
@@ -25,13 +30,17 @@ def set_options_from_args(options, args):
 
 
 def parse_options():
-    usage  = "usage: %prog [<name>] [options] [-]"
+    usage = "usage: %prog [<name>] [options] [-]"
     parser = cmd_utils.build_option_parser(usage)
 
-    parser.add_option("-p", "--print", action="store_true", dest="print_config",
-                      help="Print config to stdout, rather than uploading")
-    parser.add_option("-n", "--no-header", action="store_true", default=False,
-                      help="Print named config without a header")
+    parser.add_option(
+        "-p", "--print", action="store_true", dest="print_config",
+        help="Print config to stdout, rather than uploading",
+    )
+    parser.add_option(
+        "-n", "--no-header", action="store_true", default=False,
+        help="Print named config without a header",
+    )
 
     options, args = parser.parse_args()
     set_options_from_args(options, args)
@@ -39,8 +48,10 @@ def parse_options():
 
 
 def upload_config(client, config_name, contents, config_hash):
-    response = client.config(config_name,
-                             config_data=contents, config_hash=config_hash)
+    response = client.config(
+        config_name,
+        config_data=contents, config_hash=config_hash,
+    )
     if 'error' in response:
         log.error(response['error'])
         return False
@@ -56,7 +67,8 @@ def edit_config(contents):
     editor = os.getenv('EDITOR') or os.getenv('VISUAL') or 'vim'
     while os.system("%s %s" % (editor, fi.name)):
         response = raw_input(
-            "Editor returned an error. Continue editing? (y/n): ")
+            "Editor returned an error. Continue editing? (y/n): ",
+        )
         if response[:1].lower() == 'n':
             return
 
@@ -90,9 +102,9 @@ def update_with_editor(client, config_name):
     if not sys.stdout.isatty():
         raise SystemExit("No editing possible.")
 
-    response        = client.config(config_name)
-    config_content  = response['config']
-    config_hash     = response['hash']
+    response = client.config(config_name)
+    config_content = response['config']
+    config_hash = response['hash']
     while True:
         config_content = edit_config(config_content)
         if not config_content:
@@ -104,7 +116,8 @@ def update_with_editor(client, config_name):
                 return
 
         response = raw_input(
-            "There are errors in your configuration. Continue editing? (y/n): ")
+            "There are errors in your configuration. Continue editing? (y/n): ",
+        )
         if response[:1].lower() == 'n':
             return
 

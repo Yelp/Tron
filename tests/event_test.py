@@ -1,7 +1,15 @@
-from testify import setup, TestCase, assert_equal, teardown, assert_raises
-from tests.assertions import assert_length
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
+from testify import assert_equal
+from testify import assert_raises
+from testify import setup
+from testify import teardown
+from testify import TestCase
+
+from tests.assertions import assert_length
 from tron import event
+
 
 class EventStoreTestCase(TestCase):
 
@@ -9,7 +17,7 @@ class EventStoreTestCase(TestCase):
     def build_store(self):
         self.limits = {
             event.LEVEL_INFO:       2,
-            event.LEVEL_CRITICAL:   3
+            event.LEVEL_CRITICAL:   3,
         }
         self.store = event.EventStore(self.limits)
 
@@ -18,10 +26,12 @@ class EventStoreTestCase(TestCase):
 
     @setup
     def add_data(self):
-        for i in xrange(1,5):
-            self.store.append(self._build_event(event.LEVEL_INFO, "test%s" % i))
+        for i in xrange(1, 5):
+            self.store.append(self._build_event(
+                event.LEVEL_INFO, "test%s" % i,
+            ))
 
-        for i in xrange(5,10):
+        for i in xrange(5, 10):
             e = self._build_event(event.LEVEL_CRITICAL, "test%s" % i)
             self.store.append(e)
 
@@ -38,13 +48,13 @@ class EventStoreTestCase(TestCase):
             assert_equal(len(self.store.events[level]), limit)
 
     def test_get_events(self):
-        values = set(e.name for e in self.store.get_events())
-        expected = set(['test3', 'test4', 'test7', 'test8', 'test9', 'alpha'])
+        values = {e.name for e in self.store.get_events()}
+        expected = {'test3', 'test4', 'test7', 'test8', 'test9', 'alpha'}
         assert_equal(values, expected)
 
     def test_get_events_with_min_level(self):
-        values = set(e.name for e in self.store.get_events(event.LEVEL_OK))
-        expected = set(['test7', 'test8', 'test9', 'alpha'])
+        values = {e.name for e in self.store.get_events(event.LEVEL_OK)}
+        expected = {'test7', 'test8', 'test9', 'alpha'}
         assert_equal(values, expected)
 
 
@@ -53,7 +63,7 @@ class EventRecorderTestCase(TestCase):
     @setup
     def build_recorders(self):
         self.entity_name = 'the_name'
-        self.recorder    = event.EventRecorder(self.entity_name)
+        self.recorder = event.EventRecorder(self.entity_name)
 
     def test_get_child(self):
         child_rec = self.recorder.get_child('start')
@@ -140,7 +150,8 @@ class EventManagerTestCase(TestCase):
         recorder = self.manager.get(name)
         assert_equal(
             self.root.children['name'].children['second'].children['third'],
-            recorder)
+            recorder,
+        )
         assert_equal(recorder.name, name)
 
     def test_remove(self):

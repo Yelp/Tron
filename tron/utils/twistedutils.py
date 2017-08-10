@@ -1,4 +1,8 @@
-from twisted.internet import defer, reactor
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+from twisted.internet import defer
+from twisted.internet import reactor
 from twisted.python import failure
 
 

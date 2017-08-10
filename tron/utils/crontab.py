@@ -1,4 +1,6 @@
 """Parse a crontab entry and return a dictionary."""
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import calendar
 import itertools
@@ -11,8 +13,9 @@ PREDEFINED_SCHEDULE = {
     "@monthly": "0 0 1 * *",
     "@weekly":  "0 0 * * 0",
     "@daily":   "0 0 * * *",
-    "@midnight":"0 0 * * *",
-    "@hourly":  "0 * * * *"}
+    "@midnight": "0 0 * * *",
+    "@hourly":  "0 * * * *",
+}
 
 
 def convert_predefined(line):
@@ -27,13 +30,15 @@ def convert_predefined(line):
 class FieldParser(object):
     """Parse and validate a field in a crontab entry."""
 
-    name   = None
+    name = None
     bounds = None
-    range_pattern = re.compile(r'''
+    range_pattern = re.compile(
+        r'''
         (?P<min>\d+|\*)         # Initial value
         (?:-(?P<max>\d+))?      # Optional max upper bound
         (?:/(?P<step>\d+))?     # Optional step increment
-        ''', re.VERBOSE)
+        ''', re.VERBOSE,
+    )
 
     def normalize(self, source):
         return source.strip()
@@ -45,7 +50,7 @@ class FieldParser(object):
         if source == '*':
             return None
 
-        groups  = [self.get_values(group) for group in self.get_groups(source)]
+        groups = [self.get_values(group) for group in self.get_groups(source)]
         return sorted(set(itertools.chain.from_iterable(groups)))
 
     def get_match_groups(self, source):
@@ -55,9 +60,9 @@ class FieldParser(object):
         return match.groupdict()
 
     def get_values(self, source):
-        source               = self.normalize(source)
-        match_groups         = self.get_match_groups(source)
-        step                 = 1
+        source = self.normalize(source)
+        match_groups = self.get_match_groups(source)
+        step = 1
         min_value, max_value = self.get_value_range(match_groups)
 
         if match_groups['step']:
@@ -93,16 +98,18 @@ class FieldParser(object):
 
 
 class MinuteFieldParser(FieldParser):
-    name    = 'minutes'
-    bounds  = (0, 60)
+    name = 'minutes'
+    bounds = (0, 60)
+
 
 class HourFieldParser(FieldParser):
-    name    = 'hours'
-    bounds  = (0, 24)
+    name = 'hours'
+    bounds = (0, 24)
+
 
 class MonthdayFieldParser(FieldParser):
-    name    = 'monthdays'
-    bounds  = (1, 32)
+    name = 'monthdays'
+    bounds = (1, 32)
 
     def get_values(self, source):
         # Handle special case for last day of month
@@ -112,22 +119,24 @@ class MonthdayFieldParser(FieldParser):
 
         return super(MonthdayFieldParser, self).get_values(source)
 
+
 class MonthFieldParser(FieldParser):
-    name        = 'months'
-    bounds      = (1, 13)
+    name = 'months'
+    bounds = (1, 13)
     month_names = calendar.month_abbr[1:]
 
     def normalize(self, month):
         month = super(MonthFieldParser, self).normalize(month)
         month = month.lower()
-        for month_num, month_name in  enumerate(self.month_names, start=1):
+        for month_num, month_name in enumerate(self.month_names, start=1):
             month = month.replace(month_name.lower(), str(month_num))
         return month
 
+
 class WeekdayFieldParser(FieldParser):
-    name        = 'weekdays'
-    bounds      = (0, 7)
-    day_names   = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
+    name = 'weekdays'
+    bounds = (0, 7)
+    day_names = ['sun', 'mon', 'tue', 'wed', 'thu', 'fri', 'sat']
 
     def normalize(self, day_of_week):
         day_of_week = super(WeekdayFieldParser, self).normalize(day_of_week)
@@ -137,11 +146,11 @@ class WeekdayFieldParser(FieldParser):
         return day_of_week.replace('7', '0').replace('?', '*')
 
 
-minute_parser   = MinuteFieldParser()
-hour_parser     = HourFieldParser()
+minute_parser = MinuteFieldParser()
+hour_parser = HourFieldParser()
 monthday_parser = MonthdayFieldParser()
-month_parser    = MonthdayFieldParser()
-weekday_parser  = WeekdayFieldParser()
+month_parser = MonthdayFieldParser()
+weekday_parser = WeekdayFieldParser()
 
 
 # TODO: support L (for dow), W, #
@@ -155,4 +164,5 @@ def parse_crontab(line):
         'monthdays':    monthday_parser.parse(dom),
         'months':       month_parser.parse(months),
         'weekdays':     weekday_parser.parse(dow),
-        'ordinals':     None}
+        'ordinals':     None,
+    }

@@ -43,7 +43,7 @@ deb: man
 	dpkg-buildpackage -i -I -rfakeroot -uc -us
 
 publish:
-	python setup.py sdist bdist_wheel	
+	python setup.py sdist bdist_wheel
 	twine upload dist/*
 
 clean:
@@ -72,7 +72,7 @@ docs:
 
 doc: docs
 
-man: 
+man:
 	which $(SPHINXBUILD) >/dev/null && $(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_DIR)/man || true
 	@echo
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."

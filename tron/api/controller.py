@@ -1,8 +1,13 @@
 """
 Web Controllers for the API.
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import logging
+
 import pkg_resources
+
 import tron
 from tron.config import schema
 
@@ -33,20 +38,23 @@ class JobCollectionController(object):
 
 class ActionRunController(object):
 
-    mapped_commands = set(
-        ('start', 'success', 'cancel', 'fail', 'skip', 'stop', 'kill'))
+    mapped_commands = {
+        'start', 'success', 'cancel', 'fail', 'skip', 'stop', 'kill',
+    }
 
     def __init__(self, action_run, job_run):
         self.action_run = action_run
-        self.job_run    = job_run
+        self.job_run = job_run
 
     def handle_command(self, command):
         if command not in self.mapped_commands:
             raise UnknownCommandError("Unknown command %s" % command)
 
         if command == 'start' and self.job_run.is_scheduled:
-            return ("Action run can not be started if it's job run is still "
-                    "scheduled.")
+            return (
+                "Action run can not be started if it's job run is still "
+                "scheduled."
+            )
 
         if command in ('stop', 'kill'):
             return self.handle_termination(command)
@@ -68,13 +76,12 @@ class ActionRunController(object):
             return msg % (command, e)
 
 
-
 class JobRunController(object):
 
-    mapped_commands = set(('start', 'success', 'cancel', 'fail', 'stop'))
+    mapped_commands = {'start', 'success', 'cancel', 'fail', 'stop'}
 
     def __init__(self, job_run, job_scheduler):
-        self.job_run       = job_run
+        self.job_run = job_run
         self.job_scheduler = job_scheduler
 
     def handle_command(self, command):
@@ -157,6 +164,7 @@ class ServiceController(object):
 def format_seq(seq):
     return "\n# ".join(sorted(seq))
 
+
 def format_mapping(mapping):
     seq = ("%-30s: %s" % (k, v) for k, v in sorted(mapping.iteritems()))
     return format_seq(seq)
@@ -173,7 +181,7 @@ class ConfigController(object):
 
     HEADER_END = TEMPLATE.split('\n')[-2] + '\n'
 
-    DEFAULT_NAMED_CONFIG =  "\njobs:\n\nservices:\n"
+    DEFAULT_NAMED_CONFIG = "\njobs:\n\nservices:\n"
 
     def __init__(self, mcp):
         self.mcp = mcp
@@ -184,7 +192,8 @@ class ConfigController(object):
         command_context = container.get_master().command_context or {}
         context = {
             'node_names': format_seq(container.get_node_names()),
-            'command_context': format_mapping(command_context)}
+            'command_context': format_mapping(command_context),
+        }
         return self.TEMPLATE % context + config_content
 
     def strip_header(self, name, content):

@@ -1,11 +1,20 @@
-import mock
-from testify import TestCase, run, setup, assert_equal
-from testify import setup_teardown
-from tron.commands import display
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
-from tron.commands.display import DisplayServices, DisplayJobRuns
-from tron.commands.display import DisplayActionRuns, DisplayJobs
-from tron.core import actionrun, service
+import mock
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import setup_teardown
+from testify import TestCase
+
+from tron.commands import display
+from tron.commands.display import DisplayActionRuns
+from tron.commands.display import DisplayJobRuns
+from tron.commands.display import DisplayJobs
+from tron.commands.display import DisplayServices
+from tron.core import actionrun
+from tron.core import service
 
 
 class DisplayServicesTestCase(TestCase):
@@ -13,9 +22,18 @@ class DisplayServicesTestCase(TestCase):
     @setup
     def setup_data(self):
         self.data = [
-            dict(name="My Service",      state="stopped", live_count="4", owner="alice", enabled=True),
-            dict(name="Another Service", state="running", live_count="2", owner="bob",   enabled=False),
-            dict(name="Yet another",     state="running", live_count="1", owner="ted",   enabled=True)
+            dict(
+                name="My Service",      state="stopped",
+                live_count="4", owner="alice", enabled=True,
+            ),
+            dict(
+                name="Another Service", state="running",
+                live_count="2", owner="bob",   enabled=False,
+            ),
+            dict(
+                name="Yet another",     state="running",
+                live_count="1", owner="ted",   enabled=True,
+            ),
         ]
         self.display = DisplayServices()
 
@@ -54,7 +72,7 @@ class DisplayJobRunsTestCase(TestCase):
                 end_time='',
                 duration='',
                 manual=False,
-            )
+            ),
         ]
 
         self.action_run = dict(
@@ -69,9 +87,8 @@ class DisplayJobRunsTestCase(TestCase):
             end_time='2012-02-21 23:10:10',
             duration='2 days',
             stdout=[],
-            stderr=[]
+            stderr=[],
         )
-
 
     def test_format(self):
         out = DisplayJobRuns().format(self.data)
@@ -84,12 +101,16 @@ class DisplayJobsTestCase(TestCase):
     @setup
     def setup_data(self):
         self.data = [
-            dict(name='important_things', status='running',
-                scheduler=mock.MagicMock(), last_success='unknown', owner='alice'),
-            dict(name='other_thing', status='success',
+            dict(
+                name='important_things', status='running',
+                scheduler=mock.MagicMock(), last_success='unknown', owner='alice',
+            ),
+            dict(
+                name='other_thing', status='success',
                 scheduler=mock.MagicMock(), last_success='2012-01-23 10:23:23',
                 action_names=['other', 'first'],
-                node_pool=['blam'], owner=['bob', 'ted']),
+                node_pool=['blam'], owner=['bob', 'ted'],
+            ),
         ]
         self.run_data = [
             dict(
@@ -110,8 +131,8 @@ class DisplayJobsTestCase(TestCase):
                     end_time='2012-02-21 23:10:10',
                     duration='2 days',
                     stdout=[],
-                    stderr=[]
-                )]
+                    stderr=[],
+                )],
             ),
             dict(
                 id='something.55', state='QUE', node='machine3',
@@ -119,8 +140,8 @@ class DisplayJobsTestCase(TestCase):
                 start_time='2012-01-20 23:11:23',
                 end_time='',
                 duration='',
-                runs=[]
-            )
+                runs=[],
+            ),
         ]
 
     def do_format(self):
@@ -170,7 +191,7 @@ class DisplayActionsTestCase(TestCase):
                     duration='',
                     run_time='sometime',
                 ),
-            ]
+            ],
         }
         self.details = {
             'id':               'something.1.foo',
@@ -200,11 +221,15 @@ class AddColorForStateTestCase(TestCase):
             yield
 
     def test_add_red(self):
-        text = display.add_color_for_state(actionrun.ActionRun.STATE_FAILED.name)
+        text = display.add_color_for_state(
+            actionrun.ActionRun.STATE_FAILED.name,
+        )
         assert text.startswith(display.Color.colors['red']), text
 
     def test_add_green(self):
-        text = display.add_color_for_state(actionrun.ActionRun.STATE_RUNNING.name)
+        text = display.add_color_for_state(
+            actionrun.ActionRun.STATE_RUNNING.name,
+        )
         assert text.startswith(display.Color.colors['green']), text
 
     def test_add_blue(self):
@@ -217,7 +242,8 @@ class DisplayNodeTestCase(TestCase):
     node_source = {
         'name': 'name',
         'hostname': 'hostname',
-        'username': 'username'}
+        'username': 'username',
+    }
 
     def test_display_node(self):
         result = display.display_node(self.node_source)
@@ -227,6 +253,7 @@ class DisplayNodeTestCase(TestCase):
         source = {'name': 'name', 'nodes': [self.node_source]}
         result = display.display_node_pool(source)
         assert_equal(result, 'name (1 node(s))')
+
 
 class DisplaySchedulerTestCase(TestCase):
 
@@ -239,10 +266,10 @@ class DisplaySchedulerTestCase(TestCase):
         source = {
             'value': '5 minutes',
             'type': 'interval',
-            'jitter': ' (+/- 2 min)'}
+            'jitter': ' (+/- 2 min)',
+        }
         result = display.display_scheduler(source)
         assert_equal(result, 'interval 5 minutes%s' % (source['jitter']))
-
 
 
 if __name__ == "__main__":

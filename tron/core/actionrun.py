@@ -1,16 +1,23 @@
 """
  tron.core.actionrun
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+import itertools
 import logging
 import traceback
-import itertools
+
 from tron import command_context
+from tron import node
+from tron.actioncommand import ActionCommand
+from tron.actioncommand import NoActionRunnerFactory
 from tron.core import action
 from tron.serialize import filehandler
-from tron import node
-from tron.actioncommand import ActionCommand, NoActionRunnerFactory
-
-from tron.utils import state, timeutils, proxy, iteration
+from tron.utils import iteration
+from tron.utils import proxy
+from tron.utils import state
+from tron.utils import timeutils
 from tron.utils.observer import Observer
 
 log = logging.getLogger(__name__)
@@ -25,22 +32,29 @@ class ActionRunFactory(object):
     def build_action_run_collection(cls, job_run, action_runner):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
         action_map = job_run.action_graph.get_action_map().iteritems()
-        action_run_map = dict(
-            (name, cls.build_run_for_action(job_run, action_inst, action_runner))
-            for name, action_inst in action_map)
+        action_run_map = {
+            name: cls.build_run_for_action(job_run, action_inst, action_runner)
+            for name, action_inst in action_map
+        }
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
     @classmethod
-    def action_run_collection_from_state(cls, job_run, runs_state_data,
-                cleanup_action_state_data):
-        action_runs = [cls.action_run_from_state(job_run, state_data)
-                       for state_data in runs_state_data]
+    def action_run_collection_from_state(
+        cls, job_run, runs_state_data,
+        cleanup_action_state_data,
+    ):
+        action_runs = [
+            cls.action_run_from_state(job_run, state_data)
+            for state_data in runs_state_data
+        ]
         if cleanup_action_state_data:
             action_runs.append(cls.action_run_from_state(
-                job_run, cleanup_action_state_data, cleanup=True))
+                job_run, cleanup_action_state_data, cleanup=True,
+            ))
 
-        action_run_map = dict(
-            (action_run.action_name, action_run) for action_run in action_runs)
+        action_run_map = {
+            action_run.action_name: action_run for action_run in action_runs
+        }
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
     @classmethod
@@ -56,7 +70,8 @@ class ActionRunFactory(object):
             parent_context=job_run.context,
             output_path=job_run.output_path.clone(),
             cleanup=action.is_cleanup,
-            action_runner=action_runner)
+            action_runner=action_runner,
+        )
 
     @classmethod
     def action_run_from_state(cls, job_run, state_data, cleanup=False):
@@ -66,7 +81,8 @@ class ActionRunFactory(object):
             job_run.context,
             job_run.output_path.clone(),
             job_run.node,
-            cleanup=cleanup)
+            cleanup=cleanup,
+        )
 
 
 class ActionRun(Observer):
@@ -75,73 +91,76 @@ class ActionRun(Observer):
     ActionRuns observers ActionCommands they create and are observed by a
     parent JobRun.
     """
-    STATE_CANCELLED     = state.NamedEventState('cancelled')
-    STATE_UNKNOWN       = state.NamedEventState('unknown', short_name='UNKWN')
-    STATE_FAILED        = state.NamedEventState('failed')
-    STATE_SUCCEEDED     = state.NamedEventState('succeeded')
-    STATE_RUNNING       = state.NamedEventState('running')
-    STATE_STARTING      = state.NamedEventState('starting', short_chars=5)
-    STATE_QUEUED        = state.NamedEventState('queued')
-    STATE_SCHEDULED     = state.NamedEventState('scheduled')
-    STATE_SKIPPED       = state.NamedEventState('skipped')
+    STATE_CANCELLED = state.NamedEventState('cancelled')
+    STATE_UNKNOWN = state.NamedEventState('unknown', short_name='UNKWN')
+    STATE_FAILED = state.NamedEventState('failed')
+    STATE_SUCCEEDED = state.NamedEventState('succeeded')
+    STATE_RUNNING = state.NamedEventState('running')
+    STATE_STARTING = state.NamedEventState('starting', short_chars=5)
+    STATE_QUEUED = state.NamedEventState('queued')
+    STATE_SCHEDULED = state.NamedEventState('scheduled')
+    STATE_SKIPPED = state.NamedEventState('skipped')
 
-    STATE_SCHEDULED['ready']    = STATE_QUEUED
-    STATE_SCHEDULED['queue']    = STATE_QUEUED
-    STATE_SCHEDULED['cancel']   = STATE_CANCELLED
-    STATE_SCHEDULED['start']    = STATE_STARTING
+    STATE_SCHEDULED['ready'] = STATE_QUEUED
+    STATE_SCHEDULED['queue'] = STATE_QUEUED
+    STATE_SCHEDULED['cancel'] = STATE_CANCELLED
+    STATE_SCHEDULED['start'] = STATE_STARTING
 
-    STATE_QUEUED['cancel']      = STATE_CANCELLED
-    STATE_QUEUED['start']       = STATE_STARTING
-    STATE_QUEUED['schedule']    = STATE_SCHEDULED
+    STATE_QUEUED['cancel'] = STATE_CANCELLED
+    STATE_QUEUED['start'] = STATE_STARTING
+    STATE_QUEUED['schedule'] = STATE_SCHEDULED
 
-    STATE_STARTING['started']   = STATE_RUNNING
-    STATE_STARTING['fail']      = STATE_FAILED
+    STATE_STARTING['started'] = STATE_RUNNING
+    STATE_STARTING['fail'] = STATE_FAILED
 
-    STATE_RUNNING['fail']       = STATE_FAILED
+    STATE_RUNNING['fail'] = STATE_FAILED
     STATE_RUNNING['fail_unknown'] = STATE_UNKNOWN
-    STATE_RUNNING['success']    = STATE_SUCCEEDED
+    STATE_RUNNING['success'] = STATE_SUCCEEDED
 
-    STATE_FAILED['skip']        = STATE_SKIPPED
-    STATE_CANCELLED ['skip']    = STATE_SKIPPED
+    STATE_FAILED['skip'] = STATE_SKIPPED
+    STATE_CANCELLED['skip'] = STATE_SKIPPED
 
     # We can force many states to be success or failure
     for event_state in (STATE_UNKNOWN, STATE_QUEUED, STATE_SCHEDULED):
-        event_state['success']  = STATE_SUCCEEDED
-        event_state['fail']     = STATE_FAILED
+        event_state['success'] = STATE_SUCCEEDED
+        event_state['fail'] = STATE_FAILED
 
     # The set of states that are considered end states. Technically some of
     # these states can be manually transitioned to other states.
-    END_STATES = set(
-        (STATE_FAILED,
-         STATE_SUCCEEDED,
-         STATE_CANCELLED,
-         STATE_SKIPPED,
-         STATE_UNKNOWN)
-    )
+    END_STATES = {
+        STATE_FAILED,
+        STATE_SUCCEEDED,
+        STATE_CANCELLED,
+        STATE_SKIPPED,
+        STATE_UNKNOWN,
+    }
 
     # Failed render command is false to ensure that it will fail when run
     FAILED_RENDER = 'false'
 
-    context_class               = command_context.ActionRunContext
+    context_class = command_context.ActionRunContext
 
     # TODO: create a class for ActionRunId, JobRunId, Etc
-    def __init__(self, job_run_id, name, node, bare_command=None,
-            parent_context=None, output_path=None, cleanup=False,
-            start_time=None, end_time=None, run_state=STATE_SCHEDULED,
-            rendered_command=None, exit_status=None, action_runner=None):
-        self.job_run_id         = job_run_id
-        self.action_name        = name
-        self.node               = node
-        self.start_time         = start_time
-        self.end_time           = end_time
-        self.exit_status        = exit_status
-        self.bare_command       = bare_command
-        self.rendered_command   = rendered_command
-        self.action_runner      = action_runner or NoActionRunnerFactory
-        self.machine            = state.StateMachine(
-                    self.STATE_SCHEDULED, delegate=self, force_state=run_state)
-        self.is_cleanup         = cleanup
-        self.output_path        = output_path or filehandler.OutputPath()
+    def __init__(
+        self, job_run_id, name, node, bare_command=None,
+        parent_context=None, output_path=None, cleanup=False,
+        start_time=None, end_time=None, run_state=STATE_SCHEDULED,
+        rendered_command=None, exit_status=None, action_runner=None,
+    ):
+        self.job_run_id = job_run_id
+        self.action_name = name
+        self.node = node
+        self.start_time = start_time
+        self.end_time = end_time
+        self.exit_status = exit_status
+        self.bare_command = bare_command
+        self.rendered_command = rendered_command
+        self.action_runner = action_runner or NoActionRunnerFactory
+        self.machine = state.StateMachine(
+            self.STATE_SCHEDULED, delegate=self, force_state=run_state,
+        )
+        self.is_cleanup = cleanup
+        self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(self.id)
         self.context = command_context.build_context(self, parent_context)
 
@@ -162,8 +181,10 @@ class ActionRun(Observer):
         return self.machine.check(state)
 
     @classmethod
-    def from_state(cls, state_data, parent_context, output_path,
-                job_run_node, cleanup=False):
+    def from_state(
+        cls, state_data, parent_context, output_path,
+        job_run_node, cleanup=False,
+    ):
         """Restore the state of this ActionRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
 
@@ -175,7 +196,8 @@ class ActionRun(Observer):
             action_name = state_data['action_name']
 
         job_run_node = pool_repo.get_node(
-            state_data.get('node_name'), job_run_node)
+            state_data.get('node_name'), job_run_node,
+        )
 
         rendered_command = state_data.get('rendered_command')
         run = cls(
@@ -190,8 +212,9 @@ class ActionRun(Observer):
             start_time=state_data['start_time'],
             end_time=state_data['end_time'],
             run_state=state.named_event_by_name(
-                    cls.STATE_SCHEDULED, state_data['state']),
-            exit_status=state_data.get('exit_status')
+                cls.STATE_SCHEDULED, state_data['state'],
+            ),
+            exit_status=state_data.get('exit_status'),
         )
 
         # Transition running to fail unknown because exit status was missed
@@ -211,8 +234,10 @@ class ActionRun(Observer):
         self.machine.transition('start')
 
         if not self.is_valid_command:
-            log.error("Command for action run %s is invalid: %r",
-                self.id, self.bare_command)
+            log.error(
+                "Command for action run %s is invalid: %r",
+                self.id, self.bare_command,
+            )
             self.fail(-1)
             return
 
@@ -228,19 +253,22 @@ class ActionRun(Observer):
 
     def stop(self):
         stop_command = self.action_runner.build_stop_action_command(
-            self.id, 'terminate')
+            self.id, 'terminate',
+        )
         self.node.submit_command(stop_command)
 
     def kill(self):
         kill_command = self.action_runner.build_stop_action_command(
-            self.id, 'kill')
+            self.id, 'kill',
+        )
         self.node.submit_command(kill_command)
 
     def build_action_command(self):
         """Create a new ActionCommand instance to send to the node."""
         serializer = filehandler.OutputStreamSerializer(self.output_path)
         self.action_command = self.action_runner.create(
-            self.id, self.command, serializer)
+            self.id, self.command, serializer,
+        )
         self.watch(self.action_command)
         return self.action_command
 
@@ -265,8 +293,10 @@ class ActionRun(Observer):
     handler = handle_action_command_state_change
 
     def _done(self, target, exit_status=0):
-        log.info("Action run %s completed with %s and exit status %r",
-            self.id, target, exit_status)
+        log.info(
+            "Action run %s completed with %s and exit status %r",
+            self.id, target, exit_status,
+        )
         if self.machine.check(target):
             self.exit_status = exit_status
             self.end_time = timeutils.current_time()
@@ -370,11 +400,11 @@ class ActionRunCollection(object):
 
     # An ActionRunCollection is blocked when it has runs running which
     # are required for other blocked runs to start.
-    STATE_BLOCKED       = state.NamedEventState('blocked')
+    STATE_BLOCKED = state.NamedEventState('blocked')
 
     def __init__(self, action_graph, run_map):
-        self.action_graph       = action_graph
-        self.run_map            = run_map
+        self.action_graph = action_graph
+        self.run_map = run_map
         # Setup proxies
         self.proxy_action_runs_with_cleanup = proxy.CollectionProxy(
             self.get_action_runs_with_cleanup, [
@@ -393,7 +423,8 @@ class ActionRunCollection(object):
                 proxy.func_proxy('cleanup',         iteration.list_all),
                 proxy.func_proxy('stop',            iteration.list_all),
                 proxy.attr_proxy('start_time',      iteration.min_filter),
-            ])
+            ],
+        )
 
     def action_runs_for_actions(self, actions):
         return (self.run_map[a.name] for a in actions)
@@ -449,7 +480,8 @@ class ActionRunCollection(object):
             return False
 
         required_actions = self.action_graph.get_required_actions(
-                action_run.action_name)
+            action_run.action_name,
+        )
         if not required_actions:
             return False
 
@@ -493,7 +525,9 @@ class ActionRunCollection(object):
     def end_time(self):
         if not self.is_done:
             return None
-        end_times = (run.end_time for run in self.get_action_runs_with_cleanup())
+        end_times = (
+            run.end_time for run in self.get_action_runs_with_cleanup()
+        )
         return iteration.max_filter(end_times)
 
     def __str__(self):
@@ -502,7 +536,8 @@ class ActionRunCollection(object):
 
         run_states = ', '.join(
             "%s(%s%s)" % (a.action_name, a.state, blocked_state(a))
-            for a in self.run_map.itervalues())
+            for a in self.run_map.itervalues()
+        )
         return "%s[%s]" % (self.__class__.__name__, run_states)
 
     def __getattr__(self, name):

@@ -1,4 +1,8 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import logging
+
 from tron.utils.observer import Observable
 
 
@@ -57,9 +61,10 @@ class NamedEventState(dict):
 
 
 def traverse(starting_state, match_func):
-    visited                 = set()
-    state_pairs             = [(None, starting_state)]
-    pair_with_name          = lambda p: (p[0], p[1].name)
+    visited = set()
+    state_pairs = [(None, starting_state)]
+
+    def pair_with_name(p): return (p[0], p[1].name)
 
     while state_pairs:
         transition_state_pair = state_pairs.pop()
@@ -75,7 +80,7 @@ def traverse(starting_state, match_func):
 
 
 def named_event_by_name(starting_state, name):
-    name_match = lambda t, s: s.name == name
+    def name_match(t, s): return s.name == name
     try:
         _, state = traverse(starting_state, name_match).next()
         return state
@@ -84,7 +89,7 @@ def named_event_by_name(starting_state, name):
 
 
 def get_transitions(starting_state):
-    transition_match = lambda t, s: bool(t)
+    def transition_match(t, s): return bool(t)
     return [trans for trans, _ in traverse(starting_state, transition_match)]
 
 

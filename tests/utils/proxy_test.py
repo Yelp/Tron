@@ -1,6 +1,15 @@
-from testify import run, TestCase, assert_equal, assert_raises, assert_in, setup
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
-from tron.utils.proxy import CollectionProxy, AttributeProxy
+from testify import assert_equal
+from testify import assert_in
+from testify import assert_raises
+from testify import run
+from testify import setup
+from testify import TestCase
+
+from tron.utils.proxy import AttributeProxy
+from tron.utils.proxy import CollectionProxy
 
 
 class DummyTarget(object):
@@ -35,11 +44,13 @@ class CollectionProxyTestCase(TestCase):
     @setup
     def setup_proxy(self):
         self.target_list = [DummyTarget(1), DummyTarget(2), DummyTarget(0)]
-        self.proxy = CollectionProxy(lambda: self.target_list, [
-            ('foo', any, True),
-            ('not_foo', all, False),
-            ('equals', lambda a: list(a), True)
-        ])
+        self.proxy = CollectionProxy(
+            lambda: self.target_list, [
+                ('foo', any, True),
+                ('not_foo', all, False),
+                ('equals', lambda a: list(a), True),
+            ],
+        )
         self.dummy = DummyObject(self.proxy)
 
     def test_add(self):
@@ -56,7 +67,10 @@ class CollectionProxyTestCase(TestCase):
     def test_perform_with_params(self):
         assert_equal(self.proxy.perform('equals')(2), [False, True, False])
         sometimes = ['sometimes'] * 3
-        assert_equal(self.proxy.perform('equals')(3, sometimes=True), sometimes)
+        assert_equal(
+            self.proxy.perform('equals')
+            (3, sometimes=True), sometimes,
+        )
 
 
 class AttributeProxyTestCase(TestCase):

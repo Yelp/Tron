@@ -1,0 +1,50 @@
+-   repo: https://github.com/pre-commit/pre-commit-hooks.git
+    sha: v0.9.1
+    hooks:
+    -   id: trailing-whitespace
+        language_version: python2.7
+    -   id: end-of-file-fixer
+        language_version: python2.7
+    -   id: autopep8-wrapper
+        language_version: python2.7
+    -   id: check-docstring-first
+        language_version: python2.7
+    -   id: check-json
+        language_version: python2.7
+    -   id: check-yaml
+        files: ^(?!.*template).*\.(yaml|yml|eyaml)$
+        language_version: python2.7
+    -   id: debug-statements
+        language_version: python2.7
+    -   id: requirements-txt-fixer
+        language_version: python2.7
+    -   id: flake8
+        exclude: ^docs/source/conf.py$
+        language_version: python2.7
+    -   id: check-ast
+        language_version: python2.7
+-   repo: https://github.com/asottile/reorder_python_imports.git
+    sha: v0.3.5
+    hooks:
+    -   id: reorder-python-imports
+        language_version: python2.7
+        args:
+        - --add-import
+        - from __future__ import unicode_literals
+        - --add-import
+        - from __future__ import absolute_import
+-   repo: https://github.com/asottile/pyupgrade
+    sha: v1.1.2-1
+    hooks:
+    -   id: pyupgrade
+-   repo: https://github.com/asottile/add-trailing-comma
+    sha: v0.6.2
+    hooks:
+    -   id: add-trailing-comma
+-   repo: local
+    hooks:
+    -   id: no-catchall-except
+        name: Prevent catchall except
+        entry: except:$
+        language: pcre
+        files: \.py$

@@ -1,32 +1,48 @@
 #!/usr/bin/env python
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import os
 import sys
 
 from tron.commands import cmd_utils
 from tron.commands import display
-from tron.commands.cmd_utils import ExitCode
-from tron.commands.client import Client, get_object_type_from_identifier
+from tron.commands.client import Client
+from tron.commands.client import get_object_type_from_identifier
 from tron.commands.client import TronObjectType
+from tron.commands.cmd_utils import ExitCode
 
 
 def parse_options():
-    usage  = "usage: %prog [options] [<job | job run | action | service>]"
+    usage = "usage: %prog [options] [<job | job run | action | service>]"
     parser = cmd_utils.build_option_parser(usage)
-    parser.add_option("--numshown", "-n", type="int", dest="num_displays",
-                      help="Max number of jobs/job-runs shown", default=10)
-    parser.add_option("--color", "-c", action="store_true",
-                      dest="display_color", help="Display in color",
-                      default=None)
-    parser.add_option("--nocolor", action="store_false",
-                      dest="display_color", help="Display without color",
-                      default=None)
-    parser.add_option("--stdout", "-o", action="count", dest="stdout",
-                      help="Solely displays stdout", default=0)
-    parser.add_option("--stderr", "-e", action="count", dest="stderr",
-                      help="Solely displays stderr", default=0)
-    parser.add_option("--events", action="store_true", dest="show_events",
-                      help="Show events for the specified entity",
-                      default=False)
+    parser.add_option(
+        "--numshown", "-n", type="int", dest="num_displays",
+        help="Max number of jobs/job-runs shown", default=10,
+    )
+    parser.add_option(
+        "--color", "-c", action="store_true",
+        dest="display_color", help="Display in color",
+        default=None,
+    )
+    parser.add_option(
+        "--nocolor", action="store_false",
+        dest="display_color", help="Display without color",
+        default=None,
+    )
+    parser.add_option(
+        "--stdout", "-o", action="count", dest="stdout",
+        help="Solely displays stdout", default=0,
+    )
+    parser.add_option(
+        "--stderr", "-e", action="count", dest="stderr",
+        help="Solely displays stderr", default=0,
+    )
+    parser.add_option(
+        "--events", action="store_true", dest="show_events",
+        help="Show events for the specified entity",
+        default=False,
+    )
 
     options, args = parser.parse_args(sys.argv)
     return options, args[1:]
@@ -37,8 +53,10 @@ def console_height():
         return 40
     return int(os.popen('stty size', 'r').read().split()[0])
 
+
 def display_events(data):
     return display.DisplayEvents().format(data)
+
 
 def view_all(options, client):
     """Retreive jobs and services and display them."""
@@ -48,7 +66,7 @@ def view_all(options, client):
     return "".join([
         display.DisplayServices().format(client.services()),
         '\n',
-        display.DisplayJobs().format(client.jobs())
+        display.DisplayJobs().format(client.jobs()),
     ])
 
 
@@ -71,7 +89,9 @@ def view_job_run(options, job_run_id, client):
 
 
 def view_action_run(options, act_run_id, client):
-    content = client.action_runs(act_run_id.url, num_lines=options.num_displays)
+    content = client.action_runs(
+        act_run_id.url, num_lines=options.num_displays,
+    )
     return display.format_action_run_details(content)
 
 
@@ -91,9 +111,10 @@ obj_type_to_view_map = {
     TronObjectType.service:     view_service,
 }
 
+
 def get_view_output(name, options, client):
-    url_index   = client.index()
-    tron_id     = get_object_type_from_identifier(url_index, name)
+    url_index = client.index()
+    tron_id = get_object_type_from_identifier(url_index, name)
 
     if tron_id.type not in obj_type_to_view_map:
         return

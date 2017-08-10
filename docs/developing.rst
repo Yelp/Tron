@@ -64,7 +64,7 @@ A basic environment can then be loaded with :command:`tronfig`::
 
     ssh_options:
         agent: true
-    
+
     nodes:
         - name: 'batch-01'
           hostname: 'batch-01'
@@ -78,7 +78,7 @@ A basic environment can then be loaded with :command:`tronfig`::
 
     node_pools:
        - name: all_nodes
-         nodes: 
+         nodes:
          - 'batch-01'
          - 'batch-02'
          - 'batch-03'

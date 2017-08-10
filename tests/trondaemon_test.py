@@ -1,9 +1,18 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import os
 import tempfile
+
 import lockfile
 import mock
-from testify import TestCase, assert_equal, run, setup, teardown
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import teardown
+from testify import TestCase
 from testify.assertions import assert_in
+
 from tests.assertions import assert_raises
 from tron.trondaemon import PIDFile
 

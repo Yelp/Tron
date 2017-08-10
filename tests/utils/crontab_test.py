@@ -1,4 +1,11 @@
-from testify import TestCase, run, assert_equal, assert_raises, setup
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+from testify import assert_equal
+from testify import assert_raises
+from testify import run
+from testify import setup
+from testify import TestCase
 
 from tron.utils import crontab
 
@@ -45,19 +52,19 @@ class MinuteFieldParserTestCase(TestCase):
         assert_equal(self.parser.get_values("33"), [33])
 
     def test_get_values_with_step(self):
-        assert_equal(self.parser.get_values("*/10"), [0,10,20,30,40,50])
+        assert_equal(self.parser.get_values("*/10"), [0, 10, 20, 30, 40, 50])
 
     def test_get_values_with_step_and_range(self):
-        assert_equal(self.parser.get_values("10-30/10"), [10,20,30])
+        assert_equal(self.parser.get_values("10-30/10"), [10, 20, 30])
 
     def test_get_values_with_step_and_overflow_range(self):
-        assert_equal(self.parser.get_values("30-0/10"), [30,40,50,0])
+        assert_equal(self.parser.get_values("30-0/10"), [30, 40, 50, 0])
 
     def test_parse_with_groups(self):
-        assert_equal(self.parser.parse("5,1,7,8,5"), [1,5,7,8])
+        assert_equal(self.parser.parse("5,1,7,8,5"), [1, 5, 7, 8])
 
     def test_parse_with_groups_and_ranges(self):
-        expected = [0,1,11,13,15,17,19,20,21,40]
+        expected = [0, 1, 11, 13, 15, 17, 19, 20, 21, 40]
         assert_equal(self.parser.parse("1,11-22/2,*/20"), expected)
 
 
@@ -79,7 +86,7 @@ class WeekdayFieldParserTestCase(TestCase):
         self.parser = crontab.WeekdayFieldParser()
 
     def test_parser(self):
-        expected = [0,3,5,6]
+        expected = [0, 3, 5, 6]
         assert_equal(self.parser.parse("Sun, 3, FRI, SaT-Sun"), expected)
 
 
@@ -92,6 +99,7 @@ class MonthdayFieldParserTestCase(TestCase):
     def test_parse_last(self):
         expected = [5, 6, 'LAST']
         assert_equal(self.parser.parse("5, 6, L"), expected)
+
 
 if __name__ == "__main__":
     run()

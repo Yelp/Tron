@@ -1,6 +1,13 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import contextlib
+
 import mock
-from testify import TestCase, assert_equal, setup_teardown
+from testify import assert_equal
+from testify import setup_teardown
+from testify import TestCase
+
 import tron
 from tron.commands import cmd_utils
 
@@ -38,10 +45,13 @@ class BuildOptionParserTestCase(TestCase):
         """
         parser_class = mock.Mock()
         usage = 'Something'
-        parser = cmd_utils.build_option_parser(usage, parser_class=parser_class)
+        parser = cmd_utils.build_option_parser(
+            usage, parser_class=parser_class,
+        )
         assert_equal(parser, parser_class.return_value)
         parser_class.assert_called_with(
-            usage, version="%%prog %s" % tron.__version__)
+            usage, version="%%prog %s" % tron.__version__,
+        )
         assert_equal(parser.add_option.call_count, 3)
 
         options = [call[1] for call in parser.add_option.mock_calls]
@@ -49,5 +59,6 @@ class BuildOptionParserTestCase(TestCase):
         assert_equal(options, expected)
 
         defaults = [
-            call[2].get('default') for call in parser.add_option.mock_calls]
+            call[2].get('default') for call in parser.add_option.mock_calls
+        ]
         assert_equal(defaults, [None, None, None])

@@ -1,9 +1,18 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import os
 import tempfile
 
-from testify import TestCase, run, setup, assert_equal, teardown
 import yaml
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import teardown
+from testify import TestCase
+
 from tron.serialize.runstate import yamlstore
+
 
 class YamlStateStoreTestCase(TestCase):
 
@@ -14,7 +23,7 @@ class YamlStateStoreTestCase(TestCase):
         self.test_data = {
             'one': {'a': 1},
             'two': {'b': 2},
-            'three': {'c': 3}
+            'three': {'c': 3},
         }
 
     @teardown
@@ -52,7 +61,7 @@ class YamlStateStoreTestCase(TestCase):
         expected = {'one': {'five': 'dataz'}, 'two': {'seven': 'stars'}}
 
         key_value_pairs = [
-            (yamlstore.YamlKey('one', 'five'), 'barz')
+            (yamlstore.YamlKey('one', 'five'), 'barz'),
         ]
         # Save first
         self.store.save(key_value_pairs)
@@ -60,7 +69,7 @@ class YamlStateStoreTestCase(TestCase):
         # Save second
         key_value_pairs = [
             (yamlstore.YamlKey('two', 'seven'), 'stars'),
-            (yamlstore.YamlKey('one', 'five'), 'dataz')
+            (yamlstore.YamlKey('one', 'five'), 'dataz'),
         ]
         self.store.save(key_value_pairs)
 
@@ -68,10 +77,6 @@ class YamlStateStoreTestCase(TestCase):
         with open(self.filename, 'r') as fh:
             actual = yaml.load(fh)
         assert_equal(actual, expected)
-
-
-
-
 
 
 if __name__ == "__main__":

@@ -1,4 +1,8 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import logging
+
 from tron import node
 from tron.config.schema import CLEANUP_ACTION_NAME
 
@@ -8,13 +12,15 @@ log = logging.getLogger(__name__)
 class Action(object):
     """A configurable data object for an Action."""
 
-    def __init__(self, name, command, node_pool, required_actions=None,
-                dependent_actions=None):
-        self.name               = name
-        self.command            = command
-        self.node_pool          = node_pool
-        self.required_actions   = required_actions or []
-        self.dependent_actions  = dependent_actions or []
+    def __init__(
+        self, name, command, node_pool, required_actions=None,
+        dependent_actions=None,
+    ):
+        self.name = name
+        self.command = command
+        self.node_pool = node_pool
+        self.required_actions = required_actions or []
+        self.dependent_actions = dependent_actions or []
 
     @property
     def is_cleanup(self):
@@ -25,9 +31,10 @@ class Action(object):
         """Factory method for creating a new Action."""
         node_repo = node.NodePoolRepository.get_instance()
         return cls(
-            name=       config.name,
-            command=    config.command,
-            node_pool=  node_repo.get_by_name(config.node))
+            name=config.name,
+            command=config.command,
+            node_pool=node_repo.get_by_name(config.node),
+        )
 
     def __eq__(self, other):
         attributes_match = all(

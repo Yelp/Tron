@@ -1,12 +1,17 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
 from __future__ import with_statement
+
 import logging
 
-from tron import command_context, actioncommand
-from tron import event
+from tron import actioncommand
+from tron import command_context
 from tron import crash_reporter
+from tron import event
 from tron import node
 from tron.config import manager
-from tron.core import service, job
+from tron.core import job
+from tron.core import service
 from tron.serialize.runstate import statemanager
 from tron.utils import emailer
 
@@ -28,15 +33,15 @@ class MasterControlProgram(object):
 
     def __init__(self, working_dir, config_path):
         super(MasterControlProgram, self).__init__()
-        self.jobs               = job.JobCollection()
-        self.services           = service.ServiceCollection()
-        self.working_dir        = working_dir
-        self.crash_reporter     = None
-        self.config             = manager.ConfigManager(config_path)
-        self.context            = command_context.CommandContext()
-        self.event_recorder     = event.get_recorder()
+        self.jobs = job.JobCollection()
+        self.services = service.ServiceCollection()
+        self.working_dir = working_dir
+        self.crash_reporter = None
+        self.config = manager.ConfigManager(config_path)
+        self.context = command_context.CommandContext()
+        self.event_recorder = event.get_recorder()
         self.event_recorder.ok('started')
-        self.state_watcher      = statemanager.StateChangeWatcher()
+        self.state_watcher = statemanager.StateChangeWatcher()
 
     def shutdown(self):
         self.state_watcher.shutdown()
@@ -75,9 +80,11 @@ class MasterControlProgram(object):
         master_config_directives = [
             (self.update_state_watcher_config,           'state_persistence'),
             (self.set_context_base,                      'command_context'),
-            (node.NodePoolRepository.update_from_config, 'nodes',
-                                                         'node_pools',
-                                                         'ssh_options'),
+            (
+                node.NodePoolRepository.update_from_config, 'nodes',
+                'node_pools',
+                'ssh_options',
+            ),
             (self.apply_notification_options,            'notification_options'),
         ]
         master_config = config_container.get_master()
@@ -85,11 +92,15 @@ class MasterControlProgram(object):
 
         # TODO: unify NOTIFY_STATE_CHANGE and simplify this
         factory = self.build_job_scheduler_factory(master_config)
-        self.apply_collection_config(config_container.get_jobs(),
-            self.jobs, job.Job.NOTIFY_STATE_CHANGE, factory, reconfigure)
+        self.apply_collection_config(
+            config_container.get_jobs(),
+            self.jobs, job.Job.NOTIFY_STATE_CHANGE, factory, reconfigure,
+        )
 
-        self.apply_collection_config(config_container.get_services(),
-            self.services, service.Service.NOTIFY_STATE_CHANGE, self.context)
+        self.apply_collection_config(
+            config_container.get_services(),
+            self.services, service.Service.NOTIFY_STATE_CHANGE, self.context,
+        )
 
     def apply_collection_config(self, config, collection, notify_type, *args):
         items = collection.load_from_config(config, *args)
@@ -98,12 +109,14 @@ class MasterControlProgram(object):
     def build_job_scheduler_factory(self, master_config):
         output_stream_dir = master_config.output_stream_dir or self.working_dir
         action_runner = actioncommand.create_action_runner_factory_from_config(
-            master_config.action_runner)
+            master_config.action_runner,
+        )
         return job.JobSchedulerFactory(
             self.context,
             output_stream_dir,
             master_config.time_zone,
-            action_runner)
+            action_runner,
+        )
 
     def update_state_watcher_config(self, state_config):
         """Update the StateChangeWatcher, and save all state if the state config
@@ -144,7 +157,8 @@ class MasterControlProgram(object):
         """
         self.event_recorder.notice('restoring')
         job_states, service_states = self.state_watcher.restore(
-                self.jobs.get_names(), self.services.get_names())
+            self.jobs.get_names(), self.services.get_names(),
+        )
 
         self.jobs.restore_state(job_states)
         self.services.restore_state(service_states)

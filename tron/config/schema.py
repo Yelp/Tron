@@ -1,13 +1,18 @@
 """
  Immutable config schema objects.
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 from collections import namedtuple
+
 from tron.utils.collections import Enum
 
 
 MASTER_NAMESPACE = "MASTER"
 
 CLEANUP_ACTION_NAME = 'cleanup'
+
 
 def config_object_factory(name, required=None, optional=None):
     """
@@ -35,21 +40,23 @@ TronConfig = config_object_factory(
         'state_persistence',   # ConfigState
         'command_context',     # FrozenDict of str
         'ssh_options',         # ConfigSSHOptions
-        'notification_options',# NotificationOptions or None
+        'notification_options',  # NotificationOptions or None
         'time_zone',           # pytz time zone
         'nodes',               # FrozenDict of ConfigNode
         'node_pools',          # FrozenDict of ConfigNodePool
         'jobs',                # FrozenDict of ConfigJob
         'services',            # FrozenDict of ConfigService
-    ])
+    ],
+)
 
 
 NamedTronConfig = config_object_factory(
     'NamedTronConfig',
     optional=[
         'jobs',                # FrozenDict of ConfigJob
-        'services'             # FrozenDict of ConfigService
-    ])
+        'services',             # FrozenDict of ConfigService
+    ],
+)
 
 
 NotificationOptions = config_object_factory(
@@ -57,11 +64,14 @@ NotificationOptions = config_object_factory(
     [
         'smtp_host',            # str
         'notification_addr',    # str
-    ])
+    ],
+)
 
 
-ConfigActionRunner = config_object_factory('ConfigActionRunner',
-    optional=['runner_type', 'remote_status_path', 'remote_exec_path'])
+ConfigActionRunner = config_object_factory(
+    'ConfigActionRunner',
+    optional=['runner_type', 'remote_status_path', 'remote_exec_path'],
+)
 
 
 ConfigSSHOptions = config_object_factory(
@@ -75,11 +85,14 @@ ConfigSSHOptions = config_object_factory(
         'jitter_min_load',
         'jitter_max_delay',
         'jitter_load_factor',
-    ])
+    ],
+)
 
 
-ConfigNode = config_object_factory('ConfigNode',
-    ['hostname'], ['name', 'username', 'port'])
+ConfigNode = config_object_factory(
+    'ConfigNode',
+    ['hostname'], ['name', 'username', 'port'],
+)
 
 
 ConfigNodePool = config_object_factory('ConfigNodePool', ['nodes'], ['name'])
@@ -90,10 +103,11 @@ ConfigState = config_object_factory(
     [
         'name',
         'store_type',
-        ],[
+    ], [
         'connection_details',
-        'buffer_size'
-    ])
+        'buffer_size',
+    ],
+)
 
 
 ConfigJob = config_object_factory(
@@ -104,7 +118,7 @@ ConfigJob = config_object_factory(
         'schedule',             # Config*Scheduler
         'actions',              # FrozenDict of ConfigAction
         'namespace',            # str
-    ],[
+    ], [
         'owner',                # str
         'summary',              # str
         'notes',                # str
@@ -115,7 +129,8 @@ ConfigJob = config_object_factory(
         'enabled',              # bool
         'allow_overlap',        # bool
         'max_runtime',          # datetime.Timedelta
-    ])
+    ],
+)
 
 
 ConfigAction = config_object_factory(
@@ -123,19 +138,21 @@ ConfigAction = config_object_factory(
     [
         'name',                 # str
         'command',              # str
-    ],[
+    ], [
         'requires',             # tuple of str
         'node',                 # str
-    ])
+    ],
+)
 
 ConfigCleanupAction = config_object_factory(
     'ConfigCleanupAction',
     [
         'command',              # str
-    ],[
+    ], [
         'name',                 # str
         'node',                 # str
-    ])
+    ],
+)
 
 
 ConfigService = config_object_factory(
@@ -147,14 +164,15 @@ ConfigService = config_object_factory(
         'command',              # str
         'monitor_interval',     # float
         'namespace',            # str
-    ],[
+    ], [
         'owner',                # str
         'summary',              # str
         'notes',                # str
         'restart_delay',        # float
         'monitor_retries',      # int
         'count',                # int
-    ])
+    ],
+)
 
 
 StatePersistenceTypes = Enum.create('shelve', 'sql', 'mongo', 'yaml')

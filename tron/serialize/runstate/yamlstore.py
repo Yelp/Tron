@@ -4,21 +4,26 @@ WARNING: Using this store is NOT recommended.  It will be far too slow for
 anything but the most trivial setups.  It should only be used with a high
 buffer size (10+), and a low run_limit (< 10).
 """
-from collections import namedtuple
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import itertools
 import operator
 import os
+from collections import namedtuple
+
 from tron.serialize import runstate
 
-yaml = None # For pyflakes
+yaml = None  # For pyflakes
 
 YamlKey = namedtuple('YamlKey', ['type', 'iden'])
 
 TYPE_MAPPING = {
     runstate.JOB_STATE:     'jobs',
     runstate.SERVICE_STATE: 'services',
-    runstate.MCP_STATE:     runstate.MCP_STATE
+    runstate.MCP_STATE:     runstate.MCP_STATE,
 }
+
 
 class YamlStateStore(object):
 
@@ -27,8 +32,8 @@ class YamlStateStore(object):
         import yaml
         global yaml
         assert yaml
-        self.filename           = filename
-        self.buffer             = {}
+        self.filename = filename
+        self.buffer = {}
 
     def build_key(self, type, iden):
         return YamlKey(TYPE_MAPPING[type], iden)

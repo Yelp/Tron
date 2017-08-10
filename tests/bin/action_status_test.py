@@ -1,7 +1,9 @@
-import mock
-from testify import TestCase
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import action_status
+import mock
+from testify import TestCase
 
 
 class ActionStatusTestCase(TestCase):

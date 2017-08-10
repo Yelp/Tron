@@ -1,12 +1,22 @@
-import logging
-from testify import TestCase, run, setup, assert_equal
-from testify.utils import turtle
-from tests.assertions import assert_length, assert_call
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
+import logging
+
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import TestCase
+from testify.utils import turtle
+
+from tests.assertions import assert_call
+from tests.assertions import assert_length
 from tron import crash_reporter
+
 
 class TestError(Exception):
     pass
+
 
 class SimpleDeferredTestCase(TestCase):
 

@@ -1,8 +1,15 @@
-from testify import TestCase, setup, assert_equal, assert_raises
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+from testify import assert_equal
+from testify import assert_raises
+from testify import setup
+from testify import TestCase
 from testify.utils import turtle
 
 from tron.utils import state
 from tron.utils.state import NamedEventState
+
 
 class StateMachineSimpleTestCase(TestCase):
 
@@ -35,8 +42,10 @@ class StateMachineSimpleTestCase(TestCase):
         handler = turtle.Turtle()
         self.machine.attach(True, handler)
         self.machine.transition('true')
-        assert_equal(handler.handler.calls,
-            [((self.machine, self.state_green),{})])
+        assert_equal(
+            handler.handler.calls,
+            [((self.machine, self.state_green), {})],
+        )
 
     def test_notify_delegate(self):
         delegate = turtle.Turtle()
@@ -44,8 +53,10 @@ class StateMachineSimpleTestCase(TestCase):
         self.machine = state.StateMachine(self.state_red, delegate=delegate)
         self.machine.attach(True, handler)
         self.machine.transition('true')
-        assert_equal(handler.handler.calls,
-            [((delegate, self.state_green),{})])
+        assert_equal(
+            handler.handler.calls,
+            [((delegate, self.state_green), {})],
+        )
 
 
 class StateMachineMultiOptionTestCase(TestCase):
@@ -60,8 +71,9 @@ class StateMachineMultiOptionTestCase(TestCase):
         self.state_talking = NamedEventState('talking')
         self.state_angry = NamedEventState('angry')
 
-        self.state_listening = NamedEventState('listening',
-            listening=self.state_talking
+        self.state_listening = NamedEventState(
+            'listening',
+            listening=self.state_talking,
         )
 
         self.state_talking.update({
@@ -88,7 +100,7 @@ class StateMachineMultiOptionTestCase(TestCase):
         assert_equal(self.machine.state, self.state_angry)
 
     def test_transition_set(self):
-        expected = set(['listening', 'talking', 'ignoring'])
+        expected = {'listening', 'talking', 'ignoring'}
         assert_equal(set(self.machine.transitions), expected)
 
 
@@ -98,14 +110,19 @@ class TraverseCircularTestCase(TestCase):
         # Going around and around in circles
         self.state_telling_false = NamedEventState('telling_false')
 
-        self.state_telling_truth = NamedEventState('telling_truth',
-            true=self.state_telling_false)
+        self.state_telling_truth = NamedEventState(
+            'telling_truth',
+            true=self.state_telling_false,
+        )
         self.state_telling_false.update({'true': self.state_telling_truth})
 
         self.machine = state.StateMachine(self.state_telling_truth)
 
     def test_transition(self):
-        assert_raises(state.CircularTransitionError, self.machine.transition, 'true')
+        assert_raises(
+            state.CircularTransitionError,
+            self.machine.transition, 'true',
+        )
 
 
 class NamedEventByNameTestCase(TestCase):

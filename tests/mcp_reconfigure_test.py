@@ -1,11 +1,21 @@
 """Tests for reconfiguring mcp."""
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import tempfile
 
-from testify import TestCase, run, setup, assert_equal, teardown, suite
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import suite
+from testify import teardown
+from testify import TestCase
 
 from tests.assertions import assert_length
-from tron import mcp, event
-from tron.config import config_parse, schema
+from tron import event
+from tron import mcp
+from tron.config import config_parse
+from tron.config import schema
 from tron.serialize import filehandler
 
 
@@ -22,52 +32,63 @@ class MCPReconfigureTestCase(TestCase):
         ],
         node_pools=[dict(name='nodePool', nodes=['node0', 'node1'])],
         command_context={
-            'thischanges': 'froma'
+            'thischanges': 'froma',
         },
         jobs=[
             dict(
                 name='test_unchanged',
                 node='node0',
                 schedule='daily',
-                actions=[dict(name='action_unchanged',
-                              command='command_unchanged') ]
+                actions=[dict(
+                    name='action_unchanged',
+                    command='command_unchanged',
+                )],
             ),
             dict(
                 name='test_remove',
                 node='node1',
                 schedule=dict(interval='20s'),
-                actions=[dict(name='action_remove',
-                              command='command_remove')],
-                cleanup_action=dict(name='cleanup', command='doit')
+                actions=[dict(
+                    name='action_remove',
+                    command='command_remove',
+                )],
+                cleanup_action=dict(name='cleanup', command='doit'),
             ),
             dict(
                 name='test_change',
                 node='nodePool',
                 schedule=dict(interval='20s'),
                 actions=[
-                    dict(name='action_change',
-                         command='command_change'),
-                    dict(name='action_remove2',
-                         command='command_remove2',
-                         requires=['action_change']),
+                    dict(
+                        name='action_change',
+                        command='command_change',
+                    ),
+                    dict(
+                        name='action_remove2',
+                        command='command_remove2',
+                        requires=['action_change'],
+                    ),
                 ],
             ),
             dict(
                 name='test_daily_change',
                 node='node0',
                 schedule='daily',
-                        actions=[dict(name='action_daily_change',
-                                      command='command')],
+                actions=[dict(
+                    name='action_daily_change',
+                    command='command',
+                )],
             ),
             dict(
                 name='test_action_added',
                 node='node0',
                 schedule=dict(interval='10s'),
                 actions=[
-                    dict(name='action_first', command='command_do_it')
-                ]
-            )
-        ])
+                    dict(name='action_first', command='command_do_it'),
+                ],
+            ),
+        ],
+    )
 
     post_config = dict(
         ssh_options=dict(
@@ -81,38 +102,46 @@ class MCPReconfigureTestCase(TestCase):
         node_pools=[dict(name='nodePool', nodes=['node0', 'node1'])],
         command_context={
             'a_variable': 'is_constant',
-            'thischanges': 'tob'
+            'thischanges': 'tob',
         },
         jobs=[
             dict(
                 name='test_unchanged',
                 node='node0',
                 schedule='daily',
-                actions=[dict(name='action_unchanged',
-                              command='command_unchanged') ]
+                actions=[dict(
+                    name='action_unchanged',
+                    command='command_unchanged',
+                )],
             ),
             dict(
                 name='test_change',
                 node='nodePool',
                 schedule='daily',
                 actions=[
-                    dict(name='action_change',
-                         command='command_changed'),
+                    dict(
+                        name='action_change',
+                        command='command_changed',
+                    ),
                 ],
             ),
             dict(
                 name='test_daily_change',
                 node='node0',
                 schedule='daily',
-                        actions=[dict(name='action_daily_change',
-                                      command='command_changed')],
+                actions=[dict(
+                    name='action_daily_change',
+                    command='command_changed',
+                )],
             ),
             dict(
                 name='test_new',
                 node='nodePool',
                 schedule=dict(interval='20s'),
-                actions=[dict(name='action_new',
-                              command='command_new')]
+                actions=[dict(
+                    name='action_new',
+                    command='command_new',
+                )],
             ),
             dict(
                 name='test_action_added',
@@ -121,9 +150,10 @@ class MCPReconfigureTestCase(TestCase):
                 actions=[
                     dict(name='action_first', command='command_do_it'),
                     dict(name='action_second', command='command_ok'),
-                ]
-            )
-        ])
+                ],
+            ),
+        ],
+    )
 
     def _get_config(self, idx, output_dir):
         config = dict(self.post_config if idx else self.pre_config)
@@ -290,6 +320,7 @@ class MCPReconfigureTestCase(TestCase):
         self.reconfigure()
         job_sched = self.mcp.jobs.get_by_name('MASTER.test_action_added')
         assert_length(job_sched.job.action_graph.action_map, 2)
+
 
 if __name__ == '__main__':
     run()
