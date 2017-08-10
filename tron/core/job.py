@@ -195,8 +195,8 @@ class Job(Observable, Observer):
         """
         pool = self.node_pool
         nodes = pool.nodes if self.all_nodes else [pool.next()]
-        for node in nodes:
-            run = self.runs.build_new_run(self, run_time, node, manual=manual)
+        for n in nodes:
+            run = self.runs.build_new_run(self, run_time, n, manual=manual)
             self.watch(run)
             yield run
 

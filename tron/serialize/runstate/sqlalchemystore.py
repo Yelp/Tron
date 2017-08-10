@@ -7,10 +7,10 @@ from collections import namedtuple
 from contextlib import contextmanager
 
 import yaml
-sqlalchemy = None  # pyflakes
 
-from tron.serialize import runstate
 from tron.config.config_utils import MAX_IDENTIFIER_LENGTH
+from tron.serialize import runstate
+sqlalchemy = None  # pyflakes
 
 
 SQLStateKey = namedtuple('SQLStateKey', ['table', 'id'])

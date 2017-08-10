@@ -276,7 +276,7 @@ class ConfigControllerTestCase(TestCase):
     def test_update_config_failure(self):
         autospec_method(self.controller.strip_header)
         striped_content = self.controller.strip_header.return_value
-        name, content, config_hash = None, mock.Mock(), mock.Mock()
+        name, config_hash = None, mock.Mock()
         self.manager.get_hash.return_value = config_hash
         self.manager.write_config.side_effect = ConfigError("It broke")
         error = self.controller.update_config(

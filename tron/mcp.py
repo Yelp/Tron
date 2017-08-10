@@ -125,8 +125,8 @@ class MasterControlProgram(object):
         if self.state_watcher.update_from_config(state_config):
             for job_scheduler in self.jobs:
                 self.state_watcher.save_job(job_scheduler.get_job())
-            for service in self.services:
-                self.state_watcher.save_service(service)
+            for s in self.services:
+                self.state_watcher.save_service(s)
 
     def apply_notification_options(self, conf):
         if not conf:

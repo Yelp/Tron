@@ -32,16 +32,16 @@ class ActionGraph(object):
     def _build_dag(cls, actions, actions_config):
         """Return a directed graph from a dict of actions keyed by name."""
         base = []
-        for action in actions.itervalues():
-            dependencies = cls._get_dependencies(actions_config, action.name)
+        for a in actions.itervalues():
+            dependencies = cls._get_dependencies(actions_config, a.name)
             if not dependencies:
-                base.append(action)
+                base.append(a)
                 continue
 
             for dependency in dependencies:
                 dependency_action = actions[dependency]
-                action.required_actions.append(dependency_action)
-                dependency_action.dependent_actions.append(action)
+                a.required_actions.append(dependency_action)
+                dependency_action.dependent_actions.append(a)
         return base
 
     @classmethod

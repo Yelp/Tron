@@ -57,7 +57,7 @@ def wait_on_proc_terminate(pid):
     def wait_on_terminate():
         try:
             os.kill(pid, 0)
-        except:
+        except Exception:
             return True
     wait_on_terminate.__name__ = "Wait on %s to terminate" % pid
     wait_on_sandbox(wait_on_terminate)

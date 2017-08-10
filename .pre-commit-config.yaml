@@ -14,8 +14,6 @@
     -   id: check-yaml
         files: ^(?!.*template).*\.(yaml|yml|eyaml)$
         language_version: python2.7
-    -   id: debug-statements
-        language_version: python2.7
     -   id: requirements-txt-fixer
         language_version: python2.7
     -   id: flake8

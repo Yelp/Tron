@@ -238,7 +238,7 @@ class MCPReconfigureTestCase(TestCase):
         assert_equal(action_map['action_remove'].name, 'action_remove')
 
         self.reconfigure()
-        assert not 'test_remove' in self.mcp.jobs
+        assert 'test_remove' not in self.mcp.jobs
         assert not job_sched.job.enabled
         assert not run1.is_scheduled
 
@@ -282,7 +282,7 @@ class MCPReconfigureTestCase(TestCase):
 
     @suite('integration')
     def test_job_new(self):
-        assert not 'test_new' in self.mcp.jobs
+        assert 'test_new' not in self.mcp.jobs
         self.reconfigure()
 
         assert 'MASTER.test_new' in self.mcp.jobs
