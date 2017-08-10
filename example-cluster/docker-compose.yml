@@ -1,0 +1,11 @@
+version: "3"
+services:
+  master:
+    build:
+      context: ../
+    volumes:
+      - ../:/work
+  batch1:
+    image: library/ubuntu:16.04
+  batch2:
+    image: library/ubuntu:16.04
