@@ -5,7 +5,14 @@ services:
       context: ../
     volumes:
       - ../:/work
+      - ./tronfig:/var/lib/tron/tronfig
+    links:
+      - batch1
+      - batch2
+    privileged: true
   batch1:
-    image: library/ubuntu:16.04
+    build:
+      context: images/batch
   batch2:
-    image: library/ubuntu:16.04
+    build:
+      context: images/batch

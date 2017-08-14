@@ -1,0 +1,18 @@
+---
+
+ssh_options:
+   agent: False
+   identities: 
+     - /work/example-cluster/insecure_key
+
+nodes:
+  - hostname: batch1
+    username: tron
+
+jobs:
+    - name: "test"
+      node: batch1
+      schedule: "interval 20seconds"
+      actions:
+        - name: "first"
+          command: "echo hi >> out"
