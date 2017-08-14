@@ -1,0 +1,18 @@
+# Example Cluster
+
+This is a docker-compose setup for a working Tron setup. There is one example job
+in the tronfig which gets deployed.
+
+# To Run
+
+```
+$ docker-compose run master
+```
+
+# To start Tron (from inside the master container)
+
+```
+$ cd /work
+$ pip install -e .
+$ ./bin/trond --nodaemon -c /var/lib/tron/tronfig
+```
