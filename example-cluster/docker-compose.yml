@@ -1,0 +1,18 @@
+version: "3"
+services:
+  master:
+    build:
+      context: ../
+    volumes:
+      - ../:/work
+      - ./tronfig:/var/lib/tron/tronfig
+    links:
+      - batch1
+      - batch2
+    privileged: true
+  batch1:
+    build:
+      context: images/batch
+  batch2:
+    build:
+      context: images/batch
