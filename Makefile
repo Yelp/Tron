@@ -35,12 +35,7 @@ rpm:
 	$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall
 
 deb: man
-	# build the source package in the parent directory
-	# then rename it to project_version.orig.tar.gz
-	$(PYTHON) setup.py sdist $(COMPILE) --dist-dir=../
-	rename -f 's/$(PROJECT)-(.*)\.tar\.gz/$(PROJECT)_$$1\.orig\.tar\.gz/' ../*
-	# build the package
-	dpkg-buildpackage -i -I -rfakeroot -uc -us
+	dpkg-buildpackage -d && mv ../*.deb dist/
 
 publish:
 	python setup.py sdist bdist_wheel	
@@ -72,7 +67,7 @@ docs:
 
 doc: docs
 
-man: 
+man:
 	which $(SPHINXBUILD) >/dev/null && $(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_DIR)/man || true
 	@echo
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
