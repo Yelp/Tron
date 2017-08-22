@@ -17,3 +17,13 @@ tronweb_tests/lib/
 vagrant/insecure_tron_key
 vagrant/insecure_tron_key.pub
 .tox
+
+# Generated debian artifacts
+debian/tron
+debian/files
+debian/tron.substvars
+debian/tron.debhelper.log
+debian/tron.postinst.debhelper
+debian/tron.postrm.debhelper
+debian/tron.prerm.debhelper
+debian/tron.substvars
