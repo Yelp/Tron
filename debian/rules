@@ -1,12 +1,21 @@
 #!/usr/bin/make -f
 # -*- makefile -*-
 
-DEB_PYTHON_SYSTEM=pycentral
-DEB_DH_INSTALLINIT_ARGS="-n"
+PIP_INDEX_URL ?= https://pypi.python.org/simple
 
-include /usr/share/cdbs/1/rules/debhelper.mk
-include /usr/share/cdbs/1/class/python-distutils.mk
+%:
+	dh $@ --with python-virtualenv
 
-clean::
-	rm -rf build build-stamp python-build-stamp-* configure-stamp build/ MANIFEST
-	dh_clean
+# do not call `make clean` as part of packaging
+override_dh_auto_clean:
+	true
+
+override_dh_auto_build:
+	true
+
+# do not call `make test` as part of packaging
+override_dh_auto_test:
+	true
+
+override_dh_virtualenv:
+	dh_virtualenv -i $(PIP_INDEX_URL) --python=/usr/bin/python2.7 --preinstall no-manylinux1 --preinstall pip-custom-platform --pip-tool pip-custom-platform

@@ -11,6 +11,8 @@ DOCS_BUILDDIR=docs/_build
 DOCS_STATICSDIR=$(DOCS_DIR)/images
 ALLSPHINXOPTS=-d $(DOCS_BUILDDIR)/doctrees $(SPHINXOPTS)
 
+DOCKER_RUN=docker run -t -v $(CURDIR)/:/work:rw tron-deb-builder
+
 .PHONY : all source install clean tests docs
 
 all:
@@ -34,13 +36,12 @@ install:
 rpm:
 	$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall
 
-deb: man
-	# build the source package in the parent directory
-	# then rename it to project_version.orig.tar.gz
-	$(PYTHON) setup.py sdist $(COMPILE) --dist-dir=../
-	rename -f 's/$(PROJECT)-(.*)\.tar\.gz/$(PROJECT)_$$1\.orig\.tar\.gz/' ../*
-	# build the package
-	dpkg-buildpackage -i -I -rfakeroot -uc -us
+build_%_docker:
+	[ -d dist ] || mkdir dist
+	cd ./yelp_package/$*/ && docker build -t tron-deb-builder .
+
+package_%_deb: build_%_docker
+	$(DOCKER_RUN) /bin/bash -c "dpkg-buildpackage -d && mv ../*.deb dist/"
 
 publish:
 	python setup.py sdist bdist_wheel	
@@ -72,7 +73,7 @@ docs:
 
 doc: docs
 
-man: 
+man:
 	which $(SPHINXBUILD) >/dev/null && $(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_DIR)/man || true
 	@echo
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
