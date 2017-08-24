@@ -4,6 +4,7 @@ RUN apt-get update > /dev/null && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
         debhelper \
         dpkg-dev \
+        devscripts \
         python-pip \
         wget \
         gdebi-core \
