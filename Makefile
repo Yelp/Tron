@@ -64,7 +64,6 @@ test_all:
 LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/\x27/"/g')
 release: build_trusty_docker docs
 	$(DOCKER_RUN) dch -v $(VERSION) --distribution trusty --changelog ./debian/changelog $$'$(VERSION) tagged with \'make release\'\rCommit: $(LAST_COMMIT_MSG)'
-	@echo "$(VERSION) has the changelog set."
 	@git diff
 	@echo "Now Run:"
 	@echo 'git commit -a -m "Released $(VERSION) via make release"'
