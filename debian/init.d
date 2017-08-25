@@ -132,7 +132,7 @@ start_server() {
 # if we are using a daemonuser then change the user id
             start-stop-daemon --start --quiet --pidfile $PIDFILE \
                         --chuid $DAEMONUSER \
-                        --startas $DAEMON
+                        --startas $DAEMON \
                         -- $DAEMON_OPTS
             errcode=$?
         fi
