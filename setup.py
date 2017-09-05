@@ -37,6 +37,7 @@ setup(
         'python-daemon',
         'lockfile>=0.7',
         'SQLAlchemy>=1.0.15',
+        'yelp-clog',
     ],
     packages=find_packages(exclude=['tests.*', 'tests']) + ['tronweb'],
     scripts=[

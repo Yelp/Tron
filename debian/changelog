@@ -1,3 +1,10 @@
+tron (0.7.0.0) trusty; urgency=medium
+
+  * 0.7.0.0 tagged with 'make release'
+    Commit: fix init.d script
+
+ -- root <root@a3aeebf1169f>  Fri, 25 Aug 2017 14:22:47 +0000
+
 tron (0.6.2.1) lucid; urgency=low
 
   * Only keep last buffer from ssh connection

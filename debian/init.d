@@ -41,7 +41,6 @@
 PATH=/usr/bin:/usr/sbin:/sbin:/bin
 
 DAEMON=/usr/bin/trond # Introduce the server's location here
-PYTHON=/usr/local/bin/python
 NAME=tron             # Introduce the short server's name here
 DESC=tron             # Introduce a short description here
 LOGDIR=/var/log/tron  # Log directory to use
@@ -134,7 +133,7 @@ start_server() {
             start-stop-daemon --start --quiet --pidfile $PIDFILE \
                         --chuid $DAEMONUSER \
                         --startas $DAEMON \
-                        --exec $PYTHON -- $DAEMON_OPTS
+                        -- $DAEMON_OPTS
             errcode=$?
         fi
         return $errcode
@@ -149,8 +148,7 @@ stop_server() {
 # if we are using a daemonuser then look for process that match
             start-stop-daemon --stop --quiet --pidfile $PIDFILE \
                         --user $DAEMONUSER \
-                        --startas $DAEMON \
-                        --exec $PYTHON
+                        --startas $DAEMON
             errcode=$?
         fi
 

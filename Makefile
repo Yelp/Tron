@@ -1,15 +1,5 @@
-PYTHON=`which python`
-DESTDIR=/
-PROJECT=tron
-BUILDIR=$(CURDIR)/debian/$PROJECT
-VERSION=`$(PYTHON) setup.py --version`
-DOT=dot -Tpng
-
-SPHINXBUILD=sphinx-build
-DOCS_DIR=docs
-DOCS_BUILDDIR=docs/_build
-DOCS_STATICSDIR=$(DOCS_DIR)/images
-ALLSPHINXOPTS=-d $(DOCS_BUILDDIR)/doctrees $(SPHINXOPTS)
+VERSION=$(shell python setup.py --version)
+DOCKER_RUN=docker run -t -v $(CURDIR)/:/work:rw tron-deb-builder
 
 .PHONY : all source install clean tests docs
 
@@ -28,19 +18,15 @@ source:
 build:
 	$(PYTHON) setup.py build $(COMPILE)
 
-install:
-	$(PYTHON) setup.py install --root $(DESTDIR) $(COMPILE)
-
 rpm:
 	$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall
 
-deb: man
-	# build the source package in the parent directory
-	# then rename it to project_version.orig.tar.gz
-	$(PYTHON) setup.py sdist $(COMPILE) --dist-dir=../
-	rename -f 's/$(PROJECT)-(.*)\.tar\.gz/$(PROJECT)_$$1\.orig\.tar\.gz/' ../*
-	# build the package
-	dpkg-buildpackage -i -I -rfakeroot -uc -us
+build_%_docker:
+	[ -d dist ] || mkdir dist
+	cd ./yelp_package/$*/ && docker build -t tron-deb-builder .
+
+package_%_deb: build_%_docker
+	$(DOCKER_RUN) /bin/bash -c "dpkg-buildpackage -d && mv ../*.deb dist/"
 
 publish:
 	python setup.py sdist bdist_wheel
@@ -59,18 +45,8 @@ coffee:
 	mkdir -p tronweb/js/cs
 	coffee -o tronweb/js/cs/ -c tronweb/coffee/
 
-# TODO: add less target, and web target
-
 docs:
-	PYTHONPATH=. $(PYTHON) tools/state_diagram.py
-	mkdir -p $(DOCS_STATICSDIR)
-	$(DOT) -o$(DOCS_STATICSDIR)/action.png action.dot
-	$(DOT) -o$(DOCS_STATICSDIR)/service_instance.png service_instance.dot
-	$(SPHINXBUILD) -b html $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_BUILDDIR)/html
-	@echo
-	@echo "Build finished. The HTML pages are in $(DOCS_BUILDDIR)/html."
-
-doc: docs
+	tox -e docs
 
 man:
 	which $(SPHINXBUILD) >/dev/null && $(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_DIR)/man || true
@@ -84,3 +60,12 @@ test: tests
 
 test_all:
 	PYTHONPATH=.:bin testify tests --summary
+
+LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/\x27/"/g')
+release: build_trusty_docker docs
+	$(DOCKER_RUN) dch -v $(VERSION) --distribution trusty --changelog ./debian/changelog $$'$(VERSION) tagged with \'make release\'\rCommit: $(LAST_COMMIT_MSG)'
+	@git diff
+	@echo "Now Run:"
+	@echo 'git commit -a -m "Released $(VERSION) via make release"'
+	@echo 'git tag --force v$(VERSION)'
+	@echo 'git push --tags origin master'
