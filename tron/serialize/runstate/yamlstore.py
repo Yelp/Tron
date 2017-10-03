@@ -9,8 +9,13 @@ import itertools
 import operator
 import os
 from tron.serialize import runstate
+import yaml
 
-yaml = None # For pyflakes
+try:
+    from yaml.cyaml import CSafeLoader as Loader
+except ImportError:  # pragma: no cover (no libyaml-dev / pypy)
+    Loader = yaml.SafeLoader
+
 
 YamlKey = namedtuple('YamlKey', ['type', 'iden'])
 
@@ -23,10 +28,6 @@ TYPE_MAPPING = {
 class YamlStateStore(object):
 
     def __init__(self, filename):
-        # Differ import of yaml until class is instantiated
-        import yaml
-        global yaml
-        assert yaml
         self.filename           = filename
         self.buffer             = {}
 
@@ -38,7 +39,7 @@ class YamlStateStore(object):
             return {}
 
         with open(self.filename, 'r') as fh:
-            self.buffer = yaml.load(fh)
+            self.buffer = yaml.load(fh, Loader=Loader)
 
         items = (self.buffer.get(key.type, {}).get(key.iden) for key in keys)
         key_item_pairs = itertools.izip(keys, items)
