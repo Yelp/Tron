@@ -9,8 +9,9 @@ import itertools
 import operator
 import os
 from tron.serialize import runstate
+import yaml
 
-yaml = None # For pyflakes
+
 
 YamlKey = namedtuple('YamlKey', ['type', 'iden'])
 
@@ -23,10 +24,6 @@ TYPE_MAPPING = {
 class YamlStateStore(object):
 
     def __init__(self, filename):
-        # Differ import of yaml until class is instantiated
-        import yaml
-        global yaml
-        assert yaml
         self.filename           = filename
         self.buffer             = {}
 
