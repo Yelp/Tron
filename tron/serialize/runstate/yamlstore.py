@@ -12,9 +12,9 @@ from tron.serialize import runstate
 import yaml
 
 try:
-    from yaml.cyaml import CLoader as Loader
+    from yaml.cyaml import CSafeLoader as Loader
 except ImportError:  # pragma: no cover (no libyaml-dev / pypy)
-    Loader = yaml.Loader
+    Loader = yaml.SafeLoader
 
 
 YamlKey = namedtuple('YamlKey', ['type', 'iden'])
