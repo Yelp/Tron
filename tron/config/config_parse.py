@@ -5,6 +5,7 @@ contain a validated configuration.
 import itertools
 import logging
 import os
+import getpass
 
 import pytz
 from tron import command_context
@@ -181,8 +182,8 @@ class ValidateNode(Validator):
     }
 
     defaults = {
-        'port':                 22,
-        'username':             os.environ['USER'],
+        'port': 22,
+        'username': getpass.getuser(),
     }
 
     def do_shortcut(self, node):
@@ -441,7 +442,7 @@ def validate_jobs_and_services(config, config_context):
 
 
 DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1)
-DEFAULT_NODE = ValidateNode().do_shortcut('localhost')
+DEFAULT_NODE = ValidateNode().do_shortcut(node='localhost')
 
 
 class ValidateConfig(Validator):

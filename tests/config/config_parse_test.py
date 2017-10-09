@@ -5,6 +5,7 @@ import stat
 import tempfile
 from textwrap import dedent
 import textwrap
+import getpass
 
 import mock
 import pytz
@@ -174,9 +175,9 @@ services:
             state_persistence=config_parse.DEFAULT_STATE_PERSISTENCE,
             nodes=FrozenDict({
                 'node0': schema.ConfigNode(name='node0',
-                    username=os.environ['USER'], hostname='node0', port=22),
+                    username=getpass.getuser(), hostname='node0', port=22),
                 'node1': schema.ConfigNode(name='node1',
-                    username=os.environ['USER'], hostname='node1', port=22)
+                    username=getpass.getuser(), hostname='node1', port=22)
             }),
             node_pools=FrozenDict({
                 'nodePool': schema.ConfigNodePool(nodes=('node0', 'node1'),
