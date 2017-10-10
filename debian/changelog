@@ -1,3 +1,11 @@
+tron (0.7.1.0) trusty; urgency=medium
+
+  * 0.7.1.0 tagged with 'make release'
+    Commit: dont assume the USER env var  use the more reliable
+    getpass.getuser() instead of expecting a USER env var to be present.
+
+ -- root <root@ac0c082f7689>  Tue, 10 Oct 2017 12:47:50 +0000
+
 tron (0.7.0.0) trusty; urgency=medium
 
   * 0.7.0.0 tagged with 'make release'
