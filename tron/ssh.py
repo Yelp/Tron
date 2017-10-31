@@ -163,8 +163,7 @@ class ExecChannel(channel.SSHChannel):
             log.debug("Channel %s is open, calling deferred", self.id)
             self.start_defer.callback(self)
 
-            # Unicode commands will cause the connection to fail
-            self.command = str(self.command)
+            self.command = self.command.encode('utf-8')
 
             req = self.conn.sendRequest(self, 'exec',
                                         common.NS(self.command),
