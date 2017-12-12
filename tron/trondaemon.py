@@ -6,15 +6,22 @@ import logging.config
 import os
 import pkg_resources
 import daemon
+import platform
 
-from twisted.internet import pollreactor, defer
-from twisted.internet.main import installReactor
 
 import lockfile
 from tron.utils import flockfile
 import signal
 from twisted.python import log as twisted_log
 import tron
+
+if platform.system() == 'Linux':
+    from twisted.internet.epollreactor import EPollReactor as Reactor
+else:
+    from twisted.internet.selectreactor import SelectReactor as Reactor
+
+from twisted.internet import defer
+from twisted.internet.main import installReactor
 
 
 log = logging.getLogger(__name__)
@@ -146,7 +153,7 @@ class TronDaemon(object):
         nodaemon        = self.options.nodaemon
         context_class   = NoDaemonContext if nodaemon else daemon.DaemonContext
         self.context    = self._build_context(options, context_class)
-        self.reactor    = None
+        self.reactor    = Reactor()
 
     def _build_context(self, options, context_class):
         signal_map = {
@@ -173,7 +180,6 @@ class TronDaemon(object):
 
 
     def setup_reactor(self):
-        self.reactor = pollreactor.PollReactor()
         installReactor(self.reactor)
 
     def _run_www_api(self):
