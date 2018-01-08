@@ -25,7 +25,7 @@ build_%_docker:
 	[ -d dist ] || mkdir dist
 	cd ./yelp_package/$*/ && docker build -t tron-deb-builder .
 
-package_%_deb: build_%_docker
+package_%_deb: build_%_docker tronweb/js/cs
 	$(DOCKER_RUN) /bin/bash -c "dpkg-buildpackage -d && mv ../*.deb dist/"
 
 publish:
@@ -35,15 +35,21 @@ publish:
 clean:
 	$(PYTHON) setup.py clean
 	rm -rf build/ MANIFEST
+	rm -rf tronweb/js/cs
 	find . -name '*.pyc' -delete
 	find . -name "._*" -delete
 	rm -rf $(DOCS_BUILDDIR)/*
 	rm -rf $(DOCS_STATICSDIR)/*
 	fakeroot $(MAKE) -f $(CURDIR)/debian/rules clean
 
-coffee:
+COFFEE := $(shell which coffee 2 > /dev/null)
+tronweb/js/cs:
+ifdef COFFEE
+	$(error coffee is missing. please install coffeescript)
+else
 	mkdir -p tronweb/js/cs
 	coffee -o tronweb/js/cs/ -c tronweb/coffee/
+endif
 
 docs:
 	tox -e docs
