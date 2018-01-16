@@ -332,11 +332,7 @@ class ConfigResource(resource.Resource):
             req = "reconfigure"
 
         log.info("Handling %s request: %s, %s" % (req, name, config_hash))
-        error = fn(
-            name=name,
-            config_content=config_content,
-            config_hash=config_hash,
-        )
+        error = fn(name, config_content, config_hash)
 
         if error:
             response['error'] = error
