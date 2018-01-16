@@ -32,18 +32,26 @@ def parse_options():
                       help="Print config to stdout, rather than uploading")
     parser.add_option("-n", "--no-header", action="store_true", default=False,
                       help="Print named config without a header")
+    parser.add_option("-C", "--check", action="store_true", dest="check",
+                      help="Only check configuration, don't apply")
 
     options, args = parser.parse_args()
     set_options_from_args(options, args)
     return options
 
 
-def upload_config(client, config_name, contents, config_hash):
-    response = client.config(config_name,
-                             config_data=contents, config_hash=config_hash)
+def upload_config(client, config_name, contents, config_hash, check=False):
+    response = client.config(
+        config_name,
+        config_data=contents,
+        config_hash=config_hash,
+        check=check
+    )
+
     if 'error' in response:
         log.error(response['error'])
         return False
+
     print >>sys.stderr, "Configuration uploaded successfully"
     return True
 
@@ -77,11 +85,12 @@ def print_config(client, config_name, no_header):
     print client.config(config_name, no_header=no_header)['config']
 
 
-def update_from_stdin(client, config_name):
+def update_from_stdin(client, config_name, check=False):
     config_content = sys.stdin.read()
     config_hash = client.config(config_name)['hash']
     if validate(config_name, config_content):
-        if upload_config(client, config_name, config_content, config_hash):
+        if upload_config(
+                client, config_name, config_content, config_hash, check=check):
             return
     raise SystemExit("tronfig failed")
 
@@ -118,9 +127,7 @@ if __name__ == '__main__':
 
     if options.print_config:
         print_config(client, config_name, options.no_header)
-
     elif options.from_stdin:
-        update_from_stdin(client, config_name)
-
+        update_from_stdin(client, config_name, check=config.check)
     else:
         update_with_editor(client, config_name)
