@@ -209,6 +209,20 @@ class ConfigController(object):
             config_content = self.render_template(config_content)
         return dict(config=config_content, hash=config_hash)
 
+    def check_config(self, name, content, config_hash):
+        """Update a configuration fragment and reload the MCP."""
+        if self.config_manager.get_hash(name) != config_hash:
+            return "Configuration update will fail: config is stale, try again"
+
+        content = self.strip_header(name, content)
+
+        try:
+            self.config_manager.validate_with_fragment(name, content)
+        except Exception, e:
+            return "Configuration update will fail: %s" % str(e)
+
+        return self.config_manager.check_config(name, content)
+
     def update_config(self, name, content, config_hash):
         """Update a configuration fragment and reload the MCP."""
         if self.config_manager.get_hash(name) != config_hash:
