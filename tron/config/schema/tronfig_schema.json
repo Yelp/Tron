@@ -1,0 +1,218 @@
+{
+    "$schema": "http://json-schema.org/draft-06/schema#",
+    "description": "",
+    "minProperties": 1,
+    "type": "object",
+    "additionalProperties": false,
+    "minProperties": 1,
+    "properties":{
+                "ssh_options": {
+                    "type": "object",
+                    "properties": {
+                      "agent": {
+                          "type": "boolean",
+                          "default": false
+                      },
+                      "identities": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                      },
+                      "known_hosts_file":{
+                        "type": "string"
+                      },
+                      "connect_timeout": {
+                        "type": "number",
+                        "default": 30
+                      },
+                      "idle_connection_timeout": {
+                        "type": "number",
+                        "default": 3600
+                      },
+                      "jitter_min_load": {
+                        "type": "number",
+                        "default": 4
+                      },
+                      "jitter_max_delay" : {
+                        "type": "number",
+                        "default": 20
+                      },
+                      "jitter_load_factor": {
+                        "type": "number",
+                        "default": 20
+                      }
+                  }
+                },
+                "notification_options": {
+                  "type": "object",
+                  "properties": {
+                    "smtp_host": {
+                      "type": "string"
+                    },
+                    "notification_addr": {
+                      "type": "string"
+                    }
+                  }
+
+                },
+                "time_zone": {
+                  "type": "string"
+                },
+                "command_context": {
+                  "type": "object"
+                },
+                "output_stream_dir": {
+                  "type": "string"
+                },
+                "state_persistence": {
+                  "type": "object",
+                  "properties" : {
+                    "store_type": {
+                      "type": "string"
+                    },
+                    "name": {
+                      "type": "string"
+                    },
+                    "connection_details": {
+                      "type": "string"
+                    },
+                    "buffer_size": {
+                      "type": "number",
+                      "default": 1
+                    }
+                  }
+                },
+                "action_runner":{ 
+                  "type": "object",
+                  "properties": {
+                    "runner_type": {
+                      "type": "string"
+                    },
+                    "remote_status_path": {
+                      "type": "string"
+                    },
+                    "remote_exec_path": {
+                      "type": "string"
+                    }
+                  }
+                },
+                "nodes": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "hostname": {
+                          "type": "string"
+                        },
+                        "name": {
+                          "type": "string"
+                        },
+                        "username": {
+                          "type": "string"
+                        },
+                        "port": {
+                          "type": "number"
+                        }
+                      }
+                    }
+                },
+                "node_pools": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string",
+                        "nodes": {
+                          "type": "array",
+                          "items": {
+                            "type": "string"
+                          }
+                        }
+
+                    }
+                }
+                }
+                },
+              "jobs": {
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "name": {
+                        "type": "string"
+                      },
+                      "node": {
+                        "type": "string"
+                      },
+                      "schedule": {
+                        "oneOf" :  [
+                          {
+                            "type": "string"
+                          },
+                          {
+                            "type": "object"
+                          }
+                        ]
+                      },
+                      "actions": {
+                        "type": "array",
+                        "items": {
+                          "type": "object",
+                          "properties": {
+                            "name":{
+                              "type": "string"
+                            },
+                            "command": {
+                              "type": "string"
+                            },
+                            "requires": {
+                              "type": "array",
+                              "items": {
+                                "type": "string"
+                              }
+                            },
+                            "node": {
+                              "type": "string"
+                            }
+                          }
+                        }
+                      },
+                      "queuing": {
+                        "type": "boolean",
+                        "default": "true"
+                      },
+                      "allow_overlap": {
+                        "type": "boolean",
+                        "default": "false"
+                      },
+                      "run_limit": {
+                        "type": "number",
+                        "default": "50"
+                      },
+                      "all_nodes": {
+                        "type": "boolean",
+                        "default": "false"
+                      },
+                      "cleanup_action": {
+                        "type": "object"
+                      },
+                      "enabled": {
+                        "type": "boolean",
+                        "default": "true"
+                      },
+                      "max_runtime": {
+                        "type": "string"
+                      }
+                  }
+              }
+              },
+              "services": {
+                "type": "array",
+                "items": {
+                  "type": "object"
+                }
+              }
+      }
+}
