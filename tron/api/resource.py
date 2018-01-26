@@ -327,6 +327,9 @@ class ConfigResource(resource.Resource):
         if check:
             fn = self.controller.check_config
             req = "configure check"
+        elif config_content == "":
+            fn = self.controller.delete_config
+            req = "configuration delete"
         else:
             fn = self.controller.update_config
             req = "reconfigure"
