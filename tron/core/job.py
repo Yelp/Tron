@@ -58,7 +58,7 @@ class Job(Observable, Observer):
 
     # TODO: use config object
     def __init__(self, name, scheduler, queueing=True, all_nodes=False,
-            owner='', summary='', notes='',
+            owner='', summary='', notes='', monitoring=None,
             node_pool=None, enabled=True, action_graph=None,
             run_collection=None, parent_context=None, output_path=None,
             allow_overlap=None, action_runner=None, max_runtime=None):
@@ -67,6 +67,7 @@ class Job(Observable, Observer):
         self.owner              = owner
         self.summary            = summary
         self.notes              = notes
+        self.monitoring         = monitoring
         self.action_graph       = action_graph
         self.scheduler          = scheduler
         self.runs               = run_collection
@@ -97,6 +98,7 @@ class Job(Observable, Observer):
             owner               = job_config.owner,
             summary             = job_config.summary,
             notes               = job_config.notes,
+            monitoring          = job_config.monitoring,
             queueing            = job_config.queueing,
             all_nodes           = job_config.all_nodes,
             node_pool           = node_repo.get_by_name(job_config.node),
@@ -144,6 +146,9 @@ class Job(Observable, Observer):
 
     def get_notes(self):
         return self.notes
+
+    def get_monitoring(self):
+        return self.monitoring
 
     def get_runs(self):
         return self.runs

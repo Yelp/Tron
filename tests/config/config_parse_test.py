@@ -191,6 +191,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20), jitter=None),
                     actions=FrozenDict({
@@ -218,6 +219,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set([1, 3, 5]),
                         hour=0, minute=30, second=0,
@@ -250,6 +252,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=16, minute=30, second=0,
@@ -278,6 +281,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     actions=FrozenDict({
                         'action3_1': schema.ConfigAction(
                             name='action3_1',
@@ -308,6 +312,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=0, minute=0, second=0,
@@ -406,6 +411,7 @@ jobs:
           giving information about this job.
 
           Second sentence.
+        monitoring: {}
         actions:
             -
                 name: "action2_0"
@@ -473,6 +479,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20),
                         jitter=None,
@@ -502,6 +509,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set([1, 3, 5]),
                         hour=0,
@@ -536,6 +544,7 @@ services:
                     owner='bob@example.com',
                     summary='Flobbles the jibber service into submission',
                     notes='This is a multiple line notes section for\ngiving information about this job.\n\nSecond sentence.\n',
+                    monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=16,
@@ -566,6 +575,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     actions=FrozenDict({
                         'action3_1': schema.ConfigAction(
                             name='action3_1',
@@ -596,6 +606,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=0, minute=0, second=0,
@@ -994,6 +1005,7 @@ class ValidateJobsAndServicesTestCase(TestCase):
                 owner='',
                 summary='',
                 notes='',
+                monitoring={},
                 schedule=ConfigIntervalScheduler(
                     timedelta=datetime.timedelta(0, 20), jitter=None),
                 actions=FrozenDict({'action0_0':

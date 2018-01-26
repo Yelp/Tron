@@ -29,6 +29,10 @@ Required Fields
 Optional Fields
 ---------------
 
+**monitoring** (default **{}**)
+    (Beta Feature) Dictionary of key: value pairs to inform the monitoring
+    framework on how to alert teams for job failures.
+
 **queueing** (default **True**)
     If a job run is still running when the next job run is to be scheduled,
     add the next run to a queue if this is **True**. Otherwise, cancel
