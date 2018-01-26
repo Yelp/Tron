@@ -19,6 +19,7 @@ from tron.commands import client
 
 COMMAND_HELP = (
     ('start',           'Start the selected job, job run, action, or service'),
+    ('rerun',           'Re-run a full job (all actions) with a new job id'),
     ('cancel',          'Cancel the selected job run'),
     ('disable',         'Disable selected job and cancel any outstanding runs'),
     ('enable',          'Enable the selected job and schedule the next run'),

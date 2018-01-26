@@ -56,6 +56,9 @@ start <action_run_id>
 restart <job_run_id>
     Creates a new job run with the same run time as this job.
 
+rerun <job_run_id>
+    Creates a new job run with the same run time as this job (same as restart).
+
 cancel <job_run_id | action_run_id>
     Cancels the specified job run or action run.
 
