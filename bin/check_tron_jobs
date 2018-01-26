@@ -1,0 +1,114 @@
+#!/usr/bin/env python
+import sys
+
+from tron.commands import cmd_utils
+from tron.commands import display
+from tron.commands.client import Client, get_object_type_from_identifier
+
+
+def parse_options():
+    usage  = ""
+    parser = cmd_utils.build_option_parser(usage)
+    options, args = parser.parse_args(sys.argv)
+    return options, args[1:]
+
+
+def compute_check_result_for_job_runs(client, job, job_content):
+    kwargs = {}
+    if job_content is None:
+        kwargs["output"] = "OK: {} was just added and hasn't run yet.".format(job['name'])
+        kwargs["status"] = 0
+        return kwargs
+
+    relevant_run = get_relevant_run(job_content)
+    if relevant_run is None:
+        kwargs["output"] = "CRIT: {} hasn't had a successful run yet.\n{}".format(
+            job['name'], pretty_print_job(job_content))
+        kwargs["status"] = 2
+        return kwargs
+
+    last_state = relevant_run.get('state', 'unknown')
+    if last_state == "succeeded":
+        prefix = "OK"
+        status = 0
+    elif last_state == "failed":
+        # TODO: Inspect the actions and get the stdout
+        prefix = "CRIT"
+        status = 2
+    else:
+        prefix = "UNKNOWN"
+        status = 3
+
+    kwargs["output"] = (
+        "{}: {}'s last relevant run {}:\n"
+        "{}\n"
+        "\n\n"
+        "Here are the rest for context:\n"
+        "{}"
+    ).format(
+        prefix, job['name'], last_state,
+        pretty_print_job_run(relevant_run),
+        pretty_print_job(job_content)
+    )
+    kwargs["status"] = status
+    return kwargs
+
+
+def pretty_print_job(job_content):
+    return display.format_job_details(job_content)
+
+
+def pretty_print_job_run(job_run):
+    return str(job_run)
+
+
+def get_relevant_run(job_runs):
+    # Let's look at the last set of runs, and report on the most recent completed one
+    for run in job_runs['runs']:
+        if run.get('state', 'unknown') in ["failed", "succeeded"]:
+            return run
+    return None
+
+
+def compute_check_result_for_job(client, job):
+    kwargs = {
+        "name": "check_tron_job.{}".format(job['name']),
+        "team": 'noop',
+        "notification_email": "kwa+checktron@yelp.com",
+    }
+    status = job["status"]
+    if status == "disabled":
+        kwargs["output"] = "OK: {} is disabled and won't be checked.".format(job['name'])
+        kwargs["status"] = 0
+        return kwargs
+    else:
+        # The job is not disabled, therefore we have to look at its run history
+        url_index = client.index()
+        tron_id = get_object_type_from_identifier(url_index, job["name"])
+        job_content = client.job(tron_id.url, count=10)
+        results = compute_check_result_for_job_runs(job=job, job_content=job_content, client=client)
+        kwargs.update(results)
+        return kwargs
+
+
+def check_job(job, client):
+    print("Checking {}".format(job['name']))
+    result = compute_check_result_for_job(job=job, client=client)
+    print("Would have sent:")
+    print(result)
+    print("")
+
+
+def main():
+    options, args = parse_options()
+    cmd_utils.setup_logging(options)
+    cmd_utils.load_config(options)
+    client = Client(options.server)
+
+    jobs = client.jobs()
+    for job in jobs:
+        check_job(job=job, client=client)
+
+
+if __name__ == '__main__':
+    main()

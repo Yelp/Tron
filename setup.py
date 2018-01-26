@@ -1,8 +1,6 @@
-try:
-    from setuptools import setup, find_packages
-    assert setup
-except ImportError:
-    from distutils.core import setup
+import glob
+
+from setuptools import setup, find_packages
 
 import tron
 
@@ -38,14 +36,7 @@ setup(
         'yelp-clog'
     ],
     packages=find_packages(exclude=['tests.*','tests'])+['tronweb'],
-    scripts=[
-        'bin/trond',
-        'bin/tronview',
-        'bin/tronctl',
-        'bin/tronfig',
-        'bin/action_runner.py',
-        'bin/action_status.py',
-    ],
+    scripts=glob.glob('bin/*'),
     include_package_data=True,
     long_description="""Tron is a centralized system for managing periodic batch processes and services across a cluster. If you find cron or fcron to be insufficient for managing complex work flows across multiple computers, Tron might be for you.
 
