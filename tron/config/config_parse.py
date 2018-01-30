@@ -283,6 +283,7 @@ class ValidateJob(Validator):
         'allow_overlap':        False,
         'max_runtime':          None,
         'notes':                '',
+        'monitoring':           {},
         'owner':                '',
         'summary':              '',
     }
@@ -302,6 +303,7 @@ class ValidateJob(Validator):
         'owner':                valid_string,
         'summary':              valid_string,
         'notes':                valid_string,
+        'monitoring':           valid_dict,
     }
 
     def cast(self, in_dict, config_context):
