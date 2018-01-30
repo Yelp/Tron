@@ -12,20 +12,11 @@ all:
 	@echo "make clean - Get rid of scratch and byte files"
 	@echo "make publish - publish to pypi.python.org"
 
-source:
-	$(PYTHON) setup.py sdist $(COMPILE)
-
-build:
-	$(PYTHON) setup.py build $(COMPILE)
-
-rpm:
-	$(PYTHON) setup.py bdist_rpm --post-install=rpm/postinstall --pre-uninstall=rpm/preuninstall
-
 build_%_docker:
 	[ -d dist ] || mkdir dist
 	cd ./yelp_package/$*/ && docker build -t tron-deb-builder .
 
-package_%_deb: build_%_docker tronweb/js/cs
+package_%_deb: clean  build_%_docker tronweb/js/cs
 	$(DOCKER_RUN) /bin/bash -c "dpkg-buildpackage -d && mv ../*.deb dist/"
 
 publish:
@@ -33,22 +24,16 @@ publish:
 	twine upload dist/*
 
 clean:
-	$(PYTHON) setup.py clean
-	rm -rf build/ MANIFEST
 	rm -rf tronweb/js/cs
 	find . -name '*.pyc' -delete
-	find . -name "._*" -delete
-	rm -rf $(DOCS_BUILDDIR)/*
-	rm -rf $(DOCS_STATICSDIR)/*
-	fakeroot $(MAKE) -f $(CURDIR)/debian/rules clean
 
 COFFEE := $(shell which coffee 2 > /dev/null)
 tronweb/js/cs:
 ifdef COFFEE
 	$(error coffee is missing. please install coffeescript)
 else
-	mkdir -p tronweb/js/cs
-	coffee -o tronweb/js/cs/ -c tronweb/coffee/
+	$(DOCKER_RUN) mkdir -p tronweb/js/cs
+	$(DOCKER_RUN) coffee -o tronweb/js/cs/ -c tronweb/coffee/
 endif
 
 docs:
