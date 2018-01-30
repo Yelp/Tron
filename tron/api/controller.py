@@ -78,7 +78,7 @@ class JobRunController(object):
         self.job_scheduler = job_scheduler
 
     def handle_command(self, command):
-        if command == 'restart':
+        if command == 'restart' or command == 'rerun':
             runs = self.job_scheduler.manual_start(self.job_run.run_time)
             return "Created %s" % ",".join(str(run) for run in runs)
 
