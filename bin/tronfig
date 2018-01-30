@@ -34,6 +34,8 @@ def parse_options():
                       help="Print named config without a header")
     parser.add_option("-C", "--check", action="store_true", dest="check",
                       help="Only check configuration, don't apply")
+    parser.add_option("-d", "--delete", action="store_true",
+                      help="Delete the configuration for this namespace")
 
     options, args = parser.parse_args()
     set_options_from_args(options, args)
@@ -85,6 +87,22 @@ def print_config(client, config_name, no_header):
     print client.config(config_name, no_header=no_header)['config']
 
 
+def delete_config(client, config_name):
+    if config_name == schema.MASTER_NAMESPACE:
+        log.error("Deleting MASTER namespace is not allowed. Name must be specified.")
+        return
+
+    response = raw_input(
+        "This will delete the configuration for the %s namespace. Proceed? (y/n): " % config_name)
+    if response[:1].lower() != 'y':
+        return
+
+    config_hash = client.config(config_name)['hash']
+    if upload_config(client, config_name, "", config_hash):
+        return
+    raise SystemExit("tronfig deletion failed")
+
+
 def update_from_stdin(client, config_name, check=False):
     config_content = sys.stdin.read()
     config_hash = client.config(config_name)['hash']
@@ -127,7 +145,9 @@ if __name__ == '__main__':
 
     if options.print_config:
         print_config(client, config_name, options.no_header)
+    elif options.delete:
+        delete_config(client, config_name)
     elif options.from_stdin:
-        update_from_stdin(client, config_name, check=config.check)
+        update_from_stdin(client, config_name, check=options.check)
     else:
         update_with_editor(client, config_name)

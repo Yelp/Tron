@@ -261,6 +261,33 @@ class ConfigControllerTestCase(TestCase):
         error = self.controller.update_config(name, content, config_hash)
         assert_equal(error, "Configuration has changed. Please try again.")
 
+    def test_delete_config(self):
+        name, content, config_hash = None, "", mock.Mock()
+        self.manager.get_hash.return_value = config_hash
+        assert not self.controller.delete_config(name, content, config_hash)
+        self.manager.delete_config.assert_called_with(name)
+        self.mcp.reconfigure.assert_called_with()
+        self.manager.get_hash.assert_called_with(name)
+
+    def test_delete_config_failure(self):
+        name, content, config_hash = None, "", mock.Mock()
+        self.manager.get_hash.return_value = config_hash
+        self.manager.delete_config.side_effect = Exception("some error")
+        error = self.controller.delete_config(name, content, config_hash)
+        assert error
+        self.manager.delete_config.assert_called_with(name)
+        assert not self.mcp.reconfigure.call_count
+
+    def test_delete_config_hash_mismatch(self):
+        name, content, config_hash = None, "", mock.Mock()
+        error = self.controller.delete_config(name, content, config_hash)
+        assert_equal(error, "Configuration has changed. Please try again.")
+
+    def test_delete_config_content_not_empty(self):
+        name, content, config_hash = None, "content", mock.Mock()
+        error = self.controller.delete_config(name, content, config_hash)
+        assert error
+
     def test_get_namespaces(self):
         result = self.controller.get_namespaces()
         self.manager.get_namespaces.assert_called_with()

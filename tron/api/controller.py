@@ -235,5 +235,20 @@ class ConfigController(object):
             log.error("Configuration update failed: %s" % e)
             return str(e)
 
+    def delete_config(self, name, content, config_hash):
+        """Delete a configuration fragment and reload the MCP."""
+        if self.config_manager.get_hash(name) != config_hash:
+            return "Configuration has changed. Please try again."
+
+        if content != "":
+            return "Configuration content is not empty, will not delete."
+
+        try:
+            self.config_manager.delete_config(name)
+            self.mcp.reconfigure()
+        except Exception, e:
+            log.error("Deleting configuration for %s failed: %s" % (name, e))
+            return str(e)
+
     def get_namespaces(self):
         return self.config_manager.get_namespaces()

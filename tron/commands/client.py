@@ -100,7 +100,7 @@ class Client(object):
         check=False
     ):
         """Retrieve or update the configuration."""
-        if config_data:
+        if config_data is not None:
             data_check = 1 if check else 0
             request_data = dict(
                 config=config_data,
