@@ -10,6 +10,7 @@ RUN apt-get update > /dev/null && \
         gdebi-core \
         gcc \
         python-dev \
+        coffeescript \
         && apt-get clean > /dev/null
 
 RUN cd /tmp && \
