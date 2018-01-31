@@ -143,9 +143,13 @@ class ValidateSSHOptions(Validator):
 
     validators = {
         'agent':                    valid_bool,
+        # TODO: move this config and validations outside master namespace
+        # 'identities':               build_list_of_type_validator(
+        #                                 valid_identity_file, allow_empty=True),
         'identities':               build_list_of_type_validator(
-                                        valid_identity_file, allow_empty=True),
-        'known_hosts_file':         valid_known_hosts_file,
+                                        valid_string, allow_empty=True),
+        # 'known_hosts_file':         valid_known_hosts_file,
+        'known_hosts_file':         valid_string,
         'connect_timeout':          config_utils.valid_int,
         'idle_connection_timeout':  config_utils.valid_int,
         'jitter_min_load':          config_utils.valid_int,

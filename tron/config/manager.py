@@ -85,9 +85,9 @@ class ConfigManager(object):
 
     DEFAULT_HASH = hash_digest("")
 
-    def __init__(self, config_path):
+    def __init__(self, config_path, manifest=None):
         self.config_path = config_path
-        self.manifest = ManifestFile(config_path)
+        self.manifest = manifest or ManifestFile(config_path)
 
     def build_file_path(self, name):
         name = name.replace('.', '_').replace(os.path.sep, '_')
