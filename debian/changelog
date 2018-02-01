@@ -1,3 +1,12 @@
+tron (0.7.2.0) trusty; urgency=medium
+
+  * 0.7.2.0 tagged with make release'
+  * Use upstart instead of sysv-init
+  * Added prototype check_tron_jobs and monitoring configs
+  * Add --delete option for tronfig namespaces
+
+ -- root <root@16fb9840b464>  Thu, 01 Feb 2018 11:07:08 +0000
+
 tron (0.7.1.0) trusty; urgency=medium
 
   * 0.7.1.0 tagged with 'make release'
