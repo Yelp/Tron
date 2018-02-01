@@ -105,17 +105,18 @@ def validate_dir(path):
 def get_config_input(namespace, source=None):
     if source is None:
         source = namespace
+        namespace = None
 
     if source == '-':
         source_io = sys.stdin
-        namespace = schema.MASTER_NAMESPACE
+        namespace = namespace or schema.MASTER_NAMESPACE
     else:
         source_io = open(source, 'r')
-        namespace = os.path.basename(source)[0:-5]
+        namespace = namespace or os.path.basename(source)[0:-5]
 
     content = source_io.read()
 
-    return namespace, content, source
+    return namespace, content
 
 
 if __name__ == '__main__':
@@ -125,7 +126,7 @@ if __name__ == '__main__':
 
     if options.validate or options.validate_dir:
         if options.validate:
-            name, content, source = get_config_input(*args)
+            name, content = get_config_input(*args)
             result = validate(name, content)
         elif options.validate_dir is not None:
             result = validate_dir(options.validate_dir)
