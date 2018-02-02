@@ -30,6 +30,7 @@ setup(
         'pyasn1>=0.0.13',
         'pycrypto>=2.4',
         'pytz>=2011n',
+        'pysensu-yelp',
         'python-daemon',
         'lockfile>=0.7',
         'SQLAlchemy>=1.0.15',
