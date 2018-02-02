@@ -48,7 +48,7 @@ class ShelveStateStore(object):
     def restore(self, keys):
         items = itertools.izip(
             keys, (
-                self.shelve.get(key.key)
+                self.shelve.get(str(key.key))
                 for key in keys
             ),
         )

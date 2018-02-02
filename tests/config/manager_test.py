@@ -138,7 +138,7 @@ class ConfigManagerTestCase(TestCase):
         manager.write(path, self.content)
         self.manifest.get_file_name.return_value = path
         config = self.manager.read_raw_config(name)
-        assert_equal(config, yaml.dump(self.content))
+        assert_equal(config, yaml.safe_dump(self.content))
 
     def test_write_config(self):
         name = 'filename'

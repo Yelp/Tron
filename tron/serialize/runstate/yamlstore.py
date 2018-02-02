@@ -63,7 +63,7 @@ class YamlStateStore(object):
 
     def _write_buffer(self):
         with open(self.filename, 'w') as fh:
-            yaml.dump(self.buffer, fh)
+            yaml.safe_dump(self.buffer, fh)
 
     def cleanup(self):
         pass

@@ -25,7 +25,7 @@ class SQLAlchemyStateStore(object):
 
         self.name = name
         self._connection = None
-        self.encoder = yaml.dump
+        self.encoder = yaml.safe_dump
         self.decoder = yaml.load
         self._create_engine(connection_details)
         self._build_tables()

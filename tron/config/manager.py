@@ -24,7 +24,7 @@ def from_string(content):
 
 def write(path, content):
     with open(path, 'w') as fh:
-        yaml.dump(content, fh)
+        yaml.safe_dump(content, fh)
 
 
 def read(path):

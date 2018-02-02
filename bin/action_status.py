@@ -25,7 +25,7 @@ def print_field(field, status_file):
 
 
 def print_status_file(status_file):
-    yaml.dump(status_file, sys.stdout)
+    yaml.safe_dump(status_file, sys.stdout)
 
 
 def send_signal(signal_num, status_file):

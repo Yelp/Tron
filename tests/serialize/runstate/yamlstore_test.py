@@ -35,7 +35,7 @@ class YamlStateStoreTestCase(TestCase):
 
     def test_restore(self):
         with open(self.filename, 'w') as fh:
-            yaml.dump(self.test_data, fh)
+            yaml.safe_dump(self.test_data, fh)
 
         keys = [yamlstore.YamlKey('one', 'a'), yamlstore.YamlKey('three', 'c')]
         state_data = self.store.restore(keys)
@@ -46,7 +46,7 @@ class YamlStateStoreTestCase(TestCase):
 
     def test_restore_missing_type_key(self):
         with open(self.filename, 'w') as fh:
-            yaml.dump(self.test_data, fh)
+            yaml.safe_dump(self.test_data, fh)
 
         keys = [yamlstore.YamlKey('seven', 'a')]
         state_data = self.store.restore(keys)
