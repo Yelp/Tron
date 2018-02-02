@@ -2,23 +2,15 @@
     sha: v0.9.1
     hooks:
     -   id: trailing-whitespace
-        language_version: python2.7
     -   id: end-of-file-fixer
-        language_version: python2.7
     -   id: autopep8-wrapper
-        language_version: python2.7
     -   id: check-docstring-first
-        language_version: python2.7
     -   id: check-json
-        language_version: python2.7
     -   id: check-yaml
-        files: ^(?!.*template).*\.(yaml|yml|eyaml)$
-        language_version: python2.7
     -   id: requirements-txt-fixer
-        language_version: python2.7
     -   id: flake8
-        exclude: ^docs/source/conf.py$
         language_version: python2.7
+        exclude: ^docs/source/conf.py$
     -   id: check-ast
         language_version: python2.7
 -   repo: https://github.com/asottile/reorder_python_imports.git
@@ -26,11 +18,10 @@
     hooks:
     -   id: reorder-python-imports
         language_version: python2.7
-        args:
-        - --add-import
-        - from __future__ import unicode_literals
-        - --add-import
-        - from __future__ import absolute_import
+        args: [
+            '--add-import', 'from __future__ import absolute_import',
+            '--add-import', 'from __future__ import unicode_literals',
+        ]
 -   repo: https://github.com/asottile/pyupgrade
     sha: v1.1.2-1
     hooks:
@@ -45,4 +36,4 @@
         name: Prevent catchall except
         entry: except:$
         language: pcre
-        files: \.py$
+        types: [python]
