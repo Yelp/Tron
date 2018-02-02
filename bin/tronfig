@@ -88,8 +88,9 @@ def validate_dir(path):
         manifest = manager.ManifestFile(manifest_dir)
         manifest.create()
         for fname in os.listdir(path):
-            if fname.endswith(".yaml"):
-                namespace = fname[0:-5]
+            name, ext = os.path.splitext(fname)
+            if ext == 'yaml':
+                namespace = name
                 manifest.add(namespace, os.path.join(path, fname))
 
         config_manager = manager.ConfigManager(path, manifest)
@@ -109,10 +110,13 @@ def get_config_input(namespace, source=None):
 
     if source == '-':
         source_io = sys.stdin
-        namespace = namespace or schema.MASTER_NAMESPACE
+        if not namespace:
+            namespace = schema.MASTER_NAMESPACE
     else:
         source_io = open(source, 'r')
-        namespace = namespace or os.path.basename(source)[0:-5]
+        if not namespace:
+            name, _ = os.path.splitext(os.path.basename(source))
+            namespace = name
 
     content = source_io.read()
 
