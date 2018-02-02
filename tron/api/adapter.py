@@ -232,6 +232,7 @@ class JobAdapter(ReprAdapter):
         'owner',
         'summary',
         'notes',
+        'monitoring',
     ]
 
     def __init__(self, job,
@@ -256,6 +257,9 @@ class JobAdapter(ReprAdapter):
 
     def get_notes(self):
         return self._obj.get_notes()
+
+    def get_monitoring(self):
+        return self._obj.get_monitoring()
 
     def get_scheduler(self):
         return SchedulerAdapter(self._obj.scheduler).get_repr()
