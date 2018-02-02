@@ -341,14 +341,26 @@ class ConfigResource(resource.Resource):
         config_content = requestargs.get_string(request, 'config')
         name = requestargs.get_string(request, 'name')
         config_hash = requestargs.get_string(request, 'hash')
-        log.info("Handling reconfigure request: %s, %s" % (name, config_hash))
+        check = requestargs.get_bool(request, 'check')
+
         if not name:
             return respond(request, {'error': "'name' for config is required."})
 
         response = {'status': "Active"}
-        error = self.controller.update_config(
-            name, config_content, config_hash,
-        )
+
+        if check:
+            fn = self.controller.check_config
+            req = "configure check"
+        elif config_content == "":
+            fn = self.controller.delete_config
+            req = "configuration delete"
+        else:
+            fn = self.controller.update_config
+            req = "reconfigure"
+
+        log.info("Handling %s request: %s, %s" % (req, name, config_hash))
+        error = fn(name, config_content, config_hash)
+
         if error:
             response['error'] = error
         return respond(request, response)
@@ -397,9 +409,10 @@ class ApiRootResource(resource.Resource):
             'services',
             ServiceCollectionResource(mcp.get_service_collection()),
         )
-        self.putChild('config',   ConfigResource(mcp))
-        self.putChild('status',   StatusResource(mcp))
-        self.putChild('events',   EventResource(''))
+
+        self.putChild('config', ConfigResource(mcp))
+        self.putChild('status', StatusResource(mcp))
+        self.putChild('events', EventResource(''))
         self.putChild('', self)
 
     def render_GET(self, request):

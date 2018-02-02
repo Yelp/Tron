@@ -7,7 +7,7 @@ import shutil
 import stat
 import tempfile
 import textwrap
-from textwrap import dedent
+import getpass
 
 import mock
 import pytz
@@ -208,6 +208,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20), jitter=None,
                     ),
@@ -239,6 +240,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days={1, 3, 5},
                         hour=0, minute=30, second=0,
@@ -274,6 +276,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=16, minute=30, second=0,
@@ -304,6 +307,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     actions=FrozenDict({
                         'action3_1': schema.ConfigAction(
                             name='action3_1',
@@ -338,6 +342,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=0, minute=0, second=0,
@@ -459,6 +464,7 @@ jobs:
           giving information about this job.
 
           Second sentence.
+        monitoring: {}
         actions:
             -
                 name: "action2_0"
@@ -526,6 +532,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20),
                         jitter=None,
@@ -558,6 +565,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days={1, 3, 5},
                         hour=0,
@@ -595,6 +603,7 @@ services:
                     owner='bob@example.com',
                     summary='Flobbles the jibber service into submission',
                     notes='This is a multiple line notes section for\ngiving information about this job.\n\nSecond sentence.\n',
+                    monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=16,
@@ -627,6 +636,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     actions=FrozenDict({
                         'action3_1': schema.ConfigAction(
                             name='action3_1',
@@ -661,6 +671,7 @@ services:
                     owner='',
                     summary='',
                     notes='',
+                    monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=0, minute=0, second=0,
@@ -995,7 +1006,7 @@ class NodeConfigTestCase(TestCase):
         assert_in(expected_msg, str(exception))
 
     def test_invalid_node_name(self):
-        test_config = BASE_CONFIG + dedent("""
+        test_config = BASE_CONFIG + textwrap.dedent("""
             jobs:
                 -
                     name: "test_job0"
@@ -1013,7 +1024,7 @@ class NodeConfigTestCase(TestCase):
         assert_equal(expected_msg, str(exception))
 
     def test_invalid_nested_node_pools(self):
-        test_config = dedent("""
+        test_config = textwrap.dedent("""
             nodes:
                 - name: node0
                   hostname: node0
@@ -1038,7 +1049,7 @@ class NodeConfigTestCase(TestCase):
         assert_in(expected_msg, str(exception))
 
     def test_invalid_node_pool_config(self):
-        test_config = dedent("""
+        test_config = textwrap.dedent("""
             nodes:
                 - name: node0
                   hostname: node0
@@ -1105,6 +1116,7 @@ class ValidateJobsAndServicesTestCase(TestCase):
                 owner='',
                 summary='',
                 notes='',
+                monitoring={},
                 schedule=ConfigIntervalScheduler(
                     timedelta=datetime.timedelta(0, 20), jitter=None,
                 ),

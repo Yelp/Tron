@@ -19,7 +19,7 @@ class ShelveStateStoreTestCase(TestCase):
 
     @setup
     def setup_store(self):
-        self.filename = os.path.join(tempfile.gettempdir(), 'state')
+        self.filename = os.path.join(tempfile.mkdtemp(), 'state')
         self.store = ShelveStateStore(self.filename)
 
     @teardown
@@ -40,8 +40,10 @@ class ShelveStateStoreTestCase(TestCase):
         stored_data = shelve.open(self.filename)
         for key, value in key_value_pairs:
             assert_equal(stored_data[key.key], value)
+        stored_data.close()
 
     def test_restore(self):
+        self.store.cleanup()
         keys = [ShelveKey("thing", i) for i in xrange(5)]
         value = {'this': 'data'}
         store = shelve.open(self.filename)
@@ -49,6 +51,7 @@ class ShelveStateStoreTestCase(TestCase):
             store[key.key] = value
         store.close()
 
+        self.store.shelve = shelve.open(self.filename)
         retrieved_data = self.store.restore(keys)
         for key in keys:
             assert_equal(retrieved_data[key], value)

@@ -97,12 +97,20 @@ class Client(object):
 
     def config(
         self,
-        config_name, config_data=None, config_hash=None, no_header=False,
+        config_name,
+        config_data=None,
+        config_hash=None,
+        no_header=False,
+        check=False,
     ):
         """Retrieve or update the configuration."""
-        if config_data:
+        if config_data is not None:
+            data_check = 1 if check else 0
             request_data = dict(
-                config=config_data, name=config_name, hash=config_hash,
+                config=config_data,
+                name=config_name,
+                hash=config_hash,
+                check=data_check,
             )
             return self.request('/api/config', request_data)
         request_data = dict(name=config_name, no_header=int(no_header))

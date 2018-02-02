@@ -13,6 +13,12 @@ import os
 from collections import namedtuple
 
 from tron.serialize import runstate
+import yaml
+
+try:
+    from yaml.cyaml import CSafeLoader as Loader
+except ImportError:  # pragma: no cover (no libyaml-dev / pypy)
+    Loader = yaml.SafeLoader
 
 yaml = None  # For pyflakes
 
@@ -43,7 +49,7 @@ class YamlStateStore(object):
             return {}
 
         with open(self.filename, 'r') as fh:
-            self.buffer = yaml.load(fh)
+            self.buffer = yaml.load(fh, Loader=Loader)
 
         items = (self.buffer.get(key.type, {}).get(key.iden) for key in keys)
         key_item_pairs = itertools.izip(keys, items)

@@ -63,6 +63,7 @@ class JobTestCase(TestCase):
         job_config = mock.Mock(
             name='ajob',
             node='thenodepool',
+            monitoring={"team":"foo", "page": True},
             all_nodes=False,
             queueing=True,
             enabled=True,
@@ -83,6 +84,7 @@ class JobTestCase(TestCase):
             job_config.node,
         )
         assert_equal(new_job.enabled, True)
+        assert_equal(new_job.get_monitoring()["team"], "foo")
         assert new_job.action_graph
 
     def test_update_from_job(self):

@@ -122,6 +122,7 @@ ConfigJob = config_object_factory(
         'owner',                # str
         'summary',              # str
         'notes',                # str
+        'monitoring',           # dict
         'queueing',             # bool
         'run_limit',            # int
         'all_nodes',            # bool

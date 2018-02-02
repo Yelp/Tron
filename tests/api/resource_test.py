@@ -387,7 +387,7 @@ class ConfigResourceTestCase(TestCase):
             self.resource.controller.read_config.return_value,
         )
 
-    def test_render_POST(self):
+    def test_render_POST_update(self):
         name, config, hash = 'the_name', mock.Mock(), mock.Mock()
         request = build_request(name=name, config=config, hash=hash)
         self.resource.render_POST(request)
@@ -396,6 +396,16 @@ class ConfigResourceTestCase(TestCase):
             'status': 'Active',
             'error': self.controller.update_config.return_value,
         }
+        self.respond.assert_called_with(request, response_content)
+
+    def test_render_POST_delete(self):
+        name, config, hash = 'the_name', '', mock.Mock()
+        request = build_request(name=name, config=config, hash=hash)
+        self.resource.render_POST(request)
+        self.controller.delete_config.assert_called_with(name, config, hash)
+        response_content = {
+            'status': 'Active',
+            'error': self.controller.delete_config.return_value}
         self.respond.assert_called_with(request, response_content)
 
 

@@ -20,8 +20,8 @@ class WorkingDirTestCase(TestCase):
     @setup
     def setup_cwd(self):
         self.cwd = os.getcwd()
-        self.temp_dir = tempfile.mkdtemp()
-        self.second_dir = tempfile.mkdtemp()
+        self.temp_dir = os.path.realpath(tempfile.mkdtemp())
+        self.second_dir = os.path.realpath(tempfile.mkdtemp())
 
     @teardown
     def cleanup(self):

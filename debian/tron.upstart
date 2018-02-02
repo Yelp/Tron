@@ -1,0 +1,14 @@
+description "trond"
+
+start on (started networking)
+stop on shutdown
+
+respawn
+
+script
+  set -a
+  if [ -f /etc/default/tron ] ; then
+      . /etc/default/tron
+  fi
+  exec start-stop-daemon --start -c $DAEMONUSER --exec /usr/bin/trond -- --nodaemon $DAEMON_OPTS
+end script

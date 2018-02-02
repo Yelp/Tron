@@ -8,6 +8,7 @@ from __future__ import unicode_literals
 import itertools
 import logging
 import os
+import getpass
 
 import pytz
 
@@ -158,10 +159,14 @@ class ValidateSSHOptions(Validator):
 
     validators = {
         'agent':                    valid_bool,
+        # TODO: move this config and validations outside master namespace
+        # 'identities':               build_list_of_type_validator(
+        #                                 valid_identity_file, allow_empty=True),
         'identities':               build_list_of_type_validator(
-            valid_identity_file, allow_empty=True,
+            valid_string, allow_empty=True,
         ),
-        'known_hosts_file':         valid_known_hosts_file,
+        # 'known_hosts_file':         valid_known_hosts_file,
+        'known_hosts_file':         valid_string,
         'connect_timeout':          config_utils.valid_int,
         'idle_connection_timeout':  config_utils.valid_int,
         'jitter_min_load':          config_utils.valid_int,
@@ -199,8 +204,8 @@ class ValidateNode(Validator):
     }
 
     defaults = {
-        'port':                 22,
-        'username':             os.environ['USER'],
+        'port': 22,
+        'username': getpass.getuser(),
     }
 
     def do_shortcut(self, node):
@@ -307,6 +312,7 @@ class ValidateJob(Validator):
         'allow_overlap':        False,
         'max_runtime':          None,
         'notes':                '',
+        'monitoring':           {},
         'owner':                '',
         'summary':              '',
     }
@@ -326,6 +332,7 @@ class ValidateJob(Validator):
         'owner':                valid_string,
         'summary':              valid_string,
         'notes':                valid_string,
+        'monitoring':           valid_dict,
     }
 
     def cast(self, in_dict, config_context):
@@ -479,7 +486,7 @@ def validate_jobs_and_services(config, config_context):
 
 
 DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1)
-DEFAULT_NODE = ValidateNode().do_shortcut('localhost')
+DEFAULT_NODE = ValidateNode().do_shortcut(node='localhost')
 
 
 class ValidateConfig(Validator):

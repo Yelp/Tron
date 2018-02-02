@@ -67,6 +67,16 @@ class ManifestFile(object):
         manifest[name] = filename
         write(self.filename, manifest)
 
+    def delete(self, name):
+        manifest = read(self.filename)
+        if name not in manifest:
+            msg = "Name %s does not exist in manifest, cannot delete."
+            log.info(msg % name)
+            return
+
+        del manifest[name]
+        write(self.filename, manifest)
+
     def get_file_mapping(self):
         return read(self.filename)
 
@@ -82,9 +92,9 @@ class ConfigManager(object):
 
     DEFAULT_HASH = hash_digest("")
 
-    def __init__(self, config_path):
+    def __init__(self, config_path, manifest=None):
         self.config_path = config_path
-        self.manifest = ManifestFile(config_path)
+        self.manifest = manifest or ManifestFile(config_path)
 
     def build_file_path(self, name):
         name = name.replace('.', '_').replace(os.path.sep, '_')
@@ -99,6 +109,11 @@ class ConfigManager(object):
         self.validate_with_fragment(name, from_string(content))
         filename = self.get_filename_from_manifest(name)
         write_raw(filename, content)
+
+    def delete_config(self, name):
+        filename = self.get_filename_from_manifest(name)
+        self.manifest.delete(name)
+        os.remove(filename)
 
     def get_filename_from_manifest(self, name):
         def create_filename():

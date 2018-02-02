@@ -5,6 +5,9 @@ from __future__ import with_statement
 
 import logging
 import os
+import shutil
+import tempfile
+import traceback
 import sys
 import tempfile
 
@@ -19,121 +22,152 @@ from tron.config import schema
 log = logging.getLogger('tronfig')
 
 
-def set_options_from_args(options, args):
-    if args and args[-1] == '-':
-        options.from_stdin = True
-        args = args[:-1]
-    else:
-        options.from_stdin = False
-
-    options.config_name = args[0] if args else schema.MASTER_NAMESPACE
-
-
 def parse_options():
-    usage = "usage: %prog [<name>] [options] [-]"
+    usage  = "usage: %prog [options] [<name>] [-|path]"
     parser = cmd_utils.build_option_parser(usage)
 
-    parser.add_option(
-        "-p", "--print", action="store_true", dest="print_config",
-        help="Print config to stdout, rather than uploading",
-    )
-    parser.add_option(
-        "-n", "--no-header", action="store_true", default=False,
-        help="Print named config without a header",
-    )
+    parser.add_option("-p", "--print", action="store_true", dest="print_config",
+                      help="Print config to stdout, rather than uploading")
+    parser.add_option("-C", "--check", action="store_true", dest="check",
+                      help="Upload and check configuration, don't apply, "
+                           "useful when you want to verify if tron daemon "
+                           "will accept your configuration.")
+    parser.add_option("-d", "--delete", action="store_true",
+                      help="Delete the configuration for this namespace")
+    parser.add_option("-V", "--validate", action="store_true", dest="validate",
+                      help="Only validate configuration, don't upload, "
+                           "useful for verifying config locally. If namespace "
+                           "is not specified, it will be derived from file "
+                           "name, if any.")
+    parser.add_option("-D", "--validate-dir",
+                      action="store",
+                      dest="validate_dir",
+                      help="Full validation of a folder, don't upload, "
+                           "same as -V but checks for more edge-cases")
 
-    options, args = parser.parse_args()
-    set_options_from_args(options, args)
-    return options
+    return parser.parse_args()
 
 
-def upload_config(client, config_name, contents, config_hash):
+def upload_config(client, config_name, contents, config_hash, check=False):
     response = client.config(
         config_name,
-        config_data=contents, config_hash=config_hash,
+        config_data=contents,
+        config_hash=config_hash,
+        check=check
     )
+
     if 'error' in response:
         log.error(response['error'])
         return False
+
     print >>sys.stderr, "Configuration uploaded successfully"
     return True
-
-
-def edit_config(contents):
-    fi = tempfile.NamedTemporaryFile(suffix='.yaml')
-    fi.write(contents)
-    fi.flush()
-
-    editor = os.getenv('EDITOR') or os.getenv('VISUAL') or 'vim'
-    while os.system("%s %s" % (editor, fi.name)):
-        response = raw_input(
-            "Editor returned an error. Continue editing? (y/n): ",
-        )
-        if response[:1].lower() == 'n':
-            return
-
-    with open(fi.name) as upload_file:
-        return upload_file.read()
 
 
 def validate(config_name, config_content):
     try:
         config_data = manager.from_string(config_content)
         config_parse.validate_fragment(config_name, config_data)
-        return True
     except ConfigError, e:
-        log.error(e)
+        return str(e)
 
 
-def print_config(client, config_name, no_header):
-    print client.config(config_name, no_header=no_header)['config']
+def delete_config(client, config_name):
+    if config_name == schema.MASTER_NAMESPACE:
+        log.error("Deleting MASTER namespace is not allowed. Name must be specified.")
+        return
 
+    response = raw_input(
+        "This will delete the configuration for the %s namespace. Proceed? (y/n): " % config_name)
+    if response[:1].lower() != 'y':
+        return
 
-def update_from_stdin(client, config_name):
-    config_content = sys.stdin.read()
     config_hash = client.config(config_name)['hash']
-    if validate(config_name, config_content):
-        if upload_config(client, config_name, config_content, config_hash):
-            return
-    raise SystemExit("tronfig failed")
+    if upload_config(client, config_name, "", config_hash):
+        return
+    raise SystemExit("tronfig deletion failed")
 
 
-def update_with_editor(client, config_name):
-    if not sys.stdout.isatty():
-        raise SystemExit("No editing possible.")
+def validate_dir(path):
+    try:
+        manifest_dir = tempfile.mkdtemp()
+        manifest = manager.ManifestFile(manifest_dir)
+        manifest.create()
+        for fname in os.listdir(path):
+            name, ext = os.path.splitext(fname)
+            if ext == 'yaml':
+                namespace = name
+                manifest.add(namespace, os.path.join(path, fname))
 
-    response = client.config(config_name)
-    config_content = response['config']
-    config_hash = response['hash']
-    while True:
-        config_content = edit_config(config_content)
-        if not config_content:
-            log.warn("Cancelling edit.")
-            return
+        config_manager = manager.ConfigManager(path, manifest)
+        config_manager.load()
+    except ConfigError, e:
+        traceback.print_exc()
+        return str(e)
+    finally:
+        if manifest_dir:
+            shutil.rmtree(manifest_dir)
 
-        if validate(config_name, config_content):
-            if upload_config(client, config_name, config_content, config_hash):
-                return
 
-        response = raw_input(
-            "There are errors in your configuration. Continue editing? (y/n): ",
-        )
-        if response[:1].lower() == 'n':
-            return
+def get_config_input(namespace, source=None):
+    if source is None:
+        source = namespace
+        namespace = None
+
+    if source == '-':
+        source_io = sys.stdin
+        if not namespace:
+            namespace = schema.MASTER_NAMESPACE
+    else:
+        source_io = open(source, 'r')
+        if not namespace:
+            name, _ = os.path.splitext(os.path.basename(source))
+            namespace = name
+
+    content = source_io.read()
+
+    return namespace, content
 
 
 if __name__ == '__main__':
-    options = parse_options()
+    options, args = parse_options()
     cmd_utils.setup_logging(options)
     cmd_utils.load_config(options)
+
+    if options.validate or options.validate_dir:
+        if options.validate:
+            name, content = get_config_input(*args)
+            result = validate(name, content)
+        elif options.validate_dir is not None:
+            result = validate_dir(options.validate_dir)
+
+        if not result:
+            print "OK"
+            sys.exit(0)
+        else:
+            print result
+            sys.exit(1)
+
     client = Client(options.server)
-    config_name = options.config_name
 
     if options.print_config:
-        print_config(client, config_name, options.no_header)
-
-    elif options.from_stdin:
-        update_from_stdin(client, config_name)
-
+        name, content = get_config_input(*args)
+        print client.config(config_name)['config']
+    elif options.delete:
+        name = args[0]
+        delete_config(client, config_name)
     else:
-        update_with_editor(client, config_name)
+        name, content = get_config_input(*args)
+        config_hash = client.config(name)['hash']
+
+        result = validate(name, content)
+        if result:
+            print result
+            sys.exit(1)
+
+        if upload_config(
+                client, name, content, config_hash, check=check):
+            sys.exit(0)
+
+        print "Uploading failed"
+        sys.exit(1)

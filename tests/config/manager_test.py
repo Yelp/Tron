@@ -83,6 +83,16 @@ class ManifestFileTestCase(TestCase):
         expected = {'zing': 'zing.yaml'}
         assert_equal(manager.read(self.manifest.filename), expected)
 
+    def test_delete(self):
+        current = {
+            'one': 'a.yaml',
+            'two': 'b.yaml',
+        }
+        manager.write(self.manifest.filename, current)
+        self.manifest.delete('one')
+        expected = {'two': 'b.yaml'}
+        assert_equal(manager.read(self.manifest.filename), expected)
+
     def test_get_file_mapping(self):
         file_mapping = {
             'one': 'a.yaml',
@@ -152,6 +162,15 @@ class ConfigManagerTestCase(TestCase):
         assert_equal(manager.read(path), self.content)
         self.manifest.get_file_name.assert_called_with(name)
         self.manifest.add.assert_called_with(name, path)
+
+    @mock.patch('os.remove', autospec=True)
+    def test_delete_config(self, mock_remove):
+        name = 'namespace'
+        path = 'namespace.yaml'
+        self.manifest.get_file_name.return_value = path
+        self.manager.delete_config(name)
+        self.manifest.delete.assert_called_with(name)
+        mock_remove.assert_called_with(path)
 
     @mock.patch('tron.config.manager.config_parse.ConfigContainer', autospec=True)
     def test_validate_with_fragment(self, mock_config_container):
