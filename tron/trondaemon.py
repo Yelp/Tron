@@ -14,7 +14,6 @@ import daemon
 import lockfile
 import pkg_resources
 from twisted.internet import defer
-from twisted.internet import pollreactor
 from twisted.internet.main import installReactor
 from twisted.python import log as twisted_log
 
@@ -25,9 +24,6 @@ if platform.system() == 'Linux':
     from twisted.internet.epollreactor import EPollReactor as Reactor
 else:
     from twisted.internet.selectreactor import SelectReactor as Reactor
-
-from twisted.internet import defer
-from twisted.internet.main import installReactor
 
 
 log = logging.getLogger(__name__)
