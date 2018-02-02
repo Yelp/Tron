@@ -5,10 +5,10 @@ contain a validated configuration.
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import getpass
 import itertools
 import logging
 import os
-import getpass
 
 import pytz
 

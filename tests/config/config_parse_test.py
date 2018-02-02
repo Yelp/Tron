@@ -2,12 +2,12 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import datetime
+import getpass
 import os
 import shutil
 import stat
 import tempfile
 import textwrap
-import getpass
 
 import mock
 import pytz

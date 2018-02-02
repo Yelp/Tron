@@ -405,7 +405,8 @@ class ConfigResourceTestCase(TestCase):
         self.controller.delete_config.assert_called_with(name, config, hash)
         response_content = {
             'status': 'Active',
-            'error': self.controller.delete_config.return_value}
+            'error': self.controller.delete_config.return_value,
+        }
         self.respond.assert_called_with(request, response_content)
 
 

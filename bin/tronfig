@@ -6,10 +6,9 @@ from __future__ import with_statement
 import logging
 import os
 import shutil
-import tempfile
-import traceback
 import sys
 import tempfile
+import traceback
 
 from tron.commands import cmd_utils
 from tron.commands.client import Client
@@ -23,7 +22,7 @@ log = logging.getLogger('tronfig')
 
 
 def parse_options():
-    usage  = "usage: %prog [options] [<name>] [-|path]"
+    usage = "usage: %prog [options] [<name>] [-|path]"
     parser = cmd_utils.build_option_parser(usage)
 
     parser.add_option("-p", "--print", action="store_true", dest="print_config",
@@ -74,7 +73,8 @@ def validate(config_name, config_content):
 
 def delete_config(client, config_name):
     if config_name == schema.MASTER_NAMESPACE:
-        log.error("Deleting MASTER namespace is not allowed. Name must be specified.")
+        log.error(
+            "Deleting MASTER namespace is not allowed. Name must be specified.")
         return
 
     response = raw_input(

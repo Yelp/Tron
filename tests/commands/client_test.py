@@ -117,7 +117,10 @@ class ClientTestCase(TestCase):
     def test_config_post(self):
         name, data, hash = 'name', 'stuff', 'hash'
         self.client.config(name, config_data=data, config_hash=hash)
-        expected_data =  {'config': data, 'name': name, 'hash': hash, 'check': 0}
+        expected_data = {
+            'config': data,
+            'name': name, 'hash': hash, 'check': 0,
+        }
         self.client.request.assert_called_with('/api/config', expected_data)
 
     def test_config_get_default(self):

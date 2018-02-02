@@ -1,13 +1,17 @@
 #!/usr/bin/env python
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import sys
 
 from tron.commands import cmd_utils
 from tron.commands import display
-from tron.commands.client import Client, get_object_type_from_identifier
+from tron.commands.client import Client
+from tron.commands.client import get_object_type_from_identifier
 
 
 def parse_options():
-    usage  = ""
+    usage = ""
     parser = cmd_utils.build_option_parser(usage)
     options, args = parser.parse_args(sys.argv)
     return options, args[1:]
@@ -16,14 +20,17 @@ def parse_options():
 def compute_check_result_for_job_runs(client, job, job_content):
     kwargs = {}
     if job_content is None:
-        kwargs["output"] = "OK: {} was just added and hasn't run yet.".format(job['name'])
+        kwargs["output"] = "OK: {} was just added and hasn't run yet.".format(
+            job['name'],
+        )
         kwargs["status"] = 0
         return kwargs
 
     relevant_run = get_relevant_run(job_content)
     if relevant_run is None:
         kwargs["output"] = "CRIT: {} hasn't had a successful run yet.\n{}".format(
-            job['name'], pretty_print_job(job_content))
+            job['name'], pretty_print_job(job_content),
+        )
         kwargs["status"] = 2
         return kwargs
 
@@ -48,7 +55,7 @@ def compute_check_result_for_job_runs(client, job, job_content):
     ).format(
         prefix, job['name'], last_state,
         pretty_print_job_run(relevant_run),
-        pretty_print_job(job_content)
+        pretty_print_job(job_content),
     )
     kwargs["status"] = status
     return kwargs
@@ -78,7 +85,9 @@ def compute_check_result_for_job(client, job):
     }
     status = job["status"]
     if status == "disabled":
-        kwargs["output"] = "OK: {} is disabled and won't be checked.".format(job['name'])
+        kwargs["output"] = "OK: {} is disabled and won't be checked.".format(
+            job['name'],
+        )
         kwargs["status"] = 0
         return kwargs
     else:
@@ -86,7 +95,9 @@ def compute_check_result_for_job(client, job):
         url_index = client.index()
         tron_id = get_object_type_from_identifier(url_index, job["name"])
         job_content = client.job(tron_id.url, count=10)
-        results = compute_check_result_for_job_runs(job=job, job_content=job_content, client=client)
+        results = compute_check_result_for_job_runs(
+            job=job, job_content=job_content, client=client,
+        )
         kwargs.update(results)
         return kwargs
 

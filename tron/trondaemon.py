@@ -7,10 +7,8 @@ from __future__ import unicode_literals
 import logging
 import logging.config
 import os
-import signal
-import pkg_resources
-import daemon
 import platform
+import signal
 
 import daemon
 import lockfile
@@ -159,12 +157,12 @@ class TronDaemon(object):
     WAIT_SECONDS = 5
 
     def __init__(self, options):
-        self.options    = options
-        self.mcp        = None
-        nodaemon        = self.options.nodaemon
-        context_class   = NoDaemonContext if nodaemon else daemon.DaemonContext
-        self.context    = self._build_context(options, context_class)
-        self.reactor    = Reactor()
+        self.options = options
+        self.mcp = None
+        nodaemon = self.options.nodaemon
+        context_class = NoDaemonContext if nodaemon else daemon.DaemonContext
+        self.context = self._build_context(options, context_class)
+        self.reactor = Reactor()
 
     def _build_context(self, options, context_class):
         signal_map = {

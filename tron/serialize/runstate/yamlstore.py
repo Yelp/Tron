@@ -12,8 +12,9 @@ import operator
 import os
 from collections import namedtuple
 
-from tron.serialize import runstate
 import yaml
+
+from tron.serialize import runstate
 
 try:
     from yaml.cyaml import CSafeLoader as Loader

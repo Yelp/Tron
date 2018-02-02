@@ -63,7 +63,7 @@ class JobTestCase(TestCase):
         job_config = mock.Mock(
             name='ajob',
             node='thenodepool',
-            monitoring={"team":"foo", "page": True},
+            monitoring={"team": "foo", "page": True},
             all_nodes=False,
             queueing=True,
             enabled=True,
