@@ -146,10 +146,10 @@ if __name__ == '__main__':
 
     if options.print_config:
         name, content = get_config_input(*args)
-        print client.config(config_name)['config']
+        print client.config(name)['config']
     elif options.delete:
         name = args[0]
-        delete_config(client, config_name)
+        delete_config(client, name)
     else:
         name, content = get_config_input(*args)
         config_hash = client.config(name)['hash']
@@ -160,7 +160,7 @@ if __name__ == '__main__':
             sys.exit(1)
 
         if upload_config(
-                client, name, content, config_hash, check=check):
+                client, name, content, config_hash, check=options.check):
             sys.exit(0)
 
         print "Uploading failed"
