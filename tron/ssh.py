@@ -149,7 +149,7 @@ class ClientConnection(connection.SSHConnection):
 
 class ExecChannel(channel.SSHChannel):
 
-    name = 'session'
+    name = b'session'
     exit_defer = None
     start_defer = None
 
@@ -175,7 +175,7 @@ class ExecChannel(channel.SSHChannel):
             self.command = self.command.encode('utf-8')
 
             req = self.conn.sendRequest(
-                self, 'exec',
+                self, b'exec',
                 common.NS(self.command),
                 wantReply=True,
             )
@@ -207,7 +207,7 @@ class ExecChannel(channel.SSHChannel):
 
     def request_exit_status(self, data):
         # exit status is a 32-bit unsigned int in network byte format
-        status = struct.unpack_from(">L", data, 0)[0]
+        status = struct.unpack_from(b'>L', data, 0)[0]
 
         log.debug("Received exit status request: %d", status)
         self.exit_status = status
