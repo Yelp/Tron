@@ -10,7 +10,6 @@ import textwrap
 
 import mock
 import pytz
-import yaml
 from testify import assert_equal
 from testify import assert_in
 from testify import run
@@ -19,6 +18,7 @@ from testify import teardown
 from testify import TestCase
 
 from tests.assertions import assert_raises
+from tron import yaml
 from tron.config import config_parse
 from tron.config import config_utils
 from tron.config import ConfigError

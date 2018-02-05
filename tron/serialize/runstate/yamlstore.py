@@ -15,13 +15,6 @@ from collections import namedtuple
 from tron import yaml
 from tron.serialize import runstate
 
-try:
-    from yaml.cyaml import CSafeLoader as Loader
-except ImportError:  # pragma: no cover (no libyaml-dev / pypy)
-    Loader = yaml.SafeLoader
-
-yaml = None  # For pyflakes
-
 YamlKey = namedtuple('YamlKey', ['type', 'iden'])
 
 TYPE_MAPPING = {
@@ -34,10 +27,6 @@ TYPE_MAPPING = {
 class YamlStateStore(object):
 
     def __init__(self, filename):
-        # Differ import of yaml until class is instantiated
-        import yaml
-        global yaml
-        assert yaml
         self.filename = filename
         self.buffer = {}
 
@@ -49,7 +38,7 @@ class YamlStateStore(object):
             return {}
 
         with open(self.filename, 'r') as fh:
-            self.buffer = yaml.load(fh, Loader=Loader)
+            self.buffer = yaml.load(fh)
 
         items = (self.buffer.get(key.type, {}).get(key.iden) for key in keys)
         key_item_pairs = itertools.izip(keys, items)
