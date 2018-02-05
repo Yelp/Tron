@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import itertools
 import logging
 import time
+import traceback
 from contextlib import contextmanager
 
 import tron
@@ -190,8 +191,9 @@ class PersistentStateManager(object):
         with self._timeit():
             try:
                 self._impl.save(key_state_pairs)
-            except Exception, e:
-                msg = "Failed to save state for %s: %s" % (keys, e)
+            except Exception:
+                exc_info = traceback.format_exc()
+                msg = "Failed to save state for {}: {}".format(keys, exc_info)
                 log.warn(msg)
                 raise PersistenceStoreError(msg)
 

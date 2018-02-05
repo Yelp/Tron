@@ -149,7 +149,7 @@ class ClientConnection(connection.SSHConnection):
 
 class ExecChannel(channel.SSHChannel):
 
-    name = 'session'
+    name = 'session'.encode('utf-8')
     exit_defer = None
     start_defer = None
 
@@ -175,7 +175,7 @@ class ExecChannel(channel.SSHChannel):
             self.command = self.command.encode('utf-8')
 
             req = self.conn.sendRequest(
-                self, 'exec',
+                self, 'exec'.encode('utf-8'),
                 common.NS(self.command),
                 wantReply=True,
             )

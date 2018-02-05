@@ -5,7 +5,6 @@ services:
       context: ../
     volumes:
       - ../:/work
-      - ./tronfig:/var/lib/tron/tronfig
     links:
       - batch1
       - batch2

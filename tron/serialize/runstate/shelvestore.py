@@ -42,7 +42,7 @@ class ShelveStateStore(object):
 
     def save(self, key_value_pairs):
         for key, state_data in key_value_pairs:
-            self.shelve[key.key] = state_data
+            self.shelve[str(key.key)] = state_data
         self.shelve.sync()
 
     def restore(self, keys):
