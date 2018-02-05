@@ -11,7 +11,7 @@ import os
 import signal
 import sys
 
-import yaml
+from tron import yaml
 
 
 log = logging.getLogger('tron.action_status')
@@ -25,7 +25,7 @@ def print_field(field, status_file):
 
 
 def print_status_file(status_file):
-    yaml.safe_dump(status_file, sys.stdout)
+    yaml.dump(status_file, sys.stdout)
 
 
 def send_signal(signal_num, status_file):

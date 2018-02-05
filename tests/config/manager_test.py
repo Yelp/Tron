@@ -6,7 +6,6 @@ import shutil
 import tempfile
 
 import mock
-import yaml
 from testify import assert_equal
 from testify import run
 from testify import setup
@@ -15,6 +14,7 @@ from testify import TestCase
 
 from tests.assertions import assert_raises
 from tests.testingutils import autospec_method
+from tron import yaml
 from tron.config import ConfigError
 from tron.config import manager
 from tron.config import schema
@@ -138,7 +138,7 @@ class ConfigManagerTestCase(TestCase):
         manager.write(path, self.content)
         self.manifest.get_file_name.return_value = path
         config = self.manager.read_raw_config(name)
-        assert_equal(config, yaml.safe_dump(self.content))
+        assert_equal(config, yaml.dump(self.content))
 
     def test_write_config(self):
         name = 'filename'

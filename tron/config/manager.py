@@ -5,8 +5,7 @@ import hashlib
 import logging
 import os
 
-import yaml
-
+from tron import yaml
 from tron.config import config_parse
 from tron.config import ConfigError
 from tron.config import schema
@@ -24,7 +23,7 @@ def from_string(content):
 
 def write(path, content):
     with open(path, 'w') as fh:
-        yaml.safe_dump(content, fh)
+        yaml.dump(content, fh)
 
 
 def read(path):

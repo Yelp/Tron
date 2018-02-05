@@ -6,8 +6,7 @@ import operator
 from collections import namedtuple
 from contextlib import contextmanager
 
-import yaml
-
+from tron import yaml
 from tron.config.config_utils import MAX_IDENTIFIER_LENGTH
 from tron.serialize import runstate
 sqlalchemy = None  # pyflakes
@@ -25,7 +24,7 @@ class SQLAlchemyStateStore(object):
 
         self.name = name
         self._connection = None
-        self.encoder = yaml.safe_dump
+        self.encoder = yaml.dump
         self.decoder = yaml.load
         self._create_engine(connection_details)
         self._build_tables()

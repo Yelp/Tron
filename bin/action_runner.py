@@ -11,7 +11,7 @@ import os
 import subprocess
 import sys
 
-import yaml
+from tron import yaml
 
 
 log = logging.getLogger("tron.action_runner")
@@ -31,7 +31,7 @@ class StatusFile(object):
 
     def write(self, command, proc):
         with opener(self.filename, 'w') as fh:
-            yaml.safe_dump(self.get_content(command, proc), fh)
+            yaml.dump(self.get_content(command, proc), fh)
 
     def get_content(self, command, proc):
         return {

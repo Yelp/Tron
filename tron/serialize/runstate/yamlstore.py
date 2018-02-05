@@ -12,8 +12,7 @@ import operator
 import os
 from collections import namedtuple
 
-import yaml
-
+from tron import yaml
 from tron.serialize import runstate
 
 try:
@@ -63,7 +62,7 @@ class YamlStateStore(object):
 
     def _write_buffer(self):
         with open(self.filename, 'w') as fh:
-            yaml.safe_dump(self.buffer, fh)
+            yaml.dump(self.buffer, fh)
 
     def cleanup(self):
         pass

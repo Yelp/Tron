@@ -28,7 +28,7 @@ class StatusFileTestCase(TestCase):
         autospec_method(self.status_file.get_content)
         self.status_file.write(command, proc)
         self.status_file.get_content.assert_called_with(command, proc)
-        mock_yaml.safe_dump.assert_called_with(
+        mock_yaml.dump.assert_called_with(
             self.status_file.get_content.return_value,
             mock_open.return_value.__enter__.return_value,
         )

@@ -10,9 +10,8 @@ import optparse
 import os
 import sys
 
-import yaml
-
 import tron
+from tron import yaml
 
 
 log = logging.getLogger("tron.commands")
@@ -107,7 +106,7 @@ def read_config(filename=CONFIG_FILE_NAME):
 
 def write_config(config):
     with open(CONFIG_FILE_NAME, "w") as config_file:
-        yaml.safe_dump(config, config_file)
+        yaml.dump(config, config_file)
 
 
 def save_config(options):

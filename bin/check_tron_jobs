@@ -4,6 +4,8 @@ from __future__ import unicode_literals
 
 import sys
 
+from pysensu_yelp import send_event
+
 from tron.commands import cmd_utils
 from tron.commands import display
 from tron.commands.client import Client
@@ -18,6 +20,7 @@ def parse_options():
 
 
 def compute_check_result_for_job_runs(client, job, job_content):
+    url_index = client.index()
     kwargs = {}
     if job_content is None:
         kwargs["output"] = "OK: {} was just added and hasn't run yet.".format(
@@ -26,20 +29,32 @@ def compute_check_result_for_job_runs(client, job, job_content):
         kwargs["status"] = 0
         return kwargs
 
-    relevant_run = get_relevant_run(job_content)
-    if relevant_run is None:
+    relevant_job_run = get_relevant_run(job_content)
+    if relevant_job_run is None:
         kwargs["output"] = "CRIT: {} hasn't had a successful run yet.\n{}".format(
             job['name'], pretty_print_job(job_content),
         )
         kwargs["status"] = 2
         return kwargs
 
-    last_state = relevant_run.get('state', 'unknown')
+    # A job_run is like MASTER.foo.1
+    last_state = relevant_job_run.get('state', 'unknown')
+    job_run_id = get_object_type_from_identifier(
+        url_index, relevant_job_run['id'],
+    )
+    action_runs = client.job(job_run_id.url, include_action_runs=True)
+
+    # A job action is like MASTER.foo.1.step1
+    relevant_action = get_relevant_action(action_runs["runs"])
+    action_run_id = get_object_type_from_identifier(
+        url_index, relevant_action['id'],
+    )
+    action_run_details = client.action_runs(action_run_id.url, num_lines=10)
+
     if last_state == "succeeded":
         prefix = "OK"
         status = 0
     elif last_state == "failed":
-        # TODO: Inspect the actions and get the stdout
         prefix = "CRIT"
         status = 2
     else:
@@ -47,14 +62,17 @@ def compute_check_result_for_job_runs(client, job, job_content):
         status = 3
 
     kwargs["output"] = (
-        "{}: {}'s last relevant run {}:\n"
-        "{}\n"
-        "\n\n"
-        "Here are the rest for context:\n"
+        "{}: {}'s last relevant run (run {}) {}.\n\n"
+        "Here is the last action:"
+        "{}\n\n"
+        "And the job run view:\n"
+        "{}\n\n"
+        "Here are is the whole job view for context:\n"
         "{}"
     ).format(
-        prefix, job['name'], last_state,
-        pretty_print_job_run(relevant_run),
+        prefix, job['name'], relevant_job_run['id'], last_state,
+        pretty_print_actions(action_run_details),
+        pretty_print_job_run(relevant_job_run),
         pretty_print_job(job_content),
     )
     kwargs["status"] = status
@@ -66,15 +84,26 @@ def pretty_print_job(job_content):
 
 
 def pretty_print_job_run(job_run):
-    return str(job_run)
+    display_action = display.DisplayActionRuns()
+    return display_action.format(job_run)
+
+
+def pretty_print_actions(action_run):
+    return display.format_action_run_details(action_run)
 
 
 def get_relevant_run(job_runs):
-    # Let's look at the last set of runs, and report on the most recent completed one
     for run in job_runs['runs']:
         if run.get('state', 'unknown') in ["failed", "succeeded"]:
             return run
     return None
+
+
+def get_relevant_action(action_runs):
+    for action in reversed(action_runs):
+        if action.get('state', 'unknown') == "failed":
+            return action
+    return action_runs[-1]
 
 
 def compute_check_result_for_job(client, job):
@@ -82,6 +111,8 @@ def compute_check_result_for_job(client, job):
         "name": "check_tron_job.{}".format(job['name']),
         "team": 'noop',
         "notification_email": "kwa+checktron@yelp.com",
+        "runbook": job['monitoring'].get('runbook', "unspecified"),
+        "source": "tron",
     }
     status = job["status"]
     if status == "disabled":
@@ -94,7 +125,9 @@ def compute_check_result_for_job(client, job):
         # The job is not disabled, therefore we have to look at its run history
         url_index = client.index()
         tron_id = get_object_type_from_identifier(url_index, job["name"])
-        job_content = client.job(tron_id.url, count=10)
+        job_content = client.job(
+            tron_id.url, count=10, include_action_runs=True,
+        )
         results = compute_check_result_for_job_runs(
             job=job, job_content=job_content, client=client,
         )
@@ -103,11 +136,17 @@ def compute_check_result_for_job(client, job):
 
 
 def check_job(job, client):
-    print("Checking {}".format(job['name']))
-    result = compute_check_result_for_job(job=job, client=client)
-    print("Would have sent:")
-    print(result)
-    print("")
+    if job.get('monitoring', {}) == {}:
+        print("Not checking {}, no monitoring metadata setup.".format(
+            job['name'],
+        ))
+        return
+    else:
+        print("Checking {}".format(job['name']))
+        result = compute_check_result_for_job(job=job, client=client)
+        print(result)
+        send_event(**result)
+        print("")
 
 
 def main():
@@ -116,7 +155,7 @@ def main():
     cmd_utils.load_config(options)
     client = Client(options.server)
 
-    jobs = client.jobs()
+    jobs = client.jobs(include_job_runs=True)
     for job in jobs:
         check_job(job=job, client=client)
 
