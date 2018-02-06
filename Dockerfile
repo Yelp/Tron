@@ -8,6 +8,7 @@ RUN apt-get update > /dev/null && \
       python-pip \
       libffi-dev \
       libssl-dev  \
+      libyaml-dev \
       ssh \
       g++
 

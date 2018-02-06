@@ -1,3 +1,4 @@
 #/bin/sh
 eval $(ssh-agent)
-USER=root bin/trond --nodaemon -v
+ssh-add /work/example-cluster/insecure_key
+USER=root bin/trond --nodaemon -v -w /work/example-cluster/workdir -l logging.conf
