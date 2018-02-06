@@ -48,7 +48,7 @@ class ShelveStateStoreTestCase(TestCase):
         value = {'this': 'data'}
         store = shelve.open(self.filename)
         for key in keys:
-            store[key.key] = value
+            store[str(key.key)] = value
         store.close()
 
         self.store.shelve = shelve.open(self.filename)
