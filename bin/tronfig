@@ -1,43 +1,58 @@
 #!/usr/bin/env python
+from __future__ import absolute_import
+from __future__ import unicode_literals
 from __future__ import with_statement
+
 import logging
 import os
 import shutil
+import sys
 import tempfile
 import traceback
-import sys
 
 from tron.commands import cmd_utils
 from tron.commands.client import Client
 from tron.config import config_parse
-from tron.config import schema, manager, ConfigError
+from tron.config import ConfigError
+from tron.config import manager
+from tron.config import schema
 
 
 log = logging.getLogger('tronfig')
 
 
 def parse_options():
-    usage  = "usage: %prog [options] [<name>] [-|path]"
+    usage = "usage: %prog [options] [<name>] [-|path]"
     parser = cmd_utils.build_option_parser(usage)
 
-    parser.add_option("-p", "--print", action="store_true", dest="print_config",
-                      help="Print config to stdout, rather than uploading")
-    parser.add_option("-C", "--check", action="store_true", dest="check",
-                      help="Upload and check configuration, don't apply, "
-                           "useful when you want to verify if tron daemon "
-                           "will accept your configuration.")
-    parser.add_option("-d", "--delete", action="store_true",
-                      help="Delete the configuration for this namespace")
-    parser.add_option("-V", "--validate", action="store_true", dest="validate",
-                      help="Only validate configuration, don't upload, "
-                           "useful for verifying config locally. If namespace "
-                           "is not specified, it will be derived from file "
-                           "name, if any.")
-    parser.add_option("-D", "--validate-dir",
-                      action="store",
-                      dest="validate_dir",
-                      help="Full validation of a folder, don't upload, "
-                           "same as -V but checks for more edge-cases")
+    parser.add_option(
+        "-p", "--print", action="store_true", dest="print_config",
+        help="Print config to stdout, rather than uploading",
+    )
+    parser.add_option(
+        "-C", "--check", action="store_true", dest="check",
+        help="Upload and check configuration, don't apply, "
+             "useful when you want to verify if tron daemon "
+             "will accept your configuration.",
+    )
+    parser.add_option(
+        "-d", "--delete", action="store_true",
+        help="Delete the configuration for this namespace",
+    )
+    parser.add_option(
+        "-V", "--validate", action="store_true", dest="validate",
+        help="Only validate configuration, don't upload, "
+             "useful for verifying config locally. If namespace "
+             "is not specified, it will be derived from file "
+             "name, if any.",
+    )
+    parser.add_option(
+        "-D", "--validate-dir",
+        action="store",
+        dest="validate_dir",
+        help="Full validation of a folder, don't upload, "
+             "same as -V but checks for more edge-cases",
+    )
 
     return parser.parse_args()
 
@@ -47,7 +62,7 @@ def upload_config(client, config_name, contents, config_hash, check=False):
         config_name,
         config_data=contents,
         config_hash=config_hash,
-        check=check
+        check=check,
     )
 
     if 'error' in response:
@@ -68,11 +83,14 @@ def validate(config_name, config_content):
 
 def delete_config(client, config_name):
     if config_name == schema.MASTER_NAMESPACE:
-        log.error("Deleting MASTER namespace is not allowed. Name must be specified.")
+        log.error(
+            "Deleting MASTER namespace is not allowed. Name must be specified.",
+        )
         return
 
     response = raw_input(
-        "This will delete the configuration for the %s namespace. Proceed? (y/n): " % config_name)
+        "This will delete the configuration for the %s namespace. Proceed? (y/n): " % config_name,
+    )
     if response[:1].lower() != 'y':
         return
 
@@ -160,7 +178,8 @@ if __name__ == '__main__':
             sys.exit(1)
 
         if upload_config(
-                client, name, content, config_hash, check=options.check):
+                client, name, content, config_hash, check=options.check,
+        ):
             sys.exit(0)
 
         print "Uploading failed"

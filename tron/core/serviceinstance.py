@@ -1,20 +1,25 @@
-import logging
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
+import logging
 import operator
 import signal
 
-from tron import command_context, actioncommand
+from tron import actioncommand
+from tron import command_context
 from tron import eventloop
 from tron import node
 from tron.actioncommand import ActionCommand
-from tron.utils import observer, proxy, iteration
+from tron.utils import iteration
+from tron.utils import observer
+from tron.utils import proxy
 from tron.utils import state
 
 
 log = logging.getLogger(__name__)
 
 
-MIN_HANG_CHECK_SECONDS  = 10
+MIN_HANG_CHECK_SECONDS = 10
 HANG_CHECK_DELAY_RATIO = 0.9
 
 
@@ -61,25 +66,26 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
 
     This task will be a no-op if interval is Falsy.
     """
-    NOTIFY_START            = 'monitor_task_notify_start'
-    NOTIFY_FAILED           = 'monitor_task_notify_failed'
-    NOTIFY_UP               = 'monitor_task_notify_up'
-    NOTIFY_DOWN             = 'monitor_task_notify_down'
+    NOTIFY_START = 'monitor_task_notify_start'
+    NOTIFY_FAILED = 'monitor_task_notify_failed'
+    NOTIFY_UP = 'monitor_task_notify_up'
+    NOTIFY_DOWN = 'monitor_task_notify_down'
 
-    command_template        = "cat %s | xargs kill -0"
-    task_name               = 'monitor'
+    command_template = "cat %s | xargs kill -0"
+    task_name = 'monitor'
 
     def __init__(self, id, node, interval, pid_filename):
         super(ServiceInstanceMonitorTask, self).__init__()
-        self.interval            = interval or 0
-        self.node                = node
-        self.id                  = id
-        self.pid_filename        = pid_filename
-        self.action              = actioncommand.CompletedActionCommand
-        self.callback            = eventloop.UniqueCallback(
-                                    self.interval, self.run)
+        self.interval = interval or 0
+        self.node = node
+        self.id = id
+        self.pid_filename = pid_filename
+        self.action = actioncommand.CompletedActionCommand
+        self.callback = eventloop.UniqueCallback(
+            self.interval, self.run,
+        )
         self.hang_check_callback = create_hang_check(self.interval, self.fail)
-        self.buffer_store        = actioncommand.StringBufferStore()
+        self.buffer_store = actioncommand.StringBufferStore()
 
     def queue(self):
         """Queue this task to run after monitor_interval."""
@@ -150,19 +156,19 @@ class ServiceInstanceMonitorTask(observer.Observable, observer.Observer):
 class ServiceInstanceStopTask(observer.Observable, observer.Observer):
     """ServiceInstance task which kills the service process."""
 
-    NOTIFY_SUCCESS              = 'stop_task_notify_success'
-    NOTIFY_FAILED               = 'stop_task_notify_fail'
+    NOTIFY_SUCCESS = 'stop_task_notify_success'
+    NOTIFY_FAILED = 'stop_task_notify_fail'
 
-    command_template            = "cat %s | xargs kill -%s"
-    task_name                   = 'stop'
+    command_template = "cat %s | xargs kill -%s"
+    task_name = 'stop'
 
     def __init__(self, id, node, pid_filename):
         super(ServiceInstanceStopTask, self).__init__()
-        self.id             = id
-        self.node           = node
-        self.pid_filename   = pid_filename
-        self.buffer_store   = actioncommand.StringBufferStore()
-        self.command        = None
+        self.id = id
+        self.node = node
+        self.pid_filename = pid_filename
+        self.buffer_store = actioncommand.StringBufferStore()
+        self.command = None
 
     def get_command(self, signal):
         return self.command_template % (self.pid_filename, signal)
@@ -198,16 +204,16 @@ class ServiceInstanceStopTask(observer.Observable, observer.Observer):
 class ServiceInstanceStartTask(observer.Observable, observer.Observer):
     """ServiceInstance task which starts the service process."""
 
-    NOTIFY_FAILED           = 'start_task_notify_failed'
-    NOTIFY_STARTED          = 'start_task_notify_started'
+    NOTIFY_FAILED = 'start_task_notify_failed'
+    NOTIFY_STARTED = 'start_task_notify_started'
 
-    task_name               = 'start'
+    task_name = 'start'
 
     def __init__(self, id, node):
         super(ServiceInstanceStartTask, self).__init__()
-        self.id             = id
-        self.node           = node
-        self.buffer_store   = actioncommand.StringBufferStore()
+        self.id = id
+        self.node = node
+        self.buffer_store = actioncommand.StringBufferStore()
 
     def start(self, command):
         """Start the service command. command is rendered by the caller."""
@@ -237,55 +243,67 @@ class ServiceInstanceState(state.NamedEventState):
 class ServiceInstance(observer.Observer):
     """An instance of a service."""
 
-    STATE_DOWN          = ServiceInstanceState("down")
-    STATE_UP            = ServiceInstanceState("up")
-    STATE_FAILED        = ServiceInstanceState("failed",
-                            stop=STATE_DOWN,
-                            up=STATE_UP)
-    STATE_STOPPING      = ServiceInstanceState("stopping",
-                            down=STATE_DOWN,
-                            stop_fail=STATE_FAILED)
-    STATE_MONITORING    = ServiceInstanceState("monitoring",
-                            down=STATE_FAILED,
-                            stop=STATE_STOPPING,
-                            up=STATE_UP)
-    STATE_STARTING      = ServiceInstanceState("starting",
-                            down=STATE_FAILED,
-                            monitor=STATE_MONITORING,
-                            stop=STATE_STOPPING)
-    STATE_UNKNOWN       = ServiceInstanceState("unknown",
-                            monitor=STATE_MONITORING,
-                            stop=STATE_DOWN)
+    STATE_DOWN = ServiceInstanceState("down")
+    STATE_UP = ServiceInstanceState("up")
+    STATE_FAILED = ServiceInstanceState(
+        "failed",
+        stop=STATE_DOWN,
+        up=STATE_UP,
+    )
+    STATE_STOPPING = ServiceInstanceState(
+        "stopping",
+        down=STATE_DOWN,
+        stop_fail=STATE_FAILED,
+    )
+    STATE_MONITORING = ServiceInstanceState(
+        "monitoring",
+        down=STATE_FAILED,
+        stop=STATE_STOPPING,
+        up=STATE_UP,
+    )
+    STATE_STARTING = ServiceInstanceState(
+        "starting",
+        down=STATE_FAILED,
+        monitor=STATE_MONITORING,
+        stop=STATE_STOPPING,
+    )
+    STATE_UNKNOWN = ServiceInstanceState(
+        "unknown",
+        monitor=STATE_MONITORING,
+        stop=STATE_DOWN,
+    )
 
-    STATE_MONITORING['monitor_fail']    = STATE_UNKNOWN
-    STATE_UP['stop']                    = STATE_STOPPING
-    STATE_UP['monitor']                 = STATE_MONITORING
-    STATE_DOWN['start']                 = STATE_STARTING
-    STATE_DOWN['monitor']               = STATE_MONITORING
+    STATE_MONITORING['monitor_fail'] = STATE_UNKNOWN
+    STATE_UP['stop'] = STATE_STOPPING
+    STATE_UP['monitor'] = STATE_MONITORING
+    STATE_DOWN['start'] = STATE_STARTING
+    STATE_DOWN['monitor'] = STATE_MONITORING
 
-    context_class               = command_context.ServiceInstanceContext
+    context_class = command_context.ServiceInstanceContext
 
     def __init__(self, config, node, instance_number, parent_context):
-        self.config             = config
-        self.node               = node
-        self.instance_number    = instance_number
-        self.id                 = "%s.%s" % (config.name, self.instance_number)
+        self.config = config
+        self.node = node
+        self.instance_number = instance_number
+        self.id = "%s.%s" % (config.name, self.instance_number)
 
-        start_state             = ServiceInstance.STATE_DOWN
-        self.machine            = state.StateMachine(start_state, delegate=self)
-        self.parent_context     = parent_context
+        start_state = ServiceInstance.STATE_DOWN
+        self.machine = state.StateMachine(start_state, delegate=self)
+        self.parent_context = parent_context
         self.context = command_context.build_context(self, parent_context)
-        self.failures           = []
+        self.failures = []
 
     def create_tasks(self):
         """Create and watch tasks."""
-        interval                = self.config.monitor_interval
-        pid_file                = self.pid_filename
-        self.monitor_task       = ServiceInstanceMonitorTask(
-                                    self.id, self.node, interval, pid_file)
-        self.start_task         = ServiceInstanceStartTask(self.id, self.node)
-        self.stop_task          = ServiceInstanceStopTask(
-                                    self.id, self.node, pid_file)
+        interval = self.config.monitor_interval
+        pid_file = self.pid_filename
+        self.monitor_task = ServiceInstanceMonitorTask(
+            self.id, self.node, interval, pid_file,
+        )
+        self.start_task = ServiceInstanceStartTask(self.id, self.node)
+        self.stop_task = ServiceInstanceStopTask(
+            self.id, self.node, pid_file,
+        )
         self.watch(self.monitor_task)
         self.watch(self.start_task)
         self.watch(self.stop_task)
@@ -346,7 +364,8 @@ class ServiceInstance(observer.Observer):
             self.failures.append(get_failures_from_task(task))
 
         if event == ServiceInstanceMonitorTask.NOTIFY_FAILED and self.config.monitor_retries and self.config.monitor_retries < len(self.failures):
-            log.info("Too many monitor failures(%d) of %s" % (len(self.failures), task))
+            log.info("Too many monitor failures(%d) of %s" %
+                     (len(self.failures), task))
             self.monitor_task.cancel()
             self.machine.transition('stop')
 
@@ -363,8 +382,10 @@ class ServiceInstance(observer.Observer):
 
     @property
     def state_data(self):
-        return dict(instance_number=self.instance_number,
-                    node=self.node.hostname)
+        return dict(
+            instance_number=self.instance_number,
+            node=self.node.hostname,
+        )
 
     def get_observable(self):
         return self.machine
@@ -394,19 +415,20 @@ class ServiceInstanceCollection(object):
     """A collection of ServiceInstances."""
 
     def __init__(self, config, node_pool, context):
-        self.config             = config
-        self.node_pool          = node_pool
-        self.instances          = []
-        self.context            = context
+        self.config = config
+        self.node_pool = node_pool
+        self.instances = []
+        self.context = context
 
-        self.instances_proxy    = proxy.CollectionProxy(
+        self.instances_proxy = proxy.CollectionProxy(
             lambda: self.instances, [
                 proxy.func_proxy('stop',    iteration.list_all),
                 proxy.func_proxy('kill',    iteration.list_all),
                 proxy.func_proxy('start',   iteration.list_all),
                 proxy.func_proxy('restore', iteration.list_all),
-                proxy.attr_proxy('state_data', list)
-            ])
+                proxy.attr_proxy('state_data', list),
+            ],
+        )
 
     def clear_failed(self):
         self._clear(ServiceInstance.STATE_FAILED)
@@ -436,6 +458,7 @@ class ServiceInstanceCollection(object):
 
     def restore_state(self, state_data):
         assert not self.instances
+
         def builder(instance_state):
             node = node_selector(self.node_pool, instance_state['node'])
             return self._build_instance(node, instance_state['instance_number'])
@@ -454,7 +477,7 @@ class ServiceInstanceCollection(object):
 
     def next_instance_number(self):
         """Return the next available instance number."""
-        instance_nums = set(inst.instance_number for inst in self.instances)
+        instance_nums = {inst.instance_number for inst in self.instances}
         for num in xrange(self.config.count):
             if num not in instance_nums:
                 return num
@@ -474,14 +497,18 @@ class ServiceInstanceCollection(object):
         return self._all_states_match([state])
 
     def is_starting(self):
-        states = set([ServiceInstance.STATE_STARTING,
-                      ServiceInstance.STATE_MONITORING,
-                      ServiceInstance.STATE_UP])
+        states = {
+            ServiceInstance.STATE_STARTING,
+            ServiceInstance.STATE_MONITORING,
+            ServiceInstance.STATE_UP,
+        }
         return self._all_states_match(states)
 
     def is_up(self):
-        states = set([ServiceInstance.STATE_MONITORING,
-                     ServiceInstance.STATE_UP])
+        states = {
+            ServiceInstance.STATE_MONITORING,
+            ServiceInstance.STATE_UP,
+        }
         return self._all_states_match(states)
 
     def _all_states_match(self, states):
@@ -494,8 +521,10 @@ class ServiceInstanceCollection(object):
         return self.instances_proxy.perform(item)
 
     def __eq__(self, other):
-        return (self.node_pool == other.node_pool and
-                self.config == other.config)
+        return (
+            self.node_pool == other.node_pool and
+            self.config == other.config
+        )
 
     def __ne__(self, other):
         return not self == other

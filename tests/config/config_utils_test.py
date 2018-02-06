@@ -1,10 +1,21 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import datetime
+
 import mock
-from testify import TestCase, run, assert_equal, setup
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import TestCase
 from testify.assertions import assert_in
+
 from tests.assertions import assert_raises
-from tron.config import config_utils, ConfigError, schema
-from tron.config.config_utils import build_list_of_type_validator, ConfigContext
+from tron.config import config_utils
+from tron.config import ConfigError
+from tron.config import schema
+from tron.config.config_utils import build_list_of_type_validator
+from tron.config.config_utils import ConfigContext
 from tron.config.config_utils import valid_identifier
 
 
@@ -70,8 +81,13 @@ class BuildEnumValidatorTestCase(TestCase):
         assert_equal(self.validator('b', self.context), 'b')
 
     def test_invalid(self):
-        exception = assert_raises(ConfigError, self.validator, 'c', self.context)
-        assert_in('Value at  is not in %s: ' % str(set(self.enum)), str(exception))
+        exception = assert_raises(
+            ConfigError, self.validator, 'c', self.context,
+        )
+        assert_in(
+            'Value at  is not in %s: ' %
+            str(set(self.enum)), str(exception),
+        )
 
 
 class ValidTimeTestCase(TestCase):
@@ -93,8 +109,10 @@ class ValidTimeTestCase(TestCase):
         assert_equal(time_spec.second, 12)
 
     def test_valid_time_invalid(self):
-        assert_raises(ConfigError, config_utils.valid_time,
-            "14:32:12:34", self.context)
+        assert_raises(
+            ConfigError, config_utils.valid_time,
+            "14:32:12:34", self.context,
+        )
         assert_raises(ConfigError, config_utils.valid_time, None, self.context)
 
 
@@ -105,33 +123,46 @@ class ValidTimeDeltaTestCase(TestCase):
         self.context = config_utils.NullConfigContext
 
     def test_valid_time_delta_invalid(self):
-        exception = assert_raises(ConfigError,
-            config_utils.valid_time_delta,'no time', self.context)
+        exception = assert_raises(
+            ConfigError,
+            config_utils.valid_time_delta, 'no time', self.context,
+        )
         assert_in('not a valid time delta: no time', str(exception))
 
     def test_valid_time_delta_valid_seconds(self):
         for jitter in [' 82s ', '82 s', '82 sec', '82seconds  ']:
             delta = datetime.timedelta(seconds=82)
-            assert_equal(delta, config_utils.valid_time_delta(jitter, self.context))
+            assert_equal(
+                delta, config_utils.valid_time_delta(
+                    jitter, self.context,
+                ),
+            )
 
     def test_valid_time_delta_valid_minutes(self):
         for jitter in ['10m', '10 m', '10   min', '  10minutes']:
             delta = datetime.timedelta(seconds=600)
-            assert_equal(delta, config_utils.valid_time_delta(jitter, self.context))
+            assert_equal(
+                delta, config_utils.valid_time_delta(
+                    jitter, self.context,
+                ),
+            )
 
     def test_valid_time_delta_invalid_unit(self):
         for jitter in ['1 year', '3 mo', '3 months']:
-            assert_raises(ConfigError,
-                config_utils.valid_time_delta, jitter, self.context)
+            assert_raises(
+                ConfigError,
+                config_utils.valid_time_delta, jitter, self.context,
+            )
 
 
 class ConfigContextTestCase(TestCase):
 
     def test_build_config_context(self):
-        path, nodes, namespace = 'path', set([1,2,3]), 'namespace'
+        path, nodes, namespace = 'path', {1, 2, 3}, 'namespace'
         command_context = mock.MagicMock()
         parent_context = config_utils.ConfigContext(
-            path, nodes, command_context, namespace)
+            path, nodes, command_context, namespace,
+        )
 
         child = parent_context.build_child_context('child')
         assert_equal(child.path, '%s.child' % path)
@@ -144,11 +175,13 @@ class ConfigContextTestCase(TestCase):
 StubConfigObject = schema.config_object_factory(
     'StubConfigObject',
     ['req1', 'req2'],
-    ['opt1', 'opt2']
+    ['opt1', 'opt2'],
 )
+
 
 class StubValidator(config_utils.Validator):
     config_class = StubConfigObject
+
 
 class ValidatorTestCase(TestCase):
 
@@ -158,14 +191,17 @@ class ValidatorTestCase(TestCase):
 
     def test_validate_with_none(self):
         expected_msg = "A StubObject is required"
-        exception = assert_raises(ConfigError,
-            self.validator.validate, None, config_utils.NullConfigContext)
+        exception = assert_raises(
+            ConfigError,
+            self.validator.validate, None, config_utils.NullConfigContext,
+        )
         assert_in(expected_msg, str(exception))
 
     def test_validate_optional_with_none(self):
         self.validator.optional = True
         config = self.validator.validate(None, config_utils.NullConfigContext)
         assert_equal(config, None)
+
 
 if __name__ == "__main__":
     run()

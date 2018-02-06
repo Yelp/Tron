@@ -1,4 +1,6 @@
 """Iteration utility functions."""
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
 
 def build_filtered_func(func):
@@ -11,6 +13,7 @@ def build_filtered_func(func):
             return None
         return func(seq)
     return filtered_func
+
 
 min_filter = build_filtered_func(min)
 max_filter = build_filtered_func(max)

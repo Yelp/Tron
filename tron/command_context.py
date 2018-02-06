@@ -1,7 +1,11 @@
 """Command Context is how we construct the command line for a command which may
 have variables that need to be rendered.
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import operator
+
 from tron.utils import timeutils
 
 
@@ -21,6 +25,7 @@ def build_filled_context(*context_objects):
         return CommandContext()
 
     filler = Filler()
+
     def build(current, next):
         return CommandContext(next(filler), current)
 
@@ -90,7 +95,9 @@ class JobContext(object):
             last_success = self.job.runs.last_success
             last_success = last_success.run_time if last_success else None
 
-            time_value = timeutils.DateArithmetic.parse(date_spec, last_success)
+            time_value = timeutils.DateArithmetic.parse(
+                date_spec, last_success,
+            )
             if time_value:
                 return time_value
 

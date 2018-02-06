@@ -9,7 +9,11 @@ Table of Jobs with start date of last run
 Table of Services with state and instance count
 
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import optparse
+
 from tron.config import manager
 from tron.serialize.runstate import statemanager
 from tron.utils import tool_utils
@@ -18,8 +22,10 @@ from tron.utils import tool_utils
 def parse_options():
     parser = optparse.OptionParser()
     parser.add_option("-c", "--config-path", help="Path to the configuration.")
-    parser.add_option("-w", "--working-dir", default=".",
-        help="Working directory to resolve relative paths.")
+    parser.add_option(
+        "-w", "--working-dir", default=".",
+        help="Working directory to resolve relative paths.",
+    )
     opts, _ = parser.parse_args()
 
     if not opts.config_path:
@@ -28,14 +34,14 @@ def parse_options():
 
 
 def get_container(config_path):
-    config_manager  = manager.ConfigManager(config_path)
+    config_manager = manager.ConfigManager(config_path)
     return config_manager.load()
 
 
 def get_state(container):
-    config          = container.get_master().state_persistence
-    state_manager   = statemanager.PersistenceManagerFactory.from_config(config)
-    names           = container.get_job_and_service_names()
+    config = container.get_master().state_persistence
+    state_manager = statemanager.PersistenceManagerFactory.from_config(config)
+    names = container.get_job_and_service_names()
     return state_manager.restore(*names)
 
 
@@ -63,6 +69,7 @@ def format_jobs(job_states):
 def format_service(service_states):
     format = "%-30s %-8s %s\n"
     header = format % ("Name", "Enabled", "Instances")
+
     def build(name, service):
         return format % (name, service.get('enabled'), len(service['instances']))
     seq = sorted(build(*item) for item in service_states.iteritems())
@@ -80,7 +87,7 @@ def display_report(state_config, job_states, service_states):
 
 def main(config_path, working_dir):
     container = get_container(config_path)
-    config    = container.get_master().state_persistence
+    config = container.get_master().state_persistence
     with tool_utils.working_dir(working_dir):
         display_report(config, *get_state(container))
 

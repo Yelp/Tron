@@ -14,8 +14,13 @@
  Pre 0.5 state files can be read by the YamlStateStore. See the configuration
  documentation for more details on how to create state_persistence sections.
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import optparse
-from tron.config import manager, schema
+
+from tron.config import manager
+from tron.config import schema
 from tron.serialize import runstate
 from tron.serialize.runstate.statemanager import PersistenceManagerFactory
 from tron.utils import tool_utils
@@ -23,18 +28,28 @@ from tron.utils import tool_utils
 
 def parse_options():
     parser = optparse.OptionParser()
-    parser.add_option('-s', '--source',
+    parser.add_option(
+        '-s', '--source',
         help="The source configuration path which contains a state_persistence "
-             "section configured for the state file/database.")
-    parser.add_option('-d', '--dest',
+        "section configured for the state file/database.",
+    )
+    parser.add_option(
+        '-d', '--dest',
         help="The destination configuration path which contains a "
-             "state_persistence section configured for the state file/database.")
-    parser.add_option('--source-working-dir',
-        help="The working directory for source dir to resolve relative paths.")
-    parser.add_option('--dest-working-dir',
-        help="The working directory for dest dir to resolve relative paths.")
-    parser.add_option('--namespace', action='store_true',
-        help="Move jobs/services which are missing a namespace to the MASTER")
+        "state_persistence section configured for the state file/database.",
+    )
+    parser.add_option(
+        '--source-working-dir',
+        help="The working directory for source dir to resolve relative paths.",
+    )
+    parser.add_option(
+        '--dest-working-dir',
+        help="The working directory for dest dir to resolve relative paths.",
+    )
+    parser.add_option(
+        '--namespace', action='store_true',
+        help="Move jobs/services which are missing a namespace to the MASTER",
+    )
 
     opts, args = parser.parse_args()
 
@@ -62,33 +77,39 @@ def get_current_config(config_path):
 
 
 def add_namespaces(state_data):
-    return dict(('%s.%s' % (schema.MASTER_NAMESPACE, name), data)
-                for (name, data) in state_data.iteritems())
+    return {'%s.%s' % (schema.MASTER_NAMESPACE, name): data
+            for (name, data) in state_data.iteritems()}
+
 
 def strip_namespace(names):
     return [name.split('.', 1)[1] for name in names]
 
 
 def convert_state(opts):
-    source_manager  = get_state_manager_from_config(opts.source, opts.source_working_dir)
-    dest_manager    = get_state_manager_from_config(opts.dest, opts.dest_working_dir)
-    container       = get_current_config(opts.source)
+    source_manager = get_state_manager_from_config(
+        opts.source, opts.source_working_dir,
+    )
+    dest_manager = get_state_manager_from_config(
+        opts.dest, opts.dest_working_dir,
+    )
+    container = get_current_config(opts.source)
 
     msg = "Migrating state from %s to %s"
     print msg % (source_manager._impl, dest_manager._impl)
 
     job_names, service_names = container.get_job_and_service_names()
     if opts.namespace:
-        job_names       = strip_namespace(job_names)
-        service_names   = strip_namespace(service_names)
+        job_names = strip_namespace(job_names)
+        service_names = strip_namespace(service_names)
 
     job_states, service_states = source_manager.restore(
-        job_names, service_names, skip_validation=True)
+        job_names, service_names, skip_validation=True,
+    )
     source_manager.cleanup()
 
     if opts.namespace:
-        job_states      = add_namespaces(job_states)
-        service_states  = add_namespaces(service_states)
+        job_states = add_namespaces(job_states)
+        service_states = add_namespaces(service_states)
 
     for name, job in job_states.iteritems():
         dest_manager.save(runstate.JOB_STATE, name, job)

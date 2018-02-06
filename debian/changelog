@@ -88,14 +88,14 @@ tron (0.6.1.4) lucid; urgency=low
 
 tron (0.6.1.3) lucid; urgency=low
 
-  * Fix bug in node service stop 
+  * Fix bug in node service stop
 
  -- Yejun Yang <yejun@yelp.com>  Thu, 27 Feb 2014 17:43:57 -0800
 
 tron (0.6.1.2) lucid; urgency=low
 
   * Fix bug prevent reconnection
-  * Add new config monitor_retries 
+  * Add new config monitor_retries
 
  -- Yejun Yang <yejun@yelp.com>  Wed, 05 Feb 2014 10:29:59 -0800
 

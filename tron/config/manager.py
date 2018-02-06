@@ -1,17 +1,25 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import hashlib
 import logging
 import os
-import yaml
 
-from tron.config import schema, config_parse, ConfigError
+import yaml as yaml_raw
+
+from tron import yaml
+from tron.config import config_parse
+from tron.config import ConfigError
+from tron.config import schema
 
 
 log = logging.getLogger(__name__)
 
+
 def from_string(content):
     try:
         return yaml.load(content)
-    except yaml.error.YAMLError, e:
+    except yaml_raw.error.YAMLError, e:
         raise ConfigError("Invalid config format: %s" % str(e))
 
 
@@ -122,7 +130,7 @@ class ConfigManager(object):
 
     def get_config_name_mapping(self):
         seq = self.manifest.get_file_mapping().iteritems()
-        return dict((name, read(filename)) for name, filename in seq)
+        return {name: read(filename) for name, filename in seq}
 
     def load(self):
         """Return the fully constructed configuration."""
@@ -149,4 +157,4 @@ def create_new_config(path, master_content):
     manager = ConfigManager(path)
     manager.manifest.create()
     filename = manager.get_filename_from_manifest(schema.MASTER_NAMESPACE)
-    write_raw(filename , master_content)
+    write_raw(filename, master_content)

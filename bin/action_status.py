@@ -2,12 +2,16 @@
 """
 Read values from a status file created by action_runner.py
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import functools
 import logging
+import os
 import signal
 import sys
-import os
-import yaml
+
+from tron import yaml
 
 
 log = logging.getLogger('tron.action_status')

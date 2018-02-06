@@ -1,9 +1,18 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import os
 import shelve
 import tempfile
-from testify import TestCase, run, setup, assert_equal
+
+from testify import assert_equal
+from testify import run
+from testify import setup
 from testify import teardown
-from tron.serialize.runstate.shelvestore import ShelveStateStore, ShelveKey
+from testify import TestCase
+
+from tron.serialize.runstate.shelvestore import ShelveKey
+from tron.serialize.runstate.shelvestore import ShelveStateStore
 
 
 class ShelveStateStoreTestCase(TestCase):
@@ -23,7 +32,7 @@ class ShelveStateStoreTestCase(TestCase):
     def test_save(self):
         key_value_pairs = [
             (ShelveKey("one", "two"), {'this': 'data'}),
-            (ShelveKey("three", "four"), {'this': 'data2'})
+            (ShelveKey("three", "four"), {'this': 'data2'}),
         ]
         self.store.save(key_value_pairs)
         self.store.cleanup()

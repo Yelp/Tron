@@ -1,10 +1,16 @@
-import logging
-import itertools
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
-from tron import event, node, eventloop
+import itertools
+import logging
+
+from tron import event
+from tron import eventloop
+from tron import node
 from tron.core import serviceinstance
 from tron.core.serviceinstance import ServiceInstance
-from tron.utils import observer, collections
+from tron.utils import collections
+from tron.utils import observer
 
 
 log = logging.getLogger(__name__)
@@ -12,15 +18,15 @@ log = logging.getLogger(__name__)
 
 class ServiceState(object):
     """Determine the state of a Service."""
-    DISABLED      = "disabled"
-    STARTING      = "starting"
-    UP            = "up"
-    DEGRADED      = "degraded"
-    FAILED        = "failed"
-    STOPPING      = "stopping"
-    UNKNOWN       = "unknown"
+    DISABLED = "disabled"
+    STARTING = "starting"
+    UP = "up"
+    DEGRADED = "degraded"
+    FAILED = "failed"
+    STOPPING = "stopping"
+    UNKNOWN = "unknown"
 
-    FAILURE_STATES = set([DEGRADED, FAILED])
+    FAILURE_STATES = {DEGRADED, FAILED}
 
     @classmethod
     def from_service(cls, service):
@@ -56,18 +62,18 @@ class Service(observer.Observer, observer.Observable):
 
     def __init__(self, config, instance_collection):
         super(Service, self).__init__()
-        self.config             = config
-        self.instances          = instance_collection
-        self.enabled            = False
-        args                    = config.restart_delay, self.repair
-        self.repair_callback    = eventloop.UniqueCallback(*args)
-        self.event_recorder     = event.get_recorder(str(self))
+        self.config = config
+        self.instances = instance_collection
+        self.enabled = False
+        args = config.restart_delay, self.repair
+        self.repair_callback = eventloop.UniqueCallback(*args)
+        self.event_recorder = event.get_recorder(str(self))
 
     @classmethod
     def from_config(cls, config, base_context):
-        node_repo           = node.NodePoolRepository.get_instance()
-        node_pool           = node_repo.get_by_name(config.node)
-        args                = config, node_pool, base_context
+        node_repo = node.NodePoolRepository.get_instance()
+        node_pool = node_repo.get_by_name(config.node)
+        args = config, node_pool, base_context
         instance_collection = serviceinstance.ServiceInstanceCollection(*args)
         return cls(config, instance_collection)
 
@@ -106,8 +112,10 @@ class Service(observer.Observer, observer.Observable):
             self.instances.clear_down()
             self.notify(self.NOTIFY_STATE_CHANGE)
 
-        if event in (serviceinstance.ServiceInstance.STATE_FAILED,
-                     serviceinstance.ServiceInstance.STATE_UP):
+        if event in (
+            serviceinstance.ServiceInstance.STATE_FAILED,
+            serviceinstance.ServiceInstance.STATE_UP,
+        ):
             self.record_events()
 
         if self.get_state() in ServiceState.FAILURE_STATES:

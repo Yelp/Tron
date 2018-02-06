@@ -1,14 +1,20 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import datetime
 import os
+import textwrap
 from subprocess import CalledProcessError
 from textwrap import dedent
-import textwrap
 
 from testify import assert_equal
 from testify import assert_gt
-from testify.assertions import assert_in, assert_raises_such_that
+from testify.assertions import assert_in
+from testify.assertions import assert_raises_such_that
+
 from tests import sandbox
-from tron.core import service, actionrun
+from tron.core import actionrun
+from tron.core import service
 
 
 BASIC_CONFIG = """
@@ -64,7 +70,11 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         self.start_with_config(SINGLE_ECHO_CONFIG)
         client = self.sandbox.client
 
-        assert_equal(self.client.config('MASTER')['config'], SINGLE_ECHO_CONFIG)
+        assert_equal(
+            self.client.config('MASTER')[
+                'config'
+            ], SINGLE_ECHO_CONFIG,
+        )
 
         # reconfigure and confirm results
         second_config = DOUBLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT
@@ -86,27 +96,39 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         self.sandbox.tronctl('start', echo_job_name)
 
         def wait_on_cleanup():
-            return (len(client.job(job_url)['runs']) >= 2 and
-                    client.action_runs(action_url)['state'] ==
-                    actionrun.ActionRun.STATE_SUCCEEDED.name)
+            return (
+                len(client.job(job_url)['runs']) >= 2 and
+                client.action_runs(action_url)['state'] ==
+                actionrun.ActionRun.STATE_SUCCEEDED.name
+            )
         sandbox.wait_on_sandbox(wait_on_cleanup)
 
         echo_action_run = client.action_runs(action_url)
-        another_action_url = client.get_url('MASTER.echo_job.1.another_echo_action')
+        another_action_url = client.get_url(
+            'MASTER.echo_job.1.another_echo_action',
+        )
         other_act_run = client.action_runs(another_action_url)
-        assert_equal(echo_action_run['state'],
-            actionrun.ActionRun.STATE_SUCCEEDED.name)
+        assert_equal(
+            echo_action_run['state'],
+            actionrun.ActionRun.STATE_SUCCEEDED.name,
+        )
         assert_equal(echo_action_run['stdout'], ['Echo!'])
-        assert_equal(other_act_run['state'],
-            actionrun.ActionRun.STATE_FAILED.name)
+        assert_equal(
+            other_act_run['state'],
+            actionrun.ActionRun.STATE_FAILED.name,
+        )
 
         now = datetime.datetime.now()
-        stdout = now.strftime('Today is %Y-%m-%d, which is the same as %Y-%m-%d')
+        stdout = now.strftime(
+            'Today is %Y-%m-%d, which is the same as %Y-%m-%d',
+        )
         assert_equal(other_act_run['stdout'], [stdout])
 
         job_runs_url = client.get_url('%s.1' % echo_job_name)
-        assert_equal(client.job_runs(job_runs_url)['state'],
-            actionrun.ActionRun.STATE_FAILED.name)
+        assert_equal(
+            client.job_runs(job_runs_url)['state'],
+            actionrun.ActionRun.STATE_FAILED.name,
+        )
 
     def test_node_reconfig(self):
         job_service_config = dedent("""
@@ -143,19 +165,26 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         service_name = 'MASTER.a_service'
         service_url = self.client.get_url(service_name)
         self.sandbox.tronctl('start', service_name)
-        sandbox.wait_on_state(self.client.service, service_url,
-            service.ServiceState.FAILED)
+        sandbox.wait_on_state(
+            self.client.service, service_url,
+            service.ServiceState.FAILED,
+        )
 
         job_url = self.client.get_url('MASTER.a_job.0')
-        sandbox.wait_on_state(self.client.job_runs, job_url,
-            actionrun.ActionRun.STATE_SUCCEEDED.name)
+        sandbox.wait_on_state(
+            self.client.job_runs, job_url,
+            actionrun.ActionRun.STATE_SUCCEEDED.name,
+        )
 
         self.sandbox.tronfig(second_config)
 
-        sandbox.wait_on_state(self.client.service, service_url,
-            service.ServiceState.DISABLED)
+        sandbox.wait_on_state(
+            self.client.service, service_url,
+            service.ServiceState.DISABLED,
+        )
 
         job_url = self.client.get_url('MASTER.a_job')
+
         def wait_on_next_run():
             last_run = self.client.job(job_url)['runs'][0]
             return last_run['node']['hostname'] == '127.0.0.1'
@@ -185,16 +214,22 @@ class TronCommandsTestCase(sandbox.SandboxTestCase):
         self.sandbox.tronctl('start', job_name)
 
         cleanup_url = self.client.get_url('MASTER.echo_job.1.cleanup')
-        sandbox.wait_on_state(self.client.action_runs, cleanup_url,
-            actionrun.ActionRun.STATE_SUCCEEDED.name)
+        sandbox.wait_on_state(
+            self.client.action_runs, cleanup_url,
+            actionrun.ActionRun.STATE_SUCCEEDED.name,
+        )
 
         action_run_url = self.client.get_url('MASTER.echo_job.1.echo_action')
-        assert_equal(self.client.action_runs(action_run_url)['state'],
-            actionrun.ActionRun.STATE_SUCCEEDED.name)
+        assert_equal(
+            self.client.action_runs(action_run_url)['state'],
+            actionrun.ActionRun.STATE_SUCCEEDED.name,
+        )
 
         job_run_url = self.client.get_url('MASTER.echo_job.1')
-        assert_equal(self.client.job_runs(job_run_url)['state'],
-            actionrun.ActionRun.STATE_SUCCEEDED.name)
+        assert_equal(
+            self.client.job_runs(job_run_url)['state'],
+            actionrun.ActionRun.STATE_SUCCEEDED.name,
+        )
 
         assert_equal(self.client.job(job_url)['status'], 'enabled')
         self.sandbox.tronctl('disable', job_name)
@@ -208,10 +243,13 @@ class TronCommandsTestCase(sandbox.SandboxTestCase):
     def test_tronfig_failure(self):
         self.start_with_config(SINGLE_ECHO_CONFIG)
         bad_config = 'this is not valid: yaml: is it?'
+
         def test_return_code(exc):
             assert_equal(exc.returncode, 1)
-        assert_raises_such_that(CalledProcessError, test_return_code,
-            self.sandbox.tronfig, bad_config)
+        assert_raises_such_that(
+            CalledProcessError, test_return_code,
+            self.sandbox.tronfig, bad_config,
+        )
 
     def test_tronfig_no_header(self):
         self.start_with_config(SINGLE_ECHO_CONFIG)
@@ -236,13 +274,19 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         self.start_with_config(config)
 
         action_run_url = self.client.get_url('MASTER.failjob.0.failaction')
-        sandbox.wait_on_state(self.client.action_runs, action_run_url,
-            actionrun.ActionRun.STATE_FAILED.name)
+        sandbox.wait_on_state(
+            self.client.action_runs, action_run_url,
+            actionrun.ActionRun.STATE_FAILED.name,
+        )
 
         action_run_url = self.client.get_url('MASTER.failjob.1.cleanup')
-        sandbox.wait_on_state(self.client.action_runs, action_run_url,
-            actionrun.ActionRun.STATE_SUCCEEDED.name)
-        job_runs = self.client.job(self.client.get_url('MASTER.failjob'))['runs']
+        sandbox.wait_on_state(
+            self.client.action_runs, action_run_url,
+            actionrun.ActionRun.STATE_SUCCEEDED.name,
+        )
+        job_runs = self.client.job(
+            self.client.get_url('MASTER.failjob'),
+        )['runs']
         assert_gt(len(job_runs), 1)
 
     def test_skip_failed_actions(self):
@@ -260,19 +304,25 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         """)
         self.start_with_config(config)
         action_run_url = self.client.get_url('MASTER.multi_step_job.0.broken')
-        waiter = sandbox.build_waiter_func(self.client.action_runs, action_run_url)
+        waiter = sandbox.build_waiter_func(
+            self.client.action_runs, action_run_url,
+        )
 
         waiter(actionrun.ActionRun.STATE_FAILED.name)
         self.sandbox.tronctl('skip', 'MASTER.multi_step_job.0.broken')
         waiter(actionrun.ActionRun.STATE_SKIPPED.name)
 
         action_run_url = self.client.get_url('MASTER.multi_step_job.0.works')
-        sandbox.wait_on_state(self.client.action_runs, action_run_url,
-            actionrun.ActionRun.STATE_SUCCEEDED.name)
+        sandbox.wait_on_state(
+            self.client.action_runs, action_run_url,
+            actionrun.ActionRun.STATE_SUCCEEDED.name,
+        )
 
         job_run_url = self.client.get_url('MASTER.multi_step_job.0')
-        sandbox.wait_on_state(self.client.job_runs, job_run_url,
-            actionrun.ActionRun.STATE_SUCCEEDED.name)
+        sandbox.wait_on_state(
+            self.client.job_runs, job_run_url,
+            actionrun.ActionRun.STATE_SUCCEEDED.name,
+        )
 
     def test_failure_on_multi_step_job_doesnt_wedge_tron(self):
         config = BASIC_CONFIG + dedent("""
@@ -314,6 +364,7 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         job_url = self.client.get_url(job_name)
 
         self.sandbox.tronctl('cancel', '%s.0' % job_name)
+
         def wait_on_cancel():
             return len(self.client.job(job_url)['runs']) == 2
         sandbox.wait_on_sandbox(wait_on_cancel)
@@ -321,7 +372,8 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         run_states = [run['state'] for run in self.client.job(job_url)['runs']]
         expected = [
             actionrun.ActionRun.STATE_SCHEDULED.name,
-            actionrun.ActionRun.STATE_CANCELLED.name]
+            actionrun.ActionRun.STATE_CANCELLED.name,
+        ]
         assert_equal(run_states, expected)
 
     def test_job_queueing_false_with_overlap(self):
@@ -350,8 +402,10 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
             return len(self.client.job(job_url)['runs']) == 2
         sandbox.wait_on_sandbox(wait_on_job_schedule)
 
-        sandbox.wait_on_state(self.client.job, job_run_url,
-            actionrun.ActionRun.STATE_CANCELLED.name)
+        sandbox.wait_on_state(
+            self.client.job, job_run_url,
+            actionrun.ActionRun.STATE_CANCELLED.name,
+        )
 
         action_run_states = [action_run['state'] for action_run in
                              self.client.job_runs(job_run_url)['runs']]
@@ -372,17 +426,23 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         self.start_with_config(config)
 
         action_run_url = self.client.get_url('MASTER.fast_job.0.single_act')
-        sandbox.wait_on_state(self.client.action_runs, action_run_url,
-            actionrun.ActionRun.STATE_RUNNING.name)
+        sandbox.wait_on_state(
+            self.client.action_runs, action_run_url,
+            actionrun.ActionRun.STATE_RUNNING.name,
+        )
 
         self.restart_trond()
 
-        assert_equal(self.client.job_runs(action_run_url)['state'],
-            actionrun.ActionRun.STATE_UNKNOWN.name)
+        assert_equal(
+            self.client.job_runs(action_run_url)['state'],
+            actionrun.ActionRun.STATE_UNKNOWN.name,
+        )
 
         next_run_url = self.client.get_url('MASTER.fast_job.-1.single_act')
-        sandbox.wait_on_state(self.client.action_runs, next_run_url,
-            actionrun.ActionRun.STATE_RUNNING.name)
+        sandbox.wait_on_state(
+            self.client.action_runs, next_run_url,
+            actionrun.ActionRun.STATE_RUNNING.name,
+        )
 
     def test_trond_restart_job_running_with_dependencies(self):
         config = BASIC_CONFIG + textwrap.dedent("""
@@ -405,18 +465,25 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         self.sandbox.tronctl('start', job_name)
 
         action_run_url = self.client.get_url('MASTER.complex_job.1.first_act')
-        sandbox.wait_on_state(self.client.action_runs, action_run_url,
-            actionrun.ActionRun.STATE_RUNNING.name)
+        sandbox.wait_on_state(
+            self.client.action_runs, action_run_url,
+            actionrun.ActionRun.STATE_RUNNING.name,
+        )
 
         self.restart_trond()
 
-        assert_equal(self.client.job_runs(action_run_url)['state'],
-            actionrun.ActionRun.STATE_UNKNOWN.name)
+        assert_equal(
+            self.client.job_runs(action_run_url)['state'],
+            actionrun.ActionRun.STATE_UNKNOWN.name,
+        )
 
         for followup_action_run in ('following_act', 'last_act'):
-            url = self.client.get_url('%s.1.%s' % (job_name, followup_action_run))
-            assert_equal(self.client.action_runs(url)['state'],
-                actionrun.ActionRun.STATE_QUEUED.name)
+            url = self.client.get_url('%s.1.%s' %
+                                      (job_name, followup_action_run))
+            assert_equal(
+                self.client.action_runs(url)['state'],
+                actionrun.ActionRun.STATE_QUEUED.name,
+            )
 
 
 class ServiceEndToEndTestCase(sandbox.SandboxTestCase):
@@ -432,11 +499,14 @@ class ServiceEndToEndTestCase(sandbox.SandboxTestCase):
                     restart_delay: 2
         """)
 
-        command = ("cd {path} && PYTHONPATH=. python "
-                   "{path}/tests/mock_daemon.py %(pid_file)s")
+        command = (
+            "cd {path} && PYTHONPATH=. python "
+            "{path}/tests/mock_daemon.py %(pid_file)s"
+        )
         command = command.format(path=os.path.abspath('.'))
         config = config_template.format(
-            command=command, monitor_interval=1, wd=self.sandbox.tmp_dir)
+            command=command, monitor_interval=1, wd=self.sandbox.tmp_dir,
+        )
 
         self.start_with_config(config)
         service_name = 'MASTER.a_service'
@@ -447,7 +517,8 @@ class ServiceEndToEndTestCase(sandbox.SandboxTestCase):
         waiter(service.ServiceState.UP)
 
         new_config = config_template.format(
-            command=command, monitor_interval=2, wd=self.sandbox.tmp_dir)
+            command=command, monitor_interval=2, wd=self.sandbox.tmp_dir,
+        )
         self.sandbox.tronfig(new_config)
 
         waiter(service.ServiceState.DISABLED)

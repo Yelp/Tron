@@ -1,16 +1,20 @@
 """Utilities used for configuration parsing and validation."""
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+import datetime
 import functools
 import itertools
 import re
-import datetime
+
 from tron.config import ConfigError
 from tron.config.schema import MASTER_NAMESPACE
 from tron.utils import dicts
 from tron.utils.dicts import FrozenDict
 
 
-MAX_IDENTIFIER_LENGTH       = 255
-IDENTIFIER_RE               = re.compile(r'^[A-Za-z_][\w\-]{0,254}$')
+MAX_IDENTIFIER_LENGTH = 255
+IDENTIFIER_RE = re.compile(r'^[A-Za-z_][\w\-]{0,254}$')
 
 
 class UniqueNameDict(dict):
@@ -20,6 +24,7 @@ class UniqueNameDict(dict):
      fmt_string - format string used to create an error message, expects a
                   single format argument of 'key'
     """
+
     def __init__(self, fmt_string):
         super(dict, self).__init__()
         self.fmt_string = fmt_string
@@ -68,24 +73,30 @@ def valid_number(type_func, value, config_context):
 
     return value
 
-valid_int   = functools.partial(valid_number, int)
+
+valid_int = functools.partial(valid_number, int)
 valid_float = functools.partial(valid_number, float)
 
 valid_identifier = build_type_validator(
     lambda s: isinstance(s, basestring) and IDENTIFIER_RE.match(s),
-    'Identifier at %s is not a valid identifier: %s')
+    'Identifier at %s is not a valid identifier: %s',
+)
 
 valid_list = build_type_validator(
-    lambda s: isinstance(s, list), 'Value at %s is not a list: %s')
+    lambda s: isinstance(s, list), 'Value at %s is not a list: %s',
+)
 
-valid_string  = build_type_validator(
-    lambda s: isinstance(s, basestring), 'Value at %s is not a string: %s')
+valid_string = build_type_validator(
+    lambda s: isinstance(s, basestring), 'Value at %s is not a string: %s',
+)
 
 valid_dict = build_type_validator(
-    lambda s: isinstance(s, dict), 'Value at %s is not a dictionary: %s')
+    lambda s: isinstance(s, dict), 'Value at %s is not a dictionary: %s',
+)
 
 valid_bool = build_type_validator(
-    lambda s: isinstance(s, bool), 'Value at %s is not a boolean: %s')
+    lambda s: isinstance(s, bool), 'Value at %s is not a boolean: %s',
+)
 
 
 def build_enum_validator(enum):
@@ -112,10 +123,11 @@ TIME_INTERVAL_UNITS = dicts.invert_dict_list({
     'days':     ['d', 'day', 'days'],
     'hours':    ['h', 'hr', 'hrs', 'hour', 'hours'],
     'minutes':  ['m', 'min', 'mins', 'minute', 'minutes'],
-    'seconds':  ['s', 'sec', 'secs', 'second', 'seconds']
+    'seconds':  ['s', 'sec', 'secs', 'second', 'seconds'],
 })
 
 TIME_INTERVAL_RE = re.compile(r"^\s*(?P<value>\d+)\s*(?P<units>[a-zA-Z]+)\s*$")
+
 
 def valid_time_delta(value, config_context):
     error_msg = "Value at %s is not a valid time delta: %s"
@@ -156,6 +168,7 @@ def build_list_of_type_validator(item_validator, allow_empty=False):
 def build_dict_name_validator(item_validator, allow_empty=False):
     """Build a validator which validates a list, and returns a dict."""
     valid = build_list_of_type_validator(item_validator, allow_empty)
+
     def validator(value, config_context):
         msg = "Duplicate name %%s at %s" % config_context.path
         name_dict = UniqueNameDict(msg)
@@ -219,10 +232,10 @@ class Validator(object):
     """Base class for validating a collection and creating a mutable
     collection from the source.
     """
-    config_class            = None
-    defaults                = {}
-    validators              = {}
-    optional                = False
+    config_class = None
+    defaults = {}
+    validators = {}
+    optional = False
 
     def validate(self, in_dict, config_context):
         if self.optional and in_dict is None:
@@ -281,7 +294,7 @@ class Validator(object):
 
         missing_key_str = ', '.join(missing_keys)
         if 'name' in self.all_keys and 'name' in in_dict:
-            msg  = "%s %s is missing options: %s"
+            msg = "%s %s is missing options: %s"
             name = in_dict['name']
             raise ConfigError(msg % (self.type_name, name, missing_key_str))
 
@@ -294,7 +307,7 @@ class Validator(object):
         if not extra_keys:
             return
 
-        msg  = "Unknown keys in %s %s: %s"
+        msg = "Unknown keys in %s %s: %s"
         name = in_dict.get('name', '')
         raise ConfigError(msg % (self.type_name, name, ', '.join(extra_keys)))
 

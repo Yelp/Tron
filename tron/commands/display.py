@@ -1,10 +1,16 @@
 """
 Format and color output for tron commands.
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import contextlib
 from functools import partial
 from operator import itemgetter
-from tron.core import actionrun, job, service
+
+from tron.core import actionrun
+from tron.core import job
+from tron.core import service
 
 
 class Color(object):
@@ -96,8 +102,10 @@ class TableDisplay(object):
             self.out.append("No %s\n" % title)
 
     def header(self):
-        row = [label.ljust(self.get_field_width(i))
-               for i, label in enumerate(self.columns)]
+        row = [
+            label.ljust(self.get_field_width(i))
+            for i, label in enumerate(self.columns)
+        ]
         self.out.append(Color.set(self.header_color, "".join(row)))
 
     def footer(self):
@@ -141,8 +149,10 @@ class TableDisplay(object):
         return None
 
     def rows(self):
-        return sorted(self.data,
-            key=itemgetter(self.fields[0]), reverse=self.reversed)
+        return sorted(
+            self.data,
+            key=itemgetter(self.fields[0]), reverse=self.reversed,
+        )
 
     def store_data(self, data):
         self.data = data
@@ -157,7 +167,8 @@ class TableDisplay(object):
         default_width = self.widths[field_idx]
         column = [
             self.format_value(field_idx, row[self.fields[field_idx]])
-            for row in self.data]
+            for row in self.data
+        ]
         if not column:
             return default_width
         max_value_width = max(len(value) for value in column)
@@ -183,14 +194,14 @@ class TableDisplay(object):
 def add_color_for_state(state):
     if state == actionrun.ActionRun.STATE_FAILED.name:
         return Color.set('red', state)
-    if state in set((
+    if state in {
         actionrun.ActionRun.STATE_RUNNING.name,
         actionrun.ActionRun.STATE_SUCCEEDED.name,
         job.Job.STATUS_ENABLED,
-        service.ServiceState.UP
-    )):
+        service.ServiceState.UP,
+    }:
         return Color.set('green', state)
-    if state in set((job.Job.STATUS_DISABLED, service.ServiceState.DISABLED)):
+    if state in {job.Job.STATUS_DISABLED, service.ServiceState.DISABLED}:
         return Color.set('blue', state)
     return state
 
@@ -219,6 +230,7 @@ def format_service_details(service_content):
 
     def format_instances(service_instances):
         format_str = "    %s : %-30s %s%s"
+
         def get_failure_messages(failures):
             if not failures:
                 return ""
@@ -232,15 +244,17 @@ def format_service_details(service_content):
             return format_str % (inst['id'], node, state, failures)
         return [format(instance) for instance in service_instances]
 
-    details     = format_fields(DisplayServices, service_content)
-    instances   = format_instances(service_content['instances'])
+    details = format_fields(DisplayServices, service_content)
+    instances = format_instances(service_content['instances'])
     return details + '\n\nInstances:\n' + '\n'.join(instances)
 
 
 def format_job_details(job_content):
     details = format_fields(DisplayJobs, job_content)
     job_runs = DisplayJobRuns().format(job_content['runs'])
-    actions = "\n\nList of Actions:\n%s" % '\n'.join(job_content['action_names'])
+    actions = "\n\nList of Actions:\n%s" % '\n'.join(
+        job_content['action_names'],
+    )
     return details + actions + "\n" + job_runs
 
 
@@ -259,30 +273,30 @@ def format_action_run_details(content, stdout=True, stderr=True):
 class DisplayServices(TableDisplay):
 
     columns = ['Name',  'State',    'Count',      'Owner']
-    fields  = ['name',  'state',    'live_count', 'owner']
-    widths  = [50,      12,          7,           30     ]
-    title   = 'services'
+    fields = ['name',  'state',    'live_count', 'owner']
+    widths = [50,      12,          7,           30]
+    title = 'services'
     resize_fields = ['name']
 
     detail_labels = [
-        ('Service',             'name'              ),
-        ('Owner',               'owner'             ),
-        ('Summary',             'summary'           ),
-        ('Enabled',             'enabled'           ),
-        ('State',               'state'             ),
-        ('Max instances',       'count'             ),
-        ('Command',             'command'           ),
-        ('Pid Filename',        'pid_filename'      ),
-        ('Node Pool',           'node_pool'         ),
-        ('Monitor interval',    'monitor_interval'  ),
-        ('Restart delay',       'restart_delay'     ),
-        ('Restart delay',       'restart_delay'     ),
-        ('Notes',               'notes'             ),
+        ('Service',             'name'),
+        ('Owner',               'owner'),
+        ('Summary',             'summary'),
+        ('Enabled',             'enabled'),
+        ('State',               'state'),
+        ('Max instances',       'count'),
+        ('Command',             'command'),
+        ('Pid Filename',        'pid_filename'),
+        ('Node Pool',           'node_pool'),
+        ('Monitor interval',    'monitor_interval'),
+        ('Restart delay',       'restart_delay'),
+        ('Restart delay',       'restart_delay'),
+        ('Notes',               'notes'),
     ]
 
     colors = {
         'name':     partial(Color.set, 'yellow'),
-        'state':    add_color_for_state
+        'state':    add_color_for_state,
     }
 
 
@@ -290,8 +304,8 @@ class DisplayJobRuns(TableDisplay):
     """Format Job runs."""
 
     columns = ['Run ID',    'State',    'Node', 'Scheduled Time']
-    fields  = ['run_num',   'state',    'node', 'run_time']
-    widths  = [10,          12,         30,     25]
+    fields = ['run_num',   'state',    'node', 'run_time']
+    widths = [10,          12,         30,     25]
     title = 'job runs'
     reversed = True
 
@@ -308,7 +322,7 @@ class DisplayJobRuns(TableDisplay):
     colors = {
         'id':        partial(Color.set, 'yellow'),
         'state':     add_color_for_state,
-        'manual':    lambda value: Color.set('cyan' if value else None, value),
+        'manual': lambda value: Color.set('cyan' if value else None, value),
     }
 
     def format_value(self, field_idx, value):
@@ -328,39 +342,40 @@ class DisplayJobRuns(TableDisplay):
 
     def post_row(self, row):
         start = row['start_time'] or "-"
-        end =   row['end_time']   or "-"
+        end = row['end_time'] or "-"
         duration = row['duration'][:-7] if row['duration'] else "-"
 
         row_data = "%sStart: %s  End: %s  (%s)" % (
-            ' ' * self.widths[0], start, end, duration)
+            ' ' * self.widths[0], start, end, duration,
+        )
         self.out.append(Color.set('gray', row_data))
 
 
 class DisplayJobs(TableDisplay):
 
     columns = ['Name',  'State',    'Scheduler',    'Last Success',  'Owner']
-    fields  = ['name',  'status',   'scheduler',    'last_success',  'owner']
-    widths  = [50,       10,         20,             22,             30]
+    fields = ['name',  'status',   'scheduler',    'last_success',  'owner']
+    widths = [50,       10,         20,             22,             30]
     title = 'jobs'
     resize_fields = ['name']
 
     detail_labels = [
-        ('Job',                 'name'              ),
-        ('Owner',               'owner'             ),
-        ('Summary',             'summary'           ),
-        ('State',               'status'            ),
-        ('Scheduler',           'scheduler'         ),
-        ('Max runtime',         'max_runtime'       ),
-        ('Node Pool',           'node_pool'         ),
-        ('Run on all nodes',    'all_nodes'         ),
-        ('Allow overlapping',   'allow_overlap'     ),
-        ('Queue overlapping',   'queueing'          ),
-        ('Notes',               'notes'             ),
+        ('Job',                 'name'),
+        ('Owner',               'owner'),
+        ('Summary',             'summary'),
+        ('State',               'status'),
+        ('Scheduler',           'scheduler'),
+        ('Max runtime',         'max_runtime'),
+        ('Node Pool',           'node_pool'),
+        ('Run on all nodes',    'all_nodes'),
+        ('Allow overlapping',   'allow_overlap'),
+        ('Queue overlapping',   'queueing'),
+        ('Notes',               'notes'),
     ]
 
     colors = {
         'name':      partial(Color.set, 'yellow'),
-        'status':    add_color_for_state
+        'status':    add_color_for_state,
     }
 
     def format_value(self, field_idx, value):
@@ -373,8 +388,8 @@ class DisplayJobs(TableDisplay):
 class DisplayActionRuns(TableDisplay):
 
     columns = ['Action', 'State', 'Start Time', 'End Time', 'Duration']
-    fields  = ['id',     'state', 'start_time', 'end_time', 'duration']
-    widths  = [40,       12,      22,           22,         10     ]
+    fields = ['id',     'state', 'start_time', 'end_time', 'duration']
+    widths = [40,       12,      22,           22,         10]
     title = 'actions'
     resize_fields = ['id']
 
@@ -421,8 +436,8 @@ class DisplayActionRuns(TableDisplay):
 class DisplayEvents(TableDisplay):
 
     columns = ['Time', 'Level', 'Entity', 'Name']
-    fields  = ['time', 'level', 'entity', 'name']
-    widths  = [22,     12,       35,      20    ]
+    fields = ['time', 'level', 'entity', 'name']
+    widths = [22,     12,       35,      20]
     title = 'events'
     resize_fields = ['entity']
 

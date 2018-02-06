@@ -1,5 +1,9 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import contextlib
 import os
+
 
 @contextlib.contextmanager
 def working_dir(path):

@@ -1,5 +1,10 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import logging
+
 from twisted.python import log
+
 from tron import event
 
 
@@ -13,7 +18,7 @@ class CrashReporter(object):
     """
 
     def __init__(self, emailer):
-        self.emailer        = emailer
+        self.emailer = emailer
         self.event_recorder = event.get_recorder(str(self))
 
     def _get_level(self, event_dict):

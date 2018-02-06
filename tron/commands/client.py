@@ -1,18 +1,22 @@
 """
 A command line http client used by tronview, tronctl, and tronfig
 """
-from collections import namedtuple
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+import itertools
 import logging
 import urllib
 import urllib2
 import urlparse
-import itertools
+from collections import namedtuple
+
 import tron
 from tron.config.schema import MASTER_NAMESPACE
 
 try:
     import simplejson
-    assert simplejson # Pyflakes
+    assert simplejson  # Pyflakes
 except ImportError:
     import json as simplejson
 
@@ -20,9 +24,9 @@ except ImportError:
 log = logging.getLogger(__name__)
 
 
-USER_AGENT   = "Tron Command/%s +http://github.com/Yelp/Tron" % tron.__version__
+USER_AGENT = "Tron Command/%s +http://github.com/Yelp/Tron" % tron.__version__
 DECODE_ERROR = "DECODE_ERROR"
-URL_ERROR    = 'URL_ERROR'
+URL_ERROR = 'URL_ERROR'
 
 
 class RequestError(ValueError):
@@ -32,13 +36,13 @@ class RequestError(ValueError):
 Response = namedtuple('Response', 'error msg content')
 
 default_headers = {
-    "User-Agent": USER_AGENT
+    "User-Agent": USER_AGENT,
 }
 
 
 def build_url_request(uri, data, headers=None):
-    headers     = headers or default_headers
-    enc_data    = urllib.urlencode(data) if data else None
+    headers = headers or default_headers
+    enc_data = urllib.urlencode(data) if data else None
     return urllib2.Request(uri, enc_data, headers)
 
 
@@ -97,7 +101,7 @@ class Client(object):
         config_data=None,
         config_hash=None,
         no_header=False,
-        check=False
+        check=False,
     ):
         """Retrieve or update the configuration."""
         if config_data is not None:
@@ -106,7 +110,7 @@ class Client(object):
                 config=config_data,
                 name=config_name,
                 hash=config_hash,
-                check=data_check
+                check=data_check,
             )
             return self.request('/api/config', request_data)
         request_data = dict(name=config_name, no_header=int(no_header))
@@ -127,26 +131,32 @@ class Client(object):
         return self.http_get(service_url)
 
     def jobs(self, include_job_runs=False, include_action_runs=False):
-        params = {'include_job_runs': int(include_job_runs),
-                  'include_action_runs': int(include_action_runs)}
+        params = {
+            'include_job_runs': int(include_job_runs),
+            'include_action_runs': int(include_action_runs),
+        }
         return self.http_get('/api/jobs', params).get('jobs')
 
     def job(self, job_url, include_action_runs=False, count=0):
-        params = {'include_action_runs': int(include_action_runs),
-                  'num_runs': count}
+        params = {
+            'include_action_runs': int(include_action_runs),
+            'num_runs': count,
+        }
         return self.http_get(job_url, params)
 
     def job_runs(self, url, include_runs=True, include_graph=False):
         params = {
             'include_action_runs': int(include_runs),
-            'include_action_graph': int(include_graph)}
+            'include_action_graph': int(include_graph),
+        }
         return self.http_get(url, params)
 
     def action_runs(self, action_run_url, num_lines=0):
         params = {
             'num_lines':        num_lines,
             'include_stdout':   1,
-            'include_stderr':   1}
+            'include_stderr':   1,
+        }
         return self.http_get(action_run_url, params)
 
     def object_events(self, item_url):
@@ -182,20 +192,20 @@ def get_service_url(identifier):
 
 class TronObjectType(object):
     """Constants to identify a Tron object type."""
-    job              = 'JOB'
-    job_run          = 'JOB_RUN'
-    action_run       = 'ACTION_RUN'
-    service          = 'SERVICE'
+    job = 'JOB'
+    job_run = 'JOB_RUN'
+    action_run = 'ACTION_RUN'
+    service = 'SERVICE'
     service_instance = 'SERVICE_INSTANCE'
 
     url_builders = {
         'jobs':     get_job_url,
-        'services': get_service_url
+        'services': get_service_url,
     }
 
     groups = {
         'jobs':     [job, job_run, action_run],
-        'services': [service, service_instance]
+        'services': [service, service_instance],
     }
 
 
@@ -213,15 +223,16 @@ def get_object_type_from_identifier(url_index, identifier):
     """Given a string identifier, return a TronObjectIdentifier. """
     name_mapping = {
         'jobs':     set(url_index['jobs']),
-        'services': set(url_index['services'])
+        'services': set(url_index['services']),
     }
+
     def get_name_parts(identifier, namespace=None):
         if namespace:
             identifier = '%s.%s' % (namespace, identifier)
 
-        name_elements       = identifier.split('.')
-        name                = '.'.join(name_elements[:2])
-        length              = len(name_elements) - 2
+        name_elements = identifier.split('.')
+        name = '.'.join(name_elements[:2])
+        length = len(name_elements) - 2
         return IdentifierParts(name, identifier, length)
 
     def find_by_type(id_parts, index_name):

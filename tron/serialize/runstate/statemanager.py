@@ -1,10 +1,15 @@
-from contextlib import contextmanager
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+import itertools
 import logging
 import time
-import itertools
+from contextlib import contextmanager
+
 import tron
 from tron.config import schema
-from tron.core import job, service
+from tron.core import job
+from tron.core import service
 from tron.serialize import runstate
 from tron.serialize.runstate.mongostore import MongoStateStore
 from tron.serialize.runstate.shelvestore import ShelveStateStore
@@ -18,6 +23,7 @@ log = logging.getLogger(__name__)
 class VersionMismatchError(ValueError):
     """Raised when the state has a newer version then tron.__version.__."""
 
+
 class PersistenceStoreError(ValueError):
     """Raised if the store can not be created or fails a read or write."""
 
@@ -27,11 +33,11 @@ class PersistenceManagerFactory(object):
 
     @classmethod
     def from_config(cls, persistence_config):
-        store_type              = persistence_config.store_type
-        name                    = persistence_config.name
-        connection_details      = persistence_config.connection_details
-        buffer_size             = persistence_config.buffer_size
-        store                   = None
+        store_type = persistence_config.store_type
+        name = persistence_config.name
+        connection_details = persistence_config.connection_details
+        buffer_size = persistence_config.buffer_size
+        store = None
 
         if store_type not in schema.StatePersistenceTypes:
             raise PersistenceStoreError("Unknown store type: %s" % store_type)
@@ -56,11 +62,11 @@ class StateMetadata(object):
     """A data object for saving state metadata. Conforms to the same
     RunState interface as Jobs and Services.
     """
-    name                        = 'StateMetadata'
-    version                     = tron.__version_info__
+    name = 'StateMetadata'
+    version = tron.__version_info__
 
     def __init__(self):
-        self.state_data         = {
+        self.state_data = {
             'version':              self.version,
             'create_time':          time.time(),
         }
@@ -79,7 +85,8 @@ class StateMetadata(object):
         if version > cls.version or version < (0, 5, 2):
             msg = "State for version %s, expected %s"
             raise VersionMismatchError(
-                msg % (metadata['version'] , cls.version))
+                msg % (metadata['version'], cls.version),
+            )
 
 
 class StateSaveBuffer(object):
@@ -88,9 +95,9 @@ class StateSaveBuffer(object):
     """
 
     def __init__(self, buffer_size):
-        self.buffer_size        = buffer_size
-        self.buffer             = {}
-        self.counter            = itertools.cycle(xrange(buffer_size))
+        self.buffer_size = buffer_size
+        self.buffer = {}
+        self.counter = itertools.cycle(xrange(buffer_size))
 
     def save(self, key, state_data):
         """Save the state_data indexed by key and return True if the buffer
@@ -129,11 +136,12 @@ class PersistentStateManager(object):
     """
 
     def __init__(self, persistence_impl, buffer):
-        self.enabled            = True
-        self._buffer            = buffer
-        self._impl              = persistence_impl
-        self.metadata_key       = self._impl.build_key(
-                                    runstate.MCP_STATE, StateMetadata.name)
+        self.enabled = True
+        self._buffer = buffer
+        self._impl = persistence_impl
+        self.metadata_key = self._impl.build_key(
+            runstate.MCP_STATE, StateMetadata.name,
+        )
 
     def restore(self, job_names, service_names, skip_validation=False):
         """Return the most recent serialized state."""
@@ -141,8 +149,10 @@ class PersistentStateManager(object):
         if not skip_validation:
             self._restore_metadata()
 
-        return (self._restore_dicts(runstate.JOB_STATE, job_names),
-                self._restore_dicts(runstate.SERVICE_STATE, service_names))
+        return (
+            self._restore_dicts(runstate.JOB_STATE, job_names),
+            self._restore_dicts(runstate.SERVICE_STATE, service_names),
+        )
 
     def _restore_metadata(self):
         metadata = self._impl.restore([self.metadata_key])
@@ -155,10 +165,12 @@ class PersistentStateManager(object):
 
     def _restore_dicts(self, item_type, items):
         """Return a dict mapping of the items name to its state data."""
-        key_to_item_map  = self._keys_for_items(item_type, items)
+        key_to_item_map = self._keys_for_items(item_type, items)
         key_to_state_map = self._impl.restore(key_to_item_map.keys())
-        return dict((key_to_item_map[key], state_data)
-                    for key, state_data in key_to_state_map.iteritems())
+        return {
+            key_to_item_map[key]: state_data
+            for key, state_data in key_to_state_map.iteritems()
+        }
 
     def save(self, type_enum, name, state_data):
         """Persist an items state."""
@@ -228,14 +240,16 @@ class StateChangeWatcher(observer.Observer):
 
     def __init__(self):
         self.state_manager = NullStateManager
-        self.config        = None
+        self.config = None
 
     def update_from_config(self, state_config):
         if self.config == state_config:
             return False
 
         self.shutdown()
-        self.state_manager = PersistenceManagerFactory.from_config(state_config)
+        self.state_manager = PersistenceManagerFactory.from_config(
+            state_config,
+        )
         self.config = state_config
         return True
 

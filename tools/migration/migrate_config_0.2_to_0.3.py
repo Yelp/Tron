@@ -6,12 +6,17 @@
  Display warnings for action requires sections that are not lists.
 
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import optparse
 import re
 import sys
+
 import yaml
 
 YAML_TAG_RE = re.compile(r'!\w+\b')
+
 
 class Loader(yaml.Loader):
     """A YAML loader that does not clear its anchor mapping."""
@@ -34,10 +39,10 @@ def name_from_doc(doc):
         return doc['name']
 
     # Special case for node without a name, their name defaults to their hostname
-    if set(doc.keys()) == set(['hostname']):
+    if set(doc.keys()) == {'hostname'}:
         return doc['hostname']
 
-    if set(doc.keys()) == set(['nodes']):
+    if set(doc.keys()) == {'nodes'}:
         raise ValueError("Please create a name for NodePool %s" % doc)
 
     raise ValueError("Could not find a name for %s" % doc)
@@ -47,14 +52,15 @@ def warn_node_pools(content):
     doc = yaml.safe_load(content)
 
     node_pools = [
-        node_doc for node_doc in doc['nodes'] if 'nodes' in node_doc]
+        node_doc for node_doc in doc['nodes'] if 'nodes' in node_doc
+    ]
 
     if not node_pools:
         return
 
     print >>sys.stderr, ("\n\nNode Pools should be moved into a node_pools section." +
-        " The following node pools were found:\n" +
-        "\n".join(str(n) for n in node_pools))
+                         " The following node pools were found:\n" +
+                         "\n".join(str(n) for n in node_pools))
 
 
 def warn_requires_list(content):
@@ -75,8 +81,8 @@ def warn_requires_list(content):
         return
 
     print >>sys.stderr, ("\n\nAction requires should be a list." +
-        " The following actions have requires that are not lists:\n" +
-        "\n".join(action_names))
+                         " The following actions have requires that are not lists:\n" +
+                         "\n".join(action_names))
 
 
 def create_loader(content):
@@ -90,23 +96,27 @@ def build_anchor_mapping(content):
     """Return a map of anchors to the new name to use."""
     loader = create_loader(content)
 
-    return dict(
-        (anchor_name, name_from_doc(loader.construct_document(yaml_node)))
+    return {
+        anchor_name: name_from_doc(loader.construct_document(yaml_node))
         for anchor_name, yaml_node in loader.anchors.iteritems()
-    )
+    }
 
 
 def update_references(content):
     anchor_mapping = build_anchor_mapping(content)
 
-    key_length_func = lambda (k, v): len(k)
+    def key_length_func((k, v)): return len(k)
     anchors_by_length = sorted(
-            anchor_mapping.iteritems(), key=key_length_func, reverse=True)
+        anchor_mapping.iteritems(), key=key_length_func, reverse=True,
+    )
     for anchor_name, string_name in anchors_by_length:
         # Remove the anchors
         content = re.sub(r'\s*&%s ?' % anchor_name, '', content)
         # Update the reference to use the string identifier
-        content = re.sub(r'\*%s\b' % anchor_name, '"%s"' % string_name, content)
+        content = re.sub(
+            r'\*%s\b' % anchor_name, '"%s"' %
+            string_name, content,
+        )
 
     return content
 

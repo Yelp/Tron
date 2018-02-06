@@ -1,10 +1,21 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import mock
-from testify import setup, assert_equal, TestCase, run, setup_teardown
-from testify.assertions import assert_in, assert_not_equal
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import setup_teardown
+from testify import TestCase
+from testify.assertions import assert_in
+from testify.assertions import assert_not_equal
+
 from tests.assertions import assert_length
 from tests.testingutils import autospec_method
-
-from tron import node, eventloop, command_context, actioncommand
+from tron import actioncommand
+from tron import command_context
+from tron import eventloop
+from tron import node
 from tron.actioncommand import ActionCommand
 from tron.core import serviceinstance
 from tron.utils import state
@@ -18,19 +29,24 @@ class BuildActionTestCase(TestCase):
         self.id = 'the_id'
         self.name = 'the_name'
         self.serializer = mock.create_autospec(actioncommand.StringBufferStore)
-        self.task = mock.Mock(command=self.command,
-            id=self.id, task_name=self.name, buffer_store=self.serializer)
+        self.task = mock.Mock(
+            command=self.command,
+            id=self.id, task_name=self.name, buffer_store=self.serializer,
+        )
 
     @setup_teardown
     def setup_mock(self):
-        patcher = mock.patch('tron.core.serviceinstance.ActionCommand', autospec=True)
+        patcher = mock.patch(
+            'tron.core.serviceinstance.ActionCommand', autospec=True,
+        )
         with patcher as self.mock_action_command:
             yield
 
     def test_build_action(self):
         action = serviceinstance.build_action(self.task)
         self.mock_action_command.assert_called_with(
-            '%s.%s' % (self.id, self.name), self.command, serializer=self.serializer)
+            '%s.%s' % (self.id, self.name), self.command, serializer=self.serializer,
+        )
         assert_equal(action, self.mock_action_command.return_value)
         self.task.watch.assert_called_with(action)
 
@@ -41,8 +57,10 @@ class RunActionTestCase(TestCase):
     def setup_task(self):
         self.node = mock.create_autospec(node.Node)
         self.failed = 'NOTIFY_FAILED'
-        self.task = mock.Mock(node=self.node, NOTIFY_FAILED=self.failed,
-            task_name='mock_task')
+        self.task = mock.Mock(
+            node=self.node, NOTIFY_FAILED=self.failed,
+            task_name='mock_task',
+        )
         self.action = mock.create_autospec(actioncommand.ActionCommand)
 
     def test_run_action(self):
@@ -54,7 +72,8 @@ class RunActionTestCase(TestCase):
         assert not serviceinstance.run_action(self.task, self.action)
         self.task.notify.assert_called_with(self.failed)
         self.task.buffer_store.open.return_value.write.assert_called_with(
-            "Node run failure for mock_task: %s" % str(error))
+            "Node run failure for mock_task: %s" % str(error),
+        )
 
 
 class ServiceInstanceMonitorTaskTestCase(TestCase):
@@ -65,10 +84,13 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
         self.filename = "/tmp/filename"
         mock_node = mock.create_autospec(node.Node)
         self.task = serviceinstance.ServiceInstanceMonitorTask(
-            "id", mock_node, self.interval, self.filename)
+            "id", mock_node, self.interval, self.filename,
+        )
         autospec_method(self.task.notify)
         autospec_method(self.task.watch)
-        self.task.hang_check_callback = mock.create_autospec(eventloop.UniqueCallback)
+        self.task.hang_check_callback = mock.create_autospec(
+            eventloop.UniqueCallback,
+        )
         self.task.callback = mock.create_autospec(eventloop.UniqueCallback)
         self.mock_eventloop = None
         with mock.patch('tron.core.serviceinstance.eventloop') as self.mock_eventloop:
@@ -105,7 +127,9 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
 
     def test_handle_action_event_failstart(self):
         autospec_method(self.task.queue)
-        self.task.handle_action_event(self.task.action, ActionCommand.FAILSTART)
+        self.task.handle_action_event(
+            self.task.action, ActionCommand.FAILSTART,
+        )
         self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
         self.task.queue.assert_called_with()
         self.task.hang_check_callback.cancel.assert_called_with()
@@ -170,7 +194,8 @@ class ServiceInstanceStopTaskTestCase(TestCase):
         self.node = mock.create_autospec(node.Node)
         self.pid_filename = '/tmp/filename'
         self.task = serviceinstance.ServiceInstanceStopTask(
-            'id', self.node, self.pid_filename)
+            'id', self.node, self.pid_filename,
+        )
         autospec_method(self.task.watch)
         autospec_method(self.task.notify)
 
@@ -214,13 +239,17 @@ class ServiceInstanceStartTaskTestCase(TestCase):
 
     def test_start(self):
         command = 'the command'
-        patcher = mock.patch('tron.core.serviceinstance.ActionCommand', autospec=True)
+        patcher = mock.patch(
+            'tron.core.serviceinstance.ActionCommand', autospec=True,
+        )
         with patcher as mock_ac:
             self.task.start(command)
             self.task.watch.assert_called_with(mock_ac.return_value)
             self.node.submit_command.assert_called_with(mock_ac.return_value)
-            mock_ac.assert_called_with("%s.start" % self.task.id, command,
-                serializer=self.task.buffer_store)
+            mock_ac.assert_called_with(
+                "%s.start" % self.task.id, command,
+                serializer=self.task.buffer_store,
+            )
 
     def test_start_failed(self):
         command = 'the command'
@@ -262,23 +291,31 @@ class ServiceInstanceTestCase(TestCase):
         self.number = 5
         self.context = mock.create_autospec(command_context.CommandContext)
         self.instance = serviceinstance.ServiceInstance(
-            self.config, self.node, self.number, self.context)
-        self.instance.machine = mock.create_autospec(state.StateMachine, state=None)
+            self.config, self.node, self.number, self.context,
+        )
+        self.instance.machine = mock.create_autospec(
+            state.StateMachine, state=None,
+        )
         self.instance.start_task = mock.create_autospec(
-            serviceinstance.ServiceInstanceStartTask)
+            serviceinstance.ServiceInstanceStartTask,
+        )
         self.instance.stop_task = mock.create_autospec(
-            serviceinstance.ServiceInstanceStopTask)
+            serviceinstance.ServiceInstanceStopTask,
+        )
         self.instance.monitor_task = mock.create_autospec(
-            serviceinstance.ServiceInstanceMonitorTask)
+            serviceinstance.ServiceInstanceMonitorTask,
+        )
         self.instance.watch = mock.create_autospec(self.instance.watch)
 
     def test_create_tasks(self):
         self.instance.create_tasks()
-        assert_equal(self.instance.watch.mock_calls, [
-            mock.call(self.instance.monitor_task),
-            mock.call(self.instance.start_task),
-            mock.call(self.instance.stop_task),
-        ])
+        assert_equal(
+            self.instance.watch.mock_calls, [
+                mock.call(self.instance.monitor_task),
+                mock.call(self.instance.start_task),
+                mock.call(self.instance.stop_task),
+            ],
+        )
 
     def test_start_invalid_state(self):
         self.instance.machine.transition.return_value = False
@@ -287,7 +324,9 @@ class ServiceInstanceTestCase(TestCase):
 
     def test_start(self):
         self.instance.start()
-        self.instance.start_task.start.assert_called_with(self.instance.command)
+        self.instance.start_task.start.assert_called_with(
+            self.instance.command,
+        )
 
     def test_stop_invalid_state(self):
         self.instance.machine.check.return_value = False
@@ -321,7 +360,8 @@ class ServiceInstanceTestCase(TestCase):
 
     def test_handle_start_task_complete(self):
         self.instance.machine = mock.Mock(
-            state=serviceinstance.ServiceInstance.STATE_STARTING)
+            state=serviceinstance.ServiceInstance.STATE_STARTING,
+        )
         self.instance._handle_start_task_complete()
         self.instance.monitor_task.queue.assert_called_with()
 
@@ -332,16 +372,20 @@ class ServiceInstanceTestCase(TestCase):
     def test_state_data(self):
         expected = {
             'instance_number': self.number,
-            'node': self.node.hostname
+            'node': self.node.hostname,
         }
         assert_equal(self.instance.state_data, expected)
 
     def test_handler_many_monitor_failure(self):
-        self.instance.failures = [1]*6
+        self.instance.failures = [1] * 6
         self.instance.config.monitor_retries = 5
-        self.instance.handler(self.instance.monitor_task,  serviceinstance.ServiceInstanceMonitorTask.NOTIFY_FAILED)
+        self.instance.handler(
+            self.instance.monitor_task,
+            serviceinstance.ServiceInstanceMonitorTask.NOTIFY_FAILED,
+        )
         self.instance.monitor_task.cancel.assert_called_with()
         self.instance.machine.transition.assert_called_with('stop')
+
 
 class NodeSelectorTestCase(TestCase):
 
@@ -357,32 +401,40 @@ class NodeSelectorTestCase(TestCase):
         hostname = 'hostname'
         self.node_pool.get_by_hostname.return_value = None
         selected_node = serviceinstance.node_selector(self.node_pool, hostname)
-        assert_equal(selected_node, self.node_pool.next_round_robin.return_value)
+        assert_equal(
+            selected_node, self.node_pool.next_round_robin.return_value,
+        )
 
     def test_node_selector_hostname_found(self):
         hostname = 'hostname'
         selected_node = serviceinstance.node_selector(self.node_pool, hostname)
-        assert_equal(selected_node, self.node_pool.get_by_hostname.return_value)
+        assert_equal(
+            selected_node, self.node_pool.get_by_hostname.return_value,
+        )
 
 
 def create_mock_instance(**kwargs):
     return mock.create_autospec(serviceinstance.ServiceInstance, **kwargs)
 
+
 class ServiceInstanceCollectionTestCase(TestCase):
 
     @setup
     def setup_collection(self):
-        self.node_pool      = mock.create_autospec(node.NodePool)
-        self.config         = mock.Mock()
-        self.context        = mock.Mock()
-        self.collection     = serviceinstance.ServiceInstanceCollection(
-            self.config, self.node_pool, self.context)
+        self.node_pool = mock.create_autospec(node.NodePool)
+        self.config = mock.Mock()
+        self.context = mock.Mock()
+        self.collection = serviceinstance.ServiceInstanceCollection(
+            self.config, self.node_pool, self.context,
+        )
 
     def test__init__(self):
         assert_equal(self.collection.config.count, self.config.count)
         assert_equal(self.collection.config, self.config)
-        assert_equal(self.collection.instances,
-            self.collection.instances_proxy.obj_list_getter())
+        assert_equal(
+            self.collection.instances,
+            self.collection.instances_proxy.obj_list_getter(),
+        )
 
     def test_clear_failed(self):
         def build(state):
@@ -391,13 +443,16 @@ class ServiceInstanceCollectionTestCase(TestCase):
             return inst
         instances = [
             build(serviceinstance.ServiceInstance.STATE_FAILED),
-            build(serviceinstance.ServiceInstance.STATE_UP)]
+            build(serviceinstance.ServiceInstance.STATE_UP),
+        ]
         self.collection.instances.extend(instances)
         self.collection.clear_failed()
         assert_equal(self.collection.instances, instances[1:])
 
     def test_clear_failed_none(self):
-        instances = [create_mock_instance(state=serviceinstance.ServiceInstance.STATE_UP)]
+        instances = [create_mock_instance(
+            state=serviceinstance.ServiceInstance.STATE_UP,
+        )]
         self.collection.instances.extend(instances)
         self.collection.clear_failed()
         assert_equal(self.collection.instances, instances)
@@ -411,12 +466,16 @@ class ServiceInstanceCollectionTestCase(TestCase):
 
     def test_create_missing_none(self):
         self.collection.config.count = 2
-        self.collection.instances = [create_mock_instance(instance_number=i) for i in range(2)]
+        self.collection.instances = [create_mock_instance(
+            instance_number=i,
+        ) for i in range(2)]
         created = self.collection.create_missing()
         assert_length(created, 0)
 
     def test_build_instance(self):
-        patcher = mock.patch('tron.core.serviceinstance.ServiceInstance', autospec=True)
+        patcher = mock.patch(
+            'tron.core.serviceinstance.ServiceInstance', autospec=True,
+        )
         mock_node = mock.create_autospec(node.Node)
         number = 7
         with patcher as mock_service_instance_class:
@@ -424,20 +483,25 @@ class ServiceInstanceCollectionTestCase(TestCase):
             factory = mock_service_instance_class.create
             assert_equal(instance, factory.return_value)
             factory.assert_called_with(
-                    self.config, mock_node, number, self.collection.context)
+                self.config, mock_node, number, self.collection.context,
+            )
 
     def test_restore_state(self):
         count = 3
         state_data = [
-            dict(instance_number=i*3, node='node') for i in xrange(count)]
+            dict(instance_number=i * 3, node='node') for i in xrange(count)
+        ]
         autospec_method(self.collection._build_instance)
         created = self.collection.restore_state(state_data)
         assert_length(created, count)
         assert_equal(set(created), set(self.collection.instances))
         expected = [
-            mock.call(self.node_pool.get_by_hostname.return_value,
-                d['instance_number'])
-            for d in state_data]
+            mock.call(
+                self.node_pool.get_by_hostname.return_value,
+                d['instance_number'],
+            )
+            for d in state_data
+        ]
         for expected_call in expected:
             assert_in(expected_call, self.collection._build_instance.mock_calls)
 
@@ -453,13 +517,16 @@ class ServiceInstanceCollectionTestCase(TestCase):
 
     def test_next_instance_number(self):
         self.collection.config.count = 6
-        self.collection.instances = [create_mock_instance(instance_number=i) for i in range(5)]
+        self.collection.instances = [create_mock_instance(
+            instance_number=i,
+        ) for i in range(5)]
         assert_equal(self.collection.next_instance_number(), 5)
 
     def test_next_instance_number_in_middle(self):
         self.collection.config.count = 6
         self.collection.instances = [
-            create_mock_instance(instance_number=i) for i in range(6) if i != 3]
+            create_mock_instance(instance_number=i) for i in range(6) if i != 3
+        ]
         assert_equal(self.collection.next_instance_number(), 3)
 
     def test_missing(self):
@@ -472,6 +539,7 @@ class ServiceInstanceCollectionTestCase(TestCase):
     def test_all_true(self):
         state = serviceinstance.ServiceInstance.STATE_UP
         self.collection.config.count = count = 4
+
         def build():
             inst = create_mock_instance()
             inst.get_state.return_value = state
@@ -480,10 +548,13 @@ class ServiceInstanceCollectionTestCase(TestCase):
         assert self.collection.all(state)
 
     def test_all_empty(self):
-        assert not self.collection.all(serviceinstance.ServiceInstance.STATE_UP)
+        assert not self.collection.all(
+            serviceinstance.ServiceInstance.STATE_UP,
+        )
 
     def test_all_false(self):
         state = serviceinstance.ServiceInstance.STATE_UP
+
         def build():
             inst = create_mock_instance()
             inst.get_state.return_value = state
@@ -494,20 +565,24 @@ class ServiceInstanceCollectionTestCase(TestCase):
 
     def test__eq__(self):
         other = serviceinstance.ServiceInstanceCollection(
-            self.config, self.node_pool, self.context)
+            self.config, self.node_pool, self.context,
+        )
         assert_equal(self.collection, other)
 
     def test__ne__(self):
         other = serviceinstance.ServiceInstanceCollection(
-            mock.Mock(), self.node_pool, self.context)
+            mock.Mock(), self.node_pool, self.context,
+        )
         assert_not_equal(self.collection, other)
         other = serviceinstance.ServiceInstanceCollection(
-            self.config, mock.Mock(), self.context)
+            self.config, mock.Mock(), self.context,
+        )
         assert_not_equal(self.collection, other)
 
     def test_get_by_number(self):
         self.collection.instances = instances = [
-                    create_mock_instance(instance_number=i) for i in range(5)]
+            create_mock_instance(instance_number=i) for i in range(5)
+        ]
         instance = self.collection.get_by_number(3)
         assert_equal(instance, instances[3])
 

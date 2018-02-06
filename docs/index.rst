@@ -16,7 +16,7 @@ Table of Contents
 
 .. toctree::
     :maxdepth: 2
-    
+
     whats-new.rst
     tutorial.rst
     overview.rst
@@ -33,4 +33,3 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`search`
-

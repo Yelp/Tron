@@ -1,9 +1,18 @@
 # -*- coding: utf-8 -*-
-import datetime
-import mock
-from testify import TestCase, run, assert_equal, assert_raises
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
-from tron.config import schedule_parse, ConfigError, config_utils
+import datetime
+
+import mock
+from testify import assert_equal
+from testify import assert_raises
+from testify import run
+from testify import TestCase
+
+from tron.config import config_utils
+from tron.config import ConfigError
+from tron.config import schedule_parse
 
 
 class PadSequenceTestCase(TestCase):
@@ -37,7 +46,8 @@ class ScheduleConfigFromStringTestCase(TestCase):
         config = schedule_parse.schedule_config_from_string(schedule, context)
         assert_equal(config, mock_parse_groc.return_value)
         generic_config = schedule_parse.ConfigGenericSchedule(
-            'groc daily', schedule, None)
+            'groc daily', schedule, None,
+        )
         mock_parse_groc.assert_called_with(generic_config, context)
 
     def test_constant_config(self):
@@ -61,13 +71,15 @@ class ValidSchedulerTestCase(TestCase):
     def test_cron_from_dict(self):
         schedule = {'type': 'cron', 'value': '* * * * *'}
         config = schedule_parse.ConfigGenericSchedule(
-            'cron', schedule['value'], datetime.timedelta())
+            'cron', schedule['value'], datetime.timedelta(),
+        )
         self.assert_validation(schedule, config)
 
     def test_cron_from_dict_with_jitter(self):
         schedule = {'type': 'cron', 'value': '* * * * *', 'jitter': '5 min'}
         config = schedule_parse.ConfigGenericSchedule(
-            'cron', schedule['value'], datetime.timedelta(minutes=5))
+            'cron', schedule['value'], datetime.timedelta(minutes=5),
+        )
         self.assert_validation(schedule, config)
 
 
@@ -106,11 +118,11 @@ class ValidDailySchedulerTestCase(TestCase):
         self.assert_parse('14:32', expected)
 
     def test_valid_daily_scheduler_just_days(self):
-        expected = ("00:00:00 MWS", 0, 0, 0, set([1, 3, 6]))
+        expected = ("00:00:00 MWS", 0, 0, 0, {1, 3, 6})
         self.assert_parse("00:00:00 MWS", expected)
 
     def test_valid_daily_scheduler_time_and_day(self):
-        expected = ("17:02:44 SU", 17, 2, 44, set([0, 6]))
+        expected = ("17:02:44 SU", 17, 2, 44, {0, 6})
         self.assert_parse("17:02:44 SU", expected)
 
     def test_valid_daily_scheduler_invalid_start_time(self):
@@ -128,7 +140,8 @@ class ValidIntervalSchedulerTestCase(TestCase):
     def validate(self, config_value):
         context = config_utils.NullConfigContext
         config = schedule_parse.ConfigGenericSchedule(
-            'interval', config_value, None)
+            'interval', config_value, None,
+        )
         return schedule_parse.valid_interval_scheduler(config, context)
 
     def test_valid_interval_scheduler_shortcut(self):
@@ -142,7 +155,7 @@ class ValidIntervalSchedulerTestCase(TestCase):
         assert_equal(config.timedelta, expected)
 
     def test_valid_interval_scheduler_hours(self):
-        for spec in ['6h', '6 hours', '6 h', '6 hrs', '6 hour', u'6 hours', u'6hour']:
+        for spec in ['6h', '6 hours', '6 h', '6 hrs', '6 hour', '6 hours', '6hour']:
             config = self.validate(spec)
             expected = datetime.timedelta(hours=6)
             assert_equal(config.timedelta, expected)
@@ -157,10 +170,10 @@ class ValidIntervalSchedulerTestCase(TestCase):
         assert_raises(ConfigError, self.validate, "asdasd.asd")
 
     def test_valid_interval_scheduler_underscore(self):
-        assert_raises(ConfigError, self.validate, u"6_minute")
+        assert_raises(ConfigError, self.validate, "6_minute")
 
     def test_valid_interval_scheduler_unicode(self):
-        assert_raises(ConfigError, self.validate, u"6 ຖminute")
+        assert_raises(ConfigError, self.validate, "6 ຖminute")
 
     def test_valid_interval_scheduler_alias(self):
         config = self.validate("  hourly  ")

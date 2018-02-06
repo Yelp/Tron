@@ -1,8 +1,19 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import os
 import tempfile
-from testify import TestCase, run, assert_equal, setup, class_teardown, teardown
+
+from testify import assert_equal
+from testify import class_teardown
+from testify import run
+from testify import setup
+from testify import teardown
+from testify import TestCase
+
 from tests.assertions import assert_raises
 from tron.utils import tool_utils
+
 
 class WorkingDirTestCase(TestCase):
 

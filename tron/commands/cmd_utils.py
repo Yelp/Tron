@@ -1,14 +1,17 @@
 """
 Common code for command line utilities (see bin/)
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
 from __future__ import with_statement
+
 import logging
 import optparse
 import os
 import sys
 
-import yaml
 import tron
+from tron import yaml
 
 
 log = logging.getLogger("tron.commands")
@@ -16,11 +19,13 @@ log = logging.getLogger("tron.commands")
 
 class ExitCode(object):
     """Enumeration of exit status codes."""
-    success =           0
-    fail =              1
+    success = 0
+    fail = 1
 
 
-GLOBAL_CONFIG_FILE_NAME = os.environ.get('TRON_CONFIG') or "/etc/tron/tron.yaml"
+GLOBAL_CONFIG_FILE_NAME = os.environ.get(
+    'TRON_CONFIG',
+) or "/etc/tron/tron.yaml"
 CONFIG_FILE_NAME = os.path.expanduser('~/.tron')
 
 DEFAULT_HOST = 'localhost'
@@ -38,12 +43,18 @@ opener = open
 def build_option_parser(usage, parser_class=optparse.OptionParser):
     parser = parser_class(usage, version="%%prog %s" % tron.__version__)
 
-    parser.add_option("-v", "--verbose", action="count",
-        help="Verbose logging", default=None)
-    parser.add_option("--server", default=None,
-        help="Url including scheme, host and port, Default: %default")
-    parser.add_option("-s", "--save", action="store_true", dest="save_config",
-        help="Save options used on this job for next time.")
+    parser.add_option(
+        "-v", "--verbose", action="count",
+        help="Verbose logging", default=None,
+    )
+    parser.add_option(
+        "--server", default=None,
+        help="Url including scheme, host and port, Default: %default",
+    )
+    parser.add_option(
+        "-s", "--save", action="store_true", dest="save_config",
+        help="Save options used on this job for next time.",
+    )
 
     return parser
 
@@ -113,4 +124,5 @@ def setup_logging(options):
     logging.basicConfig(
         level=level,
         format='%(name)s %(levelname)s %(message)s',
-        stream=sys.stdout)
+        stream=sys.stdout,
+    )

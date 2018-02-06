@@ -4,6 +4,8 @@
 Part of the command line interface to the tron daemon. Provides the interface
 to controlling jobs and runs.
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
 import datetime
 import logging
@@ -11,10 +13,9 @@ import optparse
 import sys
 import urlparse
 
-import tron
+from tron.commands import client
 from tron.commands import cmd_utils
 from tron.commands.cmd_utils import ExitCode
-from tron.commands import client
 
 
 COMMAND_HELP = (
@@ -57,11 +58,14 @@ def parse_date(option, opt_str, value, parser):
 def parse_options():
     usage = "usage: %prog [options] <command> [<job | job run | action>]"
     parser = cmd_utils.build_option_parser(
-                usage, parser_class=TronCtlOptionParser)
+        usage, parser_class=TronCtlOptionParser,
+    )
 
-    parser.add_option("--run-date", action="callback", callback=parse_date,
-                      type="string", dest="run_date",
-                      help="For job starts, what should run date be set to")
+    parser.add_option(
+        "--run-date", action="callback", callback=parse_date,
+        type="string", dest="run_date",
+        help="For job starts, what should run date be set to",
+    )
 
     options, args = parser.parse_args(sys.argv)
     if len(args) < 2:
@@ -91,7 +95,8 @@ def control_objects(options, command, object_identifiers):
     for identifier in object_identifiers:
         try:
             tron_id = client.get_object_type_from_identifier(
-                url_index, identifier)
+                url_index, identifier,
+            )
         except ValueError, e:
             raise SystemExit("Error: %s" % e)
 

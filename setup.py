@@ -1,7 +1,12 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+try:
+    from setuptools import setup, find_packages
+    assert setup
+except ImportError:
+    from distutils.core import setup
+
 import glob
-
-from setuptools import setup, find_packages
-
 import tron
 
 setup(
@@ -34,9 +39,9 @@ setup(
         'python-daemon',
         'lockfile>=0.7',
         'SQLAlchemy>=1.0.15',
-        'yelp-clog'
+        'yelp-clog',
     ],
-    packages=find_packages(exclude=['tests.*','tests'])+['tronweb'],
+    packages=find_packages(exclude=['tests.*', 'tests']) + ['tronweb'],
     scripts=glob.glob('bin/*'),
     include_package_data=True,
     long_description="""Tron is a centralized system for managing periodic batch processes and services across a cluster. If you find cron or fcron to be insufficient for managing complex work flows across multiple computers, Tron might be for you.

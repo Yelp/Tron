@@ -1,9 +1,22 @@
-import datetime
-import mock
-from testify import TestCase, setup, assert_raises, assert_equal, run
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
-from tron import command_context, scheduler, node
-from tron.core import job, jobrun, actionrun, serviceinstance
+import datetime
+
+import mock
+from testify import assert_equal
+from testify import assert_raises
+from testify import run
+from testify import setup
+from testify import TestCase
+
+from tron import command_context
+from tron import node
+from tron import scheduler
+from tron.core import actionrun
+from tron.core import job
+from tron.core import jobrun
+from tron.core import serviceinstance
 from tron.core.jobrun import JobRunCollection
 
 
@@ -27,7 +40,9 @@ class BuildFilledContextTestCase(TestCase):
         assert not output.next
 
     def test_build_filled_context_single(self):
-        output = command_context.build_filled_context(command_context.JobContext)
+        output = command_context.build_filled_context(
+            command_context.JobContext,
+        )
         assert isinstance(output.base, command_context.JobContext)
         assert not output.next
 
@@ -75,8 +90,11 @@ class ChainedDictContextTestCase(SimpleContextTestCaseBase):
     @setup
     def build_context(self):
         self.next_context = command_context.CommandContext(
-                dict(foo='bar', next_foo='next_bar'))
-        self.context = command_context.CommandContext(dict(), self.next_context)
+            dict(foo='bar', next_foo='next_bar'),
+        )
+        self.context = command_context.CommandContext(
+            dict(), self.next_context,
+        )
 
     def test_chain_get(self):
         assert_equal(self.context['next_foo'], 'next_bar')
@@ -86,9 +104,11 @@ class ChainedDictOverrideContextTestCase(SimpleContextTestCaseBase):
     @setup
     def build_context(self):
         self.next_context = command_context.CommandContext(
-                dict(foo='your mom', next_foo='next_bar'))
+            dict(foo='your mom', next_foo='next_bar'),
+        )
         self.context = command_context.CommandContext(
-                dict(foo='bar'), self.next_context)
+            dict(foo='bar'), self.next_context,
+        )
 
     def test_chain_get(self):
         assert_equal(self.context['next_foo'], 'next_bar')
@@ -103,7 +123,8 @@ class ChainedObjectOverrideContextTestCase(SimpleContextTestCaseBase):
         obj.foo = 'bar'
 
         self.next_context = command_context.CommandContext(
-                dict(foo='your mom', next_foo='next_bar'))
+            dict(foo='your mom', next_foo='next_bar'),
+        )
         self.context = command_context.CommandContext(obj, self.next_context)
 
     def test_chain_get(self):
@@ -116,9 +137,14 @@ class JobContextTestCase(TestCase):
     def setup_job(self):
         self.last_success = mock.Mock(run_time=datetime.datetime(2012, 3, 14))
         mock_scheduler = mock.create_autospec(scheduler.ConstantScheduler)
-        run_collection = mock.create_autospec(JobRunCollection,
-                        last_success=self.last_success)
-        self.job = job.Job("jobname", mock_scheduler, run_collection=run_collection)
+        run_collection = mock.create_autospec(
+            JobRunCollection,
+            last_success=self.last_success,
+        )
+        self.job = job.Job(
+            "jobname", mock_scheduler,
+            run_collection=run_collection,
+        )
         self.context = command_context.JobContext(self.job)
 
     def test_name(self):
@@ -126,7 +152,8 @@ class JobContextTestCase(TestCase):
 
     def test__getitem__last_success(self):
         item = self.context["last_success:day-1"]
-        expected = (self.last_success.run_time - datetime.timedelta(days=1)).day
+        expected = (self.last_success.run_time -
+                    datetime.timedelta(days=1)).day
         assert_equal(item, str(expected))
 
         item = self.context["last_success:shortdate"]
@@ -180,8 +207,10 @@ class ActionRunContextTestCase(TestCase):
     @setup
     def build_context(self):
         mock_node = mock.create_autospec(node.Node, hostname='something')
-        self.action_run = mock.create_autospec(actionrun.ActionRun,
-            action_name='something', node=mock_node)
+        self.action_run = mock.create_autospec(
+            actionrun.ActionRun,
+            action_name='something', node=mock_node,
+        )
         self.context = command_context.ActionRunContext(self.action_run)
 
     def test_actionname(self):
@@ -199,11 +228,17 @@ class ServiceInstanceContextTestCase(TestCase):
             serviceinstance.ServiceInstance,
             instance_number=123,
             node=mock.Mock(hostname='something'),
-            config=mock.Mock(name='name', pid_file=mock.MagicMock()))
-        self.context = command_context.ServiceInstanceContext(self.service_instance)
+            config=mock.Mock(name='name', pid_file=mock.MagicMock()),
+        )
+        self.context = command_context.ServiceInstanceContext(
+            self.service_instance,
+        )
 
     def test_instance_number(self):
-        assert_equal(self.context.instance_number, self.service_instance.instance_number)
+        assert_equal(
+            self.context.instance_number,
+            self.service_instance.instance_number,
+        )
 
     def test_node(self):
         assert_equal(self.context.node, self.service_instance.node.hostname)

@@ -1,23 +1,40 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import datetime
+
 import mock
 import pytz
-from testify import TestCase, setup, assert_equal
+from testify import assert_equal
+from testify import setup
+from testify import TestCase
 from testify.assertions import assert_in
-from tests.assertions import assert_length, assert_raises, assert_call
-from tron import node, event, actioncommand
-from tron.core import jobrun, actionrun, actiongraph, job
-from tests.testingutils import Turtle, autospec_method
+
+from tests.assertions import assert_call
+from tests.assertions import assert_length
+from tests.assertions import assert_raises
+from tests.testingutils import autospec_method
+from tests.testingutils import Turtle
+from tron import actioncommand
+from tron import event
+from tron import node
+from tron.core import actiongraph
+from tron.core import actionrun
+from tron.core import job
+from tron.core import jobrun
 from tron.serialize import filehandler
 
 
 def build_mock_job():
     action_graph = mock.create_autospec(actiongraph.ActionGraph)
     runner = mock.create_autospec(actioncommand.SubprocessActionRunnerFactory)
-    return mock.create_autospec(job.Job,
+    return mock.create_autospec(
+        job.Job,
         action_graph=action_graph,
         output_path=mock.Mock(),
         context=mock.Mock(),
-        action_runner=runner)
+        action_runner=runner,
+    )
 
 
 class JobRunTestCase(TestCase):
@@ -28,16 +45,21 @@ class JobRunTestCase(TestCase):
     def setup_jobrun(self):
         self.job = build_mock_job()
         self.action_graph = self.job.action_graph
-        self.run_time = datetime.datetime(2012, 3, 14, 15, 9 ,26)
+        self.run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         mock_node = mock.create_autospec(node.Node)
-        self.job_run = jobrun.JobRun('jobname', 7, self.run_time, mock_node,
-                action_runs=Turtle(
-                    action_runs_with_cleanup=[],
-                    get_startable_action_runs=lambda: []))
+        self.job_run = jobrun.JobRun(
+            'jobname', 7, self.run_time, mock_node,
+            action_runs=Turtle(
+                action_runs_with_cleanup=[],
+                get_startable_action_runs=lambda: [],
+            ),
+        )
         autospec_method(self.job_run.watch)
         autospec_method(self.job_run.notify)
         self.job_run.event = mock.create_autospec(event.EventRecorder)
-        self.action_run = mock.create_autospec(actionrun.ActionRun, is_skipped=False)
+        self.action_run = mock.create_autospec(
+            actionrun.ActionRun, is_skipped=False,
+        )
 
     def test__init__(self):
         assert_equal(self.job_run.job_name, 'jobname')
@@ -48,7 +70,8 @@ class JobRunTestCase(TestCase):
         run_num = 6
         mock_node = mock.create_autospec(node.Node)
         run = jobrun.JobRun.for_job(
-                self.job, run_num, self.run_time, mock_node, False)
+            self.job, run_num, self.run_time, mock_node, False,
+        )
 
         assert_equal(run.action_runs.action_graph, self.action_graph)
         assert_equal(run.job_name, self.job.get_name.return_value)
@@ -60,7 +83,8 @@ class JobRunTestCase(TestCase):
         run_num = 6
         mock_node = mock.create_autospec(node.Node)
         run = jobrun.JobRun.for_job(
-                self.job, run_num, self.run_time, mock_node, True)
+            self.job, run_num, self.run_time, mock_node, True,
+        )
         assert_equal(run.action_runs.action_graph, self.action_graph)
         assert run.manual
 
@@ -74,9 +98,12 @@ class JobRunTestCase(TestCase):
         self.job_run._action_runs = None
         count = 2
         action_runs = [
-            mock.create_autospec(actionrun.ActionRun) for _ in xrange(count)]
-        run_collection = mock.create_autospec(actionrun.ActionRunCollection,
-            action_runs_with_cleanup=action_runs)
+            mock.create_autospec(actionrun.ActionRun) for _ in xrange(count)
+        ]
+        run_collection = mock.create_autospec(
+            actionrun.ActionRunCollection,
+            action_runs_with_cleanup=action_runs,
+        )
         self.job_run._set_action_runs(run_collection)
         assert_equal(self.job_run.watch.call_count, count)
 
@@ -94,8 +121,10 @@ class JobRunTestCase(TestCase):
 
     def test_set_action_runs_duplicate(self):
         run_collection = mock.create_autospec(actionrun.ActionRunCollection)
-        assert_raises(ValueError,
-            self.job_run._set_action_runs, run_collection)
+        assert_raises(
+            ValueError,
+            self.job_run._set_action_runs, run_collection,
+        )
 
     @mock.patch('tron.core.jobrun.timeutils.current_time', autospec=True)
     def test_seconds_until_run_time(self, mock_current_time):
@@ -132,7 +161,8 @@ class JobRunTestCase(TestCase):
 
     def test_do_start(self):
         startable_runs = [
-            mock.create_autospec(actionrun.ActionRun) for _ in xrange(3)]
+            mock.create_autospec(actionrun.ActionRun) for _ in xrange(3)
+        ]
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
         assert self.job_run._do_start()
@@ -161,7 +191,8 @@ class JobRunTestCase(TestCase):
 
     def test_start_action_runs(self):
         startable_runs = [
-            mock.create_autospec(actionrun.ActionRun) for _ in xrange(3)]
+            mock.create_autospec(actionrun.ActionRun) for _ in xrange(3)
+        ]
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
         started_runs = self.job_run._start_action_runs()
@@ -169,7 +200,8 @@ class JobRunTestCase(TestCase):
 
     def test_start_action_runs_failed(self):
         startable_runs = [
-            mock.create_autospec(actionrun.ActionRun) for _ in xrange(3)]
+            mock.create_autospec(actionrun.ActionRun) for _ in xrange(3)
+        ]
         startable_runs[0].start.return_value = False
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
@@ -178,7 +210,8 @@ class JobRunTestCase(TestCase):
 
     def test_start_action_runs_all_failed(self):
         startable_runs = [
-            mock.create_autospec(actionrun.ActionRun) for _ in xrange(2)]
+            mock.create_autospec(actionrun.ActionRun) for _ in xrange(2)
+        ]
         for startable_run in startable_runs:
             startable_run.start.return_value = False
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
@@ -196,12 +229,16 @@ class JobRunTestCase(TestCase):
 
     def test_handler_with_startable(self):
         startable_run = mock.create_autospec(actionrun.ActionRun)
-        self.job_run.action_runs.get_startable_action_runs = lambda: [startable_run]
+        self.job_run.action_runs.get_startable_action_runs = lambda: [
+            startable_run,
+        ]
         autospec_method(self.job_run.finalize)
         self.action_run.is_broken = False
 
         self.job_run.handler(self.action_run, mock.Mock())
-        self.job_run.notify.assert_called_with(self.job_run.NOTIFY_STATE_CHANGED)
+        self.job_run.notify.assert_called_with(
+            self.job_run.NOTIFY_STATE_CHANGED,
+        )
         startable_run.start.assert_called_with()
         assert not self.job_run.finalize.mock_calls
 
@@ -294,7 +331,7 @@ class JobRunFromStateTestCase(TestCase):
     @setup
     def setup_jobrun(self):
         self.action_graph = mock.create_autospec(actiongraph.ActionGraph)
-        self.run_time = datetime.datetime(2012, 3, 14, 15, 9 ,26)
+        self.run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         self.path = ['base', 'path']
         self.output_path = mock.create_autospec(filehandler.OutputPath)
         self.node_pool = mock.create_autospec(node.NodePool)
@@ -306,7 +343,7 @@ class JobRunFromStateTestCase(TestCase):
             'start_time':       'sometime',
             'end_time':         'sometime',
             'command':          'doit',
-            'node_name':        'thenode'
+            'node_name':        'thenode',
         }]
         self.state_data = {
             'job_name':         'thejobname',
@@ -317,13 +354,15 @@ class JobRunFromStateTestCase(TestCase):
             'start_time':       'start_time',
             'runs':             self.action_run_state_data,
             'cleanup_run':      None,
-            'manual':           True
+            'manual':           True,
         }
         self.context = mock.Mock()
 
     def test_from_state(self):
-        run = jobrun.JobRun.from_state(self.state_data, self.action_graph,
-            self.output_path, self.context, self.node_pool)
+        run = jobrun.JobRun.from_state(
+            self.state_data, self.action_graph,
+            self.output_path, self.context, self.node_pool,
+        )
         assert_length(run.action_runs.run_map, 1)
         assert_equal(run.job_name, self.state_data['job_name'])
         assert_equal(run.run_time, self.run_time)
@@ -333,8 +372,10 @@ class JobRunFromStateTestCase(TestCase):
         assert run.action_graph
 
     def test_from_state_node_no_longer_exists(self):
-        run = jobrun.JobRun.from_state(self.state_data, self.action_graph,
-            self.output_path, self.context, self.node_pool)
+        run = jobrun.JobRun.from_state(
+            self.state_data, self.action_graph,
+            self.output_path, self.context, self.node_pool,
+        )
         assert_length(run.action_runs.run_map, 1)
         assert_equal(run.job_name, 'thejobname')
         assert_equal(run.run_time, self.run_time)
@@ -377,10 +418,12 @@ class JobRunCollectionTestCase(TestCase):
         self.run_collection = jobrun.JobRunCollection(5)
         self.job_runs = [
             self._mock_run(state=actionrun.ActionRun.STATE_QUEUED, run_num=4),
-            self._mock_run(state=actionrun.ActionRun.STATE_RUNNING, run_num=3)
+            self._mock_run(state=actionrun.ActionRun.STATE_RUNNING, run_num=3),
         ] + [
-            self._mock_run(state=actionrun.ActionRun.STATE_SUCCEEDED, run_num=i)
-            for i in xrange(2,0,-1)
+            self._mock_run(
+                state=actionrun.ActionRun.STATE_SUCCEEDED, run_num=i,
+            )
+            for i in xrange(2, 0, -1)
         ]
         self.run_collection.runs.extend(self.job_runs)
         self.mock_node = mock.create_autospec(node.Node)
@@ -403,8 +446,8 @@ class JobRunCollectionTestCase(TestCase):
                 start_time="start_time",
                 end_time="sometime",
                 cleanup_run=None,
-                runs=[]
-            ) for i in xrange(3,-1,-1)
+                runs=[],
+            ) for i in xrange(3, -1, -1)
         ]
         action_graph = mock.create_autospec(actiongraph.ActionGraph)
         output_path = mock.create_autospec(filehandler.OutputPath)
@@ -412,21 +455,25 @@ class JobRunCollectionTestCase(TestCase):
         node_pool = mock.create_autospec(node.NodePool)
 
         restored_runs = run_collection.restore_state(
-                state_data, action_graph, output_path, context, node_pool)
+            state_data, action_graph, output_path, context, node_pool,
+        )
         assert_equal(run_collection.runs[0].run_num, 3)
         assert_equal(run_collection.runs[3].run_num, 0)
         assert_length(restored_runs, 4)
 
     def test_restore_state_with_runs(self):
-        assert_raises(ValueError,
-                self.run_collection.restore_state, None, None, None, None, None)
+        assert_raises(
+            ValueError,
+            self.run_collection.restore_state, None, None, None, None, None,
+        )
 
     def test_build_new_run(self):
         autospec_method(self.run_collection.remove_old_runs)
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         mock_job = build_mock_job()
         job_run = self.run_collection.build_new_run(
-            mock_job, run_time, self.mock_node)
+            mock_job, run_time, self.mock_node,
+        )
         assert_in(job_run, self.run_collection.runs)
         self.run_collection.remove_old_runs.assert_called_with()
         assert_equal(job_run.run_num, 5)
@@ -437,7 +484,8 @@ class JobRunCollectionTestCase(TestCase):
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         mock_job = build_mock_job()
         job_run = self.run_collection.build_new_run(
-            mock_job, run_time, self.mock_node, True)
+            mock_job, run_time, self.mock_node, True,
+        )
         assert_in(job_run, self.run_collection.runs)
         self.run_collection.remove_old_runs.assert_called_with()
         assert_equal(job_run.run_num, 5)
@@ -445,8 +493,10 @@ class JobRunCollectionTestCase(TestCase):
 
     def test_cancel_pending(self):
         pending_runs = [mock.Mock() for _ in xrange(2)]
-        autospec_method(self.run_collection.get_pending,
-            return_value=pending_runs)
+        autospec_method(
+            self.run_collection.get_pending,
+            return_value=pending_runs,
+        )
         self.run_collection.cancel_pending()
         for pending_run in pending_runs:
             pending_run.cancel.assert_called_with()
@@ -509,7 +559,8 @@ class JobRunCollectionTestCase(TestCase):
 
     def test_get_newest_exclude_manual(self):
         run = self._mock_run(
-                state=actionrun.ActionRun.STATE_RUNNING, run_num=5, manual=True)
+            state=actionrun.ActionRun.STATE_RUNNING, run_num=5, manual=True,
+        )
         self.job_runs.insert(0, run)
         newest_run = self.run_collection.get_newest(include_manual=False)
         assert_equal(newest_run, self.job_runs[1])
@@ -521,8 +572,9 @@ class JobRunCollectionTestCase(TestCase):
     def test_pending(self):
         run_num = self.run_collection.next_run_num()
         scheduled_run = self._mock_run(
-                run_num=run_num,
-                state=actionrun.ActionRun.STATE_SCHEDULED)
+            run_num=run_num,
+            state=actionrun.ActionRun.STATE_SCHEDULED,
+        )
         self.run_collection.runs.appendleft(scheduled_run)
         pending = list(self.run_collection.get_pending())
         assert_length(pending, 2)
@@ -531,7 +583,8 @@ class JobRunCollectionTestCase(TestCase):
     def test_get_active(self):
         starting_run = self._mock_run(
             run_num=self.run_collection.next_run_num(),
-            state=actionrun.ActionRun.STATE_STARTING)
+            state=actionrun.ActionRun.STATE_STARTING,
+        )
         self.run_collection.runs.appendleft(starting_run)
         active = list(self.run_collection.get_active())
         assert_length(active, 2)
@@ -540,7 +593,8 @@ class JobRunCollectionTestCase(TestCase):
     def test_get_active_with_node(self):
         starting_run = self._mock_run(
             run_num=self.run_collection.next_run_num(),
-            state=actionrun.ActionRun.STATE_STARTING)
+            state=actionrun.ActionRun.STATE_STARTING,
+        )
         starting_run.node = 'differentnode'
         self.run_collection.runs.appendleft(starting_run)
         active = list(self.run_collection.get_active('anode'))
@@ -554,7 +608,8 @@ class JobRunCollectionTestCase(TestCase):
     def test_get_first_queued(self):
         run_num = self.run_collection.next_run_num()
         second_queued = self._mock_run(
-            run_num=run_num, state=actionrun.ActionRun.STATE_QUEUED)
+            run_num=run_num, state=actionrun.ActionRun.STATE_QUEUED,
+        )
         self.run_collection.runs.appendleft(second_queued)
 
         first_queued = self.run_collection.get_first_queued()
@@ -574,7 +629,8 @@ class JobRunCollectionTestCase(TestCase):
         scheduled_run = self._mock_run(
             run_num=self.run_collection.next_run_num(),
             state=actionrun.ActionRun.STATE_SCHEDULED,
-            node="nine")
+            node="nine",
+        )
         self.run_collection.runs.appendleft(scheduled_run)
 
         next_run = self.run_collection.get_next_to_finish(node="seven")

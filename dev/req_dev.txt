@@ -10,3 +10,4 @@ Sphinx-PyPI-upload>=0.2.1
 testify>=0.1.12
 Twisted>=10.0.0
 mock>=0.8
+pre-commit

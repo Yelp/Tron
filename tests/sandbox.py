@@ -1,26 +1,34 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+import contextlib
+import functools
 import logging
 import os
 import shutil
 import signal
 import socket
-from subprocess import Popen, PIPE, CalledProcessError
 import sys
 import tempfile
 import time
-import contextlib
-import functools
-import mock
+from subprocess import CalledProcessError
+from subprocess import PIPE
+from subprocess import Popen
 
-from testify import TestCase, setup, teardown
+import mock
+from testify import setup
+from testify import teardown
+from testify import TestCase
 from testify.assertions import assert_not_equal
 
 from tron.commands import client
-from tron.config import manager, schema
+from tron.config import manager
+from tron.config import schema
 
 
 # Used for getting the locations of the executable
 test_dir, _ = os.path.split(__file__)
-repo_root, _   = os.path.split(test_dir)
+repo_root, _ = os.path.split(test_dir)
 
 log = logging.getLogger(__name__)
 
@@ -49,7 +57,7 @@ def wait_on_proc_terminate(pid):
     def wait_on_terminate():
         try:
             os.kill(pid, 0)
-        except:
+        except Exception:
             return True
     wait_on_terminate.__name__ = "Wait on %s to terminate" % pid
     wait_on_sandbox(wait_on_terminate)
@@ -122,8 +130,8 @@ class ClientProxy(object):
     """
 
     def __init__(self, client, log_filename):
-        self.client         = client
-        self.log_filename   = log_filename
+        self.client = client
+        self.log_filename = log_filename
 
     def log_contents(self):
         """Return the contents of the log file."""
@@ -152,7 +160,9 @@ class ClientProxy(object):
 def verify_environment():
     for env_var in ['SSH_AUTH_SOCK', 'PYTHONPATH']:
         if not os.environ.get(env_var):
-            raise TronSandboxException("Missing $%s in test environment." % env_var)
+            raise TronSandboxException(
+                "Missing $%s in test environment." % env_var,
+            )
 
 
 class TronSandbox(object):
@@ -160,19 +170,19 @@ class TronSandbox(object):
 
     def __init__(self):
         """Set up a temp directory and store paths to relevant binaries"""
-        self.tmp_dir        = tempfile.mkdtemp(prefix='tron-')
-        cmd_path_func       = functools.partial(os.path.join, repo_root, 'bin')
-        cmds                = 'tronctl', 'trond', 'tronfig', 'tronview'
-        self.commands       = dict((cmd, cmd_path_func(cmd)) for cmd in cmds)
-        self.log_file       = self.abs_path('tron.log')
-        self.log_conf       = self.abs_path('logging.conf')
-        self.pid_file       = self.abs_path('tron.pid')
-        self.config_path    = self.abs_path('configs/')
-        self.port           = find_unused_port()
-        self.host           = 'localhost'
-        self.api_uri        = 'http://%s:%s' % (self.host, self.port)
-        cclient             = client.Client(self.api_uri)
-        self.client         = ClientProxy(cclient, self.log_file)
+        self.tmp_dir = tempfile.mkdtemp(prefix='tron-')
+        cmd_path_func = functools.partial(os.path.join, repo_root, 'bin')
+        cmds = 'tronctl', 'trond', 'tronfig', 'tronview'
+        self.commands = {cmd: cmd_path_func(cmd) for cmd in cmds}
+        self.log_file = self.abs_path('tron.log')
+        self.log_conf = self.abs_path('logging.conf')
+        self.pid_file = self.abs_path('tron.pid')
+        self.config_path = self.abs_path('configs/')
+        self.port = find_unused_port()
+        self.host = 'localhost'
+        self.api_uri = 'http://%s:%s' % (self.host, self.port)
+        cclient = client.Client(self.api_uri)
+        self.client = ClientProxy(cclient, self.log_file)
         self.setup_logging_conf()
 
     def abs_path(self, filename):
@@ -198,11 +208,11 @@ class TronSandbox(object):
 
     def run_command(self, command_name, args=None, stdin_lines=None):
         """Run the command by name and return (stdout, stderr)."""
-        args        = args or []
-        command     = [sys.executable, self.commands[command_name]] + args
-        stdin       = PIPE if stdin_lines else None
-        proc        = Popen(command, stdout=PIPE, stderr=PIPE, stdin=stdin)
-        streams     = proc.communicate(stdin_lines)
+        args = args or []
+        command = [sys.executable, self.commands[command_name]] + args
+        stdin = PIPE if stdin_lines else None
+        proc = Popen(command, stdout=PIPE, stderr=PIPE, stdin=stdin)
+        streams = proc.communicate(stdin_lines)
         try:
             handle_output(command, streams, proc.returncode)
         except CalledProcessError:
@@ -221,20 +231,24 @@ class TronSandbox(object):
 
     def trond(self, *args):
         args = list(args) if args else []
-        args += ['--working-dir=%s'     % self.tmp_dir,
-                   '--pid-file=%s'      % self.pid_file,
-                   '--port=%d'          % self.port,
-                   '--host=%s'          % self.host,
-                   '--config-path=%s'   % self.config_path,
-                   '--log-conf=%s'      % self.log_conf]
+        args += [
+            '--working-dir=%s' % self.tmp_dir,
+            '--pid-file=%s' % self.pid_file,
+            '--port=%d' % self.port,
+            '--host=%s' % self.host,
+            '--config-path=%s' % self.config_path,
+            '--log-conf=%s' % self.log_conf,
+        ]
 
         self.run_command('trond', args)
         wait_on_sandbox(lambda: bool(self.client.home()))
 
-    def tronfig(self,
-                config_content=None,
-                name=schema.MASTER_NAMESPACE,
-                no_header=False):
+    def tronfig(
+        self,
+        config_content=None,
+        name=schema.MASTER_NAMESPACE,
+        no_header=False,
+    ):
         args = ['--server', self.api_uri, name]
         if no_header:
             args += ['--no-header']

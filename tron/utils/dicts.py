@@ -1,7 +1,9 @@
 """Data structures used in tron."""
 from __future__ import absolute_import
-from collections import Mapping
+from __future__ import unicode_literals
+
 import itertools
+from collections import Mapping
 
 
 def invert_dict_list(dictionary):
@@ -13,6 +15,7 @@ def invert_dict_list(dictionary):
 
     seq = (invert(k, v) for k, v in dictionary.iteritems())
     return dict(itertools.chain.from_iterable(seq))
+
 
 class FrozenDict(Mapping):
     """Simple implementation of an immutable dictionary so we can freeze the
@@ -53,13 +56,13 @@ class FrozenDict(Mapping):
         return self._hash
 
 
-## http://code.activestate.com/recipes/576693/ (r9)
+# http://code.activestate.com/recipes/576693/ (r9)
 # Backport of OrderedDict() class that runs on Python 2.4, 2.5, 2.6, 2.7 and pypy.
 # Passes Python2.7's test suite and incorporates all the latest updates.
 
 try:
     from thread import get_ident as _get_ident
-    assert _get_ident # pyflakes
+    assert _get_ident  # pyflakes
 except ImportError:
     from dummy_thread import get_ident as _get_ident
 
@@ -294,7 +297,7 @@ class OrderedDict(dict):
 
         '''
         if isinstance(other, OrderedDict):
-            return len(self)==len(other) and self.items() == other.items()
+            return len(self) == len(other) and self.items() == other.items()
         return dict.__eq__(self, other)
 
     def __ne__(self, other):
@@ -313,4 +316,4 @@ class OrderedDict(dict):
     def viewitems(self):
         "od.viewitems() -> a set-like object providing a view on od's items"
         return ItemsView(self)
-    ## end of http://code.activestate.com/recipes/576693/ }}}
+    # end of http://code.activestate.com/recipes/576693/ }}}

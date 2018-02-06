@@ -1,14 +1,17 @@
 """
 Tools for managing and properly closing file handles.
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import logging
 import os
 import os.path
 import shutil
 import sys
-from subprocess import PIPE, Popen
 import time
-
+from subprocess import PIPE
+from subprocess import Popen
 
 from tron.utils.dicts import OrderedDict
 
@@ -18,9 +21,11 @@ log = logging.getLogger(__name__)
 class NullFileHandle(object):
     """A No-Op object that supports a File interface."""
     closed = True
+
     @classmethod
     def write(cls, _):
         pass
+
     @classmethod
     def close(cls):
         pass

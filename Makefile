@@ -20,7 +20,7 @@ package_%_deb: clean  build_%_docker tronweb/js/cs
 	$(DOCKER_RUN) /bin/bash -c "dpkg-buildpackage -d && mv ../*.deb dist/"
 
 publish:
-	python setup.py sdist bdist_wheel	
+	python setup.py sdist bdist_wheel
 	twine upload dist/*
 
 clean:

@@ -1,7 +1,15 @@
-from testify import TestCase, run, setup, assert_equal, teardown
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import teardown
+from testify import TestCase
+
 from tests import testingutils
 from tron.serialize import runstate
-mongostore = None # pyflakes
+mongostore = None  # pyflakes
 
 
 class MongoStateStoreTestCase(TestCase):
@@ -51,7 +59,8 @@ class MongoStateStoreTestCase(TestCase):
             'hostname': 'mongoserver',
             'port':     '55555',
             'username': 'ted',
-            'password': 'sam'}
+            'password': 'sam',
+        }
         assert_equal(params, expected)
 
     def test_parse_connection_details_none(self):
@@ -69,10 +78,10 @@ class MongoStateStoreTestCase(TestCase):
 
     def test_save(self):
         import pymongo
-        doc0, doc1 = {'a':"Hey there"}, {'a': "Howsit"}
+        doc0, doc1 = {'a': "Hey there"}, {'a': "Howsit"}
         key_value_pairs = [
             (mongostore.MongoStateKey(self.store.JOB_COLLECTION, "1"), doc0),
-            (mongostore.MongoStateKey(self.store.SERVICE_COLLECTION, "2"), doc1)
+            (mongostore.MongoStateKey(self.store.SERVICE_COLLECTION, "2"), doc1),
         ]
         self.store.save(key_value_pairs)
         self.store.cleanup()
@@ -87,11 +96,11 @@ class MongoStateStoreTestCase(TestCase):
     def test_restore(self):
         keys = [
             mongostore.MongoStateKey(runstate.JOB_STATE, "1"),
-            mongostore.MongoStateKey(runstate.SERVICE_STATE, "2")
+            mongostore.MongoStateKey(runstate.SERVICE_STATE, "2"),
         ]
         docs = [
             {'ahh': 'first doc'},
-            {'bzz': 'second doc'}
+            {'bzz': 'second doc'},
         ]
         for i in xrange(2):
             self._create_doc(keys[i], docs[i])
@@ -111,7 +120,7 @@ class MongoStateStoreTestCase(TestCase):
     def test_restore_partial(self):
         keys = [
             mongostore.MongoStateKey(runstate.JOB_STATE, "1"),
-            mongostore.MongoStateKey(runstate.SERVICE_STATE, "2")
+            mongostore.MongoStateKey(runstate.SERVICE_STATE, "2"),
         ]
         docs = [{'ahh': 'first doc'}]
         self._create_doc(keys[0], docs[0])

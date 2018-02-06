@@ -18,4 +18,3 @@ RUN="yes"
 
 
 [ -f /var/lib/tron/ssh-agent.sh ] && . /var/lib/tron/ssh-agent.sh
-

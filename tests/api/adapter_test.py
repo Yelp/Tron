@@ -1,14 +1,28 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import shutil
 import tempfile
+
 import mock
-from testify import TestCase, assert_equal, run, setup, teardown
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import teardown
+from testify import TestCase
+
 from tests import mocks
 from tests.assertions import assert_length
-from tron import node, scheduler
+from tron import node
+from tron import scheduler
 from tron.api import adapter
-from tron.api.adapter import ReprAdapter, RunAdapter, ActionRunAdapter
-from tron.api.adapter import JobRunAdapter, ServiceAdapter
-from tron.core import actionrun, job
+from tron.api.adapter import ActionRunAdapter
+from tron.api.adapter import JobRunAdapter
+from tron.api.adapter import ReprAdapter
+from tron.api.adapter import RunAdapter
+from tron.api.adapter import ServiceAdapter
+from tron.core import actionrun
+from tron.core import job
 
 
 class MockAdapter(ReprAdapter):
@@ -27,8 +41,8 @@ class ReprAdapterTestCase(TestCase):
 
     @setup
     def setup_adapter(self):
-        self.original           = mock.Mock(one=1, two=2)
-        self.adapter            = MockAdapter(self.original)
+        self.original = mock.Mock(one=1, two=2)
+        self.adapter = MockAdapter(self.original)
 
     def test__init__(self):
         assert_equal(self.adapter._obj, self.original)
@@ -37,7 +51,7 @@ class ReprAdapterTestCase(TestCase):
     def test_get_translation_mapping(self):
         expected = {
             'three': self.adapter.get_three,
-            'four':  self.adapter.get_four
+            'four':  self.adapter.get_four,
         }
         assert_equal(self.adapter.translators, expected)
 
@@ -78,16 +92,18 @@ class RunAdapterTestCase(TestCase):
 
     @setup
     def setup_adapter(self):
-        self.original           = mock.Mock()
-        self.adapter            = RunAdapter(self.original)
+        self.original = mock.Mock()
+        self.adapter = RunAdapter(self.original)
 
     def test_get_state(self):
         assert_equal(self.adapter.get_state(), self.original.state.name)
 
     @mock.patch('tron.api.adapter.NodeAdapter', autospec=True)
     def test_get_node(self, mock_node_adapter):
-        assert_equal(self.adapter.get_node(),
-            mock_node_adapter.return_value.get_repr.return_value)
+        assert_equal(
+            self.adapter.get_node(),
+            mock_node_adapter.return_value.get_repr.return_value,
+        )
         mock_node_adapter.assert_called_with(self.original.node)
 
     def test_get_duration(self):
@@ -124,7 +140,8 @@ class ActionRunGraphAdapterTestCase(TestCase):
     def setup_adapter(self):
         self.action_runs = mock.create_autospec(
             actionrun.ActionRunCollection,
-            action_graph=mock.MagicMock())
+            action_graph=mock.MagicMock(),
+        )
         self.adapter = adapter.ActionRunGraphAdapter(self.action_runs)
         self.action_run = mock.MagicMock()
         self.action_runs.__iter__.return_value = [self.action_run]
@@ -142,7 +159,8 @@ class JobRunAdapterTestCase(TestCase):
         action_runs = mock.MagicMock()
         action_runs.__iter__.return_value = iter([mock.Mock(), mock.Mock()])
         self.job_run = mock.Mock(
-                action_runs=action_runs, action_graph=mocks.MockActionGraph())
+            action_runs=action_runs, action_graph=mocks.MockActionGraph(),
+        )
         self.adapter = JobRunAdapter(self.job_run, include_action_runs=True)
 
     def test__init__(self):
@@ -168,8 +186,10 @@ class ServiceAdapterTestCase(TestCase):
     def test_repr(self, mock_node_pool_adapter):
         result = self.adapter.get_repr()
         assert_equal(result['name'], self.service.name)
-        assert_equal(result['node_pool'],
-            mock_node_pool_adapter.return_value.get_repr.return_value)
+        assert_equal(
+            result['node_pool'],
+            mock_node_pool_adapter.return_value.get_repr.return_value,
+        )
 
 
 class NodeAdapterTestCase(TestCase):
@@ -196,8 +216,10 @@ class NodePoolAdapterTestCase(TestCase):
     def test_repr(self, mock_many):
         result = self.adapter.get_repr()
         assert_equal(result['name'], self.pool.get_name.return_value)
-        mock_many.assert_called_with(adapter.NodeAdapter,
-            self.pool.get_nodes.return_value)
+        mock_many.assert_called_with(
+            adapter.NodeAdapter,
+            self.pool.get_nodes.return_value,
+        )
 
 
 class JobIndexAdapterTestCase(TestCase):
@@ -225,7 +247,7 @@ class JobIndexAdapterTestCase(TestCase):
         result = self.adapter.get_actions()
         expected = {
             'name': action_run.action_name,
-            'command': action_run.bare_command
+            'command': action_run.bare_command,
         }
         assert_equal(result, [expected])
 
@@ -233,6 +255,7 @@ class JobIndexAdapterTestCase(TestCase):
         self.job.get_runs.return_value.get_newest.return_value = None
         result = self.adapter.get_actions()
         assert_equal(result, [])
+
 
 class SchedulerAdapterTestCase(TestCase):
 
@@ -247,10 +270,11 @@ class SchedulerAdapterTestCase(TestCase):
         expected = {
             'type': self.scheduler.get_name.return_value,
             'value': self.scheduler.get_value.return_value,
-            'jitter': mock_get_jitter.return_value
+            'jitter': mock_get_jitter.return_value,
         }
         assert_equal(result, expected)
         mock_get_jitter.assert_called_with(self.scheduler.get_jitter())
+
 
 if __name__ == "__main__":
     run()

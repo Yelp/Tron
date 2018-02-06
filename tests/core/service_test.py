@@ -1,19 +1,31 @@
-import mock
-from testify import setup, assert_equal, TestCase, run
-from testify.assertions import assert_not_equal
-from tests.assertions import assert_mock_calls
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
+import mock
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import TestCase
+from testify.assertions import assert_not_equal
+
+from tests.assertions import assert_mock_calls
 from tests.testingutils import autospec_method
-from tron.core import service, serviceinstance
-from tron import node, command_context, event, eventloop
+from tron import command_context
+from tron import event
+from tron import eventloop
+from tron import node
+from tron.core import service
+from tron.core import serviceinstance
 from tron.core.serviceinstance import ServiceInstance
+
 
 class ServiceStateTestCase(TestCase):
 
     @setup
     def setup_service(self):
         self.instances = mock.create_autospec(
-            serviceinstance.ServiceInstanceCollection)
+            serviceinstance.ServiceInstanceCollection,
+        )
         self.service = mock.Mock(enabled=True, instances=self.instances)
 
     def test_state_disabled(self):
@@ -44,11 +56,13 @@ class ServiceTestCase(TestCase):
         self.instances = mock.create_autospec(
             serviceinstance.ServiceInstanceCollection,
             stop=mock.Mock(), start=mock.Mock(), state_data=mock.Mock(),
-            restore=mock.Mock())
+            restore=mock.Mock(),
+        )
         self.service = service.Service(self.config, self.instances)
         autospec_method(self.service.watch)
         self.service.repair_callback = mock.create_autospec(
-            eventloop.UniqueCallback)
+            eventloop.UniqueCallback,
+        )
 
     @mock.patch('tron.core.service.node')
     def test_from_config(self, mock_node):
@@ -79,21 +93,31 @@ class ServiceTestCase(TestCase):
         autospec_method(self.service.notify)
         count = 3
         created_instances = [
-            mock.create_autospec(ServiceInstance) for _ in xrange(count)]
+            mock.create_autospec(ServiceInstance) for _ in xrange(count)
+        ]
         self.instances.create_missing.return_value = created_instances
         self.service.repair()
         self.instances.clear_failed.assert_called_with()
-        assert_equal(self.service.watch.mock_calls,
-            [mock.call(inst.get_observable(), True) for inst in created_instances])
+        assert_equal(
+            self.service.watch.mock_calls,
+            [
+                mock.call(inst.get_observable(), True)
+                for inst in created_instances
+            ],
+        )
         self.instances.restore.assert_called_with()
         self.instances.start.assert_called_with()
-        self.service.notify.assert_called_with(self.service.NOTIFY_STATE_CHANGE)
+        self.service.notify.assert_called_with(
+            self.service.NOTIFY_STATE_CHANGE,
+        )
 
     def test_handle_instance_state_change_down(self):
         autospec_method(self.service.notify)
         instance_event = serviceinstance.ServiceInstance.STATE_DOWN
         self.service._handle_instance_state_change(mock.Mock(), instance_event)
-        self.service.notify.assert_called_with(self.service.NOTIFY_STATE_CHANGE)
+        self.service.notify.assert_called_with(
+            self.service.NOTIFY_STATE_CHANGE,
+        )
         self.service.instances.clear_down.assert_called_with()
 
     def test_handle_instance_state_change_failed(self):
@@ -114,14 +138,14 @@ class ServiceTestCase(TestCase):
 
     def test_record_events_failure(self):
         autospec_method(self.service.get_state)
-        state = self.service.get_state.return_value  = service.ServiceState.FAILED
+        state = self.service.get_state.return_value = service.ServiceState.FAILED
         self.service.event_recorder = mock.create_autospec(event.EventRecorder)
         self.service.record_events()
         self.service.event_recorder.critical.assert_called_with(state)
 
     def test_record_events_up(self):
         autospec_method(self.service.get_state)
-        state = self.service.get_state.return_value  = service.ServiceState.UP
+        state = self.service.get_state.return_value = service.ServiceState.UP
         self.service.event_recorder = mock.create_autospec(event.EventRecorder)
         self.service.record_events()
         self.service.event_recorder.ok.assert_called_with(state)
@@ -146,7 +170,8 @@ class ServiceTestCase(TestCase):
         state_data = {'enabled': True, 'instances': []}
         self.service.restore_state(state_data)
         self.service.watch_instances.assert_called_with(
-            self.instances.restore_state.return_value)
+            self.instances.restore_state.return_value,
+        )
         self.service.enable.assert_called_with()
 
 
@@ -156,11 +181,13 @@ class ServiceCollectionTestCase(TestCase):
     def setup_collection(self):
         self.collection = service.ServiceCollection()
         self.service_list = [
-            mock.create_autospec(service.Service) for _ in xrange(3)]
+            mock.create_autospec(service.Service) for _ in xrange(3)
+        ]
 
     def _add_service(self):
         self.collection.services.update(
-            (serv.name, serv) for serv in self.service_list)
+            (serv.name, serv) for serv in self.service_list
+        )
 
     @mock.patch('tron.core.service.Service', autospec=True)
     def test_load_from_config(self, mock_service):
@@ -168,7 +195,9 @@ class ServiceCollectionTestCase(TestCase):
         autospec_method(self.collection.add)
         service_configs = {'a': mock.Mock(), 'b': mock.Mock()}
         context = mock.create_autospec(command_context.CommandContext)
-        result = list(self.collection.load_from_config(service_configs, context))
+        result = list(self.collection.load_from_config(
+            service_configs, context,
+        ))
         expected = [mock.call(config, context)
                     for config in service_configs.itervalues()]
         assert_mock_calls(expected, mock_service.from_config.mock_calls)
@@ -184,8 +213,9 @@ class ServiceCollectionTestCase(TestCase):
 
     def test_restore_state(self):
         state_count = 2
-        state_data = dict(
-            (serv.name, serv) for serv in self.service_list[:state_count])
+        state_data = {
+            serv.name: serv for serv in self.service_list[:state_count]
+        }
         self._add_service()
         self.collection.restore_state(state_data)
         for name in state_data:

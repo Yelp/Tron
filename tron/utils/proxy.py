@@ -1,4 +1,6 @@
 """Utilities for creating classes that proxy function calls."""
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
 
 class CollectionProxy(object):
@@ -6,8 +8,8 @@ class CollectionProxy(object):
 
     def __init__(self, obj_list_getter, definition_list=None):
         """See add() for a description of proxy definitions."""
-        self.obj_list_getter    = obj_list_getter
-        self._defs              = {}
+        self.obj_list_getter = obj_list_getter
+        self._defs = {}
         for definition in definition_list or []:
             self.add(*definition)
 
@@ -38,12 +40,14 @@ class CollectionProxy(object):
 
         def func(*args, **kwargs):
             return aggregate_func(
-                getattr(item, name)(*args, **kwargs) for item in obj_list())
+                getattr(item, name)(*args, **kwargs) for item in obj_list()
+            )
         return func
 
 
 def func_proxy(name, func):
     return name, func, True
+
 
 def attr_proxy(name, func):
     return name, func, False

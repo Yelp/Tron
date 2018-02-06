@@ -1,7 +1,14 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import mock
-from testify import TestCase, setup
-from testify.assertions import assert_in, assert_raises, assert_not_in
+from testify import setup
+from testify import TestCase
 from testify.assertions import assert_equal
+from testify.assertions import assert_in
+from testify.assertions import assert_not_in
+from testify.assertions import assert_raises
+
 from tests.assertions import assert_mock_calls
 from tests.testingutils import autospec_method
 from tron.utils import collections
@@ -36,7 +43,9 @@ class MappingCollectionsTestCase(TestCase):
         self.collection.update({'a': mock.Mock(), 'b': mock.Mock()})
         self.collection.restore_state(state_data)
         for key in state_data:
-            self.collection[key].restore_state.assert_called_with(state_data[key])
+            self.collection[key].restore_state.assert_called_with(
+                state_data[key],
+            )
 
     def test_contains_item_false(self):
         mock_item, mock_func = mock.Mock(), mock.Mock()
@@ -71,7 +80,9 @@ class MappingCollectionsTestCase(TestCase):
         autospec_method(self.collection.add)
         item = mock.Mock()
         self.collection.replace(item)
-        self.collection.add.assert_called_with(item, self.collection.remove_item)
+        self.collection.add.assert_called_with(
+            item, self.collection.remove_item,
+        )
 
 
 class EnumTestCase(TestCase):

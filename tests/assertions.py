@@ -1,7 +1,11 @@
 """
  Assertions for testify.
 """
-from testify.assertions import assert_not_reached, assert_in
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
+from testify.assertions import assert_in
+from testify.assertions import assert_not_reached
 
 
 def assert_raises(expected_exception_class, callable_obj, *args, **kwargs):
@@ -11,8 +15,10 @@ def assert_raises(expected_exception_class, callable_obj, *args, **kwargs):
     except expected_exception_class, e:
         # we got the expected exception
         return e
-    assert_not_reached("No exception was raised (expected %s)" %
-                       expected_exception_class)
+    assert_not_reached(
+        "No exception was raised (expected %s)" %
+        expected_exception_class,
+    )
 
 
 def assert_length(sequence, expected, msg=None):

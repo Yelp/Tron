@@ -1,17 +1,26 @@
 """
  Classes to manage job runs.
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
-from collections import deque
-import logging
 import itertools
-from tron import node, command_context, event
-from tron.core.actionrun import ActionRun, ActionRunFactory
+import logging
+from collections import deque
+
+from tron import command_context
+from tron import event
+from tron import node
+from tron.core.actionrun import ActionRun
+from tron.core.actionrun import ActionRunFactory
 from tron.serialize import filehandler
-from tron.utils import timeutils, proxy
-from tron.utils.observer import Observable, Observer
+from tron.utils import proxy
+from tron.utils import timeutils
+from tron.utils.observer import Observable
+from tron.utils.observer import Observer
 
 log = logging.getLogger(__name__)
+
 
 class Error(Exception):
     pass
@@ -23,31 +32,33 @@ class JobRun(Observable, Observer):
     dependencies.
     """
 
-    NOTIFY_DONE           = 'notify_done'
-    NOTIFY_STATE_CHANGED  = 'notify_state_changed'
+    NOTIFY_DONE = 'notify_done'
+    NOTIFY_STATE_CHANGED = 'notify_state_changed'
 
-    context_class         = command_context.JobRunContext
+    context_class = command_context.JobRunContext
 
     # TODO: use config object
-    def __init__(self, job_name, run_num, run_time, node, output_path=None,
-                base_context=None, action_runs=None, action_graph=None,
-                manual=None):
+    def __init__(
+        self, job_name, run_num, run_time, node, output_path=None,
+        base_context=None, action_runs=None, action_graph=None,
+        manual=None,
+    ):
         super(JobRun, self).__init__()
-        self.job_name           = job_name
-        self.run_num            = run_num
-        self.run_time           = run_time
-        self.node               = node
-        self.output_path        = output_path or filehandler.OutputPath()
+        self.job_name = job_name
+        self.run_num = run_num
+        self.run_time = run_time
+        self.node = node
+        self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(self.id)
-        self.action_runs_proxy  = None
-        self._action_runs       = None
-        self.action_graph       = action_graph
-        self.manual             = manual
-        self.event              = event.get_recorder(self.full_id)
+        self.action_runs_proxy = None
+        self._action_runs = None
+        self.action_graph = action_graph
+        self.manual = manual
+        self.event = event.get_recorder(self.full_id)
         self.event.ok('created')
 
         if action_runs:
-            self.action_runs    = action_runs
+            self.action_runs = action_runs
 
         self.context = command_context.build_context(self, base_context)
 
@@ -58,25 +69,31 @@ class JobRun(Observable, Observer):
     @classmethod
     def for_job(cls, job, run_num, run_time, node, manual):
         """Create a JobRun for a job."""
-        run = cls(job.get_name(), run_num, run_time, node,
-                job.output_path.clone(),
-                job.context,
-                action_graph=job.action_graph,
-                manual=manual)
+        run = cls(
+            job.get_name(), run_num, run_time, node,
+            job.output_path.clone(),
+            job.context,
+            action_graph=job.action_graph,
+            manual=manual,
+        )
 
-        action_runs     = ActionRunFactory.build_action_run_collection(run, job.action_runner)
+        action_runs = ActionRunFactory.build_action_run_collection(
+            run, job.action_runner,
+        )
         run.action_runs = action_runs
         return run
 
     @classmethod
-    def from_state(cls, state_data, action_graph, output_path, context,
-                run_node):
+    def from_state(
+        cls, state_data, action_graph, output_path, context,
+        run_node,
+    ):
         """Restore a JobRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
-        run_node  = pool_repo.get_node(state_data.get('node_name'), run_node)
-        job_name  = state_data['job_name']
+        run_node = pool_repo.get_node(state_data.get('node_name'), run_node)
+        job_name = state_data['job_name']
 
-        job_run =  cls(
+        job_run = cls(
             job_name,
             state_data['run_num'],
             state_data['run_time'],
@@ -84,10 +101,11 @@ class JobRun(Observable, Observer):
             action_graph=action_graph,
             manual=state_data.get('manual', False),
             output_path=output_path,
-            base_context=context
+            base_context=context,
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
-                job_run, state_data['runs'], state_data['cleanup_run'])
+            job_run, state_data['runs'], state_data['cleanup_run'],
+        )
         job_run.action_runs = action_runs
         return job_run
 
@@ -134,13 +152,16 @@ class JobRun(Observable, Observer):
                 'is_skipped',
                 'is_starting',
                 'start_time',
-                'end_time'
-            ])
+                'end_time',
+            ],
+        )
 
     def _del_action_runs(self):
         del self._action_runs
 
-    action_runs = property(_get_action_runs, _set_action_runs, _del_action_runs)
+    action_runs = property(
+        _get_action_runs, _set_action_runs, _del_action_runs,
+    )
 
     def seconds_until_run_time(self):
         run_time = self.run_time
@@ -300,16 +321,20 @@ class JobRunCollection(object):
         """Factory method for creating a JobRunCollection from a config."""
         return cls(job_config.run_limit)
 
-    def restore_state(self, state_data, action_graph, output_path, context,
-            node_pool):
+    def restore_state(
+        self, state_data, action_graph, output_path, context,
+        node_pool,
+    ):
         """Apply state to all jobs from the state dict."""
         if self.runs:
             msg = "State can not be restored to a collection with runs."
             raise ValueError(msg)
 
         restored_runs = [
-            JobRun.from_state(run_state, action_graph, output_path.clone(),
-                context, node_pool.next())
+            JobRun.from_state(
+                run_state, action_graph, output_path.clone(),
+                context, node_pool.next(),
+            )
             for run_state in state_data
         ]
         self.runs.extend(restored_runs)
@@ -321,7 +346,7 @@ class JobRunCollection(object):
         """
         run_num = self.next_run_num()
         log.info("Building JobRun %s for %s on %s at %s" %
-             (run_num, job, node, run_time))
+                 (run_num, job, node, run_time))
 
         run = JobRun.for_job(job, run_num, run_time, node, manual)
         self.runs.appendleft(run)
@@ -379,7 +404,7 @@ class JobRunCollection(object):
 
     def get_newest(self, include_manual=True):
         """Returns the most recently created JobRun."""
-        func = lambda r: True if include_manual else not r.manual
+        def func(r): return True if include_manual else not r.manual
         return self._get_run_using(func)
 
     def get_pending(self):
@@ -392,15 +417,17 @@ class JobRunCollection(object):
 
     def get_active(self, node=None):
         if node:
-            func = lambda r: (r.is_running or r.is_starting) and r.node == node
+            def func(r): return (
+                r.is_running or r.is_starting
+            ) and r.node == node
         else:
-            func = lambda r: r.is_running or r.is_starting
+            def func(r): return r.is_running or r.is_starting
         return self._get_runs_using(func)
 
     def get_first_queued(self, node=None):
         state = ActionRun.STATE_QUEUED
         if node:
-            queued_func = lambda r: r.state == state and r.node == node
+            def queued_func(r): return r.state == state and r.node == node
         else:
             queued_func = self._filter_by_state(state)
         return self._get_run_using(queued_func, reverse=True)
@@ -455,6 +482,6 @@ class JobRunCollection(object):
 
     def __str__(self):
         return "%s[%s]" % (
-                type(self).__name__,
-                ', '.join("%s(%s)" % (r.run_num, r.state) for r in self.runs)
+            type(self).__name__,
+            ', '.join("%s(%s)" % (r.run_num, r.state) for r in self.runs),
         )

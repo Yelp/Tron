@@ -2,7 +2,7 @@
 
 ssh_options:
    agent: False
-   identities: 
+   identities:
      - /work/example-cluster/insecure_key
 
 nodes:

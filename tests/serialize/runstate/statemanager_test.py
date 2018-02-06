@@ -1,18 +1,26 @@
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import os
+
 import mock
-from testify import TestCase, assert_equal, setup, run
+from testify import assert_equal
+from testify import run
+from testify import setup
+from testify import TestCase
 
 from tests.assertions import assert_raises
 from tests.testingutils import autospec_method
 from tron.config import schema
 from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
-from tron.serialize.runstate.statemanager import PersistentStateManager, StateChangeWatcher
-from tron.serialize.runstate.statemanager import StateSaveBuffer
-from tron.serialize.runstate.statemanager import StateMetadata
-from tron.serialize.runstate.statemanager import PersistenceStoreError
-from tron.serialize.runstate.statemanager import VersionMismatchError
 from tron.serialize.runstate.statemanager import PersistenceManagerFactory
+from tron.serialize.runstate.statemanager import PersistenceStoreError
+from tron.serialize.runstate.statemanager import PersistentStateManager
+from tron.serialize.runstate.statemanager import StateChangeWatcher
+from tron.serialize.runstate.statemanager import StateMetadata
+from tron.serialize.runstate.statemanager import StateSaveBuffer
+from tron.serialize.runstate.statemanager import VersionMismatchError
 
 
 class PersistenceManagerFactoryTestCase(TestCase):
@@ -21,7 +29,8 @@ class PersistenceManagerFactoryTestCase(TestCase):
         thefilename = 'thefilename'
         config = schema.ConfigState(
             store_type='shelve', name=thefilename, buffer_size=0,
-            connection_details=None)
+            connection_details=None,
+        )
         manager = PersistenceManagerFactory.from_config(config)
         store = manager._impl
         assert_equal(store.filename, config.name)
@@ -42,7 +51,8 @@ class StateMetadataTestCase(TestCase):
     def test_validate_metadata_mismatch(self):
         metadata = {'version': (200, 1, 1)}
         assert_raises(
-                VersionMismatchError, StateMetadata.validate_metadata, metadata)
+            VersionMismatchError, StateMetadata.validate_metadata, metadata,
+        )
 
 
 class StateSaveBufferTestCase(TestCase):
@@ -66,7 +76,7 @@ class StateSaveBufferTestCase(TestCase):
         self.buffer.save(2, 3)
         items = list(self.buffer)
         assert not self.buffer.buffer
-        assert_equal(items, [(1,2), (2,3)])
+        assert_equal(items, [(1, 2), (2, 3)])
 
 
 class PersistentStateManagerTestCase(TestCase):
@@ -93,11 +103,13 @@ class PersistentStateManagerTestCase(TestCase):
         autospec_method(self.manager._keys_for_items)
         self.manager._keys_for_items.return_value = dict(enumerate(names))
         self.store.restore.return_value = {
-            0: {'state': 'data'}, 1: {'state': '2data'}}
+            0: {'state': 'data'}, 1: {'state': '2data'},
+        }
         state_data = self.manager._restore_dicts('type', names)
         expected = {
             names[0]: {'state': 'data'},
-            names[1]: {'state': '2data'}}
+            names[1]: {'state': '2data'},
+        }
         assert_equal(expected, state_data)
 
     def test_save(self):
@@ -108,7 +120,10 @@ class PersistentStateManagerTestCase(TestCase):
 
     def test_save_failed(self):
         self.store.save.side_effect = PersistenceStoreError("blah")
-        assert_raises(PersistenceStoreError, self.manager.save, None, None, None)
+        assert_raises(
+            PersistenceStoreError,
+            self.manager.save, None, None, None,
+        )
 
     def test_save_while_disabled(self):
         with self.manager.disabled():
@@ -153,37 +168,46 @@ class StateChangeWatcherTestCase(TestCase):
         assert_equal(self.watcher.state_manager, self.state_manager)
         assert not self.watcher.shutdown.mock_calls
 
-    @mock.patch('tron.serialize.runstate.statemanager.PersistenceManagerFactory',
-    autospec=True)
+    @mock.patch(
+        'tron.serialize.runstate.statemanager.PersistenceManagerFactory',
+        autospec=True,
+    )
     def test_update_from_config_changed(self, mock_factory):
         state_config = mock.Mock()
         autospec_method(self.watcher.shutdown)
         assert self.watcher.update_from_config(state_config)
         assert_equal(self.watcher.config, state_config)
         self.watcher.shutdown.assert_called_with()
-        assert_equal(self.watcher.state_manager,
-            mock_factory.from_config.return_value)
+        assert_equal(
+            self.watcher.state_manager,
+            mock_factory.from_config.return_value,
+        )
         mock_factory.from_config.assert_called_with(state_config)
 
     def test_save_job(self):
         mock_job = mock.Mock()
         self.watcher.save_job(mock_job)
         self.watcher.state_manager.save.assert_called_with(
-            runstate.JOB_STATE, mock_job.name, mock_job.state_data)
+            runstate.JOB_STATE, mock_job.name, mock_job.state_data,
+        )
 
     def test_save_service(self):
         mock_service = mock.Mock()
         self.watcher.save_service(mock_service)
         self.watcher.state_manager.save.assert_called_with(
-            runstate.SERVICE_STATE, mock_service.name, mock_service.state_data)
+            runstate.SERVICE_STATE, mock_service.name, mock_service.state_data,
+        )
 
     def test_save_metadata(self):
-        patcher = mock.patch('tron.serialize.runstate.statemanager.StateMetadata')
+        patcher = mock.patch(
+            'tron.serialize.runstate.statemanager.StateMetadata',
+        )
         with patcher as mock_state_metadata:
             self.watcher.save_metadata()
             meta_data = mock_state_metadata.return_value
             self.watcher.state_manager.save.assert_called_with(
-                runstate.MCP_STATE, meta_data.name, meta_data.state_data)
+                runstate.MCP_STATE, meta_data.name, meta_data.state_data,
+            )
 
     def test_shutdown(self):
         self.watcher.shutdown()
@@ -198,7 +222,6 @@ class StateChangeWatcherTestCase(TestCase):
         jobs, services = mock.Mock(), mock.Mock()
         self.watcher.restore(jobs, services)
         self.watcher.state_manager.restore.assert_called_with(jobs, services)
-
 
 
 if __name__ == "__main__":

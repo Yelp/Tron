@@ -1,14 +1,25 @@
-import logging
-import itertools
+from __future__ import absolute_import
+from __future__ import unicode_literals
 
-from tron import command_context, event, node, eventloop
-from tron.core import jobrun
+import itertools
+import logging
+
+from tron import command_context
+from tron import event
+from tron import eventloop
+from tron import node
 from tron.core import actiongraph
+from tron.core import jobrun
 from tron.core.actionrun import ActionRun
 from tron.scheduler import scheduler_from_config
 from tron.serialize import filehandler
-from tron.utils import timeutils, proxy, iteration, collections
-from tron.utils.observer import Observable, Observer
+from tron.utils import collections
+from tron.utils import iteration
+from tron.utils import proxy
+from tron.utils import timeutils
+from tron.utils.observer import Observable
+from tron.utils.observer import Observer
+
 
 class Error(Exception):
     pass
@@ -32,15 +43,15 @@ class Job(Observable, Observer):
     actions and their dependency graph.
     """
 
-    STATUS_DISABLED         = "disabled"
-    STATUS_ENABLED          = "enabled"
-    STATUS_UNKNOWN          = "unknown"
-    STATUS_RUNNING          = "running"
+    STATUS_DISABLED = "disabled"
+    STATUS_ENABLED = "enabled"
+    STATUS_UNKNOWN = "unknown"
+    STATUS_RUNNING = "running"
 
-    NOTIFY_STATE_CHANGE     = 'notify_state_change'
-    NOTIFY_RUN_DONE         = 'notify_run_done'
+    NOTIFY_STATE_CHANGE = 'notify_state_change'
+    NOTIFY_RUN_DONE = 'notify_run_done'
 
-    context_class           = command_context.JobContext
+    context_class = command_context.JobContext
 
     # These attributes determine equality between two Job objects
     equality_attributes = [
@@ -57,60 +68,66 @@ class Job(Observable, Observer):
     ]
 
     # TODO: use config object
-    def __init__(self, name, scheduler, queueing=True, all_nodes=False,
-            owner='', summary='', notes='', monitoring=None,
-            node_pool=None, enabled=True, action_graph=None,
-            run_collection=None, parent_context=None, output_path=None,
-            allow_overlap=None, action_runner=None, max_runtime=None):
+    def __init__(
+        self, name, scheduler, queueing=True, all_nodes=False,
+        owner='', summary='', notes='', monitoring=None,
+        node_pool=None, enabled=True, action_graph=None,
+        run_collection=None, parent_context=None, output_path=None,
+        allow_overlap=None, action_runner=None, max_runtime=None,
+    ):
         super(Job, self).__init__()
-        self.name               = name
-        self.owner              = owner
-        self.summary            = summary
-        self.notes              = notes
-        self.monitoring         = monitoring
-        self.action_graph       = action_graph
-        self.scheduler          = scheduler
-        self.runs               = run_collection
-        self.queueing           = queueing
-        self.all_nodes          = all_nodes
-        self.enabled            = enabled
-        self.node_pool          = node_pool
-        self.allow_overlap      = allow_overlap
-        self.action_runner      = action_runner
-        self.max_runtime        = max_runtime
-        self.output_path        = output_path or filehandler.OutputPath()
+        self.name = name
+        self.owner = owner
+        self.summary = summary
+        self.notes = notes
+        self.monitoring = monitoring
+        self.action_graph = action_graph
+        self.scheduler = scheduler
+        self.runs = run_collection
+        self.queueing = queueing
+        self.all_nodes = all_nodes
+        self.enabled = enabled
+        self.node_pool = node_pool
+        self.allow_overlap = allow_overlap
+        self.action_runner = action_runner
+        self.max_runtime = max_runtime
+        self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(name)
-        self.event              = event.get_recorder(self.name)
+        self.event = event.get_recorder(self.name)
         self.context = command_context.build_context(self, parent_context)
         self.event.ok('created')
 
     @classmethod
-    def from_config(cls,
-            job_config, scheduler, parent_context, output_path, action_runner):
+    def from_config(
+        cls,
+        job_config, scheduler, parent_context, output_path, action_runner,
+    ):
         """Factory method to create a new Job instance from configuration."""
         action_graph = actiongraph.ActionGraph.from_config(
-                job_config.actions, job_config.cleanup_action)
-        runs         = jobrun.JobRunCollection.from_config(job_config)
-        node_repo    = node.NodePoolRepository.get_instance()
+            job_config.actions, job_config.cleanup_action,
+        )
+        runs = jobrun.JobRunCollection.from_config(job_config)
+        node_repo = node.NodePoolRepository.get_instance()
 
         return cls(
-            name                = job_config.name,
-            owner               = job_config.owner,
-            summary             = job_config.summary,
-            notes               = job_config.notes,
-            monitoring          = job_config.monitoring,
-            queueing            = job_config.queueing,
-            all_nodes           = job_config.all_nodes,
-            node_pool           = node_repo.get_by_name(job_config.node),
-            scheduler           = scheduler,
-            enabled             = job_config.enabled,
-            run_collection      = runs,
-            action_graph        = action_graph,
-            parent_context      = parent_context,
-            output_path         = output_path,
-            allow_overlap       = job_config.allow_overlap,
-            action_runner       = action_runner,
-            max_runtime         = job_config.max_runtime)
+            name=job_config.name,
+            owner=job_config.owner,
+            summary=job_config.summary,
+            notes=job_config.notes,
+            monitoring=job_config.monitoring,
+            queueing=job_config.queueing,
+            all_nodes=job_config.all_nodes,
+            node_pool=node_repo.get_by_name(job_config.node),
+            scheduler=scheduler,
+            enabled=job_config.enabled,
+            run_collection=runs,
+            action_graph=action_graph,
+            parent_context=parent_context,
+            output_path=output_path,
+            allow_overlap=job_config.allow_overlap,
+            action_runner=action_runner,
+            max_runtime=job_config.max_runtime,
+        )
 
     def update_from_job(self, job):
         """Update this Jobs configuration from a new config. This method
@@ -158,18 +175,19 @@ class Job(Observable, Observer):
         """This data is used to serialize the state of this job."""
         return {
             'runs':             self.runs.state_data,
-            'enabled':          self.enabled
+            'enabled':          self.enabled,
         }
 
     def restore_state(self, state_data):
         """Apply a previous state to this Job."""
         self.enabled = state_data['enabled']
         job_runs = self.runs.restore_state(
-                state_data['runs'],
-                self.action_graph,
-                self.output_path.clone(),
-                self.context,
-                self.node_pool)
+            state_data['runs'],
+            self.action_graph,
+            self.output_path.clone(),
+            self.context,
+            self.node_pool,
+        )
         for run in job_runs:
             self.watch(run)
 
@@ -182,8 +200,8 @@ class Job(Observable, Observer):
         """
         pool = self.node_pool
         nodes = pool.nodes if self.all_nodes else [pool.next()]
-        for node in nodes:
-            run = self.runs.build_new_run(self, run_time, node, manual=manual)
+        for n in nodes:
+            run = self.runs.build_new_run(self, run_time, n, manual=manual)
             self.watch(run)
             yield run
 
@@ -203,8 +221,10 @@ class Job(Observable, Observer):
     handler = handle_job_run_state_change
 
     def __eq__(self, other):
-        return all(getattr(other, attr, None) == getattr(self, attr, None)
-                   for attr in self.equality_attributes)
+        return all(
+            getattr(other, attr, None) == getattr(self, attr, None)
+            for attr in self.equality_attributes
+        )
 
     def __ne__(self, other):
         return not self == other
@@ -220,7 +240,7 @@ class JobScheduler(Observer):
     """
 
     def __init__(self, job):
-        self.job                = job
+        self.job = job
         self.shutdown_requested = False
         self.watch(job)
 
@@ -303,7 +323,8 @@ class JobScheduler(Observer):
         # Alternatively, if run_queued is True, this job_run is already queued.
         if not run_queued and not job_run.is_scheduled:
             log.info("%s in state %s already out of scheduled state." % (
-                    job_run, job_run.state))
+                job_run, job_run.state,
+            ))
             return self.schedule()
 
         node = job_run.node if self.job.all_nodes else None
@@ -393,16 +414,19 @@ class JobSchedulerFactory(object):
     """Construct JobScheduler instances from configuration."""
 
     def __init__(self, context, output_stream_dir, time_zone, action_runner):
-        self.context            = context
-        self.output_stream_dir  = output_stream_dir
-        self.time_zone          = time_zone
-        self.action_runner      = action_runner
+        self.context = context
+        self.output_stream_dir = output_stream_dir
+        self.time_zone = time_zone
+        self.action_runner = action_runner
 
     def build(self, job_config):
         log.debug("Building new job %s", job_config.name)
         output_path = filehandler.OutputPath(self.output_stream_dir)
         scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
-        job = Job.from_config(job_config, scheduler, self.context, output_path, self.action_runner)
+        job = Job.from_config(
+            job_config, scheduler,
+            self.context, output_path, self.action_runner,
+        )
         return JobScheduler(job)
 
 
@@ -411,14 +435,16 @@ class JobCollection(object):
 
     def __init__(self):
         self.jobs = collections.MappingCollection('jobs')
-        self.proxy = proxy.CollectionProxy(self.jobs.itervalues, [
-            proxy.func_proxy('request_shutdown',    iteration.list_all),
-            proxy.func_proxy('enable',              iteration.list_all),
-            proxy.func_proxy('disable',             iteration.list_all),
-            proxy.func_proxy('schedule',            iteration.list_all),
-            proxy.func_proxy('run_queue_schedule',  iteration.list_all),
-            proxy.attr_proxy('is_shutdown',         all)
-        ])
+        self.proxy = proxy.CollectionProxy(
+            self.jobs.itervalues, [
+                proxy.func_proxy('request_shutdown',    iteration.list_all),
+                proxy.func_proxy('enable',              iteration.list_all),
+                proxy.func_proxy('disable',             iteration.list_all),
+                proxy.func_proxy('schedule',            iteration.list_all),
+                proxy.func_proxy('run_queue_schedule',  iteration.list_all),
+                proxy.attr_proxy('is_shutdown',         all),
+            ],
+        )
 
     def load_from_config(self, job_configs, factory, reconfigure):
         """Apply a configuration to this collection and return a generator of

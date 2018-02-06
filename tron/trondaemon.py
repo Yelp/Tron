@@ -1,27 +1,29 @@
 """
  Daemonize trond.
 """
+from __future__ import absolute_import
+from __future__ import unicode_literals
+
 import logging
 import logging.config
 import os
-import pkg_resources
-import daemon
 import platform
-
-
-import lockfile
-from tron.utils import flockfile
 import signal
+
+import daemon
+import lockfile
+import pkg_resources
+from twisted.internet import defer
+from twisted.internet.main import installReactor
 from twisted.python import log as twisted_log
+
 import tron
+from tron.utils import flockfile
 
 if platform.system() == 'Linux':
     from twisted.internet.epollreactor import EPollReactor as Reactor
 else:
     from twisted.internet.selectreactor import SelectReactor as Reactor
-
-from twisted.internet import defer
-from twisted.internet.main import installReactor
 
 
 log = logging.getLogger(__name__)
@@ -53,7 +55,9 @@ class PIDFile(object):
 
         if pid:
             self._try_unlock()
-            raise SystemExit("Daemon was running as %s. Remove PID file." % pid)
+            raise SystemExit(
+                "Daemon was running as %s. Remove PID file." % pid,
+            )
 
     def is_process_running(self, pid):
         """Return True if the process is still running."""
@@ -118,9 +122,9 @@ class NoDaemonContext(object):
     """A mock DaemonContext for running trond without being a daemon."""
 
     def __init__(self, **kwargs):
-        self.signal_map     = kwargs.pop('signal_map', {})
-        self.pidfile        = kwargs.pop('pidfile', None)
-        self.working_dir    = kwargs.pop('working_directory', '.')
+        self.signal_map = kwargs.pop('signal_map', {})
+        self.pidfile = kwargs.pop('pidfile', None)
+        self.working_dir = kwargs.pop('working_directory', '.')
         self.signal_map[signal.SIGUSR1] = self._handle_debug
 
     def _handle_debug(self, *args):
@@ -142,18 +146,19 @@ class NoDaemonContext(object):
     def terminate(self, *args):
         pass
 
+
 class TronDaemon(object):
     """Daemonize and run the tron daemon."""
 
     WAIT_SECONDS = 5
 
     def __init__(self, options):
-        self.options    = options
-        self.mcp        = None
-        nodaemon        = self.options.nodaemon
-        context_class   = NoDaemonContext if nodaemon else daemon.DaemonContext
-        self.context    = self._build_context(options, context_class)
-        self.reactor    = Reactor()
+        self.options = options
+        self.mcp = None
+        nodaemon = self.options.nodaemon
+        context_class = NoDaemonContext if nodaemon else daemon.DaemonContext
+        self.context = self._build_context(options, context_class)
+        self.reactor = Reactor()
 
     def _build_context(self, options, context_class):
         signal_map = {
@@ -167,7 +172,7 @@ class TronDaemon(object):
             umask=0o022,
             pidfile=pidfile,
             signal_map=signal_map,
-            files_preserve=[pidfile.lock.file]
+            files_preserve=[pidfile.lock.file],
         )
 
     def run(self):
@@ -177,7 +182,6 @@ class TronDaemon(object):
             self._run_mcp()
             self._run_www_api()
             self._run_reactor()
-
 
     def setup_reactor(self):
         installReactor(self.reactor)
@@ -192,9 +196,9 @@ class TronDaemon(object):
     def _run_mcp(self):
         # Local import required because of reactor import in mcp
         from tron import mcp
-        working_dir         = self.options.working_dir
-        config_path         = self.options.config_path
-        self.mcp            = mcp.MasterControlProgram(working_dir, config_path)
+        working_dir = self.options.working_dir
+        config_path = self.options.config_path
+        self.mcp = mcp.MasterControlProgram(working_dir, config_path)
 
         try:
             self.mcp.initial_setup()
