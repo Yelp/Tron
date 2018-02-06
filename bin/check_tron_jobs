@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 from __future__ import absolute_import
 from __future__ import unicode_literals
-
+import logging
 import sys
 
 from pysensu_yelp import send_event
@@ -12,9 +12,16 @@ from tron.commands.client import Client
 from tron.commands.client import get_object_type_from_identifier
 
 
+log = logging.getLogger('check_tron_jobs')
+
+
 def parse_options():
     usage = ""
     parser = cmd_utils.build_option_parser(usage)
+    parser.add_option("--dry-run", action="store_true", default=False,
+                  help="Don't actually send alerts out. Defaults to %default")
+    parser.add_option("--job", default=None,
+                  help="Check a particular job. If unset checks all jobs")
     options, args = parser.parse_args(sys.argv)
     return options, args[1:]
 
@@ -120,6 +127,7 @@ def compute_check_result_for_job(client, job):
             job['name'],
         )
         kwargs["status"] = 0
+        log.info(kwargs["output"])
         return kwargs
     else:
         # The job is not disabled, therefore we have to look at its run history
@@ -132,21 +140,25 @@ def compute_check_result_for_job(client, job):
             job=job, job_content=job_content, client=client,
         )
         kwargs.update(results)
+        log.info(kwargs["output"].split("\n")[0])
         return kwargs
 
 
-def check_job(job, client):
+def check_job(job, client, dry_run):
     if job.get('monitoring', {}) == {}:
-        print("Not checking {}, no monitoring metadata setup.".format(
+        log.debug("Not checking {}, no monitoring metadata setup.".format(
             job['name'],
         ))
         return
     else:
-        print("Checking {}".format(job['name']))
+        log.info("Checking {}".format(job['name']))
         result = compute_check_result_for_job(job=job, client=client)
-        print(result)
-        send_event(**result)
-        print("")
+        if dry_run is True:
+            log.info("Would have sent this event to sensu: ")
+            log.info(result)
+        else:
+            log.debug(result)
+            send_event(**result)
 
 
 def main():
@@ -154,10 +166,14 @@ def main():
     cmd_utils.setup_logging(options)
     cmd_utils.load_config(options)
     client = Client(options.server)
+    log.debug("DEBUG")
 
     jobs = client.jobs(include_job_runs=True)
     for job in jobs:
-        check_job(job=job, client=client)
+        if options.job is None:
+               check_job(job=job, client=client, dry_run=options.dry_run)
+        elif job['name'] == options.job:
+               check_job(job=job, client=client, dry_run=options.dry_run)
 
 
 if __name__ == '__main__':
