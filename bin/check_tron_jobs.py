@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 from __future__ import absolute_import
 from __future__ import unicode_literals
+
 import logging
 import sys
 
@@ -18,10 +19,14 @@ log = logging.getLogger('check_tron_jobs')
 def parse_options():
     usage = ""
     parser = cmd_utils.build_option_parser(usage)
-    parser.add_option("--dry-run", action="store_true", default=False,
-                  help="Don't actually send alerts out. Defaults to %default")
-    parser.add_option("--job", default=None,
-                  help="Check a particular job. If unset checks all jobs")
+    parser.add_option(
+        "--dry-run", action="store_true", default=False,
+        help="Don't actually send alerts out. Defaults to %default",
+    )
+    parser.add_option(
+        "--job", default=None,
+        help="Check a particular job. If unset checks all jobs",
+    )
     options, args = parser.parse_args(sys.argv)
     return options, args[1:]
 
@@ -167,12 +172,14 @@ def main():
     cmd_utils.load_config(options)
     client = Client(options.server)
 
-    jobs = client.jobs(include_job_runs=True)
-    for job in jobs:
-        if options.job is None:
-               check_job(job=job, client=client, dry_run=options.dry_run)
-        elif job['name'] == options.job:
-               check_job(job=job, client=client, dry_run=options.dry_run)
+    if options.job is None:
+        jobs = client.jobs(include_job_runs=True)
+        for job in jobs:
+            check_job(job=job, client=client, dry_run=options.dry_run)
+    else:
+        job_url = client.get_url(options.job)
+        job = client.job_runs(job_url)
+        check_job(job=job, client=client, dry_run=options.dry_run)
 
 
 if __name__ == '__main__':
