@@ -166,7 +166,6 @@ def main():
     cmd_utils.setup_logging(options)
     cmd_utils.load_config(options)
     client = Client(options.server)
-    log.debug("DEBUG")
 
     jobs = client.jobs(include_job_runs=True)
     for job in jobs:
