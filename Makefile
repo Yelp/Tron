@@ -15,14 +15,14 @@ build_trusty_docker:
 	cd ./yelp_package/trusty && docker build -t tron-deb-builder .
 
 package_trusty_deb: clean build_trusty_docker coffee
-	$(DOCKER_RUN) /bin/bash -c '                      \
+	$(DOCKER_RUN) /bin/bash -c '                \
 		dpkg-buildpackage -d &&                   \
 		mv ../*.deb dist/ &&                      \
 		chown -R $(UID):$(GID) dist debian        \
 	'
 
 coffee:
-	$(DOCKER_RUN) /bin/bash -c '                           \
+	$(DOCKER_RUN) /bin/bash -c '                     \
 		mkdir -p tronweb/js/cs &&                      \
 		coffee -o tronweb/js/cs/ -c tronweb/coffee/ && \
 		chown -R $(UID):$(GID) tronweb/js/cs/          \
@@ -30,6 +30,11 @@ coffee:
 
 test:
 	tox
+
+_itest:
+	$(DOCKER_RUN) /work/itest.sh
+
+itest: test package_trusty_deb _itest
 
 # Release
 

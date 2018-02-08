@@ -11,6 +11,7 @@ RUN apt-get update > /dev/null && \
         gcc \
         python-dev \
         coffeescript \
+        libyaml-dev \
         && apt-get clean > /dev/null
 
 RUN cd /tmp && \
