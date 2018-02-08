@@ -1,0 +1,9 @@
+# Automatically added by dh_installinit
+if [ "$1" = install ] || [ "$1" = upgrade ]; then
+	if [ -e "/etc/init.d/tron" ] && [ -L "/etc/init.d/tron" ] \
+	   && [ $(readlink -f "/etc/init.d/tron") = /lib/init/upstart-job ]
+	then
+		rm -f "/etc/init.d/tron"
+	fi
+fi
+# End automatically added section

@@ -1,40 +1,57 @@
 VERSION=$(shell python setup.py --version)
-DOCKER_RUN=docker run -t -v $(CURDIR)/:/work:rw tron-deb-builder
+DOCKER_RUN = docker run -t -v $(CURDIR):/work:rw tron-deb-builder
+UID:=$(shell id -u)
+GID:=$(shell id -g)
 
-.PHONY : all source install clean tests docs
+.PHONY : all clean tests docs
 
-all:
-	@echo "make source - Create source package"
-	@echo "make build - Build from source"
-	@echo "make install - Install on local system"
-	@echo "make rpm - Generate a rpm package"
-	@echo "make deb - Generate a deb package"
-	@echo "make clean - Get rid of scratch and byte files"
+-usage:
+	@echo "make test - Run tests"
+	@echo "make package_trusty_deb - Generate trusty package"
 	@echo "make publish - publish to pypi.python.org"
+	@echo "make clean - Get rid of scratch and byte files"
 
 build_%_docker:
-	[ -d dist ] || mkdir dist
+	[ -d dist/$* ] || mkdir -p dist/$*
 	cd ./yelp_package/$*/ && docker build -t tron-deb-builder .
 
-package_%_deb: clean  build_%_docker tronweb/js/cs
-	$(DOCKER_RUN) /bin/bash -c "dpkg-buildpackage -d && mv ../*.deb dist/"
+package_trusty_deb: clean build_trusty_docker coffee
+	$(DOCKER_RUN) /bin/bash -c "                   \
+		dpkg-buildpackage -d &&                      \
+		mv ../*.deb dist/$*/ &&                      \
+		chown -R $(UID):$(GID) dist/$*               \
+	"
 
 publish:
 	python setup.py sdist bdist_wheel
 	twine upload dist/*
 
-clean:
-	rm -rf tronweb/js/cs
-	find . -name '*.pyc' -delete
+coffee:
+	$(DOCKER_RUN) /bin/bash -c '                     \
+		mkdir -p tronweb/js/cs &&                      \
+		coffee -o tronweb/js/cs/ -c tronweb/coffee/ && \
+		chown -R $(UID):$(GID) tronweb/js/cs/          \
+'
 
-COFFEE := $(shell which coffee 2 > /dev/null)
-tronweb/js/cs:
-ifdef COFFEE
-	$(error coffee is missing. please install coffeescript)
-else
-	$(DOCKER_RUN) mkdir -p tronweb/js/cs
-	$(DOCKER_RUN) coffee -o tronweb/js/cs/ -c tronweb/coffee/
-endif
+test:
+	tox
+
+# Release
+
+LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/\x27/"/g')
+release: build_trusty_docker docs
+	$(DOCKER_RUN) /bin/bash -c " \
+		dch -v $(VERSION) --distribution trusty --changelog debian/changelog \
+			$$'$(VERSION) tagged with \'make release\'\rCommit: $(LAST_COMMIT_MSG)' && \
+		chown $(UID):$(GID) debian/changelog \
+"
+	@git diff
+	@echo "Now Run:"
+	@echo 'git commit -a -m "Released $(VERSION) via make release"'
+	@echo 'git tag --force v$(VERSION)'
+	@echo 'git push --tags origin master'
+
+# Docs
 
 docs:
 	tox -e docs
@@ -44,19 +61,6 @@ man:
 	@echo
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
 
-tests:
-	tox
-
-test: tests
-
-test_all:
-	PYTHONPATH=.:bin testify tests --summary
-
-LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/\x27/"/g')
-release: build_trusty_docker docs
-	$(DOCKER_RUN) dch -v $(VERSION) --distribution trusty --changelog ./debian/changelog $$'$(VERSION) tagged with \'make release\'\rCommit: $(LAST_COMMIT_MSG)'
-	@git diff
-	@echo "Now Run:"
-	@echo 'git commit -a -m "Released $(VERSION) via make release"'
-	@echo 'git tag --force v$(VERSION)'
-	@echo 'git push --tags origin master'
+clean:
+	rm -rf tronweb/js/cs
+	find . -name '*.pyc' -delete

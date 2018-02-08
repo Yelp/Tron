@@ -1,6 +1,5 @@
 description "trond"
 
-start on (started networking)
 stop on shutdown
 
 respawn
