@@ -30,7 +30,7 @@ clean:
 	find . -name '*.pyc' -delete
 
 COFFEE := $(shell which coffee 2 > /dev/null)
-tronweb/js/cs:
+tronweb/js/cs: build_trusty_docker
 ifdef COFFEE
 	$(error coffee is missing. please install coffeescript)
 else
