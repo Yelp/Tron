@@ -16,6 +16,8 @@ build_%_docker:
 	[ -d dist ] || mkdir dist
 	cd ./yelp_package/$*/ && docker build -t tron-deb-builder .
 
+itest_trusty: package_trusty_deb
+
 package_%_deb: clean  build_%_docker tronweb/js/cs
 	$(DOCKER_RUN) /bin/bash -c "dpkg-buildpackage -d && mv ../*.deb dist/"
 

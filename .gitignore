@@ -20,6 +20,7 @@ vagrant/insecure_tron_key.pub
 
 # Generated debian artifacts
 debian/tron
+debian/tron.preinst.debhelper
 debian/files
 debian/tron.substvars
 debian/tron.debhelper.log
