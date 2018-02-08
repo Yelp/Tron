@@ -8,7 +8,6 @@ GID:=$(shell id -g)
 -usage:
 	@echo "make test - Run tests"
 	@echo "make package_trusty_deb - Generate trusty package"
-	@echo "make publish - publish to pypi.python.org"
 	@echo "make clean - Get rid of scratch and byte files"
 
 build_trusty_docker:
@@ -21,10 +20,6 @@ package_trusty_deb: clean build_trusty_docker coffee
 		mv ../*.deb dist/ &&                      \
 		chown -R $(UID):$(GID) dist debian        \
 	'
-
-publish:
-	python setup.py sdist bdist_wheel
-	twine upload dist/*
 
 coffee:
 	$(DOCKER_RUN) /bin/bash -c '                           \

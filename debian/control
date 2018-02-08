@@ -8,7 +8,7 @@ Standards-Version: 3.8.3
 Package: tron
 Architecture: all
 Homepage: http://github.com/yelp/Tron
-Depends: python2.7, ${shlibs:Depends}, ${misc:Depends}
+Depends: python2.7, libyaml-dev, ${shlibs:Depends}, ${misc:Depends}
 Description: Tron is a job scheduling, running and monitoring package.
   Designed to replace Cron for complex scheduling and dependencies.
   Provides:
