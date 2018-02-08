@@ -11,27 +11,27 @@ GID:=$(shell id -g)
 	@echo "make publish - publish to pypi.python.org"
 	@echo "make clean - Get rid of scratch and byte files"
 
-build_%_docker:
-	[ -d dist/$* ] || mkdir -p dist/$*
-	cd ./yelp_package/$*/ && docker build -t tron-deb-builder .
+build_trusty_docker:
+	[ -d dist ] || mkdir -p dist
+	cd ./yelp_package/trusty && docker build -t tron-deb-builder .
 
 package_trusty_deb: clean build_trusty_docker coffee
-	$(DOCKER_RUN) /bin/bash -c "                   \
-		dpkg-buildpackage -d &&                      \
-		mv ../*.deb dist/$*/ &&                      \
-		chown -R $(UID):$(GID) dist/$*               \
-	"
+	$(DOCKER_RUN) /bin/bash -c '                      \
+		dpkg-buildpackage -d &&                   \
+		mv ../*.deb dist/ &&                      \
+		chown -R $(UID):$(GID) dist debian        \
+	'
 
 publish:
 	python setup.py sdist bdist_wheel
 	twine upload dist/*
 
 coffee:
-	$(DOCKER_RUN) /bin/bash -c '                     \
+	$(DOCKER_RUN) /bin/bash -c '                           \
 		mkdir -p tronweb/js/cs &&                      \
 		coffee -o tronweb/js/cs/ -c tronweb/coffee/ && \
 		chown -R $(UID):$(GID) tronweb/js/cs/          \
-'
+	'
 
 test:
 	tox
