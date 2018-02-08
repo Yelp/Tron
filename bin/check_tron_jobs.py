@@ -149,21 +149,26 @@ def compute_check_result_for_job(client, job):
         return kwargs
 
 
-def check_job(job, client, dry_run):
+def check_job(job, client):
     if job.get('monitoring', {}) == {}:
         log.debug("Not checking {}, no monitoring metadata setup.".format(
             job['name'],
         ))
         return
+    log.info("Checking {}".format(job['name']))
+    return compute_check_result_for_job(job=job, client=client)
+
+
+def check_job_result(job, client, dry_run):
+    result = check_job(job, client)
+    if result is None:
+        return
+    if dry_run:
+        log.info("Would have sent this event to sensu: ")
+        log.info(result)
     else:
-        log.info("Checking {}".format(job['name']))
-        result = compute_check_result_for_job(job=job, client=client)
-        if dry_run is True:
-            log.info("Would have sent this event to sensu: ")
-            log.info(result)
-        else:
-            log.debug(result)
-            send_event(**result)
+        log.debug("Sending event: {}".format(result))
+        send_event(**result)
 
 
 def main():
@@ -175,11 +180,11 @@ def main():
     if options.job is None:
         jobs = client.jobs(include_job_runs=True)
         for job in jobs:
-            check_job(job=job, client=client, dry_run=options.dry_run)
+            check_job_result(job=job, client=client, dry_run=options.dry_run)
     else:
         job_url = client.get_url(options.job)
         job = client.job_runs(job_url)
-        check_job(job=job, client=client, dry_run=options.dry_run)
+        check_job_result(job=job, client=client, dry_run=options.dry_run)
 
 
 if __name__ == '__main__':

@@ -1,4 +1,4 @@
-opt/venvs/tron/bin/check_tron_jobs.py usr/bin/check_tron_jobs.py
+opt/venvs/tron/bin/check_tron_jobs usr/bin/check_tron_jobs.py
 opt/venvs/tron/bin/tronctl usr/bin/tronctl
 opt/venvs/tron/bin/trond usr/bin/trond
 opt/venvs/tron/bin/tronfig usr/bin/tronfig

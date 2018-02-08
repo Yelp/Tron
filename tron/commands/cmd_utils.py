@@ -119,7 +119,6 @@ def save_config(options):
 
 
 def setup_logging(options):
-    print options.verbose
     if options.verbose is None:
         level = logging.WARNING
     elif options.verbose == 1:
