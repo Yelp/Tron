@@ -1,3 +1,9 @@
+tron (0.7.3.0) trusty; urgency=medium
+
+  * $0.7.3.0 tagged with \make release'rCommit: Merge pull request
+
+ -- root <root@185112144f8b>  Thu, 08 Feb 2018 22:42:17 +0000
+
 tron (0.7.2.0) trusty; urgency=medium
 
   * 0.7.2.0 tagged with make release'
