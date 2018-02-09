@@ -2,7 +2,7 @@ Source: tron
 Section: admin
 Priority: optional
 Maintainer: Daniel Nephin <dnephin@yelp.com>
-Build-Depends: debhelper (>= 7), python2.7, dh-virtualenv
+Build-Depends: debhelper (>= 7), python2.7, libyaml-dev, dh-virtualenv
 Standards-Version: 3.8.3
 
 Package: tron

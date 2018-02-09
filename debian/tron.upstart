@@ -1,6 +1,6 @@
 description "trond"
 
-start on (started networking)
+start on filesystem and (started networking)
 stop on shutdown
 
 respawn
@@ -9,6 +9,11 @@ script
   set -a
   if [ -f /etc/default/tron ] ; then
       . /etc/default/tron
+  fi
+  if [ "x$RUN" != "xyes" ]; then
+      log_failure_msg "$NAME disabled, please adjust the configuration to your needs "
+      log_failure_msg "and then set RUN to 'yes' in /etc/default/$NAME to enable it."
+      exit 0
   fi
   exec start-stop-daemon --start -c $DAEMONUSER --exec /usr/bin/trond -- --nodaemon $DAEMON_OPTS
 end script
