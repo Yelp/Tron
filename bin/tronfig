@@ -163,7 +163,7 @@ if __name__ == '__main__':
     client = Client(options.server)
 
     if options.print_config:
-        name, content = get_config_input(*args)
+        name = args[0]
         print client.config(name)['config']
     elif options.delete:
         name = args[0]
