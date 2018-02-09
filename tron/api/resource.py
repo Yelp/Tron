@@ -3,7 +3,6 @@ Web Services Interface used by command-line clients and web frontend to
 view current state, event history and send commands to trond.
 """
 from __future__ import absolute_import
-from __future__ import unicode_literals
 
 import datetime
 import logging
