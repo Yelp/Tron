@@ -1,3 +1,4 @@
 #/bin/sh
+
 eval $(ssh-agent)
-USER=root bin/trond -l logging.conf --nodaemon -v
+USER=root trond -c tronfig/ -l logging.conf --nodaemon -v

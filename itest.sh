@@ -15,3 +15,17 @@ tronfig --help
 from yaml import CSafeLoader
 from yaml import CSafeDumper
 EOF
+
+rm -rf /var/lib/tron
+ln -s /work/example-cluster /var/lib/tron
+rm -f /var/lib/tron/tron.pid
+trond -v --nodaemon -c tronfig/ -l logging.conf &
+TRON_PID=$!
+
+sleep 5
+kill -0 $TRON_PID
+
+tronfig -p MASTER
+tronfig MASTER /work/example-cluster/tronfig/MASTER.yaml
+
+kill -9 $TRON_PID
