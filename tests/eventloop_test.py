@@ -21,12 +21,6 @@ class UniqueCallTestCase(TestCase):
         assert_equal(self.callback.delay, 5)
         assert_equal(self.callback.func, self.func)
 
-    def test_start_no_restart_interval(self):
-        self.callback.delay = None
-        with mock.patch('tron.eventloop.call_later', autospec=True) as mock_call_later:
-            self.callback.start()
-            assert not mock_call_later.call_count
-
     def test_start(self):
         self.callback.delayed_call.active.return_value = False
         with mock.patch('tron.eventloop.call_later', autospec=True) as mock_call_later:
