@@ -1,5 +1,5 @@
 VERSION=$(shell python setup.py --version)
-DOCKER_RUN = docker run -t -v $(CURDIR):/work:rw tron-deb-builder
+DOCKER_RUN = docker run -t -v $(CURDIR):/work:rw
 UID:=$(shell id -u)
 GID:=$(shell id -g)
 
@@ -11,19 +11,22 @@ GID:=$(shell id -g)
 	@echo "make release - Prepare debian info for new release"
 	@echo "make clean - Get rid of scratch and byte files"
 
-build_trusty_docker:
+docker_%:
+	@echo "Building docker image for $*"
 	[ -d dist ] || mkdir -p dist
-	cd ./yelp_package/trusty && docker build -t tron-deb-builder .
+	cd ./yelp_package/$* && docker build -t tron-builder-$* .
 
-package_trusty_deb: clean build_trusty_docker coffee
-	$(DOCKER_RUN) /bin/bash -c '                \
+deb_%: clean docker_% coffee_%
+	@echo "Building deb for $*"
+	$(DOCKER_RUN) tron-builder-$* /bin/bash -c ' \
 		dpkg-buildpackage -d &&                   \
 		mv ../*.deb dist/ &&                      \
 		chown -R $(UID):$(GID) dist debian        \
 	'
 
-coffee:
-	$(DOCKER_RUN) /bin/bash -c '                     \
+coffee_%:
+	@echo "Building tronweb"
+	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '      \
 		mkdir -p tronweb/js/cs &&                      \
 		coffee -o tronweb/js/cs/ -c tronweb/coffee/ && \
 		chown -R $(UID):$(GID) tronweb/js/cs/          \
@@ -32,16 +35,17 @@ coffee:
 test:
 	tox
 
-_itest:
-	$(DOCKER_RUN) /work/itest.sh
+_itest_%:
+	$(DOCKER_RUN) tron-builder-$* /work/itest.sh
 
-itest_trusty: test package_trusty_deb _itest
+itest_%: test deb_% _itest_%
+	@echo "Package for $* looks good"
 
 # Release
 
 LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/\x27/"/g')
-release: build_trusty_docker docs
-	$(DOCKER_RUN) /bin/bash -c " \
+release: docker_trusty docs
+	$(DOCKER_RUN) tron-builder-trusty /bin/bash -c " \
 		dch -v $(VERSION) --distribution trusty --changelog debian/changelog \
 			$$'$(VERSION) tagged with \'make release\'\rCommit: $(LAST_COMMIT_MSG)' && \
 		chown $(UID):$(GID) debian/changelog \
