@@ -35,7 +35,7 @@ test:
 _itest:
 	$(DOCKER_RUN) /work/itest.sh
 
-itest: test package_trusty_deb _itest
+itest_trusty: test package_trusty_deb _itest
 
 # Release
 

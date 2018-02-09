@@ -1,3 +1,10 @@
+tron (0.7.3.1) trusty; urgency=medium
+
+  * 0.7.3.1 tagged with 'make release'
+    Commit: Merge branch dont-start-on-boot
+
+ -- root <root@4d7566959515>  Fri, 09 Feb 2018 09:27:12 +0000
+
 tron (0.7.3.0) trusty; urgency=medium
 
   * $0.7.3.0 tagged with \make release'rCommit: Merge pull request
