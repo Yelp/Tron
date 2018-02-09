@@ -1,3 +1,11 @@
+tron (0.7.3.2) trusty; urgency=medium
+
+  * 0.7.3.2 tagged with 'make release'
+    Commit: Merge pull request #347 from Yelp/twisted-twisted  Twisted
+    fix, example cluster and itest improvements
+
+ -- root <root@065c430c301e>  Fri, 09 Feb 2018 14:39:45 +0000
+
 tron (0.7.3.1) trusty; urgency=medium
 
   * 0.7.3.1 tagged with 'make release'
