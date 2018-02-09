@@ -43,7 +43,9 @@ def respond(request, response_dict, code=http.OK, headers=None):
     request.setHeader('content-type', 'text/json')
     for key, val in (headers or {}).iteritems():
         request.setHeader(key, val)
-    return json.dumps(response_dict, cls=JSONEncoder) if response_dict else ""
+    return str(
+        json.dumps(response_dict, cls=JSONEncoder) if response_dict else "",
+    )
 
 
 def handle_command(request, api_controller, obj, **kwargs):

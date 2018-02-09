@@ -76,7 +76,13 @@ def request(uri, data=None):
 
 
 def build_get_url(url, data=None):
-    return '%s?%s' % (url, urllib.urlencode(sorted(data.items()))) if data else url
+    if data:
+        return '{}?{}'.format(
+            url,
+            urllib.urlencode(sorted(data.items())),
+        )
+    else:
+        return url
 
 
 class Client(object):
