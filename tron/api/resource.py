@@ -40,9 +40,9 @@ class JSONEncoder(json.JSONEncoder):
 def respond(request, response_dict, code=http.OK, headers=None):
     """Helper to generate a json response"""
     request.setResponseCode(code)
-    request.setHeader('content-type', 'text/json')
+    request.setHeader(b'content-type', b'text/json')
     for key, val in (headers or {}).iteritems():
-        request.setHeader(key, val)
+        request.setHeader(str(key), str(val))
     return str(
         json.dumps(response_dict, cls=JSONEncoder) if response_dict else "",
     )
