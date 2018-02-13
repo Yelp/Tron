@@ -93,7 +93,7 @@ class ServiceTestCase(TestCase):
         autospec_method(self.service.notify)
         count = 3
         created_instances = [
-            mock.create_autospec(ServiceInstance) for _ in xrange(count)
+            mock.create_autospec(ServiceInstance) for _ in range(count)
         ]
         self.instances.create_missing.return_value = created_instances
         self.service.repair()
@@ -181,7 +181,7 @@ class ServiceCollectionTestCase(TestCase):
     def setup_collection(self):
         self.collection = service.ServiceCollection()
         self.service_list = [
-            mock.create_autospec(service.Service) for _ in xrange(3)
+            mock.create_autospec(service.Service) for _ in range(3)
         ]
 
     def _add_service(self):

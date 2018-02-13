@@ -68,7 +68,7 @@ def retry(max_tries=3, delay=0.1, exceptions=(KeyError, IndexError)):
     def wrapper(f):
         @functools.wraps(f)
         def wrap(*args, **kwargs):
-            for _ in xrange(max_tries):
+            for _ in range(max_tries):
                 try:
                     return f(*args, **kwargs)
                 except exceptions:

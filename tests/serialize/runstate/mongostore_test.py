@@ -102,7 +102,7 @@ class MongoStateStoreTestCase(TestCase):
             {'ahh': 'first doc'},
             {'bzz': 'second doc'},
         ]
-        for i in xrange(2):
+        for i in range(2):
             self._create_doc(keys[i], docs[i])
 
         @testingutils.retry()

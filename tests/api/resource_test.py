@@ -334,7 +334,7 @@ class ServiceCollectionResourceTestCase(TestCase):
 
     def test_render_GET(self):
         service_count = 3
-        services = [mock.MagicMock() for _ in xrange(service_count)]
+        services = [mock.MagicMock() for _ in range(service_count)]
         self.resource.collection.__iter__.return_value = services
         with mock.patch('tron.api.resource.respond', autospec=True) as respond:
             response = self.resource.render_GET(build_request())

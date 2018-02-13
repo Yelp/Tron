@@ -27,7 +27,9 @@ class EventLevel(object):
         return self.order == other.order
 
     def __cmp__(self, other):
-        return cmp(self.order, other.order)
+        # https://docs.python.org/3.0/whatsnew/3.0.html#ordering-comparisons
+        # TODO: drop this
+        return (self.order > other.order) - (self.order < other.order)
 
     def __hash__(self):
         return hash(self.order)

@@ -8,6 +8,8 @@ import contextlib
 from functools import partial
 from operator import itemgetter
 
+from six import u
+
 from tron.core import actionrun
 from tron.core import job
 from tron.core import service
@@ -48,8 +50,8 @@ class Color(object):
     @classmethod
     def set(cls, color_name, text):
         if not cls.enabled or not color_name:
-            return unicode(text)
-        return cls.colors[color_name.lower()] + unicode(text) + cls.colors['end']
+            return u(text)
+        return cls.colors[color_name.lower()] + u(text) + cls.colors['end']
 
     @classmethod
     def toggle(cls, enable):
@@ -135,7 +137,7 @@ class TableDisplay(object):
         return value.ljust(length)
 
     def format_value(self, field_idx, value):
-        return unicode(value)
+        return u(value)
 
     def output(self):
         out = "\n".join(self.out)

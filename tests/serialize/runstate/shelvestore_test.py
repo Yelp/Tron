@@ -44,7 +44,7 @@ class ShelveStateStoreTestCase(TestCase):
 
     def test_restore(self):
         self.store.cleanup()
-        keys = [ShelveKey("thing", i) for i in xrange(5)]
+        keys = [ShelveKey("thing", i) for i in range(5)]
         value = {'this': 'data'}
         store = shelve.open(self.filename)
         for key in keys:

@@ -26,12 +26,12 @@ class EventStoreTestCase(TestCase):
 
     @setup
     def add_data(self):
-        for i in xrange(1, 5):
+        for i in range(1, 5):
             self.store.append(self._build_event(
                 event.LEVEL_INFO, "test%s" % i,
             ))
 
-        for i in xrange(5, 10):
+        for i in range(5, 10):
             e = self._build_event(event.LEVEL_CRITICAL, "test%s" % i)
             self.store.append(e)
 

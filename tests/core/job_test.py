@@ -132,7 +132,7 @@ class JobTestCase(TestCase):
         self.job.restore_state(state_data)
 
         assert not self.job.enabled
-        calls = [mock.call(job_runs[i]) for i in xrange(len(job_runs))]
+        calls = [mock.call(job_runs[i]) for i in range(len(job_runs))]
         self.job.watch.assert_has_calls(calls)
         self.job.event.ok.assert_called_with('restored')
 
@@ -157,7 +157,7 @@ class JobTestCase(TestCase):
         runs = list(self.job.build_new_runs(run_time))
 
         assert_length(runs, node_count)
-        for i in xrange(len(runs)):
+        for i in range(len(runs)):
             node = self.job.node_pool.nodes[i]
             assert_call(
                 self.job.runs.build_new_run,

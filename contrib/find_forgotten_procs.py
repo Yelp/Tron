@@ -17,6 +17,8 @@ from fnmatch import fnmatch
 from multiprocessing.pool import ThreadPool
 from tempfile import TemporaryFile
 
+from six import string_types
+
 
 DEFAULT_SIGNAL = 'TERM'
 DEFAULT_KILL_PREFIX = ''
@@ -53,7 +55,7 @@ def _check_output(*popenargs, **kwargs):
 
     if 'stdin' in kwargs:
         curr = kwargs['stdin']
-        if isinstance(curr, basestring):
+        if isinstance(curr, string_types):
             f = TemporaryFile()
             f.write(curr)
             f.seek(0)

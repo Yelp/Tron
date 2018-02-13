@@ -50,7 +50,7 @@ class TimeSpecificationTestCase(TestCase):
         time_spec = trontimespec.TimeSpecification(months=[2, 5])
         gen = time_spec.next_month(datetime.datetime(2012, 3, 14))
         expected = [(5, 2012), (2, 2013), (5, 2013), (2, 2014)]
-        assert_equal([gen.next() for _ in xrange(4)], expected)
+        assert_equal([gen.next() for _ in range(4)], expected)
 
     def test_next_day_monthdays(self):
         time_spec = trontimespec.TimeSpecification(monthdays=[5, 10, 15])
