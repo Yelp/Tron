@@ -113,8 +113,9 @@ def valid_time(value, config_context):
         try:
             return datetime.datetime.strptime(value, format)
         except ValueError as exc:
-            msg = 'Value at %s is not a valid time: %s'
-            raise ConfigError(msg % (config_context.path, exc))
+            pass
+    msg = 'Value at %s is not a valid time'
+    raise ConfigError(msg % config_context.path)
 
 
 # Translations from possible configuration units to the argument to
