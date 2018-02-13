@@ -192,23 +192,20 @@ State Persistence
 
             **sql** - uses `sqlalchemy <http://www.sqlalchemy.org/>`_ to save to a database (tested with version 0.7).
 
-            **mongo** - uses `pymongo` to save to a mongodb (tested with version 2.2).
-
             **yaml** - uses `yaml` and saves to a local file (this is not recommend and is provided to be backwards compatible with previous versions of Tron).
 
         You will need the appropriate python module for the option you choose.
 
     **name**
         The name of this store. This will be the filename for a **shelve** or
-        **yaml** store, or the database name for a **mongo** store. It is
-        just a label when used with an **sql** store.
+        **yaml** store. It is just a label when used with an **sql** store.
 
     **connection_details**
         Ignored by **shelve** and **yaml** stores.
 
         A connection string (see `sqlalchemy engine configuration <http://docs.sqlalchemy.org/en/latest/core/engines.html>`_) when using an **sql** store.
 
-        An HTTP query string when using **mongo**. Valid keys are: hostname, port, username, password.
+        Valid keys are: hostname, port, username, password.
         Example: ``"hostname=localhost&port=5555"``
 
     **buffer_size**
