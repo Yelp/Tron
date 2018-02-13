@@ -1,4 +1,17 @@
 ---
 language: python
+env:
+  - TENV=py27
+  - TENV=py36
+python:
+  - 2.7
+  - 3.6
 install: pip install tox
-script: tox
+script: tox -e $TENV
+
+matrix:
+  include:
+    - env: TENV=py27
+      python: 2.7
+    - env: TENV=py36
+      python: 3.6
