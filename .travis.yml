@@ -10,8 +10,8 @@ install: pip install tox
 script: tox -e $TENV
 
 matrix:
-  include:
-    - env: TENV=py27
-      python: 2.7
+  exclude:
     - env: TENV=py36
+      python: 2.7
+    - env: TENV=py27
       python: 3.6
