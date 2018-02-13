@@ -7,9 +7,10 @@ from __future__ import unicode_literals
 import itertools
 import logging
 import urllib
+from collections import namedtuple
+
 import urllib2
 import urlparse
-from collections import namedtuple
 
 import tron
 from tron.config.schema import MASTER_NAMESPACE

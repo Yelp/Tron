@@ -7,8 +7,9 @@ from __future__ import unicode_literals
 
 import itertools
 import operator
-import urlparse
 from collections import namedtuple
+
+import urlparse
 
 from tron.serialize import runstate
 pymongo = None  # pyflakes

@@ -1,9 +1,8 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import urllib2
-
 import mock
+import urllib2
 from testify import assert_equal
 from testify import run
 from testify import setup

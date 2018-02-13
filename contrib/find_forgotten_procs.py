@@ -12,11 +12,11 @@ import subprocess
 import sys
 import time
 import traceback
-import urllib2
 from fnmatch import fnmatch
 from multiprocessing.pool import ThreadPool
 from tempfile import TemporaryFile
 
+import urllib2
 from six import string_types
 
 
