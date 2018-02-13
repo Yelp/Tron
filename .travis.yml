@@ -12,6 +12,6 @@ script: tox -e $TENV
 matrix:
   exclude:
     - env: TENV=py36
-      python: 2.7
+      # python: 2.7
     - env: TENV=py27
       python: 3.6
