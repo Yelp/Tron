@@ -438,7 +438,7 @@ class RootResource(resource.Resource):
         self.putChild('', self)
 
     def render_GET(self, request):
-        request.redirect(request.prePathURL() + 'web')
+        request.redirect(request.prePathURL() + b'web')
         request.finish()
         return server.NOT_DONE_YET
 
