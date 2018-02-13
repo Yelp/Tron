@@ -61,10 +61,10 @@ class FrozenDict(Mapping):
 # Passes Python2.7's test suite and incorporates all the latest updates.
 
 try:
-    from thread import get_ident as _get_ident
+    from six.moves._thread import get_ident as _get_ident
     assert _get_ident  # pyflakes
 except ImportError:
-    from dummy_thread import get_ident as _get_ident
+    from six.moves._dummy_thread import get_ident as _get_ident
 
 try:
     from _abcoll import KeysView, ValuesView, ItemsView
