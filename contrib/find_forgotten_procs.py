@@ -3,6 +3,7 @@
 Find processes missing from Tron.
 """
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import json
@@ -30,7 +31,7 @@ COMMANDS = (
 
 def _print_event(contents):
     contents.setdefault('time', time.time())
-    print json.dumps(contents)
+    print(json.dumps(contents))
 
 
 def _ssh_atoms(host, user, forward_ssh_agent):

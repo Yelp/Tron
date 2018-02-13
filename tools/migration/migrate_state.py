@@ -15,6 +15,7 @@
  documentation for more details on how to create state_persistence sections.
 """
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import optparse
@@ -95,7 +96,7 @@ def convert_state(opts):
     container = get_current_config(opts.source)
 
     msg = "Migrating state from %s to %s"
-    print msg % (source_manager._impl, dest_manager._impl)
+    print(msg % (source_manager._impl, dest_manager._impl))
 
     job_names, service_names = container.get_job_and_service_names()
     if opts.namespace:
@@ -113,11 +114,11 @@ def convert_state(opts):
 
     for name, job in job_states.iteritems():
         dest_manager.save(runstate.JOB_STATE, name, job)
-    print "Migrated %s jobs." % len(job_states)
+    print("Migrated %s jobs." % len(job_states))
 
     for name, service in service_states.iteritems():
         dest_manager.save(runstate.SERVICE_STATE, name, service)
-    print "Migrated %s services." % len(service_states)
+    print("Migrated %s services." % len(service_states))
 
     dest_manager.cleanup()
 

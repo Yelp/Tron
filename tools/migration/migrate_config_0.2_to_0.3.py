@@ -7,6 +7,7 @@
 
 """
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import optparse
@@ -58,9 +59,12 @@ def warn_node_pools(content):
     if not node_pools:
         return
 
-    print >>sys.stderr, ("\n\nNode Pools should be moved into a node_pools section." +
-                         " The following node pools were found:\n" +
-                         "\n".join(str(n) for n in node_pools))
+    print(
+        "\n\nNode Pools should be moved into a node_pools section." +
+        " The following node pools were found:\n" +
+        "\n".join(str(n) for n in node_pools),
+        file=sys.stderr,
+    )
 
 
 def warn_requires_list(content):
@@ -80,9 +84,12 @@ def warn_requires_list(content):
     if not action_names:
         return
 
-    print >>sys.stderr, ("\n\nAction requires should be a list." +
-                         " The following actions have requires that are not lists:\n" +
-                         "\n".join(action_names))
+    print(
+        "\n\nAction requires should be a list." +
+        " The following actions have requires that are not lists:\n" +
+        "\n".join(action_names),
+        file=sys.stderr,
+    )
 
 
 def create_loader(content):
@@ -131,7 +138,7 @@ def convert(source, dest):
         warn_node_pools(content)
         warn_requires_list(content)
     except yaml.scanner.ScannerError, e:
-        print "Bad content: %s\n%s" % (e, content)
+        print("Bad content: %s\n%s" % (e, content))
 
     with open(dest, 'w') as fh:
         fh.write(content)
@@ -143,7 +150,7 @@ if __name__ == "__main__":
     opt_parser.add_option('-d', dest="dest", help="Destination filename.")
     opts, args = opt_parser.parse_args()
     if not opts.source or not opts.dest:
-        print >>sys.stderr, "Source and destination filenames required."
+        print("Source and destination filenames required.", file=sys.stderr)
         sys.exit(1)
 
     convert(opts.source, opts.dest)

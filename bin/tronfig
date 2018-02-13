@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 from __future__ import with_statement
 
@@ -69,7 +70,7 @@ def upload_config(client, config_name, contents, config_hash, check=False):
         log.error(response['error'])
         return False
 
-    print >>sys.stderr, "Configuration uploaded successfully"
+    print("Configuration uploaded successfully", file=sys.stderr)
     return True
 
 
@@ -154,17 +155,17 @@ if __name__ == '__main__':
             result = validate_dir(options.validate_dir)
 
         if not result:
-            print "OK"
+            print("OK")
             sys.exit(0)
         else:
-            print result
+            print(result)
             sys.exit(1)
 
     client = Client(options.server)
 
     if options.print_config:
         name = args[0]
-        print client.config(name)['config']
+        print(client.config(name)['config'])
     elif options.delete:
         name = args[0]
         delete_config(client, name)
@@ -174,7 +175,7 @@ if __name__ == '__main__':
 
         result = validate(name, content)
         if result:
-            print result
+            print(result)
             sys.exit(1)
 
         if upload_config(
@@ -182,5 +183,5 @@ if __name__ == '__main__':
         ):
             sys.exit(0)
 
-        print "Uploading failed"
+        print("Uploading failed")
         sys.exit(1)

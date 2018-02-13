@@ -9,10 +9,10 @@
     -   id: check-yaml
     -   id: requirements-txt-fixer
     -   id: flake8
-        language_version: python2.7
+        language_version: python3.6
         exclude: ^docs/source/conf.py$
     -   id: check-ast
-        language_version: python2.7
+        language_version: python3.6
 -   repo: https://github.com/asottile/reorder_python_imports.git
     sha: v0.3.5
     hooks:
