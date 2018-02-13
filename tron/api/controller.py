@@ -71,7 +71,7 @@ class ActionRunController(object):
             getattr(self.action_run, command)()
             msg = "Attempting to %s %s"
             return msg % (command, self.action_run)
-        except NotImplementedError, e:
+        except NotImplementedError as e:
             msg = "Failed to %s: %s"
             return msg % (command, e)
 
@@ -227,7 +227,7 @@ class ConfigController(object):
 
         try:
             self.config_manager.validate_with_fragment(name, content)
-        except Exception, e:
+        except Exception as e:
             return "Configuration update will fail: %s" % str(e)
 
         return self.config_manager.check_config(name, content)
@@ -240,7 +240,7 @@ class ConfigController(object):
         try:
             self.config_manager.write_config(name, content)
             self.mcp.reconfigure()
-        except Exception, e:
+        except Exception as e:
             log.error("Configuration update failed: %s" % e)
             return str(e)
 
@@ -255,7 +255,7 @@ class ConfigController(object):
         try:
             self.config_manager.delete_config(name)
             self.mcp.reconfigure()
-        except Exception, e:
+        except Exception as e:
             log.error("Deleting configuration for %s failed: %s" % (name, e))
             return str(e)
 

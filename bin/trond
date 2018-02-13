@@ -135,7 +135,7 @@ def setup_environment(options):
     if not os.path.exists(options.config_path):
         try:
             create_default_config(options.config_path)
-        except OSError, e:
+        except OSError as e:
             msg = "Error creating default configuration at %s: %s"
             raise SystemExit(msg % (options.config_path, e))
 

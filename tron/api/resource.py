@@ -55,7 +55,7 @@ def handle_command(request, api_controller, obj, **kwargs):
     try:
         response = api_controller.handle_command(command, **kwargs)
         return respond(request, {'result': response})
-    except controller.UnknownCommandError, e:
+    except controller.UnknownCommandError as e:
         log.warning("Unknown command %s for %s", command, obj)
         return respond(request, {'error': str(e)}, code=http.NOT_IMPLEMENTED)
 

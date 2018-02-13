@@ -11,6 +11,7 @@ import logging
 import os
 
 import pytz
+from six import string_types
 
 from tron import command_context
 from tron.config import config_utils
@@ -61,7 +62,7 @@ def build_format_string_validator(context_object):
         try:
             value % context
             return value
-        except (KeyError, ValueError), e:
+        except (KeyError, ValueError) as e:
             error_msg = "Unknown context variable %s at %s: %s"
             raise ConfigError(error_msg % (e, config_context.path, value))
 
@@ -210,7 +211,7 @@ class ValidateNode(Validator):
 
     def do_shortcut(self, node):
         """Nodes can be specified with just a hostname string."""
-        if isinstance(node, basestring):
+        if isinstance(node, string_types):
             return schema.ConfigNode(hostname=node, name=node, **self.defaults)
 
     def set_defaults(self, output_dict, config_context):

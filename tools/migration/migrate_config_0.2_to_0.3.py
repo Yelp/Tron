@@ -112,7 +112,7 @@ def build_anchor_mapping(content):
 def update_references(content):
     anchor_mapping = build_anchor_mapping(content)
 
-    def key_length_func((k, v)): return len(k)
+    def key_length_func(kv): return len(kv[0])
     anchors_by_length = sorted(
         anchor_mapping.iteritems(), key=key_length_func, reverse=True,
     )
@@ -137,7 +137,7 @@ def convert(source, dest):
         content = update_references(content)
         warn_node_pools(content)
         warn_requires_list(content)
-    except yaml.scanner.ScannerError, e:
+    except yaml.scanner.ScannerError as e:
         print("Bad content: %s\n%s" % (e, content))
 
     with open(dest, 'w') as fh:

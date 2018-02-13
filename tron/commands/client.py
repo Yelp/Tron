@@ -50,7 +50,7 @@ def load_response_content(http_response):
     content = http_response.read()
     try:
         return Response(None, None, simplejson.loads(content))
-    except ValueError, e:
+    except ValueError as e:
         log.error("Failed to decode response: %s, %s", e, content)
         return Response(DECODE_ERROR, str(e), content)
 
@@ -65,10 +65,10 @@ def request(uri, data=None):
     request = build_url_request(uri, data)
     try:
         response = urllib2.urlopen(request)
-    except urllib2.HTTPError, e:
+    except urllib2.HTTPError as e:
         log.error("Received error response: %s" % e)
         return build_http_error_response(e)
-    except urllib2.URLError, e:
+    except urllib2.URLError as e:
         log.error("Received error response: %s" % e)
         return Response(URL_ERROR, e.reason, None)
 

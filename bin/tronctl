@@ -98,7 +98,7 @@ def control_objects(options, command, object_identifiers):
             tron_id = client.get_object_type_from_identifier(
                 url_index, identifier,
             )
-        except ValueError, e:
+        except ValueError as e:
             raise SystemExit("Error: %s" % e)
 
         yield edit(options, command, tron_id.url)

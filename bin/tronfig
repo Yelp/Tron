@@ -11,6 +11,8 @@ import sys
 import tempfile
 import traceback
 
+from six.moves import input
+
 from tron.commands import cmd_utils
 from tron.commands.client import Client
 from tron.config import config_parse
@@ -78,7 +80,7 @@ def validate(config_name, config_content):
     try:
         config_data = manager.from_string(config_content)
         config_parse.validate_fragment(config_name, config_data)
-    except ConfigError, e:
+    except ConfigError as e:
         return str(e)
 
 
@@ -89,7 +91,7 @@ def delete_config(client, config_name):
         )
         return
 
-    response = raw_input(
+    response = input(
         "This will delete the configuration for the %s namespace. Proceed? (y/n): " % config_name,
     )
     if response[:1].lower() != 'y':
@@ -114,7 +116,7 @@ def validate_dir(path):
 
         config_manager = manager.ConfigManager(path, manifest)
         config_manager.load()
-    except ConfigError, e:
+    except ConfigError as e:
         traceback.print_exc()
         return str(e)
     finally:

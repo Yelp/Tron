@@ -12,7 +12,7 @@ def assert_raises(expected_exception_class, callable_obj, *args, **kwargs):
     """Returns the exception if the callable raises expected_exception_class"""
     try:
         callable_obj(*args, **kwargs)
-    except expected_exception_class, e:
+    except expected_exception_class as e:
         # we got the expected exception
         return e
     assert_not_reached(

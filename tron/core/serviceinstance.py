@@ -48,7 +48,7 @@ def run_action(task, action):
     try:
         task.node.submit_command(action)
         return True
-    except node.Error, e:
+    except node.Error as e:
         log.error("Failed to run %s on %s: %s", action, task.node, e)
         stream = task.buffer_store.open(actioncommand.ActionCommand.STDERR)
         stream.write("Node run failure for %s: %s" % (task.task_name, e))
@@ -451,7 +451,7 @@ class ServiceInstanceCollection(object):
             node = node_selector(self.node_pool)
             return self._build_instance(node, self.next_instance_number())
         log.info("Creating %s instances for %s" % (self.missing, self))
-        return self._build_and_sort(builder, xrange(self.missing))
+        return self._build_and_sort(builder, range(self.missing))
 
     def _build_instance(self, node, number):
         return ServiceInstance.create(self.config, node, number, self.context)
@@ -478,7 +478,7 @@ class ServiceInstanceCollection(object):
     def next_instance_number(self):
         """Return the next available instance number."""
         instance_nums = {inst.instance_number for inst in self.instances}
-        for num in xrange(self.config.count):
+        for num in range(self.config.count):
             if num not in instance_nums:
                 return num
 

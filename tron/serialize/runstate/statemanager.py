@@ -97,7 +97,7 @@ class StateSaveBuffer(object):
     def __init__(self, buffer_size):
         self.buffer_size = buffer_size
         self.buffer = {}
-        self.counter = itertools.cycle(xrange(buffer_size))
+        self.counter = itertools.cycle(range(buffer_size))
 
     def save(self, key, state_data):
         """Save the state_data indexed by key and return True if the buffer
@@ -190,7 +190,7 @@ class PersistentStateManager(object):
         with self._timeit():
             try:
                 self._impl.save(key_state_pairs)
-            except Exception, e:
+            except Exception as e:
                 msg = "Failed to save state for %s: %s" % (keys, e)
                 log.warn(msg)
                 raise PersistenceStoreError(msg)

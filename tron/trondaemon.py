@@ -203,7 +203,7 @@ class TronDaemon(object):
 
         try:
             self.mcp.initial_setup()
-        except Exception, e:
+        except Exception as e:
             msg = "Error in configuration %s: %s"
             log.exception(msg % (config_path, e))
             raise SystemExit("Failed to configure MCP")

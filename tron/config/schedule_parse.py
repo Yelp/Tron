@@ -9,6 +9,8 @@ import datetime
 import re
 from collections import namedtuple
 
+from six import string_types
+
 from tron.config import config_utils
 from tron.config import ConfigError
 from tron.config import schema
@@ -51,7 +53,7 @@ class ScheduleParseError(ConfigError):
 def pad_sequence(seq, size, padding=None):
     """Force a sequence to size. Pad with padding if too short, and ignore
     extra pieces if too long."""
-    return (list(seq) + [padding for _ in xrange(size)])[:size]
+    return (list(seq) + [padding for _ in range(size)])[:size]
 
 
 def schedule_config_from_string(schedule, config_context):
@@ -91,7 +93,7 @@ def schedule_config_from_legacy_dict(schedule, config_context):
 
 
 def valid_schedule(schedule, config_context):
-    if isinstance(schedule, basestring):
+    if isinstance(schedule, string_types):
         return schedule_config_from_string(schedule, config_context)
 
     if 'type' not in schedule:
@@ -306,7 +308,7 @@ def valid_cron_scheduler(config, config_context):
         return ConfigCronScheduler(
             original=config.value, jitter=config.jitter, **crontab_kwargs
         )
-    except ValueError, e:
+    except ValueError as e:
         msg = "Invalid cron scheduler %s: %s"
         raise ConfigError(msg % (config_context.path, e))
 

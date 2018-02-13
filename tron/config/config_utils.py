@@ -7,6 +7,8 @@ import functools
 import itertools
 import re
 
+from six import string_types
+
 from tron.config import ConfigError
 from tron.config.schema import MASTER_NAMESPACE
 from tron.utils import dicts
@@ -78,7 +80,7 @@ valid_int = functools.partial(valid_number, int)
 valid_float = functools.partial(valid_number, float)
 
 valid_identifier = build_type_validator(
-    lambda s: isinstance(s, basestring) and IDENTIFIER_RE.match(s),
+    lambda s: isinstance(s, string_types) and IDENTIFIER_RE.match(s),
     'Identifier at %s is not a valid identifier: %s',
 )
 
@@ -87,7 +89,7 @@ valid_list = build_type_validator(
 )
 
 valid_string = build_type_validator(
-    lambda s: isinstance(s, basestring), 'Value at %s is not a string: %s',
+    lambda s: isinstance(s, string_types), 'Value at %s is not a string: %s',
 )
 
 valid_dict = build_type_validator(
@@ -110,11 +112,9 @@ def valid_time(value, config_context):
     for format in ['%H:%M', '%H:%M:%S']:
         try:
             return datetime.datetime.strptime(value, format)
-        except ValueError, exc:
-            pass
-
-    msg = 'Value at %s is not a valid time: %s'
-    raise ConfigError(msg % (config_context.path, exc))
+        except ValueError as exc:
+            msg = 'Value at %s is not a valid time: %s'
+            raise ConfigError(msg % (config_context.path, exc))
 
 
 # Translations from possible configuration units to the argument to
