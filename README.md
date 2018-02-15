@@ -12,15 +12,30 @@ Install with:
 
     > sudo pip install tron
 
-Or look at the [tutorial](http://packages.python.org/tron/tutorial.html).
+Or look at the [tutorial](https://pythonhosted.org/tron/tutorial.html).
 
-The full documentation is available [on PyPI](http://packages.python.org/tron).
+The full documentation is available [on PyPI](http://pythonhosted.org/tron/).
+
+Versions / Roadmap
+------------------
+
+Tron is changing and under active development.
+
+It is being transformed from an ssh-based execution engine to a [Mesos
+framework](http://mesos.apache.org/documentation/latest/frameworks/).
+
+Tron development is specifically targeting Yelp's needs and not designed to be
+a general solution for other companies.
+
+* <= v0.6.2 - Stable version, recommended for non-Yelp installations.
+* >= v0.7.x - Development version. Many features removed and experimental
+  features added.
 
 Contributing
 ------------
 
-Read [Working on Tron](http://packages.python.org/tron/developing.html) and
+Read [Working on Tron](https://pythonhosted.org/tron/developing.html) and
 start sending pull requests!
 
-Any issues should be either posted and discussed [on
-Github](http://github.com/Yelp/Tron/issues) or emailed to yelplabs@yelp.com.
+Any issues should be posted [on
+Github](http://github.com/Yelp/Tron/issues).

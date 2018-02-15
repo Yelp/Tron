@@ -1331,19 +1331,6 @@ class ConfigContainerTestCase(TestCase):
         assert_equal(node_names, expected)
 
 
-class ValidateServiceTestCase(TestCase):
-
-    def test_cast_restart_interval_deprecation(self):
-        config = {'restart_interval': 50.0}
-        context = config_utils.NullConfigContext
-        casted_config = config_parse.ValidateService().cast(config, context)
-        expected = {
-            'restart_delay': 50.0,
-            'namespace': schema.MASTER_NAMESPACE,
-        }
-        assert_equal(casted_config, expected)
-
-
 class ValidateSSHOptionsTestCase(TestCase):
 
     @setup

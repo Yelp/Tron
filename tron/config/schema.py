@@ -176,7 +176,7 @@ ConfigService = config_object_factory(
 )
 
 
-StatePersistenceTypes = Enum.create('shelve', 'sql', 'mongo', 'yaml')
+StatePersistenceTypes = Enum.create('shelve', 'sql', 'yaml')
 
 
 ActionRunnerTypes = Enum.create('none', 'subprocess')
