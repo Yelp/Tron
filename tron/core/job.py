@@ -65,6 +65,7 @@ class Job(Observable, Observer):
         'action_runner',
         'max_runtime',
         'allow_overlap',
+        'monitoring',
     ]
 
     # TODO: use config object
