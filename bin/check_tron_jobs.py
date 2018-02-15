@@ -66,6 +66,9 @@ def compute_check_result_for_job_runs(client, job, job_content):
     if last_state == "succeeded":
         prefix = "OK"
         status = 0
+    if last_state == "queued" or last_state == "cancelled":
+        prefix = "STUCK"
+        status = 1
     elif last_state == "failed":
         prefix = "CRIT"
         status = 2
@@ -106,7 +109,7 @@ def pretty_print_actions(action_run):
 
 def get_relevant_run(job_runs):
     for run in job_runs['runs']:
-        if run.get('state', 'unknown') in ["failed", "succeeded"]:
+        if run.get('state', 'unknown') in ["failed", "succeeded", "queued", "cancelled"]:
             return run
     return None
 
@@ -122,7 +125,7 @@ def compute_check_result_for_job(client, job):
     kwargs = {
         "name": "check_tron_job.{}".format(job['name']),
         "team": 'noop',
-        "notification_email": "kwa+checktron@yelp.com",
+        "notification_email": job['monitoring'].get('notification_email', 'unspecified'),
         "runbook": job['monitoring'].get('runbook', "unspecified"),
         "source": "tron",
     }
