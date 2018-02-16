@@ -2,6 +2,7 @@
  A mock daemon for testing service handling.
 """
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import sys
@@ -14,7 +15,7 @@ from tron.trondaemon import PIDFile
 
 def do_main_program():
     while True:
-        print "ok"
+        print("ok")
         time.sleep(2)
 
 

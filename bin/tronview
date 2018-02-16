@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import os
@@ -136,13 +137,13 @@ def main():
         output = get_view_output(args[0], options, client)
 
     if not output:
-        print >>sys.stderr, "Unrecognized identifier: %s" % args[0]
+        print("Unrecognized identifier: %s" % args[0], file=sys.stderr)
         sys.exit(ExitCode.fail)
 
     if sys.stdout.isatty() and len(output.split('\n')) > console_height():
         display.view_with_less(output, options.display_color)
     else:
-        print output
+        print(output)
 
 
 if __name__ == '__main__':

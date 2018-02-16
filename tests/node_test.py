@@ -231,7 +231,7 @@ class NodePoolTestCase(TestCase):
 
     @setup
     def setup_nodes(self):
-        self.nodes = [build_node(name='node%s' % i) for i in xrange(5)]
+        self.nodes = [build_node(name='node%s' % i) for i in range(5)]
         self.node_pool = node.NodePool(self.nodes, 'thename')
 
     def test_from_config(self):
@@ -252,13 +252,13 @@ class NodePoolTestCase(TestCase):
 
     def test_next(self):
         # Call next many times
-        for _ in xrange(len(self.nodes) * 2 + 1):
+        for _ in range(len(self.nodes) * 2 + 1):
             assert_in(self.node_pool.next(), self.nodes)
 
     def test_next_round_robin(self):
         node_order = [
             self.node_pool.next_round_robin()
-            for _ in xrange(len(self.nodes) * 2)
+            for _ in range(len(self.nodes) * 2)
         ]
         assert_equal(node_order, self.nodes + self.nodes)
 

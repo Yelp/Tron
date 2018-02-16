@@ -10,6 +10,7 @@ Table of Services with state and instance count
 
 """
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import optparse
@@ -77,12 +78,12 @@ def format_service(service_states):
 
 
 def display_report(state_config, job_states, service_states):
-    print "State Config: %s" % str(state_config)
-    print "Total Jobs: %s" % len(job_states)
-    print "Total Services: %s" % len(service_states)
+    print("State Config: %s" % str(state_config))
+    print("Total Jobs: %s" % len(job_states))
+    print("Total Services: %s" % len(service_states))
 
-    print "\n%s" % format_jobs(job_states)
-    print "\n%s" % format_service(service_states)
+    print("\n%s" % format_jobs(job_states))
+    print("\n%s" % format_service(service_states))
 
 
 def main(config_path, working_dir):

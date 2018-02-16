@@ -244,7 +244,7 @@ class ActionRun(Observer):
         action_command = self.build_action_command()
         try:
             self.node.submit_command(action_command)
-        except node.Error, e:
+        except node.Error as e:
             log.warning("Failed to start %s: %r", self.id, e)
             self.fail(-2)
             return

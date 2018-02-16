@@ -2,6 +2,7 @@
  Daemonize trond.
 """
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import logging
@@ -70,7 +71,7 @@ class PIDFile(object):
             return False
 
     def __enter__(self):
-        print >>self.lock.file, os.getpid()
+        print(os.getpid(), file=self.lock.file)
         self.lock.file.flush()
 
     def _try_unlock(self):
@@ -202,7 +203,7 @@ class TronDaemon(object):
 
         try:
             self.mcp.initial_setup()
-        except Exception, e:
+        except Exception as e:
             msg = "Error in configuration %s: %s"
             log.exception(msg % (config_path, e))
             raise SystemExit("Failed to configure MCP")

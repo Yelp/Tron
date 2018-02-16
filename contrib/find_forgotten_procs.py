@@ -3,6 +3,7 @@
 Find processes missing from Tron.
 """
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import json
@@ -15,6 +16,8 @@ import urllib2
 from fnmatch import fnmatch
 from multiprocessing.pool import ThreadPool
 from tempfile import TemporaryFile
+
+from six import string_types
 
 
 DEFAULT_SIGNAL = 'TERM'
@@ -30,7 +33,7 @@ COMMANDS = (
 
 def _print_event(contents):
     contents.setdefault('time', time.time())
-    print json.dumps(contents)
+    print(json.dumps(contents))
 
 
 def _ssh_atoms(host, user, forward_ssh_agent):
@@ -52,7 +55,7 @@ def _check_output(*popenargs, **kwargs):
 
     if 'stdin' in kwargs:
         curr = kwargs['stdin']
-        if isinstance(curr, basestring):
+        if isinstance(curr, string_types):
             f = TemporaryFile()
             f.write(curr)
             f.seek(0)

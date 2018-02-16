@@ -67,10 +67,11 @@ def build_waiter_func(client_func, url):
     return functools.partial(wait_on_state, client_func, url)
 
 
-def handle_output(cmd, (stdout, stderr), returncode):
+def handle_output(cmd, out_err, returncode):
     """Log process output before it is parsed. Raise exception if exit code
     is nonzero.
     """
+    stdout, stderr = out_err
     cmd = ' '.join(cmd)
     if stdout:
         log.warn("%s STDOUT: %s", cmd, stdout)
@@ -142,7 +143,7 @@ class ClientProxy(object):
         with mock.patch('tron.commands.client.log'):
             try:
                 return func(*args, **kwargs)
-            except (client.RequestError, ValueError), e:
+            except (client.RequestError, ValueError) as e:
                 # ValueError for JSONDecode errors
                 log_contents = self.log_contents()
                 if log_contents:

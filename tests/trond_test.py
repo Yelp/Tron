@@ -410,7 +410,7 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
         action_run_states = [action_run['state'] for action_run in
                              self.client.job_runs(job_run_url)['runs']]
         expected = [actionrun.ActionRun.STATE_CANCELLED.name
-                    for _ in xrange(len(action_run_states))]
+                    for _ in range(len(action_run_states))]
         assert_equal(action_run_states, expected)
 
     def test_trond_restart_job_with_run_history(self):

@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 def from_string(content):
     try:
         return yaml.load(content)
-    except yaml_raw.error.YAMLError, e:
+    except yaml_raw.error.YAMLError as e:
         raise ConfigError("Invalid config format: %s" % str(e))
 
 

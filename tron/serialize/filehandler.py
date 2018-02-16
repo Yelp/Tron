@@ -58,7 +58,7 @@ class FileHandleWrapper(object):
         if self._fh == NullFileHandle:
             try:
                 self._fh = open(self.name, 'a')
-            except IOError, e:
+            except IOError as e:
                 log.error("Failed to open %s: %s", self.name, e)
                 return
 
@@ -179,7 +179,7 @@ class OutputStreamSerializer(object):
             cmd = ('tail', '-n', str(num_lines), path)
             tail_sub = Popen(cmd, stdout=PIPE)
             return list(line.rstrip() for line in tail_sub.stdout)
-        except OSError, e:
+        except OSError as e:
             log.error("Could not tail %s: %s" % (path, e))
             return []
 
@@ -221,7 +221,7 @@ class OutputPath(object):
         """Remove the directory and its contents."""
         try:
             shutil.rmtree(str(self))
-        except OSError, e:
+        except OSError as e:
             log.warn("Failed to delete %s: %s" % (self, e))
 
     def __eq__(self, other):

@@ -98,7 +98,7 @@ class JobRunTestCase(TestCase):
         self.job_run._action_runs = None
         count = 2
         action_runs = [
-            mock.create_autospec(actionrun.ActionRun) for _ in xrange(count)
+            mock.create_autospec(actionrun.ActionRun) for _ in range(count)
         ]
         run_collection = mock.create_autospec(
             actionrun.ActionRunCollection,
@@ -161,7 +161,7 @@ class JobRunTestCase(TestCase):
 
     def test_do_start(self):
         startable_runs = [
-            mock.create_autospec(actionrun.ActionRun) for _ in xrange(3)
+            mock.create_autospec(actionrun.ActionRun) for _ in range(3)
         ]
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
@@ -191,7 +191,7 @@ class JobRunTestCase(TestCase):
 
     def test_start_action_runs(self):
         startable_runs = [
-            mock.create_autospec(actionrun.ActionRun) for _ in xrange(3)
+            mock.create_autospec(actionrun.ActionRun) for _ in range(3)
         ]
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
 
@@ -200,7 +200,7 @@ class JobRunTestCase(TestCase):
 
     def test_start_action_runs_failed(self):
         startable_runs = [
-            mock.create_autospec(actionrun.ActionRun) for _ in xrange(3)
+            mock.create_autospec(actionrun.ActionRun) for _ in range(3)
         ]
         startable_runs[0].start.return_value = False
         self.job_run.action_runs.get_startable_action_runs = lambda: startable_runs
@@ -210,7 +210,7 @@ class JobRunTestCase(TestCase):
 
     def test_start_action_runs_all_failed(self):
         startable_runs = [
-            mock.create_autospec(actionrun.ActionRun) for _ in xrange(2)
+            mock.create_autospec(actionrun.ActionRun) for _ in range(2)
         ]
         for startable_run in startable_runs:
             startable_run.start.return_value = False
@@ -423,7 +423,7 @@ class JobRunCollectionTestCase(TestCase):
             self._mock_run(
                 state=actionrun.ActionRun.STATE_SUCCEEDED, run_num=i,
             )
-            for i in xrange(2, 0, -1)
+            for i in range(2, 0, -1)
         ]
         self.run_collection.runs.extend(self.job_runs)
         self.mock_node = mock.create_autospec(node.Node)
@@ -447,7 +447,7 @@ class JobRunCollectionTestCase(TestCase):
                 end_time="sometime",
                 cleanup_run=None,
                 runs=[],
-            ) for i in xrange(3, -1, -1)
+            ) for i in range(3, -1, -1)
         ]
         action_graph = mock.create_autospec(actiongraph.ActionGraph)
         output_path = mock.create_autospec(filehandler.OutputPath)
@@ -492,7 +492,7 @@ class JobRunCollectionTestCase(TestCase):
         assert job_run.manual
 
     def test_cancel_pending(self):
-        pending_runs = [mock.Mock() for _ in xrange(2)]
+        pending_runs = [mock.Mock() for _ in range(2)]
         autospec_method(
             self.run_collection.get_pending,
             return_value=pending_runs,

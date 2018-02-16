@@ -5,6 +5,7 @@ Part of the command line interface to the tron daemon. Provides the interface
 to controlling jobs and runs.
 """
 from __future__ import absolute_import
+from __future__ import print_function
 from __future__ import unicode_literals
 
 import datetime
@@ -85,7 +86,7 @@ def edit(options, command, uri):
     if response.error:
         return
 
-    print response.content['result']
+    print(response.content['result'])
     return True
 
 
@@ -97,7 +98,7 @@ def control_objects(options, command, object_identifiers):
             tron_id = client.get_object_type_from_identifier(
                 url_index, identifier,
             )
-        except ValueError, e:
+        except ValueError as e:
             raise SystemExit("Error: %s" % e)
 
         yield edit(options, command, tron_id.url)

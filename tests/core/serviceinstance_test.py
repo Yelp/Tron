@@ -489,7 +489,7 @@ class ServiceInstanceCollectionTestCase(TestCase):
     def test_restore_state(self):
         count = 3
         state_data = [
-            dict(instance_number=i * 3, node='node') for i in xrange(count)
+            dict(instance_number=i * 3, node='node') for i in range(count)
         ]
         autospec_method(self.collection._build_instance)
         created = self.collection.restore_state(state_data)
@@ -544,7 +544,7 @@ class ServiceInstanceCollectionTestCase(TestCase):
             inst = create_mock_instance()
             inst.get_state.return_value = state
             return inst
-        self.collection.instances = [build() for _ in xrange(count)]
+        self.collection.instances = [build() for _ in range(count)]
         assert self.collection.all(state)
 
     def test_all_empty(self):
@@ -559,7 +559,7 @@ class ServiceInstanceCollectionTestCase(TestCase):
             inst = create_mock_instance()
             inst.get_state.return_value = state
             return inst
-        self.collection.instances = [build() for _ in xrange(3)]
+        self.collection.instances = [build() for _ in range(3)]
         self.collection.instances.append(create_mock_instance())
         assert not self.collection.all(state)
 

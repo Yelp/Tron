@@ -183,12 +183,12 @@ class DateArithmeticTestCase(testingutils.MockTimeTestCase):
         self._cmp_date('shortdate', self.now)
 
     def test_shortdate_plus(self):
-        for i in xrange(50):
+        for i in range(50):
             dt = self.now + datetime.timedelta(days=i)
             self._cmp_date('shortdate+%s' % i, dt)
 
     def test_shortdate_minus(self):
-        for i in xrange(50):
+        for i in range(50):
             dt = self.now - datetime.timedelta(days=i)
             self._cmp_date('shortdate-%s' % i, dt)
 
@@ -196,12 +196,12 @@ class DateArithmeticTestCase(testingutils.MockTimeTestCase):
         self._cmp_day('day', self.now)
 
     def test_day_minus(self):
-        for i in xrange(50):
+        for i in range(50):
             dt = self.now - datetime.timedelta(days=i)
             self._cmp_day('day-%s' % i, dt)
 
     def test_day_plus(self):
-        for i in xrange(50):
+        for i in range(50):
             dt = self.now + datetime.timedelta(days=i)
             self._cmp_day('day+%s' % i, dt)
 
@@ -209,12 +209,12 @@ class DateArithmeticTestCase(testingutils.MockTimeTestCase):
         self._cmp_month('month', self.now)
 
     def test_month_plus(self):
-        for i in xrange(50):
+        for i in range(50):
             dt = self.now + timeutils.macro_timedelta(self.now, months=i)
             self._cmp_month('month+%s' % i, dt)
 
     def test_month_minus(self):
-        for i in xrange(50):
+        for i in range(50):
             dt = self.now - timeutils.macro_timedelta(self.now, months=i)
             self._cmp_month('month-%s' % i, dt)
 
@@ -222,12 +222,12 @@ class DateArithmeticTestCase(testingutils.MockTimeTestCase):
         self._cmp_year('year', self.now)
 
     def test_year_plus(self):
-        for i in xrange(50):
+        for i in range(50):
             dt = self.now + timeutils.macro_timedelta(self.now, years=i)
             self._cmp_year('year+%s' % i, dt)
 
     def test_year_minus(self):
-        for i in xrange(50):
+        for i in range(50):
             dt = self.now - timeutils.macro_timedelta(self.now, years=i)
             self._cmp_year('year-%s' % i, dt)
 

@@ -64,7 +64,7 @@ class ListAllTestCase(TestCase):
         assert list_all(range(1, 5))
 
     def test_all_false(self):
-        assert not list_all(0 for _ in xrange(7))
+        assert not list_all(0 for _ in range(7))
 
     def test_full_iteration(self):
         seq = iter([1, 0, 3, 0, 5])

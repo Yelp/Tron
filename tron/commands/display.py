@@ -48,8 +48,12 @@ class Color(object):
     @classmethod
     def set(cls, color_name, text):
         if not cls.enabled or not color_name:
-            return unicode(text)
-        return cls.colors[color_name.lower()] + unicode(text) + cls.colors['end']
+            return text
+        return "{}{}{}".format(
+            cls.colors[color_name.lower()],
+            text,
+            cls.colors['end'],
+        )
 
     @classmethod
     def toggle(cls, enable):
@@ -135,7 +139,7 @@ class TableDisplay(object):
         return value.ljust(length)
 
     def format_value(self, field_idx, value):
-        return unicode(value)
+        return value
 
     def output(self):
         out = "\n".join(self.out)
@@ -381,6 +385,9 @@ class DisplayJobs(TableDisplay):
     def format_value(self, field_idx, value):
         if self.fields[field_idx] == 'scheduler':
             value = display_scheduler(value)
+        elif self.fields[field_idx] == 'owner':
+            if isinstance(value, list):
+                value = ', '.join(value)
 
         return super(DisplayJobs, self).format_value(field_idx, value)
 
