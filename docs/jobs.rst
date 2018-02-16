@@ -78,6 +78,15 @@ Optional Fields
     Note: This requires an :ref:`action_runners` to be configured. If
     `action_runner` is none max_runtime does nothing.
 
+**owner** (default **""**)
+    A free-form string for annotating the owner of a job. Example: "ads" or "john".
+
+**notes** (default **""**)
+    A free-form string for putting notes about a job. Example: "Not idempotent!"
+
+**summary** (default **""**)
+    A free-form string for adding a summary of what the job does. Example: "Helps frob the flux capacitor"
+
 
 .. _job_actions:
 

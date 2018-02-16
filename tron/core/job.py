@@ -55,17 +55,20 @@ class Job(Observable, Observer):
 
     # These attributes determine equality between two Job objects
     equality_attributes = [
+        'action_graph',
+        'action_runner',
+        'all_nodes',
+        'allow_overlap',
+        'max_runtime',
+        'monitoring',
         'name',
+        'node_pool',
+        'notes',
+        'output_path',
+        'owner',
         'queueing',
         'scheduler',
-        'node_pool',
-        'all_nodes',
-        'action_graph',
-        'output_path',
-        'action_runner',
-        'max_runtime',
-        'allow_overlap',
-        'monitoring',
+        'summary',
     ]
 
     # TODO: use config object
