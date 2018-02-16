@@ -1,6 +1,0 @@
-127.0.0.1       localhost
-
-192.168.33.40   master.tron-v master
-192.168.33.41   batch-01.tron-v batch-01
-192.168.33.42   batch-02.tron-v batch-02
-192.168.33.43   batch-03.tron-v batch-03
