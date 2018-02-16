@@ -6,7 +6,6 @@ import datetime
 import itertools
 import shutil
 import tempfile
-
 from exceptions import KeyError
 
 from tests.testingutils import Turtle
