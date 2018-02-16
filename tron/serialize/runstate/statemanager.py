@@ -11,7 +11,6 @@ from tron.config import schema
 from tron.core import job
 from tron.core import service
 from tron.serialize import runstate
-from tron.serialize.runstate.mongostore import MongoStateStore
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 from tron.serialize.runstate.sqlalchemystore import SQLAlchemyStateStore
 from tron.serialize.runstate.yamlstore import YamlStateStore
@@ -47,9 +46,6 @@ class PersistenceManagerFactory(object):
 
         if store_type == schema.StatePersistenceTypes.sql:
             store = SQLAlchemyStateStore(name, connection_details)
-
-        if store_type == schema.StatePersistenceTypes.mongo:
-            store = MongoStateStore(name, connection_details)
 
         if store_type == schema.StatePersistenceTypes.yaml:
             store = YamlStateStore(name)

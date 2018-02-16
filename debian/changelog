@@ -1,3 +1,12 @@
+tron (0.7.4.0) trusty; urgency=medium
+
+  * 0.7.4.0 tagged with 'make release'
+  * Remove support for mongodb in state serialization
+  * Remove deprecated restart_interval option for services
+  * Fix unicode bug in root URL
+
+ -- root <root@ed515052fdab>  Tue, 13 Feb 2018 20:57:16 +0000
+
 tron (0.7.3.2) trusty; urgency=medium
 
   * 0.7.3.2 tagged with 'make release'

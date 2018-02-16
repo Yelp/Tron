@@ -6,13 +6,12 @@ in the tronfig which gets deployed.
 # To Run
 
 ```
-$ docker-compose run master
+$ tox -e example-cluster
 ```
 
 # To start Tron (from inside the master container)
 
 ```
 $ cd /work
-$ pip install -e .
-$ ./bin/trond --nodaemon -c /var/lib/tron/tronfig
+$ ./example-cluster/start.sh
 ```
