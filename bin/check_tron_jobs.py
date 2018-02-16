@@ -55,7 +55,6 @@ def compute_check_result_for_job_runs(client, job, job_content):
         url_index, relevant_job_run['id'],
     )
     action_runs = client.job(job_run_id.url, include_action_runs=True)
-
     # A job action is like MASTER.foo.1.step1
     relevant_action = get_relevant_action(action_runs["runs"])
     action_run_id = get_object_type_from_identifier(
@@ -63,12 +62,12 @@ def compute_check_result_for_job_runs(client, job, job_content):
     )
     action_run_details = client.action_runs(action_run_id.url, num_lines=10)
 
-    if last_state == "succeeded":
-        prefix = "OK"
-        status = 0
-    if last_state == "queued" or last_state == "cancelled":
+    if is_job_stuck(job_content):
         prefix = "STUCK"
         status = 1
+    elif last_state == "succeeded":
+        prefix = "OK"
+        status = 0
     elif last_state == "failed":
         prefix = "CRIT"
         status = 2
@@ -109,9 +108,19 @@ def pretty_print_actions(action_run):
 
 def get_relevant_run(job_runs):
     for run in job_runs['runs']:
-        if run.get('state', 'unknown') in ["failed", "succeeded", "queued", "cancelled"]:
+        if run.get('state', 'unknown') in ["failed", "succeeded"]:
             return run
     return None
+
+
+def is_job_stuck(job_runs):
+    for run in job_runs['runs']:
+        run_state = run.get('state', 'unknown')
+        if run_state in ["running"]:
+            return False
+        if run_state in ["queued", "cancelled"]:
+            return True
+    return False
 
 
 def get_relevant_action(action_runs):

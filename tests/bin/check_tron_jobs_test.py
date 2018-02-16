@@ -23,7 +23,22 @@ class CheckJobsTestCase(TestCase):
         print("%s", actual)
         assert_equal(actual["state"], "failed")
 
-    def test_get_relevant_run_picks_the_one_that_queued(self):
+    def test_is_job_no_stuck(self):
+        job_runs = {
+            'status': 'running', 'next_run': None, 'runs': [
+                {
+                    'node': {'username': 'batch', 'hostname': 'localhost', 'name': 'localhost', 'port': 22}, 'raw_command': 'sleep 30m', 'requirements': [], 'run_num': '66', 'exit_status': None, 'stdout': None,
+                    'start_time': None, 'id': 'MASTER.kwatest.66.purposestuck', 'action_name': 'purposestuck', 'state': 'running', 'command': None, 'end_time': None, 'stderr': None, 'duration': '', 'job_name': 'MASTER.kwatest',
+                },
+                {
+                    'node': {'username': 'batch', 'hostname': 'localhost', 'name': 'localhost', 'port': 22}, 'raw_command': 'sleep 30m', 'requirements': [], 'run_num': '65', 'exit_status': None, 'stdout': None, 'start_time': '2018-02-14 17:10:09',
+                    'id': 'MASTER.kwatest.65.purposestuck', 'action_name': 'purposestuck', 'state': 'cancelled', 'command': 'sleep 30m', 'end_time': None, 'stderr': None, 'duration': '0:04:34.912704', 'job_name': 'MASTER.kwatest',
+                },
+            ],
+        }
+        assert_equal(check_tron_jobs.is_job_stuck(job_runs), False)
+
+    def test_is_job_stuck(self):
         job_runs = {
             'status': 'running', 'next_run': None, 'runs': [
                 {
@@ -36,23 +51,4 @@ class CheckJobsTestCase(TestCase):
                 },
             ],
         }
-        actual = check_tron_jobs.get_relevant_run(job_runs)
-        print("%s", actual)
-        assert_equal(actual["state"], "queued")
-
-    def test_get_relevant_run_picks_the_one_that_cancelled(self):
-        job_runs = {
-            'status': 'running', 'next_run': None, 'runs': [
-                {
-                    'node': {'username': 'batch', 'hostname': 'localhost', 'name': 'localhost', 'port': 22}, 'raw_command': 'sleep 30m', 'requirements': [], 'run_num': '66', 'exit_status': None, 'stdout': None,
-                    'start_time': None, 'id': 'MASTER.kwatest.66.purposestuck', 'action_name': 'purposestuck', 'state': 'cancelled', 'command': None, 'end_time': None, 'stderr': None, 'duration': '', 'job_name': 'MASTER.kwatest',
-                },
-                {
-                    'node': {'username': 'batch', 'hostname': 'localhost', 'name': 'localhost', 'port': 22}, 'raw_command': 'sleep 30m', 'requirements': [], 'run_num': '65', 'exit_status': None, 'stdout': None, 'start_time': '2018-02-14 17:10:09',
-                    'id': 'MASTER.kwatest.65.purposestuck', 'action_name': 'purposestuck', 'state': 'running', 'command': 'sleep 30m', 'end_time': None, 'stderr': None, 'duration': '0:04:34.912704', 'job_name': 'MASTER.kwatest',
-                },
-            ],
-        }
-        actual = check_tron_jobs.get_relevant_run(job_runs)
-        print("%s", actual)
-        assert_equal(actual["state"], "cancelled")
+        assert_equal(check_tron_jobs.is_job_stuck(job_runs), True)
