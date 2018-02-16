@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import time
+
 import check_tron_jobs
 from testify import assert_equal
 from testify import TestCase
@@ -27,12 +29,10 @@ class CheckJobsTestCase(TestCase):
         job_runs = {
             'status': 'running', 'next_run': None, 'runs': [
                 {
-                    'node': {'username': 'batch', 'hostname': 'localhost', 'name': 'localhost', 'port': 22}, 'raw_command': 'sleep 30m', 'requirements': [], 'run_num': '66', 'exit_status': None, 'stdout': None,
-                    'start_time': None, 'id': 'MASTER.kwatest.66.purposestuck', 'action_name': 'purposestuck', 'state': 'running', 'command': None, 'end_time': None, 'stderr': None, 'duration': '', 'job_name': 'MASTER.kwatest',
+                    'id': 'MASTER.test.2', 'state': 'scheduled', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() + 600)),
                 },
                 {
-                    'node': {'username': 'batch', 'hostname': 'localhost', 'name': 'localhost', 'port': 22}, 'raw_command': 'sleep 30m', 'requirements': [], 'run_num': '65', 'exit_status': None, 'stdout': None, 'start_time': '2018-02-14 17:10:09',
-                    'id': 'MASTER.kwatest.65.purposestuck', 'action_name': 'purposestuck', 'state': 'cancelled', 'command': 'sleep 30m', 'end_time': None, 'stderr': None, 'duration': '0:04:34.912704', 'job_name': 'MASTER.kwatest',
+                    'id': 'MASTER.test.1', 'state': 'running', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)),
                 },
             ],
         }
@@ -42,12 +42,10 @@ class CheckJobsTestCase(TestCase):
         job_runs = {
             'status': 'running', 'next_run': None, 'runs': [
                 {
-                    'node': {'username': 'batch', 'hostname': 'localhost', 'name': 'localhost', 'port': 22}, 'raw_command': 'sleep 30m', 'requirements': [], 'run_num': '66', 'exit_status': None, 'stdout': None,
-                    'start_time': None, 'id': 'MASTER.kwatest.66.purposestuck', 'action_name': 'purposestuck', 'state': 'queued', 'command': None, 'end_time': None, 'stderr': None, 'duration': '', 'job_name': 'MASTER.kwatest',
+                    'id': 'MASTER.test.1', 'state': 'queued', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)),
                 },
                 {
-                    'node': {'username': 'batch', 'hostname': 'localhost', 'name': 'localhost', 'port': 22}, 'raw_command': 'sleep 30m', 'requirements': [], 'run_num': '65', 'exit_status': None, 'stdout': None, 'start_time': '2018-02-14 17:10:09',
-                    'id': 'MASTER.kwatest.65.purposestuck', 'action_name': 'purposestuck', 'state': 'running', 'command': 'sleep 30m', 'end_time': None, 'stderr': None, 'duration': '0:04:34.912704', 'job_name': 'MASTER.kwatest',
+                    'id': 'MASTER.test.2', 'state': 'running', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 1200)),
                 },
             ],
         }

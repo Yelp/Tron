@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 
 import logging
 import sys
+import time
 
 from pysensu_yelp import send_event
 
@@ -114,12 +115,14 @@ def get_relevant_run(job_runs):
 
 
 def is_job_stuck(job_runs):
+    next_run_time = None
     for run in job_runs['runs']:
-        run_state = run.get('state', 'unknown')
-        if run_state in ["running"]:
-            return False
-        if run_state in ["queued", "cancelled"]:
-            return True
+        if run.get('state', 'unknown') == "running":
+            if next_run_time:
+                difftime = time.strptime(next_run_time, '%Y-%m-%d %H:%M:%S')
+                if time.time() > time.mktime(difftime):
+                    return True
+        next_run_time = run.get('run_time', None)
     return False
 
 
