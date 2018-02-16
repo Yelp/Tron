@@ -687,6 +687,10 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
         self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
         assert self.collection._is_run_blocked(self.run_map['second_name'])
 
+    def test_is_run_blocked_required_actions_missing(self):
+        del self.run_map['action_name']
+        assert not self.collection._is_run_blocked(self.run_map['second_name'])
+
 
 if __name__ == "__main__":
     run()

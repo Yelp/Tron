@@ -427,7 +427,7 @@ class ActionRunCollection(object):
         )
 
     def action_runs_for_actions(self, actions):
-        return (self.run_map[a.name] for a in actions)
+        return (self.run_map[a.name] for a in actions if a.name in self.run_map)
 
     def get_action_runs_with_cleanup(self):
         return self.run_map.itervalues()
