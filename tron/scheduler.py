@@ -42,7 +42,11 @@ def scheduler_from_config(config, time_zone):
         return ConstantScheduler()
 
     if isinstance(config, schedule_parse.ConfigIntervalScheduler):
-        return IntervalScheduler(config.timedelta, config.jitter)
+        return IntervalScheduler(
+            interval=config.timedelta,
+            jitter=config.jitter,
+            time_zone=time_zone,
+        )
 
     if isinstance(config, schedule_parse.ConfigGrocScheduler):
         return GeneralScheduler(
@@ -59,6 +63,7 @@ def scheduler_from_config(config, time_zone):
 
     if isinstance(config, schedule_parse.ConfigCronScheduler):
         return GeneralScheduler(
+            time_zone=time_zone,
             minutes=config.minutes,
             hours=config.hours,
             monthdays=config.monthdays,
@@ -74,6 +79,7 @@ def scheduler_from_config(config, time_zone):
     if isinstance(config, schedule_parse.ConfigDailyScheduler):
         return GeneralScheduler(
             hours=[config.hour],
+            time_zone=time_zone,
             minutes=[config.minute],
             seconds=[config.second],
             weekdays=config.days,
@@ -174,7 +180,7 @@ class GeneralScheduler(object):
     def next_run_time(self, start_time):
         """Find the next time to run."""
         if not start_time:
-            start_time = timeutils.current_time()
+            start_time = timeutils.current_time(tz=self.time_zone)
         elif self.time_zone:
             try:
                 start_time = self.time_zone.localize(start_time, is_dst=None)
@@ -216,12 +222,13 @@ class IntervalScheduler(object):
     """
     schedule_on_complete = False
 
-    def __init__(self, interval, jitter):
+    def __init__(self, interval, jitter, time_zone):
         self.interval = interval
         self.jitter = jitter
+        self.time_zone = time_zone
 
-    def next_run_time(self, last_run_time):
-        last_run_time = last_run_time or timeutils.current_time()
+    def next_run_time(self, last_run_time, time_zone=None):
+        last_run_time = last_run_time or timeutils.current_time(tz=time_zone)
         return last_run_time + self.interval + get_jitter(self.jitter)
 
     def __str__(self):

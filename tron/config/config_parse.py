@@ -328,6 +328,7 @@ class ValidateJob(Validator):
         'allow_overlap':        valid_bool,
         'max_runtime':          config_utils.valid_time_delta,
         'monitoring':           valid_dict,
+        'time_zone':            valid_time_zone,
     }
 
     def cast(self, in_dict, config_context):

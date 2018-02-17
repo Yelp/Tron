@@ -165,9 +165,10 @@ class JobRun(Observable, Observer):
 
     def seconds_until_run_time(self):
         run_time = self.run_time
-        now = timeutils.current_time()
         if run_time.tzinfo:
-            now = run_time.tzinfo.localize(now)
+            now = timeutils.current_time(tz=run_time.tzinfo)
+        else:
+            now = timeutils.current_time()
         return max(0, timeutils.delta_total_seconds(run_time - now))
 
     def start(self):

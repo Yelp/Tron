@@ -127,6 +127,7 @@ ConfigJob = config_object_factory(
         'enabled',              # bool
         'allow_overlap',        # bool
         'max_runtime',          # datetime.Timedelta
+        'time_zone',            # pytz time zone
     ],
 )
 

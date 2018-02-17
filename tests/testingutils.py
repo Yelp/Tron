@@ -51,7 +51,7 @@ class MockTimeTestCase(TestCase):
     def setup_current_time(self):
         assert self.now, "%s must set a now field" % self.__class__
         self.old_current_time = timeutils.current_time
-        timeutils.current_time = lambda: self.now
+        timeutils.current_time = lambda tz=None: self.now
 
     @teardown
     def teardown_current_time(self):

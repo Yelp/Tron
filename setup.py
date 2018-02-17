@@ -29,6 +29,7 @@ setup(
         "Development Status :: 4 - Beta",
     ],
     install_requires=[
+        'humanize >= 0.5.0',
         'Twisted >=10.0.0, <=12.3',
         'PyYAML>=3.0',
         'pyasn1>=0.0.13',
