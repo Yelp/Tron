@@ -41,6 +41,9 @@ class NamedEventState(dict):
     def __hash__(self):
         return hash(self.name)
 
+    def __bool__(self):
+        return bool(self.name)
+
     def __nonzero__(self):
         return bool(self.name)
 
