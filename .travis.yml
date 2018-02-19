@@ -15,3 +15,13 @@ matrix:
       # python: 2.7
     - env: TENV=py27
       python: 3.6
+
+deploy:
+  - provider: pypi
+    user: yelplabs
+    password:
+      secure: "ZUQHl9BldAntIwEz9QPf5rODpGwb/2M+Bjs3scFuGBK8PsDtZ9krek9TsDsLEIw7IjQw9eUc25xcDZ5DsIXLF+aZLGeEkBrKkPzPMBD9ebWH8phtINg5H1tgMbtWmieDI1SGcPXoSQhOpaKG3v0FrbdTb1V5DNVFqawn0rvFJ8U="
+    on:
+      tags: true
+      repo: Yelp/Tron
+      condition: $TENV == "py36"
