@@ -95,7 +95,7 @@ class KnownHostTestCase(TestCase):
     def setup_known_hosts(self):
         self.known_hosts = node.KnownHosts(None)
         self.entry = mock.Mock()
-        self.known_hosts._entries.append(self.entry)
+        self.known_hosts._added.append(self.entry)
 
     def test_get_public_key(self):
         hostname = 'hostname'

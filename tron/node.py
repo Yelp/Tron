@@ -187,7 +187,7 @@ class KnownHosts(KnownHostsFile):
         return cls.fromPath(FilePath(file_path))
 
     def get_public_key(self, hostname):
-        for entry in self._entries:
+        for entry in self.iterentries():
             if entry.matchesHost(hostname):
                 return entry.publicKey
         log.warn("Missing host key for: %s", hostname)
