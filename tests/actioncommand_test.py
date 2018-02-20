@@ -172,8 +172,8 @@ class SubprocessActionRunnerFactoryTestCase(TestCase):
     def test_build_command(self):
         id, command, exec_name = 'id', 'do a thing', 'exec_name'
         actual = self.factory.build_command(id, command, exec_name)
-        expected = '%s/%s "%s/%s" "%s"' % (
-            self.exec_path, exec_name, self.status_path, id, command,
+        expected = '%s/%s "%s/%s" "%s" "%s"' % (
+            self.exec_path, exec_name, self.status_path, id, command, id,
         )
         assert_equal(actual, expected)
 

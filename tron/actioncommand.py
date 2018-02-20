@@ -196,7 +196,7 @@ class SubprocessActionRunnerFactory(object):
     def build_command(self, id, command, exec_name):
         status_path = os.path.join(self.status_path, id)
         runner_path = os.path.join(self.exec_path, exec_name)
-        return '''%s "%s" "%s"''' % (runner_path, status_path, command)
+        return '''%s "%s" "%s" "%s"''' % (runner_path, status_path, command, id)
 
     def build_stop_action_command(self, id, command):
         command = self.build_command(id, command, self.status_exec_name)
