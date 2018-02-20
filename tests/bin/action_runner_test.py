@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import contextlib
 import tempfile
 
 import action_runner
@@ -49,15 +48,9 @@ class RegisterTestCase(TestCase):
 
     @setup_teardown
     def patch_sys(self):
-        with contextlib.nested(
-            mock.patch('action_runner.os.path.isdir', autospec=True),
-            mock.patch('action_runner.os.makedirs', autospec=True),
-            mock.patch('action_runner.StatusFile', autospec=True),
-        ) as (
-            self.mock_isdir,
-            self.mock_makedirs,
-            self.mock_status_file,
-        ):
+        with mock.patch('action_runner.os.path.isdir', autospec=True) as self.mock_isdir, \
+                mock.patch('action_runner.os.makedirs', autospec=True) as self.mock_makedirs, \
+                mock.patch('action_runner.StatusFile', autospec=True) as self.mock_status_file:
             self.output_path = '/bogus/path/does/not/exist'
             self.command = 'command'
             self.proc = mock.Mock()

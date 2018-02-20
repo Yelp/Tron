@@ -6,10 +6,9 @@ from __future__ import unicode_literals
 
 import itertools
 import logging
-import urllib
-import urllib2
-import urlparse
 from collections import namedtuple
+
+from six.moves import urllib
 
 import tron
 from tron.config.schema import MASTER_NAMESPACE
@@ -42,8 +41,8 @@ default_headers = {
 
 def build_url_request(uri, data, headers=None):
     headers = headers or default_headers
-    enc_data = urllib.urlencode(data) if data else None
-    return urllib2.Request(uri, enc_data, headers)
+    enc_data = urllib.parse.urlencode(data) if data else None
+    return urllib.request.Request(uri, enc_data, headers)
 
 
 def load_response_content(http_response):
@@ -64,11 +63,11 @@ def request(uri, data=None):
     log.info("Request to %s with %s", uri, data)
     request = build_url_request(uri, data)
     try:
-        response = urllib2.urlopen(request)
-    except urllib2.HTTPError as e:
+        response = urllib.request.urlopen(request)
+    except urllib.error.HTTPError as e:
         log.error("Received error response: %s" % e)
         return build_http_error_response(e)
-    except urllib2.URLError as e:
+    except urllib.error.URLError as e:
         log.error("Received error response: %s" % e)
         return Response(URL_ERROR, e.reason, None)
 
@@ -79,7 +78,7 @@ def build_get_url(url, data=None):
     if data:
         return '{}?{}'.format(
             url,
-            urllib.urlencode(sorted(data.items())),
+            urllib.parse.urlencode(sorted(data.items())),
         )
     else:
         return url
@@ -173,7 +172,7 @@ class Client(object):
 
     def request(self, url, data=None):
         log.info("Request: %s, %s, %s", self.url_base, url, data)
-        uri = urlparse.urljoin(self.url_base, url)
+        uri = urllib.parse.urljoin(self.url_base, url)
         response = request(uri, data)
         if response.error:
             raise RequestError("%s: %s" % (uri, response))
