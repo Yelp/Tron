@@ -7,6 +7,7 @@ from __future__ import unicode_literals
 import logging
 
 import pkg_resources
+import six
 
 import tron
 from tron.config import schema
@@ -166,7 +167,7 @@ def format_seq(seq):
 
 
 def format_mapping(mapping):
-    seq = ("%-30s: %s" % (k, v) for k, v in sorted(mapping.iteritems()))
+    seq = ("%-30s: %s" % (k, v) for k, v in sorted(six.iteritems(mapping)))
     return format_seq(seq)
 
 

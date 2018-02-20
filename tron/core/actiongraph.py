@@ -34,7 +34,7 @@ class ActionGraph(object):
     def _build_dag(cls, actions, actions_config):
         """Return a directed graph from a dict of actions keyed by name."""
         base = []
-        for a in actions.itervalues():
+        for a in six.itervalues(actions):
             dependencies = cls._get_dependencies(actions_config, a.name)
             if not dependencies:
                 base.append(a)
@@ -67,7 +67,7 @@ class ActionGraph(object):
         return self.action_map[name].dependent_actions
 
     def get_actions(self):
-        return self.action_map.itervalues()
+        return six.itervalues(self.action_map)
 
     def get_action_map(self):
         return self.action_map

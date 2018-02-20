@@ -207,7 +207,9 @@ class ConfigControllerTestCase(TestCase):
 
     def test_strip_header_named(self):
         expected = "\nthing"
-        name, content = 'something', self.controller.TEMPLATE + expected
+        name, content = 'something', "{}{}".format(
+            self.controller.TEMPLATE, expected,
+        )
         assert_equal(self.controller.strip_header(name, content), expected)
 
     def test_strip_header_named_missing(self):

@@ -1,8 +1,10 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import itertools
 import logging
+
+import six
+from six.moves import filter
 
 from tron import event
 from tron import eventloop
@@ -177,8 +179,8 @@ class ServiceCollection(object):
             log.debug("Building new service %s", config.name)
             return Service.from_config(config, context)
 
-        seq = (build(config) for config in service_configs.itervalues())
-        return itertools.ifilter(self.add, seq)
+        seq = (build(config) for config in six.itervalues(service_configs))
+        return filter(self.add, seq)
 
     def add(self, service):
         return self.services.replace(service)
@@ -193,4 +195,4 @@ class ServiceCollection(object):
         return self.services.keys()
 
     def __iter__(self):
-        return self.services.itervalues()
+        return six.itervalues(self.services)

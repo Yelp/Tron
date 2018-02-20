@@ -3,6 +3,8 @@ from __future__ import unicode_literals
 
 import logging
 
+import six
+
 from tron.utils.observer import Observable
 
 
@@ -77,7 +79,7 @@ def traverse(starting_state, match_func):
         if match_func(*transition_state_pair):
             yield transition_state_pair
 
-        for next_pair in cur_state.iteritems():
+        for next_pair in six.iteritems(cur_state):
             if pair_with_name(next_pair) not in visited:
                 state_pairs.append(next_pair)
 

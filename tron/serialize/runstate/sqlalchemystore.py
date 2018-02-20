@@ -1,10 +1,11 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import itertools
 import operator
 from collections import namedtuple
 from contextlib import contextmanager
+
+from six.moves import filter
 
 from tron import yaml
 from tron.config.config_utils import MAX_IDENTIFIER_LENGTH
@@ -114,7 +115,7 @@ class SQLAlchemyStateStore(object):
     def restore(self, keys):
         with self.connect() as conn:
             items = [(key, self._select(conn, key)) for key in keys]
-            return dict(itertools.ifilter(operator.itemgetter(1), items))
+            return dict(filter(operator.itemgetter(1), items))
 
     def _select(self, conn, key):
         cols = [key.table.c.state_data]

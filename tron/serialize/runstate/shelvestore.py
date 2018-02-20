@@ -1,10 +1,13 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import itertools
 import logging
 import operator
 import shelve
+
+from six.moves import filter
+from six.moves import zip
+
 
 log = logging.getLogger(__name__)
 
@@ -46,13 +49,13 @@ class ShelveStateStore(object):
         self.shelve.sync()
 
     def restore(self, keys):
-        items = itertools.izip(
+        items = zip(
             keys, (
                 self.shelve.get(str(key.key))
                 for key in keys
             ),
         )
-        return dict(itertools.ifilter(operator.itemgetter(1), items))
+        return dict(filter(operator.itemgetter(1), items))
 
     def cleanup(self):
         self.shelve.close()

@@ -4,10 +4,10 @@ A command line http client used by tronview, tronctl, and tronfig
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import itertools
 import logging
 from collections import namedtuple
 
+from six.moves import filter
 from six.moves import urllib
 
 import tron
@@ -220,7 +220,7 @@ IdentifierParts = namedtuple('IdentifierParts', 'name full_id length')
 
 
 def first(seq):
-    for item in itertools.ifilter(None, seq):
+    for item in filter(None, seq):
         return item
 
 

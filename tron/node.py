@@ -96,13 +96,13 @@ class NodePoolRepository(object):
         instance._update_node_pools(node_pool_configs)
 
     def _update_nodes(self, node_configs, ssh_options, known_hosts, ssh_config):
-        for config in node_configs.itervalues():
+        for config in six.itervalues(node_configs):
             pub_key = known_hosts.get_public_key(config.hostname)
             node = Node.from_config(config, ssh_options, pub_key, ssh_config)
             self.add_node(node)
 
     def _update_node_pools(self, node_pool_configs):
-        for config in node_pool_configs.itervalues():
+        for config in six.itervalues(node_pool_configs):
             nodes = self._get_nodes_by_name(config.nodes)
             pool = NodePool.from_config(config, nodes)
             self.pools.replace(pool)

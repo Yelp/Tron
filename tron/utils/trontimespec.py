@@ -15,7 +15,8 @@ from __future__ import unicode_literals
 
 import calendar
 import datetime
-import itertools
+
+from six.moves import filter
 
 try:
     import pytz
@@ -180,7 +181,7 @@ class TimeSpecification(object):
 
         def day_filter(day): return first_day <= day <= last_day_of_month
 
-        def sort_days(days): return sorted(itertools.ifilter(day_filter, days))
+        def sort_days(days): return sorted(filter(day_filter, days))
 
         if self.monthdays:
             return sort_days(map_last(day) for day in self.monthdays)
@@ -215,7 +216,7 @@ class TimeSpecification(object):
 
         def hour_filter(hour): return not is_start_day or hour >= start_hour
 
-        for hour in itertools.ifilter(hour_filter, self.hours):
+        for hour in filter(hour_filter, self.hours):
             for minute in self.minutes:
                 for second in self.seconds:
                     candidate = datetime.time(hour, minute, second)
