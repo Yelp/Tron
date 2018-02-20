@@ -10,10 +10,9 @@ import os.path
 import shutil
 import sys
 import time
+from collections import OrderedDict
 from subprocess import PIPE
 from subprocess import Popen
-
-from tron.utils.dicts import OrderedDict
 
 log = logging.getLogger(__name__)
 
