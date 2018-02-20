@@ -4,6 +4,8 @@ from __future__ import unicode_literals
 
 import logging
 
+import six
+
 
 log = logging.getLogger(__name__)
 
@@ -40,7 +42,7 @@ class MappingCollection(dict):
         self.pop(name).disable()
 
     def restore_state(self, state_data):
-        for name, state in state_data.iteritems():
+        for name, state in six.iteritems(state_data):
             self[name].restore_state(state)
         log.info("Loaded state for %d %s", len(state_data), self.item_name)
 

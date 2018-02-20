@@ -187,7 +187,7 @@ class ConfigManagerTestCase(TestCase):
     @mock.patch('tron.config.manager.config_parse.ConfigContainer', autospec=True)
     def test_load(self, mock_config_container, mock_read):
         content_items = self.content.items()
-        self.manifest.get_file_mapping().iteritems.return_value = content_items
+        self.manifest.get_file_mapping().return_value = content_items
         container = self.manager.load()
         self.manifest.get_file_mapping.assert_called_with()
         assert_equal(container, mock_config_container.create.return_value)

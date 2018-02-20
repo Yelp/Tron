@@ -5,6 +5,7 @@ import itertools
 import logging
 import random
 
+import six
 from twisted.conch.client.knownhosts import KnownHostsFile
 from twisted.internet import defer
 from twisted.internet import protocol
@@ -428,7 +429,7 @@ class Node(object):
 
         log.info("Service to %s stopped", self.hostname)
 
-        for run_id, run in self.run_states.iteritems():
+        for run_id, run in six.iteritems(self.run_states):
             if run.state == RUN_STATE_CONNECTING:
                 # Now we can trigger a reconnect and re-start any waiting runs.
                 self._connect_then_run(run)

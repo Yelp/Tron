@@ -6,6 +6,8 @@ import logging
 import operator
 from collections import deque
 
+import six
+
 from tron.utils import timeutils
 
 log = logging.getLogger(__name__)
@@ -64,7 +66,7 @@ class EventStore(object):
 
     def get_events(self, min_level=None):
         min_level = min_level or self.NO_LEVEL
-        event_iterable = self.events.iteritems()
+        event_iterable = six.iteritems(self.events)
         groups = (e for key, e in event_iterable if key >= min_level)
         return itertools.chain.from_iterable(groups)
     __iter__ = get_events

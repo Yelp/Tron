@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import six
 from testify import assert_equal
 from testify import assert_raises
 from testify import setup
@@ -44,7 +45,7 @@ class EventStoreTestCase(TestCase):
 
     def test_append(self):
         assert_equal(len(self.store.events), 3)
-        for level, limit in self.limits.iteritems():
+        for level, limit in six.iteritems(self.limits):
             assert_equal(len(self.store.events[level]), limit)
 
     def test_get_events(self):

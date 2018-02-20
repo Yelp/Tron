@@ -20,6 +20,8 @@ from __future__ import unicode_literals
 
 import optparse
 
+import six
+
 from tron.config import manager
 from tron.config import schema
 from tron.serialize import runstate
@@ -79,7 +81,7 @@ def get_current_config(config_path):
 
 def add_namespaces(state_data):
     return {'%s.%s' % (schema.MASTER_NAMESPACE, name): data
-            for (name, data) in state_data.iteritems()}
+            for (name, data) in six.iteritems(state_data)}
 
 
 def strip_namespace(names):
@@ -112,11 +114,11 @@ def convert_state(opts):
         job_states = add_namespaces(job_states)
         service_states = add_namespaces(service_states)
 
-    for name, job in job_states.iteritems():
+    for name, job in six.iteritems(job_states):
         dest_manager.save(runstate.JOB_STATE, name, job)
     print("Migrated %s jobs." % len(job_states))
 
-    for name, service in service_states.iteritems():
+    for name, service in six.iteritems(service_states):
         dest_manager.save(runstate.SERVICE_STATE, name, service)
     print("Migrated %s services." % len(service_states))
 

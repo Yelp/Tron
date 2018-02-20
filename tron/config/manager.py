@@ -5,6 +5,7 @@ import hashlib
 import logging
 import os
 
+import six
 import yaml as yaml_raw
 
 from tron import yaml
@@ -44,7 +45,7 @@ def read_raw(path):
 
 
 def hash_digest(content):
-    return hashlib.sha1(content).hexdigest()
+    return hashlib.sha1(content.encode('utf-8')).hexdigest()
 
 
 class ManifestFile(object):
@@ -129,7 +130,7 @@ class ConfigManager(object):
         config_parse.ConfigContainer.create(name_mapping)
 
     def get_config_name_mapping(self):
-        seq = self.manifest.get_file_mapping().iteritems()
+        seq = six.iteritems(self.manifest.get_file_mapping())
         return {name: read(filename) for name, filename in seq}
 
     def load(self):

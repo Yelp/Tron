@@ -3,6 +3,8 @@ from __future__ import unicode_literals
 
 import logging
 
+import six
+
 from tron.core import action
 
 log = logging.getLogger(__name__)
@@ -20,7 +22,7 @@ class ActionGraph(object):
         """Create this graph from a job config."""
         actions = {
             name: action.Action.from_config(conf)
-            for name, conf in actions_config.iteritems()
+            for name, conf in six.iteritems(actions_config)
         }
         if cleanup_action_config:
             cleanup_action = action.Action.from_config(cleanup_action_config)

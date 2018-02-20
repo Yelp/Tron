@@ -8,6 +8,8 @@ import itertools
 import logging
 import traceback
 
+import six
+
 from tron import command_context
 from tron import node
 from tron.actioncommand import ActionCommand
@@ -31,7 +33,7 @@ class ActionRunFactory(object):
     @classmethod
     def build_action_run_collection(cls, job_run, action_runner):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
-        action_map = job_run.action_graph.get_action_map().iteritems()
+        action_map = six.iteritems(job_run.action_graph.get_action_map())
         action_run_map = {
             name: cls.build_run_for_action(job_run, action_inst, action_runner)
             for name, action_inst in action_map

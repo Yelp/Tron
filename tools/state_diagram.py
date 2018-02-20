@@ -9,6 +9,8 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import six
+
 from tron.core.actionrun import ActionRun
 from tron.core.service import ServiceInstance
 
@@ -18,7 +20,7 @@ def traverse_graph(starting_state, func=lambda f, a, t: None, seen_states=None):
     seen_states = seen_states or []
     seen_states.append(starting_state)
 
-    for action, state in starting_state.iteritems():
+    for action, state in six.iteritems(starting_state):
         func(starting_state, action, state)
         if state in seen_states:
             continue
@@ -63,6 +65,6 @@ machines = {
 }
 
 if __name__ == "__main__":
-    for name, starting_state in machines.iteritems():
+    for name, starting_state in six.iteritems(machines):
         with open("%s.dot" % name, 'w') as f:
             f.write(dot_from_starting_state(starting_state))

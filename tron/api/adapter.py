@@ -8,7 +8,9 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import functools
-import urllib
+
+import six
+from six.moves.urllib.parse import quote
 
 from tron import actioncommand
 from tron import scheduler
@@ -41,7 +43,7 @@ class ReprAdapter(object):
             field: getattr(self._obj, field) for field in self.fields
         }
         translated = {
-            field: func() for field, func in self.translators.iteritems()
+            field: func() for field, func in six.iteritems(self.translators)
         }
         repr_data.update(translated)
         return repr_data
@@ -295,7 +297,7 @@ class JobAdapter(ReprAdapter):
         return next_run.run_time if next_run else None
 
     def get_url(self):
-        return '/jobs/%s' % urllib.quote(self._obj.get_name())
+        return '/jobs/%s' % quote(self._obj.get_name())
 
     @toggle_flag('include_job_runs')
     def get_runs(self):
@@ -370,7 +372,7 @@ class ServiceAdapter(ReprAdapter):
         self.include_events = include_events
 
     def get_url(self):
-        return "/services/%s" % urllib.quote(self._obj.get_name())
+        return "/services/%s" % quote(self._obj.get_name())
 
     def get_count(self):
         return self._obj.config.count

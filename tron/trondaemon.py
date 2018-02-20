@@ -14,6 +14,7 @@ import signal
 import daemon
 import lockfile
 import pkg_resources
+import six
 from twisted.internet import defer
 from twisted.internet.main import installReactor
 from twisted.python import log as twisted_log
@@ -133,7 +134,7 @@ class NoDaemonContext(object):
         ipdb.set_trace()
 
     def __enter__(self):
-        for signum, handler in self.signal_map.iteritems():
+        for signum, handler in six.iteritems(self.signal_map):
             signal.signal(signum, handler)
 
         os.chdir(self.working_dir)

@@ -179,7 +179,7 @@ class ConfigController(object):
 
     TEMPLATE = pkg_resources.resource_string(tron.__name__, TEMPLATE_FILE)
 
-    HEADER_END = TEMPLATE.split('\n')[-2] + '\n'
+    HEADER_END = "{}\n".format(TEMPLATE.split(b'\n')[-2])
 
     DEFAULT_NAMED_CONFIG = "\njobs:\n\nservices:\n"
 
