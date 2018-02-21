@@ -163,7 +163,7 @@ class NodePool(object):
 
     def next_round_robin(self):
         """Return the next node cycling in a consistent order."""
-        return self.iter.next()
+        return next(self.iter)
 
     def disable(self):
         """Required for MappingCollection.Item interface."""

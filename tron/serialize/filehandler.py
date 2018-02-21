@@ -8,11 +8,12 @@ import logging
 import os
 import os.path
 import shutil
-import sys
 import time
 from collections import OrderedDict
 from subprocess import PIPE
 from subprocess import Popen
+
+import six
 
 log = logging.getLogger(__name__)
 
@@ -111,7 +112,7 @@ class FileHandleManager(object):
     def reset(cls):
         """Empty the cache and reset the instance to it's original state."""
         inst = cls.get_instance()
-        for fh_wrapper in inst.cache.values():
+        for fh_wrapper in list(inst.cache.values()):
             inst.remove(fh_wrapper)
 
     def open(self, filename):
@@ -133,7 +134,7 @@ class FileHandleManager(object):
             return
 
         cur_time = time_func()
-        for name, fh_wrapper in self.cache.items():
+        for name, fh_wrapper in list(self.cache.items()):
             if cur_time - fh_wrapper.last_accessed > self.max_idle_time:
                 fh_wrapper.close()
             else:
@@ -172,7 +173,7 @@ class OutputStreamSerializer(object):
         if not path or not os.path.exists(path):
             return []
         if not num_lines:
-            num_lines = sys.maxint
+            num_lines = six.MAXSIZE
 
         try:
             cmd = ('tail', '-n', str(num_lines), path)

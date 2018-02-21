@@ -107,7 +107,7 @@ class MockNodePool(object):
             self.nodes.append(MockNode())
 
         if self._ndx_cycle:
-            return self.nodes[self._ndx_cycle.next()]
+            return self.nodes[next(self._ndx_cycle)]
         else:
             return self.nodes[0]
 

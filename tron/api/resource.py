@@ -8,6 +8,8 @@ from __future__ import unicode_literals
 import datetime
 import logging
 
+import six
+
 try:
     import simplejson as json
     _silence_pyflakes = [json]
@@ -41,7 +43,7 @@ def respond(request, response_dict, code=http.OK, headers=None):
     """Helper to generate a json response"""
     request.setResponseCode(code)
     request.setHeader(b'content-type', b'text/json')
-    for key, val in (headers or {}).iteritems():
+    for key, val in six.iteritems((headers or {})):
         request.setHeader(str(key), str(val))
     return str(
         json.dumps(response_dict, cls=JSONEncoder) if response_dict else "",
