@@ -87,7 +87,7 @@ def traverse(starting_state, match_func):
 def named_event_by_name(starting_state, name):
     def name_match(t, s): return s.name == name
     try:
-        _, state = traverse(starting_state, name_match).next()
+        _, state = next(traverse(starting_state, name_match))
         return state
     except StopIteration:
         raise ValueError("State %s not found." % name)

@@ -69,7 +69,7 @@ class ListAllTestCase(TestCase):
     def test_full_iteration(self):
         seq = iter([1, 0, 3, 0, 5])
         assert not list_all(seq)
-        assert_raises(StopIteration, seq.next)
+        assert_raises(StopIteration, lambda: next(seq))
 
 
 if __name__ == "__main__":

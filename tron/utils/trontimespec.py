@@ -114,12 +114,21 @@ def validate_spec(source, value_range, type, default=None, allow_last=False):
     if not source:
         return default
 
+    has_last = False
+    source_wo_last = []
     for item in source:
         if allow_last and item == TOKEN_LAST:
+            has_last = True
             continue
         if item not in value_range:
             raise ValueError("%s not in range %s" % (type, value_range))
-    return sorted(set(source))
+        source_wo_last.append(item)
+
+    sorted_source = sorted(source_wo_last)
+    if has_last:
+        sorted_source.append(TOKEN_LAST)
+
+    return sorted_source
 
 
 class TimeSpecification(object):
