@@ -1,6 +1,8 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import shlex
+
 import mock
 from testify import assert_equal
 from testify import setup
@@ -169,13 +171,19 @@ class SubprocessActionRunnerFactoryTestCase(TestCase):
         assert_equal(action_command.stdout, serializer.open.return_value)
         assert_equal(action_command.stderr, serializer.open.return_value)
 
-    def test_build_command(self):
-        id, command, exec_name = 'id', 'do a thing', 'exec_name'
+    def test_build_command_complex_quoting(self):
+        id = 'id'
+        command = '/bin/foo -c "foo" --foo "bar"'
+        exec_name = "action_runner.py"
         actual = self.factory.build_command(id, command, exec_name)
-        expected = '%s/%s "%s/%s" "%s" "%s"' % (
-            self.exec_path, exec_name, self.status_path, id, command, id,
+        assert_equal(
+            shlex.split(actual), [
+                "%s/%s" % (self.exec_path, exec_name),
+                "%s/%s" % (self.status_path, id),
+                command,
+                id,
+            ],
         )
-        assert_equal(actual, expected)
 
     def test_build_stop_action_command(self):
         id, command = 'id', 'do a thing'

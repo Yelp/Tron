@@ -41,10 +41,12 @@ class RegisterTestCase(TestCase):
         with contextlib.nested(
             mock.patch('action_runner.os.path.isdir', autospec=True),
             mock.patch('action_runner.os.access', autospec=True),
+            mock.patch('action_runner.os.makedirs', autospec=True),
             mock.patch('action_runner.StatusFile', autospec=True),
         ) as (
             self.mock_isdir,
             self.mock_access,
+            self.mock_makedirs,
             self.mock_status_file,
         ):
             self.output_path = '/bogus/path/does/not/exist'
@@ -56,18 +58,16 @@ class RegisterTestCase(TestCase):
     def test_get_status_file_dir_does_not_exist(self):
         self.mock_isdir.return_value = False
         self.mock_access.return_value = True
-        with mock.patch('action_runner.os.makedirs') as m:
-            action_runner.get_status_file(self.output_path)
-            m.assert_called_with(self.output_path)
+        action_runner.get_status_file(self.output_path)
+        self.mock_makedirs.assert_called_with(self.output_path)
 
     def test_get_status_file_dir_does_not_exist_create_fails(self):
         self.mock_isdir.return_value = False
         self.mock_access.return_value = True
-        with mock.patch('action_runner.os.makedirs') as m:
-            m.side_effect = OSError
-            self.failUnlessRaises(
-                OSError, action_runner.get_status_file, self.output_path,
-            )
+        self.mock_makedirs.side_effect = OSError
+        self.failUnlessRaises(
+            OSError, action_runner.get_status_file, self.output_path,
+        )
 
     def test_get_status_file_exists_not_writable(self):
         self.mock_isdir.return_value = True
