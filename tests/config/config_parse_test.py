@@ -857,7 +857,7 @@ jobs:
         exception = assert_raises(
             ConfigError, valid_config_from_yaml, test_config,
         )
-        assert_in(expect, exception)
+        assert_in(expect, str(exception))
 
     def test_config_cleanup_name_collision(self):
         test_config = BASE_CONFIG + """
@@ -1027,6 +1027,8 @@ class NodeConfigTestCase(TestCase):
             nodes:
                 - name: node0
                   hostname: node0
+                - name: node1
+                  hostname: node1
 
             node_pools:
                 - name: pool0
@@ -1233,7 +1235,7 @@ class BuildFormatStringValidatorTestCase(TestCase):
             ConfigError,
             self.validator, template, NullConfigContext,
         )
-        assert_in("Unknown context variable u'unknown'", str(exception))
+        assert_in("Unknown context variable", str(exception))
 
     def test_validator_passes_with_context(self):
         template = "The %(one)s thing I %(seven)s is %(mars)s"

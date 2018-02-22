@@ -80,7 +80,7 @@ class NodePoolRepository(object):
     def filter_by_name(self, node_configs, node_pool_configs):
         self.nodes.filter_by_name(node_configs)
         self.pools.filter_by_name(
-            node_configs.keys() + node_pool_configs.keys(),
+            list(node_configs.keys()) + list(node_pool_configs.keys()),
         )
 
     @classmethod

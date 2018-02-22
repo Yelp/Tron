@@ -178,9 +178,11 @@ class ConfigController(object):
 
     TEMPLATE_FILE = 'named_config_template.yaml'
 
-    TEMPLATE = pkg_resources.resource_string(tron.__name__, TEMPLATE_FILE)
+    TEMPLATE = pkg_resources.resource_string(
+        tron.__name__, TEMPLATE_FILE,
+    ).decode('utf-8')
 
-    HEADER_END = "{}\n".format(TEMPLATE.split(b'\n')[-2])
+    HEADER_END = "{}\n".format(TEMPLATE.split('\n')[-2])
 
     DEFAULT_NAMED_CONFIG = "\njobs:\n\nservices:\n"
 
@@ -195,7 +197,8 @@ class ConfigController(object):
             'node_names': format_seq(container.get_node_names()),
             'command_context': format_mapping(command_context),
         }
-        return self.TEMPLATE % context + config_content
+        header_content = self.TEMPLATE % context
+        return header_content + config_content
 
     def strip_header(self, name, content):
         if name == schema.MASTER_NAMESPACE:
