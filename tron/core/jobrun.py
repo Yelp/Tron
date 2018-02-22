@@ -376,7 +376,7 @@ class JobRunCollection(object):
         argument (a JobRun), and return True or False.
         """
         try:
-            return self._get_runs_using(func, reverse).next()
+            return next(self._get_runs_using(func, reverse))
         except StopIteration:
             return None
 
