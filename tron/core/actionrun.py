@@ -267,7 +267,9 @@ class ActionRun(Observer):
         """Create a new ActionCommand instance to send to the node."""
         serializer = filehandler.OutputStreamSerializer(self.output_path)
         self.action_command = self.action_runner.create(
-            self.id, self.command, serializer,
+            id=self.id,
+            command=self.command,
+            serializer=serializer,
         )
         self.watch(self.action_command)
         return self.action_command
