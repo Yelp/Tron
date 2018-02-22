@@ -136,11 +136,9 @@ def get_relevant_action(action_runs):
 def compute_check_result_for_job(client, job):
     kwargs = {
         "name": "check_tron_job.{}".format(job['name']),
-        "team": 'noop',
-        "notification_email": job['monitoring'].get('notification_email', 'unspecified'),
-        "runbook": job['monitoring'].get('runbook', "unspecified"),
         "source": "tron",
     }
+    kwargs.update(job['monitoring'])
     status = job["status"]
     if status == "disabled":
         kwargs["output"] = "OK: {} is disabled and won't be checked.".format(
