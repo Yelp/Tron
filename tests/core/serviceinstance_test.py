@@ -7,11 +7,9 @@ from testify import run
 from testify import setup
 from testify import setup_teardown
 from testify import TestCase
-from testify.assertions import assert_in
 from testify.assertions import assert_not_equal
 
 from tests.assertions import assert_length
-from tests.testingutils import autospec_method
 from tron import actioncommand
 from tron import command_context
 from tron import eventloop
@@ -86,8 +84,8 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
         self.task = serviceinstance.ServiceInstanceMonitorTask(
             "id", mock_node, self.interval, self.filename,
         )
-        autospec_method(self.task.notify)
-        autospec_method(self.task.watch)
+        self.task.notify = mock.create_autospec(self.task.notify)
+        self.task.watch = mock.create_autospec(self.task.watch)
         self.task.hang_check_callback = mock.create_autospec(
             eventloop.UniqueCallback,
         )
@@ -126,7 +124,7 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
             assert_equal(mock_log.warn.call_count, 1)
 
     def test_handle_action_event_failstart(self):
-        autospec_method(self.task.queue)
+        self.task.queue = mock.create_autospec(self.task.queue)
         self.task.handle_action_event(
             self.task.action, ActionCommand.FAILSTART,
         )
@@ -135,20 +133,24 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
         self.task.hang_check_callback.cancel.assert_called_with()
 
     def test_handle_action_event_exit(self):
-        autospec_method(self.task._handle_action_exit)
+        self.task._handle_action_exit = mock.create_autospec(
+            self.task._handle_action_exit,
+        )
         self.task.handle_action_event(self.task.action, ActionCommand.EXITING)
         self.task._handle_action_exit.assert_called_with()
         self.task.hang_check_callback.cancel.assert_called_with()
 
     def test_handle_action_running(self):
-        autospec_method(self.task.queue)
+        self.task.queue = mock.create_autospec(self.task.queue)
         self.task.handle_action_event(self.task.action, ActionCommand.RUNNING)
         assert not self.task.hang_check_callback.cancel.mock_calls
         assert not self.task.queue.mock_calls
 
     def test_handle_action_mismatching_action(self):
-        autospec_method(self.task._handle_action_exit)
         action = mock.create_autospec(actioncommand.ActionCommand)
+        self.task._handle_action_exit = mock.create_autospec(
+            self.task._handle_action_exit,
+        )
         self.task.handle_action_event(action, ActionCommand.EXITING)
         assert not self.task._handle_action_exit.mock_calls
 
@@ -156,7 +158,7 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
         self.task.action = mock.create_autospec(ActionCommand)
         self.task.action.is_failed = False
         self.task.action.is_unknown = False
-        autospec_method(self.task.queue)
+        self.task.queue = mock.create_autospec(self.task.queue)
         self.task._handle_action_exit()
         self.task.notify.assert_called_with(self.task.NOTIFY_UP)
         self.task.queue.assert_called_with()
@@ -164,7 +166,7 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
     def test_handle_action_exit_down(self):
         self.task.action = mock.create_autospec(ActionCommand)
         self.task.action.is_unknown = False
-        autospec_method(self.task.queue)
+        self.task.queue = mock.create_autospec(self.task.queue)
         self.task._handle_action_exit()
         self.task.notify.assert_called_with(self.task.NOTIFY_DOWN)
         assert_equal(self.task.queue.call_count, 0)
@@ -172,7 +174,7 @@ class ServiceInstanceMonitorTaskTestCase(TestCase):
     def test_handle_action_unknown(self):
         self.task.action = mock.create_autospec(ActionCommand)
         self.task.action.is_unknown = True
-        autospec_method(self.task.queue)
+        self.task.queue = mock.create_autospec(self.task.queue)
         self.task._handle_action_exit()
         self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
         assert_equal(self.task.queue.call_count, 1)
@@ -196,8 +198,7 @@ class ServiceInstanceStopTaskTestCase(TestCase):
         self.task = serviceinstance.ServiceInstanceStopTask(
             'id', self.node, self.pid_filename,
         )
-        autospec_method(self.task.watch)
-        autospec_method(self.task.notify)
+        self.task.notify = mock.create_autospec(self.task.notify)
 
     def test_kill_task(self):
         assert self.task.stop()
@@ -234,8 +235,7 @@ class ServiceInstanceStartTaskTestCase(TestCase):
     def setup_task(self):
         self.node = mock.create_autospec(node.Node)
         self.task = serviceinstance.ServiceInstanceStartTask('id', self.node)
-        autospec_method(self.task.notify)
-        autospec_method(self.task.watch)
+        self.task.watch = mock.create_autospec(self.task.watch)
 
     def test_start(self):
         command = 'the command'
@@ -254,6 +254,7 @@ class ServiceInstanceStartTaskTestCase(TestCase):
     def test_start_failed(self):
         command = 'the command'
         self.node.submit_command.side_effect = node.Error
+        self.task.notify = mock.create_autospec(self.task.notify)
         self.task.start(command)
         self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
 
@@ -273,11 +274,13 @@ class ServiceInstanceStartTaskTestCase(TestCase):
 
     def test_handle_action_exit_fail(self):
         action = mock.create_autospec(ActionCommand, is_failed=True)
+        self.task.notify = mock.create_autospec(self.task.notify)
         self.task._handle_action_exit(action)
         self.task.notify.assert_called_with(self.task.NOTIFY_FAILED)
 
     def test_handle_action_exit_success(self):
         action = mock.create_autospec(ActionCommand, is_failed=False)
+        self.task.notify = mock.create_autospec(self.task.notify)
         self.task._handle_action_exit(action)
         self.task.notify.assert_called_with(self.task.NOTIFY_STARTED)
 
@@ -308,6 +311,7 @@ class ServiceInstanceTestCase(TestCase):
         self.instance.watch = mock.create_autospec(self.instance.watch)
 
     def test_create_tasks(self):
+        self.config.monitor_interval = 5
         self.instance.create_tasks()
         assert_equal(
             self.instance.watch.mock_calls, [
@@ -348,7 +352,9 @@ class ServiceInstanceTestCase(TestCase):
     def test_handler_notify_started(self):
         obs = mock.Mock()
         event = serviceinstance.ServiceInstanceStartTask.NOTIFY_STARTED
-        autospec_method(self.instance._handle_start_task_complete)
+        self.instance._handle_start_task_complete = mock.create_autospec(
+            self.instance._handle_start_task_complete,
+        )
         self.instance.handler(obs, event)
         self.instance._handle_start_task_complete.assert_called_with()
 
@@ -459,7 +465,8 @@ class ServiceInstanceCollectionTestCase(TestCase):
 
     def test_create_missing(self):
         self.collection.config.count = 5
-        autospec_method(self.collection._build_instance)
+        self.config.pid_file = "%s"
+        self.config.monitor_interval = 5
         created = self.collection.create_missing()
         assert_length(created, 5)
         assert_equal(set(created), set(self.collection.instances))
@@ -491,24 +498,16 @@ class ServiceInstanceCollectionTestCase(TestCase):
         state_data = [
             dict(instance_number=i * 3, node='node') for i in range(count)
         ]
-        autospec_method(self.collection._build_instance)
+        self.config.pid_file = "%s"
+        self.config.monitor_interval = 5
         created = self.collection.restore_state(state_data)
         assert_length(created, count)
         assert_equal(set(created), set(self.collection.instances))
-        expected = [
-            mock.call(
-                self.node_pool.get_by_hostname.return_value,
-                d['instance_number'],
-            )
-            for d in state_data
-        ]
-        for expected_call in expected:
-            assert_in(expected_call, self.collection._build_instance.mock_calls)
 
     def test_build_and_sort(self):
-        autospec_method(self.collection.sort)
         count = 4
         builder, seq = mock.Mock(), range(count)
+        self.collection.sort = mock.create_autospec(self.collection.sort)
         instances = self.collection._build_and_sort(builder, seq)
         self.collection.sort.assert_called_with()
         assert_equal(builder.mock_calls, [mock.call(i) for i in seq])
