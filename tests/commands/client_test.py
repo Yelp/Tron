@@ -49,8 +49,8 @@ class RequestTestCase(TestCase):
         assert request.has_header('User-agent')
         assert_equal(request.get_method(), 'POST')
         assert_equal(request.get_full_url(), self.url)
-        assert_in('param=is_set', request.get_data())
-        assert_in('other=1', request.get_data())
+        assert_in('param=is_set', request.data)
+        assert_in('other=1', request.data)
 
     def test_load_response_content_success(self):
         content = 'not:valid:json'

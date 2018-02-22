@@ -85,6 +85,7 @@ class DateArithmetic(object):
         based on date format (Ex: seconds for unixtime, days for day).
         """
         dt = dt or current_time()
+
         match = cls.DATE_TYPE_PATTERN.match(date_str)
         if not match:
             return

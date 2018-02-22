@@ -201,4 +201,4 @@ class Filler(object):
         return False
 
     def __bool__(self):
-        return True
+        return False
