@@ -5,7 +5,7 @@ services:
       context: ../
     volumes:
       - ../:/work
-      - ./:/var/lib/tron
+      - ./:/nail/tron
     links:
       - batch1
       - batch2
