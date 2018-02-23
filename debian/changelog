@@ -1,3 +1,10 @@
+tron (0.7.4.1) trusty; urgency=medium
+
+  * 0.7.4.1 tagged with 'make release'
+    Commit: Released 0.7.4.1 via make release
+
+ -- root <root@209774aa33a5>  Fri, 23 Feb 2018 23:35:28 +0000
+
 tron (0.7.4.0) trusty; urgency=medium
 
   * 0.7.4.0 tagged with 'make release'

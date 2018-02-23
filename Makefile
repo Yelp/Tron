@@ -59,7 +59,7 @@ release: docker_trusty docs
 # Docs
 
 docs:
-	tox -e docs
+	tox -r -e docs
 
 man:
 	which $(SPHINXBUILD) >/dev/null && $(SPHINXBUILD) -b man $(ALLSPHINXOPTS) $(DOCS_DIR) $(DOCS_DIR)/man || true
