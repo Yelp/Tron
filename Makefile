@@ -7,7 +7,7 @@ GID:=$(shell id -g)
 
 -usage:
 	@echo "make test - Run tests"
-	@echo "make package_trusty_deb - Generate trusty package"
+	@echo "make itest - Generate trusty package and run integration tests"
 	@echo "make release - Prepare debian info for new release"
 	@echo "make clean - Get rid of scratch and byte files"
 
@@ -19,17 +19,18 @@ docker_%:
 deb_%: clean docker_% coffee_%
 	@echo "Building deb for $*"
 	$(DOCKER_RUN) tron-builder-$* /bin/bash -c ' \
-		dpkg-buildpackage -d &&                   \
-		mv ../*.deb dist/ &&                      \
-		chown -R $(UID):$(GID) dist debian        \
+		dpkg-buildpackage -d &&                    \
+		mv ../*.deb dist/ &&                       \
+		rm -rf debian/tron &&                      \
+		chown -R $(UID):$(GID) dist debian         \
 	'
 
 coffee_%:
 	@echo "Building tronweb"
 	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '      \
-		mkdir -p tronweb/js/cs &&                      \
-		coffee -o tronweb/js/cs/ -c tronweb/coffee/ && \
-		chown -R $(UID):$(GID) tronweb/js/cs/          \
+		mkdir -p tronweb/js/cs &&                       \
+		coffee -o tronweb/js/cs/ -c tronweb/coffee/ &&  \
+		chown -R $(UID):$(GID) tronweb/js/cs/           \
 	'
 
 test:

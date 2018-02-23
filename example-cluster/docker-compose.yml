@@ -3,6 +3,8 @@ services:
   master:
     build:
       context: ../
+      # dockerfile: Dockerfile.trusty
+      dockerfile: Dockerfile.xenial
     volumes:
       - ../:/work
       - ./:/var/lib/tron

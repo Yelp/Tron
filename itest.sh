@@ -5,6 +5,7 @@ set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 dpkg -i /work/dist/*.deb || true
+apt-get update >/dev/null
 apt-get install -qq -y -f curl
 dpkg -i /work/dist/*.deb
 
