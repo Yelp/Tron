@@ -24,38 +24,39 @@ from tron.config import schema
 log = logging.getLogger('tronfig')
 
 
-def parse_options():
-    usage = "usage: %prog [options] [<name>] [-|path]"
-    parser = cmd_utils.build_option_parser(usage)
+def parse_cli():
+    parser = cmd_utils.build_option_parser()
 
-    parser.add_option(
+    parser.add_argument(
         "-p", "--print", action="store_true", dest="print_config",
         help="Print config to stdout, rather than uploading",
     )
-    parser.add_option(
+    parser.add_argument(
         "-C", "--check", action="store_true", dest="check",
         help="Upload and check configuration, don't apply, "
              "useful when you want to verify if tron daemon "
              "will accept your configuration.",
     )
-    parser.add_option(
+    parser.add_argument(
         "-d", "--delete", action="store_true",
         help="Delete the configuration for this namespace",
     )
-    parser.add_option(
+    parser.add_argument(
         "-V", "--validate", action="store_true", dest="validate",
         help="Only validate configuration, don't upload, "
              "useful for verifying config locally. If namespace "
              "is not specified, it will be derived from file "
              "name, if any.",
     )
-    parser.add_option(
+    parser.add_argument(
         "-D", "--validate-dir",
         action="store",
         dest="validate_dir",
         help="Full validation of a folder, don't upload, "
              "same as -V but checks for more edge-cases",
     )
+    parser.add_argument('name')
+    parser.add_argument('source')
 
     return parser.parse_args()
 
@@ -145,16 +146,16 @@ def get_config_input(namespace, source=None):
 
 
 if __name__ == '__main__':
-    options, args = parse_options()
-    cmd_utils.setup_logging(options)
-    cmd_utils.load_config(options)
+    args = parse_cli()
+    cmd_utils.setup_logging(args)
+    cmd_utils.load_config(args)
 
-    if options.validate or options.validate_dir:
-        if options.validate:
-            name, content = get_config_input(*args)
+    if args.validate or args.validate_dir:
+        if args.validate:
+            name, content = get_config_input(args.name, args.source)
             result = validate(name, content)
-        elif options.validate_dir is not None:
-            result = validate_dir(options.validate_dir)
+        elif args.validate_dir is not None:
+            result = validate_dir(args.validate_dir)
 
         if not result:
             print("OK")
@@ -163,17 +164,15 @@ if __name__ == '__main__':
             print(result)
             sys.exit(1)
 
-    client = Client(options.server)
+    client = Client(args.server)
 
-    if options.print_config:
-        name = args[0]
-        print(client.config(name)['config'])
-    elif options.delete:
-        name = args[0]
-        delete_config(client, name)
+    if args.print_config:
+        print(client.config(args.name)['config'])
+    elif args.delete:
+        delete_config(client, args.name)
     else:
-        name, content = get_config_input(*args)
-        config_hash = client.config(name)['hash']
+        content = get_config_input(args.name, args.source)
+        config_hash = client.config(args.name)['hash']
 
         result = validate(name, content)
         if result:
@@ -181,7 +180,7 @@ if __name__ == '__main__':
             sys.exit(1)
 
         if upload_config(
-                client, name, content, config_hash, check=options.check,
+                client, name, content, config_hash, check=args.check,
         ):
             sys.exit(0)
 

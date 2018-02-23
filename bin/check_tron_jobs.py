@@ -3,8 +3,6 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import logging
-import sys
-import time
 
 from pysensu_yelp import send_event
 
@@ -17,19 +15,18 @@ from tron.commands.client import get_object_type_from_identifier
 log = logging.getLogger('check_tron_jobs')
 
 
-def parse_options():
-    usage = ""
-    parser = cmd_utils.build_option_parser(usage)
-    parser.add_option(
+def parse_cli():
+    parser = cmd_utils.build_option_parser()
+    parser.add_argument(
         "--dry-run", action="store_true", default=False,
-        help="Don't actually send alerts out. Defaults to %default",
+        help="Don't actually send alerts out. Defaults to %(default)s",
     )
-    parser.add_option(
+    parser.add_argument(
         "--job", default=None,
         help="Check a particular job. If unset checks all jobs",
     )
-    options, args = parser.parse_args(sys.argv)
-    return options, args[1:]
+    args = parser.parse_args()
+    return args
 
 
 def compute_check_result_for_job_runs(client, job, job_content):
@@ -185,19 +182,19 @@ def check_job_result(job, client, dry_run):
 
 
 def main():
-    options, args = parse_options()
-    cmd_utils.setup_logging(options)
-    cmd_utils.load_config(options)
-    client = Client(options.server)
+    args = parse_cli()
+    cmd_utils.setup_logging(args)
+    cmd_utils.load_config(args)
+    client = Client(args.server)
 
-    if options.job is None:
+    if args.job is None:
         jobs = client.jobs(include_job_runs=True)
         for job in jobs:
-            check_job_result(job=job, client=client, dry_run=options.dry_run)
+            check_job_result(job=job, client=client, dry_run=args.dry_run)
     else:
-        job_url = client.get_url(options.job)
+        job_url = client.get_url(args.job)
         job = client.job_runs(job_url)
-        check_job_result(job=job, client=client, dry_run=options.dry_run)
+        check_job_result(job=job, client=client, dry_run=args.dry_run)
 
 
 if __name__ == '__main__':
