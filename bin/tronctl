@@ -8,9 +8,9 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import argparse
 import datetime
 import logging
-import optparse
 import sys
 import urlparse
 
@@ -38,49 +38,55 @@ COMMAND_HELP = (
 log = logging.getLogger('tronctl')
 
 
-class TronCtlOptionParser(optparse.OptionParser):
-    def format_epilog(self, formatter):
-        # We want to include some extra helpful info
-        result = [formatter.format_heading("Commands")]
-        formatter.indent()
-        for cmd_name, desc in COMMAND_HELP:
-            text = ''.join((cmd_name.ljust(20), desc.ljust(40)))
-            result.append(formatter._format_text(text))
-            result.append('\n')
-
+def command_help_epilog():
+    # We want to include some extra helpful info
+    result = ["commands:", "\n"]
+    for cmd_name, desc in COMMAND_HELP:
+        result.append('  ')
+        text = ''.join((cmd_name.ljust(15), desc.ljust(40)))
+        result.append(text)
         result.append('\n')
-        return ''.join(result)
+    return ''.join(result)
 
 
-def parse_date(option, opt_str, value, parser):
-    parser.values.run_date = datetime.datetime.strptime(value, "%Y-%m-%d")
+def parse_date(date_string):
+    return datetime.datetime.strptime(date_string, "%Y-%m-%d")
 
 
-def parse_options():
-    usage = "usage: %prog [options] <command> [<job | job run | action>]"
+def parse_cli():
     parser = cmd_utils.build_option_parser(
-        usage, parser_class=TronCtlOptionParser,
+        parser_class=argparse.ArgumentParser,
+        epilog=command_help_epilog(),
     )
 
-    parser.add_option(
-        "--run-date", action="callback", callback=parse_date,
-        type="string", dest="run_date",
+    parser.add_argument(
+        "--run-date",
+        type=parse_date, dest="run_date",
         help="For job starts, what should run date be set to",
     )
+    parser.add_argument(
+        'command',
+        help='Tronctl command to run',
+        choices=[row[0] for row in COMMAND_HELP],
+    )
+    parser.add_argument(
+        'ids',
+        nargs='*',
+        # TODO: this right?
+        help='job name, job run id, or action id',
+    )
 
-    options, args = parser.parse_args(sys.argv)
-    if len(args) < 2:
-        parser.error("Missing command")
+    args = parser.parse_args()
 
-    return options, args[1:]
+    return args
 
 
-def edit(options, command, uri):
-    data = {'command': command}
-    if command == "start" and options.run_date:
-        data['run_time'] = str(options.run_date)
+def edit(args, uri):
+    data = {'command': args.command}
+    if args.command == "start" and args.run_date:
+        data['run_time'] = str(args.run_date)
 
-    uri = urlparse.urljoin(options.server, uri)
+    uri = urlparse.urljoin(args.server, uri)
     response = client.request(uri, data=data)
 
     if response.error:
@@ -90,10 +96,10 @@ def edit(options, command, uri):
     return True
 
 
-def control_objects(options, command, object_identifiers):
-    tron_client = client.Client(options.server)
+def control_objects(args):
+    tron_client = client.Client(args.server)
     url_index = tron_client.index()
-    for identifier in object_identifiers:
+    for identifier in args.ids:
         try:
             tron_id = client.get_object_type_from_identifier(
                 url_index, identifier,
@@ -101,23 +107,24 @@ def control_objects(options, command, object_identifiers):
         except ValueError as e:
             raise SystemExit("Error: %s" % e)
 
-        yield edit(options, command, tron_id.url)
+        yield edit(args, tron_id.url)
 
 
 def main():
     """run tronctl"""
-    options, args = parse_options()
-    cmd_utils.setup_logging(options)
-    cmd_utils.load_config(options)
+    args = parse_cli()
+    cmd_utils.setup_logging(args)
+    cmd_utils.load_config(args)
 
-    command = args.pop(0)
-    if not args:
+    print(args)
+    if not args.ids:
+        # TODO: this comment sucks, wtf does that mean? get rid of it
         # our only non-object commands are for enabling and disabling jobs, so
         # just direct those commands here
-        if not edit(options, command, client.get_job_url('')):
+        if not edit(args, client.get_job_url('')):
             sys.exit(ExitCode.fail)
     else:
-        if not all(control_objects(options, command, args)):
+        if not all(control_objects(args)):
             sys.exit(ExitCode.fail)
 
 
