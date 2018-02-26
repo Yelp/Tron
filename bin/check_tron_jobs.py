@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 
 import logging
 import sys
+import time
 
 from pysensu_yelp import send_event
 
@@ -55,7 +56,6 @@ def compute_check_result_for_job_runs(client, job, job_content):
         url_index, relevant_job_run['id'],
     )
     action_runs = client.job(job_run_id.url, include_action_runs=True)
-
     # A job action is like MASTER.foo.1.step1
     relevant_action = get_relevant_action(action_runs["runs"])
     action_run_id = get_object_type_from_identifier(
@@ -63,7 +63,10 @@ def compute_check_result_for_job_runs(client, job, job_content):
     )
     action_run_details = client.action_runs(action_run_id.url, num_lines=10)
 
-    if last_state == "succeeded":
+    if is_job_stuck(job_content):
+        prefix = "STUCK"
+        status = 1
+    elif last_state == "succeeded":
         prefix = "OK"
         status = 0
     elif last_state == "failed":
@@ -111,6 +114,18 @@ def get_relevant_run(job_runs):
     return None
 
 
+def is_job_stuck(job_runs):
+    next_run_time = None
+    for run in job_runs['runs']:
+        if run.get('state', 'unknown') == "running":
+            if next_run_time:
+                difftime = time.strptime(next_run_time, '%Y-%m-%d %H:%M:%S')
+                if time.time() > time.mktime(difftime):
+                    return True
+        next_run_time = run.get('run_time', None)
+    return False
+
+
 def get_relevant_action(action_runs):
     for action in reversed(action_runs):
         if action.get('state', 'unknown') == "failed":
@@ -121,11 +136,9 @@ def get_relevant_action(action_runs):
 def compute_check_result_for_job(client, job):
     kwargs = {
         "name": "check_tron_job.{}".format(job['name']),
-        "team": 'noop',
-        "notification_email": "kwa+checktron@yelp.com",
-        "runbook": job['monitoring'].get('runbook', "unspecified"),
         "source": "tron",
     }
+    kwargs.update(job['monitoring'])
     status = job["status"]
     if status == "disabled":
         kwargs["output"] = "OK: {} is disabled and won't be checked.".format(
