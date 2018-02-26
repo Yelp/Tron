@@ -139,7 +139,7 @@ class TableDisplay(object):
         return value.ljust(length)
 
     def format_value(self, field_idx, value):
-        return value
+        return str(value)
 
     def output(self):
         out = "\n".join(self.out)
@@ -385,9 +385,6 @@ class DisplayJobs(TableDisplay):
     def format_value(self, field_idx, value):
         if self.fields[field_idx] == 'scheduler':
             value = display_scheduler(value)
-        elif self.fields[field_idx] == 'owner':
-            if isinstance(value, list):
-                value = ', '.join(value)
 
         return super(DisplayJobs, self).format_value(field_idx, value)
 
