@@ -64,7 +64,7 @@ def compute_check_result_for_job_runs(client, job, job_content):
     action_run_details = client.action_runs(action_run_id.url, num_lines=10)
 
     if is_job_stuck(job_content):
-        prefix = "STUCK"
+        prefix = "Job still running when next job is scheduled to run (stuck?)"
         status = 1
     elif last_state == "succeeded":
         prefix = "OK"
@@ -116,7 +116,7 @@ def get_relevant_run(job_runs):
 
 def is_job_stuck(job_runs):
     next_run_time = None
-    for run in job_runs['runs']:
+    for run in sorted(job_runs['runs'], key=lambda k: k['run_time'], reverse=True):
         if run.get('state', 'unknown') == "running":
             if next_run_time:
                 difftime = time.strptime(next_run_time, '%Y-%m-%d %H:%M:%S')

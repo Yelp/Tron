@@ -42,10 +42,23 @@ class CheckJobsTestCase(TestCase):
         job_runs = {
             'status': 'running', 'next_run': None, 'runs': [
                 {
-                    'id': 'MASTER.test.1', 'state': 'queued', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)),
+                    'id': 'MASTER.test.2', 'state': 'queued', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)),
                 },
                 {
-                    'id': 'MASTER.test.2', 'state': 'running', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 1200)),
+                    'id': 'MASTER.test.1', 'state': 'running', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 1200)),
+                },
+            ],
+        }
+        assert_equal(check_tron_jobs.is_job_stuck(job_runs), True)
+
+    def test_is_job_stuck_when_runtime_not_sorted(self):
+        job_runs = {
+            'status': 'running', 'next_run': None, 'runs': [
+                {
+                    'id': 'MASTER.test.2', 'state': 'running', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)),
+                },
+                {
+                    'id': 'MASTER.test.1', 'state': 'scheduled', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
                 },
             ],
         }
