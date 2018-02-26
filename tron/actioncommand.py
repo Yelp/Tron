@@ -4,6 +4,8 @@ from __future__ import unicode_literals
 import logging
 import os
 
+from six.moves import shlex_quote
+
 from tron.config import schema
 from tron.serialize import filehandler
 from tron.utils import state
@@ -197,7 +199,12 @@ class SubprocessActionRunnerFactory(object):
     def build_command(self, id, command, exec_name):
         status_path = os.path.join(self.status_path, id)
         runner_path = os.path.join(self.exec_path, exec_name)
-        return '''%s "%s" "%s"''' % (runner_path, status_path, command)
+        return "%s %s %s %s" % (
+            shlex_quote(runner_path),
+            shlex_quote(status_path),
+            shlex_quote(command),
+            shlex_quote(id),
+        )
 
     def build_stop_action_command(self, id, command):
         command = self.build_command(id, command, self.status_exec_name)

@@ -207,7 +207,7 @@ class TronDaemon(object):
         except Exception as e:
             msg = "Error in configuration %s: %s"
             log.exception(msg % (config_path, e))
-            raise SystemExit("Failed to configure MCP")
+            raise
 
     def _run_reactor(self):
         """Run the twisted reactor."""
