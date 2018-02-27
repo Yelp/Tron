@@ -312,10 +312,7 @@ class ValidateJob(Validator):
         'queueing':             True,
         'allow_overlap':        False,
         'max_runtime':          None,
-        'notes':                '',
         'monitoring':           {},
-        'owner':                '',
-        'summary':              '',
     }
 
     validators = {
@@ -330,9 +327,6 @@ class ValidateJob(Validator):
         'enabled':              valid_bool,
         'allow_overlap':        valid_bool,
         'max_runtime':          config_utils.valid_time_delta,
-        'owner':                valid_string,
-        'summary':              valid_string,
-        'notes':                valid_string,
         'monitoring':           valid_dict,
     }
 
@@ -391,9 +385,6 @@ class ValidateService(Validator):
         'count':                1,
         'monitor_retries':      5,
         'restart_delay':        None,
-        'notes':                '',
-        'owner':                '',
-        'summary':              '',
     }
 
     validators = {
@@ -405,9 +396,6 @@ class ValidateService(Validator):
         'count':                valid_int,
         'node':                 valid_node_name,
         'restart_delay':        valid_float,
-        'owner':                valid_string,
-        'summary':              valid_string,
-        'notes':                valid_string,
     }
 
     def cast(self, in_dict, config_context):

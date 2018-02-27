@@ -284,8 +284,6 @@ class DisplayServices(TableDisplay):
 
     detail_labels = [
         ('Service',             'name'),
-        ('Owner',               'owner'),
-        ('Summary',             'summary'),
         ('Enabled',             'enabled'),
         ('State',               'state'),
         ('Max instances',       'count'),
@@ -295,7 +293,6 @@ class DisplayServices(TableDisplay):
         ('Monitor interval',    'monitor_interval'),
         ('Restart delay',       'restart_delay'),
         ('Restart delay',       'restart_delay'),
-        ('Notes',               'notes'),
     ]
 
     colors = {
@@ -365,8 +362,6 @@ class DisplayJobs(TableDisplay):
 
     detail_labels = [
         ('Job',                 'name'),
-        ('Owner',               'owner'),
-        ('Summary',             'summary'),
         ('State',               'status'),
         ('Scheduler',           'scheduler'),
         ('Max runtime',         'max_runtime'),
@@ -374,7 +369,6 @@ class DisplayJobs(TableDisplay):
         ('Run on all nodes',    'all_nodes'),
         ('Allow overlapping',   'allow_overlap'),
         ('Queue overlapping',   'queueing'),
-        ('Notes',               'notes'),
     ]
 
     colors = {
