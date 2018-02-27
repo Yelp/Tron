@@ -71,16 +71,12 @@ class Job(Observable, Observer):
     # TODO: use config object
     def __init__(
         self, name, scheduler, queueing=True, all_nodes=False,
-        owner='', summary='', notes='', monitoring=None,
-        node_pool=None, enabled=True, action_graph=None,
+        monitoring=None, node_pool=None, enabled=True, action_graph=None,
         run_collection=None, parent_context=None, output_path=None,
         allow_overlap=None, action_runner=None, max_runtime=None,
     ):
         super(Job, self).__init__()
         self.name = name
-        self.owner = owner
-        self.summary = summary
-        self.notes = notes
         self.monitoring = monitoring
         self.action_graph = action_graph
         self.scheduler = scheduler
@@ -112,9 +108,6 @@ class Job(Observable, Observer):
 
         return cls(
             name=job_config.name,
-            owner=job_config.owner,
-            summary=job_config.summary,
-            notes=job_config.notes,
             monitoring=job_config.monitoring,
             queueing=job_config.queueing,
             all_nodes=job_config.all_nodes,
@@ -155,15 +148,6 @@ class Job(Observable, Observer):
 
     def get_name(self):
         return self.name
-
-    def get_owner(self):
-        return self.owner
-
-    def get_summary(self):
-        return self.summary
-
-    def get_notes(self):
-        return self.notes
 
     def get_monitoring(self):
         return self.monitoring
