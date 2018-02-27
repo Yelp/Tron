@@ -37,6 +37,7 @@ setup(
         'pysensu-yelp',
         'python-daemon',
         'lockfile>=0.7',
+        'six>=1.11.0',
         'SQLAlchemy>=1.0.15',
         'yelp-clog',
     ],
