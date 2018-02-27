@@ -64,20 +64,25 @@ def compute_check_result_for_job_runs(client, job, job_content):
     action_run_details = client.action_runs(action_run_id.url, num_lines=10)
 
     if is_job_stuck(job_content):
-        prefix = "Job still running when next job is scheduled to run (stuck?)"
+        prefix = "WARN"
+        annotation = "Job still running when next job is scheduled to run (stuck?)"
         status = 1
     elif last_state == "succeeded":
         prefix = "OK"
+        annotation = ""
         status = 0
     elif last_state == "failed":
         prefix = "CRIT"
+        annotation = ""
         status = 2
     else:
         prefix = "UNKNOWN"
+        annotation = ""
         status = 3
 
     kwargs["output"] = (
-        "{}: {}'s last relevant run (run {}) {}.\n\n"
+        "{}: {}\n"
+        "{}'s last relevant run (run {}) {}.\n\n"
         "Here is the last action:"
         "{}\n\n"
         "And the job run view:\n"
@@ -85,7 +90,7 @@ def compute_check_result_for_job_runs(client, job, job_content):
         "Here are is the whole job view for context:\n"
         "{}"
     ).format(
-        prefix, job['name'], relevant_job_run['id'], last_state,
+        prefix, annotation, job['name'], relevant_job_run['id'], last_state,
         pretty_print_actions(action_run_details),
         pretty_print_job_run(relevant_job_run),
         pretty_print_job(job_content),
