@@ -1,5 +1,12 @@
 # Change Log
 
+## [v0.7.4.2](https://github.com/Yelp/Tron/tree/v0.7.4.2) (2018-02-27)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.4.1...v0.7.4.2)
+
+**Merged pull requests:**
+
+- Fix tronview bug and include six in install\_requires [\#366](https://github.com/Yelp/Tron/pull/366) ([qui](https://github.com/qui))
+
 ## [v0.7.4.1](https://github.com/Yelp/Tron/tree/v0.7.4.1) (2018-02-23)
 [Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.4.0...v0.7.4.1)
 
