@@ -1,3 +1,10 @@
+tron (0.7.4.2) trusty; urgency=medium
+
+  * 0.7.4.2 tagged with 'make release'
+    Commit: added xenial building support
+
+ -- root <root@cd05b3203eb4>  Tue, 27 Feb 2018 01:23:33 +0000
+
 tron (0.7.4.1) trusty; urgency=medium
 
   * 0.7.4.1 tagged with 'make release'
