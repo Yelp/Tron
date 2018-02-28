@@ -1,7 +1,7 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-__version_info__ = (0, 7, 4, 1)
+__version_info__ = (0, 7, 5, 0)
 __version__ = ".".join("%s" % v for v in __version_info__)
 __author__ = 'Yelp <yelplabs@yelp.com>'
 __credits__ = [

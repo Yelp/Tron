@@ -8,9 +8,9 @@ import re
 import time
 
 
-def current_time():
+def current_time(tz=None):
     """Return the current datetime."""
-    return datetime.datetime.now()
+    return datetime.datetime.now(tz=tz)
 
 
 def current_timestamp():

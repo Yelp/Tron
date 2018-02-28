@@ -39,7 +39,8 @@ def build_mock_job():
 
 class JobRunTestCase(TestCase):
 
-    now = datetime.datetime(2012, 3, 14, 15, 9, 20)
+    now = datetime.datetime(2012, 3, 14, 15, 9, 20, tzinfo=None)
+    now_with_tz = datetime.datetime(2012, 3, 14, 15, 9, 20, tzinfo=pytz.utc)
 
     @setup
     def setup_jobrun(self):
@@ -134,7 +135,7 @@ class JobRunTestCase(TestCase):
 
     @mock.patch('tron.core.jobrun.timeutils.current_time', autospec=True)
     def test_seconds_until_run_time_with_tz(self, mock_current_time):
-        mock_current_time.return_value = self.now
+        mock_current_time.return_value = self.now_with_tz
         self.job_run.run_time = self.run_time.replace(tzinfo=pytz.utc)
         seconds = self.job_run.seconds_until_run_time()
         assert_equal(seconds, 6)

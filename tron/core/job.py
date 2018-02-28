@@ -1,8 +1,10 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import datetime
 import logging
 
+import humanize
 import six
 from six.moves import filter
 
@@ -68,21 +70,19 @@ class Job(Observable, Observer):
         'max_runtime',
         'allow_overlap',
         'monitoring',
+        'time_zone',
     ]
 
     # TODO: use config object
     def __init__(
         self, name, scheduler, queueing=True, all_nodes=False,
-        owner='', summary='', notes='', monitoring=None,
-        node_pool=None, enabled=True, action_graph=None,
+        monitoring=None, node_pool=None, enabled=True, action_graph=None,
         run_collection=None, parent_context=None, output_path=None,
         allow_overlap=None, action_runner=None, max_runtime=None,
+        time_zone=None,
     ):
         super(Job, self).__init__()
         self.name = name
-        self.owner = owner
-        self.summary = summary
-        self.notes = notes
         self.monitoring = monitoring
         self.action_graph = action_graph
         self.scheduler = scheduler
@@ -94,6 +94,7 @@ class Job(Observable, Observer):
         self.allow_overlap = allow_overlap
         self.action_runner = action_runner
         self.max_runtime = max_runtime
+        self.time_zone = time_zone
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(name)
         self.event = event.get_recorder(self.name)
@@ -114,10 +115,8 @@ class Job(Observable, Observer):
 
         return cls(
             name=job_config.name,
-            owner=job_config.owner,
-            summary=job_config.summary,
-            notes=job_config.notes,
             monitoring=job_config.monitoring,
+            time_zone=job_config.time_zone,
             queueing=job_config.queueing,
             all_nodes=job_config.all_nodes,
             node_pool=node_repo.get_by_name(job_config.node),
@@ -158,17 +157,11 @@ class Job(Observable, Observer):
     def get_name(self):
         return self.name
 
-    def get_owner(self):
-        return self.owner
-
-    def get_summary(self):
-        return self.summary
-
-    def get_notes(self):
-        return self.notes
-
     def get_monitoring(self):
         return self.monitoring
+
+    def get_time_zone(self):
+        return self.time_zone
 
     def get_runs(self):
         return self.runs
@@ -302,8 +295,12 @@ class JobScheduler(Observer):
 
     def _set_callback(self, job_run):
         """Set a callback for JobRun to fire at the appropriate time."""
-        log.info("Scheduling next Jobrun for %s", self.job.name)
         seconds = job_run.seconds_until_run_time()
+        human_time = humanize.naturaltime(datetime.timedelta(seconds=seconds))
+        log.info(
+            "Scheduling next Jobrun for %s about %s from now (%d seconds)",
+            self.job.name, human_time, seconds,
+        )
         eventloop.call_later(seconds, self.run_job, job_run)
 
     # TODO: new class for this method
@@ -425,7 +422,8 @@ class JobSchedulerFactory(object):
     def build(self, job_config):
         log.debug("Building new job %s", job_config.name)
         output_path = filehandler.OutputPath(self.output_stream_dir)
-        scheduler = scheduler_from_config(job_config.schedule, self.time_zone)
+        time_zone = job_config.time_zone or self.time_zone
+        scheduler = scheduler_from_config(job_config.schedule, time_zone)
         job = Job.from_config(
             job_config, scheduler,
             self.context, output_path, self.action_runner,

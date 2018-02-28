@@ -106,6 +106,7 @@ jobs:
         node: node0
         schedule: "daily 00:30:00 MWF"
         allow_overlap: True
+        time_zone: "Pacific/Auckland"
         actions:
             -
                 name: "action1_0"
@@ -204,9 +205,6 @@ services:
                     name='MASTER.test_job0',
                     namespace='MASTER',
                     node='node0',
-                    owner='',
-                    summary='',
-                    notes='',
                     monitoring={},
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20), jitter=None,
@@ -230,15 +228,13 @@ services:
                     enabled=True,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
                 'MASTER.test_job1': schema.ConfigJob(
                     name='MASTER.test_job1',
                     namespace='MASTER',
                     node='node0',
                     enabled=True,
-                    owner='',
-                    summary='',
-                    notes='',
                     monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days={1, 3, 5},
@@ -266,15 +262,13 @@ services:
                     cleanup_action=None,
                     max_runtime=None,
                     allow_overlap=True,
+                    time_zone=pytz.timezone("Pacific/Auckland"),
                 ),
                 'MASTER.test_job2': schema.ConfigJob(
                     name='MASTER.test_job2',
                     namespace='MASTER',
                     node='node1',
                     enabled=True,
-                    owner='',
-                    summary='',
-                    notes='',
                     monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
@@ -296,6 +290,7 @@ services:
                     cleanup_action=None,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
                 'MASTER.test_job3': schema.ConfigJob(
                     name='MASTER.test_job3',
@@ -303,9 +298,6 @@ services:
                     node='node1',
                     schedule=ConfigConstantScheduler(),
                     enabled=True,
-                    owner='',
-                    summary='',
-                    notes='',
                     monitoring={},
                     actions=FrozenDict({
                         'action3_1': schema.ConfigAction(
@@ -333,14 +325,12 @@ services:
                     cleanup_action=None,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
                 'MASTER.test_job4': schema.ConfigJob(
                     name='MASTER.test_job4',
                     namespace='MASTER',
                     node='nodePool',
-                    owner='',
-                    summary='',
-                    notes='',
                     monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
@@ -363,6 +353,7 @@ services:
                     enabled=False,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
             }),
             services=FrozenDict(
@@ -376,9 +367,6 @@ services:
                         monitor_interval=20,
                         monitor_retries=5,
                         restart_delay=None,
-                        owner='',
-                        summary='',
-                        notes='',
                         count=2,
                     ),
                 },
@@ -456,13 +444,6 @@ jobs:
         name: "test_job2"
         node: node1
         schedule: "daily 16:30:00"
-        owner: "bob@example.com"
-        summary: "Flobbles the jibber service into submission"
-        notes: |
-          This is a multiple line notes section for
-          giving information about this job.
-
-          Second sentence.
         monitoring: {}
         actions:
             -
@@ -512,13 +493,6 @@ services:
         count: 20
         pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
         monitor_interval: 40
-        owner: "bob@example.com"
-        summary: "Jibber service, handles dequeueing submitted flobbles"
-        notes: |
-          This is a multiple line notes section for
-          giving information about this job.
-
-          Second sentence.
 """
 
     def test_attributes(self):
@@ -528,9 +502,6 @@ services:
                     name='test_job0',
                     namespace='test_namespace',
                     node='node0',
-                    owner='',
-                    summary='',
-                    notes='',
                     monitoring={},
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20),
@@ -555,15 +526,13 @@ services:
                     enabled=True,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
                 'test_job1': schema.ConfigJob(
                     name='test_job1',
                     namespace='test_namespace',
                     node='node0',
                     enabled=True,
-                    owner='',
-                    summary='',
-                    notes='',
                     monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days={1, 3, 5},
@@ -593,15 +562,13 @@ services:
                     cleanup_action=None,
                     max_runtime=None,
                     allow_overlap=True,
+                    time_zone=None,
                 ),
                 'test_job2': schema.ConfigJob(
                     name='test_job2',
                     namespace='test_namespace',
                     node='node1',
                     enabled=True,
-                    owner='bob@example.com',
-                    summary='Flobbles the jibber service into submission',
-                    notes='This is a multiple line notes section for\ngiving information about this job.\n\nSecond sentence.\n',
                     monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
@@ -625,6 +592,7 @@ services:
                     cleanup_action=None,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
                 'test_job3': schema.ConfigJob(
                     name='test_job3',
@@ -632,9 +600,6 @@ services:
                     node='node1',
                     schedule=ConfigConstantScheduler(),
                     enabled=True,
-                    owner='',
-                    summary='',
-                    notes='',
                     monitoring={},
                     actions=FrozenDict({
                         'action3_1': schema.ConfigAction(
@@ -662,14 +627,12 @@ services:
                     cleanup_action=None,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
                 'test_job4': schema.ConfigJob(
                     name='test_job4',
                     namespace='test_namespace',
                     node='NodePool',
-                    owner='',
-                    summary='',
-                    notes='',
                     monitoring={},
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
@@ -692,6 +655,7 @@ services:
                     enabled=False,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
             }),
             services=FrozenDict(
@@ -700,9 +664,6 @@ services:
                         namespace='test_namespace',
                         name='service0',
                         node='NodePool',
-                        owner='',
-                        summary='',
-                        notes='',
                         pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                         command='service_command0',
                         monitor_interval=20,
@@ -714,9 +675,6 @@ services:
                         namespace='test_namespace',
                         name='service1',
                         node='NodePool',
-                        owner='bob@example.com',
-                        summary='Jibber service, handles dequeueing submitted flobbles',
-                        notes='This is a multiple line notes section for\ngiving information about this job.\n\nSecond sentence.\n',
                         pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                         command='service_command1',
                         monitor_interval=40.0,
@@ -1114,9 +1072,6 @@ class ValidateJobsAndServicesTestCase(TestCase):
                 name='MASTER.test_job0',
                 namespace='MASTER',
                 node='node0',
-                owner='',
-                summary='',
-                notes='',
                 monitoring={},
                 schedule=ConfigIntervalScheduler(
                     timedelta=datetime.timedelta(0, 20), jitter=None,
@@ -1139,6 +1094,7 @@ class ValidateJobsAndServicesTestCase(TestCase):
                 enabled=True,
                 allow_overlap=False,
                 max_runtime=None,
+                time_zone=None,
             ),
         }
 
@@ -1148,9 +1104,6 @@ class ValidateJobsAndServicesTestCase(TestCase):
                 name='MASTER.test_service0',
                 namespace='MASTER',
                 node='node0',
-                owner='',
-                summary='',
-                notes='',
                 pid_file='/var/run/%(name)s-%(instance_number)s.pid',
                 command='service_command0',
                 monitor_interval=20,

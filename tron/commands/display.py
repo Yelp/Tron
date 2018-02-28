@@ -139,7 +139,7 @@ class TableDisplay(object):
         return value.ljust(length)
 
     def format_value(self, field_idx, value):
-        return value
+        return str(value)
 
     def output(self):
         out = "\n".join(self.out)
@@ -284,8 +284,6 @@ class DisplayServices(TableDisplay):
 
     detail_labels = [
         ('Service',             'name'),
-        ('Owner',               'owner'),
-        ('Summary',             'summary'),
         ('Enabled',             'enabled'),
         ('State',               'state'),
         ('Max instances',       'count'),
@@ -295,7 +293,6 @@ class DisplayServices(TableDisplay):
         ('Monitor interval',    'monitor_interval'),
         ('Restart delay',       'restart_delay'),
         ('Restart delay',       'restart_delay'),
-        ('Notes',               'notes'),
     ]
 
     colors = {
@@ -365,8 +362,6 @@ class DisplayJobs(TableDisplay):
 
     detail_labels = [
         ('Job',                 'name'),
-        ('Owner',               'owner'),
-        ('Summary',             'summary'),
         ('State',               'status'),
         ('Scheduler',           'scheduler'),
         ('Max runtime',         'max_runtime'),
@@ -374,7 +369,6 @@ class DisplayJobs(TableDisplay):
         ('Run on all nodes',    'all_nodes'),
         ('Allow overlapping',   'allow_overlap'),
         ('Queue overlapping',   'queueing'),
-        ('Notes',               'notes'),
     ]
 
     colors = {
@@ -385,9 +379,6 @@ class DisplayJobs(TableDisplay):
     def format_value(self, field_idx, value):
         if self.fields[field_idx] == 'scheduler':
             value = display_scheduler(value)
-        elif self.fields[field_idx] == 'owner':
-            if isinstance(value, list):
-                value = ', '.join(value)
 
         return super(DisplayJobs, self).format_value(field_idx, value)
 

@@ -2,4 +2,5 @@
 
 pip install -e .
 eval $(ssh-agent)
-USER=root trond -l logging.conf --nodaemon --working-dir=/nail/tron -v
+export USER=root
+exec trond -l logging.conf --nodaemon --working-dir=/nail/tron -v

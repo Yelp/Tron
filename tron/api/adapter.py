@@ -245,9 +245,6 @@ class JobAdapter(ReprAdapter):
         'runs',
         'max_runtime',
         'action_graph',
-        'owner',
-        'summary',
-        'notes',
         'monitoring',
     ]
 
@@ -266,15 +263,6 @@ class JobAdapter(ReprAdapter):
 
     def get_name(self):
         return self._obj.get_name()
-
-    def get_owner(self):
-        return self._obj.get_owner()
-
-    def get_summary(self):
-        return self._obj.get_summary()
-
-    def get_notes(self):
-        return self._obj.get_notes()
 
     def get_monitoring(self):
         return self._obj.get_monitoring()
@@ -361,9 +349,6 @@ class ServiceAdapter(ReprAdapter):
         'live_count',
         'monitor_interval',
         'restart_delay',
-        'owner',
-        'summary',
-        'notes',
         'events',
     ]
 
@@ -376,15 +361,6 @@ class ServiceAdapter(ReprAdapter):
 
     def get_count(self):
         return self._obj.config.count
-
-    def get_owner(self):
-        return self._obj.config.owner
-
-    def get_summary(self):
-        return self._obj.config.summary
-
-    def get_notes(self):
-        return self._obj.config.notes
 
     def get_state(self):
         return self._obj.get_state()
