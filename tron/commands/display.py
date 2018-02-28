@@ -276,9 +276,9 @@ def format_action_run_details(content, stdout=True, stderr=True):
 
 class DisplayServices(TableDisplay):
 
-    columns = ['Name',  'State',    'Count',      'Owner']
-    fields = ['name',  'state',    'live_count', 'owner']
-    widths = [50,      12,          7,           30]
+    columns = ['Name',  'State',    'Count']
+    fields = ['name',  'state',    'live_count']
+    widths = [50,      12,          7]
     title = 'services'
     resize_fields = ['name']
 
@@ -354,9 +354,9 @@ class DisplayJobRuns(TableDisplay):
 
 class DisplayJobs(TableDisplay):
 
-    columns = ['Name',  'State',    'Scheduler',    'Last Success',  'Owner']
-    fields = ['name',  'status',   'scheduler',    'last_success',  'owner']
-    widths = [50,       10,         20,             22,             30]
+    columns = ['Name',  'State',    'Scheduler',    'Last Success']
+    fields = ['name',  'status',   'scheduler',    'last_success']
+    widths = [50,       10,         20,             22]
     title = 'jobs'
     resize_fields = ['name']
 
