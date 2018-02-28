@@ -106,6 +106,7 @@ jobs:
         node: node0
         schedule: "daily 00:30:00 MWF"
         allow_overlap: True
+        time_zone: "Pacific/Auckland"
         actions:
             -
                 name: "action1_0"
@@ -227,6 +228,7 @@ services:
                     enabled=True,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
                 'MASTER.test_job1': schema.ConfigJob(
                     name='MASTER.test_job1',
@@ -260,6 +262,7 @@ services:
                     cleanup_action=None,
                     max_runtime=None,
                     allow_overlap=True,
+                    time_zone=pytz.timezone("Pacific/Auckland"),
                 ),
                 'MASTER.test_job2': schema.ConfigJob(
                     name='MASTER.test_job2',
@@ -287,6 +290,7 @@ services:
                     cleanup_action=None,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
                 'MASTER.test_job3': schema.ConfigJob(
                     name='MASTER.test_job3',
@@ -321,6 +325,7 @@ services:
                     cleanup_action=None,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
                 'MASTER.test_job4': schema.ConfigJob(
                     name='MASTER.test_job4',
@@ -348,6 +353,7 @@ services:
                     enabled=False,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
             }),
             services=FrozenDict(
@@ -520,6 +526,7 @@ services:
                     enabled=True,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
                 'test_job1': schema.ConfigJob(
                     name='test_job1',
@@ -555,6 +562,7 @@ services:
                     cleanup_action=None,
                     max_runtime=None,
                     allow_overlap=True,
+                    time_zone=None,
                 ),
                 'test_job2': schema.ConfigJob(
                     name='test_job2',
@@ -584,6 +592,7 @@ services:
                     cleanup_action=None,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
                 'test_job3': schema.ConfigJob(
                     name='test_job3',
@@ -618,6 +627,7 @@ services:
                     cleanup_action=None,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
                 'test_job4': schema.ConfigJob(
                     name='test_job4',
@@ -645,6 +655,7 @@ services:
                     enabled=False,
                     max_runtime=None,
                     allow_overlap=False,
+                    time_zone=None,
                 ),
             }),
             services=FrozenDict(
@@ -1081,6 +1092,7 @@ class ValidateJobsAndServicesTestCase(TestCase):
                 enabled=True,
                 allow_overlap=False,
                 max_runtime=None,
+                time_zone=None,
             ),
         }
 

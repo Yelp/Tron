@@ -430,16 +430,26 @@ class JobSchedulerScheduleTestCase(TestCase):
 
     @setup
     def setup_job(self):
-        self.scheduler = mock.Mock()
-        run_collection = mock.Mock(has_pending=False)
+        self.scheduler = mock.Mock(autospec=True)
+        self.scheduler.next_run_time.return_value = 0
+        mock_run = mock.Mock()
+        mock_run.seconds_until_run_time.return_value = 0
+        run_collection = mock.Mock(
+            has_pending=False, autospec=True, return_value=[mock_run],
+        )
+        mock_build_new_run = mock.Mock()
+        run_collection.build_new_run.return_value = mock_build_new_run
+        mock_build_new_run.seconds_until_run_time.return_value = 0
         node_pool = mock.Mock()
         self.job = job.Job(
-            "jobname",
-            self.scheduler,
+            name="jobname",
+            scheduler=self.scheduler,
             run_collection=run_collection,
             node_pool=node_pool,
         )
         self.job_scheduler = job.JobScheduler(self.job)
+        self.original_build_new_runs = self.job.build_new_runs
+        self.job.build_new_runs = mock.Mock(return_value=[mock_run])
 
     @setup_teardown
     def mock_eventloop(self):
@@ -458,12 +468,13 @@ class JobSchedulerScheduleTestCase(TestCase):
         assert_length(self.eventloop.call_later.mock_calls, 1)
 
     def test_enable_noop(self):
-        self.job.enalbed = True
+        self.job.enabled = True
         self.job_scheduler.enable()
         assert self.job.enabled
         assert_length(self.eventloop.call_later.mock_calls, 0)
 
     def test_schedule(self):
+        self.job.build_new_runs = self.original_build_new_runs
         self.job_scheduler.schedule()
         assert_length(self.eventloop.call_later.mock_calls, 1)
 
