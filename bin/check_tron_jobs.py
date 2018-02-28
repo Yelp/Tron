@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import logging
+import time
 
 from pysensu_yelp import send_event
 

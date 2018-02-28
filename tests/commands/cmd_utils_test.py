@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import argparse
 import contextlib
 
 import mock
@@ -8,7 +9,6 @@ from testify import assert_equal
 from testify import setup_teardown
 from testify import TestCase
 
-import tron
 from tron.commands import cmd_utils
 
 
@@ -45,20 +45,24 @@ class BuildOptionParserTestCase(TestCase):
         """
         parser_class = mock.Mock()
         usage = 'Something'
+        epilog = 'Something'
         parser = cmd_utils.build_option_parser(
-            usage, parser_class=parser_class,
+            usage=usage, parser_class=parser_class, epilog=epilog,
         )
         assert_equal(parser, parser_class.return_value)
         parser_class.assert_called_with(
-            usage, version="%%prog %s" % tron.__version__,
+            usage=usage, formatter_class=argparse.RawDescriptionHelpFormatter, epilog=epilog,
         )
-        assert_equal(parser.add_option.call_count, 3)
+        assert_equal(parser.add_argument.call_count, 4)
 
-        options = [call[1] for call in parser.add_option.mock_calls]
-        expected = [('-v', '--verbose'), ('--server',), ('-s', '--save')]
-        assert_equal(options, expected)
+        args = [call[1] for call in parser.add_argument.mock_calls]
+        expected = [
+            ('--version',), ('-v', '--verbose'),
+            ('--server',), ('-s', '--save'),
+        ]
+        assert_equal(args, expected)
 
         defaults = [
-            call[2].get('default') for call in parser.add_option.mock_calls
+            call[2].get('default') for call in parser.add_argument.mock_calls
         ]
-        assert_equal(defaults, [None, None, None])
+        assert_equal(defaults, [None, None, None, None])

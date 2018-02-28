@@ -72,7 +72,6 @@ def parse_cli():
     parser.add_argument(
         'ids',
         nargs='*',
-        # TODO: this right?
         help='job name, job run id, or action id',
     )
 
@@ -116,9 +115,7 @@ def main():
     cmd_utils.setup_logging(args)
     cmd_utils.load_config(args)
 
-    print(args)
     if not args.ids:
-        # TODO: this comment sucks, wtf does that mean? get rid of it
         # our only non-object commands are for enabling and disabling jobs, so
         # just direct those commands here
         if not edit(args, client.get_job_url('')):
