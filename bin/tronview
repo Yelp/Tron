@@ -43,6 +43,11 @@ def parse_cli():
         help="Show events for the specified entity",
         default=False,
     )
+    parser.add_argument(
+        'name',
+        nargs='*',
+        help='job name',
+    )
 
     args = parser.parse_args()
     return args

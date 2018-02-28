@@ -55,7 +55,6 @@ def parse_cli():
         help="Full validation of a folder, don't upload, "
              "same as -V but checks for more edge-cases",
     )
-    parser.add_argument('name')
     parser.add_argument('source')
 
     return parser.parse_args()
@@ -125,20 +124,14 @@ def validate_dir(path):
             shutil.rmtree(manifest_dir)
 
 
-def get_config_input(namespace, source=None):
-    if source is None:
-        source = namespace
-        namespace = None
-
+def get_config_input(source):
     if source == '-':
         source_io = sys.stdin
-        if not namespace:
-            namespace = schema.MASTER_NAMESPACE
+        namespace = schema.MASTER_NAMESPACE
     else:
         source_io = open(source, 'r')
-        if not namespace:
-            name, _ = os.path.splitext(os.path.basename(source))
-            namespace = name
+        name, _ = os.path.splitext(os.path.basename(source))
+        namespace = name
 
     content = source_io.read()
 
@@ -152,7 +145,7 @@ if __name__ == '__main__':
 
     if args.validate or args.validate_dir:
         if args.validate:
-            name, content = get_config_input(args.name, args.source)
+            name, content = get_config_input(args.source)
             result = validate(name, content)
         elif args.validate_dir is not None:
             result = validate_dir(args.validate_dir)
@@ -167,12 +160,12 @@ if __name__ == '__main__':
     client = Client(args.server)
 
     if args.print_config:
-        print(client.config(args.name)['config'])
+        print(client.config(args.source)['config'])
     elif args.delete:
-        delete_config(client, args.name)
+        delete_config(client, args.source)
     else:
-        content = get_config_input(args.name, args.source)
-        config_hash = client.config(args.name)['hash']
+        content = get_config_input(args.source)
+        config_hash = client.config(args.source)['hash']
 
         result = validate(name, content)
         if result:
