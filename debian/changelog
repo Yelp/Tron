@@ -1,3 +1,11 @@
+tron (0.7.5.0) trusty; urgency=medium
+
+  * 0.7.5.0 tagged with 'make release'
+    Commit: Merge pull request #360 from Yelp/per_job_tz  Allow jobs to
+    override the default timezone
+
+ -- root <root@d339239f37b4>  Wed, 28 Feb 2018 02:07:09 +0000
+
 tron (0.7.4.2) trusty; urgency=medium
 
   * 0.7.4.2 tagged with 'make release'
