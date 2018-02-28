@@ -47,7 +47,7 @@ def respond(request, response_dict, code=http.OK, headers=None):
         request.setHeader(str(key), str(val))
     return str(
         json.dumps(response_dict, cls=JSONEncoder) if response_dict else "",
-    )
+    ).encode('utf-8')
 
 
 def handle_command(request, api_controller, obj, **kwargs):
@@ -406,18 +406,18 @@ class ApiRootResource(resource.Resource):
 
         # Setup children
         self.putChild(
-            'jobs',
+            b'jobs',
             JobCollectionResource(mcp.get_job_collection()),
         )
         self.putChild(
-            'services',
+            b'services',
             ServiceCollectionResource(mcp.get_service_collection()),
         )
 
-        self.putChild('config', ConfigResource(mcp))
-        self.putChild('status', StatusResource(mcp))
-        self.putChild('events', EventResource(''))
-        self.putChild('', self)
+        self.putChild(b'config', ConfigResource(mcp))
+        self.putChild(b'status', StatusResource(mcp))
+        self.putChild(b'events', EventResource(''))
+        self.putChild(b'', self)
 
     def render_GET(self, request):
         """Return an index of urls for resources."""
@@ -435,9 +435,9 @@ class RootResource(resource.Resource):
         resource.Resource.__init__(self)
         self.web_path = web_path
         self.mcp = mcp
-        self.putChild('api', ApiRootResource(self.mcp))
-        self.putChild('web', static.File(web_path))
-        self.putChild('', self)
+        self.putChild(b'api', ApiRootResource(self.mcp))
+        self.putChild(b'web', static.File(web_path))
+        self.putChild(b'', self)
 
     def render_GET(self, request):
         request.redirect(request.prePathURL() + b'web')
@@ -454,7 +454,7 @@ class LogAdapter(object):
         self.logger = logger
 
     def write(self, line):
-        self.logger.info(line.rstrip('\n'))
+        self.logger.info(line.rstrip(b'\n'))
 
     def close(self):
         pass
