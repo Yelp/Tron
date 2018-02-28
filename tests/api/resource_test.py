@@ -126,8 +126,8 @@ class ApiRootResourceTestCase(WWWTestCase):
 
     def test__init__(self):
         expected_children = [
-            'jobs', 'services',
-            'config', 'status', 'events', '',
+            b'jobs', b'services',
+            b'config', b'status', b'events', b'',
         ]
         assert_equal(set(expected_children), set(self.resource.children))
 
@@ -155,7 +155,7 @@ class RootResourceTestCase(WWWTestCase):
         request.finish.assert_called_with()
 
     def test_get_children(self):
-        assert_equal(set(self.resource.children), {'api', 'web', ''})
+        assert_equal(set(self.resource.children), {b'api', b'web', b''})
 
 
 class ActionRunHistoryResourceTestCase(WWWTestCase):

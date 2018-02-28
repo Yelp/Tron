@@ -422,9 +422,9 @@ class ApiRootResource(resource.Resource):
     def render_GET(self, request):
         """Return an index of urls for resources."""
         response = {
-            'jobs':             self.children['jobs'].get_job_index(),
-            'services':         self.children['services'].get_service_index(),
-            'namespaces':       self.children['config'].get_config_index(),
+            'jobs':             self.children[b'jobs'].get_job_index(),
+            'services':         self.children[b'services'].get_service_index(),
+            'namespaces':       self.children[b'config'].get_config_index(),
         }
         return respond(request, response)
 
