@@ -313,6 +313,7 @@ class ValidateJob(Validator):
         'allow_overlap':        False,
         'max_runtime':          None,
         'monitoring':           {},
+        'time_zone':            None,
     }
 
     validators = {
