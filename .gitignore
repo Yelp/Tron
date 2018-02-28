@@ -26,3 +26,4 @@ debian/tron.postinst.debhelper
 debian/tron.postrm.debhelper
 debian/tron.prerm.debhelper
 debian/tron.substvars
+debian/debhelper-build-stamp

@@ -33,7 +33,7 @@ def config_object_factory(name, required=None, optional=None):
 
 
 TronConfig = config_object_factory(
-    'TronConfig',
+    name='TronConfig',
     optional=[
         'output_stream_dir',   # str
         'action_runner',       # ConfigActionRunner
@@ -51,7 +51,7 @@ TronConfig = config_object_factory(
 
 
 NamedTronConfig = config_object_factory(
-    'NamedTronConfig',
+    name='NamedTronConfig',
     optional=[
         'jobs',                # FrozenDict of ConfigJob
         'services',             # FrozenDict of ConfigService
@@ -60,8 +60,8 @@ NamedTronConfig = config_object_factory(
 
 
 NotificationOptions = config_object_factory(
-    'NotificationOptions',
-    [
+    name='NotificationOptions',
+    required=[
         'smtp_host',            # str
         'notification_addr',    # str
     ],
@@ -75,7 +75,7 @@ ConfigActionRunner = config_object_factory(
 
 
 ConfigSSHOptions = config_object_factory(
-    'ConfigSSHOptions',
+    name='ConfigSSHOptions',
     optional=[
         'agent',
         'identities',
@@ -90,8 +90,9 @@ ConfigSSHOptions = config_object_factory(
 
 
 ConfigNode = config_object_factory(
-    'ConfigNode',
-    ['hostname'], ['name', 'username', 'port'],
+    name='ConfigNode',
+    required=['hostname'],
+    optional=['name', 'username', 'port'],
 )
 
 
@@ -99,11 +100,12 @@ ConfigNodePool = config_object_factory('ConfigNodePool', ['nodes'], ['name'])
 
 
 ConfigState = config_object_factory(
-    'ConfigState',
-    [
+    name='ConfigState',
+    required=[
         'name',
         'store_type',
-    ], [
+    ],
+    optional=[
         'connection_details',
         'buffer_size',
     ],
@@ -111,17 +113,15 @@ ConfigState = config_object_factory(
 
 
 ConfigJob = config_object_factory(
-    'ConfigJob',
-    [
+    name='ConfigJob',
+    required=[
         'name',                 # str
         'node',                 # str
         'schedule',             # Config*Scheduler
         'actions',              # FrozenDict of ConfigAction
         'namespace',            # str
-    ], [
-        'owner',                # str
-        'summary',              # str
-        'notes',                # str
+    ],
+    optional=[
         'monitoring',           # dict
         'queueing',             # bool
         'run_limit',            # int
@@ -130,26 +130,29 @@ ConfigJob = config_object_factory(
         'enabled',              # bool
         'allow_overlap',        # bool
         'max_runtime',          # datetime.Timedelta
+        'time_zone',            # pytz time zone
     ],
 )
 
 
 ConfigAction = config_object_factory(
-    'ConfigAction',
-    [
+    name='ConfigAction',
+    required=[
         'name',                 # str
         'command',              # str
-    ], [
+    ],
+    optional=[
         'requires',             # tuple of str
         'node',                 # str
     ],
 )
 
 ConfigCleanupAction = config_object_factory(
-    'ConfigCleanupAction',
-    [
+    name='ConfigCleanupAction',
+    required=[
         'command',              # str
-    ], [
+    ],
+    optional=[
         'name',                 # str
         'node',                 # str
     ],
@@ -157,18 +160,16 @@ ConfigCleanupAction = config_object_factory(
 
 
 ConfigService = config_object_factory(
-    'ConfigService',
-    [
+    name='ConfigService',
+    required=[
         'name',                 # str
         'node',                 # str
         'pid_file',             # str
         'command',              # str
         'monitor_interval',     # float
         'namespace',            # str
-    ], [
-        'owner',                # str
-        'summary',              # str
-        'notes',                # str
+    ],
+    optional=[
         'restart_delay',        # float
         'monitor_retries',      # int
         'count',                # int

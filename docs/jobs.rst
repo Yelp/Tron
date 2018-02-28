@@ -70,13 +70,18 @@ Optional Fields
     is only relevant when a Job is first added to the configuration, after
     which this value will be ignored.
 
-**max_runtime** (defailt **None**)
+**max_runtime** (default **None**)
     A time interval (ex: "2 hours") that limits the duration of each job run.
     If the job run is still running after this duration, all of it's actions
     are sent SIGTERM.
 
     Note: This requires an :ref:`action_runners` to be configured. If
     `action_runner` is none max_runtime does nothing.
+
+**time_zone** (default **None**)
+    Time zone used for calculating when a job should run. Defaults to
+    None, which means it will use the default time_zone set in the master
+    config.
 
 
 .. _job_actions:
@@ -303,7 +308,7 @@ like regular actions except that there is only one per job and it has no name
 or requirements list.
 
 If your job creates shared resources that should be destroyed after a run
-regardless of success or failure, such as intermedmiate files or Amazon Elastic
+regardless of success or failure, such as intermediate files or Amazon Elastic
 MapReduce job flows, you can use cleanup actions to tear them down.
 
 The command context variable ``cleanup_job_status`` is provided to cleanup

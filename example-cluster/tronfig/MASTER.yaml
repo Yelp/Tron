@@ -1,0 +1,19 @@
+ssh_options:
+   agent: False
+   identities:
+      - /work/example-cluster/insecure_key
+
+nodes:
+   - hostname: batch1
+     username: tron
+
+time_zone: US/Eastern
+
+jobs:
+   - name: "test"
+     node: batch1
+     schedule: "daily 17:00:00"
+     time_zone: "US/Pacific"
+     actions:
+        - name: "first"
+          command: "echo hi >> out"

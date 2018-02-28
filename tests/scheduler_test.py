@@ -31,7 +31,7 @@ class SchedulerFromConfigTestCase(TestCase):
         line = "cron */5 * * 7,8 *"
         config_context = mock.Mock(path='test')
         config = schedule_parse.valid_schedule(line, config_context)
-        sched = scheduler.scheduler_from_config(config, mock.Mock())
+        sched = scheduler.scheduler_from_config(config=config, time_zone=None)
         start_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         next_time = sched.next_run_time(start_time)
         assert_equal(next_time, datetime.datetime(2012, 7, 1, 0))
@@ -41,7 +41,7 @@ class SchedulerFromConfigTestCase(TestCase):
         config_context = config_utils.NullConfigContext
         line = "daily 17:32 MWF"
         config = schedule_parse.valid_schedule(line, config_context)
-        sched = scheduler.scheduler_from_config(config, mock.Mock())
+        sched = scheduler.scheduler_from_config(config=config, time_zone=None)
         assert_equal(sched.time_spec.hours, [17])
         assert_equal(sched.time_spec.minutes, [32])
         start_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
@@ -379,7 +379,11 @@ class IntervalSchedulerTestCase(TestCase):
     def build_scheduler(self):
         self.seconds = 7
         self.interval = datetime.timedelta(seconds=self.seconds)
-        self.scheduler = scheduler.IntervalScheduler(self.interval, None)
+        self.scheduler = scheduler.IntervalScheduler(
+            interval=self.interval,
+            jitter=None,
+            time_zone=None,
+        )
 
     def test_next_run_time_no_jitter(self):
         prev_run_time = datetime.datetime(2011, 5, 21)
@@ -396,7 +400,11 @@ class IntervalSchedulerTestCase(TestCase):
         mock_random.randint.return_value = random_jitter = -200
         random_delta = datetime.timedelta(seconds=random_jitter)
         prev_run_time = datetime.datetime(2011, 5, 21)
-        interval_sched = scheduler.IntervalScheduler(self.interval, jitter)
+        interval_sched = scheduler.IntervalScheduler(
+            interval=self.interval,
+            jitter=jitter,
+            time_zone=None,
+        )
         run_time = interval_sched.next_run_time(prev_run_time)
         assert_equal(run_time, prev_run_time + random_delta + self.interval)
 
