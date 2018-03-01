@@ -58,7 +58,9 @@ class PIDFile(object):
         if pid:
             self._try_unlock()
             raise SystemExit(
-                "Daemon was running as %s. Remove PID file." % pid,
+                "A tron pidfile is already present at %s using PID %s. The existing pidfile must be removed before starting another tron daemon." % (
+                    self.filename, pid,
+                ),
             )
 
     def is_process_running(self, pid):

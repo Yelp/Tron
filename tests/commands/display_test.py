@@ -24,15 +24,15 @@ class DisplayServicesTestCase(TestCase):
         self.data = [
             dict(
                 name="My Service",      state="stopped",
-                live_count="4", owner="alice", enabled=True,
+                live_count="4", enabled=True,
             ),
             dict(
                 name="Another Service", state="running",
-                live_count="2", owner="bob",   enabled=False,
+                live_count="2", enabled=False,
             ),
             dict(
                 name="Yet another",     state="running",
-                live_count="1", owner="ted",   enabled=True,
+                live_count="1", enabled=True,
             ),
         ]
         self.display = DisplayServices()
@@ -88,12 +88,11 @@ class DisplayJobsTestCase(TestCase):
         self.data = [
             dict(
                 name='important_things', status='running',
-                scheduler=mock.MagicMock(), last_success=None, owner='alice',
+                scheduler=mock.MagicMock(), last_success=None,
             ),
             dict(
                 name='other_thing', status='enabled',
                 scheduler=mock.MagicMock(), last_success='2012-01-23 10:23:23',
-                owner='',
             ),
         ]
 

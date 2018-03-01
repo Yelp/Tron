@@ -1,3 +1,12 @@
+tron (0.7.5.1) trusty; urgency=medium
+
+  * 0.7.5.1 tagged with 'make release'
+    Commit: Merge pull request #367 from
+    Yelp/u/jgl/better_pidfile_error_message  Make tron pidfile error
+    message more clear
+
+ -- root <root@b5305b0b6d16>  Wed, 28 Feb 2018 23:12:22 +0000
+
 tron (0.7.5.0) trusty; urgency=medium
 
   * 0.7.5.0 tagged with 'make release'
