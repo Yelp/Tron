@@ -46,7 +46,8 @@ def build_url_request(uri, data, headers=None):
 
 
 def load_response_content(http_response):
-    content = http_response.read()
+    encoding = http_response.headers.get_content_charset()
+    content = http_response.read().decode(encoding)
     try:
         return Response(None, None, simplejson.loads(content))
     except ValueError as e:
@@ -56,6 +57,16 @@ def load_response_content(http_response):
 
 def build_http_error_response(exc):
     content = exc.read() if hasattr(exc, 'read') else None
+    if content:
+        encoding = exc.headers.get_content_charset()
+        content = content.decode(encoding)
+        try:
+            content = simplejson.loads(content)
+            content = content['error']
+        except ValueError:
+            log.warn(
+                "Incorrectly formatted error response: {}".format(content),
+            )
     return Response(exc.code, exc.msg, content)
 
 

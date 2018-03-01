@@ -1,13 +1,22 @@
 version: "3"
 services:
-  master:
+  # For debugging
+  playground:
     build:
       context: ../
-      # dockerfile: Dockerfile.trusty
-      dockerfile: Dockerfile.xenial
+      dockerfile: yelp_package/trusty/Dockerfile
+      # dockerfile: yelp_package/xenial/Dockerfile
     volumes:
       - ../:/work
       - ./:/nail/tron
+    links:
+      - batch1
+      - batch2
+  # For itests only, `pip install -e .` won't work
+  master:
+    build:
+      dockerfile: images/trusty
+      dockerfile: images/xenial
     links:
       - batch1
       - batch2

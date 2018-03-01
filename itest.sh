@@ -12,6 +12,8 @@ dpkg -i /work/dist/*.deb
 trond --help
 tronfig --help
 
+/opt/venvs/tron/bin/python --version | grep -q '3\.6'
+
 /opt/venvs/tron/bin/python - <<EOF
 from yaml import CSafeLoader
 from yaml import CSafeDumper
@@ -35,6 +37,8 @@ for i in {1..5}; do
     sleep 1
 done
 kill -0 $TRON_PID
+
+curl localhost:8089/api/status | grep -qi alive
 
 tronfig -p MASTER
 tronfig MASTER /work/example-cluster/tronfig/MASTER.yaml

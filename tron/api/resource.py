@@ -42,7 +42,7 @@ class JSONEncoder(json.JSONEncoder):
 def respond(request, response_dict, code=http.OK, headers=None):
     """Helper to generate a json response"""
     request.setResponseCode(code)
-    request.setHeader(b'content-type', b'text/json')
+    request.setHeader(b'content-type', b'text/json; charset=utf-8')
     for key, val in six.iteritems((headers or {})):
         request.setHeader(str(key), str(val))
     return str(
@@ -52,7 +52,7 @@ def respond(request, response_dict, code=http.OK, headers=None):
 
 def handle_command(request, api_controller, obj, **kwargs):
     """Handle a request to perform a command."""
-    command = requestargs.get_string(request, 'command')
+    command = requestargs.get_string(request, b'command')
     log.info("Handling '%s' request on %s", command, obj)
     try:
         response = api_controller.handle_command(command, **kwargs)
@@ -332,23 +332,31 @@ class ConfigResource(resource.Resource):
         return self.controller.get_namespaces()
 
     def render_GET(self, request):
-        config_name = requestargs.get_string(request, 'name')
-        no_header = requestargs.get_bool(request, 'no_header')
+        config_name = requestargs.get_string(request, b'name')
+        no_header = requestargs.get_bool(request, b'no_header')
         if not config_name:
-            return respond(request, {'error': "'name' for config is required."})
+            return respond(
+                request,
+                {'error': "'name' for config is required."},
+                code=http.BAD_REQUEST,
+            )
         response = self.controller.read_config(
             config_name, add_header=not no_header,
         )
         return respond(request, response)
 
     def render_POST(self, request):
-        config_content = requestargs.get_string(request, 'config')
-        name = requestargs.get_string(request, 'name')
-        config_hash = requestargs.get_string(request, 'hash')
-        check = requestargs.get_bool(request, 'check')
+        config_content = requestargs.get_string(request, b'config')
+        name = requestargs.get_string(request, b'name')
+        config_hash = requestargs.get_string(request, b'hash')
+        check = requestargs.get_bool(request, b'check')
 
         if not name:
-            return respond(request, {'error': "'name' for config is required."})
+            return respond(
+                request,
+                {'error': "'name' for config is required."},
+                code=http.BAD_REQUEST,
+            )
 
         response = {'status': "Active"}
 

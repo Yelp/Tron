@@ -1,18 +1,31 @@
 FROM ubuntu:trusty
 
-RUN apt-get update > /dev/null && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
-        debhelper \
-        dpkg-dev \
-        devscripts \
-        python-pip \
-        wget \
-        gdebi-core \
-        gcc \
-        python-dev \
+# Need Python 3.6
+RUN apt-get -q update && \
+    apt-get -q install -y --no-install-recommends software-properties-common && \
+    add-apt-repository ppa:deadsnakes/ppa
+
+RUN apt-get -q update && \
+    DEBIAN_FRONTEND=noninteractive apt-get -q install -y --no-install-recommends \
         coffeescript \
+        debhelper \
+        devscripts \
+        dpkg-dev \
+        gcc \
+        gdebi-core \
+        git \
+        help2man \
+        libffi-dev \
+        libgpgme11 \
+        libssl-dev \
         libyaml-dev \
-        && apt-get clean > /dev/null
+        python3.6-dev \
+        wget \
+    && apt-get -q clean
+
+RUN wget https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py
+RUN python3.6 /tmp/get-pip.py
+RUN pip3.6 install tox wheel
 
 RUN cd /tmp && \
     wget http://mirrors.kernel.org/ubuntu/pool/universe/d/dh-virtualenv/dh-virtualenv_1.0-1_all.deb && \

@@ -37,7 +37,8 @@ test:
 	tox
 
 _itest_%:
-	$(DOCKER_RUN) tron-builder-$* /work/itest.sh
+	docker build -f example-cluster/images/$* -t tron-runner-$* example-cluster
+	$(DOCKER_RUN) tron-runner-$* /work/itest.sh
 
 itest_%: test deb_% _itest_%
 	@echo "Package for $* looks good"
@@ -70,3 +71,4 @@ man:
 clean:
 	rm -rf tronweb/js/cs
 	find . -name '*.pyc' -delete
+	git clean -fdx
