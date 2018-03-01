@@ -45,7 +45,7 @@ def parse_cli():
     )
     parser.add_argument(
         'name',
-        nargs='*',
+        nargs='?',
         help='job name',
     )
 
@@ -135,7 +135,7 @@ def main():
     display.Color.toggle(args.display_color)
     client = Client(args.server)
 
-    if not args:
+    if not args.name:
         output = view_all(args, client)
     else:
         output = get_view_output(args.name, args, client)
