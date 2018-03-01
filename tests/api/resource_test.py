@@ -38,7 +38,10 @@ REQUEST.childLink = lambda val: "/jobs/%s" % val
 
 
 def build_request(**kwargs):
-    args = {k: [v] for k, v in six.iteritems(kwargs)}
+    args = {
+        k.encode('utf-8'): [v]
+        for k, v in six.iteritems(kwargs)
+    }
     return mock.create_autospec(twisted.web.server.Request, args=args)
 
 
