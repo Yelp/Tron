@@ -15,6 +15,7 @@ services:
   # For itests only, `pip install -e .` won't work
   master:
     build:
+      context: .
       dockerfile: images/trusty
       dockerfile: images/xenial
     links:

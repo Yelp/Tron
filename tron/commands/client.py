@@ -41,7 +41,7 @@ default_headers = {
 
 def build_url_request(uri, data, headers=None):
     headers = headers or default_headers
-    enc_data = urllib.parse.urlencode(data) if data else None
+    enc_data = urllib.parse.urlencode(data).encode() if data else None
     return urllib.request.Request(uri, enc_data, headers)
 
 

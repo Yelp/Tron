@@ -50,9 +50,16 @@ def respond(request, response_dict, code=http.OK, headers=None):
     ).encode('utf-8')
 
 
+def get_string_arg(request, name):
+    val = requestargs.get_string(request, name.encode())
+    if val:
+        val = val.decode()
+    return val
+
+
 def handle_command(request, api_controller, obj, **kwargs):
     """Handle a request to perform a command."""
-    command = requestargs.get_string(request, b'command')
+    command = requestargs.get_string(request, b'command').decode('utf-8')
     log.info("Handling '%s' request on %s", command, obj)
     try:
         response = api_controller.handle_command(command, **kwargs)
@@ -332,7 +339,7 @@ class ConfigResource(resource.Resource):
         return self.controller.get_namespaces()
 
     def render_GET(self, request):
-        config_name = requestargs.get_string(request, b'name')
+        config_name = get_string_arg(request, 'name')
         no_header = requestargs.get_bool(request, b'no_header')
         if not config_name:
             return respond(
@@ -346,9 +353,9 @@ class ConfigResource(resource.Resource):
         return respond(request, response)
 
     def render_POST(self, request):
-        config_content = requestargs.get_string(request, b'config')
-        name = requestargs.get_string(request, b'name')
-        config_hash = requestargs.get_string(request, b'hash')
+        config_content = get_string_arg(request, 'config')
+        name = get_string_arg(request, 'name')
+        config_hash = get_string_arg(request, 'hash')
         check = requestargs.get_bool(request, b'check')
 
         if not name:
