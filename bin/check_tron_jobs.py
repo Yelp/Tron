@@ -57,20 +57,20 @@ def compute_check_result_for_job_runs(client, job, job_content):
     )
     action_runs = client.job(job_run_id.url, include_action_runs=True)
     # A job action is like MASTER.foo.1.step1
-    relevant_action = get_relevant_action(action_runs["runs"])
+    relevant_action = get_relevant_action(action_runs["runs"], last_state)
     action_run_id = get_object_type_from_identifier(
         url_index, relevant_action['id'],
     )
     action_run_details = client.action_runs(action_run_id.url, num_lines=10)
 
-    if is_job_stuck(job_content):
-        prefix = "WARN"
-        annotation = "Job still running when next job is scheduled to run (stuck?)"
-        status = 1
-    elif last_state == "succeeded":
+    if last_state == "succeeded":
         prefix = "OK"
         annotation = ""
         status = 0
+    elif last_state == "running":
+        prefix = "WARN"
+        annotation = "Job still running when next job is scheduled to run (stuck?)"
+        status = 1
     elif last_state == "failed":
         prefix = "CRIT"
         annotation = ""
@@ -113,6 +113,9 @@ def pretty_print_actions(action_run):
 
 
 def get_relevant_run(job_runs):
+    run = is_job_stuck(job_runs)
+    if run is not None:
+        return run
     for run in job_runs['runs']:
         if run.get('state', 'unknown') in ["failed", "succeeded"]:
             return run
@@ -126,14 +129,14 @@ def is_job_stuck(job_runs):
             if next_run_time:
                 difftime = time.strptime(next_run_time, '%Y-%m-%d %H:%M:%S')
                 if time.time() > time.mktime(difftime):
-                    return True
+                    return run
         next_run_time = run.get('run_time', None)
-    return False
+    return None
 
 
-def get_relevant_action(action_runs):
+def get_relevant_action(action_runs, last_state):
     for action in reversed(action_runs):
-        if action.get('state', 'unknown') == "failed":
+        if action.get('state', 'unknown') == last_state:
             return action
     return action_runs[-1]
 
