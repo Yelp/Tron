@@ -1,3 +1,11 @@
+tron (0.7.5.2) trusty; urgency=medium
+
+  * 0.7.5.2 tagged with 'make release'
+    Commit: Merge pull request #373 from Yelp/fix_tz_naive_localization
+    Only localize datetimes when they lack tzinfo
+
+ -- root <root@28c49fd423bf>  Fri, 02 Mar 2018 20:49:06 +0000
+
 tron (0.7.5.1) trusty; urgency=medium
 
   * 0.7.5.1 tagged with 'make release'
