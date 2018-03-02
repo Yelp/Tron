@@ -171,6 +171,7 @@ class GeneralSchedulerLongJobRunTest(GeneralSchedulerTimeTestBase):
 class GeneralSchedulerDSTTest(testingutils.MockTimeTestCase):
 
     now = datetime.datetime(2011, 11, 6, 1, 10, 0)
+    now_utc = timeutils.current_time(tz=pytz.timezone('UTC'))
 
     def hours_until_time(self, run_time, sch):
         tz = sch.time_zone
@@ -244,6 +245,21 @@ class GeneralSchedulerDSTTest(testingutils.MockTimeTestCase):
         self._assert_range(s1b - s1a, 23.99, 24.11)
         self._assert_range(s2b - s2a, 23.99, 24.11)
         self._assert_range(s1a - s2a, -0.61, -0.59)
+
+    def test_handles_tz_specific_jobs_with_tz_specific_start_time(self):
+        sch = scheduler.GeneralScheduler(time_zone=pytz.timezone('UTC'))
+        next_run_time = sch.next_run_time(self.now_utc)
+        assert_equal(next_run_time.hour, 0)
+
+    def test_handles_unsetting_the_time_zone(self):
+        sch = scheduler.GeneralScheduler(time_zone=None)
+        next_run_time = sch.next_run_time(self.now_utc)
+        assert_equal(next_run_time.hour, 0)
+
+    def test_handles_changing_the_time_zone(self):
+        sch = scheduler.GeneralScheduler(time_zone=pytz.timezone('US/Pacific'))
+        next_run_time = sch.next_run_time(self.now_utc)
+        assert_equal(next_run_time.hour, 8)
 
 
 def parse_groc(config):
