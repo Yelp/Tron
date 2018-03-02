@@ -87,7 +87,7 @@ def compute_check_result_for_job_runs(client, job, job_content):
         "{}\n\n"
         "And the job run view:\n"
         "{}\n\n"
-        "Here are is the whole job view for context:\n"
+        "Here is the whole job view for context:\n"
         "{}"
     ).format(
         prefix, annotation, job['name'], relevant_job_run['id'], last_state,
