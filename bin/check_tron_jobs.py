@@ -15,6 +15,9 @@ from tron.commands.client import get_object_type_from_identifier
 
 
 log = logging.getLogger('check_tron_jobs')
+SENSU_REQUIRED_KEYS = frozenset(
+    ['name', 'runbook', 'status', 'output', 'team'],
+)
 
 
 def parse_options():
@@ -42,7 +45,7 @@ def compute_check_result_for_job_runs(client, job, job_content):
         kwargs["status"] = 0
         return kwargs
 
-    relevant_job_run = get_relevant_run(job_content)
+    relevant_job_run, last_state = get_relevant_run_and_state(job_content)
     if relevant_job_run is None:
         kwargs["output"] = "CRIT: {} hasn't had a successful run yet.\n{}".format(
             job['name'], pretty_print_job(job_content),
@@ -51,7 +54,6 @@ def compute_check_result_for_job_runs(client, job, job_content):
         return kwargs
 
     # A job_run is like MASTER.foo.1
-    last_state = relevant_job_run.get('state', 'unknown')
     job_run_id = get_object_type_from_identifier(
         url_index, relevant_job_run['id'],
     )
@@ -63,17 +65,21 @@ def compute_check_result_for_job_runs(client, job, job_content):
     )
     action_run_details = client.action_runs(action_run_id.url, num_lines=10)
 
-    if last_state == "succeeded":
+    if last_state == "succeeded" or last_state == "waiting_run_done":
         prefix = "OK"
         annotation = ""
         status = 0
-    elif last_state == "running":
+    elif last_state == "stuck":
         prefix = "WARN"
         annotation = "Job still running when next job is scheduled to run (stuck?)"
         status = 1
     elif last_state == "failed":
         prefix = "CRIT"
         annotation = ""
+        status = 2
+    elif last_state == "no_scheduled":
+        prefix = "CRIT"
+        annotation = "Job is not scheduled at all"
         status = 2
     else:
         prefix = "UNKNOWN"
@@ -90,7 +96,7 @@ def compute_check_result_for_job_runs(client, job, job_content):
         "Here is the whole job view for context:\n"
         "{}"
     ).format(
-        prefix, annotation, job['name'], relevant_job_run['id'], last_state,
+        prefix, annotation, job['name'], relevant_job_run['id'], relevant_job_run['state'],
         pretty_print_actions(action_run_details),
         pretty_print_job_run(relevant_job_run),
         pretty_print_job(job_content),
@@ -112,12 +118,24 @@ def pretty_print_actions(action_run):
     return display.format_action_run_details(action_run)
 
 
-def get_relevant_run(job_runs):
+def get_relevant_run_and_state(job_runs):
+    if len(job_runs['runs']) == 0:
+        return None, "no_run_yet"
+    run = is_job_scheduled(job_runs)
+    if run is None:
+        return job_runs['run'][0], "no_scheduled"
     run = is_job_stuck(job_runs)
     if run is not None:
-        return run
+        return run, "stuck"
     for run in job_runs['runs']:
         if run.get('state', 'unknown') in ["failed", "succeeded"]:
+            return run, run.get('state', 'unknown')
+    return job_runs['runs'][0], "waiting_run_done"
+
+
+def is_job_scheduled(job_runs):
+    for run in job_runs['runs']:
+        if run.get('state', 'unknown') in ["scheduled", "queued"]:
             return run
     return None
 
@@ -188,7 +206,9 @@ def check_job_result(job, client, dry_run):
         log.info("Would have sent this event to sensu: ")
         log.info(result)
     else:
-        log.debug("Sending event: {}".format(result))
+        for key in SENSU_REQUIRED_KEYS:
+            if key not in result:
+                result[key] = 'unspecified'
         send_event(**result)
 
 

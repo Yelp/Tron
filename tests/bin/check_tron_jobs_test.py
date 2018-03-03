@@ -68,7 +68,7 @@ class CheckJobsTestCase(TestCase):
 
     def test_no_job_scheduled_or_queuing(self):
         job_runs = {
-            'status': 'running', 'next_run': None, 'runs': [
+            'status': 'succeeded', 'next_run': None, 'runs': [
                 {
                     'id': 'MASTER.test.2', 'state': 'succeeded', 'end_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)),
                 },
@@ -77,5 +77,17 @@ class CheckJobsTestCase(TestCase):
                 },
             ],
         }
-        run = check_tron_jobs.is_no_job_scheduled(job_runs)
+        run = check_tron_jobs.is_job_scheduled(job_runs)
         assert_equal(run, None)
+
+    def test_job_is_scheduled_not_run(self):
+        job_runs = {
+            'status': 'scheduled', 'next_run': None, 'runs': [
+                {
+                    'id': 'MASTER.test.1', 'state': 'scheduled', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() + 1200)),
+                },
+            ],
+        }
+        run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
+        assert_equal(run['id'], 'MASTER.test.1')
+        assert_equal(state, 'waiting_run_done')
