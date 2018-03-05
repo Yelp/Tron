@@ -15,9 +15,6 @@ from tron.commands.client import get_object_type_from_identifier
 
 
 log = logging.getLogger('check_tron_jobs')
-SENSU_REQUIRED_KEYS = frozenset(
-    ['name', 'runbook', 'status', 'output', 'team'],
-)
 
 
 def parse_options():
@@ -77,7 +74,7 @@ def compute_check_result_for_job_runs(client, job, job_content):
         prefix = "CRIT"
         annotation = ""
         status = 2
-    elif last_state == "no_scheduled":
+    elif last_state == "not_scheduled":
         prefix = "CRIT"
         annotation = "Job is not scheduled at all"
         status = 2
@@ -123,7 +120,7 @@ def get_relevant_run_and_state(job_runs):
         return None, "no_run_yet"
     run = is_job_scheduled(job_runs)
     if run is None:
-        return job_runs['run'][0], "no_scheduled"
+        return job_runs['run'][0], "not_scheduled"
     run = is_job_stuck(job_runs)
     if run is not None:
         return run, "stuck"
@@ -206,9 +203,13 @@ def check_job_result(job, client, dry_run):
         log.info("Would have sent this event to sensu: ")
         log.info(result)
     else:
-        for key in SENSU_REQUIRED_KEYS:
-            if key not in result:
-                result[key] = 'unspecified'
+        log.debug("Sending event: {}".format(result))
+        if 'runbook' not in result:
+            log.info("No runbook specified")
+            result['runbook'] = 'foo'
+        if 'team' not in result:
+            log.info("No team specified")
+            result['team'] = 'noop'
         send_event(**result)
 
 
