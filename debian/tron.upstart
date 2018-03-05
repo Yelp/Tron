@@ -7,6 +7,7 @@ respawn
 
 script
   set -a
+  . /lib/lsb/init-functions
   if [ -f /etc/default/tron ] ; then
       . /etc/default/tron
   fi

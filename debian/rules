@@ -23,6 +23,3 @@ override_dh_virtualenv:
                 --preinstall no-manylinux1 \
                 --preinstall pip-custom-platform \
                 --pip-tool pip-custom-platform
-
-override_dh_installinit:
-	dh_installinit --noscripts
