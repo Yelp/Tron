@@ -40,8 +40,8 @@ DEFAULT_CONFIG = {
 opener = open
 
 
-def build_option_parser(usage=None, parser_class=argparse.ArgumentParser, epilog=None):
-    parser = parser_class(
+def build_option_parser(usage=None, epilog=None):
+    parser = argparse.ArgumentParser(
         usage=usage,
         epilog=epilog,
         formatter_class=argparse.RawDescriptionHelpFormatter,

@@ -36,7 +36,7 @@ done
 kill -0 $TRON_PID
 
 tronfig -p MASTER
-tronfig MASTER /work/example-cluster/tronfig/MASTER.yaml
+tronfig -n MASTER /work/example-cluster/tronfig/MASTER.yaml
 cat /work/example-cluster/tronfig/MASTER.yaml | tronfig MASTER -
 
 kill -9 $TRON_PID

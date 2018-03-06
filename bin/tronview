@@ -46,7 +46,7 @@ def parse_cli():
     parser.add_argument(
         'name',
         nargs='?',
-        help='job name',
+        help='job name | job run id | action id',
     )
 
     args = parser.parse_args()
