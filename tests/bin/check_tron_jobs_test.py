@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import time
 
 import check_tron_jobs
+from check_tron_jobs import State
 from testify import assert_equal
 from testify import TestCase
 
@@ -90,4 +91,4 @@ class CheckJobsTestCase(TestCase):
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.1')
-        assert_equal(state, 'waiting_for_first_run')
+        assert_equal(state, State.WAITING_FOR_FIRST_RUN)
