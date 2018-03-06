@@ -62,7 +62,7 @@ def compute_check_result_for_job_runs(client, job, job_content):
     )
     action_run_details = client.action_runs(action_run_id.url, num_lines=10)
 
-    if last_state == "succeeded" or last_state == "waiting_run_done":
+    if last_state == "succeeded" or last_state == "waiting_for_first_run":
         prefix = "OK"
         annotation = ""
         status = 0
@@ -127,7 +127,7 @@ def get_relevant_run_and_state(job_runs):
     for run in job_runs['runs']:
         if run.get('state', 'unknown') in ["failed", "succeeded"]:
             return run, run.get('state', 'unknown')
-    return job_runs['runs'][0], "waiting_run_done"
+    return job_runs['runs'][0], "waiting_for_first_run"
 
 
 def is_job_scheduled(job_runs):

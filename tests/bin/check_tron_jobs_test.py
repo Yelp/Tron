@@ -90,4 +90,4 @@ class CheckJobsTestCase(TestCase):
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.1')
-        assert_equal(state, 'waiting_run_done')
+        assert_equal(state, 'waiting_for_first_run')
