@@ -8,7 +8,6 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
-import argparse
 import datetime
 import logging
 import sys
@@ -55,7 +54,6 @@ def parse_date(date_string):
 
 def parse_cli():
     parser = cmd_utils.build_option_parser(
-        parser_class=argparse.ArgumentParser,
         epilog=command_help_epilog(),
     )
 
@@ -98,7 +96,7 @@ def edit(args, uri):
 def control_objects(args):
     tron_client = client.Client(args.server)
     url_index = tron_client.index()
-    for identifier in args.ids:
+    for identifier in args.id:
         try:
             tron_id = client.get_object_type_from_identifier(
                 url_index, identifier,
@@ -115,7 +113,7 @@ def main():
     cmd_utils.setup_logging(args)
     cmd_utils.load_config(args)
 
-    if not args.ids:
+    if not args.id:
         # our only non-object commands are for enabling and disabling jobs, so
         # just direct those commands here
         if not edit(args, client.get_job_url('')):

@@ -43,14 +43,13 @@ class BuildOptionParserTestCase(TestCase):
         """Assert that we don't set default options so that we can load
         the defaults from the config.
         """
-        parser_class = mock.Mock()
         usage = 'Something'
         epilog = 'Something'
+        argparse.ArgumentParser = mock.Mock()
         parser = cmd_utils.build_option_parser(
-            usage=usage, parser_class=parser_class, epilog=epilog,
+            usage=usage, epilog=epilog,
         )
-        assert_equal(parser, parser_class.return_value)
-        parser_class.assert_called_with(
+        argparse.ArgumentParser.assert_called_with(
             usage=usage, formatter_class=argparse.RawDescriptionHelpFormatter, epilog=epilog,
         )
         assert_equal(parser.add_argument.call_count, 4)
