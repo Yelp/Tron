@@ -42,7 +42,7 @@ Configuration
 
 By default tron will run with a blank configuration file. The config file is
 saved to ``<working_dir>/config/`` by default. See the full documentation at
-http://pythonhosted.org/tron/config.html.
+http://tron.readthedocs.io/en/latest/config.html.
 
 
 Bugs
