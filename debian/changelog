@@ -1,3 +1,11 @@
+tron (0.7.5.3) trusty; urgency=medium
+
+  * 0.7.5.3 tagged with 'make release'
+    Commit: Merge pull request #372 from Yelp/u/jgl/TRON-
+    212_upgrade_to_argparse  Upgrade to argparse
+
+ -- root <root@401cb8cd587b>  Thu, 08 Mar 2018 00:39:13 +0000
+
 tron (0.7.5.2) trusty; urgency=medium
 
   * 0.7.5.2 tagged with 'make release'
