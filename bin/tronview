@@ -6,6 +6,9 @@ from __future__ import unicode_literals
 import os
 import sys
 
+import argcomplete
+import requests
+
 from tron.commands import cmd_utils
 from tron.commands import display
 from tron.commands.client import Client
@@ -47,10 +50,16 @@ def parse_cli():
         'name',
         nargs='?',
         help='job name | job run id | action id',
-    )
+    ).completer = tron_jobs_available
 
+    argcomplete.autocomplete(parser)
     args = parser.parse_args()
     return args
+
+
+def tron_jobs_available(prefix, parsed_args, **kwargs):
+    resource = "%s/api/jobs" % cmd_utils.get_default_server()
+    return (job['name'] for job in requests.get(resource).json()['jobs'] if job['name'].startswith(prefix))
 
 
 def console_height():

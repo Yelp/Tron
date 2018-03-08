@@ -29,6 +29,7 @@ setup(
         "Development Status :: 4 - Beta",
     ],
     install_requires=[
+        'argcomplete >= 0.8.1',
         'humanize >= 0.5.0',
         'Twisted >=10.0.0, <=12.3',
         'PyYAML>=3.0',
@@ -38,6 +39,7 @@ setup(
         'pysensu-yelp',
         'python-daemon',
         'lockfile>=0.7',
+        'requests == 2.18.4',
         'six>=1.11.0',
         'SQLAlchemy>=1.0.15',
         'yelp-clog',

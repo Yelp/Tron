@@ -40,6 +40,10 @@ DEFAULT_CONFIG = {
 opener = open
 
 
+def get_default_server():
+    return DEFAULT_CONFIG['server']
+
+
 def build_option_parser(usage=None, epilog=None):
     parser = argparse.ArgumentParser(
         usage=usage,
