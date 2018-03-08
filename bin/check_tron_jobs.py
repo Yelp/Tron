@@ -6,25 +6,26 @@ import logging
 import sys
 import time
 
-from enum import Enum
 from pysensu_yelp import send_event
 
 from tron.commands import cmd_utils
 from tron.commands import display
 from tron.commands.client import Client
 from tron.commands.client import get_object_type_from_identifier
+# from enum import Enum
 
 log = logging.getLogger('check_tron_jobs')
 
 
-class State(Enum):
-    SUCCEEDED = "succeeded"
-    FAILED = "failed"
-    STUCK = "stuck"
-    NO_RUN_YET = "no_run_yet"
-    NOT_SCHEDULED = "not_scheduled"
-    WAITING_FOR_FIRST_RUN = "waiting_for_first_run"
-    UNKNOWN = "UNKNOWN"
+# This won't work until next release (enum has to be installed)
+# class State(Enum):
+#     SUCCEEDED = "succeeded"
+#     FAILED = "failed"
+#     STUCK = "stuck"
+#     NO_RUN_YET = "no_run_yet"
+#     NOT_SCHEDULED = "not_scheduled"
+#     WAITING_FOR_FIRST_RUN = "waiting_for_first_run"
+#     UNKNOWN = "UNKNOWN"
 
 
 def parse_options():
@@ -72,19 +73,23 @@ def compute_check_result_for_job_runs(client, job, job_content):
     )
     action_run_details = client.action_runs(action_run_id.url, num_lines=10)
 
-    if last_state == State.SUCCEEDED or last_state == State.WAITING_FOR_FIRST_RUN:
+    # if last_state == State.SUCCEEDED or last_state == State.WAITING_FOR_FIRST_RUN:
+    if last_state == "succeeded" or last_state == "waiting_for_first_run":
         prefix = "OK"
         annotation = ""
         status = 0
-    elif last_state == State.STUCK:
+    # elif last_state == State.STUCK:
+    elif last_state == "stuck":
         prefix = "WARN"
         annotation = "Job still running when next job is scheduled to run (stuck?)"
         status = 1
-    elif last_state == State.FAILED:
+    # elif last_state == State.FAILED:
+    elif last_state == "failed":
         prefix = "CRIT"
         annotation = ""
         status = 2
-    elif last_state == State.NOT_SCHEDULED:
+    # elif last_state == State.NOT_SCHEDULED:
+    elif last_state == "not_scheduled":
         prefix = "CRIT"
         annotation = "Job is not scheduled at all"
         status = 2
@@ -127,17 +132,22 @@ def pretty_print_actions(action_run):
 
 def get_relevant_run_and_state(job_runs):
     if len(job_runs['runs']) == 0:
-        return None, State.NO_RUN_YET
+        # return None, State.NO_RUN_YET
+        return None, "no_run_yet"
     run = is_job_scheduled(job_runs)
     if run is None:
-        return job_runs['run'][0], State.NOT_SCHEDULED
+        # return job_runs['run'][0], State.NOT_SCHEDULED
+        return job_runs['run'][0], "not_scheduled"
     run = is_job_stuck(job_runs)
     if run is not None:
-        return run, State.STUCK
+        # return run, State.STUCK
+        return run, "stuck"
     for run in job_runs['runs']:
         if run.get('state', 'unknown') in ["failed", "succeeded"]:
-            return run, State(run.get('state', 'unknown'))
-    return job_runs['runs'][0], State.WAITING_FOR_FIRST_RUN
+            # return run, State(run.get('state', 'unknown'))
+            return run, run.get('state', 'unknown')
+    # return job_runs['runs'][0], State.WAITING_FOR_FIRST_RUN
+    return job_runs['runs'][0], "waiting_for_first_run"
 
 
 def is_job_scheduled(job_runs):
@@ -201,7 +211,7 @@ def check_job(job, client):
             job['name'],
         ))
         return
-    if not job.get('monitoring').get('team', None):
+    if job.get('monitoring').get('team', None) is None:
         log.debug("Not checking {}, no team specified".format(job['name']))
         return
     log.info("Checking {}".format(job['name']))
