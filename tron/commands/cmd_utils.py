@@ -5,8 +5,8 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 from __future__ import with_statement
 
+import argparse
 import logging
-import optparse
 import os
 import sys
 
@@ -40,18 +40,26 @@ DEFAULT_CONFIG = {
 opener = open
 
 
-def build_option_parser(usage, parser_class=optparse.OptionParser):
-    parser = parser_class(usage, version="%%prog %s" % tron.__version__)
+def build_option_parser(usage=None, epilog=None):
+    parser = argparse.ArgumentParser(
+        usage=usage,
+        epilog=epilog,
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument(
+        '--version', action='version',
+        version="%s %s" % (parser.prog, tron.__version__),
+    )
 
-    parser.add_option(
+    parser.add_argument(
         "-v", "--verbose", action="count",
         help="Verbose logging", default=None,
     )
-    parser.add_option(
+    parser.add_argument(
         "--server", default=None,
-        help="Url including scheme, host and port, Default: %default",
+        help="Url including scheme, host and port, Default: %(default)s",
     )
-    parser.add_option(
+    parser.add_argument(
         "-s", "--save", action="store_true", dest="save_config",
         help="Save options used on this job for next time.",
     )

@@ -14,39 +14,43 @@ from tron.commands.client import TronObjectType
 from tron.commands.cmd_utils import ExitCode
 
 
-def parse_options():
-    usage = "usage: %prog [options] [<job | job run | action | service>]"
-    parser = cmd_utils.build_option_parser(usage)
-    parser.add_option(
-        "--numshown", "-n", type="int", dest="num_displays",
+def parse_cli():
+    parser = cmd_utils.build_option_parser()
+    parser.add_argument(
+        "--numshown", "-n", type=int, dest="num_displays",
         help="Max number of jobs/job-runs shown", default=10,
     )
-    parser.add_option(
+    parser.add_argument(
         "--color", "-c", action="store_true",
         dest="display_color", help="Display in color",
         default=None,
     )
-    parser.add_option(
+    parser.add_argument(
         "--nocolor", action="store_false",
         dest="display_color", help="Display without color",
         default=None,
     )
-    parser.add_option(
+    parser.add_argument(
         "--stdout", "-o", action="count", dest="stdout",
         help="Solely displays stdout", default=0,
     )
-    parser.add_option(
+    parser.add_argument(
         "--stderr", "-e", action="count", dest="stderr",
         help="Solely displays stderr", default=0,
     )
-    parser.add_option(
+    parser.add_argument(
         "--events", action="store_true", dest="show_events",
         help="Show events for the specified entity",
         default=False,
     )
+    parser.add_argument(
+        'name',
+        nargs='?',
+        help='job name | job run id | action id',
+    )
 
-    options, args = parser.parse_args(sys.argv)
-    return options, args[1:]
+    args = parser.parse_args()
+    return args
 
 
 def console_height():
@@ -59,9 +63,9 @@ def display_events(data):
     return display.DisplayEvents().format(data)
 
 
-def view_all(options, client):
+def view_all(args, client):
     """Retreive jobs and services and display them."""
-    if options.show_events:
+    if args.show_events:
         return display_events(client.events())
 
     return "".join([
@@ -71,17 +75,17 @@ def view_all(options, client):
     ])
 
 
-def view_job(options, job_id, client):
+def view_job(args, job_id, client):
     """Retrieve details of the specified job and display"""
-    if options.show_events:
+    if args.show_events:
         return display_events(client.object_events(job_id.url))
 
-    job_content = client.job(job_id.url, count=options.num_displays)
+    job_content = client.job(job_id.url, count=args.num_displays)
     return display.format_job_details(job_content)
 
 
-def view_job_run(options, job_run_id, client):
-    if options.show_events:
+def view_job_run(args, job_run_id, client):
+    if args.show_events:
         return display_events(client.object_events(job_run_id.url))
 
     actions = client.job_runs(job_run_id.url)
@@ -89,16 +93,16 @@ def view_job_run(options, job_run_id, client):
     return display_action.format(actions)
 
 
-def view_action_run(options, act_run_id, client):
+def view_action_run(args, act_run_id, client):
     content = client.action_runs(
-        act_run_id.url, num_lines=options.num_displays,
+        act_run_id.url, num_lines=args.num_displays,
     )
     return display.format_action_run_details(content)
 
 
-def view_service(options, service_id, client):
+def view_service(args, service_id, client):
     """Retrieve details of the specified service and display"""
-    if options.show_events:
+    if args.show_events:
         return display_events(client.object_events(service_id.url))
 
     service_content = client.service(service_id.url)
@@ -113,35 +117,35 @@ obj_type_to_view_map = {
 }
 
 
-def get_view_output(name, options, client):
+def get_view_output(name, args, client):
     url_index = client.index()
     tron_id = get_object_type_from_identifier(url_index, name)
 
     if tron_id.type not in obj_type_to_view_map:
         return
-    return obj_type_to_view_map[tron_id.type](options, tron_id, client)
+    return obj_type_to_view_map[tron_id.type](args, tron_id, client)
 
 
 def main():
     """run tronview"""
-    options, args = parse_options()
-    cmd_utils.setup_logging(options)
-    cmd_utils.load_config(options)
+    args = parse_cli()
+    cmd_utils.setup_logging(args)
+    cmd_utils.load_config(args)
 
-    display.Color.toggle(options.display_color)
-    client = Client(options.server)
+    display.Color.toggle(args.display_color)
+    client = Client(args.server)
 
-    if not args:
-        output = view_all(options, client)
+    if not args.name:
+        output = view_all(args, client)
     else:
-        output = get_view_output(args[0], options, client)
+        output = get_view_output(args.name, args, client)
 
     if not output:
-        print("Unrecognized identifier: %s" % args[0], file=sys.stderr)
+        print("Unrecognized identifier: %s" % args.name, file=sys.stderr)
         sys.exit(ExitCode.fail)
 
     if sys.stdout.isatty() and len(output.split('\n')) > console_height():
-        display.view_with_less(output, options.display_color)
+        display.view_with_less(output, args.display_color)
     else:
         print(output)
 
