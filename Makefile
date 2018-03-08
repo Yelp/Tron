@@ -27,7 +27,7 @@ deb_%: clean docker_% coffee_%
 coffee_%:
 	@echo "Building tronweb"
 	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '      \
-	        rm -rf tronweb/js/cs &&                      \
+		rm -rf tronweb/js/cs &&                      \
 		mkdir -p tronweb/js/cs &&                      \
 		coffee -o tronweb/js/cs/ -c tronweb/coffee/ && \
 		chown -R $(UID):$(GID) tronweb/js/cs/          \
