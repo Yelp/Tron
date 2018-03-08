@@ -1,0 +1,15 @@
+---
+
+ssh_options:
+   agent: False
+
+nodes:
+  - hostname: localhost
+
+jobs:
+    - name: "test"
+      node: localhost
+      schedule: "interval 20seconds"
+      actions:
+        - name: "first"
+          command: "echo hi"
