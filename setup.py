@@ -29,6 +29,7 @@ setup(
         "Development Status :: 4 - Beta",
     ],
     install_requires=[
+        'argcomplete >= 0.8.1',
         'humanize >= 0.5.0',
         'Twisted >=10.0.0, <=12.3',
         'PyYAML>=3.0',

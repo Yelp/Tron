@@ -13,6 +13,8 @@ import logging
 import sys
 import urlparse
 
+import argcomplete
+
 from tron.commands import client
 from tron.commands import cmd_utils
 from tron.commands.cmd_utils import ExitCode
@@ -71,8 +73,9 @@ def parse_cli():
         'id',
         nargs='*',
         help='job name, job run id, or action id',
-    )
+    ).completer = cmd_utils.tron_jobs_completer
 
+    argcomplete.autocomplete(parser)
     args = parser.parse_args()
 
     return args

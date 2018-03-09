@@ -6,6 +6,8 @@ from __future__ import unicode_literals
 import os
 import sys
 
+import argcomplete
+
 from tron.commands import cmd_utils
 from tron.commands import display
 from tron.commands.client import Client
@@ -47,8 +49,9 @@ def parse_cli():
         'name',
         nargs='?',
         help='job name | job run id | action id',
-    )
+    ).completer = cmd_utils.tron_jobs_completer
 
+    argcomplete.autocomplete(parser)
     args = parser.parse_args()
     return args
 
