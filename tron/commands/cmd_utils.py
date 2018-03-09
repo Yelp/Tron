@@ -12,6 +12,7 @@ import sys
 
 import tron
 from tron import yaml
+from tron.commands.client import Client
 
 
 log = logging.getLogger("tron.commands")
@@ -42,6 +43,11 @@ opener = open
 
 def get_default_server():
     return DEFAULT_CONFIG['server']
+
+
+def tron_jobs_completer(prefix, parsed_args, **kwargs):
+    default_client = Client(get_default_server())
+    return (job['name'] for job in default_client.jobs() if job['name'].startswith(prefix))
 
 
 def build_option_parser(usage=None, epilog=None):
