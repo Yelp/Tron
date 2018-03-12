@@ -3,9 +3,8 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import optparse
+import argparse
 import os
-import sys
 
 import pkg_resources
 
@@ -22,97 +21,99 @@ DEFAULT_PIDFILE = 'tron.pid'
 DEFAULT_PIDPATH = '/var/run/' + DEFAULT_PIDFILE
 
 
-def parse_options():
-    parser = optparse.OptionParser(version="%%prog %s" % tron.__version__)
+def parse_cli():
+    parser = argparse.ArgumentParser()
 
-    parser.add_option(
-        "-w", "--working-dir", default=DEFAULT_WORKING_DIR,
-        help="Working directory for the Tron daemon, default %default",
+    parser.add_argument(
+        '--version', action='version', version="%s %s" % (parser.prog, tron.__version__),
     )
 
-    parser.add_option(
+    parser.add_argument(
+        "-w", "--working-dir", default=DEFAULT_WORKING_DIR,
+        help="Working directory for the Tron daemon, default %(default)s",
+    )
+
+    parser.add_argument(
         "-c", "--config-path", default=DEFAULT_CONF_PATH,
         help="File path to the Tron configuration file",
     )
 
-    parser.add_option(
+    parser.add_argument(
         "--nodaemon", action="store_true", default=False,
-        help="Disable daemonizing, default %default",
+        help="Disable daemonizing, default %(default)s",
     )
 
-    parser.add_option(
+    parser.add_argument(
         "--pid-file",
         help="File path to PID file, defaults to %s if working directory "
         "is default. Otherwise defaults to <working dir>/%s" %
         (DEFAULT_PIDPATH, DEFAULT_PIDFILE),
     )
 
-    logging_group = optparse.OptionGroup(parser, "Logging")
-    logging_group.add_option(
+    logging_group = parser.add_argument_group('logging', '')
+    logging_group.add_argument(
         "--log-conf", "-l",
         help="File path to a custom logging.conf",
     )
 
-    logging_group.add_option(
+    logging_group.add_argument(
         "-v", "--verbose", action="count", default=0,
         help="Verbose logging. Repeat for more verbosity.",
     )
 
-    logging_group.add_option(
+    logging_group.add_argument(
         "--debug", action="store_true",
         help="Debug mode, extra error reporting, no daemonizing",
     )
-    parser.add_option_group(logging_group)
 
-    api_group = optparse.OptionGroup(parser, "Web Service API")
-    api_group.add_option(
+    api_group = parser.add_argument_group('Web Service API', '')
+    api_group.add_argument(
         "--port", "-P", dest="listen_port", type=int,
-        help="TCP port number to listen on, default %default",
+        help="TCP port number to listen on, default %(default)s",
         default=cmd_utils.DEFAULT_PORT,
     )
 
-    api_group.add_option(
+    api_group.add_argument(
         "--host", "-H", dest="listen_host",
-        help="Hostname to listen on, default %default",
+        help="Hostname to listen on, default %(default)s",
         default=cmd_utils.DEFAULT_HOST,
     )
 
     requirement = pkg_resources.Requirement.parse("tron")
-    api_group.add_option(
+    api_group.add_argument(
         "--web-path",
         default=pkg_resources.resource_filename(
             requirement, 'tronweb',
         ),
-        help="Path to static web resources, default %default.",
+        help="Path to static web resources, default %(default)s.",
     )
-    parser.add_option_group(api_group)
 
-    options, args = parser.parse_args(sys.argv)
-    options.working_dir = os.path.abspath(options.working_dir)
+    args = parser.parse_args()
+    args.working_dir = os.path.abspath(args.working_dir)
 
-    if options.log_conf:
-        options.log_conf = os.path.join(options.working_dir, options.log_conf)
-        if not os.path.exists(options.log_conf):
+    if args.log_conf:
+        args.log_conf = os.path.join(args.working_dir, args.log_conf)
+        if not os.path.exists(args.log_conf):
             parser.error(
                 "Logging config file not found: %s" %
-                options.log_conf,
+                args.log_conf,
             )
 
-    if not options.pid_file:
-        if options.working_dir == DEFAULT_WORKING_DIR:
-            options.pid_file = DEFAULT_PIDPATH
+    if not args.pid_file:
+        if args.working_dir == DEFAULT_WORKING_DIR:
+            args.pid_file = DEFAULT_PIDPATH
         else:
-            options.pid_file = DEFAULT_PIDFILE
+            args.pid_file = DEFAULT_PIDFILE
 
-    options.pid_file = os.path.join(options.working_dir, options.pid_file)
-    options.config_path = os.path.join(
-        options.working_dir, options.config_path,
+    args.pid_file = os.path.join(args.working_dir, args.pid_file)
+    args.config_path = os.path.join(
+        args.working_dir, args.config_path,
     )
 
-    if options.debug:
-        options.nodaemon = True
+    if args.debug:
+        args.nodaemon = True
 
-    return options
+    return args
 
 
 def create_default_config(config_path):
@@ -121,34 +122,34 @@ def create_default_config(config_path):
     manager.create_new_config(config_path, default)
 
 
-def setup_environment(options):
+def setup_environment(args):
     """Setup the working directory and config environment."""
-    if not os.path.exists(options.working_dir):
-        os.makedirs(options.working_dir)
+    if not os.path.exists(args.working_dir):
+        os.makedirs(args.working_dir)
 
-    if (not os.path.isdir(options.working_dir) or
-            not os.access(options.working_dir, os.R_OK | os.W_OK | os.X_OK)):
-        msg = "Error, can't access working directory %s" % options.working_dir
+    if (not os.path.isdir(args.working_dir) or
+            not os.access(args.working_dir, os.R_OK | os.W_OK | os.X_OK)):
+        msg = "Error, can't access working directory %s" % args.working_dir
         raise SystemExit(msg)
 
     # Attempt to create a default config if config is missing
-    if not os.path.exists(options.config_path):
+    if not os.path.exists(args.config_path):
         try:
-            create_default_config(options.config_path)
+            create_default_config(args.config_path)
         except OSError as e:
             msg = "Error creating default configuration at %s: %s"
-            raise SystemExit(msg % (options.config_path, e))
+            raise SystemExit(msg % (args.config_path, e))
 
-    if not os.access(options.config_path, os.R_OK | os.W_OK):
+    if not os.access(args.config_path, os.R_OK | os.W_OK):
         msg = "Error opening configuration %s: Missing Permissions"
-        raise SystemExit(msg % options.config_path)
+        raise SystemExit(msg % args.config_path)
 
 
 def main():
-    options = parse_options()
+    args = parse_cli()
 
-    setup_environment(options)
-    trond = trondaemon.TronDaemon(options)
+    setup_environment(args)
+    trond = trondaemon.TronDaemon(args)
     trond.run()
 
 

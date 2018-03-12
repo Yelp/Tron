@@ -1,6 +1,6 @@
 {
   "$schema": "http://json-schema.org/draft-06/schema#",
-  "description": "http://pythonhosted.org/tron/config.html",
+  "description": "http://tron.readthedocs.io/en/latest/config.html",
   "type": "object",
   "additionalProperties": false,
   "properties": {

@@ -30,6 +30,7 @@ setup(
         "Development Status :: 4 - Beta",
     ],
     install_requires=[
+        'argcomplete >= 0.8.1',
         'humanize >= 0.5.0',
         'cryptography>=2.1.4',
         'Twisted>=17.0.0',
@@ -43,6 +44,7 @@ setup(
         'six>=1.11.0',
         'SQLAlchemy>=1.0.15',
         'yelp-clog',
+        'enum34>=1.1.6',
     ],
     packages=find_packages(exclude=['tests.*', 'tests']) + ['tronweb'],
     scripts=glob.glob('bin/*'),

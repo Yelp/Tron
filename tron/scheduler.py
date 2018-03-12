@@ -182,16 +182,25 @@ class GeneralScheduler(object):
         if not start_time:
             start_time = timeutils.current_time(tz=self.time_zone)
         elif self.time_zone:
-            try:
-                start_time = self.time_zone.localize(start_time, is_dst=None)
-            except AmbiguousTimeError:
-                # We are in the infamous 1 AM block which happens twice on
-                # fall-back. Pretend like it's the first time, every time.
-                start_time = self.time_zone.localize(start_time, is_dst=True)
-            except NonExistentTimeError:
-                # We are in the infamous 2:xx AM block which does not
-                # exist. Pretend like it's the later time, every time.
-                start_time = self.time_zone.localize(start_time, is_dst=True)
+            if start_time.tzinfo is None or start_time.tzinfo.utcoffset(start_time) is None:
+                # tz-naive start times need to be localized first to the requested
+                # time zone.
+                try:
+                    start_time = self.time_zone.localize(
+                        start_time, is_dst=None,
+                    )
+                except AmbiguousTimeError:
+                    # We are in the infamous 1 AM block which happens twice on
+                    # fall-back. Pretend like it's the first time, every time.
+                    start_time = self.time_zone.localize(
+                        start_time, is_dst=True,
+                    )
+                except NonExistentTimeError:
+                    # We are in the infamous 2:xx AM block which does not
+                    # exist. Pretend like it's the later time, every time.
+                    start_time = self.time_zone.localize(
+                        start_time, is_dst=True,
+                    )
 
         return self.time_spec.get_match(start_time) + get_jitter(self.jitter)
 
