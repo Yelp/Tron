@@ -3,3 +3,4 @@ opt/venvs/tron/bin/tronctl usr/bin/tronctl
 opt/venvs/tron/bin/trond usr/bin/trond
 opt/venvs/tron/bin/tronfig usr/bin/tronfig
 opt/venvs/tron/bin/tronview usr/bin/tronview
+opt/venvs/tron/bin/tron_tabcomplete.sh etc/bash_completion.d/tron.bash
