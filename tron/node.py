@@ -5,6 +5,7 @@ import itertools
 import logging
 import random
 
+import six
 from twisted.conch.client.knownhosts import KnownHostsFile
 from twisted.internet import defer
 from twisted.internet import protocol
@@ -79,7 +80,7 @@ class NodePoolRepository(object):
     def filter_by_name(self, node_configs, node_pool_configs):
         self.nodes.filter_by_name(node_configs)
         self.pools.filter_by_name(
-            node_configs.keys() + node_pool_configs.keys(),
+            list(node_configs.keys()) + list(node_pool_configs.keys()),
         )
 
     @classmethod
@@ -95,13 +96,13 @@ class NodePoolRepository(object):
         instance._update_node_pools(node_pool_configs)
 
     def _update_nodes(self, node_configs, ssh_options, known_hosts, ssh_config):
-        for config in node_configs.itervalues():
+        for config in six.itervalues(node_configs):
             pub_key = known_hosts.get_public_key(config.hostname)
             node = Node.from_config(config, ssh_options, pub_key, ssh_config)
             self.add_node(node)
 
     def _update_node_pools(self, node_pool_configs):
-        for config in node_pool_configs.itervalues():
+        for config in six.itervalues(node_pool_configs):
             nodes = self._get_nodes_by_name(config.nodes)
             pool = NodePool.from_config(config, nodes)
             self.pools.replace(pool)
@@ -162,7 +163,7 @@ class NodePool(object):
 
     def next_round_robin(self):
         """Return the next node cycling in a consistent order."""
-        return self.iter.next()
+        return next(self.iter)
 
     def disable(self):
         """Required for MappingCollection.Item interface."""
@@ -187,7 +188,7 @@ class KnownHosts(KnownHostsFile):
         return cls.fromPath(FilePath(file_path))
 
     def get_public_key(self, hostname):
-        for entry in self._entries:
+        for entry in self.iterentries():
             if entry.matchesHost(hostname):
                 return entry.publicKey
         log.warn("Missing host key for: %s", hostname)
@@ -428,7 +429,7 @@ class Node(object):
 
         log.info("Service to %s stopped", self.hostname)
 
-        for run_id, run in self.run_states.iteritems():
+        for run_id, run in six.iteritems(self.run_states):
             if run.state == RUN_STATE_CONNECTING:
                 # Now we can trigger a reconnect and re-start any waiting runs.
                 self._connect_then_run(run)

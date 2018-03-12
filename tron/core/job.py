@@ -2,10 +2,11 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import datetime
-import itertools
 import logging
 
 import humanize
+import six
+from six.moves import filter
 
 from tron import command_context
 from tron import event
@@ -436,7 +437,7 @@ class JobCollection(object):
     def __init__(self):
         self.jobs = collections.MappingCollection('jobs')
         self.proxy = proxy.CollectionProxy(
-            self.jobs.itervalues, [
+            lambda: six.itervalues(self.jobs), [
                 proxy.func_proxy('request_shutdown',    iteration.list_all),
                 proxy.func_proxy('enable',              iteration.list_all),
                 proxy.func_proxy('disable',             iteration.list_all),
@@ -458,8 +459,8 @@ class JobCollection(object):
                     job_scheduler.schedule()
                 yield job_scheduler.get_job()
 
-        seq = (factory.build(config) for config in job_configs.itervalues())
-        return map_to_job_and_schedule(itertools.ifilter(self.add, seq))
+        seq = (factory.build(config) for config in six.itervalues(job_configs))
+        return map_to_job_and_schedule(filter(self.add, seq))
 
     def add(self, job_scheduler):
         return self.jobs.add(job_scheduler, self.update)
@@ -487,7 +488,7 @@ class JobCollection(object):
         return [sched.get_job_runs() for sched in self]
 
     def __iter__(self):
-        return self.jobs.itervalues()
+        return six.itervalues(self.jobs)
 
     def __getattr__(self, name):
         return self.proxy.perform(name)

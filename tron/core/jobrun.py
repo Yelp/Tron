@@ -4,9 +4,10 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import itertools
 import logging
 from collections import deque
+
+from six.moves import filter
 
 from tron import command_context
 from tron import event
@@ -368,7 +369,7 @@ class JobRunCollection(object):
     def _get_runs_using(self, func, reverse=False):
         """Filter runs using func()."""
         job_runs = self.runs if not reverse else reversed(self.runs)
-        return itertools.ifilter(func, job_runs)
+        return filter(func, job_runs)
 
     def _get_run_using(self, func, reverse=False):
         """Find the first run (from most recent to least recent), where func()
@@ -376,7 +377,7 @@ class JobRunCollection(object):
         argument (a JobRun), and return True or False.
         """
         try:
-            return self._get_runs_using(func, reverse).next()
+            return next(self._get_runs_using(func, reverse))
         except StopIteration:
             return None
 

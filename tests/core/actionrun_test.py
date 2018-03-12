@@ -6,6 +6,7 @@ import shutil
 import tempfile
 
 import mock
+import six
 from testify import assert_equal
 from testify import run
 from testify import setup
@@ -375,7 +376,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             list(self.output_path), self.run_node,
         )
 
-        for key, value in self.state_data.iteritems():
+        for key, value in six.iteritems(self.state_data):
             if key in ['state', 'node_name']:
                 continue
             assert_equal(getattr(action_run, key), value)

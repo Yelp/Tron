@@ -5,6 +5,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import mock
+import six
 import twisted.web.http
 import twisted.web.resource
 import twisted.web.server
@@ -37,7 +38,7 @@ REQUEST.childLink = lambda val: "/jobs/%s" % val
 
 
 def build_request(**kwargs):
-    args = {k: [v] for k, v in kwargs.iteritems()}
+    args = {k: [v] for k, v in six.iteritems(kwargs)}
     return mock.create_autospec(twisted.web.server.Request, args=args)
 
 

@@ -6,7 +6,6 @@ import datetime
 import itertools
 import shutil
 import tempfile
-from exceptions import KeyError
 
 from tests.testingutils import Turtle
 
@@ -108,7 +107,7 @@ class MockNodePool(object):
             self.nodes.append(MockNode())
 
         if self._ndx_cycle:
-            return self.nodes[self._ndx_cycle.next()]
+            return self.nodes[next(self._ndx_cycle)]
         else:
             return self.nodes[0]
 

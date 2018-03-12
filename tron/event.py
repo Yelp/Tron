@@ -6,6 +6,8 @@ import logging
 import operator
 from collections import deque
 
+import six
+
 from tron.utils import timeutils
 
 log = logging.getLogger(__name__)
@@ -31,6 +33,18 @@ class EventLevel(object):
         # TODO: drop this
         return (self.order > other.order) - (self.order < other.order)
 
+    def __lt__(self, other):
+        return self.order < other.order
+
+    def __le__(self, other):
+        return self.order <= other.order
+
+    def __gt__(self, other):
+        return self.order > other.order
+
+    def __ge__(self, other):
+        return self.order >= other.order
+
     def __hash__(self):
         return hash(self.order)
 
@@ -46,7 +60,6 @@ class EventStore(object):
     retrieving events which with a minimal level.
     """
     DEFAULT_LIMIT = 10
-    NO_LEVEL = EventLevel(None, None)
 
     def __init__(self, limits=None):
         self.limits = limits or dict()
@@ -62,11 +75,12 @@ class EventStore(object):
             self.events[level] = self._build_deque(level)
         self.events[level].append(event)
 
-    def get_events(self, min_level=None):
-        min_level = min_level or self.NO_LEVEL
-        event_iterable = self.events.iteritems()
+    def get_events(self, min_level=LEVEL_INFO):
+        min_level = min_level or LEVEL_INFO
+        event_iterable = six.iteritems(self.events)
         groups = (e for key, e in event_iterable if key >= min_level)
         return itertools.chain.from_iterable(groups)
+
     __iter__ = get_events
 
 
@@ -123,7 +137,7 @@ class EventRecorder(object):
         """
         for event in self.events.get_events(min_level):
             yield event
-        for child in self.children.itervalues():
+        for child in six.itervalues(self.children):
             for event in child._events_with_child_events(min_level):
                 yield event
 

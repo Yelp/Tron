@@ -4,9 +4,11 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import itertools
 import logging
 import traceback
+
+import six
+from six.moves import filter
 
 from tron import command_context
 from tron import node
@@ -31,7 +33,7 @@ class ActionRunFactory(object):
     @classmethod
     def build_action_run_collection(cls, job_run, action_runner):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
-        action_map = job_run.action_graph.get_action_map().iteritems()
+        action_map = six.iteritems(job_run.action_graph.get_action_map())
         action_run_map = {
             name: cls.build_run_for_action(job_run, action_inst, action_runner)
             for name, action_inst in action_map
@@ -432,11 +434,11 @@ class ActionRunCollection(object):
         return (self.run_map[a.name] for a in actions if a.name in self.run_map)
 
     def get_action_runs_with_cleanup(self):
-        return self.run_map.itervalues()
+        return six.itervalues(self.run_map)
     action_runs_with_cleanup = property(get_action_runs_with_cleanup)
 
     def get_action_runs(self):
-        return (run for run in self.run_map.itervalues() if not run.is_cleanup)
+        return (run for run in six.itervalues(self.run_map) if not run.is_cleanup)
     action_runs = property(get_action_runs)
 
     @property
@@ -461,7 +463,7 @@ class ActionRunCollection(object):
             action_runs = self.action_runs_with_cleanup
         else:
             action_runs = self.action_runs
-        return itertools.ifilter(func, action_runs)
+        return filter(func, action_runs)
 
     def get_startable_action_runs(self):
         """Returns any actions that are scheduled or queued that can be run."""
@@ -538,7 +540,7 @@ class ActionRunCollection(object):
 
         run_states = ', '.join(
             "%s(%s%s)" % (a.action_name, a.state, blocked_state(a))
-            for a in self.run_map.itervalues()
+            for a in six.itervalues(self.run_map)
         )
         return "%s[%s]" % (self.__class__.__name__, run_states)
 
@@ -552,7 +554,7 @@ class ActionRunCollection(object):
         return name in self.run_map
 
     def __iter__(self):
-        return self.run_map.itervalues()
+        return six.itervalues(self.run_map)
 
     def get(self, name):
         return self.run_map.get(name)

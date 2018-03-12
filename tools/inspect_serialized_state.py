@@ -15,6 +15,8 @@ from __future__ import unicode_literals
 
 import optparse
 
+import six
+
 from tron.config import manager
 from tron.serialize.runstate import statemanager
 from tron.utils import tool_utils
@@ -63,7 +65,7 @@ def format_jobs(job_states):
         start_times = filter(None, start_times)
         last_run = format_date(max(start_times)) if start_times else None
         return format % (name, job['enabled'], len(job['runs']), last_run)
-    seq = sorted(build(*item) for item in job_states.iteritems())
+    seq = sorted(build(*item) for item in six.iteritems(job_states))
     return header + "".join(seq)
 
 
@@ -73,7 +75,7 @@ def format_service(service_states):
 
     def build(name, service):
         return format % (name, service.get('enabled'), len(service['instances']))
-    seq = sorted(build(*item) for item in service_states.iteritems())
+    seq = sorted(build(*item) for item in six.iteritems(service_states))
     return header + "".join(seq)
 
 

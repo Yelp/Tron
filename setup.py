@@ -20,6 +20,7 @@ setup(
     classifiers=[
         "Programming Language :: Python",
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3.6',
         "Operating System :: OS Independent",
         "License :: OSI Approved :: Apache Software License",
         "Topic :: System :: Monitoring",
@@ -31,7 +32,8 @@ setup(
     install_requires=[
         'argcomplete >= 0.8.1',
         'humanize >= 0.5.0',
-        'Twisted >=10.0.0, <=12.3',
+        'cryptography>=2.1.4',
+        'Twisted>=17.0.0',
         'PyYAML>=3.0',
         'pyasn1>=0.0.13',
         'pycrypto>=2.4',

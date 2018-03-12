@@ -3,6 +3,8 @@ from __future__ import unicode_literals
 
 import logging
 
+import six
+
 from tron.utils.observer import Observable
 
 
@@ -41,6 +43,9 @@ class NamedEventState(dict):
     def __hash__(self):
         return hash(self.name)
 
+    def __bool__(self):
+        return bool(self.name)
+
     def __nonzero__(self):
         return bool(self.name)
 
@@ -74,7 +79,7 @@ def traverse(starting_state, match_func):
         if match_func(*transition_state_pair):
             yield transition_state_pair
 
-        for next_pair in cur_state.iteritems():
+        for next_pair in six.iteritems(cur_state):
             if pair_with_name(next_pair) not in visited:
                 state_pairs.append(next_pair)
 
@@ -82,7 +87,7 @@ def traverse(starting_state, match_func):
 def named_event_by_name(starting_state, name):
     def name_match(t, s): return s.name == name
     try:
-        _, state = traverse(starting_state, name_match).next()
+        _, state = next(traverse(starting_state, name_match))
         return state
     except StopIteration:
         raise ValueError("State %s not found." % name)

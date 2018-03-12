@@ -15,7 +15,8 @@ from __future__ import unicode_literals
 
 import calendar
 import datetime
-import itertools
+
+from six.moves import filter
 
 try:
     import pytz
@@ -113,12 +114,21 @@ def validate_spec(source, value_range, type, default=None, allow_last=False):
     if not source:
         return default
 
+    has_last = False
+    source_wo_last = []
     for item in source:
         if allow_last and item == TOKEN_LAST:
+            has_last = True
             continue
         if item not in value_range:
             raise ValueError("%s not in range %s" % (type, value_range))
-    return sorted(set(source))
+        source_wo_last.append(item)
+
+    sorted_source = sorted(source_wo_last)
+    if has_last:
+        sorted_source.append(TOKEN_LAST)
+
+    return sorted_source
 
 
 class TimeSpecification(object):
@@ -180,7 +190,7 @@ class TimeSpecification(object):
 
         def day_filter(day): return first_day <= day <= last_day_of_month
 
-        def sort_days(days): return sorted(itertools.ifilter(day_filter, days))
+        def sort_days(days): return sorted(filter(day_filter, days))
 
         if self.monthdays:
             return sort_days(map_last(day) for day in self.monthdays)
@@ -215,7 +225,7 @@ class TimeSpecification(object):
 
         def hour_filter(hour): return not is_start_day or hour >= start_hour
 
-        for hour in itertools.ifilter(hour_filter, self.hours):
+        for hour in filter(hour_filter, self.hours):
             for minute in self.minutes:
                 for second in self.seconds:
                     candidate = datetime.time(hour, minute, second)

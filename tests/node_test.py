@@ -76,13 +76,16 @@ class NodePoolRepositoryTestCase(TestCase):
                 node_names + [node_pool_config['c'].name],
             ),
         )
-        assert_equal(set(self.repo.nodes), set(node_names + mock_nodes.keys()))
+        assert_equal(
+            set(self.repo.nodes),
+            set(list(node_names) + list(mock_nodes.keys())),
+        )
 
     def test_nodes_by_name(self):
         mock_nodes = {'a': mock.Mock(), 'b': mock.Mock()}
         self.repo.nodes.update(mock_nodes)
         nodes = self.repo._get_nodes_by_name(['a', 'b'])
-        assert_equal(nodes, mock_nodes.values())
+        assert_equal(nodes, list(mock_nodes.values()))
 
     def test_get_node(self):
         returned_node = self.repo.get_node(self.node.get_name())
@@ -95,7 +98,7 @@ class KnownHostTestCase(TestCase):
     def setup_known_hosts(self):
         self.known_hosts = node.KnownHosts(None)
         self.entry = mock.Mock()
-        self.known_hosts._entries.append(self.entry)
+        self.known_hosts._added.append(self.entry)
 
     def test_get_public_key(self):
         hostname = 'hostname'

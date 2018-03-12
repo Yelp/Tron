@@ -13,6 +13,8 @@ from __future__ import unicode_literals
 
 import optparse
 
+import six
+
 from tron.config import manager
 from tron.config import schema
 
@@ -40,7 +42,7 @@ def parse_args():
 def build_diagram(job_config):
     edges, nodes = [], []
 
-    for action in job_config.actions.itervalues():
+    for action in six.itervalues(job_config.actions):
         shape = 'invhouse' if not action.requires else 'rect'
         nodes.append("node [shape = %s]; %s" % (shape, action.name))
         for required_action in action.requires:

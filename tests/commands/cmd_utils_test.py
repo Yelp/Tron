@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import argparse
-import contextlib
 
 import mock
 from testify import assert_equal
@@ -16,10 +15,8 @@ class GetConfigTestCase(TestCase):
 
     @setup_teardown
     def patch_environment(self):
-        with contextlib.nested(
-            mock.patch('tron.commands.cmd_utils.opener', autospec=True),
-            mock.patch('tron.commands.cmd_utils.yaml', autospec=True),
-        ) as (self.mock_opener, self.mock_yaml):
+        with mock.patch('tron.commands.cmd_utils.opener', autospec=True) as self.mock_opener, \
+                mock.patch('tron.commands.cmd_utils.yaml', autospec=True) as self.mock_yaml:
             yield
 
     def test_read_config_missing(self):

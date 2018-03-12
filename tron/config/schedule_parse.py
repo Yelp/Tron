@@ -218,10 +218,10 @@ def build_groc_schedule_parser_re():
     """
 
     # m|mon|monday|...|day
-    DAY_VALUES = '|'.join(CONVERT_DAYS_INT.keys() + ['day'])
+    DAY_VALUES = '|'.join(list(CONVERT_DAYS_INT.keys()) + ['day'])
 
     # jan|january|...|month
-    MONTH_VALUES = '|'.join(CONVERT_MONTHS.keys() + ['month'])
+    MONTH_VALUES = '|'.join(list(CONVERT_MONTHS.keys()) + ['month'])
 
     DATE_SUFFIXES = 'st|nd|rd|th'
 

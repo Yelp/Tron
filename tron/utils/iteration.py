@@ -8,8 +8,8 @@ def build_filtered_func(func):
         """Filter out Nones and return the return of func."""
         if not seq:
             return None
-        seq = filter(None, seq)
-        if not seq:
+        seq = list(filter(None, seq))
+        if len(seq) == 0:
             return None
         return func(seq)
     return filtered_func

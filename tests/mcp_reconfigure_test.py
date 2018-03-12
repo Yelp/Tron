@@ -191,9 +191,9 @@ class MCPReconfigureTestCase(TestCase):
         assert 'MASTER.test_unchanged' in self.mcp.jobs
         job_sched = self.mcp.jobs.get_by_name('MASTER.test_unchanged')
         orig_job = job_sched.job
-        run0 = job_sched.get_runs_to_schedule(False).next()
+        run0 = next(job_sched.get_runs_to_schedule(False))
         run0.start()
-        run1 = job_sched.get_runs_to_schedule(False).next()
+        run1 = next(job_sched.get_runs_to_schedule(False))
 
         assert_equal(job_sched.job.name, "MASTER.test_unchanged")
         action_map = job_sched.job.action_graph.action_map
@@ -216,7 +216,7 @@ class MCPReconfigureTestCase(TestCase):
     def test_job_unchanged_disabled(self):
         job_sched = self.mcp.jobs.get_by_name('MASTER.test_unchanged')
         orig_job = job_sched.job
-        job_sched.get_runs_to_schedule(False).next()
+        next(job_sched.get_runs_to_schedule(False))
         job_sched.disable()
 
         self.reconfigure()
@@ -228,9 +228,9 @@ class MCPReconfigureTestCase(TestCase):
     def test_job_removed(self):
         assert 'MASTER.test_remove' in self.mcp.jobs
         job_sched = self.mcp.jobs.get_by_name('MASTER.test_remove')
-        run0 = job_sched.get_runs_to_schedule(False).next()
+        run0 = next(job_sched.get_runs_to_schedule(False))
         run0.start()
-        run1 = job_sched.get_runs_to_schedule(False).next()
+        run1 = next(job_sched.get_runs_to_schedule(False))
 
         assert_equal(job_sched.job.name, "MASTER.test_remove")
         action_map = job_sched.job.action_graph.action_map
@@ -246,9 +246,9 @@ class MCPReconfigureTestCase(TestCase):
     def test_job_changed(self):
         assert 'MASTER.test_change' in self.mcp.jobs
         job_sched = self.mcp.jobs.get_by_name('MASTER.test_change')
-        run0 = job_sched.get_runs_to_schedule(False).next()
+        run0 = next(job_sched.get_runs_to_schedule(False))
         run0.start()
-        job_sched.get_runs_to_schedule(False).next()
+        next(job_sched.get_runs_to_schedule(False))
         assert_equal(len(job_sched.job.runs.runs), 2)
 
         assert_equal(job_sched.job.name, "MASTER.test_change")
@@ -300,7 +300,7 @@ class MCPReconfigureTestCase(TestCase):
     def test_daily_reschedule(self):
         job_sched = self.mcp.jobs.get_by_name('MASTER.test_daily_change')
 
-        job_sched.get_runs_to_schedule(False).next()
+        next(job_sched.get_runs_to_schedule(False))
 
         assert_equal(len(job_sched.job.runs.runs), 1)
         run = job_sched.job.runs.runs[0]

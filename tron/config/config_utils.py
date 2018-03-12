@@ -7,6 +7,7 @@ import functools
 import itertools
 import re
 
+import six
 from six import string_types
 
 from tron.config import ConfigError
@@ -316,7 +317,7 @@ class Validator(object):
         """Set any default values for any optional values that were not
         specified.
         """
-        for key, value in self.defaults.iteritems():
+        for key, value in six.iteritems(self.defaults):
             output_dict.setdefault(key, value)
 
     def path_name(self, name=None):
@@ -340,7 +341,7 @@ class Validator(object):
     def validate_contents(self, input, config_context):
         """Override this to validate each value in the input."""
         valid_input = {}
-        for key, value in input.iteritems():
+        for key, value in six.iteritems(input):
             if key in self.validators:
                 child_context = config_context.build_child_context(key)
                 valid_input[key] = self.validators[key](value, child_context)

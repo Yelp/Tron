@@ -11,6 +11,7 @@ import logging
 import os
 
 import pytz
+import six
 from six import string_types
 
 from tron import command_context
@@ -364,7 +365,7 @@ class ValidateJob(Validator):
 
     def post_validation(self, job, config_context):
         """Validate actions for the job."""
-        for action in job['actions'].itervalues():
+        for _, action in six.iteritems(job['actions']):
             self._validate_dependencies(job, job['actions'], action)
 
 
@@ -511,7 +512,7 @@ class ValidateConfig(Validator):
         another pool.
         """
         all_node_names = set(config['nodes'])
-        for node_pool in config['node_pools'].itervalues():
+        for node_pool in six.itervalues(config['node_pools']):
             invalid_names = set(node_pool.nodes) - all_node_names
             if invalid_names:
                 msg = "NodePool %s contains other NodePools: " % node_pool.name
@@ -577,7 +578,7 @@ def validate_config_mapping(config_mapping):
     nodes = get_nodes_from_master_namespace(master)
     yield MASTER_NAMESPACE, master
 
-    for name, content in config_mapping.iteritems():
+    for name, content in six.iteritems(config_mapping):
         context = ConfigContext(name, nodes, master.command_context, name)
         yield name, valid_named_config(content, config_context=context)
 
@@ -588,8 +589,8 @@ class ConfigContainer(object):
     def __init__(self, config_mapping):
         self.configs = config_mapping
 
-    def iteritems(self):
-        return self.configs.iteritems()
+    def items(self):
+        return six.iteritems(self.configs)
 
     @classmethod
     def create(cls, config_mapping):
@@ -598,19 +599,19 @@ class ConfigContainer(object):
     # TODO: DRY with get_jobs(), get_services()
     def get_job_and_service_names(self):
         job_names, service_names = [], []
-        for config in self.configs.itervalues():
+        for config in six.itervalues(self.configs):
             job_names.extend(config.jobs)
             service_names.extend(config.services)
         return job_names, service_names
 
     def get_jobs(self):
         return dict(itertools.chain.from_iterable(
-            config.jobs.iteritems() for config in self.configs.itervalues()
+            six.iteritems(config.jobs) for _, config in self.configs.items()
         ))
 
     def get_services(self):
         return dict(itertools.chain.from_iterable(
-            config.services.iteritems() for config in self.configs.itervalues()
+            six.iteritems(config.services) for _, config in self.configs.items()
         ))
 
     def get_master(self):

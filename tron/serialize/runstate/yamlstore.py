@@ -7,10 +7,11 @@ buffer size (10+), and a low run_limit (< 10).
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import itertools
 import operator
 import os
 from collections import namedtuple
+
+from six.moves import filter
 
 from tron import yaml
 from tron.serialize import runstate
@@ -41,8 +42,8 @@ class YamlStateStore(object):
             self.buffer = yaml.load(fh)
 
         items = (self.buffer.get(key.type, {}).get(key.iden) for key in keys)
-        key_item_pairs = itertools.izip(keys, items)
-        return dict(itertools.ifilter(operator.itemgetter(1), key_item_pairs))
+        key_item_pairs = zip(keys, items)
+        return dict(filter(operator.itemgetter(1), key_item_pairs))
 
     def save(self, key_value_pairs):
         for key, state_data in key_value_pairs:

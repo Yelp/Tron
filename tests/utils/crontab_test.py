@@ -45,7 +45,7 @@ class MinuteFieldParserTestCase(TestCase):
         assert_raises(ValueError, self.parser.validate_bounds, 60)
 
     def test_get_values_asterisk(self):
-        assert_equal(self.parser.get_values("*"), range(0, 60))
+        assert_equal(self.parser.get_values("*"), list(range(0, 60)))
 
     def test_get_values_min_only(self):
         assert_equal(self.parser.get_values("4"), [4])

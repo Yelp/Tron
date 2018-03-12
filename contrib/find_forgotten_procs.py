@@ -12,12 +12,13 @@ import subprocess
 import sys
 import time
 import traceback
-import urllib2
 from fnmatch import fnmatch
 from multiprocessing.pool import ThreadPool
 from tempfile import TemporaryFile
 
+import six
 from six import string_types
+from six.moves.urllib import request
 
 
 DEFAULT_SIGNAL = 'TERM'
@@ -117,7 +118,7 @@ def ssh_get_instances(host, service_to_target, user, forward_ssh_agent):
         """ % {
             'bash_hash': ' '.join([
                 '["%s"]="%s"' % (s, t,)
-                for s, t in service_to_target.iteritems()
+                for s, t in six.iteritems(service_to_target)
             ]),
         },
     )
@@ -173,12 +174,13 @@ def find_forgotten(host, services, user, forward_ssh_agent, signal=None, kill_pr
         serivce_to_expecteds[service_name] = expected_pidfiles
 
     lost_pids = {}
-    for service_name, pid_command_pairs in ssh_get_instances(
+    instances = ssh_get_instances(
         host,
         service_to_target,
         user,
         forward_ssh_agent,
-    ).iteritems():
+    )
+    for service_name, pid_command_pairs in six.iteritems(instances):
         lost = [
             pid
             for pid, command in pid_command_pairs
@@ -210,7 +212,7 @@ def _get_services_from_tron(tron_base):
 
     url = tron_base + 'api/services'
 
-    return json.loads(urllib2.urlopen(url).read())['services']
+    return json.loads(request.urlopen(url).read())['services']
 
 
 def main(command, tron_base, *target_service_names, **options):

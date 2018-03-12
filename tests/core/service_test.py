@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import mock
+import six
 from testify import assert_equal
 from testify import run
 from testify import setup
@@ -199,7 +200,7 @@ class ServiceCollectionTestCase(TestCase):
             service_configs, context,
         ))
         expected = [mock.call(config, context)
-                    for config in service_configs.itervalues()]
+                    for config in six.itervalues(service_configs)]
         assert_mock_calls(expected, mock_service.from_config.mock_calls)
         expected = [mock.call(s) for s in result]
         assert_mock_calls(expected, self.collection.add.mock_calls)

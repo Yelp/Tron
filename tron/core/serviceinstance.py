@@ -450,7 +450,7 @@ class ServiceInstanceCollection(object):
         def builder(_):
             node = node_selector(self.node_pool)
             return self._build_instance(node, self.next_instance_number())
-        log.info("Creating %s instances for %s" % (self.missing, self))
+        log.info("Creating {} instances for {}".format(self.missing, self))
         return self._build_and_sort(builder, range(self.missing))
 
     def _build_instance(self, node, number):
@@ -468,7 +468,7 @@ class ServiceInstanceCollection(object):
     def _build_and_sort(self, builder, seq):
         def build_and_add(item):
             instance = builder(item)
-            log.info("Building and adding %s to %s" % (instance, self))
+            log.info("Building and adding {} to {}".format(instance, self))
             self.instances.append(instance)
             return instance
         instances = list(build_and_add(item) for item in seq)

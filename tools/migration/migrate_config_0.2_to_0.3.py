@@ -14,6 +14,7 @@ import optparse
 import re
 import sys
 
+import six
 import yaml
 
 YAML_TAG_RE = re.compile(r'!\w+\b')
@@ -105,7 +106,7 @@ def build_anchor_mapping(content):
 
     return {
         anchor_name: name_from_doc(loader.construct_document(yaml_node))
-        for anchor_name, yaml_node in loader.anchors.iteritems()
+        for anchor_name, yaml_node in six.iteritems(loader.anchors)
     }
 
 
@@ -114,7 +115,7 @@ def update_references(content):
 
     def key_length_func(kv): return len(kv[0])
     anchors_by_length = sorted(
-        anchor_mapping.iteritems(), key=key_length_func, reverse=True,
+        six.iteritems(anchor_mapping), key=key_length_func, reverse=True,
     )
     for anchor_name, string_name in anchors_by_length:
         # Remove the anchors

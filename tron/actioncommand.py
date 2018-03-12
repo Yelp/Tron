@@ -23,6 +23,7 @@ class CompletedActionCommand(object):
     is_complete = True
     is_done = True
     is_failed = False
+    is_unknown = False
 
     @staticmethod
     def write_stderr(_):

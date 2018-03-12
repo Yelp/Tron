@@ -1,9 +1,9 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import urllib2
-
 import mock
+from six.moves.urllib.error import HTTPError
+from six.moves.urllib.error import URLError
 from testify import assert_equal
 from testify import run
 from testify import setup
@@ -31,7 +31,7 @@ class RequestTestCase(TestCase):
     @setup_teardown
     def patch_urllib(self):
         patcher = mock.patch(
-            'tron.commands.client.urllib2.urlopen',
+            'tron.commands.client.urllib.request.urlopen',
             autospec=True,
         )
         with patcher as self.mock_urlopen:
@@ -49,8 +49,8 @@ class RequestTestCase(TestCase):
         assert request.has_header('User-agent')
         assert_equal(request.get_method(), 'POST')
         assert_equal(request.get_full_url(), self.url)
-        assert_in('param=is_set', request.get_data())
-        assert_in('other=1', request.get_data())
+        assert_in('param=is_set', request.data)
+        assert_in('other=1', request.data)
 
     def test_load_response_content_success(self):
         content = 'not:valid:json'
@@ -60,7 +60,7 @@ class RequestTestCase(TestCase):
         assert_equal(response.content, content)
 
     def test_request_http_error(self):
-        self.mock_urlopen.side_effect = urllib2.HTTPError(
+        self.mock_urlopen.side_effect = HTTPError(
             self.url, 500, 'broke', {}, build_file_mock('oops'),
         )
         response = client.request(self.url)
@@ -68,7 +68,7 @@ class RequestTestCase(TestCase):
         assert_equal(response, expected)
 
     def test_request_url_error(self):
-        self.mock_urlopen.side_effect = urllib2.URLError('broke')
+        self.mock_urlopen.side_effect = URLError('broke')
         response = client.request(self.url)
         expected = client.Response(client.URL_ERROR, 'broke', None)
         assert_equal(response, expected)

@@ -6,6 +6,8 @@ import logging
 import time
 from contextlib import contextmanager
 
+import six
+
 import tron
 from tron.config import schema
 from tron.core import job
@@ -100,11 +102,11 @@ class StateSaveBuffer(object):
         is full.
         """
         self.buffer[key] = state_data
-        return not self.counter.next()
+        return not next(self.counter)
 
     def __iter__(self):
         """Return all buffered data and clear the buffer."""
-        for key, item in self.buffer.iteritems():
+        for key, item in six.iteritems(self.buffer):
             yield key, item
         self.buffer.clear()
 
@@ -157,7 +159,7 @@ class PersistentStateManager(object):
     def _keys_for_items(self, item_type, names):
         """Returns a dict of item to the key for that item."""
         keys = (self._impl.build_key(item_type, name) for name in names)
-        return dict(itertools.izip(keys, names))
+        return dict(zip(keys, names))
 
     def _restore_dicts(self, item_type, items):
         """Return a dict mapping of the items name to its state data."""
@@ -165,7 +167,7 @@ class PersistentStateManager(object):
         key_to_state_map = self._impl.restore(key_to_item_map.keys())
         return {
             key_to_item_map[key]: state_data
-            for key, state_data in key_to_state_map.iteritems()
+            for key, state_data in six.iteritems(key_to_state_map)
         }
 
     def save(self, type_enum, name, state_data):

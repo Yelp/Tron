@@ -51,7 +51,15 @@ class FieldParser(object):
             return None
 
         groups = [self.get_values(group) for group in self.get_groups(source)]
-        return sorted(set(itertools.chain.from_iterable(groups)))
+        groups = set(itertools.chain.from_iterable(groups))
+        has_last = False
+        if 'LAST' in groups:
+            has_last = True
+            groups.remove('LAST')
+        groups = sorted(groups)
+        if has_last:
+            groups.append('LAST')
+        return groups
 
     def get_match_groups(self, source):
         match = self.range_pattern.match(source)
@@ -83,11 +91,11 @@ class FieldParser(object):
 
     def get_range(self, min_value, max_value, step):
         if min_value < max_value:
-            return range(min_value, max_value, step)
+            return list(range(min_value, max_value, step))
 
         min_bound, max_bound = self.bounds
         diff = (max_bound - min_value) + (max_value - min_bound)
-        return [(min_value + i) % max_bound for i in range(0, diff, step)]
+        return [(min_value + i) % max_bound for i in list(range(0, diff, step))]
 
     def validate_bounds(self, value):
         min_value, max_value = self.bounds
