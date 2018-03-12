@@ -52,8 +52,8 @@ class RequestTestCase(TestCase):
         assert request.has_header('User-agent')
         assert_equal(request.get_method(), 'POST')
         assert_equal(request.get_full_url(), self.url)
-        assert_in('param=is_set', request.data)
-        assert_in('other=1', request.data)
+        assert_in('param=is_set', request.data.decode())
+        assert_in('other=1', request.data.decode())
 
     @mock.patch('tron.commands.client.log', autospec=True)
     def test_load_response_content_success(self, _):

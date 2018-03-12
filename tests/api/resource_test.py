@@ -403,7 +403,7 @@ class ConfigResourceTestCase(TestCase):
         self.respond.assert_called_with(request, response_content)
 
     def test_render_POST_delete(self):
-        name, config, hash = 'the_name', 'config', 'hash'
+        name, config, hash = 'the_name', '', ''
         request = build_request(name=name, config=config, hash=hash)
         self.resource.render_POST(request)
         self.controller.delete_config.assert_called_with(name, config, hash)

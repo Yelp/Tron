@@ -52,14 +52,14 @@ def respond(request, response_dict, code=http.OK, headers=None):
 
 def get_string_arg(request, name):
     val = requestargs.get_string(request, name.encode())
-    if val:
+    if val and not isinstance(val, str):
         val = val.decode()
     return val
 
 
 def handle_command(request, api_controller, obj, **kwargs):
     """Handle a request to perform a command."""
-    command = requestargs.get_string(request, b'command').decode('utf-8')
+    command = get_string_arg(request, 'command')
     log.info("Handling '%s' request on %s", command, obj)
     try:
         response = api_controller.handle_command(command, **kwargs)
