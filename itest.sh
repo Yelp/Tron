@@ -41,7 +41,7 @@ kill -0 $TRON_PID
 curl localhost:8089/api/status | grep -qi alive
 
 tronfig -p MASTER
-tronfig MASTER /work/example-cluster/tronfig/MASTER.yaml
-cat /work/example-cluster/tronfig/MASTER.yaml | tronfig MASTER -
+tronfig -n MASTER /work/example-cluster/tronfig/MASTER.yaml
+cat /work/example-cluster/tronfig/MASTER.yaml | tronfig -n MASTER -
 
 kill -9 $TRON_PID

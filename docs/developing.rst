@@ -40,12 +40,7 @@ sample configuration file with a few test cases. To run a development intsance
 of Tron create a working directory and start
 :command:`trond` using the following::
 
-    $ mkdir wd
-    $ cp dev/dev-logging.conf wd/
-    $ bin/trond -w wd --nodaemon -l dev-logging.conf
-
-
-A sample testing config file is available at ``tests/data/test_config.yaml``
+    $ make dev
 
 
 Running the Tests

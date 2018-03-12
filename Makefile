@@ -3,13 +3,14 @@ DOCKER_RUN = docker run -t -e SSH_AUTH_SOCK -v $(CURDIR):/work:rw
 UID:=$(shell id -u)
 GID:=$(shell id -g)
 
-.PHONY : all clean tests docs
+.PHONY : all clean tests docs dev
 
 -usage:
 	@echo "make test - Run tests"
 	@echo "make itest - Generate trusty package and run integration tests"
 	@echo "make release - Prepare debian info for new release"
 	@echo "make clean - Get rid of scratch and byte files"
+	@echo "make dev - Get a local copy of trond running in debug mode in the foreground"
 
 docker_%:
 	@echo "Building docker image for $*"
@@ -27,10 +28,11 @@ deb_%: clean docker_% coffee_%
 
 coffee_%:
 	@echo "Building tronweb"
-	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '      \
-		mkdir -p tronweb/js/cs &&                       \
-		coffee -o tronweb/js/cs/ -c tronweb/coffee/ &&  \
-		chown -R $(UID):$(GID) tronweb/js/cs/           \
+	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '     \
+		rm -rf tronweb/js/cs &&                        \
+		mkdir -p tronweb/js/cs &&                      \
+		coffee -o tronweb/js/cs/ -c tronweb/coffee/ && \
+		chown -R $(UID):$(GID) tronweb/js/cs/          \
 	'
 
 test:
@@ -42,6 +44,9 @@ _itest_%:
 
 itest_%: test deb_% _itest_%
 	@echo "Package for $* looks good"
+
+dev:
+	.tox/py27/bin/trond --debug --working-dir=dev -l logging.conf --host=$(shell hostname -f)
 
 # Release
 

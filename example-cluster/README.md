@@ -15,3 +15,16 @@ $ tox -e example-cluster
 $ cd /work
 $ ./example-cluster/start.sh
 ```
+
+# To test tronview, tronctl, etc
+First, start Tron in a container using the above steps. Then in a different terminal,
+you will attach to that running container. There you will be able to run `tronctl`,
+`tronview` and others against the Trond master in the example cluster.
+
+```
+$ docker ps
+
+[find container ID of examplecluster_master]
+
+$ sudo docker exec -it <ID> /bin/bash
+```
