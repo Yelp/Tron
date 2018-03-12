@@ -2,6 +2,8 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import os
+import shutil
+import tempfile
 
 import mock
 from testify import assert_equal
@@ -26,16 +28,19 @@ from tron.serialize.runstate.statemanager import VersionMismatchError
 class PersistenceManagerFactoryTestCase(TestCase):
 
     def test_from_config_shelve(self):
-        thefilename = 'thefilename'
-        config = schema.ConfigState(
-            store_type='shelve', name=thefilename, buffer_size=0,
-            connection_details=None,
-        )
-        manager = PersistenceManagerFactory.from_config(config)
-        store = manager._impl
-        assert_equal(store.filename, config.name)
-        assert isinstance(store, ShelveStateStore)
-        os.unlink(thefilename)
+        tmpdir = tempfile.mkdtemp()
+        try:
+            fname = os.path.join(tmpdir, 'state')
+            config = schema.ConfigState(
+                store_type='shelve', name=fname, buffer_size=0,
+                connection_details=None,
+            )
+            manager = PersistenceManagerFactory.from_config(config)
+            store = manager._impl
+            assert_equal(store.filename, config.name)
+            assert isinstance(store, ShelveStateStore)
+        finally:
+            shutil.rmtree(tmpdir)
 
 
 class StateMetadataTestCase(TestCase):

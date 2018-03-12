@@ -257,9 +257,11 @@ class GeneralSchedulerDSTTest(testingutils.MockTimeTestCase):
         assert_equal(next_run_time.hour, 0)
 
     def test_handles_changing_the_time_zone(self):
+        pacific_now = datetime.datetime.now(pytz.timezone('US/Pacific'))
+        pacific_offset = pacific_now.utcoffset().total_seconds() / 60 / 60
         sch = scheduler.GeneralScheduler(time_zone=pytz.timezone('US/Pacific'))
         next_run_time = sch.next_run_time(self.now_utc)
-        assert_equal(next_run_time.hour, 8)
+        assert_equal(next_run_time.hour, -pacific_offset)
 
 
 def parse_groc(config):

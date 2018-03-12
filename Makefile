@@ -7,7 +7,9 @@ GID:=$(shell id -g)
 
 -usage:
 	@echo "make test - Run tests"
-	@echo "make itest - Generate trusty package and run integration tests"
+	@echo "make deb_trusty - Generate trusty deb package"
+	@echo "make itest_trusty - Run tests and integration checks"
+	@echo "make _itest_trusty - Run only integration checks"
 	@echo "make release - Prepare debian info for new release"
 	@echo "make clean - Get rid of scratch and byte files"
 	@echo "make dev - Get a local copy of trond running in debug mode in the foreground"

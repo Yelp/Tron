@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import os
 import shelve
+import shutil
 import tempfile
 
 from testify import assert_equal
@@ -19,12 +20,13 @@ class ShelveStateStoreTestCase(TestCase):
 
     @setup
     def setup_store(self):
-        self.filename = os.path.join(tempfile.mkdtemp(), 'state')
+        self.tmpdir = tempfile.mkdtemp()
+        self.filename = os.path.join(self.tmpdir, 'state')
         self.store = ShelveStateStore(self.filename)
 
     @teardown
     def teardown_store(self):
-        os.unlink(self.filename)
+        shutil.rmtree(self.tmpdir)
 
     def test__init__(self):
         assert_equal(self.filename, self.store.filename)
