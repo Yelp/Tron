@@ -392,7 +392,7 @@ class ConfigResourceTestCase(TestCase):
         )
 
     def test_render_POST_update(self):
-        name, config, hash = 'the_name', mock.Mock(), mock.Mock()
+        name, config, hash = 'the_name', 'config', 'hash'
         request = build_request(name=name, config=config, hash=hash)
         self.resource.render_POST(request)
         self.controller.update_config.assert_called_with(name, config, hash)
@@ -403,7 +403,7 @@ class ConfigResourceTestCase(TestCase):
         self.respond.assert_called_with(request, response_content)
 
     def test_render_POST_delete(self):
-        name, config, hash = 'the_name', '', mock.Mock()
+        name, config, hash = 'the_name', 'config', 'hash'
         request = build_request(name=name, config=config, hash=hash)
         self.resource.render_POST(request)
         self.controller.delete_config.assert_called_with(name, config, hash)
