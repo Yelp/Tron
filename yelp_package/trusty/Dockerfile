@@ -12,6 +12,8 @@ RUN apt-get update > /dev/null && \
         python-dev \
         coffeescript \
         libyaml-dev \
+        libssl-dev \
+        libffi-dev \
         && apt-get clean > /dev/null
 
 RUN cd /tmp && \
