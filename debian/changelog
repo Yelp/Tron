@@ -1,3 +1,10 @@
+tron (0.7.6.1) trusty; urgency=medium
+
+  * 0.7.6.1 tagged with 'make release'
+    Commit: bump version, fix package building issues
+
+ -- root <root@d28ba802797d>  Mon, 12 Mar 2018 17:08:34 +0000
+
 tron (0.7.6.0) trusty; urgency=medium
 
   * 0.7.6.0 tagged with 'make release'
