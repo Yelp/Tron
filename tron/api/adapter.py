@@ -285,7 +285,7 @@ class JobAdapter(ReprAdapter):
         return next_run.run_time if next_run else None
 
     def get_url(self):
-        return '/jobs/%s' % quote(bytes(self._obj.get_name()))
+        return '/jobs/{}'.format(quote(self._obj.get_name()))
 
     @toggle_flag('include_job_runs')
     def get_runs(self):

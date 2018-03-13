@@ -5,6 +5,7 @@ view current state, event history and send commands to trond.
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import collections
 import datetime
 import logging
 
@@ -35,6 +36,9 @@ class JSONEncoder(json.JSONEncoder):
 
         if isinstance(o, datetime.date):
             return o.isoformat()
+
+        if isinstance(o, collections.KeysView):
+            return list(o)
 
         return super(JSONEncoder, self).default(o)
 
