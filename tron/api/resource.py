@@ -229,7 +229,7 @@ class JobCollectionResource(resource.Resource):
     def getChild(self, name, request):
         if not name:
             return self
-        return resource_from_collection(self.job_collection, name, JobResource)
+        return resource_from_collection(self.job_collection, name.decode(), JobResource)
 
     def get_data(self, include_job_run=False, include_action_runs=False):
         return adapter.adapt_many(
