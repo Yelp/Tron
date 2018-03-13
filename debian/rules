@@ -22,7 +22,9 @@ override_dh_virtualenv:
                 --python=/usr/bin/python3.6 \
                 --preinstall no-manylinux1 \
                 --preinstall pip-custom-platform \
-                --pip-tool pip-custom-platform
+                --preinstall pip==9.0.1 \
+                --preinstall setuptools==38.5.2 \
+                --pip-tool pip-custom-platform \
 
 override_dh_installinit:
 	dh_installinit --noscripts

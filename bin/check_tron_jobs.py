@@ -128,7 +128,7 @@ def get_relevant_run_and_state(job_runs):
         return None, State.NO_RUN_YET
     run = is_job_scheduled(job_runs)
     if run is None:
-        return job_runs['run'][0], State.NOT_SCHEDULED
+        return job_runs['runs'][0], State.NOT_SCHEDULED
     run = is_job_stuck(job_runs)
     if run is not None:
         return run, State.STUCK
@@ -159,8 +159,13 @@ def is_job_stuck(job_runs):
 
 def get_relevant_action(action_runs, last_state):
     for action in reversed(action_runs):
-        if action.get('state', 'unknown') == last_state:
-            return action
+        action_state = action.get('state', 'unknown')
+        try:
+            if State(action_state) == last_state:
+                return action
+        except ValueError:
+            if action_state == 'running' and last_state == State.STUCK:
+                return action
     return action_runs[-1]
 
 
@@ -199,7 +204,7 @@ def check_job(job, client):
             job['name'],
         ))
         return
-    if not job.get('monitoring').get('team', None):
+    if job.get('monitoring').get('team', None) is None:
         log.debug("Not checking {}, no team specified".format(job['name']))
         return
     log.info("Checking {}".format(job['name']))
