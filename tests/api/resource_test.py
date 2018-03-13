@@ -29,8 +29,6 @@ from tron.api import controller
 from tron.api import resource as www
 from tron.core import job
 from tron.core import jobrun
-from tron.core import service
-from tron.core import serviceinstance
 
 
 REQUEST = twisted.web.server.Request(mock.Mock(), None)
@@ -126,17 +124,15 @@ class ApiRootResourceTestCase(WWWTestCase):
 
     def test__init__(self):
         expected_children = [
-            'jobs', 'services',
-            'config', 'status', 'events', '',
+            'jobs', 'config', 'status', 'events', '',
         ]
         assert_equal(set(expected_children), set(self.resource.children))
 
     def test_render_GET(self):
-        expected_keys = ['jobs', 'services', 'namespaces', ]
+        expected_keys = ['jobs', 'namespaces', ]
         response = self.resource.render_GET(build_request())
         assert_equal(set(response.keys()), set(expected_keys))
         self.mcp.get_job_collection().get_jobs.assert_called_with()
-        self.mcp.get_service_collection.return_value.get_names.assert_called_with()
 
 
 class RootResourceTestCase(WWWTestCase):
@@ -273,76 +269,6 @@ class JobResourceTestCase(WWWTestCase):
         resource = self.resource.getChild(action_name, None)
         assert_equal(resource.__class__, www.ActionRunHistoryResource)
         assert_equal(resource.action_runs, action_runs)
-
-
-class ServiceResourceTestCase(WWWTestCase):
-
-    @setup
-    def setup_resource(self):
-        instances = mock.create_autospec(
-            serviceinstance.ServiceInstanceCollection,
-            node_pool=mock.create_autospec(node.NodePool),
-        )
-        self.service = mock.create_autospec(
-            service.Service,
-            instances=instances,
-            enabled=True,
-            config=mock.Mock(),
-        )
-        self.resource = www.ServiceResource(self.service)
-        self.resource.controller = mock.create_autospec(
-            controller.ServiceController,
-        )
-
-    def test_getChild(self):
-        number = '3'
-        resource = self.resource.getChild(number, None)
-        assert isinstance(resource, www.ServiceInstanceResource)
-        self.service.instances.get_by_number.assert_called_with(3)
-
-    def test_render_GET(self):
-        response = self.resource.render_GET(build_request())
-        assert_equal(response['name'], self.service.name)
-
-    def test_render_POST(self):
-        response = self.resource.render_POST(build_request())
-        assert_equal(
-            response['result'],
-            self.resource.controller.handle_command.return_value,
-        )
-
-
-class ServiceCollectionResourceTestCase(TestCase):
-
-    @setup
-    def build_resource(self):
-        self.mcp = mock.create_autospec(mcp.MasterControlProgram)
-        self.resource = www.ServiceCollectionResource(self.mcp)
-        self.resource.collection = mock.create_autospec(
-            service.ServiceCollection,
-        )
-
-    def test_getChild(self):
-        child = self.resource.collection.get_by_name.return_value = mock.Mock()
-        child_resource = self.resource.getChild('name', None)
-        assert isinstance(child_resource, www.ServiceResource)
-        assert_equal(child_resource.service, child)
-
-    def test_getChild_missing(self):
-        self.resource.collection.get_by_name.return_value = None
-        child_resource = self.resource.getChild('name', None)
-        assert isinstance(child_resource, twisted.web.resource.NoResource)
-
-    def test_render_GET(self):
-        service_count = 3
-        services = [mock.MagicMock() for _ in range(service_count)]
-        self.resource.collection.__iter__.return_value = services
-        with mock.patch('tron.api.resource.respond', autospec=True) as respond:
-            response = self.resource.render_GET(build_request())
-            assert_equal(response, respond.return_value)
-            assert_equal(
-                len(respond.call_args[0][1]['services']), service_count,
-            )
 
 
 class EventResourceTestCase(WWWTestCase):

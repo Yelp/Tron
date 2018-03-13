@@ -2,7 +2,6 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import datetime
-import os
 import textwrap
 from subprocess import CalledProcessError
 from textwrap import dedent
@@ -14,7 +13,6 @@ from testify.assertions import assert_raises_such_that
 
 from tests import sandbox
 from tron.core import actionrun
-from tron.core import service
 
 
 BASIC_CONFIG = """
@@ -131,7 +129,7 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         )
 
     def test_node_reconfig(self):
-        job_service_config = dedent("""
+        job_config = dedent("""
             jobs:
                 - name: a_job
                   node: local
@@ -139,13 +137,6 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
                   actions:
                     - name: first_action
                       command: "echo something"
-
-            services:
-                - name: a_service
-                  node: local
-                  pid_file: /tmp/does_not_exist
-                  command: "echo service start"
-                  monitor_interval: 1
         """)
         second_config = dedent("""
             ssh_options:
@@ -159,16 +150,8 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
                 name: "state_data.shelve"
                 store_type: shelve
 
-        """) + job_service_config
-        self.start_with_config(BASIC_CONFIG + job_service_config)
-
-        service_name = 'MASTER.a_service'
-        service_url = self.client.get_url(service_name)
-        self.sandbox.tronctl('start', service_name)
-        sandbox.wait_on_state(
-            self.client.service, service_url,
-            service.ServiceState.FAILED,
-        )
+        """) + job_config
+        self.start_with_config(BASIC_CONFIG + job_config)
 
         job_url = self.client.get_url('MASTER.a_job.0')
         sandbox.wait_on_state(
@@ -177,11 +160,6 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         )
 
         self.sandbox.tronfig(second_config)
-
-        sandbox.wait_on_state(
-            self.client.service, service_url,
-            service.ServiceState.DISABLED,
-        )
 
         job_url = self.client.get_url('MASTER.a_job')
 
@@ -484,67 +462,3 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
                 self.client.action_runs(url)['state'],
                 actionrun.ActionRun.STATE_QUEUED.name,
             )
-
-
-class ServiceEndToEndTestCase(sandbox.SandboxTestCase):
-
-    def test_service_reconfigure(self):
-        config_template = BASIC_CONFIG + dedent("""
-            services:
-                -   name: "a_service"
-                    node: local
-                    pid_file: "{wd}/%(name)s-%(instance_number)s.pid"
-                    command: "{command}"
-                    monitor_interval: {monitor_interval}
-                    restart_delay: 2
-        """)
-
-        command = (
-            "cd {path} && PYTHONPATH=. python "
-            "{path}/tests/mock_daemon.py %(pid_file)s"
-        )
-        command = command.format(path=os.path.abspath('.'))
-        config = config_template.format(
-            command=command, monitor_interval=1, wd=self.sandbox.tmp_dir,
-        )
-
-        self.start_with_config(config)
-        service_name = 'MASTER.a_service'
-        service_url = self.client.get_url(service_name)
-
-        self.sandbox.tronctl('start', service_name)
-        waiter = sandbox.build_waiter_func(self.client.service, service_url)
-        waiter(service.ServiceState.UP)
-
-        new_config = config_template.format(
-            command=command, monitor_interval=2, wd=self.sandbox.tmp_dir,
-        )
-        self.sandbox.tronfig(new_config)
-
-        waiter(service.ServiceState.DISABLED)
-        self.sandbox.tronctl('start', service_name)
-        waiter(service.ServiceState.UP)
-        self.sandbox.tronctl('stop', service_name)
-        waiter(service.ServiceState.DISABLED)
-
-    def test_service_failed_restart(self):
-        config = BASIC_CONFIG + dedent("""
-            services:
-                -   name: service_restart
-                    node: local
-                    pid_file: "/tmp/file_dne"
-                    command: "sleep 1; cat /bogus/file/DNE"
-                    monitor_interval: 1
-                    restart_delay: 2
-        """)
-        self.start_with_config(config)
-        service_name = 'MASTER.service_restart'
-        service_url = self.client.get_url(service_name)
-        self.sandbox.tronctl('start', service_name)
-
-        waiter = sandbox.build_waiter_func(self.client.service, service_url)
-        waiter(service.ServiceState.FAILED)
-        service_content = self.client.service(service_url)
-        expected = 'cat: /bogus/file/DNE: No such file or directory'
-        assert_in(service_content['instances'][0]['failures'][0], expected)
-        waiter(service.ServiceState.STARTING)

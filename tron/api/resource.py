@@ -409,10 +409,6 @@ class ApiRootResource(resource.Resource):
             'jobs',
             JobCollectionResource(mcp.get_job_collection()),
         )
-        self.putChild(
-            'services',
-            ServiceCollectionResource(mcp.get_service_collection()),
-        )
 
         self.putChild('config', ConfigResource(mcp))
         self.putChild('status', StatusResource(mcp))
@@ -423,7 +419,6 @@ class ApiRootResource(resource.Resource):
         """Return an index of urls for resources."""
         response = {
             'jobs':             self.children['jobs'].get_job_index(),
-            'services':         self.children['services'].get_service_index(),
             'namespaces':       self.children['config'].get_config_index(),
         }
         return respond(request, response)

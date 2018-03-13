@@ -11,7 +11,6 @@ from tron import event
 from tron import node
 from tron.config import manager
 from tron.core import job
-from tron.core import service
 from tron.serialize.runstate import statemanager
 from tron.utils import emailer
 
@@ -34,7 +33,6 @@ class MasterControlProgram(object):
     def __init__(self, working_dir, config_path):
         super(MasterControlProgram, self).__init__()
         self.jobs = job.JobCollection()
-        self.services = service.ServiceCollection()
         self.working_dir = working_dir
         self.crash_reporter = None
         self.config = manager.ConfigManager(config_path)
@@ -97,11 +95,6 @@ class MasterControlProgram(object):
             self.jobs, job.Job.NOTIFY_STATE_CHANGE, factory, reconfigure,
         )
 
-        self.apply_collection_config(
-            config_container.get_services(),
-            self.services, service.Service.NOTIFY_STATE_CHANGE, self.context,
-        )
-
     def apply_collection_config(self, config, collection, notify_type, *args):
         items = collection.load_from_config(config, *args)
         self.state_watcher.watch_all(items, notify_type)
@@ -125,8 +118,6 @@ class MasterControlProgram(object):
         if self.state_watcher.update_from_config(state_config):
             for job_scheduler in self.jobs:
                 self.state_watcher.save_job(job_scheduler.get_job())
-            for s in self.services:
-                self.state_watcher.save_service(s)
 
     def apply_notification_options(self, conf):
         if not conf:
@@ -145,9 +136,6 @@ class MasterControlProgram(object):
     def get_job_collection(self):
         return self.jobs
 
-    def get_service_collection(self):
-        return self.services
-
     def get_config_manager(self):
         return self.config
 
@@ -156,12 +144,9 @@ class MasterControlProgram(object):
         to the configured Jobs and Services.
         """
         self.event_recorder.notice('restoring')
-        job_states, service_states = self.state_watcher.restore(
-            self.jobs.get_names(), self.services.get_names(),
-        )
+        job_states = self.state_watcher.restore(self.jobs.get_names())
 
         self.jobs.restore_state(job_states)
-        self.services.restore_state(service_states)
         self.state_watcher.save_metadata()
 
     def __str__(self):

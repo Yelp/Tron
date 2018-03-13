@@ -19,7 +19,6 @@ from tron.config import manager
 from tron.core import actionrun
 from tron.core import job
 from tron.core import jobrun
-from tron.core import service
 
 
 class JobCollectionControllerTestCase(TestCase):
@@ -132,52 +131,6 @@ class JobControllerTestCase(TestCase):
         run_time = mock.Mock()
         self.controller.handle_command('start', run_time)
         self.job_scheduler.manual_start.assert_called_with(run_time=run_time)
-
-
-class ServiceInstanceControllerTestCase(TestCase):
-
-    @setup
-    def setup_controller(self):
-        self.instance = mock.create_autospec(service.ServiceInstance)
-        self.controller = controller.ServiceInstanceController(self.instance)
-
-    def test_handle_command_stop(self):
-        response = self.controller.handle_command('stop')
-        self.instance.stop.assert_called_with()
-        assert_in("stopping", response)
-
-    def test_handle_command_stop_failure(self):
-        self.instance.stop.return_value = False
-        response = self.controller.handle_command('stop')
-        self.instance.stop.assert_called_with()
-        assert_in("Failed to stop", response)
-
-    def test_handle_command_start(self):
-        response = self.controller.handle_command('start')
-        self.instance.start.assert_called_with()
-        assert_in("starting", response)
-
-    def test_handle_command_start_failure(self):
-        self.instance.start.return_value = False
-        response = self.controller.handle_command('start')
-        self.instance.start.assert_called_with()
-        assert_in("Failed to start", response)
-
-
-class ServiceControllerTestCase(TestCase):
-
-    @setup
-    def setup_controller(self):
-        self.service = mock.create_autospec(service.Service)
-        self.controller = controller.ServiceController(self.service)
-
-    def test_handle_command_stop(self):
-        self.controller.handle_command('stop')
-        self.service.disable.assert_called_with()
-
-    def test_handle_command_start(self):
-        self.controller.handle_command('start')
-        self.service.enable.assert_called_with()
 
 
 class ConfigControllerTestCase(TestCase):

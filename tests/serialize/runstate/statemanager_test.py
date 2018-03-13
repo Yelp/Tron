@@ -196,13 +196,6 @@ class StateChangeWatcherTestCase(TestCase):
             runstate.JOB_STATE, mock_job.name, mock_job.state_data,
         )
 
-    def test_save_service(self):
-        mock_service = mock.Mock()
-        self.watcher.save_service(mock_service)
-        self.watcher.state_manager.save.assert_called_with(
-            runstate.SERVICE_STATE, mock_service.name, mock_service.state_data,
-        )
-
     def test_save_metadata(self):
         patcher = mock.patch(
             'tron.serialize.runstate.statemanager.StateMetadata',
@@ -224,9 +217,9 @@ class StateChangeWatcherTestCase(TestCase):
         assert_equal(self.watcher.state_manager.disabled.return_value, context)
 
     def test_restore(self):
-        jobs, services = mock.Mock(), mock.Mock()
-        self.watcher.restore(jobs, services)
-        self.watcher.state_manager.restore.assert_called_with(jobs, services)
+        jobs = mock.Mock()
+        self.watcher.restore(jobs)
+        self.watcher.state_manager.restore.assert_called_with(jobs)
 
 
 if __name__ == "__main__":

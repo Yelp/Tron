@@ -17,7 +17,6 @@ from tron import mcp
 from tron.config import config_parse
 from tron.config import manager
 from tron.core import job
-from tron.core import service
 from tron.serialize.runstate import statemanager
 
 
@@ -74,7 +73,7 @@ class MasterControlProgramTestCase(TestCase):
             master_config.state_persistence,
         )
         assert_equal(self.mcp.context.base, master_config.command_context)
-        assert_equal(len(self.mcp.apply_collection_config.mock_calls), 2)
+        assert_equal(len(self.mcp.apply_collection_config.mock_calls), 1)
         self.mcp.apply_notification_options.assert_called_with(
             master_config.notification_options,
         )
@@ -90,10 +89,6 @@ class MasterControlProgramTestCase(TestCase):
         self.mcp.jobs.__iter__.return_values = {
             'a': mock.Mock(), 'b': mock.Mock(),
         }
-        self.mcp.services = mock.create_autospec(service.ServiceCollection)
-        self.mcp.services.__iter__.return_value = {
-            'c': mock.Mock(), 'd': mock.Mock(),
-        }
         state_config = mock.Mock()
         self.mcp.update_state_watcher_config(state_config)
         self.mcp.state_watcher.update_from_config.assert_called_with(
@@ -102,10 +97,6 @@ class MasterControlProgramTestCase(TestCase):
         assert_equal(
             self.mcp.state_watcher.save_job.mock_calls,
             [mock.call(j.job) for j in self.mcp.jobs],
-        )
-        assert_equal(
-            self.mcp.state_watcher.save_service.mock_calls,
-            [mock.call(s) for s in self.mcp.services],
         )
 
     def test_update_state_watcher_config_no_change(self):
@@ -126,7 +117,6 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
             self.working_dir, self.config_path,
         )
         self.mcp.jobs = mock.create_autospec(job.JobCollection)
-        self.mcp.services = mock.create_autospec(service.ServiceCollection)
         self.mcp.state_watcher = mock.create_autospec(
             statemanager.StateChangeWatcher,
         )
@@ -138,12 +128,10 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
         shutil.rmtree(self.config_path)
 
     def test_restore_state(self):
-        service_state_data = {'3': 'things', '4': 'things'}
         job_state_data = {'1': 'things', '2': 'things'}
-        self.mcp.state_watcher.restore.return_value = job_state_data, service_state_data
+        self.mcp.state_watcher.restore.return_value = job_state_data
         self.mcp.restore_state()
         self.mcp.jobs.restore_state.assert_called_with(job_state_data)
-        self.mcp.services.restore_state.assert_called_with(service_state_data)
 
 
 if __name__ == '__main__':
