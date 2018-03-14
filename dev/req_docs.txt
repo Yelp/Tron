@@ -1,0 +1,4 @@
+docutils>=0.8.1
+Pygments>=1.4
+Sphinx>=1.1.2
+Sphinx-PyPI-upload>=0.2.1

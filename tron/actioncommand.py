@@ -230,11 +230,10 @@ def create_action_runner_factory_from_config(config):
     if not config:
         return NoActionRunnerFactory
 
-    if config.runner_type not in schema.ActionRunnerTypes:
-        raise ValueError("Unknown runner type: %s", config.runner_type)
+    runner_type = schema.ActionRunnerTypes(config.runner_type)
 
-    if config.runner_type == schema.ActionRunnerTypes.none:
+    if runner_type == schema.ActionRunnerTypes.NONE:
         return NoActionRunnerFactory
 
-    if config.runner_type == schema.ActionRunnerTypes.subprocess:
+    if runner_type == schema.ActionRunnerTypes.SUBPROCESS:
         return SubprocessActionRunnerFactory.from_config(config)

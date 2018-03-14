@@ -1,14 +1,11 @@
-docutils>=0.8.1
 Jinja2>=2.6
 pyasn1>=0.0.13
 pycrypto>=2.4
-Pygments>=1.4
 pytz>=2011n
 PyYAML>=3.0
-Sphinx>=1.1.2
-Sphinx-PyPI-upload>=0.2.1
 testify>=0.1.12
 cryptography>=2.1.4
 Twisted>=17.0.0
 mock>=0.8
 pre-commit
+ipdb
