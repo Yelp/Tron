@@ -37,6 +37,7 @@ DEFAULT_CONFIG = {
     'display_color':    False,
 }
 
+TAB_COMPLETE_FILE = '/etc/tron/tron_tab_completions'
 
 opener = open
 
@@ -46,8 +47,13 @@ def get_default_server():
 
 
 def tron_jobs_completer(prefix, parsed_args, **kwargs):
-    default_client = Client(get_default_server())
-    return (job['name'] for job in default_client.jobs() if job['name'].startswith(prefix))
+    if os.path.isfile(TAB_COMPLETE_FILE):
+        with opener(TAB_COMPLETE_FILE, 'r') as f:
+            jobs = f.readlines()
+        return (job.strip('\n\r') for job in jobs if job.startswith(prefix))
+    else:
+        default_client = Client(get_default_server())
+        return (job['name'] for job in default_client.jobs() if job['name'].startswith(prefix))
 
 
 def build_option_parser(usage=None, epilog=None):

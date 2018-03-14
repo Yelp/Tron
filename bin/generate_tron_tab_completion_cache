@@ -1,0 +1,28 @@
+#!/usr/bin/env python
+"""
+print a list of all the tron jobs, to be saved as a cache for tab completion
+"""
+from __future__ import absolute_import
+from __future__ import print_function
+from __future__ import unicode_literals
+
+import argcomplete
+
+from tron.commands import cmd_utils
+from tron.commands.client import Client
+
+
+def main():
+    parser = cmd_utils.build_option_parser()
+    argcomplete.autocomplete(parser)
+    args = parser.parse_args()
+    cmd_utils.load_config(args)
+
+    client = Client(args.server)
+    jobs = [job['name'] for job in client.jobs()]
+    for job in jobs:
+        print(job)
+
+
+if __name__ == '__main__':
+    main()
