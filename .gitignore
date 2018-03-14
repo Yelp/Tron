@@ -17,7 +17,6 @@ tronweb_tests/lib/
 tron_state
 
 # Generated debian artifacts
-debian/debhelper-build-stamp
 debian/tron
 debian/tron.preinst.debhelper
 debian/files
