@@ -4,12 +4,31 @@ from __future__ import unicode_literals
 import time
 
 import check_tron_jobs
+import mock
 from check_tron_jobs import State
+from mock import PropertyMock
 from testify import assert_equal
 from testify import TestCase
 
 
 class CheckJobsTestCase(TestCase):
+
+    def test_check_job_result_exception(self):
+        with mock.patch('check_tron_jobs.parse_cli') as mock_args, \
+                mock.patch('check_tron_jobs.cmd_utils'), \
+                mock.patch('check_tron_jobs.Client') as mock_client, \
+                mock.patch('check_tron_jobs.check_job_result') as mock_check_job_result:
+
+            type(mock_args.return_value).job = PropertyMock(return_value=None)
+            mock_client.return_value.jobs.return_value = [
+                'job1', 'job2', 'job3',
+            ]
+            mock_check_job_result.side_effect = [
+                KeyError('foo'), None, TypeError,
+            ]
+            error_code = check_tron_jobs.main()
+            assert_equal(error_code, 1)
+            assert_equal(mock_check_job_result.call_count, 3)
 
     def test_get_relevant_action_picks_the_one_that_failed(self):
         action_runs = [
