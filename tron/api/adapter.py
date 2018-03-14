@@ -50,7 +50,10 @@ class ReprAdapter(object):
 
 
 def adapt_many(adapter_class, seq, *args, **kwargs):
-    return [adapter_class(item, *args, **kwargs).get_repr() for item in seq if item is not None]
+    return [
+        adapter_class(item, *args, **kwargs).get_repr()
+        for item in seq if item is not None
+    ]
 
 
 def toggle_flag(flag_name):

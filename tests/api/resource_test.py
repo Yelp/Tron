@@ -195,13 +195,13 @@ class JobCollectionResourceTestCase(WWWTestCase):
         assert 'jobs' in result
 
     def test_getChild(self):
-        child = self.resource.getChild("testname", mock.Mock())
+        child = self.resource.getChild(b"testname", mock.Mock())
         assert isinstance(child, www.JobResource)
         self.job_collection.get_by_name.assert_called_with("testname")
 
     def test_getChild_missing_job(self):
         self.job_collection.get_by_name.return_value = None
-        child = self.resource.getChild("bar", mock.Mock())
+        child = self.resource.getChild(b"bar", mock.Mock())
         assert isinstance(child, twisted.web.resource.NoResource)
 
 
@@ -224,6 +224,7 @@ class JobResourceTestCase(WWWTestCase):
             ),
             max_runtime=mock.Mock(),
         )
+        self.job.get_name.return_value = 'foo'
         self.job_scheduler.get_job.return_value = self.job
         self.job_scheduler.get_job_runs.return_value = self.job_runs
         self.resource = www.JobResource(self.job_scheduler)
@@ -257,7 +258,7 @@ class JobResourceTestCase(WWWTestCase):
 
     def test_getChild(self):
         autospec_method(self.resource.get_run_from_identifier)
-        identifier = 'identifier'
+        identifier = b'identifier'
         resource = self.resource.getChild(identifier, None)
         assert_equal(
             resource.job_run,
@@ -269,7 +270,7 @@ class JobResourceTestCase(WWWTestCase):
             self.resource.get_run_from_identifier,
             return_value=None,
         )
-        action_name = 'action_name'
+        action_name = b'action_name'
         action_runs = [mock.Mock(), mock.Mock()]
         self.job.action_graph.names = [action_name]
         self.job.runs.get_action_runs.return_value = action_runs
@@ -298,7 +299,7 @@ class ServiceResourceTestCase(WWWTestCase):
         )
 
     def test_getChild(self):
-        number = '3'
+        number = b'3'
         resource = self.resource.getChild(number, None)
         assert isinstance(resource, www.ServiceInstanceResource)
         self.service.instances.get_by_number.assert_called_with(3)
@@ -327,13 +328,13 @@ class ServiceCollectionResourceTestCase(TestCase):
 
     def test_getChild(self):
         child = self.resource.collection.get_by_name.return_value = mock.Mock()
-        child_resource = self.resource.getChild('name', None)
+        child_resource = self.resource.getChild(b'name', None)
         assert isinstance(child_resource, www.ServiceResource)
         assert_equal(child_resource.service, child)
 
     def test_getChild_missing(self):
         self.resource.collection.get_by_name.return_value = None
-        child_resource = self.resource.getChild('name', None)
+        child_resource = self.resource.getChild(b'name', None)
         assert isinstance(child_resource, twisted.web.resource.NoResource)
 
     def test_render_GET(self):
