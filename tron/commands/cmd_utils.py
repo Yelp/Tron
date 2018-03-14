@@ -37,7 +37,7 @@ DEFAULT_CONFIG = {
     'display_color':    False,
 }
 
-TAB_COMPLETE_FILE = '/etc/tron/tron_tab_completions'
+TAB_COMPLETE_FILE = '/var/cache/tron_tab_completions'
 
 opener = open
 
