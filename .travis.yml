@@ -1,23 +1,12 @@
 ---
 language: python
 env:
-  - TENV=py27
   - TENV=py36
   - TENV=itest
 python:
-  - 2.7
   - 3.6
 install: pip install tox
 script: tox -e $TENV
-
-matrix:
-  exclude:
-    - env: TENV=py36
-      python: 2.7
-    - env: TENV=itest
-      python: 2.7
-    - env: TENV=py27
-      python: 3.6
 
 deploy:
   - provider: pypi
