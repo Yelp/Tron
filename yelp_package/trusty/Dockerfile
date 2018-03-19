@@ -19,8 +19,6 @@ RUN apt-get -q update && \
         libgpgme11 \
         libssl-dev \
         libyaml-dev \
-        libssl-dev \
-        libffi-dev \
         python3.6-dev \
         wget \
     && apt-get -q clean
