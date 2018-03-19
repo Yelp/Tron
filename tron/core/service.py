@@ -11,7 +11,6 @@ from tron import eventloop
 from tron import node
 from tron.core import serviceinstance
 from tron.core.serviceinstance import ServiceInstance
-from tron.utils import collections
 from tron.utils import observer
 
 
@@ -167,13 +166,15 @@ class ServiceCollection(object):
     """A collection of services."""
 
     def __init__(self):
-        self.services = collections.MappingCollection('services')
+        self.services = {}
 
     def load_from_config(self, service_configs, context):
         """Apply a configuration to this collection and return a generator of
         services which were added.
         """
-        self.services.filter_by_name(service_configs.keys())
+        for name in set(self.services) - set(service_configs.keys()):
+            log.info("Removing service %s" % name)
+            self.services.pop(name).disable()
 
         def build(config):
             log.debug("Building new service %s", config.name)
@@ -185,8 +186,10 @@ class ServiceCollection(object):
     def add(self, service):
         return self.services.replace(service)
 
-    def restore_state(self, service_state_data):
-        self.services.restore_state(service_state_data)
+    def restore_state(self, state_data):
+        for name, state in six.iteritems(state_data):
+            self.services[name].restore_state(state)
+        log.info("Loaded state for {} services".format(len(state_data)))
 
     def get_by_name(self, name):
         return self.services.get(name)

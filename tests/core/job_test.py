@@ -577,13 +577,11 @@ class JobCollectionTestCase(TestCase):
         self.collection = job.JobCollection()
 
     def test_load_from_config(self):
-        autospec_method(self.collection.jobs.filter_by_name)
         autospec_method(self.collection.add)
         factory = mock.create_autospec(job.JobSchedulerFactory)
         job_configs = {'a': mock.Mock(), 'b': mock.Mock()}
         result = self.collection.load_from_config(job_configs, factory, True)
         result = list(result)
-        self.collection.jobs.filter_by_name.assert_called_with(job_configs)
         expected_calls = [mock.call(v) for v in six.itervalues(job_configs)]
         assert_mock_calls(expected_calls, factory.build.mock_calls)
         assert_length(self.collection.add.mock_calls, len(job_configs) * 2)

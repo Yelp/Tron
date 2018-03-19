@@ -26,6 +26,7 @@ def create_mock_node(name=None):
     mock_node = mock.create_autospec(node.Node)
     if name:
         mock_node.get_name.return_value = name
+        mock_node.name = name
     return mock_node
 
 
@@ -37,7 +38,7 @@ class NodePoolRepositoryTestCase(TestCase):
 
     @setup
     def setup_store(self):
-        self.node = create_mock_node()
+        self.node = create_mock_node('default')
         self.repo = node.NodePoolRepository.get_instance()
         self.repo.add_node(self.node)
 
@@ -62,23 +63,23 @@ class NodePoolRepositoryTestCase(TestCase):
         assert_not_in(self.node, self.repo.pools)
 
     def test_update_from_config(self):
-        mock_nodes = {'a': create_mock_node('a'), 'b': create_mock_node('b')}
-        self.repo.nodes.update(mock_nodes)
-        node_config = {'a': mock.Mock(), 'b': mock.Mock()}
-        node_pool_config = {'c': mock.Mock(nodes=['a', 'b'])}
+        mock_nodes = {n: create_mock_node(n) for n in ['a', 'b']}
+        self.repo.nodes = mock_nodes
+        node_config = {n: create_mock_node(n) for n in ['a', 'b']}
+        mock_pool = mock.Mock()
+        mock_pool.name = 'c'
+        mock_pool.get_name.return_value = 'c'
+        mock_pool.nodes = ['a', 'b']
+        node_pool_config = {'c': mock_pool}
         ssh_options = mock.Mock(identities=[], known_hosts_file=None)
         node.NodePoolRepository.update_from_config(
             node_config, node_pool_config, ssh_options,
         )
-        node_names = [node_config['a'].name, node_config['b'].name]
         assert_equal(
-            set(self.repo.pools), set(
-                node_names + [node_pool_config['c'].name],
-            ),
+            set(self.repo.pools), {'a', 'b', 'c'},
         )
         assert_equal(
-            set(self.repo.nodes),
-            set(list(node_names) + list(mock_nodes.keys())),
+            set(self.repo.nodes), {'a', 'b'},
         )
 
     def test_nodes_by_name(self):
