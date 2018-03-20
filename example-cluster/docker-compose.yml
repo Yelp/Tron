@@ -17,7 +17,7 @@ services:
     build:
       context: .
       dockerfile: images/trusty
-      dockerfile: images/xenial
+      # dockerfile: images/xenial
     links:
       - batch1
       - batch2
