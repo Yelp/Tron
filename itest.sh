@@ -5,7 +5,9 @@ set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install gdebi-core curl --yes
+apt-get install -y software-properties-common gdebi-core curl
+add-apt-repository -y ppa:deadsnakes/ppa
+apt-get update
 gdebi --non-interactive /work/dist/*.deb
 
 trond --help
