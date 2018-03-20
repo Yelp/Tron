@@ -3,6 +3,7 @@ services:
   master:
     build:
       context: ../
+      dockerfile: yelp_package/trusty/Dockerfile
     volumes:
       - ../:/work
       - ./:/nail/tron

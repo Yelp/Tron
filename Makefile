@@ -40,7 +40,7 @@ test:
 	tox
 
 _itest_%:
-	$(DOCKER_RUN) tron-builder-$* /work/itest.sh
+	$(DOCKER_RUN) ubuntu:$* /work/itest.sh
 
 itest_%: test deb_% _itest_%
 	@echo "Package for $* looks good"
