@@ -4,9 +4,9 @@ set -euxo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-dpkg -i /work/dist/*.deb || true
-apt-get install -qq -y -f curl
-dpkg -i /work/dist/*.deb
+apt-get update
+DEBIAN_FRONTEND=noninteractive apt-get install gdebi-core curl --yes
+gdebi --non-interactive /work/dist/*.deb
 
 trond --help
 tronfig --help

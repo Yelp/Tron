@@ -5,7 +5,6 @@ RUN apt-get update > /dev/null && \
         debhelper \
         dpkg-dev \
         devscripts \
-        python-pip \
         wget \
         gdebi-core \
         gcc \
@@ -20,5 +19,9 @@ RUN cd /tmp && \
     wget http://mirrors.kernel.org/ubuntu/pool/universe/d/dh-virtualenv/dh-virtualenv_1.0-1_all.deb && \
     gdebi -n dh-virtualenv*.deb && \
     rm dh-virtualenv_*.deb
+
+RUN wget https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py
+RUN python /tmp/get-pip.py
+RUN pip install tox wheel
 
 WORKDIR /work
