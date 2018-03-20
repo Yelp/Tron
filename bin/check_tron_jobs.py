@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import logging
+import sys
 import time
 
 from enum import Enum
@@ -237,8 +238,8 @@ def main():
         for job in jobs:
             try:
                 check_job_result(job=job, client=client, dry_run=args.dry_run)
-            except Exception:
-                log.info("check job result fails for job {}".format(job))
+            except Exception as e:
+                log.info("check job result fails for job {}: {}".format(job, e))
                 error_code = 1
     else:
         job_url = client.get_url(args.job)
@@ -249,4 +250,4 @@ def main():
 
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
