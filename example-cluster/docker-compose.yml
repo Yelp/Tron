@@ -16,7 +16,7 @@ services:
   master:
     build:
       context: .
-      dockerfile: images/trusty
+      dockerfile: ubuntu:trusty
       # dockerfile: images/xenial
     links:
       - batch1
