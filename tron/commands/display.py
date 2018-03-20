@@ -10,7 +10,6 @@ from operator import itemgetter
 
 from tron.core import actionrun
 from tron.core import job
-from tron.core import service
 
 
 class Color(object):
@@ -202,10 +201,9 @@ def add_color_for_state(state):
         actionrun.ActionRun.STATE_RUNNING.name,
         actionrun.ActionRun.STATE_SUCCEEDED.name,
         job.Job.STATUS_ENABLED,
-        service.ServiceState.UP,
     }:
         return Color.set('green', state)
-    if state in {job.Job.STATUS_DISABLED, service.ServiceState.DISABLED}:
+    if state in {job.Job.STATUS_DISABLED}:
         return Color.set('blue', state)
     return state
 
@@ -229,30 +227,6 @@ def format_fields(display_obj, content):
     return "\n".join(build_field(*item) for item in display_obj.detail_labels)
 
 
-def format_service_details(service_content):
-    """Format details about a service."""
-
-    def format_instances(service_instances):
-        format_str = "    %s : %-30s %s%s"
-
-        def get_failure_messages(failures):
-            if not failures:
-                return ""
-            header = Color.set("red", "\n    stderr: ")
-            return header + Color.set("red", "\n".join(failures))
-
-        def format(inst):
-            state = add_color_for_state(inst['state'])
-            failures = get_failure_messages(inst['failures'])
-            node = display_node(inst['node'])
-            return format_str % (inst['id'], node, state, failures)
-        return [format(instance) for instance in service_instances]
-
-    details = format_fields(DisplayServices, service_content)
-    instances = format_instances(service_content['instances'])
-    return details + '\n\nInstances:\n' + '\n'.join(instances)
-
-
 def format_job_details(job_content):
     details = format_fields(DisplayJobs, job_content)
     job_runs = DisplayJobRuns().format(job_content['runs'])
@@ -272,33 +246,6 @@ def format_action_run_details(content, stdout=True, stderr=True):
 
     details = format_fields(DisplayActionRuns, content)
     return details + '\n' + '\n'.join(out)
-
-
-class DisplayServices(TableDisplay):
-
-    columns = ['Name',  'State',    'Count']
-    fields = ['name',  'state',    'live_count']
-    widths = [50,      12,          7]
-    title = 'services'
-    resize_fields = ['name']
-
-    detail_labels = [
-        ('Service',             'name'),
-        ('Enabled',             'enabled'),
-        ('State',               'state'),
-        ('Max instances',       'count'),
-        ('Command',             'command'),
-        ('Pid Filename',        'pid_filename'),
-        ('Node Pool',           'node_pool'),
-        ('Monitor interval',    'monitor_interval'),
-        ('Restart delay',       'restart_delay'),
-        ('Restart delay',       'restart_delay'),
-    ]
-
-    colors = {
-        'name':     partial(Color.set, 'yellow'),
-        'state':    add_color_for_state,
-    }
 
 
 class DisplayJobRuns(TableDisplay):

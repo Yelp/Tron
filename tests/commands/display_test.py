@@ -12,42 +12,8 @@ from tron.commands import display
 from tron.commands.display import DisplayActionRuns
 from tron.commands.display import DisplayJobRuns
 from tron.commands.display import DisplayJobs
-from tron.commands.display import DisplayServices
 from tron.core import actionrun
-from tron.core import service
-
-
-class DisplayServicesTestCase(TestCase):
-
-    @setup
-    def setup_data(self):
-        self.data = [
-            dict(
-                name="My Service",      state="stopped",
-                live_count="4", enabled=True,
-            ),
-            dict(
-                name="Another Service", state="running",
-                live_count="2", enabled=False,
-            ),
-            dict(
-                name="Yet another",     state="running",
-                live_count="1", enabled=True,
-            ),
-        ]
-        self.display = DisplayServices()
-
-    def test_format(self):
-        out = self.display.format(self.data)
-        lines = out.split('\n')
-        assert_equal(len(lines), 6)
-        assert lines[3].startswith('Another')
-
-    def test_format_no_data(self):
-        out = self.display.format([])
-        lines = out.split("\n")
-        assert_equal(len(lines), 4)
-        assert_equal(lines[2], 'No Services')
+from tron.core import job
 
 
 class DisplayJobRunsTestCase(TestCase):
@@ -185,7 +151,7 @@ class AddColorForStateTestCase(TestCase):
         assert text.startswith(display.Color.colors['green']), text
 
     def test_add_blue(self):
-        text = display.add_color_for_state(service.ServiceState.DISABLED)
+        text = display.add_color_for_state(job.Job.STATUS_DISABLED)
         assert text.startswith(display.Color.colors['blue']), text
 
 

@@ -11,7 +11,6 @@ import six
 import tron
 from tron.config import schema
 from tron.core import job
-from tron.core import service
 from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 from tron.serialize.runstate.sqlalchemystore import SQLAlchemyStateStore
@@ -141,16 +140,13 @@ class PersistentStateManager(object):
             runstate.MCP_STATE, StateMetadata.name,
         )
 
-    def restore(self, job_names, service_names, skip_validation=False):
+    def restore(self, job_names, skip_validation=False):
         """Return the most recent serialized state."""
         log.debug("Restoring state.")
         if not skip_validation:
             self._restore_metadata()
 
-        return (
-            self._restore_dicts(runstate.JOB_STATE, job_names),
-            self._restore_dicts(runstate.SERVICE_STATE, service_names),
-        )
+        return self._restore_dicts(runstate.JOB_STATE, job_names)
 
     def _restore_metadata(self):
         metadata = self._impl.restore([self.metadata_key])
@@ -255,14 +251,9 @@ class StateChangeWatcher(observer.Observer):
         """Handle a state change in an observable by saving its state."""
         if isinstance(observable, job.Job):
             self.save_job(observable)
-        if isinstance(observable, service.Service):
-            self.save_service(observable)
 
     def save_job(self, job):
         self._save_object(runstate.JOB_STATE, job)
-
-    def save_service(self, service):
-        self._save_object(runstate.SERVICE_STATE, service)
 
     def save_metadata(self):
         self._save_object(runstate.MCP_STATE, StateMetadata())
@@ -277,5 +268,5 @@ class StateChangeWatcher(observer.Observer):
     def disabled(self):
         return self.state_manager.disabled()
 
-    def restore(self, jobs, services):
-        return self.state_manager.restore(jobs, services)
+    def restore(self, jobs):
+        return self.state_manager.restore(jobs)

@@ -21,7 +21,7 @@ from tron.commands.cmd_utils import ExitCode
 
 
 COMMAND_HELP = (
-    ('start',           'Start the selected job, job run, action, or service'),
+    ('start',           'Start the selected job, job run, or action'),
     ('rerun',           'Re-run a full job (all actions) with a new job id'),
     ('cancel',          'Cancel the selected job run'),
     ('disable',         'Disable selected job and cancel any outstanding runs'),
@@ -31,8 +31,8 @@ COMMAND_HELP = (
     ('fail',            'Mark an UNKNOWN job as having failed'),
     ('success',         'Mark an UNKNOWN job as having succeeded'),
     ('skip',            'Skip a failed action, runs dependent actions.'),
-    ('stop',            'Stop the service or action run (SIGTERM)'),
-    ('kill',            'Force kill the service or action run (SIGKILL)'),
+    ('stop',            'Stop the action run (SIGTERM)'),
+    ('kill',            'Force kill the action run (SIGKILL)'),
 )
 
 
