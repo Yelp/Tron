@@ -41,8 +41,7 @@ test:
 	tox
 
 _itest_%:
-	docker build -f example-cluster/images/$* -t tron-runner-$* example-cluster
-	$(DOCKER_RUN) tron-runner-$* /work/itest.sh
+	$(DOCKER_RUN) ubuntu:$* /work/itest.sh
 
 itest_%: test deb_% _itest_%
 	@echo "Package for $* looks good"

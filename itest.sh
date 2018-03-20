@@ -4,10 +4,11 @@ set -euxo pipefail
 
 export DEBIAN_FRONTEND=noninteractive
 
-dpkg -i /work/dist/*.deb || true
-apt-get update >/dev/null
-apt-get install -qq -y -f curl
-dpkg -i /work/dist/*.deb
+apt-get update
+apt-get install -y software-properties-common gdebi-core curl
+add-apt-repository -y ppa:deadsnakes/ppa
+apt-get update
+gdebi --non-interactive /work/dist/*.deb
 
 trond --help
 tronfig --help
