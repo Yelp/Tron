@@ -144,6 +144,14 @@ def valid_node_name(value, config_context):
     return value
 
 
+def valid_cluster_name(value, config_context):
+    valid_string(value, config_context)
+    if not config_context.partial and value not in config_context.clusters:
+        msg = "Unknown cluster name %s at %s"
+        raise ConfigError(msg % (value, config_context.path))
+    return value
+
+
 class ValidateSSHOptions(Validator):
     """Validate SSH options."""
     config_class = ConfigSSHOptions
@@ -264,6 +272,13 @@ class ValidateAction(Validator):
     defaults = {
         'node':                 None,
         'requires':             (),
+        'executor':             schema.ExecutorTypes.ssh,
+        'cluster':              None,
+        'pool':                 None,
+        'cpus':                 None,
+        'mem':                  None,
+        'service':              None,
+        'deploy_group':         None,
     }
     requires = build_list_of_type_validator(
         valid_action_name, allow_empty=True,
@@ -273,6 +288,15 @@ class ValidateAction(Validator):
         'command':              build_format_string_validator(action_context),
         'node':                 valid_node_name,
         'requires':             requires,
+        'executor':             config_utils.build_enum_validator(
+            schema.ExecutorTypes,
+        ),
+        'cluster':              valid_cluster_name,
+        'pool':                 valid_string,
+        'cpus':                 valid_float,
+        'mem':                  valid_float,
+        'service':              valid_string,
+        'deploy_group':         valid_string,
     }
 
 
@@ -291,11 +315,27 @@ class ValidateCleanupAction(Validator):
     defaults = {
         'node':                 None,
         'name':                 CLEANUP_ACTION_NAME,
+        'executor':             schema.ExecutorTypes.ssh,
+        'cluster':              None,
+        'pool':                 None,
+        'cpus':                 None,
+        'mem':                  None,
+        'service':              None,
+        'deploy_group':         None,
     }
     validators = {
         'name':                 valid_cleanup_action_name,
         'command':              build_format_string_validator(action_context),
         'node':                 valid_node_name,
+        'executor':             config_utils.build_enum_validator(
+            schema.ExecutorTypes,
+        ),
+        'cluster':              valid_cluster_name,
+        'pool':                 valid_string,
+        'cpus':                 valid_float,
+        'mem':                  valid_float,
+        'service':              valid_string,
+        'deploy_group':         valid_string,
     }
 
 
@@ -315,6 +355,8 @@ class ValidateJob(Validator):
         'max_runtime':          None,
         'monitoring':           {},
         'time_zone':            None,
+        'service':              None,
+        'deploy_group':         None,
     }
 
     validators = {
@@ -331,6 +373,8 @@ class ValidateJob(Validator):
         'max_runtime':          config_utils.valid_time_delta,
         'monitoring':           valid_dict,
         'time_zone':            valid_time_zone,
+        'service':              valid_string,
+        'deploy_group':         valid_string,
     }
 
     def cast(self, in_dict, config_context):
@@ -365,8 +409,35 @@ class ValidateJob(Validator):
 
     def post_validation(self, job, config_context):
         """Validate actions for the job."""
+        incomplete_paasta_actions = []
+
+        def is_incomplete_paasta_action(action):
+            return (
+                action.executor == schema.ExecutorTypes.paasta and (
+                    action.service is None or
+                    action.deploy_group is None
+                )
+            )
+
         for _, action in six.iteritems(job['actions']):
             self._validate_dependencies(job, job['actions'], action)
+            if is_incomplete_paasta_action(action):
+                incomplete_paasta_actions.append(action)
+
+        cleanup_action = job.get('cleanup_action')
+        if cleanup_action and is_incomplete_paasta_action(cleanup_action):
+            incomplete_paasta_actions.append(action)
+
+        if incomplete_paasta_actions and not(
+            job.get('service') and job.get('deploy_group')
+        ):
+            raise ConfigError(
+                'Either job {name} or PaaSTA actions {actions} need a service '
+                'and deploy_group.'.format(
+                    name=job['name'],
+                    actions=incomplete_paasta_actions,
+                ),
+            )
 
 
 valid_job = ValidateJob()
@@ -491,9 +562,11 @@ class ValidateConfig(Validator):
         'node_pools':           {},
         'jobs':                 (),
         'services':             (),
+        'clusters':             (),
     }
     node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
     nodes = build_dict_name_validator(valid_node, allow_empty=True)
+    clusters = build_list_of_type_validator(valid_string, allow_empty=True)
     validators = {
         'action_runner':        ValidateActionRunner(),
         'output_stream_dir':    valid_output_stream_dir,
@@ -504,6 +577,7 @@ class ValidateConfig(Validator):
         'state_persistence':    valid_state_persistence,
         'nodes':                nodes,
         'node_pools':           node_pools,
+        'clusters':             clusters,
     }
     optional = False
 
@@ -529,7 +603,7 @@ class ValidateConfig(Validator):
             self.validate_node_pool_nodes(config)
 
         config_context = ConfigContext(
-            'config', node_names,
+            'config', node_names, config.get('clusters'),
             config.get('command_context'), MASTER_NAMESPACE,
         )
         validate_jobs_and_services(config, config_context)
@@ -579,7 +653,9 @@ def validate_config_mapping(config_mapping):
     yield MASTER_NAMESPACE, master
 
     for name, content in six.iteritems(config_mapping):
-        context = ConfigContext(name, nodes, master.command_context, name)
+        context = ConfigContext(
+            name, nodes, master.clusters, master.command_context, name,
+        )
         yield name, valid_named_config(content, config_context=context)
 
 
