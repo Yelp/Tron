@@ -55,6 +55,10 @@ nodes:
 node_pools:
     - name: NodePool
       nodes: [node0, node1]
+
+clusters:
+    - cluster-one
+    - cluster-two
 """
 
 
@@ -81,6 +85,10 @@ nodes:
 node_pools:
     -   name: nodePool
         nodes: [node0, node1]
+
+clusters:
+    - cluster-one
+    - cluster-two
     """
 
     config = BASE_CONFIG + """
@@ -152,6 +160,17 @@ jobs:
             -
                 name: "action4_0"
                 command: "test_command4.0"
+    -
+        name: "test_job_paasta"
+        node: nodePool
+        service: my_service
+        deploy_group: prod.non_canary
+        schedule: "daily"
+        actions:
+            -
+                name: "action4_0"
+                executor: paasta
+                command: "test_command4.0"
 
 services:
     -
@@ -200,12 +219,15 @@ services:
                     name='nodePool',
                 ),
             }),
+            clusters=('cluster-one', 'cluster-two'),
             jobs=FrozenDict({
                 'MASTER.test_job0': schema.ConfigJob(
                     name='MASTER.test_job0',
                     namespace='MASTER',
                     node='node0',
                     monitoring={},
+                    service=None,
+                    deploy_group=None,
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20), jitter=None,
                     ),
@@ -215,6 +237,13 @@ services:
                             command='test_command0.0',
                             requires=(),
                             node=None,
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                     }),
                     queueing=True,
@@ -224,6 +253,13 @@ services:
                         name='cleanup',
                         command='test_command0.1',
                         node=None,
+                        executor='ssh',
+                        cluster=None,
+                        pool=None,
+                        cpus=None,
+                        mem=None,
+                        service=None,
+                        deploy_group=None,
                     ),
                     enabled=True,
                     max_runtime=None,
@@ -236,6 +272,8 @@ services:
                     node='node0',
                     enabled=True,
                     monitoring={},
+                    service=None,
+                    deploy_group=None,
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days={1, 3, 5},
                         hour=0, minute=30, second=0,
@@ -248,12 +286,26 @@ services:
                             command='test_command1.1',
                             requires=('action1_0',),
                             node=None,
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                         'action1_0': schema.ConfigAction(
                             name='action1_0',
                             command='test_command1.0',
                             requires=(),
                             node=None,
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                     }),
                     queueing=True,
@@ -270,6 +322,8 @@ services:
                     node='node1',
                     enabled=True,
                     monitoring={},
+                    service=None,
+                    deploy_group=None,
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=16, minute=30, second=0,
@@ -282,6 +336,13 @@ services:
                             command='test_command2.0',
                             requires=(),
                             node=None,
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                     }),
                     queueing=True,
@@ -299,24 +360,47 @@ services:
                     schedule=ConfigConstantScheduler(),
                     enabled=True,
                     monitoring={},
+                    service=None,
+                    deploy_group=None,
                     actions=FrozenDict({
                         'action3_1': schema.ConfigAction(
                             name='action3_1',
                             command='test_command3.1',
                             requires=(),
                             node=None,
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                         'action3_0': schema.ConfigAction(
                             name='action3_0',
                             command='test_command3.0',
                             requires=(),
                             node=None,
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                         'action3_2': schema.ConfigAction(
                             name='action3_2',
                             command='test_command3.2',
                             requires=('action3_0', 'action3_1'),
                             node='node0',
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                     }),
                     queueing=True,
@@ -332,6 +416,8 @@ services:
                     namespace='MASTER',
                     node='nodePool',
                     monitoring={},
+                    service=None,
+                    deploy_group=None,
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=0, minute=0, second=0,
@@ -344,6 +430,13 @@ services:
                             command='test_command4.0',
                             requires=(),
                             node=None,
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                     }),
                     queueing=True,
@@ -351,6 +444,43 @@ services:
                     all_nodes=True,
                     cleanup_action=None,
                     enabled=False,
+                    max_runtime=None,
+                    allow_overlap=False,
+                    time_zone=None,
+                ),
+                'MASTER.test_job_paasta': schema.ConfigJob(
+                    name='MASTER.test_job_paasta',
+                    namespace='MASTER',
+                    node='nodePool',
+                    monitoring={},
+                    service='my_service',
+                    deploy_group='prod.non_canary',
+                    schedule=schedule_parse.ConfigDailyScheduler(
+                        days=set(),
+                        hour=0, minute=0, second=0,
+                        original='00:00:00 ',
+                        jitter=None,
+                    ),
+                    actions=FrozenDict({
+                        'action4_0': schema.ConfigAction(
+                            name='action4_0',
+                            command='test_command4.0',
+                            requires=(),
+                            node=None,
+                            executor='paasta',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
+                        ),
+                    }),
+                    queueing=True,
+                    run_limit=50,
+                    all_nodes=False,
+                    cleanup_action=None,
+                    enabled=True,
                     max_runtime=None,
                     allow_overlap=False,
                     time_zone=None,
@@ -402,6 +532,10 @@ services:
         assert_equal(
             test_config.jobs['MASTER.test_job4'],
             expected.jobs['MASTER.test_job4'],
+        )
+        assert_equal(
+            test_config.jobs['MASTER.test_job_paasta'],
+            expected.jobs['MASTER.test_job_paasta'],
         )
         assert_equal(test_config.jobs, expected.jobs)
         assert_equal(test_config.services, expected.services)
@@ -477,6 +611,17 @@ jobs:
             -
                 name: "action4_0"
                 command: "test_command4.0"
+    -
+        name: "test_job_paasta"
+        node: NodePool
+        service: my_service
+        deploy_group: prod.non_canary
+        schedule: "daily"
+        actions:
+            -
+                name: "action4_0"
+                executor: paasta
+                command: "test_command4.0"
 
 services:
     -
@@ -503,6 +648,8 @@ services:
                     namespace='test_namespace',
                     node='node0',
                     monitoring={},
+                    service=None,
+                    deploy_group=None,
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20),
                         jitter=None,
@@ -513,6 +660,13 @@ services:
                             command='test_command0.0',
                             requires=(),
                             node=None,
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                     }),
                     queueing=True,
@@ -522,6 +676,13 @@ services:
                         name='cleanup',
                         command='test_command0.1',
                         node=None,
+                        executor='ssh',
+                        cluster=None,
+                        pool=None,
+                        cpus=None,
+                        mem=None,
+                        service=None,
+                        deploy_group=None,
                     ),
                     enabled=True,
                     max_runtime=None,
@@ -534,6 +695,8 @@ services:
                     node='node0',
                     enabled=True,
                     monitoring={},
+                    service=None,
+                    deploy_group=None,
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days={1, 3, 5},
                         hour=0,
@@ -548,12 +711,26 @@ services:
                             command='test_command1.1',
                             requires=('action1_0',),
                             node=None,
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                         'action1_0': schema.ConfigAction(
                             name='action1_0',
                             command='test_command1.0 %(some_var)s',
                             requires=(),
                             node=None,
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                     }),
                     queueing=True,
@@ -570,6 +747,8 @@ services:
                     node='node1',
                     enabled=True,
                     monitoring={},
+                    service=None,
+                    deploy_group=None,
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=16,
@@ -584,6 +763,13 @@ services:
                             command='test_command2.0',
                             requires=(),
                             node=None,
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                     }),
                     queueing=True,
@@ -601,24 +787,47 @@ services:
                     schedule=ConfigConstantScheduler(),
                     enabled=True,
                     monitoring={},
+                    service=None,
+                    deploy_group=None,
                     actions=FrozenDict({
                         'action3_1': schema.ConfigAction(
                             name='action3_1',
                             command='test_command3.1',
                             requires=(),
                             node=None,
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                         'action3_0': schema.ConfigAction(
                             name='action3_0',
                             command='test_command3.0',
                             requires=(),
                             node=None,
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                         'action3_2': schema.ConfigAction(
                             name='action3_2',
                             command='test_command3.2',
                             requires=('action3_0', 'action3_1'),
                             node='node0',
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                     }),
                     queueing=True,
@@ -634,6 +843,8 @@ services:
                     namespace='test_namespace',
                     node='NodePool',
                     monitoring={},
+                    service=None,
+                    deploy_group=None,
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
                         hour=0, minute=0, second=0,
@@ -646,6 +857,13 @@ services:
                             command='test_command4.0',
                             requires=(),
                             node=None,
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
                         ),
                     }),
                     queueing=True,
@@ -653,6 +871,43 @@ services:
                     all_nodes=True,
                     cleanup_action=None,
                     enabled=False,
+                    max_runtime=None,
+                    allow_overlap=False,
+                    time_zone=None,
+                ),
+                'test_job_paasta': schema.ConfigJob(
+                    name='test_job_paasta',
+                    namespace='test_namespace',
+                    node='NodePool',
+                    monitoring={},
+                    service='my_service',
+                    deploy_group='prod.non_canary',
+                    schedule=schedule_parse.ConfigDailyScheduler(
+                        days=set(),
+                        hour=0, minute=0, second=0,
+                        original='00:00:00 ',
+                        jitter=None,
+                    ),
+                    actions=FrozenDict({
+                        'action4_0': schema.ConfigAction(
+                            name='action4_0',
+                            command='test_command4.0',
+                            requires=(),
+                            node=None,
+                            executor='paasta',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
+                        ),
+                    }),
+                    queueing=True,
+                    run_limit=50,
+                    all_nodes=False,
+                    cleanup_action=None,
+                    enabled=True,
                     max_runtime=None,
                     allow_overlap=False,
                     time_zone=None,
@@ -694,6 +949,10 @@ services:
         assert_equal(test_config.jobs['test_job2'], expected.jobs['test_job2'])
         assert_equal(test_config.jobs['test_job3'], expected.jobs['test_job3'])
         assert_equal(test_config.jobs['test_job4'], expected.jobs['test_job4'])
+        assert_equal(
+            test_config.jobs['test_job_paasta'],
+            expected.jobs['test_job_paasta'],
+        )
         assert_equal(
             test_config.services['service0'], expected.services['service0'],
         )
@@ -898,6 +1157,123 @@ services:
         )
         assert_in(expected_msg, str(exception))
 
+    def test_job_with_invalid_cluster(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    -
+        name: "test_job0"
+        node: node0
+        schedule: "interval 20s"
+        service: foo
+        deploy_group: prod
+        actions:
+            -
+                name: "action0_0"
+                executor: paasta
+                cluster: unknown-cluster
+                command: "test_command0.0"
+"""
+        expected_msg = "Unknown cluster name unknown-cluster"
+        exception = assert_raises(
+            ConfigError, valid_config_from_yaml, test_config,
+        )
+        assert_in(expected_msg, str(exception))
+
+    def test_job_with_missing_service_for_paasta_action(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    -
+        name: "test_job0"
+        node: node0
+        schedule: "interval 20s"
+        actions:
+            -
+                name: "action0_0"
+                executor: paasta
+                cluster: cluster-one
+                command: "test_command0.0"
+"""
+        expected_msg = "need a service and deploy_group"
+        exception = assert_raises(
+            ConfigError, valid_config_from_yaml, test_config,
+        )
+        assert_in(expected_msg, str(exception))
+
+    def test_job_with_missing_service_for_paasta_cleanup_action(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    -
+        name: "test_job0"
+        node: node0
+        schedule: "interval 20s"
+        actions:
+            -
+                name: "action0_0"
+                command: "test_command0.0"
+                executor: ssh
+        cleanup_action:
+            command: "test_command0.1"
+            executor: paasta
+"""
+        expected_msg = "need a service and deploy_group"
+        exception = assert_raises(
+            ConfigError, valid_config_from_yaml, test_config,
+        )
+        assert_in(expected_msg, str(exception))
+
+    def test_job_with_service_in_paasta_action_only_is_valid(self):
+        test_config = BASE_CONFIG + """
+jobs:
+    -
+        name: "test_job0"
+        node: node0
+        schedule: "interval 20s"
+        actions:
+            -
+                name: "action0_0"
+                executor: paasta
+                cluster: cluster-one
+                service: baz
+                deploy_group: prod
+                command: "test_command0.0"
+"""
+        expected = schema.ConfigJob(
+            name='MASTER.test_job0',
+            namespace='MASTER',
+            node='node0',
+            monitoring={},
+            service=None,
+            deploy_group=None,
+            schedule=ConfigIntervalScheduler(
+                timedelta=datetime.timedelta(0, 20), jitter=None,
+            ),
+            actions=FrozenDict({
+                'action0_0': schema.ConfigAction(
+                    name='action0_0',
+                    command='test_command0.0',
+                    requires=(),
+                    node=None,
+                    executor='paasta',
+                    cluster='cluster-one',
+                    pool=None,
+                    cpus=None,
+                    mem=None,
+                    service='baz',
+                    deploy_group='prod',
+                ),
+            }),
+            queueing=True,
+            run_limit=50,
+            all_nodes=False,
+            cleanup_action=None,
+            enabled=True,
+            max_runtime=None,
+            allow_overlap=False,
+            time_zone=None,
+        )
+        parsed_config = valid_config_from_yaml(test_config)
+        assert_equal(parsed_config.jobs['MASTER.test_job0'], expected)
+
     def test_overlap_job_service_names(self):
         tron_config = dict(
             nodes=['localhost'],
@@ -931,7 +1307,7 @@ services:
             actions=[],
         )
         config_context = config_utils.ConfigContext(
-            'config', ['localhost'], None, None,
+            'config', ['localhost'], ['cluster'], None, None,
         )
         expected_msg = "Required non-empty list at config.Job.job_name.actions"
         exception = assert_raises(
@@ -1073,6 +1449,8 @@ class ValidateJobsAndServicesTestCase(TestCase):
                 namespace='MASTER',
                 node='node0',
                 monitoring={},
+                service=None,
+                deploy_group=None,
                 schedule=ConfigIntervalScheduler(
                     timedelta=datetime.timedelta(0, 20), jitter=None,
                 ),
@@ -1082,6 +1460,13 @@ class ValidateJobsAndServicesTestCase(TestCase):
                                         command='test_command0.0',
                                         requires=(),
                                         node=None,
+                                        executor='ssh',
+                                        cluster=None,
+                                        pool=None,
+                                        cpus=None,
+                                        mem=None,
+                                        service=None,
+                                        deploy_group=None,
                                     )}),
                 queueing=True,
                 run_limit=50,
@@ -1090,6 +1475,13 @@ class ValidateJobsAndServicesTestCase(TestCase):
                     command='test_command0.1',
                     name='cleanup',
                     node=None,
+                    executor='ssh',
+                    cluster=None,
+                    pool=None,
+                    cpus=None,
+                    mem=None,
+                    service=None,
+                    deploy_group=None,
                 ),
                 enabled=True,
                 allow_overlap=False,
@@ -1115,7 +1507,7 @@ class ValidateJobsAndServicesTestCase(TestCase):
 
         config = manager.from_string(test_config)
         context = config_utils.ConfigContext(
-            'config', ['node0'], None, MASTER_NAMESPACE,
+            'config', ['node0'], ['unused-cluster'], None, MASTER_NAMESPACE,
         )
         config_parse.validate_jobs_and_services(config, context)
         assert_equal(expected_jobs, config['jobs'])
@@ -1192,7 +1584,9 @@ class BuildFormatStringValidatorTestCase(TestCase):
 
     def test_validator_passes_with_context(self):
         template = "The %(one)s thing I %(seven)s is %(mars)s"
-        context = config_utils.ConfigContext(None, None, {'mars': 'ok'}, None)
+        context = config_utils.ConfigContext(
+            None, None, None, {'mars': 'ok'}, None,
+        )
         assert self.validator(template, context)
 
 
@@ -1263,6 +1657,7 @@ class ConfigContainerTestCase(TestCase):
         expected = [
             'test_job1', 'test_job0',
             'test_job3', 'test_job2', 'test_job4',
+            'test_job_paasta',
         ]
         assert_equal(set(job_names), set(expected))
         assert_equal(set(service_names), {'service1', 'service0'})
@@ -1271,6 +1666,7 @@ class ConfigContainerTestCase(TestCase):
         expected = [
             'test_job1', 'test_job0',
             'test_job3', 'test_job2', 'test_job4',
+            'test_job_paasta',
         ]
         assert_equal(set(expected), set(self.container.get_jobs().keys()))
 

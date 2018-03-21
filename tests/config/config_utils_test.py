@@ -159,14 +159,16 @@ class ConfigContextTestCase(TestCase):
 
     def test_build_config_context(self):
         path, nodes, namespace = 'path', {1, 2, 3}, 'namespace'
+        clusters = {'c1', 'c2'}
         command_context = mock.MagicMock()
         parent_context = config_utils.ConfigContext(
-            path, nodes, command_context, namespace,
+            path, nodes, clusters, command_context, namespace,
         )
 
         child = parent_context.build_child_context('child')
         assert_equal(child.path, '%s.child' % path)
         assert_equal(child.nodes, nodes)
+        assert_equal(child.clusters, clusters)
         assert_equal(child.namespace, namespace)
         assert_equal(child.command_context, command_context)
         assert not child.partial
