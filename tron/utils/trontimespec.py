@@ -275,7 +275,8 @@ class TimeSpecification(object):
                 for _ in range(24):
                     out += datetime.timedelta(minutes=60)
                     try:
-                        out = self.timezone.localize(out)
+                        if out.tzinfo is None:
+                            out = self.timezone.localize(out)
                     except NonExistentTimeError:
                         return None
         return to_timezone(out, tzinfo)
