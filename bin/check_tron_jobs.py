@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import logging
+import sys
 import time
 
 from enum import Enum
@@ -231,15 +232,22 @@ def main():
     cmd_utils.load_config(args)
     client = Client(args.server)
 
+    error_code = 0
     if args.job is None:
         jobs = client.jobs(include_job_runs=True)
         for job in jobs:
-            check_job_result(job=job, client=client, dry_run=args.dry_run)
+            try:
+                check_job_result(job=job, client=client, dry_run=args.dry_run)
+            except Exception as e:
+                log.info("check job result fails for job {}: {}".format(job, e))
+                error_code = 1
     else:
         job_url = client.get_url(args.job)
         job = client.job_runs(job_url)
         check_job_result(job=job, client=client, dry_run=args.dry_run)
 
+    return error_code
+
 
 if __name__ == '__main__':
-    main()
+    sys.exit(main())
