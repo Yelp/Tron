@@ -171,7 +171,7 @@ if __name__ == '__main__':
         delete_config(client, args.source)
     else:
         namespace, content = get_config_input(args.namespace, args.source)
-        config_hash = client.config(args.namespace)['hash']
+        config_hash = client.config(namespace)['hash']
         result = validate(namespace, content)
         if result:
             print(result)
