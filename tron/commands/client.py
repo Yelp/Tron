@@ -140,12 +140,6 @@ class Client(object):
     def get_url(self, identifier):
         return get_object_type_from_identifier(self.index(), identifier).url
 
-    def services(self):
-        return self.http_get('/api/services').get('services')
-
-    def service(self, service_url):
-        return self.http_get(service_url)
-
     def jobs(self, include_job_runs=False, include_action_runs=False):
         params = {
             'include_job_runs': int(include_job_runs),
@@ -202,26 +196,18 @@ def get_job_url(identifier):
     return build_api_url('jobs', split_identifier(identifier))
 
 
-def get_service_url(identifier):
-    return build_api_url('services', split_identifier(identifier))
-
-
 class TronObjectType(object):
     """Constants to identify a Tron object type."""
     job = 'JOB'
     job_run = 'JOB_RUN'
     action_run = 'ACTION_RUN'
-    service = 'SERVICE'
-    service_instance = 'SERVICE_INSTANCE'
 
     url_builders = {
         'jobs':     get_job_url,
-        'services': get_service_url,
     }
 
     groups = {
         'jobs':     [job, job_run, action_run],
-        'services': [service, service_instance],
     }
 
 
@@ -239,7 +225,6 @@ def get_object_type_from_identifier(url_index, identifier):
     """Given a string identifier, return a TronObjectIdentifier. """
     name_mapping = {
         'jobs':     set(url_index['jobs']),
-        'services': set(url_index['services']),
     }
 
     def get_name_parts(identifier, namespace=None):
@@ -260,7 +245,7 @@ def get_object_type_from_identifier(url_index, identifier):
 
     def find_by_name(name, namespace=None):
         id = get_name_parts(name, namespace)
-        return find_by_type(id, 'jobs') or find_by_type(id, 'services')
+        return find_by_type(id, 'jobs')
 
     namespaces = [None, MASTER_NAMESPACE] + url_index['namespaces']
     id_obj = first(find_by_name(identifier, name) for name in namespaces)
