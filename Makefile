@@ -27,7 +27,7 @@ deb_%: clean docker_% coffee_%
 		chown -R $(UID):$(GID) dist debian        \
 	'
 
-coffee_%:
+coffee_%: docker_%
 	@echo "Building tronweb"
 	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '      \
 		rm -rf tronweb/js/cs &&                      \
