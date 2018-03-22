@@ -475,7 +475,7 @@ class JobCollection(object):
         """
         self.jobs = {
             name: item
-            for name, item in self.jobs.items() if name in job_configs
+            for name, item in six.iteritems(self.jobs) if name in job_configs
         }
 
         jobs = []
@@ -489,7 +489,17 @@ class JobCollection(object):
         return jobs
 
     def add(self, job_scheduler):
-        return self.jobs.add(job_scheduler, self.update)
+        name = job_scheduler.get_name()
+        if name in self.jobs:
+            js = self.jobs[name]
+            if job_scheduler == js:
+                return False
+            if self.update(job_scheduler):
+                return False
+
+        log.info("Adding new %s" % job_scheduler)
+        self.jobs[name] = job_scheduler
+        return True
 
     def update(self, new_job_scheduler):
         log.info("Updating %s", new_job_scheduler)
@@ -498,8 +508,11 @@ class JobCollection(object):
         job_scheduler.schedule_reconfigured()
         return True
 
-    def restore_state(self, job_state_data):
-        self.jobs.restore_state(job_state_data)
+    def restore_state(self, jobs_state_data):
+        for name, state in six.iteritems(jobs_state_data):
+            self.jobs[name].restore_state(state)
+
+        log.info("Loaded state for %s jobs", len(jobs_state_data))
 
     def get_by_name(self, name):
         return self.jobs.get(name)
