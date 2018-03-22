@@ -46,6 +46,7 @@ TronConfig = config_object_factory(
         'node_pools',          # FrozenDict of ConfigNodePool
         'jobs',                # FrozenDict of ConfigJob
         'services',            # FrozenDict of ConfigService
+        'clusters',            # tuple of str
     ],
 )
 
@@ -131,6 +132,8 @@ ConfigJob = config_object_factory(
         'allow_overlap',        # bool
         'max_runtime',          # datetime.Timedelta
         'time_zone',            # pytz time zone
+        'service',              # str
+        'deploy_group',         # str
     ],
 )
 
@@ -144,6 +147,13 @@ ConfigAction = config_object_factory(
     optional=[
         'requires',             # tuple of str
         'node',                 # str
+        'executor',             # str
+        'cluster',              # str
+        'pool',                 # str
+        'cpus',                 # float
+        'mem',                  # float
+        'service',              # str
+        'deploy_group',         # str
     ],
 )
 
@@ -155,6 +165,13 @@ ConfigCleanupAction = config_object_factory(
     optional=[
         'name',                 # str
         'node',                 # str
+        'executor',             # str
+        'cluster',              # str
+        'pool',                 # str
+        'cpus',                 # float
+        'mem',                  # float
+        'service',              # str
+        'deploy_group',         # str
     ],
 )
 
@@ -178,6 +195,9 @@ ConfigService = config_object_factory(
 
 
 StatePersistenceTypes = Enum.create('shelve', 'sql', 'yaml')
+
+
+ExecutorTypes = Enum.create('ssh', 'paasta')
 
 
 ActionRunnerTypes = Enum.create('none', 'subprocess')
