@@ -1,15 +1,51 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import dbm
 import logging
 import operator
+import pickle
 import shelve
+import sys
+from io import BytesIO
 
 from six.moves import filter
 from six.moves import zip
 
 
 log = logging.getLogger(__name__)
+
+
+class Py2Shelf(shelve.Shelf):
+    def __init__(self, filename, flag='c', protocol=2, writeback=False):
+        if sys.version_info[0] == 3:
+            shelve.Shelf.__init__(
+                self, dbm.open(filename, flag,), protocol, writeback, 'utf8',
+            )
+        else:
+            shelve.Shelf.__init__(
+                self, dbm.open(filename, flag), protocol, writeback,
+            )
+
+    def __getitem__(self, key):
+        try:
+            value = self.cache[key]
+        except KeyError:
+            f = BytesIO(self.dict[key.encode('utf8')])
+            if sys.version_info[0] == 3:
+                value = pickle.load(f, encoding='bytes')
+            else:
+                value = pickle.load(f)
+            if self.writeback:
+                self.cache[key] = value
+        return value
+
+    def __setitem__(self, key, value):
+        if self.writeback:
+            self.cache[key] = value
+        f = BytesIO()
+        pickle.dump(obj=value, file=f, protocol=self._protocol)
+        self.dict[key.encode('utf8')] = f.getvalue()
 
 
 class ShelveKey(object):
@@ -38,7 +74,7 @@ class ShelveStateStore(object):
 
     def __init__(self, filename):
         self.filename = filename
-        self.shelve = shelve.open(self.filename)
+        self.shelve = Py2Shelf(self.filename)
 
     def build_key(self, type, iden):
         return ShelveKey(type, iden)
