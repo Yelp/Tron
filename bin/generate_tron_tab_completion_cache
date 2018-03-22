@@ -19,9 +19,12 @@ def main():
     cmd_utils.load_config(args)
 
     client = Client(args.server)
-    jobs = [job['name'] for job in client.jobs()]
-    for job in jobs:
-        print(job)
+    for job in client.jobs(include_job_runs=True, include_action_runs=True):
+        print(job['name'])
+        for run in job['runs']:
+            print(run["id"])
+            for action in run["runs"]:
+                print(action["id"])
 
 
 if __name__ == '__main__':
