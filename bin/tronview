@@ -67,15 +67,11 @@ def display_events(data):
 
 
 def view_all(args, client):
-    """Retreive jobs and services and display them."""
+    """Retrieve jobs and display them."""
     if args.show_events:
         return display_events(client.events())
 
-    return "".join([
-        display.DisplayServices().format(client.services()),
-        '\n',
-        display.DisplayJobs().format(client.jobs()),
-    ])
+    return display.DisplayJobs().format(client.jobs())
 
 
 def view_job(args, job_id, client):
@@ -103,20 +99,10 @@ def view_action_run(args, act_run_id, client):
     return display.format_action_run_details(content)
 
 
-def view_service(args, service_id, client):
-    """Retrieve details of the specified service and display"""
-    if args.show_events:
-        return display_events(client.object_events(service_id.url))
-
-    service_content = client.service(service_id.url)
-    return display.format_service_details(service_content)
-
-
 obj_type_to_view_map = {
     TronObjectType.job:         view_job,
     TronObjectType.job_run:     view_job_run,
     TronObjectType.action_run:  view_action_run,
-    TronObjectType.service:     view_service,
 }
 
 

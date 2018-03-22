@@ -180,10 +180,6 @@ class GetUrlTestCase(TestCase):
         url = client.get_job_url('MASTER.name')
         assert_equal(url, '/api/jobs/MASTER.name')
 
-    def test_get_service_url(self):
-        url = client.get_service_url('MASTER.name.2')
-        assert_equal(url, '/api/services/MASTER.name/2')
-
 
 class GetContentFromIdentifierTestCase(TestCase):
 
@@ -205,29 +201,12 @@ class GetContentFromIdentifierTestCase(TestCase):
         assert_equal(identifier.url, '/api/jobs/MASTER.namea')
         assert_equal(identifier.type, TronObjectType.job)
 
-    def test_get_url_from_identifier_service_no_namespace(self):
-        identifier = get_object_type_from_identifier(self.index, 'foo')
-        assert_equal(identifier.url, '/api/services/MASTER.foo')
-        assert_equal(identifier.type, TronObjectType.service)
-
     def test_get_url_from_identifier_job(self):
         identifier = get_object_type_from_identifier(
             self.index, 'MASTER.namea',
         )
         assert_equal(identifier.url, '/api/jobs/MASTER.namea')
         assert_equal(identifier.type, TronObjectType.job)
-
-    def test_get_url_from_identifier_service(self):
-        identifier = get_object_type_from_identifier(self.index, 'MASTER.foo')
-        assert_equal(identifier.url, '/api/services/MASTER.foo')
-        assert_equal(identifier.type, TronObjectType.service)
-
-    def test_get_url_from_identifier_service_instance(self):
-        identifier = get_object_type_from_identifier(
-            self.index, 'MASTER.foo.1',
-        )
-        assert_equal(identifier.url, '/api/services/MASTER.foo/1')
-        assert_equal(identifier.type, TronObjectType.service_instance)
 
     def test_get_url_from_identifier_job_run(self):
         identifier = get_object_type_from_identifier(
