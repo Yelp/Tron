@@ -38,7 +38,7 @@ setup(
         'pyasn1>=0.0.13',
         'pycrypto>=2.4',
         'pytz>=2011n',
-        'pysensu-yelp',
+        'pysensu-yelp>=0.3.5',
         'python-daemon',
         'lockfile>=0.7',
         'six>=1.11.0',
