@@ -35,7 +35,6 @@ from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import ConfigAction
 from tron.config.schema import ConfigCleanupAction
 from tron.config.schema import ConfigJob
-from tron.config.schema import ConfigService
 from tron.config.schema import ConfigSSHOptions
 from tron.config.schema import ConfigState
 from tron.config.schema import MASTER_NAMESPACE
@@ -443,43 +442,6 @@ class ValidateJob(Validator):
 valid_job = ValidateJob()
 
 
-class ValidateService(Validator):
-    """Validate a services configuration."""
-    config_class = ConfigService
-
-    service_context = command_context.build_filled_context(
-        command_context.ServiceInstanceContext,
-    )
-
-    service_pid_context = command_context.build_filled_context(
-        command_context.ServiceInstancePidContext,
-    )
-
-    defaults = {
-        'count':                1,
-        'monitor_retries':      5,
-        'restart_delay':        None,
-    }
-
-    validators = {
-        'name':                 valid_name_identifier,
-        'pid_file':             build_format_string_validator(service_pid_context),
-        'command':              build_format_string_validator(service_context),
-        'monitor_interval':     valid_float,
-        'monitor_retries':      valid_int,
-        'count':                valid_int,
-        'node':                 valid_node_name,
-        'restart_delay':        valid_float,
-    }
-
-    def cast(self, in_dict, config_context):
-        in_dict['namespace'] = config_context.namespace
-        return in_dict
-
-
-valid_service = ValidateService()
-
-
 class ValidateActionRunner(Validator):
     config_class = schema.ConfigActionRunner
     optional = True
@@ -525,18 +487,17 @@ class ValidateStatePersistence(Validator):
 valid_state_persistence = ValidateStatePersistence()
 
 
-def validate_jobs_and_services(config, config_context):
-    """Validate jobs and services."""
+def validate_jobs(config, config_context):
+    """Validate jobs"""
     valid_jobs = build_dict_name_validator(valid_job, allow_empty=True)
-    valid_services = build_dict_name_validator(valid_service, allow_empty=True)
-    validation = [('jobs', valid_jobs), ('services', valid_services)]
+    validation = [('jobs', valid_jobs)]
 
     for config_name, valid in validation:
         child_context = config_context.build_child_context(config_name)
         config[config_name] = valid(config.get(config_name, []), child_context)
 
-    fmt_string = 'Job and Service names must be unique %s'
-    config_utils.unique_names(fmt_string, config['jobs'], config['services'])
+    fmt_string = 'Job names must be unique %s'
+    config_utils.unique_names(fmt_string, config['jobs'])
 
 
 DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1)
@@ -561,7 +522,6 @@ class ValidateConfig(Validator):
         'nodes':                {'localhost': DEFAULT_NODE},
         'node_pools':           {},
         'jobs':                 (),
-        'services':             (),
         'clusters':             (),
     }
     node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
@@ -606,25 +566,24 @@ class ValidateConfig(Validator):
             'config', node_names, config.get('clusters'),
             config.get('command_context'), MASTER_NAMESPACE,
         )
-        validate_jobs_and_services(config, config_context)
+        validate_jobs(config, config_context)
 
 
 class ValidateNamedConfig(Validator):
     """A shorter validator for named configurations, which allow for
-    jobs and services to be defined as configuration fragments that
+    jobs to be defined as configuration fragments that
     are, in turn, reconciled by Tron.
     """
     config_class = NamedTronConfig
     type_name = "NamedConfigFragment"
     defaults = {
         'jobs':                 (),
-        'services':             (),
     }
 
     optional = False
 
     def post_validation(self, config, config_context):
-        validate_jobs_and_services(config, config_context)
+        validate_jobs(config, config_context)
 
 
 valid_config = ValidateConfig()
@@ -672,22 +631,16 @@ class ConfigContainer(object):
     def create(cls, config_mapping):
         return cls(dict(validate_config_mapping(config_mapping)))
 
-    # TODO: DRY with get_jobs(), get_services()
-    def get_job_and_service_names(self):
-        job_names, service_names = [], []
+    # TODO: DRY with get_jobs()
+    def get_job_names(self):
+        job_names = []
         for config in six.itervalues(self.configs):
             job_names.extend(config.jobs)
-            service_names.extend(config.services)
-        return job_names, service_names
+        return job_names
 
     def get_jobs(self):
         return dict(itertools.chain.from_iterable(
             six.iteritems(config.jobs) for _, config in self.configs.items()
-        ))
-
-    def get_services(self):
-        return dict(itertools.chain.from_iterable(
-            six.iteritems(config.services) for _, config in self.configs.items()
         ))
 
     def get_master(self):

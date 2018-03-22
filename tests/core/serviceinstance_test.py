@@ -9,12 +9,10 @@ from testify import setup_teardown
 from testify import TestCase
 
 from tron import actioncommand
-from tron import command_context
 from tron import eventloop
 from tron import node
 from tron.actioncommand import ActionCommand
 from tron.core import serviceinstance
-from tron.utils import state
 
 
 class BuildActionTestCase(TestCase):
@@ -281,114 +279,6 @@ class ServiceInstanceStartTaskTestCase(TestCase):
         self.task.notify = mock.create_autospec(self.task.notify)
         self.task._handle_action_exit(action)
         self.task.notify.assert_called_with(self.task.NOTIFY_STARTED)
-
-
-class ServiceInstanceTestCase(TestCase):
-
-    @setup
-    def setup_instance(self):
-        self.config = mock.MagicMock()
-        self.node = mock.create_autospec(node.Node, hostname='hostname')
-        self.number = 5
-        self.context = mock.create_autospec(command_context.CommandContext)
-        self.instance = serviceinstance.ServiceInstance(
-            self.config, self.node, self.number, self.context,
-        )
-        self.instance.machine = mock.create_autospec(
-            state.StateMachine, state=None,
-        )
-        self.instance.start_task = mock.create_autospec(
-            serviceinstance.ServiceInstanceStartTask,
-        )
-        self.instance.stop_task = mock.create_autospec(
-            serviceinstance.ServiceInstanceStopTask,
-        )
-        self.instance.monitor_task = mock.create_autospec(
-            serviceinstance.ServiceInstanceMonitorTask,
-        )
-        self.instance.watch = mock.create_autospec(self.instance.watch)
-
-    def test_create_tasks(self):
-        self.config.monitor_interval = 5
-        self.instance.create_tasks()
-        assert_equal(
-            self.instance.watch.mock_calls, [
-                mock.call(self.instance.monitor_task),
-                mock.call(self.instance.start_task),
-                mock.call(self.instance.stop_task),
-            ],
-        )
-
-    def test_start_invalid_state(self):
-        self.instance.machine.transition.return_value = False
-        self.instance.start()
-        assert_equal(self.instance.start_task.start.call_count, 0)
-
-    def test_start(self):
-        self.instance.start()
-        self.instance.start_task.start.assert_called_with(
-            self.instance.command,
-        )
-
-    def test_stop_invalid_state(self):
-        self.instance.machine.check.return_value = False
-        self.instance.stop()
-        assert not self.instance.machine.transition.call_count
-
-    def test_stop(self):
-        self.instance.stop()
-        self.instance.stop_task.stop.assert_called_with()
-        self.instance.machine.transition.assert_called_with('stop')
-        self.instance.monitor_task.cancel.assert_called_with()
-
-    def test_handler_transition_map(self):
-        obs = mock.Mock()
-        event = serviceinstance.ServiceInstanceMonitorTask.NOTIFY_START
-        self.instance.handler(obs, event)
-        self.instance.machine.transition.assert_called_with("monitor")
-
-    def test_handler_notify_started(self):
-        obs = mock.Mock()
-        event = serviceinstance.ServiceInstanceStartTask.NOTIFY_STARTED
-        self.instance._handle_start_task_complete = mock.create_autospec(
-            self.instance._handle_start_task_complete,
-        )
-        self.instance.handler(obs, event)
-        self.instance._handle_start_task_complete.assert_called_with()
-
-    def test_handler_notify_success(self):
-        obs = mock.Mock()
-        event = serviceinstance.ServiceInstanceStopTask.NOTIFY_SUCCESS
-        self.instance.handler(obs, event)
-        self.instance.machine.transition.assert_called_with('down')
-
-    def test_handle_start_task_complete(self):
-        self.instance.machine = mock.Mock(
-            state=serviceinstance.ServiceInstance.STATE_STARTING,
-        )
-        self.instance._handle_start_task_complete()
-        self.instance.monitor_task.queue.assert_called_with()
-
-    def test_handle_start_task_complete_from_unknown(self):
-        self.instance._handle_start_task_complete()
-        self.instance.stop_task.stop.assert_called_with()
-
-    def test_state_data(self):
-        expected = {
-            'instance_number': self.number,
-            'node': self.node.hostname,
-        }
-        assert_equal(self.instance.state_data, expected)
-
-    def test_handler_many_monitor_failure(self):
-        self.instance.failures = [1] * 6
-        self.instance.config.monitor_retries = 5
-        self.instance.handler(
-            self.instance.monitor_task,
-            serviceinstance.ServiceInstanceMonitorTask.NOTIFY_FAILED,
-        )
-        self.instance.monitor_task.cancel.assert_called_with()
-        self.instance.machine.transition.assert_called_with('stop')
 
 
 class NodeSelectorTestCase(TestCase):
