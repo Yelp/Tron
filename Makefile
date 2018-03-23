@@ -39,6 +39,9 @@ coffee_%:
 test:
 	tox -e py27,py36
 
+test_in_docker_%: docker_%
+	$(DOCKER_RUN) tron-builder-$* tox -vv --workdir .tox-docker -e py27
+
 tox_%:
 	tox -e $*
 
@@ -50,7 +53,7 @@ itest_deb: itest_deb_trusty
 itest_deb_%: deb_% _itest_%
 	@echo "Package for $* looks good"
 
-itest_%: test itest_deb_%
+itest_%: test_in_docker_% itest_deb_%
 	@echo "itest $* OK"
 
 dev:

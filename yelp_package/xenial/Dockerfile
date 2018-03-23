@@ -22,4 +22,8 @@ RUN cd /tmp && \
     gdebi -n dh-virtualenv*.deb && \
     rm dh-virtualenv_*.deb
 
+RUN wget https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py
+RUN python /tmp/get-pip.py
+RUN pip install -U tox wheel setuptools
+
 WORKDIR /work

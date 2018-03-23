@@ -23,6 +23,6 @@ RUN cd /tmp && \
 
 RUN wget https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py
 RUN python /tmp/get-pip.py
-RUN pip install tox wheel
+RUN pip install -U tox wheel setuptools
 
 WORKDIR /work
