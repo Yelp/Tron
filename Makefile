@@ -45,6 +45,8 @@ tox_%:
 _itest_%:
 	$(DOCKER_RUN) ubuntu:$* /work/itest.sh
 
+itest_deb: itest_deb_trusty
+
 itest_deb_%: deb_% _itest_%
 	@echo "Package for $* looks good"
 
