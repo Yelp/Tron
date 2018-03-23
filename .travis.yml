@@ -6,6 +6,10 @@ env:
 python:
   - 2.7
   - 3.6
+
+before_install:
+  - sudo apt-get install -y libdb5.1-dev
+
 install: pip install tox
 script: tox -e $TENV
 
