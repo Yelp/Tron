@@ -8,6 +8,7 @@ tron.egg-info
 *.swo
 docs/_build/
 .idea
+tron.iml
 docs/images/
 *.dot
 tronweb/js/cs/*.js

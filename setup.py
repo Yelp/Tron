@@ -45,6 +45,7 @@ setup(
         'SQLAlchemy>=1.0.15',
         'yelp-clog',
         'enum34>=1.1.6',
+        'bsddb3',
     ],
     packages=find_packages(exclude=['tests.*', 'tests']) + ['tronweb'],
     scripts=glob.glob('bin/*'),

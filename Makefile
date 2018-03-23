@@ -37,13 +37,20 @@ coffee_%:
 	'
 
 test:
-	tox
+	tox -e py27,py36
+
+tox_%:
+	tox -e $*
 
 _itest_%:
 	$(DOCKER_RUN) ubuntu:$* /work/itest.sh
 
-itest_%: test deb_% _itest_%
+itest_deb: itest_deb_trusty
+
+itest_deb_%: deb_% _itest_%
 	@echo "Package for $* looks good"
+
+itest_%: test itest_deb_%
 
 dev:
 	.tox/py27/bin/trond --debug --working-dir=dev -l logging.conf --host=$(shell hostname -f)
