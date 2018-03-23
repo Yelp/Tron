@@ -8,6 +8,7 @@ RUN apt-get update > /dev/null && \
         python-pip \
         wget \
         gdebi-core \
+        git \
         gcc \
         python-dev \
         coffeescript \
@@ -21,5 +22,9 @@ RUN cd /tmp && \
     wget http://mirrors.kernel.org/ubuntu/pool/universe/d/dh-virtualenv/dh-virtualenv_1.0-1_all.deb && \
     gdebi -n dh-virtualenv*.deb && \
     rm dh-virtualenv_*.deb
+
+RUN wget https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py
+RUN python /tmp/get-pip.py
+RUN pip install -U tox wheel setuptools
 
 WORKDIR /work
