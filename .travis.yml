@@ -16,11 +16,11 @@ script: make $TARGET
 
 matrix:
   exclude:
-    - env: TARGET=py36
+    - env: TARGET=tox_py36
       python: 2.7
-    - env: TARGET=py27
+    - env: TARGET=tox_py27
       python: 3.6
-    - env: TARGET=deb_itest
+    - env: TARGET=itest_deb
       python: 3.6
 
 deploy:
