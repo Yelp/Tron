@@ -11,6 +11,7 @@ RUN apt-get update > /dev/null && \
         gcc \
         python-dev \
         coffeescript \
+        libdb5.3-dev \
         libyaml-dev \
         libssl-dev \
         libffi-dev \
