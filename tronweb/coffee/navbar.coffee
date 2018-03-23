@@ -32,9 +32,6 @@ class module.NavView extends Backbone.View
               <li><a href="#jobs">
                 <i class="icon-time"></i>Scheduled Jobs</a>
               </li>
-              <li><a href="#services">
-                <i class="icon-repeat"></i>Services</a>
-              </li>
               <li><a href="#configs">
                 <i class="icon-wrench"></i>Config</a>
               </li>
