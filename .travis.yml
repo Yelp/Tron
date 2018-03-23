@@ -3,7 +3,7 @@ language: python
 env:
   - TARGET=tox_py27
   - TARGET=tox_py36
-  - TARGET=itest_deb_trusty
+  - TARGET=deb_itest_trusty
 python:
   - 2.7
   - 3.6
@@ -20,7 +20,7 @@ matrix:
       python: 2.7
     - env: TARGET=tox_py27
       python: 3.6
-    - env: TARGET=itest_deb_trusty
+    - env: TARGET=deb_itest_trusty
       python: 3.6
 
 deploy:
