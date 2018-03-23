@@ -23,10 +23,24 @@ class TestAction(TestCase):
             name="ted",
             command="do something",
             node="first",
+            executor="ssh",
+            cluster="prod",
+            pool="default",
+            cpus=1,
+            mem=100,
+            service="bar",
+            deploy_group="test",
         )
         new_action = action.Action.from_config(config)
         assert_equal(new_action.name, config.name)
         assert_equal(new_action.command, config.command)
+        assert_equal(new_action.executor, config.executor)
+        assert_equal(new_action.cluster, config.cluster)
+        assert_equal(new_action.pool, config.pool)
+        assert_equal(new_action.cpus, config.cpus)
+        assert_equal(new_action.mem, config.mem)
+        assert_equal(new_action.service, config.service)
+        assert_equal(new_action.deploy_group, config.deploy_group)
         assert_equal(new_action.node_pool, None)
         assert_equal(new_action.required_actions, [])
 
