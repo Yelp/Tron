@@ -47,9 +47,10 @@ wait $TRON_PID
 
 /opt/venvs/tron/bin/python - <<EOF
 import os
-from tron.serialize.runstate.shelvestore import Py2Shelf
+from tron.serialize.runstate.shelvestore import Py2Shelf, ShelveKey
 db = Py2Shelf('/var/lib/tron/tron_state')
-ts = db[b'mcp_state___StateMetadata'][u'create_time']
+key = str(ShelveKey('mcp_state', 'StateMetadata').key)
+ts = db[key][u'create_time']
 print("assert db time {} > start time {}".format(ts, int(os.environ['TRON_START_TIME'])))
 assert ts > int(os.environ['TRON_START_TIME'])
 EOF
