@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import dbm
 import logging
 import operator
 import pickle
@@ -9,6 +8,7 @@ import shelve
 import sys
 from io import BytesIO
 
+import bsddb3
 from six.moves import filter
 from six.moves import zip
 
@@ -18,14 +18,11 @@ log = logging.getLogger(__name__)
 
 class Py2Shelf(shelve.Shelf):
     def __init__(self, filename, flag='c', protocol=2, writeback=False):
+        db = bsddb3.hashopen(filename, flag)
+        args = [self, db, protocol, writeback]
         if sys.version_info[0] == 3:
-            shelve.Shelf.__init__(
-                self, dbm.open(filename, flag,), protocol, writeback, 'utf8',
-            )
-        else:
-            shelve.Shelf.__init__(
-                self, dbm.open(filename, flag), protocol, writeback,
-            )
+            args.append('utf8')
+        shelve.Shelf.__init__(*args)
 
     def __getitem__(self, key):
         try:
