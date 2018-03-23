@@ -7,6 +7,7 @@ RUN apt-get update > /dev/null && \
         devscripts \
         wget \
         gdebi-core \
+        git \
         gcc \
         python-dev \
         coffeescript \

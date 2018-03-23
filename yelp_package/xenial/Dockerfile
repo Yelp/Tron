@@ -8,6 +8,7 @@ RUN apt-get update > /dev/null && \
         python-pip \
         wget \
         gdebi-core \
+        git \
         gcc \
         python-dev \
         coffeescript \
