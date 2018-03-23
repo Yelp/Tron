@@ -1,8 +1,9 @@
 ---
 language: python
 env:
-  - TENV=py27
-  - TENV=py36
+  - TARGET=tox_py27
+  - TARGET=tox_py36
+  - TARGET=itest_deb
 python:
   - 2.7
   - 3.6
@@ -11,13 +12,15 @@ before_install:
   - sudo apt-get install -y libdb5.3-dev
 
 install: pip install tox
-script: tox -e $TENV
+script: make $TARGET
 
 matrix:
   exclude:
-    - env: TENV=py36
+    - env: TARGET=py36
       python: 2.7
-    - env: TENV=py27
+    - env: TARGET=py27
+      python: 3.6
+    - env: TARGET=deb_itest
       python: 3.6
 
 deploy:
@@ -28,4 +31,4 @@ deploy:
     on:
       tags: true
       repo: Yelp/Tron
-      condition: $TENV == "py36"
+      condition: $TARGET == "tox_py36"
