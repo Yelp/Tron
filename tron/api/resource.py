@@ -42,7 +42,8 @@ class JSONEncoder(json.JSONEncoder):
 def respond(request, response_dict, code=http.OK, headers=None):
     """Helper to generate a json response"""
     request.setResponseCode(code)
-    request.setHeader(b'content-type', b'text/json')
+    request.setHeader(b'content-type', b'application/json')
+    request.setHeader(b'Access-Control-Allow-Origin', b'*')
     for key, val in six.iteritems((headers or {})):
         request.setHeader(str(key), str(val))
     return str(
