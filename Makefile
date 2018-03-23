@@ -48,10 +48,10 @@ tox_%:
 _itest_%:
 	$(DOCKER_RUN) ubuntu:$* /work/itest.sh
 
-deb_itest_%: deb_% _itest_%
+debitest_%: deb_% _itest_%
 	@echo "Package for $* looks good"
 
-itest_%: test_in_docker_% deb_itest_%
+itest_%: test_in_docker_% debitest_%
 	@echo "itest $* OK"
 
 dev:
