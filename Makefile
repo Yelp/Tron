@@ -51,6 +51,7 @@ itest_deb_%: deb_% _itest_%
 	@echo "Package for $* looks good"
 
 itest_%: test itest_deb_%
+	@echo "itest $* OK"
 
 dev:
 	.tox/py27/bin/trond --debug --working-dir=dev -l logging.conf --host=$(shell hostname -f)
