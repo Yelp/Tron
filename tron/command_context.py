@@ -156,32 +156,6 @@ class ActionRunContext(object):
         return self.action_run.node.hostname
 
 
-class ServiceInstancePidContext(object):
-
-    def __init__(self, service_instance):
-        self.service_instance = service_instance
-
-    @property
-    def instance_number(self):
-        return self.service_instance.instance_number
-
-    @property
-    def node(self):
-        return self.service_instance.node.hostname
-
-    @property
-    def name(self):
-        return self.service_instance.config.name
-
-
-class ServiceInstanceContext(ServiceInstancePidContext):
-
-    @property
-    def pid_file(self):
-        context = CommandContext(self, self.service_instance.parent_context)
-        return self.service_instance.config.pid_file % context
-
-
 class Filler(object):
     """Filler object for using CommandContext during config parsing. This class
     is used as a substitute for objects that would be passed to Context objects.
