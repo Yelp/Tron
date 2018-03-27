@@ -1,7 +1,6 @@
 ---
 language: python
 env:
-  - TARGET=tox_py27
   - TARGET=tox_py36
   - TARGET=debitest_trusty
 python:

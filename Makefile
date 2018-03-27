@@ -22,15 +22,15 @@ docker_%:
 deb_%: clean docker_% coffee_%
 	@echo "Building deb for $*"
 	$(DOCKER_RUN) tron-builder-$* /bin/bash -c ' \
-		dpkg-buildpackage -d &&                    \
-		mv ../*.deb dist/ &&                       \
-		rm -rf debian/tron &&                      \
-		chown -R $(UID):$(GID) dist debian         \
+		dpkg-buildpackage -d &&                  \
+		mv ../*.deb dist/ &&                     \
+		rm -rf debian/tron &&                    \
+		chown -R $(UID):$(GID) dist debian       \
 	'
 
 coffee_%: docker_%
 	@echo "Building tronweb"
-	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '     \
+	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '       \
 		rm -rf tronweb/js/cs &&                        \
 		mkdir -p tronweb/js/cs &&                      \
 		coffee -o tronweb/js/cs/ -c tronweb/coffee/ && \
@@ -38,10 +38,10 @@ coffee_%: docker_%
 	'
 
 test:
-	tox -e py27,py36
+	tox -e py36
 
 test_in_docker_%: docker_%
-	$(DOCKER_RUN) tron-builder-$* tox -vv --workdir .tox-docker -e py27
+	$(DOCKER_RUN) tron-builder-$* tox -vv --workdir .tox-docker -e py36
 
 tox_%:
 	tox -e $*
@@ -66,7 +66,7 @@ release: docker_trusty docs
 		dch -v $(VERSION) --distribution trusty --changelog debian/changelog \
 			$$'$(VERSION) tagged with \'make release\'\rCommit: $(LAST_COMMIT_MSG)' && \
 		chown $(UID):$(GID) debian/changelog \
-"
+	"
 	@git diff
 	@echo "Now Run:"
 	@echo 'git commit -a -m "Released $(VERSION) via make release"'
@@ -84,5 +84,6 @@ man:
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
 
 clean:
-	rm -rf dist debian/files debian/tron.debhelper.log debian/tron.postinst.debhelper debian/tron.substvars tronweb/js/cs
+	rm -rf dist debian/files debian/tron.debhelper.log \
+	       debian/tron.postinst.debhelper debian/tron.substvars tronweb/js/cs
 	find . -name '*.pyc' -delete
