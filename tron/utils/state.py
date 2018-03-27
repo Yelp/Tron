@@ -116,6 +116,10 @@ class StateMachine(Observable):
         self._state_by_name = None
         self.delegate = delegate
 
+    def reset(self):
+        """Force state machine into initial state."""
+        self.state = self.initial_state
+
     def check(self, target):
         """Check if the state can be transitioned to target. Returns the
         destination state if target is a valid state to transition to,

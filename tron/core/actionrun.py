@@ -73,6 +73,7 @@ class ActionRunFactory(object):
             output_path=job_run.output_path.clone(),
             cleanup=action.is_cleanup,
             action_runner=action_runner,
+            retries=action.retries,
         )
 
     @classmethod
@@ -148,6 +149,7 @@ class ActionRun(Observer):
         parent_context=None, output_path=None, cleanup=False,
         start_time=None, end_time=None, run_state=STATE_SCHEDULED,
         rendered_command=None, exit_status=None, action_runner=None,
+        retries=None, retry_codes=None,
     ):
         self.job_run_id = job_run_id
         self.action_name = name
@@ -165,6 +167,12 @@ class ActionRun(Observer):
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(self.id)
         self.context = command_context.build_context(self, parent_context)
+        self.retries = retries
+        self.retry_codes = retry_codes
+        if self.retries is not None and self.retry_codes is None:
+            self.retry_codes = []
+
+        self.action_command = None
 
     @property
     def state(self):
@@ -185,7 +193,7 @@ class ActionRun(Observer):
     @classmethod
     def from_state(
         cls, state_data, parent_context, output_path,
-        job_run_node, cleanup=False,
+        job_run_node, cleanup=False, retries=None, retry_codes=None,
     ):
         """Restore the state of this ActionRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
@@ -217,6 +225,8 @@ class ActionRun(Observer):
                 cls.STATE_SCHEDULED, state_data['state'],
             ),
             exit_status=state_data.get('exit_status'),
+            retries=retries,
+            retry_codes=retry_codes,
         )
 
         # Transition running to fail unknown because exit status was missed
@@ -232,6 +242,16 @@ class ActionRun(Observer):
             return False
 
         log.info("Starting action run %s", self.id)
+
+        if self.retries is not None:
+            if self.retries < 0:
+                log.info(
+                    "Reached maximum number of retries: {}".format(
+                        len(self.retry_codes),
+                    ),
+                )
+                self.fail(self.retry_codes[-1])
+
         self.start_time = timeutils.current_time()
         self.machine.transition('start')
 
@@ -254,12 +274,18 @@ class ActionRun(Observer):
         return True
 
     def stop(self):
+        if self.retries is not None:
+            self.retries = -1
+
         stop_command = self.action_runner.build_stop_action_command(
             self.id, 'terminate',
         )
         self.node.submit_command(stop_command)
 
     def kill(self):
+        if self.retries is not None:
+            self.retries = -1
+
         kill_command = self.action_runner.build_stop_action_command(
             self.id, 'kill',
         )
@@ -307,6 +333,12 @@ class ActionRun(Observer):
             return self.machine.transition(target)
 
     def fail(self, exit_status=0):
+        if self.retries is not None and not self.retries < 0:
+            self.retries -= 1
+            self.retry_codes.append(exit_status)
+            self.machine.reset()
+            return self.start()
+
         return self._done('fail', exit_status)
 
     def success(self):
@@ -314,7 +346,7 @@ class ActionRun(Observer):
 
     def fail_unknown(self):
         """Failed with unknown reason."""
-        log.warn("Lost communication with action run %s", self.id)
+        log.warning("Lost communication with action run %s", self.id)
         return self.machine.transition('fail_unknown')
 
     @property
@@ -333,6 +365,8 @@ class ActionRun(Observer):
             'rendered_command': self.rendered_command,
             'node_name':        self.node.get_name() if self.node else None,
             'exit_status':      self.exit_status,
+            'retries':          self.retries,
+            'retry_codes':      self.retry_codes,
         }
 
     def render_command(self):

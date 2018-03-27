@@ -164,14 +164,16 @@ class ActionRunTestCase(TestCase):
         self.action_run.fail()
         assert not self.action_run.start()
 
-    def test_start_invalid_command(self):
+    @mock.patch('tron.core.actionrun.log')
+    def test_start_invalid_command(self, _log):
         self.action_run.bare_command = "%(notfound)s"
         self.action_run.machine.transition('ready')
         assert not self.action_run.start()
         assert self.action_run.is_failed
         assert_equal(self.action_run.exit_status, -1)
 
-    def test_start_node_error(self):
+    @mock.patch('tron.core.actionrun.log')
+    def test_start_node_error(self, _log):
         def raise_error(c):
             raise node.Error("The error")
         self.action_run.node = turtle.Turtle(submit_command=raise_error)
@@ -231,7 +233,8 @@ class ActionRunTestCase(TestCase):
         assert self.action_run.is_succeeded
         assert_equal(self.action_run.exit_status, 0)
 
-    def test_handler_exiting_failunknown(self):
+    @mock.patch('tron.core.actionrun.log')
+    def test_handler_exiting_failunknown(self, _log):
         self.action_run.action_command = mock.create_autospec(
             actioncommand.ActionCommand, exit_status=None,
         )
@@ -315,7 +318,8 @@ class ActionRunTestCase(TestCase):
         self.action_run.bare_command = "new command"
         assert_equal(self.action_run.command, self.rendered_command)
 
-    def test_command_failed_render(self):
+    @mock.patch('tron.core.actionrun.log')
+    def test_command_failed_render(self, _log):
         self.action_run.bare_command = "%(this_is_missing)s"
         assert_equal(self.action_run.command, ActionRun.FAILED_RENDER)
 
@@ -334,6 +338,23 @@ class ActionRunTestCase(TestCase):
         assert self.action_run.is_broken
         self.action_run.machine.state = ActionRun.STATE_QUEUED
         assert not self.action_run.is_broken
+
+    def test_retry(self):
+        self.action_run.retries = 1
+        self.action_run.retry_codes = []
+
+        self.action_run.build_action_command()
+        self.action_run.action_command.exit_status = -1
+        self.action_run.machine.transition('start')
+        assert self.action_run.handler(
+            self.action_run.action_command, ActionCommand.EXITING,
+        )
+        assert not self.action_run.is_failed
+        assert self.action_run.handler(
+            self.action_run.action_command, ActionCommand.EXITING,
+        )
+        assert self.action_run.is_failed
+        assert_equal(self.action_run.retry_codes, [-1, -1])
 
     def test__getattr__(self):
         assert not self.action_run.is_succeeded

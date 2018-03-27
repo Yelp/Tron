@@ -26,9 +26,12 @@ def config_object_factory(name, required=None, optional=None):
     """
     required = required or []
     optional = optional or []
+
     config_class = namedtuple(name, required + optional)
+    config_class.__new__.__defaults__ = (None,) * len(optional)
     config_class.required_keys = required
     config_class.optional_keys = optional
+
     return config_class
 
 
@@ -154,6 +157,7 @@ ConfigAction = config_object_factory(
         'mem',                  # float
         'service',              # str
         'deploy_group',         # str
+        'retries',              # int
     ],
 )
 
