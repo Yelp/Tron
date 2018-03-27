@@ -5,7 +5,6 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import logging
-import traceback
 
 import six
 from six.moves import filter
@@ -138,7 +137,7 @@ class ActionRun(Observer):
     }
 
     # Failed render command is false to ensure that it will fail when run
-    FAILED_RENDER = 'false'
+    FAILED_RENDER = 'false # Command failed to render correctly. See the Tron error log.'
 
     context_class = command_context.ActionRunContext
 
@@ -346,9 +345,9 @@ class ActionRun(Observer):
 
         try:
             self.rendered_command = self.render_command()
-        except Exception:
-            log.error("Failed generating rendering command\n%s" %
-                      traceback.format_exc())
+        except Exception as e:
+            log.error("Failed generating rendering command: %s: %s" %
+                      (e.__class__.__name__, e))
 
             # Return a command string that will always fail
             self.rendered_command = self.FAILED_RENDER
