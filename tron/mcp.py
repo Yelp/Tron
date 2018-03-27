@@ -53,9 +53,10 @@ class MasterControlProgram(object):
         self.event_recorder.ok("reconfigured")
         try:
             self._load_config(reconfigure=True)
-        except Exception:
+        except Exception as e:
             self.event_recorder.critical("reconfigure_failure")
-            log.exception("reconfigure failure")
+            log.exception("reconfigure failure: %s: %s" %
+                          (e.__class__.__name__, e))
             raise
 
     def _load_config(self, reconfigure=False):
