@@ -46,14 +46,33 @@ def get_default_server():
     return DEFAULT_CONFIG['server']
 
 
-def tron_jobs_completer(prefix, parsed_args, **kwargs):
+def filter_jobs_actions_runs(prefix, inputs):
+    dots = prefix.count('.')
+    if prefix is "":
+        # If the user hasn't begun to type anything, we need to get them started with all jobs
+        return [i for i in inputs if i.count('.') == 1]
+    elif dots == 0:
+        # If the user hasn't completed a job, we need to get them started with all jobs
+        # that start with what they have
+        return [i for i in inputs if i.count('.') == 1 and i.startswith(prefix)]
+    elif prefix in inputs:
+        # If what a user typed is exactly what is already in a suggestion, then we need to give them
+        # Even more suggestions (+1)
+        return [i for i in inputs if i.startswith(prefix) and (i.count('.') == dots or i.count('.') == dots + 1)]
+    else:
+        # Otherwise we only want to scope our suggestions to those that are on the same "level"
+        # which in string form means they have the same number of dots
+        return [i for i in inputs if i.startswith(prefix) and i.count('.') == dots]
+
+
+def tron_jobs_completer(prefix, **kwargs):
     if os.path.isfile(TAB_COMPLETE_FILE):
         with opener(TAB_COMPLETE_FILE, 'r') as f:
             jobs = f.readlines()
-        return (job.strip('\n\r') for job in jobs if job.startswith(prefix))
+        return filter_jobs_actions_runs(prefix=prefix, inputs=[job.strip('\n\r') for job in jobs])
     else:
         default_client = Client(get_default_server())
-        return (job['name'] for job in default_client.jobs() if job['name'].startswith(prefix))
+        return filter_jobs_actions_runs(prefix=prefix, inputs=[job['name'] for job in default_client.jobs()])
 
 
 def build_option_parser(usage=None, epilog=None):
