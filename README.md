@@ -38,5 +38,11 @@ Contributing
 Read [Working on Tron](http://tron.readthedocs.io/en/latest/developing.html) and
 start sending pull requests!
 
-Any issues should be posted [on
-Github](http://github.com/Yelp/Tron/issues).
+Any issues should be posted [on Github](http://github.com/Yelp/Tron/issues).
+
+BerkeleyDB on Mac OS X
+----------------------
+
+    $ brew install berkeley-db
+    $ export BERKELEYDB_DIR=$(brew --cellar)/berkeley-db/<installed version>
+    $ export YES_I_HAVE_THE_RIGHT_TO_USE_THIS_BERKELEY_DB_VERSION=1

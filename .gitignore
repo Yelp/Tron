@@ -8,12 +8,14 @@ tron.egg-info
 *.swo
 docs/_build/
 .idea
+tron.iml
 docs/images/
 *.dot
 tronweb/js/cs/*.js
 tronweb_tests/spec/*.js
 tronweb_tests/lib/
 .tox
+.tox-docker
 tron_state
 tron_state.db
 tron.iml

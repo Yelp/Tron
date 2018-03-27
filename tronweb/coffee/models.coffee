@@ -111,13 +111,6 @@ class JobIndexEntry extends IndexEntry
     getUrl: =>
         "#job/#{@name}"
 
-class ServiceIndexEntry extends IndexEntry
-
-    type: "Service"
-
-    getUrl: =>
-        "#service/#{@name}"
-
 class ConfigIndexEntry extends IndexEntry
 
     type: "Config"
@@ -152,7 +145,6 @@ class module.QuickFindModel extends Backbone.Model
     parse: (resp, options) =>
         index = [].concat(
             @getJobEntries(resp['jobs']),
-            new ServiceIndexEntry name for name in resp['services'],
             new ConfigIndexEntry name for name in resp['namespaces'])
 
         _.mash([entry.name, entry] for entry in index)

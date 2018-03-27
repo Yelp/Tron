@@ -28,7 +28,7 @@ deb_%: clean docker_% coffee_%
 		chown -R $(UID):$(GID) dist debian         \
 	'
 
-coffee_%:
+coffee_%: docker_%
 	@echo "Building tronweb"
 	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '     \
 		rm -rf tronweb/js/cs &&                        \
@@ -38,16 +38,25 @@ coffee_%:
 	'
 
 test:
-	tox
+	tox -e py27,py36
+
+test_in_docker_%: docker_%
+	$(DOCKER_RUN) tron-builder-$* tox -vv --workdir .tox-docker -e py27
+
+tox_%:
+	tox -e $*
 
 _itest_%:
 	$(DOCKER_RUN) ubuntu:$* /work/itest.sh
 
-itest_%: test deb_% _itest_%
+debitest_%: deb_% _itest_%
 	@echo "Package for $* looks good"
 
+itest_%: test_in_docker_% debitest_%
+	@echo "itest $* OK"
+
 dev:
-	.tox/py27/bin/trond --debug --working-dir=dev -l logging.conf --host=$(shell hostname -f)
+	.tox/py36/bin/trond --debug --working-dir=dev -l logging.conf --host=$(shell hostname -f)
 
 # Release
 

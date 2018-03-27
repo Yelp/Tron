@@ -23,11 +23,13 @@ EOF
 rm -rf /var/lib/tron
 ln -s /work/example-cluster /var/lib/tron
 rm -f /var/lib/tron/tron.pid
+export TRON_START_TIME=$(date +%s)
+
 trond -v --nodaemon -c tronfig/ -l logging.conf &
 TRON_PID=$!
 
 for i in {1..5}; do
-    if curl localhost:8089/api/status; then
+    if curl localhost:8089/api/status 2>/dev/null; then
         break
     fi
     if [ "$i" == "5" ]; then
@@ -46,4 +48,16 @@ tronfig -n MASTER /work/example-cluster/tronfig/MASTER.yaml
 tronfig /work/example-cluster/tronfig/MASTER.yaml
 cat /work/example-cluster/tronfig/MASTER.yaml | tronfig -n MASTER -
 
-kill -9 $TRON_PID
+kill -SIGTERM $TRON_PID
+wait $TRON_PID
+
+/opt/venvs/tron/bin/python - <<EOF
+import os
+from tron.serialize.runstate.shelvestore import ShelveStateStore, ShelveKey
+db = ShelveStateStore('/var/lib/tron/tron_state')
+key = ShelveKey('mcp_state', 'StateMetadata')
+res = db.restore([key])
+ts = res[key][u'create_time']
+print("assert db time {} > start time {}".format(ts, int(os.environ['TRON_START_TIME'])))
+assert ts > int(os.environ['TRON_START_TIME'])
+EOF
