@@ -340,17 +340,17 @@ class ActionRunTestCase(TestCase):
         assert not self.action_run.is_broken
 
     def test_retry(self):
-        self.action_run.retries_remaining = 1
+        self.action_run.retries_remaining = 2
         self.action_run.exit_statuses = []
 
         self.action_run.build_action_command()
         self.action_run.action_command.exit_status = -1
         self.action_run.machine.transition('start')
-        assert self.action_run.handler(
+        self.action_run.handler(
             self.action_run.action_command, ActionCommand.EXITING,
         )
         assert not self.action_run.is_failed
-        assert self.action_run.handler(
+        self.action_run.handler(
             self.action_run.action_command, ActionCommand.EXITING,
         )
         assert self.action_run.is_failed
