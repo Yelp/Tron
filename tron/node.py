@@ -191,7 +191,7 @@ class KnownHosts(KnownHostsFile):
         for entry in self.iterentries():
             if entry.matchesHost(hostname):
                 return entry.publicKey
-        log.warn("Missing host key for: %s", hostname)
+        log.warning("Missing host key for: %s", hostname)
 
 
 class RunState(object):
@@ -407,8 +407,8 @@ class Node(object):
             self._fail_run(
                 run, failure.Failure(
                     exc_value=ConnectError(
-                        "Connection to %s failed" %
-                        self.hostname,
+                        "Connection to %s@%s:%d failed" %
+                        (self.username, self.hostname, self.port),
                     ),
                 ),
             )
@@ -607,7 +607,8 @@ class Node(object):
         self._fail_run(
             run, failure.Failure(
                 exc_value=ConnectError(
-                    "Connection to %s failed" % self.hostname,
+                    "Connection to %s@%s:%d failed" %
+                    (self.username, self.hostname, self.port),
                 ),
             ),
         )

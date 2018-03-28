@@ -17,6 +17,7 @@ from tron.actioncommand import NoActionRunnerFactory
 from tron.core import action
 from tron.serialize import filehandler
 from tron.utils import iteration
+from tron.utils import maybe_decode
 from tron.utils import proxy
 from tron.utils import state
 from tron.utils import timeutils
@@ -155,7 +156,7 @@ class ActionRun(Observer):
         self.start_time = start_time
         self.end_time = end_time
         self.exit_status = exit_status
-        self.bare_command = bare_command
+        self.bare_command = maybe_decode(bare_command)
         self.rendered_command = rendered_command
         self.action_runner = action_runner or NoActionRunnerFactory
         self.machine = state.StateMachine(
@@ -326,7 +327,7 @@ class ActionRun(Observer):
         return {
             'job_run_id':       self.job_run_id,
             'action_name':      self.action_name,
-            'state':            str(self.state),
+            'state':            self.state.name,
             'start_time':       self.start_time,
             'end_time':         self.end_time,
             'command':          command,
