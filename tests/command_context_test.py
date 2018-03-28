@@ -16,7 +16,6 @@ from tron import scheduler
 from tron.core import actionrun
 from tron.core import job
 from tron.core import jobrun
-from tron.core import serviceinstance
 from tron.core.jobrun import JobRunCollection
 
 
@@ -220,47 +219,11 @@ class ActionRunContextTestCase(TestCase):
         assert_equal(self.context.node, self.action_run.node.hostname)
 
 
-class ServiceInstanceContextTestCase(TestCase):
-
-    @setup
-    def build_context(self):
-        self.service_instance = mock.create_autospec(
-            serviceinstance.ServiceInstance,
-            instance_number=123,
-            node=mock.Mock(hostname='something'),
-            config=mock.Mock(name='name', pid_file=mock.MagicMock()),
-        )
-        self.context = command_context.ServiceInstanceContext(
-            self.service_instance,
-        )
-
-    def test_instance_number(self):
-        assert_equal(
-            self.context.instance_number,
-            self.service_instance.instance_number,
-        )
-
-    def test_node(self):
-        assert_equal(self.context.node, self.service_instance.node.hostname)
-
-    def test_name(self):
-        assert_equal(self.context.name, self.service_instance.config.name)
-
-    def test_pid_file(self):
-        self.service_instance.parent_context = {'one': 'thing'}
-        self.service_instance.config.pid_file = '%(one)s %(instance_number)s'
-        assert_equal(self.context.pid_file, 'thing 123')
-
-
 class FillerTestCase(TestCase):
 
     @setup
     def setup_filler(self):
         self.filler = command_context.Filler()
-
-    def test_filler_with_service_instance_pid_file(self):
-        context = command_context.ServiceInstanceContext(self.filler)
-        assert_equal(context.pid_file, self.filler)
 
     def test_filler_with_job__getitem__(self):
         context = command_context.JobContext(self.filler)

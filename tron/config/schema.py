@@ -48,7 +48,6 @@ TronConfig = config_object_factory(
         'nodes',               # FrozenDict of ConfigNode
         'node_pools',          # FrozenDict of ConfigNodePool
         'jobs',                # FrozenDict of ConfigJob
-        'services',            # FrozenDict of ConfigService
         'clusters',            # tuple of str
     ],
 )
@@ -58,7 +57,6 @@ NamedTronConfig = config_object_factory(
     name='NamedTronConfig',
     optional=[
         'jobs',                # FrozenDict of ConfigJob
-        'services',             # FrozenDict of ConfigService
     ],
 )
 

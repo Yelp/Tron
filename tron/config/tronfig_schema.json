@@ -203,12 +203,6 @@
           }
         }
       }
-    },
-    "services": {
-      "type": "array",
-      "items": {
-        "type": "object"
-      }
     }
   }
 }

@@ -171,14 +171,6 @@ jobs:
                 executor: paasta
                 command: "test_command4.0"
 
-services:
-    -
-        name: "service0"
-        node: nodePool
-        command: "service_command0"
-        count: 2
-        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
-        monitor_interval: 20
 """
 
     @mock.patch.dict('tron.config.config_parse.ValidateNode.defaults')
@@ -418,21 +410,6 @@ services:
                     time_zone=None,
                 ),
             }),
-            services=FrozenDict(
-                {
-                    'MASTER.service0': schema.ConfigService(
-                        name='MASTER.service0',
-                        namespace='MASTER',
-                        node='nodePool',
-                        pid_file='/var/run/%(name)s-%(instance_number)s.pid',
-                        command='service_command0',
-                        monitor_interval=20,
-                        monitor_retries=5,
-                        restart_delay=None,
-                        count=2,
-                    ),
-                },
-            ),
         )
 
         test_config = valid_config_from_yaml(self.config)
@@ -470,7 +447,6 @@ services:
             expected.jobs['MASTER.test_job_paasta'],
         )
         assert_equal(test_config.jobs, expected.jobs)
-        assert_equal(test_config.services, expected.services)
         assert_equal(test_config, expected)
         assert_equal(test_config.jobs['MASTER.test_job4'].enabled, False)
 
@@ -555,21 +531,6 @@ jobs:
                 executor: paasta
                 command: "test_command4.0"
 
-services:
-    -
-        name: "service0"
-        node: NodePool
-        command: "service_command0"
-        count: 2
-        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
-        monitor_interval: 20
-    -
-        name: "service1"
-        node: NodePool
-        command: "service_command1"
-        count: 20
-        pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
-        monitor_interval: 40
 """
 
     def test_attributes(self):
@@ -783,32 +744,6 @@ services:
                     time_zone=None,
                 ),
             }),
-            services=FrozenDict(
-                {
-                    'service0': schema.ConfigService(
-                        namespace='test_namespace',
-                        name='service0',
-                        node='NodePool',
-                        pid_file='/var/run/%(name)s-%(instance_number)s.pid',
-                        command='service_command0',
-                        monitor_interval=20,
-                        monitor_retries=5,
-                        restart_delay=None,
-                        count=2,
-                    ),
-                    'service1': schema.ConfigService(
-                        namespace='test_namespace',
-                        name='service1',
-                        node='NodePool',
-                        pid_file='/var/run/%(name)s-%(instance_number)s.pid',
-                        command='service_command1',
-                        monitor_interval=40.0,
-                        monitor_retries=5,
-                        restart_delay=None,
-                        count=20,
-                    ),
-                },
-            ),
         )
 
         test_config = validate_fragment(
@@ -823,14 +758,7 @@ services:
             test_config.jobs['test_job_paasta'],
             expected.jobs['test_job_paasta'],
         )
-        assert_equal(
-            test_config.services['service0'], expected.services['service0'],
-        )
-        assert_equal(
-            test_config.services['service1'], expected.services['service1'],
-        )
         assert_equal(test_config.jobs, expected.jobs)
-        assert_equal(test_config.services, expected.services)
         assert_equal(test_config, expected)
         assert_equal(test_config.jobs['test_job4'].enabled, False)
 
@@ -1007,26 +935,6 @@ jobs:
         )
         assert_equal(expected_msg, str(exception))
 
-    def test_job_in_services(self):
-        test_config = BASE_CONFIG + """
-services:
-    -
-        name: "test_job0"
-        node: node0
-        schedule: "interval 20s"
-        actions:
-            -
-                name: "action0_0"
-                command: "test_command0.0"
-        cleanup_action:
-            command: "test_command0.1"
-"""
-        expected_msg = "Service test_job0 is missing options:"
-        exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
-        )
-        assert_in(expected_msg, str(exception))
-
     def test_job_with_invalid_cluster(self):
         test_config = BASE_CONFIG + """
 jobs:
@@ -1139,31 +1047,6 @@ jobs:
         )
         parsed_config = valid_config_from_yaml(test_config)
         assert_equal(parsed_config.jobs['MASTER.test_job0'], expected)
-
-    def test_overlap_job_service_names(self):
-        tron_config = dict(
-            nodes=['localhost'],
-            jobs=[
-                dict(
-                    name="sameName",
-                    node="localhost",
-                    schedule="interval 20s",
-                    actions=[dict(name="someAction", command="something")],
-                ),
-            ],
-            services=[
-                dict(
-                    name="sameName",
-                    node="localhost",
-                    pid_file="file",
-                    command="something",
-                    monitor_interval=20,
-                ),
-            ],
-        )
-        expected_message = "Job and Service names must be unique MASTER.sameName"
-        exception = assert_raises(ConfigError, valid_config, tron_config)
-        assert_in(expected_message, str(exception))
 
     def test_validate_job_no_actions(self):
         job_config = dict(
@@ -1284,9 +1167,9 @@ class NodeConfigTestCase(TestCase):
         assert_in(expected_message, str(exception))
 
 
-class ValidateJobsAndServicesTestCase(TestCase):
+class ValidateJobsTestCase(TestCase):
 
-    def test_valid_jobs_and_services_success(self):
+    def test_valid_jobs_success(self):
         test_config = BASE_CONFIG + textwrap.dedent("""
             jobs:
                 -
@@ -1299,14 +1182,6 @@ class ValidateJobsAndServicesTestCase(TestCase):
                             command: "test_command0.0"
                     cleanup_action:
                         command: "test_command0.1"
-            services:
-                -
-                    name: "test_service0"
-                    node: node0
-                    command: "service_command0"
-                    count: 2
-                    pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
-                    monitor_interval: 20
                     """)
         expected_jobs = {
             'MASTER.test_job0':
@@ -1350,28 +1225,12 @@ class ValidateJobsAndServicesTestCase(TestCase):
             ),
         }
 
-        expected_services = {
-            'MASTER.test_service0':
-            schema.ConfigService(
-                name='MASTER.test_service0',
-                namespace='MASTER',
-                node='node0',
-                pid_file='/var/run/%(name)s-%(instance_number)s.pid',
-                command='service_command0',
-                monitor_interval=20,
-                monitor_retries=5,
-                restart_delay=None,
-                count=2,
-            ),
-        }
-
         config = manager.from_string(test_config)
         context = config_utils.ConfigContext(
             'config', ['node0'], ['unused-cluster'], None, MASTER_NAMESPACE,
         )
-        config_parse.validate_jobs_and_services(config, context)
+        config_parse.validate_jobs(config, context)
         assert_equal(expected_jobs, config['jobs'])
-        assert_equal(expected_services, config['services'])
 
 
 class ValidCleanupActionNameTestCase(TestCase):
@@ -1513,15 +1372,14 @@ class ConfigContainerTestCase(TestCase):
             config_parse.ConfigContainer.create, config_mapping,
         )
 
-    def test_get_job_and_service_names(self):
-        job_names, service_names = self.container.get_job_and_service_names()
+    def test_get_job_names(self):
+        job_names = self.container.get_job_names()
         expected = [
             'test_job1', 'test_job0',
             'test_job3', 'test_job2', 'test_job4',
             'test_job_paasta',
         ]
         assert_equal(set(job_names), set(expected))
-        assert_equal(set(service_names), {'service1', 'service0'})
 
     def test_get_jobs(self):
         expected = [
@@ -1530,12 +1388,6 @@ class ConfigContainerTestCase(TestCase):
             'test_job_paasta',
         ]
         assert_equal(set(expected), set(self.container.get_jobs().keys()))
-
-    def test_get_services(self):
-        assert_equal(
-            set(self.container.get_services().keys()),
-            {'service1', 'service0'},
-        )
 
     def test_get_node_names(self):
         node_names = self.container.get_node_names()
