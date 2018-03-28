@@ -249,11 +249,12 @@ class ActionRun(Observer):
             ))
 
         if self.retries_remaining is not None:
-            if self.retries_remaining < 0:
+            if self.retries_remaining <= 0:
                 log.info("Reached maximum number of retries: {}".format(
-                    len(self.exit_statuses) - 1,
+                    len(self.exit_statuses),
                 ))
                 self.fail(self.exit_statuses[-1])
+                return
 
         self.start_time = timeutils.current_time()
         self.machine.transition('start')
@@ -336,11 +337,12 @@ class ActionRun(Observer):
             return self.machine.transition(target)
 
     def fail(self, exit_status=0):
-        if self.retries_remaining is not None and not self.retries_remaining < 0:
-            self.retries_remaining -= 1
-            self.exit_statuses.append(exit_status)
-            self.machine.reset()
-            return self.start()
+        if self.retries_remaining is not None:
+            if self.retries_remaining > 0:
+                self.retries_remaining -= 1
+                self.exit_statuses.append(exit_status)
+                self.machine.reset()
+                return self.start()
 
         return self._done('fail', exit_status)
 
