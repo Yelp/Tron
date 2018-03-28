@@ -240,15 +240,19 @@ class ActionRun(Observer):
         if not self.machine.check('start'):
             return False
 
-        log.info("Starting action run %s", self.id)
+        if len(self.exit_statuses) == 0:
+            log.info("Starting action run %s", self.id)
+        else:
+            log.info("Restarting action run {}, retry {}".format(
+                self.id,
+                len(self.exit_statuses),
+            ))
 
         if self.retries_remaining is not None:
             if self.retries_remaining < 0:
-                log.info(
-                    "Reached maximum number of retries: {}".format(
-                        len(self.exit_statuses) - 1,
-                    ),
-                )
+                log.info("Reached maximum number of retries: {}".format(
+                    len(self.exit_statuses) - 1,
+                ))
                 self.fail(self.exit_statuses[-1])
 
         self.start_time = timeutils.current_time()
