@@ -72,7 +72,7 @@ class ActionRunFactory(object):
             output_path=job_run.output_path.clone(),
             cleanup=action.is_cleanup,
             action_runner=action_runner,
-            retries=action.retries,
+            retries_remaining=action.retries,
         )
 
     @classmethod
@@ -148,7 +148,7 @@ class ActionRun(Observer):
         parent_context=None, output_path=None, cleanup=False,
         start_time=None, end_time=None, run_state=STATE_SCHEDULED,
         rendered_command=None, exit_status=None, action_runner=None,
-        retries=None, exit_statuses=None,
+        retries_remaining=None, exit_statuses=None,
     ):
         self.job_run_id = job_run_id
         self.action_name = name
@@ -166,7 +166,7 @@ class ActionRun(Observer):
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(self.id)
         self.context = command_context.build_context(self, parent_context)
-        self.retries = retries
+        self.retries_remaining = retries_remaining
         self.exit_statuses = exit_statuses
         if self.exit_statuses is None:
             self.exit_statuses = []
@@ -192,7 +192,7 @@ class ActionRun(Observer):
     @classmethod
     def from_state(
         cls, state_data, parent_context, output_path,
-        job_run_node, cleanup=False, retries=None, exit_statuses=None,
+        job_run_node, cleanup=False, retries_remaining=None, exit_statuses=None,
     ):
         """Restore the state of this ActionRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
@@ -224,7 +224,7 @@ class ActionRun(Observer):
                 cls.STATE_SCHEDULED, state_data['state'],
             ),
             exit_status=state_data.get('exit_status'),
-            retries=retries,
+            retries_remaining=retries_remaining,
             exit_statuses=exit_statuses,
         )
 
@@ -242,11 +242,11 @@ class ActionRun(Observer):
 
         log.info("Starting action run %s", self.id)
 
-        if self.retries is not None:
-            if self.retries < 0:
+        if self.retries_remaining is not None:
+            if self.retries_remaining < 0:
                 log.info(
                     "Reached maximum number of retries: {}".format(
-                        len(self.exit_statuses),
+                        len(self.exit_statuses) - 1,
                     ),
                 )
                 self.fail(self.exit_statuses[-1])
@@ -273,8 +273,8 @@ class ActionRun(Observer):
         return True
 
     def stop(self):
-        if self.retries is not None:
-            self.retries = -1
+        if self.retries_remaining is not None:
+            self.retries_remaining = -1
 
         stop_command = self.action_runner.build_stop_action_command(
             self.id, 'terminate',
@@ -282,8 +282,8 @@ class ActionRun(Observer):
         self.node.submit_command(stop_command)
 
     def kill(self):
-        if self.retries is not None:
-            self.retries = -1
+        if self.retries_remaining is not None:
+            self.retries_remaining = -1
 
         kill_command = self.action_runner.build_stop_action_command(
             self.id, 'kill',
@@ -332,8 +332,8 @@ class ActionRun(Observer):
             return self.machine.transition(target)
 
     def fail(self, exit_status=0):
-        if self.retries is not None and not self.retries < 0:
-            self.retries -= 1
+        if self.retries_remaining is not None and not self.retries_remaining < 0:
+            self.retries_remaining -= 1
             self.exit_statuses.append(exit_status)
             self.machine.reset()
             return self.start()
@@ -355,17 +355,17 @@ class ActionRun(Observer):
         # Freeze command after it's run
         command = rendered_command if rendered_command else self.bare_command
         return {
-            'job_run_id':       self.job_run_id,
-            'action_name':      self.action_name,
-            'state':            str(self.state),
-            'start_time':       self.start_time,
-            'end_time':         self.end_time,
-            'command':          command,
-            'rendered_command': self.rendered_command,
-            'node_name':        self.node.get_name() if self.node else None,
-            'exit_status':      self.exit_status,
-            'retries':          self.retries,
-            'exit_statuses':    self.exit_statuses,
+            'job_run_id':        self.job_run_id,
+            'action_name':       self.action_name,
+            'state':             str(self.state),
+            'start_time':        self.start_time,
+            'end_time':          self.end_time,
+            'command':           command,
+            'rendered_command':  self.rendered_command,
+            'node_name':         self.node.get_name() if self.node else None,
+            'exit_status':       self.exit_status,
+            'retries_remaining': self.retries_remaining,
+            'exit_statuses':     self.exit_statuses,
         }
 
     def render_command(self):
