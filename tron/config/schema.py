@@ -28,6 +28,8 @@ def config_object_factory(name, required=None, optional=None):
     optional = optional or []
 
     config_class = namedtuple(name, required + optional)
+
+    # make last len(optional) args actually optional
     config_class.__new__.__defaults__ = (None,) * len(optional)
     config_class.required_keys = required
     config_class.optional_keys = optional

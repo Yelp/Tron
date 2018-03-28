@@ -148,7 +148,7 @@ class ActionRun(Observer):
         parent_context=None, output_path=None, cleanup=False,
         start_time=None, end_time=None, run_state=STATE_SCHEDULED,
         rendered_command=None, exit_status=None, action_runner=None,
-        retries=None, retry_codes=None,
+        retries=None, exit_statuses=None,
     ):
         self.job_run_id = job_run_id
         self.action_name = name
@@ -167,9 +167,9 @@ class ActionRun(Observer):
         self.output_path.append(self.id)
         self.context = command_context.build_context(self, parent_context)
         self.retries = retries
-        self.retry_codes = retry_codes
-        if self.retries is not None and self.retry_codes is None:
-            self.retry_codes = []
+        self.exit_statuses = exit_statuses
+        if self.exit_statuses is None:
+            self.exit_statuses = []
 
         self.action_command = None
 
@@ -192,7 +192,7 @@ class ActionRun(Observer):
     @classmethod
     def from_state(
         cls, state_data, parent_context, output_path,
-        job_run_node, cleanup=False, retries=None, retry_codes=None,
+        job_run_node, cleanup=False, retries=None, exit_statuses=None,
     ):
         """Restore the state of this ActionRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
@@ -225,7 +225,7 @@ class ActionRun(Observer):
             ),
             exit_status=state_data.get('exit_status'),
             retries=retries,
-            retry_codes=retry_codes,
+            exit_statuses=exit_statuses,
         )
 
         # Transition running to fail unknown because exit status was missed
@@ -246,10 +246,10 @@ class ActionRun(Observer):
             if self.retries < 0:
                 log.info(
                     "Reached maximum number of retries: {}".format(
-                        len(self.retry_codes),
+                        len(self.exit_statuses),
                     ),
                 )
-                self.fail(self.retry_codes[-1])
+                self.fail(self.exit_statuses[-1])
 
         self.start_time = timeutils.current_time()
         self.machine.transition('start')
@@ -334,7 +334,7 @@ class ActionRun(Observer):
     def fail(self, exit_status=0):
         if self.retries is not None and not self.retries < 0:
             self.retries -= 1
-            self.retry_codes.append(exit_status)
+            self.exit_statuses.append(exit_status)
             self.machine.reset()
             return self.start()
 
@@ -365,7 +365,7 @@ class ActionRun(Observer):
             'node_name':        self.node.get_name() if self.node else None,
             'exit_status':      self.exit_status,
             'retries':          self.retries,
-            'retry_codes':      self.retry_codes,
+            'exit_statuses':    self.exit_statuses,
         }
 
     def render_command(self):

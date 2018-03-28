@@ -341,7 +341,7 @@ class ActionRunTestCase(TestCase):
 
     def test_retry(self):
         self.action_run.retries = 1
-        self.action_run.retry_codes = []
+        self.action_run.exit_statuses = []
 
         self.action_run.build_action_command()
         self.action_run.action_command.exit_status = -1
@@ -354,7 +354,7 @@ class ActionRunTestCase(TestCase):
             self.action_run.action_command, ActionCommand.EXITING,
         )
         assert self.action_run.is_failed
-        assert_equal(self.action_run.retry_codes, [-1, -1])
+        assert_equal(self.action_run.exit_statuses, [-1, -1])
 
     def test__getattr__(self):
         assert not self.action_run.is_succeeded
