@@ -192,7 +192,7 @@ class ActionRun(Observer):
     @classmethod
     def from_state(
         cls, state_data, parent_context, output_path,
-        job_run_node, cleanup=False, retries_remaining=None, exit_statuses=None,
+        job_run_node, cleanup=False,
     ):
         """Restore the state of this ActionRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
@@ -224,8 +224,8 @@ class ActionRun(Observer):
                 cls.STATE_SCHEDULED, state_data['state'],
             ),
             exit_status=state_data.get('exit_status'),
-            retries_remaining=retries_remaining,
-            exit_statuses=exit_statuses,
+            retries_remaining=state_data.get('retries_remaining'),
+            exit_statuses=state_data.get('exit_statuses'),
         )
 
         # Transition running to fail unknown because exit status was missed
@@ -247,14 +247,6 @@ class ActionRun(Observer):
                 self.id,
                 len(self.exit_statuses),
             ))
-
-        if self.retries_remaining is not None:
-            if self.retries_remaining <= 0:
-                log.info("Reached maximum number of retries: {}".format(
-                    len(self.exit_statuses),
-                ))
-                self.fail(self.exit_statuses[-1])
-                return
 
         self.start_time = timeutils.current_time()
         self.machine.transition('start')
@@ -343,6 +335,10 @@ class ActionRun(Observer):
                 self.exit_statuses.append(exit_status)
                 self.machine.reset()
                 return self.start()
+            else:
+                log.info("Reached maximum number of retries: {}".format(
+                    len(self.exit_statuses),
+                ))
 
         return self._done('fail', exit_status)
 

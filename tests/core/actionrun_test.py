@@ -342,18 +342,22 @@ class ActionRunTestCase(TestCase):
     def test_retry(self):
         self.action_run.retries_remaining = 2
         self.action_run.exit_statuses = []
-
         self.action_run.build_action_command()
         self.action_run.action_command.exit_status = -1
         self.action_run.machine.transition('start')
-        self.action_run.handler(
-            self.action_run.action_command, ActionCommand.EXITING,
-        )
+
+        self.action_run.fail(-1)
+        assert self.action_run.retries_remaining == 1
         assert not self.action_run.is_failed
-        self.action_run.handler(
-            self.action_run.action_command, ActionCommand.EXITING,
-        )
+
+        self.action_run.fail(-1)
+        assert self.action_run.retries_remaining == 0
+        assert not self.action_run.is_failed
+
+        self.action_run.fail(-1)
+        assert self.action_run.retries_remaining == 0
         assert self.action_run.is_failed
+
         assert_equal(self.action_run.exit_statuses, [-1, -1])
 
     def test__getattr__(self):
