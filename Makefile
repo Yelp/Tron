@@ -57,6 +57,9 @@ itest_%: test_in_docker_% debitest_%
 dev:
 	.tox/py27/bin/trond --debug --working-dir=dev -l logging.conf --host=$(shell hostname -f)
 
+example_cluster:
+	tox -e example-cluster
+
 # Release
 
 LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/\x27/"/g')
