@@ -194,6 +194,7 @@ class ActionRun(object):
         deploy_group=None,
         retries_remaining=None,
         exit_statuses=None,
+        machine=None,
     ):
         self.job_run_id = maybe_decode(job_run_id)
         self.action_name = maybe_decode(name)
@@ -204,7 +205,7 @@ class ActionRun(object):
         self.bare_command = maybe_decode(bare_command)
         self.rendered_command = rendered_command
         self.action_runner = action_runner or NoActionRunnerFactory
-        self.machine = state.StateMachine(
+        self.machine = machine or state.StateMachine(
             self.STATE_SCHEDULED,
             delegate=self,
             force_state=run_state,
