@@ -71,6 +71,8 @@ class Job(Observable, Observer):
         'allow_overlap',
         'monitoring',
         'time_zone',
+        'service',
+        'deploy_group',
     ]
 
     # TODO: use config object
@@ -80,6 +82,8 @@ class Job(Observable, Observer):
         run_collection=None, parent_context=None, output_path=None,
         allow_overlap=None, action_runner=None, max_runtime=None,
         time_zone=None,
+        service=None,
+        deploy_group=None,
     ):
         super(Job, self).__init__()
         self.name = name
@@ -95,6 +99,8 @@ class Job(Observable, Observer):
         self.action_runner = action_runner
         self.max_runtime = max_runtime
         self.time_zone = time_zone
+        self.service = service
+        self.deploy_group = deploy_group
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(name)
         self.event = event.get_recorder(self.name)
@@ -129,6 +135,8 @@ class Job(Observable, Observer):
             allow_overlap=job_config.allow_overlap,
             action_runner=action_runner,
             max_runtime=job_config.max_runtime,
+            service=job_config.service,
+            deploy_group=job_config.deploy_group,
         )
 
     def update_from_job(self, job):
@@ -162,6 +170,12 @@ class Job(Observable, Observer):
 
     def get_time_zone(self):
         return self.time_zone
+
+    def get_service(self):
+        return self.service
+
+    def get_deploy_group(self):
+        return self.deploy_group
 
     def get_runs(self):
         return self.runs
@@ -273,7 +287,7 @@ class JobScheduler(Observer):
 
     def manual_start(self, run_time=None):
         """Trigger a job run manually (instead of from the scheduler)."""
-        run_time = run_time or timeutils.current_time()
+        run_time = run_time or timeutils.current_time(tz=self.job.time_zone)
         manual_runs = list(self.job.build_new_runs(run_time, manual=True))
         for r in manual_runs:
             r.start()

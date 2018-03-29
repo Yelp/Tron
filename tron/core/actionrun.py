@@ -13,6 +13,7 @@ from tron import command_context
 from tron import node
 from tron.actioncommand import ActionCommand
 from tron.actioncommand import NoActionRunnerFactory
+from tron.config.schema import ExecutorTypes
 from tron.core import action
 from tron.serialize import filehandler
 from tron.utils import iteration
@@ -63,35 +64,48 @@ class ActionRunFactory(object):
         """Create an ActionRun for a JobRun and Action."""
         run_node = action.node_pool.next() if action.node_pool else job_run.node
 
-        return ActionRun(
-            job_run.id,
-            action.name,
-            run_node,
-            action.command,
-            parent_context=job_run.context,
-            output_path=job_run.output_path.clone(),
-            cleanup=action.is_cleanup,
-            action_runner=action_runner,
-            retries_remaining=action.retries,
-        )
+        args = {
+            'job_run_id': job_run.id,
+            'name': action.name,
+            'node': run_node,
+            'bare_command': action.command,
+            'parent_context': job_run.context,
+            'output_path': job_run.output_path.clone(),
+            'cleanup': action.is_cleanup,
+            'action_runner': action_runner,
+            'executor': action.executor,
+            'cluster': action.cluster,
+            'pool': action.pool,
+            'cpus': action.cpus,
+            'mem': action.mem,
+            'service': action.service or job_run.service,
+            'deploy_group': action.deploy_group or job_run.deploy_group,
+            'retries_remaining': action.retries,
+        }
+        if action.executor == ExecutorTypes.paasta:
+            return PaaSTAActionRun(**args)
+        return SSHActionRun(**args)
 
     @classmethod
     def action_run_from_state(cls, job_run, state_data, cleanup=False):
         """Restore an ActionRun for this JobRun from the state data."""
-        return ActionRun.from_state(
-            state_data,
-            job_run.context,
-            job_run.output_path.clone(),
-            job_run.node,
-            cleanup=cleanup,
-        )
+        args = {
+            'state_data': state_data,
+            'parent_context': job_run.context,
+            'output_path': job_run.output_path.clone(),
+            'job_run_node': job_run.node,
+            'cleanup': cleanup,
+        }
+
+        if state_data.get('executor') == ExecutorTypes.paasta:
+            return PaaSTAActionRun.from_state(**args)
+        return SSHActionRun.from_state(**args)
 
 
-class ActionRun(Observer):
-    """Tracks the state of a single run of an Action.
+class ActionRun(object):
+    """Base class for tracking the state of a single run of an Action.
 
-    ActionRuns observers ActionCommands they create and are observed by a
-    parent JobRun.
+    ActionRuns are observed by a parent JobRun.
     """
     STATE_CANCELLED = state.NamedEventState('cancelled')
     STATE_UNKNOWN = state.NamedEventState('unknown', short_name='UNKWN')
@@ -144,11 +158,29 @@ class ActionRun(Observer):
 
     # TODO: create a class for ActionRunId, JobRunId, Etc
     def __init__(
-        self, job_run_id, name, node, bare_command=None,
-        parent_context=None, output_path=None, cleanup=False,
-        start_time=None, end_time=None, run_state=STATE_SCHEDULED,
-        rendered_command=None, exit_status=None, action_runner=None,
-        retries_remaining=None, exit_statuses=None,
+        self,
+        job_run_id,
+        name,
+        node,
+        bare_command=None,
+        parent_context=None,
+        output_path=None,
+        cleanup=False,
+        start_time=None,
+        end_time=None,
+        run_state=STATE_SCHEDULED,
+        rendered_command=None,
+        exit_status=None,
+        action_runner=None,
+        executor=None,
+        cluster=None,
+        pool=None,
+        cpus=None,
+        mem=None,
+        service=None,
+        deploy_group=None,
+        retries_remaining=None,
+        exit_statuses=None,
     ):
         self.job_run_id = job_run_id
         self.action_name = name
@@ -163,6 +195,13 @@ class ActionRun(Observer):
             self.STATE_SCHEDULED, delegate=self, force_state=run_state,
         )
         self.is_cleanup = cleanup
+        self.executor = executor
+        self.cluster = cluster
+        self.pool = pool
+        self.cpus = cpus
+        self.mem = mem
+        self.service = service
+        self.deploy_group = deploy_group
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(self.id)
         self.context = command_context.build_context(self, parent_context)
@@ -226,6 +265,13 @@ class ActionRun(Observer):
             exit_status=state_data.get('exit_status'),
             retries_remaining=state_data.get('retries_remaining'),
             exit_statuses=state_data.get('exit_statuses'),
+            executor=state_data.get('executor', ExecutorTypes.ssh),
+            cluster=state_data.get('cluster'),
+            pool=state_data.get('pool'),
+            cpus=state_data.get('cpus'),
+            mem=state_data.get('mem'),
+            service=state_data.get('service'),
+            deploy_group=state_data.get('deploy_group'),
         )
 
         # Transition running to fail unknown because exit status was missed
@@ -259,64 +305,16 @@ class ActionRun(Observer):
             self.fail(-1)
             return
 
-        action_command = self.build_action_command()
-        try:
-            self.node.submit_command(action_command)
-        except node.Error as e:
-            log.warning("Failed to start %s: %r", self.id, e)
-            self.fail(-2)
-            return
+        return self.submit_command()
 
-        return True
+    def submit_command(self):
+        raise NotImplementedError()
 
     def stop(self):
-        if self.retries_remaining is not None:
-            self.retries_remaining = -1
-
-        stop_command = self.action_runner.build_stop_action_command(
-            self.id, 'terminate',
-        )
-        self.node.submit_command(stop_command)
+        raise NotImplementedError()
 
     def kill(self, final=True):
-        if self.retries_remaining is not None and final:
-            self.retries_remaining = -1
-
-        kill_command = self.action_runner.build_stop_action_command(
-            self.id, 'kill',
-        )
-        self.node.submit_command(kill_command)
-
-    def build_action_command(self):
-        """Create a new ActionCommand instance to send to the node."""
-        serializer = filehandler.OutputStreamSerializer(self.output_path)
-        self.action_command = self.action_runner.create(
-            id=self.id,
-            command=self.command,
-            serializer=serializer,
-        )
-        self.watch(self.action_command)
-        return self.action_command
-
-    def handle_action_command_state_change(self, action_command, event):
-        """Observe ActionCommand state changes."""
-        log.debug("Action command state change: %s", action_command.state)
-
-        if event == ActionCommand.RUNNING:
-            return self.machine.transition('started')
-
-        if event == ActionCommand.FAILSTART:
-            return self.fail(None)
-
-        if event == ActionCommand.EXITING:
-            if action_command.exit_status is None:
-                return self.fail_unknown()
-
-            if not action_command.exit_status:
-                return self.success()
-
-            return self.fail(action_command.exit_status)
-    handler = handle_action_command_state_change
+        raise NotImplementedError()
 
     def _done(self, target, exit_status=0):
         log.info(
@@ -363,15 +361,22 @@ class ActionRun(Observer):
         # Freeze command after it's run
         command = rendered_command if rendered_command else self.bare_command
         return {
-            'job_run_id':        self.job_run_id,
-            'action_name':       self.action_name,
-            'state':             str(self.state),
-            'start_time':        self.start_time,
-            'end_time':          self.end_time,
-            'command':           command,
-            'rendered_command':  self.rendered_command,
-            'node_name':         self.node.get_name() if self.node else None,
-            'exit_status':       self.exit_status,
+            'job_run_id':       self.job_run_id,
+            'action_name':      self.action_name,
+            'state':            str(self.state),
+            'start_time':       self.start_time,
+            'end_time':         self.end_time,
+            'command':          command,
+            'rendered_command': self.rendered_command,
+            'node_name':        self.node.get_name() if self.node else None,
+            'exit_status':      self.exit_status,
+            'executor':         self.executor,
+            'cluster':          self.cluster,
+            'pool':             self.pool,
+            'cpus':             self.cpus,
+            'mem':              self.mem,
+            'service':          self.service,
+            'deploy_group':     self.deploy_group,
             'retries_remaining': self.retries_remaining,
             'exit_statuses':     self.exit_statuses,
         }
@@ -438,6 +443,108 @@ class ActionRun(Observer):
 
     def __str__(self):
         return "ActionRun: %s" % self.id
+
+
+class SSHActionRun(ActionRun, Observer):
+    """An ActionRun that executes the command on a node through SSH.
+    """
+
+    def submit_command(self):
+        action_command = self.build_action_command()
+        try:
+            self.node.submit_command(action_command)
+        except node.Error as e:
+            log.warning("Failed to start %s: %r", self.id, e)
+            self.fail(-2)
+            return
+        return True
+
+    def stop(self):
+        if self.retries_remaining is not None:
+            self.retries_remaining = -1
+
+        stop_command = self.action_runner.build_stop_action_command(
+            self.id, 'terminate',
+        )
+        self.node.submit_command(stop_command)
+
+    def kill(self, final=True):
+        if self.retries_remaining is not None and final:
+            self.retries_remaining = -1
+
+        kill_command = self.action_runner.build_stop_action_command(
+            self.id, 'kill',
+        )
+        self.node.submit_command(kill_command)
+
+    def build_action_command(self):
+        """Create a new ActionCommand instance to send to the node."""
+        serializer = filehandler.OutputStreamSerializer(self.output_path)
+        self.action_command = self.action_runner.create(
+            id=self.id,
+            command=self.command,
+            serializer=serializer,
+        )
+        self.watch(self.action_command)
+        return self.action_command
+
+    def handle_action_command_state_change(self, action_command, event):
+        """Observe ActionCommand state changes."""
+        log.debug("Action command state change: %s", action_command.state)
+
+        if event == ActionCommand.RUNNING:
+            return self.machine.transition('started')
+
+        if event == ActionCommand.FAILSTART:
+            return self.fail(None)
+
+        if event == ActionCommand.EXITING:
+            if action_command.exit_status is None:
+                return self.fail_unknown()
+
+            if not action_command.exit_status:
+                return self.success()
+
+            return self.fail(action_command.exit_status)
+    handler = handle_action_command_state_change
+
+
+class PaaSTAActionRun(ActionRun):
+    """An ActionRun that executes the command on a PaaSTA Mesos cluster.
+    """
+
+    def submit_command(self):
+        self.machine.transition('started')
+        stdout = filehandler.OutputStreamSerializer(
+            self.output_path,
+        ).open('.stdout')
+        stdout.write(
+            "Would have run command for service {service} from deploy group "
+            "{deploy_group} on cluster {cluster} in the {pool} pool, with "
+            "{cpus} cpus and {mem} MB memory.".format(
+                service=self.service,
+                deploy_group=self.deploy_group,
+                cluster=self.cluster,
+                pool=self.pool,
+                cpus=self.cpus,
+                mem=self.mem,
+            ),
+        )
+        self.success()
+        stdout.close()
+        return True
+
+    def stop(self):
+        if self.retries_remaining is not None:
+            self.retries_remaining = -1
+
+        pass
+
+    def kill(self, final=True):
+        if self.retries_remaining is not None and final:
+            self.retries_remaining = -1
+
+        pass
 
 
 class ActionRunCollection(object):
