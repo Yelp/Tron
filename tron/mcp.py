@@ -141,7 +141,7 @@ class MasterControlProgram(object):
 
     def restore_state(self):
         """Use the state manager to retrieve to persisted state and apply it
-        to the configured Jobs and Services.
+        to the configured Jobs.
         """
         self.event_recorder.notice('restoring')
         job_states = self.state_watcher.restore(self.jobs.get_names())

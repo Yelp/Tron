@@ -11,7 +11,7 @@ ssh_options:
     # smtp_host: localhost
     # notification_addr: nobody@localhost
 
-## Directory used to store stdout/stderr from jobs and services. Defaults
+## Directory used to store stdout/stderr from jobs. Defaults
 ## to the working directory
 # output_stream_dir: /tmp/tron/streams/
 
@@ -54,14 +54,3 @@ jobs:
     #       command: "uname -a"
     #   cleanup_action:
     #     command: "rm -rf /tmp/sample_job_scratch"
-
-services:
-    ## Configure services here. Services differ from jobs in that they are
-    ## expected to have an enable/disable and monitoring phase.
-    # - name: "sample_service"
-    #   node: node
-    #   count: 2
-    #   pid_file: "/var/run/%(name)s-%(instance_number)s.pid"
-    #   command: "run_service --pid-file=%(pid_file)s start"
-    #   monitor_interval: 20
-    #   restart_delay: 60s

@@ -121,47 +121,6 @@ class JobController(object):
         raise UnknownCommandError("Unknown command %s" % command)
 
 
-class ServiceInstanceController(object):
-
-    def __init__(self, service_instance):
-        self.service_instance = service_instance
-
-    def handle_command(self, command):
-        error_msg = "Failed to %s from state %s."
-        if command == 'stop':
-            if self.service_instance.stop():
-                return "%s stopping." % self.service_instance
-            return error_msg % (command, self.service_instance.get_state())
-
-        if command == 'start':
-            if self.service_instance.start():
-                return "%s starting." % self.service_instance
-            return error_msg % (command, self.service_instance.get_state())
-
-        raise UnknownCommandError("Unknown command %s" % command)
-
-
-class ServiceController(object):
-
-    def __init__(self, service):
-        self.service = service
-
-    def handle_command(self, command):
-        if command == 'stop':
-            self.service.disable()
-            return "%s stopping." % self.service
-
-        if command == 'start':
-            self.service.enable()
-            return "%s starting." % self.service
-
-        if command == 'kill':
-            self.service.disable(force=True)
-            return "Killing %s." % self.service
-
-        raise UnknownCommandError("Unknown command %s" % command)
-
-
 def format_seq(seq):
     return "\n# ".join(sorted(seq))
 
@@ -184,7 +143,7 @@ class ConfigController(object):
 
     HEADER_END = "{}\n".format(TEMPLATE.split('\n')[-2])
 
-    DEFAULT_NAMED_CONFIG = "\njobs:\n\nservices:\n"
+    DEFAULT_NAMED_CONFIG = "\njobs:\n"
 
     def __init__(self, mcp):
         self.mcp = mcp

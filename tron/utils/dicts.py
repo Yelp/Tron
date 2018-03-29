@@ -21,7 +21,7 @@ def invert_dict_list(dictionary):
 
 class FrozenDict(Mapping):
     """Simple implementation of an immutable dictionary so we can freeze the
-    command context, set of jobs/services, actions, etc.
+    command context, set of jobs, actions, etc.
 
     from http://stackoverflow.com/questions/2703599/what-would-be-a-frozen-dict
     """

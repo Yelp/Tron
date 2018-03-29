@@ -174,24 +174,6 @@ ConfigCleanupAction = config_object_factory(
 )
 
 
-ConfigService = config_object_factory(
-    name='ConfigService',
-    required=[
-        'name',                 # str
-        'node',                 # str
-        'pid_file',             # str
-        'command',              # str
-        'monitor_interval',     # float
-        'namespace',            # str
-    ],
-    optional=[
-        'restart_delay',        # float
-        'monitor_retries',      # int
-        'count',                # int
-    ],
-)
-
-
 StatePersistenceTypes = Enum.create('shelve', 'sql', 'yaml')
 
 

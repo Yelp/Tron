@@ -20,7 +20,6 @@ from tron.api.adapter import ActionRunAdapter
 from tron.api.adapter import JobRunAdapter
 from tron.api.adapter import ReprAdapter
 from tron.api.adapter import RunAdapter
-from tron.api.adapter import ServiceAdapter
 from tron.core import actionrun
 from tron.core import job
 
@@ -173,23 +172,6 @@ class JobRunAdapterTestCase(TestCase):
     def test_get_runs_without_action_runs(self):
         self.adapter.include_action_runs = False
         assert_equal(self.adapter.get_runs(), None)
-
-
-class ServiceAdapterTestCase(TestCase):
-
-    @setup
-    def setup_adapter(self):
-        self.service = mock.MagicMock()
-        self.adapter = ServiceAdapter(self.service)
-
-    @mock.patch('tron.api.adapter.NodePoolAdapter', autospec=True)
-    def test_repr(self, mock_node_pool_adapter):
-        result = self.adapter.get_repr()
-        assert_equal(result['name'], self.service.name)
-        assert_equal(
-            result['node_pool'],
-            mock_node_pool_adapter.return_value.get_repr.return_value,
-        )
 
 
 class NodeAdapterTestCase(TestCase):

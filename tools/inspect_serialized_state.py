@@ -3,10 +3,8 @@
 Displays:
 State configuration
 Count of jobs
-Count of services
 
 Table of Jobs with start date of last run
-Table of Services with state and instance count
 
 """
 from __future__ import absolute_import
@@ -44,7 +42,7 @@ def get_container(config_path):
 def get_state(container):
     config = container.get_master().state_persistence
     state_manager = statemanager.PersistenceManagerFactory.from_config(config)
-    names = container.get_job_and_service_names()
+    names = container.get_job_names()
     return state_manager.restore(*names)
 
 
@@ -69,23 +67,11 @@ def format_jobs(job_states):
     return header + "".join(seq)
 
 
-def format_service(service_states):
-    format = "%-30s %-8s %s\n"
-    header = format % ("Name", "Enabled", "Instances")
-
-    def build(name, service):
-        return format % (name, service.get('enabled'), len(service['instances']))
-    seq = sorted(build(*item) for item in six.iteritems(service_states))
-    return header + "".join(seq)
-
-
-def display_report(state_config, job_states, service_states):
+def display_report(state_config, job_states):
     print("State Config: %s" % str(state_config))
     print("Total Jobs: %s" % len(job_states))
-    print("Total Services: %s" % len(service_states))
 
     print("\n%s" % format_jobs(job_states))
-    print("\n%s" % format_service(service_states))
 
 
 def main(config_path, working_dir):
