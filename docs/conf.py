@@ -19,6 +19,8 @@ from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.abspath('..'))
 
+import tron  # noqa
+
 
 class Mock(MagicMock):
     @classmethod
