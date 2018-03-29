@@ -6,10 +6,10 @@ from __future__ import absolute_import
 from __future__ import print_function
 from __future__ import unicode_literals
 
+import argparse
 import logging
 import os
 import signal
-import sys
 
 from tron import yaml
 
@@ -43,19 +43,26 @@ commands = {
     'print':        print_status_file,
     'pid': lambda statusfile: print(get_field('pid', statusfile)),
     'return_code': lambda statusfile: print(get_field('return_code', statusfile)),
-    'terminate': lambda statusfile: send_signal(signal.SIGTERM. statusfile),
+    'terminate': lambda statusfile: send_signal(signal.SIGTERM, statusfile),
     'kill': lambda statusfile: send_signal(signal.SIGKILL, statusfile),
 }
 
 
-def parse_args(args):
-    if len(args) != 3:
-        raise SystemExit("Field and path are required")
-
-    if args[2] not in commands:
-        raise SystemExit("Unknown command %s" % args[2])
-
-    return args[1:]
+def parse_args():
+    parser = argparse.ArgumentParser(description='Action Status for Tron')
+    parser.add_argument(
+        'output_dir',
+        help='The directory where the state of the action run is',
+    )
+    parser.add_argument(
+        'command',
+        help='the command to run',
+    )
+    parser.add_argument(
+        'run_id',
+        help='run_id of the action',
+    )
+    return parser.parse_args()
 
 
 def run_command(command, status_file):
@@ -64,6 +71,6 @@ def run_command(command, status_file):
 
 if __name__ == "__main__":
     logging.basicConfig()
-    path, command = parse_args(sys.argv)
-    with open(os.path.join(path, STATUS_FILE)) as f:
-        run_command(command, f)
+    args = parse_args()
+    with open(os.path.join(args.output_dir, STATUS_FILE)) as f:
+        run_command(args.command, f)
