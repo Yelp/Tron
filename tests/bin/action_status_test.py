@@ -15,7 +15,7 @@ class ActionStatusTestCase(TestCase):
 
     @setup_teardown
     def setup_status_file(self):
-        self.status_file = tempfile.NamedTemporaryFile()
+        self.status_file = tempfile.NamedTemporaryFile(mode='r+')
         self.status_content = {
             'pid': 1234,
             'return_code': None,
