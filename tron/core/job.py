@@ -14,6 +14,7 @@ from tron import eventloop
 from tron import node
 from tron.core import actiongraph
 from tron.core import jobrun
+from tron.core import recovery
 from tron.core.actionrun import ActionRun
 from tron.scheduler import scheduler_from_config
 from tron.serialize import filehandler
@@ -221,9 +222,17 @@ class Job(Observable, Observer):
             self.node_pool,
         )
         for run in job_runs:
+            action_runs_needing_recovery = recovery.filter_action_runs_needing_recovery(
+                action_runs=run._action_runs,
+            )
+            for action_run in action_runs_needing_recovery:
+                deferred = recovery.recover_action_run(action_run)
+                if not deferred:
+                    log.debug(
+                        "unable to recover action run %s" %
+                        action_run.id,
+                    )
             self.watch(run)
-
-        self.event.ok('restored')
 
     def build_new_runs(self, run_time, manual=False):
         """Uses its JobCollection to build new JobRuns. If all_nodes is set,
