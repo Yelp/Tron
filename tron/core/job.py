@@ -159,7 +159,7 @@ class Job(Observable, Observer):
         if self.runs.get_run_by_state(ActionRun.STATE_SCHEDULED):
             return self.STATUS_ENABLED
 
-        log.warn("%s in an unknown state: %s" % (self, self.runs))
+        log.warning("%s in an unknown state: %s" % (self, self.runs))
         return self.STATUS_UNKNOWN
 
     def get_name(self):

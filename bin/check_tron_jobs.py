@@ -239,7 +239,9 @@ def main():
             try:
                 check_job_result(job=job, client=client, dry_run=args.dry_run)
             except Exception as e:
-                log.info("check job result fails for job {}: {}".format(job, e))
+                log.warning("check job result fails for job {}: {}".format(
+                    job.get('name', ''), e,
+                ))
                 error_code = 1
     else:
         job_url = client.get_url(args.job)
