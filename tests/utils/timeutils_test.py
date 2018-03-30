@@ -17,11 +17,6 @@ from tron.utils.timeutils import macro_timedelta
 
 class ToTimestampTestCase(TestCase):
 
-    def test_normal_time(self):
-        # One hour after the epoch
-        start_date = datetime.datetime(1970, 1, 1, 1)
-        assert_equal(timeutils.to_timestamp(start_date), 60 * 60)
-
     def test_normal_time_with_timezone(self):
         # 62 minutes after the epoch
         start_date = pytz.utc.localize(datetime.datetime(1970, 1, 1, 1, 2))
