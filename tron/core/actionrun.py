@@ -316,7 +316,7 @@ class ActionRun(object):
 
     def fail_unknown(self):
         """Failed with unknown reason."""
-        log.warn("Lost communication with action run %s", self.id)
+        log.warning("Lost communication with action run %s", self.id)
         return self.machine.transition('fail_unknown')
 
     @property
