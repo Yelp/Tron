@@ -49,16 +49,6 @@ class SQLAlchemyStateStore(object):
             Column('state_data', Text),
         )
 
-        self.service_table = Table(
-            'service_state_data', self._metadata,
-            Column(
-                'id', String(
-                    MAX_IDENTIFIER_LENGTH,
-                ), primary_key=True,
-            ),
-            Column('state_data', Text),
-        )
-
         self.metadata_table = Table(
             'metadata_table', self._metadata,
             Column(
@@ -85,8 +75,6 @@ class SQLAlchemyStateStore(object):
         table = None
         if type == runstate.JOB_STATE:
             table = self.job_table
-        if type == runstate.SERVICE_STATE:
-            table = self.service_table
         if type == runstate.MCP_STATE:
             table = self.metadata_table
         return SQLStateKey(table, iden)
