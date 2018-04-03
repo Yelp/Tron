@@ -1,12 +1,17 @@
 # Change Log
 
-## [0.7.8.0](https://github.com/Yelp/Tron/tree/0.7.8.0) (2018-04-02)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.7.1...0.7.8.0)
+## [v0.7.8.0](https://github.com/Yelp/Tron/tree/v0.7.8.0) (2018-04-03)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.7.1...v0.7.8.0)
 
 **Merged pull requests:**
 
+- Don't delete file if namespace is incorrect [\#414](https://github.com/Yelp/Tron/pull/414) ([qui](https://github.com/qui))
+- update namespace cleanup script [\#411](https://github.com/Yelp/Tron/pull/411) ([chlgit](https://github.com/chlgit))
+- Fix timestamp with timezone and remove flaky test [\#410](https://github.com/Yelp/Tron/pull/410) ([qui](https://github.com/qui))
 - add a script to clean up namespace [\#409](https://github.com/Yelp/Tron/pull/409) ([chlgit](https://github.com/chlgit))
 - improve monitoring log [\#408](https://github.com/Yelp/Tron/pull/408) ([chlgit](https://github.com/chlgit))
+- Try to fix doc building [\#406](https://github.com/Yelp/Tron/pull/406) ([solarkennedy](https://github.com/solarkennedy))
+- fix the action\_status command [\#404](https://github.com/Yelp/Tron/pull/404) ([Rob-Johnson](https://github.com/Rob-Johnson))
 - Timezone date context bug [\#403](https://github.com/Yelp/Tron/pull/403) ([qui](https://github.com/qui))
 - Do a better job at printing exceptions when there are command render problems [\#402](https://github.com/Yelp/Tron/pull/402) ([solarkennedy](https://github.com/solarkennedy))
 - Make more sane tab completions for busy tron servers [\#400](https://github.com/Yelp/Tron/pull/400) ([solarkennedy](https://github.com/solarkennedy))

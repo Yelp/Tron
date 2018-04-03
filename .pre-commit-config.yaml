@@ -3,6 +3,7 @@
     hooks:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
+        exclude: CHANGELOG.md
     -   id: autopep8-wrapper
     -   id: check-docstring-first
     -   id: check-json
