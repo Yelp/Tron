@@ -1,3 +1,15 @@
+tron (0.7.8.0) trusty; urgency=medium
+
+  * 0.7.8.0 tagged with 'make release'
+  * Script to clean up namespaces
+  * Improve check_tron_jobs logging
+  * Fix bug in date context math with timezones
+  * Improve tab completion
+  * Remove more service code
+  * Use config values to create PaaSTA action run that prints
+
+ -- root <root@d2932ccaf8e4>  Tue, 03 Apr 2018 18:51:45 +0000
+
 tron (0.7.7.1) trusty; urgency=medium
 
   * 0.7.7.1 tagged with 'make release'
