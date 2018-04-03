@@ -15,6 +15,7 @@ RUN apt-get update > /dev/null && \
         libyaml-dev \
         libssl-dev \
         libffi-dev \
+        ssh-client \
         && apt-get clean > /dev/null
 
 RUN cd /tmp && \
