@@ -87,6 +87,5 @@ man:
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
 
 clean:
-	rm -rf dist debian/files debian/tron.debhelper.log \
-	       debian/tron.postinst.debhelper debian/tron.substvars tronweb/js/cs
+	rm -rf tronweb/js/cs
 	find . -name '*.pyc' -delete
