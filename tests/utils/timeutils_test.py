@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import datetime
 
+import pytz
 from testify import assert_equal
 from testify import setup
 from testify import TestCase
@@ -12,6 +13,30 @@ from tron.utils import timeutils
 from tron.utils.timeutils import DateArithmetic
 from tron.utils.timeutils import duration
 from tron.utils.timeutils import macro_timedelta
+
+
+class ToTimestampTestCase(TestCase):
+
+    def test_normal_time_with_timezone(self):
+        # 62 minutes after the epoch
+        start_date = pytz.utc.localize(datetime.datetime(1970, 1, 1, 1, 2))
+        assert_equal(timeutils.to_timestamp(start_date), 62 * 60)
+
+    def test_ambiguous_times(self):
+        pacific_tz = pytz.timezone("US/Pacific")
+        before_fall_back = timeutils.to_timestamp(
+            pacific_tz.localize(
+                datetime.datetime(2017, 11, 5, 1, 23),
+                is_dst=True,
+            ),
+        )
+        after_fall_back = timeutils.to_timestamp(
+            pacific_tz.localize(
+                datetime.datetime(2017, 11, 5, 1, 23),
+                is_dst=False,
+            ),
+        )
+        assert_equal(after_fall_back - before_fall_back, 60 * 60)
 
 
 class TimeDeltaTestCase(TestCase):
@@ -128,6 +153,20 @@ class TimeDeltaTestCase(TestCase):
             self.begin_feb_leap,
             datetime.datetime(year=2016, month=2, day=1),
             years=4,
+        )
+
+    def test_start_date_with_timezone(self):
+        pacific_tz = pytz.timezone("US/Pacific")
+        start_date = pacific_tz.localize(
+            datetime.datetime(year=2018, month=1, day=3, hour=13),
+        )
+        expected_end = pacific_tz.localize(
+            datetime.datetime(year=2018, month=1, day=1, hour=13),
+        )
+        self.check_delta(
+            start_date,
+            expected_end,
+            days=-2,
         )
 
 
@@ -269,3 +308,8 @@ class DateArithmeticTestCase(testingutils.MockTimeTestCase):
 
     def test_bad_date_format(self):
         assert DateArithmetic.parse('~~') is None
+
+
+class DateArithmeticWithTimezoneTestCase(DateArithmeticTestCase):
+
+    now = pytz.timezone("US/Pacific").localize(datetime.datetime(2012, 3, 20))

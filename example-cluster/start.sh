@@ -12,7 +12,7 @@ if [ ! -f /root/.ssh/id_rsa ]; then
   echo Setting up SSH keys
   yes | ssh-keygen -q -N "" -f /root/.ssh/id_rsa >/dev/null
   cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
-  eval $(ssh-agent)
+  eval $(ssh-agent) || true
 fi
 
 echo Installing packages

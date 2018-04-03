@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 import datetime
 import re
 import time
+from calendar import timegm
 
 
 def current_time(tz=None):
@@ -20,7 +21,10 @@ def current_timestamp():
 
 def to_timestamp(time_val):
     """Generate a unix timestamp for the given datetime instance"""
-    return time.mktime(time_val.timetuple())
+    # TODO: replace with datetime.timestamp() after python3.6
+    if time_val.tzinfo:
+        return timegm(time_val.utctimetuple())
+    return time.mktime(time_val.utctimetuple())
 
 
 def delta_total_seconds(td):
@@ -47,7 +51,8 @@ def macro_timedelta(start_date, years=0, months=0, days=0, hours=0):
     end_date = datetime.datetime(
         start_date.year + years, new_month, start_date.day, start_date.hour,
     )
-    delta += end_date - start_date
+    month_and_year_delta = end_date - start_date.replace(tzinfo=None)
+    delta += month_and_year_delta
 
     return delta
 
@@ -55,6 +60,9 @@ def macro_timedelta(start_date, years=0, months=0, days=0, hours=0):
 def duration(start_time, end_time=None):
     """Get a timedelta between end_time and start_time, where end_time defaults
     to now().
+
+    WARNING: mixing tz-aware and naive datetimes in start_time and end_time
+    will cause an error.
     """
     if not start_time:
         return None
