@@ -271,14 +271,12 @@ class TimeSpecification(object):
             except AmbiguousTimeError:
                 out = self.timezone.localize(out)
             except NonExistentTimeError:
-                # TODO: this is duplicated in the scheduler
-                for _ in range(24):
-                    out += datetime.timedelta(minutes=60)
-                    try:
-                        if out.tzinfo is None:
-                            out = self.timezone.localize(out)
-                    except NonExistentTimeError:
-                        return None
+                try:
+                    out = self.timezone.localize(
+                        out + datetime.timedelta(minutes=60),
+                    )
+                except NonExistentTimeError:
+                    return None
         return to_timezone(out, tzinfo)
 
     def __eq__(self, other):

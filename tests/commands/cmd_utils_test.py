@@ -33,6 +33,58 @@ class GetConfigTestCase(TestCase):
         assert_equal(mock_access.call_count, 2)
         assert_equal(config, {})
 
+    def test_filter_jobs_actions_runs_with_nothing(self):
+        inputs = [
+            "M.foo", "M.foo.1", "M.foo.1.action1",
+            "M.foo.2.action1", "M.bar", "M.bar.1.action",
+        ]
+        prefix = ""
+        expected = ["M.foo", "M.bar"]
+        assert_equal(
+            cmd_utils.filter_jobs_actions_runs(
+                prefix, inputs,
+            ), expected,
+        )
+
+    def test_filter_jobs_actions_runs_with_almost_a_job(self):
+        inputs = [
+            "M.foo", "M.foo.1", "M.foo.1.action1",
+            "M.foo.2.action1", "M.bar.1.action",
+        ]
+        prefix = "M.f"
+        expected = ["M.foo"]
+        assert_equal(
+            cmd_utils.filter_jobs_actions_runs(
+                prefix, inputs,
+            ), expected,
+        )
+
+    def test_filter_jobs_actions_runs_with_a_job_run(self):
+        inputs = [
+            "M.foo", "M.foo.1", "M.foo.1.action1",
+            "M.foo.2", "M.foo.2.action1", "M.bar.1.action",
+        ]
+        prefix = "M.foo."
+        expected = ["M.foo.1", "M.foo.2"]
+        assert_equal(
+            cmd_utils.filter_jobs_actions_runs(
+                prefix, inputs,
+            ), expected,
+        )
+
+    def test_filter_jobs_actions_runs_with_a_job_run_and_id(self):
+        inputs = [
+            "M.foo", "M.foo.1", "M.foo.1.action1",
+            "M.foo.2.action1", "M.bar.1.action",
+        ]
+        prefix = "M.foo.1"
+        expected = ["M.foo.1", "M.foo.1.action1"]
+        assert_equal(
+            cmd_utils.filter_jobs_actions_runs(
+                prefix, inputs,
+            ), expected,
+        )
+
 
 class BuildOptionParserTestCase(TestCase):
 

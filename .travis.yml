@@ -1,12 +1,16 @@
 ---
 language: python
 env:
-  - TENV=py36
-  - TENV=itest
+  - TARGET=tox_py36
+  - TARGET=debitest_trusty
 python:
   - 3.6
+
+before_install:
+  - sudo apt-get install -y libdb5.3-dev
+
 install: pip install tox
-script: tox -e $TENV
+script: make $TARGET
 
 deploy:
   - provider: pypi
@@ -16,4 +20,4 @@ deploy:
     on:
       tags: true
       repo: Yelp/Tron
-      condition: $TENV == "py36"
+      condition: $TARGET == "tox_py36"

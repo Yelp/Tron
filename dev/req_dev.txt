@@ -8,4 +8,4 @@ cryptography>=2.1.4
 Twisted>=17.0.0
 mock>=0.8
 pre-commit
-ipdb
+bsddb3

@@ -22,12 +22,15 @@ from tests.testingutils import autospec_method
 from tests.testingutils import Turtle
 from tron import actioncommand
 from tron import node
+from tron.config.schema import ExecutorTypes
 from tron.core import actiongraph
 from tron.core import jobrun
 from tron.core.actionrun import ActionCommand
 from tron.core.actionrun import ActionRun
 from tron.core.actionrun import ActionRunCollection
 from tron.core.actionrun import ActionRunFactory
+from tron.core.actionrun import PaaSTAActionRun
+from tron.core.actionrun import SSHActionRun
 from tron.serialize import filehandler
 
 
@@ -45,6 +48,8 @@ class ActionRunFactoryTestCase(TestCase):
         self.job_run = jobrun.JobRun(
             'jobname', 7, self.run_time, mock_node,
             action_graph=self.action_graph,
+            service='foo',
+            deploy_group='test',
         )
 
         self.action_state_data = {
@@ -118,7 +123,54 @@ class ActionRunFactoryTestCase(TestCase):
         assert_equal(action_run.action_name, action.name)
         assert_equal(action_run.command, action.command)
 
-    def test_action_run_from_state(self):
+    def test_build_run_for_ssh_action(self):
+        action = Turtle(
+            name='theaction', command="doit", executor=ExecutorTypes.ssh,
+        )
+        action_run = ActionRunFactory.build_run_for_action(
+            self.job_run, action, self.action_runner,
+        )
+        assert_equal(action_run.__class__, SSHActionRun)
+
+    def test_build_run_for_paasta_action_default_service(self):
+        action = Turtle(
+            name='theaction',
+            command="doit",
+            executor=ExecutorTypes.paasta,
+            cluster='prod',
+            pool='default',
+            cpus=10,
+            mem=500,
+            service=None,
+            deploy_group=None,
+        )
+        action_run = ActionRunFactory.build_run_for_action(
+            self.job_run, action, self.action_runner,
+        )
+        assert_equal(action_run.__class__, PaaSTAActionRun)
+        assert_equal(action_run.cluster, action.cluster)
+        assert_equal(action_run.pool, action.pool)
+        assert_equal(action_run.cpus, action.cpus)
+        assert_equal(action_run.mem, action.mem)
+        assert_equal(action_run.service, self.job_run.service)
+        assert_equal(action_run.deploy_group, self.job_run.deploy_group)
+
+    def test_build_run_for_paasta_action_overrides_service(self):
+        action = Turtle(
+            name='theaction',
+            command="doit",
+            executor=ExecutorTypes.paasta,
+            service='bar',
+            deploy_group='dev',
+        )
+        action_run = ActionRunFactory.build_run_for_action(
+            self.job_run, action, self.action_runner,
+        )
+        assert_equal(action_run.__class__, PaaSTAActionRun)
+        assert_equal(action_run.service, action.service)
+        assert_equal(action_run.deploy_group, action.deploy_group)
+
+    def test_action_run_from_state_default(self):
         state_data = self.action_state_data
         action_run = ActionRunFactory.action_run_from_state(
             self.job_run, state_data,
@@ -126,6 +178,30 @@ class ActionRunFactoryTestCase(TestCase):
 
         assert_equal(action_run.job_run_id, state_data['job_run_id'])
         assert not action_run.is_cleanup
+        assert_equal(action_run.__class__, SSHActionRun)
+
+    def test_action_run_from_state_paasta(self):
+        state_data = self.action_state_data
+        state_data['executor'] = ExecutorTypes.paasta
+        state_data['cluster'] = 'cluster-one'
+        state_data['pool'] = 'private'
+        state_data['cpus'] = 2
+        state_data['mem'] = 200
+        state_data['service'] = 'baz'
+        state_data['deploy_group'] = 'test'
+        action_run = ActionRunFactory.action_run_from_state(
+            self.job_run, state_data,
+        )
+
+        assert_equal(action_run.job_run_id, state_data['job_run_id'])
+        assert_equal(action_run.cluster, state_data['cluster'])
+        assert_equal(action_run.pool, state_data['pool'])
+        assert_equal(action_run.cpus, state_data['cpus'])
+        assert_equal(action_run.mem, state_data['mem'])
+        assert_equal(action_run.service, state_data['service'])
+        assert_equal(action_run.deploy_group, state_data['deploy_group'])
+        assert not action_run.is_cleanup
+        assert_equal(action_run.__class__, PaaSTAActionRun)
 
 
 class ActionRunTestCase(TestCase):
@@ -146,10 +222,10 @@ class ActionRunTestCase(TestCase):
             output_path=self.output_path,
             action_runner=self.action_runner,
         )
-
-    @teardown
-    def teardown_action_run(self):
-        shutil.rmtree(self.output_path.base, ignore_errors=True)
+        # These should be implemented in subclasses, we don't care here
+        self.action_run.submit_command = mock.Mock()
+        self.action_run.stop = mock.Mock()
+        self.action_run.kill = mock.Mock()
 
     def test_init_state(self):
         assert_equal(self.action_run.state, ActionRun.STATE_SCHEDULED)
@@ -157,6 +233,7 @@ class ActionRunTestCase(TestCase):
     def test_start(self):
         self.action_run.machine.transition('ready')
         assert self.action_run.start()
+        assert_equal(self.action_run.submit_command.call_count, 1)
         assert self.action_run.is_starting
         assert self.action_run.start_time
 
@@ -170,85 +247,6 @@ class ActionRunTestCase(TestCase):
         assert not self.action_run.start()
         assert self.action_run.is_failed
         assert_equal(self.action_run.exit_status, -1)
-
-    def test_start_node_error(self):
-        def raise_error(c):
-            raise node.Error("The error")
-        self.action_run.node = turtle.Turtle(submit_command=raise_error)
-        self.action_run.machine.transition('ready')
-        assert not self.action_run.start()
-        assert_equal(self.action_run.exit_status, -2)
-        assert self.action_run.is_failed
-
-    @mock.patch('tron.core.actionrun.filehandler', autospec=True)
-    def test_build_action_command(self, mock_filehandler):
-        autospec_method(self.action_run.watch)
-        serializer = mock_filehandler.OutputStreamSerializer.return_value
-        action_command = self.action_run.build_action_command()
-        assert_equal(action_command, self.action_run.action_command)
-        assert_equal(action_command, self.action_runner.create.return_value)
-        self.action_runner.create.assert_called_with(
-            self.action_run.id, self.action_run.command, serializer,
-        )
-        mock_filehandler.OutputStreamSerializer.assert_called_with(
-            self.action_run.output_path,
-        )
-        self.action_run.watch.assert_called_with(action_command)
-
-    def test_handler_running(self):
-        self.action_run.build_action_command()
-        self.action_run.machine.transition('start')
-        assert self.action_run.handler(
-            self.action_run.action_command, ActionCommand.RUNNING,
-        )
-        assert self.action_run.is_running
-
-    def test_handler_failstart(self):
-        self.action_run.build_action_command()
-        assert self.action_run.handler(
-            self.action_run.action_command, ActionCommand.FAILSTART,
-        )
-        assert self.action_run.is_failed
-
-    def test_handler_exiting_fail(self):
-        self.action_run.build_action_command()
-        self.action_run.action_command.exit_status = -1
-        self.action_run.machine.transition('start')
-        assert self.action_run.handler(
-            self.action_run.action_command, ActionCommand.EXITING,
-        )
-        assert self.action_run.is_failed
-        assert_equal(self.action_run.exit_status, -1)
-
-    def test_handler_exiting_success(self):
-        self.action_run.build_action_command()
-        self.action_run.action_command.exit_status = 0
-        self.action_run.machine.transition('start')
-        self.action_run.machine.transition('started')
-        assert self.action_run.handler(
-            self.action_run.action_command, ActionCommand.EXITING,
-        )
-        assert self.action_run.is_succeeded
-        assert_equal(self.action_run.exit_status, 0)
-
-    def test_handler_exiting_failunknown(self):
-        self.action_run.action_command = mock.create_autospec(
-            actioncommand.ActionCommand, exit_status=None,
-        )
-        self.action_run.machine.transition('start')
-        self.action_run.machine.transition('started')
-        assert self.action_run.handler(
-            self.action_run.action_command, ActionCommand.EXITING,
-        )
-        assert self.action_run.is_unknown
-        assert_equal(self.action_run.exit_status, None)
-
-    def test_handler_unhandled(self):
-        self.action_run.build_action_command()
-        assert self.action_run.handler(
-            self.action_run.action_command, ActionCommand.PENDING,
-        ) is None
-        assert self.action_run.is_scheduled
 
     def test_success(self):
         assert self.action_run.ready()
@@ -348,6 +346,108 @@ class ActionRunTestCase(TestCase):
             AttributeError,
             self.action_run.__getattr__, 'is_not_a_real_state',
         )
+
+
+class SSHActionRunTestCase(TestCase):
+
+    @setup
+    def setup_action_run(self):
+        self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
+        self.action_runner = mock.create_autospec(
+            actioncommand.NoActionRunnerFactory,
+        )
+        self.command = "do command %(actionname)s"
+        self.action_run = SSHActionRun(
+            "id",
+            "action_name",
+            mock.create_autospec(node.Node),
+            self.command,
+            output_path=self.output_path,
+            action_runner=self.action_runner,
+        )
+
+    @teardown
+    def teardown_action_run(self):
+        shutil.rmtree(self.output_path.base, ignore_errors=True)
+
+    def test_start_node_error(self):
+        def raise_error(c):
+            raise node.Error("The error")
+        self.action_run.node = turtle.Turtle(submit_command=raise_error)
+        self.action_run.machine.transition('ready')
+        assert not self.action_run.start()
+        assert_equal(self.action_run.exit_status, -2)
+        assert self.action_run.is_failed
+
+    @mock.patch('tron.core.actionrun.filehandler', autospec=True)
+    def test_build_action_command(self, mock_filehandler):
+        autospec_method(self.action_run.watch)
+        serializer = mock_filehandler.OutputStreamSerializer.return_value
+        action_command = self.action_run.build_action_command()
+        assert_equal(action_command, self.action_run.action_command)
+        assert_equal(action_command, self.action_runner.create.return_value)
+        self.action_runner.create.assert_called_with(
+            self.action_run.id, self.action_run.command, serializer,
+        )
+        mock_filehandler.OutputStreamSerializer.assert_called_with(
+            self.action_run.output_path,
+        )
+        self.action_run.watch.assert_called_with(action_command)
+
+    def test_handler_running(self):
+        self.action_run.build_action_command()
+        self.action_run.machine.transition('start')
+        assert self.action_run.handler(
+            self.action_run.action_command, ActionCommand.RUNNING,
+        )
+        assert self.action_run.is_running
+
+    def test_handler_failstart(self):
+        self.action_run.build_action_command()
+        assert self.action_run.handler(
+            self.action_run.action_command, ActionCommand.FAILSTART,
+        )
+        assert self.action_run.is_failed
+
+    def test_handler_exiting_fail(self):
+        self.action_run.build_action_command()
+        self.action_run.action_command.exit_status = -1
+        self.action_run.machine.transition('start')
+        assert self.action_run.handler(
+            self.action_run.action_command, ActionCommand.EXITING,
+        )
+        assert self.action_run.is_failed
+        assert_equal(self.action_run.exit_status, -1)
+
+    def test_handler_exiting_success(self):
+        self.action_run.build_action_command()
+        self.action_run.action_command.exit_status = 0
+        self.action_run.machine.transition('start')
+        self.action_run.machine.transition('started')
+        assert self.action_run.handler(
+            self.action_run.action_command, ActionCommand.EXITING,
+        )
+        assert self.action_run.is_succeeded
+        assert_equal(self.action_run.exit_status, 0)
+
+    def test_handler_exiting_failunknown(self):
+        self.action_run.action_command = mock.create_autospec(
+            actioncommand.ActionCommand, exit_status=None,
+        )
+        self.action_run.machine.transition('start')
+        self.action_run.machine.transition('started')
+        assert self.action_run.handler(
+            self.action_run.action_command, ActionCommand.EXITING,
+        )
+        assert self.action_run.is_unknown
+        assert_equal(self.action_run.exit_status, None)
+
+    def test_handler_unhandled(self):
+        self.action_run.build_action_command()
+        assert self.action_run.handler(
+            self.action_run.action_command, ActionCommand.PENDING,
+        ) is None
+        assert self.action_run.is_scheduled
 
 
 class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):

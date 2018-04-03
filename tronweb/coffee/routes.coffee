@@ -13,8 +13,6 @@ class module.TronRoutes extends Backbone.Router
         "job/:name":                "job"
         "job/:job_name/:run_num":   "jobrun"
         "job/:name/:run/:action":   "actionrun"
-        "services(;*params)":       "services"
-        "service/:name":            "service"
         "configs":                  "configs"
         "config/:name":             "config"
 
@@ -44,18 +42,6 @@ class module.TronRoutes extends Backbone.Router
 
     config: (name) ->
         @updateMainView(new Config(name: name), ConfigView)
-
-    services: (params) ->
-        collection = new ServiceCollection([],
-            refreshModel: new RefreshModel(),
-            filterModel: new FilterModel(module.getParamsMap(params)))
-        @updateMainView(collection, ServiceListView)
-
-    service: (name) ->
-        refreshModel = new RefreshModel()
-        @updateMainView(
-            new Service(name: name, refreshModel: refreshModel),
-            ServiceView)
 
     jobs: (params) ->
         collection = new JobCollection([],

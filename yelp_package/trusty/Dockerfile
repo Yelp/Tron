@@ -13,10 +13,11 @@ RUN apt-get -q update && \
         dpkg-dev \
         wget \
         gdebi-core \
+        git \
         gcc \
         gdebi-core \
-        git \
         help2man \
+        libdb5.3-dev \
         libffi-dev \
         libgpgme11 \
         libssl-dev \
@@ -36,6 +37,6 @@ RUN cd /tmp && \
 
 RUN wget https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py
 RUN python /tmp/get-pip.py
-RUN pip install tox wheel
+RUN pip install -U tox wheel setuptools
 
 WORKDIR /work

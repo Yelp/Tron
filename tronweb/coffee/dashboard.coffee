@@ -9,20 +9,17 @@ class window.Dashboard extends Backbone.Model
         options = options || {}
         @refreshModel = new RefreshModel(interval: 30)
         @filterModel = options.filterModel
-        @serviceList = new ServiceCollection()
         @jobList = new JobCollection()
-        @listenTo(@serviceList, "sync", @change)
         @listenTo(@jobList, "sync", @change)
 
     fetch: =>
-        @serviceList.fetch()
         @jobList.fetch()
 
     change: (args) ->
         @trigger("change", args)
 
     models: =>
-        @serviceList.models.concat @jobList.models
+        @jobList.models
 
     sorted: =>
         _.sortBy(@models(), (item) -> item.get('name'))
@@ -33,7 +30,6 @@ class window.Dashboard extends Backbone.Model
 
 matchType = (item, query) ->
     switch query
-        when 'service' then true if item instanceof Service
         when 'job' then true if item instanceof Job
 
 
@@ -56,8 +52,6 @@ class window.DashboardFilterView extends FilterView
               <option value="">All</option>
               <option <%= isSelected(defaultValue, 'job') %>
                   value="job">Scheduled Jobs</option>
-              <option <%= isSelected(defaultValue, 'service') %>
-                  value="service">Services</option>
             </select>
           </div>
         </div>
@@ -90,7 +84,6 @@ class window.DashboardView extends Backbone.View
 
     makeView: (model) =>
         switch model.constructor.name
-            when Service.name then new module.ServiceStatusBoxView(model: model)
             when Job.name then new module.JobStatusBoxView(model: model)
 
     renderRefresh: ->
@@ -137,20 +130,6 @@ class window.StatusBoxView extends ClickableListEntry
             name: formatName(@model.attributes.name)
         @$el.html @template(context)
         @
-
-class module.ServiceStatusBoxView extends StatusBoxView
-
-    buildUrl: =>
-        "#service/#{@model.get('name')}"
-
-    icon: "icon-repeat"
-
-    getState: =>
-        @model.get('state')
-
-    count: =>
-        @model.get('instances').length
-
 
 class module.JobStatusBoxView extends StatusBoxView
 

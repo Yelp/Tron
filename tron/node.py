@@ -197,7 +197,7 @@ class KnownHosts(KnownHostsFile):
         for entry in self.iterentries():
             if entry.matchesHost(hostname):
                 return entry.publicKey
-        log.warn("Missing host key for: %s", hostname)
+        log.warning("Missing host key for: %s", hostname)
 
 
 class RunState(object):
@@ -418,7 +418,10 @@ class Node(object):
                 run,
                 failure.Failure(
                     exc_value=ConnectError(
-                        "Connection to %s failed" % self.hostname, ), ),
+                        "Connection to %s@%s:%d failed" %
+                        (self.username, self.hostname, self.port),
+                    ),
+                ),
             )
 
         self.connection_defer.addCallback(call_open_channel)
@@ -627,7 +630,10 @@ class Node(object):
             run,
             failure.Failure(
                 exc_value=ConnectError(
-                    "Connection to %s failed" % self.hostname, ), ),
+                    "Connection to %s@%s:%d failed" %
+                    (self.username, self.hostname, self.port),
+                ),
+            ),
         )
 
         # We want to hard hangup on this connection. It could theoretically

@@ -84,7 +84,7 @@ def parse_args():
     parser = argparse.ArgumentParser(description='Action Runner for Tron')
     parser.add_argument(
         'output_dir',
-        help='an integer for the accumulator',
+        help='The directory to store the state of the action run',
     )
     parser.add_argument(
         'command',
@@ -92,7 +92,7 @@ def parse_args():
     )
     parser.add_argument(
         'run_id',
-        help='run_id of the process',
+        help='run_id of the action',
     )
     return parser.parse_args()
 

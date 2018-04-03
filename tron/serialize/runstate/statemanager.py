@@ -185,7 +185,7 @@ class PersistentStateManager(object):
                 self._impl.save(key_state_pairs)
             except Exception as e:
                 msg = "Failed to save state for %s: %s" % (keys, e)
-                log.warn(msg)
+                log.warning(msg)
                 raise PersistenceStoreError(msg)
 
     def cleanup(self):

@@ -8,13 +8,18 @@ tron.egg-info
 *.swo
 docs/_build/
 .idea
+tron.iml
 docs/images/
 *.dot
 tronweb/js/cs/*.js
 tronweb_tests/spec/*.js
 tronweb_tests/lib/
 .tox
+.tox-docker
 tron_state
+tron_state.db
+tron.iml
+__pycache__/
 
 # Generated debian artifacts
 debian/tron
@@ -25,6 +30,4 @@ debian/tron.debhelper.log
 debian/tron.postinst.debhelper
 debian/tron.postrm.debhelper
 debian/tron.prerm.debhelper
-debian/tron.substvars
 debian/debhelper-build-stamp
-example-cluster/tron_state.db

@@ -173,7 +173,7 @@ class ValidIntervalSchedulerTestCase(TestCase):
         assert_raises(ConfigError, self.validate, "6_minute")
 
     def test_valid_interval_scheduler_unicode(self):
-        assert_raises(ConfigError, self.validate, "6 ຖminute")
+        assert_raises(ConfigError, self.validate, "6 \x0e\x96minute")
 
     def test_valid_interval_scheduler_alias(self):
         config = self.validate("  hourly  ")

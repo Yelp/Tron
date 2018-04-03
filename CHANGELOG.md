@@ -1,5 +1,107 @@
 # Change Log
 
+## [0.7.8.0](https://github.com/Yelp/Tron/tree/0.7.8.0) (2018-04-02)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.7.1...0.7.8.0)
+
+**Merged pull requests:**
+
+- add a script to clean up namespace [\#409](https://github.com/Yelp/Tron/pull/409) ([chlgit](https://github.com/chlgit))
+- improve monitoring log [\#408](https://github.com/Yelp/Tron/pull/408) ([chlgit](https://github.com/chlgit))
+- Timezone date context bug [\#403](https://github.com/Yelp/Tron/pull/403) ([qui](https://github.com/qui))
+- Do a better job at printing exceptions when there are command render problems [\#402](https://github.com/Yelp/Tron/pull/402) ([solarkennedy](https://github.com/solarkennedy))
+- Make more sane tab completions for busy tron servers [\#400](https://github.com/Yelp/Tron/pull/400) ([solarkennedy](https://github.com/solarkennedy))
+- Chl/remove service code second pass [\#399](https://github.com/Yelp/Tron/pull/399) ([chlgit](https://github.com/chlgit))
+- Use PaaSTA config values in runs and create PaaSTA action run [\#398](https://github.com/Yelp/Tron/pull/398) ([qui](https://github.com/qui))
+
+## [v0.7.7.1](https://github.com/Yelp/Tron/tree/v0.7.7.1) (2018-03-23)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.7.0...v0.7.7.1)
+
+**Closed issues:**
+
+- Document example of setting a non-DST-aware time zone [\#82](https://github.com/Yelp/Tron/issues/82)
+
+**Merged pull requests:**
+
+- Yelp's itest changes [\#397](https://github.com/Yelp/Tron/pull/397) ([keymone](https://github.com/keymone))
+- add header required for CORS [\#396](https://github.com/Yelp/Tron/pull/396) ([Rob-Johnson](https://github.com/Rob-Johnson))
+- Use bsddb3 directly [\#395](https://github.com/Yelp/Tron/pull/395) ([keymone](https://github.com/keymone))
+- Removed service functionality from tronweb [\#394](https://github.com/Yelp/Tron/pull/394) ([solarkennedy](https://github.com/solarkennedy))
+- Print out job runs and action runs in tab completion cache [\#393](https://github.com/Yelp/Tron/pull/393) ([solarkennedy](https://github.com/solarkennedy))
+
+## [v0.7.7.0](https://github.com/Yelp/Tron/tree/v0.7.7.0) (2018-03-22)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.8.0.0...v0.7.7.0)
+
+**Merged pull requests:**
+
+- Only try advancing the time by one hour when localizing [\#392](https://github.com/Yelp/Tron/pull/392) ([keymone](https://github.com/keymone))
+- use the resolved namespace in tronfig [\#391](https://github.com/Yelp/Tron/pull/391) ([Rob-Johnson](https://github.com/Rob-Johnson))
+- Paasta executor configs [\#390](https://github.com/Yelp/Tron/pull/390) ([qui](https://github.com/qui))
+- Implement and use backward compatible Py2Shelf [\#389](https://github.com/Yelp/Tron/pull/389) ([keymone](https://github.com/keymone))
+- Dont try to localize time with tzinfo [\#388](https://github.com/Yelp/Tron/pull/388) ([keymone](https://github.com/keymone))
+- Fix example cluster and package building [\#386](https://github.com/Yelp/Tron/pull/386) ([keymone](https://github.com/keymone))
+- Remove service code - first pass [\#385](https://github.com/Yelp/Tron/pull/385) ([chlgit](https://github.com/chlgit))
+- fix check\_tron\_job broken due to job misconfigure issue [\#384](https://github.com/Yelp/Tron/pull/384) ([chlgit](https://github.com/chlgit))
+- Change location of tab complete cache [\#383](https://github.com/Yelp/Tron/pull/383) ([jglukasik](https://github.com/jglukasik))
+- Allow tab complete to read from cached file [\#382](https://github.com/Yelp/Tron/pull/382) ([jglukasik](https://github.com/jglukasik))
+
+## [v0.8.0.0](https://github.com/Yelp/Tron/tree/v0.8.0.0) (2018-03-14)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.6.1...v0.8.0.0)
+
+**Merged pull requests:**
+
+- fix get relevant action bug and add unit tests [\#381](https://github.com/Yelp/Tron/pull/381) ([chlgit](https://github.com/chlgit))
+
+## [v0.7.6.1](https://github.com/Yelp/Tron/tree/v0.7.6.1) (2018-03-12)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.6.0...v0.7.6.1)
+
+## [v0.7.6.0](https://github.com/Yelp/Tron/tree/v0.7.6.0) (2018-03-12)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.5.3...v0.7.6.0)
+
+**Merged pull requests:**
+
+- First pass at tab complete [\#380](https://github.com/Yelp/Tron/pull/380) ([jglukasik](https://github.com/jglukasik))
+- Added a 'make dev' target to iterate faster with local development [\#378](https://github.com/Yelp/Tron/pull/378) ([solarkennedy](https://github.com/solarkennedy))
+- Fix CommandIndex constructor to fix autocomplete in tronweb [\#376](https://github.com/Yelp/Tron/pull/376) ([solarkennedy](https://github.com/solarkennedy))
+- Python3 port [\#362](https://github.com/Yelp/Tron/pull/362) ([keymone](https://github.com/keymone))
+
+## [v0.7.5.3](https://github.com/Yelp/Tron/tree/v0.7.5.3) (2018-03-08)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.5.2...v0.7.5.3)
+
+**Closed issues:**
+
+- tronweb hijacks cmd+r \(browser refresh\) [\#278](https://github.com/Yelp/Tron/issues/278)
+
+**Merged pull requests:**
+
+- Move tron documentation to readthedocs.io [\#377](https://github.com/Yelp/Tron/pull/377) ([solarkennedy](https://github.com/solarkennedy))
+- Remove keybind hijacking. Fixes \#278 [\#375](https://github.com/Yelp/Tron/pull/375) ([solarkennedy](https://github.com/solarkennedy))
+- Chl/tron 224 detect jobs not scheduled [\#374](https://github.com/Yelp/Tron/pull/374) ([chlgit](https://github.com/chlgit))
+- Upgrade to argparse [\#372](https://github.com/Yelp/Tron/pull/372) ([jglukasik](https://github.com/jglukasik))
+
+## [v0.7.5.2](https://github.com/Yelp/Tron/tree/v0.7.5.2) (2018-03-02)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.5.1...v0.7.5.2)
+
+**Merged pull requests:**
+
+- Only localize datetimes when they lack tzinfo [\#373](https://github.com/Yelp/Tron/pull/373) ([solarkennedy](https://github.com/solarkennedy))
+- improving stuck job checking when runtime of job run unsorted [\#365](https://github.com/Yelp/Tron/pull/365) ([chlgit](https://github.com/chlgit))
+
+## [v0.7.5.1](https://github.com/Yelp/Tron/tree/v0.7.5.1) (2018-02-28)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.5.0...v0.7.5.1)
+
+**Merged pull requests:**
+
+- remove owner from tronview display [\#371](https://github.com/Yelp/Tron/pull/371) ([Rob-Johnson](https://github.com/Rob-Johnson))
+- Make tron pidfile error message more clear [\#367](https://github.com/Yelp/Tron/pull/367) ([jglukasik](https://github.com/jglukasik))
+
+## [v0.7.5.0](https://github.com/Yelp/Tron/tree/v0.7.5.0) (2018-02-28)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.4.2...v0.7.5.0)
+
+**Merged pull requests:**
+
+- rmove notes/summary/owner [\#368](https://github.com/Yelp/Tron/pull/368) ([chlgit](https://github.com/chlgit))
+- Allow jobs to override the default timezone [\#360](https://github.com/Yelp/Tron/pull/360) ([solarkennedy](https://github.com/solarkennedy))
+
 ## [v0.7.4.2](https://github.com/Yelp/Tron/tree/v0.7.4.2) (2018-02-27)
 [Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.4.1...v0.7.4.2)
 

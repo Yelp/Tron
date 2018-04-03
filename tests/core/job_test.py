@@ -71,6 +71,8 @@ class JobTestCase(TestCase):
             run_limit=20,
             actions={action.name: action},
             cleanup_action=None,
+            service='foo',
+            deploy_group='test',
         )
         scheduler = 'scheduler_token'
         parent_context = 'parent_context_token'
@@ -86,6 +88,8 @@ class JobTestCase(TestCase):
         )
         assert_equal(new_job.enabled, True)
         assert_equal(new_job.get_monitoring()["team"], "foo")
+        assert_equal(new_job.get_service(), 'foo')
+        assert_equal(new_job.get_deploy_group(), 'test')
         assert new_job.action_graph
 
     def test_update_from_job(self):
@@ -415,6 +419,17 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
         manual_runs = self.job_scheduler.manual_start()
 
         self.job.build_new_runs.assert_called_with(self.now, manual=True)
+        assert_length(manual_runs, 1)
+        self.manual_run.start.assert_called_once_with()
+
+    def test_manual_start_default_with_timezone(self):
+        self.job.time_zone = mock.Mock()
+        with mock.patch('tron.core.job.timeutils.current_time') as mock_current:
+            manual_runs = self.job_scheduler.manual_start()
+            mock_current.assert_called_with(tz=self.job.time_zone)
+            self.job.build_new_runs.assert_called_with(
+                mock_current.return_value, manual=True,
+            )
         assert_length(manual_runs, 1)
         self.manual_run.start.assert_called_once_with()
 

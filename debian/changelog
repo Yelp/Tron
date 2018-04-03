@@ -5,6 +5,27 @@ tron (0.8.0.0) trusty; urgency=medium
 
  -- root <root@7a84f15cf87d>  Wed, 14 Mar 2018 11:14:08 +0000
 
+tron (0.7.7.1) trusty; urgency=medium
+
+  * 0.7.7.1 tagged with 'make release'
+    Commit: Preparing 0.7.7.1 release  - fix shelve regression - use
+    bsddb3 directly - remove service functionality from tronweb - add
+    CORS header - dockerize itests - test debian package in travis - tab
+    completion improvements
+
+ -- root <root@98871b48f7e4>  Fri, 23 Mar 2018 21:11:20 +0000
+
+tron (0.7.7.0) trusty; urgency=medium
+
+  * 0.7.7.0 tagged with 'make release'
+  * Cache job names in tab completion
+  * Remove core service class (services are deprecated now)
+  * Add backward compatible shelve
+  * Add initial config fields for actions on PaaSTA
+  * Bug fixes in tronfig and DST time resolution
+
+ -- root <root@bc3b0b62294a>  Thu, 22 Mar 2018 18:33:40 +0000
+
 tron (0.7.6.1) trusty; urgency=medium
 
   * 0.7.6.1 tagged with 'make release'
