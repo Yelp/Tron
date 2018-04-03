@@ -104,7 +104,7 @@ def convert_state(opts):
     if opts.namespace:
         job_names = strip_namespace(job_names)
 
-    job_states, service_states = source_manager.restore(
+    job_states = source_manager.restore(
         job_names, skip_validation=True,
     )
     source_manager.cleanup()
