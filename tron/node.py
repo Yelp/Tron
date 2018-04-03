@@ -191,7 +191,7 @@ class KnownHosts(KnownHostsFile):
         for entry in self.iterentries():
             if entry.matchesHost(hostname):
                 return entry.publicKey
-        log.warn("Missing host key for: %s", hostname)
+        log.warning("Missing host key for: %s", hostname)
 
 
 class RunState(object):

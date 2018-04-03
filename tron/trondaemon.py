@@ -81,14 +81,14 @@ class PIDFile(object):
         try:
             self.lock.release()
         except lockfile.NotLocked:
-            log.warn("Lockfile was already unlocked.")
+            log.warning("Lockfile was already unlocked.")
 
     def __exit__(self, *args):
         self._try_unlock()
         try:
             os.unlink(self.filename)
         except OSError:
-            log.warn("Failed to remove pidfile: %s" % self.filename)
+            log.warning("Failed to remove pidfile: %s" % self.filename)
 
 
 def setup_logging(options):

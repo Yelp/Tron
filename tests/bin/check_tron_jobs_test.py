@@ -20,7 +20,7 @@ class CheckJobsTestCase(TestCase):
     def test_check_job_result_exception(self, mock_args, mock_cmd_utils, mock_client, mock_check_job_result):
         type(mock_args.return_value).job = PropertyMock(return_value=None)
         mock_client.return_value.jobs.return_value = [
-            'job1', 'job2', 'job3',
+            {'name': 'job1'}, {'name': 'job2'}, {'name': 'job3'},
         ]
         mock_check_job_result.side_effect = [
             KeyError('foo'), None, TypeError,

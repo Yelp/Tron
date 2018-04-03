@@ -222,7 +222,7 @@ class OutputPath(object):
         try:
             shutil.rmtree(str(self))
         except OSError as e:
-            log.warn("Failed to delete %s: %s" % (self, e))
+            log.warning("Failed to delete %s: %s" % (self, e))
 
     def __eq__(self, other):
         return self.base == other.base and self.parts == other.parts

@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 import datetime
 import re
 import time
+from calendar import timegm
 
 
 def current_time(tz=None):
@@ -20,6 +21,9 @@ def current_timestamp():
 
 def to_timestamp(time_val):
     """Generate a unix timestamp for the given datetime instance"""
+    # TODO: replace with datetime.timestamp() after python3.6
+    if time_val.tzinfo:
+        return timegm(time_val.utctimetuple())
     return time.mktime(time_val.utctimetuple())
 
 
