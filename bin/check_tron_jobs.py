@@ -24,7 +24,7 @@ class State(Enum):
     NO_RUN_YET = "no_run_yet"
     NOT_SCHEDULED = "not_scheduled"
     WAITING_FOR_FIRST_RUN = "waiting_for_first_run"
-    UNKNOWN = "UNKNOWN"
+    UNKNOWN = "unknown"
 
 
 def parse_cli():
@@ -71,29 +71,30 @@ def compute_check_result_for_job_runs(client, job, job_content):
     )
     action_run_details = client.action_runs(action_run_id.url, num_lines=10)
 
-    if last_state == State.SUCCEEDED or last_state == State.WAITING_FOR_FIRST_RUN:
-        prefix = "OK"
-        annotation = ""
+    if last_state == State.SUCCEEDED:
+        prefix = "OK: The last job run succeeded"
+        status = 0
+    elif last_state == State.WAITING_FOR_FIRST_RUN:
+        prefix = "OK: The job is 'new' and waiting for the first run"
         status = 0
     elif last_state == State.STUCK:
-        prefix = "WARN"
-        annotation = "Job still running when next job is scheduled to run (stuck?)"
+        prefix = "WARN: Job still running when next job is scheduled to run (stuck?)"
         status = 1
     elif last_state == State.FAILED:
-        prefix = "CRIT"
-        annotation = ""
+        prefix = "CRIT: The last job run failed!"
         status = 2
     elif last_state == State.NOT_SCHEDULED:
-        prefix = "CRIT"
-        annotation = "Job is not scheduled at all"
+        prefix = "CRIT: Job is not scheduled at all!"
         status = 2
+    elif last_state == State.UNKNOWN:
+        prefix = "WARN: Job has gone 'unknown' and might need manual intervention"
+        status = 1
     else:
-        prefix = "UNKNOWN"
-        annotation = ""
+        prefix = "UNKNOWN: The job is in a state that check_tron_jobs doesn't understand"
         status = 3
 
     kwargs["output"] = (
-        "{}: {}\n"
+        "{}\n"
         "{}'s last relevant run (run {}) {}.\n\n"
         "Here is the last action:"
         "{}\n\n"
@@ -102,7 +103,7 @@ def compute_check_result_for_job_runs(client, job, job_content):
         "Here is the whole job view for context:\n"
         "{}"
     ).format(
-        prefix, annotation, job['name'], relevant_job_run['id'], relevant_job_run['state'],
+        prefix, job['name'], relevant_job_run['id'], relevant_job_run['state'],
         pretty_print_actions(action_run_details),
         pretty_print_job_run(relevant_job_run),
         pretty_print_job(job_content),
@@ -134,8 +135,9 @@ def get_relevant_run_and_state(job_runs):
     if run is not None:
         return run, State.STUCK
     for run in job_runs['runs']:
-        if run.get('state', 'unknown') in ["failed", "succeeded"]:
-            return run, State(run.get('state', 'unknown'))
+        state = run.get('state', 'unknown')
+        if state in ["failed", "succeeded", "unknown"]:
+            return run, State(state)
     return job_runs['runs'][0], State.WAITING_FOR_FIRST_RUN
 
 
