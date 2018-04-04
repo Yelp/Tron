@@ -26,7 +26,7 @@ class RequestTestCase(TestCase):
 
     @setup
     def setup_options(self):
-        self.url = 'http://localhost:8089/services/'
+        self.url = 'http://localhost:8089/jobs/'
 
     @setup_teardown
     def patch_urllib(self):
@@ -181,7 +181,6 @@ class GetContentFromIdentifierTestCase(TestCase):
                 'MASTER.nameb': '',
                 'OTHER.nameg':  '',
             },
-            'services': ['MASTER.foo'],
         }
 
     def test_get_url_from_identifier_job_no_namespace(self):

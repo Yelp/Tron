@@ -72,7 +72,7 @@ class ManifestFile(object):
     def delete(self, name):
         manifest = read(self.filename)
         if name not in manifest:
-            msg = "Name %s does not exist in manifest, cannot delete."
+            msg = "Namespace %s does not exist in manifest, cannot delete."
             log.info(msg % name)
             return
 
@@ -113,7 +113,12 @@ class ConfigManager(object):
         write_raw(filename, content)
 
     def delete_config(self, name):
-        filename = self.get_filename_from_manifest(name)
+        filename = self.manifest.get_file_name(name)
+        if not filename:
+            msg = "Namespace %s does not exist in manifest, cannot delete."
+            log.info(msg % name)
+            return
+
         self.manifest.delete(name)
         os.remove(filename)
 

@@ -1,6 +1,6 @@
 """
  Migrate a state file/database from one StateStore implementation to another. It
- may also be used to add namespace names to jobs/services when upgrading
+ may also be used to add namespace names to jobs when upgrading
  from pre-0.5.2 to version 0.5.2.
 
  Usage:
@@ -51,7 +51,7 @@ def parse_options():
     )
     parser.add_option(
         '--namespace', action='store_true',
-        help="Move jobs/services which are missing a namespace to the MASTER",
+        help="Move jobs which are missing a namespace to the MASTER",
     )
 
     opts, args = parser.parse_args()
@@ -100,27 +100,21 @@ def convert_state(opts):
     msg = "Migrating state from %s to %s"
     print(msg % (source_manager._impl, dest_manager._impl))
 
-    job_names, service_names = container.get_job_and_service_names()
+    job_names = container.get_job_names()
     if opts.namespace:
         job_names = strip_namespace(job_names)
-        service_names = strip_namespace(service_names)
 
     job_states, service_states = source_manager.restore(
-        job_names, service_names, skip_validation=True,
+        job_names, skip_validation=True,
     )
     source_manager.cleanup()
 
     if opts.namespace:
         job_states = add_namespaces(job_states)
-        service_states = add_namespaces(service_states)
 
     for name, job in six.iteritems(job_states):
         dest_manager.save(runstate.JOB_STATE, name, job)
     print("Migrated %s jobs." % len(job_states))
-
-    for name, service in six.iteritems(service_states):
-        dest_manager.save(runstate.SERVICE_STATE, name, service)
-    print("Migrated %s services." % len(service_states))
 
     dest_manager.cleanup()
 
