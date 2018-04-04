@@ -175,3 +175,29 @@ class CheckJobsTestCase(TestCase):
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.1')
         assert_equal(state, State.WAITING_FOR_FIRST_RUN)
+
+    def test_job_has_no_runs_at_al(self):
+        job_runs = {
+            'status': 'running', 'next_run': None, 'runs': [],
+        }
+        run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
+        assert_equal(run, None)
+        assert_equal(state, State.NO_RUN_YET)
+
+    def test_job_unknown(self):
+        job_runs = {
+            'status': 'running', 'next_run': None, 'runs': [
+                {
+                    'id': 'MASTER.test.3', 'state': 'scheduled', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)),
+                },
+                {
+                    'id': 'MASTER.test.2', 'state': 'unknown', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 1200)),
+                },
+                {
+                    'id': 'MASTER.test.1', 'state': 'succeeded', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 1800)),
+                },
+            ],
+        }
+        run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
+        assert_equal(run['id'], 'MASTER.test.2')
+        assert_equal(state, State.UNKNOWN)
