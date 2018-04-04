@@ -47,6 +47,8 @@ def build_url_request(uri, data, headers=None):
 
 def load_response_content(http_response):
     encoding = http_response.headers.get_content_charset()
+    if encoding is None:
+        encoding = 'utf8'
     content = http_response.read().decode(encoding)
     try:
         return Response(None, None, simplejson.loads(content))
@@ -59,12 +61,14 @@ def build_http_error_response(exc):
     content = exc.read() if hasattr(exc, 'read') else None
     if content:
         encoding = exc.headers.get_content_charset()
+        if encoding is None:
+            encoding = 'utf8'
         content = content.decode(encoding)
         try:
             content = simplejson.loads(content)
             content = content['error']
         except ValueError:
-            log.warn(
+            log.warning(
                 "Incorrectly formatted error response: {}".format(content),
             )
     return Response(exc.code, exc.msg, content)
