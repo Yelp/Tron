@@ -7,9 +7,9 @@ To install Tron you will need:
   `github <http://github.com/yelp/Tron>`_ or `pypi <http://pypi.python.org/pypi/tron>`_
   (see :ref:`installing_tron`).
 * A server on which to run :command:`trond`.
-* One or more batch/service boxes which will run the Jobs and Services.
+* One or more batch boxes which will run the Jobs.
 * An SSH key and a user that will allow the tron daemon to login to all of the
-  batch/service machines without a password prompt.
+  batch machines without a password prompt.
 
 .. _installing_tron:
 
@@ -49,9 +49,6 @@ Once :command:`trond` is running, you can view its status using :command:`tronvi
 to specify a different server, and have that setting saved in ``~/.tron``)::
 
     $ tronview
-
-    Services:
-    No services
 
     Jobs:
     No jobs
@@ -97,9 +94,6 @@ configured job. Note that it is configured to run 10 minutes from now. This
 should give you time to examine the job to ensure you really want to run it.
 
 ::
-
-    Services:
-    No services
 
     Jobs:
     Name              State      Scheduler            Last Success

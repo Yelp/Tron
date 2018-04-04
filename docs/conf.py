@@ -15,7 +15,8 @@ from __future__ import unicode_literals
 
 import os
 import sys
-from unittest.mock import MagicMock
+
+from mock import MagicMock
 
 sys.path.insert(0, os.path.abspath('..'))
 
@@ -234,7 +235,7 @@ man_pages = [
         ['Yelp, Inc.'], 1,
     ),
     (
-        'man_tronctl', 'tronctl', 'control Tron jobs and services',
+        'man_tronctl', 'tronctl', 'control Tron jobs',
         ['Yelp, Inc.'], 1,
     ),
     (
