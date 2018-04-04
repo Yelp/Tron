@@ -8,7 +8,6 @@ from contextlib import contextmanager
 
 import six
 
-import tron
 from tron.config import schema
 from tron.core import job
 from tron.serialize import runstate
@@ -60,7 +59,8 @@ class StateMetadata(object):
     RunState interface as Jobs and Services.
     """
     name = 'StateMetadata'
-    version = tron.__version_info__
+    # version = tron.__version_info__
+    version = (0, 7, 0, 0)
 
     def __init__(self):
         self.state_data = {
@@ -76,11 +76,8 @@ class StateMetadata(object):
         if not metadata:
             return
 
-        version = metadata['version']
-        # Names (and state keys) changed in 0.5.2, requires migration
-        # see tools/migration/migrate_state_to_namespace
-        if version > cls.version or version < (0, 5, 2):
-            msg = "State for version %s, expected %s"
+        if metadata['version'][0] > cls.version[0]:
+            msg = "State version %s, expected <= %s"
             raise VersionMismatchError(
                 msg % (metadata['version'], cls.version),
             )
