@@ -327,10 +327,13 @@ class ActionRun(object):
             return self.machine.transition(target)
 
     def retry(self):
-        # kill if in flight
         if self.retries_remaining is None or self.retries_remaining <= 0:
             self.retries_remaining = 1
-        self.kill(final=False)
+
+        if self.is_done:
+            self.fail(None)
+        else:
+            self.kill(final=False)
 
     def fail(self, exit_status=0):
         if self.retries_remaining is not None:
