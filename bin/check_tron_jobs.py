@@ -16,6 +16,9 @@ from tron.commands.client import get_object_type_from_identifier
 
 log = logging.getLogger('check_tron_jobs')
 
+# This script run every 300 seconds currently
+RUN_INTERVAL = 300
+
 
 class State(Enum):
     SUCCEEDED = "succeeded"
@@ -39,6 +42,10 @@ def parse_cli():
     )
     args = parser.parse_args()
     return args
+
+
+def _timestamp_to_timeobj(timestamp):
+    return time.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
 
 
 def compute_check_result_for_job_runs(client, job, job_content):
@@ -153,7 +160,7 @@ def is_job_stuck(job_runs):
     for run in sorted(job_runs['runs'], key=lambda k: k['run_time'], reverse=True):
         if run.get('state', 'unknown') == "running":
             if next_run_time:
-                difftime = time.strptime(next_run_time, '%Y-%m-%d %H:%M:%S')
+                difftime = _timestamp_to_timeobj(next_run_time)
                 if time.time() > time.mktime(difftime):
                     return run
         next_run_time = run.get('run_time', None)
@@ -172,12 +179,38 @@ def get_relevant_action(action_runs, last_state):
     return action_runs[-1]
 
 
+def guess_realert_every(job):
+    try:
+        job_next_run = job.get('next_run', None)
+        if job_next_run is None:
+            return -1
+        job_runs = job.get('runs', [])
+        job_runs_started = [
+            run for run in job_runs if run['start_time'] is not None
+        ]
+        if len(job_runs_started) == 0:
+            return -1
+        job_previous_run = max(
+            job_runs_started, key=lambda k: k['start_time'],
+        ).get('start_time')
+        time_diff = (time.mktime(_timestamp_to_timeobj(job_next_run)) -
+                     time.mktime(_timestamp_to_timeobj(job_previous_run)))
+        realert_every = max(int(time_diff / RUN_INTERVAL), 1)
+    except Exception as e:
+        log.warning("guess_realert_every failed: {}".format(e))
+        return -1
+    return realert_every
+
+
 def compute_check_result_for_job(client, job):
     kwargs = {
         "name": "check_tron_job.{}".format(job['name']),
         "source": "tron",
     }
     kwargs.update(job['monitoring'])
+    if 'realert_every' not in kwargs:
+        kwargs['realert_every'] = guess_realert_every(job)
+
     status = job["status"]
     if status == "disabled":
         kwargs["output"] = "OK: {} is disabled and won't be checked.".format(
