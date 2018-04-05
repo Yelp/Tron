@@ -20,15 +20,17 @@ class RequestArgsTestCase(TestCase):
     @setup
     def setup_args(self):
         self.args = {
-            'number':   ['123'],
-            'string':   ['astring'],
-            'boolean':  ['1'],
-            'datetime': ['2012-03-14 15:09:26'],
+            b'number':   [b'123'],
+            b'string':   [b'astring'],
+            b'boolean':  [b'1'],
+            b'datetime': [b'2012-03-14 15:09:26'],
         }
         self.datetime = datetime.datetime(2012, 3, 14, 15, 9, 26)
         self.request = Turtle(args=self.args)
 
     def _add_arg(self, name, value):
+        name = name.encode()
+        value = value.encode()
         if name not in self.args:
             self.args[name] = []
         self.args[name].append(value)

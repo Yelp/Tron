@@ -13,20 +13,29 @@ def get_integer(request, key):
     """Returns the first value in the request args for the given key, if that
     value is an integer. Otherwise returns None.
     """
-    if not request.args or key not in request.args:
+    value = get_string(request, key)
+    if value is None or not value.isdigit():
         return None
 
-    value = request.args[key][0]
-    if not value.isdigit():
-        return None
     return int(value)
 
 
 def get_string(request, key):
     """Returns the first value in the request args for a given key."""
-    if not request.args or key not in request.args:
+    if not request.args:
         return None
-    return request.args[key][0]
+
+    if key is not bytes:
+        key = key.encode()
+
+    if key not in request.args:
+        return None
+
+    val = request.args[key][0]
+    if val and type(val) is bytes:
+        val = val.decode()
+
+    return val
 
 
 def get_bool(request, key):
@@ -38,9 +47,11 @@ def get_datetime(request, key):
     """Returns the first value in the request args for a given key. Casts to
     a datetime. Returns None if the value cannot be converted to datetime.
     """
-    if not request.args or key not in request.args:
-        return False
+    val = get_string(request, key)
+    if not val:
+        return None
+
     try:
-        return datetime.datetime.strptime(request.args[key][0], DATE_FORMAT)
+        return datetime.datetime.strptime(val, DATE_FORMAT)
     except ValueError:
         return None

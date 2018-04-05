@@ -48,7 +48,7 @@ def respond(request, response_dict, code=http.OK, headers=None):
         request.setHeader(str(key), str(val))
     return str(
         json.dumps(response_dict, cls=JSONEncoder) if response_dict else "",
-    )
+    ).encode('utf-8')
 
 
 def handle_command(request, api_controller, obj, **kwargs):
