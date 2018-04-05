@@ -11,7 +11,7 @@ if ! which ssh; then
 fi
 
 echo Installing packages
-pip install -e .
+pip3.6 install -e .
 
 echo Starting Tron
 exec trond -l logging.conf --nodaemon --working-dir=/nail/tron -v
