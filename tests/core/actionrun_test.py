@@ -241,7 +241,8 @@ class ActionRunTestCase(TestCase):
         self.action_run.fail()
         assert not self.action_run.start()
 
-    def test_start_invalid_command(self):
+    @mock.patch('tron.core.actionrun.log')
+    def test_start_invalid_command(self, _log):
         self.action_run.bare_command = "%(notfound)s"
         self.action_run.machine.transition('ready')
         assert not self.action_run.start()
@@ -313,7 +314,8 @@ class ActionRunTestCase(TestCase):
         self.action_run.bare_command = "new command"
         assert_equal(self.action_run.command, self.rendered_command)
 
-    def test_command_failed_render(self):
+    @mock.patch('tron.core.actionrun.log')
+    def test_command_failed_render(self, _log):
         self.action_run.bare_command = "%(this_is_missing)s"
         assert_equal(self.action_run.command, ActionRun.FAILED_RENDER)
 
@@ -393,6 +395,27 @@ class SSHActionRunTestCase(TestCase):
             self.action_run.output_path,
         )
         self.action_run.watch.assert_called_with(action_command)
+
+    def test_retry(self):
+        self.action_run.retries_remaining = 2
+        self.action_run.exit_statuses = []
+        self.action_run.build_action_command()
+        self.action_run.action_command.exit_status = -1
+        self.action_run.machine.transition('start')
+
+        self.action_run.fail(-1)
+        assert self.action_run.retries_remaining == 1
+        assert not self.action_run.is_failed
+
+        self.action_run.fail(-1)
+        assert self.action_run.retries_remaining == 0
+        assert not self.action_run.is_failed
+
+        self.action_run.fail(-1)
+        assert self.action_run.retries_remaining == 0
+        assert self.action_run.is_failed
+
+        assert_equal(self.action_run.exit_statuses, [-1, -1])
 
     def test_handler_running(self):
         self.action_run.build_action_command()

@@ -269,33 +269,33 @@ class ValidateAction(Validator):
     config_class = ConfigAction
 
     defaults = {
-        'node':                 None,
-        'requires':             (),
-        'executor':             schema.ExecutorTypes.ssh,
-        'cluster':              None,
-        'pool':                 None,
-        'cpus':                 None,
-        'mem':                  None,
-        'service':              None,
-        'deploy_group':         None,
+        'node':         None,
+        'requires':     (),
+        'executor':     schema.ExecutorTypes.ssh,
+        'cluster':      None,
+        'pool':         None,
+        'cpus':         None,
+        'mem':          None,
+        'service':      None,
+        'deploy_group': None,
+        'retries':      None,
     }
     requires = build_list_of_type_validator(
         valid_action_name, allow_empty=True,
     )
     validators = {
-        'name':                 valid_action_name,
-        'command':              build_format_string_validator(action_context),
-        'node':                 valid_node_name,
-        'requires':             requires,
-        'executor':             config_utils.build_enum_validator(
-            schema.ExecutorTypes,
-        ),
-        'cluster':              valid_cluster_name,
-        'pool':                 valid_string,
-        'cpus':                 valid_float,
-        'mem':                  valid_float,
-        'service':              valid_string,
-        'deploy_group':         valid_string,
+        'name':         valid_action_name,
+        'command':      build_format_string_validator(action_context),
+        'node':         valid_node_name,
+        'requires':     requires,
+        'executor':     config_utils.build_enum_validator(schema.ExecutorTypes),
+        'cluster':      valid_cluster_name,
+        'pool':         valid_string,
+        'cpus':         valid_float,
+        'mem':          valid_float,
+        'service':      valid_string,
+        'deploy_group': valid_string,
+        'retries':      valid_int,
     }
 
 
