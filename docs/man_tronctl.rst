@@ -6,7 +6,7 @@ tronctl
 Synopsys
 --------
 
-``tronctl [--server <host:port>] [--verbose] <command> <job_name | job_run_id | action_run_id | service_name>``
+``tronctl [--server <host:port>] [--verbose] <command> <job_name | job_run_id | action_run_id>``
 
 Description
 -----------
@@ -78,24 +78,8 @@ fail <job_run_id | action_run_id>
 stop <action_run_id>
     Stop an action run
 
-stop <service>
-    Stop (SIGTERM) a service
-
-kill <service>
-    Force stop (SIGKILL) a service
-
 kill <action_run_id>
     Force stop (SIGKILL) an action run
-
-
-Service Commands
-----------------
-
-start <service name>
-    Start the service.
-
-stop <service name>
-    Stop the service.
 
 
 Examples

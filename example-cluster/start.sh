@@ -1,22 +1,17 @@
 #!/usr/bin/env bash
 
-set -eu
-
-if ! dpkg -l ssh >/dev/null 2>&1; then
-  echo Installing SSH
-  apt-get install -y ssh
+if ! which ssh; then
+  echo Setting up SSH
+  apt-get -qq -y install ssh
+  mkdir -p ~/.ssh
+  cp example-cluster/insecure_key ~/.ssh/id_rsa
+  cp example-cluster/insecure_key.pub ~/.ssh/aithorized_keys
+  chmod -R 0600 ~/.ssh
   service ssh start
 fi
 
-if [ ! -f /root/.ssh/id_rsa ]; then
-  echo Setting up SSH keys
-  yes | ssh-keygen -q -N "" -f /root/.ssh/id_rsa >/dev/null
-  cp /root/.ssh/id_rsa.pub /root/.ssh/authorized_keys
-  eval $(ssh-agent) || true
-fi
-
 echo Installing packages
-pip3.6 install -q -e .
+pip install -e .
 
-echo Starting trond
+echo Starting Tron
 exec trond -l logging.conf --nodaemon --working-dir=/nail/tron -v
