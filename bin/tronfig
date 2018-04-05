@@ -170,7 +170,7 @@ if __name__ == '__main__':
         content = client.config(args.source)['config']
         if type(content) is not bytes:
             content = content.encode('utf8')
-        print(content)
+        sys.stdout.write(content)
     elif args.delete:
         delete_config(client, args.source)
     else:
