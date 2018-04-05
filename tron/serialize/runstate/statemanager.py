@@ -59,7 +59,9 @@ class StateMetadata(object):
     RunState interface as Jobs and Services.
     """
     name = 'StateMetadata'
-    # version = tron.__version_info__
+
+    # State schema version, only first component counts,
+    # for backwards compatibility
     version = (0, 7, 0, 0)
 
     def __init__(self):
@@ -71,7 +73,7 @@ class StateMetadata(object):
     @classmethod
     def validate_metadata(cls, metadata):
         """Raises an exception if the metadata version is newer then
-        tron.__version__.
+        StateMetadata.version
         """
         if not metadata:
             return
