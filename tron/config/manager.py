@@ -45,7 +45,10 @@ def read_raw(path):
 
 
 def hash_digest(content):
-    return hashlib.sha1(content.encode('utf-8')).hexdigest()
+    # TODO: use maybe_encode()
+    if type(content) is not bytes:
+        content = content.encode('utf8')
+    return hashlib.sha1(content).hexdigest()
 
 
 class ManifestFile(object):
