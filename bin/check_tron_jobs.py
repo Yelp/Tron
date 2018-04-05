@@ -138,7 +138,18 @@ def get_relevant_run_and_state(job_runs):
         state = run.get('state', 'unknown')
         if state in ["failed", "succeeded", "unknown"]:
             return run, State(state)
+        if state in ["running"]:
+            action_state = is_action_failed_or_unknown(run)
+            if action_state != State.SUCCEEDED:
+                return run, action_state
     return job_runs['runs'][0], State.WAITING_FOR_FIRST_RUN
+
+
+def is_action_failed_or_unknown(job_run):
+    for run in job_run.get('runs', []):
+        if run.get('state', None) in ["failed", "unknown"]:
+            return State(run.get('state'))
+    return State.SUCCEEDED
 
 
 def is_job_scheduled(job_runs):
