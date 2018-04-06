@@ -25,7 +25,7 @@ def get_string(request, key):
     if not request.args:
         return None
 
-    if key is not bytes:
+    if type(key) is not bytes:
         key = key.encode()
 
     if key not in request.args:
