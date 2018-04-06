@@ -50,7 +50,8 @@ def respond(request, response_dict, code=http.OK, headers=None):
     result = json.dumps(
         response_dict, cls=JSONEncoder,
     ) if response_dict else ""
-    if type(result) is bytes:
+
+    if type(result) is not bytes:
         result = result.encode('utf8')
 
     return result
