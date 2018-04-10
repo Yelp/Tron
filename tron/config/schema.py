@@ -176,6 +176,7 @@ ConfigCleanupAction = config_object_factory(
         'mem',                  # float
         'service',              # str
         'deploy_group',         # str
+        'retries',              # int
     ],
 )
 
