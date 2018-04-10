@@ -15,10 +15,12 @@ nodes:
 time_zone: US/Eastern
 
 jobs:
-   - name: "test"
-     node: localhost
-     schedule: "daily 17:00:00"
-     time_zone: "US/Pacific"
-     actions:
-        - name: "first"
-          command: "sleep 5m"
+  - name: "test"
+    node: localhost
+    schedule: "daily 17:00:00"
+    time_zone: "US/Pacific"
+    actions:
+      - name: "first"
+        command: "sleep 5m"
+    cleanup_action:
+      command: "echo %(last_success:shortdate)s %(cleanup_job_status)s"
