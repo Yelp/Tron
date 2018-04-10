@@ -6,6 +6,7 @@ RUN apt-get update > /dev/null && \
         dpkg-dev \
         devscripts \
         wget \
+        faketime \
         gdebi-core \
         git \
         gcc \
