@@ -1,3 +1,11 @@
+tron (0.7.8.2) trusty; urgency=medium
+
+  * 0.7.8.2 tagged with 'make release'
+    Commit: Merge pull request #424 from Yelp/cleanup-retries-validation
+    Fix validation of cleanup action
+
+ -- root <root@bdc822939744>  Tue, 10 Apr 2018 11:52:29 +0000
+
 tron (0.7.8.1) trusty; urgency=medium
 
   * 0.7.8.1 tagged with 'make release'
