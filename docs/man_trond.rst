@@ -11,7 +11,7 @@ Synopsys
 Description
 -----------
 
-**trond** is the tron daemon that manages all jobs and services.
+**trond** is the tron daemon that manages all jobs.
 
 Options
 -------
