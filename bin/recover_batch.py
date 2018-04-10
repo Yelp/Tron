@@ -3,6 +3,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import argparse
+import sys
 
 import yaml
 from twisted.internet import inotify
@@ -32,10 +33,11 @@ def parse_args():
 def notify(ignored, filepath, mask):
     with open(filepath.path) as f:
         last_entry = f.readlines()[-1]
-        x = yaml.loads(last_entry)
-        return_code = x['return_code']
-        if return_code:
-            exit(return_code)
+        x = yaml.load(last_entry)
+        return_code = x.get('return_code')
+        if return_code is not None:
+            reactor.stop()
+            sys.exit(return_code)
 
 
 def get_existing_return_code(filepath):
@@ -54,6 +56,6 @@ if __name__ == "__main__":
     args = parse_args()
     existing_return_code = get_existing_return_code(args.filepath)
     if existing_return_code is not None:
-        exit(existing_return_code)
-    watcher = StatusFileWatcher("/tmp", notify)
+        sys.exit(existing_return_code)
+    watcher = StatusFileWatcher(args.filepath, notify)
     reactor.run()
