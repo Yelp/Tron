@@ -13,6 +13,7 @@ from tron import command_context
 from tron import node
 from tron.actioncommand import ActionCommand
 from tron.actioncommand import NoActionRunnerFactory
+from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.config.schema import ExecutorTypes
 from tron.core import action
 from tron.serialize import filehandler
@@ -268,6 +269,14 @@ class ActionRun(object):
             job_run_node,
         )
 
+        action_runner_data = state_data.get(
+            'action_runner',
+        )
+        if action_runner_data:
+            action_runner = SubprocessActionRunnerFactory(**action_runner_data)
+        else:
+            action_runner = NoActionRunnerFactory
+
         rendered_command = state_data.get('rendered_command')
         run = cls(
             job_run_id,
@@ -294,6 +303,7 @@ class ActionRun(object):
             mem=state_data.get('mem'),
             service=state_data.get('service'),
             deploy_group=state_data.get('deploy_group'),
+            action_runner=action_runner,
         )
 
         # Transition running to fail unknown because exit status was missed
@@ -415,6 +425,10 @@ class ActionRun(object):
             'deploy_group': self.deploy_group,
             'retries_remaining': self.retries_remaining,
             'exit_statuses': self.exit_statuses,
+            'action_runner': None if self.action_runner == NoActionRunnerFactory else {
+                'status_path': self.action_runner.status_path,
+                'exec_path': self.action_runner.exec_path,
+            },
         }
 
     def render_command(self):
@@ -486,6 +500,9 @@ class ActionRun(object):
 class SSHActionRun(ActionRun, Observer):
     """An ActionRun that executes the command on a node through SSH.
     """
+
+    def __init__(self, *args, **kwargs):
+        super(SSHActionRun, self).__init__(*args, **kwargs)
 
     def submit_command(self):
         action_command = self.build_action_command()
@@ -616,6 +633,7 @@ class ActionRunCollection(object):
                 proxy.func_proxy('cleanup', iteration.list_all),
                 proxy.func_proxy('stop', iteration.list_all),
                 proxy.attr_proxy('start_time', iteration.min_filter),
+                proxy.attr_proxy('state_data', iteration.list_all),
             ],
         )
 
