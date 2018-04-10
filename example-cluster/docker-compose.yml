@@ -3,16 +3,12 @@ services:
   master:
     build:
       context: ../
-      dockerfile: yelp_package/trusty/Dockerfile
+      dockerfile: example-cluster/images/batch/Dockerfile
     volumes:
       - ../:/work
       - ./:/nail/tron
     links:
       - batch1
-      - batch2
   batch1:
     build:
-      context: images/batch
-  batch2:
-    build:
-      context: images/batch
+      context: ../

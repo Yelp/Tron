@@ -1,3 +1,11 @@
+tron (0.7.8.1) trusty; urgency=medium
+
+  * 0.7.8.1 tagged with 'make release'
+  * Retries attribute for action runs
+  * Preparing for Python 3 upgrade
+
+ -- root <root@29a498a76bfe>  Fri, 06 Apr 2018 14:45:12 +0000
+
 tron (0.7.8.0) trusty; urgency=medium
 
   * 0.7.8.0 tagged with 'make release'

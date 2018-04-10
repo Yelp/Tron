@@ -67,7 +67,7 @@ SSH
 ---
 
 **ssh_options** (optional)
-    Options for SSH connections to Tron nodes. When tron runs a job or service
+    Options for SSH connections to Tron nodes. When tron runs a job
     on a node, it will add some jitter (random delay) to the run, which can be
     configured with the options below.
 
@@ -309,14 +309,6 @@ Jobs and Actions
 **jobs**
     List of jobs for Tron to manage. See :doc:`jobs` for the options available
     to jobs and their actions.
-
-Services
---------
-
-**services**
-    List of services for Tron to manage.  See :doc:`services` for the options
-    available to services.
-
 
 .. _config_logging:
 

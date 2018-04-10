@@ -93,6 +93,7 @@ class ActionRunAdapter(RunAdapter):
         'end_time',
         'exit_status',
         'action_name',
+        'exit_statuses',
     ]
 
     translated_field_names = [

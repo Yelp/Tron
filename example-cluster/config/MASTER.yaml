@@ -1,18 +1,26 @@
----
-
 ssh_options:
    agent: False
    identities:
-     - /work/example-cluster/insecure_key
+      - /work/example-cluster/insecure_key
+
+action_runner:
+    runner_type: "subprocess"
+    remote_status_path: "/tmp/tron"
+    remote_exec_path: "/work/bin/"
 
 nodes:
-  - hostname: batch1
-    username: tron
+   - hostname: localhost
+     username: tron
+
+time_zone: US/Eastern
 
 jobs:
-    - name: "test"
-      node: batch1
-      schedule: "interval 20seconds"
-      actions:
-        - name: "first"
-          command: "echo hi >> out"
+  - name: "test"
+    node: localhost
+    schedule: "daily 17:00:00"
+    time_zone: "US/Pacific"
+    actions:
+      - name: "first"
+        command: "sleep 5m"
+    cleanup_action:
+      command: "echo %(last_success:shortdate)s %(cleanup_job_status)s"

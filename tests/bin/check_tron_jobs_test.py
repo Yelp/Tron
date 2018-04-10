@@ -111,6 +111,81 @@ class CheckJobsTestCase(TestCase):
         assert_equal(run['id'], 'MASTER.test.1')
         assert_equal(state, State.FAILED)
 
+    def test_job_running_but_action_failed_already(self):
+        job_runs = {
+            'status': 'running', 'next_run': None, 'runs': [
+                {
+                    'id': 'MASTER.test.3', 'state': 'scheduled', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() + 600)),
+                },
+                {
+                    'id': 'MASTER.test.2', 'state': 'running', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)), 'runs': [
+                        {
+                            'id': 'MASTER.test.2.action2', 'state': 'running',
+                        },
+                        {
+                            'id': 'MASTER.test.1.action1', 'state': 'failed',
+                        },
+                    ],
+                },
+                {
+                    'id': 'MASTER.test.1', 'state': 'succeeded', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 1800)),
+                },
+            ],
+        }
+        run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
+        assert_equal(run['id'], 'MASTER.test.2')
+        assert_equal(state, State.FAILED)
+
+    def test_job_running_but_action_unknown_already(self):
+        job_runs = {
+            'status': 'running', 'next_run': None, 'runs': [
+                {
+                    'id': 'MASTER.test.3', 'state': 'scheduled', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() + 600)),
+                },
+                {
+                    'id': 'MASTER.test.2', 'state': 'running', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)), 'runs': [
+                        {
+                            'id': 'MASTER.test.2.action2', 'state': 'running',
+                        },
+                        {
+                            'id': 'MASTER.test.1.action1', 'state': 'unknown',
+                        },
+                    ],
+                },
+                {
+                    'id': 'MASTER.test.1', 'state': 'succeeded', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 1800)),
+                },
+            ],
+        }
+        run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
+        assert_equal(run['id'], 'MASTER.test.2')
+        assert_equal(state, State.UNKNOWN)
+
+    def test_job_running_and_action_succeeded(self):
+        job_runs = {
+            'status': 'running', 'next_run': None, 'runs': [
+                {
+                    'id': 'MASTER.test.3', 'state': 'scheduled', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() + 600)),
+                },
+                {
+                    'id': 'MASTER.test.2', 'state': 'running', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)), 'runs': [
+                        {
+                            'id': 'MASTER.test.2.action2', 'state': 'running',
+                        },
+                        {
+                            'id': 'MASTER.test.1.action1', 'state': 'succeeded',
+                        },
+                    ],
+                },
+                {
+                    'id': 'MASTER.test.1', 'state': 'succeeded', 'run_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 1800)),
+                },
+            ],
+        }
+        run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
+        assert_equal(run['id'], 'MASTER.test.1')
+        assert_equal(state, State.SUCCEEDED)
+
     def test_job_no_run_yet(self):
         job_runs = {
             'status': 'running', 'next_run': None, 'runs': [],
@@ -201,3 +276,65 @@ class CheckJobsTestCase(TestCase):
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.2')
         assert_equal(state, State.UNKNOWN)
+
+    def test_guess_realert_every(self):
+        job_runs = {
+            'status': 'running', 'next_run': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() + 600)), 'runs': [
+                {
+                    'id': 'MASTER.test.3', 'state': 'scheduled', 'start_time': None,
+                },
+                {
+                    'id': 'MASTER.test.2', 'state': 'failed', 'start_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)),
+                },
+                {
+                    'id': 'MASTER.test.1', 'state': 'succeeded', 'start_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 1800)),
+                },
+            ],
+        }
+        realert_every = check_tron_jobs.guess_realert_every(job_runs)
+        assert_equal(realert_every, 4)
+
+    def test_guess_realert_every_queue_job(self):
+        job_runs = {
+            'status': 'running', 'next_run': None, 'runs': [
+                {
+                    'id': 'MASTER.test.3', 'state': 'queued', 'start_time': None,
+                },
+                {
+                    'id': 'MASTER.test.2', 'state': 'running', 'start_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)),
+                },
+                {
+                    'id': 'MASTER.test.1', 'state': 'succeeded', 'start_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 1800)),
+                },
+            ],
+        }
+        realert_every = check_tron_jobs.guess_realert_every(job_runs)
+        assert_equal(realert_every, -1)
+
+    def test_guess_realert_every_frequent_run(self):
+        job_runs = {
+            'status': 'running', 'next_run': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() + 10)), 'runs': [
+                {
+                    'id': 'MASTER.test.3', 'state': 'scheduled', 'start_time': None,
+                },
+                {
+                    'id': 'MASTER.test.2', 'state': 'failed', 'start_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 10)),
+                },
+                {
+                    'id': 'MASTER.test.1', 'state': 'succeeded', 'start_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 20)),
+                },
+            ],
+        }
+        realert_every = check_tron_jobs.guess_realert_every(job_runs)
+        assert_equal(realert_every, 1)
+
+    def test_guess_realert_every_first_time_job(self):
+        job_runs = {
+            'status': 'enabled', 'next_run': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() + 600)), 'runs': [
+                {
+                    'id': 'MASTER.test.1', 'state': 'scheduled', 'start_time': None,
+                },
+            ],
+        }
+        realert_every = check_tron_jobs.guess_realert_every(job_runs)
+        assert_equal(realert_every, -1)

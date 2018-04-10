@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 
-if ! which ssh; then
+if ! service ssh status; then
   echo Setting up SSH
   apt-get -qq -y install ssh
   mkdir -p ~/.ssh
@@ -14,4 +14,5 @@ echo Installing packages
 pip install -e .
 
 echo Starting Tron
+rm -f /nail/tron/tron.pid
 exec trond -l logging.conf --nodaemon --working-dir=/nail/tron -v

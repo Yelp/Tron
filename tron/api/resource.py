@@ -46,9 +46,15 @@ def respond(request, response_dict, code=http.OK, headers=None):
     request.setHeader(b'Access-Control-Allow-Origin', b'*')
     for key, val in six.iteritems((headers or {})):
         request.setHeader(str(key), str(val))
-    return str(
-        json.dumps(response_dict, cls=JSONEncoder) if response_dict else "",
-    )
+
+    result = json.dumps(
+        response_dict, cls=JSONEncoder,
+    ) if response_dict else ""
+
+    if type(result) is not bytes:
+        result = result.encode('utf8')
+
+    return result
 
 
 def handle_command(request, api_controller, obj, **kwargs):
