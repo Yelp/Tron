@@ -1,3 +1,8 @@
+state_persistence:
+    name: "/nail/tron/tron_state"
+    store_type: "shelve"
+    buffer_size: 10
+
 ssh_options:
    agent: False
    identities:
@@ -17,10 +22,11 @@ time_zone: US/Eastern
 jobs:
   - name: "test"
     node: localhost
-    schedule: "daily 17:00:00"
+    schedule: "cron * * * * *"
     time_zone: "US/Pacific"
     actions:
       - name: "first"
-        command: "sleep 5m"
+        command: "date; ruby -e 'exit(rand(0..1))'"
+        retries: 3
     cleanup_action:
       command: "echo %(last_success:shortdate)s %(cleanup_job_status)s"

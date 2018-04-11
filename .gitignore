@@ -32,3 +32,5 @@ debian/tron.postrm.debhelper
 debian/tron.prerm.debhelper
 debian/debhelper-build-stamp
 .vscode
+example-cluster/MASTER.*
+example-cluster/tron-repl.pid
