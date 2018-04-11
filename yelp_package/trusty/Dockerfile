@@ -12,6 +12,7 @@ RUN apt-get -q update && \
         devscripts \
         dpkg-dev \
         wget \
+        faketime \
         gdebi-core \
         git \
         gcc \

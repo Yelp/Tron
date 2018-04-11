@@ -17,4 +17,4 @@ fi
 
 echo Starting Tron
 rm -f /nail/tron/tron.pid
-exec trond -l logging.conf --nodaemon --working-dir=/nail/tron -v
+exec faketime -f '+0.0y x10' trond -l logging.conf --nodaemon --working-dir=/nail/tron -v

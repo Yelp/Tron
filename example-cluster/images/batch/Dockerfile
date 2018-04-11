@@ -5,6 +5,7 @@ RUN apt-get update > /dev/null && \
         debhelper \
         dpkg-dev \
         devscripts \
+        faketime \
         wget \
         gdebi-core \
         git \

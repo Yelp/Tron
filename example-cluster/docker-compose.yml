@@ -21,3 +21,4 @@ services:
   batch1:
     build:
       context: ../
+      dockerfile: example-cluster/images/batch/Dockerfile
