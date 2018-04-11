@@ -6,6 +6,7 @@ import logging
 import six
 
 from tron.core import action
+from tron.utils import maybe_decode
 
 log = logging.getLogger(__name__)
 
@@ -21,12 +22,12 @@ class ActionGraph(object):
     def from_config(cls, actions_config, cleanup_action_config=None):
         """Create this graph from a job config."""
         actions = {
-            name: action.Action.from_config(conf)
+            maybe_decode(name): action.Action.from_config(conf)
             for name, conf in six.iteritems(actions_config)
         }
         if cleanup_action_config:
             cleanup_action = action.Action.from_config(cleanup_action_config)
-            actions[cleanup_action.name] = cleanup_action
+            actions[maybe_decode(cleanup_action.name)] = cleanup_action
 
         return cls(cls._build_dag(actions, actions_config), actions)
 
@@ -50,7 +51,7 @@ class ActionGraph(object):
     def _get_dependencies(cls, actions_config, action_name):
         if action_name == action.CLEANUP_ACTION_NAME:
             return []
-        return actions_config[action_name].requires
+        return actions_config[maybe_decode(action_name)].requires
 
     def actions_for_names(self, names):
         return (self.action_map[name] for name in names)
