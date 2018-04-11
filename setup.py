@@ -46,6 +46,8 @@ setup(
         'yelp-clog',
         'enum34>=1.1.6',
         'bsddb3',
+        'ipython',
+        'ipdb',
     ],
     packages=find_packages(exclude=['tests.*', 'tests']) + ['tronweb'],
     scripts=glob.glob('bin/*'),
