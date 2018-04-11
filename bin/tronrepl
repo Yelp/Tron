@@ -21,7 +21,7 @@ log = logging.getLogger(__name__)
 DEFAULT_CONF = 'default_config.yaml'
 DEFAULT_CONF_PATH = 'config/'
 DEFAULT_WORKING_DIR = '/var/lib/tron/'
-DEFAULT_PIDFILE = 'tron.pid'
+DEFAULT_PIDFILE = 'tron-repl.pid'
 DEFAULT_PIDPATH = '/var/run/' + DEFAULT_PIDFILE
 
 
