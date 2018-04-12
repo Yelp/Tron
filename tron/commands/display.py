@@ -216,7 +216,7 @@ def format_fields(display_obj, content):
         return display_obj.colors[field](field_value)
 
     def format_field(field):
-        value = content[field]
+        value = content.get(field)
         if value is None:
             return ''
         return field_display_mapping.get(field, lambda f: f)(value)
