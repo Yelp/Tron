@@ -22,6 +22,7 @@ from twisted.web import http, resource, static, server
 from tron import event
 from tron.api import adapter, controller
 from tron.api import requestargs
+from tron.utils import maybe_decode
 
 
 log = logging.getLogger(__name__)
@@ -118,6 +119,8 @@ class JobRunResource(resource.Resource):
     def getChild(self, action_name, _):
         if not action_name:
             return self
+
+        action_name = maybe_decode(action_name)
         if action_name == '_events':
             return EventResource(self.job_run.id)
         if action_name in self.job_run.action_runs:
@@ -165,6 +168,8 @@ class JobResource(resource.Resource):
     def getChild(self, run_id, _):
         if not run_id:
             return self
+
+        run_id = maybe_decode(run_id)
         if run_id == '_events':
             return EventResource(self.job_scheduler.get_name())
 
@@ -229,7 +234,9 @@ class JobCollectionResource(resource.Resource):
     def getChild(self, name, request):
         if not name:
             return self
-        return resource_from_collection(self.job_collection, name.decode(), JobResource)
+
+        name = maybe_decode(name)
+        return resource_from_collection(self.job_collection, name, JobResource)
 
     def get_data(self, include_job_run=False, include_action_runs=False):
         return adapter.adapt_many(

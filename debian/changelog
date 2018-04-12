@@ -5,6 +5,14 @@ tron (0.8.0.0) trusty; urgency=medium
 
  -- root <root@7a84f15cf87d>  Wed, 14 Mar 2018 11:14:08 +0000
 
+tron (0.7.8.3) trusty; urgency=medium
+
+  * 0.7.8.3 tagged with 'make release'
+    Commit: Merge pull request #426 from Yelp/maybe-decode-all-the-
+    things  Maybe decode all the things
+
+ -- root <root@134c326c0301>  Thu, 12 Apr 2018 13:29:50 +0000
+
 tron (0.7.8.2) trusty; urgency=medium
 
   * 0.7.8.2 tagged with 'make release'

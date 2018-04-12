@@ -36,7 +36,7 @@ class ActionRunFactory(object):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
         action_map = six.iteritems(job_run.action_graph.get_action_map())
         action_run_map = {
-            name: cls.build_run_for_action(job_run, action_inst, action_runner)
+            maybe_decode(name): cls.build_run_for_action(job_run, action_inst, action_runner)
             for name, action_inst in action_map
         }
         return ActionRunCollection(job_run.action_graph, action_run_map)
@@ -56,7 +56,8 @@ class ActionRunFactory(object):
             ))
 
         action_run_map = {
-            action_run.action_name: action_run for action_run in action_runs
+            maybe_decode(action_run.action_name): action_run
+            for action_run in action_runs
         }
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
@@ -183,8 +184,8 @@ class ActionRun(object):
         retries_remaining=None,
         exit_statuses=None,
     ):
-        self.job_run_id = job_run_id
-        self.action_name = name
+        self.job_run_id = maybe_decode(job_run_id)
+        self.action_name = maybe_decode(name)
         self.node = node
         self.start_time = start_time
         self.end_time = end_time

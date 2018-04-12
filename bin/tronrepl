@@ -12,6 +12,7 @@ import IPython
 import pkg_resources
 
 import tron
+import tron.mcp
 from tron import trondaemon
 from tron.commands import cmd_utils
 from tron.config import manager
@@ -155,6 +156,27 @@ def main():
 
     setup_environment(args)
     trond = trondaemon.TronDaemon(args)  # noqa: F841
+
+    trond.mcp = tron.mcp.MasterControlProgram(
+        trond.options.working_dir, trond.options.config_path,
+    )
+    trond.mcp._load_config()
+    trond.mcp.restore_state()
+
+    mcp = trond.mcp  # noqa: F841
+    store = mcp.state_watcher.state_manager._impl  # noqa: F841
+    shelve = store.shelve  # noqa: F841
+
+    print("")
+    print("+---------------------+")
+    print("| Tron REPL           |")
+    print("|   Available locals: |")
+    print("|   - trond           |")
+    print("|   - mcp             |")
+    print("|   - store           |")
+    print("|   - shelve          |")
+    print("+---------------------+")
+    print("")
     IPython.embed()
 
 

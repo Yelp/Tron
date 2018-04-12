@@ -1,6 +1,7 @@
 #!/usr/bin/env bash
 
-if ! service ssh status; then
+
+if ! service ssh status > /dev/null; then
   echo Setting up SSH
   apt-get -qq -y install ssh
   mkdir -p ~/.ssh
