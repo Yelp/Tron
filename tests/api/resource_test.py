@@ -263,7 +263,7 @@ class JobResourceTestCase(WWWTestCase):
             self.resource.get_run_from_identifier,
             return_value=None,
         )
-        action_name = b'action_name'
+        action_name = 'action_name'
         action_runs = [mock.Mock(), mock.Mock()]
         self.job.action_graph.names = [action_name]
         self.job.runs.get_action_runs.return_value = action_runs
