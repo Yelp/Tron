@@ -17,6 +17,23 @@ def filter_action_runs_needing_recovery(action_runs):
     ]
 
 
+def filter_recoverable_action_runs(action_runs):
+    """
+    Given a list of action_runs, create a filtered list that only includes those that can be recovered
+    For now, the only test is whether the run is an SSHActionRun
+    """
+    return [
+        action_run for action_run in action_runs
+        if isinstance(action_run, SSHActionRun)
+    ]
+
+
+def filter_recovery_candidates(runs):
+    return filter_recoverable_action_runs(
+        action_runs=filter_recoverable_action_runs(action_runs=runs),
+    )
+
+
 def build_recovery_command(recovery_binary, path):
     return "%s %s" % (recovery_binary, path)
 

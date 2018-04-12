@@ -222,10 +222,11 @@ class Job(Observable, Observer):
             self.node_pool,
         )
         for run in job_runs:
-            action_runs_needing_recovery = recovery.filter_action_runs_needing_recovery(
-                action_runs=run._action_runs,
+            runs_to_recover = recovery.filter_recovery_candidates(
+                run._action_runs,
             )
-            for action_run in action_runs_needing_recovery:
+
+            for action_run in runs_to_recover:
                 deferred = recovery.recover_action_run(action_run)
                 if not deferred:
                     log.debug(
