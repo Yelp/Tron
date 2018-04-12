@@ -7,8 +7,6 @@ from tron.actioncommand import NoActionRunnerFactory
 from tron.core.actionrun import ActionRun
 from tron.core.actionrun import SSHActionRun
 
-RECOVERY_BINARY = "/work/bin/recover_batch.py"
-
 log = logging.getLogger(__name__)
 
 
@@ -36,7 +34,9 @@ def recover_action_run(action_run):
         name="recovery-%s" % action_run.id,
         node=action_run.node,
         bare_command=build_recovery_command(
-            recovery_binary=RECOVERY_BINARY,
+            recovery_binary="%s/recover_batch.py" % (
+                action_run.action_runner.exec_path
+            ),
             path="%s/%s/status" % (
                 action_run.action_runner.status_path,
                 action_run.id,
