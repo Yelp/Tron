@@ -12,6 +12,8 @@ import bsddb3
 from six.moves import filter
 from six.moves import zip
 
+from tron.utils import maybe_decode
+
 
 log = logging.getLogger(__name__)
 
@@ -49,8 +51,8 @@ class ShelveKey(object):
     __slots__ = ['type', 'iden']
 
     def __init__(self, type, iden):
-        self.type = type
-        self.iden = iden
+        self.type = maybe_decode(type)
+        self.iden = maybe_decode(iden)
 
     @property
     def key(self):
