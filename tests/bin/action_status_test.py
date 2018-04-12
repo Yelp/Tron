@@ -27,12 +27,12 @@ class ActionStatusTestCase(TestCase):
         yield
         self.status_file.close()
 
-    @mock.patch('action_status.os.kill', autospec=True)
-    def test_send_signal(self, mock_kill):
+    @mock.patch('action_status.os.killpg', autospec=True)
+    @mock.patch('action_status.os.getpgid', autospec=True, return_value=42)
+    def test_send_signal(self, mock_getpgid, mock_kill):
         action_status.send_signal(signal.SIGKILL, self.status_file)
-        mock_kill.assert_called_with(
-            self.status_content['pid'], signal.SIGKILL,
-        )
+        mock_getpgid.assert_called_with(self.status_content['pid'])
+        mock_kill.assert_called_with(42, signal.SIGKILL)
 
     def test_get_field_retrieves_last_entry(self):
         self.status_file.seek(0, 2)
