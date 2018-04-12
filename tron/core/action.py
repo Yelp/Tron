@@ -5,6 +5,7 @@ import logging
 
 from tron import node
 from tron.config.schema import CLEANUP_ACTION_NAME
+from tron.utils import maybe_decode
 
 log = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ class Action(object):
         service=None,
         deploy_group=None,
     ):
-        self.name = name
+        self.name = maybe_decode(name)
         self.command = command
         self.node_pool = node_pool
         self.retries = retries

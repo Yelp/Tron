@@ -35,3 +35,6 @@ debian/debhelper-build-stamp
 # example_cluster junk
 *.stdout
 *.stderr
+.vscode
+example-cluster/MASTER.*
+example-cluster/tron-repl.pid

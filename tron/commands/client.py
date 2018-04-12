@@ -129,10 +129,12 @@ class Client(object):
     def get_url(self, identifier):
         return get_object_type_from_identifier(self.index(), identifier).url
 
-    def jobs(self, include_job_runs=False, include_action_runs=False):
+    def jobs(self, include_job_runs=False, include_action_runs=False, include_action_graph=True, include_node_pool=True):
         params = {
             'include_job_runs': int(include_job_runs),
             'include_action_runs': int(include_action_runs),
+            'include_action_graph': int(include_action_graph),
+            'include_node_pool': int(include_node_pool),
         }
         return self.http_get('/api/jobs', params).get('jobs')
 
