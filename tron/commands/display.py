@@ -346,7 +346,8 @@ class DisplayActionRuns(TableDisplay):
         ('Bare command',        'raw_command'),
         ('Start time',          'start_time'),
         ('End time',            'end_time'),
-        ('Exit status',         'exit_status'),
+        ('Final exit status',   'exit_status'),
+        ('Retry exit statuses', 'exit_statuses'),
     ]
 
     colors = {
