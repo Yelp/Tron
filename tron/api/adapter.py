@@ -254,12 +254,14 @@ class JobAdapter(ReprAdapter):
         include_job_runs=False,
         include_action_runs=False,
         include_action_graph=True,
+        include_node_pool=True,
         num_runs=None,
     ):
         super(JobAdapter, self).__init__(job)
         self.include_job_runs = include_job_runs
         self.include_action_runs = include_action_runs
         self.include_action_graph = include_action_graph
+        self.include_node_pool = include_node_pool
         self.num_runs = num_runs
 
     def get_name(self):
@@ -274,6 +276,7 @@ class JobAdapter(ReprAdapter):
     def get_action_names(self):
         return self._obj.action_graph.names
 
+    @toggle_flag('include_node_pool')
     def get_node_pool(self):
         return NodePoolAdapter(self._obj.node_pool).get_repr()
 
