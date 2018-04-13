@@ -21,7 +21,7 @@ time_zone: US/Eastern
 jobs:
    - name: "test"
      node: localhost
-     schedule: "daily 17:00:00"
+     schedule: "cron * * * * *"
      time_zone: "US/Pacific"
      actions:
         - name: "first"

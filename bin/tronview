@@ -71,7 +71,12 @@ def view_all(args, client):
     if args.show_events:
         return display_events(client.events())
 
-    return display.DisplayJobs().format(client.jobs())
+    return display.DisplayJobs().format(client.jobs(
+        include_job_runs=False,
+        include_action_runs=False,
+        include_action_graph=False,
+        include_node_pool=False,
+    ))
 
 
 def view_job(args, job_id, client):

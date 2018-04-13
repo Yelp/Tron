@@ -13,3 +13,5 @@ Twisted>=17.0.0
 mock>=0.8
 pre-commit
 bsddb3
+ipython
+ipdb
