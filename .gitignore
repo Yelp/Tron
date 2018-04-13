@@ -8,6 +8,7 @@ tron.egg-info
 *.swo
 docs/_build/
 .idea
+.vscode
 tron.iml
 docs/images/
 *.dot
@@ -23,6 +24,8 @@ __pycache__/
 example-cluster/MASTER.*
 example-cluster/tron-repl.pid
 example-cluster/tron_state*
+*.stdout
+*.stderr
 
 # Generated debian artifacts
 debian/tron
@@ -34,4 +37,3 @@ debian/tron.postinst.debhelper
 debian/tron.postrm.debhelper
 debian/tron.prerm.debhelper
 debian/debhelper-build-stamp
-.vscode

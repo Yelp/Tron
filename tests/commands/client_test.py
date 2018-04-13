@@ -166,7 +166,7 @@ class ClientTestCase(TestCase):
     def test_jobs(self):
         self.client.jobs()
         self.client.request.assert_called_with(
-            '/api/jobs?include_action_runs=0&include_job_runs=0',
+            '/api/jobs?include_action_graph=1&include_action_runs=0&include_job_runs=0&include_node_pool=1',
         )
 
 
