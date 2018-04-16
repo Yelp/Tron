@@ -1,3 +1,10 @@
+tron (0.8.0.1) trusty; urgency=medium
+
+  * 0.8.0.1 tagged with 'make release'
+    Commit: Merge pull request #370 from Yelp/python3-deb  Python3 deb
+
+ -- root <root@ef2489238ddf>  Mon, 16 Apr 2018 14:38:29 +0000
+
 tron (0.8.0.0) trusty; urgency=medium
 
   * 0.8.0.0 tagged with 'make release'
