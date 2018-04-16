@@ -5,11 +5,15 @@ set -euxo pipefail
 export DEBIAN_FRONTEND=noninteractive
 
 apt-get update
-DEBIAN_FRONTEND=noninteractive apt-get install gdebi-core curl --yes
+apt-get install -y software-properties-common gdebi-core curl
+add-apt-repository -y ppa:deadsnakes/ppa
+apt-get update
 gdebi --non-interactive /work/dist/*.deb
 
 trond --help
 tronfig --help
+
+/opt/venvs/tron/bin/python --version | grep -q '3\.6'
 
 /opt/venvs/tron/bin/python - <<EOF
 from yaml import CSafeLoader
@@ -36,6 +40,8 @@ for i in {1..5}; do
     sleep 1
 done
 kill -0 $TRON_PID
+
+curl localhost:8089/api/status | grep -qi alive
 
 tronfig -p MASTER
 tronfig -n MASTER /work/example-cluster/tronfig/MASTER.yaml

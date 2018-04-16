@@ -156,6 +156,7 @@ def main():
 
     setup_environment(args)
     trond = trondaemon.TronDaemon(args)  # noqa: F841
+
     trond.mcp = tron.mcp.MasterControlProgram(
         trond.options.working_dir, trond.options.config_path,
     )

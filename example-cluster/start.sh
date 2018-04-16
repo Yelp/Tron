@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+
 if ! service ssh status > /dev/null; then
   echo Setting up SSH
   apt-get -qq -y install ssh
@@ -10,9 +11,9 @@ if ! service ssh status > /dev/null; then
   service ssh start
 fi
 
-if ! pip list --format=columns | grep 'tron.*/work' > /dev/null; then
+if ! pip3.6 list --format=columns | grep 'tron.*/work' > /dev/null; then
   echo Installing packages
-  pip install -q -e .
+  pip3.6 install -q -e .
 fi
 
 echo Starting Tron

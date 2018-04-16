@@ -190,7 +190,7 @@ class ActionRun(object):
         self.start_time = start_time
         self.end_time = end_time
         self.exit_status = exit_status
-        self.bare_command = bare_command
+        self.bare_command = maybe_decode(bare_command)
         self.rendered_command = rendered_command
         self.action_runner = action_runner or NoActionRunnerFactory
         self.machine = state.StateMachine(
@@ -365,7 +365,7 @@ class ActionRun(object):
         return {
             'job_run_id':       self.job_run_id,
             'action_name':      self.action_name,
-            'state':            str(self.state),
+            'state':            self.state.name,
             'start_time':       self.start_time,
             'end_time':         self.end_time,
             'command':          command,

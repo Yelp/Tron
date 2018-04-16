@@ -10,6 +10,7 @@ from operator import itemgetter
 
 from tron.core import actionrun
 from tron.core import job
+from tron.utils import maybe_encode
 
 
 class Color(object):
@@ -415,6 +416,6 @@ def view_with_less(content, color=True):
         cmd.append('-r')
 
     less_proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    less_proc.stdin.write(content)
+    less_proc.stdin.write(maybe_encode(content))
     less_proc.stdin.close()
     less_proc.wait()

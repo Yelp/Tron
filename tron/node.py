@@ -407,8 +407,8 @@ class Node(object):
             self._fail_run(
                 run, failure.Failure(
                     exc_value=ConnectError(
-                        "Connection to %s failed" %
-                        self.hostname,
+                        "Connection to %s@%s:%d failed" %
+                        (self.username, self.hostname, self.port),
                     ),
                 ),
             )
@@ -607,7 +607,8 @@ class Node(object):
         self._fail_run(
             run, failure.Failure(
                 exc_value=ConnectError(
-                    "Connection to %s failed" % self.hostname,
+                    "Connection to %s@%s:%d failed" %
+                    (self.username, self.hostname, self.port),
                 ),
             ),
         )

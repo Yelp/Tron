@@ -41,12 +41,15 @@ default_headers = {
 
 def build_url_request(uri, data, headers=None):
     headers = headers or default_headers
-    enc_data = urllib.parse.urlencode(data) if data else None
+    enc_data = urllib.parse.urlencode(data).encode() if data else None
     return urllib.request.Request(uri, enc_data, headers)
 
 
 def load_response_content(http_response):
-    content = http_response.read()
+    encoding = http_response.headers.get_content_charset()
+    if encoding is None:
+        encoding = 'utf8'
+    content = http_response.read().decode(encoding)
     try:
         return Response(None, None, simplejson.loads(content))
     except ValueError as e:
@@ -56,6 +59,18 @@ def load_response_content(http_response):
 
 def build_http_error_response(exc):
     content = exc.read() if hasattr(exc, 'read') else None
+    if content:
+        encoding = exc.headers.get_content_charset()
+        if encoding is None:
+            encoding = 'utf8'
+        content = content.decode(encoding)
+        try:
+            content = simplejson.loads(content)
+            content = content['error']
+        except ValueError:
+            log.warning(
+                "Incorrectly formatted error response: {}".format(content),
+            )
     return Response(exc.code, exc.msg, content)
 
 

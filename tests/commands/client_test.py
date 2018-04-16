@@ -19,7 +19,10 @@ from tron.commands.client import TronObjectType
 
 
 def build_file_mock(content):
-    return mock.Mock(read=mock.Mock(return_value=content))
+    return mock.Mock(
+        read=mock.Mock(return_value=content),
+        headers=mock.Mock(get_content_charset=mock.Mock(return_value='utf-8')),
+    )
 
 
 class RequestTestCase(TestCase):
@@ -49,32 +52,41 @@ class RequestTestCase(TestCase):
         assert request.has_header('User-agent')
         assert_equal(request.get_method(), 'POST')
         assert_equal(request.get_full_url(), self.url)
-        assert_in('param=is_set', request.data)
-        assert_in('other=1', request.data)
+        assert_in('param=is_set', request.data.decode())
+        assert_in('other=1', request.data.decode())
 
-    def test_load_response_content_success(self):
-        content = 'not:valid:json'
+    @mock.patch('tron.commands.client.log', autospec=True)
+    def test_load_response_content_success(self, _):
+        content = b'not:valid:json'
         http_response = build_file_mock(content)
         response = client.load_response_content(http_response)
         assert_equal(response.error, client.DECODE_ERROR)
-        assert_equal(response.content, content)
+        assert_equal(response.content, content.decode('utf-8'))
 
-    def test_request_http_error(self):
+    @mock.patch('tron.commands.client.log', autospec=True)
+    def test_request_http_error(self, _):
         self.mock_urlopen.side_effect = HTTPError(
-            self.url, 500, 'broke', {}, build_file_mock('oops'),
+            self.url,
+            500,
+            'broke',
+            mock.Mock(
+                get_content_charset=mock.Mock(return_value='utf-8'),
+            ),
+            build_file_mock(b'oops'),
         )
         response = client.request(self.url)
         expected = client.Response(500, 'broke', 'oops')
         assert_equal(response, expected)
 
-    def test_request_url_error(self):
+    @mock.patch('tron.commands.client.log', autospec=True)
+    def test_request_url_error(self, _):
         self.mock_urlopen.side_effect = URLError('broke')
         response = client.request(self.url)
         expected = client.Response(client.URL_ERROR, 'broke', None)
         assert_equal(response, expected)
 
     def test_request_success(self):
-        self.mock_urlopen.return_value = build_file_mock('{"ok": "ok"}')
+        self.mock_urlopen.return_value = build_file_mock(b'{"ok": "ok"}')
         response = client.request(self.url)
         expected = client.Response(None, None, {'ok': 'ok'})
         assert_equal(response, expected)
