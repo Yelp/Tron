@@ -25,6 +25,7 @@ class Action(object):
         'mem',
         'service',
         'deploy_group',
+        'retries',
     ]
 
     def __init__(
