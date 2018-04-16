@@ -8,6 +8,7 @@ tron.egg-info
 *.swo
 docs/_build/
 .idea
+.vscode
 tron.iml
 docs/images/
 *.dot
@@ -35,6 +36,6 @@ debian/debhelper-build-stamp
 # example_cluster junk
 *.stdout
 *.stderr
-.vscode
+example-cluster/config
 example-cluster/MASTER.*
 example-cluster/tron-repl.pid
