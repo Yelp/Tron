@@ -37,7 +37,7 @@ RUN cd /tmp && \
     rm dh-virtualenv_*.deb
 
 RUN wget https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py
-RUN python /tmp/get-pip.py
-RUN pip install -U tox wheel setuptools
+RUN python3.6 /tmp/get-pip.py
+RUN pip3.6 install -U tox wheel setuptools
 
 WORKDIR /work
