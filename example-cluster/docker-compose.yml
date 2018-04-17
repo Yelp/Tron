@@ -8,8 +8,6 @@ services:
     volumes:
       - ../:/work
       - ./:/nail/tron
-    links:
-      - batch1
     ports:
       - "8089:8089"
   # For itests only, `pip install -e .` won't work
