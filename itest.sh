@@ -25,10 +25,11 @@ from yaml import CSafeLoader
 from yaml import CSafeDumper
 EOF
 
-mkdir -p /nail/tron
+export TRON_WORKDIR=/nail/tron
+mkdir -p $TRON_WORKDIR
 export TRON_START_TIME=$(date +%s)
 
-trond --nodaemon --working-dir=/nail/tron &
+trond --nodaemon --working-dir=$TRON_WORKDIR &
 TRON_PID=$!
 
 for i in {1..5}; do
@@ -57,7 +58,7 @@ wait $TRON_PID
 /opt/venvs/tron/bin/python - <<EOF
 import os
 from tron.serialize.runstate.shelvestore import ShelveStateStore, ShelveKey
-db = ShelveStateStore('/var/lib/tron/tron_state')
+db = ShelveStateStore('$TRON_WORKDIR/tron_state')
 key = ShelveKey('mcp_state', 'StateMetadata')
 res = db.restore([key])
 ts = res[key][u'create_time']
