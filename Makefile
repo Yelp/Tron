@@ -41,7 +41,7 @@ test:
 	tox -e py36
 
 test_in_docker_%: docker_%
-	$(DOCKER_RUN) tron-builder-$* tox -vv --workdir .tox-docker -e py36
+	$(DOCKER_RUN) tron-builder-$* python3.6 -m tox -vv --workdir .tox-docker -e py36
 
 tox_%:
 	tox -e $*
