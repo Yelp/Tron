@@ -1,9 +1,10 @@
 #!/usr/bin/env bash
 
+set -e
 
-if ! service ssh status > /dev/null; then
+if ! service ssh status >/dev/null 2>&1 ; then
   echo Setting up SSH
-  apt-get -qq -y install ssh
+  apt-get -qq -y install ssh >/dev/null
   service ssh start
 fi
 
@@ -23,4 +24,10 @@ fi
 
 echo Starting Tron
 rm -f /nail/tron/tron.pid
-exec faketime -f '+0.0y x10' trond -l logging.conf --nodaemon --working-dir=/nail/tron -v
+exec faketime -f '+0.0y x10' \
+  trond \
+    -l logging.conf \
+    --nodaemon \
+    --working-dir=/nail/tron \
+    -v \
+    --host 0.0.0.0
