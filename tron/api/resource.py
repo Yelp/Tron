@@ -238,7 +238,13 @@ class JobCollectionResource(resource.Resource):
         name = maybe_decode(name)
         return resource_from_collection(self.job_collection, name, JobResource)
 
-    def get_data(self, include_job_run=False, include_action_runs=False, include_action_graph=True, include_node_pool=True):
+    def get_data(
+        self,
+        include_job_run=False,
+        include_action_runs=False,
+        include_action_graph=True,
+        include_node_pool=True,
+    ):
         return adapter.adapt_many(
             adapter.JobAdapter,
             self.job_collection.get_jobs(),
@@ -256,9 +262,11 @@ class JobCollectionResource(resource.Resource):
         return {job['name']: job['actions'] for job in jobs}
 
     def render_GET(self, request):
-        include_job_runs = requestargs.get_bool(request, 'include_job_runs')
+        include_job_runs = requestargs.get_bool(
+            request, 'include_job_runs', default=False,
+        )
         include_action_runs = requestargs.get_bool(
-            request, 'include_action_runs',
+            request, 'include_action_runs', default=False,
         )
         include_action_graph = requestargs.get_bool(
             request, 'include_action_graph', default=True,
