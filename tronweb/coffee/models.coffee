@@ -34,7 +34,7 @@ class window.RefreshModel extends Backbone.Model
             @scheduleRefresh()
 
     disableRefresh: =>
-        console.log("Disableing refresh ")
+        console.log("Disabling refresh ")
         @enabled = false
         @clear()
 
