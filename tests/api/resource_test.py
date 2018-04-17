@@ -124,7 +124,7 @@ class ApiRootResourceTestCase(WWWTestCase):
 
     def test__init__(self):
         expected_children = [
-            'jobs', 'config', 'status', 'events', '',
+            b'jobs', b'config', b'status', b'events', b'',
         ]
         assert_equal(set(expected_children), set(self.resource.children))
 
@@ -151,7 +151,7 @@ class RootResourceTestCase(WWWTestCase):
         request.finish.assert_called_with()
 
     def test_get_children(self):
-        assert_equal(set(self.resource.children), {'api', 'web', ''})
+        assert_equal(set(self.resource.children), {b'api', b'web', b''})
 
 
 class ActionRunHistoryResourceTestCase(WWWTestCase):
@@ -188,13 +188,13 @@ class JobCollectionResourceTestCase(WWWTestCase):
         assert 'jobs' in result
 
     def test_getChild(self):
-        child = self.resource.getChild("testname", mock.Mock())
+        child = self.resource.getChild(b"testname", mock.Mock())
         assert isinstance(child, www.JobResource)
         self.job_collection.get_by_name.assert_called_with("testname")
 
     def test_getChild_missing_job(self):
         self.job_collection.get_by_name.return_value = None
-        child = self.resource.getChild("bar", mock.Mock())
+        child = self.resource.getChild(b"bar", mock.Mock())
         assert isinstance(child, twisted.web.resource.NoResource)
 
 
@@ -217,6 +217,7 @@ class JobResourceTestCase(WWWTestCase):
             ),
             max_runtime=mock.Mock(),
         )
+        self.job.get_name.return_value = 'foo'
         self.job_scheduler.get_job.return_value = self.job
         self.job_scheduler.get_job_runs.return_value = self.job_runs
         self.resource = www.JobResource(self.job_scheduler)
@@ -250,7 +251,7 @@ class JobResourceTestCase(WWWTestCase):
 
     def test_getChild(self):
         autospec_method(self.resource.get_run_from_identifier)
-        identifier = 'identifier'
+        identifier = b'identifier'
         resource = self.resource.getChild(identifier, None)
         assert_equal(
             resource.job_run,
@@ -315,7 +316,7 @@ class ConfigResourceTestCase(TestCase):
         )
 
     def test_render_POST_update(self):
-        name, config, hash = 'the_name', mock.Mock(), mock.Mock()
+        name, config, hash = 'the_name', 'config', 'hash'
         request = build_request(name=name, config=config, hash=hash)
         self.resource.render_POST(request)
         self.controller.update_config.assert_called_with(name, config, hash)
@@ -326,7 +327,7 @@ class ConfigResourceTestCase(TestCase):
         self.respond.assert_called_with(request, response_content)
 
     def test_render_POST_delete(self):
-        name, config, hash = 'the_name', '', mock.Mock()
+        name, config, hash = 'the_name', '', ''
         request = build_request(name=name, config=config, hash=hash)
         self.resource.render_POST(request)
         self.controller.delete_config.assert_called_with(name, config, hash)

@@ -1,5 +1,6 @@
 #!/usr/bin/env bash
 
+
 if ! service ssh status > /dev/null; then
   echo Setting up SSH
   apt-get -qq -y install ssh
@@ -8,11 +9,12 @@ if ! service ssh status > /dev/null; then
   cp example-cluster/insecure_key.pub ~/.ssh/authorized_keys
   chmod -R 0600 ~/.ssh
   service ssh start
+  eval $(ssh-agent)
 fi
 
-if ! pip list --format=columns | grep 'tron.*/work' > /dev/null; then
-  echo "Installing packages (may take a while)"
-  pip install -q -e .
+if ! pip3.6 list --format=columns | grep 'tron.*/work' > /dev/null; then
+  echo Installing packages
+  pip3.6 install -q -e .
 fi
 
 echo Starting Tron

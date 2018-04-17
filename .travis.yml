@@ -1,11 +1,9 @@
 ---
 language: python
 env:
-  - TARGET=tox_py27
   - TARGET=tox_py36
   - TARGET=debitest_trusty
 python:
-  - 2.7
   - 3.6
 
 before_install:
@@ -13,15 +11,6 @@ before_install:
 
 install: pip install tox
 script: make $TARGET
-
-matrix:
-  exclude:
-    - env: TARGET=tox_py36
-      python: 2.7
-    - env: TARGET=tox_py27
-      python: 3.6
-    - env: TARGET=debitest_trusty
-      python: 3.6
 
 deploy:
   - provider: pypi

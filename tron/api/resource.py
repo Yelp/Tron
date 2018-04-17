@@ -5,6 +5,7 @@ view current state, event history and send commands to trond.
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import collections
 import datetime
 import logging
 
@@ -37,13 +38,16 @@ class JSONEncoder(json.JSONEncoder):
         if isinstance(o, datetime.date):
             return o.isoformat()
 
+        if isinstance(o, collections.KeysView):
+            return list(o)
+
         return super(JSONEncoder, self).default(o)
 
 
 def respond(request, response_dict, code=http.OK, headers=None):
     """Helper to generate a json response"""
     request.setResponseCode(code)
-    request.setHeader(b'content-type', b'application/json')
+    request.setHeader(b'content-type', b'application/json; charset=utf-8')
     request.setHeader(b'Access-Control-Allow-Origin', b'*')
     for key, val in six.iteritems((headers or {})):
         request.setHeader(str(key), str(val))
@@ -285,7 +289,11 @@ class ConfigResource(resource.Resource):
         config_name = requestargs.get_string(request, 'name')
         no_header = requestargs.get_bool(request, 'no_header')
         if not config_name:
-            return respond(request, {'error': "'name' for config is required."})
+            return respond(
+                request,
+                {'error': "'name' for config is required."},
+                code=http.BAD_REQUEST,
+            )
         response = self.controller.read_config(
             config_name, add_header=not no_header,
         )
@@ -298,7 +306,11 @@ class ConfigResource(resource.Resource):
         check = requestargs.get_bool(request, 'check')
 
         if not name:
-            return respond(request, {'error': "'name' for config is required."})
+            return respond(
+                request,
+                {'error': "'name' for config is required."},
+                code=http.BAD_REQUEST,
+            )
 
         response = {'status': "Active"}
 
@@ -356,20 +368,20 @@ class ApiRootResource(resource.Resource):
 
         # Setup children
         self.putChild(
-            'jobs',
+            b'jobs',
             JobCollectionResource(mcp.get_job_collection()),
         )
 
-        self.putChild('config', ConfigResource(mcp))
-        self.putChild('status', StatusResource(mcp))
-        self.putChild('events', EventResource(''))
-        self.putChild('', self)
+        self.putChild(b'config', ConfigResource(mcp))
+        self.putChild(b'status', StatusResource(mcp))
+        self.putChild(b'events', EventResource(''))
+        self.putChild(b'', self)
 
     def render_GET(self, request):
         """Return an index of urls for resources."""
         response = {
-            'jobs':             self.children['jobs'].get_job_index(),
-            'namespaces':       self.children['config'].get_config_index(),
+            'jobs':             self.children[b'jobs'].get_job_index(),
+            'namespaces':       self.children[b'config'].get_config_index(),
         }
         return respond(request, response)
 
@@ -380,9 +392,9 @@ class RootResource(resource.Resource):
         resource.Resource.__init__(self)
         self.web_path = web_path
         self.mcp = mcp
-        self.putChild('api', ApiRootResource(self.mcp))
-        self.putChild('web', static.File(web_path))
-        self.putChild('', self)
+        self.putChild(b'api', ApiRootResource(self.mcp))
+        self.putChild(b'web', static.File(web_path))
+        self.putChild(b'', self)
 
     def render_GET(self, request):
         request.redirect(request.prePathURL() + b'web')
@@ -399,7 +411,7 @@ class LogAdapter(object):
         self.logger = logger
 
     def write(self, line):
-        self.logger.info(line.rstrip('\n'))
+        self.logger.info(line.rstrip(b'\n'))
 
     def close(self):
         pass

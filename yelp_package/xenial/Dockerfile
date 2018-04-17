@@ -1,22 +1,30 @@
-FROM docker-dev.yelpcorp.com/xenial_yelp
+FROM ubuntu:xenial
 
-RUN apt-get update > /dev/null && \
-    DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
+# Need Python 3.6
+RUN apt-get -q update && \
+    apt-get -q install -y --no-install-recommends software-properties-common && \
+    add-apt-repository ppa:deadsnakes/ppa
+
+RUN apt-get -q update && \
+    DEBIAN_FRONTEND=noninteractive apt-get -q install -y --no-install-recommends \
+        coffeescript \
         debhelper \
-        dpkg-dev \
         devscripts \
-        python-pip \
-        wget \
+        dpkg-dev \
+        gcc \
         gdebi-core \
         git \
-        gcc \
-        python-dev \
-        coffeescript \
+        help2man \
+        libffi-dev \
+        libgpgme11 \
+        libssl-dev \
         libdb5.3-dev \
         libyaml-dev \
         libssl-dev \
         libffi-dev \
-        && apt-get clean > /dev/null
+        python3.6-dev \
+        wget \
+    && apt-get -q clean
 
 RUN cd /tmp && \
     wget http://mirrors.kernel.org/ubuntu/pool/universe/d/dh-virtualenv/dh-virtualenv_1.0-1_all.deb && \

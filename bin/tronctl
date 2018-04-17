@@ -11,9 +11,9 @@ from __future__ import unicode_literals
 import datetime
 import logging
 import sys
-import urlparse
 
 import argcomplete
+from six.moves.urllib.parse import urljoin
 
 from tron.commands import client
 from tron.commands import cmd_utils
@@ -87,7 +87,7 @@ def edit(args, uri):
     if args.command == "start" and args.run_date:
         data['run_time'] = str(args.run_date)
 
-    uri = urlparse.urljoin(args.server, uri)
+    uri = urljoin(args.server, uri)
     response = client.request(uri, data=data)
 
     if response.error:

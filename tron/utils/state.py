@@ -5,6 +5,7 @@ import logging
 
 import six
 
+from tron.utils import maybe_decode
 from tron.utils.observer import Observable
 
 
@@ -85,6 +86,8 @@ def traverse(starting_state, match_func):
 
 
 def named_event_by_name(starting_state, name):
+    name = maybe_decode(name)
+
     def name_match(t, s): return s.name == name
     try:
         _, state = next(traverse(starting_state, name_match))

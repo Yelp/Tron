@@ -4,7 +4,9 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import argparse
+import logging
 import os
+import traceback
 
 import pkg_resources
 
@@ -13,6 +15,7 @@ from tron import trondaemon
 from tron.commands import cmd_utils
 from tron.config import manager
 
+log = logging.getLogger(__name__)
 
 DEFAULT_CONF = 'default_config.yaml'
 DEFAULT_CONF_PATH = 'config/'
@@ -138,6 +141,7 @@ def setup_environment(args):
             create_default_config(args.config_path)
         except OSError as e:
             msg = "Error creating default configuration at %s: %s"
+            log.debug(traceback.format_exc())
             raise SystemExit(msg % (args.config_path, e))
 
     if not os.access(args.config_path, os.R_OK | os.W_OK):
