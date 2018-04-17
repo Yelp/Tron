@@ -10,6 +10,11 @@ add-apt-repository -y ppa:deadsnakes/ppa
 apt-get update
 gdebi --non-interactive /work/dist/*.deb
 
+# TODO: change default MASTER config to not require ssh agent
+apt-get install -y ssh
+service ssh start
+eval $(ssh-agent)
+
 trond --help
 tronfig --help
 
@@ -20,12 +25,10 @@ from yaml import CSafeLoader
 from yaml import CSafeDumper
 EOF
 
-rm -rf /var/lib/tron
-ln -s /work/example-cluster /var/lib/tron
-rm -f /var/lib/tron/tron.pid
+mkdir -p /nail/tron
 export TRON_START_TIME=$(date +%s)
 
-trond -v --nodaemon -c tronfig/ -l logging.conf &
+trond --nodaemon --working-dir=/nail/tron &
 TRON_PID=$!
 
 for i in {1..5}; do

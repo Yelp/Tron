@@ -4,11 +4,15 @@
 if ! service ssh status > /dev/null; then
   echo Setting up SSH
   apt-get -qq -y install ssh
+  service ssh start
+fi
+
+if [ -z "$SSH_AUTH_SOCK" ]; then
+  echo Setting up SSH agent
   mkdir -p ~/.ssh
   cp example-cluster/insecure_key ~/.ssh/id_rsa
   cp example-cluster/insecure_key.pub ~/.ssh/authorized_keys
   chmod -R 0600 ~/.ssh
-  service ssh start
   eval $(ssh-agent)
 fi
 
