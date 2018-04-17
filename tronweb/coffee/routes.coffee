@@ -48,7 +48,7 @@ class module.TronRoutes extends Backbone.Router
             [],
             refreshModel: new RefreshModel(),
             filterModel: new JobListFilterModel(module.getParamsMap(params))
-            fetchParams: { include_job_runs: 1, include_node_pools: 1 }
+            fetchParams: { include_job_runs: 1, include_node_pool: 1 }
         )
         @updateMainView(collection, JobListView)
 
