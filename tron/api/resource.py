@@ -261,9 +261,11 @@ class JobCollectionResource(resource.Resource):
             request, 'include_action_runs',
         )
         include_action_graph = requestargs.get_bool(
-            request, 'include_action_graph',
+            request, 'include_action_graph', default=True,
         )
-        include_node_pool = requestargs.get_bool(request, 'include_node_pool')
+        include_node_pool = requestargs.get_bool(
+            request, 'include_node_pool', default=True,
+        )
         output = dict(jobs=self.get_data(
             include_job_runs, include_action_runs, include_action_graph, include_node_pool,
         ))
