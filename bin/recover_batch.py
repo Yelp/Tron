@@ -3,12 +3,16 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import argparse
+import logging
 import sys
 
+import psutil
 import yaml
 from twisted.internet import inotify
 from twisted.internet import reactor
 from twisted.python import filepath
+
+log = logging.getLogger(__name__)
 
 
 class StatusFileWatcher(object):
@@ -40,22 +44,29 @@ def notify(ignored, filepath, mask):
             sys.exit(return_code)
 
 
-def get_existing_return_code(filepath):
+def get_key_from_last_line(filepath, key):
     with open(filepath) as f:
         lines = f.readlines()
         if lines:
             content = yaml.load(lines[-1])
-            if content['return_code'] is not None:
-                return content['return_code']
-            else:
-                return None
+            return content.get(key)
         return None
 
 
 if __name__ == "__main__":
     args = parse_args()
-    existing_return_code = get_existing_return_code(args.filepath)
+    existing_return_code = get_key_from_last_line(args.filepath, 'return_code')
     if existing_return_code is not None:
         sys.exit(existing_return_code)
+
+    runner_pid = get_key_from_last_line(args.filepath, 'runner_pid')
+    if not psutil.pid_exists(runner_pid):
+        log.info("action_runner pid %d no longer running; unable to recover batch" % runner_pid)
+        #TODO: should we kill the process here?
+        sys.exit(1)
+
+    if existing_return_code is not None:
+        sys.exit(1)
+
     watcher = StatusFileWatcher(args.filepath, notify)
     reactor.run()

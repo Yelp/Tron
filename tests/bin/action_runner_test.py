@@ -19,17 +19,23 @@ class StatusFileTestCase(TestCase):
 
     def test_get_content(self):
         command, proc, run_id = 'do this', mock.Mock(), 'Job.test.1'
-        content = self.status_file.get_content(
-            command=command,
-            proc=proc,
-            run_id=run_id,
-        )
-        expected = dict(
-            run_id=run_id,
-            command=command,
-            pid=proc.pid,
-            return_code=proc.returncode,
-        )
+        with mock.patch('action_runner.time.time', autospace=True) as faketime, \
+             mock.patch('action_runner.os.getpid', autospec=True) as fakepid:
+            faketime.return_value = 0
+            fakepid.return_value = 2
+            content = self.status_file.get_content(
+                command=command,
+                proc=proc,
+                run_id=run_id,
+            )
+            expected = dict(
+                run_id=run_id,
+                command=command,
+                pid=proc.pid,
+                return_code=proc.returncode,
+                runner_pid=2,
+                timestamp=0,
+            )
         assert_equal(content, expected)
 
 
