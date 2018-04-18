@@ -80,6 +80,10 @@ class ActionRunController(object):
             return msg % (command, e)
 
     def handle_retry(self):
+        cleanup_run = self.action_runs.cleanup_action_run
+        if cleanup_run and cleanup_run.is_done:
+            return "JobRun has run a cleanup action, use rerun instead"
+
         self.action_run.retry()
 
 

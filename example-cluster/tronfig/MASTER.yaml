@@ -15,7 +15,7 @@ action_runner:
 
 nodes:
   - hostname: localhost
-    username: tron
+    username: root
   # Note: the action runner is not available on batch1.
   # Comment out the action_runner config if you want to schedule things remotely
   #  - hostname: batch1
