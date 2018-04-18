@@ -174,8 +174,20 @@ class module.ActionRunView extends Backbone.View
                     <tr><td>Command</td>
                         <td><code class="command"><%= command %></code></td></tr>
                     <% } %>
-                    <tr><td>Exit code</td>
-                        <td><%= modules.actionrun.formatExit(exit_status) %></td></tr>
+                    <tr><td>Exit codes</td>
+                        <td>
+                            <%= modules.actionrun.formatExit(exit_status) %>
+                            <% if (exit_statuses) { %>
+                                <small>
+                                    (exits of failed attempts:
+                                    <%= _.map(
+                                            _.reverse(exit_statuses),
+                                            modules.actionrun.formatExit
+                                        ).join(", ") %>)
+                                </small>
+                            <% } %>
+                        </td>
+                    </tr>
                     <tr><td>Start time</td>
                         <td><% print(dateFromNow(start_time, ''))  %></td></tr>
                     <tr><td>End time</td>
