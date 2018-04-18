@@ -184,7 +184,7 @@ class JobCollectionResourceTestCase(WWWTestCase):
     def test_render_GET(self):
         self.resource.get_data = Turtle()
         result = self.resource.render_GET(REQUEST)
-        assert_call(self.resource.get_data, 0, False, False, False, False)
+        assert_call(self.resource.get_data, 0, False, False, True, True)
         assert 'jobs' in result
 
     def test_getChild(self):
