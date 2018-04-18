@@ -26,11 +26,8 @@ time_zone: US/Eastern
 jobs:
   - name: "test"
     node: localhost
-    schedule: "cron */10 * * * *"
+    schedule: "cron * * * * *"
     time_zone: "US/Pacific"
     actions:
-      - name: "one"
-        command: "echo one; ruby -e 'exit(rand(0..1))'"
-      - name: "two"
-        command: "echo two; ruby -e 'exit(rand(0..1))'"
-        requires: ["one"]
+      - name: "first"
+        command: "sleep 5m"

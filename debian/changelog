@@ -1,3 +1,10 @@
+tron (0.8.0.2) trusty; urgency=medium
+
+  * 0.8.0.2 tagged with 'make release'
+    Fix: regression in tronweb jobs list
+
+ -- root <root@aa16172c0160>  Wed, 18 Apr 2018 11:09:19 +0000
+
 tron (0.8.0.1) trusty; urgency=medium
 
   * 0.8.0.1 tagged with 'make release'

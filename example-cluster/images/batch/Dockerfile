@@ -26,6 +26,6 @@ RUN cat /home/tron/insecure_key.pub > /home/tron/.ssh/authorized_keys
 
 RUN wget --no-check-certificate https://bootstrap.pypa.io/get-pip.py -O /tmp/get-pip.py
 RUN python /tmp/get-pip.py
-RUN pip install -U tox wheel setuptools
+RUN pip install -U tox wheel setuptools PyYAML
 
 WORKDIR /work

@@ -1,5 +1,5 @@
 VERSION=$(shell python setup.py --version)
-DOCKER_RUN = docker run -t -e SSH_AUTH_SOCK -v $(CURDIR):/work:rw
+DOCKER_RUN = docker run -t -v $(CURDIR):/work:rw
 UID:=$(shell id -u)
 GID:=$(shell id -g)
 
