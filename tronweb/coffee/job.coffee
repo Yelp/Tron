@@ -20,23 +20,16 @@ class window.Job extends Backbone.Model
 
 
 class window.JobCollection extends Backbone.Collection
-    model: Job
-    url: "/jobs"
 
     initialize: (models, options) =>
-        options = options || {}
-        @fetchParams = options.fetchParams
-        @fetchParams ||= { include_job_runs: 1 }
-        delete options.fetchParams
-
         super options
+        options = options || {}
         @refreshModel = options.refreshModel
         @filterModel = options.filterModel
 
-    fetch: (options) =>
-        options ||= {}
-        options.data ||= $.param(@fetchParams)
-        super(options)
+    model: Job
+
+    url: "/jobs?include_job_runs=1"
 
     parse: (resp, options) =>
         resp['jobs']

@@ -44,12 +44,9 @@ class module.TronRoutes extends Backbone.Router
         @updateMainView(new Config(name: name), ConfigView)
 
     jobs: (params) ->
-        collection = new JobCollection(
-            [],
+        collection = new JobCollection([],
             refreshModel: new RefreshModel(),
-            filterModel: new JobListFilterModel(module.getParamsMap(params))
-            fetchParams: { include_job_runs: 1, include_node_pool: 1 }
-        )
+            filterModel: new JobListFilterModel(module.getParamsMap(params)))
         @updateMainView(collection, JobListView)
 
     job: (name) ->

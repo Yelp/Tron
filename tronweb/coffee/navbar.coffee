@@ -1,5 +1,8 @@
+
+
 window.modules = window.modules || {}
 module = window.modules.navbar = {}
+
 
 class module.NavView extends Backbone.View
 
@@ -13,7 +16,7 @@ class module.NavView extends Backbone.View
         id: "menu"
 
     events:
-        ".search-query click": "handleClick"
+        ".search-query click":  "handleClick"
 
     handleClick: (event) ->
        console.log(event)

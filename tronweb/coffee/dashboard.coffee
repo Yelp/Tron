@@ -5,9 +5,9 @@ window.modules.dashboard = module = {}
 
 class window.Dashboard extends Backbone.Model
 
-    initialize: (options) ->
+    initialize: (options)->
         options = options || {}
-        @refreshModel = new RefreshModel({ interval: 30 })
+        @refreshModel = new RefreshModel(interval: 30)
         @filterModel = options.filterModel
         @jobList = new JobCollection()
         @listenTo(@jobList, "sync", @change)
