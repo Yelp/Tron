@@ -33,12 +33,11 @@ class SQLAlchmeyStateStoreTestCase(TestCase):
 
     def test_create_tables(self):
         assert self.store.job_table.name
-        assert self.store.service_table.name
         assert self.store.metadata_table.name
 
     def test_build_key(self):
-        key = self.store.build_key(runstate.SERVICE_STATE, 'blah')
-        assert_equal(key.table, self.store.service_table)
+        key = self.store.build_key(runstate.JOB_STATE, 'blah')
+        assert_equal(key.table, self.store.job_table)
         assert_equal(key.id, 'blah')
 
     def test_save(self):
@@ -58,7 +57,7 @@ class SQLAlchmeyStateStoreTestCase(TestCase):
     def test_restore_many(self):
         keys = [
             sqlalchemystore.SQLStateKey(self.store.job_table, 'stars'),
-            sqlalchemystore.SQLStateKey(self.store.service_table, 'foo'),
+            sqlalchemystore.SQLStateKey(self.store.metadata_table, 'foo'),
         ]
         items = [
             {'docs': 'builder', 'a': 'b'},
@@ -73,7 +72,7 @@ class SQLAlchmeyStateStoreTestCase(TestCase):
     def test_restore_partial(self):
         keys = [
             sqlalchemystore.SQLStateKey(self.store.job_table, 'stars'),
-            sqlalchemystore.SQLStateKey(self.store.service_table, 'foo'),
+            sqlalchemystore.SQLStateKey(self.store.metadata_table, 'foo'),
         ]
         item = {'docs': 'builder', 'a': 'b'}
         self.store.save([(keys[0], item)])

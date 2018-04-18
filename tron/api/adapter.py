@@ -96,6 +96,7 @@ class ActionRunAdapter(RunAdapter):
         'end_time',
         'exit_status',
         'action_name',
+        'exit_statuses',
     ]
 
     translated_field_names = [
@@ -256,12 +257,14 @@ class JobAdapter(ReprAdapter):
         include_job_runs=False,
         include_action_runs=False,
         include_action_graph=True,
+        include_node_pool=True,
         num_runs=None,
     ):
         super(JobAdapter, self).__init__(job)
         self.include_job_runs = include_job_runs
         self.include_action_runs = include_action_runs
         self.include_action_graph = include_action_graph
+        self.include_node_pool = include_node_pool
         self.num_runs = num_runs
 
     def get_name(self):
@@ -276,6 +279,7 @@ class JobAdapter(ReprAdapter):
     def get_action_names(self):
         return self._obj.action_graph.names
 
+    @toggle_flag('include_node_pool')
     def get_node_pool(self):
         return NodePoolAdapter(self._obj.node_pool).get_repr()
 
@@ -336,75 +340,6 @@ class SchedulerAdapter(ReprAdapter):
 
     def get_jitter(self):
         return scheduler.get_jitter_str(self._obj.get_jitter())
-
-
-class ServiceAdapter(ReprAdapter):
-
-    field_names = ['name', 'enabled']
-    translated_field_names = [
-        'count',
-        'url',
-        'state',
-        'command',
-        'pid_filename',
-        'instances',
-        'node_pool',
-        'live_count',
-        'monitor_interval',
-        'restart_delay',
-        'events',
-    ]
-
-    def __init__(self, service, include_events=False):
-        super(ServiceAdapter, self).__init__(service)
-        self.include_events = include_events
-
-    def get_url(self):
-        return "/services/%s" % quote(bytes(self._obj.get_name()))
-
-    def get_count(self):
-        return self._obj.config.count
-
-    def get_state(self):
-        return self._obj.get_state()
-
-    def get_command(self):
-        return self._obj.config.command
-
-    def get_pid_filename(self):
-        return self._obj.config.pid_file
-
-    def get_instances(self):
-        return adapt_many(ServiceInstanceAdapter, self._obj.instances)
-
-    def get_node_pool(self):
-        return NodePoolAdapter(self._obj.instances.node_pool).get_repr()
-
-    def get_live_count(self):
-        return len(self._obj.instances)
-
-    def get_monitor_interval(self):
-        return self._obj.config.monitor_interval
-
-    def get_restart_delay(self):
-        return self._obj.config.restart_delay
-
-    @toggle_flag('include_events')
-    def get_events(self):
-        events = adapt_many(EventAdapter, self._obj.event_recorder.list())
-        return events[:self.include_events]
-
-
-class ServiceInstanceAdapter(ReprAdapter):
-
-    field_names = ['id', 'failures']
-    translated_field_names = ['state', 'node']
-
-    def get_state(self):
-        return str(self._obj.get_state())
-
-    def get_node(self):
-        return NodeAdapter(self._obj.node).get_repr()
 
 
 class EventAdapter(ReprAdapter):

@@ -1,19 +1,33 @@
+state_persistence:
+  name: "/nail/tron/tron_state"
+  store_type: "shelve"
+  buffer_size: 10
+
 ssh_options:
-   agent: False
-   identities:
-      - /work/example-cluster/insecure_key
+  agent: False
+  identities:
+    - /work/example-cluster/insecure_key
+
+action_runner:
+  runner_type: "subprocess"
+  remote_status_path: "/tmp/tron"
+  remote_exec_path: "/work/bin/"
 
 nodes:
-   - hostname: batch1
-     username: tron
+  - hostname: localhost
+    username: root
+  # Note: the action runner is not available on batch1.
+  # Comment out the action_runner config if you want to schedule things remotely
+  #  - hostname: batch1
+  #    username: tron
 
 time_zone: US/Eastern
 
 jobs:
-   - name: "test"
-     node: batch1
-     schedule: "daily 17:00:00"
-     time_zone: "US/Pacific"
-     actions:
-        - name: "first"
-          command: "echo hi >> out"
+  - name: "test"
+    node: localhost
+    schedule: "cron * * * * *"
+    time_zone: "US/Pacific"
+    actions:
+      - name: "first"
+        command: "sleep 5m"

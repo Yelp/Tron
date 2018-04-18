@@ -15,6 +15,7 @@ from tron import node
 from tron.core.actionrun import ActionRun
 from tron.core.actionrun import ActionRunFactory
 from tron.serialize import filehandler
+from tron.utils import maybe_decode
 from tron.utils import proxy
 from tron.utils import timeutils
 from tron.utils.observer import Observable
@@ -47,7 +48,7 @@ class JobRun(Observable, Observer):
         deploy_group=None,
     ):
         super(JobRun, self).__init__()
-        self.job_name = job_name
+        self.job_name = maybe_decode(job_name)
         self.run_num = run_num
         self.run_time = run_time
         self.node = node

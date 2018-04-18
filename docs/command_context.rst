@@ -5,7 +5,7 @@ Built-In Command Context Variables
 ==================================
 
 Tron includes some built in command context variables that can be used in
-command configuration (as well as pid_file_template for services).
+command configuration.
 
 
 **shortdate**
@@ -44,7 +44,7 @@ command configuration (as well as pid_file_template for services).
     before the run date.
 
 **name**
-    Name of the job or service
+    Name of the job
 
 **node**
     Hostname of the node the action is being run on
@@ -68,14 +68,3 @@ Context variables only available to Jobs
     The last successful run date (defaults to current date if there was no
     previous successful run). Supports date arithmetic using the form
     ``%(last_success:shortdate-1)s``.
-
-
-Context variables only available to Services
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
-
-**pid_file**
-    The filename of the pid file.
-
-**instance_number**
-    The number identifying this instance (will be 0 to n-1 where n is the
-    total number of instances).

@@ -8,6 +8,7 @@ tron.egg-info
 *.swo
 docs/_build/
 .idea
+.vscode
 tron.iml
 docs/images/
 *.dot
@@ -16,10 +17,16 @@ tronweb_tests/spec/*.js
 tronweb_tests/lib/
 .tox
 .tox-docker
-tron_state
-tron_state.db
 tron.iml
 __pycache__/
+
+# Example cluster
+example-cluster/config
+example-cluster/MASTER.*
+example-cluster/tron-repl.pid
+example-cluster/tron_state*
+*.stdout
+*.stderr
 
 # Generated debian artifacts
 debian/tron

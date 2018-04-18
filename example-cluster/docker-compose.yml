@@ -5,13 +5,11 @@ services:
     build:
       context: ../
       dockerfile: yelp_package/trusty/Dockerfile
-      # dockerfile: yelp_package/xenial/Dockerfile
     volumes:
       - ../:/work
       - ./:/nail/tron
-    links:
-      - batch1
-      - batch2
+    ports:
+      - "8089:8089"
   # For itests only, `pip install -e .` won't work
   master:
     build:
@@ -20,10 +18,7 @@ services:
       # dockerfile: images/xenial
     links:
       - batch1
-      - batch2
   batch1:
     build:
-      context: images/batch
-  batch2:
-    build:
-      context: images/batch
+      context: ../
+      dockerfile: example-cluster/images/batch/Dockerfile

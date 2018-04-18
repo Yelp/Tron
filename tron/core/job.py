@@ -17,6 +17,7 @@ from tron.core.actionrun import ActionRun
 from tron.scheduler import scheduler_from_config
 from tron.serialize import filehandler
 from tron.utils import iteration
+from tron.utils import maybe_decode
 from tron.utils import proxy
 from tron.utils import timeutils
 from tron.utils.observer import Observable
@@ -84,7 +85,7 @@ class Job(Observable, Observer):
         deploy_group=None,
     ):
         super(Job, self).__init__()
-        self.name = name
+        self.name = maybe_decode(name)
         self.monitoring = monitoring
         self.action_graph = action_graph
         self.scheduler = scheduler

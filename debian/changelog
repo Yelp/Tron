@@ -1,9 +1,59 @@
+tron (0.8.0.2) trusty; urgency=medium
+
+  * 0.8.0.2 tagged with 'make release'
+    Fix: regression in tronweb jobs list
+
+ -- root <root@aa16172c0160>  Wed, 18 Apr 2018 11:09:19 +0000
+
+tron (0.8.0.1) trusty; urgency=medium
+
+  * 0.8.0.1 tagged with 'make release'
+    Commit: Merge pull request #370 from Yelp/python3-deb  Python3 deb
+
+ -- root <root@ef2489238ddf>  Mon, 16 Apr 2018 14:38:29 +0000
+
 tron (0.8.0.0) trusty; urgency=medium
 
   * 0.8.0.0 tagged with 'make release'
     Commit: remove duplicate ignore for debian/debhelper-build-stamp
 
  -- root <root@7a84f15cf87d>  Wed, 14 Mar 2018 11:14:08 +0000
+
+tron (0.7.8.3) trusty; urgency=medium
+
+  * 0.7.8.3 tagged with 'make release'
+    Commit: Merge pull request #426 from Yelp/maybe-decode-all-the-
+    things  Maybe decode all the things
+
+ -- root <root@134c326c0301>  Thu, 12 Apr 2018 13:29:50 +0000
+
+tron (0.7.8.2) trusty; urgency=medium
+
+  * 0.7.8.2 tagged with 'make release'
+    Commit: Merge pull request #424 from Yelp/cleanup-retries-validation
+    Fix validation of cleanup action
+
+ -- root <root@bdc822939744>  Tue, 10 Apr 2018 11:52:29 +0000
+
+tron (0.7.8.1) trusty; urgency=medium
+
+  * 0.7.8.1 tagged with 'make release'
+  * Retries attribute for action runs
+  * Preparing for Python 3 upgrade
+
+ -- root <root@29a498a76bfe>  Fri, 06 Apr 2018 14:45:12 +0000
+
+tron (0.7.8.0) trusty; urgency=medium
+
+  * 0.7.8.0 tagged with 'make release'
+  * Script to clean up namespaces
+  * Improve check_tron_jobs logging
+  * Fix bug in date context math with timezones
+  * Improve tab completion
+  * Remove more service code
+  * Use config values to create PaaSTA action run that prints
+
+ -- root <root@d2932ccaf8e4>  Tue, 03 Apr 2018 18:51:45 +0000
 
 tron (0.7.7.1) trusty; urgency=medium
 

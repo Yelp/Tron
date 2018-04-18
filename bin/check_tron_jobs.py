@@ -16,6 +16,9 @@ from tron.commands.client import get_object_type_from_identifier
 
 log = logging.getLogger('check_tron_jobs')
 
+# This script run every 300 seconds currently
+RUN_INTERVAL = 300
+
 
 class State(Enum):
     SUCCEEDED = "succeeded"
@@ -24,7 +27,7 @@ class State(Enum):
     NO_RUN_YET = "no_run_yet"
     NOT_SCHEDULED = "not_scheduled"
     WAITING_FOR_FIRST_RUN = "waiting_for_first_run"
-    UNKNOWN = "UNKNOWN"
+    UNKNOWN = "unknown"
 
 
 def parse_cli():
@@ -39,6 +42,10 @@ def parse_cli():
     )
     args = parser.parse_args()
     return args
+
+
+def _timestamp_to_timeobj(timestamp):
+    return time.strptime(timestamp, '%Y-%m-%d %H:%M:%S')
 
 
 def compute_check_result_for_job_runs(client, job, job_content):
@@ -71,29 +78,30 @@ def compute_check_result_for_job_runs(client, job, job_content):
     )
     action_run_details = client.action_runs(action_run_id.url, num_lines=10)
 
-    if last_state == State.SUCCEEDED or last_state == State.WAITING_FOR_FIRST_RUN:
-        prefix = "OK"
-        annotation = ""
+    if last_state == State.SUCCEEDED:
+        prefix = "OK: The last job run succeeded"
+        status = 0
+    elif last_state == State.WAITING_FOR_FIRST_RUN:
+        prefix = "OK: The job is 'new' and waiting for the first run"
         status = 0
     elif last_state == State.STUCK:
-        prefix = "WARN"
-        annotation = "Job still running when next job is scheduled to run (stuck?)"
+        prefix = "WARN: Job still running when next job is scheduled to run (stuck?)"
         status = 1
     elif last_state == State.FAILED:
-        prefix = "CRIT"
-        annotation = ""
+        prefix = "CRIT: The last job run failed!"
         status = 2
     elif last_state == State.NOT_SCHEDULED:
-        prefix = "CRIT"
-        annotation = "Job is not scheduled at all"
+        prefix = "CRIT: Job is not scheduled at all!"
         status = 2
+    elif last_state == State.UNKNOWN:
+        prefix = "WARN: Job has gone 'unknown' and might need manual intervention"
+        status = 1
     else:
-        prefix = "UNKNOWN"
-        annotation = ""
+        prefix = "UNKNOWN: The job is in a state that check_tron_jobs doesn't understand"
         status = 3
 
     kwargs["output"] = (
-        "{}: {}\n"
+        "{}\n"
         "{}'s last relevant run (run {}) {}.\n\n"
         "Here is the last action:"
         "{}\n\n"
@@ -102,7 +110,7 @@ def compute_check_result_for_job_runs(client, job, job_content):
         "Here is the whole job view for context:\n"
         "{}"
     ).format(
-        prefix, annotation, job['name'], relevant_job_run['id'], relevant_job_run['state'],
+        prefix, job['name'], relevant_job_run['id'], relevant_job_run['state'],
         pretty_print_actions(action_run_details),
         pretty_print_job_run(relevant_job_run),
         pretty_print_job(job_content),
@@ -134,9 +142,21 @@ def get_relevant_run_and_state(job_runs):
     if run is not None:
         return run, State.STUCK
     for run in job_runs['runs']:
-        if run.get('state', 'unknown') in ["failed", "succeeded"]:
-            return run, State(run.get('state', 'unknown'))
+        state = run.get('state', 'unknown')
+        if state in ["failed", "succeeded", "unknown"]:
+            return run, State(state)
+        if state in ["running"]:
+            action_state = is_action_failed_or_unknown(run)
+            if action_state != State.SUCCEEDED:
+                return run, action_state
     return job_runs['runs'][0], State.WAITING_FOR_FIRST_RUN
+
+
+def is_action_failed_or_unknown(job_run):
+    for run in job_run.get('runs', []):
+        if run.get('state', None) in ["failed", "unknown"]:
+            return State(run.get('state'))
+    return State.SUCCEEDED
 
 
 def is_job_scheduled(job_runs):
@@ -151,7 +171,7 @@ def is_job_stuck(job_runs):
     for run in sorted(job_runs['runs'], key=lambda k: k['run_time'], reverse=True):
         if run.get('state', 'unknown') == "running":
             if next_run_time:
-                difftime = time.strptime(next_run_time, '%Y-%m-%d %H:%M:%S')
+                difftime = _timestamp_to_timeobj(next_run_time)
                 if time.time() > time.mktime(difftime):
                     return run
         next_run_time = run.get('run_time', None)
@@ -170,12 +190,38 @@ def get_relevant_action(action_runs, last_state):
     return action_runs[-1]
 
 
+def guess_realert_every(job):
+    try:
+        job_next_run = job.get('next_run', None)
+        if job_next_run is None:
+            return -1
+        job_runs = job.get('runs', [])
+        job_runs_started = [
+            run for run in job_runs if run['start_time'] is not None
+        ]
+        if len(job_runs_started) == 0:
+            return -1
+        job_previous_run = max(
+            job_runs_started, key=lambda k: k['start_time'],
+        ).get('start_time')
+        time_diff = (time.mktime(_timestamp_to_timeobj(job_next_run)) -
+                     time.mktime(_timestamp_to_timeobj(job_previous_run)))
+        realert_every = max(int(time_diff / RUN_INTERVAL), 1)
+    except Exception as e:
+        log.warning("guess_realert_every failed: {}".format(e))
+        return -1
+    return realert_every
+
+
 def compute_check_result_for_job(client, job):
     kwargs = {
         "name": "check_tron_job.{}".format(job['name']),
         "source": "tron",
     }
     kwargs.update(job['monitoring'])
+    if 'realert_every' not in kwargs:
+        kwargs['realert_every'] = guess_realert_every(job)
+
     status = job["status"]
     if status == "disabled":
         kwargs["output"] = "OK: {} is disabled and won't be checked.".format(

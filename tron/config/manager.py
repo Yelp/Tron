@@ -12,6 +12,8 @@ from tron import yaml
 from tron.config import config_parse
 from tron.config import ConfigError
 from tron.config import schema
+from tron.utils import maybe_decode
+from tron.utils import maybe_encode
 
 
 log = logging.getLogger(__name__)
@@ -36,7 +38,7 @@ def read(path):
 
 def write_raw(path, content):
     with open(path, 'w') as fh:
-        fh.write(content)
+        fh.write(maybe_decode(content))
 
 
 def read_raw(path):
@@ -45,7 +47,7 @@ def read_raw(path):
 
 
 def hash_digest(content):
-    return hashlib.sha1(content.encode('utf-8')).hexdigest()
+    return hashlib.sha1(maybe_encode(content)).hexdigest()
 
 
 class ManifestFile(object):
@@ -72,7 +74,7 @@ class ManifestFile(object):
     def delete(self, name):
         manifest = read(self.filename)
         if name not in manifest:
-            msg = "Name %s does not exist in manifest, cannot delete."
+            msg = "Namespace %s does not exist in manifest, cannot delete."
             log.info(msg % name)
             return
 
@@ -113,7 +115,12 @@ class ConfigManager(object):
         write_raw(filename, content)
 
     def delete_config(self, name):
-        filename = self.get_filename_from_manifest(name)
+        filename = self.manifest.get_file_name(name)
+        if not filename:
+            msg = "Namespace %s does not exist in manifest, cannot delete."
+            log.info(msg % name)
+            return
+
         self.manifest.delete(name)
         os.remove(filename)
 

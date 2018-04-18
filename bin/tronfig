@@ -166,7 +166,11 @@ if __name__ == '__main__':
     client = Client(args.server)
 
     if args.print_config:
-        print(client.config(args.source)['config'])
+        # TODO: use maybe_encode()
+        content = client.config(args.source)['config']
+        if type(content) is not bytes:
+            content = content.encode('utf8')
+        os.write(sys.stdout.fileno(), content)
     elif args.delete:
         delete_config(client, args.source)
     else:

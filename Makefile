@@ -1,5 +1,5 @@
 VERSION=$(shell python setup.py --version)
-DOCKER_RUN = docker run -t -e SSH_AUTH_SOCK -v $(CURDIR):/work:rw
+DOCKER_RUN = docker run -t -v $(CURDIR):/work:rw
 UID:=$(shell id -u)
 GID:=$(shell id -g)
 
@@ -41,7 +41,7 @@ test:
 	tox -e py36
 
 test_in_docker_%: docker_%
-	$(DOCKER_RUN) tron-builder-$* tox -vv --workdir .tox-docker -e py36
+	$(DOCKER_RUN) tron-builder-$* python3.6 -m tox -vv --workdir .tox-docker -e py36
 
 tox_%:
 	tox -e $*
@@ -87,6 +87,5 @@ man:
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
 
 clean:
-	rm -rf dist debian/files debian/tron.debhelper.log \
-	       debian/tron.postinst.debhelper debian/tron.substvars tronweb/js/cs
+	rm -rf tronweb/js/cs
 	find . -name '*.pyc' -delete

@@ -10,6 +10,7 @@ from operator import itemgetter
 
 from tron.core import actionrun
 from tron.core import job
+from tron.utils import maybe_encode
 
 
 class Color(object):
@@ -216,7 +217,7 @@ def format_fields(display_obj, content):
         return display_obj.colors[field](field_value)
 
     def format_field(field):
-        value = content[field]
+        value = content.get(field)
         if value is None:
             return ''
         return field_display_mapping.get(field, lambda f: f)(value)
@@ -346,7 +347,8 @@ class DisplayActionRuns(TableDisplay):
         ('Bare command',        'raw_command'),
         ('Start time',          'start_time'),
         ('End time',            'end_time'),
-        ('Exit status',         'exit_status'),
+        ('Final exit status',   'exit_status'),
+        ('Retry exit statuses', 'exit_statuses'),
     ]
 
     colors = {
@@ -414,6 +416,6 @@ def view_with_less(content, color=True):
         cmd.append('-r')
 
     less_proc = subprocess.Popen(cmd, stdin=subprocess.PIPE)
-    less_proc.stdin.write(content)
+    less_proc.stdin.write(maybe_encode(content))
     less_proc.stdin.close()
     less_proc.wait()

@@ -11,17 +11,17 @@ Synopsys
 Description
 -----------
 
-**tronview** displays the status of tron scheduled jobs and services.
+**tronview** displays the status of tron scheduled jobs.
 
 tronview
-    Show all configured jobs and services
+    Show all configured jobs
 
-tronview <job_name|service_name>
-    Shows details for a job or service. Ex::
+tronview <job_name>
+    Shows details for a job. Ex::
 
     $ tronview my_job
 
-tronview <job_run_id|service_instance_id>
+tronview <job_run_id>
     Show details for specific run or instance. Ex::
 
     $ tronview my_job.0
@@ -73,8 +73,7 @@ Options
 States
 ----------
 For complete list of states with a diagram of valid transitions see
-http://packages.python.org/tron/jobs.html#states and
-http://packages.python.org/tron/services.html#states
+http://packages.python.org/tron/jobs.html#states
 
 
 Bugs

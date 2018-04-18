@@ -5,6 +5,7 @@ import logging
 
 from tron import node
 from tron.config.schema import CLEANUP_ACTION_NAME
+from tron.utils import maybe_decode
 
 log = logging.getLogger(__name__)
 
@@ -24,11 +25,13 @@ class Action(object):
         'mem',
         'service',
         'deploy_group',
+        'retries',
     ]
 
     def __init__(
         self, name, command, node_pool, required_actions=None,
         dependent_actions=None,
+        retries=None,
         executor=None,
         cluster=None,
         pool=None,
@@ -37,9 +40,10 @@ class Action(object):
         service=None,
         deploy_group=None,
     ):
-        self.name = name
+        self.name = maybe_decode(name)
         self.command = command
         self.node_pool = node_pool
+        self.retries = retries
         self.required_actions = required_actions or []
         self.dependent_actions = dependent_actions or []
         self.executor = executor
@@ -62,6 +66,7 @@ class Action(object):
             name=config.name,
             command=config.command,
             node_pool=node_repo.get_by_name(config.node),
+            retries=config.retries,
             executor=config.executor,
             cluster=config.cluster,
             pool=config.pool,

@@ -172,6 +172,13 @@ class ConfigManagerTestCase(TestCase):
         self.manifest.delete.assert_called_with(name)
         mock_remove.assert_called_with(path)
 
+    @mock.patch('os.remove', autospec=True)
+    def test_delete_missing_namespace(self, mock_remove):
+        name = 'namespace'
+        self.manifest.get_file_name.return_value = None
+        self.manager.delete_config(name)
+        assert_equal(mock_remove.call_count, 0)
+
     @mock.patch('tron.config.manager.config_parse.ConfigContainer', autospec=True)
     def test_validate_with_fragment(self, mock_config_container):
         name = 'the_name'

@@ -36,7 +36,7 @@ class ActionRunFactory(object):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
         action_map = six.iteritems(job_run.action_graph.get_action_map())
         action_run_map = {
-            name: cls.build_run_for_action(job_run, action_inst, action_runner)
+            maybe_decode(name): cls.build_run_for_action(job_run, action_inst, action_runner)
             for name, action_inst in action_map
         }
         return ActionRunCollection(job_run.action_graph, action_run_map)
@@ -56,7 +56,8 @@ class ActionRunFactory(object):
             ))
 
         action_run_map = {
-            action_run.action_name: action_run for action_run in action_runs
+            maybe_decode(action_run.action_name): action_run
+            for action_run in action_runs
         }
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
@@ -81,6 +82,7 @@ class ActionRunFactory(object):
             'mem': action.mem,
             'service': action.service or job_run.service,
             'deploy_group': action.deploy_group or job_run.deploy_group,
+            'retries_remaining': action.retries,
         }
         if action.executor == ExecutorTypes.paasta:
             return PaaSTAActionRun(**args)
@@ -179,9 +181,11 @@ class ActionRun(object):
         mem=None,
         service=None,
         deploy_group=None,
+        retries_remaining=None,
+        exit_statuses=None,
     ):
-        self.job_run_id = job_run_id
-        self.action_name = name
+        self.job_run_id = maybe_decode(job_run_id)
+        self.action_name = maybe_decode(name)
         self.node = node
         self.start_time = start_time
         self.end_time = end_time
@@ -203,6 +207,12 @@ class ActionRun(object):
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(self.id)
         self.context = command_context.build_context(self, parent_context)
+        self.retries_remaining = retries_remaining
+        self.exit_statuses = exit_statuses
+        if self.exit_statuses is None:
+            self.exit_statuses = []
+
+        self.action_command = None
 
     @property
     def state(self):
@@ -255,6 +265,8 @@ class ActionRun(object):
                 cls.STATE_SCHEDULED, state_data['state'],
             ),
             exit_status=state_data.get('exit_status'),
+            retries_remaining=state_data.get('retries_remaining'),
+            exit_statuses=state_data.get('exit_statuses'),
             executor=state_data.get('executor', ExecutorTypes.ssh),
             cluster=state_data.get('cluster'),
             pool=state_data.get('pool'),
@@ -276,7 +288,14 @@ class ActionRun(object):
         if not self.machine.check('start'):
             return False
 
-        log.info("Starting action run %s", self.id)
+        if len(self.exit_statuses) == 0:
+            log.info("Starting action run %s", self.id)
+        else:
+            log.info("Restarting action run {}, retry {}".format(
+                self.id,
+                len(self.exit_statuses),
+            ))
+
         self.start_time = timeutils.current_time()
         self.machine.transition('start')
 
@@ -296,7 +315,7 @@ class ActionRun(object):
     def stop(self):
         raise NotImplementedError()
 
-    def kill(self):
+    def kill(self, final=True):
         raise NotImplementedError()
 
     def _done(self, target, exit_status=0):
@@ -309,7 +328,24 @@ class ActionRun(object):
             self.end_time = timeutils.current_time()
             return self.machine.transition(target)
 
+    def retry(self):
+        # kill if in flight
+        if self.retries_remaining is None or self.retries_remaining <= 0:
+            self.retries_remaining = 1
+        self.kill(final=False)
+
     def fail(self, exit_status=0):
+        if self.retries_remaining is not None:
+            if self.retries_remaining > 0:
+                self.retries_remaining -= 1
+                self.exit_statuses.append(exit_status)
+                self.machine.reset()
+                return self.start()
+            else:
+                log.info("Reached maximum number of retries: {}".format(
+                    len(self.exit_statuses),
+                ))
+
         return self._done('fail', exit_status)
 
     def success(self):
@@ -343,6 +379,8 @@ class ActionRun(object):
             'mem':              self.mem,
             'service':          self.service,
             'deploy_group':     self.deploy_group,
+            'retries_remaining': self.retries_remaining,
+            'exit_statuses':     self.exit_statuses,
         }
 
     def render_command(self):
@@ -424,12 +462,18 @@ class SSHActionRun(ActionRun, Observer):
         return True
 
     def stop(self):
+        if self.retries_remaining is not None:
+            self.retries_remaining = -1
+
         stop_command = self.action_runner.build_stop_action_command(
             self.id, 'terminate',
         )
         self.node.submit_command(stop_command)
 
-    def kill(self):
+    def kill(self, final=True):
+        if self.retries_remaining is not None and final:
+            self.retries_remaining = -1
+
         kill_command = self.action_runner.build_stop_action_command(
             self.id, 'kill',
         )
@@ -493,9 +537,15 @@ class PaaSTAActionRun(ActionRun):
         return True
 
     def stop(self):
+        if self.retries_remaining is not None:
+            self.retries_remaining = -1
+
         pass
 
-    def kill(self):
+    def kill(self, final=True):
+        if self.retries_remaining is not None and final:
+            self.retries_remaining = -1
+
         pass
 
 

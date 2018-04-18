@@ -29,7 +29,7 @@ class RequestTestCase(TestCase):
 
     @setup
     def setup_options(self):
-        self.url = 'http://localhost:8089/services/'
+        self.url = 'http://localhost:8089/jobs/'
 
     @setup_teardown
     def patch_urllib(self):
@@ -166,7 +166,7 @@ class ClientTestCase(TestCase):
     def test_jobs(self):
         self.client.jobs()
         self.client.request.assert_called_with(
-            '/api/jobs?include_action_runs=0&include_job_runs=0',
+            '/api/jobs?include_action_graph=1&include_action_runs=0&include_job_runs=0&include_node_pool=1',
         )
 
 
@@ -193,7 +193,6 @@ class GetContentFromIdentifierTestCase(TestCase):
                 'MASTER.nameb': '',
                 'OTHER.nameg':  '',
             },
-            'services': ['MASTER.foo'],
         }
 
     def test_get_url_from_identifier_job_no_namespace(self):

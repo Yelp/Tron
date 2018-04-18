@@ -22,6 +22,7 @@ from twisted.web import http, resource, static, server
 from tron import event
 from tron.api import adapter, controller
 from tron.api import requestargs
+from tron.utils import maybe_decode
 
 
 log = logging.getLogger(__name__)
@@ -50,21 +51,20 @@ def respond(request, response_dict, code=http.OK, headers=None):
     request.setHeader(b'Access-Control-Allow-Origin', b'*')
     for key, val in six.iteritems((headers or {})):
         request.setHeader(str(key), str(val))
-    return str(
-        json.dumps(response_dict, cls=JSONEncoder) if response_dict else "",
-    ).encode('utf-8')
 
+    result = json.dumps(
+        response_dict, cls=JSONEncoder,
+    ) if response_dict else ""
 
-def get_string_arg(request, name):
-    val = requestargs.get_string(request, name.encode())
-    if val and not isinstance(val, str):
-        val = val.decode()
-    return val
+    if type(result) is not bytes:
+        result = result.encode('utf8')
+
+    return result
 
 
 def handle_command(request, api_controller, obj, **kwargs):
     """Handle a request to perform a command."""
-    command = get_string_arg(request, 'command')
+    command = requestargs.get_string(request, 'command')
     log.info("Handling '%s' request on %s", command, obj)
     try:
         response = api_controller.handle_command(command, **kwargs)
@@ -119,6 +119,8 @@ class JobRunResource(resource.Resource):
     def getChild(self, action_name, _):
         if not action_name:
             return self
+
+        action_name = maybe_decode(action_name)
         if action_name == '_events':
             return EventResource(self.job_run.id)
         if action_name in self.job_run.action_runs:
@@ -166,6 +168,8 @@ class JobResource(resource.Resource):
     def getChild(self, run_id, _):
         if not run_id:
             return self
+
+        run_id = maybe_decode(run_id)
         if run_id == '_events':
             return EventResource(self.job_scheduler.get_name())
 
@@ -230,14 +234,24 @@ class JobCollectionResource(resource.Resource):
     def getChild(self, name, request):
         if not name:
             return self
-        return resource_from_collection(self.job_collection, name.decode(), JobResource)
 
-    def get_data(self, include_job_run=False, include_action_runs=False):
+        name = maybe_decode(name)
+        return resource_from_collection(self.job_collection, name, JobResource)
+
+    def get_data(
+        self,
+        include_job_run=False,
+        include_action_runs=False,
+        include_action_graph=True,
+        include_node_pool=True,
+    ):
         return adapter.adapt_many(
             adapter.JobAdapter,
             self.job_collection.get_jobs(),
             include_job_run,
             include_action_runs,
+            include_action_graph,
+            include_node_pool,
             num_runs=5,
         )
 
@@ -248,87 +262,25 @@ class JobCollectionResource(resource.Resource):
         return {job['name']: job['actions'] for job in jobs}
 
     def render_GET(self, request):
-        include_job_runs = requestargs.get_bool(request, 'include_job_runs')
+        include_job_runs = requestargs.get_bool(
+            request, 'include_job_runs', default=False,
+        )
         include_action_runs = requestargs.get_bool(
-            request, 'include_action_runs',
+            request, 'include_action_runs', default=False,
+        )
+        include_action_graph = requestargs.get_bool(
+            request, 'include_action_graph', default=True,
+        )
+        include_node_pool = requestargs.get_bool(
+            request, 'include_node_pool', default=True,
         )
         output = dict(jobs=self.get_data(
-            include_job_runs, include_action_runs,
+            include_job_runs, include_action_runs, include_action_graph, include_node_pool,
         ))
         return respond(request, output)
 
     def render_POST(self, request):
         return handle_command(request, self.controller, self.job_collection)
-
-
-class ServiceInstanceResource(resource.Resource):
-
-    isLeaf = True
-
-    def __init__(self, service_instance):
-        resource.Resource.__init__(self)
-        self.service_instance = service_instance
-        self.controller = controller.ServiceInstanceController(
-            service_instance,
-        )
-
-    def render_POST(self, request):
-        return handle_command(request, self.controller, self.service_instance)
-
-
-class ServiceResource(resource.Resource):
-    """A resource that describes a particular service"""
-
-    def __init__(self, service):
-        resource.Resource.__init__(self)
-        self.service = service
-        self.controller = controller.ServiceController(self.service)
-
-    def getChild(self, name, _):
-        if not name:
-            return self
-        if name == '_events':
-            return EventResource(str(self.service))
-
-        number = int(name) if name.isdigit() else None
-        instance = self.service.instances.get_by_number(number)
-        if instance:
-            return ServiceInstanceResource(instance)
-
-        return resource.NoResource("Cannot find service instance: %s" % name)
-
-    def render_GET(self, request):
-        include_events = requestargs.get_integer(request, 'include_events')
-        response = adapter.ServiceAdapter(
-            self.service,
-            include_events=include_events,
-        ).get_repr()
-        return respond(request, response)
-
-    def render_POST(self, request):
-        return handle_command(request, self.controller, self.service)
-
-
-class ServiceCollectionResource(resource.Resource):
-    """Resource for ServiceCollection."""
-
-    def __init__(self, service_collection):
-        self.collection = service_collection
-        resource.Resource.__init__(self)
-
-    def getChild(self, name, _):
-        if not name:
-            return self
-        return resource_from_collection(self.collection, name, ServiceResource)
-
-    def get_data(self):
-        return adapter.adapt_many(adapter.ServiceAdapter, self.collection)
-
-    def get_service_index(self):
-        return self.collection.get_names()
-
-    def render_GET(self, request):
-        return respond(request, dict(services=self.get_data()))
 
 
 class ConfigResource(resource.Resource):
@@ -344,8 +296,8 @@ class ConfigResource(resource.Resource):
         return self.controller.get_namespaces()
 
     def render_GET(self, request):
-        config_name = get_string_arg(request, 'name')
-        no_header = requestargs.get_bool(request, b'no_header')
+        config_name = requestargs.get_string(request, 'name')
+        no_header = requestargs.get_bool(request, 'no_header')
         if not config_name:
             return respond(
                 request,
@@ -358,10 +310,10 @@ class ConfigResource(resource.Resource):
         return respond(request, response)
 
     def render_POST(self, request):
-        config_content = get_string_arg(request, 'config')
-        name = get_string_arg(request, 'name')
-        config_hash = get_string_arg(request, 'hash')
-        check = requestargs.get_bool(request, b'check')
+        config_content = requestargs.get_string(request, 'config')
+        name = requestargs.get_string(request, 'name')
+        config_hash = requestargs.get_string(request, 'hash')
+        check = requestargs.get_bool(request, 'check')
 
         if not name:
             return respond(
