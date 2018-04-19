@@ -181,7 +181,12 @@ class module.ActionRunView extends Backbone.View
                                 <small>
                                     (exits of failed attempts:
                                     <%= _.map(
-                                            _.reverse(exit_statuses),
+                                            _.sortBy(
+                                                exit_statuses,
+                                                function(val, key) {
+                                                    return -key;
+                                                }
+                                            ),
                                             modules.actionrun.formatExit
                                         ).join(", ") %>)
                                 </small>

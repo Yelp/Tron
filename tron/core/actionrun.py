@@ -333,6 +333,7 @@ class ActionRun(object):
             self.retries_remaining = 1
 
         if self.is_done:
+            self.exit_statuses.append(self.exit_status)
             self.restart()
         else:
             log.info("Killing the current action run for a retry")
