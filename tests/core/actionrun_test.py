@@ -125,7 +125,7 @@ class ActionRunFactoryTestCase(TestCase):
 
     def test_build_run_for_ssh_action(self):
         action = Turtle(
-            name='theaction', command="doit", executor=ExecutorTypes.ssh,
+            name='theaction', command="doit", executor=ExecutorTypes.SSH,
         )
         action_run = ActionRunFactory.build_run_for_action(
             self.job_run, action, self.action_runner,
@@ -136,7 +136,7 @@ class ActionRunFactoryTestCase(TestCase):
         action = Turtle(
             name='theaction',
             command="doit",
-            executor=ExecutorTypes.paasta,
+            executor=ExecutorTypes.PAASTA,
             cluster='prod',
             pool='default',
             cpus=10,
@@ -159,7 +159,7 @@ class ActionRunFactoryTestCase(TestCase):
         action = Turtle(
             name='theaction',
             command="doit",
-            executor=ExecutorTypes.paasta,
+            executor=ExecutorTypes.PAASTA,
             service='bar',
             deploy_group='dev',
         )
@@ -182,7 +182,7 @@ class ActionRunFactoryTestCase(TestCase):
 
     def test_action_run_from_state_paasta(self):
         state_data = self.action_state_data
-        state_data['executor'] = ExecutorTypes.paasta
+        state_data['executor'] = ExecutorTypes.PAASTA
         state_data['cluster'] = 'cluster-one'
         state_data['pool'] = 'private'
         state_data['cpus'] = 2

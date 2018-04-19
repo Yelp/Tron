@@ -258,7 +258,7 @@ In the config::
 ::
 
     schedule:
-        type: "groc daily"
+        type: "groc_daily"
         value: "every day 11:22"
         jitter: "5 min"
 

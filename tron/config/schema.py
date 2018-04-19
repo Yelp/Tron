@@ -187,7 +187,11 @@ class StatePersistenceTypes(Enum):
     YAML = 'yaml'
 
 
-ExecutorTypes = Enum.create('ssh', 'paasta')
+class ExecutorTypes(Enum):
+    SSH = 'ssh'
+    PAASTA = 'paasta'
 
 
-ActionRunnerTypes = Enum.create('none', 'subprocess')
+class ActionRunnerTypes(Enum):
+    NONE = 'none'
+    SUBPROCESS = 'subprocess'

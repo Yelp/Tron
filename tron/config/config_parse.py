@@ -271,7 +271,7 @@ class ValidateAction(Validator):
     defaults = {
         'node':         None,
         'requires':     (),
-        'executor':     schema.ExecutorTypes.ssh,
+        'executor':     schema.ExecutorTypes.SSH.value,
         'cluster':      None,
         'pool':         None,
         'cpus':         None,
@@ -314,7 +314,7 @@ class ValidateCleanupAction(Validator):
     defaults = {
         'node':         None,
         'name':         CLEANUP_ACTION_NAME,
-        'executor':     schema.ExecutorTypes.ssh,
+        'executor':     schema.ExecutorTypes.SSH.value,
         'cluster':      None,
         'pool':         None,
         'cpus':         None,
@@ -412,7 +412,7 @@ class ValidateJob(Validator):
 
         def is_incomplete_paasta_action(action):
             return (
-                action.executor == schema.ExecutorTypes.paasta and (
+                action.executor == schema.ExecutorTypes.PAASTA.value and (
                     action.service is None or
                     action.deploy_group is None
                 )

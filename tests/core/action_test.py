@@ -8,6 +8,7 @@ from testify import setup
 from testify import TestCase
 
 from tron import node
+from tron.config.schema import ExecutorTypes
 from tron.core import action
 
 
@@ -34,7 +35,7 @@ class TestAction(TestCase):
         new_action = action.Action.from_config(config)
         assert_equal(new_action.name, config.name)
         assert_equal(new_action.command, config.command)
-        assert_equal(new_action.executor, config.executor)
+        assert_equal(new_action.executor, ExecutorTypes(config.executor))
         assert_equal(new_action.cluster, config.cluster)
         assert_equal(new_action.pool, config.pool)
         assert_equal(new_action.cpus, config.cpus)

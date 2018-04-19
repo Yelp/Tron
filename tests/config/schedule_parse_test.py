@@ -46,7 +46,7 @@ class ScheduleConfigFromStringTestCase(TestCase):
         config = schedule_parse.schedule_config_from_string(schedule, context)
         assert_equal(config, mock_parse_groc.return_value)
         generic_config = schedule_parse.ConfigGenericSchedule(
-            'groc daily', schedule, None,
+            'groc_daily', schedule, None,
         )
         mock_parse_groc.assert_called_with(generic_config, context)
 
@@ -62,11 +62,7 @@ class ValidSchedulerTestCase(TestCase):
     @mock.patch('tron.config.schedule_parse.schedulers', autospec=True)
     def assert_validation(self, schedule, expected, mock_schedulers):
         context = config_utils.NullConfigContext
-        config = schedule_parse.valid_schedule(schedule, context)
-        mock_schedulers.__getitem__.assert_called_with('cron')
-        func = mock_schedulers.__getitem__.return_value
-        assert_equal(config, func.return_value)
-        func.assert_called_with(expected, context)
+        assert schedule_parse.valid_schedule(schedule, context)
 
     def test_cron_from_dict(self):
         schedule = {'type': 'cron', 'value': '* * * * *'}

@@ -58,7 +58,7 @@ class JobTestCase(TestCase):
     @mock.patch('tron.core.job.event', autospec=True)
     def test_from_config(self, _mock_event):
         action = mock.Mock(
-            name='first', command='doit',
+            name='first', command='doit', executor='ssh',
             node=None, requires=[],
         )
         job_config = mock.Mock(

@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 import datetime
 
 import mock
+from enum import Enum
 from testify import assert_equal
 from testify import run
 from testify import setup
@@ -72,7 +73,7 @@ class BuildEnumValidatorTestCase(TestCase):
 
     @setup
     def setup_enum_validator(self):
-        self.enum = dict(a=1, b=2)
+        self.enum = Enum('TestEnum', [('a', 'a'), ('b', 'b')])
         self.validator = config_utils.build_enum_validator(self.enum)
         self.context = config_utils.NullConfigContext
 
@@ -84,10 +85,7 @@ class BuildEnumValidatorTestCase(TestCase):
         exception = assert_raises(
             ConfigError, self.validator, 'c', self.context,
         )
-        assert_in(
-            'Value at  is not in %s: ' %
-            str(set(self.enum)), str(exception),
-        )
+        assert_in('Value at  is not in %s: ' % self.enum, str(exception))
 
 
 class ValidTimeTestCase(TestCase):
