@@ -522,13 +522,13 @@ class JobCollection(object):
         return self.jobs.get(name)
 
     def get_names(self):
-        return self.jobs.keys()
+        return list(self.jobs.keys())
 
     def get_jobs(self):
-        return [sched.get_job() for sched in self]
+        return [sched.get_job() for sched in six.itervalues(self.jobs)]
 
     def get_job_run_collections(self):
-        return [sched.get_job_runs() for sched in self]
+        return [sched.get_job_runs() for sched in six.itervalues(self.jobs)]
 
     def __iter__(self):
         return six.itervalues(self.jobs)
