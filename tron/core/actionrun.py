@@ -329,7 +329,7 @@ class ActionRun(object):
             return self.machine.transition(target)
 
     def retry(self):
-        if self.retries_remaining is None or self.retries_remaining < 0:
+        if self.retries_remaining is None or self.retries_remaining <= 0:
             self.retries_remaining = 1
 
         if self.is_done:
