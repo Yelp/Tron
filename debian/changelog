@@ -1,3 +1,10 @@
+tron (0.8.0.4) trusty; urgency=medium
+
+  * 0.8.0.4 tagged with 'make release'
+    Commit: friendlier output from tronctl retry
+
+ -- root <root@dafe28d81983>  Fri, 20 Apr 2018 14:15:05 +0000
+
 tron (0.8.0.3) trusty; urgency=medium
 
   * 0.8.0.3 tagged with 'make release'
