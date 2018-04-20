@@ -84,7 +84,10 @@ class ActionRunController(object):
         if cleanup_run and cleanup_run.is_done:
             return "JobRun has run a cleanup action, use rerun instead"
 
-        self.action_run.retry()
+        if self.action_run.retry():
+            return "Retrying %s" % self.action_run
+        else:
+            return "Failed to schedule retry for %s" % self.action_run
 
 
 class JobRunController(object):
