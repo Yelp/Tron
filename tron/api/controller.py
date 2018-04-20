@@ -60,6 +60,9 @@ class ActionRunController(object):
         if command in ('stop', 'kill'):
             return self.handle_termination(command)
 
+        if command == 'retry':
+            return self.handle_retry()
+
         if getattr(self.action_run, command)():
             msg = "%s now in state %s"
             return msg % (self.action_run, self.action_run.state)
@@ -75,6 +78,13 @@ class ActionRunController(object):
         except NotImplementedError as e:
             msg = "Failed to %s: %s"
             return msg % (command, e)
+
+    def handle_retry(self):
+        cleanup_run = self.job_run.action_runs.cleanup_action_run
+        if cleanup_run and cleanup_run.is_done:
+            return "JobRun has run a cleanup action, use rerun instead"
+
+        self.action_run.retry()
 
 
 class JobRunController(object):

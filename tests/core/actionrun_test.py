@@ -396,7 +396,7 @@ class SSHActionRunTestCase(TestCase):
         )
         self.action_run.watch.assert_called_with(action_command)
 
-    def test_retry(self):
+    def test_auto_retry(self):
         self.action_run.retries_remaining = 2
         self.action_run.exit_statuses = []
         self.action_run.build_action_command()
@@ -416,6 +416,18 @@ class SSHActionRunTestCase(TestCase):
         assert self.action_run.is_failed
 
         assert_equal(self.action_run.exit_statuses, [-1, -1])
+
+    def test_manual_retry(self):
+        self.action_run.retries_remaining = None
+        self.action_run.exit_statuses = []
+        self.action_run.build_action_command()
+        self.action_run.action_command.exit_status = -1
+        self.action_run.machine.transition('start')
+        self.action_run.fail(-1)
+        self.action_run.retry()
+        self.action_run.is_running
+        assert_equal(self.action_run.exit_statuses, [-1])
+        assert_equal(self.action_run.retries_remaining, 0)
 
     def test_handler_running(self):
         self.action_run.build_action_command()

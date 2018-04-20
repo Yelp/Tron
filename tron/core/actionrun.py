@@ -329,18 +329,25 @@ class ActionRun(object):
             return self.machine.transition(target)
 
     def retry(self):
-        # kill if in flight
         if self.retries_remaining is None or self.retries_remaining <= 0:
             self.retries_remaining = 1
-        self.kill(final=False)
+
+        if self.is_done:
+            self.fail(self.exit_status)
+        else:
+            log.info("Killing the current action run for a retry")
+            self.kill(final=False)
+
+    def restart(self):
+        self.machine.reset()
+        return self.start()
 
     def fail(self, exit_status=0):
         if self.retries_remaining is not None:
             if self.retries_remaining > 0:
                 self.retries_remaining -= 1
                 self.exit_statuses.append(exit_status)
-                self.machine.reset()
-                return self.start()
+                return self.restart()
             else:
                 log.info("Reached maximum number of retries: {}".format(
                     len(self.exit_statuses),

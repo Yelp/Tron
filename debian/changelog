@@ -1,3 +1,12 @@
+tron (0.8.0.3) trusty; urgency=medium
+
+  * 0.8.0.3 tagged with 'make release'
+    Feature: Job actions can now be re-tried using cli command
+    `tronctl retry <action reference>`. This will automatically
+    trigger dependent actions upon success of re-tried action.
+
+ -- root <root@21bbc7053b21>  Thu, 19 Apr 2018 13:14:04 +0000
+
 tron (0.8.0.2) trusty; urgency=medium
 
   * 0.8.0.2 tagged with 'make release'
