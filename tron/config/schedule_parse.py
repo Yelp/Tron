@@ -119,8 +119,10 @@ def valid_daily_scheduler(config, config_context):
 
     def valid_day(day):
         if day not in CONVERT_DAYS_INT:
-            raise ConfigError("Unknown day %s at %s" % (day,
-                                                        config_context.path))
+            raise ConfigError("Unknown day %s at %s" % (
+                day,
+                config_context.path,
+            ))
         return CONVERT_DAYS_INT[day]
 
     original = "%s %s" % (time_string, days)

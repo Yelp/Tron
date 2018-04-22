@@ -62,11 +62,11 @@ class SQLAlchmeyStateStoreTestCase(TestCase):
         items = [
             {
                 'docs': 'builder',
-                'a': 'b'
+                'a': 'b',
             },
             {
                 'docks': 'helper',
-                'c': 'd'
+                'c': 'd',
             },
         ]
         self.store.save(zip(keys, items))

@@ -45,7 +45,9 @@ class WWWTestCase(TestCase):
     @setup_teardown
     def mock_respond(self):
         with mock.patch(
-                'tron.api.resource.respond', autospec=True) as self.respond:
+                'tron.api.resource.respond',
+                autospec=True,
+        ) as self.respond:
             self.respond.side_effect = lambda _req, output, code=None: output
             yield
 
@@ -58,7 +60,9 @@ class HandleCommandTestCase(TestCase):
     @setup_teardown
     def mock_respond(self):
         with mock.patch(
-                'tron.api.resource.respond', autospec=True) as self.respond:
+                'tron.api.resource.respond',
+                autospec=True,
+        ) as self.respond:
             yield
 
     def test_handle_command_unknown(self):
@@ -300,7 +304,9 @@ class ConfigResourceTestCase(TestCase):
         self.controller = self.resource.controller = mock.create_autospec(
             controller.ConfigController, )
         with mock.patch(
-                'tron.api.resource.respond', autospec=True) as self.respond:
+                'tron.api.resource.respond',
+                autospec=True,
+        ) as self.respond:
             yield
 
     def test_render_GET(self):

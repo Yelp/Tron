@@ -94,8 +94,13 @@ class NodePoolRepository(object):
         )
         instance._update_node_pools(node_pool_configs)
 
-    def _update_nodes(self, node_configs, ssh_options, known_hosts,
-                      ssh_config):
+    def _update_nodes(
+            self,
+            node_configs,
+            ssh_options,
+            known_hosts,
+            ssh_config,
+    ):
         for config in six.itervalues(node_configs):
             pub_key = known_hosts.get_public_key(config.hostname)
             node = Node.from_config(config, ssh_options, pub_key, ssh_config)
@@ -202,9 +207,11 @@ class RunState(object):
         self.channel = None
 
     def __repr__(self):
-        return "RunState(run: %r, state: %r, channel: %r)" % (self.run,
-                                                              self.state,
-                                                              self.channel)
+        return "RunState(run: %r, state: %r, channel: %r)" % (
+            self.run,
+            self.state,
+            self.channel,
+        )
 
 
 def determine_jitter(count, node_settings):
@@ -412,9 +419,11 @@ class Node(object):
             self._fail_run(
                 run,
                 failure.Failure(
-                    exc_value=ConnectError("Connection to %s@%s:%d failed" %
-                                           (self.username, self.hostname,
-                                            self.port), ), ),
+                    exc_value=ConnectError("Connection to %s@%s:%d failed" % (
+                        self.username,
+                        self.hostname,
+                        self.port,
+                    ), ), ),
             )
 
         self.connection_defer.addCallback(call_open_channel)
@@ -622,9 +631,11 @@ class Node(object):
         self._fail_run(
             run,
             failure.Failure(
-                exc_value=ConnectError("Connection to %s@%s:%d failed" %
-                                       (self.username, self.hostname,
-                                        self.port), ), ),
+                exc_value=ConnectError("Connection to %s@%s:%d failed" % (
+                    self.username,
+                    self.hostname,
+                    self.port,
+                ), ), ),
         )
 
         # We want to hard hangup on this connection. It could theoretically

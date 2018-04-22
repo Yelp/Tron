@@ -86,7 +86,8 @@ class Action(object):
             for attr in self.equality_attributes)
         return attributes_match and all(self_act == other_act for (
             self_act,
-            other_act) in zip(self.required_actions, other.required_actions))
+            other_act,
+        ) in zip(self.required_actions, other.required_actions))
 
     def __ne__(self, other):
         return not self == other

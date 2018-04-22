@@ -287,7 +287,7 @@ class JobCollectionResource(resource.Resource):
                 include_action_runs,
                 include_action_graph,
                 include_node_pool,
-            ))
+            ), )
         return respond(request, output)
 
     def render_POST(self, request):

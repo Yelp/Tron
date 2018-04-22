@@ -533,7 +533,7 @@ class ValidateConfig(Validator):
         'time_zone': None,
         'state_persistence': DEFAULT_STATE_PERSISTENCE,
         'nodes': {
-            'localhost': DEFAULT_NODE
+            'localhost': DEFAULT_NODE,
         },
         'node_pools': {},
         'jobs': (),
@@ -665,7 +665,7 @@ class ConfigContainer(object):
         return dict(
             itertools.chain.from_iterable(
                 six.iteritems(config.jobs)
-                for _, config in self.configs.items()))
+                for _, config in self.configs.items()), )
 
     def get_master(self):
         return self.configs[MASTER_NAMESPACE]

@@ -32,12 +32,18 @@ class ShelveStateStoreTestCase(TestCase):
 
     def test_save(self):
         key_value_pairs = [
-            (ShelveKey("one", "two"), {
-                'this': 'data'
-            }),
-            (ShelveKey("three", "four"), {
-                'this': 'data2'
-            }),
+            (
+                ShelveKey("one", "two"),
+                {
+                    'this': 'data',
+                },
+            ),
+            (
+                ShelveKey("three", "four"),
+                {
+                    'this': 'data2',
+                },
+            ),
         ]
         self.store.save(key_value_pairs)
         self.store.cleanup()

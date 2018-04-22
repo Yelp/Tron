@@ -68,7 +68,7 @@ class JobTestCase(TestCase):
             node='thenodepool',
             monitoring={
                 "team": "foo",
-                "page": True
+                "page": True,
             },
             all_nodes=False,
             queueing=True,
@@ -439,8 +439,8 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
 
     def test_manual_start_default_with_timezone(self):
         self.job.time_zone = mock.Mock()
-        with mock.patch(
-                'tron.core.job.timeutils.current_time') as mock_current:
+        with mock.patch('tron.core.job.timeutils.current_time',
+                        ) as mock_current:
             manual_runs = self.job_scheduler.manual_start()
             mock_current.assert_called_with(tz=self.job.time_zone)
             self.job.build_new_runs.assert_called_with(
@@ -563,8 +563,10 @@ class JobSchedulerScheduleTestCase(TestCase):
         self.job_scheduler.run_job.assert_not_called()
 
     def test_run_queue_schedule(self):
-        with mock.patch.object(self.job_scheduler,
-                               'schedule') as mock_schedule:
+        with mock.patch.object(
+                self.job_scheduler,
+                'schedule',
+        ) as mock_schedule:
             self.job_scheduler.run_job = mock.Mock()
             self.job.scheduler.schedule_on_complete = False
             queued_job_run = mock.Mock()

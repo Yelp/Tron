@@ -37,7 +37,10 @@ class ActionRunFactory(object):
         action_map = six.iteritems(job_run.action_graph.get_action_map())
         action_run_map = {
             maybe_decode(name): cls.build_run_for_action(
-                job_run, action_inst, action_runner)
+                job_run,
+                action_inst,
+                action_runner,
+            )
             for name, action_inst in action_map
         }
         return ActionRunCollection(job_run.action_graph, action_run_map)
@@ -59,7 +62,7 @@ class ActionRunFactory(object):
                     job_run,
                     cleanup_action_state_data,
                     cleanup=True,
-                ))
+                ), )
 
         action_run_map = {
             maybe_decode(action_run.action_name): action_run
@@ -719,9 +722,11 @@ class ActionRunCollection(object):
         def blocked_state(action_run):
             return ":blocked" if self._is_run_blocked(action_run) else ""
 
-        run_states = ', '.join("%s(%s%s)" % (a.action_name, a.state,
-                                             blocked_state(a))
-                               for a in six.itervalues(self.run_map))
+        run_states = ', '.join("%s(%s%s)" % (
+            a.action_name,
+            a.state,
+            blocked_state(a),
+        ) for a in six.itervalues(self.run_map))
         return "%s[%s]" % (self.__class__.__name__, run_states)
 
     def __getattr__(self, name):
