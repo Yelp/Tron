@@ -65,8 +65,8 @@ def compute_check_result_for_job_runs(client, job, job_content):
         kwargs[
             "output"
         ] = "CRIT: {} hasn't had a successful run yet.\n{}".format(
-                job['name'],
-                pretty_print_job(job_content),
+            job['name'],
+            pretty_print_job(job_content),
         )
         kwargs["status"] = 2
         return kwargs
@@ -117,13 +117,13 @@ def compute_check_result_for_job_runs(client, job, job_content):
         "Here is the whole job view for context:\n"
         "{}"
     ).format(
-                            prefix,
-                            job['name'],
-                            relevant_job_run['id'],
-                            relevant_job_run['state'],
-                            pretty_print_actions(action_run_details),
-                            pretty_print_job_run(relevant_job_run),
-                            pretty_print_job(job_content),
+        prefix,
+        job['name'],
+        relevant_job_run['id'],
+        relevant_job_run['state'],
+        pretty_print_actions(action_run_details),
+        pretty_print_job_run(relevant_job_run),
+        pretty_print_job(job_content),
     )
     kwargs["status"] = status
     return kwargs
