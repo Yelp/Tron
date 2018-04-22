@@ -4,35 +4,20 @@
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
         exclude: CHANGELOG.md
-    -   id: autopep8-wrapper
-    -   id: check-docstring-first
     -   id: check-json
     -   id: check-yaml
     -   id: requirements-txt-fixer
-    -   id: flake8
-        exclude: ^docs/conf.py$
-    -   id: check-ast
 -   repo: https://github.com/asottile/reorder_python_imports.git
     sha: v0.3.5
     hooks:
     -   id: reorder-python-imports
-        language_version: python2.7
-        args: [
-            '--add-import', 'from __future__ import absolute_import',
-            '--add-import', 'from __future__ import unicode_literals',
-        ]
--   repo: https://github.com/asottile/pyupgrade
-    sha: v1.1.2-1
-    hooks:
-    -   id: pyupgrade
--   repo: https://github.com/asottile/add-trailing-comma
-    sha: v0.6.2
-    hooks:
-    -   id: add-trailing-comma
+        language_version: python3.6
 -   repo: local
     hooks:
-    -   id: no-catchall-except
-        name: Prevent catchall except
-        entry: except:$
-        language: pcre
-        types: [python]
+        -   id: yapf
+            name: yapf
+            entry: yapf
+            language: python
+            args: ["-i"]
+            exclude: ^docs/conf.py$
+            types: [python]

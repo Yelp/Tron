@@ -14,7 +14,8 @@ import six
 from tron.core.actionrun import ActionRun
 
 
-def traverse_graph(starting_state, func=lambda f, a, t: None, seen_states=None):
+def traverse_graph(starting_state, func=lambda f, a, t: None,
+                   seen_states=None):
     """Traverse the graph depth-first without cycling."""
     seen_states = seen_states or []
     seen_states.append(starting_state)
@@ -42,6 +43,7 @@ def build_diagram(states, starting_state):
 
         def collection_edges(from_state, act, to_state):
             edges.append((from_state.name, act, to_state.name))
+
         traverse_graph(starting_state, collection_edges)
 
         for edge in edges:
@@ -59,7 +61,7 @@ def dot_from_starting_state(starting_state):
 
 
 machines = {
-    'action':           ActionRun.STATE_SCHEDULED,
+    'action': ActionRun.STATE_SCHEDULED,
 }
 
 if __name__ == "__main__":

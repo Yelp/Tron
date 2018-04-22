@@ -19,29 +19,48 @@ from tron.commands.cmd_utils import ExitCode
 def parse_cli():
     parser = cmd_utils.build_option_parser()
     parser.add_argument(
-        "--numshown", "-n", type=int, dest="num_displays",
-        help="Max number of jobs/job-runs shown", default=10,
+        "--numshown",
+        "-n",
+        type=int,
+        dest="num_displays",
+        help="Max number of jobs/job-runs shown",
+        default=10,
     )
     parser.add_argument(
-        "--color", "-c", action="store_true",
-        dest="display_color", help="Display in color",
+        "--color",
+        "-c",
+        action="store_true",
+        dest="display_color",
+        help="Display in color",
         default=None,
     )
     parser.add_argument(
-        "--nocolor", action="store_false",
-        dest="display_color", help="Display without color",
+        "--nocolor",
+        action="store_false",
+        dest="display_color",
+        help="Display without color",
         default=None,
     )
     parser.add_argument(
-        "--stdout", "-o", action="count", dest="stdout",
-        help="Solely displays stdout", default=0,
+        "--stdout",
+        "-o",
+        action="count",
+        dest="stdout",
+        help="Solely displays stdout",
+        default=0,
     )
     parser.add_argument(
-        "--stderr", "-e", action="count", dest="stderr",
-        help="Solely displays stderr", default=0,
+        "--stderr",
+        "-e",
+        action="count",
+        dest="stderr",
+        help="Solely displays stderr",
+        default=0,
     )
     parser.add_argument(
-        "--events", action="store_true", dest="show_events",
+        "--events",
+        action="store_true",
+        dest="show_events",
         help="Show events for the specified entity",
         default=False,
     )
@@ -71,12 +90,13 @@ def view_all(args, client):
     if args.show_events:
         return display_events(client.events())
 
-    return display.DisplayJobs().format(client.jobs(
-        include_job_runs=False,
-        include_action_runs=False,
-        include_action_graph=False,
-        include_node_pool=False,
-    ))
+    return display.DisplayJobs().format(
+        client.jobs(
+            include_job_runs=False,
+            include_action_runs=False,
+            include_action_graph=False,
+            include_node_pool=False,
+        ))
 
 
 def view_job(args, job_id, client):
@@ -99,15 +119,16 @@ def view_job_run(args, job_run_id, client):
 
 def view_action_run(args, act_run_id, client):
     content = client.action_runs(
-        act_run_id.url, num_lines=args.num_displays,
+        act_run_id.url,
+        num_lines=args.num_displays,
     )
     return display.format_action_run_details(content)
 
 
 obj_type_to_view_map = {
-    TronObjectType.job:         view_job,
-    TronObjectType.job_run:     view_job_run,
-    TronObjectType.action_run:  view_action_run,
+    TronObjectType.job: view_job,
+    TronObjectType.job_run: view_job_run,
+    TronObjectType.action_run: view_action_run,
 }
 
 

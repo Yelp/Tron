@@ -5,8 +5,8 @@ from __future__ import unicode_literals
 import logging
 import sys
 import time
-
 from enum import Enum
+
 from pysensu_yelp import send_event
 
 from tron.commands import cmd_utils
@@ -63,11 +63,10 @@ def compute_check_result_for_job_runs(client, job, job_content):
     relevant_job_run, last_state = get_relevant_run_and_state(job_content)
     if relevant_job_run is None:
         kwargs[
-            "output"
-        ] = "CRIT: {} hasn't had a successful run yet.\n{}".format(
-            job['name'],
-            pretty_print_job(job_content),
-        )
+            "output"] = "CRIT: {} hasn't had a successful run yet.\n{}".format(
+                job['name'],
+                pretty_print_job(job_content),
+            )
         kwargs["status"] = 2
         return kwargs
 
@@ -107,24 +106,22 @@ def compute_check_result_for_job_runs(client, job, job_content):
         prefix = "UNKNOWN: The job is in a state that check_tron_jobs doesn't understand"
         status = 3
 
-    kwargs["output"] = (
-        "{}\n"
-        "{}'s last relevant run (run {}) {}.\n\n"
-        "Here is the last action:"
-        "{}\n\n"
-        "And the job run view:\n"
-        "{}\n\n"
-        "Here is the whole job view for context:\n"
-        "{}"
-    ).format(
-        prefix,
-        job['name'],
-        relevant_job_run['id'],
-        relevant_job_run['state'],
-        pretty_print_actions(action_run_details),
-        pretty_print_job_run(relevant_job_run),
-        pretty_print_job(job_content),
-    )
+    kwargs["output"] = ("{}\n"
+                        "{}'s last relevant run (run {}) {}.\n\n"
+                        "Here is the last action:"
+                        "{}\n\n"
+                        "And the job run view:\n"
+                        "{}\n\n"
+                        "Here is the whole job view for context:\n"
+                        "{}").format(
+                            prefix,
+                            job['name'],
+                            relevant_job_run['id'],
+                            relevant_job_run['state'],
+                            pretty_print_actions(action_run_details),
+                            pretty_print_job_run(relevant_job_run),
+                            pretty_print_job(job_content),
+                        )
     kwargs["status"] = status
     return kwargs
 
@@ -179,7 +176,9 @@ def is_job_scheduled(job_runs):
 def is_job_stuck(job_runs):
     next_run_time = None
     for run in sorted(
-            job_runs['runs'], key=lambda k: k['run_time'], reverse=True,
+            job_runs['runs'],
+            key=lambda k: k['run_time'],
+            reverse=True,
     ):
         if run.get('state', 'unknown') == "running":
             if next_run_time:
@@ -284,8 +283,7 @@ def check_job_result(job, client, dry_run):
         log.debug("Sending event: {}".format(result))
         if 'runbook' not in result:
             result[
-                'runbook'
-            ] = "No runbook specified. Please specify a runbook in the monitoring section of the job definition."
+                'runbook'] = "No runbook specified. Please specify a runbook in the monitoring section of the job definition."
         send_event(**result)
 
 
