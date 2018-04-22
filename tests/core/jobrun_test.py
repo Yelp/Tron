@@ -18,6 +18,8 @@ from tests.testingutils import Turtle
 from tron import actioncommand
 from tron import event
 from tron import node
+from tron.config import config_utils
+from tron.core import action
 from tron.core import actiongraph
 from tron.core import actionrun
 from tron.core import job
@@ -26,7 +28,16 @@ from tron.serialize import filehandler
 
 
 def build_mock_job():
-    action_graph = mock.create_autospec(actiongraph.ActionGraph)
+    config_context = config_utils.ConfigContext(
+        'config', ['localhost'], ['cluster'], None, None,
+    )
+    action_graph = actiongraph.ActionGraph.from_config(
+        action.ActionMap.from_config(
+            [{'name': 'test', 'command': 'test'}],
+            config_context,
+        ),
+        config_context,
+    )
     runner = mock.create_autospec(actioncommand.SubprocessActionRunnerFactory)
     return mock.create_autospec(
         job.Job,

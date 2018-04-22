@@ -25,8 +25,6 @@ from tron.config import manager
 from tron.config import schedule_parse
 from tron.config import schema
 from tron.config.config_parse import build_format_string_validator
-from tron.config.config_parse import CLEANUP_ACTION_NAME
-from tron.config.config_parse import valid_cleanup_action_name
 from tron.config.config_parse import valid_config
 from tron.config.config_parse import valid_job
 from tron.config.config_parse import valid_node_pool
@@ -35,7 +33,10 @@ from tron.config.config_parse import validate_fragment
 from tron.config.config_utils import NullConfigContext
 from tron.config.schedule_parse import ConfigConstantScheduler
 from tron.config.schedule_parse import ConfigIntervalScheduler
+from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import MASTER_NAMESPACE
+from tron.core.action import Action
+from tron.core.action import ActionMap
 from tron.utils.dicts import FrozenDict
 
 
@@ -173,6 +174,10 @@ jobs:
 
 """
 
+    context = config_utils.ConfigContext(
+        'config', ['localhost'], ['cluster'], None, None,
+    )
+
     @mock.patch.dict('tron.config.config_parse.ValidateNode.defaults')
     def test_attributes(self):
         config_parse.ValidateNode.defaults['username'] = 'foo'
@@ -224,21 +229,22 @@ jobs:
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20), jitter=None,
                     ),
-                    actions=FrozenDict({
-                        'action0_0': schema.ConfigAction(
-                            name='action0_0',
-                            command='test_command0.0',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                    }),
+                    actions=ActionMap.from_config(
+                        [{
+                            'name': 'action0_0',
+                            'command': 'test_command0.0',
+                            'executor': 'ssh',
+                        }], self.context,
+                    ),
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
-                    cleanup_action=schema.ConfigCleanupAction(
-                        name='cleanup',
-                        command='test_command0.1',
-                        executor='ssh',
+                    cleanup_action=Action.from_config(
+                        {
+                            'name': 'cleanup',
+                            'command': 'test_command0.1',
+                            'executor': 'ssh',
+                        }, self.context,
                     ),
                     enabled=True,
                     max_runtime=None,
@@ -259,20 +265,21 @@ jobs:
                         original="00:30:00 MWF",
                         jitter=None,
                     ),
-                    actions=FrozenDict({
-                        'action1_1': schema.ConfigAction(
-                            name='action1_1',
-                            command='test_command1.1',
-                            requires=('action1_0',),
-                            executor='ssh',
-                        ),
-                        'action1_0': schema.ConfigAction(
-                            name='action1_0',
-                            command='test_command1.0',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                    }),
+                    actions=ActionMap.from_config(
+                        [
+                            {
+                                'name': 'action1_1',
+                                'command': 'test_command1.1',
+                                'requires': ('action1_0',),
+                                'executor': 'ssh',
+                            },
+                            {
+                                'name': 'action1_0',
+                                'command': 'test_command1.0',
+                                'executor': 'ssh',
+                            },
+                        ], self.context,
+                    ),
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
@@ -295,14 +302,13 @@ jobs:
                         original="16:30:00 ",
                         jitter=None,
                     ),
-                    actions=FrozenDict({
-                        'action2_0': schema.ConfigAction(
-                            name='action2_0',
-                            command='test_command2.0',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                    }),
+                    actions=ActionMap.from_config(
+                        [{
+                            'name': 'action2_0',
+                            'command': 'test_command2.0',
+                            'executor': 'ssh',
+                        }], self.context,
+                    ),
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
@@ -320,27 +326,26 @@ jobs:
                     monitoring={},
                     service=None,
                     deploy_group=None,
-                    actions=FrozenDict({
-                        'action3_1': schema.ConfigAction(
-                            name='action3_1',
-                            command='test_command3.1',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                        'action3_0': schema.ConfigAction(
-                            name='action3_0',
-                            command='test_command3.0',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                        'action3_2': schema.ConfigAction(
-                            name='action3_2',
-                            command='test_command3.2',
-                            requires=('action3_0', 'action3_1'),
-                            node='node0',
-                            executor='ssh',
-                        ),
-                    }),
+                    actions=ActionMap.from_config(
+                        [
+                            {
+                                'name': 'action3_1',
+                                'command': 'test_command3.1',
+                                'executor': 'ssh',
+                            },
+                            {
+                                'name': 'action3_0',
+                                'command': 'test_command3.0',
+                                'executor': 'ssh',
+                            },
+                            {
+                                'name': 'action3_2',
+                                'command': 'test_command3.2',
+                                'requires': ('action3_0', 'action3_1'),
+                                'node': 'node0',
+                            },
+                        ], self.context,
+                    ),
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
@@ -362,14 +367,13 @@ jobs:
                         original='00:00:00 ',
                         jitter=None,
                     ),
-                    actions=FrozenDict({
-                        'action4_0': schema.ConfigAction(
-                            name='action4_0',
-                            command='test_command4.0',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                    }),
+                    actions=ActionMap.from_config(
+                        [{
+                            'name': 'action4_0',
+                            'command': 'test_command4.0',
+                            'executor': 'ssh',
+                        }], self.context,
+                    ),
                     queueing=True,
                     run_limit=50,
                     all_nodes=True,
@@ -392,14 +396,13 @@ jobs:
                         original='00:00:00 ',
                         jitter=None,
                     ),
-                    actions=FrozenDict({
-                        'action4_0': schema.ConfigAction(
-                            name='action4_0',
-                            command='test_command4.0',
-                            executor='paasta',
-                            requires=(),
-                        ),
-                    }),
+                    actions=ActionMap.from_config(
+                        [{
+                            'name': 'action4_0',
+                            'command': 'test_command4.0',
+                            'executor': 'paasta',
+                        }], self.context,
+                    ),
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
@@ -534,6 +537,9 @@ jobs:
 """
 
     def test_attributes(self):
+        config_context = config_utils.ConfigContext(
+            'config', ['localhost'], ['cluster'], None, None,
+        )
         expected = schema.NamedTronConfig(
             jobs=FrozenDict({
                 'test_job0': schema.ConfigJob(
@@ -547,28 +553,23 @@ jobs:
                         timedelta=datetime.timedelta(0, 20),
                         jitter=None,
                     ),
-                    actions=FrozenDict({
-                        'action0_0': schema.ConfigAction(
-                            name='action0_0',
-                            command='test_command0.0',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                    }),
+                    actions=ActionMap.from_config(
+                        [{
+                            'name': 'action0_0',
+                            'command': 'test_command0.0',
+                            'executor': 'ssh',
+                        }], config_context,
+                    ),
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
-                    cleanup_action=schema.ConfigCleanupAction(
-                        name='cleanup',
-                        command='test_command0.1',
-                        node=None,
-                        executor='ssh',
-                        cluster=None,
-                        pool=None,
-                        cpus=None,
-                        mem=None,
-                        service=None,
-                        deploy_group=None,
+                    cleanup_action=Action.from_config(
+                        {
+                            'name': 'cleanup',
+                            'command': 'test_command0.1',
+                            'executor': 'ssh',
+                        },
+                        config_context,
                     ),
                     enabled=True,
                     max_runtime=None,
@@ -591,20 +592,21 @@ jobs:
                         original="00:30:00 MWF",
                         jitter=None,
                     ),
-                    actions=FrozenDict({
-                        'action1_1': schema.ConfigAction(
-                            name='action1_1',
-                            command='test_command1.1',
-                            requires=('action1_0',),
-                            executor='ssh',
-                        ),
-                        'action1_0': schema.ConfigAction(
-                            name='action1_0',
-                            command='test_command1.0 %(some_var)s',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                    }),
+                    actions=ActionMap.from_config(
+                        [
+                            {
+                                'name': 'action1_1',
+                                'command': 'test_command1.1',
+                                'requires': ('action1_0',),
+                                'executor': 'ssh',
+                            },
+                            {
+                                'name': 'action1_0',
+                                'command': 'test_command1.0 %(some_var)s',
+                                'executor': 'ssh',
+                            },
+                        ], config_context,
+                    ),
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
@@ -629,14 +631,13 @@ jobs:
                         original="16:30:00 ",
                         jitter=None,
                     ),
-                    actions=FrozenDict({
-                        'action2_0': schema.ConfigAction(
-                            name='action2_0',
-                            command='test_command2.0',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                    }),
+                    actions=ActionMap.from_config(
+                        [{
+                            'name': 'action2_0',
+                            'command': 'test_command2.0',
+                            'executor': 'ssh',
+                        }], config_context,
+                    ),
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
@@ -654,27 +655,27 @@ jobs:
                     monitoring={},
                     service=None,
                     deploy_group=None,
-                    actions=FrozenDict({
-                        'action3_1': schema.ConfigAction(
-                            name='action3_1',
-                            command='test_command3.1',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                        'action3_0': schema.ConfigAction(
-                            name='action3_0',
-                            command='test_command3.0',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                        'action3_2': schema.ConfigAction(
-                            name='action3_2',
-                            command='test_command3.2',
-                            requires=('action3_0', 'action3_1'),
-                            node='node0',
-                            executor='ssh',
-                        ),
-                    }),
+                    actions=ActionMap.from_config(
+                        [
+                            {
+                                'name': 'action3_1',
+                                'command': 'test_command3.1',
+                                'executor': 'ssh',
+                            },
+                            {
+                                'name': 'action3_0',
+                                'command': 'test_command3.0',
+                                'executor': 'ssh',
+                            },
+                            {
+                                'name': 'action3_2',
+                                'command': 'test_command3.2',
+                                'requires': ('action3_0', 'action3_1'),
+                                'node': 'node0',
+                                'executor': 'ssh',
+                            },
+                        ], config_context,
+                    ),
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
@@ -696,14 +697,13 @@ jobs:
                         original="00:00:00 ",
                         jitter=None,
                     ),
-                    actions=FrozenDict({
-                        'action4_0': schema.ConfigAction(
-                            name='action4_0',
-                            command='test_command4.0',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                    }),
+                    actions=ActionMap.from_config(
+                        [{
+                            'name': 'action4_0',
+                            'command': 'test_command4.0',
+                            'executor': 'ssh',
+                        }], config_context,
+                    ),
                     queueing=True,
                     run_limit=50,
                     all_nodes=True,
@@ -726,14 +726,13 @@ jobs:
                         original='00:00:00 ',
                         jitter=None,
                     ),
-                    actions=FrozenDict({
-                        'action4_0': schema.ConfigAction(
-                            name='action4_0',
-                            command='test_command4.0',
-                            executor='paasta',
-                            requires=(),
-                        ),
-                    }),
+                    actions=ActionMap.from_config(
+                        [{
+                            'name': 'action4_0',
+                            'command': 'test_command4.0',
+                            'executor': 'paasta',
+                        }], config_context,
+                    ),
                     queueing=True,
                     run_limit=50,
                     all_nodes=False,
@@ -788,7 +787,7 @@ jobs:
         schedule: "interval 20s"
         actions:
         """
-        expected_message = "Value at config.jobs.Job.test_job0.actions"
+        expected_message = "Required non-empty list at config.jobs.Job.test_job0.actions"
         exception = assert_raises(
             ConfigError, valid_config_from_yaml, test_config,
         )
@@ -810,9 +809,9 @@ jobs:
                 command: "test_command0.0"
 
         """
-        expected = "Duplicate name action0_0 at config.jobs.Job.test_job0.actions"
+        expected = "Duplicate action names found: ['action0_0'] at config.jobs.Job.test_job0.actions"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ValueError, valid_config_from_yaml, test_config,
         )
         assert_in(expected, str(exception))
 
@@ -868,7 +867,7 @@ jobs:
                 command: "test_command0.1"
                 requires: [action0_0]
         """
-        expect = "Circular dependency in job.MASTER.test_job0: action0_0 -> action0_1"
+        expect = "Circular dependency in job.MASTER.test_job0"
         exception = assert_raises(
             ConfigError, valid_config_from_yaml, test_config,
         )
@@ -887,9 +886,9 @@ jobs:
                 command: "test_command0.0"
 
         """ % CLEANUP_ACTION_NAME
-        expected_message = "config.jobs.Job.test_job0.actions.Action.cleanup.name"
+        expected_message = "Action name reserved for cleanup action"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ValueError, valid_config_from_yaml, test_config,
         )
         assert_in(expected_message, str(exception))
 
@@ -910,7 +909,7 @@ jobs:
         """
         expected_msg = "Cleanup actions cannot have custom names"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ValueError, valid_config_from_yaml, test_config,
         )
         assert_in(expected_msg, str(exception))
 
@@ -929,9 +928,12 @@ jobs:
             command: "test_command0.1"
             requires: [action0_0]
         """
-        expected_msg = "Unknown keys in CleanupAction : requires"
+        expected_msg = (
+            "Cleanup action cannot have dependencies, has ['action0_0'] at "
+            "config.jobs.Job.test_job0.cleanup_action"
+        )
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ValueError, valid_config_from_yaml, test_config,
         )
         assert_equal(expected_msg, str(exception))
 
@@ -953,7 +955,7 @@ jobs:
 """
         expected_msg = "Unknown cluster name unknown-cluster"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ValueError, valid_config_from_yaml, test_config,
         )
         assert_in(expected_msg, str(exception))
 
@@ -1015,6 +1017,10 @@ jobs:
                 deploy_group: prod
                 command: "test_command0.0"
 """
+
+        config_context = config_utils.ConfigContext(
+            'config', ['localhost'], ['cluster-one'], None, None,
+        )
         expected = schema.ConfigJob(
             name='MASTER.test_job0',
             namespace='MASTER',
@@ -1025,17 +1031,19 @@ jobs:
             schedule=ConfigIntervalScheduler(
                 timedelta=datetime.timedelta(0, 20), jitter=None,
             ),
-            actions=FrozenDict({
-                'action0_0': schema.ConfigAction(
-                    name='action0_0',
-                    command='test_command0.0',
-                    executor='paasta',
-                    cluster='cluster-one',
-                    service='baz',
-                    deploy_group='prod',
-                    requires=(),
-                ),
-            }),
+            actions=ActionMap.from_config(
+                [
+                    {
+                        'name': 'action0_0',
+                        'command': 'test_command0.0',
+                        'executor': 'paasta',
+                        'cluster': 'cluster-one',
+                        'service': 'baz',
+                        'deploy_group': 'prod',
+                    },
+                ],
+                config_context,
+            ),
             queueing=True,
             run_limit=50,
             all_nodes=False,
@@ -1183,7 +1191,10 @@ class ValidateJobsTestCase(TestCase):
                     cleanup_action:
                         command: "test_command0.1"
                     """)
-        expected_jobs = {
+        context = config_utils.ConfigContext(
+            'config', ['node0'], ['unused-cluster'], None, MASTER_NAMESPACE,
+        )
+        expected_jobs = FrozenDict({
             'MASTER.test_job0':
             schema.ConfigJob(
                 name='MASTER.test_job0',
@@ -1195,55 +1206,34 @@ class ValidateJobsTestCase(TestCase):
                 schedule=ConfigIntervalScheduler(
                     timedelta=datetime.timedelta(0, 20), jitter=None,
                 ),
-                actions=FrozenDict({
-                    'action0_0': schema.ConfigAction(
-                        name='action0_0',
-                        command='test_command0.0',
-                        executor='ssh',
-                        requires=(),
-                    ),
-                }),
+                actions=ActionMap.from_config(
+                    [
+                        {
+                            'name': 'action0_0',
+                            'command': 'test_command0.0',
+                        },
+                    ], context,
+                ),
                 queueing=True,
                 run_limit=50,
                 all_nodes=False,
-                cleanup_action=schema.ConfigCleanupAction(
-                    command='test_command0.1',
-                    name='cleanup',
-                    node=None,
-                    executor='ssh',
-                    cluster=None,
-                    pool=None,
-                    cpus=None,
-                    mem=None,
-                    service=None,
-                    deploy_group=None,
+                cleanup_action=Action.from_config(
+                    {
+                        'command': 'test_command0.1',
+                        'name': 'cleanup',
+                    },
+                    context,
                 ),
                 enabled=True,
                 allow_overlap=False,
                 max_runtime=None,
                 time_zone=None,
             ),
-        }
+        })
 
         config = manager.from_string(test_config)
-        context = config_utils.ConfigContext(
-            'config', ['node0'], ['unused-cluster'], None, MASTER_NAMESPACE,
-        )
         config_parse.validate_jobs(config, context)
         assert_equal(expected_jobs, config['jobs'])
-
-
-class ValidCleanupActionNameTestCase(TestCase):
-
-    def test_valid_cleanup_action_name_pass(self):
-        name = valid_cleanup_action_name(CLEANUP_ACTION_NAME, None)
-        assert_equal(CLEANUP_ACTION_NAME, name)
-
-    def test_valid_cleanup_action_name_fail(self):
-        assert_raises(
-            ConfigError,
-            valid_cleanup_action_name, 'other', NullConfigContext,
-        )
 
 
 class ValidOutputStreamDirTestCase(TestCase):

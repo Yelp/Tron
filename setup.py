@@ -19,7 +19,6 @@ setup(
     description='Job scheduling and monitoring system',
     classifiers=[
         "Programming Language :: Python",
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.6',
         "Operating System :: OS Independent",
         "License :: OSI Approved :: Apache Software License",
@@ -48,11 +47,17 @@ setup(
         'bsddb3',
         'ipython',
         'ipdb',
+        'pyrsistent >= 0.14.2',
     ],
     packages=find_packages(exclude=['tests.*', 'tests']) + ['tronweb'],
     scripts=glob.glob('bin/*'),
     include_package_data=True,
-    long_description="""Tron is a centralized system for managing periodic batch processes across a cluster. If you find cron or fcron to be insufficient for managing complex work flows across multiple computers, Tron might be for you.
+    long_description="""
+Tron is a centralized system for managing periodic batch processes across a
+cluster. If you find cron or fcron to be insufficient for managing complex work
+flows across multiple computers, Tron might be for you.
 
-For more information, look at the `tutorial <http://tron.readthedocs.io/en/latest/tutorial.html>`_ or the `full documentation <http://tron.readthedocs.io/en/latest/index.html>`_.""",
+For more information, look at the `tutorial <http://tron.readthedocs.io/en/latest/tutorial.html>`_
+or the `full documentation <http://tron.readthedocs.io/en/latest/index.html>`_.
+""",
 )

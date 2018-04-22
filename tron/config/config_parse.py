@@ -24,16 +24,12 @@ from tron.config.config_utils import ConfigContext
 from tron.config.config_utils import PartialConfigContext
 from tron.config.config_utils import valid_bool
 from tron.config.config_utils import valid_dict
-from tron.config.config_utils import valid_float
 from tron.config.config_utils import valid_identifier
 from tron.config.config_utils import valid_int
 from tron.config.config_utils import valid_name_identifier
 from tron.config.config_utils import valid_string
 from tron.config.config_utils import Validator
 from tron.config.schedule_parse import valid_schedule
-from tron.config.schema import CLEANUP_ACTION_NAME
-from tron.config.schema import ConfigAction
-from tron.config.schema import ConfigCleanupAction
 from tron.config.schema import ConfigJob
 from tron.config.schema import ConfigSSHOptions
 from tron.config.schema import ConfigState
@@ -41,6 +37,8 @@ from tron.config.schema import MASTER_NAMESPACE
 from tron.config.schema import NamedTronConfig
 from tron.config.schema import NotificationOptions
 from tron.config.schema import TronConfig
+from tron.core.action import Action
+from tron.core.action import ActionMap
 from tron.utils.dicts import FrozenDict
 
 
@@ -65,7 +63,6 @@ def build_format_string_validator(context_object):
         except (KeyError, ValueError) as e:
             error_msg = "Unknown context variable %s at %s: %s"
             raise ConfigError(error_msg % (e, config_context.path, value))
-
     return validator
 
 
@@ -249,96 +246,11 @@ class ValidateNodePool(Validator):
 valid_node_pool = ValidateNodePool()
 
 
-def valid_action_name(value, config_context):
-    valid_identifier(value, config_context)
-    if value == CLEANUP_ACTION_NAME:
-        error_msg = "Invalid action name %s at %s"
-        raise ConfigError(error_msg % (value, config_context.path))
-    return value
-
-
 action_context = command_context.build_filled_context(
     command_context.JobContext,
     command_context.JobRunContext,
     command_context.ActionRunContext,
 )
-
-
-class ValidateAction(Validator):
-    """Validate an action."""
-    config_class = ConfigAction
-
-    defaults = {
-        'node':         None,
-        'requires':     (),
-        'executor':     schema.ExecutorTypes.ssh,
-        'cluster':      None,
-        'pool':         None,
-        'cpus':         None,
-        'mem':          None,
-        'service':      None,
-        'deploy_group': None,
-        'retries':      None,
-    }
-    requires = build_list_of_type_validator(
-        valid_action_name, allow_empty=True,
-    )
-    validators = {
-        'name':         valid_action_name,
-        'command':      build_format_string_validator(action_context),
-        'node':         valid_node_name,
-        'requires':     requires,
-        'executor':     config_utils.build_enum_validator(schema.ExecutorTypes),
-        'cluster':      valid_cluster_name,
-        'pool':         valid_string,
-        'cpus':         valid_float,
-        'mem':          valid_float,
-        'service':      valid_string,
-        'deploy_group': valid_string,
-        'retries':      valid_int,
-    }
-
-
-valid_action = ValidateAction()
-
-
-def valid_cleanup_action_name(value, config_context):
-    if value != CLEANUP_ACTION_NAME:
-        msg = "Cleanup actions cannot have custom names %s.%s"
-        raise ConfigError(msg % (config_context.path, value))
-    return CLEANUP_ACTION_NAME
-
-
-class ValidateCleanupAction(Validator):
-    config_class = ConfigCleanupAction
-    defaults = {
-        'node':         None,
-        'name':         CLEANUP_ACTION_NAME,
-        'executor':     schema.ExecutorTypes.ssh,
-        'cluster':      None,
-        'pool':         None,
-        'cpus':         None,
-        'mem':          None,
-        'service':      None,
-        'deploy_group': None,
-        'retries':      None,
-    }
-    validators = {
-        'name':         valid_cleanup_action_name,
-        'command':      build_format_string_validator(action_context),
-        'node':         valid_node_name,
-        'executor':     config_utils.build_enum_validator(schema.ExecutorTypes),
-        'cluster':      valid_cluster_name,
-        'pool':         valid_string,
-        'cpus':         valid_float,
-        'mem':          valid_float,
-        'service':      valid_string,
-        'deploy_group': valid_string,
-        'retries':      valid_int,
-    }
-
-
-valid_cleanup_action = ValidateCleanupAction()
 
 
 class ValidateJob(Validator):
@@ -363,8 +275,8 @@ class ValidateJob(Validator):
         'schedule':             valid_schedule,
         'run_limit':            valid_int,
         'all_nodes':            valid_bool,
-        'actions':              build_dict_name_validator(valid_action),
-        'cleanup_action':       valid_cleanup_action,
+        'actions':              ActionMap.from_config,
+        'cleanup_action':       Action.from_config,
         'node':                 valid_node_name,
         'queueing':             valid_bool,
         'enabled':              valid_bool,
@@ -408,6 +320,13 @@ class ValidateJob(Validator):
 
     def post_validation(self, job, config_context):
         """Validate actions for the job."""
+        if len(job['actions']) == 0:
+            raise ConfigError(
+                'Required non-empty list at {}.actions'.format(
+                    config_context.path,
+                ),
+            )
+
         incomplete_paasta_actions = []
 
         def is_incomplete_paasta_action(action):

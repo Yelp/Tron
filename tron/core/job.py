@@ -115,7 +115,7 @@ class Job(Observable, Observer):
     ):
         """Factory method to create a new Job instance from configuration."""
         action_graph = actiongraph.ActionGraph.from_config(
-            job_config.actions, job_config.cleanup_action,
+            job_config.actions, parent_context, job_config.cleanup_action,
         )
         runs = jobrun.JobRunCollection.from_config(job_config)
         node_repo = node.NodePoolRepository.get_instance()

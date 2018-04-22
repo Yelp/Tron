@@ -6,14 +6,22 @@ from __future__ import unicode_literals
 import argparse
 import logging
 import os
+import platform
 import traceback
 
 import pkg_resources
+from twisted.internet.main import installReactor
 
 import tron
 from tron import trondaemon
 from tron.commands import cmd_utils
 from tron.config import manager
+
+if platform.system() == 'Linux':
+    from twisted.internet.epollreactor import EPollReactor as Reactor
+else:
+    from twisted.internet.selectreactor import SelectReactor as Reactor
+installReactor(Reactor())
 
 log = logging.getLogger(__name__)
 

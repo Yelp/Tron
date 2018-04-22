@@ -22,7 +22,9 @@ from tests.testingutils import autospec_method
 from tests.testingutils import Turtle
 from tron import actioncommand
 from tron import node
+from tron.config import config_utils
 from tron.config.schema import ExecutorTypes
+from tron.core import action
 from tron.core import actiongraph
 from tron.core import jobrun
 from tron.core.actionrun import ActionCommand
@@ -598,13 +600,15 @@ class ActionRunCollectionTestCase(TestCase):
     @setup
     def setup_runs(self):
         action_names = ['action_name', 'second_name', 'cleanup']
-
-        action_graph = [
-            mock.Mock(name=name, required_actions=[])
-            for name in action_names
-        ]
-        self.action_graph = actiongraph.ActionGraph(
-            action_graph, {a.name: a for a in action_graph},
+        config_context = config_utils.ConfigContext(
+            'config', ['localhost'], ['cluster'], None, None,
+        )
+        self.action_graph = actiongraph.ActionGraph.from_config(
+            action.ActionMap.from_config(
+                [{'name': name, 'command': 'test'} for name in action_names],
+                config_context,
+            ),
+            config_context,
         )
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.command = "do command"
@@ -623,7 +627,7 @@ class ActionRunCollectionTestCase(TestCase):
         assert self.collection.proxy_action_runs_with_cleanup
 
     def test_action_runs_for_actions(self):
-        actions = [Turtle(name='action_name')]
+        actions = ['action_name']
         action_runs = self.collection.action_runs_for_actions(actions)
         assert_equal(list(action_runs), self.action_runs[:1])
 
@@ -761,16 +765,23 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
     @setup
     def setup_collection(self):
         action_names = ['action_name', 'second_name', 'cleanup']
-
-        action_graph = [
-            Turtle(name=name, required_actions=[])
-            for name in action_names
-        ]
-        self.second_act = second_act = action_graph.pop(1)
-        second_act.required_actions.append(action_graph[0])
-        action_map = {a.name: a for a in action_graph}
-        action_map['second_name'] = second_act
-        self.action_graph = actiongraph.ActionGraph(action_graph, action_map)
+        config_context = config_utils.ConfigContext(
+            'config', ['localhost'], ['cluster'], None, None,
+        )
+        self.action_graph = actiongraph.ActionGraph.from_config(
+            action.ActionMap.from_config(
+                [
+                    {'name': 'action_name', 'command': 'test'},
+                    {
+                        'name': 'second_name', 'command': 'test',
+                        'requires': ['action_name'],
+                    },
+                    {'name': 'cleanup', 'command': 'test'},
+                ],
+                config_context,
+            ),
+            config_context,
+        )
 
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.command = "do command"
@@ -798,12 +809,16 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
         assert not self.collection._is_run_blocked(self.run_map['second_name'])
 
     def test_is_run_blocked_required_actions_blocked(self):
-        third_act = Turtle(
-            name='third_act', required_actions=[self.second_act],
+        third_act = action.Action(
+            name='third_act',
+            command='test',
+            required_actions=['second_name'],
+            node_pool='testpool',
         )
-        self.action_graph.action_map['third_act'] = third_act
+        self.action_graph.action_map = self.action_graph.action_map.update(
+            {'third_act': third_act},
+        )
         self.run_map['third_act'] = self._build_run('third_act')
-
         self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
         assert self.collection._is_run_blocked(self.run_map['third_act'])
 

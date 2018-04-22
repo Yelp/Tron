@@ -141,46 +141,6 @@ ConfigJob = config_object_factory(
 )
 
 
-ConfigAction = config_object_factory(
-    name='ConfigAction',
-    required=[
-        'name',                 # str
-        'command',              # str
-    ],
-    optional=[
-        'requires',             # tuple of str
-        'node',                 # str
-        'executor',             # str
-        'cluster',              # str
-        'pool',                 # str
-        'cpus',                 # float
-        'mem',                  # float
-        'service',              # str
-        'deploy_group',         # str
-        'retries',              # int
-    ],
-)
-
-ConfigCleanupAction = config_object_factory(
-    name='ConfigCleanupAction',
-    required=[
-        'command',              # str
-    ],
-    optional=[
-        'name',                 # str
-        'node',                 # str
-        'executor',             # str
-        'cluster',              # str
-        'pool',                 # str
-        'cpus',                 # float
-        'mem',                  # float
-        'service',              # str
-        'deploy_group',         # str
-        'retries',              # int
-    ],
-)
-
-
 StatePersistenceTypes = Enum.create('shelve', 'sql', 'yaml')
 
 

@@ -18,6 +18,7 @@ except ImportError:
     import json
 
 from twisted.web import http, resource, static, server
+from pyrsistent import PRecord, PClass, PSet, PVector, PMap, thaw
 
 from tron import event
 from tron.api import adapter, controller
@@ -40,6 +41,9 @@ class JSONEncoder(json.JSONEncoder):
 
         if isinstance(o, collections.KeysView):
             return list(o)
+
+        if isinstance(o, (PRecord, PClass, PSet, PVector, PMap)):
+            return thaw(o)
 
         return super(JSONEncoder, self).default(o)
 

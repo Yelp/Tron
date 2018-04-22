@@ -131,8 +131,7 @@ class ActionRunAdapter(RunAdapter):
     @toggle_flag('job_run')
     def get_requirements(self):
         action_name = self._obj.action_name
-        required = self.job_run.action_graph.get_required_actions(action_name)
-        return [act.name for act in required]
+        return self.job_run.action_graph[action_name].required_actions
 
     def _get_serializer(self):
         return filehandler.OutputStreamSerializer(self._obj.output_path)
@@ -167,7 +166,10 @@ class ActionGraphAdapter(object):
                 'dependent':    [dep.name for dep in action.dependent_actions],
             }
 
-        return [build(action) for action in self.action_graph.get_actions()]
+        return [
+            build(action)
+            for (_, action) in self.action_graph.action_map.items()
+        ]
 
 
 class ActionRunGraphAdapter(object):
@@ -177,9 +179,9 @@ class ActionRunGraphAdapter(object):
 
     def get_repr(self):
         def build(action_run):
-            deps = self.action_runs.action_graph.get_dependent_actions(
+            deps = self.action_runs.action_graph.action_map[
                 action_run.action_name,
-            )
+            ].dependent_actions
             return {
                 'id':           action_run.id,
                 'name':         action_run.action_name,
