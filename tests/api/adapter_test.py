@@ -37,7 +37,6 @@ class MockAdapter(ReprAdapter):
 
 
 class ReprAdapterTestCase(TestCase):
-
     @setup
     def setup_adapter(self):
         self.original = mock.Mock(one=1, two=2)
@@ -50,7 +49,7 @@ class ReprAdapterTestCase(TestCase):
     def test_get_translation_mapping(self):
         expected = {
             'three': self.adapter.get_three,
-            'four':  self.adapter.get_four,
+            'four': self.adapter.get_four,
         }
         assert_equal(self.adapter.translators, expected)
 
@@ -60,7 +59,6 @@ class ReprAdapterTestCase(TestCase):
 
 
 class SampleClassStub(object):
-
     def __init__(self):
         self.true_flag = True
         self.false_flag = False
@@ -75,7 +73,6 @@ class SampleClassStub(object):
 
 
 class ToggleFlagTestCase(TestCase):
-
     @setup
     def setup_stub(self):
         self.stub = SampleClassStub()
@@ -88,7 +85,6 @@ class ToggleFlagTestCase(TestCase):
 
 
 class RunAdapterTestCase(TestCase):
-
     @setup
     def setup_adapter(self):
         self.original = mock.Mock()
@@ -111,7 +107,6 @@ class RunAdapterTestCase(TestCase):
 
 
 class ActionRunAdapterTestCase(TestCase):
-
     @setup
     def setup_adapter(self):
         self.temp_dir = tempfile.mkdtemp()
@@ -134,7 +129,6 @@ class ActionRunAdapterTestCase(TestCase):
 
 
 class ActionRunGraphAdapterTestCase(TestCase):
-
     @setup
     def setup_adapter(self):
         self.action_runs = mock.create_autospec(
@@ -152,13 +146,13 @@ class ActionRunGraphAdapterTestCase(TestCase):
 
 
 class JobRunAdapterTestCase(TestCase):
-
     @setup
     def setup_adapter(self):
         action_runs = mock.MagicMock()
         action_runs.__iter__.return_value = iter([mock.Mock(), mock.Mock()])
         self.job_run = mock.Mock(
-            action_runs=action_runs, action_graph=mocks.MockActionGraph(),
+            action_runs=action_runs,
+            action_graph=mocks.MockActionGraph(),
         )
         self.adapter = JobRunAdapter(self.job_run, include_action_runs=True)
 
@@ -175,7 +169,6 @@ class JobRunAdapterTestCase(TestCase):
 
 
 class NodeAdapterTestCase(TestCase):
-
     @setup
     def setup_adapter(self):
         self.node = mock.create_autospec(node.Node)
@@ -188,7 +181,6 @@ class NodeAdapterTestCase(TestCase):
 
 
 class NodePoolAdapterTestCase(TestCase):
-
     @setup
     def setup_adapter(self):
         self.pool = mock.create_autospec(node.NodePool)
@@ -205,7 +197,6 @@ class NodePoolAdapterTestCase(TestCase):
 
 
 class JobIndexAdapterTestCase(TestCase):
-
     @setup
     def setup_adapter(self):
         self.job = mock.create_autospec(job.Job)
@@ -240,7 +231,6 @@ class JobIndexAdapterTestCase(TestCase):
 
 
 class SchedulerAdapterTestCase(TestCase):
-
     @setup
     def setup_adapter(self):
         self.scheduler = mock.create_autospec(scheduler.GeneralScheduler)

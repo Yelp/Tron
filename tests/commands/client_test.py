@@ -26,7 +26,6 @@ def build_file_mock(content):
 
 
 class RequestTestCase(TestCase):
-
     @setup
     def setup_options(self):
         self.url = 'http://localhost:8089/jobs/'
@@ -69,9 +68,7 @@ class RequestTestCase(TestCase):
             self.url,
             500,
             'broke',
-            mock.Mock(
-                get_content_charset=mock.Mock(return_value='utf-8'),
-            ),
+            mock.Mock(get_content_charset=mock.Mock(return_value='utf-8'), ),
             build_file_mock(b'oops'),
         )
         response = client.request(self.url)
@@ -93,7 +90,6 @@ class RequestTestCase(TestCase):
 
 
 class ClientRequestTestCase(TestCase):
-
     @setup
     def setup_client(self):
         self.url = 'http://localhost:8089/'
@@ -107,7 +103,8 @@ class ClientRequestTestCase(TestCase):
     def test_request_error(self):
         exception = assert_raises(
             client.RequestError,
-            self.client.request, '/jobs',
+            self.client.request,
+            '/jobs',
         )
         assert_in(self.url, str(exception))
 
@@ -119,7 +116,6 @@ class ClientRequestTestCase(TestCase):
 
 
 class ClientTestCase(TestCase):
-
     @setup
     def setup_client(self):
         self.url = 'http://localhost:8089/'
@@ -131,15 +127,16 @@ class ClientTestCase(TestCase):
         self.client.config(name, config_data=data, config_hash=hash)
         expected_data = {
             'config': data,
-            'name': name, 'hash': hash, 'check': 0,
+            'name': name,
+            'hash': hash,
+            'check': 0,
         }
         self.client.request.assert_called_with('/api/config', expected_data)
 
     def test_config_get_default(self):
         self.client.config('config_name')
         self.client.request.assert_called_with(
-            '/api/config?name=config_name&no_header=0',
-        )
+            '/api/config?name=config_name&no_header=0', )
 
     def test_http_get(self):
         self.client.http_get('/api/jobs', {'include': 1})
@@ -154,14 +151,12 @@ class ClientTestCase(TestCase):
     def test_job_runs(self):
         self.client.job_runs('/api/jobs/name/0')
         self.client.request.assert_called_with(
-            '/api/jobs/name/0?include_action_graph=0&include_action_runs=1',
-        )
+            '/api/jobs/name/0?include_action_graph=0&include_action_runs=1', )
 
     def test_job(self):
         self.client.job('/api/jobs/name', count=20)
         self.client.request.assert_called_with(
-            '/api/jobs/name?include_action_runs=0&num_runs=20',
-        )
+            '/api/jobs/name?include_action_runs=0&num_runs=20', )
 
     def test_jobs(self):
         self.client.jobs()
@@ -171,7 +166,6 @@ class ClientTestCase(TestCase):
 
 
 class GetUrlTestCase(TestCase):
-
     def test_get_job_url_for_action_run(self):
         url = client.get_job_url('MASTER.name.1.act')
         assert_equal(url, '/api/jobs/MASTER.name/1/act')
@@ -182,7 +176,6 @@ class GetUrlTestCase(TestCase):
 
 
 class GetContentFromIdentifierTestCase(TestCase):
-
     @setup
     def setup_client(self):
         self.options = mock.Mock()
@@ -191,7 +184,7 @@ class GetContentFromIdentifierTestCase(TestCase):
             'jobs': {
                 'MASTER.namea': '',
                 'MASTER.nameb': '',
-                'OTHER.nameg':  '',
+                'OTHER.nameg': '',
             },
         }
 
@@ -202,21 +195,24 @@ class GetContentFromIdentifierTestCase(TestCase):
 
     def test_get_url_from_identifier_job(self):
         identifier = get_object_type_from_identifier(
-            self.index, 'MASTER.namea',
+            self.index,
+            'MASTER.namea',
         )
         assert_equal(identifier.url, '/api/jobs/MASTER.namea')
         assert_equal(identifier.type, TronObjectType.job)
 
     def test_get_url_from_identifier_job_run(self):
         identifier = get_object_type_from_identifier(
-            self.index, 'MASTER.nameb.7',
+            self.index,
+            'MASTER.nameb.7',
         )
         assert_equal(identifier.url, '/api/jobs/MASTER.nameb/7')
         assert_equal(identifier.type, TronObjectType.job_run)
 
     def test_get_url_from_identifier_action_run(self):
         identifier = get_object_type_from_identifier(
-            self.index, 'MASTER.nameb.7.run',
+            self.index,
+            'MASTER.nameb.7.run',
         )
         assert_equal(identifier.url, '/api/jobs/MASTER.nameb/7/run')
         assert_equal(identifier.type, TronObjectType.action_run)
@@ -229,7 +225,9 @@ class GetContentFromIdentifierTestCase(TestCase):
     def test_get_url_from_identifier_no_match(self):
         exc = assert_raises(
             ValueError,
-            get_object_type_from_identifier, self.index, 'MASTER.namec',
+            get_object_type_from_identifier,
+            self.index,
+            'MASTER.namec',
         )
         assert_in('namec', str(exc))
 

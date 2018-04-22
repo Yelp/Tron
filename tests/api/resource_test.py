@@ -30,7 +30,6 @@ from tron.api import resource as www
 from tron.core import job
 from tron.core import jobrun
 
-
 REQUEST = twisted.web.server.Request(mock.Mock(), None)
 REQUEST.childLink = lambda val: "/jobs/%s" % val
 
@@ -45,7 +44,8 @@ class WWWTestCase(TestCase):
 
     @setup_teardown
     def mock_respond(self):
-        with mock.patch('tron.api.resource.respond', autospec=True) as self.respond:
+        with mock.patch(
+                'tron.api.resource.respond', autospec=True) as self.respond:
             self.respond.side_effect = lambda _req, output, code=None: output
             yield
 
@@ -55,10 +55,10 @@ class WWWTestCase(TestCase):
 
 
 class HandleCommandTestCase(TestCase):
-
     @setup_teardown
     def mock_respond(self):
-        with mock.patch('tron.api.resource.respond', autospec=True) as self.respond:
+        with mock.patch(
+                'tron.api.resource.respond', autospec=True) as self.respond:
             yield
 
     def test_handle_command_unknown(self):
@@ -71,7 +71,8 @@ class HandleCommandTestCase(TestCase):
         mock_controller.handle_command.assert_called_with(command)
         assert_equal(response, self.respond.return_value)
         self.respond.assert_called_with(
-            request, {'error': str(error)},
+            request,
+            {'error': str(error)},
             code=http.NOT_IMPLEMENTED,
         )
 
@@ -89,7 +90,6 @@ class HandleCommandTestCase(TestCase):
 
 
 class ActionRunResourceTestCase(WWWTestCase):
-
     @setup
     def setup_resource(self):
         self.job_run = mock.MagicMock()
@@ -103,7 +103,6 @@ class ActionRunResourceTestCase(WWWTestCase):
 
 
 class JobrunResourceTestCase(WWWTestCase):
-
     @setup
     def setup_resource(self):
         self.job_run = mock.MagicMock()
@@ -116,7 +115,6 @@ class JobrunResourceTestCase(WWWTestCase):
 
 
 class ApiRootResourceTestCase(WWWTestCase):
-
     @setup
     def build_resource(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
@@ -124,19 +122,25 @@ class ApiRootResourceTestCase(WWWTestCase):
 
     def test__init__(self):
         expected_children = [
-            b'jobs', b'config', b'status', b'events', b'',
+            b'jobs',
+            b'config',
+            b'status',
+            b'events',
+            b'',
         ]
         assert_equal(set(expected_children), set(self.resource.children))
 
     def test_render_GET(self):
-        expected_keys = ['jobs', 'namespaces', ]
+        expected_keys = [
+            'jobs',
+            'namespaces',
+        ]
         response = self.resource.render_GET(build_request())
         assert_equal(set(response.keys()), set(expected_keys))
         self.mcp.get_job_collection().get_jobs.assert_called_with()
 
 
 class RootResourceTestCase(WWWTestCase):
-
     @setup
     def build_resource(self):
         self.web_path = '/bogus/path'
@@ -155,7 +159,6 @@ class RootResourceTestCase(WWWTestCase):
 
 
 class ActionRunHistoryResourceTestCase(WWWTestCase):
-
     @setup
     def setup_resource(self):
         self.action_runs = [mock.MagicMock(), mock.MagicMock()]
@@ -167,7 +170,6 @@ class ActionRunHistoryResourceTestCase(WWWTestCase):
 
 
 class JobCollectionResourceTestCase(WWWTestCase):
-
     @class_setup
     def build_resource(self):
         self.job = mock.Mock(
@@ -199,7 +201,6 @@ class JobCollectionResourceTestCase(WWWTestCase):
 
 
 class JobResourceTestCase(WWWTestCase):
-
     @setup
     def setup_resource(self):
         self.job_scheduler = mock.create_autospec(job.JobScheduler)
@@ -212,9 +213,7 @@ class JobResourceTestCase(WWWTestCase):
             queueing=True,
             action_graph=mock.MagicMock(),
             scheduler=mock.Mock(),
-            node_pool=mock.create_autospec(
-                node.NodePool,
-            ),
+            node_pool=mock.create_autospec(node.NodePool, ),
             max_runtime=mock.Mock(),
         )
         self.job.get_name.return_value = 'foo'
@@ -240,7 +239,8 @@ class JobResourceTestCase(WWWTestCase):
     def test_get_run_from_identifier_state_name(self):
         job_run = self.resource.get_run_from_identifier('SUCC')
         assert_equal(
-            job_run, self.job_runs.get_run_by_state_short_name.return_value,
+            job_run,
+            self.job_runs.get_run_by_state_short_name.return_value,
         )
         self.job_runs.get_run_by_state_short_name.assert_called_with('SUCC')
 
@@ -273,7 +273,6 @@ class JobResourceTestCase(WWWTestCase):
 
 
 class EventResourceTestCase(WWWTestCase):
-
     @setup
     def setup_resource(self):
         self.name = 'the_name'
@@ -294,15 +293,14 @@ class EventResourceTestCase(WWWTestCase):
 
 
 class ConfigResourceTestCase(TestCase):
-
     @setup_teardown
     def setup_resource(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
         self.resource = www.ConfigResource(self.mcp)
         self.controller = self.resource.controller = mock.create_autospec(
-            controller.ConfigController,
-        )
-        with mock.patch('tron.api.resource.respond', autospec=True) as self.respond:
+            controller.ConfigController, )
+        with mock.patch(
+                'tron.api.resource.respond', autospec=True) as self.respond:
             yield
 
     def test_render_GET(self):

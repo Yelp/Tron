@@ -34,7 +34,6 @@ def create_mock_pool():
 
 
 class NodePoolRepositoryTestCase(TestCase):
-
     @setup
     def setup_store(self):
         self.node = create_mock_node()
@@ -68,13 +67,14 @@ class NodePoolRepositoryTestCase(TestCase):
         node_pool_config = {'c': mock.Mock(nodes=['a', 'b'])}
         ssh_options = mock.Mock(identities=[], known_hosts_file=None)
         node.NodePoolRepository.update_from_config(
-            node_config, node_pool_config, ssh_options,
+            node_config,
+            node_pool_config,
+            ssh_options,
         )
         node_names = [node_config['a'].name, node_config['b'].name]
         assert_equal(
-            set(self.repo.pools), set(
-                node_names + [node_pool_config['c'].name],
-            ),
+            set(self.repo.pools),
+            set(node_names + [node_pool_config['c'].name], ),
         )
         assert_equal(
             set(self.repo.nodes),
@@ -93,7 +93,6 @@ class NodePoolRepositoryTestCase(TestCase):
 
 
 class KnownHostTestCase(TestCase):
-
     @setup
     def setup_known_hosts(self):
         self.known_hosts = node.KnownHosts(None)
@@ -112,11 +111,12 @@ class KnownHostTestCase(TestCase):
 
 
 class DetermineJitterTestCase(TestCase):
-
     @setup
     def setup_node_settings(self):
         self.settings = mock.Mock(
-            jitter_load_factor=1, jitter_min_load=4, jitter_max_delay=20,
+            jitter_load_factor=1,
+            jitter_min_load=4,
+            jitter_max_delay=20,
         )
 
     @setup_teardown
@@ -141,7 +141,10 @@ class DetermineJitterTestCase(TestCase):
 
 
 def build_node(
-        hostname='localhost', username='theuser', name='thename', pub_key=None,
+        hostname='localhost',
+        username='theuser',
+        name='thename',
+        pub_key=None,
 ):
     config = mock.Mock(hostname=hostname, username=username, name=name)
     ssh_opts = mock.create_autospec(ssh.SSHAuthOptions)
@@ -150,7 +153,6 @@ def build_node(
 
 
 class NodeTestCase(TestCase):
-
     class TestConnection(object):
         def openChannel(self, chan):
             self.chan = chan
@@ -178,13 +180,17 @@ class NodeTestCase(TestCase):
         ssh_options = self.node.conch_options
         node_config = mock.Mock(
             hostname='localhost',
-            username='theuser', name='thename',
+            username='theuser',
+            name='thename',
         )
         ssh_options.__getitem__.return_value = 'something'
         public_key = mock.Mock()
         node_settings = mock.Mock()
         new_node = node.Node.from_config(
-            node_config, ssh_options, public_key, node_settings,
+            node_config,
+            ssh_options,
+            public_key,
+            node_settings,
         )
         assert_equal(new_node.name, node_config.name)
         assert_equal(new_node.hostname, node_config.hostname)
@@ -231,7 +237,6 @@ class NodeTestCase(TestCase):
 
 
 class NodePoolTestCase(TestCase):
-
     @setup
     def setup_nodes(self):
         self.nodes = [build_node(name='node%s' % i) for i in range(5)]

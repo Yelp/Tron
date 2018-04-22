@@ -60,8 +60,14 @@ class SQLAlchmeyStateStoreTestCase(TestCase):
             sqlalchemystore.SQLStateKey(self.store.metadata_table, 'foo'),
         ]
         items = [
-            {'docs': 'builder', 'a': 'b'},
-            {'docks': 'helper', 'c': 'd'},
+            {
+                'docs': 'builder',
+                'a': 'b'
+            },
+            {
+                'docks': 'helper',
+                'c': 'd'
+            },
         ]
         self.store.save(zip(keys, items))
 

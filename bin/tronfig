@@ -20,7 +20,6 @@ from tron.config import ConfigError
 from tron.config import manager
 from tron.config import schema
 
-
 log = logging.getLogger('tronfig')
 
 
@@ -28,35 +27,49 @@ def parse_cli():
     parser = cmd_utils.build_option_parser()
 
     parser.add_argument(
-        "-p", "--print", action="store_true", dest="print_config",
+        "-p",
+        "--print",
+        action="store_true",
+        dest="print_config",
         help="Print config to stdout, rather than uploading",
     )
     parser.add_argument(
-        "-C", "--check", action="store_true", dest="check",
+        "-C",
+        "--check",
+        action="store_true",
+        dest="check",
         help="Upload and check configuration, don't apply, "
-             "useful when you want to verify if tron daemon "
-             "will accept your configuration.",
+        "useful when you want to verify if tron daemon "
+        "will accept your configuration.",
     )
     parser.add_argument(
-        "-d", "--delete", action="store_true",
+        "-d",
+        "--delete",
+        action="store_true",
         help="Delete the configuration for this namespace",
     )
     parser.add_argument(
-        "-V", "--validate", action="store_true", dest="validate",
+        "-V",
+        "--validate",
+        action="store_true",
+        dest="validate",
         help="Only validate configuration, don't upload, "
-             "useful for verifying config locally. If namespace "
-             "is not specified, it will be derived from file "
-             "name, if any.",
+        "useful for verifying config locally. If namespace "
+        "is not specified, it will be derived from file "
+        "name, if any.",
     )
     parser.add_argument(
-        "-D", "--validate-dir",
+        "-D",
+        "--validate-dir",
         action="store",
         dest="validate_dir",
         help="Full validation of a folder, don't upload, "
-             "same as -V but checks for more edge-cases",
+        "same as -V but checks for more edge-cases",
     )
     parser.add_argument(
-        "-n", "--namespace", action="store",
+        "-n",
+        "--namespace",
+        action="store",
         help="Alternate namespace to use",
     )
     parser.add_argument('source')
@@ -96,8 +109,8 @@ def delete_config(client, config_name):
         return
 
     response = input(
-        "This will delete the configuration for the %s namespace. Proceed? (y/n): " % config_name,
-    )
+        "This will delete the configuration for the %s namespace. Proceed? (y/n): "
+        % config_name, )
     if response[:1].lower() != 'y':
         return
 
@@ -182,7 +195,11 @@ if __name__ == '__main__':
             sys.exit(1)
 
         if upload_config(
-                client, namespace, content, config_hash, check=args.check,
+                client,
+                namespace,
+                content,
+                config_hash,
+                check=args.check,
         ):
             sys.exit(0)
 

@@ -107,7 +107,9 @@ class ActionCommand(object):
         """
         log.error(
             "Unknown failure for ActionCommand run %s: %s\n%s",
-            self.id, self.command, str(result),
+            self.id,
+            self.command,
+            str(result),
         )
         self.exited(result)
         self.done()
@@ -215,11 +217,9 @@ class SubprocessActionRunnerFactory(object):
         return ActionCommand(run_id, command, StringBufferStore())
 
     def __eq__(self, other):
-        return (
-            self.__class__ == other.__class__ and
-            self.status_path == other.status_path and
-            self.exec_path == other.exec_path
-        )
+        return (self.__class__ == other.__class__
+                and self.status_path == other.status_path
+                and self.exec_path == other.exec_path)
 
     def __ne__(self, other):
         return not self == other

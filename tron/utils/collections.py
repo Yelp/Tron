@@ -6,7 +6,6 @@ import logging
 
 import six
 
-
 log = logging.getLogger(__name__)
 
 

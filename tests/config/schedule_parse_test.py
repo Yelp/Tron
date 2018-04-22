@@ -16,7 +16,6 @@ from tron.config import schedule_parse
 
 
 class PadSequenceTestCase(TestCase):
-
     def test_pad_sequence_short(self):
         expected = [0, 1, 2, 3, None, None]
         assert_equal(schedule_parse.pad_sequence(range(4), 6), expected)
@@ -38,15 +37,17 @@ class PadSequenceTestCase(TestCase):
 
 
 class ScheduleConfigFromStringTestCase(TestCase):
-
-    @mock.patch('tron.config.schedule_parse.parse_groc_expression', autospec=True)
+    @mock.patch(
+        'tron.config.schedule_parse.parse_groc_expression', autospec=True)
     def test_groc_config(self, mock_parse_groc):
         schedule = 'every Mon,Wed at 12:00'
         context = config_utils.NullConfigContext
         config = schedule_parse.schedule_config_from_string(schedule, context)
         assert_equal(config, mock_parse_groc.return_value)
         generic_config = schedule_parse.ConfigGenericSchedule(
-            'groc daily', schedule, None,
+            'groc daily',
+            schedule,
+            None,
         )
         mock_parse_groc.assert_called_with(generic_config, context)
 
@@ -58,7 +59,6 @@ class ScheduleConfigFromStringTestCase(TestCase):
 
 
 class ValidSchedulerTestCase(TestCase):
-
     @mock.patch('tron.config.schedule_parse.schedulers', autospec=True)
     def assert_validation(self, schedule, expected, mock_schedulers):
         context = config_utils.NullConfigContext
@@ -71,14 +71,18 @@ class ValidSchedulerTestCase(TestCase):
     def test_cron_from_dict(self):
         schedule = {'type': 'cron', 'value': '* * * * *'}
         config = schedule_parse.ConfigGenericSchedule(
-            'cron', schedule['value'], datetime.timedelta(),
+            'cron',
+            schedule['value'],
+            datetime.timedelta(),
         )
         self.assert_validation(schedule, config)
 
     def test_cron_from_dict_with_jitter(self):
         schedule = {'type': 'cron', 'value': '* * * * *', 'jitter': '5 min'}
         config = schedule_parse.ConfigGenericSchedule(
-            'cron', schedule['value'], datetime.timedelta(minutes=5),
+            'cron',
+            schedule['value'],
+            datetime.timedelta(minutes=5),
         )
         self.assert_validation(schedule, config)
 
@@ -102,7 +106,6 @@ class ValidCronSchedulerTestCase(TestCase):
 
 
 class ValidDailySchedulerTestCase(TestCase):
-
     def validate(self, config):
         context = config_utils.NullConfigContext
         config = schedule_parse.ConfigGenericSchedule('daily', config, None)
@@ -136,11 +139,12 @@ class ValidDailySchedulerTestCase(TestCase):
 
 
 class ValidIntervalSchedulerTestCase(TestCase):
-
     def validate(self, config_value):
         context = config_utils.NullConfigContext
         config = schedule_parse.ConfigGenericSchedule(
-            'interval', config_value, None,
+            'interval',
+            config_value,
+            None,
         )
         return schedule_parse.valid_interval_scheduler(config, context)
 
@@ -155,7 +159,9 @@ class ValidIntervalSchedulerTestCase(TestCase):
         assert_equal(config.timedelta, expected)
 
     def test_valid_interval_scheduler_hours(self):
-        for spec in ['6h', '6 hours', '6 h', '6 hrs', '6 hour', '6 hours', '6hour']:
+        for spec in [
+                '6h', '6 hours', '6 h', '6 hrs', '6 hour', '6 hours', '6hour'
+        ]:
             config = self.validate(spec)
             expected = datetime.timedelta(hours=6)
             assert_equal(config.timedelta, expected)

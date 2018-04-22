@@ -49,7 +49,10 @@ def macro_timedelta(start_date, years=0, months=0, days=0, hours=0):
         years -= 1
 
     end_date = datetime.datetime(
-        start_date.year + years, new_month, start_date.day, start_date.hour,
+        start_date.year + years,
+        new_month,
+        start_date.day,
+        start_date.hour,
     )
     month_and_year_delta = end_date - start_date.replace(tzinfo=None)
     delta += month_and_year_delta
@@ -78,11 +81,11 @@ class DateArithmetic(object):
     DATE_TYPE_PATTERN = re.compile(r'(\w+)([+-]\d+)?')
 
     DATE_FORMATS = {
-        'year':                 '%Y',
-        'month':                '%m',
-        'day':                  '%d',
-        'hour':                 '%H',
-        'shortdate':            '%Y-%m-%d',
+        'year': '%Y',
+        'month': '%m',
+        'day': '%d',
+        'hour': '%H',
+        'shortdate': '%Y-%m-%d',
     }
 
     @classmethod

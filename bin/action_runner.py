@@ -16,7 +16,6 @@ import yaml
 
 log = logging.getLogger("tron.action_runner")
 
-
 STATUS_FILE = 'status'
 
 
@@ -28,10 +27,10 @@ class StatusFile(object):
 
     def get_content(self, run_id, command, proc):
         return {
-            'run_id':       run_id,
-            'command':      command,
-            'pid':          proc.pid,
-            'return_code':  proc.returncode,
+            'run_id': run_id,
+            'command': command,
+            'pid': proc.pid,
+            'return_code': proc.returncode,
         }
 
     @contextlib.contextmanager
@@ -42,7 +41,8 @@ class StatusFile(object):
                     run_id=run_id,
                     command=command,
                     proc=proc,
-                ), fh,
+                ),
+                fh,
             )
             try:
                 yield
@@ -52,7 +52,8 @@ class StatusFile(object):
                         run_id=run_id,
                         command=command,
                         proc=proc,
-                    ), fh,
+                    ),
+                    fh,
                 )
 
 
@@ -72,9 +73,9 @@ def get_status_file(output_path):
 def run_proc(output_path, command, run_id, proc):
     status_file = get_status_file(output_path)
     with status_file.wrap(
-        command=command,
-        run_id=run_id,
-        proc=proc,
+            command=command,
+            run_id=run_id,
+            proc=proc,
     ):
         proc.wait()
     sys.exit(proc.returncode)
@@ -99,7 +100,10 @@ def parse_args():
 
 def run_command(command):
     return subprocess.Popen(
-        command, shell=True, stdout=sys.stdout, stderr=sys.stderr,
+        command,
+        shell=True,
+        stdout=sys.stdout,
+        stderr=sys.stderr,
     )
 
 

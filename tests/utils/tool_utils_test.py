@@ -16,7 +16,6 @@ from tron.utils import tool_utils
 
 
 class WorkingDirTestCase(TestCase):
-
     @setup
     def setup_cwd(self):
         self.cwd = os.getcwd()

@@ -43,7 +43,6 @@ from tron.config.schema import NotificationOptions
 from tron.config.schema import TronConfig
 from tron.utils.dicts import FrozenDict
 
-
 log = logging.getLogger(__name__)
 
 
@@ -51,12 +50,14 @@ def build_format_string_validator(context_object):
     """Validate that a string does not contain any unexpected formatting keys.
         valid_keys - a sequence of strings
     """
+
     def validator(value, config_context):
         if config_context.partial:
             return valid_string(value, config_context)
 
         context = command_context.CommandContext(
-            context_object, config_context.command_context,
+            context_object,
+            config_context.command_context,
         )
 
         try:
@@ -86,8 +87,7 @@ def valid_output_stream_dir(output_dir, config_context):
 
     if not os.access(output_dir, os.W_OK):
         raise ConfigError(
-            "output_stream_dir '%s' is not writable" % output_dir,
-        )
+            "output_stream_dir '%s' is not writable" % output_dir, )
 
     return output_dir
 
@@ -156,31 +156,40 @@ class ValidateSSHOptions(Validator):
     config_class = ConfigSSHOptions
     optional = True
     defaults = {
-        'agent':                    False,
-        'identities':               (),
-        'known_hosts_file':         None,
-        'connect_timeout':          30,
-        'idle_connection_timeout':  3600,
-        'jitter_min_load':          4,
-        'jitter_max_delay':         20,
-        'jitter_load_factor':       1,
+        'agent': False,
+        'identities': (),
+        'known_hosts_file': None,
+        'connect_timeout': 30,
+        'idle_connection_timeout': 3600,
+        'jitter_min_load': 4,
+        'jitter_max_delay': 20,
+        'jitter_load_factor': 1,
     }
 
     validators = {
-        'agent':                    valid_bool,
+        'agent':
+        valid_bool,
         # TODO: move this config and validations outside master namespace
         # 'identities':               build_list_of_type_validator(
         #                                 valid_identity_file, allow_empty=True),
-        'identities':               build_list_of_type_validator(
-            valid_string, allow_empty=True,
+        'identities':
+        build_list_of_type_validator(
+            valid_string,
+            allow_empty=True,
         ),
         # 'known_hosts_file':         valid_known_hosts_file,
-        'known_hosts_file':         valid_string,
-        'connect_timeout':          config_utils.valid_int,
-        'idle_connection_timeout':  config_utils.valid_int,
-        'jitter_min_load':          config_utils.valid_int,
-        'jitter_max_delay':         config_utils.valid_int,
-        'jitter_load_factor':       config_utils.valid_int,
+        'known_hosts_file':
+        valid_string,
+        'connect_timeout':
+        config_utils.valid_int,
+        'idle_connection_timeout':
+        config_utils.valid_int,
+        'jitter_min_load':
+        config_utils.valid_int,
+        'jitter_max_delay':
+        config_utils.valid_int,
+        'jitter_load_factor':
+        config_utils.valid_int,
     }
 
     def post_validation(self, valid_input, config_context):
@@ -206,10 +215,10 @@ valid_notification_options = ValidateNotificationOptions()
 class ValidateNode(Validator):
     config_class = schema.ConfigNode
     validators = {
-        'name':                 config_utils.valid_identifier,
-        'username':             config_utils.valid_string,
-        'hostname':             config_utils.valid_string,
-        'port':                 config_utils.valid_int,
+        'name': config_utils.valid_identifier,
+        'username': config_utils.valid_string,
+        'hostname': config_utils.valid_string,
+        'port': config_utils.valid_int,
     }
 
     defaults = {
@@ -233,8 +242,8 @@ valid_node = ValidateNode()
 class ValidateNodePool(Validator):
     config_class = schema.ConfigNodePool
     validators = {
-        'name':                 valid_identifier,
-        'nodes':                build_list_of_type_validator(valid_identifier),
+        'name': valid_identifier,
+        'nodes': build_list_of_type_validator(valid_identifier),
     }
 
     def cast(self, node_pool, _context):
@@ -269,33 +278,34 @@ class ValidateAction(Validator):
     config_class = ConfigAction
 
     defaults = {
-        'node':         None,
-        'requires':     (),
-        'executor':     schema.ExecutorTypes.ssh,
-        'cluster':      None,
-        'pool':         None,
-        'cpus':         None,
-        'mem':          None,
-        'service':      None,
+        'node': None,
+        'requires': (),
+        'executor': schema.ExecutorTypes.ssh,
+        'cluster': None,
+        'pool': None,
+        'cpus': None,
+        'mem': None,
+        'service': None,
         'deploy_group': None,
-        'retries':      None,
+        'retries': None,
     }
     requires = build_list_of_type_validator(
-        valid_action_name, allow_empty=True,
+        valid_action_name,
+        allow_empty=True,
     )
     validators = {
-        'name':         valid_action_name,
-        'command':      build_format_string_validator(action_context),
-        'node':         valid_node_name,
-        'requires':     requires,
-        'executor':     config_utils.build_enum_validator(schema.ExecutorTypes),
-        'cluster':      valid_cluster_name,
-        'pool':         valid_string,
-        'cpus':         valid_float,
-        'mem':          valid_float,
-        'service':      valid_string,
+        'name': valid_action_name,
+        'command': build_format_string_validator(action_context),
+        'node': valid_node_name,
+        'requires': requires,
+        'executor': config_utils.build_enum_validator(schema.ExecutorTypes),
+        'cluster': valid_cluster_name,
+        'pool': valid_string,
+        'cpus': valid_float,
+        'mem': valid_float,
+        'service': valid_string,
         'deploy_group': valid_string,
-        'retries':      valid_int,
+        'retries': valid_int,
     }
 
 
@@ -312,29 +322,29 @@ def valid_cleanup_action_name(value, config_context):
 class ValidateCleanupAction(Validator):
     config_class = ConfigCleanupAction
     defaults = {
-        'node':         None,
-        'name':         CLEANUP_ACTION_NAME,
-        'executor':     schema.ExecutorTypes.ssh,
-        'cluster':      None,
-        'pool':         None,
-        'cpus':         None,
-        'mem':          None,
-        'service':      None,
+        'node': None,
+        'name': CLEANUP_ACTION_NAME,
+        'executor': schema.ExecutorTypes.ssh,
+        'cluster': None,
+        'pool': None,
+        'cpus': None,
+        'mem': None,
+        'service': None,
         'deploy_group': None,
-        'retries':      None,
+        'retries': None,
     }
     validators = {
-        'name':         valid_cleanup_action_name,
-        'command':      build_format_string_validator(action_context),
-        'node':         valid_node_name,
-        'executor':     config_utils.build_enum_validator(schema.ExecutorTypes),
-        'cluster':      valid_cluster_name,
-        'pool':         valid_string,
-        'cpus':         valid_float,
-        'mem':          valid_float,
-        'service':      valid_string,
+        'name': valid_cleanup_action_name,
+        'command': build_format_string_validator(action_context),
+        'node': valid_node_name,
+        'executor': config_utils.build_enum_validator(schema.ExecutorTypes),
+        'cluster': valid_cluster_name,
+        'pool': valid_string,
+        'cpus': valid_float,
+        'mem': valid_float,
+        'service': valid_string,
         'deploy_group': valid_string,
-        'retries':      valid_int,
+        'retries': valid_int,
     }
 
 
@@ -345,35 +355,35 @@ class ValidateJob(Validator):
     """Validate jobs."""
     config_class = ConfigJob
     defaults = {
-        'run_limit':            50,
-        'all_nodes':            False,
-        'cleanup_action':       None,
-        'enabled':              True,
-        'queueing':             True,
-        'allow_overlap':        False,
-        'max_runtime':          None,
-        'monitoring':           {},
-        'time_zone':            None,
-        'service':              None,
-        'deploy_group':         None,
+        'run_limit': 50,
+        'all_nodes': False,
+        'cleanup_action': None,
+        'enabled': True,
+        'queueing': True,
+        'allow_overlap': False,
+        'max_runtime': None,
+        'monitoring': {},
+        'time_zone': None,
+        'service': None,
+        'deploy_group': None,
     }
 
     validators = {
-        'name':                 valid_name_identifier,
-        'schedule':             valid_schedule,
-        'run_limit':            valid_int,
-        'all_nodes':            valid_bool,
-        'actions':              build_dict_name_validator(valid_action),
-        'cleanup_action':       valid_cleanup_action,
-        'node':                 valid_node_name,
-        'queueing':             valid_bool,
-        'enabled':              valid_bool,
-        'allow_overlap':        valid_bool,
-        'max_runtime':          config_utils.valid_time_delta,
-        'monitoring':           valid_dict,
-        'time_zone':            valid_time_zone,
-        'service':              valid_string,
-        'deploy_group':         valid_string,
+        'name': valid_name_identifier,
+        'schedule': valid_schedule,
+        'run_limit': valid_int,
+        'all_nodes': valid_bool,
+        'actions': build_dict_name_validator(valid_action),
+        'cleanup_action': valid_cleanup_action,
+        'node': valid_node_name,
+        'queueing': valid_bool,
+        'enabled': valid_bool,
+        'allow_overlap': valid_bool,
+        'max_runtime': config_utils.valid_time_delta,
+        'monitoring': valid_dict,
+        'time_zone': valid_time_zone,
+        'service': valid_string,
+        'deploy_group': valid_string,
     }
 
     def cast(self, in_dict, config_context):
@@ -382,8 +392,12 @@ class ValidateJob(Validator):
 
     # TODO: extract common code to a util function
     def _validate_dependencies(
-        self, job, actions,
-        base_action, current_action=None, stack=None,
+            self,
+            job,
+            actions,
+            base_action,
+            current_action=None,
+            stack=None,
     ):
         """Check for circular or misspelled dependencies."""
         stack = stack or []
@@ -395,13 +409,15 @@ class ValidateJob(Validator):
                 msg = 'Circular dependency in job.%s: %s'
                 raise ConfigError(msg % (job['name'], ' -> '.join(stack)))
             if dep not in actions:
-                raise ConfigError(
-                    'Action jobs.%s.%s has a dependency "%s"'
-                    ' that is not in the same job!' %
-                    (job['name'], current_action.name, dep),
-                )
+                raise ConfigError('Action jobs.%s.%s has a dependency "%s"'
+                                  ' that is not in the same job!' %
+                                  (job['name'], current_action.name, dep), )
             self._validate_dependencies(
-                job, actions, base_action, actions[dep], stack,
+                job,
+                actions,
+                base_action,
+                actions[dep],
+                stack,
             )
 
         stack.pop()
@@ -411,12 +427,8 @@ class ValidateJob(Validator):
         incomplete_paasta_actions = []
 
         def is_incomplete_paasta_action(action):
-            return (
-                action.executor == schema.ExecutorTypes.paasta and (
-                    action.service is None or
-                    action.deploy_group is None
-                )
-            )
+            return (action.executor == schema.ExecutorTypes.paasta and
+                    (action.service is None or action.deploy_group is None))
 
         for _, action in six.iteritems(job['actions']):
             self._validate_dependencies(job, job['actions'], action)
@@ -427,16 +439,14 @@ class ValidateJob(Validator):
         if cleanup_action and is_incomplete_paasta_action(cleanup_action):
             incomplete_paasta_actions.append(action)
 
-        if incomplete_paasta_actions and not(
-            job.get('service') and job.get('deploy_group')
-        ):
+        if incomplete_paasta_actions and not (job.get('service')
+                                              and job.get('deploy_group')):
             raise ConfigError(
                 'Either job {name} or PaaSTA actions {actions} need a service '
                 'and deploy_group.'.format(
                     name=job['name'],
                     actions=incomplete_paasta_actions,
-                ),
-            )
+                ), )
 
 
 valid_job = ValidateJob()
@@ -446,34 +456,37 @@ class ValidateActionRunner(Validator):
     config_class = schema.ConfigActionRunner
     optional = True
     defaults = {
-        'runner_type':          None,
-        'remote_exec_path':     '',
-        'remote_status_path':   '/tmp',
+        'runner_type': None,
+        'remote_exec_path': '',
+        'remote_status_path': '/tmp',
     }
 
     validators = {
-        'runner_type':          config_utils.build_enum_validator(
-            schema.ActionRunnerTypes,
-        ),
-        'remote_status_path':   valid_string,
-        'remote_exec_path':     valid_string,
+        'runner_type':
+        config_utils.build_enum_validator(schema.ActionRunnerTypes, ),
+        'remote_status_path':
+        valid_string,
+        'remote_exec_path':
+        valid_string,
     }
 
 
 class ValidateStatePersistence(Validator):
     config_class = schema.ConfigState
     defaults = {
-        'buffer_size':          1,
-        'connection_details':   None,
+        'buffer_size': 1,
+        'connection_details': None,
     }
 
     validators = {
-        'name':                 valid_string,
-        'store_type':           config_utils.build_enum_validator(
-            schema.StatePersistenceTypes,
-        ),
-        'connection_details':   valid_string,
-        'buffer_size':          valid_int,
+        'name':
+        valid_string,
+        'store_type':
+        config_utils.build_enum_validator(schema.StatePersistenceTypes, ),
+        'connection_details':
+        valid_string,
+        'buffer_size':
+        valid_int,
     }
 
     def post_validation(self, config, config_context):
@@ -512,32 +525,34 @@ class ValidateConfig(Validator):
     """
     config_class = TronConfig
     defaults = {
-        'action_runner':        {},
-        'output_stream_dir':    None,
-        'command_context':      {},
-        'ssh_options':          ValidateSSHOptions.defaults,
+        'action_runner': {},
+        'output_stream_dir': None,
+        'command_context': {},
+        'ssh_options': ValidateSSHOptions.defaults,
         'notification_options': None,
-        'time_zone':            None,
-        'state_persistence':    DEFAULT_STATE_PERSISTENCE,
-        'nodes':                {'localhost': DEFAULT_NODE},
-        'node_pools':           {},
-        'jobs':                 (),
-        'clusters':             (),
+        'time_zone': None,
+        'state_persistence': DEFAULT_STATE_PERSISTENCE,
+        'nodes': {
+            'localhost': DEFAULT_NODE
+        },
+        'node_pools': {},
+        'jobs': (),
+        'clusters': (),
     }
     node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
     nodes = build_dict_name_validator(valid_node, allow_empty=True)
     clusters = build_list_of_type_validator(valid_string, allow_empty=True)
     validators = {
-        'action_runner':        ValidateActionRunner(),
-        'output_stream_dir':    valid_output_stream_dir,
-        'command_context':      valid_command_context,
-        'ssh_options':          valid_ssh_options,
+        'action_runner': ValidateActionRunner(),
+        'output_stream_dir': valid_output_stream_dir,
+        'command_context': valid_command_context,
+        'ssh_options': valid_ssh_options,
         'notification_options': valid_notification_options,
-        'time_zone':            valid_time_zone,
-        'state_persistence':    valid_state_persistence,
-        'nodes':                nodes,
-        'node_pools':           node_pools,
-        'clusters':             clusters,
+        'time_zone': valid_time_zone,
+        'state_persistence': valid_state_persistence,
+        'nodes': nodes,
+        'node_pools': node_pools,
+        'clusters': clusters,
     }
     optional = False
 
@@ -556,15 +571,19 @@ class ValidateConfig(Validator):
         """Validate a non-named config."""
         node_names = config_utils.unique_names(
             'Node and NodePool names must be unique %s',
-            config['nodes'], config.get('node_pools', []),
+            config['nodes'],
+            config.get('node_pools', []),
         )
 
         if config.get('node_pools'):
             self.validate_node_pool_nodes(config)
 
         config_context = ConfigContext(
-            'config', node_names, config.get('clusters'),
-            config.get('command_context'), MASTER_NAMESPACE,
+            'config',
+            node_names,
+            config.get('clusters'),
+            config.get('command_context'),
+            MASTER_NAMESPACE,
         )
         validate_jobs(config, config_context)
 
@@ -577,7 +596,7 @@ class ValidateNamedConfig(Validator):
     config_class = NamedTronConfig
     type_name = "NamedConfigFragment"
     defaults = {
-        'jobs':                 (),
+        'jobs': (),
     }
 
     optional = False
@@ -613,7 +632,11 @@ def validate_config_mapping(config_mapping):
 
     for name, content in six.iteritems(config_mapping):
         context = ConfigContext(
-            name, nodes, master.clusters, master.command_context, name,
+            name,
+            nodes,
+            master.clusters,
+            master.command_context,
+            name,
         )
         yield name, valid_named_config(content, config_context=context)
 
@@ -639,9 +662,10 @@ class ConfigContainer(object):
         return job_names
 
     def get_jobs(self):
-        return dict(itertools.chain.from_iterable(
-            six.iteritems(config.jobs) for _, config in self.configs.items()
-        ))
+        return dict(
+            itertools.chain.from_iterable(
+                six.iteritems(config.jobs)
+                for _, config in self.configs.items()))
 
     def get_master(self):
         return self.configs[MASTER_NAMESPACE]

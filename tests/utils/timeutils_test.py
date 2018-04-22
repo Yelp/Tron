@@ -16,7 +16,6 @@ from tron.utils.timeutils import macro_timedelta
 
 
 class ToTimestampTestCase(TestCase):
-
     def test_normal_time_with_timezone(self):
         # 62 minutes after the epoch
         start_date = pytz.utc.localize(datetime.datetime(1970, 1, 1, 1, 2))
@@ -28,19 +27,16 @@ class ToTimestampTestCase(TestCase):
             pacific_tz.localize(
                 datetime.datetime(2017, 11, 5, 1, 23),
                 is_dst=True,
-            ),
-        )
+            ), )
         after_fall_back = timeutils.to_timestamp(
             pacific_tz.localize(
                 datetime.datetime(2017, 11, 5, 1, 23),
                 is_dst=False,
-            ),
-        )
+            ), )
         assert_equal(after_fall_back - before_fall_back, 60 * 60)
 
 
 class TimeDeltaTestCase(TestCase):
-
     @setup
     def make_dates(self):
         self.start_nonleap = datetime.datetime(year=2011, month=1, day=1)
@@ -53,8 +49,10 @@ class TimeDeltaTestCase(TestCase):
     def check_delta(self, start, target, years=0, months=0, days=0):
         assert_equal(
             start + macro_timedelta(
-                start, years=years,
-                months=months, days=days,
+                start,
+                years=years,
+                months=months,
+                days=days,
             ),
             target,
         )
@@ -158,11 +156,9 @@ class TimeDeltaTestCase(TestCase):
     def test_start_date_with_timezone(self):
         pacific_tz = pytz.timezone("US/Pacific")
         start_date = pacific_tz.localize(
-            datetime.datetime(year=2018, month=1, day=3, hour=13),
-        )
+            datetime.datetime(year=2018, month=1, day=3, hour=13), )
         expected_end = pacific_tz.localize(
-            datetime.datetime(year=2018, month=1, day=1, hour=13),
-        )
+            datetime.datetime(year=2018, month=1, day=1, hour=13), )
         self.check_delta(
             start_date,
             expected_end,
@@ -171,7 +167,6 @@ class TimeDeltaTestCase(TestCase):
 
 
 class DurationTestCase(TestCase):
-
     @setup
     def setup_times(self):
         self.earliest = datetime.datetime(2012, 2, 1, 3, 0, 0)
@@ -192,7 +187,6 @@ class DurationTestCase(TestCase):
 
 
 class DeltaTotalSecondsTestCase(TestCase):
-
     def test(self):
         expected = 86702.004002999995
         delta = datetime.timedelta(*range(1, 6))

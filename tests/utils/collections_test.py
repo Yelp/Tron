@@ -15,7 +15,6 @@ from tron.utils import collections
 
 
 class MappingCollectionsTestCase(TestCase):
-
     @setup
     def setup_collection(self):
         self.name = 'some_name'
@@ -44,8 +43,7 @@ class MappingCollectionsTestCase(TestCase):
         self.collection.restore_state(state_data)
         for key in state_data:
             self.collection[key].restore_state.assert_called_with(
-                state_data[key],
-            )
+                state_data[key], )
 
     def test_contains_item_false(self):
         mock_item, mock_func = mock.Mock(), mock.Mock()
@@ -81,12 +79,12 @@ class MappingCollectionsTestCase(TestCase):
         item = mock.Mock()
         self.collection.replace(item)
         self.collection.add.assert_called_with(
-            item, self.collection.remove_item,
+            item,
+            self.collection.remove_item,
         )
 
 
 class EnumTestCase(TestCase):
-
     @setup
     def setup_enum(self):
         self.values = ['one', 'two', 'three']

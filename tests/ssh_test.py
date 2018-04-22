@@ -13,14 +13,15 @@ from tron import ssh
 
 
 class ClientTransportTestCase(TestCase):
-
     @setup
     def setup_transport(self):
         self.username = 'username'
         self.options = mock.Mock()
         self.expected_pub_key = mock.Mock()
         self.transport = ssh.ClientTransport(
-            self.username, self.options, self.expected_pub_key,
+            self.username,
+            self.options,
+            self.expected_pub_key,
         )
 
     def test_verifyHostKey_missing_pub_key(self):
@@ -53,7 +54,6 @@ class ClientTransportTestCase(TestCase):
 
 
 class SSHAuthOptionsTestCase(TestCase):
-
     def test_from_config_none(self):
         ssh_conf = mock.Mock(agent=False, identities=[])
         ssh_options = ssh.SSHAuthOptions.from_config(ssh_conf)

@@ -26,7 +26,6 @@ from tron.utils import timeutils
 
 
 class SchedulerFromConfigTestCase(TestCase):
-
     def test_cron_scheduler(self):
         line = "cron */5 * * 7,8 *"
         config_context = mock.Mock(path='test')
@@ -127,7 +126,10 @@ class GeneralSchedulerTodayTest(GeneralSchedulerTimeTestBase):
 
         assert_equal(next_run_date, self.now.date())
         earlier_time = datetime.datetime(
-            self.now.year, self.now.month, self.now.day, hour=13,
+            self.now.year,
+            self.now.month,
+            self.now.day,
+            hour=13,
         )
         assert_lte(earlier_time, run_time)
 
@@ -144,8 +146,10 @@ class GeneralSchedulerTomorrowTest(GeneralSchedulerTimeTestBase):
 
         assert_equal(next_run_date, tomorrow)
         earlier_time = datetime.datetime(
-            year=tomorrow.year, month=tomorrow.month,
-            day=tomorrow.day, hour=13,
+            year=tomorrow.year,
+            month=tomorrow.month,
+            day=tomorrow.day,
+            hour=13,
         )
         assert_lte(earlier_time, run_time)
 
@@ -292,8 +296,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
 
     def test_parse_no_weekday(self):
         cfg = parse_groc(
-            '1st,2nd,3rd,10th day of march,apr,September at 00:00',
-        )
+            '1st,2nd,3rd,10th day of march,apr,September at 00:00', )
         assert_equal(cfg.ordinals, None)
         assert_equal(cfg.monthdays, {1, 2, 3, 10})
         assert_equal(cfg.weekdays, None)
@@ -355,7 +358,8 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
                 next_run_date.year,
                 next_run_date.month,
                 next_run_date.day,
-            ), 0,
+            ),
+            0,
         )
 
     def test_weekly_in_month(self):
@@ -372,7 +376,8 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
                 next_run_date.year,
                 next_run_date.month,
                 next_run_date.day,
-            ), 0,
+            ),
+            0,
         )
 
     def test_monthly(self):
@@ -389,7 +394,8 @@ class IntervalSchedulerTestCase(TestCase):
 
     @setup_teardown
     def patch_time(self):
-        with mock.patch('tron.scheduler.timeutils.current_time') as self.mock_now:
+        with mock.patch(
+                'tron.scheduler.timeutils.current_time') as self.mock_now:
             self.mock_now.return_value = self.now
             yield
 

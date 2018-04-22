@@ -32,7 +32,6 @@ from tron.config import schedule_parse
 from tron.utils import timeutils
 from tron.utils import trontimespec
 
-
 log = logging.getLogger(__name__)
 
 
@@ -134,19 +133,19 @@ class GeneralScheduler(object):
     schedule_on_complete = False
 
     def __init__(
-        self,
-        ordinals=None,
-        weekdays=None,
-        months=None,
-        monthdays=None,
-        timestr=None,
-        minutes=None,
-        hours=None,
-        seconds=None,
-        time_zone=None,
-        name=None,
-        original=None,
-        jitter=None,
+            self,
+            ordinals=None,
+            weekdays=None,
+            months=None,
+            monthdays=None,
+            timestr=None,
+            minutes=None,
+            hours=None,
+            seconds=None,
+            time_zone=None,
+            name=None,
+            original=None,
+            jitter=None,
     ):
         """Parameters:
           timestr     - the time of day to run, as 'HH:MM'
@@ -182,35 +181,42 @@ class GeneralScheduler(object):
         if not start_time:
             start_time = timeutils.current_time(tz=self.time_zone)
         elif self.time_zone:
-            if start_time.tzinfo is None or start_time.tzinfo.utcoffset(start_time) is None:
+            if start_time.tzinfo is None or start_time.tzinfo.utcoffset(
+                    start_time) is None:
                 # tz-naive start times need to be localized first to the requested
                 # time zone.
                 try:
                     start_time = self.time_zone.localize(
-                        start_time, is_dst=None,
+                        start_time,
+                        is_dst=None,
                     )
                 except AmbiguousTimeError:
                     # We are in the infamous 1 AM block which happens twice on
                     # fall-back. Pretend like it's the first time, every time.
                     start_time = self.time_zone.localize(
-                        start_time, is_dst=True,
+                        start_time,
+                        is_dst=True,
                     )
                 except NonExistentTimeError:
                     # We are in the infamous 2:xx AM block which does not
                     # exist. Pretend like it's the later time, every time.
                     start_time = self.time_zone.localize(
-                        start_time, is_dst=True,
+                        start_time,
+                        is_dst=True,
                     )
 
         return self.time_spec.get_match(start_time) + get_jitter(self.jitter)
 
     def __str__(self):
         return '%s %s%s' % (
-            self.name, self.original, get_jitter_str(self.jitter),
+            self.name,
+            self.original,
+            get_jitter_str(self.jitter),
         )
 
     def __eq__(self, other):
-        return hasattr(other, 'time_spec') and self.time_spec == other.time_spec
+        return hasattr(other,
+                       'time_spec') and self.time_spec == other.time_spec
 
     def __ne__(self, other):
         return not self == other
@@ -242,14 +248,14 @@ class IntervalScheduler(object):
 
     def __str__(self):
         return "%s %s%s" % (
-            self.get_name(), self.interval, get_jitter_str(self.jitter),
+            self.get_name(),
+            self.interval,
+            get_jitter_str(self.jitter),
         )
 
     def __eq__(self, other):
-        return (
-            isinstance(other, IntervalScheduler) and
-            self.interval == other.interval
-        )
+        return (isinstance(other, IntervalScheduler)
+                and self.interval == other.interval)
 
     def __ne__(self, other):
         return not self == other

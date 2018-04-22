@@ -12,7 +12,6 @@ from testify import TestCase
 
 
 class StatusFileTestCase(TestCase):
-
     @setup
     def setup_status_file(self):
         self.filename = tempfile.NamedTemporaryFile().name
@@ -21,11 +20,14 @@ class StatusFileTestCase(TestCase):
     def test_get_content(self):
         command, proc, run_id = 'do this', mock.Mock(), 'Job.test.1'
         content = self.status_file.get_content(
-            command=command, proc=proc, run_id=run_id,
+            command=command,
+            proc=proc,
+            run_id=run_id,
         )
         expected = dict(
             run_id=run_id,
-            command=command, pid=proc.pid,
+            command=command,
+            pid=proc.pid,
             return_code=proc.returncode,
         )
         assert_equal(content, expected)
@@ -58,14 +60,18 @@ class RegisterTestCase(TestCase):
         self.mock_access.return_value = True
         self.mock_makedirs.side_effect = OSError
         self.failUnlessRaises(
-            OSError, action_runner.get_status_file, self.output_path,
+            OSError,
+            action_runner.get_status_file,
+            self.output_path,
         )
 
     def test_get_status_file_exists_not_writable(self):
         self.mock_isdir.return_value = True
         self.mock_access.return_value = False
         self.failUnlessRaises(
-            OSError, action_runner.get_status_file, self.output_path,
+            OSError,
+            action_runner.get_status_file,
+            self.output_path,
         )
 
     @mock.patch('action_runner.sys.exit', autospec=True)
@@ -73,11 +79,13 @@ class RegisterTestCase(TestCase):
         self.mock_isdir.return_value = True
         self.mock_access.return_value = True
         action_runner.run_proc(
-            self.output_path, self.command, self.run_id, self.proc,
+            self.output_path,
+            self.command,
+            self.run_id,
+            self.proc,
         )
         self.mock_status_file.assert_called_with(
-            self.output_path + '/' + action_runner.STATUS_FILE,
-        )
+            self.output_path + '/' + action_runner.STATUS_FILE, )
         self.mock_status_file.return_value.wrap.assert_called_with(
             command=self.command,
             run_id=self.run_id,

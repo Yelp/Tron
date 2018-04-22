@@ -19,23 +19,21 @@ from tron.commands import client
 from tron.commands import cmd_utils
 from tron.commands.cmd_utils import ExitCode
 
-
 COMMAND_HELP = (
-    ('start',           'Start the selected job, job run, or action'),
-    ('rerun',           'Re-run a full job (all actions) with a new job id'),
-    ('retry',           'Re-run a job action within an existing job run'),
-    ('cancel',          'Cancel the selected job run'),
-    ('disable',         'Disable selected job and cancel any outstanding runs'),
-    ('enable',          'Enable the selected job and schedule the next run'),
-    ('disableall',      'Disable all jobs'),
-    ('enableall',       'Enable all jobs'),
-    ('fail',            'Mark an UNKNOWN job as having failed'),
-    ('success',         'Mark an UNKNOWN job as having succeeded'),
-    ('skip',            'Skip a failed action, runs dependent actions.'),
-    ('stop',            'Stop the action run (SIGTERM)'),
-    ('kill',            'Force kill the action run (SIGKILL)'),
+    ('start', 'Start the selected job, job run, or action'),
+    ('rerun', 'Re-run a full job (all actions) with a new job id'),
+    ('retry', 'Re-run a job action within an existing job run'),
+    ('cancel', 'Cancel the selected job run'),
+    ('disable', 'Disable selected job and cancel any outstanding runs'),
+    ('enable', 'Enable the selected job and schedule the next run'),
+    ('disableall', 'Disable all jobs'),
+    ('enableall', 'Enable all jobs'),
+    ('fail', 'Mark an UNKNOWN job as having failed'),
+    ('success', 'Mark an UNKNOWN job as having succeeded'),
+    ('skip', 'Skip a failed action, runs dependent actions.'),
+    ('stop', 'Stop the action run (SIGTERM)'),
+    ('kill', 'Force kill the action run (SIGKILL)'),
 )
-
 
 log = logging.getLogger('tronctl')
 
@@ -56,13 +54,12 @@ def parse_date(date_string):
 
 
 def parse_cli():
-    parser = cmd_utils.build_option_parser(
-        epilog=command_help_epilog(),
-    )
+    parser = cmd_utils.build_option_parser(epilog=command_help_epilog(), )
 
     parser.add_argument(
         "--run-date",
-        type=parse_date, dest="run_date",
+        type=parse_date,
+        dest="run_date",
         help="For job starts, what should run date be set to",
     )
     parser.add_argument(
@@ -103,7 +100,8 @@ def control_objects(args):
     for identifier in args.id:
         try:
             tron_id = client.get_object_type_from_identifier(
-                url_index, identifier,
+                url_index,
+                identifier,
             )
         except ValueError as e:
             raise SystemExit("Error: %s" % e)

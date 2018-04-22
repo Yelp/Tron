@@ -11,6 +11,7 @@ import six
 def invert_dict_list(dictionary):
     """Invert a dictionary of lists. All values in the lists should be unique.
     """
+
     def invert(key, seq):
         for item in seq:
             yield item, key

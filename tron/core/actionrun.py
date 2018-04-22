@@ -36,24 +36,30 @@ class ActionRunFactory(object):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
         action_map = six.iteritems(job_run.action_graph.get_action_map())
         action_run_map = {
-            maybe_decode(name): cls.build_run_for_action(job_run, action_inst, action_runner)
+            maybe_decode(name): cls.build_run_for_action(
+                job_run, action_inst, action_runner)
             for name, action_inst in action_map
         }
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
     @classmethod
     def action_run_collection_from_state(
-        cls, job_run, runs_state_data,
-        cleanup_action_state_data,
+            cls,
+            job_run,
+            runs_state_data,
+            cleanup_action_state_data,
     ):
         action_runs = [
             cls.action_run_from_state(job_run, state_data)
             for state_data in runs_state_data
         ]
         if cleanup_action_state_data:
-            action_runs.append(cls.action_run_from_state(
-                job_run, cleanup_action_state_data, cleanup=True,
-            ))
+            action_runs.append(
+                cls.action_run_from_state(
+                    job_run,
+                    cleanup_action_state_data,
+                    cleanup=True,
+                ))
 
         action_run_map = {
             maybe_decode(action_run.action_name): action_run
@@ -64,7 +70,8 @@ class ActionRunFactory(object):
     @classmethod
     def build_run_for_action(cls, job_run, action, action_runner):
         """Create an ActionRun for a JobRun and Action."""
-        run_node = action.node_pool.next() if action.node_pool else job_run.node
+        run_node = action.node_pool.next(
+        ) if action.node_pool else job_run.node
 
         args = {
             'job_run_id': job_run.id,
@@ -160,29 +167,29 @@ class ActionRun(object):
 
     # TODO: create a class for ActionRunId, JobRunId, Etc
     def __init__(
-        self,
-        job_run_id,
-        name,
-        node,
-        bare_command=None,
-        parent_context=None,
-        output_path=None,
-        cleanup=False,
-        start_time=None,
-        end_time=None,
-        run_state=STATE_SCHEDULED,
-        rendered_command=None,
-        exit_status=None,
-        action_runner=None,
-        executor=None,
-        cluster=None,
-        pool=None,
-        cpus=None,
-        mem=None,
-        service=None,
-        deploy_group=None,
-        retries_remaining=None,
-        exit_statuses=None,
+            self,
+            job_run_id,
+            name,
+            node,
+            bare_command=None,
+            parent_context=None,
+            output_path=None,
+            cleanup=False,
+            start_time=None,
+            end_time=None,
+            run_state=STATE_SCHEDULED,
+            rendered_command=None,
+            exit_status=None,
+            action_runner=None,
+            executor=None,
+            cluster=None,
+            pool=None,
+            cpus=None,
+            mem=None,
+            service=None,
+            deploy_group=None,
+            retries_remaining=None,
+            exit_statuses=None,
     ):
         self.job_run_id = maybe_decode(job_run_id)
         self.action_name = maybe_decode(name)
@@ -194,7 +201,9 @@ class ActionRun(object):
         self.rendered_command = rendered_command
         self.action_runner = action_runner or NoActionRunnerFactory
         self.machine = state.StateMachine(
-            self.STATE_SCHEDULED, delegate=self, force_state=run_state,
+            self.STATE_SCHEDULED,
+            delegate=self,
+            force_state=run_state,
         )
         self.is_cleanup = cleanup
         self.executor = executor
@@ -232,8 +241,12 @@ class ActionRun(object):
 
     @classmethod
     def from_state(
-        cls, state_data, parent_context, output_path,
-        job_run_node, cleanup=False,
+            cls,
+            state_data,
+            parent_context,
+            output_path,
+            job_run_node,
+            cleanup=False,
     ):
         """Restore the state of this ActionRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
@@ -246,7 +259,8 @@ class ActionRun(object):
             action_name = state_data['action_name']
 
         job_run_node = pool_repo.get_node(
-            state_data.get('node_name'), job_run_node,
+            state_data.get('node_name'),
+            job_run_node,
         )
 
         rendered_command = state_data.get('rendered_command')
@@ -262,7 +276,8 @@ class ActionRun(object):
             start_time=state_data['start_time'],
             end_time=state_data['end_time'],
             run_state=state.named_event_by_name(
-                cls.STATE_SCHEDULED, state_data['state'],
+                cls.STATE_SCHEDULED,
+                state_data['state'],
             ),
             exit_status=state_data.get('exit_status'),
             retries_remaining=state_data.get('retries_remaining'),
@@ -302,7 +317,8 @@ class ActionRun(object):
         if not self.is_valid_command:
             log.error(
                 "Command for action run %s is invalid: %r",
-                self.id, self.bare_command,
+                self.id,
+                self.bare_command,
             )
             self.fail(-1)
             return
@@ -321,7 +337,9 @@ class ActionRun(object):
     def _done(self, target, exit_status=0):
         log.info(
             "Action run %s completed with %s and exit status %r",
-            self.id, target, exit_status,
+            self.id,
+            target,
+            exit_status,
         )
         if self.machine.check(target):
             self.exit_status = exit_status
@@ -350,8 +368,7 @@ class ActionRun(object):
                 return self.restart()
             else:
                 log.info("Reached maximum number of retries: {}".format(
-                    len(self.exit_statuses),
-                ))
+                    len(self.exit_statuses), ))
 
         return self._done('fail', exit_status)
 
@@ -370,24 +387,24 @@ class ActionRun(object):
         # Freeze command after it's run
         command = rendered_command if rendered_command else self.bare_command
         return {
-            'job_run_id':       self.job_run_id,
-            'action_name':      self.action_name,
-            'state':            self.state.name,
-            'start_time':       self.start_time,
-            'end_time':         self.end_time,
-            'command':          command,
+            'job_run_id': self.job_run_id,
+            'action_name': self.action_name,
+            'state': self.state.name,
+            'start_time': self.start_time,
+            'end_time': self.end_time,
+            'command': command,
             'rendered_command': self.rendered_command,
-            'node_name':        self.node.get_name() if self.node else None,
-            'exit_status':      self.exit_status,
-            'executor':         self.executor,
-            'cluster':          self.cluster,
-            'pool':             self.pool,
-            'cpus':             self.cpus,
-            'mem':              self.mem,
-            'service':          self.service,
-            'deploy_group':     self.deploy_group,
+            'node_name': self.node.get_name() if self.node else None,
+            'exit_status': self.exit_status,
+            'executor': self.executor,
+            'cluster': self.cluster,
+            'pool': self.pool,
+            'cpus': self.cpus,
+            'mem': self.mem,
+            'service': self.service,
+            'deploy_group': self.deploy_group,
             'retries_remaining': self.retries_remaining,
-            'exit_statuses':     self.exit_statuses,
+            'exit_statuses': self.exit_statuses,
         }
 
     def render_command(self):
@@ -473,7 +490,8 @@ class SSHActionRun(ActionRun, Observer):
             self.retries_remaining = -1
 
         stop_command = self.action_runner.build_stop_action_command(
-            self.id, 'terminate',
+            self.id,
+            'terminate',
         )
         self.node.submit_command(stop_command)
 
@@ -482,7 +500,8 @@ class SSHActionRun(ActionRun, Observer):
             self.retries_remaining = -1
 
         kill_command = self.action_runner.build_stop_action_command(
-            self.id, 'kill',
+            self.id,
+            'kill',
         )
         self.node.submit_command(kill_command)
 
@@ -515,6 +534,7 @@ class SSHActionRun(ActionRun, Observer):
                 return self.success()
 
             return self.fail(action_command.exit_status)
+
     handler = handle_action_command_state_change
 
 
@@ -524,9 +544,8 @@ class PaaSTAActionRun(ActionRun):
 
     def submit_command(self):
         self.machine.transition('started')
-        stdout = filehandler.OutputStreamSerializer(
-            self.output_path,
-        ).open('.stdout')
+        stdout = filehandler.OutputStreamSerializer(self.output_path,
+                                                    ).open('.stdout')
         stdout.write(
             "Would have run command for service {service} from deploy group "
             "{deploy_group} on cluster {cluster} in the {pool} pool, with "
@@ -537,8 +556,7 @@ class PaaSTAActionRun(ActionRun):
                 pool=self.pool,
                 cpus=self.cpus,
                 mem=self.mem,
-            ),
-        )
+            ), )
         self.success()
         stdout.close()
         return True
@@ -568,34 +586,39 @@ class ActionRunCollection(object):
         self.run_map = run_map
         # Setup proxies
         self.proxy_action_runs_with_cleanup = proxy.CollectionProxy(
-            self.get_action_runs_with_cleanup, [
-                proxy.attr_proxy('is_running',      any),
-                proxy.attr_proxy('is_starting',     any),
-                proxy.attr_proxy('is_scheduled',    any),
-                proxy.attr_proxy('is_cancelled',    any),
-                proxy.attr_proxy('is_active',       any),
-                proxy.attr_proxy('is_queued',       all),
-                proxy.attr_proxy('is_complete',     all),
-                proxy.func_proxy('queue',           iteration.list_all),
-                proxy.func_proxy('cancel',          iteration.list_all),
-                proxy.func_proxy('success',         iteration.list_all),
-                proxy.func_proxy('fail',            iteration.list_all),
-                proxy.func_proxy('ready',           iteration.list_all),
-                proxy.func_proxy('cleanup',         iteration.list_all),
-                proxy.func_proxy('stop',            iteration.list_all),
-                proxy.attr_proxy('start_time',      iteration.min_filter),
+            self.get_action_runs_with_cleanup,
+            [
+                proxy.attr_proxy('is_running', any),
+                proxy.attr_proxy('is_starting', any),
+                proxy.attr_proxy('is_scheduled', any),
+                proxy.attr_proxy('is_cancelled', any),
+                proxy.attr_proxy('is_active', any),
+                proxy.attr_proxy('is_queued', all),
+                proxy.attr_proxy('is_complete', all),
+                proxy.func_proxy('queue', iteration.list_all),
+                proxy.func_proxy('cancel', iteration.list_all),
+                proxy.func_proxy('success', iteration.list_all),
+                proxy.func_proxy('fail', iteration.list_all),
+                proxy.func_proxy('ready', iteration.list_all),
+                proxy.func_proxy('cleanup', iteration.list_all),
+                proxy.func_proxy('stop', iteration.list_all),
+                proxy.attr_proxy('start_time', iteration.min_filter),
             ],
         )
 
     def action_runs_for_actions(self, actions):
-        return (self.run_map[a.name] for a in actions if a.name in self.run_map)
+        return (self.run_map[a.name] for a in actions
+                if a.name in self.run_map)
 
     def get_action_runs_with_cleanup(self):
         return six.itervalues(self.run_map)
+
     action_runs_with_cleanup = property(get_action_runs_with_cleanup)
 
     def get_action_runs(self):
-        return (run for run in six.itervalues(self.run_map) if not run.is_cleanup)
+        return (run for run in six.itervalues(self.run_map)
+                if not run.is_cleanup)
+
     action_runs = property(get_action_runs)
 
     @property
@@ -624,9 +647,11 @@ class ActionRunCollection(object):
 
     def get_startable_action_runs(self):
         """Returns any actions that are scheduled or queued that can be run."""
+
         def startable(action_run):
-            return (action_run.check_state('start') and
-                    not self._is_run_blocked(action_run))
+            return (action_run.check_state('start')
+                    and not self._is_run_blocked(action_run))
+
         return self._get_runs_using(startable)
 
     @property
@@ -641,8 +666,7 @@ class ActionRunCollection(object):
             return False
 
         required_actions = self.action_graph.get_required_actions(
-            action_run.action_name,
-        )
+            action_run.action_name, )
         if not required_actions:
             return False
 
@@ -665,6 +689,7 @@ class ActionRunCollection(object):
 
         def done_or_blocked(action_run):
             return action_run.is_done or self._is_run_blocked(action_run)
+
         return all(done_or_blocked(run) for run in self.action_runs)
 
     @property
@@ -686,19 +711,17 @@ class ActionRunCollection(object):
     def end_time(self):
         if not self.is_done:
             return None
-        end_times = (
-            run.end_time for run in self.get_action_runs_with_cleanup()
-        )
+        end_times = (run.end_time
+                     for run in self.get_action_runs_with_cleanup())
         return iteration.max_filter(end_times)
 
     def __str__(self):
         def blocked_state(action_run):
             return ":blocked" if self._is_run_blocked(action_run) else ""
 
-        run_states = ', '.join(
-            "%s(%s%s)" % (a.action_name, a.state, blocked_state(a))
-            for a in six.itervalues(self.run_map)
-        )
+        run_states = ', '.join("%s(%s%s)" % (a.action_name, a.state,
+                                             blocked_state(a))
+                               for a in six.itervalues(self.run_map))
         return "%s[%s]" % (self.__class__.__name__, run_states)
 
     def __getattr__(self, name):

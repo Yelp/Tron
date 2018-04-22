@@ -21,7 +21,6 @@ from tron.config import schema
 
 
 class FromStringTestCase(TestCase):
-
     def test_from_string_valid(self):
         content = "{'one': 'thing', 'another': 'thing'}\n"
         actual = manager.from_string(content)
@@ -34,7 +33,6 @@ class FromStringTestCase(TestCase):
 
 
 class ReadWriteTestCase(TestCase):
-
     @setup
     def setup_tempfile(self):
         self.filename = tempfile.NamedTemporaryFile().name
@@ -57,7 +55,6 @@ class ReadWriteTestCase(TestCase):
 
 
 class ManifestFileTestCase(TestCase):
-
     @setup
     def setup_manifest(self):
         self.temp_dir = tempfile.mkdtemp()
@@ -127,8 +124,10 @@ class ConfigManagerTestCase(TestCase):
         assert_equal(path, os.path.join(self.temp_dir, '_etc_passwd.yaml'))
         path = self.manager.build_file_path('../../etc/passwd')
         assert_equal(
-            path, os.path.join(
-                self.temp_dir, '______etc_passwd.yaml',
+            path,
+            os.path.join(
+                self.temp_dir,
+                '______etc_passwd.yaml',
             ),
         )
 
@@ -150,7 +149,8 @@ class ConfigManagerTestCase(TestCase):
         self.manifest.get_file_name.assert_called_with(name)
         assert not self.manifest.add.call_count
         self.manager.validate_with_fragment.assert_called_with(
-            name, self.content,
+            name,
+            self.content,
         )
 
     def test_write_config_new_name(self):
@@ -179,7 +179,8 @@ class ConfigManagerTestCase(TestCase):
         self.manager.delete_config(name)
         assert_equal(mock_remove.call_count, 0)
 
-    @mock.patch('tron.config.manager.config_parse.ConfigContainer', autospec=True)
+    @mock.patch(
+        'tron.config.manager.config_parse.ConfigContainer', autospec=True)
     def test_validate_with_fragment(self, mock_config_container):
         name = 'the_name'
         name_mapping = {'something': 'content', name: 'old_content'}
@@ -191,7 +192,8 @@ class ConfigManagerTestCase(TestCase):
         mock_config_container.create.assert_called_with(expected_mapping)
 
     @mock.patch('tron.config.manager.read')
-    @mock.patch('tron.config.manager.config_parse.ConfigContainer', autospec=True)
+    @mock.patch(
+        'tron.config.manager.config_parse.ConfigContainer', autospec=True)
     def test_load(self, mock_config_container, mock_read):
         content_items = self.content.items()
         self.manifest.get_file_mapping().return_value = content_items
@@ -199,8 +201,10 @@ class ConfigManagerTestCase(TestCase):
         self.manifest.get_file_mapping.assert_called_with()
         assert_equal(container, mock_config_container.create.return_value)
 
-        expected = {name: call.return_value
-                    for ((name, _), call) in zip(content_items, mock_read.mock_calls)}
+        expected = {
+            name: call.return_value
+            for ((name, _), call) in zip(content_items, mock_read.mock_calls)
+        }
         mock_config_container.create.assert_called_with(expected)
 
     def test_get_hash_default(self):
@@ -217,7 +221,6 @@ class ConfigManagerTestCase(TestCase):
 
 
 class CreateNewConfigTestCase(TestCase):
-
     @mock.patch('tron.config.manager.os.makedirs', autospec=True)
     @mock.patch('tron.config.manager.ManifestFile', autospec=True)
     @mock.patch('tron.config.manager.write_raw', autospec=True)

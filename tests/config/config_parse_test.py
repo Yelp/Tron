@@ -38,7 +38,6 @@ from tron.config.schedule_parse import ConfigIntervalScheduler
 from tron.config.schema import MASTER_NAMESPACE
 from tron.utils.dicts import FrozenDict
 
-
 BASE_CONFIG = """
 ssh_options:
     agent: false
@@ -185,7 +184,7 @@ jobs:
             }),
             ssh_options=schema.ConfigSSHOptions(
                 agent=False,
-                identities=('tests/test_id_rsa',),
+                identities=('tests/test_id_rsa', ),
                 known_hosts_file=None,
                 connect_timeout=30,
                 idle_connection_timeout=3600,
@@ -197,24 +196,32 @@ jobs:
             time_zone=pytz.timezone("EST"),
             state_persistence=config_parse.DEFAULT_STATE_PERSISTENCE,
             nodes=FrozenDict({
-                'node0': schema.ConfigNode(
+                'node0':
+                schema.ConfigNode(
                     name='node0',
-                    username='foo', hostname='node0', port=22,
+                    username='foo',
+                    hostname='node0',
+                    port=22,
                 ),
-                'node1': schema.ConfigNode(
+                'node1':
+                schema.ConfigNode(
                     name='node1',
-                    username='foo', hostname='node1', port=22,
+                    username='foo',
+                    hostname='node1',
+                    port=22,
                 ),
             }),
             node_pools=FrozenDict({
-                'nodePool': schema.ConfigNodePool(
+                'nodePool':
+                schema.ConfigNodePool(
                     nodes=('node0', 'node1'),
                     name='nodePool',
                 ),
             }),
             clusters=('cluster-one', 'cluster-two'),
             jobs=FrozenDict({
-                'MASTER.test_job0': schema.ConfigJob(
+                'MASTER.test_job0':
+                schema.ConfigJob(
                     name='MASTER.test_job0',
                     namespace='MASTER',
                     node='node0',
@@ -222,10 +229,12 @@ jobs:
                     service=None,
                     deploy_group=None,
                     schedule=ConfigIntervalScheduler(
-                        timedelta=datetime.timedelta(0, 20), jitter=None,
+                        timedelta=datetime.timedelta(0, 20),
+                        jitter=None,
                     ),
                     actions=FrozenDict({
-                        'action0_0': schema.ConfigAction(
+                        'action0_0':
+                        schema.ConfigAction(
                             name='action0_0',
                             command='test_command0.0',
                             executor='ssh',
@@ -245,7 +254,8 @@ jobs:
                     allow_overlap=False,
                     time_zone=None,
                 ),
-                'MASTER.test_job1': schema.ConfigJob(
+                'MASTER.test_job1':
+                schema.ConfigJob(
                     name='MASTER.test_job1',
                     namespace='MASTER',
                     node='node0',
@@ -255,18 +265,22 @@ jobs:
                     deploy_group=None,
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days={1, 3, 5},
-                        hour=0, minute=30, second=0,
+                        hour=0,
+                        minute=30,
+                        second=0,
                         original="00:30:00 MWF",
                         jitter=None,
                     ),
                     actions=FrozenDict({
-                        'action1_1': schema.ConfigAction(
+                        'action1_1':
+                        schema.ConfigAction(
                             name='action1_1',
                             command='test_command1.1',
-                            requires=('action1_0',),
+                            requires=('action1_0', ),
                             executor='ssh',
                         ),
-                        'action1_0': schema.ConfigAction(
+                        'action1_0':
+                        schema.ConfigAction(
                             name='action1_0',
                             command='test_command1.0',
                             executor='ssh',
@@ -281,7 +295,8 @@ jobs:
                     allow_overlap=True,
                     time_zone=pytz.timezone("Pacific/Auckland"),
                 ),
-                'MASTER.test_job2': schema.ConfigJob(
+                'MASTER.test_job2':
+                schema.ConfigJob(
                     name='MASTER.test_job2',
                     namespace='MASTER',
                     node='node1',
@@ -291,12 +306,15 @@ jobs:
                     deploy_group=None,
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
-                        hour=16, minute=30, second=0,
+                        hour=16,
+                        minute=30,
+                        second=0,
                         original="16:30:00 ",
                         jitter=None,
                     ),
                     actions=FrozenDict({
-                        'action2_0': schema.ConfigAction(
+                        'action2_0':
+                        schema.ConfigAction(
                             name='action2_0',
                             command='test_command2.0',
                             executor='ssh',
@@ -311,7 +329,8 @@ jobs:
                     allow_overlap=False,
                     time_zone=None,
                 ),
-                'MASTER.test_job3': schema.ConfigJob(
+                'MASTER.test_job3':
+                schema.ConfigJob(
                     name='MASTER.test_job3',
                     namespace='MASTER',
                     node='node1',
@@ -321,19 +340,22 @@ jobs:
                     service=None,
                     deploy_group=None,
                     actions=FrozenDict({
-                        'action3_1': schema.ConfigAction(
+                        'action3_1':
+                        schema.ConfigAction(
                             name='action3_1',
                             command='test_command3.1',
                             executor='ssh',
                             requires=(),
                         ),
-                        'action3_0': schema.ConfigAction(
+                        'action3_0':
+                        schema.ConfigAction(
                             name='action3_0',
                             command='test_command3.0',
                             executor='ssh',
                             requires=(),
                         ),
-                        'action3_2': schema.ConfigAction(
+                        'action3_2':
+                        schema.ConfigAction(
                             name='action3_2',
                             command='test_command3.2',
                             requires=('action3_0', 'action3_1'),
@@ -349,7 +371,8 @@ jobs:
                     allow_overlap=False,
                     time_zone=None,
                 ),
-                'MASTER.test_job4': schema.ConfigJob(
+                'MASTER.test_job4':
+                schema.ConfigJob(
                     name='MASTER.test_job4',
                     namespace='MASTER',
                     node='nodePool',
@@ -358,12 +381,15 @@ jobs:
                     deploy_group=None,
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
-                        hour=0, minute=0, second=0,
+                        hour=0,
+                        minute=0,
+                        second=0,
                         original='00:00:00 ',
                         jitter=None,
                     ),
                     actions=FrozenDict({
-                        'action4_0': schema.ConfigAction(
+                        'action4_0':
+                        schema.ConfigAction(
                             name='action4_0',
                             command='test_command4.0',
                             executor='ssh',
@@ -379,7 +405,8 @@ jobs:
                     allow_overlap=False,
                     time_zone=None,
                 ),
-                'MASTER.test_job_paasta': schema.ConfigJob(
+                'MASTER.test_job_paasta':
+                schema.ConfigJob(
                     name='MASTER.test_job_paasta',
                     namespace='MASTER',
                     node='nodePool',
@@ -388,12 +415,15 @@ jobs:
                     deploy_group='prod.non_canary',
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
-                        hour=0, minute=0, second=0,
+                        hour=0,
+                        minute=0,
+                        second=0,
                         original='00:00:00 ',
                         jitter=None,
                     ),
                     actions=FrozenDict({
-                        'action4_0': schema.ConfigAction(
+                        'action4_0':
+                        schema.ConfigAction(
                             name='action4_0',
                             command='test_command4.0',
                             executor='paasta',
@@ -536,7 +566,8 @@ jobs:
     def test_attributes(self):
         expected = schema.NamedTronConfig(
             jobs=FrozenDict({
-                'test_job0': schema.ConfigJob(
+                'test_job0':
+                schema.ConfigJob(
                     name='test_job0',
                     namespace='test_namespace',
                     node='node0',
@@ -548,7 +579,8 @@ jobs:
                         jitter=None,
                     ),
                     actions=FrozenDict({
-                        'action0_0': schema.ConfigAction(
+                        'action0_0':
+                        schema.ConfigAction(
                             name='action0_0',
                             command='test_command0.0',
                             executor='ssh',
@@ -575,7 +607,8 @@ jobs:
                     allow_overlap=False,
                     time_zone=None,
                 ),
-                'test_job1': schema.ConfigJob(
+                'test_job1':
+                schema.ConfigJob(
                     name='test_job1',
                     namespace='test_namespace',
                     node='node0',
@@ -592,13 +625,15 @@ jobs:
                         jitter=None,
                     ),
                     actions=FrozenDict({
-                        'action1_1': schema.ConfigAction(
+                        'action1_1':
+                        schema.ConfigAction(
                             name='action1_1',
                             command='test_command1.1',
-                            requires=('action1_0',),
+                            requires=('action1_0', ),
                             executor='ssh',
                         ),
-                        'action1_0': schema.ConfigAction(
+                        'action1_0':
+                        schema.ConfigAction(
                             name='action1_0',
                             command='test_command1.0 %(some_var)s',
                             executor='ssh',
@@ -613,7 +648,8 @@ jobs:
                     allow_overlap=True,
                     time_zone=None,
                 ),
-                'test_job2': schema.ConfigJob(
+                'test_job2':
+                schema.ConfigJob(
                     name='test_job2',
                     namespace='test_namespace',
                     node='node1',
@@ -630,7 +666,8 @@ jobs:
                         jitter=None,
                     ),
                     actions=FrozenDict({
-                        'action2_0': schema.ConfigAction(
+                        'action2_0':
+                        schema.ConfigAction(
                             name='action2_0',
                             command='test_command2.0',
                             executor='ssh',
@@ -645,7 +682,8 @@ jobs:
                     allow_overlap=False,
                     time_zone=None,
                 ),
-                'test_job3': schema.ConfigJob(
+                'test_job3':
+                schema.ConfigJob(
                     name='test_job3',
                     namespace='test_namespace',
                     node='node1',
@@ -655,19 +693,22 @@ jobs:
                     service=None,
                     deploy_group=None,
                     actions=FrozenDict({
-                        'action3_1': schema.ConfigAction(
+                        'action3_1':
+                        schema.ConfigAction(
                             name='action3_1',
                             command='test_command3.1',
                             executor='ssh',
                             requires=(),
                         ),
-                        'action3_0': schema.ConfigAction(
+                        'action3_0':
+                        schema.ConfigAction(
                             name='action3_0',
                             command='test_command3.0',
                             executor='ssh',
                             requires=(),
                         ),
-                        'action3_2': schema.ConfigAction(
+                        'action3_2':
+                        schema.ConfigAction(
                             name='action3_2',
                             command='test_command3.2',
                             requires=('action3_0', 'action3_1'),
@@ -683,7 +724,8 @@ jobs:
                     allow_overlap=False,
                     time_zone=None,
                 ),
-                'test_job4': schema.ConfigJob(
+                'test_job4':
+                schema.ConfigJob(
                     name='test_job4',
                     namespace='test_namespace',
                     node='NodePool',
@@ -692,12 +734,15 @@ jobs:
                     deploy_group=None,
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
-                        hour=0, minute=0, second=0,
+                        hour=0,
+                        minute=0,
+                        second=0,
                         original="00:00:00 ",
                         jitter=None,
                     ),
                     actions=FrozenDict({
-                        'action4_0': schema.ConfigAction(
+                        'action4_0':
+                        schema.ConfigAction(
                             name='action4_0',
                             command='test_command4.0',
                             executor='ssh',
@@ -713,7 +758,8 @@ jobs:
                     allow_overlap=False,
                     time_zone=None,
                 ),
-                'test_job_paasta': schema.ConfigJob(
+                'test_job_paasta':
+                schema.ConfigJob(
                     name='test_job_paasta',
                     namespace='test_namespace',
                     node='NodePool',
@@ -722,12 +768,15 @@ jobs:
                     deploy_group='prod.non_canary',
                     schedule=schedule_parse.ConfigDailyScheduler(
                         days=set(),
-                        hour=0, minute=0, second=0,
+                        hour=0,
+                        minute=0,
+                        second=0,
                         original='00:00:00 ',
                         jitter=None,
                     ),
                     actions=FrozenDict({
-                        'action4_0': schema.ConfigAction(
+                        'action4_0':
+                        schema.ConfigAction(
                             name='action4_0',
                             command='test_command4.0',
                             executor='paasta',
@@ -743,11 +792,11 @@ jobs:
                     allow_overlap=False,
                     time_zone=None,
                 ),
-            }),
-        )
+            }), )
 
         test_config = validate_fragment(
-            'test_namespace', yaml.load(self.config),
+            'test_namespace',
+            yaml.load(self.config),
         )
         assert_equal(test_config.jobs['test_job0'], expected.jobs['test_job0'])
         assert_equal(test_config.jobs['test_job1'], expected.jobs['test_job1'])
@@ -764,7 +813,6 @@ jobs:
 
 
 class JobConfigTestCase(TestCase):
-
     def test_no_actions(self):
         test_config = BASE_CONFIG + """
 jobs:
@@ -775,7 +823,9 @@ jobs:
         """
         expected_message = "Job test_job0 is missing options: actions"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ConfigError,
+            valid_config_from_yaml,
+            test_config,
         )
         assert_in(expected_message, str(exception))
 
@@ -790,7 +840,9 @@ jobs:
         """
         expected_message = "Value at config.jobs.Job.test_job0.actions"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ConfigError,
+            valid_config_from_yaml,
+            test_config,
         )
         assert_in(expected_message, str(exception))
 
@@ -812,7 +864,9 @@ jobs:
         """
         expected = "Duplicate name action0_0 at config.jobs.Job.test_job0.actions"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ConfigError,
+            valid_config_from_yaml,
+            test_config,
         )
         assert_in(expected, str(exception))
 
@@ -842,12 +896,12 @@ jobs:
                 requires: [action0_0]
 
         """
-        expected_message = (
-            'jobs.MASTER.test_job1.action1_0 has a dependency '
-            '"action0_0" that is not in the same job!'
-        )
+        expected_message = ('jobs.MASTER.test_job1.action1_0 has a dependency '
+                            '"action0_0" that is not in the same job!')
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ConfigError,
+            valid_config_from_yaml,
+            test_config,
         )
         assert_in(expected_message, str(exception))
 
@@ -870,7 +924,9 @@ jobs:
         """
         expect = "Circular dependency in job.MASTER.test_job0: action0_0 -> action0_1"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ConfigError,
+            valid_config_from_yaml,
+            test_config,
         )
         assert_in(expect, str(exception))
 
@@ -889,7 +945,9 @@ jobs:
         """ % CLEANUP_ACTION_NAME
         expected_message = "config.jobs.Job.test_job0.actions.Action.cleanup.name"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ConfigError,
+            valid_config_from_yaml,
+            test_config,
         )
         assert_in(expected_message, str(exception))
 
@@ -910,7 +968,9 @@ jobs:
         """
         expected_msg = "Cleanup actions cannot have custom names"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ConfigError,
+            valid_config_from_yaml,
+            test_config,
         )
         assert_in(expected_msg, str(exception))
 
@@ -931,7 +991,9 @@ jobs:
         """
         expected_msg = "Unknown keys in CleanupAction : requires"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ConfigError,
+            valid_config_from_yaml,
+            test_config,
         )
         assert_equal(expected_msg, str(exception))
 
@@ -953,7 +1015,9 @@ jobs:
 """
         expected_msg = "Unknown cluster name unknown-cluster"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ConfigError,
+            valid_config_from_yaml,
+            test_config,
         )
         assert_in(expected_msg, str(exception))
 
@@ -973,7 +1037,9 @@ jobs:
 """
         expected_msg = "need a service and deploy_group"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ConfigError,
+            valid_config_from_yaml,
+            test_config,
         )
         assert_in(expected_msg, str(exception))
 
@@ -995,7 +1061,9 @@ jobs:
 """
         expected_msg = "need a service and deploy_group"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ConfigError,
+            valid_config_from_yaml,
+            test_config,
         )
         assert_in(expected_msg, str(exception))
 
@@ -1023,10 +1091,12 @@ jobs:
             service=None,
             deploy_group=None,
             schedule=ConfigIntervalScheduler(
-                timedelta=datetime.timedelta(0, 20), jitter=None,
+                timedelta=datetime.timedelta(0, 20),
+                jitter=None,
             ),
             actions=FrozenDict({
-                'action0_0': schema.ConfigAction(
+                'action0_0':
+                schema.ConfigAction(
                     name='action0_0',
                     command='test_command0.0',
                     executor='paasta',
@@ -1056,21 +1126,26 @@ jobs:
             actions=[],
         )
         config_context = config_utils.ConfigContext(
-            'config', ['localhost'], ['cluster'], None, None,
+            'config',
+            ['localhost'],
+            ['cluster'],
+            None,
+            None,
         )
         expected_msg = "Required non-empty list at config.Job.job_name.actions"
         exception = assert_raises(
-            ConfigError, valid_job, job_config, config_context,
+            ConfigError,
+            valid_job,
+            job_config,
+            config_context,
         )
         assert_in(expected_msg, str(exception))
 
 
 class NodeConfigTestCase(TestCase):
-
     def test_validate_node_pool(self):
         config_node_pool = valid_node_pool(
-            dict(name="theName", nodes=["node1", "node2"]),
-        )
+            dict(name="theName", nodes=["node1", "node2"]), )
         assert_equal(config_node_pool.name, "theName")
         assert_equal(len(config_node_pool.nodes), 2)
 
@@ -1101,7 +1176,9 @@ class NodeConfigTestCase(TestCase):
             """)
         expected_msg = "Unknown node name some_unknown_node at config.jobs.Job.test_job0.node"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ConfigError,
+            valid_config_from_yaml,
+            test_config,
         )
         assert_equal(expected_msg, str(exception))
 
@@ -1128,7 +1205,9 @@ class NodeConfigTestCase(TestCase):
         """)
         expected_msg = "NodePool pool1 contains other NodePools: pool0"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ConfigError,
+            valid_config_from_yaml,
+            test_config,
         )
         assert_in(expected_msg, str(exception))
 
@@ -1153,7 +1232,9 @@ class NodeConfigTestCase(TestCase):
         """)
         expected_msg = "NodePool pool0 is missing options"
         exception = assert_raises(
-            ConfigError, valid_config_from_yaml, test_config,
+            ConfigError,
+            valid_config_from_yaml,
+            test_config,
         )
         assert_in(expected_msg, str(exception))
 
@@ -1162,13 +1243,15 @@ class NodeConfigTestCase(TestCase):
         test_config = yaml.load(test_config)
         expected_message = "Unknown keys in NamedConfigFragment : bozray"
         exception = assert_raises(
-            ConfigError, validate_fragment, 'foo', test_config,
+            ConfigError,
+            validate_fragment,
+            'foo',
+            test_config,
         )
         assert_in(expected_message, str(exception))
 
 
 class ValidateJobsTestCase(TestCase):
-
     def test_valid_jobs_success(self):
         test_config = BASE_CONFIG + textwrap.dedent("""
             jobs:
@@ -1193,10 +1276,12 @@ class ValidateJobsTestCase(TestCase):
                 service=None,
                 deploy_group=None,
                 schedule=ConfigIntervalScheduler(
-                    timedelta=datetime.timedelta(0, 20), jitter=None,
+                    timedelta=datetime.timedelta(0, 20),
+                    jitter=None,
                 ),
                 actions=FrozenDict({
-                    'action0_0': schema.ConfigAction(
+                    'action0_0':
+                    schema.ConfigAction(
                         name='action0_0',
                         command='test_command0.0',
                         executor='ssh',
@@ -1227,14 +1312,17 @@ class ValidateJobsTestCase(TestCase):
 
         config = manager.from_string(test_config)
         context = config_utils.ConfigContext(
-            'config', ['node0'], ['unused-cluster'], None, MASTER_NAMESPACE,
+            'config',
+            ['node0'],
+            ['unused-cluster'],
+            None,
+            MASTER_NAMESPACE,
         )
         config_parse.validate_jobs(config, context)
         assert_equal(expected_jobs, config['jobs'])
 
 
 class ValidCleanupActionNameTestCase(TestCase):
-
     def test_valid_cleanup_action_name_pass(self):
         name = valid_cleanup_action_name(CLEANUP_ACTION_NAME, None)
         assert_equal(CLEANUP_ACTION_NAME, name)
@@ -1242,12 +1330,13 @@ class ValidCleanupActionNameTestCase(TestCase):
     def test_valid_cleanup_action_name_fail(self):
         assert_raises(
             ConfigError,
-            valid_cleanup_action_name, 'other', NullConfigContext,
+            valid_cleanup_action_name,
+            'other',
+            NullConfigContext,
         )
 
 
 class ValidOutputStreamDirTestCase(TestCase):
-
     @setup
     def setup_dir(self):
         self.dir = tempfile.mkdtemp()
@@ -1263,7 +1352,9 @@ class ValidOutputStreamDirTestCase(TestCase):
     def test_missing_dir(self):
         exception = assert_raises(
             ConfigError,
-            valid_output_stream_dir, 'bogus-dir', NullConfigContext,
+            valid_output_stream_dir,
+            'bogus-dir',
+            NullConfigContext,
         )
         assert_in("is not a directory", str(exception))
 
@@ -1284,7 +1375,6 @@ class ValidOutputStreamDirTestCase(TestCase):
 
 
 class BuildFormatStringValidatorTestCase(TestCase):
-
     @setup
     def setup_keys(self):
         self.context = dict.fromkeys(['one', 'seven', 'stars'])
@@ -1298,26 +1388,30 @@ class BuildFormatStringValidatorTestCase(TestCase):
         template = "The %(one)s thing I %(seven)s is %(unknown)s"
         exception = assert_raises(
             ConfigError,
-            self.validator, template, NullConfigContext,
+            self.validator,
+            template,
+            NullConfigContext,
         )
         assert_in("Unknown context variable", str(exception))
 
     def test_validator_passes_with_context(self):
         template = "The %(one)s thing I %(seven)s is %(mars)s"
         context = config_utils.ConfigContext(
-            None, None, None, {'mars': 'ok'}, None,
+            None,
+            None,
+            None,
+            {'mars': 'ok'},
+            None,
         )
         assert self.validator(template, context)
 
 
 class ValidateConfigMappingTestCase(TestCase):
 
-    config = BASE_CONFIG + textwrap.dedent(
-        """
+    config = BASE_CONFIG + textwrap.dedent("""
         command_context:
             some_var: "The string"
-        """
-    )
+        """)
 
     def test_validate_config_mapping_missing_master(self):
         config_mapping = {'other': mock.Mock()}
@@ -1340,12 +1434,10 @@ class ValidateConfigMappingTestCase(TestCase):
 
 class ConfigContainerTestCase(TestCase):
 
-    config = BASE_CONFIG + textwrap.dedent(
-        """
+    config = BASE_CONFIG + textwrap.dedent("""
         command_context:
             some_var: "The string"
-        """
-    )
+        """)
 
     @setup
     def setup_container(self):
@@ -1369,22 +1461,29 @@ class ConfigContainerTestCase(TestCase):
         config_mapping = {'other': mock.Mock()}
         assert_raises(
             ConfigError,
-            config_parse.ConfigContainer.create, config_mapping,
+            config_parse.ConfigContainer.create,
+            config_mapping,
         )
 
     def test_get_job_names(self):
         job_names = self.container.get_job_names()
         expected = [
-            'test_job1', 'test_job0',
-            'test_job3', 'test_job2', 'test_job4',
+            'test_job1',
+            'test_job0',
+            'test_job3',
+            'test_job2',
+            'test_job4',
             'test_job_paasta',
         ]
         assert_equal(set(job_names), set(expected))
 
     def test_get_jobs(self):
         expected = [
-            'test_job1', 'test_job0',
-            'test_job3', 'test_job2', 'test_job4',
+            'test_job1',
+            'test_job0',
+            'test_job3',
+            'test_job2',
+            'test_job4',
             'test_job_paasta',
         ]
         assert_equal(set(expected), set(self.container.get_jobs().keys()))
@@ -1396,7 +1495,6 @@ class ConfigContainerTestCase(TestCase):
 
 
 class ValidateSSHOptionsTestCase(TestCase):
-
     @setup
     def setup_context(self):
         self.context = config_utils.NullConfigContext
@@ -1407,21 +1505,23 @@ class ValidateSSHOptionsTestCase(TestCase):
         if 'SSH_AUTH_SOCK' in os.environ:
             del os.environ['SSH_AUTH_SOCK']
         assert_raises(
-            ConfigError, config_parse.valid_ssh_options.validate,
-            self.config, self.context,
+            ConfigError,
+            config_parse.valid_ssh_options.validate,
+            self.config,
+            self.context,
         )
 
     @mock.patch.dict('tron.config.config_parse.os.environ')
     def test_post_validation_success(self):
         os.environ['SSH_AUTH_SOCK'] = 'something'
         config = config_parse.valid_ssh_options.validate(
-            self.config, self.context,
+            self.config,
+            self.context,
         )
         assert_equal(config.agent, True)
 
 
 class ValidateIdentityFileTestCase(TestCase):
-
     @setup
     def setup_context(self):
         self.context = config_utils.NullConfigContext
@@ -1430,7 +1530,9 @@ class ValidateIdentityFileTestCase(TestCase):
     def test_valid_identity_file_missing_private_key(self):
         exception = assert_raises(
             ConfigError,
-            config_parse.valid_identity_file, '/file/not/exist', self.context,
+            config_parse.valid_identity_file,
+            '/file/not/exist',
+            self.context,
         )
         assert_in("Private key file", str(exception))
 
@@ -1438,7 +1540,9 @@ class ValidateIdentityFileTestCase(TestCase):
         filename = self.private_file.name
         exception = assert_raises(
             ConfigError,
-            config_parse.valid_identity_file, filename, self.context,
+            config_parse.valid_identity_file,
+            filename,
+            self.context,
         )
         assert_in("Public key file", str(exception))
 
@@ -1460,7 +1564,6 @@ class ValidateIdentityFileTestCase(TestCase):
 
 
 class ValidKnownHostsFileTestCase(TestCase):
-
     @setup
     def setup_context(self):
         self.context = config_utils.NullConfigContext
@@ -1468,14 +1571,17 @@ class ValidKnownHostsFileTestCase(TestCase):
 
     def test_valid_known_hosts_file_exists(self):
         filename = config_parse.valid_known_hosts_file(
-            self.known_hosts_file.name, self.context,
+            self.known_hosts_file.name,
+            self.context,
         )
         assert_equal(filename, self.known_hosts_file.name)
 
     def test_valid_known_hosts_file_missing(self):
         exception = assert_raises(
             ConfigError,
-            config_parse.valid_known_hosts_file, '/bogus/path', self.context,
+            config_parse.valid_known_hosts_file,
+            '/bogus/path',
+            self.context,
         )
         assert_in('Known hosts file /bogus/path', str(exception))
 
@@ -1483,7 +1589,8 @@ class ValidKnownHostsFileTestCase(TestCase):
         context = config_utils.PartialConfigContext
         expected = '/bogus/does/not/exist'
         filename = config_parse.valid_known_hosts_file(
-            expected, context,
+            expected,
+            context,
         )
         assert_equal(filename, expected)
 

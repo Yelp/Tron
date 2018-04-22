@@ -15,7 +15,6 @@ from tron.config import schema
 from tron.utils import maybe_decode
 from tron.utils import maybe_encode
 
-
 log = logging.getLogger(__name__)
 
 
@@ -129,6 +128,7 @@ class ConfigManager(object):
             filename = self.build_file_path(name)
             self.manifest.add(name, filename)
             return filename
+
         return self.manifest.get_file_name(name) or create_filename()
 
     def validate_with_fragment(self, name, content):

@@ -19,7 +19,6 @@ class TestError(Exception):
 
 
 class SimpleDeferredTestCase(TestCase):
-
     @setup
     def setup_crash_reporter(self):
         self.emailer = turtle.Turtle()

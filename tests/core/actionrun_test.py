@@ -35,40 +35,44 @@ from tron.serialize import filehandler
 
 
 class ActionRunFactoryTestCase(TestCase):
-
     @setup
     def setup_action_runs(self):
         self.run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         actions = [Turtle(name='act1'), Turtle(name='act2')]
         self.action_graph = actiongraph.ActionGraph(
-            actions, {a.name: a for a in actions},
+            actions,
+            {a.name: a
+             for a in actions},
         )
 
         mock_node = mock.create_autospec(node.Node)
         self.job_run = jobrun.JobRun(
-            'jobname', 7, self.run_time, mock_node,
+            'jobname',
+            7,
+            self.run_time,
+            mock_node,
             action_graph=self.action_graph,
             service='foo',
             deploy_group='test',
         )
 
         self.action_state_data = {
-            'job_run_id':       'job_run_id',
-            'action_name':      'act1',
-            'state':            'succeeded',
-            'run_time':         'the_run_time',
-            'start_time':       None,
-            'end_time':         None,
-            'command':          'do action1',
-            'node_name':        'anode',
+            'job_run_id': 'job_run_id',
+            'action_name': 'act1',
+            'state': 'succeeded',
+            'run_time': 'the_run_time',
+            'start_time': None,
+            'end_time': None,
+            'command': 'do action1',
+            'node_name': 'anode',
         }
         self.action_runner = mock.create_autospec(
-            actioncommand.SubprocessActionRunnerFactory,
-        )
+            actioncommand.SubprocessActionRunnerFactory, )
 
     def test_build_action_run_collection(self):
         collection = ActionRunFactory.build_action_run_collection(
-            self.job_run, self.action_runner,
+            self.job_run,
+            self.action_runner,
         )
         assert_equal(collection.action_graph, self.action_graph)
         assert_in('act1', collection.run_map)
@@ -79,17 +83,19 @@ class ActionRunFactoryTestCase(TestCase):
     def test_action_run_collection_from_state(self):
         state_data = [self.action_state_data]
         cleanup_action_state_data = {
-            'job_run_id':       'job_run_id',
-            'action_name':      'cleanup',
-            'state':            'succeeded',
-            'run_time':         self.run_time,
-            'start_time':       None,
-            'end_time':         None,
-            'command':          'do cleanup',
-            'node_name':        'anode',
+            'job_run_id': 'job_run_id',
+            'action_name': 'cleanup',
+            'state': 'succeeded',
+            'run_time': self.run_time,
+            'start_time': None,
+            'end_time': None,
+            'command': 'do cleanup',
+            'node_name': 'anode',
         }
         collection = ActionRunFactory.action_run_collection_from_state(
-            self.job_run, state_data, cleanup_action_state_data,
+            self.job_run,
+            state_data,
+            cleanup_action_state_data,
         )
 
         assert_equal(collection.action_graph, self.action_graph)
@@ -99,10 +105,15 @@ class ActionRunFactoryTestCase(TestCase):
 
     def test_build_run_for_action(self):
         action = Turtle(
-            name='theaction', node_pool=None, is_cleanup=False, command="doit",
+            name='theaction',
+            node_pool=None,
+            is_cleanup=False,
+            command="doit",
         )
         action_run = ActionRunFactory.build_run_for_action(
-            self.job_run, action, self.action_runner,
+            self.job_run,
+            action,
+            self.action_runner,
         )
 
         assert_equal(action_run.job_run_id, self.job_run.id)
@@ -114,7 +125,9 @@ class ActionRunFactoryTestCase(TestCase):
     def test_build_run_for_action_with_node(self):
         action = Turtle(name='theaction', is_cleanup=True, command="doit")
         action_run = ActionRunFactory.build_run_for_action(
-            self.job_run, action, self.action_runner,
+            self.job_run,
+            action,
+            self.action_runner,
         )
 
         assert_equal(action_run.job_run_id, self.job_run.id)
@@ -125,10 +138,14 @@ class ActionRunFactoryTestCase(TestCase):
 
     def test_build_run_for_ssh_action(self):
         action = Turtle(
-            name='theaction', command="doit", executor=ExecutorTypes.ssh,
+            name='theaction',
+            command="doit",
+            executor=ExecutorTypes.ssh,
         )
         action_run = ActionRunFactory.build_run_for_action(
-            self.job_run, action, self.action_runner,
+            self.job_run,
+            action,
+            self.action_runner,
         )
         assert_equal(action_run.__class__, SSHActionRun)
 
@@ -145,7 +162,9 @@ class ActionRunFactoryTestCase(TestCase):
             deploy_group=None,
         )
         action_run = ActionRunFactory.build_run_for_action(
-            self.job_run, action, self.action_runner,
+            self.job_run,
+            action,
+            self.action_runner,
         )
         assert_equal(action_run.__class__, PaaSTAActionRun)
         assert_equal(action_run.cluster, action.cluster)
@@ -164,7 +183,9 @@ class ActionRunFactoryTestCase(TestCase):
             deploy_group='dev',
         )
         action_run = ActionRunFactory.build_run_for_action(
-            self.job_run, action, self.action_runner,
+            self.job_run,
+            action,
+            self.action_runner,
         )
         assert_equal(action_run.__class__, PaaSTAActionRun)
         assert_equal(action_run.service, action.service)
@@ -173,7 +194,8 @@ class ActionRunFactoryTestCase(TestCase):
     def test_action_run_from_state_default(self):
         state_data = self.action_state_data
         action_run = ActionRunFactory.action_run_from_state(
-            self.job_run, state_data,
+            self.job_run,
+            state_data,
         )
 
         assert_equal(action_run.job_run_id, state_data['job_run_id'])
@@ -190,7 +212,8 @@ class ActionRunFactoryTestCase(TestCase):
         state_data['service'] = 'baz'
         state_data['deploy_group'] = 'test'
         action_run = ActionRunFactory.action_run_from_state(
-            self.job_run, state_data,
+            self.job_run,
+            state_data,
         )
 
         assert_equal(action_run.job_run_id, state_data['job_run_id'])
@@ -205,13 +228,11 @@ class ActionRunFactoryTestCase(TestCase):
 
 
 class ActionRunTestCase(TestCase):
-
     @setup
     def setup_action_run(self):
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.action_runner = mock.create_autospec(
-            actioncommand.NoActionRunnerFactory,
-        )
+            actioncommand.NoActionRunnerFactory, )
         self.command = "do command %(actionname)s"
         self.rendered_command = "do command action_name"
         self.action_run = ActionRun(
@@ -346,18 +367,17 @@ class ActionRunTestCase(TestCase):
     def test__getattr__missing_attribute(self):
         assert_raises(
             AttributeError,
-            self.action_run.__getattr__, 'is_not_a_real_state',
+            self.action_run.__getattr__,
+            'is_not_a_real_state',
         )
 
 
 class SSHActionRunTestCase(TestCase):
-
     @setup
     def setup_action_run(self):
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.action_runner = mock.create_autospec(
-            actioncommand.NoActionRunnerFactory,
-        )
+            actioncommand.NoActionRunnerFactory, )
         self.command = "do command %(actionname)s"
         self.action_run = SSHActionRun(
             "id",
@@ -375,6 +395,7 @@ class SSHActionRunTestCase(TestCase):
     def test_start_node_error(self):
         def raise_error(c):
             raise node.Error("The error")
+
         self.action_run.node = turtle.Turtle(submit_command=raise_error)
         self.action_run.machine.transition('ready')
         assert not self.action_run.start()
@@ -389,11 +410,12 @@ class SSHActionRunTestCase(TestCase):
         assert_equal(action_command, self.action_run.action_command)
         assert_equal(action_command, self.action_runner.create.return_value)
         self.action_runner.create.assert_called_with(
-            self.action_run.id, self.action_run.command, serializer,
+            self.action_run.id,
+            self.action_run.command,
+            serializer,
         )
         mock_filehandler.OutputStreamSerializer.assert_called_with(
-            self.action_run.output_path,
-        )
+            self.action_run.output_path, )
         self.action_run.watch.assert_called_with(action_command)
 
     def test_auto_retry(self):
@@ -433,14 +455,16 @@ class SSHActionRunTestCase(TestCase):
         self.action_run.build_action_command()
         self.action_run.machine.transition('start')
         assert self.action_run.handler(
-            self.action_run.action_command, ActionCommand.RUNNING,
+            self.action_run.action_command,
+            ActionCommand.RUNNING,
         )
         assert self.action_run.is_running
 
     def test_handler_failstart(self):
         self.action_run.build_action_command()
         assert self.action_run.handler(
-            self.action_run.action_command, ActionCommand.FAILSTART,
+            self.action_run.action_command,
+            ActionCommand.FAILSTART,
         )
         assert self.action_run.is_failed
 
@@ -449,7 +473,8 @@ class SSHActionRunTestCase(TestCase):
         self.action_run.action_command.exit_status = -1
         self.action_run.machine.transition('start')
         assert self.action_run.handler(
-            self.action_run.action_command, ActionCommand.EXITING,
+            self.action_run.action_command,
+            ActionCommand.EXITING,
         )
         assert self.action_run.is_failed
         assert_equal(self.action_run.exit_status, -1)
@@ -460,19 +485,22 @@ class SSHActionRunTestCase(TestCase):
         self.action_run.machine.transition('start')
         self.action_run.machine.transition('started')
         assert self.action_run.handler(
-            self.action_run.action_command, ActionCommand.EXITING,
+            self.action_run.action_command,
+            ActionCommand.EXITING,
         )
         assert self.action_run.is_succeeded
         assert_equal(self.action_run.exit_status, 0)
 
     def test_handler_exiting_failunknown(self):
         self.action_run.action_command = mock.create_autospec(
-            actioncommand.ActionCommand, exit_status=None,
+            actioncommand.ActionCommand,
+            exit_status=None,
         )
         self.action_run.machine.transition('start')
         self.action_run.machine.transition('started')
         assert self.action_run.handler(
-            self.action_run.action_command, ActionCommand.EXITING,
+            self.action_run.action_command,
+            ActionCommand.EXITING,
         )
         assert self.action_run.is_unknown
         assert_equal(self.action_run.exit_status, None)
@@ -480,7 +508,8 @@ class SSHActionRunTestCase(TestCase):
     def test_handler_unhandled(self):
         self.action_run.build_action_command()
         assert self.action_run.handler(
-            self.action_run.action_command, ActionCommand.PENDING,
+            self.action_run.action_command,
+            ActionCommand.PENDING,
         ) is None
         assert self.action_run.is_scheduled
 
@@ -494,21 +523,23 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         self.parent_context = {}
         self.output_path = ['one', 'two']
         self.state_data = {
-            'job_run_id':       'theid',
-            'action_name':      'theaction',
-            'node_name':        'anode',
-            'command':          'do things',
-            'start_time':       'start_time',
-            'end_time':         'end_time',
-            'state':            'succeeded',
+            'job_run_id': 'theid',
+            'action_name': 'theaction',
+            'node_name': 'anode',
+            'command': 'do things',
+            'start_time': 'start_time',
+            'end_time': 'end_time',
+            'state': 'succeeded',
         }
         self.run_node = Turtle()
 
     def test_from_state(self):
         state_data = self.state_data
         action_run = ActionRun.from_state(
-            state_data, self.parent_context,
-            list(self.output_path), self.run_node,
+            state_data,
+            self.parent_context,
+            list(self.output_path),
+            self.run_node,
         )
 
         for key, value in six.iteritems(self.state_data):
@@ -524,7 +555,9 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         self.state_data['state'] = 'running'
         action_run = ActionRun.from_state(
             self.state_data,
-            self.parent_context, self.output_path, self.run_node,
+            self.parent_context,
+            self.output_path,
+            self.run_node,
         )
         assert action_run.is_unknown
         assert_equal(action_run.exit_status, 0)
@@ -533,8 +566,10 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
     def test_from_state_queued(self):
         self.state_data['state'] = 'queued'
         action_run = ActionRun.from_state(
-            self.state_data, self.parent_context,
-            self.output_path, self.run_node,
+            self.state_data,
+            self.parent_context,
+            self.output_path,
+            self.run_node,
         )
         assert action_run.is_queued
 
@@ -542,7 +577,9 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         del self.state_data['node_name']
         action_run = ActionRun.from_state(
             self.state_data,
-            self.parent_context, self.output_path, self.run_node,
+            self.parent_context,
+            self.output_path,
+            self.run_node,
         )
         assert_equal(action_run.node, self.run_node)
 
@@ -550,10 +587,13 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
     def test_from_state_with_node_exists(self, mock_store):
         ActionRun.from_state(
             self.state_data,
-            self.parent_context, self.output_path, self.run_node,
+            self.parent_context,
+            self.output_path,
+            self.run_node,
         )
         mock_store.get_instance().get_node.assert_called_with(
-            self.state_data['node_name'], self.run_node,
+            self.state_data['node_name'],
+            self.run_node,
         )
 
     def test_from_state_before_rendered_command(self):
@@ -561,7 +601,9 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         self.state_data['rendered_command'] = None
         action_run = ActionRun.from_state(
             self.state_data,
-            self.parent_context, self.output_path, self.run_node,
+            self.parent_context,
+            self.output_path,
+            self.run_node,
         )
         assert_equal(action_run.bare_command, self.state_data['command'])
         assert not action_run.rendered_command
@@ -570,7 +612,9 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         self.state_data['command'] = 'do things %(actionname)s'
         action_run = ActionRun.from_state(
             self.state_data,
-            self.parent_context, self.output_path, self.run_node,
+            self.parent_context,
+            self.output_path,
+            self.run_node,
         )
         assert_equal(action_run.bare_command, self.state_data['command'])
         assert not action_run.rendered_command
@@ -580,18 +624,22 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         self.state_data['rendered_command'] = self.state_data['command']
         action_run = ActionRun.from_state(
             self.state_data,
-            self.parent_context, self.output_path, self.run_node,
+            self.parent_context,
+            self.output_path,
+            self.run_node,
         )
         assert_equal(action_run.bare_command, self.state_data['command'])
         assert_equal(action_run.rendered_command, self.state_data['command'])
 
 
 class ActionRunCollectionTestCase(TestCase):
-
     def _build_run(self, name):
         mock_node = mock.create_autospec(node.Node)
         return ActionRun(
-            "id", name, mock_node, self.command,
+            "id",
+            name,
+            mock_node,
+            self.command,
             output_path=self.output_path,
         )
 
@@ -600,11 +648,12 @@ class ActionRunCollectionTestCase(TestCase):
         action_names = ['action_name', 'second_name', 'cleanup']
 
         action_graph = [
-            mock.Mock(name=name, required_actions=[])
-            for name in action_names
+            mock.Mock(name=name, required_actions=[]) for name in action_names
         ]
         self.action_graph = actiongraph.ActionGraph(
-            action_graph, {a.name: a for a in action_graph},
+            action_graph,
+            {a.name: a
+             for a in action_graph},
         )
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.command = "do command"
@@ -687,9 +736,9 @@ class ActionRunCollectionTestCase(TestCase):
         self.run_map['second_name'].machine.state = ActionRun.STATE_QUEUED
         autospec_method(self.collection._is_run_blocked)
 
-        def blocked_second_action_run(
-            ar,
-        ): return ar == self.run_map['second_name']
+        def blocked_second_action_run(ar, ):
+            return ar == self.run_map['second_name']
+
         self.collection._is_run_blocked.side_effect = blocked_second_action_run
         assert self.collection.is_done
         assert self.collection.is_failed
@@ -750,11 +799,13 @@ class ActionRunCollectionTestCase(TestCase):
 
 
 class ActionRunCollectionIsRunBlockedTestCase(TestCase):
-
     def _build_run(self, name):
         mock_node = mock.create_autospec(node.Node)
         return ActionRun(
-            "id", name, mock_node, self.command,
+            "id",
+            name,
+            mock_node,
+            self.command,
             output_path=self.output_path,
         )
 
@@ -763,8 +814,7 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
         action_names = ['action_name', 'second_name', 'cleanup']
 
         action_graph = [
-            Turtle(name=name, required_actions=[])
-            for name in action_names
+            Turtle(name=name, required_actions=[]) for name in action_names
         ]
         self.second_act = second_act = action_graph.pop(1)
         second_act.required_actions.append(action_graph[0])
@@ -799,7 +849,8 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
 
     def test_is_run_blocked_required_actions_blocked(self):
         third_act = Turtle(
-            name='third_act', required_actions=[self.second_act],
+            name='third_act',
+            required_actions=[self.second_act],
         )
         self.action_graph.action_map['third_act'] = third_act
         self.run_map['third_act'] = self._build_run('third_act')

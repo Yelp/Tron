@@ -17,7 +17,6 @@ from tron.serialize import filehandler
 
 
 class ActionCommandTestCase(TestCase):
-
     @setup
     def setup_command(self):
         self.serializer = mock.create_autospec(filehandler.FileHandleManager)
@@ -67,8 +66,7 @@ class ActionCommandTestCase(TestCase):
         message = "this is the message"
         serializer = mock.create_autospec(filehandler.FileHandleManager)
         fh = serializer.open.return_value = mock.create_autospec(
-            filehandler.FileHandleWrapper,
-        )
+            filehandler.FileHandleWrapper, )
         ac = ActionCommand("action.1.do", "do", serializer)
 
         ac.write_stderr(message)
@@ -113,48 +111,45 @@ class ActionCommandTestCase(TestCase):
 
 
 class CreateActionCommandFactoryFromConfigTestCase(TestCase):
-
     def test_create_default_action_command_no_config(self):
         config = ()
         factory = actioncommand.create_action_runner_factory_from_config(
-            config,
-        )
+            config, )
         assert_equal(factory, actioncommand.NoActionRunnerFactory)
 
     def test_create_default_action_command(self):
         config = schema.ConfigActionRunner('none', None, None)
         factory = actioncommand.create_action_runner_factory_from_config(
-            config,
-        )
+            config, )
         assert_equal(factory, actioncommand.NoActionRunnerFactory)
 
     def test_create_action_command_with_simple_runner(self):
         status_path, exec_path = '/tmp/what', '/remote/bin'
         config = schema.ConfigActionRunner(
-            'subprocess', status_path, exec_path,
+            'subprocess',
+            status_path,
+            exec_path,
         )
         factory = actioncommand.create_action_runner_factory_from_config(
-            config,
-        )
+            config, )
         assert_equal(factory.status_path, status_path)
         assert_equal(factory.exec_path, exec_path)
 
 
 class SubprocessActionRunnerFactoryTestCase(TestCase):
-
     @setup
     def setup_factory(self):
         self.status_path = 'status_path'
         self.exec_path = 'exec_path'
         self.factory = actioncommand.SubprocessActionRunnerFactory(
-            self.status_path, self.exec_path,
+            self.status_path,
+            self.exec_path,
         )
 
     def test_from_config(self):
         config = mock.Mock()
         runner_factory = actioncommand.SubprocessActionRunnerFactory.from_config(
-            config,
-        )
+            config, )
         assert_equal(runner_factory.status_path, config.remote_status_path)
         assert_equal(runner_factory.exec_path, config.remote_exec_path)
 
@@ -177,7 +172,8 @@ class SubprocessActionRunnerFactoryTestCase(TestCase):
         exec_name = "action_runner.py"
         actual = self.factory.build_command(id, command, exec_name)
         assert_equal(
-            shlex.split(actual), [
+            shlex.split(actual),
+            [
                 "%s/%s" % (self.exec_path, exec_name),
                 "%s/%s" % (self.status_path, id),
                 command,

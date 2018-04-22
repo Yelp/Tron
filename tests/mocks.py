@@ -11,7 +11,6 @@ from tests.testingutils import Turtle
 
 
 class MockAction(Turtle):
-
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('name', 'action_name')
         kwargs.setdefault('required_actions', [])
@@ -20,7 +19,6 @@ class MockAction(Turtle):
 
 
 class MockActionGraph(Turtle):
-
     def __init__(self, *args, **kwargs):
         action = MockAction()
         kwargs.setdefault('graph', [action])
@@ -37,7 +35,6 @@ class MockActionGraph(Turtle):
 
 
 class MockActionRun(Turtle):
-
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('output_path', [tempfile.mkdtemp()])
         kwargs.setdefault('start_time', datetime.datetime.now())
@@ -47,7 +44,6 @@ class MockActionRun(Turtle):
 
 
 class MockActionRunCollection(Turtle):
-
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('action_graph', MockActionGraph())
         kwargs.setdefault('run_map', {})
@@ -60,20 +56,17 @@ class MockActionRunCollection(Turtle):
 
 
 class MockJobRun(Turtle):
-
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('output_path', [tempfile.mkdtemp()])
         kwargs.setdefault('action_graph', MockActionGraph())
         action_runs = MockActionRunCollection(
-            action_graph=kwargs['action_graph'],
-        )
+            action_graph=kwargs['action_graph'], )
         kwargs.setdefault('action_runs', action_runs)
         atexit.register(lambda: shutil.rmtree(kwargs['output_path'][0]))
         super(MockJobRun, self).__init__(*args, **kwargs)
 
 
 class MockNode(Turtle):
-
     def __init__(self, hostname=None):
         super(MockNode, self).__init__()
         self.name = self.hostname = hostname
@@ -115,6 +108,5 @@ class MockNodePool(object):
 
 
 class MockJobRunCollection(Turtle):
-
     def __iter__(self):
         return iter(self.runs)

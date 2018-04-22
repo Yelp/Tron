@@ -41,11 +41,18 @@ class JobRun(Observable, Observer):
 
     # TODO: use config object
     def __init__(
-        self, job_name, run_num, run_time, node, output_path=None,
-        base_context=None, action_runs=None, action_graph=None,
-        manual=None,
-        service=None,
-        deploy_group=None,
+            self,
+            job_name,
+            run_num,
+            run_time,
+            node,
+            output_path=None,
+            base_context=None,
+            action_runs=None,
+            action_graph=None,
+            manual=None,
+            service=None,
+            deploy_group=None,
     ):
         super(JobRun, self).__init__()
         self.job_name = maybe_decode(job_name)
@@ -76,7 +83,10 @@ class JobRun(Observable, Observer):
     def for_job(cls, job, run_num, run_time, node, manual):
         """Create a JobRun for a job."""
         run = cls(
-            job.get_name(), run_num, run_time, node,
+            job.get_name(),
+            run_num,
+            run_time,
+            node,
             job.output_path.clone(),
             job.context,
             action_graph=job.action_graph,
@@ -86,15 +96,20 @@ class JobRun(Observable, Observer):
         )
 
         action_runs = ActionRunFactory.build_action_run_collection(
-            run, job.action_runner,
+            run,
+            job.action_runner,
         )
         run.action_runs = action_runs
         return run
 
     @classmethod
     def from_state(
-        cls, state_data, action_graph, output_path, context,
-        run_node,
+            cls,
+            state_data,
+            action_graph,
+            output_path,
+            context,
+            run_node,
     ):
         """Restore a JobRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
@@ -114,7 +129,9 @@ class JobRun(Observable, Observer):
             deploy_group=state_data.get('deploy_group'),
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
-            job_run, state_data['runs'], state_data['cleanup_run'],
+            job_run,
+            state_data['runs'],
+            state_data['cleanup_run'],
         )
         job_run.action_runs = action_runs
         return job_run
@@ -123,15 +140,15 @@ class JobRun(Observable, Observer):
     def state_data(self):
         """This data is used to serialize the state of this job run."""
         return {
-            'job_name':         self.job_name,
-            'run_num':          self.run_num,
-            'run_time':         self.run_time,
-            'node_name':        self.node.get_name() if self.node else None,
-            'runs':             self.action_runs.state_data,
-            'cleanup_run':      self.action_runs.cleanup_action_state_data,
-            'manual':           self.manual,
-            'service':          self.service,
-            'deploy_group':     self.deploy_group,
+            'job_name': self.job_name,
+            'run_num': self.run_num,
+            'run_time': self.run_time,
+            'node_name': self.node.get_name() if self.node else None,
+            'runs': self.action_runs.state_data,
+            'cleanup_run': self.action_runs.cleanup_action_state_data,
+            'manual': self.manual,
+            'service': self.service,
+            'deploy_group': self.deploy_group,
         }
 
     def _get_action_runs(self):
@@ -172,7 +189,9 @@ class JobRun(Observable, Observer):
         del self._action_runs
 
     action_runs = property(
-        _get_action_runs, _set_action_runs, _del_action_runs,
+        _get_action_runs,
+        _set_action_runs,
+        _del_action_runs,
     )
 
     def seconds_until_run_time(self):
@@ -243,6 +262,7 @@ class JobRun(Observable, Observer):
         # action to be triggered more then once. Guard against that.
         if cleanup_run.check_state('start'):
             cleanup_run.start()
+
     handler = handle_action_run_state_change
 
     def finalize(self):
@@ -335,8 +355,12 @@ class JobRunCollection(object):
         return cls(job_config.run_limit)
 
     def restore_state(
-        self, state_data, action_graph, output_path, context,
-        node_pool,
+            self,
+            state_data,
+            action_graph,
+            output_path,
+            context,
+            node_pool,
     ):
         """Apply state to all jobs from the state dict."""
         if self.runs:
@@ -345,10 +369,12 @@ class JobRunCollection(object):
 
         restored_runs = [
             JobRun.from_state(
-                run_state, action_graph, output_path.clone(),
-                context, node_pool.next(),
-            )
-            for run_state in state_data
+                run_state,
+                action_graph,
+                output_path.clone(),
+                context,
+                node_pool.next(),
+            ) for run_state in state_data
         ]
         self.runs.extend(restored_runs)
         return restored_runs
@@ -358,8 +384,8 @@ class JobRunCollection(object):
         and return it.
         """
         run_num = self.next_run_num()
-        log.info("Building JobRun %s for %s on %s at %s" %
-                 (run_num, job, node, run_time))
+        log.info("Building JobRun %s for %s on %s at %s" % (run_num, job, node,
+                                                            run_time))
 
         run = JobRun.for_job(job, run_num, run_time, node, manual)
         self.runs.appendleft(run)
@@ -417,7 +443,10 @@ class JobRunCollection(object):
 
     def get_newest(self, include_manual=True):
         """Returns the most recently created JobRun."""
-        def func(r): return True if include_manual else not r.manual
+
+        def func(r):
+            return True if include_manual else not r.manual
+
         return self._get_run_using(func)
 
     def get_pending(self):
@@ -430,17 +459,22 @@ class JobRunCollection(object):
 
     def get_active(self, node=None):
         if node:
-            def func(r): return (
-                r.is_running or r.is_starting
-            ) and r.node == node
+
+            def func(r):
+                return (r.is_running or r.is_starting) and r.node == node
         else:
-            def func(r): return r.is_running or r.is_starting
+
+            def func(r):
+                return r.is_running or r.is_starting
+
         return self._get_runs_using(func)
 
     def get_first_queued(self, node=None):
         state = ActionRun.STATE_QUEUED
         if node:
-            def queued_func(r): return r.state == state and r.node == node
+
+            def queued_func(r):
+                return r.state == state and r.node == node
         else:
             queued_func = self._filter_by_state(state)
         return self._get_run_using(queued_func, reverse=True)
@@ -453,11 +487,13 @@ class JobRunCollection(object):
         """Return the most recent run which is either running or scheduled. If
         node is not None, then only looks for runs on that node.
         """
+
         def compare(run):
             if node and run.node != node:
                 return False
             if run.is_running or run.is_scheduled:
                 return run
+
         return self._get_run_using(compare)
 
     def next_run_num(self):

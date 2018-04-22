@@ -97,7 +97,8 @@ class JobContext(object):
             last_success = last_success.run_time if last_success else None
 
             time_value = timeutils.DateArithmetic.parse(
-                date_spec, last_success,
+                date_spec,
+                last_success,
             )
             if time_value:
                 return time_value
@@ -112,7 +113,6 @@ class JobContext(object):
 
 
 class JobRunContext(object):
-
     def __init__(self, job_run):
         self.job_run = job_run
 

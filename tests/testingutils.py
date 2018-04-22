@@ -14,7 +14,6 @@ from testify import TestCase
 
 from tron.utils import timeutils
 
-
 log = logging.getLogger(__name__)
 
 # TODO: remove when replaced with tron.eventloop
@@ -65,6 +64,7 @@ def retry(max_tries=3, delay=0.1, exceptions=(KeyError, IndexError)):
     """A function decorator for re-trying an operation. Useful for MongoDB
     which is only eventually consistent.
     """
+
     def wrapper(f):
         @functools.wraps(f)
         def wrap(*args, **kwargs):
@@ -74,7 +74,9 @@ def retry(max_tries=3, delay=0.1, exceptions=(KeyError, IndexError)):
                 except exceptions:
                     time.sleep(delay)
             raise
+
         return wrap
+
     return wrapper
 
 

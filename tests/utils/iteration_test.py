@@ -37,7 +37,6 @@ class FilterFuncTestCase(TestCase):
 
 
 class FilteredMinTestCase(FilterFuncTestCase):
-
     @setup
     def setup_func(self):
         self.test_func = min_filter
@@ -48,7 +47,6 @@ class FilteredMinTestCase(FilterFuncTestCase):
 
 
 class FilteredMaxTestCase(FilterFuncTestCase):
-
     @setup
     def setup_func(self):
         self.test_func = max_filter
@@ -59,7 +57,6 @@ class FilteredMaxTestCase(FilterFuncTestCase):
 
 
 class ListAllTestCase(TestCase):
-
     def test_all_true(self):
         assert list_all(range(1, 5))
 

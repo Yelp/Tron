@@ -14,7 +14,6 @@ class Callback(DelayedCall):
 
 
 class NullCallback(object):
-
     @staticmethod
     def cancel():
         pass
@@ -44,9 +43,8 @@ class UniqueCallback(object):
         if not self.delay or self.delayed_call.active():
             return
 
-        self.delayed_call = call_later(
-            self.delay, self.func, *self.args, **self.kwargs
-        )
+        self.delayed_call = call_later(self.delay, self.func, *self.args,
+                                       **self.kwargs)
 
     def cancel(self):
         if self.delayed_call.active():

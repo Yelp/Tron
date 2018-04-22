@@ -33,6 +33,7 @@ try:
     from pytz import AmbiguousTimeError
     assert AmbiguousTimeError
 except ImportError:
+
     class NonExistentTimeError(Exception):
         pass
 
@@ -137,16 +138,16 @@ class TimeSpecification(object):
     """
 
     def __init__(
-        self,
-        ordinals=None,
-        weekdays=None,
-        months=None,
-        monthdays=None,
-        timestr=None,
-        timezone=None,
-        minutes=None,
-        hours=None,
-        seconds=None,
+            self,
+            ordinals=None,
+            weekdays=None,
+            months=None,
+            monthdays=None,
+            timestr=None,
+            timezone=None,
+            minutes=None,
+            hours=None,
+            seconds=None,
     ):
 
         if weekdays and monthdays:
@@ -169,11 +170,18 @@ class TimeSpecification(object):
         self.seconds = validate_spec(seconds, second_range, 'second')
         self.ordinals = validate_spec(ordinals, ordinal_range, 'ordinal')
         self.weekdays = validate_spec(
-            weekdays, weekday_range, 'weekdays', allow_last=True,
+            weekdays,
+            weekday_range,
+            'weekdays',
+            allow_last=True,
         )
         self.months = validate_spec(months, month_range, 'month')
         self.monthdays = validate_spec(
-            monthdays, monthday_range, 'monthdays', [], True,
+            monthdays,
+            monthday_range,
+            'monthdays',
+            [],
+            True,
         )
         self.timezone = get_timezone(timezone)
 
@@ -181,16 +189,18 @@ class TimeSpecification(object):
         """Returns matching days for the given year and month.
         """
         first_day_of_month, last_day_of_month = calendar.monthrange(
-            year, month,
+            year,
+            month,
         )
 
-        def map_last(
-            day,
-        ): return last_day_of_month if day == TOKEN_LAST else day
+        def map_last(day, ):
+            return last_day_of_month if day == TOKEN_LAST else day
 
-        def day_filter(day): return first_day <= day <= last_day_of_month
+        def day_filter(day):
+            return first_day <= day <= last_day_of_month
 
-        def sort_days(days): return sorted(filter(day_filter, days))
+        def sort_days(days):
+            return sorted(filter(day_filter, days))
 
         if self.monthdays:
             return sort_days(map_last(day) for day in self.monthdays)
@@ -223,7 +233,8 @@ class TimeSpecification(object):
         """Return the next valid time."""
         start_hour = start_date.time().hour
 
-        def hour_filter(hour): return not is_start_day or hour >= start_hour
+        def hour_filter(hour):
+            return not is_start_day or hour >= start_hour
 
         for hour in filter(hour_filter, self.hours):
             for minute in self.minutes:
@@ -255,8 +266,13 @@ class TimeSpecification(object):
                     continue
 
                 candidate = start_date.replace(
-                    year, month, day, time.hour,
-                    time.minute, second=time.second, microsecond=0,
+                    year,
+                    month,
+                    day,
+                    time.hour,
+                    time.minute,
+                    second=time.second,
+                    microsecond=0,
                 )
                 candidate = self.handle_timezone(candidate, start.tzinfo)
                 if not candidate:
@@ -273,8 +289,7 @@ class TimeSpecification(object):
             except NonExistentTimeError:
                 try:
                     out = self.timezone.localize(
-                        out + datetime.timedelta(minutes=60),
-                    )
+                        out + datetime.timedelta(minutes=60), )
                 except NonExistentTimeError:
                     return None
         return to_timezone(out, tzinfo)
@@ -292,8 +307,7 @@ class TimeSpecification(object):
         ]
         return all(
             getattr(other, attr, None) == getattr(self, attr, None)
-            for attr in attrs
-        )
+            for attr in attrs)
 
     def __ne__(self, other):
         return not self == other

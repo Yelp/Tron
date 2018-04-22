@@ -12,7 +12,6 @@ from tron.utils.state import NamedEventState
 
 
 class StateMachineSimpleTestCase(TestCase):
-
     @setup
     def build_machine(self):
         self.state_green = NamedEventState('green')
@@ -121,12 +120,12 @@ class TraverseCircularTestCase(TestCase):
     def test_transition(self):
         assert_raises(
             state.CircularTransitionError,
-            self.machine.transition, 'true',
+            self.machine.transition,
+            'true',
         )
 
 
 class NamedEventByNameTestCase(TestCase):
-
     @setup
     def create_state_graph(self):
         self.start = STATE_A = state.NamedEventState("a")

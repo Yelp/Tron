@@ -29,16 +29,20 @@ class Action(object):
     ]
 
     def __init__(
-        self, name, command, node_pool, required_actions=None,
-        dependent_actions=None,
-        retries=None,
-        executor=None,
-        cluster=None,
-        pool=None,
-        cpus=None,
-        mem=None,
-        service=None,
-        deploy_group=None,
+            self,
+            name,
+            command,
+            node_pool,
+            required_actions=None,
+            dependent_actions=None,
+            retries=None,
+            executor=None,
+            cluster=None,
+            pool=None,
+            cpus=None,
+            mem=None,
+            service=None,
+            deploy_group=None,
     ):
         self.name = maybe_decode(name)
         self.command = command
@@ -79,12 +83,10 @@ class Action(object):
     def __eq__(self, other):
         attributes_match = all(
             getattr(self, attr, None) == getattr(other, attr, None)
-            for attr in self.equality_attributes
-        )
-        return attributes_match and all(
-            self_act == other_act for (self_act, other_act)
-            in zip(self.required_actions, other.required_actions)
-        )
+            for attr in self.equality_attributes)
+        return attributes_match and all(self_act == other_act for (
+            self_act,
+            other_act) in zip(self.required_actions, other.required_actions))
 
     def __ne__(self, other):
         return not self == other

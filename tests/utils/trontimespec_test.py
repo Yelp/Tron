@@ -11,7 +11,6 @@ from tron.utils import trontimespec
 
 
 class GetTimeTestCase(TestCase):
-
     def test_get_time(self):
         assert_equal(datetime.time(4, 15), trontimespec.get_time("4:15"))
         assert_equal(datetime.time(22, 59), trontimespec.get_time("22:59"))
@@ -22,7 +21,6 @@ class GetTimeTestCase(TestCase):
 
 
 class TimeSpecificationTestCase(TestCase):
-
     def _cmp(self, start_time, expected):
         start_time = datetime.datetime(*start_time)
         expected = datetime.datetime(*expected)
@@ -36,8 +34,7 @@ class TimeSpecificationTestCase(TestCase):
 
     def test_get_match_monthdays(self):
         self.time_spec = trontimespec.TimeSpecification(
-            monthdays=[10, 3, 3, 10],
-        )
+            monthdays=[10, 3, 3, 10], )
         self._cmp((2012, 3, 14), (2012, 4, 3))
         self._cmp((2012, 3, 1), (2012, 3, 3))
 
@@ -75,7 +72,8 @@ class TimeSpecificationTestCase(TestCase):
 
     def test_next_day_weekdays_with_ordinals(self):
         time_spec = trontimespec.TimeSpecification(
-            weekdays=[1, 5], ordinals=[1, 3],
+            weekdays=[1, 5],
+            ordinals=[1, 3],
         )
         gen = time_spec.next_day(14, 2012, 3)
         assert_equal(list(gen), [16, 19])
@@ -107,7 +105,8 @@ class TimeSpecificationTestCase(TestCase):
 
     def test_next_time_minutes(self):
         time_spec = trontimespec.TimeSpecification(
-            minutes=[30, 20, 30], seconds=[0],
+            minutes=[30, 20, 30],
+            seconds=[0],
         )
         start_date = datetime.datetime(2012, 3, 14, 0, 25)
         time = time_spec.next_time(start_date, True)
@@ -120,7 +119,9 @@ class TimeSpecificationTestCase(TestCase):
 
     def test_next_time_hours_and_minutes_and_seconds(self):
         time_spec = trontimespec.TimeSpecification(
-            minutes=[20, 30], hours=[1, 5], seconds=[4, 5],
+            minutes=[20, 30],
+            hours=[1, 5],
+            seconds=[4, 5],
         )
         start_date = datetime.datetime(2012, 3, 14, 1, 25)
         time = time_spec.next_time(start_date, True)

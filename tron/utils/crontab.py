@@ -6,15 +6,14 @@ import calendar
 import itertools
 import re
 
-
 PREDEFINED_SCHEDULE = {
-    "@yearly":  "0 0 1 1 *",
+    "@yearly": "0 0 1 1 *",
     "@anually": "0 0 1 1 *",
     "@monthly": "0 0 1 * *",
-    "@weekly":  "0 0 * * 0",
-    "@daily":   "0 0 * * *",
+    "@weekly": "0 0 * * 0",
+    "@daily": "0 0 * * *",
     "@midnight": "0 0 * * *",
-    "@hourly":  "0 * * * *",
+    "@hourly": "0 * * * *",
 }
 
 
@@ -37,7 +36,8 @@ class FieldParser(object):
         (?P<min>\d+|\*)         # Initial value
         (?:-(?P<max>\d+))?      # Optional max upper bound
         (?:/(?P<step>\d+))?     # Optional step increment
-        ''', re.VERBOSE,
+        ''',
+        re.VERBOSE,
     )
 
     def normalize(self, source):
@@ -95,7 +95,8 @@ class FieldParser(object):
 
         min_bound, max_bound = self.bounds
         diff = (max_bound - min_value) + (max_value - min_bound)
-        return [(min_value + i) % max_bound for i in list(range(0, diff, step))]
+        return [(min_value + i) % max_bound
+                for i in list(range(0, diff, step))]
 
     def validate_bounds(self, value):
         min_value, max_value = self.bounds
@@ -167,10 +168,10 @@ def parse_crontab(line):
     minutes, hours, dom, months, dow = line.split(None, 4)
 
     return {
-        'minutes':      minute_parser.parse(minutes),
-        'hours':        hour_parser.parse(hours),
-        'monthdays':    monthday_parser.parse(dom),
-        'months':       month_parser.parse(months),
-        'weekdays':     weekday_parser.parse(dow),
-        'ordinals':     None,
+        'minutes': minute_parser.parse(minutes),
+        'hours': hour_parser.parse(hours),
+        'monthdays': monthday_parser.parse(dom),
+        'months': month_parser.parse(months),
+        'weekdays': weekday_parser.parse(dow),
+        'ordinals': None,
     }
