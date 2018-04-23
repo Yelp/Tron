@@ -1,5 +1,70 @@
 # Change Log
 
+## [v0.8.0.4](https://github.com/Yelp/Tron/tree/v0.8.0.4) (2018-04-20)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.8.0.3...v0.8.0.4)
+
+## [v0.8.0.3](https://github.com/Yelp/Tron/tree/v0.8.0.3) (2018-04-20)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.8.0.2...v0.8.0.3)
+
+**Merged pull requests:**
+
+- Fix Xenial build [\#432](https://github.com/Yelp/Tron/pull/432) ([vkhromov](https://github.com/vkhromov))
+- Add retry action [\#418](https://github.com/Yelp/Tron/pull/418) ([keymone](https://github.com/keymone))
+
+## [v0.8.0.2](https://github.com/Yelp/Tron/tree/v0.8.0.2) (2018-04-18)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.8.0.1...v0.8.0.2)
+
+**Merged pull requests:**
+
+- Fix scheduled jobs page [\#431](https://github.com/Yelp/Tron/pull/431) ([keymone](https://github.com/keymone))
+- Some cleanups and fix to config manager [\#430](https://github.com/Yelp/Tron/pull/430) ([keymone](https://github.com/keymone))
+
+## [v0.8.0.1](https://github.com/Yelp/Tron/tree/v0.8.0.1) (2018-04-16)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.8.3...v0.8.0.1)
+
+**Merged pull requests:**
+
+- Always send signals to the full process group in the tron action runner [\#428](https://github.com/Yelp/Tron/pull/428) ([solarkennedy](https://github.com/solarkennedy))
+- speed up tronview command with zero args [\#427](https://github.com/Yelp/Tron/pull/427) ([chlgit](https://github.com/chlgit))
+- Python3 deb [\#370](https://github.com/Yelp/Tron/pull/370) ([keymone](https://github.com/keymone))
+
+## [v0.7.8.3](https://github.com/Yelp/Tron/tree/v0.7.8.3) (2018-04-12)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.8.2...v0.7.8.3)
+
+**Closed issues:**
+
+- Node healthchecks [\#216](https://github.com/Yelp/Tron/issues/216)
+- Tab complete tronview commands [\#35](https://github.com/Yelp/Tron/issues/35)
+
+**Merged pull requests:**
+
+- Maybe decode all the things [\#426](https://github.com/Yelp/Tron/pull/426) ([keymone](https://github.com/keymone))
+- Fix links in long\_description \(used on PyPI\), use hyperlinks [\#423](https://github.com/Yelp/Tron/pull/423) ([sjaensch](https://github.com/sjaensch))
+- Run the example\_cluster under faketime 10x faster than real life [\#415](https://github.com/Yelp/Tron/pull/415) ([solarkennedy](https://github.com/solarkennedy))
+
+## [v0.7.8.2](https://github.com/Yelp/Tron/tree/v0.7.8.2) (2018-04-10)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.8.1...v0.7.8.2)
+
+**Merged pull requests:**
+
+- Fix validation of cleanup action [\#424](https://github.com/Yelp/Tron/pull/424) ([keymone](https://github.com/keymone))
+- set a smart realert\_every [\#420](https://github.com/Yelp/Tron/pull/420) ([chlgit](https://github.com/chlgit))
+
+## [v0.7.8.1](https://github.com/Yelp/Tron/tree/v0.7.8.1) (2018-04-06)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.8.0...v0.7.8.1)
+
+**Merged pull requests:**
+
+- Deal with requestargs encoding in get\_string\(\) [\#422](https://github.com/Yelp/Tron/pull/422) ([keymone](https://github.com/keymone))
+- monitoring alert if any action becomes failed or unknown [\#421](https://github.com/Yelp/Tron/pull/421) ([chlgit](https://github.com/chlgit))
+- Fix namespace with non-ascii crashing tronfig [\#419](https://github.com/Yelp/Tron/pull/419) ([keymone](https://github.com/keymone))
+- Disconnect state version from release version [\#417](https://github.com/Yelp/Tron/pull/417) ([keymone](https://github.com/keymone))
+- service code clean up [\#416](https://github.com/Yelp/Tron/pull/416) ([chlgit](https://github.com/chlgit))
+- Alert when a job is in an unknown state [\#413](https://github.com/Yelp/Tron/pull/413) ([solarkennedy](https://github.com/solarkennedy))
+- Added the action\_runner for localhost on the example\_cluster [\#407](https://github.com/Yelp/Tron/pull/407) ([solarkennedy](https://github.com/solarkennedy))
+- remove service code third pass [\#405](https://github.com/Yelp/Tron/pull/405) ([chlgit](https://github.com/chlgit))
+- First Stab at Action retries [\#401](https://github.com/Yelp/Tron/pull/401) ([keymone](https://github.com/keymone))
+
 ## [v0.7.8.0](https://github.com/Yelp/Tron/tree/v0.7.8.0) (2018-04-03)
 [Full Changelog](https://github.com/Yelp/Tron/compare/v0.7.7.1...v0.7.8.0)
 
