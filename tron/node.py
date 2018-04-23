@@ -78,7 +78,8 @@ class NodePoolRepository(object):
     def filter_by_name(self, node_configs, node_pool_configs):
         self.nodes.filter_by_name(node_configs)
         self.pools.filter_by_name(
-            list(node_configs.keys()) + list(node_pool_configs.keys()), )
+            list(node_configs.keys()) + list(node_pool_configs.keys()),
+        )
 
     @classmethod
     def update_from_config(cls, node_configs, node_pool_configs, ssh_config):
@@ -95,11 +96,11 @@ class NodePoolRepository(object):
         instance._update_node_pools(node_pool_configs)
 
     def _update_nodes(
-            self,
-            node_configs,
-            ssh_options,
-            known_hosts,
-            ssh_config,
+        self,
+        node_configs,
+        ssh_options,
+        known_hosts,
+        ssh_config,
     ):
         for config in six.itervalues(node_configs):
             pub_key = known_hosts.get_public_key(config.hostname)
@@ -276,10 +277,12 @@ class Node(object):
     def __eq__(self, other):
         if not isinstance(other, self.__class__):
             return False
-        return (self.config == other.config
-                and self.conch_options == other.conch_options
-                and self.pub_key == other.pub_key
-                and self.node_settings == other.node_settings)
+        return (
+            self.config == other.config
+            and self.conch_options == other.conch_options
+            and self.pub_key == other.pub_key
+            and self.node_settings == other.node_settings
+        )
 
     def __ne__(self, other):
         return not self == other
@@ -419,11 +422,14 @@ class Node(object):
             self._fail_run(
                 run,
                 failure.Failure(
-                    exc_value=ConnectError("Connection to %s@%s:%d failed" % (
-                        self.username,
-                        self.hostname,
-                        self.port,
-                    ), ), ),
+                    exc_value=ConnectError(
+                        "Connection to %s@%s:%d failed" % (
+                            self.username,
+                            self.hostname,
+                            self.port,
+                        ),
+                    ),
+                ),
             )
 
         self.connection_defer.addCallback(call_open_channel)
@@ -631,11 +637,14 @@ class Node(object):
         self._fail_run(
             run,
             failure.Failure(
-                exc_value=ConnectError("Connection to %s@%s:%d failed" % (
-                    self.username,
-                    self.hostname,
-                    self.port,
-                ), ), ),
+                exc_value=ConnectError(
+                    "Connection to %s@%s:%d failed" % (
+                        self.username,
+                        self.hostname,
+                        self.port,
+                    ),
+                ),
+            ),
         )
 
         # We want to hard hangup on this connection. It could theoretically

@@ -43,7 +43,8 @@ class MappingCollectionsTestCase(TestCase):
         self.collection.restore_state(state_data)
         for key in state_data:
             self.collection[key].restore_state.assert_called_with(
-                state_data[key], )
+                state_data[key],
+            )
 
     def test_contains_item_false(self):
         mock_item, mock_func = mock.Mock(), mock.Mock()

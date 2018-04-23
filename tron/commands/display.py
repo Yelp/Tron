@@ -200,9 +200,9 @@ def add_color_for_state(state):
     if state == actionrun.ActionRun.STATE_FAILED.name:
         return Color.set('red', state)
     if state in {
-            actionrun.ActionRun.STATE_RUNNING.name,
-            actionrun.ActionRun.STATE_SUCCEEDED.name,
-            job.Job.STATUS_ENABLED,
+        actionrun.ActionRun.STATE_RUNNING.name,
+        actionrun.ActionRun.STATE_SUCCEEDED.name,
+        job.Job.STATUS_ENABLED,
     }:
         return Color.set('green', state)
     if state in {job.Job.STATUS_DISABLED}:
@@ -234,7 +234,8 @@ def format_job_details(job_content):
     details = format_fields(DisplayJobs, job_content)
     job_runs = DisplayJobRuns().format(job_content['runs'])
     actions = "\n\nList of Actions:\n%s" % '\n'.join(
-        job_content['action_names'], )
+        job_content['action_names'],
+    )
     return details + actions + "\n" + job_runs
 
 

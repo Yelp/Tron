@@ -67,7 +67,8 @@ class ActionRunFactoryTestCase(TestCase):
             'node_name': 'anode',
         }
         self.action_runner = mock.create_autospec(
-            actioncommand.SubprocessActionRunnerFactory, )
+            actioncommand.SubprocessActionRunnerFactory,
+        )
 
     def test_build_action_run_collection(self):
         collection = ActionRunFactory.build_action_run_collection(
@@ -232,7 +233,8 @@ class ActionRunTestCase(TestCase):
     def setup_action_run(self):
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.action_runner = mock.create_autospec(
-            actioncommand.NoActionRunnerFactory, )
+            actioncommand.NoActionRunnerFactory,
+        )
         self.command = "do command %(actionname)s"
         self.rendered_command = "do command action_name"
         self.action_run = ActionRun(
@@ -377,7 +379,8 @@ class SSHActionRunTestCase(TestCase):
     def setup_action_run(self):
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.action_runner = mock.create_autospec(
-            actioncommand.NoActionRunnerFactory, )
+            actioncommand.NoActionRunnerFactory,
+        )
         self.command = "do command %(actionname)s"
         self.action_run = SSHActionRun(
             "id",
@@ -415,7 +418,8 @@ class SSHActionRunTestCase(TestCase):
             serializer,
         )
         mock_filehandler.OutputStreamSerializer.assert_called_with(
-            self.action_run.output_path, )
+            self.action_run.output_path,
+        )
         self.action_run.watch.assert_called_with(action_command)
 
     def test_auto_retry(self):

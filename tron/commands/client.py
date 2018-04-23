@@ -67,7 +67,8 @@ def build_http_error_response(exc):
             content = content['error']
         except ValueError:
             log.warning(
-                "Incorrectly formatted error response: {}".format(content), )
+                "Incorrectly formatted error response: {}".format(content),
+            )
     return Response(exc.code, exc.msg, content)
 
 
@@ -113,12 +114,12 @@ class Client(object):
         return self.http_get('/api/events')['data']
 
     def config(
-            self,
-            config_name,
-            config_data=None,
-            config_hash=None,
-            no_header=False,
-            check=False,
+        self,
+        config_name,
+        config_data=None,
+        config_hash=None,
+        no_header=False,
+        check=False,
     ):
         """Retrieve or update the configuration."""
         if config_data is not None:
@@ -142,11 +143,11 @@ class Client(object):
         return get_object_type_from_identifier(self.index(), identifier).url
 
     def jobs(
-            self,
-            include_job_runs=False,
-            include_action_runs=False,
-            include_action_graph=True,
-            include_node_pool=True,
+        self,
+        include_job_runs=False,
+        include_action_runs=False,
+        include_action_graph=True,
+        include_node_pool=True,
     ):
         params = {
             'include_job_runs': int(include_job_runs),

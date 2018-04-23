@@ -14,8 +14,9 @@ import six
 from tron.core.actionrun import ActionRun
 
 
-def traverse_graph(starting_state, func=lambda f, a, t: None,
-                   seen_states=None):
+def traverse_graph(
+    starting_state, func=lambda f, a, t: None, seen_states=None
+):
     """Traverse the graph depth-first without cycling."""
     seen_states = seen_states or []
     seen_states.append(starting_state)

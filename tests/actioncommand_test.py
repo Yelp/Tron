@@ -66,7 +66,8 @@ class ActionCommandTestCase(TestCase):
         message = "this is the message"
         serializer = mock.create_autospec(filehandler.FileHandleManager)
         fh = serializer.open.return_value = mock.create_autospec(
-            filehandler.FileHandleWrapper, )
+            filehandler.FileHandleWrapper,
+        )
         ac = ActionCommand("action.1.do", "do", serializer)
 
         ac.write_stderr(message)
@@ -114,13 +115,15 @@ class CreateActionCommandFactoryFromConfigTestCase(TestCase):
     def test_create_default_action_command_no_config(self):
         config = ()
         factory = actioncommand.create_action_runner_factory_from_config(
-            config, )
+            config,
+        )
         assert_equal(factory, actioncommand.NoActionRunnerFactory)
 
     def test_create_default_action_command(self):
         config = schema.ConfigActionRunner('none', None, None)
         factory = actioncommand.create_action_runner_factory_from_config(
-            config, )
+            config,
+        )
         assert_equal(factory, actioncommand.NoActionRunnerFactory)
 
     def test_create_action_command_with_simple_runner(self):
@@ -131,7 +134,8 @@ class CreateActionCommandFactoryFromConfigTestCase(TestCase):
             exec_path,
         )
         factory = actioncommand.create_action_runner_factory_from_config(
-            config, )
+            config,
+        )
         assert_equal(factory.status_path, status_path)
         assert_equal(factory.exec_path, exec_path)
 
@@ -149,7 +153,8 @@ class SubprocessActionRunnerFactoryTestCase(TestCase):
     def test_from_config(self):
         config = mock.Mock()
         runner_factory = actioncommand.SubprocessActionRunnerFactory.from_config(
-            config, )
+            config,
+        )
         assert_equal(runner_factory.status_path, config.remote_status_path)
         assert_equal(runner_factory.exec_path, config.remote_exec_path)
 

@@ -47,10 +47,10 @@ class ActionRunFactory(object):
 
     @classmethod
     def action_run_collection_from_state(
-            cls,
-            job_run,
-            runs_state_data,
-            cleanup_action_state_data,
+        cls,
+        job_run,
+        runs_state_data,
+        cleanup_action_state_data,
     ):
         action_runs = [
             cls.action_run_from_state(job_run, state_data)
@@ -62,7 +62,8 @@ class ActionRunFactory(object):
                     job_run,
                     cleanup_action_state_data,
                     cleanup=True,
-                ), )
+                ),
+            )
 
         action_run_map = {
             maybe_decode(action_run.action_name): action_run
@@ -170,29 +171,29 @@ class ActionRun(object):
 
     # TODO: create a class for ActionRunId, JobRunId, Etc
     def __init__(
-            self,
-            job_run_id,
-            name,
-            node,
-            bare_command=None,
-            parent_context=None,
-            output_path=None,
-            cleanup=False,
-            start_time=None,
-            end_time=None,
-            run_state=STATE_SCHEDULED,
-            rendered_command=None,
-            exit_status=None,
-            action_runner=None,
-            executor=None,
-            cluster=None,
-            pool=None,
-            cpus=None,
-            mem=None,
-            service=None,
-            deploy_group=None,
-            retries_remaining=None,
-            exit_statuses=None,
+        self,
+        job_run_id,
+        name,
+        node,
+        bare_command=None,
+        parent_context=None,
+        output_path=None,
+        cleanup=False,
+        start_time=None,
+        end_time=None,
+        run_state=STATE_SCHEDULED,
+        rendered_command=None,
+        exit_status=None,
+        action_runner=None,
+        executor=None,
+        cluster=None,
+        pool=None,
+        cpus=None,
+        mem=None,
+        service=None,
+        deploy_group=None,
+        retries_remaining=None,
+        exit_statuses=None,
     ):
         self.job_run_id = maybe_decode(job_run_id)
         self.action_name = maybe_decode(name)
@@ -244,12 +245,12 @@ class ActionRun(object):
 
     @classmethod
     def from_state(
-            cls,
-            state_data,
-            parent_context,
-            output_path,
-            job_run_node,
-            cleanup=False,
+        cls,
+        state_data,
+        parent_context,
+        output_path,
+        job_run_node,
+        cleanup=False,
     ):
         """Restore the state of this ActionRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
@@ -309,10 +310,12 @@ class ActionRun(object):
         if len(self.exit_statuses) == 0:
             log.info("Starting action run %s", self.id)
         else:
-            log.info("Restarting action run {}, retry {}".format(
-                self.id,
-                len(self.exit_statuses),
-            ))
+            log.info(
+                "Restarting action run {}, retry {}".format(
+                    self.id,
+                    len(self.exit_statuses),
+                )
+            )
 
         self.start_time = timeutils.current_time()
         self.machine.transition('start')
@@ -370,8 +373,11 @@ class ActionRun(object):
                 self.exit_statuses.append(exit_status)
                 return self.restart()
             else:
-                log.info("Reached maximum number of retries: {}".format(
-                    len(self.exit_statuses), ))
+                log.info(
+                    "Reached maximum number of retries: {}".format(
+                        len(self.exit_statuses),
+                    )
+                )
 
         return self._done('fail', exit_status)
 
@@ -422,8 +428,10 @@ class ActionRun(object):
         try:
             self.rendered_command = self.render_command()
         except Exception as e:
-            log.error("Failed generating rendering command: %s: %s" %
-                      (e.__class__.__name__, e))
+            log.error(
+                "Failed generating rendering command: %s: %s" %
+                (e.__class__.__name__, e)
+            )
 
             # Return a command string that will always fail
             self.rendered_command = self.FAILED_RENDER
@@ -559,7 +567,8 @@ class PaaSTAActionRun(ActionRun):
                 pool=self.pool,
                 cpus=self.cpus,
                 mem=self.mem,
-            ), )
+            ),
+        )
         self.success()
         stdout.close()
         return True
@@ -610,8 +619,9 @@ class ActionRunCollection(object):
         )
 
     def action_runs_for_actions(self, actions):
-        return (self.run_map[a.name] for a in actions
-                if a.name in self.run_map)
+        return (
+            self.run_map[a.name] for a in actions if a.name in self.run_map
+        )
 
     def get_action_runs_with_cleanup(self):
         return six.itervalues(self.run_map)
@@ -619,8 +629,9 @@ class ActionRunCollection(object):
     action_runs_with_cleanup = property(get_action_runs_with_cleanup)
 
     def get_action_runs(self):
-        return (run for run in six.itervalues(self.run_map)
-                if not run.is_cleanup)
+        return (
+            run for run in six.itervalues(self.run_map) if not run.is_cleanup
+        )
 
     action_runs = property(get_action_runs)
 
@@ -652,8 +663,10 @@ class ActionRunCollection(object):
         """Returns any actions that are scheduled or queued that can be run."""
 
         def startable(action_run):
-            return (action_run.check_state('start')
-                    and not self._is_run_blocked(action_run))
+            return (
+                action_run.check_state('start')
+                and not self._is_run_blocked(action_run)
+            )
 
         return self._get_runs_using(startable)
 
@@ -669,7 +682,8 @@ class ActionRunCollection(object):
             return False
 
         required_actions = self.action_graph.get_required_actions(
-            action_run.action_name, )
+            action_run.action_name,
+        )
         if not required_actions:
             return False
 
@@ -714,19 +728,22 @@ class ActionRunCollection(object):
     def end_time(self):
         if not self.is_done:
             return None
-        end_times = (run.end_time
-                     for run in self.get_action_runs_with_cleanup())
+        end_times = (
+            run.end_time for run in self.get_action_runs_with_cleanup()
+        )
         return iteration.max_filter(end_times)
 
     def __str__(self):
         def blocked_state(action_run):
             return ":blocked" if self._is_run_blocked(action_run) else ""
 
-        run_states = ', '.join("%s(%s%s)" % (
-            a.action_name,
-            a.state,
-            blocked_state(a),
-        ) for a in six.itervalues(self.run_map))
+        run_states = ', '.join(
+            "%s(%s%s)" % (
+                a.action_name,
+                a.state,
+                blocked_state(a),
+            ) for a in six.itervalues(self.run_map)
+        )
         return "%s[%s]" % (self.__class__.__name__, run_states)
 
     def __getattr__(self, name):

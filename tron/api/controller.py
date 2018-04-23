@@ -57,8 +57,10 @@ class ActionRunController(object):
             raise UnknownCommandError("Unknown command %s" % command)
 
         if command == 'start' and self.job_run.is_scheduled:
-            return ("Action run can not be started if it's job run is still "
-                    "scheduled.")
+            return (
+                "Action run can not be started if it's job run is still "
+                "scheduled."
+            )
 
         if command in ('stop', 'kill'):
             return self.handle_termination(command)

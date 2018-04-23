@@ -34,7 +34,8 @@ class TimeSpecificationTestCase(TestCase):
 
     def test_get_match_monthdays(self):
         self.time_spec = trontimespec.TimeSpecification(
-            monthdays=[10, 3, 3, 10], )
+            monthdays=[10, 3, 3, 10],
+        )
         self._cmp((2012, 3, 14), (2012, 4, 3))
         self._cmp((2012, 3, 1), (2012, 3, 3))
 

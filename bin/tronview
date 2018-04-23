@@ -96,7 +96,8 @@ def view_all(args, client):
             include_action_runs=False,
             include_action_graph=False,
             include_node_pool=False,
-        ))
+        )
+    )
 
 
 def view_job(args, job_id, client):

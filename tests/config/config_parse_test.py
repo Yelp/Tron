@@ -178,10 +178,12 @@ jobs:
         expected = schema.TronConfig(
             action_runner=FrozenDict(),
             output_stream_dir='/tmp',
-            command_context=FrozenDict({
-                'python': '/usr/bin/python',
-                'batch_dir': '/tron/batch/test/foo',
-            }),
+            command_context=FrozenDict(
+                {
+                    'python': '/usr/bin/python',
+                    'batch_dir': '/tron/batch/test/foo',
+                }
+            ),
             ssh_options=schema.ConfigSSHOptions(
                 agent=False,
                 identities=('tests/test_id_rsa', ),
@@ -195,251 +197,269 @@ jobs:
             notification_options=None,
             time_zone=pytz.timezone("EST"),
             state_persistence=config_parse.DEFAULT_STATE_PERSISTENCE,
-            nodes=FrozenDict({
-                'node0':
-                schema.ConfigNode(
-                    name='node0',
-                    username='foo',
-                    hostname='node0',
-                    port=22,
-                ),
-                'node1':
-                schema.ConfigNode(
-                    name='node1',
-                    username='foo',
-                    hostname='node1',
-                    port=22,
-                ),
-            }),
-            node_pools=FrozenDict({
-                'nodePool':
-                schema.ConfigNodePool(
-                    nodes=('node0', 'node1'),
-                    name='nodePool',
-                ),
-            }),
+            nodes=FrozenDict(
+                {
+                    'node0':
+                    schema.ConfigNode(
+                        name='node0',
+                        username='foo',
+                        hostname='node0',
+                        port=22,
+                    ),
+                    'node1':
+                    schema.ConfigNode(
+                        name='node1',
+                        username='foo',
+                        hostname='node1',
+                        port=22,
+                    ),
+                }
+            ),
+            node_pools=FrozenDict(
+                {
+                    'nodePool':
+                    schema.ConfigNodePool(
+                        nodes=('node0', 'node1'),
+                        name='nodePool',
+                    ),
+                }
+            ),
             clusters=('cluster-one', 'cluster-two'),
-            jobs=FrozenDict({
-                'MASTER.test_job0':
-                schema.ConfigJob(
-                    name='MASTER.test_job0',
-                    namespace='MASTER',
-                    node='node0',
-                    monitoring={},
-                    service=None,
-                    deploy_group=None,
-                    schedule=ConfigIntervalScheduler(
-                        timedelta=datetime.timedelta(0, 20),
-                        jitter=None,
+            jobs=FrozenDict(
+                {
+                    'MASTER.test_job0':
+                    schema.ConfigJob(
+                        name='MASTER.test_job0',
+                        namespace='MASTER',
+                        node='node0',
+                        monitoring={},
+                        service=None,
+                        deploy_group=None,
+                        schedule=ConfigIntervalScheduler(
+                            timedelta=datetime.timedelta(0, 20),
+                            jitter=None,
+                        ),
+                        actions=FrozenDict(
+                            {
+                                'action0_0':
+                                schema.ConfigAction(
+                                    name='action0_0',
+                                    command='test_command0.0',
+                                    executor='ssh',
+                                    requires=(),
+                                ),
+                            }
+                        ),
+                        queueing=True,
+                        run_limit=50,
+                        all_nodes=False,
+                        cleanup_action=schema.ConfigCleanupAction(
+                            name='cleanup',
+                            command='test_command0.1',
+                            executor='ssh',
+                        ),
+                        enabled=True,
+                        max_runtime=None,
+                        allow_overlap=False,
+                        time_zone=None,
                     ),
-                    actions=FrozenDict({
-                        'action0_0':
-                        schema.ConfigAction(
-                            name='action0_0',
-                            command='test_command0.0',
-                            executor='ssh',
-                            requires=(),
+                    'MASTER.test_job1':
+                    schema.ConfigJob(
+                        name='MASTER.test_job1',
+                        namespace='MASTER',
+                        node='node0',
+                        enabled=True,
+                        monitoring={},
+                        service=None,
+                        deploy_group=None,
+                        schedule=schedule_parse.ConfigDailyScheduler(
+                            days={1, 3, 5},
+                            hour=0,
+                            minute=30,
+                            second=0,
+                            original="00:30:00 MWF",
+                            jitter=None,
                         ),
-                    }),
-                    queueing=True,
-                    run_limit=50,
-                    all_nodes=False,
-                    cleanup_action=schema.ConfigCleanupAction(
-                        name='cleanup',
-                        command='test_command0.1',
-                        executor='ssh',
+                        actions=FrozenDict(
+                            {
+                                'action1_1':
+                                schema.ConfigAction(
+                                    name='action1_1',
+                                    command='test_command1.1',
+                                    requires=('action1_0', ),
+                                    executor='ssh',
+                                ),
+                                'action1_0':
+                                schema.ConfigAction(
+                                    name='action1_0',
+                                    command='test_command1.0',
+                                    executor='ssh',
+                                    requires=(),
+                                ),
+                            }
+                        ),
+                        queueing=True,
+                        run_limit=50,
+                        all_nodes=False,
+                        cleanup_action=None,
+                        max_runtime=None,
+                        allow_overlap=True,
+                        time_zone=pytz.timezone("Pacific/Auckland"),
                     ),
-                    enabled=True,
-                    max_runtime=None,
-                    allow_overlap=False,
-                    time_zone=None,
-                ),
-                'MASTER.test_job1':
-                schema.ConfigJob(
-                    name='MASTER.test_job1',
-                    namespace='MASTER',
-                    node='node0',
-                    enabled=True,
-                    monitoring={},
-                    service=None,
-                    deploy_group=None,
-                    schedule=schedule_parse.ConfigDailyScheduler(
-                        days={1, 3, 5},
-                        hour=0,
-                        minute=30,
-                        second=0,
-                        original="00:30:00 MWF",
-                        jitter=None,
+                    'MASTER.test_job2':
+                    schema.ConfigJob(
+                        name='MASTER.test_job2',
+                        namespace='MASTER',
+                        node='node1',
+                        enabled=True,
+                        monitoring={},
+                        service=None,
+                        deploy_group=None,
+                        schedule=schedule_parse.ConfigDailyScheduler(
+                            days=set(),
+                            hour=16,
+                            minute=30,
+                            second=0,
+                            original="16:30:00 ",
+                            jitter=None,
+                        ),
+                        actions=FrozenDict(
+                            {
+                                'action2_0':
+                                schema.ConfigAction(
+                                    name='action2_0',
+                                    command='test_command2.0',
+                                    executor='ssh',
+                                    requires=(),
+                                ),
+                            }
+                        ),
+                        queueing=True,
+                        run_limit=50,
+                        all_nodes=False,
+                        cleanup_action=None,
+                        max_runtime=None,
+                        allow_overlap=False,
+                        time_zone=None,
                     ),
-                    actions=FrozenDict({
-                        'action1_1':
-                        schema.ConfigAction(
-                            name='action1_1',
-                            command='test_command1.1',
-                            requires=('action1_0', ),
-                            executor='ssh',
+                    'MASTER.test_job3':
+                    schema.ConfigJob(
+                        name='MASTER.test_job3',
+                        namespace='MASTER',
+                        node='node1',
+                        schedule=ConfigConstantScheduler(),
+                        enabled=True,
+                        monitoring={},
+                        service=None,
+                        deploy_group=None,
+                        actions=FrozenDict(
+                            {
+                                'action3_1':
+                                schema.ConfigAction(
+                                    name='action3_1',
+                                    command='test_command3.1',
+                                    executor='ssh',
+                                    requires=(),
+                                ),
+                                'action3_0':
+                                schema.ConfigAction(
+                                    name='action3_0',
+                                    command='test_command3.0',
+                                    executor='ssh',
+                                    requires=(),
+                                ),
+                                'action3_2':
+                                schema.ConfigAction(
+                                    name='action3_2',
+                                    command='test_command3.2',
+                                    requires=('action3_0', 'action3_1'),
+                                    node='node0',
+                                    executor='ssh',
+                                ),
+                            }
                         ),
-                        'action1_0':
-                        schema.ConfigAction(
-                            name='action1_0',
-                            command='test_command1.0',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                    }),
-                    queueing=True,
-                    run_limit=50,
-                    all_nodes=False,
-                    cleanup_action=None,
-                    max_runtime=None,
-                    allow_overlap=True,
-                    time_zone=pytz.timezone("Pacific/Auckland"),
-                ),
-                'MASTER.test_job2':
-                schema.ConfigJob(
-                    name='MASTER.test_job2',
-                    namespace='MASTER',
-                    node='node1',
-                    enabled=True,
-                    monitoring={},
-                    service=None,
-                    deploy_group=None,
-                    schedule=schedule_parse.ConfigDailyScheduler(
-                        days=set(),
-                        hour=16,
-                        minute=30,
-                        second=0,
-                        original="16:30:00 ",
-                        jitter=None,
+                        queueing=True,
+                        run_limit=50,
+                        all_nodes=False,
+                        cleanup_action=None,
+                        max_runtime=None,
+                        allow_overlap=False,
+                        time_zone=None,
                     ),
-                    actions=FrozenDict({
-                        'action2_0':
-                        schema.ConfigAction(
-                            name='action2_0',
-                            command='test_command2.0',
-                            executor='ssh',
-                            requires=(),
+                    'MASTER.test_job4':
+                    schema.ConfigJob(
+                        name='MASTER.test_job4',
+                        namespace='MASTER',
+                        node='nodePool',
+                        monitoring={},
+                        service=None,
+                        deploy_group=None,
+                        schedule=schedule_parse.ConfigDailyScheduler(
+                            days=set(),
+                            hour=0,
+                            minute=0,
+                            second=0,
+                            original='00:00:00 ',
+                            jitter=None,
                         ),
-                    }),
-                    queueing=True,
-                    run_limit=50,
-                    all_nodes=False,
-                    cleanup_action=None,
-                    max_runtime=None,
-                    allow_overlap=False,
-                    time_zone=None,
-                ),
-                'MASTER.test_job3':
-                schema.ConfigJob(
-                    name='MASTER.test_job3',
-                    namespace='MASTER',
-                    node='node1',
-                    schedule=ConfigConstantScheduler(),
-                    enabled=True,
-                    monitoring={},
-                    service=None,
-                    deploy_group=None,
-                    actions=FrozenDict({
-                        'action3_1':
-                        schema.ConfigAction(
-                            name='action3_1',
-                            command='test_command3.1',
-                            executor='ssh',
-                            requires=(),
+                        actions=FrozenDict(
+                            {
+                                'action4_0':
+                                schema.ConfigAction(
+                                    name='action4_0',
+                                    command='test_command4.0',
+                                    executor='ssh',
+                                    requires=(),
+                                ),
+                            }
                         ),
-                        'action3_0':
-                        schema.ConfigAction(
-                            name='action3_0',
-                            command='test_command3.0',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                        'action3_2':
-                        schema.ConfigAction(
-                            name='action3_2',
-                            command='test_command3.2',
-                            requires=('action3_0', 'action3_1'),
-                            node='node0',
-                            executor='ssh',
-                        ),
-                    }),
-                    queueing=True,
-                    run_limit=50,
-                    all_nodes=False,
-                    cleanup_action=None,
-                    max_runtime=None,
-                    allow_overlap=False,
-                    time_zone=None,
-                ),
-                'MASTER.test_job4':
-                schema.ConfigJob(
-                    name='MASTER.test_job4',
-                    namespace='MASTER',
-                    node='nodePool',
-                    monitoring={},
-                    service=None,
-                    deploy_group=None,
-                    schedule=schedule_parse.ConfigDailyScheduler(
-                        days=set(),
-                        hour=0,
-                        minute=0,
-                        second=0,
-                        original='00:00:00 ',
-                        jitter=None,
+                        queueing=True,
+                        run_limit=50,
+                        all_nodes=True,
+                        cleanup_action=None,
+                        enabled=False,
+                        max_runtime=None,
+                        allow_overlap=False,
+                        time_zone=None,
                     ),
-                    actions=FrozenDict({
-                        'action4_0':
-                        schema.ConfigAction(
-                            name='action4_0',
-                            command='test_command4.0',
-                            executor='ssh',
-                            requires=(),
+                    'MASTER.test_job_paasta':
+                    schema.ConfigJob(
+                        name='MASTER.test_job_paasta',
+                        namespace='MASTER',
+                        node='nodePool',
+                        monitoring={},
+                        service='my_service',
+                        deploy_group='prod.non_canary',
+                        schedule=schedule_parse.ConfigDailyScheduler(
+                            days=set(),
+                            hour=0,
+                            minute=0,
+                            second=0,
+                            original='00:00:00 ',
+                            jitter=None,
                         ),
-                    }),
-                    queueing=True,
-                    run_limit=50,
-                    all_nodes=True,
-                    cleanup_action=None,
-                    enabled=False,
-                    max_runtime=None,
-                    allow_overlap=False,
-                    time_zone=None,
-                ),
-                'MASTER.test_job_paasta':
-                schema.ConfigJob(
-                    name='MASTER.test_job_paasta',
-                    namespace='MASTER',
-                    node='nodePool',
-                    monitoring={},
-                    service='my_service',
-                    deploy_group='prod.non_canary',
-                    schedule=schedule_parse.ConfigDailyScheduler(
-                        days=set(),
-                        hour=0,
-                        minute=0,
-                        second=0,
-                        original='00:00:00 ',
-                        jitter=None,
+                        actions=FrozenDict(
+                            {
+                                'action4_0':
+                                schema.ConfigAction(
+                                    name='action4_0',
+                                    command='test_command4.0',
+                                    executor='paasta',
+                                    requires=(),
+                                ),
+                            }
+                        ),
+                        queueing=True,
+                        run_limit=50,
+                        all_nodes=False,
+                        cleanup_action=None,
+                        enabled=True,
+                        max_runtime=None,
+                        allow_overlap=False,
+                        time_zone=None,
                     ),
-                    actions=FrozenDict({
-                        'action4_0':
-                        schema.ConfigAction(
-                            name='action4_0',
-                            command='test_command4.0',
-                            executor='paasta',
-                            requires=(),
-                        ),
-                    }),
-                    queueing=True,
-                    run_limit=50,
-                    all_nodes=False,
-                    cleanup_action=None,
-                    enabled=True,
-                    max_runtime=None,
-                    allow_overlap=False,
-                    time_zone=None,
-                ),
-            }),
+                }
+            ),
         )
 
         test_config = valid_config_from_yaml(self.config)
@@ -565,234 +585,249 @@ jobs:
 
     def test_attributes(self):
         expected = schema.NamedTronConfig(
-            jobs=FrozenDict({
-                'test_job0':
-                schema.ConfigJob(
-                    name='test_job0',
-                    namespace='test_namespace',
-                    node='node0',
-                    monitoring={},
-                    service=None,
-                    deploy_group=None,
-                    schedule=ConfigIntervalScheduler(
-                        timedelta=datetime.timedelta(0, 20),
-                        jitter=None,
-                    ),
-                    actions=FrozenDict({
-                        'action0_0':
-                        schema.ConfigAction(
-                            name='action0_0',
-                            command='test_command0.0',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                    }),
-                    queueing=True,
-                    run_limit=50,
-                    all_nodes=False,
-                    cleanup_action=schema.ConfigCleanupAction(
-                        name='cleanup',
-                        command='test_command0.1',
-                        node=None,
-                        executor='ssh',
-                        cluster=None,
-                        pool=None,
-                        cpus=None,
-                        mem=None,
+            jobs=FrozenDict(
+                {
+                    'test_job0':
+                    schema.ConfigJob(
+                        name='test_job0',
+                        namespace='test_namespace',
+                        node='node0',
+                        monitoring={},
                         service=None,
                         deploy_group=None,
+                        schedule=ConfigIntervalScheduler(
+                            timedelta=datetime.timedelta(0, 20),
+                            jitter=None,
+                        ),
+                        actions=FrozenDict(
+                            {
+                                'action0_0':
+                                schema.ConfigAction(
+                                    name='action0_0',
+                                    command='test_command0.0',
+                                    executor='ssh',
+                                    requires=(),
+                                ),
+                            }
+                        ),
+                        queueing=True,
+                        run_limit=50,
+                        all_nodes=False,
+                        cleanup_action=schema.ConfigCleanupAction(
+                            name='cleanup',
+                            command='test_command0.1',
+                            node=None,
+                            executor='ssh',
+                            cluster=None,
+                            pool=None,
+                            cpus=None,
+                            mem=None,
+                            service=None,
+                            deploy_group=None,
+                        ),
+                        enabled=True,
+                        max_runtime=None,
+                        allow_overlap=False,
+                        time_zone=None,
                     ),
-                    enabled=True,
-                    max_runtime=None,
-                    allow_overlap=False,
-                    time_zone=None,
-                ),
-                'test_job1':
-                schema.ConfigJob(
-                    name='test_job1',
-                    namespace='test_namespace',
-                    node='node0',
-                    enabled=True,
-                    monitoring={},
-                    service=None,
-                    deploy_group=None,
-                    schedule=schedule_parse.ConfigDailyScheduler(
-                        days={1, 3, 5},
-                        hour=0,
-                        minute=30,
-                        second=0,
-                        original="00:30:00 MWF",
-                        jitter=None,
+                    'test_job1':
+                    schema.ConfigJob(
+                        name='test_job1',
+                        namespace='test_namespace',
+                        node='node0',
+                        enabled=True,
+                        monitoring={},
+                        service=None,
+                        deploy_group=None,
+                        schedule=schedule_parse.ConfigDailyScheduler(
+                            days={1, 3, 5},
+                            hour=0,
+                            minute=30,
+                            second=0,
+                            original="00:30:00 MWF",
+                            jitter=None,
+                        ),
+                        actions=FrozenDict(
+                            {
+                                'action1_1':
+                                schema.ConfigAction(
+                                    name='action1_1',
+                                    command='test_command1.1',
+                                    requires=('action1_0', ),
+                                    executor='ssh',
+                                ),
+                                'action1_0':
+                                schema.ConfigAction(
+                                    name='action1_0',
+                                    command='test_command1.0 %(some_var)s',
+                                    executor='ssh',
+                                    requires=(),
+                                ),
+                            }
+                        ),
+                        queueing=True,
+                        run_limit=50,
+                        all_nodes=False,
+                        cleanup_action=None,
+                        max_runtime=None,
+                        allow_overlap=True,
+                        time_zone=None,
                     ),
-                    actions=FrozenDict({
-                        'action1_1':
-                        schema.ConfigAction(
-                            name='action1_1',
-                            command='test_command1.1',
-                            requires=('action1_0', ),
-                            executor='ssh',
+                    'test_job2':
+                    schema.ConfigJob(
+                        name='test_job2',
+                        namespace='test_namespace',
+                        node='node1',
+                        enabled=True,
+                        monitoring={},
+                        service=None,
+                        deploy_group=None,
+                        schedule=schedule_parse.ConfigDailyScheduler(
+                            days=set(),
+                            hour=16,
+                            minute=30,
+                            second=0,
+                            original="16:30:00 ",
+                            jitter=None,
                         ),
-                        'action1_0':
-                        schema.ConfigAction(
-                            name='action1_0',
-                            command='test_command1.0 %(some_var)s',
-                            executor='ssh',
-                            requires=(),
+                        actions=FrozenDict(
+                            {
+                                'action2_0':
+                                schema.ConfigAction(
+                                    name='action2_0',
+                                    command='test_command2.0',
+                                    executor='ssh',
+                                    requires=(),
+                                ),
+                            }
                         ),
-                    }),
-                    queueing=True,
-                    run_limit=50,
-                    all_nodes=False,
-                    cleanup_action=None,
-                    max_runtime=None,
-                    allow_overlap=True,
-                    time_zone=None,
-                ),
-                'test_job2':
-                schema.ConfigJob(
-                    name='test_job2',
-                    namespace='test_namespace',
-                    node='node1',
-                    enabled=True,
-                    monitoring={},
-                    service=None,
-                    deploy_group=None,
-                    schedule=schedule_parse.ConfigDailyScheduler(
-                        days=set(),
-                        hour=16,
-                        minute=30,
-                        second=0,
-                        original="16:30:00 ",
-                        jitter=None,
+                        queueing=True,
+                        run_limit=50,
+                        all_nodes=False,
+                        cleanup_action=None,
+                        max_runtime=None,
+                        allow_overlap=False,
+                        time_zone=None,
                     ),
-                    actions=FrozenDict({
-                        'action2_0':
-                        schema.ConfigAction(
-                            name='action2_0',
-                            command='test_command2.0',
-                            executor='ssh',
-                            requires=(),
+                    'test_job3':
+                    schema.ConfigJob(
+                        name='test_job3',
+                        namespace='test_namespace',
+                        node='node1',
+                        schedule=ConfigConstantScheduler(),
+                        enabled=True,
+                        monitoring={},
+                        service=None,
+                        deploy_group=None,
+                        actions=FrozenDict(
+                            {
+                                'action3_1':
+                                schema.ConfigAction(
+                                    name='action3_1',
+                                    command='test_command3.1',
+                                    executor='ssh',
+                                    requires=(),
+                                ),
+                                'action3_0':
+                                schema.ConfigAction(
+                                    name='action3_0',
+                                    command='test_command3.0',
+                                    executor='ssh',
+                                    requires=(),
+                                ),
+                                'action3_2':
+                                schema.ConfigAction(
+                                    name='action3_2',
+                                    command='test_command3.2',
+                                    requires=('action3_0', 'action3_1'),
+                                    node='node0',
+                                    executor='ssh',
+                                ),
+                            }
                         ),
-                    }),
-                    queueing=True,
-                    run_limit=50,
-                    all_nodes=False,
-                    cleanup_action=None,
-                    max_runtime=None,
-                    allow_overlap=False,
-                    time_zone=None,
-                ),
-                'test_job3':
-                schema.ConfigJob(
-                    name='test_job3',
-                    namespace='test_namespace',
-                    node='node1',
-                    schedule=ConfigConstantScheduler(),
-                    enabled=True,
-                    monitoring={},
-                    service=None,
-                    deploy_group=None,
-                    actions=FrozenDict({
-                        'action3_1':
-                        schema.ConfigAction(
-                            name='action3_1',
-                            command='test_command3.1',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                        'action3_0':
-                        schema.ConfigAction(
-                            name='action3_0',
-                            command='test_command3.0',
-                            executor='ssh',
-                            requires=(),
-                        ),
-                        'action3_2':
-                        schema.ConfigAction(
-                            name='action3_2',
-                            command='test_command3.2',
-                            requires=('action3_0', 'action3_1'),
-                            node='node0',
-                            executor='ssh',
-                        ),
-                    }),
-                    queueing=True,
-                    run_limit=50,
-                    all_nodes=False,
-                    cleanup_action=None,
-                    max_runtime=None,
-                    allow_overlap=False,
-                    time_zone=None,
-                ),
-                'test_job4':
-                schema.ConfigJob(
-                    name='test_job4',
-                    namespace='test_namespace',
-                    node='NodePool',
-                    monitoring={},
-                    service=None,
-                    deploy_group=None,
-                    schedule=schedule_parse.ConfigDailyScheduler(
-                        days=set(),
-                        hour=0,
-                        minute=0,
-                        second=0,
-                        original="00:00:00 ",
-                        jitter=None,
+                        queueing=True,
+                        run_limit=50,
+                        all_nodes=False,
+                        cleanup_action=None,
+                        max_runtime=None,
+                        allow_overlap=False,
+                        time_zone=None,
                     ),
-                    actions=FrozenDict({
-                        'action4_0':
-                        schema.ConfigAction(
-                            name='action4_0',
-                            command='test_command4.0',
-                            executor='ssh',
-                            requires=(),
+                    'test_job4':
+                    schema.ConfigJob(
+                        name='test_job4',
+                        namespace='test_namespace',
+                        node='NodePool',
+                        monitoring={},
+                        service=None,
+                        deploy_group=None,
+                        schedule=schedule_parse.ConfigDailyScheduler(
+                            days=set(),
+                            hour=0,
+                            minute=0,
+                            second=0,
+                            original="00:00:00 ",
+                            jitter=None,
                         ),
-                    }),
-                    queueing=True,
-                    run_limit=50,
-                    all_nodes=True,
-                    cleanup_action=None,
-                    enabled=False,
-                    max_runtime=None,
-                    allow_overlap=False,
-                    time_zone=None,
-                ),
-                'test_job_paasta':
-                schema.ConfigJob(
-                    name='test_job_paasta',
-                    namespace='test_namespace',
-                    node='NodePool',
-                    monitoring={},
-                    service='my_service',
-                    deploy_group='prod.non_canary',
-                    schedule=schedule_parse.ConfigDailyScheduler(
-                        days=set(),
-                        hour=0,
-                        minute=0,
-                        second=0,
-                        original='00:00:00 ',
-                        jitter=None,
+                        actions=FrozenDict(
+                            {
+                                'action4_0':
+                                schema.ConfigAction(
+                                    name='action4_0',
+                                    command='test_command4.0',
+                                    executor='ssh',
+                                    requires=(),
+                                ),
+                            }
+                        ),
+                        queueing=True,
+                        run_limit=50,
+                        all_nodes=True,
+                        cleanup_action=None,
+                        enabled=False,
+                        max_runtime=None,
+                        allow_overlap=False,
+                        time_zone=None,
                     ),
-                    actions=FrozenDict({
-                        'action4_0':
-                        schema.ConfigAction(
-                            name='action4_0',
-                            command='test_command4.0',
-                            executor='paasta',
-                            requires=(),
+                    'test_job_paasta':
+                    schema.ConfigJob(
+                        name='test_job_paasta',
+                        namespace='test_namespace',
+                        node='NodePool',
+                        monitoring={},
+                        service='my_service',
+                        deploy_group='prod.non_canary',
+                        schedule=schedule_parse.ConfigDailyScheduler(
+                            days=set(),
+                            hour=0,
+                            minute=0,
+                            second=0,
+                            original='00:00:00 ',
+                            jitter=None,
                         ),
-                    }),
-                    queueing=True,
-                    run_limit=50,
-                    all_nodes=False,
-                    cleanup_action=None,
-                    enabled=True,
-                    max_runtime=None,
-                    allow_overlap=False,
-                    time_zone=None,
-                ),
-            }), )
+                        actions=FrozenDict(
+                            {
+                                'action4_0':
+                                schema.ConfigAction(
+                                    name='action4_0',
+                                    command='test_command4.0',
+                                    executor='paasta',
+                                    requires=(),
+                                ),
+                            }
+                        ),
+                        queueing=True,
+                        run_limit=50,
+                        all_nodes=False,
+                        cleanup_action=None,
+                        enabled=True,
+                        max_runtime=None,
+                        allow_overlap=False,
+                        time_zone=None,
+                    ),
+                }
+            ),
+        )
 
         test_config = validate_fragment(
             'test_namespace',
@@ -896,8 +931,10 @@ jobs:
                 requires: [action0_0]
 
         """
-        expected_message = ('jobs.MASTER.test_job1.action1_0 has a dependency '
-                            '"action0_0" that is not in the same job!')
+        expected_message = (
+            'jobs.MASTER.test_job1.action1_0 has a dependency '
+            '"action0_0" that is not in the same job!'
+        )
         exception = assert_raises(
             ConfigError,
             valid_config_from_yaml,
@@ -1094,18 +1131,20 @@ jobs:
                 timedelta=datetime.timedelta(0, 20),
                 jitter=None,
             ),
-            actions=FrozenDict({
-                'action0_0':
-                schema.ConfigAction(
-                    name='action0_0',
-                    command='test_command0.0',
-                    executor='paasta',
-                    cluster='cluster-one',
-                    service='baz',
-                    deploy_group='prod',
-                    requires=(),
-                ),
-            }),
+            actions=FrozenDict(
+                {
+                    'action0_0':
+                    schema.ConfigAction(
+                        name='action0_0',
+                        command='test_command0.0',
+                        executor='paasta',
+                        cluster='cluster-one',
+                        service='baz',
+                        deploy_group='prod',
+                        requires=(),
+                    ),
+                }
+            ),
             queueing=True,
             run_limit=50,
             all_nodes=False,
@@ -1145,7 +1184,8 @@ jobs:
 class NodeConfigTestCase(TestCase):
     def test_validate_node_pool(self):
         config_node_pool = valid_node_pool(
-            dict(name="theName", nodes=["node1", "node2"]), )
+            dict(name="theName", nodes=["node1", "node2"]),
+        )
         assert_equal(config_node_pool.name, "theName")
         assert_equal(len(config_node_pool.nodes), 2)
 
@@ -1163,7 +1203,8 @@ class NodeConfigTestCase(TestCase):
         assert_in(expected_msg, str(exception))
 
     def test_invalid_node_name(self):
-        test_config = BASE_CONFIG + textwrap.dedent("""
+        test_config = BASE_CONFIG + textwrap.dedent(
+            """
             jobs:
                 -
                     name: "test_job0"
@@ -1173,7 +1214,8 @@ class NodeConfigTestCase(TestCase):
                         -
                             name: "action0_0"
                             command: "test_command0.0"
-            """)
+            """
+        )
         expected_msg = "Unknown node name some_unknown_node at config.jobs.Job.test_job0.node"
         exception = assert_raises(
             ConfigError,
@@ -1183,7 +1225,8 @@ class NodeConfigTestCase(TestCase):
         assert_equal(expected_msg, str(exception))
 
     def test_invalid_nested_node_pools(self):
-        test_config = textwrap.dedent("""
+        test_config = textwrap.dedent(
+            """
             nodes:
                 - name: node0
                   hostname: node0
@@ -1202,7 +1245,8 @@ class NodeConfigTestCase(TestCase):
                   actions:
                     - name: first
                       command: "echo 1"
-        """)
+        """
+        )
         expected_msg = "NodePool pool1 contains other NodePools: pool0"
         exception = assert_raises(
             ConfigError,
@@ -1212,7 +1256,8 @@ class NodeConfigTestCase(TestCase):
         assert_in(expected_msg, str(exception))
 
     def test_invalid_node_pool_config(self):
-        test_config = textwrap.dedent("""
+        test_config = textwrap.dedent(
+            """
             nodes:
                 - name: node0
                   hostname: node0
@@ -1229,7 +1274,8 @@ class NodeConfigTestCase(TestCase):
                   actions:
                     - name: first
                       command: "echo 1"
-        """)
+        """
+        )
         expected_msg = "NodePool pool0 is missing options"
         exception = assert_raises(
             ConfigError,
@@ -1253,7 +1299,8 @@ class NodeConfigTestCase(TestCase):
 
 class ValidateJobsTestCase(TestCase):
     def test_valid_jobs_success(self):
-        test_config = BASE_CONFIG + textwrap.dedent("""
+        test_config = BASE_CONFIG + textwrap.dedent(
+            """
             jobs:
                 -
                     name: "test_job0"
@@ -1265,7 +1312,8 @@ class ValidateJobsTestCase(TestCase):
                             command: "test_command0.0"
                     cleanup_action:
                         command: "test_command0.1"
-                    """)
+                    """
+        )
         expected_jobs = {
             'MASTER.test_job0':
             schema.ConfigJob(
@@ -1279,15 +1327,17 @@ class ValidateJobsTestCase(TestCase):
                     timedelta=datetime.timedelta(0, 20),
                     jitter=None,
                 ),
-                actions=FrozenDict({
-                    'action0_0':
-                    schema.ConfigAction(
-                        name='action0_0',
-                        command='test_command0.0',
-                        executor='ssh',
-                        requires=(),
-                    ),
-                }),
+                actions=FrozenDict(
+                    {
+                        'action0_0':
+                        schema.ConfigAction(
+                            name='action0_0',
+                            command='test_command0.0',
+                            executor='ssh',
+                            requires=(),
+                        ),
+                    }
+                ),
                 queueing=True,
                 run_limit=50,
                 all_nodes=False,
@@ -1408,10 +1458,12 @@ class BuildFormatStringValidatorTestCase(TestCase):
 
 class ValidateConfigMappingTestCase(TestCase):
 
-    config = BASE_CONFIG + textwrap.dedent("""
+    config = BASE_CONFIG + textwrap.dedent(
+        """
         command_context:
             some_var: "The string"
-        """)
+        """
+    )
 
     def test_validate_config_mapping_missing_master(self):
         config_mapping = {'other': mock.Mock()}
@@ -1434,10 +1486,12 @@ class ValidateConfigMappingTestCase(TestCase):
 
 class ConfigContainerTestCase(TestCase):
 
-    config = BASE_CONFIG + textwrap.dedent("""
+    config = BASE_CONFIG + textwrap.dedent(
+        """
         command_context:
             some_var: "The string"
-        """)
+        """
+    )
 
     @setup
     def setup_container(self):

@@ -119,10 +119,12 @@ def valid_daily_scheduler(config, config_context):
 
     def valid_day(day):
         if day not in CONVERT_DAYS_INT:
-            raise ConfigError("Unknown day %s at %s" % (
-                day,
-                config_context.path,
-            ))
+            raise ConfigError(
+                "Unknown day %s at %s" % (
+                    day,
+                    config_context.path,
+                )
+            )
         return CONVERT_DAYS_INT[day]
 
     original = "%s %s" % (time_string, days)
@@ -152,7 +154,8 @@ def valid_interval_scheduler(config, config_context):
         return build_config(TIME_INTERVAL_SHORTCUTS[interval_key])
 
     return build_config(
-        config_utils.valid_time_delta(config.value, config_context), )
+        config_utils.valid_time_delta(config.value, config_context),
+    )
 
 
 def normalize_weekdays(seq):
@@ -254,18 +257,20 @@ def build_groc_schedule_parser_re():
     # [at] 00:00
     TIME_EXPR = r'((at\s+)?(?P<time>\d\d:\d\d))?'
 
-    DAILY_SCHEDULE_EXPR = ''.join([
-        r'^',
-        MONTH_DAYS_EXPR,
-        r'\s*',
-        DAYS_EXPR,
-        r'\s*',
-        MONTHS_EXPR,
-        r'\s*',
-        TIME_EXPR,
-        r'\s*',
-        r'$',
-    ])
+    DAILY_SCHEDULE_EXPR = ''.join(
+        [
+            r'^',
+            MONTH_DAYS_EXPR,
+            r'\s*',
+            DAYS_EXPR,
+            r'\s*',
+            MONTHS_EXPR,
+            r'\s*',
+            TIME_EXPR,
+            r'\s*',
+            r'$',
+        ]
+    )
     return re.compile(DAILY_SCHEDULE_EXPR)
 
 
@@ -330,7 +335,8 @@ def valid_cron_scheduler(config, config_context):
     try:
         crontab_kwargs = crontab.parse_crontab(config.value)
         return ConfigCronScheduler(
-            original=config.value, jitter=config.jitter, **crontab_kwargs)
+            original=config.value, jitter=config.jitter, **crontab_kwargs
+        )
     except ValueError as e:
         msg = "Invalid cron scheduler %s: %s"
         raise ConfigError(msg % (config_context.path, e))

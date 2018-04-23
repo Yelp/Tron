@@ -59,7 +59,8 @@ class ActionGraphTestCase(TestCase):
 
     def test_actions_for_names(self):
         actions = list(
-            self.action_graph.actions_for_names(['base_one', 'dep_multi']), )
+            self.action_graph.actions_for_names(['base_one', 'dep_multi']),
+        )
         expected_actions = [
             self.action_map['base_one'],
             self.action_map['dep_multi'],

@@ -61,7 +61,8 @@ class PIDFile(object):
                 % (
                     self.filename,
                     pid,
-                ), )
+                ),
+            )
 
     def is_process_running(self, pid):
         """Return True if the process is still running."""

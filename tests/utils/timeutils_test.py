@@ -27,12 +27,14 @@ class ToTimestampTestCase(TestCase):
             pacific_tz.localize(
                 datetime.datetime(2017, 11, 5, 1, 23),
                 is_dst=True,
-            ), )
+            ),
+        )
         after_fall_back = timeutils.to_timestamp(
             pacific_tz.localize(
                 datetime.datetime(2017, 11, 5, 1, 23),
                 is_dst=False,
-            ), )
+            ),
+        )
         assert_equal(after_fall_back - before_fall_back, 60 * 60)
 
 
@@ -156,9 +158,11 @@ class TimeDeltaTestCase(TestCase):
     def test_start_date_with_timezone(self):
         pacific_tz = pytz.timezone("US/Pacific")
         start_date = pacific_tz.localize(
-            datetime.datetime(year=2018, month=1, day=3, hour=13), )
+            datetime.datetime(year=2018, month=1, day=3, hour=13),
+        )
         expected_end = pacific_tz.localize(
-            datetime.datetime(year=2018, month=1, day=1, hour=13), )
+            datetime.datetime(year=2018, month=1, day=1, hour=13),
+        )
         self.check_delta(
             start_date,
             expected_end,

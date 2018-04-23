@@ -212,7 +212,8 @@ class StateChangeWatcherTestCase(TestCase):
 
     def test_save_metadata(self):
         patcher = mock.patch(
-            'tron.serialize.runstate.statemanager.StateMetadata', )
+            'tron.serialize.runstate.statemanager.StateMetadata',
+        )
         with patcher as mock_state_metadata:
             self.watcher.save_metadata()
             meta_data = mock_state_metadata.return_value

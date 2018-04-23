@@ -141,10 +141,10 @@ class DetermineJitterTestCase(TestCase):
 
 
 def build_node(
-        hostname='localhost',
-        username='theuser',
-        name='thename',
-        pub_key=None,
+    hostname='localhost',
+    username='theuser',
+    name='thename',
+    pub_key=None,
 ):
     config = mock.Mock(hostname=hostname, username=username, name=name)
     ssh_opts = mock.create_autospec(ssh.SSHAuthOptions)

@@ -78,24 +78,24 @@ class Job(Observable, Observer):
 
     # TODO: use config object
     def __init__(
-            self,
-            name,
-            scheduler,
-            queueing=True,
-            all_nodes=False,
-            monitoring=None,
-            node_pool=None,
-            enabled=True,
-            action_graph=None,
-            run_collection=None,
-            parent_context=None,
-            output_path=None,
-            allow_overlap=None,
-            action_runner=None,
-            max_runtime=None,
-            time_zone=None,
-            service=None,
-            deploy_group=None,
+        self,
+        name,
+        scheduler,
+        queueing=True,
+        all_nodes=False,
+        monitoring=None,
+        node_pool=None,
+        enabled=True,
+        action_graph=None,
+        run_collection=None,
+        parent_context=None,
+        output_path=None,
+        allow_overlap=None,
+        action_runner=None,
+        max_runtime=None,
+        time_zone=None,
+        service=None,
+        deploy_group=None,
     ):
         super(Job, self).__init__()
         self.name = maybe_decode(name)
@@ -121,12 +121,12 @@ class Job(Observable, Observer):
 
     @classmethod
     def from_config(
-            cls,
-            job_config,
-            scheduler,
-            parent_context,
-            output_path,
-            action_runner,
+        cls,
+        job_config,
+        scheduler,
+        parent_context,
+        output_path,
+        action_runner,
     ):
         """Factory method to create a new Job instance from configuration."""
         action_graph = actiongraph.ActionGraph.from_config(
@@ -251,7 +251,8 @@ class Job(Observable, Observer):
     def __eq__(self, other):
         return all(
             getattr(other, attr, None) == getattr(self, attr, None)
-            for attr in self.equality_attributes)
+            for attr in self.equality_attributes
+        )
 
     def __ne__(self, other):
         return not self == other
@@ -355,10 +356,12 @@ class JobScheduler(Observer):
         # also possible this job was run (or is running) manually by a user.
         # Alternatively, if run_queued is True, this job_run is already queued.
         if not run_queued and not job_run.is_scheduled:
-            log.info("%s in state %s already out of scheduled state." % (
-                job_run,
-                job_run.state,
-            ))
+            log.info(
+                "%s in state %s already out of scheduled state." % (
+                    job_run,
+                    job_run.state,
+                )
+            )
             return self.schedule()
 
         node = job_run.node if self.job.all_nodes else None

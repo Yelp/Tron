@@ -136,7 +136,8 @@ class ClientTestCase(TestCase):
     def test_config_get_default(self):
         self.client.config('config_name')
         self.client.request.assert_called_with(
-            '/api/config?name=config_name&no_header=0', )
+            '/api/config?name=config_name&no_header=0',
+        )
 
     def test_http_get(self):
         self.client.http_get('/api/jobs', {'include': 1})
@@ -151,12 +152,14 @@ class ClientTestCase(TestCase):
     def test_job_runs(self):
         self.client.job_runs('/api/jobs/name/0')
         self.client.request.assert_called_with(
-            '/api/jobs/name/0?include_action_graph=0&include_action_runs=1', )
+            '/api/jobs/name/0?include_action_graph=0&include_action_runs=1',
+        )
 
     def test_job(self):
         self.client.job('/api/jobs/name', count=20)
         self.client.request.assert_called_with(
-            '/api/jobs/name?include_action_runs=0&num_runs=20', )
+            '/api/jobs/name?include_action_runs=0&num_runs=20',
+        )
 
     def test_jobs(self):
         self.client.jobs()

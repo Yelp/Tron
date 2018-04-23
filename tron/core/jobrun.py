@@ -41,18 +41,18 @@ class JobRun(Observable, Observer):
 
     # TODO: use config object
     def __init__(
-            self,
-            job_name,
-            run_num,
-            run_time,
-            node,
-            output_path=None,
-            base_context=None,
-            action_runs=None,
-            action_graph=None,
-            manual=None,
-            service=None,
-            deploy_group=None,
+        self,
+        job_name,
+        run_num,
+        run_time,
+        node,
+        output_path=None,
+        base_context=None,
+        action_runs=None,
+        action_graph=None,
+        manual=None,
+        service=None,
+        deploy_group=None,
     ):
         super(JobRun, self).__init__()
         self.job_name = maybe_decode(job_name)
@@ -104,12 +104,12 @@ class JobRun(Observable, Observer):
 
     @classmethod
     def from_state(
-            cls,
-            state_data,
-            action_graph,
-            output_path,
-            context,
-            run_node,
+        cls,
+        state_data,
+        action_graph,
+        output_path,
+        context,
+        run_node,
     ):
         """Restore a JobRun from a serialized state."""
         pool_repo = node.NodePoolRepository.get_instance()
@@ -355,12 +355,12 @@ class JobRunCollection(object):
         return cls(job_config.run_limit)
 
     def restore_state(
-            self,
-            state_data,
-            action_graph,
-            output_path,
-            context,
-            node_pool,
+        self,
+        state_data,
+        action_graph,
+        output_path,
+        context,
+        node_pool,
     ):
         """Apply state to all jobs from the state dict."""
         if self.runs:
@@ -384,12 +384,14 @@ class JobRunCollection(object):
         and return it.
         """
         run_num = self.next_run_num()
-        log.info("Building JobRun %s for %s on %s at %s" % (
-            run_num,
-            job,
-            node,
-            run_time,
-        ))
+        log.info(
+            "Building JobRun %s for %s on %s at %s" % (
+                run_num,
+                job,
+                node,
+                run_time,
+            )
+        )
 
         run = JobRun.for_job(job, run_num, run_time, node, manual)
         self.runs.appendleft(run)

@@ -237,11 +237,11 @@ class JobCollectionResource(resource.Resource):
         return resource_from_collection(self.job_collection, name, JobResource)
 
     def get_data(
-            self,
-            include_job_run=False,
-            include_action_runs=False,
-            include_action_graph=True,
-            include_node_pool=True,
+        self,
+        include_job_run=False,
+        include_action_runs=False,
+        include_action_graph=True,
+        include_node_pool=True,
     ):
         return adapter.adapt_many(
             adapter.JobAdapter,
@@ -287,7 +287,8 @@ class JobCollectionResource(resource.Resource):
                 include_action_runs,
                 include_action_graph,
                 include_node_pool,
-            ), )
+            ),
+        )
         return respond(request, output)
 
     def render_POST(self, request):

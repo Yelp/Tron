@@ -17,11 +17,11 @@ class CheckJobsTestCase(TestCase):
     @patch('check_tron_jobs.cmd_utils')
     @patch('check_tron_jobs.parse_cli')
     def test_check_job_result_exception(
-            self,
-            mock_args,
-            mock_cmd_utils,
-            mock_client,
-            mock_check_job_result,
+        self,
+        mock_args,
+        mock_cmd_utils,
+        mock_client,
+        mock_check_job_result,
     ):
         type(mock_args.return_value).job = PropertyMock(return_value=None)
         mock_client.return_value.jobs.return_value = [

@@ -73,9 +73,9 @@ def get_status_file(output_path):
 def run_proc(output_path, command, run_id, proc):
     status_file = get_status_file(output_path)
     with status_file.wrap(
-            command=command,
-            run_id=run_id,
-            proc=proc,
+        command=command,
+        run_id=run_id,
+        proc=proc,
     ):
         proc.wait()
     sys.exit(proc.returncode)

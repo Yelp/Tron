@@ -23,8 +23,8 @@ class UniqueCallTestCase(TestCase):
     def test_start(self):
         self.callback.delayed_call.active.return_value = False
         with mock.patch(
-                'tron.eventloop.call_later',
-                autospec=True,
+            'tron.eventloop.call_later',
+            autospec=True,
         ) as mock_call_later:
             self.callback.start()
             mock_call_later.assert_called_with(
@@ -39,8 +39,8 @@ class UniqueCallTestCase(TestCase):
     def test_start_already_actice(self):
         self.callback.delayed_call.active.return_value = True
         with mock.patch(
-                'tron.eventloop.call_later',
-                autospec=True,
+            'tron.eventloop.call_later',
+            autospec=True,
         ) as mock_call_later:
             self.callback.start()
             assert not mock_call_later.call_count

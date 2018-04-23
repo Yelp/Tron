@@ -110,7 +110,8 @@ def delete_config(client, config_name):
 
     response = input(
         "This will delete the configuration for the %s namespace. Proceed? (y/n): "
-        % config_name, )
+        % config_name,
+    )
     if response[:1].lower() != 'y':
         return
 
@@ -195,11 +196,11 @@ if __name__ == '__main__':
             sys.exit(1)
 
         if upload_config(
-                client,
-                namespace,
-                content,
-                config_hash,
-                check=args.check,
+            client,
+            namespace,
+            content,
+            config_hash,
+            check=args.check,
         ):
             sys.exit(0)
 

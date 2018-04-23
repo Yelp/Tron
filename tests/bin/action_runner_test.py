@@ -85,7 +85,8 @@ class RegisterTestCase(TestCase):
             self.proc,
         )
         self.mock_status_file.assert_called_with(
-            self.output_path + '/' + action_runner.STATUS_FILE, )
+            self.output_path + '/' + action_runner.STATUS_FILE,
+        )
         self.mock_status_file.return_value.wrap.assert_called_with(
             command=self.command,
             run_id=self.run_id,

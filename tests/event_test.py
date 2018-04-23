@@ -31,7 +31,8 @@ class EventStoreTestCase(TestCase):
                 self._build_event(
                     event.LEVEL_INFO,
                     "test%s" % i,
-                ), )
+                ),
+            )
 
         for i in range(5, 10):
             e = self._build_event(event.LEVEL_CRITICAL, "test%s" % i)

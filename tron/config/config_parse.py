@@ -87,7 +87,8 @@ def valid_output_stream_dir(output_dir, config_context):
 
     if not os.access(output_dir, os.W_OK):
         raise ConfigError(
-            "output_stream_dir '%s' is not writable" % output_dir, )
+            "output_stream_dir '%s' is not writable" % output_dir,
+        )
 
     return output_dir
 
@@ -392,12 +393,12 @@ class ValidateJob(Validator):
 
     # TODO: extract common code to a util function
     def _validate_dependencies(
-            self,
-            job,
-            actions,
-            base_action,
-            current_action=None,
-            stack=None,
+        self,
+        job,
+        actions,
+        base_action,
+        current_action=None,
+        stack=None,
     ):
         """Check for circular or misspelled dependencies."""
         stack = stack or []
@@ -409,9 +410,11 @@ class ValidateJob(Validator):
                 msg = 'Circular dependency in job.%s: %s'
                 raise ConfigError(msg % (job['name'], ' -> '.join(stack)))
             if dep not in actions:
-                raise ConfigError('Action jobs.%s.%s has a dependency "%s"'
-                                  ' that is not in the same job!' %
-                                  (job['name'], current_action.name, dep), )
+                raise ConfigError(
+                    'Action jobs.%s.%s has a dependency "%s"'
+                    ' that is not in the same job!' %
+                    (job['name'], current_action.name, dep),
+                )
             self._validate_dependencies(
                 job,
                 actions,
@@ -427,8 +430,10 @@ class ValidateJob(Validator):
         incomplete_paasta_actions = []
 
         def is_incomplete_paasta_action(action):
-            return (action.executor == schema.ExecutorTypes.paasta and
-                    (action.service is None or action.deploy_group is None))
+            return (
+                action.executor == schema.ExecutorTypes.paasta
+                and (action.service is None or action.deploy_group is None)
+            )
 
         for _, action in six.iteritems(job['actions']):
             self._validate_dependencies(job, job['actions'], action)
@@ -439,14 +444,16 @@ class ValidateJob(Validator):
         if cleanup_action and is_incomplete_paasta_action(cleanup_action):
             incomplete_paasta_actions.append(action)
 
-        if incomplete_paasta_actions and not (job.get('service')
-                                              and job.get('deploy_group')):
+        if incomplete_paasta_actions and not (
+            job.get('service') and job.get('deploy_group')
+        ):
             raise ConfigError(
                 'Either job {name} or PaaSTA actions {actions} need a service '
                 'and deploy_group.'.format(
                     name=job['name'],
                     actions=incomplete_paasta_actions,
-                ), )
+                ),
+            )
 
 
 valid_job = ValidateJob()
@@ -665,7 +672,9 @@ class ConfigContainer(object):
         return dict(
             itertools.chain.from_iterable(
                 six.iteritems(config.jobs)
-                for _, config in self.configs.items()), )
+                for _, config in self.configs.items()
+            ),
+        )
 
     def get_master(self):
         return self.configs[MASTER_NAMESPACE]

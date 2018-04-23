@@ -133,19 +133,19 @@ class GeneralScheduler(object):
     schedule_on_complete = False
 
     def __init__(
-            self,
-            ordinals=None,
-            weekdays=None,
-            months=None,
-            monthdays=None,
-            timestr=None,
-            minutes=None,
-            hours=None,
-            seconds=None,
-            time_zone=None,
-            name=None,
-            original=None,
-            jitter=None,
+        self,
+        ordinals=None,
+        weekdays=None,
+        months=None,
+        monthdays=None,
+        timestr=None,
+        minutes=None,
+        hours=None,
+        seconds=None,
+        time_zone=None,
+        name=None,
+        original=None,
+        jitter=None,
     ):
         """Parameters:
           timestr     - the time of day to run, as 'HH:MM'
@@ -182,7 +182,8 @@ class GeneralScheduler(object):
             start_time = timeutils.current_time(tz=self.time_zone)
         elif self.time_zone:
             if start_time.tzinfo is None or start_time.tzinfo.utcoffset(
-                    start_time, ) is None:
+                start_time,
+            ) is None:
                 # tz-naive start times need to be localized first to the requested
                 # time zone.
                 try:
@@ -256,8 +257,10 @@ class IntervalScheduler(object):
         )
 
     def __eq__(self, other):
-        return (isinstance(other, IntervalScheduler)
-                and self.interval == other.interval)
+        return (
+            isinstance(other, IntervalScheduler)
+            and self.interval == other.interval
+        )
 
     def __ne__(self, other):
         return not self == other

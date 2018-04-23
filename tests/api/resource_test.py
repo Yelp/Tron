@@ -45,8 +45,8 @@ class WWWTestCase(TestCase):
     @setup_teardown
     def mock_respond(self):
         with mock.patch(
-                'tron.api.resource.respond',
-                autospec=True,
+            'tron.api.resource.respond',
+            autospec=True,
         ) as self.respond:
             self.respond.side_effect = lambda _req, output, code=None: output
             yield
@@ -60,8 +60,8 @@ class HandleCommandTestCase(TestCase):
     @setup_teardown
     def mock_respond(self):
         with mock.patch(
-                'tron.api.resource.respond',
-                autospec=True,
+            'tron.api.resource.respond',
+            autospec=True,
         ) as self.respond:
             yield
 
@@ -302,10 +302,11 @@ class ConfigResourceTestCase(TestCase):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
         self.resource = www.ConfigResource(self.mcp)
         self.controller = self.resource.controller = mock.create_autospec(
-            controller.ConfigController, )
+            controller.ConfigController,
+        )
         with mock.patch(
-                'tron.api.resource.respond',
-                autospec=True,
+            'tron.api.resource.respond',
+            autospec=True,
         ) as self.respond:
             yield
 

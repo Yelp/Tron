@@ -114,12 +114,12 @@ class ActionRunAdapter(RunAdapter):
     ]
 
     def __init__(
-            self,
-            action_run,
-            job_run=None,
-            max_lines=10,
-            include_stdout=False,
-            include_stderr=False,
+        self,
+        action_run,
+        job_run=None,
+        max_lines=10,
+        include_stdout=False,
+        include_stderr=False,
     ):
         super(ActionRunAdapter, self).__init__(action_run)
         self.job_run = job_run
@@ -181,7 +181,8 @@ class ActionRunGraphAdapter(object):
     def get_repr(self):
         def build(action_run):
             deps = self.action_runs.action_graph.get_dependent_actions(
-                action_run.action_name, )
+                action_run.action_name,
+            )
             return {
                 'id': action_run.id,
                 'name': action_run.action_name,
@@ -217,10 +218,10 @@ class JobRunAdapter(RunAdapter):
     ]
 
     def __init__(
-            self,
-            job_run,
-            include_action_runs=False,
-            include_action_graph=False,
+        self,
+        job_run,
+        include_action_runs=False,
+        include_action_graph=False,
     ):
         super(JobRunAdapter, self).__init__(job_run)
         self.include_action_runs = include_action_runs
@@ -256,13 +257,13 @@ class JobAdapter(ReprAdapter):
     ]
 
     def __init__(
-            self,
-            job,
-            include_job_runs=False,
-            include_action_runs=False,
-            include_action_graph=True,
-            include_node_pool=True,
-            num_runs=None,
+        self,
+        job,
+        include_job_runs=False,
+        include_action_runs=False,
+        include_action_graph=True,
+        include_node_pool=True,
+        num_runs=None,
     ):
         super(JobAdapter, self).__init__(job)
         self.include_job_runs = include_job_runs

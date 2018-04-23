@@ -98,7 +98,8 @@ class JobRunControllerTestCase(TestCase):
     def test_handle_command_restart(self):
         self.controller.handle_command('restart')
         self.job_scheduler.manual_start.assert_called_with(
-            self.job_run.run_time, )
+            self.job_run.run_time,
+        )
 
     def test_handle_mapped_command(self):
         result = self.controller.handle_command('start')
@@ -143,7 +144,8 @@ class ConfigControllerTestCase(TestCase):
     def test_render_template(self):
         config_content = "asdf asdf"
         container = self.manager.load.return_value = mock.create_autospec(
-            config_parse.ConfigContainer, )
+            config_parse.ConfigContainer,
+        )
         container.get_node_names.return_value = ['one', 'two', 'three']
         container.get_master.return_value.command_context = {'zing': 'stars'}
         content = self.controller.render_template(config_content)
@@ -196,7 +198,8 @@ class ConfigControllerTestCase(TestCase):
         resp = self.controller.read_config(name)
         self.controller._get_config_content.assert_called_with(name)
         self.controller.render_template.assert_called_with(
-            self.controller._get_config_content.return_value, )
+            self.controller._get_config_content.return_value,
+        )
         assert_equal(
             resp['config'],
             self.controller.render_template.return_value,

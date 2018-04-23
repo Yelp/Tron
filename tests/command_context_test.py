@@ -39,7 +39,8 @@ class BuildFilledContextTestCase(TestCase):
 
     def test_build_filled_context_single(self):
         output = command_context.build_filled_context(
-            command_context.JobContext, )
+            command_context.JobContext,
+        )
         assert isinstance(output.base, command_context.JobContext)
         assert not output.next
 
@@ -86,7 +87,8 @@ class ChainedDictContextTestCase(SimpleContextTestCaseBase):
     @setup
     def build_context(self):
         self.next_context = command_context.CommandContext(
-            dict(foo='bar', next_foo='next_bar'), )
+            dict(foo='bar', next_foo='next_bar'),
+        )
         self.context = command_context.CommandContext(
             dict(),
             self.next_context,
@@ -100,7 +102,8 @@ class ChainedDictOverrideContextTestCase(SimpleContextTestCaseBase):
     @setup
     def build_context(self):
         self.next_context = command_context.CommandContext(
-            dict(foo='your mom', next_foo='next_bar'), )
+            dict(foo='your mom', next_foo='next_bar'),
+        )
         self.context = command_context.CommandContext(
             dict(foo='bar'),
             self.next_context,
@@ -120,7 +123,8 @@ class ChainedObjectOverrideContextTestCase(SimpleContextTestCaseBase):
         obj.foo = 'bar'
 
         self.next_context = command_context.CommandContext(
-            dict(foo='your mom', next_foo='next_bar'), )
+            dict(foo='your mom', next_foo='next_bar'),
+        )
         self.context = command_context.CommandContext(obj, self.next_context)
 
     def test_chain_get(self):
@@ -148,8 +152,8 @@ class JobContextTestCase(TestCase):
 
     def test__getitem__last_success(self):
         item = self.context["last_success:day-1"]
-        expected = (
-            self.last_success.run_time - datetime.timedelta(days=1)).day
+        expected = (self.last_success.run_time -
+                    datetime.timedelta(days=1)).day
         assert_equal(item, str(expected))
 
         item = self.context["last_success:shortdate"]

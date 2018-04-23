@@ -45,8 +45,10 @@ class SSHAuthOptions(object):
         return not self.use_agent
 
     def __eq__(self, other):
-        return other and (self.use_agent == other.use_agent
-                          and self.identitys == other.identitys)
+        return other and (
+            self.use_agent == other.use_agent
+            and self.identitys == other.identitys
+        )
 
     def __ne__(self, other):
         return not self == other
@@ -229,10 +231,14 @@ class ExecChannel(channel.SSHChannel):
         return "".join(self.data)
 
     def closed(self):
-        if (self.exit_status is None and self.running and self.exit_defer
-                and not self.exit_defer.called):
-            log.warning("Channel has been closed without receiving an exit"
-                        " status", )
+        if (
+            self.exit_status is None and self.running and self.exit_defer
+            and not self.exit_defer.called
+        ):
+            log.warning(
+                "Channel has been closed without receiving an exit"
+                " status",
+            )
             f = failure.Failure(exc_value=ChannelClosedEarlyError())
             self.exit_defer.errback(f)
 

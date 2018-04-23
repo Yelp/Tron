@@ -296,7 +296,8 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
 
     def test_parse_no_weekday(self):
         cfg = parse_groc(
-            '1st,2nd,3rd,10th day of march,apr,September at 00:00', )
+            '1st,2nd,3rd,10th day of march,apr,September at 00:00',
+        )
         assert_equal(cfg.ordinals, None)
         assert_equal(cfg.monthdays, {1, 2, 3, 10})
         assert_equal(cfg.weekdays, None)
@@ -394,8 +395,9 @@ class IntervalSchedulerTestCase(TestCase):
 
     @setup_teardown
     def patch_time(self):
-        with mock.patch('tron.scheduler.timeutils.current_time',
-                        ) as self.mock_now:
+        with mock.patch(
+            'tron.scheduler.timeutils.current_time',
+        ) as self.mock_now:
             self.mock_now.return_value = self.now
             yield
 

@@ -56,17 +56,18 @@ def compute_check_result_for_job_runs(client, job, job_content):
     kwargs = {}
     if job_content is None:
         kwargs["output"] = "OK: {} was just added and hasn't run yet.".format(
-            job['name'], )
+            job['name'],
+        )
         kwargs["status"] = 0
         return kwargs
 
     relevant_job_run, last_state = get_relevant_run_and_state(job_content)
     if relevant_job_run is None:
-        kwargs[
-            "output"] = "CRIT: {} hasn't had a successful run yet.\n{}".format(
-                job['name'],
-                pretty_print_job(job_content),
-            )
+        kwargs["output"
+               ] = "CRIT: {} hasn't had a successful run yet.\n{}".format(
+                   job['name'],
+                   pretty_print_job(job_content),
+               )
         kwargs["status"] = 2
         return kwargs
 
@@ -106,22 +107,24 @@ def compute_check_result_for_job_runs(client, job, job_content):
         prefix = "UNKNOWN: The job is in a state that check_tron_jobs doesn't understand"
         status = 3
 
-    kwargs["output"] = ("{}\n"
-                        "{}'s last relevant run (run {}) {}.\n\n"
-                        "Here is the last action:"
-                        "{}\n\n"
-                        "And the job run view:\n"
-                        "{}\n\n"
-                        "Here is the whole job view for context:\n"
-                        "{}").format(
-                            prefix,
-                            job['name'],
-                            relevant_job_run['id'],
-                            relevant_job_run['state'],
-                            pretty_print_actions(action_run_details),
-                            pretty_print_job_run(relevant_job_run),
-                            pretty_print_job(job_content),
-                        )
+    kwargs["output"] = (
+        "{}\n"
+        "{}'s last relevant run (run {}) {}.\n\n"
+        "Here is the last action:"
+        "{}\n\n"
+        "And the job run view:\n"
+        "{}\n\n"
+        "Here is the whole job view for context:\n"
+        "{}"
+    ).format(
+        prefix,
+        job['name'],
+        relevant_job_run['id'],
+        relevant_job_run['state'],
+        pretty_print_actions(action_run_details),
+        pretty_print_job_run(relevant_job_run),
+        pretty_print_job(job_content),
+    )
     kwargs["status"] = status
     return kwargs
 
@@ -176,9 +179,9 @@ def is_job_scheduled(job_runs):
 def is_job_stuck(job_runs):
     next_run_time = None
     for run in sorted(
-            job_runs['runs'],
-            key=lambda k: k['run_time'],
-            reverse=True,
+        job_runs['runs'],
+        key=lambda k: k['run_time'],
+        reverse=True,
     ):
         if run.get('state', 'unknown') == "running":
             if next_run_time:
@@ -216,8 +219,10 @@ def guess_realert_every(job):
             job_runs_started,
             key=lambda k: k['start_time'],
         ).get('start_time')
-        time_diff = (time.mktime(_timestamp_to_timeobj(job_next_run)) -
-                     time.mktime(_timestamp_to_timeobj(job_previous_run)))
+        time_diff = (
+            time.mktime(_timestamp_to_timeobj(job_next_run)) -
+            time.mktime(_timestamp_to_timeobj(job_previous_run))
+        )
         realert_every = max(int(time_diff / RUN_INTERVAL), 1)
     except Exception as e:
         log.warning("guess_realert_every failed: {}".format(e))
@@ -237,7 +242,8 @@ def compute_check_result_for_job(client, job):
     status = job["status"]
     if status == "disabled":
         kwargs["output"] = "OK: {} is disabled and won't be checked.".format(
-            job['name'], )
+            job['name'],
+        )
         kwargs["status"] = 0
         log.info(kwargs["output"])
         return kwargs
@@ -262,8 +268,11 @@ def compute_check_result_for_job(client, job):
 
 def check_job(job, client):
     if job.get('monitoring', {}) == {}:
-        log.debug("Not checking {}, no monitoring metadata setup.".format(
-            job['name'], ))
+        log.debug(
+            "Not checking {}, no monitoring metadata setup.".format(
+                job['name'],
+            )
+        )
         return
     if job.get('monitoring').get('team', None) is None:
         log.debug("Not checking {}, no team specified".format(job['name']))
@@ -283,7 +292,8 @@ def check_job_result(job, client, dry_run):
         log.debug("Sending event: {}".format(result))
         if 'runbook' not in result:
             result[
-                'runbook'] = "No runbook specified. Please specify a runbook in the monitoring section of the job definition."
+                'runbook'
+            ] = "No runbook specified. Please specify a runbook in the monitoring section of the job definition."
         send_event(**result)
 
 
@@ -300,10 +310,12 @@ def main():
             try:
                 check_job_result(job=job, client=client, dry_run=args.dry_run)
             except Exception as e:
-                log.warning("check job result fails for job {}: {}".format(
-                    job.get('name', ''),
-                    e,
-                ))
+                log.warning(
+                    "check job result fails for job {}: {}".format(
+                        job.get('name', ''),
+                        e,
+                    )
+                )
                 error_code = 1
     else:
         job_url = client.get_url(args.job)

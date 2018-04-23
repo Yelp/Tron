@@ -18,6 +18,6 @@
             name: yapf
             entry: yapf
             language: python
-            args: ["-i"]
+            args: ["-i", "-p"]
             exclude: ^docs/conf.py$
             types: [python]

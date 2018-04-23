@@ -138,16 +138,16 @@ class TimeSpecification(object):
     """
 
     def __init__(
-            self,
-            ordinals=None,
-            weekdays=None,
-            months=None,
-            monthdays=None,
-            timestr=None,
-            timezone=None,
-            minutes=None,
-            hours=None,
-            seconds=None,
+        self,
+        ordinals=None,
+        weekdays=None,
+        months=None,
+        monthdays=None,
+        timestr=None,
+        timezone=None,
+        minutes=None,
+        hours=None,
+        seconds=None,
     ):
 
         if weekdays and monthdays:
@@ -289,7 +289,8 @@ class TimeSpecification(object):
             except NonExistentTimeError:
                 try:
                     out = self.timezone.localize(
-                        out + datetime.timedelta(minutes=60), )
+                        out + datetime.timedelta(minutes=60),
+                    )
                 except NonExistentTimeError:
                     return None
         return to_timezone(out, tzinfo)
@@ -307,7 +308,8 @@ class TimeSpecification(object):
         ]
         return all(
             getattr(other, attr, None) == getattr(self, attr, None)
-            for attr in attrs)
+            for attr in attrs
+        )
 
     def __ne__(self, other):
         return not self == other

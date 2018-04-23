@@ -162,13 +162,13 @@ class ValidIntervalSchedulerTestCase(TestCase):
 
     def test_valid_interval_scheduler_hours(self):
         for spec in [
-                '6h',
-                '6 hours',
-                '6 h',
-                '6 hrs',
-                '6 hour',
-                '6 hours',
-                '6hour',
+            '6h',
+            '6 hours',
+            '6 h',
+            '6 hrs',
+            '6 hour',
+            '6 hours',
+            '6hour',
         ]:
             config = self.validate(spec)
             expected = datetime.timedelta(hours=6)

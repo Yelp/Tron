@@ -95,8 +95,9 @@ class FieldParser(object):
 
         min_bound, max_bound = self.bounds
         diff = (max_bound - min_value) + (max_value - min_bound)
-        return [(min_value + i) % max_bound
-                for i in list(range(0, diff, step))]
+        return [
+            (min_value + i) % max_bound for i in list(range(0, diff, step))
+        ]
 
     def validate_bounds(self, value):
         min_value, max_value = self.bounds

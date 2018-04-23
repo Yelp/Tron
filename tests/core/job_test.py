@@ -36,7 +36,8 @@ class JobTestCase(TestCase):
         run_collection = Turtle()
         self.nodes = mock.create_autospec(node.NodePool)
         self.action_runner = mock.create_autospec(
-            actioncommand.SubprocessActionRunnerFactory, )
+            actioncommand.SubprocessActionRunnerFactory,
+        )
 
         patcher = mock.patch('tron.core.job.node.NodePoolRepository')
         with patcher as self.mock_node_repo:
@@ -93,7 +94,8 @@ class JobTestCase(TestCase):
         assert_equal(new_job.scheduler, scheduler)
         assert_equal(new_job.context.next, parent_context)
         self.mock_node_repo.get_instance().get_by_name.assert_called_with(
-            job_config.node, )
+            job_config.node,
+        )
         assert_equal(new_job.enabled, True)
         assert_equal(new_job.get_monitoring()["team"], "foo")
         assert_equal(new_job.get_service(), 'foo')
@@ -252,7 +254,8 @@ class JobSchedulerTestCase(TestCase):
 
     def test_restore_job_state(self):
         run_collection = mocks.MockJobRunCollection(
-            get_scheduled=lambda: ['a'], )
+            get_scheduled=lambda: ['a'],
+        )
         self.job_scheduler.job = Turtle(runs=run_collection)
         self.job_scheduler._set_callback = Turtle()
         state_data = 'state_data_token'
@@ -271,7 +274,8 @@ class JobSchedulerTestCase(TestCase):
         self.job_scheduler.schedule_reconfigured()
         assert_length(self.job.runs.remove_pending.calls, 1)
         self.job_scheduler.create_and_schedule_runs.assert_called_with(
-            ignore_last_run_time=True, )
+            ignore_last_run_time=True,
+        )
 
     def test_run_job(self):
         self.job_scheduler.schedule = Turtle()
@@ -380,7 +384,8 @@ class JobSchedulerGetRunsToScheduleTestCase(TestCase):
 
         self.job.runs.get_newest.assert_called_with(include_manual=False)
         self.job.scheduler.next_run_time.assert_called_once_with(
-            self.job.runs.get_newest.return_value.run_time, )
+            self.job.runs.get_newest.return_value.run_time,
+        )
         assert_length(job_runs, 1)
         # This should return a JobRun which has the job attached as an observer
         job_runs[0].attach.assert_any_call(True, self.job)
@@ -390,7 +395,8 @@ class JobSchedulerGetRunsToScheduleTestCase(TestCase):
 
         self.job.runs.get_newest.assert_called_with(include_manual=False)
         self.job.scheduler.next_run_time.assert_called_once_with(
-            self.job.runs.get_newest.return_value.run_time, )
+            self.job.runs.get_newest.return_value.run_time,
+        )
         assert_length(job_runs, 1)
         # This should return a JobRun which has the job attached as an observer
         job_runs[0].attach.assert_any_call(True, self.job)
@@ -439,8 +445,9 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
 
     def test_manual_start_default_with_timezone(self):
         self.job.time_zone = mock.Mock()
-        with mock.patch('tron.core.job.timeutils.current_time',
-                        ) as mock_current:
+        with mock.patch(
+            'tron.core.job.timeutils.current_time',
+        ) as mock_current:
             manual_runs = self.job_scheduler.manual_start()
             mock_current.assert_called_with(tz=self.job.time_zone)
             self.job.build_new_runs.assert_called_with(
@@ -564,8 +571,8 @@ class JobSchedulerScheduleTestCase(TestCase):
 
     def test_run_queue_schedule(self):
         with mock.patch.object(
-                self.job_scheduler,
-                'schedule',
+            self.job_scheduler,
+            'schedule',
         ) as mock_schedule:
             self.job_scheduler.run_job = mock.Mock()
             self.job.scheduler.schedule_on_complete = False
@@ -588,7 +595,8 @@ class JobSchedulerFactoryTestCase(TestCase):
         self.output_stream_dir = mock.Mock()
         self.time_zone = mock.Mock()
         self.action_runner = mock.create_autospec(
-            actioncommand.SubprocessActionRunnerFactory, )
+            actioncommand.SubprocessActionRunnerFactory,
+        )
         self.factory = job.JobSchedulerFactory(
             self.context,
             self.output_stream_dir,
@@ -645,9 +653,11 @@ class JobCollectionTestCase(TestCase):
         )
         assert self.collection.update(mock_scheduler)
         self.collection.get_by_name.assert_called_with(
-            mock_scheduler.get_name(), )
+            mock_scheduler.get_name(),
+        )
         existing_scheduler.get_job().update_from_job.assert_called_with(
-            mock_scheduler.get_job.return_value, )
+            mock_scheduler.get_job.return_value,
+        )
         existing_scheduler.schedule_reconfigured.assert_called_with()
 
 

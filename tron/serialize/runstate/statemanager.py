@@ -80,10 +80,12 @@ class StateMetadata(object):
 
         if metadata['version'][0] > cls.version[0]:
             msg = "State version %s, expected <= %s"
-            raise VersionMismatchError(msg % (
-                metadata['version'],
-                cls.version,
-            ), )
+            raise VersionMismatchError(
+                msg % (
+                    metadata['version'],
+                    cls.version,
+                ),
+            )
 
 
 class StateSaveBuffer(object):
@@ -243,7 +245,8 @@ class StateChangeWatcher(observer.Observer):
 
         self.shutdown()
         self.state_manager = PersistenceManagerFactory.from_config(
-            state_config, )
+            state_config,
+        )
         self.config = state_config
         return True
 

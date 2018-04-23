@@ -164,7 +164,8 @@ def verify_environment():
     for env_var in ['SSH_AUTH_SOCK', 'PYTHONPATH']:
         if not os.environ.get(env_var):
             raise TronSandboxException(
-                "Missing $%s in test environment." % env_var, )
+                "Missing $%s in test environment." % env_var,
+            )
 
 
 class TronSandbox(object):
@@ -246,10 +247,10 @@ class TronSandbox(object):
         wait_on_sandbox(lambda: bool(self.client.home()))
 
     def tronfig(
-            self,
-            config_content=None,
-            name=schema.MASTER_NAMESPACE,
-            no_header=False,
+        self,
+        config_content=None,
+        name=schema.MASTER_NAMESPACE,
+        no_header=False,
     ):
         args = ['--server', self.api_uri, name]
         if no_header:
