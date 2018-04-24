@@ -1,5 +1,12 @@
 # Change Log
 
+## [v0.8.0.5](https://github.com/Yelp/Tron/tree/v0.8.0.5) (2018-04-24)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.8.0.4...v0.8.0.5)
+
+**Merged pull requests:**
+
+- maybe\_encode all data in the file serializer [\#435](https://github.com/Yelp/Tron/pull/435) ([qui](https://github.com/qui))
+
 ## [v0.8.0.4](https://github.com/Yelp/Tron/tree/v0.8.0.4) (2018-04-20)
 [Full Changelog](https://github.com/Yelp/Tron/compare/v0.8.0.3...v0.8.0.4)
 
