@@ -21,3 +21,4 @@
             args: ["-i", "-p"]
             exclude: ^docs/conf.py$
             types: [python]
+            additional_dependencies: ['yapf']
