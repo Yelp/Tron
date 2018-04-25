@@ -56,6 +56,9 @@ start <action_run_id>
 restart <job_run_id>
     Creates a new job run with the same run time as this job.
 
+retry <action_run_id>
+    Re-run an action within an existing job run.
+
 rerun <job_run_id>
     Creates a new job run with the same run time as this job (same as restart).
 
@@ -104,6 +107,9 @@ Examples
 
     $ tronctl success job0.5
     Job Run job0.5 now in state SUCC
+
+    $ tronctl retry MASTER.job.5.action1
+    Retrying ActionRun: MASTER.job.5.action1
 
 Bugs
 ----
