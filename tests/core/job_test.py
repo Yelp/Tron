@@ -29,7 +29,6 @@ from tron.core.actionrun import ActionRun
 
 
 class JobTestCase(TestCase):
-
     @setup_teardown
     def setup_job(self):
         action_graph = mock.Mock(names=lambda: ['one', 'two'])
@@ -43,8 +42,10 @@ class JobTestCase(TestCase):
         patcher = mock.patch('tron.core.job.node.NodePoolRepository')
         with patcher as self.mock_node_repo:
             self.job = job.Job(
-                "jobname", scheduler,
-                run_collection=run_collection, action_graph=action_graph,
+                "jobname",
+                scheduler,
+                run_collection=run_collection,
+                action_graph=action_graph,
                 node_pool=self.nodes,
             )
             autospec_method(self.job.notify)
@@ -58,13 +59,18 @@ class JobTestCase(TestCase):
     @mock.patch('tron.core.job.event', autospec=True)
     def test_from_config(self, _mock_event):
         action = mock.Mock(
-            name='first', command='doit',
-            node=None, requires=[],
+            name='first',
+            command='doit',
+            node=None,
+            requires=[],
         )
         job_config = mock.Mock(
             name='ajob',
             node='thenodepool',
-            monitoring={"team": "foo", "page": True},
+            monitoring={
+                "team": "foo",
+                "page": True,
+            },
             all_nodes=False,
             queueing=True,
             enabled=True,
@@ -78,7 +84,11 @@ class JobTestCase(TestCase):
         parent_context = 'parent_context_token'
         output_path = ["base_path"]
         new_job = job.Job.from_config(
-            job_config, scheduler, parent_context, output_path, self.action_runner,
+            job_config,
+            scheduler,
+            parent_context,
+            output_path,
+            self.action_runner,
         )
 
         assert_equal(new_job.scheduler, scheduler)
@@ -95,7 +105,8 @@ class JobTestCase(TestCase):
     def test_update_from_job(self):
         action_runner = mock.Mock()
         other_job = job.Job(
-            'otherjob', 'scheduler',
+            'otherjob',
+            'scheduler',
             action_runner=action_runner,
         )
         self.job.update_from_job(other_job)
@@ -149,7 +160,11 @@ class JobTestCase(TestCase):
         node = self.job.node_pool.next.return_value
         assert_call(
             self.job.runs.build_new_run,
-            0, self.job, run_time, node, manual=False,
+            0,
+            self.job,
+            run_time,
+            node,
+            manual=False,
         )
         assert_length(runs, 1)
         self.job.watch.assert_called_with(runs[0])
@@ -166,7 +181,11 @@ class JobTestCase(TestCase):
             node = self.job.node_pool.nodes[i]
             assert_call(
                 self.job.runs.build_new_run,
-                i, self.job, run_time, node, manual=False,
+                i,
+                self.job,
+                run_time,
+                node,
+                manual=False,
             )
 
         self.job.watch.assert_has_calls([mock.call(run) for run in runs])
@@ -180,7 +199,11 @@ class JobTestCase(TestCase):
         assert_length(runs, 1)
         assert_call(
             self.job.runs.build_new_run,
-            0, self.job, run_time, node, manual=True,
+            0,
+            self.job,
+            run_time,
+            node,
+            manual=True,
         )
         self.job.watch.assert_called_with(runs[0])
 
@@ -216,7 +239,6 @@ class JobTestCase(TestCase):
 
 
 class JobSchedulerTestCase(TestCase):
-
     @setup
     def setup_job(self):
         self.scheduler = Turtle()
@@ -336,7 +358,6 @@ class JobSchedulerTestCase(TestCase):
 
 
 class JobSchedulerGetRunsToScheduleTestCase(TestCase):
-
     @setup
     def setup_job(self):
         self.scheduler = mock.Mock()
@@ -424,11 +445,14 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
 
     def test_manual_start_default_with_timezone(self):
         self.job.time_zone = mock.Mock()
-        with mock.patch('tron.core.job.timeutils.current_time') as mock_current:
+        with mock.patch(
+            'tron.core.job.timeutils.current_time',
+        ) as mock_current:
             manual_runs = self.job_scheduler.manual_start()
             mock_current.assert_called_with(tz=self.job.time_zone)
             self.job.build_new_runs.assert_called_with(
-                mock_current.return_value, manual=True,
+                mock_current.return_value,
+                manual=True,
             )
         assert_length(manual_runs, 1)
         self.manual_run.start.assert_called_once_with()
@@ -443,7 +467,6 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
 
 
 class JobSchedulerScheduleTestCase(TestCase):
-
     @setup
     def setup_job(self):
         self.scheduler = mock.Mock(autospec=True)
@@ -451,7 +474,9 @@ class JobSchedulerScheduleTestCase(TestCase):
         mock_run = mock.Mock()
         mock_run.seconds_until_run_time.return_value = 0
         run_collection = mock.Mock(
-            has_pending=False, autospec=True, return_value=[mock_run],
+            has_pending=False,
+            autospec=True,
+            return_value=[mock_run],
         )
         mock_build_new_run = mock.Mock()
         run_collection.build_new_run.return_value = mock_build_new_run
@@ -517,7 +542,9 @@ class JobSchedulerScheduleTestCase(TestCase):
         self.job_scheduler.handle_job_events(self.job, job.Job.NOTIFY_RUN_DONE)
         self.eventloop.call_later.assert_any_call(
             0,
-            self.job_scheduler.run_job, queued_job_run, run_queued=True,
+            self.job_scheduler.run_job,
+            queued_job_run,
+            run_queued=True,
         )
 
     def test_handle_job_events_schedule_on_complete(self):
@@ -537,12 +564,16 @@ class JobSchedulerScheduleTestCase(TestCase):
         def get_queued(state):
             if state == ActionRun.STATE_QUEUED:
                 return []
+
         self.job.runs.get_runs_by_state = get_queued
         self.job_scheduler.handler(self.job, job.Job.NOTIFY_RUN_DONE)
         self.job_scheduler.run_job.assert_not_called()
 
     def test_run_queue_schedule(self):
-        with mock.patch.object(self.job_scheduler, 'schedule') as mock_schedule:
+        with mock.patch.object(
+            self.job_scheduler,
+            'schedule',
+        ) as mock_schedule:
             self.job_scheduler.run_job = mock.Mock()
             self.job.scheduler.schedule_on_complete = False
             queued_job_run = mock.Mock()
@@ -550,13 +581,14 @@ class JobSchedulerScheduleTestCase(TestCase):
             self.job_scheduler.run_queue_schedule()
             self.eventloop.call_later.assert_called_once_with(
                 0,
-                self.job_scheduler.run_job, queued_job_run, run_queued=True,
+                self.job_scheduler.run_job,
+                queued_job_run,
+                run_queued=True,
             )
             mock_schedule.assert_called_once_with()
 
 
 class JobSchedulerFactoryTestCase(TestCase):
-
     @setup
     def setup_factory(self):
         self.context = mock.Mock()
@@ -566,7 +598,10 @@ class JobSchedulerFactoryTestCase(TestCase):
             actioncommand.SubprocessActionRunnerFactory,
         )
         self.factory = job.JobSchedulerFactory(
-            self.context, self.output_stream_dir, self.time_zone, self.action_runner,
+            self.context,
+            self.output_stream_dir,
+            self.time_zone,
+            self.action_runner,
         )
 
     def test_build(self):
@@ -586,7 +621,6 @@ class JobSchedulerFactoryTestCase(TestCase):
 
 
 class JobCollectionTestCase(TestCase):
-
     @setup
     def setup_collection(self):
         self.collection = job.JobCollection()
@@ -603,8 +637,9 @@ class JobCollectionTestCase(TestCase):
         assert_mock_calls(expected_calls, factory.build.mock_calls)
         assert_length(self.collection.add.mock_calls, len(job_configs) * 2)
         assert_length(result, len(job_configs))
-        job_schedulers = [call[1][0]
-                          for call in self.collection.add.mock_calls[::2]]
+        job_schedulers = [
+            call[1][0] for call in self.collection.add.mock_calls[::2]
+        ]
         for job_scheduler in job_schedulers:
             job_scheduler.schedule.assert_called_with()
             job_scheduler.get_job.assert_called_with()

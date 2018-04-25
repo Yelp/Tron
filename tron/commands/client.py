@@ -19,9 +19,7 @@ try:
 except ImportError:
     import json as simplejson
 
-
 log = logging.getLogger(__name__)
-
 
 USER_AGENT = "Tron Command/%s +http://github.com/Yelp/Tron" % tron.__version__
 DECODE_ERROR = "DECODE_ERROR"
@@ -144,7 +142,13 @@ class Client(object):
     def get_url(self, identifier):
         return get_object_type_from_identifier(self.index(), identifier).url
 
-    def jobs(self, include_job_runs=False, include_action_runs=False, include_action_graph=True, include_node_pool=True):
+    def jobs(
+        self,
+        include_job_runs=False,
+        include_action_runs=False,
+        include_action_graph=True,
+        include_node_pool=True,
+    ):
         params = {
             'include_job_runs': int(include_job_runs),
             'include_action_runs': int(include_action_runs),
@@ -169,9 +173,9 @@ class Client(object):
 
     def action_runs(self, action_run_url, num_lines=0):
         params = {
-            'num_lines':        num_lines,
-            'include_stdout':   1,
-            'include_stderr':   1,
+            'num_lines': num_lines,
+            'include_stdout': 1,
+            'include_stderr': 1,
         }
         return self.http_get(action_run_url, params)
 
@@ -209,11 +213,11 @@ class TronObjectType(object):
     action_run = 'ACTION_RUN'
 
     url_builders = {
-        'jobs':     get_job_url,
+        'jobs': get_job_url,
     }
 
     groups = {
-        'jobs':     [job, job_run, action_run],
+        'jobs': [job, job_run, action_run],
     }
 
 
@@ -230,7 +234,7 @@ def first(seq):
 def get_object_type_from_identifier(url_index, identifier):
     """Given a string identifier, return a TronObjectIdentifier. """
     name_mapping = {
-        'jobs':     set(url_index['jobs']),
+        'jobs': set(url_index['jobs']),
     }
 
     def get_name_parts(identifier, namespace=None):

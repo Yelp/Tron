@@ -18,7 +18,6 @@ from tron.trondaemon import PIDFile
 
 
 class PIDFileTestCase(TestCase):
-
     @setup
     def setup_pidfile(self):
         self.filename = os.path.join(tempfile.gettempdir(), 'test.pid')

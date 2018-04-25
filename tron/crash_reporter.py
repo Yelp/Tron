@@ -7,7 +7,6 @@ from twisted.python import log
 
 from tron import event
 
-
 logger = logging.getLogger(__name__)
 
 

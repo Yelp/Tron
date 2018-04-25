@@ -17,7 +17,6 @@ from tron.serialize.runstate.shelvestore import ShelveStateStore
 
 
 class ShelveStateStoreTestCase(TestCase):
-
     @setup
     def setup_store(self):
         self.tmpdir = tempfile.mkdtemp()
@@ -33,8 +32,18 @@ class ShelveStateStoreTestCase(TestCase):
 
     def test_save(self):
         key_value_pairs = [
-            (ShelveKey("one", "two"), {'this': 'data'}),
-            (ShelveKey("three", "four"), {'this': 'data2'}),
+            (
+                ShelveKey("one", "two"),
+                {
+                    'this': 'data',
+                },
+            ),
+            (
+                ShelveKey("three", "four"),
+                {
+                    'this': 'data2',
+                },
+            ),
         ]
         self.store.save(key_value_pairs)
         self.store.cleanup()

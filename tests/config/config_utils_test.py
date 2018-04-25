@@ -20,7 +20,6 @@ from tron.config.config_utils import valid_identifier
 
 
 class UniqueNameDictTestCase(TestCase):
-
     @setup
     def setup_dict(self):
         self.msg = "The key %s was there."
@@ -36,7 +35,6 @@ class UniqueNameDictTestCase(TestCase):
 
 
 class ValidatorIdentifierTestCase(TestCase):
-
     def test_valid_identifier_too_long(self):
         assert_raises(ConfigError, valid_identifier, 'a' * 256, mock.Mock())
 
@@ -50,7 +48,6 @@ class ValidatorIdentifierTestCase(TestCase):
 
 
 class BuildListOfTypeValidatorTestCase(TestCase):
-
     @setup
     def setup_validator(self):
         self.item_validator = mock.Mock()
@@ -69,7 +66,6 @@ class BuildListOfTypeValidatorTestCase(TestCase):
 
 
 class BuildEnumValidatorTestCase(TestCase):
-
     @setup
     def setup_enum_validator(self):
         self.enum = dict(a=1, b=2)
@@ -82,16 +78,18 @@ class BuildEnumValidatorTestCase(TestCase):
 
     def test_invalid(self):
         exception = assert_raises(
-            ConfigError, self.validator, 'c', self.context,
+            ConfigError,
+            self.validator,
+            'c',
+            self.context,
         )
         assert_in(
-            'Value at  is not in %s: ' %
-            str(set(self.enum)), str(exception),
+            'Value at  is not in %s: ' % str(set(self.enum)),
+            str(exception),
         )
 
 
 class ValidTimeTestCase(TestCase):
-
     @setup
     def setup_config(self):
         self.context = config_utils.NullConfigContext
@@ -110,14 +108,15 @@ class ValidTimeTestCase(TestCase):
 
     def test_valid_time_invalid(self):
         assert_raises(
-            ConfigError, config_utils.valid_time,
-            "14:32:12:34", self.context,
+            ConfigError,
+            config_utils.valid_time,
+            "14:32:12:34",
+            self.context,
         )
         assert_raises(ConfigError, config_utils.valid_time, None, self.context)
 
 
 class ValidTimeDeltaTestCase(TestCase):
-
     @setup
     def setup_config(self):
         self.context = config_utils.NullConfigContext
@@ -125,7 +124,9 @@ class ValidTimeDeltaTestCase(TestCase):
     def test_valid_time_delta_invalid(self):
         exception = assert_raises(
             ConfigError,
-            config_utils.valid_time_delta, 'no time', self.context,
+            config_utils.valid_time_delta,
+            'no time',
+            self.context,
         )
         assert_in('not a valid time delta: no time', str(exception))
 
@@ -133,8 +134,10 @@ class ValidTimeDeltaTestCase(TestCase):
         for jitter in [' 82s ', '82 s', '82 sec', '82seconds  ']:
             delta = datetime.timedelta(seconds=82)
             assert_equal(
-                delta, config_utils.valid_time_delta(
-                    jitter, self.context,
+                delta,
+                config_utils.valid_time_delta(
+                    jitter,
+                    self.context,
                 ),
             )
 
@@ -142,8 +145,10 @@ class ValidTimeDeltaTestCase(TestCase):
         for jitter in ['10m', '10 m', '10   min', '  10minutes']:
             delta = datetime.timedelta(seconds=600)
             assert_equal(
-                delta, config_utils.valid_time_delta(
-                    jitter, self.context,
+                delta,
+                config_utils.valid_time_delta(
+                    jitter,
+                    self.context,
                 ),
             )
 
@@ -151,18 +156,23 @@ class ValidTimeDeltaTestCase(TestCase):
         for jitter in ['1 year', '3 mo', '3 months']:
             assert_raises(
                 ConfigError,
-                config_utils.valid_time_delta, jitter, self.context,
+                config_utils.valid_time_delta,
+                jitter,
+                self.context,
             )
 
 
 class ConfigContextTestCase(TestCase):
-
     def test_build_config_context(self):
         path, nodes, namespace = 'path', {1, 2, 3}, 'namespace'
         clusters = {'c1', 'c2'}
         command_context = mock.MagicMock()
         parent_context = config_utils.ConfigContext(
-            path, nodes, clusters, command_context, namespace,
+            path,
+            nodes,
+            clusters,
+            command_context,
+            namespace,
         )
 
         child = parent_context.build_child_context('child')
@@ -186,7 +196,6 @@ class StubValidator(config_utils.Validator):
 
 
 class ValidatorTestCase(TestCase):
-
     @setup
     def setup_validator(self):
         self.validator = StubValidator()
@@ -195,7 +204,9 @@ class ValidatorTestCase(TestCase):
         expected_msg = "A StubObject is required"
         exception = assert_raises(
             ConfigError,
-            self.validator.validate, None, config_utils.NullConfigContext,
+            self.validator.validate,
+            None,
+            config_utils.NullConfigContext,
         )
         assert_in(expected_msg, str(exception))
 

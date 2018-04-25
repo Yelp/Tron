@@ -12,7 +12,6 @@ import six
 import tron
 from tron.config import schema
 
-
 log = logging.getLogger(__name__)
 
 
@@ -21,7 +20,6 @@ class UnknownCommandError(Exception):
 
 
 class JobCollectionController(object):
-
     def __init__(self, job_collection):
         self.job_collection = job_collection
 
@@ -40,7 +38,14 @@ class JobCollectionController(object):
 class ActionRunController(object):
 
     mapped_commands = {
-        'start', 'success', 'cancel', 'fail', 'skip', 'stop', 'kill', 'retry',
+        'start',
+        'success',
+        'cancel',
+        'fail',
+        'skip',
+        'stop',
+        'kill',
+        'retry',
     }
 
     def __init__(self, action_run, job_run):
@@ -105,7 +110,10 @@ class JobRunController(object):
 
         if command in self.mapped_commands:
             if getattr(self.job_run, command)():
-                return "%s now in state %s" % (self.job_run, self.job_run.state)
+                return "%s now in state %s" % (
+                    self.job_run,
+                    self.job_run.state,
+                )
 
             msg = "Failed to %s, %s in state %s"
             return msg % (command, self.job_run, self.job_run.state)
@@ -114,7 +122,6 @@ class JobRunController(object):
 
 
 class JobController(object):
-
     def __init__(self, job_scheduler):
         self.job_scheduler = job_scheduler
 
@@ -151,7 +158,8 @@ class ConfigController(object):
     TEMPLATE_FILE = 'named_config_template.yaml'
 
     TEMPLATE = pkg_resources.resource_string(
-        tron.__name__, TEMPLATE_FILE,
+        tron.__name__,
+        TEMPLATE_FILE,
     ).decode('utf-8')
 
     HEADER_END = "{}\n".format(TEMPLATE.split('\n')[-2])

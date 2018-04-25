@@ -16,13 +16,12 @@ from tron.api.requestargs import get_string
 
 
 class RequestArgsTestCase(TestCase):
-
     @setup
     def setup_args(self):
         self.args = {
-            b'number':   [b'123'],
-            b'string':   [b'astring'],
-            b'boolean':  [b'1'],
+            b'number': [b'123'],
+            b'string': [b'astring'],
+            b'boolean': [b'1'],
             b'datetime': [b'2012-03-14 15:09:26'],
         }
         self.datetime = datetime.datetime(2012, 3, 14, 15, 9, 26)

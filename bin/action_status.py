@@ -40,9 +40,10 @@ def send_signal(signal_num, status_file):
 
 
 commands = {
-    'print':        print_status_file,
+    'print': print_status_file,
     'pid': lambda statusfile: print(get_field('pid', statusfile)),
-    'return_code': lambda statusfile: print(get_field('return_code', statusfile)),
+    'return_code':
+    lambda statusfile: print(get_field('return_code', statusfile)),
     'terminate': lambda statusfile: send_signal(signal.SIGTERM, statusfile),
     'kill': lambda statusfile: send_signal(signal.SIGKILL, statusfile),
 }

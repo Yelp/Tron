@@ -12,7 +12,6 @@ from tron.core import action
 
 
 class TestAction(TestCase):
-
     @setup
     def setup_action(self):
         self.node_pool = mock.create_autospec(node.NodePool)
@@ -46,7 +45,9 @@ class TestAction(TestCase):
 
     def test__eq__(self):
         new_action = action.Action(
-            self.action.name, self.action.command, self.node_pool,
+            self.action.name,
+            self.action.command,
+            self.node_pool,
         )
         assert_equal(new_action, self.action)
 

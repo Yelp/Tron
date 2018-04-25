@@ -10,7 +10,6 @@ from tron import eventloop
 
 
 class UniqueCallTestCase(TestCase):
-
     @setup
     def setup_monitor(self):
         self.func = mock.Mock()
@@ -23,10 +22,14 @@ class UniqueCallTestCase(TestCase):
 
     def test_start(self):
         self.callback.delayed_call.active.return_value = False
-        with mock.patch('tron.eventloop.call_later', autospec=True) as mock_call_later:
+        with mock.patch(
+            'tron.eventloop.call_later',
+            autospec=True,
+        ) as mock_call_later:
             self.callback.start()
             mock_call_later.assert_called_with(
-                self.callback.delay, self.callback.func,
+                self.callback.delay,
+                self.callback.func,
             )
             assert_equal(
                 self.callback.delayed_call,
@@ -35,6 +38,9 @@ class UniqueCallTestCase(TestCase):
 
     def test_start_already_actice(self):
         self.callback.delayed_call.active.return_value = True
-        with mock.patch('tron.eventloop.call_later', autospec=True) as mock_call_later:
+        with mock.patch(
+            'tron.eventloop.call_later',
+            autospec=True,
+        ) as mock_call_later:
             self.callback.start()
             assert not mock_call_later.call_count

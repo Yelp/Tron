@@ -11,7 +11,6 @@ from tron.utils import crontab
 
 
 class ConvertPredefinedTestCase(TestCase):
-
     def test_convert_predefined_valid(self):
         expected = crontab.PREDEFINED_SCHEDULE['@hourly']
         assert_equal(crontab.convert_predefined('@hourly'), expected)
@@ -25,7 +24,6 @@ class ConvertPredefinedTestCase(TestCase):
 
 
 class ParseCrontabTestCase(TestCase):
-
     def test_parse_asterisk(self):
         line = '* * * * *'
         actual = crontab.parse_crontab(line)
@@ -69,7 +67,6 @@ class MinuteFieldParserTestCase(TestCase):
 
 
 class MonthFieldParserTestCase(TestCase):
-
     @setup
     def setup_parser(self):
         self.parser = crontab.MonthFieldParser()
@@ -80,7 +77,6 @@ class MonthFieldParserTestCase(TestCase):
 
 
 class WeekdayFieldParserTestCase(TestCase):
-
     @setup
     def setup_parser(self):
         self.parser = crontab.WeekdayFieldParser()
@@ -91,7 +87,6 @@ class WeekdayFieldParserTestCase(TestCase):
 
 
 class MonthdayFieldParserTestCase(TestCase):
-
     @setup
     def setup_parser(self):
         self.parser = crontab.MonthdayFieldParser()

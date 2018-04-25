@@ -66,8 +66,8 @@ class StateMetadata(object):
 
     def __init__(self):
         self.state_data = {
-            'version':              self.version,
-            'create_time':          time.time(),
+            'version': self.version,
+            'create_time': time.time(),
         }
 
     @classmethod
@@ -81,7 +81,10 @@ class StateMetadata(object):
         if metadata['version'][0] > cls.version[0]:
             msg = "State version %s, expected <= %s"
             raise VersionMismatchError(
-                msg % (metadata['version'], cls.version),
+                msg % (
+                    metadata['version'],
+                    cls.version,
+                ),
             )
 
 
@@ -136,7 +139,8 @@ class PersistentStateManager(object):
         self._buffer = buffer
         self._impl = persistence_impl
         self.metadata_key = self._impl.build_key(
-            runstate.MCP_STATE, StateMetadata.name,
+            runstate.MCP_STATE,
+            StateMetadata.name,
         )
 
     def restore(self, job_names, skip_validation=False):

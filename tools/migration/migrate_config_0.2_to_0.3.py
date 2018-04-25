@@ -53,9 +53,7 @@ def name_from_doc(doc):
 def warn_node_pools(content):
     doc = yaml.safe_load(content)
 
-    node_pools = [
-        node_doc for node_doc in doc['nodes'] if 'nodes' in node_doc
-    ]
+    node_pools = [node_doc for node_doc in doc['nodes'] if 'nodes' in node_doc]
 
     if not node_pools:
         return
@@ -113,17 +111,22 @@ def build_anchor_mapping(content):
 def update_references(content):
     anchor_mapping = build_anchor_mapping(content)
 
-    def key_length_func(kv): return len(kv[0])
+    def key_length_func(kv):
+        return len(kv[0])
+
     anchors_by_length = sorted(
-        six.iteritems(anchor_mapping), key=key_length_func, reverse=True,
+        six.iteritems(anchor_mapping),
+        key=key_length_func,
+        reverse=True,
     )
     for anchor_name, string_name in anchors_by_length:
         # Remove the anchors
         content = re.sub(r'\s*&%s ?' % anchor_name, '', content)
         # Update the reference to use the string identifier
         content = re.sub(
-            r'\*%s\b' % anchor_name, '"%s"' %
-            string_name, content,
+            r'\*%s\b' % anchor_name,
+            '"%s"' % string_name,
+            content,
         )
 
     return content

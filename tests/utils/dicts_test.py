@@ -8,7 +8,6 @@ from tron.utils import dicts
 
 
 class InvertDictListTestCase(TestCase):
-
     def test_invert_dict_list(self):
         expected = {
             'a': 1,

@@ -14,7 +14,6 @@ class Callback(DelayedCall):
 
 
 class NullCallback(object):
-
     @staticmethod
     def cancel():
         pass

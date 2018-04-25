@@ -25,7 +25,6 @@ from tron.serialize.filehandler import OutputStreamSerializer
 
 
 class FileHandleWrapperTestCase(TestCase):
-
     @setup
     def setup_fh_wrapper(self):
         self.file = NamedTemporaryFile('r')
@@ -88,7 +87,6 @@ class FileHandleWrapperTestCase(TestCase):
 
 
 class FileHandleManagerTestCase(TestCase):
-
     @setup
     def setup_fh_manager(self):
         FileHandleManager.reset()
@@ -135,7 +133,9 @@ class FileHandleManagerTestCase(TestCase):
         fh_wrapper = self.manager.open(self.file1.name)
         fh_wrapper.last_accessed = 123456
 
-        def time_func(): return 123458.1
+        def time_func():
+            return 123458.1
+
         self.manager.cleanup(time_func)
         assert_not_in(fh_wrapper.name, self.manager.cache)
         assert_equal(len(self.manager.cache), 0)
@@ -151,7 +151,9 @@ class FileHandleManagerTestCase(TestCase):
         for i, fh_wrapper in enumerate(fh_wrappers):
             fh_wrapper.last_accessed = 123456 + i
 
-        def time_func(): return 123460.1
+        def time_func():
+            return 123460.1
+
         self.manager.cleanup(time_func)
         assert_equal(len(self.manager.cache), 2)
 
@@ -167,7 +169,9 @@ class FileHandleManagerTestCase(TestCase):
 
         fh_wrapper.last_accessed = 123456
 
-        def time_func(): return 123458.1
+        def time_func():
+            return 123458.1
+
         self.manager.cleanup(time_func)
         assert_not_in(fh_wrapper.name, self.manager.cache)
         assert_equal(len(self.manager.cache), 0)
@@ -216,15 +220,15 @@ class FileHandleManagerTestCase(TestCase):
 
 
 class OutputStreamSerializerTestCase(TestCase):
-
     @setup
     def setup_serializer(self):
         self.test_dir = mkdtemp()
         self.serial = OutputStreamSerializer([self.test_dir])
         self.filename = "STARS"
         self.content = "123\n456\n789"
-        self.expected = [line.encode('ascii')
-                         for line in self.content.split('\n')]
+        self.expected = [
+            line.encode('ascii') for line in self.content.split('\n')
+        ]
 
     @teardown
     def teardown_test_dir(self):
@@ -261,7 +265,6 @@ class OutputStreamSerializerTestCase(TestCase):
 
 
 class OutputPathTestCase(TestCase):
-
     @setup
     def setup_path(self):
         self.path = OutputPath('one', 'two', 'three')

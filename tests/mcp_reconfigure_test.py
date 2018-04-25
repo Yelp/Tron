@@ -39,19 +39,23 @@ class MCPReconfigureTestCase(TestCase):
                 name='test_unchanged',
                 node='node0',
                 schedule='daily',
-                actions=[dict(
-                    name='action_unchanged',
-                    command='command_unchanged',
-                )],
+                actions=[
+                    dict(
+                        name='action_unchanged',
+                        command='command_unchanged',
+                    ),
+                ],
             ),
             dict(
                 name='test_remove',
                 node='node1',
                 schedule=dict(interval='20s'),
-                actions=[dict(
-                    name='action_remove',
-                    command='command_remove',
-                )],
+                actions=[
+                    dict(
+                        name='action_remove',
+                        command='command_remove',
+                    ),
+                ],
                 cleanup_action=dict(name='cleanup', command='doit'),
             ),
             dict(
@@ -74,10 +78,12 @@ class MCPReconfigureTestCase(TestCase):
                 name='test_daily_change',
                 node='node0',
                 schedule='daily',
-                actions=[dict(
-                    name='action_daily_change',
-                    command='command',
-                )],
+                actions=[
+                    dict(
+                        name='action_daily_change',
+                        command='command',
+                    ),
+                ],
             ),
             dict(
                 name='test_action_added',
@@ -109,10 +115,12 @@ class MCPReconfigureTestCase(TestCase):
                 name='test_unchanged',
                 node='node0',
                 schedule='daily',
-                actions=[dict(
-                    name='action_unchanged',
-                    command='command_unchanged',
-                )],
+                actions=[
+                    dict(
+                        name='action_unchanged',
+                        command='command_unchanged',
+                    ),
+                ],
             ),
             dict(
                 name='test_change',
@@ -129,10 +137,12 @@ class MCPReconfigureTestCase(TestCase):
                 name='test_daily_change',
                 node='node0',
                 schedule='daily',
-                actions=[dict(
-                    name='action_daily_change',
-                    command='command_changed',
-                )],
+                actions=[
+                    dict(
+                        name='action_daily_change',
+                        command='command_changed',
+                    ),
+                ],
             ),
             dict(
                 name='test_new',

@@ -42,6 +42,7 @@ class CollectionProxy(object):
             return aggregate_func(
                 getattr(item, name)(*args, **kwargs) for item in obj_list()
             )
+
         return func
 
 

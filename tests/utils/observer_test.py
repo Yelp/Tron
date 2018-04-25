@@ -13,19 +13,22 @@ from tron.utils.observer import Observer
 
 
 class ObservableTestCase(TestCase):
-
     @setup
     def setup_observer(self):
         self.obs = Observable()
 
     def test_attach(self):
-        def func(): return 1
+        def func():
+            return 1
+
         self.obs.attach('a', func)
         assert_equal(len(self.obs._observers), 1)
         assert_equal(self.obs._observers['a'], [func])
 
     def test_listen_seq(self):
-        def func(): return 1
+        def func():
+            return 1
+
         self.obs.attach(['a', 'b'], func)
         assert_equal(len(self.obs._observers), 2)
         assert_equal(self.obs._observers['a'], [func])
@@ -41,12 +44,13 @@ class ObservableTestCase(TestCase):
 
 
 class ObserverClearTestCase(TestCase):
-
     @setup
     def setup_observer(self):
         self.obs = Observable()
 
-        def func(): return 1
+        def func():
+            return 1
+
         self.obs.attach('a', func)
         self.obs.attach('b', func)
         self.obs.attach(True, func)
@@ -62,7 +66,9 @@ class ObserverClearTestCase(TestCase):
         assert_equal(set(self.obs._observers.keys()), {True, 'b'})
 
     def test_remove_observer_none(self):
-        def observer(): return 2
+        def observer():
+            return 2
+
         self.obs.remove_observer(observer)
         assert_equal(set(self.obs._observers.keys()), {True, 'a', 'b'})
         assert_length(self.obs._observers['a'], 2)
@@ -70,7 +76,9 @@ class ObserverClearTestCase(TestCase):
         assert_length(self.obs._observers[True], 1)
 
     def test_remove_observer(self):
-        def observer(): return 2
+        def observer():
+            return 2
+
         self.obs.attach('a', observer)
         self.obs.attach('c', observer)
         self.obs.remove_observer(observer)
@@ -81,7 +89,6 @@ class ObserverClearTestCase(TestCase):
 
 
 class MockObserver(Observer):
-
     def __init__(self, obs, event):
         self.obs = obs
         self.event = event
@@ -95,7 +102,6 @@ class MockObserver(Observer):
 
 
 class ObserverTestCase(TestCase):
-
     @setup
     def setup_observer(self):
         self.obs = Observable()

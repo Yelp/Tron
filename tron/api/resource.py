@@ -24,7 +24,6 @@ from tron.api import adapter, controller
 from tron.api import requestargs
 from tron.utils import maybe_decode
 
-
 log = logging.getLogger(__name__)
 
 
@@ -53,7 +52,8 @@ def respond(request, response_dict, code=http.OK, headers=None):
         request.setHeader(str(key), str(val))
 
     result = json.dumps(
-        response_dict, cls=JSONEncoder,
+        response_dict,
+        cls=JSONEncoder,
     ) if response_dict else ""
 
     if type(result) is not bytes:
@@ -109,7 +109,6 @@ class ActionRunResource(resource.Resource):
 
 
 class JobRunResource(resource.Resource):
-
     def __init__(self, job_run, job_scheduler):
         resource.Resource.__init__(self)
         self.job_run = job_run
@@ -149,7 +148,6 @@ def is_negative_int(string):
 
 
 class JobResource(resource.Resource):
-
     def __init__(self, job_scheduler):
         resource.Resource.__init__(self)
         self.job_scheduler = job_scheduler
@@ -186,7 +184,8 @@ class JobResource(resource.Resource):
 
     def render_GET(self, request):
         include_action_runs = requestargs.get_bool(
-            request, 'include_action_runs',
+            request,
+            'include_action_runs',
         )
         include_graph = requestargs.get_bool(request, 'include_action_graph')
         num_runs = requestargs.get_integer(request, 'num_runs')
@@ -225,7 +224,6 @@ class ActionRunHistoryResource(resource.Resource):
 
 
 class JobCollectionResource(resource.Resource):
-
     def __init__(self, job_collection):
         self.job_collection = job_collection
         self.controller = controller.JobCollectionController(job_collection)
@@ -257,26 +255,40 @@ class JobCollectionResource(resource.Resource):
 
     def get_job_index(self):
         jobs = adapter.adapt_many(
-            adapter.JobIndexAdapter, self.job_collection.get_jobs(),
+            adapter.JobIndexAdapter,
+            self.job_collection.get_jobs(),
         )
         return {job['name']: job['actions'] for job in jobs}
 
     def render_GET(self, request):
         include_job_runs = requestargs.get_bool(
-            request, 'include_job_runs', default=False,
+            request,
+            'include_job_runs',
+            default=False,
         )
         include_action_runs = requestargs.get_bool(
-            request, 'include_action_runs', default=False,
+            request,
+            'include_action_runs',
+            default=False,
         )
         include_action_graph = requestargs.get_bool(
-            request, 'include_action_graph', default=True,
+            request,
+            'include_action_graph',
+            default=True,
         )
         include_node_pool = requestargs.get_bool(
-            request, 'include_node_pool', default=True,
+            request,
+            'include_node_pool',
+            default=True,
         )
-        output = dict(jobs=self.get_data(
-            include_job_runs, include_action_runs, include_action_graph, include_node_pool,
-        ))
+        output = dict(
+            jobs=self.get_data(
+                include_job_runs,
+                include_action_runs,
+                include_action_graph,
+                include_node_pool,
+            ),
+        )
         return respond(request, output)
 
     def render_POST(self, request):
@@ -305,7 +317,8 @@ class ConfigResource(resource.Resource):
                 code=http.BAD_REQUEST,
             )
         response = self.controller.read_config(
-            config_name, add_header=not no_header,
+            config_name,
+            add_header=not no_header,
         )
         return respond(request, response)
 
@@ -365,13 +378,13 @@ class EventResource(resource.Resource):
     def render_GET(self, request):
         recorder = event.get_recorder(self.entity_name)
         response_data = adapter.adapt_many(
-            adapter.EventAdapter, recorder.list(),
+            adapter.EventAdapter,
+            recorder.list(),
         )
         return respond(request, dict(data=response_data))
 
 
 class ApiRootResource(resource.Resource):
-
     def __init__(self, mcp):
         self._master_control = mcp
         resource.Resource.__init__(self)
@@ -390,14 +403,13 @@ class ApiRootResource(resource.Resource):
     def render_GET(self, request):
         """Return an index of urls for resources."""
         response = {
-            'jobs':             self.children[b'jobs'].get_job_index(),
-            'namespaces':       self.children[b'config'].get_config_index(),
+            'jobs': self.children[b'jobs'].get_job_index(),
+            'namespaces': self.children[b'config'].get_config_index(),
         }
         return respond(request, response)
 
 
 class RootResource(resource.Resource):
-
     def __init__(self, mcp, web_path):
         resource.Resource.__init__(self)
         self.web_path = web_path
@@ -416,7 +428,6 @@ class RootResource(resource.Resource):
 
 
 class LogAdapter(object):
-
     def __init__(self, logger):
         self.logger = logger
 

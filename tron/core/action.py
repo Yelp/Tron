@@ -29,7 +29,11 @@ class Action(object):
     ]
 
     def __init__(
-        self, name, command, node_pool, required_actions=None,
+        self,
+        name,
+        command,
+        node_pool,
+        required_actions=None,
         dependent_actions=None,
         retries=None,
         executor=None,
@@ -82,8 +86,10 @@ class Action(object):
             for attr in self.equality_attributes
         )
         return attributes_match and all(
-            self_act == other_act for (self_act, other_act)
-            in zip(self.required_actions, other.required_actions)
+            self_act == other_act for (
+                self_act,
+                other_act,
+            ) in zip(self.required_actions, other.required_actions)
         )
 
     def __ne__(self, other):

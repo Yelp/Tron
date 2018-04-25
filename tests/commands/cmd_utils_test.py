@@ -12,7 +12,6 @@ from tron.commands import cmd_utils
 
 
 class GetConfigTestCase(TestCase):
-
     @setup_teardown
     def patch_environment(self):
         with mock.patch('tron.commands.cmd_utils.opener', autospec=True) as self.mock_opener, \
@@ -35,59 +34,80 @@ class GetConfigTestCase(TestCase):
 
     def test_filter_jobs_actions_runs_with_nothing(self):
         inputs = [
-            "M.foo", "M.foo.1", "M.foo.1.action1",
-            "M.foo.2.action1", "M.bar", "M.bar.1.action",
+            "M.foo",
+            "M.foo.1",
+            "M.foo.1.action1",
+            "M.foo.2.action1",
+            "M.bar",
+            "M.bar.1.action",
         ]
         prefix = ""
         expected = ["M.foo", "M.bar"]
         assert_equal(
             cmd_utils.filter_jobs_actions_runs(
-                prefix, inputs,
-            ), expected,
+                prefix,
+                inputs,
+            ),
+            expected,
         )
 
     def test_filter_jobs_actions_runs_with_almost_a_job(self):
         inputs = [
-            "M.foo", "M.foo.1", "M.foo.1.action1",
-            "M.foo.2.action1", "M.bar.1.action",
+            "M.foo",
+            "M.foo.1",
+            "M.foo.1.action1",
+            "M.foo.2.action1",
+            "M.bar.1.action",
         ]
         prefix = "M.f"
         expected = ["M.foo"]
         assert_equal(
             cmd_utils.filter_jobs_actions_runs(
-                prefix, inputs,
-            ), expected,
+                prefix,
+                inputs,
+            ),
+            expected,
         )
 
     def test_filter_jobs_actions_runs_with_a_job_run(self):
         inputs = [
-            "M.foo", "M.foo.1", "M.foo.1.action1",
-            "M.foo.2", "M.foo.2.action1", "M.bar.1.action",
+            "M.foo",
+            "M.foo.1",
+            "M.foo.1.action1",
+            "M.foo.2",
+            "M.foo.2.action1",
+            "M.bar.1.action",
         ]
         prefix = "M.foo."
         expected = ["M.foo.1", "M.foo.2"]
         assert_equal(
             cmd_utils.filter_jobs_actions_runs(
-                prefix, inputs,
-            ), expected,
+                prefix,
+                inputs,
+            ),
+            expected,
         )
 
     def test_filter_jobs_actions_runs_with_a_job_run_and_id(self):
         inputs = [
-            "M.foo", "M.foo.1", "M.foo.1.action1",
-            "M.foo.2.action1", "M.bar.1.action",
+            "M.foo",
+            "M.foo.1",
+            "M.foo.1.action1",
+            "M.foo.2.action1",
+            "M.bar.1.action",
         ]
         prefix = "M.foo.1"
         expected = ["M.foo.1", "M.foo.1.action1"]
         assert_equal(
             cmd_utils.filter_jobs_actions_runs(
-                prefix, inputs,
-            ), expected,
+                prefix,
+                inputs,
+            ),
+            expected,
         )
 
 
 class BuildOptionParserTestCase(TestCase):
-
     def test_build_option_parser(self):
         """Assert that we don't set default options so that we can load
         the defaults from the config.
@@ -96,17 +116,22 @@ class BuildOptionParserTestCase(TestCase):
         epilog = 'Something'
         argparse.ArgumentParser = mock.Mock()
         parser = cmd_utils.build_option_parser(
-            usage=usage, epilog=epilog,
+            usage=usage,
+            epilog=epilog,
         )
         argparse.ArgumentParser.assert_called_with(
-            usage=usage, formatter_class=argparse.RawDescriptionHelpFormatter, epilog=epilog,
+            usage=usage,
+            formatter_class=argparse.RawDescriptionHelpFormatter,
+            epilog=epilog,
         )
         assert_equal(parser.add_argument.call_count, 4)
 
         args = [call[1] for call in parser.add_argument.mock_calls]
         expected = [
-            ('--version',), ('-v', '--verbose'),
-            ('--server',), ('-s', '--save'),
+            ('--version', ),
+            ('-v', '--verbose'),
+            ('--server', ),
+            ('-s', '--save'),
         ]
         assert_equal(args, expected)
 

@@ -14,7 +14,6 @@ from tron.core import job
 from tron.serialize.runstate import statemanager
 from tron.utils import emailer
 
-
 log = logging.getLogger(__name__)
 
 
@@ -55,8 +54,9 @@ class MasterControlProgram(object):
             self._load_config(reconfigure=True)
         except Exception as e:
             self.event_recorder.critical("reconfigure_failure")
-            log.exception("reconfigure failure: %s: %s" %
-                          (e.__class__.__name__, e))
+            log.exception(
+                "reconfigure failure: %s: %s" % (e.__class__.__name__, e)
+            )
             raise
 
     def _load_config(self, reconfigure=False):
@@ -77,14 +77,15 @@ class MasterControlProgram(object):
     def apply_config(self, config_container, reconfigure=False):
         """Apply a configuration."""
         master_config_directives = [
-            (self.update_state_watcher_config,           'state_persistence'),
-            (self.set_context_base,                      'command_context'),
+            (self.update_state_watcher_config, 'state_persistence'),
+            (self.set_context_base, 'command_context'),
             (
-                node.NodePoolRepository.update_from_config, 'nodes',
+                node.NodePoolRepository.update_from_config,
+                'nodes',
                 'node_pools',
                 'ssh_options',
             ),
-            (self.apply_notification_options,            'notification_options'),
+            (self.apply_notification_options, 'notification_options'),
         ]
         master_config = config_container.get_master()
         apply_master_configuration(master_config_directives, master_config)
@@ -93,7 +94,10 @@ class MasterControlProgram(object):
         factory = self.build_job_scheduler_factory(master_config)
         self.apply_collection_config(
             config_container.get_jobs(),
-            self.jobs, job.Job.NOTIFY_STATE_CHANGE, factory, reconfigure,
+            self.jobs,
+            job.Job.NOTIFY_STATE_CHANGE,
+            factory,
+            reconfigure,
         )
 
     def apply_collection_config(self, config, collection, notify_type, *args):

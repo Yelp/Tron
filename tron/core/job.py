@@ -78,10 +78,21 @@ class Job(Observable, Observer):
 
     # TODO: use config object
     def __init__(
-        self, name, scheduler, queueing=True, all_nodes=False,
-        monitoring=None, node_pool=None, enabled=True, action_graph=None,
-        run_collection=None, parent_context=None, output_path=None,
-        allow_overlap=None, action_runner=None, max_runtime=None,
+        self,
+        name,
+        scheduler,
+        queueing=True,
+        all_nodes=False,
+        monitoring=None,
+        node_pool=None,
+        enabled=True,
+        action_graph=None,
+        run_collection=None,
+        parent_context=None,
+        output_path=None,
+        allow_overlap=None,
+        action_runner=None,
+        max_runtime=None,
         time_zone=None,
         service=None,
         deploy_group=None,
@@ -111,11 +122,16 @@ class Job(Observable, Observer):
     @classmethod
     def from_config(
         cls,
-        job_config, scheduler, parent_context, output_path, action_runner,
+        job_config,
+        scheduler,
+        parent_context,
+        output_path,
+        action_runner,
     ):
         """Factory method to create a new Job instance from configuration."""
         action_graph = actiongraph.ActionGraph.from_config(
-            job_config.actions, job_config.cleanup_action,
+            job_config.actions,
+            job_config.cleanup_action,
         )
         runs = jobrun.JobRunCollection.from_config(job_config)
         node_repo = node.NodePoolRepository.get_instance()
@@ -185,8 +201,8 @@ class Job(Observable, Observer):
     def state_data(self):
         """This data is used to serialize the state of this job."""
         return {
-            'runs':             self.runs.state_data,
-            'enabled':          self.enabled,
+            'runs': self.runs.state_data,
+            'enabled': self.enabled,
         }
 
     def restore_state(self, state_data):
@@ -229,6 +245,7 @@ class Job(Observable, Observer):
         if event == jobrun.JobRun.NOTIFY_DONE:
             self.notify(self.NOTIFY_RUN_DONE)
             return
+
     handler = handle_job_run_state_change
 
     def __eq__(self, other):
@@ -314,7 +331,9 @@ class JobScheduler(Observer):
         human_time = humanize.naturaltime(datetime.timedelta(seconds=seconds))
         log.info(
             "Scheduling next Jobrun for %s about %s from now (%d seconds)",
-            self.job.name, human_time, seconds,
+            self.job.name,
+            human_time,
+            seconds,
         )
         eventloop.call_later(seconds, self.run_job, job_run)
 
@@ -337,9 +356,12 @@ class JobScheduler(Observer):
         # also possible this job was run (or is running) manually by a user.
         # Alternatively, if run_queued is True, this job_run is already queued.
         if not run_queued and not job_run.is_scheduled:
-            log.info("%s in state %s already out of scheduled state." % (
-                job_run, job_run.state,
-            ))
+            log.info(
+                "%s in state %s already out of scheduled state." % (
+                    job_run,
+                    job_run.state,
+                )
+            )
             return self.schedule()
 
         node = job_run.node if self.job.all_nodes else None
@@ -440,8 +462,11 @@ class JobSchedulerFactory(object):
         time_zone = job_config.time_zone or self.time_zone
         scheduler = scheduler_from_config(job_config.schedule, time_zone)
         job = Job.from_config(
-            job_config, scheduler,
-            self.context, output_path, self.action_runner,
+            job_config,
+            scheduler,
+            self.context,
+            output_path,
+            self.action_runner,
         )
         return JobScheduler(job)
 
@@ -452,13 +477,14 @@ class JobCollection(object):
     def __init__(self):
         self.jobs = collections.MappingCollection('jobs')
         self.proxy = proxy.CollectionProxy(
-            lambda: six.itervalues(self.jobs), [
-                proxy.func_proxy('request_shutdown',    iteration.list_all),
-                proxy.func_proxy('enable',              iteration.list_all),
-                proxy.func_proxy('disable',             iteration.list_all),
-                proxy.func_proxy('schedule',            iteration.list_all),
-                proxy.func_proxy('run_queue_schedule',  iteration.list_all),
-                proxy.attr_proxy('is_shutdown',         all),
+            lambda: six.itervalues(self.jobs),
+            [
+                proxy.func_proxy('request_shutdown', iteration.list_all),
+                proxy.func_proxy('enable', iteration.list_all),
+                proxy.func_proxy('disable', iteration.list_all),
+                proxy.func_proxy('schedule', iteration.list_all),
+                proxy.func_proxy('run_queue_schedule', iteration.list_all),
+                proxy.attr_proxy('is_shutdown', all),
             ],
         )
 

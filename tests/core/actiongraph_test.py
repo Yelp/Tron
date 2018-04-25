@@ -12,14 +12,18 @@ from tron.core import actiongraph
 
 
 class ActionGraphTestCase(TestCase):
-
     @setup
     def setup_graph(self):
         self.action_names = [
-            'base_one', 'base_two', 'dep_one', 'dep_one_one', 'dep_multi',
+            'base_one',
+            'base_two',
+            'dep_one',
+            'dep_one_one',
+            'dep_multi',
         ]
         am = self.action_map = {
-            name: turtle.Turtle(name=name) for name in self.action_names
+            name: turtle.Turtle(name=name)
+            for name in self.action_names
         }
 
         am['dep_multi'].required_actions = [am['dep_one_one'], am['base_two']]
@@ -58,7 +62,8 @@ class ActionGraphTestCase(TestCase):
             self.action_graph.actions_for_names(['base_one', 'dep_multi']),
         )
         expected_actions = [
-            self.action_map['base_one'], self.action_map['dep_multi'],
+            self.action_map['base_one'],
+            self.action_map['dep_multi'],
         ]
         assert_equal(actions, expected_actions)
 
@@ -73,7 +78,8 @@ class ActionGraphTestCase(TestCase):
 
     def test__eq__(self):
         other_graph = turtle.Turtle(
-            graph=self.graph, action_map=self.action_map,
+            graph=self.graph,
+            action_map=self.action_map,
         )
         assert_equal(self.action_graph, other_graph)
 

@@ -12,7 +12,6 @@ from testify import TestCase
 
 
 class ActionStatusTestCase(TestCase):
-
     @setup_teardown
     def setup_status_file(self):
         self.status_file = tempfile.NamedTemporaryFile(mode='r+')

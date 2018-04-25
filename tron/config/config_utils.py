@@ -15,7 +15,6 @@ from tron.config.schema import MASTER_NAMESPACE
 from tron.utils import dicts
 from tron.utils.dicts import FrozenDict
 
-
 MAX_IDENTIFIER_LENGTH = 255
 IDENTIFIER_RE = re.compile(r'^[A-Za-z_][\w\-]{0,254}$')
 
@@ -56,10 +55,12 @@ def build_type_validator(validator, error_fmt):
             config_context - a ConfigContext object
             Returns True if the value is valid
     """
+
     def f(value, config_context):
         if not validator(value):
             raise ConfigError(error_fmt % (config_context.path, value))
         return value
+
     return f
 
 
@@ -86,19 +87,23 @@ valid_identifier = build_type_validator(
 )
 
 valid_list = build_type_validator(
-    lambda s: isinstance(s, list), 'Value at %s is not a list: %s',
+    lambda s: isinstance(s, list),
+    'Value at %s is not a list: %s',
 )
 
 valid_string = build_type_validator(
-    lambda s: isinstance(s, string_types), 'Value at %s is not a string: %s',
+    lambda s: isinstance(s, string_types),
+    'Value at %s is not a string: %s',
 )
 
 valid_dict = build_type_validator(
-    lambda s: isinstance(s, dict), 'Value at %s is not a dictionary: %s',
+    lambda s: isinstance(s, dict),
+    'Value at %s is not a dictionary: %s',
 )
 
 valid_bool = build_type_validator(
-    lambda s: isinstance(s, bool), 'Value at %s is not a boolean: %s',
+    lambda s: isinstance(s, bool),
+    'Value at %s is not a boolean: %s',
 )
 
 
@@ -121,12 +126,14 @@ def valid_time(value, config_context):
 
 # Translations from possible configuration units to the argument to
 # datetime.timedelta
-TIME_INTERVAL_UNITS = dicts.invert_dict_list({
-    'days':     ['d', 'day', 'days'],
-    'hours':    ['h', 'hr', 'hrs', 'hour', 'hours'],
-    'minutes':  ['m', 'min', 'mins', 'minute', 'minutes'],
-    'seconds':  ['s', 'sec', 'secs', 'second', 'seconds'],
-})
+TIME_INTERVAL_UNITS = dicts.invert_dict_list(
+    {
+        'days': ['d', 'day', 'days'],
+        'hours': ['h', 'hr', 'hrs', 'hour', 'hours'],
+        'minutes': ['m', 'min', 'mins', 'minute', 'minutes'],
+        'seconds': ['s', 'sec', 'secs', 'second', 'seconds'],
+    }
+)
 
 TIME_INTERVAL_RE = re.compile(r"^\s*(?P<value>\d+)\s*(?P<units>[a-zA-Z]+)\s*$")
 
@@ -156,6 +163,7 @@ def build_list_of_type_validator(item_validator, allow_empty=False):
     """Build a validator which validates a list contains items which pass
     item_validator.
     """
+
     def validator(value, config_context):
         if allow_empty and not value:
             return ()
@@ -164,6 +172,7 @@ def build_list_of_type_validator(item_validator, allow_empty=False):
             msg = "Required non-empty list at %s"
             raise ConfigError(msg % config_context.path)
         return tuple(item_validator(item, config_context) for item in seq)
+
     return validator
 
 
@@ -177,6 +186,7 @@ def build_dict_name_validator(item_validator, allow_empty=False):
         for item in valid(value, config_context):
             name_dict[item.name] = item
         return FrozenDict(**name_dict)
+
     return validator
 
 

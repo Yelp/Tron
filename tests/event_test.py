@@ -13,12 +13,11 @@ from tron import event
 
 
 class EventStoreTestCase(TestCase):
-
     @setup
     def build_store(self):
         self.limits = {
-            event.LEVEL_INFO:       2,
-            event.LEVEL_CRITICAL:   3,
+            event.LEVEL_INFO: 2,
+            event.LEVEL_CRITICAL: 3,
         }
         self.store = event.EventStore(self.limits)
 
@@ -28,9 +27,12 @@ class EventStoreTestCase(TestCase):
     @setup
     def add_data(self):
         for i in range(1, 5):
-            self.store.append(self._build_event(
-                event.LEVEL_INFO, "test%s" % i,
-            ))
+            self.store.append(
+                self._build_event(
+                    event.LEVEL_INFO,
+                    "test%s" % i,
+                ),
+            )
 
         for i in range(5, 10):
             e = self._build_event(event.LEVEL_CRITICAL, "test%s" % i)
@@ -60,7 +62,6 @@ class EventStoreTestCase(TestCase):
 
 
 class EventRecorderTestCase(TestCase):
-
     @setup
     def build_recorders(self):
         self.entity_name = 'the_name'
@@ -122,7 +123,6 @@ class EventRecorderTestCase(TestCase):
 
 
 class EventManagerTestCase(TestCase):
-
     @setup
     def setup_manager(self):
         self.manager = event.EventManager.get_instance()
