@@ -67,6 +67,11 @@ def valid_config_from_yaml(config_content):
 
 class ConfigTestCase(TestCase):
     BASE_CONFIG = """
+state_persistence:
+    name: tron_state
+    store_type: shelve
+    buffer_size: 1
+
 output_stream_dir: "/tmp"
 
 time_zone: "EST"
@@ -228,7 +233,7 @@ jobs:
                         'action0_0': schema.ConfigAction(
                             name='action0_0',
                             command='test_command0.0',
-                            executor='ssh',
+                            executor=schema.ExecutorTypes.SSH.value,
                             requires=(),
                         ),
                     }),
@@ -238,7 +243,7 @@ jobs:
                     cleanup_action=schema.ConfigCleanupAction(
                         name='cleanup',
                         command='test_command0.1',
-                        executor='ssh',
+                        executor=schema.ExecutorTypes.SSH.value,
                     ),
                     enabled=True,
                     max_runtime=None,
@@ -264,12 +269,12 @@ jobs:
                             name='action1_1',
                             command='test_command1.1',
                             requires=('action1_0',),
-                            executor='ssh',
+                            executor=schema.ExecutorTypes.SSH.value,
                         ),
                         'action1_0': schema.ConfigAction(
                             name='action1_0',
                             command='test_command1.0',
-                            executor='ssh',
+                            executor=schema.ExecutorTypes.SSH.value,
                             requires=(),
                         ),
                     }),
@@ -299,7 +304,7 @@ jobs:
                         'action2_0': schema.ConfigAction(
                             name='action2_0',
                             command='test_command2.0',
-                            executor='ssh',
+                            executor=schema.ExecutorTypes.SSH.value,
                             requires=(),
                         ),
                     }),
@@ -324,13 +329,13 @@ jobs:
                         'action3_1': schema.ConfigAction(
                             name='action3_1',
                             command='test_command3.1',
-                            executor='ssh',
+                            executor=schema.ExecutorTypes.SSH.value,
                             requires=(),
                         ),
                         'action3_0': schema.ConfigAction(
                             name='action3_0',
                             command='test_command3.0',
-                            executor='ssh',
+                            executor=schema.ExecutorTypes.SSH.value,
                             requires=(),
                         ),
                         'action3_2': schema.ConfigAction(
@@ -338,7 +343,7 @@ jobs:
                             command='test_command3.2',
                             requires=('action3_0', 'action3_1'),
                             node='node0',
-                            executor='ssh',
+                            executor=schema.ExecutorTypes.SSH.value,
                         ),
                     }),
                     queueing=True,
@@ -366,7 +371,7 @@ jobs:
                         'action4_0': schema.ConfigAction(
                             name='action4_0',
                             command='test_command4.0',
-                            executor='ssh',
+                            executor=schema.ExecutorTypes.SSH.value,
                             requires=(),
                         ),
                     }),
@@ -396,7 +401,7 @@ jobs:
                         'action4_0': schema.ConfigAction(
                             name='action4_0',
                             command='test_command4.0',
-                            executor='paasta',
+                            executor=schema.ExecutorTypes.PAASTA.value,
                             requires=(),
                         ),
                     }),
@@ -551,7 +556,7 @@ jobs:
                         'action0_0': schema.ConfigAction(
                             name='action0_0',
                             command='test_command0.0',
-                            executor='ssh',
+                            executor=schema.ExecutorTypes.SSH.value,
                             requires=(),
                         ),
                     }),
@@ -562,7 +567,7 @@ jobs:
                         name='cleanup',
                         command='test_command0.1',
                         node=None,
-                        executor='ssh',
+                        executor=schema.ExecutorTypes.SSH.value,
                         cluster=None,
                         pool=None,
                         cpus=None,
@@ -592,17 +597,17 @@ jobs:
                         jitter=None,
                     ),
                     actions=FrozenDict({
+                        'action1_0': schema.ConfigAction(
+                            name='action1_0',
+                            command='test_command1.0 %(some_var)s',
+                            executor=schema.ExecutorTypes.SSH.value,
+                            requires=(),
+                        ),
                         'action1_1': schema.ConfigAction(
                             name='action1_1',
                             command='test_command1.1',
                             requires=('action1_0',),
-                            executor='ssh',
-                        ),
-                        'action1_0': schema.ConfigAction(
-                            name='action1_0',
-                            command='test_command1.0 %(some_var)s',
-                            executor='ssh',
-                            requires=(),
+                            executor=schema.ExecutorTypes.SSH.value,
                         ),
                     }),
                     queueing=True,
@@ -633,7 +638,7 @@ jobs:
                         'action2_0': schema.ConfigAction(
                             name='action2_0',
                             command='test_command2.0',
-                            executor='ssh',
+                            executor=schema.ExecutorTypes.SSH.value,
                             requires=(),
                         ),
                     }),
@@ -658,13 +663,13 @@ jobs:
                         'action3_1': schema.ConfigAction(
                             name='action3_1',
                             command='test_command3.1',
-                            executor='ssh',
+                            executor=schema.ExecutorTypes.SSH.value,
                             requires=(),
                         ),
                         'action3_0': schema.ConfigAction(
                             name='action3_0',
                             command='test_command3.0',
-                            executor='ssh',
+                            executor=schema.ExecutorTypes.SSH.value,
                             requires=(),
                         ),
                         'action3_2': schema.ConfigAction(
@@ -672,7 +677,7 @@ jobs:
                             command='test_command3.2',
                             requires=('action3_0', 'action3_1'),
                             node='node0',
-                            executor='ssh',
+                            executor=schema.ExecutorTypes.SSH.value,
                         ),
                     }),
                     queueing=True,
@@ -700,7 +705,7 @@ jobs:
                         'action4_0': schema.ConfigAction(
                             name='action4_0',
                             command='test_command4.0',
-                            executor='ssh',
+                            executor=schema.ExecutorTypes.SSH.value,
                             requires=(),
                         ),
                     }),
@@ -730,7 +735,7 @@ jobs:
                         'action4_0': schema.ConfigAction(
                             name='action4_0',
                             command='test_command4.0',
-                            executor='paasta',
+                            executor=schema.ExecutorTypes.PAASTA.value,
                             requires=(),
                         ),
                     }),
@@ -1029,7 +1034,7 @@ jobs:
                 'action0_0': schema.ConfigAction(
                     name='action0_0',
                     command='test_command0.0',
-                    executor='paasta',
+                    executor=schema.ExecutorTypes.PAASTA.value,
                     cluster='cluster-one',
                     service='baz',
                     deploy_group='prod',
@@ -1199,7 +1204,7 @@ class ValidateJobsTestCase(TestCase):
                     'action0_0': schema.ConfigAction(
                         name='action0_0',
                         command='test_command0.0',
-                        executor='ssh',
+                        executor=schema.ExecutorTypes.SSH.value,
                         requires=(),
                     ),
                 }),
@@ -1210,7 +1215,7 @@ class ValidateJobsTestCase(TestCase):
                     command='test_command0.1',
                     name='cleanup',
                     node=None,
-                    executor='ssh',
+                    executor=schema.ExecutorTypes.SSH.value,
                     cluster=None,
                     pool=None,
                     cpus=None,

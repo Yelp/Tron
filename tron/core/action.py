@@ -5,6 +5,7 @@ import logging
 
 from tron import node
 from tron.config.schema import CLEANUP_ACTION_NAME
+from tron.config.schema import ExecutorTypes
 from tron.utils import maybe_decode
 
 log = logging.getLogger(__name__)
@@ -67,7 +68,7 @@ class Action(object):
             command=config.command,
             node_pool=node_repo.get_by_name(config.node),
             retries=config.retries,
-            executor=config.executor,
+            executor=ExecutorTypes(config.executor),
             cluster=config.cluster,
             pool=config.pool,
             cpus=config.cpus,

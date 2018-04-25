@@ -21,6 +21,7 @@ tron.iml
 __pycache__/
 
 # Example cluster
+example-cluster/config
 example-cluster/MASTER.*
 example-cluster/tron-repl.pid
 example-cluster/tron_state*

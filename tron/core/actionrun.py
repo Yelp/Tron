@@ -84,7 +84,7 @@ class ActionRunFactory(object):
             'deploy_group': action.deploy_group or job_run.deploy_group,
             'retries_remaining': action.retries,
         }
-        if action.executor == ExecutorTypes.paasta:
+        if action.executor == ExecutorTypes.PAASTA:
             return PaaSTAActionRun(**args)
         return SSHActionRun(**args)
 
@@ -99,7 +99,7 @@ class ActionRunFactory(object):
             'cleanup': cleanup,
         }
 
-        if state_data.get('executor') == ExecutorTypes.paasta:
+        if state_data.get('executor') == ExecutorTypes.PAASTA:
             return PaaSTAActionRun.from_state(**args)
         return SSHActionRun.from_state(**args)
 
@@ -267,7 +267,7 @@ class ActionRun(object):
             exit_status=state_data.get('exit_status'),
             retries_remaining=state_data.get('retries_remaining'),
             exit_statuses=state_data.get('exit_statuses'),
-            executor=state_data.get('executor', ExecutorTypes.ssh),
+            executor=ExecutorTypes(state_data.get('executor', 'ssh')),
             cluster=state_data.get('cluster'),
             pool=state_data.get('pool'),
             cpus=state_data.get('cpus'),
@@ -329,18 +329,25 @@ class ActionRun(object):
             return self.machine.transition(target)
 
     def retry(self):
-        # kill if in flight
         if self.retries_remaining is None or self.retries_remaining <= 0:
             self.retries_remaining = 1
-        self.kill(final=False)
+
+        if self.is_done:
+            return self.fail(self.exit_status)
+        else:
+            log.info("Killing the current action run for a retry")
+            return self.kill(final=False)
+
+    def restart(self):
+        self.machine.reset()
+        return self.start()
 
     def fail(self, exit_status=0):
         if self.retries_remaining is not None:
             if self.retries_remaining > 0:
                 self.retries_remaining -= 1
                 self.exit_statuses.append(exit_status)
-                self.machine.reset()
-                return self.start()
+                return self.restart()
             else:
                 log.info("Reached maximum number of retries: {}".format(
                     len(self.exit_statuses),

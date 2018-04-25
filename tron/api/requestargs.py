@@ -38,9 +38,13 @@ def get_string(request, key):
     return val
 
 
-def get_bool(request, key):
+def get_bool(request, key, default=None):
     """Returns True if the key exists and is truthy in the request args."""
-    return bool(get_integer(request, key))
+    int_value = get_integer(request, key)
+    if int_value is None:
+        return default
+
+    return bool(int_value)
 
 
 def get_datetime(request, key):

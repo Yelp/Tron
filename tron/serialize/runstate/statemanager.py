@@ -32,22 +32,21 @@ class PersistenceManagerFactory(object):
 
     @classmethod
     def from_config(cls, persistence_config):
-        store_type = persistence_config.store_type
+        store_type = schema.StatePersistenceTypes(
+            persistence_config.store_type,
+        )
         name = persistence_config.name
         connection_details = persistence_config.connection_details
         buffer_size = persistence_config.buffer_size
         store = None
 
-        if store_type not in schema.StatePersistenceTypes:
-            raise PersistenceStoreError("Unknown store type: %s" % store_type)
-
-        if store_type == schema.StatePersistenceTypes.shelve:
+        if store_type == schema.StatePersistenceTypes.SHELVE:
             store = ShelveStateStore(name)
 
-        if store_type == schema.StatePersistenceTypes.sql:
+        if store_type == schema.StatePersistenceTypes.SQL:
             store = SQLAlchemyStateStore(name, connection_details)
 
-        if store_type == schema.StatePersistenceTypes.yaml:
+        if store_type == schema.StatePersistenceTypes.YAML:
             store = YamlStateStore(name)
 
         buffer = StateSaveBuffer(buffer_size)

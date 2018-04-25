@@ -12,6 +12,8 @@ from tron import yaml
 from tron.config import config_parse
 from tron.config import ConfigError
 from tron.config import schema
+from tron.utils import maybe_decode
+from tron.utils import maybe_encode
 
 
 log = logging.getLogger(__name__)
@@ -36,7 +38,7 @@ def read(path):
 
 def write_raw(path, content):
     with open(path, 'w') as fh:
-        fh.write(content)
+        fh.write(maybe_decode(content))
 
 
 def read_raw(path):
@@ -45,10 +47,7 @@ def read_raw(path):
 
 
 def hash_digest(content):
-    # TODO: use maybe_encode()
-    if type(content) is not bytes:
-        content = content.encode('utf8')
-    return hashlib.sha1(content).hexdigest()
+    return hashlib.sha1(maybe_encode(content)).hexdigest()
 
 
 class ManifestFile(object):

@@ -8,7 +8,6 @@ from six.moves import shlex_quote
 
 from tron.config import schema
 from tron.serialize import filehandler
-from tron.utils import maybe_decode
 from tron.utils import state
 from tron.utils import timeutils
 
@@ -86,11 +85,9 @@ class ActionCommand(object):
         return self.machine.transition('exit')
 
     def write_stderr(self, value):
-        value = maybe_decode(value)
         self.stderr.write(value)
 
     def write_stdout(self, value):
-        value = maybe_decode(value)
         self.stdout.write(value)
 
     def done(self):
@@ -233,11 +230,10 @@ def create_action_runner_factory_from_config(config):
     if not config:
         return NoActionRunnerFactory
 
-    if config.runner_type not in schema.ActionRunnerTypes:
-        raise ValueError("Unknown runner type: %s", config.runner_type)
+    runner_type = schema.ActionRunnerTypes(config.runner_type)
 
-    if config.runner_type == schema.ActionRunnerTypes.none:
+    if runner_type == schema.ActionRunnerTypes.NONE:
         return NoActionRunnerFactory
 
-    if config.runner_type == schema.ActionRunnerTypes.subprocess:
+    if runner_type == schema.ActionRunnerTypes.SUBPROCESS:
         return SubprocessActionRunnerFactory.from_config(config)

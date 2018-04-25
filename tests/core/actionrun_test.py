@@ -125,7 +125,7 @@ class ActionRunFactoryTestCase(TestCase):
 
     def test_build_run_for_ssh_action(self):
         action = Turtle(
-            name='theaction', command="doit", executor=ExecutorTypes.ssh,
+            name='theaction', command="doit", executor=ExecutorTypes.SSH,
         )
         action_run = ActionRunFactory.build_run_for_action(
             self.job_run, action, self.action_runner,
@@ -136,7 +136,7 @@ class ActionRunFactoryTestCase(TestCase):
         action = Turtle(
             name='theaction',
             command="doit",
-            executor=ExecutorTypes.paasta,
+            executor=ExecutorTypes.PAASTA,
             cluster='prod',
             pool='default',
             cpus=10,
@@ -159,7 +159,7 @@ class ActionRunFactoryTestCase(TestCase):
         action = Turtle(
             name='theaction',
             command="doit",
-            executor=ExecutorTypes.paasta,
+            executor=ExecutorTypes.PAASTA,
             service='bar',
             deploy_group='dev',
         )
@@ -182,7 +182,7 @@ class ActionRunFactoryTestCase(TestCase):
 
     def test_action_run_from_state_paasta(self):
         state_data = self.action_state_data
-        state_data['executor'] = ExecutorTypes.paasta
+        state_data['executor'] = ExecutorTypes.PAASTA
         state_data['cluster'] = 'cluster-one'
         state_data['pool'] = 'private'
         state_data['cpus'] = 2
@@ -396,7 +396,7 @@ class SSHActionRunTestCase(TestCase):
         )
         self.action_run.watch.assert_called_with(action_command)
 
-    def test_retry(self):
+    def test_auto_retry(self):
         self.action_run.retries_remaining = 2
         self.action_run.exit_statuses = []
         self.action_run.build_action_command()
@@ -416,6 +416,18 @@ class SSHActionRunTestCase(TestCase):
         assert self.action_run.is_failed
 
         assert_equal(self.action_run.exit_statuses, [-1, -1])
+
+    def test_manual_retry(self):
+        self.action_run.retries_remaining = None
+        self.action_run.exit_statuses = []
+        self.action_run.build_action_command()
+        self.action_run.action_command.exit_status = -1
+        self.action_run.machine.transition('start')
+        self.action_run.fail(-1)
+        self.action_run.retry()
+        self.action_run.is_running
+        assert_equal(self.action_run.exit_statuses, [-1])
+        assert_equal(self.action_run.retries_remaining, 0)
 
     def test_handler_running(self):
         self.action_run.build_action_command()

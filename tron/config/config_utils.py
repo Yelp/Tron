@@ -8,6 +8,7 @@ import itertools
 import re
 
 import six
+from enum import Enum
 from six import string_types
 
 from tron.config import ConfigError
@@ -103,9 +104,17 @@ valid_bool = build_type_validator(
 
 
 def build_enum_validator(enum):
-    enum = set(enum)
+    if not issubclass(enum, Enum):
+        raise RuntimeError("Cannot build enum validator for non-Enum class")
+
     msg = 'Value at %%s is not in %s: %%s.' % str(enum)
-    return build_type_validator(enum.__contains__, msg)
+
+    def enum_validator(value):
+        try:
+            return enum(value)
+        except ValueError:
+            return False
+    return build_type_validator(enum_validator, msg)
 
 
 def valid_time(value, config_context):

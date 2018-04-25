@@ -15,6 +15,8 @@ from subprocess import Popen
 
 import six
 
+from tron.utils import maybe_encode
+
 log = logging.getLogger(__name__)
 
 
@@ -57,13 +59,13 @@ class FileHandleWrapper(object):
         """Write content to the fh. Re-open if necessary."""
         if self._fh == NullFileHandle:
             try:
-                self._fh = open(self.name, 'a')
+                self._fh = open(self.name, 'ab')
             except IOError as e:
                 log.error("Failed to open %s: %s", self.name, e)
                 return
 
         self.last_accessed = time.time()
-        self._fh.write(content)
+        self._fh.write(maybe_encode(content))
         self.manager.update(self)
 
     def __enter__(self):

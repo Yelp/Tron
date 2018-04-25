@@ -122,6 +122,11 @@ Optional Fields
     Node or node pool to run the action on if different from the rest of the
     job.
 
+**retries** (beta)
+    An integer representing how many times Tron is allowed to automatically
+    retry an action if it fails.
+    Defaults to None (0 retries allowed).
+
 Example Actions
 ^^^^^^^^^^^^^^^
 
@@ -258,7 +263,7 @@ In the config::
 ::
 
     schedule:
-        type: "groc daily"
+        type: "groc_daily"
         value: "every day 11:22"
         jitter: "5 min"
 

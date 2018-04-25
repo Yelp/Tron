@@ -23,6 +23,7 @@ from tron.commands.cmd_utils import ExitCode
 COMMAND_HELP = (
     ('start',           'Start the selected job, job run, or action'),
     ('rerun',           'Re-run a full job (all actions) with a new job id'),
+    ('retry',           'Re-run a job action within an existing job run'),
     ('cancel',          'Cancel the selected job run'),
     ('disable',         'Disable selected job and cancel any outstanding runs'),
     ('enable',          'Enable the selected job and schedule the next run'),

@@ -31,7 +31,9 @@ class ActionGraphTestCase(TestCase):
 
     def test_from_config(self):
         config = {
-            name: turtle.Turtle(name=name, node='first', requires=[])
+            name: turtle.Turtle(
+                name=name, node='first', requires=[], executor='ssh',
+            )
             for name in self.action_names
         }
         config['dep_multi'].requires = ['dep_one_one', 'base_two']

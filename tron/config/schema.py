@@ -6,7 +6,7 @@ from __future__ import unicode_literals
 
 from collections import namedtuple
 
-from tron.utils.collections import Enum
+from enum import Enum
 
 
 MASTER_NAMESPACE = "MASTER"
@@ -181,10 +181,17 @@ ConfigCleanupAction = config_object_factory(
 )
 
 
-StatePersistenceTypes = Enum.create('shelve', 'sql', 'yaml')
+class StatePersistenceTypes(Enum):
+    SHELVE = 'shelve'
+    SQL = 'sql'
+    YAML = 'yaml'
 
 
-ExecutorTypes = Enum.create('ssh', 'paasta')
+class ExecutorTypes(Enum):
+    SSH = 'ssh'
+    PAASTA = 'paasta'
 
 
-ActionRunnerTypes = Enum.create('none', 'subprocess')
+class ActionRunnerTypes(Enum):
+    NONE = 'none'
+    SUBPROCESS = 'subprocess'

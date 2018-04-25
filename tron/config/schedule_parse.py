@@ -9,6 +9,7 @@ import datetime
 import re
 from collections import namedtuple
 
+from enum import Enum
 from six import string_types
 
 from tron.config import config_utils
@@ -63,7 +64,7 @@ def schedule_config_from_string(schedule, config_context):
         schedule.split(None, 1), 2, padding='',
     )
     if name not in schedulers:
-        config = ConfigGenericSchedule('groc daily', schedule, jitter=None)
+        config = ConfigGenericSchedule('groc_daily', schedule, jitter=None)
         return parse_groc_expression(config, config_context)
 
     config = ConfigGenericSchedule(name, schedule_config, jitter=None)
@@ -318,8 +319,11 @@ schedulers = {
     'daily':        valid_daily_scheduler,
     'interval':     valid_interval_scheduler,
     'cron':         valid_cron_scheduler,
-    'groc daily':   parse_groc_expression,
+    'groc_daily':   parse_groc_expression,
 }
+
+
+SchedulerTypes = Enum('SchedulerTypes', [(k, k) for k in schedulers.keys()])
 
 
 class ScheduleValidator(config_utils.Validator):
@@ -329,6 +333,6 @@ class ScheduleValidator(config_utils.Validator):
         'jitter':       datetime.timedelta(),
     }
     validators = {
-        'type':         config_utils.build_enum_validator(schedulers.keys()),
+        'type':         config_utils.build_enum_validator(SchedulerTypes),
         'jitter':       config_utils.valid_time_delta,
     }
