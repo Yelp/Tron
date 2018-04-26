@@ -123,6 +123,7 @@ class StateMachine(Observable):
         self.state = force_state or self.initial_state
         self._state_by_name = None
         self.delegate = delegate
+        self.transitions = get_transitions(self.initial_state)
 
     def reset(self):
         """Force state machine into initial state."""
@@ -135,10 +136,6 @@ class StateMachine(Observable):
         """
         log.debug("Checking for transition from %s to %s", self.state, target)
         return self.state.get(target, None)
-
-    @property
-    def transitions(self):
-        return get_transitions(self.initial_state)
 
     def transition(self, target, stop_item=None):
         """Check our current state for a transition based on the input 'target'
