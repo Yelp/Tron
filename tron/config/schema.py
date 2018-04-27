@@ -128,6 +128,7 @@ ConfigJob = config_object_factory(
         'time_zone',  # pytz time zone
         'service',  # str
         'deploy_group',  # str
+        'expected_runtime',  # datetime.Timedelta
     ],
 )
 
@@ -148,6 +149,7 @@ ConfigAction = config_object_factory(
         'service',  # str
         'deploy_group',  # str
         'retries',  # int
+        'expected_runtime',  # datetime.Timedelta
     ],
 )
 

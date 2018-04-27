@@ -289,6 +289,7 @@ class ValidateAction(Validator):
         'service': None,
         'deploy_group': None,
         'retries': None,
+        'expected_runtime': None,
     }
     requires = build_list_of_type_validator(
         valid_action_name,
@@ -307,6 +308,7 @@ class ValidateAction(Validator):
         'service': valid_string,
         'deploy_group': valid_string,
         'retries': valid_int,
+        'expected_runtime': config_utils.valid_time_delta,
     }
 
 
@@ -367,6 +369,7 @@ class ValidateJob(Validator):
         'time_zone': None,
         'service': None,
         'deploy_group': None,
+        'expected_runtime': None,
     }
 
     validators = {
@@ -385,6 +388,7 @@ class ValidateJob(Validator):
         'time_zone': valid_time_zone,
         'service': valid_string,
         'deploy_group': valid_string,
+        'expected_runtime': config_utils.valid_time_delta,
     }
 
     def cast(self, in_dict, config_context):

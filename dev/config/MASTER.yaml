@@ -10,6 +10,17 @@ jobs:
     - name: "test"
       node: localhost
       schedule: "interval 20seconds"
+      expected_runtime: "10m"
+      actions:
+        - name: "first"
+          command: "echo hi"
+          expected_runtime: "8m"
+        - name: "second"
+          command: "sleep 10m"
+          expected_runtime: "5m"
+    - name: "test2"
+      node: localhost
+      schedule: "interval 20seconds"
       actions:
         - name: "first"
           command: "echo hi"

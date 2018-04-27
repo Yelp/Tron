@@ -77,6 +77,13 @@ class ActionGraph(object):
     def names(self):
         return self.action_map.keys()
 
+    @property
+    def expected_runtime(self):
+        return {
+            name: self.action_map[name].expected_runtime
+            for name in self.action_map.keys()
+        }
+
     def __getitem__(self, name):
         return self.action_map[name]
 

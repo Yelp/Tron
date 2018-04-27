@@ -254,6 +254,8 @@ class JobAdapter(ReprAdapter):
         'max_runtime',
         'action_graph',
         'monitoring',
+        'expected_runtime',
+        'actions_expected_runtime',
     ]
 
     def __init__(
@@ -310,6 +312,12 @@ class JobAdapter(ReprAdapter):
 
     def get_max_runtime(self):
         return str(self._obj.max_runtime)
+
+    def get_expected_runtime(self):
+        return str(self._obj.expected_runtime)
+
+    def get_actions_expected_runtime(self):
+        return str(self._obj.action_graph.expected_runtime)
 
     @toggle_flag('include_action_graph')
     def get_action_graph(self):

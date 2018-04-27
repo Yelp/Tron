@@ -13,6 +13,8 @@ from tron.commands import cmd_utils
 from tron.commands import display
 from tron.commands.client import Client
 from tron.commands.client import get_object_type_from_identifier
+from tron.config import config_utils
+from tron.utils import timeutils
 
 log = logging.getLogger('check_tron_jobs')
 
@@ -78,7 +80,10 @@ def compute_check_result_for_job_runs(client, job, job_content):
     )
     action_runs = client.job(job_run_id.url, include_action_runs=True)
     # A job action is like MASTER.foo.1.step1
-    relevant_action = get_relevant_action(action_runs["runs"], last_state)
+    actions_expected_runtime = job_content.get('actions_expected_runtime', {})
+    relevant_action = get_relevant_action(
+        action_runs["runs"], last_state, actions_expected_runtime
+    )
     action_run_id = get_object_type_from_identifier(
         url_index,
         relevant_action['id'],
@@ -176,32 +181,81 @@ def is_job_scheduled(job_runs):
     return None
 
 
+def _get_delta_seconds_from_str(expected_runtime_str):
+    expected_runtime = config_utils.valid_time_delta(
+        expected_runtime_str, config_utils.NullConfigContext
+    )
+    return timeutils.delta_total_seconds(expected_runtime)
+
+
 def is_job_stuck(job_runs):
     next_run_time = None
+
+    expected_runtime_str = job_runs.get('expected_runtime', None)
+    if expected_runtime_str is not None:
+        seconds = _get_delta_seconds_from_str(expected_runtime_str)
+    actions_expected_runtime = job_runs.get('actions_expected_runtime', {})
+
     for run in sorted(
         job_runs['runs'],
         key=lambda k: k['run_time'],
         reverse=True,
     ):
         if run.get('state', 'unknown') == "running":
+            # check if runtime exceeds expected_runtime
+            if expected_runtime_str is not None:
+                starttime = run.get('start_time', None)
+                if time.mktime(_timestamp_to_timeobj(starttime)
+                               ) + seconds < time.time():
+                    return run
+            # check if it is still running at next scheduled job run time
             if next_run_time:
                 difftime = _timestamp_to_timeobj(next_run_time)
                 if time.time() > time.mktime(difftime):
                     return run
+            # check if action runtime exceeds actions_expected_runtime
+            for action in run.get('runs', []):
+                if is_action_exceeding_expected_runtime(
+                    action, actions_expected_runtime
+                ):
+                    return run
+
         next_run_time = run.get('run_time', None)
     return None
 
 
-def get_relevant_action(action_runs, last_state):
+def is_action_exceeding_expected_runtime(action, actions_expected_runtime):
+    if action.get('state', 'unknown') == 'running':
+        action_name = action.get('action_name', None)
+        if action_name in actions_expected_runtime and actions_expected_runtime[
+            action_name
+        ] is not None:
+            action_seconds = _get_delta_seconds_from_str(
+                actions_expected_runtime[action_name]
+            )
+            action_starttime = action.get('start_time', None)
+            if time.mktime(_timestamp_to_timeobj(action_starttime)
+                           ) + action_seconds < time.time():
+                return True
+    return False
+
+
+def get_relevant_action(action_runs, last_state, actions_expected_runtime):
+    stuck_action_candidate = None
     for action in reversed(action_runs):
         action_state = action.get('state', 'unknown')
         try:
             if State(action_state) == last_state:
                 return action
         except ValueError:
-            if action_state == 'running' and last_state == State.STUCK:
-                return action
-    return action_runs[-1]
+            if last_state == State.STUCK:
+                if is_action_exceeding_expected_runtime(
+                    action, actions_expected_runtime
+                ):
+                    return action
+                if action_state == 'running':
+                    stuck_action_candidate = action
+    return stuck_action_candidate or action_runs[-1]
 
 
 def guess_realert_every(job):

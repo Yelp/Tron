@@ -83,6 +83,11 @@ Optional Fields
     None, which means it will use the default time_zone set in the master
     config.
 
+**expected_runtime** (default **None**)
+    A time interval (ex: "2 hours") that specified the maximum expected duration of each job run.
+    Monitoring will alert if a job run is still running after this duration.
+    Use max_runtime instead if hard limit is needed.
+
 
 .. _job_actions:
 
@@ -126,6 +131,11 @@ Optional Fields
     An integer representing how many times Tron is allowed to automatically
     retry an action if it fails.
     Defaults to None (0 retries allowed).
+
+**expected_runtime** (default **None**)
+    A time interval (ex: "2 hours") that specified the maximal duration of each action run.
+    If the job action was still running after this duration, it would alert team for suspicious
+    action stuck.
 
 Example Actions
 ^^^^^^^^^^^^^^^
