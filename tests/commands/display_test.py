@@ -83,47 +83,48 @@ class DisplayActionsTestCase(TestCase):
     def setup_data(self):
         self.data = {
             'id':
-            'something.23',
+                'something.23',
             'state':
-            'UNKWN',
+                'UNKWN',
             'node': {
                 'hostname': 'something',
                 'username': 'a',
             },
             'run_time':
-            'sometime',
+                'sometime',
             'start_time':
-            'sometime',
+                'sometime',
             'end_time':
-            'sometime',
+                'sometime',
             'manual':
-            False,
-            'runs': [
-                dict(
-                    id='something.23.run_other_thing',
-                    state='UNKWN',
-                    start_time='2012-01-23 10:10:10.123456',
-                    end_time='',
-                    duration='',
-                    run_time='sometime',
-                ),
-                dict(
-                    id='something.1.run_foo',
-                    state='FAIL',
-                    start_time='2012-01-23 10:10:10.123456',
-                    end_time='2012-01-23 10:40:10.123456',
-                    duration='1234.123456',
-                    run_time='sometime',
-                ),
-                dict(
-                    id='something.23.run_other_thing',
-                    state='QUE',
-                    start_time='2012-01-23 10:10:10.123456',
-                    end_time='',
-                    duration='',
-                    run_time='sometime',
-                ),
-            ],
+                False,
+            'runs':
+                [
+                    dict(
+                        id='something.23.run_other_thing',
+                        state='UNKWN',
+                        start_time='2012-01-23 10:10:10.123456',
+                        end_time='',
+                        duration='',
+                        run_time='sometime',
+                    ),
+                    dict(
+                        id='something.1.run_foo',
+                        state='FAIL',
+                        start_time='2012-01-23 10:10:10.123456',
+                        end_time='2012-01-23 10:40:10.123456',
+                        duration='1234.123456',
+                        run_time='sometime',
+                    ),
+                    dict(
+                        id='something.23.run_other_thing',
+                        state='QUE',
+                        start_time='2012-01-23 10:10:10.123456',
+                        end_time='',
+                        duration='',
+                        run_time='sometime',
+                    ),
+                ],
         }
         self.details = {
             'id': 'something.1.foo',
