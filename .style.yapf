@@ -52,7 +52,7 @@ blank_line_before_nested_class_or_def=False
 coalesce_brackets=False
 
 # The column limit.
-column_limit=79
+column_limit=134
 
 # The style for continuation alignment. Possible values are:
 #
@@ -113,7 +113,7 @@ i18n_function_call=
 #       'key2': value1 +
 #               value2,
 #   }
-indent_dictionary_value=False
+indent_dictionary_value=True
 
 # The number of columns to use for indentation.
 indent_width=4
