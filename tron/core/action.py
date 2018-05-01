@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import datetime
 import logging
 
 from tron import node
@@ -49,7 +50,9 @@ class Action(object):
         self.mem = mem
         self.service = service
         self.deploy_group = deploy_group
-        self.expected_runtime = expected_runtime
+        self.expected_runtime = expected_runtime or datetime.timedelta(
+            hours=24
+        )
 
     @property
     def is_cleanup(self):

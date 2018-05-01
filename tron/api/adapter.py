@@ -16,6 +16,7 @@ from tron import actioncommand
 from tron import scheduler
 from tron.serialize import filehandler
 from tron.utils import timeutils
+from tron.utils.timeutils import delta_total_seconds
 
 
 class ReprAdapter(object):
@@ -314,10 +315,10 @@ class JobAdapter(ReprAdapter):
         return str(self._obj.max_runtime)
 
     def get_expected_runtime(self):
-        return str(self._obj.expected_runtime)
+        return delta_total_seconds(self._obj.expected_runtime)
 
     def get_actions_expected_runtime(self):
-        return str(self._obj.action_graph.expected_runtime)
+        return self._obj.action_graph.expected_runtime
 
     @toggle_flag('include_action_graph')
     def get_action_graph(self):

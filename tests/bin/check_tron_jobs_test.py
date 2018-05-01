@@ -47,12 +47,13 @@ class CheckJobsTestCase(TestCase):
     def test_get_relevant_action_picks_the_one_that_failed(self):
         action_runs = [
             {
-                'node': {
-                    'username': 'batch',
-                    'hostname': 'localhost',
-                    'name': 'localhost',
-                    'port': 22,
-                },
+                'node':
+                    {
+                        'username': 'batch',
+                        'hostname': 'localhost',
+                        'name': 'localhost',
+                        'port': 22,
+                    },
                 'raw_command': '/bin/false',
                 'requirements': [],
                 'run_num': '582',
@@ -69,12 +70,13 @@ class CheckJobsTestCase(TestCase):
                 'job_name': 'MASTER.kwatest',
             },
             {
-                'node': {
-                    'username': 'batch',
-                    'hostname': 'localhost',
-                    'name': 'localhost',
-                    'port': 22,
-                },
+                'node':
+                    {
+                        'username': 'batch',
+                        'hostname': 'localhost',
+                        'name': 'localhost',
+                        'port': 22,
+                    },
                 'raw_command': '/bin/true',
                 'requirements': [],
                 'run_num': '582',
@@ -91,78 +93,172 @@ class CheckJobsTestCase(TestCase):
                 'job_name': 'MASTER.kwatest',
             },
         ]
-        actual = check_tron_jobs.get_relevant_action(action_runs, State.FAILED, {})
+        actual = check_tron_jobs.get_relevant_action(
+            action_runs=action_runs,
+            last_state=State.FAILED,
+            actions_expected_runtime={}
+        )
         assert_equal(actual["state"], "failed")
 
     def test_get_relevant_action_picks_the_first_one_succeeded(self):
         action_runs = [
             {
-                'id': 'MASTER.test.action1',
-                'action_name': 'action1',
-                'state': 'succeeded',
-                'start_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 1200)),
+                'id':
+                    'MASTER.test.action1',
+                'action_name':
+                    'action1',
+                'state':
+                    'succeeded',
+                'start_time':
+                    time.strftime(
+                        '%Y-%m-%d %H:%M:%S',
+                        time.localtime(time.time() - 1200)
+                    ),
+                'duration':
+                    '0:18:01.475067',
             },
             {
-                'id': 'MASTER.test.action2',
-                'action_name': 'action2',
-                'state': 'succeeded',
-                'start_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)),
+                'id':
+                    'MASTER.test.action2',
+                'action_name':
+                    'action2',
+                'state':
+                    'succeeded',
+                'start_time':
+                    time.strftime(
+                        '%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)
+                    ),
+                'duration':
+                    '0:08:02.005783',
             },
             {
-                'id': 'MASTER.test.action1',
-                'action_name': 'action1',
-                'state': 'succeeded',
-                'start_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time())),
+                'id':
+                    'MASTER.test.action1',
+                'action_name':
+                    'action1',
+                'state':
+                    'succeeded',
+                'start_time':
+                    time.strftime(
+                        '%Y-%m-%d %H:%M:%S', time.localtime(time.time())
+                    ),
+                'duration':
+                    '0:00:01.006305',
             },
         ]
         actual = check_tron_jobs.get_relevant_action(
-            action_runs,
-            State.SUCCEEDED,
-            {},
+            action_runs=action_runs,
+            last_state=State.SUCCEEDED,
+            actions_expected_runtime={
+                'action1': 86400.0,
+                'action2': 86400.0,
+                'action3': 86400.0
+            },
         )
         assert_equal(actual["id"], "MASTER.test.action1")
 
     def test_get_relevant_action_pick_the_one_stuck(self):
         action_runs = [
             {
-                'id': 'MASTER.test.1.action3',
-                'state': 'succeeded',
-                'start_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 1200)),
+                'id':
+                    'MASTER.test.1.action3',
+                'state':
+                    'succeeded',
+                'start_time':
+                    time.strftime(
+                        '%Y-%m-%d %H:%M:%S',
+                        time.localtime(time.time() - 1200)
+                    ),
+                'duration':
+                    '0:18:01.475067',
             },
             {
-                'id': 'MASTER.test.1.action2',
-                'state': 'running',
-                'start_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 1100)),
+                'id':
+                    'MASTER.test.1.action2',
+                'state':
+                    'running',
+                'start_time':
+                    time.strftime(
+                        '%Y-%m-%d %H:%M:%S',
+                        time.localtime(time.time() - 1100)
+                    ),
+                'duration':
+                    '0:18:40.005783',
             },
             {
-                'id': 'MASTER.test.1.action1',
-                'state': 'succeeded',
-                'start_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 1000)),
+                'id':
+                    'MASTER.test.1.action1',
+                'state':
+                    'succeeded',
+                'start_time':
+                    time.strftime(
+                        '%Y-%m-%d %H:%M:%S',
+                        time.localtime(time.time() - 1000)
+                    ),
+                'duration':
+                    '0:00:01.006305',
             },
         ]
-        actual = check_tron_jobs.get_relevant_action(action_runs, State.STUCK, {'action1': None, 'action2': None, 'action3': None})
+        actual = check_tron_jobs.get_relevant_action(
+            action_runs=action_runs,
+            last_state=State.STUCK,
+            actions_expected_runtime={
+                'action1': 86400.0,
+                'action2': 86400.0,
+                'action3': 86400.0,
+            }
+        )
         assert_equal(actual["id"], "MASTER.test.1.action2")
 
     def test_get_relevant_action_pick_the_one_exceeds_expected_runtime(self):
         action_runs = [
             {
-                'id': 'MASTER.test.1.action3',
-                'state': 'running',
-                'start_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)),
+                'id':
+                    'MASTER.test.1.action3',
+                'state':
+                    'running',
+                'start_time':
+                    time.strftime(
+                        '%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)
+                    ),
+                'duration':
+                    '0:10:00.006305',
             },
             {
-                'id': 'MASTER.test.1.action2',
-                'state': 'running',
-                'start_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)),
+                'id':
+                    'MASTER.test.1.action2',
+                'state':
+                    'running',
+                'start_time':
+                    time.strftime(
+                        '%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)
+                    ),
+                'duration':
+                    '0:10:00.006383',
             },
             {
-                'id': 'MASTER.test.1.action1',
-                'state': 'succeeded',
-                'start_time': time.strftime('%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)),
+                'id':
+                    'MASTER.test.1.action1',
+                'state':
+                    'succeeded',
+                'start_time':
+                    time.strftime(
+                        '%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)
+                    ),
+                'duration':
+                    '0:10:00.006331',
             },
         ]
-        actions_expected_runtime = {'action3': '8m', 'action2': '12m', 'action1': '15m'}
-        actual = check_tron_jobs.get_relevant_action(action_runs, State.STUCK, actions_expected_runtime)
+        actions_expected_runtime = {
+            'action3': 480.0,
+            'action2': 720.0,
+            'action1': 900.0
+        }
+        actual = check_tron_jobs.get_relevant_action(
+            action_runs=action_runs,
+            last_state=State.STUCK,
+            actions_expected_runtime=actions_expected_runtime
+        )
         assert_equal(actual["id"], "MASTER.test.1.action3")
 
     def test_job_succeeded(self):
@@ -174,28 +270,37 @@ class CheckJobsTestCase(TestCase):
             'runs':
                 [
                     {
-                        'id': 'MASTER.test.3',
-                        'state': 'scheduled',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() + 600),
-                        ),
+                        'id':
+                            'MASTER.test.3',
+                        'state':
+                            'scheduled',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() + 600),
+                            ),
                     },
                     {
-                        'id': 'MASTER.test.2',
-                        'state': 'running',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 600),
-                        ),
+                        'id':
+                            'MASTER.test.2',
+                        'state':
+                            'running',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 600),
+                            ),
                     },
                     {
-                        'id': 'MASTER.test.1',
-                        'state': 'succeeded',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 1800),
-                        ),
+                        'id':
+                            'MASTER.test.1',
+                        'state':
+                            'succeeded',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 1800),
+                            ),
                     },
                 ],
         }
@@ -212,28 +317,37 @@ class CheckJobsTestCase(TestCase):
             'runs':
                 [
                     {
-                        'id': 'MASTER.test.3',
-                        'state': 'scheduled',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() + 600),
-                        ),
+                        'id':
+                            'MASTER.test.3',
+                        'state':
+                            'scheduled',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() + 600),
+                            ),
                     },
                     {
-                        'id': 'MASTER.test.2',
-                        'state': 'running',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 600),
-                        ),
+                        'id':
+                            'MASTER.test.2',
+                        'state':
+                            'running',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 600),
+                            ),
                     },
                     {
-                        'id': 'MASTER.test.1',
-                        'state': 'failed',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 1800),
-                        ),
+                        'id':
+                            'MASTER.test.1',
+                        'state':
+                            'failed',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 1800),
+                            ),
                     },
                 ],
         }
@@ -250,12 +364,15 @@ class CheckJobsTestCase(TestCase):
             'runs':
                 [
                     {
-                        'id': 'MASTER.test.3',
-                        'state': 'scheduled',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() + 600),
-                        ),
+                        'id':
+                            'MASTER.test.3',
+                        'state':
+                            'scheduled',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() + 600),
+                            ),
                     },
                     {
                         'id':
@@ -280,12 +397,15 @@ class CheckJobsTestCase(TestCase):
                             ],
                     },
                     {
-                        'id': 'MASTER.test.1',
-                        'state': 'succeeded',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 1800),
-                        ),
+                        'id':
+                            'MASTER.test.1',
+                        'state':
+                            'succeeded',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 1800),
+                            ),
                     },
                 ],
         }
@@ -302,12 +422,15 @@ class CheckJobsTestCase(TestCase):
             'runs':
                 [
                     {
-                        'id': 'MASTER.test.3',
-                        'state': 'scheduled',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() + 600),
-                        ),
+                        'id':
+                            'MASTER.test.3',
+                        'state':
+                            'scheduled',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() + 600),
+                            ),
                     },
                     {
                         'id':
@@ -332,12 +455,15 @@ class CheckJobsTestCase(TestCase):
                             ],
                     },
                     {
-                        'id': 'MASTER.test.1',
-                        'state': 'succeeded',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 1800),
-                        ),
+                        'id':
+                            'MASTER.test.1',
+                        'state':
+                            'succeeded',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 1800),
+                            ),
                     },
                 ],
         }
@@ -354,12 +480,15 @@ class CheckJobsTestCase(TestCase):
             'runs':
                 [
                     {
-                        'id': 'MASTER.test.3',
-                        'state': 'scheduled',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() + 600),
-                        ),
+                        'id':
+                            'MASTER.test.3',
+                        'state':
+                            'scheduled',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() + 600),
+                            ),
                     },
                     {
                         'id':
@@ -384,12 +513,15 @@ class CheckJobsTestCase(TestCase):
                             ],
                     },
                     {
-                        'id': 'MASTER.test.1',
-                        'state': 'succeeded',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 1800),
-                        ),
+                        'id':
+                            'MASTER.test.1',
+                        'state':
+                            'succeeded',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 1800),
+                            ),
                     },
                 ],
         }
@@ -416,20 +548,26 @@ class CheckJobsTestCase(TestCase):
             'runs':
                 [
                     {
-                        'id': 'MASTER.test.2',
-                        'state': 'queued',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 600),
-                        ),
+                        'id':
+                            'MASTER.test.2',
+                        'state':
+                            'queued',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 600),
+                            ),
                     },
                     {
-                        'id': 'MASTER.test.1',
-                        'state': 'running',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 1200),
-                        ),
+                        'id':
+                            'MASTER.test.1',
+                        'state':
+                            'running',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 1200),
+                            ),
                     },
                 ],
         }
@@ -444,29 +582,41 @@ class CheckJobsTestCase(TestCase):
             'next_run':
                 None,
             'expected_runtime':
-                '8m',
+                480.0,
             'runs':
                 [
                     {
-                        'id': 'MASTER.test.100',
-                        'state': 'scheduled',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() + 600),
-                        ),
-                        'start_time': None,
+                        'id':
+                            'MASTER.test.100',
+                        'state':
+                            'scheduled',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() + 600),
+                            ),
+                        'start_time':
+                            None,
+                        'duration':
+                            '',
                     },
                     {
-                        'id': 'MASTER.test.99',
-                        'state': 'running',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 600),
-                        ),
-                        'start_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 600),
-                        ),
+                        'id':
+                            'MASTER.test.99',
+                        'state':
+                            'running',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 600),
+                            ),
+                        'start_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 600),
+                            ),
+                        'duration':
+                            '0:10:01.883601',
                     },
                 ],
         }
@@ -481,18 +631,23 @@ class CheckJobsTestCase(TestCase):
             'next_run':
                 None,
             'actions_expected_runtime': {
-                'action1': '12m',
-                'action2': '8m'
+                'action1': 720.0,
+                'action2': 480.0
             },
             'runs':
                 [
                     {
-                        'id': 'MASTER.test.3',
-                        'state': 'scheduled',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() + 600),
-                        ),
+                        'id':
+                            'MASTER.test.3',
+                        'state':
+                            'scheduled',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() + 600),
+                            ),
+                        'duration':
+                            '',
                     },
                     {
                         'id':
@@ -504,35 +659,54 @@ class CheckJobsTestCase(TestCase):
                                 '%Y-%m-%d %H:%M:%S',
                                 time.localtime(time.time() - 600),
                             ),
+                        'duration':
+                            '0:10:01.883601',
                         'runs':
                             [
                                 {
-                                    'id': 'MASTER.test.2.action2',
-                                    'state': 'running',
-                                    'action_name': 'action2',
-                                    'start_time': time.strftime(
-                                        '%Y-%m-%d %H:%M:%S',
-                                        time.localtime(time.time() - 600),
-                                    ),
+                                    'id':
+                                        'MASTER.test.2.action2',
+                                    'state':
+                                        'running',
+                                    'action_name':
+                                        'action2',
+                                    'start_time':
+                                        time.strftime(
+                                            '%Y-%m-%d %H:%M:%S',
+                                            time.localtime(time.time() - 600),
+                                        ),
+                                    'duration':
+                                        '0:10:01.883601',
                                 },
                                 {
-                                    'id': 'MASTER.test.1.action1',
-                                    'state': 'running',
-                                    'action_name': 'action1',
-                                    'start_time': time.strftime(
-                                        '%Y-%m-%d %H:%M:%S',
-                                        time.localtime(time.time() - 600),
-                                    ),
+                                    'id':
+                                        'MASTER.test.1.action1',
+                                    'state':
+                                        'running',
+                                    'action_name':
+                                        'action1',
+                                    'start_time':
+                                        time.strftime(
+                                            '%Y-%m-%d %H:%M:%S',
+                                            time.localtime(time.time() - 600),
+                                        ),
+                                    'duration':
+                                        '0:10:01.885401',
                                 },
                             ],
                     },
                     {
-                        'id': 'MASTER.test.1',
-                        'state': 'succeeded',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 1800),
-                        ),
+                        'id':
+                            'MASTER.test.1',
+                        'state':
+                            'succeeded',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 1800),
+                            ),
+                        'duration':
+                            '0:15:00.453601',
                     },
                 ],
         }
@@ -549,20 +723,26 @@ class CheckJobsTestCase(TestCase):
             'runs':
                 [
                     {
-                        'id': 'MASTER.test.2',
-                        'state': 'running',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 600),
-                        ),
+                        'id':
+                            'MASTER.test.2',
+                        'state':
+                            'running',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 600),
+                            ),
                     },
                     {
-                        'id': 'MASTER.test.1',
-                        'state': 'scheduled',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time()),
-                        ),
+                        'id':
+                            'MASTER.test.1',
+                        'state':
+                            'scheduled',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time()),
+                            ),
                     },
                 ],
         }
@@ -579,20 +759,26 @@ class CheckJobsTestCase(TestCase):
             'runs':
                 [
                     {
-                        'id': 'MASTER.test.2',
-                        'state': 'succeeded',
-                        'end_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 600),
-                        ),
+                        'id':
+                            'MASTER.test.2',
+                        'state':
+                            'succeeded',
+                        'end_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 600),
+                            ),
                     },
                     {
-                        'id': 'MASTER.test.1',
-                        'state': 'succeeded',
-                        'end_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 1200),
-                        ),
+                        'id':
+                            'MASTER.test.1',
+                        'state':
+                            'succeeded',
+                        'end_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 1200),
+                            ),
                     },
                 ],
         }
@@ -609,12 +795,15 @@ class CheckJobsTestCase(TestCase):
             'runs':
                 [
                     {
-                        'id': 'MASTER.test.1',
-                        'state': 'scheduled',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() + 1200),
-                        ),
+                        'id':
+                            'MASTER.test.1',
+                        'state':
+                            'scheduled',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() + 1200),
+                            ),
                     },
                 ],
         }
@@ -641,28 +830,37 @@ class CheckJobsTestCase(TestCase):
             'runs':
                 [
                     {
-                        'id': 'MASTER.test.3',
-                        'state': 'scheduled',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 600),
-                        ),
+                        'id':
+                            'MASTER.test.3',
+                        'state':
+                            'scheduled',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 600),
+                            ),
                     },
                     {
-                        'id': 'MASTER.test.2',
-                        'state': 'unknown',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 1200),
-                        ),
+                        'id':
+                            'MASTER.test.2',
+                        'state':
+                            'unknown',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 1200),
+                            ),
                     },
                     {
-                        'id': 'MASTER.test.1',
-                        'state': 'succeeded',
-                        'run_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 1800),
-                        ),
+                        'id':
+                            'MASTER.test.1',
+                        'state':
+                            'succeeded',
+                        'run_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 1800),
+                            ),
                     },
                 ],
         }
@@ -687,20 +885,26 @@ class CheckJobsTestCase(TestCase):
                         'start_time': None,
                     },
                     {
-                        'id': 'MASTER.test.2',
-                        'state': 'failed',
-                        'start_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 600),
-                        ),
+                        'id':
+                            'MASTER.test.2',
+                        'state':
+                            'failed',
+                        'start_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 600),
+                            ),
                     },
                     {
-                        'id': 'MASTER.test.1',
-                        'state': 'succeeded',
-                        'start_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 1800),
-                        ),
+                        'id':
+                            'MASTER.test.1',
+                        'state':
+                            'succeeded',
+                        'start_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 1800),
+                            ),
                     },
                 ],
         }
@@ -721,20 +925,26 @@ class CheckJobsTestCase(TestCase):
                         'start_time': None,
                     },
                     {
-                        'id': 'MASTER.test.2',
-                        'state': 'running',
-                        'start_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 600),
-                        ),
+                        'id':
+                            'MASTER.test.2',
+                        'state':
+                            'running',
+                        'start_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 600),
+                            ),
                     },
                     {
-                        'id': 'MASTER.test.1',
-                        'state': 'succeeded',
-                        'start_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 1800),
-                        ),
+                        'id':
+                            'MASTER.test.1',
+                        'state':
+                            'succeeded',
+                        'start_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 1800),
+                            ),
                     },
                 ],
         }
@@ -758,20 +968,26 @@ class CheckJobsTestCase(TestCase):
                         'start_time': None,
                     },
                     {
-                        'id': 'MASTER.test.2',
-                        'state': 'failed',
-                        'start_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 10),
-                        ),
+                        'id':
+                            'MASTER.test.2',
+                        'state':
+                            'failed',
+                        'start_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 10),
+                            ),
                     },
                     {
-                        'id': 'MASTER.test.1',
-                        'state': 'succeeded',
-                        'start_time': time.strftime(
-                            '%Y-%m-%d %H:%M:%S',
-                            time.localtime(time.time() - 20),
-                        ),
+                        'id':
+                            'MASTER.test.1',
+                        'state':
+                            'succeeded',
+                        'start_time':
+                            time.strftime(
+                                '%Y-%m-%d %H:%M:%S',
+                                time.localtime(time.time() - 20),
+                            ),
                     },
                 ],
         }
@@ -780,16 +996,21 @@ class CheckJobsTestCase(TestCase):
 
     def test_guess_realert_every_first_time_job(self):
         job_runs = {
-            'status': 'enabled',
-            'next_run': time.strftime(
-                '%Y-%m-%d %H:%M:%S',
-                time.localtime(time.time() + 600),
-            ),
-            'runs': [{
-                'id': 'MASTER.test.1',
-                'state': 'scheduled',
-                'start_time': None,
-            }, ],
+            'status':
+                'enabled',
+            'next_run':
+                time.strftime(
+                    '%Y-%m-%d %H:%M:%S',
+                    time.localtime(time.time() + 600),
+                ),
+            'runs':
+                [
+                    {
+                        'id': 'MASTER.test.1',
+                        'state': 'scheduled',
+                        'start_time': None,
+                    },
+                ],
         }
         realert_every = check_tron_jobs.guess_realert_every(job_runs)
         assert_equal(realert_every, -1)

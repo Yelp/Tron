@@ -7,6 +7,7 @@ import six
 
 from tron.core import action
 from tron.utils import maybe_decode
+from tron.utils.timeutils import delta_total_seconds
 
 log = logging.getLogger(__name__)
 
@@ -80,7 +81,7 @@ class ActionGraph(object):
     @property
     def expected_runtime(self):
         return {
-            name: self.action_map[name].expected_runtime
+            name: delta_total_seconds(self.action_map[name].expected_runtime)
             for name in self.action_map.keys()
         }
 
