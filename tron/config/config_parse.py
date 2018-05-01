@@ -169,28 +169,28 @@ class ValidateSSHOptions(Validator):
 
     validators = {
         'agent':
-        valid_bool,
+            valid_bool,
         # TODO: move this config and validations outside master namespace
         # 'identities':               build_list_of_type_validator(
         #                                 valid_identity_file, allow_empty=True),
         'identities':
-        build_list_of_type_validator(
-            valid_string,
-            allow_empty=True,
-        ),
+            build_list_of_type_validator(
+                valid_string,
+                allow_empty=True,
+            ),
         # 'known_hosts_file':         valid_known_hosts_file,
         'known_hosts_file':
-        valid_string,
+            valid_string,
         'connect_timeout':
-        config_utils.valid_int,
+            config_utils.valid_int,
         'idle_connection_timeout':
-        config_utils.valid_int,
+            config_utils.valid_int,
         'jitter_min_load':
-        config_utils.valid_int,
+            config_utils.valid_int,
         'jitter_max_delay':
-        config_utils.valid_int,
+            config_utils.valid_int,
         'jitter_load_factor':
-        config_utils.valid_int,
+            config_utils.valid_int,
     }
 
     def post_validation(self, valid_input, config_context):
@@ -470,11 +470,11 @@ class ValidateActionRunner(Validator):
 
     validators = {
         'runner_type':
-        config_utils.build_enum_validator(schema.ActionRunnerTypes, ),
+            config_utils.build_enum_validator(schema.ActionRunnerTypes, ),
         'remote_status_path':
-        valid_string,
+            valid_string,
         'remote_exec_path':
-        valid_string,
+            valid_string,
     }
 
 
@@ -487,13 +487,13 @@ class ValidateStatePersistence(Validator):
 
     validators = {
         'name':
-        valid_string,
+            valid_string,
         'store_type':
-        config_utils.build_enum_validator(schema.StatePersistenceTypes, ),
+            config_utils.build_enum_validator(schema.StatePersistenceTypes, ),
         'connection_details':
-        valid_string,
+            valid_string,
         'buffer_size':
-        valid_int,
+            valid_int,
     }
 
     def post_validation(self, config, config_context):

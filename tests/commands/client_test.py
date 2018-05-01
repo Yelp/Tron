@@ -184,11 +184,12 @@ class GetContentFromIdentifierTestCase(TestCase):
         self.options = mock.Mock()
         self.index = {
             'namespaces': ['OTHER', 'MASTER'],
-            'jobs': {
-                'MASTER.namea': '',
-                'MASTER.nameb': '',
-                'OTHER.nameg': '',
-            },
+            'jobs':
+                {
+                    'MASTER.namea': '',
+                    'MASTER.nameb': '',
+                    'OTHER.nameg': '',
+                },
         }
 
     def test_get_url_from_identifier_job_no_namespace(self):
