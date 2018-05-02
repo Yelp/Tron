@@ -50,9 +50,7 @@ class Action(object):
         self.mem = mem
         self.service = service
         self.deploy_group = deploy_group
-        self.expected_runtime = expected_runtime or datetime.timedelta(
-            hours=24
-        )
+        self.expected_runtime = expected_runtime
 
     @property
     def is_cleanup(self):

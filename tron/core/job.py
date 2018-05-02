@@ -115,9 +115,7 @@ class Job(Observable, Observer):
         self.time_zone = time_zone
         self.service = service
         self.deploy_group = deploy_group
-        self.expected_runtime = expected_runtime or datetime.timedelta(
-            hours=24
-        )
+        self.expected_runtime = expected_runtime
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(name)
         self.event = event.get_recorder(self.name)

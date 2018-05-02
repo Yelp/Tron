@@ -84,7 +84,7 @@ Optional Fields
     config.
 
 **expected_runtime** (default **24h**)
-    A time interval (ex: "2 hours") that specified the maximum expected duration of each job run.
+    A time interval (ex: "2 hours") that specifies the maximum expected duration of each job run.
     Monitoring will alert if a job run is still running after this duration.
     Use max_runtime instead if hard limit is needed.
 
@@ -133,7 +133,7 @@ Optional Fields
     Defaults to None (0 retries allowed).
 
 **expected_runtime** (default **24h**)
-    A time interval (ex: "2 hours") that specified the maximum expected duration of each action run.
+    A time interval (ex: "2 hours") that specifies the maximum expected duration of each action run.
     Monitoring will alert if a action run is still running after this duration.
 
 Example Actions
