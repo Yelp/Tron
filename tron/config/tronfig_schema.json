@@ -200,6 +200,9 @@
           },
           "max_runtime": {
             "type": "string"
+          },
+          "expected_runtime": {
+            "type": "string"
           }
         }
       }

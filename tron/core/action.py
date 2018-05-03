@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import datetime
 import logging
 
 from tron import node
@@ -14,18 +15,9 @@ class Action(object):
     """A configurable data object for an Action."""
 
     equality_attributes = [
-        'name',
-        'command',
-        'node_pool',
-        'is_cleanup',
-        'executor',
-        'cluster',
-        'pool',
-        'cpus',
-        'mem',
-        'service',
-        'deploy_group',
-        'retries',
+        'name', 'command', 'node_pool', 'is_cleanup', 'executor', 'cluster',
+        'pool', 'cpus', 'mem', 'service', 'deploy_group', 'retries',
+        'expected_runtime'
     ]
 
     def __init__(
@@ -43,6 +35,7 @@ class Action(object):
         mem=None,
         service=None,
         deploy_group=None,
+        expected_runtime=None,
     ):
         self.name = maybe_decode(name)
         self.command = command
@@ -57,6 +50,7 @@ class Action(object):
         self.mem = mem
         self.service = service
         self.deploy_group = deploy_group
+        self.expected_runtime = expected_runtime
 
     @property
     def is_cleanup(self):
@@ -78,6 +72,7 @@ class Action(object):
             mem=config.mem,
             service=config.service,
             deploy_group=config.deploy_group,
+            expected_runtime=config.expected_runtime,
         )
 
     def __eq__(self, other):
