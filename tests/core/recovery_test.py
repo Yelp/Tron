@@ -5,6 +5,7 @@ from mock import Mock
 from testify import setup
 from testify import TestCase
 
+from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.core.actionrun import ActionRun
 from tron.core.actionrun import SSHActionRun
 from tron.core.recovery import build_recovery_command
@@ -51,4 +52,18 @@ class TestRecovery(TestCase):
             name="test.succeeded",
             node=Mock(),
         )
-        assert recover_action_run(no_action_runner) is None
+        assert recover_action_run(
+            no_action_runner, no_action_runner.action_runner
+        ) is None
+
+    def test_recover_action_run_action_runner(self):
+        action_runner = SubprocessActionRunnerFactory(
+            status_path='/tmp/foo',
+            exec_path='/bin/foo',
+        )
+        action_run = SSHActionRun(
+            job_run_id="test.succeeded",
+            name="test.succeeded",
+            node=Mock(),
+            action_runner=action_runner
+        )
