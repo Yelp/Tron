@@ -205,7 +205,7 @@ class ActionRun(object):
         self.exit_status = exit_status
         self.bare_command = maybe_decode(bare_command)
         self.rendered_command = rendered_command
-        self.action_runner = action_runner or NoActionRunnerFactory
+        self.action_runner = action_runner or NoActionRunnerFactory()
         self.machine = machine or state.StateMachine(
             self.STATE_SCHEDULED,
             delegate=self,
@@ -269,13 +269,11 @@ class ActionRun(object):
             job_run_node,
         )
 
-        action_runner_data = state_data.get(
-            'action_runner',
-        )
+        action_runner_data = state_data.get('action_runner')
         if action_runner_data:
             action_runner = SubprocessActionRunnerFactory(**action_runner_data)
         else:
-            action_runner = NoActionRunnerFactory
+            action_runner = NoActionRunnerFactory()
 
         rendered_command = state_data.get('rendered_command')
         run = cls(
@@ -407,28 +405,48 @@ class ActionRun(object):
         # Freeze command after it's run
         command = rendered_command if rendered_command else self.bare_command
         return {
-            'job_run_id': self.job_run_id,
-            'action_name': self.action_name,
-            'state': self.state.name,
-            'start_time': self.start_time,
-            'end_time': self.end_time,
-            'command': command,
-            'rendered_command': self.rendered_command,
-            'node_name': self.node.get_name() if self.node else None,
-            'exit_status': self.exit_status,
-            'executor': self.executor,
-            'cluster': self.cluster,
-            'pool': self.pool,
-            'cpus': self.cpus,
-            'mem': self.mem,
-            'service': self.service,
-            'deploy_group': self.deploy_group,
-            'retries_remaining': self.retries_remaining,
-            'exit_statuses': self.exit_statuses,
-            'action_runner': None if self.action_runner == NoActionRunnerFactory else {
-                'status_path': self.action_runner.status_path,
-                'exec_path': self.action_runner.exec_path,
-            },
+            'job_run_id':
+                self.job_run_id,
+            'action_name':
+                self.action_name,
+            'state':
+                self.state.name,
+            'start_time':
+                self.start_time,
+            'end_time':
+                self.end_time,
+            'command':
+                command,
+            'rendered_command':
+                self.rendered_command,
+            'node_name':
+                self.node.get_name() if self.node else None,
+            'exit_status':
+                self.exit_status,
+            'executor':
+                self.executor,
+            'cluster':
+                self.cluster,
+            'pool':
+                self.pool,
+            'cpus':
+                self.cpus,
+            'mem':
+                self.mem,
+            'service':
+                self.service,
+            'deploy_group':
+                self.deploy_group,
+            'retries_remaining':
+                self.retries_remaining,
+            'exit_statuses':
+                self.exit_statuses,
+            'action_runner':
+                None
+                if type(self.action_runner) == NoActionRunnerFactory else {
+                    'status_path': self.action_runner.status_path,
+                    'exec_path': self.action_runner.exec_path,
+                },
         }
 
     def render_command(self):

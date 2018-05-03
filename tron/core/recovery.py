@@ -38,11 +38,12 @@ def build_recovery_command(recovery_binary, path):
     return "%s %s" % (recovery_binary, path)
 
 
-def recover_action_run(action_run):
-    log.info("creating recovery run")
-    if action_run.action_runner == NoActionRunnerFactory:
+def recover_action_run(action_run, action_runner):
+    log.info("creating recovery run for actionrun %s" % action_run.id)
+    if type(action_runner) == NoActionRunnerFactory:
         log.info(
-            "unable to recover action_run %s: action_run has no action_runner" % action_run.id,
+            "unable to recover action_run %s: action_run has no action_runner"
+            % action_run.id,
         )
         return None
 
@@ -51,11 +52,9 @@ def recover_action_run(action_run):
         name="recovery-%s" % action_run.id,
         node=action_run.node,
         bare_command=build_recovery_command(
-            recovery_binary="%s/recover_batch.py" % (
-                action_run.action_runner.exec_path
-            ),
+            recovery_binary="%s/recover_batch.py" % (action_runner.exec_path),
             path="%s/%s/status" % (
-                action_run.action_runner.status_path,
+                action_runner.status_path,
                 action_run.id,
             ),
         ),
@@ -67,6 +66,8 @@ def recover_action_run(action_run):
     )
 
     # this line is where the magic happens.
+    # the action run watches another actioncommand,
+    # and updates its internal state acoording to its result.
     action_run.watch(recovery_action_command)
 
     log.info(
