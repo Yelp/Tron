@@ -317,7 +317,6 @@ class JobRun(Observable, Observer):
         if self.action_runs.is_queued:
             return ActionRun.STATE_QUEUED
 
-        log.info("%s in an unknown state: %s" % (self, self.action_runs))
         return ActionRun.STATE_UNKNOWN
 
     @property
