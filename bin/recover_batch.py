@@ -61,7 +61,10 @@ if __name__ == "__main__":
 
     runner_pid = get_key_from_last_line(args.filepath, 'runner_pid')
     if not psutil.pid_exists(runner_pid):
-        log.info("action_runner pid %d no longer running; unable to recover batch" % runner_pid)
+        log.info(
+            "action_runner pid %d no longer running; unable to recover batch" %
+            runner_pid
+        )
         #TODO: should we kill the process here?
         sys.exit(1)
 

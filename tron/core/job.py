@@ -227,11 +227,12 @@ class Job(Observable, Observer):
             )
 
             for action_run in runs_to_recover:
-                deferred = recovery.recover_action_run(action_run)
+                deferred = recovery.recover_action_run(
+                    action_run, action_run.action_runnner
+                )
                 if not deferred:
                     log.debug(
-                        "unable to recover action run %s" %
-                        action_run.id,
+                        "unable to recover action run %s" % action_run.id,
                     )
             self.watch(run)
 
