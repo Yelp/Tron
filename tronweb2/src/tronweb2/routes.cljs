@@ -3,7 +3,8 @@
   (:import goog.History)
   (:require [secretary.core :as secretary]
             [goog.events :as gevents]
-            [goog.history.EventType :as EventType]))
+            [goog.history.EventType :as EventType]
+            [ajax.core :refer [GET]]))
 
 (defn hook-browser-navigation! []
   (doto (History.)
@@ -13,9 +14,14 @@
        (secretary/dispatch! (.-token event))))
     (.setEnabled true)))
 
-(defn setup [rc]
+(defn setup [state]
   (secretary/set-config! :prefix "#")
 
-  (defroute "/" [] (.log js/console "nav to /"))
+  (defroute "/" []
+    (.log js/console "nav to /")
+    (swap! state assoc :view :jobs)
+    (GET "/api/jobs"
+      :params {:include_job_runs 1}
+      :handler #(swap! state assoc :jobs (% "jobs"))))
 
   (hook-browser-navigation!))
