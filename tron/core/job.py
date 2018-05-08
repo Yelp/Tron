@@ -214,27 +214,17 @@ class Job(Observable, Observer):
     def restore_state(self, state_data):
         """Apply a previous state to this Job."""
         self.enabled = state_data['enabled']
-        job_runs = self.runs.restore_state(
+        job_runs = jobrun.job_runs_from_state(
             state_data['runs'],
             self.action_graph,
             self.output_path.clone(),
             self.context,
             self.node_pool,
         )
+        self.runs.runs.extend(job_runs)
         for run in job_runs:
-            runs_to_recover = recovery.filter_recovery_candidates(
-                run._action_runs,
-            )
-
-            for action_run in runs_to_recover:
-                deferred = recovery.recover_action_run(
-                    action_run, action_run.action_runnner
-                )
-                if not deferred:
-                    log.debug(
-                        "unable to recover action run %s" % action_run.id,
-                    )
             self.watch(run)
+        return job_runs
 
     def build_new_runs(self, run_time, manual=False):
         """Uses its JobCollection to build new JobRuns. If all_nodes is set,
@@ -290,10 +280,17 @@ class JobScheduler(Observer):
 
     def restore_state(self, job_state_data):
         """Restore the job state and schedule any JobRuns."""
-        self.job.restore_state(job_state_data)
+        job_runs = self.job.restore_state(job_state_data)
+        self.job.runs.runs.extend(job_runs)
+        self.job.event.ok('restored')
+
+        recovery.launch_recovery_actionruns_for_job_runs(job_runs=job_runs)
+
         scheduled = self.job.runs.get_scheduled()
+        # for those that weere already scheduled, we reschedule them to run.
         for job_run in scheduled:
             self._set_callback(job_run)
+
         # Ensure we have at least 1 scheduled run
         self.schedule()
 

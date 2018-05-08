@@ -353,31 +353,6 @@ class JobRunCollection(object):
         """Factory method for creating a JobRunCollection from a config."""
         return cls(job_config.run_limit)
 
-    def restore_state(
-        self,
-        state_data,
-        action_graph,
-        output_path,
-        context,
-        node_pool,
-    ):
-        """Apply state to all jobs from the state dict."""
-        if self.runs:
-            msg = "State can not be restored to a collection with runs."
-            raise ValueError(msg)
-
-        restored_runs = [
-            JobRun.from_state(
-                run_state,
-                action_graph,
-                output_path.clone(),
-                context,
-                node_pool.next(),
-            ) for run_state in state_data
-        ]
-        self.runs.extend(restored_runs)
-        return restored_runs
-
     def build_new_run(self, job, run_time, node, manual=False):
         """Create a new run for the job, add it to the runs list,
         and return it.
@@ -400,6 +375,7 @@ class JobRunCollection(object):
     def cancel_pending(self):
         """Find any queued or scheduled runs and cancel them."""
         for pending in self.get_pending():
+            print('here!')
             pending.cancel()
 
     def remove_pending(self):
@@ -539,3 +515,21 @@ class JobRunCollection(object):
             type(self).__name__,
             ', '.join("%s(%s)" % (r.run_num, r.state) for r in self.runs),
         )
+
+
+def job_runs_from_state(
+    runs,
+    action_graph,
+    output_path,
+    context,
+    node_pool,
+):
+    return [
+        JobRun.from_state(
+            run,
+            action_graph,
+            output_path.clone(),
+            context,
+            node_pool.next(),
+        ) for run in runs
+    ]

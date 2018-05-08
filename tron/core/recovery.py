@@ -81,3 +81,12 @@ def recover_action_run(action_run, action_runner):
         lambda x: log.info("completed recovery run %s" % recovery_run.id, )
     )
     return deferred
+
+
+def launch_recovery_actionruns_for_job_runs(job_runs):
+    for run in job_runs:
+        runs_to_recover = filter_recovery_candidates(run._action_runs, )
+        for action_run in runs_to_recover:
+            deferred = recover_action_run(action_run, action_run.action_runner)
+            if not deferred:
+                log.debug("unable to recover action run %s" % action_run.id, )
