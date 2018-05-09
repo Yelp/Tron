@@ -1,15 +1,19 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import mock
 from mock import Mock
 from testify import setup
 from testify import TestCase
 
 from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.core.actionrun import ActionRun
+from tron.core.actionrun import PaaSTAActionRun
 from tron.core.actionrun import SSHActionRun
 from tron.core.recovery import build_recovery_command
 from tron.core.recovery import filter_action_runs_needing_recovery
+from tron.core.recovery import filter_recoverable_action_runs
+from tron.core.recovery import filter_recovery_candidates
 from tron.core.recovery import recover_action_run
 
 
@@ -29,6 +33,12 @@ class TestRecovery(TestCase):
                 machine=mock_unknown_machine,
             ),
             SSHActionRun(
+                job_run_id="test.succeeded",
+                name="test.succeeded",
+                node=Mock(),
+                machine=mock_ok_machine,
+            ),
+            PaaSTAActionRun(
                 job_run_id="test.succeeded",
                 name="test.succeeded",
                 node=Mock(),
@@ -67,3 +77,20 @@ class TestRecovery(TestCase):
             node=Mock(),
             action_runner=action_runner
         )
+
+    def test_filter_recoverable_action_runs(self):
+        assert filter_recoverable_action_runs(self.action_runs) == \
+            [self.action_runs[0], self.action_runs[1]]
+
+    def test_filter_recovery_candidates(self):
+        with mock.patch('tron.core.recovery.filter_recoverable_action_runs') as mock_filter_recoverable, \
+                mock.patch('tron.core.recovery.filter_action_runs_needing_recovery') as mock_filter_needing_recovery:
+
+            mock_filter_needing_recovery.return_value = ['foo']
+            filter_recovery_candidates(self.action_runs)
+            mock_filter_recoverable.assert_called_once_with(
+                action_runs=['foo']
+            )
+            mock_filter_needing_recovery.assert_called_once_with(
+                action_runs=self.action_runs
+            )

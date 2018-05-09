@@ -30,7 +30,7 @@ def filter_recoverable_action_runs(action_runs):
 
 def filter_recovery_candidates(runs):
     return filter_recoverable_action_runs(
-        action_runs=filter_recoverable_action_runs(action_runs=runs),
+        action_runs=filter_action_runs_needing_recovery(action_runs=runs),
     )
 
 
@@ -85,7 +85,7 @@ def recover_action_run(action_run, action_runner):
 
 def launch_recovery_actionruns_for_job_runs(job_runs):
     for run in job_runs:
-        runs_to_recover = filter_recovery_candidates(run._action_runs, )
+        runs_to_recover = filter_recovery_candidates(run._action_runs)
         for action_run in runs_to_recover:
             deferred = recover_action_run(action_run, action_run.action_runner)
             if not deferred:
