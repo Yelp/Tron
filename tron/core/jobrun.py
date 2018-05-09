@@ -375,7 +375,6 @@ class JobRunCollection(object):
     def cancel_pending(self):
         """Find any queued or scheduled runs and cancel them."""
         for pending in self.get_pending():
-            print('here!')
             pending.cancel()
 
     def remove_pending(self):
