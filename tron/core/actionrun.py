@@ -96,8 +96,8 @@ class ActionRunFactory(object):
             'deploy_group': action.deploy_group or job_run.deploy_group,
             'retries_remaining': action.retries,
         }
-        if action.executor == ExecutorTypes.paasta:
-            return PaaSTAActionRun(**args)
+        if action.executor == ExecutorTypes.mesos:
+            return MesosActionRun(**args)
         return SSHActionRun(**args)
 
     @classmethod
@@ -111,8 +111,8 @@ class ActionRunFactory(object):
             'cleanup': cleanup,
         }
 
-        if state_data.get('executor') == ExecutorTypes.paasta:
-            return PaaSTAActionRun.from_state(**args)
+        if state_data.get('executor') == ExecutorTypes.mesos:
+            return MesosActionRun.from_state(**args)
         return SSHActionRun.from_state(**args)
 
 
@@ -569,8 +569,8 @@ class SSHActionRun(ActionRun, Observer):
     handler = handle_action_command_state_change
 
 
-class PaaSTAActionRun(ActionRun):
-    """An ActionRun that executes the command on a PaaSTA Mesos cluster.
+class MesosActionRun(ActionRun):
+    """An ActionRun that executes the command on a Mesos cluster.
     """
 
     def submit_command(self):

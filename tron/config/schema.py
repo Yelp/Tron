@@ -175,6 +175,6 @@ ConfigCleanupAction = config_object_factory(
 
 StatePersistenceTypes = Enum.create('shelve', 'sql', 'yaml')
 
-ExecutorTypes = Enum.create('ssh', 'paasta')
+ExecutorTypes = Enum.create('ssh', 'mesos')
 
 ActionRunnerTypes = Enum.create('none', 'subprocess')

@@ -10,7 +10,7 @@ from testify import TestCase
 from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.core.actionrun import ActionRun
-from tron.core.actionrun import PaaSTAActionRun
+from tron.core.actionrun import MesosActionRun
 from tron.core.actionrun import SSHActionRun
 from tron.core.recovery import build_recovery_command
 from tron.core.recovery import filter_action_runs_needing_recovery
@@ -41,7 +41,7 @@ class TestRecovery(TestCase):
                 node=Mock(),
                 machine=mock_ok_machine,
             ),
-            PaaSTAActionRun(
+            MesosActionRun(
                 job_run_id="test.succeeded",
                 name="test.succeeded",
                 node=Mock(),

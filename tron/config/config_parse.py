@@ -434,31 +434,31 @@ class ValidateJob(Validator):
 
     def post_validation(self, job, config_context):
         """Validate actions for the job."""
-        incomplete_paasta_actions = []
+        incomplete_mesos_actions = []
 
-        def is_incomplete_paasta_action(action):
+        def is_incomplete_mesos_action(action):
             return (
-                action.executor == schema.ExecutorTypes.paasta
+                action.executor == schema.ExecutorTypes.mesos
                 and (action.service is None or action.deploy_group is None)
             )
 
         for _, action in six.iteritems(job['actions']):
             self._validate_dependencies(job, job['actions'], action)
-            if is_incomplete_paasta_action(action):
-                incomplete_paasta_actions.append(action)
+            if is_incomplete_mesos_action(action):
+                incomplete_mesos_actions.append(action)
 
         cleanup_action = job.get('cleanup_action')
-        if cleanup_action and is_incomplete_paasta_action(cleanup_action):
-            incomplete_paasta_actions.append(action)
+        if cleanup_action and is_incomplete_mesos_action(cleanup_action):
+            incomplete_mesos_actions.append(action)
 
-        if incomplete_paasta_actions and not (
+        if incomplete_mesos_actions and not (
             job.get('service') and job.get('deploy_group')
         ):
             raise ConfigError(
-                'Either job {name} or PaaSTA actions {actions} need a service '
+                'Either job {name} or Mesos actions {actions} need a service '
                 'and deploy_group.'.format(
                     name=job['name'],
-                    actions=incomplete_paasta_actions,
+                    actions=incomplete_mesos_actions,
                 ),
             )
 

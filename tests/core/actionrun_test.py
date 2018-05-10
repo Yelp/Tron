@@ -29,7 +29,7 @@ from tron.core.actionrun import ActionCommand
 from tron.core.actionrun import ActionRun
 from tron.core.actionrun import ActionRunCollection
 from tron.core.actionrun import ActionRunFactory
-from tron.core.actionrun import PaaSTAActionRun
+from tron.core.actionrun import MesosActionRun
 from tron.core.actionrun import SSHActionRun
 from tron.serialize import filehandler
 
@@ -155,11 +155,11 @@ class ActionRunFactoryTestCase(TestCase):
         )
         assert_equal(action_run.__class__, SSHActionRun)
 
-    def test_build_run_for_paasta_action_default_service(self):
+    def test_build_run_for_mesos_action_default_service(self):
         action = Turtle(
             name='theaction',
             command="doit",
-            executor=ExecutorTypes.paasta,
+            executor=ExecutorTypes.mesos,
             cluster='prod',
             pool='default',
             cpus=10,
@@ -172,7 +172,7 @@ class ActionRunFactoryTestCase(TestCase):
             action,
             self.action_runner,
         )
-        assert_equal(action_run.__class__, PaaSTAActionRun)
+        assert_equal(action_run.__class__, MesosActionRun)
         assert_equal(action_run.cluster, action.cluster)
         assert_equal(action_run.pool, action.pool)
         assert_equal(action_run.cpus, action.cpus)
@@ -180,11 +180,11 @@ class ActionRunFactoryTestCase(TestCase):
         assert_equal(action_run.service, self.job_run.service)
         assert_equal(action_run.deploy_group, self.job_run.deploy_group)
 
-    def test_build_run_for_paasta_action_overrides_service(self):
+    def test_build_run_for_mesos_action_overrides_service(self):
         action = Turtle(
             name='theaction',
             command="doit",
-            executor=ExecutorTypes.paasta,
+            executor=ExecutorTypes.mesos,
             service='bar',
             deploy_group='dev',
         )
@@ -193,7 +193,7 @@ class ActionRunFactoryTestCase(TestCase):
             action,
             self.action_runner,
         )
-        assert_equal(action_run.__class__, PaaSTAActionRun)
+        assert_equal(action_run.__class__, MesosActionRun)
         assert_equal(action_run.service, action.service)
         assert_equal(action_run.deploy_group, action.deploy_group)
 
@@ -208,9 +208,9 @@ class ActionRunFactoryTestCase(TestCase):
         assert not action_run.is_cleanup
         assert_equal(action_run.__class__, SSHActionRun)
 
-    def test_action_run_from_state_paasta(self):
+    def test_action_run_from_state_mesos(self):
         state_data = self.action_state_data
-        state_data['executor'] = ExecutorTypes.paasta
+        state_data['executor'] = ExecutorTypes.mesos
         state_data['cluster'] = 'cluster-one'
         state_data['pool'] = 'private'
         state_data['cpus'] = 2
@@ -230,7 +230,7 @@ class ActionRunFactoryTestCase(TestCase):
         assert_equal(action_run.service, state_data['service'])
         assert_equal(action_run.deploy_group, state_data['deploy_group'])
         assert not action_run.is_cleanup
-        assert_equal(action_run.__class__, PaaSTAActionRun)
+        assert_equal(action_run.__class__, MesosActionRun)
 
 
 class ActionRunTestCase(TestCase):

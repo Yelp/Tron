@@ -162,7 +162,7 @@ jobs:
                 name: "action4_0"
                 command: "test_command4.0"
     -
-        name: "test_job_paasta"
+        name: "test_job_mesos"
         node: nodePool
         service: my_service
         deploy_group: prod.non_canary
@@ -170,7 +170,7 @@ jobs:
         actions:
             -
                 name: "action4_0"
-                executor: paasta
+                executor: mesos
                 command: "test_command4.0"
 
 """
@@ -449,9 +449,9 @@ jobs:
                             time_zone=None,
                             expected_runtime=datetime.timedelta(1),
                         ),
-                    'MASTER.test_job_paasta':
+                    'MASTER.test_job_mesos':
                         schema.ConfigJob(
-                            name='MASTER.test_job_paasta',
+                            name='MASTER.test_job_mesos',
                             namespace='MASTER',
                             node='nodePool',
                             monitoring={},
@@ -471,7 +471,7 @@ jobs:
                                         schema.ConfigAction(
                                             name='action4_0',
                                             command='test_command4.0',
-                                            executor='paasta',
+                                            executor='mesos',
                                             requires=(),
                                             expected_runtime=datetime.
                                             timedelta(1),
@@ -523,8 +523,8 @@ jobs:
             expected.jobs['MASTER.test_job4'],
         )
         assert_equal(
-            test_config.jobs['MASTER.test_job_paasta'],
-            expected.jobs['MASTER.test_job_paasta'],
+            test_config.jobs['MASTER.test_job_mesos'],
+            expected.jobs['MASTER.test_job_mesos'],
         )
         assert_equal(test_config.jobs, expected.jobs)
         assert_equal(test_config, expected)
@@ -600,7 +600,7 @@ jobs:
                 name: "action4_0"
                 command: "test_command4.0"
     -
-        name: "test_job_paasta"
+        name: "test_job_mesos"
         node: NodePool
         service: my_service
         deploy_group: prod.non_canary
@@ -608,7 +608,7 @@ jobs:
         actions:
             -
                 name: "action4_0"
-                executor: paasta
+                executor: mesos
                 command: "test_command4.0"
 
 """
@@ -844,9 +844,9 @@ jobs:
                             time_zone=None,
                             expected_runtime=datetime.timedelta(1),
                         ),
-                    'test_job_paasta':
+                    'test_job_mesos':
                         schema.ConfigJob(
-                            name='test_job_paasta',
+                            name='test_job_mesos',
                             namespace='test_namespace',
                             node='NodePool',
                             monitoring={},
@@ -866,7 +866,7 @@ jobs:
                                         schema.ConfigAction(
                                             name='action4_0',
                                             command='test_command4.0',
-                                            executor='paasta',
+                                            executor='mesos',
                                             requires=(),
                                             expected_runtime=datetime.
                                             timedelta(1),
@@ -897,8 +897,8 @@ jobs:
         assert_equal(test_config.jobs['test_job3'], expected.jobs['test_job3'])
         assert_equal(test_config.jobs['test_job4'], expected.jobs['test_job4'])
         assert_equal(
-            test_config.jobs['test_job_paasta'],
-            expected.jobs['test_job_paasta'],
+            test_config.jobs['test_job_mesos'],
+            expected.jobs['test_job_mesos'],
         )
         assert_equal(test_config.jobs, expected.jobs)
         assert_equal(test_config, expected)
@@ -1104,7 +1104,7 @@ jobs:
         actions:
             -
                 name: "action0_0"
-                executor: paasta
+                executor: mesos
                 cluster: unknown-cluster
                 command: "test_command0.0"
 """
@@ -1116,7 +1116,7 @@ jobs:
         )
         assert_in(expected_msg, str(exception))
 
-    def test_job_with_missing_service_for_paasta_action(self):
+    def test_job_with_missing_service_for_mesos_action(self):
         test_config = BASE_CONFIG + """
 jobs:
     -
@@ -1126,7 +1126,7 @@ jobs:
         actions:
             -
                 name: "action0_0"
-                executor: paasta
+                executor: mesos
                 cluster: cluster-one
                 command: "test_command0.0"
 """
@@ -1138,7 +1138,7 @@ jobs:
         )
         assert_in(expected_msg, str(exception))
 
-    def test_job_with_missing_service_for_paasta_cleanup_action(self):
+    def test_job_with_missing_service_for_mesos_cleanup_action(self):
         test_config = BASE_CONFIG + """
 jobs:
     -
@@ -1152,7 +1152,7 @@ jobs:
                 executor: ssh
         cleanup_action:
             command: "test_command0.1"
-            executor: paasta
+            executor: mesos
 """
         expected_msg = "need a service and deploy_group"
         exception = assert_raises(
@@ -1162,7 +1162,7 @@ jobs:
         )
         assert_in(expected_msg, str(exception))
 
-    def test_job_with_service_in_paasta_action_only_is_valid(self):
+    def test_job_with_service_in_mesos_action_only_is_valid(self):
         test_config = BASE_CONFIG + """
 jobs:
     -
@@ -1172,7 +1172,7 @@ jobs:
         actions:
             -
                 name: "action0_0"
-                executor: paasta
+                executor: mesos
                 cluster: cluster-one
                 service: baz
                 deploy_group: prod
@@ -1195,7 +1195,7 @@ jobs:
                         schema.ConfigAction(
                             name='action0_0',
                             command='test_command0.0',
-                            executor='paasta',
+                            executor='mesos',
                             cluster='cluster-one',
                             service='baz',
                             deploy_group='prod',
@@ -1594,7 +1594,7 @@ class ConfigContainerTestCase(TestCase):
             'test_job3',
             'test_job2',
             'test_job4',
-            'test_job_paasta',
+            'test_job_mesos',
         ]
         assert_equal(set(job_names), set(expected))
 
@@ -1605,7 +1605,7 @@ class ConfigContainerTestCase(TestCase):
             'test_job3',
             'test_job2',
             'test_job4',
-            'test_job_paasta',
+            'test_job_mesos',
         ]
         assert_equal(set(expected), set(self.container.get_jobs().keys()))
 
