@@ -14,41 +14,32 @@
        (secretary/dispatch! (.-token event))))
     (.setEnabled true)))
 
-(defn fetch-jobs! [state]
-  (when-not (:jobs-inflight @state)
-    (swap! state assoc :jobs-inflight true)
-    (GET "/api/jobs"
-      :params {:include_job_runs 1}
+(defn fetch! [state url params key f]
+  (when-not (:req-inflight @state)
+    (swap! state assoc :req-inflight true)
+    (GET url
+      :params params
       :handler
-      #(swap! state merge {:jobs (% "jobs")
-                           :jobs-inflight false
+      #(swap! state merge {key (f %)
+                           :req-inflight false
                            :error-message nil})
       :error-handler
-      #(swap! state merge {:error-message "Failed to load jobs"
-                           :jobs-inflight false}))))
-
-(defn fetch-api! [state]
-  (when-not (:api-inflight @state)
-    (swap! state assoc :api-inflight true)
-    (GET "/api"
-      :handler
-      #(swap! state merge {:api (% "api")
-                           :api-inflight false
-                           :error-message nil})
-      :error-handler
-      #(swap! state merge {:error-message "Failed to load api"
-                           :api-inflight false}))))
-
+      #(swap! state merge {:error-message (str "Failed to load " url)
+                           :req-inflight false}))))
 
 (defn setup [state]
   (secretary/set-config! :prefix "#")
 
   (defroute "/" []
-    (swap! state merge {:view :jobs})
-    (fetch-jobs! state))
+    (swap! state merge {:view :jobs :view-title "Jobs"})
+    (fetch! state "/api/jobs" {:include_job_runs 1} :jobs #(% "jobs")))
 
   (defroute "/configs" []
-    (swap! state merge {:view :configs})
-    (fetch-api! state))
+    (swap! state merge {:view :configs :view-title "Configs"})
+    (fetch! state "/api" {} :api identity))
+
+  (defroute "/config/:name" [name]
+    (swap! state merge {:view :config :view-title (str "Config: " name)})
+    (fetch! state "/api/config" {:name name} :config identity))
 
   (hook-browser-navigation!))

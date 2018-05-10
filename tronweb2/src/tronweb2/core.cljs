@@ -5,20 +5,27 @@
 (def app-state (reagent/atom {}))
 
 (defn jobs [state]
-  [:div.container
-    (for [j (:jobs state)]
-      [:div.card.w-25 {:key (j "name")}
-        [:div.card-body
-          [:h6.card-title (str (j "name"))]
-          [:p.card-text
-            "qwrf we gert gqe rf wertg ert gq er fw treg w erf qwer f"]]])])
+  (for [j (:jobs state)]
+    [:div.card.w-25 {:key (j "name")}
+      [:div.card-body
+        [:h6.card-title (str (j "name"))]
+        [:p.card-text ""]]]))
 
 (defn configs [state]
-  [:div.container "Configs"])
+  (if-let [data (:api state)]
+    (for [n (data "namespaces")]
+      [:div.row {:key n}
+        [:div.col-sm
+          [:a {:href (str "#/config/" n)} n]]])))
 
-(def views
-  {:jobs jobs
-   :configs configs})
+(defn config [state]
+  (if-let [data (:config state)]
+    [:pre [:code (data "config")]]))
+
+(defmulti render :view)
+(defmethod render :jobs [state] (jobs state))
+(defmethod render :configs [state] (configs state))
+(defmethod render :config [state] (config state))
 
 (defn root []
   [:div.container-fluid
@@ -33,9 +40,11 @@
         [:input.form-control.mr-sm-2 {:type "search" :placeholder "Search"}]
         [:button.btn.btn-outline-success.my-2.my-sm-0 {:type "submit"} "Search"]]]
     [:br]
-    (let [state @app-state
-          view (:view state)]
-      ((views view) state))])
+    (let [state @app-state]
+      [:div.container
+        [:h1 (:view-title state)]
+        [:br]
+        (render state)])])
 
 
 (defn ^:export init []
