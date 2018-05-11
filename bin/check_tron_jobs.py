@@ -18,8 +18,7 @@ from tron.utils import timeutils
 
 log = logging.getLogger('check_tron_jobs')
 
-# This script run every 300 seconds currently
-RUN_INTERVAL = 300
+_run_interval = None
 
 
 class State(Enum):
@@ -44,6 +43,14 @@ def parse_cli():
         "--job",
         default=None,
         help="Check a particular job. If unset checks all jobs",
+    )
+    parser.add_argument(
+        "--run-interval",
+        help=
+        "Run interval for this monitoring script. This is used to calculate realert and alert_after setting. Default to %(default)s (seconds)",
+        type=int,
+        dest="run_interval",
+        default=300,
     )
     args = parser.parse_args()
     return args
@@ -286,7 +293,7 @@ def guess_realert_every(job):
             time.mktime(_timestamp_to_timeobj(job_next_run)) -
             time.mktime(_timestamp_to_timeobj(job_previous_run))
         )
-        realert_every = max(int(time_diff / RUN_INTERVAL), 1)
+        realert_every = max(int(time_diff / _run_interval), 1)
     except Exception as e:
         log.warning("guess_realert_every failed: {}".format(e))
         return -1
@@ -301,6 +308,7 @@ def compute_check_result_for_job(client, job):
     kwargs.update(job['monitoring'])
     if 'realert_every' not in kwargs:
         kwargs['realert_every'] = guess_realert_every(job)
+    kwargs['check_every'] = "{}s".format(_run_interval)
 
     status = job["status"]
     if status == "disabled":
@@ -367,6 +375,9 @@ def main():
     client = Client(args.server)
 
     error_code = 0
+
+    global _run_interval
+    _run_interval = args.run_interval
     if args.job is None:
         jobs = client.jobs(include_job_runs=True)
         for job in jobs:
