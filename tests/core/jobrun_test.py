@@ -479,7 +479,6 @@ class JobRunCollectionTestCase(TestCase):
                 runs=[],
             ) for i in range(3, -1, -1)
         ]
-        run_collection = jobrun.JobRunCollection(20)
         action_graph = mock.create_autospec(actiongraph.ActionGraph)
         output_path = mock.create_autospec(filehandler.OutputPath)
         context = mock.Mock()

@@ -76,9 +76,9 @@ def recover_action_run(action_run, action_runner):
             recovery_run.node,
         )
     )
-    deferred = recovery_run.node.submit_command(recovery_action_command, )
+    deferred = recovery_run.node.submit_command(recovery_action_command)
     deferred.addCallback(
-        lambda x: log.info("completed recovery run %s" % recovery_run.id, )
+        lambda x: log.info("completed recovery run %s" % recovery_run.id)
     )
     return deferred
 

@@ -74,12 +74,15 @@ class TestRecovery(TestCase):
             status_path='/tmp/foo',
             exec_path='/bin/foo',
         )
+        mock_node = mock.Mock()
         action_run = SSHActionRun(
             job_run_id="test.succeeded",
             name="test.succeeded",
-            node=Mock(),
+            node=mock_node,
             action_runner=action_runner
         )
+        res = recover_action_run(action_run, action_runner)
+        mock_node.submit_command.assert_called_once()
 
     def test_filter_recoverable_action_runs(self):
         assert filter_recoverable_action_runs(self.action_runs) == \
