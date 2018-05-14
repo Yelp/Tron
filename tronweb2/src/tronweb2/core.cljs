@@ -186,7 +186,6 @@
 
 (defn actionrun [state]
   (let [jr (or (:jobrun state) {})
-        _ (.log js/console jr)
         runs (or (jr "runs") [])
         an (:actionrun-name state)
         ar (first (filter #(= an (% "action_name")) runs))

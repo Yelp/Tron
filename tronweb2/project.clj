@@ -1,10 +1,11 @@
 (defproject tronweb2 "0.1.0-SNAPSHOT"
   :dependencies [[org.clojure/clojure "1.9.0"]
-                 [org.clojure/clojurescript "1.9.908"]
+                 [org.clojure/clojurescript "1.10.238"]
                  [reagent "0.7.0"]
                  [secretary "1.2.3"]
                  [cljs-ajax "0.7.3"]
-                 [clojure-humanize "0.2.2"]]
+                 [clojure-humanize "0.2.2"]
+                 [com.andrewmcveigh/cljs-time "0.5.2"]]
 
   :plugins [[lein-cljsbuild "1.1.5"]]
   :min-lein-version "2.5.3"
@@ -13,7 +14,7 @@
 
   :profiles
   {:dev {:dependencies [[binaryage/devtools "0.9.4"]]}
-   :prod {}}
+   :min {}}
 
   :cljsbuild
   {:builds
