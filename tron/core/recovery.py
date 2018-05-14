@@ -83,10 +83,15 @@ def recover_action_run(action_run, action_runner):
     return deferred
 
 
-def launch_recovery_actionruns_for_job_runs(job_runs):
+def launch_recovery_actionruns_for_job_runs(job_runs, master_action_runner):
     for run in job_runs:
         runs_to_recover = filter_recovery_candidates(run._action_runs)
         for action_run in runs_to_recover:
-            deferred = recover_action_run(action_run, action_run.action_runner)
+            if type(action_run.action_runner) == NoActionRunnerFactory and \
+               type(master_action_runner) != NoActionRunnerFactory:
+                action_runner = master_action_runner
+            else:
+                action_runner = action_run.action_runner
+            deferred = recover_action_run(action_run, action_runner)
             if not deferred:
-                log.debug("unable to recover action run %s" % action_run.id, )
+                log.debug("unable to recover action run %s" % action_run.id)

@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import collections
 import datetime
 
 import mock
@@ -141,7 +142,7 @@ class JobTestCase(TestCase):
         assert_equal(state_data['runs'], self.job.runs.state_data)
         assert state_data['enabled']
 
-    def test_restore_state(self):
+    def test_get_job_runs_from_state(self):
         job_runs = [
             dict(
                 run_num=i,
@@ -154,12 +155,9 @@ class JobTestCase(TestCase):
             ) for i in range(0, 3)
         ]
         state_data = {'enabled': False, 'runs': job_runs}
-
-        returned_runs = self.job.restore_state(state_data)
-
+        returned_runs = self.job.get_job_runs_from_state(state_data)
         assert not self.job.enabled
         calls = [mock.call(returned_runs[i]) for i in range(0, len(job_runs))]
-        self.job.runs.runs.extend.assert_has_calls(mock.call(returned_runs))
         self.job.watch.assert_has_calls(calls)
 
     def test_build_new_runs(self):
@@ -266,10 +264,27 @@ class JobSchedulerTestCase(TestCase):
         self.job.max_runtime = datetime.timedelta(days=1)
         self.job_scheduler = job.JobScheduler(job=self.job)
 
+    def test_restore_state_sets_job_runs(self):
+        self.job.enabled = False
+        mock_runs = [mock.Mock(), mock.Mock()]
+        job_state_data = {'runs': mock_runs, 'enabled': True}
+
+        self.job_scheduler._set_callback = lambda x: x
+
+        self.job.runs.runs = collections.deque()
+        self.job.runs.get_scheduled.return_value = [mock.Mock()]
+        self.job.get_job_runs_from_state.return_value = mock_runs
+
+        with mock.patch(
+            'tron.core.job.recovery.launch_recovery_actionruns_for_job_runs'
+        ) as mock_launch_recovery:
+            mock_launch_recovery.return_value = mock.Mock(autospec=True)
+            self.job_scheduler.restore_state(job_state_data, mock.Mock())
+            assert self.job.runs.runs == collections.deque(mock_runs)
+
     def test_restore_job_state_launches_recovery_runs(self):
         job_runs = []
         job_state_data = {'runs': job_runs, 'enabled': True}
-        # with mock.patch()
 
     def test_disable(self):
         self.job_scheduler.disable()

@@ -2,10 +2,12 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import mock
+from mock import call
 from mock import Mock
 from testify import setup
 from testify import TestCase
 
+from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.core.actionrun import ActionRun
 from tron.core.actionrun import PaaSTAActionRun
@@ -14,6 +16,7 @@ from tron.core.recovery import build_recovery_command
 from tron.core.recovery import filter_action_runs_needing_recovery
 from tron.core.recovery import filter_recoverable_action_runs
 from tron.core.recovery import filter_recovery_candidates
+from tron.core.recovery import launch_recovery_actionruns_for_job_runs
 from tron.core.recovery import recover_action_run
 
 
@@ -93,4 +96,36 @@ class TestRecovery(TestCase):
             )
             mock_filter_needing_recovery.assert_called_once_with(
                 action_runs=self.action_runs
+            )
+
+    def test_launch_recovery_actionruns_for_job_runs(self):
+        with mock.patch('tron.core.recovery.filter_recovery_candidates') as mock_filter_recovery_candidates, \
+                 mock.patch('tron.core.recovery.recover_action_run') as mock_recover_action_run:
+
+            mock_values = [
+                mock.Mock(
+                    autospec=True, action_runner=NoActionRunnerFactory()
+                ),
+                mock.Mock(
+                    autospec=True,
+                    action_runner=SubprocessActionRunnerFactory(
+                        status_path='/tmp/foo', exec_path=('/tmp/foo')
+                    )
+                ),
+            ]
+
+            mock_job_runs = []
+            mock_filter_recovery_candidates.return_value = mock_values
+            mock_action_runner = mock.Mock(autospec=True)
+
+            mock_job_run = mock.Mock()
+            launch_recovery_actionruns_for_job_runs(
+                [mock_job_run], mock_action_runner
+            )
+            mock_recover_action_run.assert_has_calls(
+                [
+                    call(mock_values[0], mock_action_runner),
+                    call(mock_values[1], mock_values[1].action_runner)
+                ],
+                any_order=True
             )
