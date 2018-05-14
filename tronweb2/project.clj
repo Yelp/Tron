@@ -3,7 +3,8 @@
                  [org.clojure/clojurescript "1.9.908"]
                  [reagent "0.7.0"]
                  [secretary "1.2.3"]
-                 [cljs-ajax "0.7.3"]]
+                 [cljs-ajax "0.7.3"]
+                 [clojure-humanize "0.2.2"]]
 
   :plugins [[lein-cljsbuild "1.1.5"]]
   :min-lein-version "2.5.3"
@@ -11,8 +12,7 @@
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"]
 
   :profiles
-  {:dev
-   {:dependencies [[binaryage/devtools "0.9.4"]]}
+  {:dev {:dependencies [[binaryage/devtools "0.9.4"]]}
    :prod {}}
 
   :cljsbuild
