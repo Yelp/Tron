@@ -52,7 +52,7 @@ setup(
         'requests',
         'psutil'
     ],
-    packages=find_packages(exclude=['tests.*', 'tests']) + ['tronweb'],
+    packages=find_packages(exclude=['tests.*', 'tests']) + ['tronweb', 'tronweb2'],
     scripts=glob.glob('bin/*'),
     include_package_data=True,
     long_description="""
