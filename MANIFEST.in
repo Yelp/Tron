@@ -8,3 +8,6 @@ recursive-include tests *.py *.yaml
 recursive-include docs *.rst *.yaml *.1 *.8
 recursive-include tronweb *
 recursive-exclude tronweb *.coffee
+recursive-include tronweb2 *
+recursive-exclude tronweb2 tronweb2/target*
+recursive-exclude tronweb2 *.cljs

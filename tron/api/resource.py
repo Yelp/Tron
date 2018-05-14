@@ -8,6 +8,7 @@ from __future__ import unicode_literals
 import collections
 import datetime
 import logging
+import re
 
 import six
 
@@ -431,7 +432,10 @@ class RootResource(resource.Resource):
         self.mcp = mcp
         self.putChild(b'api', ApiRootResource(self.mcp))
         self.putChild(b'web', static.File(web_path))
-        self.putChild(b'web2', static.File('/Users/maksym/dev/yelp/tron/tronweb2/resources/public'))
+        web2_path = re.sub(
+            r"tronweb(/?)$", "tronweb2/resources/public", web_path
+        )
+        self.putChild(b'web2', static.File(web2_path))
         self.putChild(b'', self)
 
     def render_GET(self, request):
