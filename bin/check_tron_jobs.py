@@ -257,7 +257,7 @@ def is_action_run_exceeding_expected_runtime(
 
 
 def get_relevant_action(*, action_runs, last_state, actions_expected_runtime):
-    stuck_action_candidate = None
+    stuck_action_run_candidate = None
     for action_run in reversed(action_runs):
         action_state = action_run.get('state', 'unknown')
         try:
