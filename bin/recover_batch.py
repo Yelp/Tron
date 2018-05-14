@@ -68,8 +68,5 @@ if __name__ == "__main__":
         #TODO: should we kill the process here?
         sys.exit(1)
 
-    if existing_return_code is not None:
-        sys.exit(1)
-
     watcher = StatusFileWatcher(args.filepath, notify)
     reactor.run()
