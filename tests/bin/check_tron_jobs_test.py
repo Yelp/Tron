@@ -24,6 +24,7 @@ class CheckJobsTestCase(TestCase):
         mock_check_job_result,
     ):
         type(mock_args.return_value).job = PropertyMock(return_value=None)
+        type(mock_args.return_value).run_interval = 300
         mock_client.return_value.jobs.return_value = [
             {
                 'name': 'job1',
