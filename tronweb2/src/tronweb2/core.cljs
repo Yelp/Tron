@@ -14,11 +14,13 @@
 (def app-state (reagent/atom {}))
 
 (defn jobs [state]
-  (for [{job-name "name"} (:jobs state)]
-    [:div.card.w-25 {:key job-name}
-      [:div.card-body
-        [:h6.card-title [:a {:href (str "#/job/" job-name)} (str job-name)]]
-        [:p.card-text ""]]]))
+  [:div.row
+    (for [{job-name "name"} (:jobs state)]
+      [:div.col-sm-3.mb-4 {:key job-name}
+        [:div.card
+          [:div.card-body
+            [:h6.card-title [:a {:href (str "#/job/" job-name)} (str job-name)]]
+            [:p.card-text ""]]]])])
 
 (defn configs [state]
   (when-let [data (:api state)]

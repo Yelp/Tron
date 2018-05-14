@@ -19,7 +19,7 @@ docker_%:
 	[ -d dist ] || mkdir -p dist
 	cd ./yelp_package/$* && docker build -t tron-builder-$* .
 
-deb_%: clean docker_% coffee_%
+deb_%: clean docker_% coffee_% cljs
 	@echo "Building deb for $*"
 	$(DOCKER_RUN) tron-builder-$* /bin/bash -c ' \
 		dpkg-buildpackage -d &&                  \
@@ -35,6 +35,16 @@ coffee_%: docker_%
 		mkdir -p tronweb/js/cs &&                      \
 		coffee -o tronweb/js/cs/ -c tronweb/coffee/ && \
 		chown -R $(UID):$(GID) tronweb/js/cs/          \
+	'
+
+cljs:
+	cd tronweb2 && docker build -t tron-cljsbuild .
+	@echo "Compiling cljs"
+	$(DOCKER_RUN) tron-cljsbuild /bin/bash -c '           \
+		cd /work/tronweb2 &&                                \
+		rm -rf resources/public/js/compiled &&              \
+		lein cljsbuild once min &&                          \
+		chown -R $(UID):$(GID) resources/public/js/compiled \
 	'
 
 test:
