@@ -31,7 +31,7 @@ def get_string(request, key):
         return None
 
     val = request.args[key][0]
-    if val and type(val) is bytes:
+    if val is not None and type(val) is bytes:
         val = val.decode()
 
     return val
