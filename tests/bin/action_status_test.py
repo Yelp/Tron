@@ -39,8 +39,11 @@ class ActionStatusTestCase(TestCase):
             'pid': 1234,
             'return_code': 0,
             'run_id': 'MASTER.foo.bar.1234',
+            'command': 'echo ' + 'really_long' * 100,
         }
-        self.status_file.write(yaml.safe_dump(additional_status_content))
+        self.status_file.write(
+            yaml.safe_dump(additional_status_content, explicit_start=True),
+        )
         self.status_file.flush()
         self.status_file.seek(0)
         assert action_status.get_field('return_code', self.status_file) == 0
