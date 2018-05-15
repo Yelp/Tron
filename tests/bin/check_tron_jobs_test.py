@@ -787,6 +787,42 @@ class CheckJobsTestCase(TestCase):
         assert_equal(run['id'], 'MASTER.test.2')
         assert_equal(state, State.NOT_SCHEDULED)
 
+    def test_get_relevant_action_for_not_scheduled_state(self):
+        action_runs = [
+            {
+                'id':
+                    'MASTER.test.1.2',
+                'state':
+                    'succeeded',
+                'end_time':
+                    time.strftime(
+                        '%Y-%m-%d %H:%M:%S',
+                        time.localtime(time.time() - 600),
+                    ),
+            },
+            {
+                'id':
+                    'MASTER.test.1.1',
+                'state':
+                    'succeeded',
+                'end_time':
+                    time.strftime(
+                        '%Y-%m-%d %H:%M:%S',
+                        time.localtime(time.time() - 1200),
+                    ),
+            },
+        ]
+        actual = check_tron_jobs.get_relevant_action(
+            action_runs=action_runs,
+            last_state=State.NOT_SCHEDULED,
+            actions_expected_runtime={
+                'action1': 86400.0,
+                'action2': 86400.0,
+                'action3': 86400.0,
+            }
+        )
+        assert_equal(actual["id"], "MASTER.test.1.1")
+
     def test_job_waiting_for_first_run(self):
         job_runs = {
             'status':
