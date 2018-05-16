@@ -7,6 +7,9 @@
             [cljs-time.core :as t]
             [clojure.string :as str]))
 
+(defn log [& args]
+  (.log js/console args))
+
 (defn duration-from-str [s]
   (let [[h m s] (str/split s #":")]
     (+ (int h) (int m) (float s))))
@@ -31,11 +34,15 @@
 (defn config [state]
   (when-let [data (:config state)] [:pre [:code (data "config")]]))
 
+(defn parse-in-local-time [t]
+  (let [offset (.getTimezoneOffset (js/Date.))]
+    (tf/parse (tf/formatter "YYYY-MM-dd HH:mm:ss") t)))
+    ; (t/plus (tf/parse (tf/formatter "YYYY-MM-dd HH:mm:ss") t))))
+    ;         (t/Period. 0 0 0 0 0 offset (* 8 3600) 0))))
+
 (defn format-time [t]
   (if (and t (not= "" t))
-    [:abbr {:title t}
-      (humanize/datetime
-        (tf/parse (tf/formatter "YYYY-MM-dd HH:mm:ss") t))]
+    [:abbr {:title t} (humanize/datetime (parse-in-local-time t))]
     "-"))
 
 (defn format-duration [d]
@@ -54,11 +61,33 @@
     [:div.col.small (format-time (jr "run_time"))]
     [:div.col.small (format-duration (jr "duration"))]])
 
+(defn job-ag-node [[node deps]]
+  [:div.d-inline-flex.flex-row.pl-1.mb-2
+    {:key node
+     :class (if (> (count deps) 1) "border" "")}
+    [:div.align-top.pr-2 node]
+    (when (> (count deps) 0)
+      (list [:div.align-top.pr-2 {:key 1} "←"]
+            [:div.align-top
+             {:key 2 :class (if (> (count deps) 1) "border-left" "")}
+             (map job-ag-node deps)]
+            [:div.w-100 {:key 3} ""]))])
+
+(defn job-ag [jobs]
+  [:div.col
+    (let [jobs-map (into {} (map #(do [(% "name") (% "dependent")]) jobs))
+          in-deps (fn [n nd] (some #(= n %) (last nd)))
+          deps-of (fn [n] (map first (filter #(in-deps n %) jobs-map)))
+          build-dag (fn f [n] [n (map f (deps-of n))])
+          root-nodes (map first (filter #(= [] (last %)) jobs-map))
+          dag (map build-dag root-nodes)]
+      (map job-ag-node dag))])
+
 (defn job- [j]
   [:div.container
     [:div.row.mb-3
-      [:div.col.border.p-3.mr-3
-        [:h5 "Details"]
+      [:div.col.border.mr-3
+        [:h5.row.p-3.bg-dark.text-light "Details"]
         [:div.row [:div.col "Status"] [:div.col (j "status")]]
         [:div.row [:div.col "Node pool"]
                   [:div.col (get-in j ["node_pool" "name"])]]
@@ -66,8 +95,9 @@
         [:div.row [:div.col "Settings"] [:div.col "-"]]
         [:div.row [:div.col "Last run"] [:div.col (format-time (j "last_run"))]]
         [:div.row [:div.col "Next run"] [:div.col (format-time (j "next_run"))]]]
-      [:div.col.border.p-3.ml-3
-        [:h5 "Action graph"]]]
+      [:div.col.border.ml-3
+        [:h5.row.p-3.bg-dark.text-light "Action graph"]
+        [:div.row (job-ag (j "action_graph"))]]]
     [:div.row.mb-3.border
       [:div.col.p-3.mb-0.bg-dark.text-light.h5 "Timeline"]]
     [:div.row.border.border-bottom-0
@@ -116,7 +146,8 @@
             [:div.col "End"]
             [:div.col (format-time (jr "end_time"))]]]
         [:div.col.border.ml-3
-          [:h5.row.p-3.bg-dark.text-light "Action graph"]]]
+          [:h5.row.p-3.bg-dark.text-light "Action graph"]
+          (job-ag (jr "action_graph"))]]
       [:div.row.border.border-bottom-0
         [:div.col.p-3.mb-0.bg-dark.text-light.h5 "Action runs"]]
       [:div.row.border.border-top-0

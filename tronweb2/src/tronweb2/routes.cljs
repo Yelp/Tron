@@ -40,7 +40,7 @@
 
   (defroute "/job/:name" [name]
     (swap! state merge {:view :job :view-title (str "Job: " name) :job nil})
-    (fetch! state (str "/api/jobs/" name) {} :job identity))
+    (fetch! state (str "/api/jobs/" name) {:include_action_graph 1} :job identity))
 
   (defroute "/job/:name/:run" [name run]
     (swap! state merge {:view :jobrun :view-title (str "Job run: " name) :jobrun nil})
