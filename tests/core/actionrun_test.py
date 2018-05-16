@@ -52,8 +52,6 @@ class ActionRunFactoryTestCase(TestCase):
             self.run_time,
             mock_node,
             action_graph=self.action_graph,
-            service='foo',
-            deploy_group='test',
         )
 
         self.action_state_data = {
@@ -155,17 +153,24 @@ class ActionRunFactoryTestCase(TestCase):
         )
         assert_equal(action_run.__class__, SSHActionRun)
 
-    def test_build_run_for_mesos_action_default_service(self):
+    def test_build_run_for_mesos_action(self):
         action = Turtle(
             name='theaction',
             command="doit",
             executor=ExecutorTypes.mesos,
-            cluster='prod',
-            pool='default',
             cpus=10,
             mem=500,
-            service=None,
-            deploy_group=None,
+            constraints=[['pool', 'LIKE', 'default']],
+            docker_image='fake-docker.com:400/image',
+            docker_parameters=[{
+                'key': 'test',
+                'value': 123
+            }],
+            env={'TESTING': 'true'},
+            extra_volumes=[{
+                'path': '/tmp'
+            }],
+            mesos_address='fake-mesos-master.com',
         )
         action_run = ActionRunFactory.build_run_for_action(
             self.job_run,
@@ -173,29 +178,14 @@ class ActionRunFactoryTestCase(TestCase):
             self.action_runner,
         )
         assert_equal(action_run.__class__, MesosActionRun)
-        assert_equal(action_run.cluster, action.cluster)
-        assert_equal(action_run.pool, action.pool)
         assert_equal(action_run.cpus, action.cpus)
         assert_equal(action_run.mem, action.mem)
-        assert_equal(action_run.service, self.job_run.service)
-        assert_equal(action_run.deploy_group, self.job_run.deploy_group)
-
-    def test_build_run_for_mesos_action_overrides_service(self):
-        action = Turtle(
-            name='theaction',
-            command="doit",
-            executor=ExecutorTypes.mesos,
-            service='bar',
-            deploy_group='dev',
-        )
-        action_run = ActionRunFactory.build_run_for_action(
-            self.job_run,
-            action,
-            self.action_runner,
-        )
-        assert_equal(action_run.__class__, MesosActionRun)
-        assert_equal(action_run.service, action.service)
-        assert_equal(action_run.deploy_group, action.deploy_group)
+        assert_equal(action_run.constraints, action.constraints)
+        assert_equal(action_run.docker_image, action.docker_image)
+        assert_equal(action_run.docker_parameters, action.docker_parameters)
+        assert_equal(action_run.env, action.env)
+        assert_equal(action_run.extra_volumes, action.extra_volumes)
+        assert_equal(action_run.mesos_address, action.mesos_address)
 
     def test_action_run_from_state_default(self):
         state_data = self.action_state_data
@@ -211,24 +201,31 @@ class ActionRunFactoryTestCase(TestCase):
     def test_action_run_from_state_mesos(self):
         state_data = self.action_state_data
         state_data['executor'] = ExecutorTypes.mesos
-        state_data['cluster'] = 'cluster-one'
-        state_data['pool'] = 'private'
         state_data['cpus'] = 2
         state_data['mem'] = 200
-        state_data['service'] = 'baz'
-        state_data['deploy_group'] = 'test'
+        state_data['constraints'] = [['pool', 'LIKE', 'default']]
+        state_data['docker_image'] = 'fake-docker.com:400/image'
+        state_data['docker_parameters'] = [{'key': 'test', 'value': 123}]
+        state_data['env'] = {'TESTING': 'true'}
+        state_data['extra_volumes'] = [{'path': '/tmp'}]
+        state_data['mesos_address'] = 'fake-mesos-master.com'
         action_run = ActionRunFactory.action_run_from_state(
             self.job_run,
             state_data,
         )
 
         assert_equal(action_run.job_run_id, state_data['job_run_id'])
-        assert_equal(action_run.cluster, state_data['cluster'])
-        assert_equal(action_run.pool, state_data['pool'])
         assert_equal(action_run.cpus, state_data['cpus'])
         assert_equal(action_run.mem, state_data['mem'])
-        assert_equal(action_run.service, state_data['service'])
-        assert_equal(action_run.deploy_group, state_data['deploy_group'])
+        assert_equal(action_run.constraints, state_data['constraints'])
+        assert_equal(action_run.docker_image, state_data['docker_image'])
+        assert_equal(
+            action_run.docker_parameters, state_data['docker_parameters']
+        )
+        assert_equal(action_run.env, state_data['env'])
+        assert_equal(action_run.extra_volumes, state_data['extra_volumes'])
+        assert_equal(action_run.mesos_address, state_data['mesos_address'])
+
         assert not action_run.is_cleanup
         assert_equal(action_run.__class__, MesosActionRun)
 

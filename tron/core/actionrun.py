@@ -87,14 +87,16 @@ class ActionRunFactory(object):
             'output_path': job_run.output_path.clone(),
             'cleanup': action.is_cleanup,
             'action_runner': action_runner,
+            'retries_remaining': action.retries,
             'executor': action.executor,
-            'cluster': action.cluster,
-            'pool': action.pool,
             'cpus': action.cpus,
             'mem': action.mem,
-            'service': action.service or job_run.service,
-            'deploy_group': action.deploy_group or job_run.deploy_group,
-            'retries_remaining': action.retries,
+            'constraints': action.constraints,
+            'docker_image': action.docker_image,
+            'docker_parameters': action.docker_parameters,
+            'env': action.env,
+            'extra_volumes': action.extra_volumes,
+            'mesos_address': action.mesos_address,
         }
         if action.executor == ExecutorTypes.mesos:
             return MesosActionRun(**args)
@@ -186,16 +188,18 @@ class ActionRun(object):
         rendered_command=None,
         exit_status=None,
         action_runner=None,
-        executor=None,
-        cluster=None,
-        pool=None,
-        cpus=None,
-        mem=None,
-        service=None,
-        deploy_group=None,
         retries_remaining=None,
         exit_statuses=None,
         machine=None,
+        executor=None,
+        cpus=None,
+        mem=None,
+        constraints=None,
+        docker_image=None,
+        docker_parameters=None,
+        env=None,
+        extra_volumes=None,
+        mesos_address=None,
     ):
         self.job_run_id = maybe_decode(job_run_id)
         self.action_name = maybe_decode(name)
@@ -213,12 +217,14 @@ class ActionRun(object):
         )
         self.is_cleanup = cleanup
         self.executor = executor
-        self.cluster = cluster
-        self.pool = pool
         self.cpus = cpus
         self.mem = mem
-        self.service = service
-        self.deploy_group = deploy_group
+        self.constraints = constraints
+        self.docker_image = docker_image
+        self.docker_parameters = docker_parameters
+        self.env = env
+        self.extra_volumes = extra_volumes
+        self.mesos_address = mesos_address
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(self.id)
         self.context = command_context.build_context(self, parent_context)
@@ -294,14 +300,16 @@ class ActionRun(object):
             exit_status=state_data.get('exit_status'),
             retries_remaining=state_data.get('retries_remaining'),
             exit_statuses=state_data.get('exit_statuses'),
+            action_runner=action_runner,
             executor=state_data.get('executor', ExecutorTypes.ssh),
-            cluster=state_data.get('cluster'),
-            pool=state_data.get('pool'),
             cpus=state_data.get('cpus'),
             mem=state_data.get('mem'),
-            service=state_data.get('service'),
-            deploy_group=state_data.get('deploy_group'),
-            action_runner=action_runner,
+            constraints=state_data.get('constraints'),
+            docker_image=state_data.get('docker_image'),
+            docker_parameters=state_data.get('docker_parameters'),
+            env=state_data.get('env'),
+            extra_volumes=state_data.get('extra_volumes'),
+            mesos_address=state_data.get('mesos_address'),
         )
 
         # Transition running to fail unknown because exit status was missed
@@ -421,16 +429,18 @@ class ActionRun(object):
             'rendered_command': self.rendered_command,
             'node_name': self.node.get_name() if self.node else None,
             'exit_status': self.exit_status,
-            'executor': self.executor,
-            'cluster': self.cluster,
-            'pool': self.pool,
-            'cpus': self.cpus,
-            'mem': self.mem,
-            'service': self.service,
-            'deploy_group': self.deploy_group,
             'retries_remaining': self.retries_remaining,
             'exit_statuses': self.exit_statuses,
-            'action_runner': action_runner
+            'action_runner': action_runner,
+            'executor': self.executor,
+            'cpus': self.cpus,
+            'mem': self.mem,
+            'constraints': self.constraints,
+            'docker_image': self.docker_image,
+            'docker_parameters': self.docker_parameters,
+            'env': self.env,
+            'extra_volumes': self.extra_volumes,
+            'mesos_address': self.mesos_address,
         }
 
     def render_command(self):
@@ -578,13 +588,9 @@ class MesosActionRun(ActionRun):
         stdout = filehandler.OutputStreamSerializer(self.output_path,
                                                     ).open('.stdout')
         stdout.write(
-            "Would have run command for service {service} from deploy group "
-            "{deploy_group} on cluster {cluster} in the {pool} pool, with "
+            "Would have run command on docker image {docker_image} with "
             "{cpus} cpus and {mem} MB memory.".format(
-                service=self.service,
-                deploy_group=self.deploy_group,
-                cluster=self.cluster,
-                pool=self.pool,
+                docker_image=self.docker_image,
                 cpus=self.cpus,
                 mem=self.mem,
             ),

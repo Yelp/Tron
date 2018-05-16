@@ -49,7 +49,6 @@ TronConfig = config_object_factory(
         'nodes',  # FrozenDict of ConfigNode
         'node_pools',  # FrozenDict of ConfigNodePool
         'jobs',  # FrozenDict of ConfigJob
-        'clusters',  # tuple of str
     ],
 )
 
@@ -126,8 +125,6 @@ ConfigJob = config_object_factory(
         'allow_overlap',  # bool
         'max_runtime',  # datetime.Timedelta
         'time_zone',  # pytz time zone
-        'service',  # str
-        'deploy_group',  # str
         'expected_runtime',  # datetime.Timedelta
     ],
 )
@@ -141,14 +138,16 @@ ConfigAction = config_object_factory(
     optional=[
         'requires',  # tuple of str
         'node',  # str
+        'retries',  # int
         'executor',  # str
-        'cluster',  # str
-        'pool',  # str
         'cpus',  # float
         'mem',  # float
-        'service',  # str
-        'deploy_group',  # str
-        'retries',  # int
+        'constraints',  # List of ConfigConstraint
+        'docker_image',  # str
+        'docker_parameters',  # List of ConfigParameter
+        'env',  # dict
+        'extra_volumes',  # List of ConfigVolume
+        'mesos_address',  # str
         'expected_runtime',  # datetime.Timedelta
     ],
 )
@@ -161,16 +160,47 @@ ConfigCleanupAction = config_object_factory(
     optional=[
         'name',  # str
         'node',  # str
-        'executor',  # str
-        'cluster',  # str
-        'pool',  # str
-        'cpus',  # float
-        'mem',  # float
-        'service',  # str
-        'deploy_group',  # str
         'retries',  # int
         'expected_runtime',  # datetime.Timedelta
+        'executor',  # str
+        'cpus',  # float
+        'mem',  # float
+        'constraints',  # List of ConfigConstraint
+        'docker_image',  # str
+        'docker_parameters',  # List of ConfigParameter
+        'env',  # dict
+        'extra_volumes',  # List of ConfigVolume
+        'mesos_address',  # str
     ],
+)
+
+ConfigConstraint = config_object_factory(
+    name='ConfigConstraint',
+    required=[
+        'attribute',
+        'operator',
+        'value',
+    ],
+    optional=[],
+)
+
+ConfigVolume = config_object_factory(
+    name='ConfigVolume',
+    required=[
+        'container_path',
+        'host_path',
+        'mode',
+    ],
+    optional=[],
+)
+
+ConfigParameter = config_object_factory(
+    name='ConfigParameter',
+    required=[
+        'key',
+        'value',
+    ],
+    optional=[],
 )
 
 StatePersistenceTypes = Enum.create('shelve', 'sql', 'yaml')
@@ -178,3 +208,5 @@ StatePersistenceTypes = Enum.create('shelve', 'sql', 'yaml')
 ExecutorTypes = Enum.create('ssh', 'mesos')
 
 ActionRunnerTypes = Enum.create('none', 'subprocess')
+
+VolumeModes = Enum.create('RO', 'RW')

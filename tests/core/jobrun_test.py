@@ -34,8 +34,6 @@ def build_mock_job():
         output_path=mock.Mock(),
         context=mock.Mock(),
         action_runner=runner,
-        service='foo',
-        deploy_group='test',
     )
 
 
@@ -59,8 +57,6 @@ class JobRunTestCase(TestCase):
                 action_runs_with_cleanup=[],
                 get_startable_action_runs=lambda: [],
             ),
-            service='baz',
-            deploy_group='other',
         )
         autospec_method(self.job_run.watch)
         autospec_method(self.job_run.notify)
@@ -91,8 +87,6 @@ class JobRunTestCase(TestCase):
         assert_equal(run.run_num, run_num)
         assert_equal(run.node, mock_node)
         assert not run.manual
-        assert_equal(run.service, self.job.service)
-        assert_equal(run.deploy_group, self.job.deploy_group)
 
     def test_for_job_manual(self):
         run_num = 6
@@ -112,8 +106,6 @@ class JobRunTestCase(TestCase):
         assert_equal(state_data['run_num'], 7)
         assert not state_data['manual']
         assert_equal(state_data['run_time'], self.run_time)
-        assert_equal(state_data['service'], 'baz')
-        assert_equal(state_data['deploy_group'], 'other')
 
     def test_set_action_runs(self):
         self.job_run._action_runs = None
@@ -377,8 +369,6 @@ class JobRunFromStateTestCase(TestCase):
             'runs': self.action_run_state_data,
             'cleanup_run': None,
             'manual': True,
-            'service': 'foo',
-            'deploy_group': 'test',
         }
         self.context = mock.Mock()
 
@@ -397,8 +387,6 @@ class JobRunFromStateTestCase(TestCase):
         assert_equal(run.output_path, self.output_path)
         assert run.context.next
         assert run.action_graph
-        assert_equal(run.service, self.state_data['service'])
-        assert_equal(run.deploy_group, self.state_data['deploy_group'])
 
     def test_from_state_node_no_longer_exists(self):
         run = jobrun.JobRun.from_state(

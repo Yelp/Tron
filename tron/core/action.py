@@ -15,9 +15,10 @@ class Action(object):
     """A configurable data object for an Action."""
 
     equality_attributes = [
-        'name', 'command', 'node_pool', 'is_cleanup', 'executor', 'cluster',
-        'pool', 'cpus', 'mem', 'service', 'deploy_group', 'retries',
-        'expected_runtime'
+        'name', 'command', 'node_pool', 'is_cleanup', 'retries',
+        'expected_runtime', 'executor', 'cpus', 'mem', 'constraints',
+        'docker_image', 'docker_parameters', 'env', 'extra_volumes',
+        'mesos_address'
     ]
 
     def __init__(
@@ -28,14 +29,16 @@ class Action(object):
         required_actions=None,
         dependent_actions=None,
         retries=None,
+        expected_runtime=None,
         executor=None,
-        cluster=None,
-        pool=None,
         cpus=None,
         mem=None,
-        service=None,
-        deploy_group=None,
-        expected_runtime=None,
+        constraints=None,
+        docker_image=None,
+        docker_parameters=None,
+        env=None,
+        extra_volumes=None,
+        mesos_address=None,
     ):
         self.name = maybe_decode(name)
         self.command = command
@@ -43,14 +46,16 @@ class Action(object):
         self.retries = retries
         self.required_actions = required_actions or []
         self.dependent_actions = dependent_actions or []
+        self.expected_runtime = expected_runtime
         self.executor = executor
-        self.cluster = cluster
-        self.pool = pool
         self.cpus = cpus
         self.mem = mem
-        self.service = service
-        self.deploy_group = deploy_group
-        self.expected_runtime = expected_runtime
+        self.constraints = constraints or []
+        self.docker_image = docker_image
+        self.docker_parameters = docker_parameters or []
+        self.env = env or {}
+        self.extra_volumes = extra_volumes or []
+        self.mesos_address = mesos_address
 
     @property
     def is_cleanup(self):
@@ -65,14 +70,16 @@ class Action(object):
             command=config.command,
             node_pool=node_repo.get_by_name(config.node),
             retries=config.retries,
+            expected_runtime=config.expected_runtime,
             executor=config.executor,
-            cluster=config.cluster,
-            pool=config.pool,
             cpus=config.cpus,
             mem=config.mem,
-            service=config.service,
-            deploy_group=config.deploy_group,
-            expected_runtime=config.expected_runtime,
+            constraints=config.constraints,
+            docker_image=config.docker_image,
+            docker_parameters=config.docker_parameters,
+            env=config.env,
+            extra_volumes=config.extra_volumes,
+            mesos_address=config.mesos_address,
         )
 
     def __eq__(self, other):
