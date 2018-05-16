@@ -336,6 +336,7 @@ class ValidateCleanupAction(Validator):
         'service': None,
         'deploy_group': None,
         'retries': None,
+        'expected_runtime': datetime.timedelta(hours=24),
     }
     validators = {
         'name': valid_cleanup_action_name,
@@ -349,6 +350,7 @@ class ValidateCleanupAction(Validator):
         'service': valid_string,
         'deploy_group': valid_string,
         'retries': valid_int,
+        'expected_runtime': config_utils.valid_time_delta,
     }
 
 
