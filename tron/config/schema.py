@@ -169,6 +169,7 @@ ConfigCleanupAction = config_object_factory(
         'service',  # str
         'deploy_group',  # str
         'retries',  # int
+        'expected_runtime',  # datetime.Timedelta
     ],
 )
 
