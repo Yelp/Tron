@@ -43,6 +43,7 @@ class StatusFile(object):
                     proc=proc,
                 ),
                 fh,
+                explicit_start=True,
             )
             try:
                 yield
@@ -54,6 +55,7 @@ class StatusFile(object):
                         proc=proc,
                     ),
                     fh,
+                    explicit_start=True,
                 )
 
 
