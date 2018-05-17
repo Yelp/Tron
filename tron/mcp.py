@@ -69,7 +69,11 @@ class MasterControlProgram(object):
         In this case jobs shouldn't be scheduled until the state is applied.
         """
         self._load_config()
-        self.restore_state(self.config.load().get_master().action_runner)
+        self.restore_state(
+            actioncommand.create_action_runner_factory_from_config(
+                self.config.load().get_master().action_runner
+            )
+        )
         # Any job with existing state would have been scheduled already. Jobs
         # without any state will be scheduled here.
         self.jobs.run_queue_schedule()
