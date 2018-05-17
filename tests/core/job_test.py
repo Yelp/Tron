@@ -267,6 +267,7 @@ class JobSchedulerTestCase(TestCase):
     def test_restore_state_sets_job_runs(self):
         self.job.enabled = False
         mock_runs = [mock.Mock(), mock.Mock()]
+        mock_action_runner = mock.Mock()
         job_state_data = {'runs': mock_runs, 'enabled': True}
 
         self.job_scheduler._set_callback = lambda x: x
@@ -279,12 +280,13 @@ class JobSchedulerTestCase(TestCase):
             'tron.core.job.recovery.launch_recovery_actionruns_for_job_runs'
         ) as mock_launch_recovery:
             mock_launch_recovery.return_value = mock.Mock(autospec=True)
-            self.job_scheduler.restore_state(job_state_data, mock.Mock())
+            self.job_scheduler.restore_state(
+                job_state_data, mock_action_runner
+            )
             assert self.job.runs.runs == collections.deque(mock_runs)
-
-    def test_restore_job_state_launches_recovery_runs(self):
-        job_runs = []
-        job_state_data = {'runs': job_runs, 'enabled': True}
+            assert mock_launch_recovery.called_once_with(
+                job_runs=mock_runs, master_action_runner=mock_action_runner
+            )
 
     def test_disable(self):
         self.job_scheduler.disable()
