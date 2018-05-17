@@ -7,7 +7,8 @@
                  [clojure-humanize "0.2.2"]
                  [com.andrewmcveigh/cljs-time "0.5.2"]]
 
-  :plugins [[lein-cljsbuild "1.1.5"]]
+  :plugins [[lein-cljsbuild "1.1.5"]
+            [lein-figwheel "0.5.16"]]
   :min-lein-version "2.5.3"
   :source-paths ["src"]
   :clean-targets ^{:protect false} ["resources/public/js/compiled" "target"]
@@ -20,6 +21,7 @@
   {:builds
    [{:id           "dev"
      :source-paths ["src"]
+     :figwheel     {:on-jsload "tronweb2.core/reload"}
      :compiler     {:main                 tronweb2.core
                     :output-to            "resources/public/js/compiled/app.js"
                     :output-dir           "resources/public/js/compiled/out"

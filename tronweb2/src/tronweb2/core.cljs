@@ -7,14 +7,18 @@
             [cljs-time.core :as t]
             [clojure.string :as str]))
 
+(defonce app-state (reagent/atom {}))
+
 (defn log [& args]
   (.log js/console args))
 
 (defn duration-from-str [s]
-  (let [[h m s] (str/split s #":")]
-    (+ (int h) (int m) (float s))))
-
-(def app-state (reagent/atom {}))
+  (let [[h m s] (str/split s #":")
+        s (str/replace s #"^0+" "0")]
+    (* 1000
+       (+ (* 3600 (js/parseFloat h))
+          (* 60 (js/parseFloat m))
+          (js/parseFloat s)))))
 
 (defn jobs [state]
   [:div.row
@@ -47,7 +51,7 @@
 
 (defn format-duration [d]
   (if (and d (not= "" d))
-    [:abbr {:title d} (humanize/duration (duration-from-str d))]
+    [:abbr {:title d} (humanize/duration (duration-from-str d) {:number-format str})]
     "-"))
 
 (defn job-run [jr even]
@@ -59,6 +63,8 @@
     [:div.col (jr "state")]
     [:div.col (get-in jr ["node" "name"])]
     [:div.col.small (format-time (jr "run_time"))]
+    [:div.col.small (format-time (jr "start_time"))]
+    [:div.col.small (format-time (jr "end_time"))]
     [:div.col.small (format-duration (jr "duration"))]])
 
 (defn job-ag-node [[node deps]]
@@ -83,6 +89,48 @@
           dag (map build-dag root-nodes)]
       (map job-ag-node dag))])
 
+(defn non-overlap-timelines [runs]
+  (reduce
+    (fn [tls {st "start_time" dr "duration" :as run}]
+      (let [time (parse-in-local-time st)
+            ms (duration-from-str dr)
+            period (t/Period. 0 0 0 0 0 0 0 ms)
+            interval (t/interval time (t/plus time period))
+            non-ol-tls (filter #(t/overlap interval (last (first %)))
+                               (map-indexed vector tls))
+            idx (or (get-in non-ol-tls [0 0]) 0)]
+        (update-in tls [idx] (fnil conj []) (assoc run :interval interval))))
+    []
+    (filter
+      #(not= "" (apply str (vals (select-keys % ["start_time" "duration"]))))
+      (reverse runs))))
+
+(defn job-timeline [runs]
+  (let [tls (non-overlap-timelines runs)
+        intervals (map :interval (mapcat identity tls))
+        gstart (apply min (map :start intervals))
+        gend (apply max (map :end intervals))
+        [gstart gend] (map tc/to-long [gstart gend])
+        gduration (- gend gstart)]
+    (for [[idx runs] (map-indexed vector tls)]
+      [:div.row {:key idx}
+        (for [run runs
+              :let [{{:keys [start end]} :interval} run
+                    [start end] (map tc/to-long [start end])
+                    duration (- end start)]]
+          [:div.col.m-0.p-0.position-absolute.text-light.small
+           {:key (run "run_num")
+            :style {:height "2rem"
+                    :width (str (* 100 (/ duration gduration)) "%")
+                    :top "0"
+                    :left (str (* 100 (/ (- start gstart) gduration)) "%")}
+            :class (case (run "state")
+                     "scheduled" "bg-secondary"
+                     "running" "bg-warning"
+                     "succeeded" "bg-success"
+                     "failed" "bg-danger"
+                     "")}])])))
+
 (defn job- [j]
   [:div.container
     [:div.row.mb-3
@@ -97,10 +145,12 @@
         [:div.row [:div.col "Next run"] [:div.col (format-time (j "next_run"))]]]
       [:div.col.border.ml-3
         [:h5.row.p-3.bg-dark.text-light "Action graph"]
-        [:div.row (job-ag (j "action_graph"))]]]
-    [:div.row.mb-3.border
-      [:div.col.p-3.mb-0.bg-dark.text-light.h5 "Timeline"]]
+        (job-ag (j "action_graph"))]]
     [:div.row.border.border-bottom-0
+      [:div.col.p-3.mb-0.bg-dark.text-light.h5 "Timeline"]]
+    [:div.row.border.border-top-0.mb-3
+      [:div.col.p-3 (job-timeline (j "runs"))]]
+    [:div.row.mb-3.border.border-bottom-0
       [:div.col.p-3.mb-0.bg-dark.text-light.h5 "Job runs"]]
     [:div.row.border.border-top-0
       [:div.col.p-3
@@ -108,7 +158,9 @@
           [:div.col.h6 "Id"]
           [:div.col.h6 "State"]
           [:div.col.h6 "Node"]
-          [:div.col.h6 "Run time"]
+          [:div.col.h6 "Scheduled"]
+          [:div.col.h6 "Start"]
+          [:div.col.h6 "End"]
           [:div.col.h6 "Duration"]]
         (map job-run (j "runs") (cycle [true false]))]]])
 
@@ -258,3 +310,7 @@
   (enable-console-print!)
   (routes/setup app-state)
   (reagent/render [root] (.getElementById js/document "app")))
+
+(defn ^:export reload []
+  (reagent/render [root] (.getElementById js/document "app"))
+  (reagent/force-update-all))
