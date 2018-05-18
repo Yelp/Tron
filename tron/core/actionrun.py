@@ -16,6 +16,7 @@ from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.config.schema import ExecutorTypes
 from tron.core import action
+from tron.mesos import get_mesos_cluster
 from tron.serialize import filehandler
 from tron.utils import iteration
 from tron.utils import maybe_decode
@@ -579,25 +580,28 @@ class SSHActionRun(ActionRun, Observer):
     handler = handle_action_command_state_change
 
 
-class MesosActionRun(ActionRun):
+class MesosActionRun(ActionRun, Observer):
     """An ActionRun that executes the command on a Mesos cluster.
     """
 
     def submit_command(self):
-        self.machine.transition('started')
-        stdout = filehandler.OutputStreamSerializer(self.output_path,
-                                                    ).open('.stdout')
-        stdout.write(
-            "Would have run command on docker image {docker_image} with "
-            "{cpus} cpus and {mem} MB memory.".format(
-                docker_image=self.docker_image,
-                cpus=self.cpus,
-                mem=self.mem,
-            ),
+        serializer = filehandler.OutputStreamSerializer(self.output_path)
+        mesos_cluster = get_mesos_cluster(self.mesos_address)
+        task = mesos_cluster.create_task(
+            action_run_id=self.id,
+            command=self.command,
+            cpus=self.cpus,
+            mem=self.mem,
+            constraints=self.constraints,
+            docker_image=self.docker_image,
+            docker_parameters=self.docker_parameters,
+            env=self.env,
+            extra_volumes=self.extra_volumes,
+            serializer=serializer,
         )
-        self.success()
-        stdout.close()
-        return True
+        mesos_cluster.submit(task)  # TODO: catch errors
+        self.watch(task)
+        return task
 
     def stop(self):
         if self.retries_remaining is not None:
@@ -610,6 +614,28 @@ class MesosActionRun(ActionRun):
             self.retries_remaining = -1
 
         pass
+
+    def handle_action_command_state_change(self, action_command, event):
+        """Observe ActionCommand state changes."""
+        # TODO: consolidate? Same as SSHActionRun for now
+        log.debug("Action command state change: %s", action_command.state)
+
+        if event == ActionCommand.RUNNING:
+            return self.machine.transition('started')
+
+        if event == ActionCommand.FAILSTART:
+            return self.fail(None)
+
+        if event == ActionCommand.EXITING:
+            if action_command.exit_status is None:
+                return self.fail_unknown()
+
+            if not action_command.exit_status:
+                return self.success()
+
+            return self.fail(action_command.exit_status)
+
+    handler = handle_action_command_state_change
 
 
 class ActionRunCollection(object):

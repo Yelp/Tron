@@ -14,6 +14,7 @@ import os
 import pytz
 import six
 from six import string_types
+from task_processing.plugins.mesos.constraints import OPERATORS
 
 from tron import command_context
 from tron.config import config_utils
@@ -151,15 +152,9 @@ def valid_node_name(value, config_context):
 class ValidateConstraint(Validator):
     config_class = ConfigConstraint
     validators = {
-        'attribute':
-            valid_string,
-        'operator':
-            config_utils.build_enum_validator(
-                # TODO: import from taskproc
-                ['EQUALS', 'NOTEQUALS', 'LIKE', 'UNLIKE']
-            ),
-        'value':
-            valid_string,
+        'attribute': valid_string,
+        'operator': config_utils.build_enum_validator(OPERATORS.keys()),
+        'value': valid_string,
     }
 
 
