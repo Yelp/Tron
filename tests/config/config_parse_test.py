@@ -301,12 +301,12 @@ jobs:
                                         'name': 'action1_1',
                                         'command': 'test_command1.1',
                                         'requires': ('action1_0', ),
-                                        'executor': 'ssh',
+                                        'expected_runtime': "2h",
                                     },
                                     {
                                         'name': 'action1_0',
                                         'command': 'test_command1.0',
-                                        'executor': 'ssh',
+                                        'expected_runtime': "2h",
                                     },
                                 ],
                                 self.context,
@@ -644,6 +644,7 @@ jobs:
                             max_runtime=None,
                             allow_overlap=False,
                             time_zone=None,
+                            expected_runtime=datetime.timedelta(1),
                         ),
                     'test_job1':
                         schema.ConfigJob(
@@ -688,6 +689,7 @@ jobs:
                             max_runtime=None,
                             allow_overlap=True,
                             time_zone=None,
+                            expected_runtime=datetime.timedelta(1),
                         ),
                     'test_job2':
                         schema.ConfigJob(
@@ -709,31 +711,8 @@ jobs:
                             actions=ActionMap.from_config(
                                 [
                                     {
-                                        'name':
-                                            'action3_1',
-                                        'command':
-                                            'test_command3.1',
-                                        'expected_runtime':
-                                            datetime.timedelta(1),
-                                    },
-                                    {
-                                        'name':
-                                            'action3_0',
-                                        'command':
-                                            'test_command3.0',
-                                        'expected_runtime':
-                                            datetime.timedelta(1),
-                                    },
-                                    {
-                                        'name':
-                                            'action3_2',
-                                        'command':
-                                            'test_command3.2',
-                                        'requires': ['action3_0', 'action3_1'],
-                                        'node':
-                                            'node0',
-                                        'expected_runtime':
-                                            datetime.timedelta(1),
+                                        'name': 'action2_0',
+                                        'command': 'test_command2.0',
                                     },
                                 ],
                                 config_context,
@@ -745,6 +724,7 @@ jobs:
                             max_runtime=None,
                             allow_overlap=False,
                             time_zone=None,
+                            expected_runtime=datetime.timedelta(1),
                         ),
                     'test_job3':
                         schema.ConfigJob(
@@ -789,6 +769,7 @@ jobs:
                             max_runtime=None,
                             allow_overlap=False,
                             time_zone=None,
+                            expected_runtime=datetime.timedelta(1),
                         ),
                     'test_job4':
                         schema.ConfigJob(
@@ -824,6 +805,7 @@ jobs:
                             max_runtime=None,
                             allow_overlap=False,
                             time_zone=None,
+                            expected_runtime=datetime.timedelta(1),
                         ),
                     'test_job_paasta':
                         schema.ConfigJob(
@@ -859,6 +841,7 @@ jobs:
                             max_runtime=None,
                             allow_overlap=False,
                             time_zone=None,
+                            expected_runtime=datetime.timedelta(1),
                         ),
                 }
             ),
@@ -1388,6 +1371,7 @@ class ValidateJobsTestCase(TestCase):
                                 {
                                     'name': 'action0_0',
                                     'command': 'test_command0.0',
+                                    'expected_runtime': '20m',
                                 },
                             ],
                             context,
@@ -1406,6 +1390,7 @@ class ValidateJobsTestCase(TestCase):
                         allow_overlap=False,
                         max_runtime=None,
                         time_zone=None,
+                        expected_runtime=datetime.timedelta(0, 1200),
                     ),
             }
         )

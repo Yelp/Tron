@@ -15,6 +15,7 @@ from tron import node
 from tron.config import schema
 from tron.config.config_utils import IDENTIFIER_RE
 from tron.config.config_utils import TIME_INTERVAL_RE
+from tron.config.config_utils import TIME_INTERVAL_UNITS
 from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.utils import maybe_decode
 
@@ -22,6 +23,9 @@ log = logging.getLogger(__name__)
 
 
 def factory_time_delta(value):
+    if isinstance(value, datetime.timedelta):
+        return value
+
     error_msg = "Value at %s is not a valid time delta: %s"
     matches = TIME_INTERVAL_RE.match(value)
     if not matches:
@@ -63,7 +67,7 @@ class Action(PClass):
     service = field(type=(str, type(None)), initial=None)
     deploy_group = field(type=(str, type(None)), initial=None)
     expected_runtime = field(
-        type=(datetime.Timedelta, type(None)),
+        type=(datetime.timedelta, type(None)),
         initial=datetime.timedelta(hours=24),
         factory=factory_time_delta,
     )
