@@ -15,7 +15,6 @@ from tron.utils import collections
 
 
 class MappingCollectionsTestCase(TestCase):
-
     @setup
     def setup_collection(self):
         self.name = 'some_name'
@@ -81,12 +80,12 @@ class MappingCollectionsTestCase(TestCase):
         item = mock.Mock()
         self.collection.replace(item)
         self.collection.add.assert_called_with(
-            item, self.collection.remove_item,
+            item,
+            self.collection.remove_item,
         )
 
 
 class EnumTestCase(TestCase):
-
     @setup
     def setup_enum(self):
         self.values = ['one', 'two', 'three']

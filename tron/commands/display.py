@@ -17,22 +17,22 @@ class Color(object):
 
     enabled = None
     colors = {
-        'gray':                 '\033[90m',
-        'red':                  '\033[91m',
-        'green':                '\033[92m',
-        'yellow':               '\033[93m',
-        'blue':                 '\033[94m',
-        'purple':               '\033[95m',
-        'cyan':                 '\033[96m',
-        'white':                '\033[99m',
+        'gray': '\033[90m',
+        'red': '\033[91m',
+        'green': '\033[92m',
+        'yellow': '\033[93m',
+        'blue': '\033[94m',
+        'purple': '\033[95m',
+        'cyan': '\033[96m',
+        'white': '\033[99m',
         # h is for highlighted
-        'hgray':                '\033[100m',
-        'hred':                 '\033[101m',
-        'hgreen':               '\033[102m',
-        'hyellow':              '\033[103m',
-        'hblue':                '\033[104m',
-        'hcyan':                '\033[106m',
-        'end':                  '\033[0m',
+        'hgray': '\033[100m',
+        'hred': '\033[101m',
+        'hgreen': '\033[102m',
+        'hyellow': '\033[103m',
+        'hblue': '\033[104m',
+        'hcyan': '\033[106m',
+        'end': '\033[0m',
     }
 
     @classmethod
@@ -155,7 +155,8 @@ class TableDisplay(object):
     def rows(self):
         return sorted(
             self.data,
-            key=itemgetter(self.fields[0]), reverse=self.reversed,
+            key=itemgetter(self.fields[0]),
+            reverse=self.reversed,
         )
 
     def store_data(self, data):
@@ -211,6 +212,7 @@ def add_color_for_state(state):
 
 def format_fields(display_obj, content):
     """Format fields with some color."""
+
     def add_color(field, field_value):
         if field not in display_obj.colors:
             return field_value
@@ -252,25 +254,25 @@ def format_action_run_details(content, stdout=True, stderr=True):
 class DisplayJobRuns(TableDisplay):
     """Format Job runs."""
 
-    columns = ['Run ID',    'State',    'Node', 'Scheduled Time']
-    fields = ['run_num',   'state',    'node', 'run_time']
-    widths = [10,          12,         30,     25]
+    columns = ['Run ID', 'State', 'Node', 'Scheduled Time']
+    fields = ['run_num', 'state', 'node', 'run_time']
+    widths = [10, 12, 30, 25]
     title = 'job runs'
     reversed = True
 
     detail_labels = [
-        ('Job Run',             'id'),
-        ('State',               'state'),
-        ('Node',                'node'),
-        ('Scheduled time',      'run_time'),
-        ('Start time',          'start_time'),
-        ('End time',            'end_time'),
-        ('Manual run',          'manual'),
+        ('Job Run', 'id'),
+        ('State', 'state'),
+        ('Node', 'node'),
+        ('Scheduled time', 'run_time'),
+        ('Start time', 'start_time'),
+        ('End time', 'end_time'),
+        ('Manual run', 'manual'),
     ]
 
     colors = {
-        'id':        partial(Color.set, 'yellow'),
-        'state':     add_color_for_state,
+        'id': partial(Color.set, 'yellow'),
+        'state': add_color_for_state,
         'manual': lambda value: Color.set('cyan' if value else None, value),
     }
 
@@ -295,33 +297,36 @@ class DisplayJobRuns(TableDisplay):
         duration = row['duration'][:-7] if row['duration'] else "-"
 
         row_data = "%sStart: %s  End: %s  (%s)" % (
-            ' ' * self.widths[0], start, end, duration,
+            ' ' * self.widths[0],
+            start,
+            end,
+            duration,
         )
         self.out.append(Color.set('gray', row_data))
 
 
 class DisplayJobs(TableDisplay):
 
-    columns = ['Name',  'State',    'Scheduler',    'Last Success']
-    fields = ['name',  'status',   'scheduler',    'last_success']
-    widths = [50,       10,         20,             22]
+    columns = ['Name', 'State', 'Scheduler', 'Last Success']
+    fields = ['name', 'status', 'scheduler', 'last_success']
+    widths = [50, 10, 20, 22]
     title = 'jobs'
     resize_fields = ['name']
 
     detail_labels = [
-        ('Job',                 'name'),
-        ('State',               'status'),
-        ('Scheduler',           'scheduler'),
-        ('Max runtime',         'max_runtime'),
-        ('Node Pool',           'node_pool'),
-        ('Run on all nodes',    'all_nodes'),
-        ('Allow overlapping',   'allow_overlap'),
-        ('Queue overlapping',   'queueing'),
+        ('Job', 'name'),
+        ('State', 'status'),
+        ('Scheduler', 'scheduler'),
+        ('Max runtime', 'max_runtime'),
+        ('Node Pool', 'node_pool'),
+        ('Run on all nodes', 'all_nodes'),
+        ('Allow overlapping', 'allow_overlap'),
+        ('Queue overlapping', 'queueing'),
     ]
 
     colors = {
-        'name':      partial(Color.set, 'yellow'),
-        'status':    add_color_for_state,
+        'name': partial(Color.set, 'yellow'),
+        'status': add_color_for_state,
     }
 
     def format_value(self, field_idx, value):
@@ -334,27 +339,27 @@ class DisplayJobs(TableDisplay):
 class DisplayActionRuns(TableDisplay):
 
     columns = ['Action', 'State', 'Start Time', 'End Time', 'Duration']
-    fields = ['id',     'state', 'start_time', 'end_time', 'duration']
-    widths = [40,       12,      22,           22,         10]
+    fields = ['id', 'state', 'start_time', 'end_time', 'duration']
+    widths = [40, 12, 22, 22, 10]
     title = 'actions'
     resize_fields = ['id']
 
     detail_labels = [
-        ('Action Run',          'id'),
-        ('State',               'state'),
-        ('Node',                'node'),
-        ('Command',             'command'),
-        ('Bare command',        'raw_command'),
-        ('Start time',          'start_time'),
-        ('End time',            'end_time'),
-        ('Final exit status',   'exit_status'),
+        ('Action Run', 'id'),
+        ('State', 'state'),
+        ('Node', 'node'),
+        ('Command', 'command'),
+        ('Bare command', 'raw_command'),
+        ('Start time', 'start_time'),
+        ('End time', 'end_time'),
+        ('Final exit status', 'exit_status'),
         ('Retry exit statuses', 'exit_statuses'),
     ]
 
     colors = {
-        'id':           partial(Color.set, 'yellow'),
-        'state':        add_color_for_state,
-        'command':      partial(Color.set, 'gray'),
+        'id': partial(Color.set, 'yellow'),
+        'state': add_color_for_state,
+        'command': partial(Color.set, 'gray'),
     }
 
     def banner(self):
@@ -384,7 +389,7 @@ class DisplayEvents(TableDisplay):
 
     columns = ['Time', 'Level', 'Entity', 'Name']
     fields = ['time', 'level', 'entity', 'name']
-    widths = [22,     12,       35,      20]
+    widths = [22, 12, 35, 20]
     title = 'events'
     resize_fields = ['entity']
 
@@ -402,9 +407,9 @@ def display_scheduler(source):
 
 
 field_display_mapping = {
-    'node':             display_node,
-    'node_pool':        display_node_pool,
-    'scheduler':        display_scheduler,
+    'node': display_node,
+    'node_pool': display_node_pool,
+    'scheduler': display_scheduler,
 }
 
 

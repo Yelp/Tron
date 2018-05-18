@@ -5,7 +5,6 @@ from __future__ import unicode_literals
 
 import datetime
 
-
 DATE_FORMAT = "%Y-%m-%d %H:%M:%S"
 
 

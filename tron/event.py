@@ -12,7 +12,6 @@ from tron.utils import timeutils
 
 log = logging.getLogger(__name__)
 
-
 # Special character used to split an entity name into hierarchy levels
 NAME_CHARACTER = '.'
 
@@ -49,10 +48,10 @@ class EventLevel(object):
         return hash(self.order)
 
 
-LEVEL_INFO = EventLevel(0, "INFO")         # Troubleshooting information
-LEVEL_OK = EventLevel(1, "OK")           # Expected behaviour
-LEVEL_NOTICE = EventLevel(2, "NOTICE")       # Troubling behaviour
-LEVEL_CRITICAL = EventLevel(3, "CRITICAL")     # Major Failure
+LEVEL_INFO = EventLevel(0, "INFO")  # Troubleshooting information
+LEVEL_OK = EventLevel(1, "OK")  # Expected behaviour
+LEVEL_NOTICE = EventLevel(2, "NOTICE")  # Troubling behaviour
+LEVEL_CRITICAL = EventLevel(3, "CRITICAL")  # Major Failure
 
 
 class EventStore(object):
@@ -142,13 +141,13 @@ class EventRecorder(object):
                 yield event
 
     def info(self, name, **data):
-        return self._record(LEVEL_INFO,     name, **data)
+        return self._record(LEVEL_INFO, name, **data)
 
     def ok(self, name, **data):
-        return self._record(LEVEL_OK,       name, **data)
+        return self._record(LEVEL_OK, name, **data)
 
     def notice(self, name, **data):
-        return self._record(LEVEL_NOTICE,   name, **data)
+        return self._record(LEVEL_NOTICE, name, **data)
 
     def critical(self, name, **data):
         return self._record(LEVEL_CRITICAL, name, **data)

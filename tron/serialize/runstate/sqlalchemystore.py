@@ -12,12 +12,10 @@ from tron.config.config_utils import MAX_IDENTIFIER_LENGTH
 from tron.serialize import runstate
 sqlalchemy = None  # pyflakes
 
-
 SQLStateKey = namedtuple('SQLStateKey', ['table', 'id'])
 
 
 class SQLAlchemyStateStore(object):
-
     def __init__(self, name, connection_details):
         import sqlalchemy
         global sqlalchemy
@@ -40,21 +38,23 @@ class SQLAlchemyStateStore(object):
         from sqlalchemy import Table, Column, String, Text
         self._metadata = sqlalchemy.MetaData()
         self.job_table = Table(
-            'job_state_data', self._metadata,
+            'job_state_data',
+            self._metadata,
             Column(
-                'id', String(
-                    MAX_IDENTIFIER_LENGTH,
-                ), primary_key=True,
+                'id',
+                String(MAX_IDENTIFIER_LENGTH, ),
+                primary_key=True,
             ),
             Column('state_data', Text),
         )
 
         self.metadata_table = Table(
-            'metadata_table', self._metadata,
+            'metadata_table',
+            self._metadata,
             Column(
-                'id', String(
-                    MAX_IDENTIFIER_LENGTH,
-                ), primary_key=True,
+                'id',
+                String(MAX_IDENTIFIER_LENGTH, ),
+                primary_key=True,
             ),
             Column('state_data', Text),
         )

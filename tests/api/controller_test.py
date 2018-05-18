@@ -22,12 +22,12 @@ from tron.core import jobrun
 
 
 class JobCollectionControllerTestCase(TestCase):
-
     @setup
     def setup_controller(self):
         self.collection = mock.create_autospec(
             job.JobCollection,
-            enable=mock.Mock(), disable=mock.Mock(),
+            enable=mock.Mock(),
+            disable=mock.Mock(),
         )
         self.controller = JobCollectionController(self.collection)
 
@@ -41,7 +41,6 @@ class JobCollectionControllerTestCase(TestCase):
 
 
 class ActionRunControllerTestCase(TestCase):
-
     @setup
     def setup_controller(self):
         self.action_run = mock.create_autospec(
@@ -51,7 +50,8 @@ class ActionRunControllerTestCase(TestCase):
         self.job_run = mock.create_autospec(jobrun.JobRun)
         self.job_run.is_scheduled = False
         self.controller = controller.ActionRunController(
-            self.action_run, self.job_run,
+            self.action_run,
+            self.job_run,
         )
 
     def test_handle_command_start_failed(self):
@@ -82,16 +82,17 @@ class ActionRunControllerTestCase(TestCase):
 
 
 class JobRunControllerTestCase(TestCase):
-
     @setup
     def setup_controller(self):
         self.job_run = mock.create_autospec(
             jobrun.JobRun,
-            run_time=mock.Mock(), cancel=mock.Mock(),
+            run_time=mock.Mock(),
+            cancel=mock.Mock(),
         )
         self.job_scheduler = mock.create_autospec(job.JobScheduler)
         self.controller = controller.JobRunController(
-            self.job_run, self.job_scheduler,
+            self.job_run,
+            self.job_scheduler,
         )
 
     def test_handle_command_restart(self):
@@ -113,7 +114,6 @@ class JobRunControllerTestCase(TestCase):
 
 
 class JobControllerTestCase(TestCase):
-
     @setup
     def setup_controller(self):
         self.job_scheduler = mock.create_autospec(job.JobScheduler)
@@ -134,7 +134,6 @@ class JobControllerTestCase(TestCase):
 
 
 class ConfigControllerTestCase(TestCase):
-
     @setup
     def setup_controller(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
@@ -161,7 +160,8 @@ class ConfigControllerTestCase(TestCase):
     def test_strip_header_named(self):
         expected = "\nthing"
         name, content = 'something', "{}{}".format(
-            self.controller.TEMPLATE, expected,
+            self.controller.TEMPLATE,
+            expected,
         )
         assert_equal(self.controller.strip_header(name, content), expected)
 
@@ -235,7 +235,9 @@ class ConfigControllerTestCase(TestCase):
         self.manager.get_hash.return_value = config_hash
         self.manager.write_config.side_effect = ConfigError("It broke")
         error = self.controller.update_config(
-            name, striped_content, config_hash,
+            name,
+            striped_content,
+            config_hash,
         )
         assert_equal(error, "It broke")
         self.manager.write_config.assert_called_with(name, striped_content)

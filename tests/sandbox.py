@@ -25,7 +25,6 @@ from tron.commands import client
 from tron.config import manager
 from tron.config import schema
 
-
 # Used for getting the locations of the executable
 test_dir, _ = os.path.split(__file__)
 repo_root, _ = os.path.split(test_dir)
@@ -47,8 +46,10 @@ def wait_on_sandbox(func, delay=0.1, max_wait=5.0):
 
 def wait_on_state(client_func, url, state, field='state'):
     """Use client_func(url) to wait until the resource changes to state."""
+
     def wait_func():
         return client_func(url)[field] == state
+
     wait_func.__name__ = '%s wait on %s' % (url, state)
     wait_on_sandbox(wait_func)
 
@@ -59,6 +60,7 @@ def wait_on_proc_terminate(pid):
             os.kill(pid, 0)
         except Exception:
             return True
+
     wait_on_terminate.__name__ = "Wait on %s to terminate" % pid
     wait_on_sandbox(wait_on_terminate)
 

@@ -32,7 +32,6 @@ class EmptyContextTestCase(TestCase):
 
 
 class BuildFilledContextTestCase(TestCase):
-
     def test_build_filled_context_no_objects(self):
         output = command_context.build_filled_context()
         assert not output.base
@@ -76,23 +75,23 @@ class SimpleDictContextTestCase(SimpleContextTestCaseBase):
 
 
 class SimpleObjectContextTestCase(SimpleContextTestCaseBase):
-
     @setup
     def build_context(self):
         class Obj(object):
             foo = 'bar'
+
         self.context = command_context.CommandContext(Obj)
 
 
 class ChainedDictContextTestCase(SimpleContextTestCaseBase):
-
     @setup
     def build_context(self):
         self.next_context = command_context.CommandContext(
             dict(foo='bar', next_foo='next_bar'),
         )
         self.context = command_context.CommandContext(
-            dict(), self.next_context,
+            dict(),
+            self.next_context,
         )
 
     def test_chain_get(self):
@@ -106,7 +105,8 @@ class ChainedDictOverrideContextTestCase(SimpleContextTestCaseBase):
             dict(foo='your mom', next_foo='next_bar'),
         )
         self.context = command_context.CommandContext(
-            dict(foo='bar'), self.next_context,
+            dict(foo='bar'),
+            self.next_context,
         )
 
     def test_chain_get(self):
@@ -118,6 +118,7 @@ class ChainedObjectOverrideContextTestCase(SimpleContextTestCaseBase):
     def build_context(self):
         class MyObject(object):
             pass
+
         obj = MyObject()
         obj.foo = 'bar'
 
@@ -131,7 +132,6 @@ class ChainedObjectOverrideContextTestCase(SimpleContextTestCaseBase):
 
 
 class JobContextTestCase(TestCase):
-
     @setup
     def setup_job(self):
         self.last_success = mock.Mock(run_time=datetime.datetime(2012, 3, 14))
@@ -141,7 +141,8 @@ class JobContextTestCase(TestCase):
             last_success=self.last_success,
         )
         self.job = job.Job(
-            "jobname", mock_scheduler,
+            "jobname",
+            mock_scheduler,
             run_collection=run_collection,
         )
         self.context = command_context.JobContext(self.job)
@@ -175,7 +176,6 @@ class JobContextTestCase(TestCase):
 
 
 class JobRunContextTestCase(TestCase):
-
     @setup
     def setup_context(self):
         self.jobrun = mock.create_autospec(jobrun.JobRun, run_time='sometime')
@@ -202,13 +202,13 @@ class JobRunContextTestCase(TestCase):
 
 
 class ActionRunContextTestCase(TestCase):
-
     @setup
     def build_context(self):
         mock_node = mock.create_autospec(node.Node, hostname='something')
         self.action_run = mock.create_autospec(
             actionrun.ActionRun,
-            action_name='something', node=mock_node,
+            action_name='something',
+            node=mock_node,
         )
         self.context = command_context.ActionRunContext(self.action_run)
 
@@ -220,7 +220,6 @@ class ActionRunContextTestCase(TestCase):
 
 
 class FillerTestCase(TestCase):
-
     @setup
     def setup_filler(self):
         self.filler = command_context.Filler()

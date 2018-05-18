@@ -14,7 +14,6 @@ from six.moves import zip
 
 from tron.utils import maybe_decode
 
-
 log = logging.getLogger(__name__)
 
 
@@ -85,10 +84,8 @@ class ShelveStateStore(object):
 
     def restore(self, keys):
         items = zip(
-            keys, (
-                self.shelve.get(str(key.key))
-                for key in keys
-            ),
+            keys,
+            (self.shelve.get(str(key.key)) for key in keys),
         )
         return dict(filter(operator.itemgetter(1), items))
 

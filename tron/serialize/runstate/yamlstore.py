@@ -19,13 +19,12 @@ from tron.serialize import runstate
 YamlKey = namedtuple('YamlKey', ['type', 'iden'])
 
 TYPE_MAPPING = {
-    runstate.JOB_STATE:     'jobs',
-    runstate.MCP_STATE:     runstate.MCP_STATE,
+    runstate.JOB_STATE: 'jobs',
+    runstate.MCP_STATE: runstate.MCP_STATE,
 }
 
 
 class YamlStateStore(object):
-
     def __init__(self, filename):
         self.filename = filename
         self.buffer = {}

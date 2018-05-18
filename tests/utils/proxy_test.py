@@ -13,7 +13,6 @@ from tron.utils.proxy import CollectionProxy
 
 
 class DummyTarget(object):
-
     def __init__(self, v):
         self.v = v
 
@@ -31,7 +30,6 @@ class DummyTarget(object):
 
 
 class DummyObject(object):
-
     def __init__(self, proxy):
         self.proxy = proxy
 
@@ -40,12 +38,12 @@ class DummyObject(object):
 
 
 class CollectionProxyTestCase(TestCase):
-
     @setup
     def setup_proxy(self):
         self.target_list = [DummyTarget(1), DummyTarget(2), DummyTarget(0)]
         self.proxy = CollectionProxy(
-            lambda: self.target_list, [
+            lambda: self.target_list,
+            [
                 ('foo', any, True),
                 ('not_foo', all, False),
                 ('equals', lambda a: list(a), True),
@@ -68,13 +66,12 @@ class CollectionProxyTestCase(TestCase):
         assert_equal(self.proxy.perform('equals')(2), [False, True, False])
         sometimes = ['sometimes'] * 3
         assert_equal(
-            self.proxy.perform('equals')
-            (3, sometimes=True), sometimes,
+            self.proxy.perform('equals')(3, sometimes=True),
+            sometimes,
         )
 
 
 class AttributeProxyTestCase(TestCase):
-
     @setup
     def setup_proxy(self):
         self.target = DummyTarget(1)

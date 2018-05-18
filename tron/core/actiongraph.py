@@ -33,14 +33,20 @@ class ActionGraph(object):
                 continue
             for dname in action.requires:
                 daction = action_map[dname]
-                action_map = action_map.update({
-                    aname: action.set(
-                        required_actions=action.required_actions.add(dname),
-                    ),
-                    dname: daction.set(
-                        dependent_actions=daction.dependent_actions.add(aname),
-                    ),
-                })
+                action_map = action_map.update(
+                    {
+                        aname:
+                            action.set(
+                                required_actions=action.required_actions.
+                                add(dname),
+                            ),
+                        dname:
+                            daction.set(
+                                dependent_actions=daction.dependent_actions.
+                                add(aname),
+                            ),
+                    }
+                )
         return base, action_map
 
     @classmethod

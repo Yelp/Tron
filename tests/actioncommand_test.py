@@ -17,7 +17,6 @@ from tron.serialize import filehandler
 
 
 class ActionCommandTestCase(TestCase):
-
     @setup
     def setup_command(self):
         self.serializer = mock.create_autospec(filehandler.FileHandleManager)
@@ -113,7 +112,6 @@ class ActionCommandTestCase(TestCase):
 
 
 class CreateActionCommandFactoryFromConfigTestCase(TestCase):
-
     def test_create_default_action_command_no_config(self):
         config = ()
         factory = actioncommand.create_action_runner_factory_from_config(
@@ -131,7 +129,9 @@ class CreateActionCommandFactoryFromConfigTestCase(TestCase):
     def test_create_action_command_with_simple_runner(self):
         status_path, exec_path = '/tmp/what', '/remote/bin'
         config = schema.ConfigActionRunner(
-            'subprocess', status_path, exec_path,
+            'subprocess',
+            status_path,
+            exec_path,
         )
         factory = actioncommand.create_action_runner_factory_from_config(
             config,
@@ -141,13 +141,13 @@ class CreateActionCommandFactoryFromConfigTestCase(TestCase):
 
 
 class SubprocessActionRunnerFactoryTestCase(TestCase):
-
     @setup
     def setup_factory(self):
         self.status_path = 'status_path'
         self.exec_path = 'exec_path'
         self.factory = actioncommand.SubprocessActionRunnerFactory(
-            self.status_path, self.exec_path,
+            self.status_path,
+            self.exec_path,
         )
 
     def test_from_config(self):
@@ -177,7 +177,8 @@ class SubprocessActionRunnerFactoryTestCase(TestCase):
         exec_name = "action_runner.py"
         actual = self.factory.build_command(id, command, exec_name)
         assert_equal(
-            shlex.split(actual), [
+            shlex.split(actual),
+            [
                 "%s/%s" % (self.exec_path, exec_name),
                 "%s/%s" % (self.status_path, id),
                 command,

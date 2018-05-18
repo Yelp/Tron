@@ -26,13 +26,14 @@ from tron.serialize.runstate.statemanager import VersionMismatchError
 
 
 class PersistenceManagerFactoryTestCase(TestCase):
-
     def test_from_config_shelve(self):
         tmpdir = tempfile.mkdtemp()
         try:
             fname = os.path.join(tmpdir, 'state')
             config = schema.ConfigState(
-                store_type='shelve', name=fname, buffer_size=0,
+                store_type='shelve',
+                name=fname,
+                buffer_size=0,
                 connection_details=None,
             )
             manager = PersistenceManagerFactory.from_config(config)
@@ -44,7 +45,6 @@ class PersistenceManagerFactoryTestCase(TestCase):
 
 
 class StateMetadataTestCase(TestCase):
-
     def test_validate_metadata(self):
         metadata = {'version': (0, 5, 2)}
         StateMetadata.validate_metadata(metadata)
@@ -56,12 +56,13 @@ class StateMetadataTestCase(TestCase):
     def test_validate_metadata_mismatch(self):
         metadata = {'version': (200, 1, 1)}
         assert_raises(
-            VersionMismatchError, StateMetadata.validate_metadata, metadata,
+            VersionMismatchError,
+            StateMetadata.validate_metadata,
+            metadata,
         )
 
 
 class StateSaveBufferTestCase(TestCase):
-
     @setup
     def setup_buffer(self):
         self.buffer_size = 5
@@ -85,7 +86,6 @@ class StateSaveBufferTestCase(TestCase):
 
 
 class PersistentStateManagerTestCase(TestCase):
-
     @setup
     def setup_manager(self):
         self.store = mock.Mock()
@@ -108,12 +108,21 @@ class PersistentStateManagerTestCase(TestCase):
         autospec_method(self.manager._keys_for_items)
         self.manager._keys_for_items.return_value = dict(enumerate(names))
         self.store.restore.return_value = {
-            0: {'state': 'data'}, 1: {'state': '2data'},
+            0: {
+                'state': 'data'
+            },
+            1: {
+                'state': '2data'
+            },
         }
         state_data = self.manager._restore_dicts('type', names)
         expected = {
-            names[0]: {'state': 'data'},
-            names[1]: {'state': '2data'},
+            names[0]: {
+                'state': 'data'
+            },
+            names[1]: {
+                'state': '2data'
+            },
         }
         assert_equal(expected, state_data)
 
@@ -127,7 +136,10 @@ class PersistentStateManagerTestCase(TestCase):
         self.store.save.side_effect = PersistenceStoreError("blah")
         assert_raises(
             PersistenceStoreError,
-            self.manager.save, None, None, None,
+            self.manager.save,
+            None,
+            None,
+            None,
         )
 
     def test_save_while_disabled(self):
@@ -148,6 +160,7 @@ class PersistentStateManagerTestCase(TestCase):
         def testfunc():
             with self.manager.disabled():
                 raise ValueError()
+
         assert_raises(ValueError, testfunc)
         assert self.manager.enabled
 
@@ -159,7 +172,6 @@ class PersistentStateManagerTestCase(TestCase):
 
 
 class StateChangeWatcherTestCase(TestCase):
-
     @setup
     def setup_watcher(self):
         self.watcher = StateChangeWatcher()
@@ -193,7 +205,9 @@ class StateChangeWatcherTestCase(TestCase):
         mock_job = mock.Mock()
         self.watcher.save_job(mock_job)
         self.watcher.state_manager.save.assert_called_with(
-            runstate.JOB_STATE, mock_job.name, mock_job.state_data,
+            runstate.JOB_STATE,
+            mock_job.name,
+            mock_job.state_data,
         )
 
     def test_save_metadata(self):
@@ -204,7 +218,9 @@ class StateChangeWatcherTestCase(TestCase):
             self.watcher.save_metadata()
             meta_data = mock_state_metadata.return_value
             self.watcher.state_manager.save.assert_called_with(
-                runstate.MCP_STATE, meta_data.name, meta_data.state_data,
+                runstate.MCP_STATE,
+                meta_data.name,
+                meta_data.state_data,
             )
 
     def test_shutdown(self):

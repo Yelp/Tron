@@ -12,6 +12,7 @@ def build_filtered_func(func):
         if len(seq) == 0:
             return None
         return func(seq)
+
     return filtered_func
 
 

@@ -50,8 +50,10 @@ class PIDFile(object):
         if pid:
             self._try_unlock()
             raise SystemExit(
-                "A tron pidfile is already present at %s using PID %s. The existing pidfile must be removed before starting another tron daemon." % (
-                    self.filename, pid,
+                "A tron pidfile is already present at %s using PID %s. The existing pidfile must be removed before starting another tron daemon."
+                % (
+                    self.filename,
+                    pid,
                 ),
             )
 
@@ -157,8 +159,8 @@ class TronDaemon(object):
 
     def _build_context(self, options, context_class):
         signal_map = {
-            signal.SIGHUP:  self._handle_reconfigure,
-            signal.SIGINT:  self._handle_graceful_shutdown,
+            signal.SIGHUP: self._handle_reconfigure,
+            signal.SIGINT: self._handle_graceful_shutdown,
             signal.SIGTERM: self._handle_shutdown,
         }
         pidfile = PIDFile(options.pid_file)

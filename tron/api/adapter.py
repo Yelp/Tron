@@ -39,11 +39,10 @@ class ReprAdapter(object):
         }
 
     def get_repr(self):
-        repr_data = {
-            field: getattr(self._obj, field) for field in self.fields
-        }
+        repr_data = {field: getattr(self._obj, field) for field in self.fields}
         translated = {
-            field: func() for field, func in six.iteritems(self.translators)
+            field: func()
+            for field, func in six.iteritems(self.translators)
         }
         repr_data.update(translated)
         return repr_data
@@ -51,8 +50,8 @@ class ReprAdapter(object):
 
 def adapt_many(adapter_class, seq, *args, **kwargs):
     return [
-        adapter_class(item, *args, **kwargs).get_repr()
-        for item in seq if item is not None
+        adapter_class(item, *args, **kwargs).get_repr() for item in seq
+        if item is not None
     ]
 
 
@@ -67,7 +66,9 @@ def toggle_flag(flag_name):
             if getattr(self, flag_name):
                 return f(self, *args, **kwargs)
             return None
+
         return wrapper
+
     return wrap
 
 
@@ -113,8 +114,12 @@ class ActionRunAdapter(RunAdapter):
     ]
 
     def __init__(
-        self, action_run, job_run=None,
-        max_lines=10, include_stdout=False, include_stderr=False,
+        self,
+        action_run,
+        job_run=None,
+        max_lines=10,
+        include_stdout=False,
+        include_stderr=False,
     ):
         super(ActionRunAdapter, self).__init__(action_run)
         self.job_run = job_run
@@ -154,16 +159,15 @@ class ActionRunAdapter(RunAdapter):
 
 
 class ActionGraphAdapter(object):
-
     def __init__(self, action_graph):
         self.action_graph = action_graph
 
     def get_repr(self):
         def build(action):
             return {
-                'name':         action.name,
-                'command':      action.command,
-                'dependent':    [dep.name for dep in action.dependent_actions],
+                'name': action.name,
+                'command': action.command,
+                'dependent': [dep.name for dep in action.dependent_actions],
             }
 
         return [
@@ -173,7 +177,6 @@ class ActionGraphAdapter(object):
 
 
 class ActionRunGraphAdapter(object):
-
     def __init__(self, action_run_collection):
         self.action_runs = action_run_collection
 
@@ -183,14 +186,14 @@ class ActionRunGraphAdapter(object):
                 action_run.action_name,
             ].dependent_actions
             return {
-                'id':           action_run.id,
-                'name':         action_run.action_name,
-                'command':      action_run.rendered_command,
-                'raw_command':  action_run.bare_command,
-                'state':        action_run.state.name,
-                'start_time':   action_run.start_time,
-                'end_time':     action_run.end_time,
-                'dependent':    [dep.name for dep in deps],
+                'id': action_run.id,
+                'name': action_run.action_name,
+                'command': action_run.rendered_command,
+                'raw_command': action_run.bare_command,
+                'state': action_run.state.name,
+                'start_time': action_run.start_time,
+                'end_time': action_run.end_time,
+                'dependent': [dep.name for dep in deps],
             }
 
         return [build(action_run) for action_run in self.action_runs]
@@ -217,7 +220,8 @@ class JobRunAdapter(RunAdapter):
     ]
 
     def __init__(
-        self, job_run,
+        self,
+        job_run,
         include_action_runs=False,
         include_action_graph=False,
     ):
@@ -255,7 +259,8 @@ class JobAdapter(ReprAdapter):
     ]
 
     def __init__(
-        self, job,
+        self,
+        job,
         include_job_runs=False,
         include_action_runs=False,
         include_action_graph=True,
@@ -299,9 +304,9 @@ class JobAdapter(ReprAdapter):
     @toggle_flag('include_job_runs')
     def get_runs(self):
         runs = adapt_many(
-            JobRunAdapter, list(self._obj.runs)[
-                :self.num_runs or None
-            ], self.include_action_runs,
+            JobRunAdapter,
+            list(self._obj.runs)[:self.num_runs or None],
+            self.include_action_runs,
         )
         return runs
 

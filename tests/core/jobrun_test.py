@@ -29,11 +29,18 @@ from tron.serialize import filehandler
 
 def build_mock_job():
     config_context = config_utils.ConfigContext(
-        'config', ['localhost'], ['cluster'], None, None,
+        'config',
+        ['localhost'],
+        ['cluster'],
+        None,
+        None,
     )
     action_graph = actiongraph.ActionGraph.from_config(
         action.ActionMap.from_config(
-            [{'name': 'test', 'command': 'test'}],
+            [{
+                'name': 'test',
+                'command': 'test'
+            }],
             config_context,
         ),
         config_context,
@@ -62,7 +69,10 @@ class JobRunTestCase(TestCase):
         self.run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         mock_node = mock.create_autospec(node.Node)
         self.job_run = jobrun.JobRun(
-            'jobname', 7, self.run_time, mock_node,
+            'jobname',
+            7,
+            self.run_time,
+            mock_node,
             action_runs=Turtle(
                 action_runs_with_cleanup=[],
                 get_startable_action_runs=lambda: [],
@@ -74,7 +84,8 @@ class JobRunTestCase(TestCase):
         autospec_method(self.job_run.notify)
         self.job_run.event = mock.create_autospec(event.EventRecorder)
         self.action_run = mock.create_autospec(
-            actionrun.ActionRun, is_skipped=False,
+            actionrun.ActionRun,
+            is_skipped=False,
         )
 
     def test__init__(self):
@@ -86,7 +97,11 @@ class JobRunTestCase(TestCase):
         run_num = 6
         mock_node = mock.create_autospec(node.Node)
         run = jobrun.JobRun.for_job(
-            self.job, run_num, self.run_time, mock_node, False,
+            self.job,
+            run_num,
+            self.run_time,
+            mock_node,
+            False,
         )
 
         assert_equal(run.action_runs.action_graph, self.action_graph)
@@ -101,7 +116,11 @@ class JobRunTestCase(TestCase):
         run_num = 6
         mock_node = mock.create_autospec(node.Node)
         run = jobrun.JobRun.for_job(
-            self.job, run_num, self.run_time, mock_node, True,
+            self.job,
+            run_num,
+            self.run_time,
+            mock_node,
+            True,
         )
         assert_equal(run.action_runs.action_graph, self.action_graph)
         assert run.manual
@@ -143,7 +162,8 @@ class JobRunTestCase(TestCase):
         run_collection = mock.create_autospec(actionrun.ActionRunCollection)
         assert_raises(
             ValueError,
-            self.job_run._set_action_runs, run_collection,
+            self.job_run._set_action_runs,
+            run_collection,
         )
 
     @mock.patch('tron.core.jobrun.timeutils.current_time', autospec=True)
@@ -250,8 +270,7 @@ class JobRunTestCase(TestCase):
     def test_handler_with_startable(self):
         startable_run = mock.create_autospec(actionrun.ActionRun)
         self.job_run.action_runs.get_startable_action_runs = lambda: [
-            startable_run,
-        ]
+            startable_run, ]
         autospec_method(self.job_run.finalize)
         self.action_run.is_broken = False
 
@@ -347,7 +366,6 @@ class JobRunTestCase(TestCase):
 
 
 class JobRunFromStateTestCase(TestCase):
-
     @setup
     def setup_jobrun(self):
         self.action_graph = mock.create_autospec(actiongraph.ActionGraph)
@@ -355,35 +373,40 @@ class JobRunFromStateTestCase(TestCase):
         self.path = ['base', 'path']
         self.output_path = mock.create_autospec(filehandler.OutputPath)
         self.node_pool = mock.create_autospec(node.NodePool)
-        self.action_run_state_data = [{
-            'job_run_id':       'thejobname.22',
-            'action_name':      'blingaction',
-            'state':            'succeeded',
-            'run_time':         'sometime',
-            'start_time':       'sometime',
-            'end_time':         'sometime',
-            'command':          'doit',
-            'node_name':        'thenode',
-        }]
+        self.action_run_state_data = [
+            {
+                'job_run_id': 'thejobname.22',
+                'action_name': 'blingaction',
+                'state': 'succeeded',
+                'run_time': 'sometime',
+                'start_time': 'sometime',
+                'end_time': 'sometime',
+                'command': 'doit',
+                'node_name': 'thenode',
+            }
+        ]
         self.state_data = {
-            'job_name':         'thejobname',
-            'run_num':          22,
-            'run_time':         self.run_time,
-            'node_name':        'thebox',
-            'end_time':         'the_end',
-            'start_time':       'start_time',
-            'runs':             self.action_run_state_data,
-            'cleanup_run':      None,
-            'manual':           True,
-            'service':          'foo',
-            'deploy_group':     'test',
+            'job_name': 'thejobname',
+            'run_num': 22,
+            'run_time': self.run_time,
+            'node_name': 'thebox',
+            'end_time': 'the_end',
+            'start_time': 'start_time',
+            'runs': self.action_run_state_data,
+            'cleanup_run': None,
+            'manual': True,
+            'service': 'foo',
+            'deploy_group': 'test',
         }
         self.context = mock.Mock()
 
     def test_from_state(self):
         run = jobrun.JobRun.from_state(
-            self.state_data, self.action_graph,
-            self.output_path, self.context, self.node_pool,
+            self.state_data,
+            self.action_graph,
+            self.output_path,
+            self.context,
+            self.node_pool,
         )
         assert_length(run.action_runs.run_map, 1)
         assert_equal(run.job_name, self.state_data['job_name'])
@@ -397,8 +420,11 @@ class JobRunFromStateTestCase(TestCase):
 
     def test_from_state_node_no_longer_exists(self):
         run = jobrun.JobRun.from_state(
-            self.state_data, self.action_graph,
-            self.output_path, self.context, self.node_pool,
+            self.state_data,
+            self.action_graph,
+            self.output_path,
+            self.context,
+            self.node_pool,
         )
         assert_length(run.action_runs.run_map, 1)
         assert_equal(run.job_name, 'thejobname')
@@ -433,7 +459,6 @@ class MockJobRun(Turtle):
 
 
 class JobRunCollectionTestCase(TestCase):
-
     def _mock_run(self, **kwargs):
         return MockJobRun(**kwargs)
 
@@ -445,9 +470,9 @@ class JobRunCollectionTestCase(TestCase):
             self._mock_run(state=actionrun.ActionRun.STATE_RUNNING, run_num=3),
         ] + [
             self._mock_run(
-                state=actionrun.ActionRun.STATE_SUCCEEDED, run_num=i,
-            )
-            for i in range(2, 0, -1)
+                state=actionrun.ActionRun.STATE_SUCCEEDED,
+                run_num=i,
+            ) for i in range(2, 0, -1)
         ]
         self.run_collection.runs.extend(self.job_runs)
         self.mock_node = mock.create_autospec(node.Node)
@@ -479,7 +504,11 @@ class JobRunCollectionTestCase(TestCase):
         node_pool = mock.create_autospec(node.NodePool)
 
         restored_runs = run_collection.restore_state(
-            state_data, action_graph, output_path, context, node_pool,
+            state_data,
+            action_graph,
+            output_path,
+            context,
+            node_pool,
         )
         assert_equal(run_collection.runs[0].run_num, 3)
         assert_equal(run_collection.runs[3].run_num, 0)
@@ -488,7 +517,12 @@ class JobRunCollectionTestCase(TestCase):
     def test_restore_state_with_runs(self):
         assert_raises(
             ValueError,
-            self.run_collection.restore_state, None, None, None, None, None,
+            self.run_collection.restore_state,
+            None,
+            None,
+            None,
+            None,
+            None,
         )
 
     def test_build_new_run(self):
@@ -496,7 +530,9 @@ class JobRunCollectionTestCase(TestCase):
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         mock_job = build_mock_job()
         job_run = self.run_collection.build_new_run(
-            mock_job, run_time, self.mock_node,
+            mock_job,
+            run_time,
+            self.mock_node,
         )
         assert_in(job_run, self.run_collection.runs)
         self.run_collection.remove_old_runs.assert_called_with()
@@ -508,7 +544,10 @@ class JobRunCollectionTestCase(TestCase):
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         mock_job = build_mock_job()
         job_run = self.run_collection.build_new_run(
-            mock_job, run_time, self.mock_node, True,
+            mock_job,
+            run_time,
+            self.mock_node,
+            True,
         )
         assert_in(job_run, self.run_collection.runs)
         self.run_collection.remove_old_runs.assert_called_with()
@@ -583,7 +622,9 @@ class JobRunCollectionTestCase(TestCase):
 
     def test_get_newest_exclude_manual(self):
         run = self._mock_run(
-            state=actionrun.ActionRun.STATE_RUNNING, run_num=5, manual=True,
+            state=actionrun.ActionRun.STATE_RUNNING,
+            run_num=5,
+            manual=True,
         )
         self.job_runs.insert(0, run)
         newest_run = self.run_collection.get_newest(include_manual=False)
@@ -632,7 +673,8 @@ class JobRunCollectionTestCase(TestCase):
     def test_get_first_queued(self):
         run_num = self.run_collection.next_run_num()
         second_queued = self._mock_run(
-            run_num=run_num, state=actionrun.ActionRun.STATE_QUEUED,
+            run_num=run_num,
+            state=actionrun.ActionRun.STATE_QUEUED,
         )
         self.run_collection.runs.appendleft(second_queued)
 
@@ -707,7 +749,9 @@ class JobRunCollectionTestCase(TestCase):
         action_name = 'action_name'
         self.run_collection.runs = job_runs = [mock.Mock(), mock.Mock()]
         runs = self.run_collection.get_action_runs(action_name)
-        expected = [job_run.get_action_run.return_value for job_run in job_runs]
+        expected = [
+            job_run.get_action_run.return_value for job_run in job_runs
+        ]
         assert_equal(runs, expected)
         for job_run in job_runs:
             job_run.get_action_run.assert_called_with(action_name)

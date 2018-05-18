@@ -87,7 +87,8 @@ class Action(PClass):
                 cluster not in config_context.clusters:
             raise ValueError(
                 "Unknown cluster name {} at {}".format(
-                    cluster, config_context.path,
+                    cluster,
+                    config_context.path,
                 ),
             )
 
@@ -143,9 +144,12 @@ class ActionMap(CheckedPMap):
                 ),
             )
 
-        return cls.create({
-            item['name']: Action.from_config(
-                item, config_context=config_context,
-            )
-            for item in items
-        })
+        return cls.create(
+            {
+                item['name']: Action.from_config(
+                    item,
+                    config_context=config_context,
+                )
+                for item in items
+            }
+        )

@@ -11,11 +11,14 @@ from tron.core import action
 
 
 class TestAction(TestCase):
-
     @setup
     def setup_action(self):
         self.config_context = config_utils.ConfigContext(
-            'config', ['localhost'], ['cluster'], None, None,
+            'config',
+            ['localhost'],
+            ['cluster'],
+            None,
+            None,
         )
         self.node_pool = 'node_pool'
         self.action = action.Action.from_config(
@@ -23,7 +26,8 @@ class TestAction(TestCase):
                 'name': "my_action",
                 'command': "doit",
                 'node_pool': self.node_pool,
-            }, self.config_context,
+            },
+            self.config_context,
         )
 
     def test_from_config(self):
@@ -50,7 +54,8 @@ class TestAction(TestCase):
                 'name': self.action.name,
                 'command': self.action.command,
                 'node_pool': self.node_pool,
-            }, self.config_context,
+            },
+            self.config_context,
         )
         assert_equal(new_action, self.action)
 
