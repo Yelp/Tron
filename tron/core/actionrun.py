@@ -58,7 +58,7 @@ class ActionRunFactory(object):
                     job_run,
                     cleanup_action_state_data,
                     cleanup=True,
-                )
+                ),
             )
 
         action_run_map = {
@@ -731,8 +731,11 @@ class ActionRunCollection(object):
             return ":blocked" if self._is_run_blocked(action_run) else ""
 
         run_states = ', '.join(
-            "%s(%s%s)" % (a.action_name, a.state, blocked_state(a))
-            for a in six.itervalues(self.run_map)
+            "%s(%s%s)" % (
+                a.action_name,
+                a.state,
+                blocked_state(a),
+            ) for a in six.itervalues(self.run_map)
         )
         return "%s[%s]" % (self.__class__.__name__, run_states)
 

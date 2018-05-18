@@ -43,7 +43,7 @@ class MCPReconfigureTestCase(TestCase):
                     dict(
                         name='action_unchanged',
                         command='command_unchanged',
-                    )
+                    ),
                 ],
             ),
             dict(
@@ -54,7 +54,7 @@ class MCPReconfigureTestCase(TestCase):
                     dict(
                         name='action_remove',
                         command='command_remove',
-                    )
+                    ),
                 ],
                 cleanup_action=dict(name='cleanup', command='doit'),
             ),
@@ -82,7 +82,7 @@ class MCPReconfigureTestCase(TestCase):
                     dict(
                         name='action_daily_change',
                         command='command',
-                    )
+                    ),
                 ],
             ),
             dict(
@@ -119,7 +119,7 @@ class MCPReconfigureTestCase(TestCase):
                     dict(
                         name='action_unchanged',
                         command='command_unchanged',
-                    )
+                    ),
                 ],
             ),
             dict(
@@ -141,7 +141,7 @@ class MCPReconfigureTestCase(TestCase):
                     dict(
                         name='action_daily_change',
                         command='command_changed',
-                    )
+                    ),
                 ],
             ),
             dict(

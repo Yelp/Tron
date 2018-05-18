@@ -35,7 +35,7 @@ REQUEST.childLink = lambda val: "/jobs/%s" % val
 
 
 def build_request(**kwargs):
-    args = {k.encode(): [v] for k, v in six.iteritems(kwargs)}
+    args = {k.encode(): [v.encode()] for k, v in six.iteritems(kwargs)}
     return mock.create_autospec(twisted.web.server.Request, args=args)
 
 
@@ -45,7 +45,8 @@ class WWWTestCase(TestCase):
     @setup_teardown
     def mock_respond(self):
         with mock.patch(
-            'tron.api.resource.respond', autospec=True
+            'tron.api.resource.respond',
+            autospec=True,
         ) as self.respond:
             self.respond.side_effect = lambda _req, output, code=None: output
             yield
@@ -59,7 +60,8 @@ class HandleCommandTestCase(TestCase):
     @setup_teardown
     def mock_respond(self):
         with mock.patch(
-            'tron.api.resource.respond', autospec=True
+            'tron.api.resource.respond',
+            autospec=True,
         ) as self.respond:
             yield
 
@@ -217,6 +219,7 @@ class JobResourceTestCase(WWWTestCase):
             scheduler=mock.Mock(),
             node_pool=mock.create_autospec(node.NodePool, ),
             max_runtime=mock.Mock(),
+            expected_runtime=mock.MagicMock(),
         )
         self.job.get_name.return_value = 'foo'
         self.job_scheduler.get_job.return_value = self.job
@@ -303,7 +306,8 @@ class ConfigResourceTestCase(TestCase):
             controller.ConfigController,
         )
         with mock.patch(
-            'tron.api.resource.respond', autospec=True
+            'tron.api.resource.respond',
+            autospec=True,
         ) as self.respond:
             yield
 

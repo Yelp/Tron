@@ -83,6 +83,11 @@ Optional Fields
     None, which means it will use the default time_zone set in the master
     config.
 
+**expected_runtime** (default **24h**)
+    A time interval (ex: "2 hours") that specifies the maximum expected duration of each job run.
+    Monitoring will alert if a job run is still running after this duration.
+    Use max_runtime instead if hard limit is needed.
+
 
 .. _job_actions:
 
@@ -121,6 +126,16 @@ Optional Fields
 **node**
     Node or node pool to run the action on if different from the rest of the
     job.
+
+**retries** (beta)
+    An integer representing how many times Tron is allowed to automatically
+    retry the command. Tron will immediately re-run the command if it fails,
+    and the action will not enter the failed state until retries are exhausted.
+    Defaults to None (0 retries allowed).
+
+**expected_runtime** (default **24h**)
+    A time interval (ex: "2 hours") that specifies the maximum expected duration of each action run.
+    Monitoring will alert if a action run is still running after this duration.
 
 Example Actions
 ^^^^^^^^^^^^^^^

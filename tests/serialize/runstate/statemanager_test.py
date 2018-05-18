@@ -109,19 +109,19 @@ class PersistentStateManagerTestCase(TestCase):
         self.manager._keys_for_items.return_value = dict(enumerate(names))
         self.store.restore.return_value = {
             0: {
-                'state': 'data'
+                'state': 'data',
             },
             1: {
-                'state': '2data'
+                'state': '2data',
             },
         }
         state_data = self.manager._restore_dicts('type', names)
         expected = {
             names[0]: {
-                'state': 'data'
+                'state': 'data',
             },
             names[1]: {
-                'state': '2data'
+                'state': '2data',
             },
         }
         assert_equal(expected, state_data)

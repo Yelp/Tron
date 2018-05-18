@@ -21,13 +21,13 @@ class YamlStateStoreTestCase(TestCase):
         self.store = yamlstore.YamlStateStore(self.filename)
         self.test_data = {
             'one': {
-                'a': 1
+                'a': 1,
             },
             'two': {
-                'b': 2
+                'b': 2,
             },
             'three': {
-                'c': 3
+                'c': 3,
             },
         }
 

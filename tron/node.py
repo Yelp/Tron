@@ -95,7 +95,11 @@ class NodePoolRepository(object):
         instance._update_node_pools(node_pool_configs)
 
     def _update_nodes(
-        self, node_configs, ssh_options, known_hosts, ssh_config
+        self,
+        node_configs,
+        ssh_options,
+        known_hosts,
+        ssh_config,
     ):
         for config in six.itervalues(node_configs):
             pub_key = known_hosts.get_public_key(config.hostname)
@@ -204,7 +208,9 @@ class RunState(object):
 
     def __repr__(self):
         return "RunState(run: %r, state: %r, channel: %r)" % (
-            self.run, self.state, self.channel
+            self.run,
+            self.state,
+            self.channel,
         )
 
 
@@ -416,8 +422,11 @@ class Node(object):
                 run,
                 failure.Failure(
                     exc_value=ConnectError(
-                        "Connection to %s@%s:%d failed" %
-                        (self.username, self.hostname, self.port),
+                        "Connection to %s@%s:%d failed" % (
+                            self.username,
+                            self.hostname,
+                            self.port,
+                        ),
                     ),
                 ),
             )
@@ -628,8 +637,11 @@ class Node(object):
             run,
             failure.Failure(
                 exc_value=ConnectError(
-                    "Connection to %s@%s:%d failed" %
-                    (self.username, self.hostname, self.port),
+                    "Connection to %s@%s:%d failed" % (
+                        self.username,
+                        self.hostname,
+                        self.port,
+                    ),
                 ),
             ),
         )

@@ -76,13 +76,14 @@ def tron_jobs_completer(prefix, **kwargs):
         with opener(TAB_COMPLETE_FILE, 'r') as f:
             jobs = f.readlines()
         return filter_jobs_actions_runs(
-            prefix=prefix, inputs=[job.strip('\n\r') for job in jobs]
+            prefix=prefix,
+            inputs=[job.strip('\n\r') for job in jobs],
         )
     else:
         default_client = Client(get_default_server())
         return filter_jobs_actions_runs(
             prefix=prefix,
-            inputs=[job['name'] for job in default_client.jobs()]
+            inputs=[job['name'] for job in default_client.jobs()],
         )
 
 

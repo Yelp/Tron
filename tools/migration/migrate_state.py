@@ -32,12 +32,14 @@ from tron.utils import tool_utils
 def parse_options():
     parser = optparse.OptionParser()
     parser.add_option(
-        '-s', '--source',
+        '-s',
+        '--source',
         help="The source configuration path which contains a state_persistence "
         "section configured for the state file/database.",
     )
     parser.add_option(
-        '-d', '--dest',
+        '-d',
+        '--dest',
         help="The destination configuration path which contains a "
         "state_persistence section configured for the state file/database.",
     )
@@ -50,7 +52,8 @@ def parse_options():
         help="The working directory for dest dir to resolve relative paths.",
     )
     parser.add_option(
-        '--namespace', action='store_true',
+        '--namespace',
+        action='store_true',
         help="Move jobs which are missing a namespace to the MASTER",
     )
 
@@ -80,8 +83,10 @@ def get_current_config(config_path):
 
 
 def add_namespaces(state_data):
-    return {'%s.%s' % (schema.MASTER_NAMESPACE, name): data
-            for (name, data) in six.iteritems(state_data)}
+    return {
+        '%s.%s' % (schema.MASTER_NAMESPACE, name): data
+        for (name, data) in six.iteritems(state_data)
+    }
 
 
 def strip_namespace(names):
@@ -90,10 +95,12 @@ def strip_namespace(names):
 
 def convert_state(opts):
     source_manager = get_state_manager_from_config(
-        opts.source, opts.source_working_dir,
+        opts.source,
+        opts.source_working_dir,
     )
     dest_manager = get_state_manager_from_config(
-        opts.dest, opts.dest_working_dir,
+        opts.dest,
+        opts.dest_working_dir,
     )
     container = get_current_config(opts.source)
 
@@ -105,7 +112,8 @@ def convert_state(opts):
         job_names = strip_namespace(job_names)
 
     job_states = source_manager.restore(
-        job_names, skip_validation=True,
+        job_names,
+        skip_validation=True,
     )
     source_manager.cleanup()
 

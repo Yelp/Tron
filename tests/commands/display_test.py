@@ -88,7 +88,7 @@ class DisplayActionsTestCase(TestCase):
                 'UNKWN',
             'node': {
                 'hostname': 'something',
-                'username': 'a'
+                'username': 'a',
             },
             'run_time':
                 'sometime',

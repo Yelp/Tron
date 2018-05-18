@@ -111,7 +111,8 @@ class JobRunController(object):
         if command in self.mapped_commands:
             if getattr(self.job_run, command)():
                 return "%s now in state %s" % (
-                    self.job_run, self.job_run.state
+                    self.job_run,
+                    self.job_run.state,
                 )
 
             msg = "Failed to %s, %s in state %s"

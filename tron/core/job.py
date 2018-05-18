@@ -74,6 +74,7 @@ class Job(Observable, Observer):
         'time_zone',
         'service',
         'deploy_group',
+        'expected_runtime',
     ]
 
     # TODO: use config object
@@ -96,6 +97,7 @@ class Job(Observable, Observer):
         time_zone=None,
         service=None,
         deploy_group=None,
+        expected_runtime=None
     ):
         super(Job, self).__init__()
         self.name = maybe_decode(name)
@@ -113,6 +115,7 @@ class Job(Observable, Observer):
         self.time_zone = time_zone
         self.service = service
         self.deploy_group = deploy_group
+        self.expected_runtime = expected_runtime
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(name)
         self.event = event.get_recorder(self.name)
@@ -131,7 +134,6 @@ class Job(Observable, Observer):
         """Factory method to create a new Job instance from configuration."""
         action_graph = actiongraph.ActionGraph.from_config(
             job_config.actions,
-            parent_context,
             job_config.cleanup_action,
         )
         runs = jobrun.JobRunCollection.from_config(job_config)
@@ -155,6 +157,7 @@ class Job(Observable, Observer):
             max_runtime=job_config.max_runtime,
             service=job_config.service,
             deploy_group=job_config.deploy_group,
+            expected_runtime=job_config.expected_runtime,
         )
 
     def update_from_job(self, job):

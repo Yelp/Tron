@@ -1,3 +1,12 @@
+tron (0.8.0.6) trusty; urgency=medium
+
+  * 0.8.0.6 tagged with 'make release'
+  * Support for expected runtime alerts
+  * Pre calculate state machine transitions
+  * Bug fixes
+
+ -- root <root@71b346549edd>  Wed, 16 May 2018 18:31:23 +0000
+
 tron (0.8.0.5) trusty; urgency=medium
 
   * 0.8.0.5 tagged with 'make release'

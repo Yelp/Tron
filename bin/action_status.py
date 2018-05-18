@@ -19,8 +19,8 @@ STATUS_FILE = 'status'
 
 
 def get_field(field, status_file):
-    lines = status_file.readlines()
-    content = yaml.load(lines[-1])
+    docs = yaml.load_all(status_file.read())
+    content = list(docs)[-1]
     return content.get(field)
 
 
@@ -40,11 +40,16 @@ def send_signal(signal_num, status_file):
 
 
 commands = {
-    'print':        print_status_file,
-    'pid': lambda statusfile: print(get_field('pid', statusfile)),
-    'return_code': lambda statusfile: print(get_field('return_code', statusfile)),
-    'terminate': lambda statusfile: send_signal(signal.SIGTERM, statusfile),
-    'kill': lambda statusfile: send_signal(signal.SIGKILL, statusfile),
+    'print':
+        print_status_file,
+    'pid':
+        lambda statusfile: print(get_field('pid', statusfile)),
+    'return_code':
+        lambda statusfile: print(get_field('return_code', statusfile)),
+    'terminate':
+        lambda statusfile: send_signal(signal.SIGTERM, statusfile),
+    'kill':
+        lambda statusfile: send_signal(signal.SIGKILL, statusfile),
 }
 
 

@@ -384,8 +384,12 @@ class JobRunCollection(object):
         """
         run_num = self.next_run_num()
         log.info(
-            "Building JobRun %s for %s on %s at %s" %
-            (run_num, job, node, run_time)
+            "Building JobRun %s for %s on %s at %s" % (
+                run_num,
+                job,
+                node,
+                run_time,
+            )
         )
 
         run = JobRun.for_job(job, run_num, run_time, node, manual)

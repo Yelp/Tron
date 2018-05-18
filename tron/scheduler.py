@@ -182,7 +182,7 @@ class GeneralScheduler(object):
             start_time = timeutils.current_time(tz=self.time_zone)
         elif self.time_zone:
             if start_time.tzinfo is None or start_time.tzinfo.utcoffset(
-                start_time
+                start_time,
             ) is None:
                 # tz-naive start times need to be localized first to the requested
                 # time zone.
@@ -217,7 +217,8 @@ class GeneralScheduler(object):
 
     def __eq__(self, other):
         return hasattr(
-            other, 'time_spec'
+            other,
+            'time_spec',
         ) and self.time_spec == other.time_spec
 
     def __ne__(self, other):

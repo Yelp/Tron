@@ -5,6 +5,7 @@ contain a validated configuration.
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import datetime
 import getpass
 import itertools
 import logging
@@ -278,6 +279,7 @@ class ValidateJob(Validator):
         'time_zone': None,
         'service': None,
         'deploy_group': None,
+        'expected_runtime': datetime.timedelta(hours=24),
     }
 
     validators = {
@@ -296,6 +298,7 @@ class ValidateJob(Validator):
         'time_zone': valid_time_zone,
         'service': valid_string,
         'deploy_group': valid_string,
+        'expected_runtime': config_utils.valid_time_delta,
     }
 
     def cast(self, in_dict, config_context):
@@ -458,7 +461,7 @@ class ValidateConfig(Validator):
         'time_zone': None,
         'state_persistence': DEFAULT_STATE_PERSISTENCE,
         'nodes': {
-            'localhost': DEFAULT_NODE
+            'localhost': DEFAULT_NODE,
         },
         'node_pools': {},
         'jobs': (),
@@ -591,7 +594,7 @@ class ConfigContainer(object):
             itertools.chain.from_iterable(
                 six.iteritems(config.jobs)
                 for _, config in self.configs.items()
-            )
+            ),
         )
 
     def get_master(self):

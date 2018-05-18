@@ -118,15 +118,18 @@ jobs:
             -
                 name: "action1_0"
                 command: "test_command1.0"
+                expected_runtime: "2h"
             -
                 name: "action1_1"
                 command: "test_command1.1"
                 requires: [action1_0]
+                expected_runtime: "2h"
 
     -
         name: "test_job2"
         node: node1
         schedule: "daily 16:30:00"
+        expected_runtime: "1h"
         actions:
             -
                 name: "action2_0"
@@ -273,6 +276,7 @@ jobs:
                             max_runtime=None,
                             allow_overlap=False,
                             time_zone=None,
+                            expected_runtime=datetime.timedelta(1),
                         ),
                     'MASTER.test_job1':
                         schema.ConfigJob(
@@ -314,6 +318,7 @@ jobs:
                             max_runtime=None,
                             allow_overlap=True,
                             time_zone=pytz.timezone("Pacific/Auckland"),
+                            expected_runtime=datetime.timedelta(1),
                         ),
                     'MASTER.test_job2':
                         schema.ConfigJob(
@@ -349,6 +354,7 @@ jobs:
                             max_runtime=None,
                             allow_overlap=False,
                             time_zone=None,
+                            expected_runtime=datetime.timedelta(0, 3600),
                         ),
                     'MASTER.test_job3':
                         schema.ConfigJob(
@@ -391,6 +397,7 @@ jobs:
                             max_runtime=None,
                             allow_overlap=False,
                             time_zone=None,
+                            expected_runtime=datetime.timedelta(1),
                         ),
                     'MASTER.test_job4':
                         schema.ConfigJob(
@@ -426,6 +433,7 @@ jobs:
                             max_runtime=None,
                             allow_overlap=False,
                             time_zone=None,
+                            expected_runtime=datetime.timedelta(1),
                         ),
                     'MASTER.test_job_paasta':
                         schema.ConfigJob(
@@ -461,6 +469,7 @@ jobs:
                             max_runtime=None,
                             allow_overlap=False,
                             time_zone=None,
+                            expected_runtime=datetime.timedelta(1),
                         ),
                 }
             ),
@@ -700,10 +709,32 @@ jobs:
                             actions=ActionMap.from_config(
                                 [
                                     {
-                                        'name': 'action2_0',
-                                        'command': 'test_command2.0',
-                                        'executor': 'ssh',
-                                    }
+                                        'name':
+                                            'action3_1',
+                                        'command':
+                                            'test_command3.1',
+                                        'expected_runtime':
+                                            datetime.timedelta(1),
+                                    },
+                                    {
+                                        'name':
+                                            'action3_0',
+                                        'command':
+                                            'test_command3.0',
+                                        'expected_runtime':
+                                            datetime.timedelta(1),
+                                    },
+                                    {
+                                        'name':
+                                            'action3_2',
+                                        'command':
+                                            'test_command3.2',
+                                        'requires': ['action3_0', 'action3_1'],
+                                        'node':
+                                            'node0',
+                                        'expected_runtime':
+                                            datetime.timedelta(1),
+                                    },
                                 ],
                                 config_context,
                             ),
@@ -1167,6 +1198,7 @@ jobs:
             max_runtime=None,
             allow_overlap=False,
             time_zone=None,
+            expected_runtime=datetime.timedelta(1),
         )
         parsed_config = valid_config_from_yaml(test_config)
         assert_equal(parsed_config.jobs['MASTER.test_job0'], expected)
@@ -1320,10 +1352,12 @@ class ValidateJobsTestCase(TestCase):
                     name: "test_job0"
                     node: node0
                     schedule: "interval 20s"
+                    expected_runtime: "20m"
                     actions:
                         -
                             name: "action0_0"
                             command: "test_command0.0"
+                            expected_runtime: "20m"
                     cleanup_action:
                         command: "test_command0.1"
                     """

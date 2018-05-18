@@ -81,7 +81,10 @@ class StateMetadata(object):
         if metadata['version'][0] > cls.version[0]:
             msg = "State version %s, expected <= %s"
             raise VersionMismatchError(
-                msg % (metadata['version'], cls.version),
+                msg % (
+                    metadata['version'],
+                    cls.version,
+                ),
             )
 
 

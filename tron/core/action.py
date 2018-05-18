@@ -1,6 +1,7 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import datetime
 import logging
 
 from pyrsistent import CheckedPMap
@@ -13,26 +14,29 @@ from pyrsistent import s
 from tron import node
 from tron.config import schema
 from tron.config.config_utils import IDENTIFIER_RE
+from tron.config.config_utils import TIME_INTERVAL_RE
 from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.utils import maybe_decode
 
 log = logging.getLogger(__name__)
 
 
+def factory_time_delta(value):
+    error_msg = "Value at %s is not a valid time delta: %s"
+    matches = TIME_INTERVAL_RE.match(value)
+    if not matches:
+        raise RuntimeError(error_msg % (config_context.path, value))
+
+    units = matches.group('units')
+    if units not in TIME_INTERVAL_UNITS:
+        raise RuntimeError(error_msg % (config_context.path, value))
+
+    time_spec = {TIME_INTERVAL_UNITS[units]: int(matches.group('value'))}
+    return datetime.timedelta(**time_spec)
+
+
 class Action(PClass):
     """A configurable data object for an Action."""
-
-    # 'command':      build_format_string_validator(action_context),
-    # 'node':         valid_node_name,
-    # 'requires':     requires,
-    # 'executor':     config_utils.build_enum_validator(schema.ExecutorTypes),
-    # 'cluster':      valid_cluster_name,
-    # 'pool':         valid_string,
-    # 'cpus':         valid_float,
-    # 'mem':          valid_float,
-    # 'service':      valid_string,
-    # 'deploy_group': valid_string,
-    # 'retries':      valid_int,
 
     name = field(
         type=str,
@@ -58,6 +62,11 @@ class Action(PClass):
     mem = field(type=(float, type(None)), initial=None, factory=float)
     service = field(type=(str, type(None)), initial=None)
     deploy_group = field(type=(str, type(None)), initial=None)
+    expected_runtime = field(
+        type=(datetime.Timedelta, type(None)),
+        initial=datetime.timedelta(hours=24),
+        factory=factory_time_delta,
+    )
 
     required_actions = field(type=PSet, initial=s(), factory=pset)
     dependent_actions = field(type=PSet, initial=s(), factory=pset)

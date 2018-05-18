@@ -180,7 +180,8 @@ class ConfigManagerTestCase(TestCase):
         assert_equal(mock_remove.call_count, 0)
 
     @mock.patch(
-        'tron.config.manager.config_parse.ConfigContainer', autospec=True
+        'tron.config.manager.config_parse.ConfigContainer',
+        autospec=True,
     )
     def test_validate_with_fragment(self, mock_config_container):
         name = 'the_name'
@@ -194,7 +195,8 @@ class ConfigManagerTestCase(TestCase):
 
     @mock.patch('tron.config.manager.read')
     @mock.patch(
-        'tron.config.manager.config_parse.ConfigContainer', autospec=True
+        'tron.config.manager.config_parse.ConfigContainer',
+        autospec=True,
     )
     def test_load(self, mock_config_container, mock_read):
         content_items = self.content.items()

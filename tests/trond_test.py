@@ -491,7 +491,10 @@ class JobEndToEndTestCase(sandbox.SandboxTestCase):
 
         for followup_action_run in ('following_act', 'last_act'):
             url = self.client.get_url(
-                '%s.1.%s' % (job_name, followup_action_run)
+                '%s.1.%s' % (
+                    job_name,
+                    followup_action_run,
+                )
             )
             assert_equal(
                 self.client.action_runs(url)['state'],

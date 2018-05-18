@@ -461,7 +461,7 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
     def test_manual_start_default_with_timezone(self):
         self.job.time_zone = mock.Mock()
         with mock.patch(
-            'tron.core.job.timeutils.current_time'
+            'tron.core.job.timeutils.current_time',
         ) as mock_current:
             manual_runs = self.job_scheduler.manual_start()
             mock_current.assert_called_with(tz=self.job.time_zone)
@@ -586,7 +586,8 @@ class JobSchedulerScheduleTestCase(TestCase):
 
     def test_run_queue_schedule(self):
         with mock.patch.object(
-            self.job_scheduler, 'schedule'
+            self.job_scheduler,
+            'schedule',
         ) as mock_schedule:
             self.job_scheduler.run_job = mock.Mock()
             self.job.scheduler.schedule_on_complete = False

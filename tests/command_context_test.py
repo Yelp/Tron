@@ -152,9 +152,8 @@ class JobContextTestCase(TestCase):
 
     def test__getitem__last_success(self):
         item = self.context["last_success:day-1"]
-        expected = (self.last_success.run_time -
-                    datetime.timedelta(days=1)).day
-        assert_equal(item, str(expected))
+        expected_date = self.last_success.run_time - datetime.timedelta(days=1)
+        assert_equal(item, str(expected_date.day))
 
         item = self.context["last_success:shortdate"]
         assert_equal(item, "2012-03-14")

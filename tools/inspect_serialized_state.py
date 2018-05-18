@@ -24,7 +24,9 @@ def parse_options():
     parser = optparse.OptionParser()
     parser.add_option("-c", "--config-path", help="Path to the configuration.")
     parser.add_option(
-        "-w", "--working-dir", default=".",
+        "-w",
+        "--working-dir",
+        default=".",
         help="Working directory to resolve relative paths.",
     )
     opts, _ = parser.parse_args()
@@ -63,6 +65,7 @@ def format_jobs(job_states):
         start_times = filter(None, start_times)
         last_run = format_date(max(start_times)) if start_times else None
         return format % (name, job['enabled'], len(job['runs']), last_run)
+
     seq = sorted(build(*item) for item in six.iteritems(job_states))
     return header + "".join(seq)
 
