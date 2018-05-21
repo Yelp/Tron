@@ -9,6 +9,7 @@ from twisted.internet.defer import DeferredQueue
 
 from tron.actioncommand import ActionCommand
 
+TASK_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
 # TODO: put in configs
 MESOS_MASTER_PORT = 5050
 DOCKERCFG_LOCATION = "file:///root/.dockercfg"
@@ -52,6 +53,14 @@ class MesosTask(ActionCommand):
         super(MesosTask, self).__init__(id, task_config.cmd, serializer)
         self.task_config = task_config
         self.mesos_task_id = None
+        self.log = self.setup_logger()
+
+    def setup_logger(self):
+        log = logging.getLogger(__name__ + '.' + self.id)
+        handler = logging.StreamHandler(self.stderr)
+        handler.setFormatter(logging.Formatter(TASK_LOG_FORMAT))
+        log.addHandler(handler)
+        return log
 
 
 class MesosCluster:
