@@ -22,9 +22,6 @@ you will attach to that running container. There you will be able to run `tronct
 `tronview` and others against the Trond master in the example cluster.
 
 ```
-$ docker ps
-
-[find container ID of examplecluster_master]
-
-$ sudo docker exec -it <ID> /bin/bash
+$ EXAMPLE_CONTAINER_ID=$(docker ps -q -f status=running -f name=example-cluster_playground)
+$ sudo docker exec -it $EXAMPLE_CONTAINER_ID /bin/bash
 ```
