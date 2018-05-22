@@ -6,6 +6,7 @@ import requests
 from task_processing.runners.subscription import Subscription
 from task_processing.task_processor import TaskProcessor
 from twisted.internet.defer import DeferredQueue
+from twisted.internet.defer import logError
 
 from tron.actioncommand import ActionCommand
 
@@ -49,11 +50,19 @@ def shutdown_frameworks():
 
 
 class MesosTask(ActionCommand):
+    ERROR_STATES = frozenset(['failed', 'killed', 'lost', 'error'])
+
     def __init__(self, id, task_config, serializer=None):
         super(MesosTask, self).__init__(id, task_config.cmd, serializer)
         self.task_config = task_config
-        self.mesos_task_id = None
         self.log = self.setup_logger()
+
+        self.log.info(
+            'Mesos task {} created with config {}'.format(
+                self.get_mesos_id(),
+                self.get_config(),
+            ),
+        )
 
     def setup_logger(self):
         log = logging.getLogger(__name__ + '.' + self.id)
@@ -62,22 +71,84 @@ class MesosTask(ActionCommand):
         log.addHandler(handler)
         return log
 
+    def get_mesos_id(self):
+        return self.task_config.task_id
+
+    def get_config(self):
+        return self.task_config
+
+    def handle_event(self, event):
+        event_id = getattr(event, 'task_id', None)
+        if event_id != self.get_mesos_id():
+            self.log.warn(
+                'Event task id {} does not match, ignoring'.format(event_id),
+            )
+            return
+        mesos_type = getattr(event, 'platform_type', None)
+        self.log.info(
+            'Got event for task {id}, Mesos type {type}'.format(
+                id=event_id,
+                type=mesos_type,
+            )
+        )
+
+        if mesos_type == 'staging':
+            pass
+        elif mesos_type == 'running':
+            self.started()
+        elif mesos_type == 'finished':
+            self.exited(0)
+        elif mesos_type in self.ERROR_STATES:
+            self.exited(1)
+        else:
+            self.log.warn(
+                'Did not handle unknown type of event: {}'.format(event),
+            )
+
+        if event.terminal:
+            self.log.info('Event was terminal, closing task')
+            # Returns False if we've already exited normally above
+            unexpected_error = self.exited(None)
+            if unexpected_error:
+                self.log.error('Unknown failure, exiting')
+            self.done()
+
 
 class MesosCluster:
 
     # TODO: does it create a connection on init? should it be async?
     def __init__(self, mesos_address):
+        self.mesos_address = mesos_address
         self.processor = get_mesos_processor()
         self.queue = DeferredQueue()
-        self.deferred = self.queue.get()
-        self.deferred.addCallback(self.handle_event)
-        # TODO: addErrback?
+        self.deferred = None
         self.runner = self.get_runner(mesos_address, self.queue)
         self.tasks = {}
+        self.handle_next_event()
+
+    def handle_next_event(self, deferred_result=None):
+        if self.deferred and not self.deferred.called:
+            log.warning(
+                'Already have handlers waiting for next event in queue, '
+                'not adding more'
+            )
+            return
+        self.deferred = self.queue.get()
+        self.deferred.addCallback(self._process_event)
+        self.deferred.addCallback(self.handle_next_event)
+        self.deferred.addErrback(logError)
+        self.deferred.addErrback(self.handle_next_event)
 
     def submit(self, task):
-        self.tasks[task.id] = task
-        self.runner.run(task.task_config)
+        mesos_task_id = task.get_mesos_id()
+        self.tasks[mesos_task_id] = task
+        self.runner.run(task.get_config())
+        log.info(
+            'Submitting task {} to {}'.format(
+                mesos_task_id,
+                self.mesos_address,
+            ),
+        )
 
     def create_task(
         self,
@@ -120,46 +191,27 @@ class MesosCluster:
         )
         return Subscription(executor, queue)
 
-    def handle_event(self, event):
-        log.info(
-            'Task {id}, {type}'.format(
-                id=event.task_id, type=event.platform_type
-            )
-        )
-        action_run_id = event.task_config.name
-        if action_run_id not in self.tasks:
-            log.warning(
-                'Got event for unknown action run: {}'.format(action_run_id)
-            )
+    def _process_event(self, event):
+        if event.kind == 'control':
+            log.info('Control event: {}'.format(event))
+        elif event.kind == 'task':
+            if not hasattr(event, 'task_id'):
+                log.warn('Task event missing task_id: {}'.format(event))
+                return
+            if event.task_id not in self.tasks:
+                log.warn(
+                    'Received event for unknown task {}: {}'.format(
+                        event.task_id,
+                        event,
+                    ),
+                )
+                return
+            task = self.tasks[event.task_id]
+            task.handle_event(event)
+            if task.is_done:
+                del self.tasks[event.task_id]
         else:
-            task = self.tasks[action_run_id]
-            task.write_stdout(json.dumps(event.raw))
-            if event.platform_type == 'staging':
-                task.mesos_task_id = event.task_id
-                # TODO: save task_id in action run state
-            elif event.platform_type == 'running':
-                task.started()
-            elif event.platform_type == 'finished':
-                task.exited(0)
-            elif event.platform_type == 'failed':
-                task.exited(1)
-                log.error('Task failed')  # todo
-            elif event.platform_type == 'killed':
-                task.exited(1)
-                log.info('Task killed')
-            elif event.platform_type == 'lost':
-                task.exited(1)
-                log.info('Task lost, should retry')
-            elif event.platform_type == 'error':
-                task.exited(1)
-                log.info('Task error, {}'.format(event.raw))
-
-            if event.terminal:
-                task.done()
-                del self.tasks[action_run_id]
-
-        self.deferred = self.queue.get()
-        self.deferred.addCallback(self.handle_event)
+            log.warn('Unknown type of event: {}'.format(event))
 
     def stop(self):
         self.runner.stop()

@@ -599,6 +599,7 @@ class MesosActionRun(ActionRun, Observer):
             extra_volumes=self.extra_volumes,
             serializer=serializer,
         )
+        # TODO: save task.task_id (mesos id) to state
         mesos_cluster.submit(task)  # TODO: catch errors
         self.watch(task)
         return task
