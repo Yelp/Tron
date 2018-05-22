@@ -123,8 +123,8 @@ class CheckJobsTestCase(TestCase):
             },
         ]
         actual = check_tron_jobs.get_relevant_action(
-            action_runs,
-            State.SUCCEEDED,
+            action_runs=action_runs,
+            last_state=State.SUCCEEDED,
         )
         assert_equal(actual["id"], "MASTER.test.action1")
 
@@ -158,7 +158,7 @@ class CheckJobsTestCase(TestCase):
                 'action3': 86400.0,
             }
         )
-        assert_equal(actual["id"], "MASTER.test.1.action2")
+        assert_equal(actual["id"], "MASTER.test.action2")
 
     def test_get_relevant_action_pick_the_one_exceeds_expected_runtime(self):
         action_runs = [

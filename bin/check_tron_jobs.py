@@ -193,6 +193,8 @@ def is_job_scheduled(job_runs):
 def _get_seconds_from_duration(duration):
     seconds = 0.0
     for dur in duration.split(":"):
+        if not dur:
+            dur = 0
         seconds = seconds * 60 + float(dur)
     return seconds
 
@@ -256,7 +258,11 @@ def is_action_run_exceeding_expected_runtime(
     return False
 
 
-def get_relevant_action(*, action_runs, last_state, actions_expected_runtime):
+def get_relevant_action(
+    *, action_runs, last_state, actions_expected_runtime=None
+):
+    if actions_expected_runtime is None:
+        actions_expected_runtime = {}
     stuck_action_run_candidate = None
     for action_run in reversed(action_runs):
         action_state = action_run.get('state', 'unknown')
