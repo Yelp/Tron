@@ -221,8 +221,6 @@ class Job(Observable, Observer):
             self.context,
             self.node_pool,
         )
-        for run in job_runs:
-            self.watch(run)
         return job_runs
 
     def build_new_runs(self, run_time, manual=False):
@@ -280,6 +278,8 @@ class JobScheduler(Observer):
     def restore_state(self, job_state_data, config_action_runner):
         """Restore the job state and schedule any JobRuns."""
         job_runs = self.job.get_job_runs_from_state(job_state_data)
+        for run in job_runs:
+            self.job.watch(run)
         self.job.runs.runs.extend(job_runs)
         self.job.event.ok('restored')
 

@@ -157,8 +157,6 @@ class JobTestCase(TestCase):
         state_data = {'enabled': False, 'runs': job_runs}
         returned_runs = self.job.get_job_runs_from_state(state_data)
         assert not self.job.enabled
-        calls = [mock.call(returned_runs[i]) for i in range(0, len(job_runs))]
-        self.job.watch.assert_has_calls(calls)
 
     def test_build_new_runs(self):
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
@@ -287,6 +285,8 @@ class JobSchedulerTestCase(TestCase):
             assert mock_launch_recovery.called_once_with(
                 job_runs=mock_runs, master_action_runner=mock_action_runner
             )
+            calls = [mock.call(mock_runs[i]) for i in range(0, len(mock_runs))]
+            self.job.watch.assert_has_calls(calls)
 
     def test_disable(self):
         self.job_scheduler.disable()
