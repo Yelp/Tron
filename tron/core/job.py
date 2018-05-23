@@ -75,7 +75,6 @@ class Job(Observable, Observer):
         'service',
         'deploy_group',
         'expected_runtime',
-        'enabled',
     ]
 
     # TODO: use config object
