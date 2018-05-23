@@ -47,7 +47,7 @@ class StatusFile(object):
                 ),
                 fh,
                 explicit_start=True,
-                width='inf',
+                width=1000000,
             )
             try:
                 yield
@@ -60,7 +60,7 @@ class StatusFile(object):
                     ),
                     fh,
                     explicit_start=True,
-                    width='inf',
+                    width=1000000,
                 )
 
 
