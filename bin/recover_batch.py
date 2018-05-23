@@ -41,7 +41,6 @@ def notify(ignored, filepath, mask):
         return_code = x.get('return_code')
         if return_code is not None:
             reactor.stop()
-            sys.exit(return_code)
 
 
 def get_key_from_last_line(filepath, key):
