@@ -17,6 +17,7 @@ MESOS_MASTER_PORT = 5050
 DOCKERCFG_LOCATION = "file:///root/.dockercfg"
 MESOS_SECRET = ''
 MESOS_ROLE = '*'
+OFFER_TIMEOUT = 300
 
 log = logging.getLogger(__name__)
 _processor = None
@@ -213,6 +214,7 @@ class MesosCluster:
             environment=env,
             volumes=extra_volumes,  # TODO: add default volumes
             uris=[DOCKERCFG_LOCATION],
+            offer_timeout=OFFER_TIMEOUT,
         )
         return MesosTask(action_run_id, task_config, serializer)
 
