@@ -8,6 +8,7 @@ from task_processing.task_processor import TaskProcessor
 from twisted.internet.defer import logError
 
 from tron.actioncommand import ActionCommand
+from tron.utils.dicts import get_deep
 from tron.utils.queue import PyDeferredQueue
 
 TASK_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
@@ -77,6 +78,27 @@ class MesosTask(ActionCommand):
     def get_config(self):
         return self.task_config
 
+    def log_event_info(self, event):
+        # Separate out so task still transitions even if this nice-to-have logging fails.
+        mesos_type = getattr(event, 'platform_type', None)
+        if mesos_type == 'staging':
+            # TODO: Save these in state?
+            agent = get_deep(event.raw, 'offer.agent_id.value')
+            hostname = get_deep(event.raw, 'offer.hostname')
+            self.log.info(
+                'Staging task on agent {agent} (hostname {hostname})'.format(
+                    agent=agent,
+                    hostname=hostname,
+                ),
+            )
+        elif mesos_type == 'running':
+            agent = get_deep(event.raw, 'agent_id.value')
+            self.log.info('Running on agent {agent}'.format(agent=agent))
+        elif mesos_type == 'finished':
+            pass
+        elif mesos_type in self.ERROR_STATES:
+            self.log.error('Error from Mesos: {}'.format(event.raw))
+
     def handle_event(self, event):
         event_id = getattr(event, 'task_id', None)
         if event_id != self.get_mesos_id():
@@ -85,12 +107,17 @@ class MesosTask(ActionCommand):
             )
             return
         mesos_type = getattr(event, 'platform_type', None)
+
         self.log.info(
             'Got event for task {id}, Mesos type {type}'.format(
                 id=event_id,
                 type=mesos_type,
             )
         )
+        try:
+            self.log_event_info(event)
+        except Exception as e:
+            self.log.warn('Exception while logging event: {}'.format(e))
 
         if mesos_type == 'staging':
             pass
@@ -115,20 +142,25 @@ class MesosTask(ActionCommand):
 
 
 class MesosCluster:
-
-    # TODO: does it create a connection on init? should it be async?
     def __init__(self, mesos_address):
         self.mesos_address = mesos_address
         self.processor = get_mesos_processor()
         self.queue = PyDeferredQueue()
         self.deferred = None
-        self.runner = self.get_runner(mesos_address, self.queue)
+        self.runner = None
         self.tasks = {}
+
+        self.connect()
+
+    # TODO: Should this be done asynchronously?
+    # TODO: Handle/retry errors
+    def connect(self):
+        self.runner = self.get_runner(self.mesos_address, self.queue)
         self.handle_next_event()
 
     def handle_next_event(self, deferred_result=None):
         if self.deferred and not self.deferred.called:
-            log.warning(
+            log.warn(
                 'Already have handlers waiting for next event in queue, '
                 'not adding more'
             )
@@ -140,6 +172,13 @@ class MesosCluster:
         self.deferred.addErrback(self.handle_next_event)
 
     def submit(self, task):
+        if self.runner.stopping:
+            # Last framework was terminated for some reason, re-connect.
+            self.connect()
+        elif self.deferred.called:
+            # Just in case callbacks are missing, re-add.
+            self.handle_next_event()
+
         mesos_task_id = task.get_mesos_id()
         self.tasks[mesos_task_id] = task
         self.runner.run(task.get_config())
@@ -193,7 +232,18 @@ class MesosCluster:
 
     def _process_event(self, event):
         if event.kind == 'control':
-            log.info('Control event: {}'.format(event))
+            message = getattr(event, 'message', None)
+            if message == 'stop':
+                # Framework has been removed, stop it.
+                log.warn('Framework has been stopped: {}'.format(event.raw))
+                self.stop()
+            elif message == 'unknown':
+                log.warn(
+                    'Unknown error from Mesos master: {}'.format(event.raw)
+                )
+            else:
+                log.warn('Unknown type of control event: {}'.format(event))
+
         elif event.kind == 'task':
             if not hasattr(event, 'task_id'):
                 log.warn('Task event missing task_id: {}'.format(event))

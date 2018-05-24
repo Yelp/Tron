@@ -20,6 +20,21 @@ def invert_dict_list(dictionary):
     return dict(itertools.chain.from_iterable(seq))
 
 
+def get_deep(dictionary, path, default=None):
+    """Safely get a nested value from a dict, with a default.
+
+    Path is a dot-separated string of keys to follow for the value.
+    """
+    keys = path.split('.')
+    result = dictionary
+    try:
+        for key in keys:
+            result = result[key]
+    except (KeyError, TypeError, ValueError):
+        result = default
+    return result
+
+
 class FrozenDict(Mapping):
     """Simple implementation of an immutable dictionary so we can freeze the
     command context, set of jobs, actions, etc.
