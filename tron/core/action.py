@@ -65,6 +65,20 @@ class Action(object):
     def from_config(cls, config):
         """Factory method for creating a new Action."""
         node_repo = node.NodePoolRepository.get_instance()
+
+        # Only convert config values if they are not None.
+        constraints = config.constraints
+        if constraints:
+            constraints = [
+                [c.attribute, c.operator, c.value] for c in constraints
+            ]
+        docker_parameters = config.docker_parameters
+        if docker_parameters:
+            docker_parameters = [c._asdict() for c in docker_parameters]
+        extra_volumes = config.extra_volumes
+        if extra_volumes:
+            extra_volumes = [c._asdict() for c in extra_volumes]
+
         return cls(
             name=config.name,
             command=config.command,
@@ -74,11 +88,11 @@ class Action(object):
             executor=config.executor,
             cpus=config.cpus,
             mem=config.mem,
-            constraints=config.constraints,
+            constraints=constraints,
             docker_image=config.docker_image,
-            docker_parameters=config.docker_parameters,
+            docker_parameters=docker_parameters,
             env=config.env,
-            extra_volumes=config.extra_volumes,
+            extra_volumes=extra_volumes,
             mesos_address=config.mesos_address,
         )
 

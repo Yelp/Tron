@@ -207,9 +207,8 @@ class MesosCluster:
             cmd=command,
             cpus=cpus,
             mem=mem,
-            constraints=constraints,  # TODO: format back to dict
+            constraints=constraints,
             image=docker_image,
-            # TODO: format. and should ulimit, cap_add be passed in directly?
             docker_parameters=docker_parameters,
             environment=env,
             volumes=extra_volumes,  # TODO: add default volumes

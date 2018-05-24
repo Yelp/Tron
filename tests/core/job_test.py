@@ -61,7 +61,7 @@ class JobTestCase(TestCase):
 
     @mock.patch('tron.core.job.event', autospec=True)
     def test_from_config(self, _mock_event):
-        action = mock.Mock(
+        action = mock.MagicMock(
             name='first',
             command='doit',
             node=None,
