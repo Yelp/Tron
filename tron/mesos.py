@@ -5,10 +5,10 @@ from urllib.parse import urlparse
 import requests
 from task_processing.runners.subscription import Subscription
 from task_processing.task_processor import TaskProcessor
-from twisted.internet.defer import DeferredQueue
 from twisted.internet.defer import logError
 
 from tron.actioncommand import ActionCommand
+from tron.utils.queue import PyDeferredQueue
 
 TASK_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
 # TODO: put in configs
@@ -120,7 +120,7 @@ class MesosCluster:
     def __init__(self, mesos_address):
         self.mesos_address = mesos_address
         self.processor = get_mesos_processor()
-        self.queue = DeferredQueue()
+        self.queue = PyDeferredQueue()
         self.deferred = None
         self.runner = self.get_runner(mesos_address, self.queue)
         self.tasks = {}
