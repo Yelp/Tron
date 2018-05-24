@@ -402,51 +402,35 @@ class ActionRun(object):
     def state_data(self):
         """This data is used to serialize the state of this action run."""
         rendered_command = self.rendered_command
+
+        action_runner = None if type(
+            self.action_runner
+        ) == NoActionRunnerFactory else {
+            'status_path': self.action_runner.status_path,
+            'exec_path': self.action_runner.exec_path,
+        }
         # Freeze command after it's run
         command = rendered_command if rendered_command else self.bare_command
         return {
-            'job_run_id':
-                self.job_run_id,
-            'action_name':
-                self.action_name,
-            'state':
-                self.state.name,
-            'start_time':
-                self.start_time,
-            'end_time':
-                self.end_time,
-            'command':
-                command,
-            'rendered_command':
-                self.rendered_command,
-            'node_name':
-                self.node.get_name() if self.node else None,
-            'exit_status':
-                self.exit_status,
-            'executor':
-                self.executor,
-            'cluster':
-                self.cluster,
-            'pool':
-                self.pool,
-            'cpus':
-                self.cpus,
-            'mem':
-                self.mem,
-            'service':
-                self.service,
-            'deploy_group':
-                self.deploy_group,
-            'retries_remaining':
-                self.retries_remaining,
-            'exit_statuses':
-                self.exit_statuses,
-            'action_runner':
-                None
-                if type(self.action_runner) == NoActionRunnerFactory else {
-                    'status_path': self.action_runner.status_path,
-                    'exec_path': self.action_runner.exec_path,
-                },
+            'job_run_id': self.job_run_id,
+            'action_name': self.action_name,
+            'state': self.state.name,
+            'start_time': self.start_time,
+            'end_time': self.end_time,
+            'command': command,
+            'rendered_command': self.rendered_command,
+            'node_name': self.node.get_name() if self.node else None,
+            'exit_status': self.exit_status,
+            'executor': self.executor,
+            'cluster': self.cluster,
+            'pool': self.pool,
+            'cpus': self.cpus,
+            'mem': self.mem,
+            'service': self.service,
+            'deploy_group': self.deploy_group,
+            'retries_remaining': self.retries_remaining,
+            'exit_statuses': self.exit_statuses,
+            'action_runner': action_runner
         }
 
     def render_command(self):
