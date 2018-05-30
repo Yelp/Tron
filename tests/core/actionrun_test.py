@@ -92,6 +92,11 @@ class ActionRunFactoryTestCase(TestCase):
             'end_time': None,
             'command': 'do cleanup',
             'node_name': 'anode',
+            'action_runner':
+                {
+                    'status_path': '/tmp/foo',
+                    'exec_path': '/bin/foo'
+                }
         }
         collection = ActionRunFactory.action_run_collection_from_state(
             self.job_run,
@@ -232,9 +237,7 @@ class ActionRunTestCase(TestCase):
     @setup
     def setup_action_run(self):
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
-        self.action_runner = mock.create_autospec(
-            actioncommand.NoActionRunnerFactory,
-        )
+        self.action_runner = actioncommand.NoActionRunnerFactory()
         self.command = "do command %(actionname)s"
         self.rendered_command = "do command action_name"
         self.action_run = ActionRun(

@@ -69,7 +69,11 @@ class MasterControlProgram(object):
         In this case jobs shouldn't be scheduled until the state is applied.
         """
         self._load_config()
-        self.restore_state()
+        self.restore_state(
+            actioncommand.create_action_runner_factory_from_config(
+                self.config.load().get_master().action_runner
+            )
+        )
         # Any job with existing state would have been scheduled already. Jobs
         # without any state will be scheduled here.
         self.jobs.run_queue_schedule()
@@ -144,14 +148,14 @@ class MasterControlProgram(object):
     def get_config_manager(self):
         return self.config
 
-    def restore_state(self):
+    def restore_state(self, action_runner):
         """Use the state manager to retrieve to persisted state and apply it
         to the configured Jobs.
         """
         self.event_recorder.notice('restoring')
         job_states = self.state_watcher.restore(self.jobs.get_names())
 
-        self.jobs.restore_state(job_states)
+        self.jobs.restore_state(job_states, action_runner)
         self.state_watcher.save_metadata()
 
     def __str__(self):

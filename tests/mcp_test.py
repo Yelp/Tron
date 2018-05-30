@@ -134,8 +134,11 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
     def test_restore_state(self):
         job_state_data = {'1': 'things', '2': 'things'}
         self.mcp.state_watcher.restore.return_value = job_state_data
-        self.mcp.restore_state()
-        self.mcp.jobs.restore_state.assert_called_with(job_state_data)
+        action_runner = mock.Mock()
+        self.mcp.restore_state(action_runner)
+        self.mcp.jobs.restore_state.assert_called_with(
+            job_state_data, action_runner
+        )
 
 
 if __name__ == '__main__':

@@ -13,6 +13,7 @@ from tron import command_context
 from tron import node
 from tron.actioncommand import ActionCommand
 from tron.actioncommand import NoActionRunnerFactory
+from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.config.schema import ExecutorTypes
 from tron.core import action
 from tron.serialize import filehandler
@@ -194,6 +195,7 @@ class ActionRun(object):
         deploy_group=None,
         retries_remaining=None,
         exit_statuses=None,
+        machine=None,
     ):
         self.job_run_id = maybe_decode(job_run_id)
         self.action_name = maybe_decode(name)
@@ -203,8 +205,8 @@ class ActionRun(object):
         self.exit_status = exit_status
         self.bare_command = maybe_decode(bare_command)
         self.rendered_command = rendered_command
-        self.action_runner = action_runner or NoActionRunnerFactory
-        self.machine = state.StateMachine(
+        self.action_runner = action_runner or NoActionRunnerFactory()
+        self.machine = machine or state.StateMachine(
             self.STATE_SCHEDULED,
             delegate=self,
             force_state=run_state,
@@ -267,6 +269,12 @@ class ActionRun(object):
             job_run_node,
         )
 
+        action_runner_data = state_data.get('action_runner')
+        if action_runner_data:
+            action_runner = SubprocessActionRunnerFactory(**action_runner_data)
+        else:
+            action_runner = NoActionRunnerFactory()
+
         rendered_command = state_data.get('rendered_command')
         run = cls(
             job_run_id,
@@ -293,6 +301,7 @@ class ActionRun(object):
             mem=state_data.get('mem'),
             service=state_data.get('service'),
             deploy_group=state_data.get('deploy_group'),
+            action_runner=action_runner,
         )
 
         # Transition running to fail unknown because exit status was missed
@@ -393,6 +402,13 @@ class ActionRun(object):
     def state_data(self):
         """This data is used to serialize the state of this action run."""
         rendered_command = self.rendered_command
+
+        action_runner = None if type(
+            self.action_runner
+        ) == NoActionRunnerFactory else {
+            'status_path': self.action_runner.status_path,
+            'exec_path': self.action_runner.exec_path,
+        }
         # Freeze command after it's run
         command = rendered_command if rendered_command else self.bare_command
         return {
@@ -414,6 +430,7 @@ class ActionRun(object):
             'deploy_group': self.deploy_group,
             'retries_remaining': self.retries_remaining,
             'exit_statuses': self.exit_statuses,
+            'action_runner': action_runner
         }
 
     def render_command(self):
@@ -485,6 +502,9 @@ class ActionRun(object):
 class SSHActionRun(ActionRun, Observer):
     """An ActionRun that executes the command on a node through SSH.
     """
+
+    def __init__(self, *args, **kwargs):
+        super(SSHActionRun, self).__init__(*args, **kwargs)
 
     def submit_command(self):
         action_command = self.build_action_command()
@@ -615,6 +635,7 @@ class ActionRunCollection(object):
                 proxy.func_proxy('cleanup', iteration.list_all),
                 proxy.func_proxy('stop', iteration.list_all),
                 proxy.attr_proxy('start_time', iteration.min_filter),
+                proxy.attr_proxy('state_data', iteration.list_all),
             ],
         )
 

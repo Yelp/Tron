@@ -11,6 +11,7 @@ import logging
 import os
 import subprocess
 import sys
+import time
 
 import yaml
 
@@ -31,6 +32,8 @@ class StatusFile(object):
             'command': command,
             'pid': proc.pid,
             'return_code': proc.returncode,
+            'runner_pid': os.getpid(),
+            'timestamp': time.time(),
         }
 
     @contextlib.contextmanager
@@ -44,6 +47,7 @@ class StatusFile(object):
                 ),
                 fh,
                 explicit_start=True,
+                width=1000000,
             )
             try:
                 yield
@@ -56,6 +60,7 @@ class StatusFile(object):
                     ),
                     fh,
                     explicit_start=True,
+                    width=1000000,
                 )
 
 

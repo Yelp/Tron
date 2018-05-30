@@ -467,8 +467,7 @@ class JobRunCollectionTestCase(TestCase):
         runs = jobrun.JobRunCollection.from_config(job_config)
         assert_equal(runs.run_limit, 20)
 
-    def test_restore_state(self):
-        run_collection = jobrun.JobRunCollection(20)
+    def test_job_runs_from_state(self):
         state_data = [
             dict(
                 run_num=i,
@@ -484,28 +483,15 @@ class JobRunCollectionTestCase(TestCase):
         output_path = mock.create_autospec(filehandler.OutputPath)
         context = mock.Mock()
         node_pool = mock.create_autospec(node.NodePool)
-
-        restored_runs = run_collection.restore_state(
+        runs = jobrun.job_runs_from_state(
             state_data,
             action_graph,
             output_path,
             context,
             node_pool,
         )
-        assert_equal(run_collection.runs[0].run_num, 3)
-        assert_equal(run_collection.runs[3].run_num, 0)
-        assert_length(restored_runs, 4)
-
-    def test_restore_state_with_runs(self):
-        assert_raises(
-            ValueError,
-            self.run_collection.restore_state,
-            None,
-            None,
-            None,
-            None,
-            None,
-        )
+        assert len(runs) == 4
+        assert all([type(job) == jobrun.JobRun for job in runs])
 
     def test_build_new_run(self):
         autospec_method(self.run_collection.remove_old_runs)

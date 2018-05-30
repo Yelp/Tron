@@ -37,15 +37,6 @@ class MappingCollectionsTestCase(TestCase):
         assert_not_in(name, self.collection)
         item.disable.assert_called_with()
 
-    def test_restore_state(self):
-        state_data = {'a': mock.Mock(), 'b': mock.Mock()}
-        self.collection.update({'a': mock.Mock(), 'b': mock.Mock()})
-        self.collection.restore_state(state_data)
-        for key in state_data:
-            self.collection[key].restore_state.assert_called_with(
-                state_data[key],
-            )
-
     def test_contains_item_false(self):
         mock_item, mock_func = mock.Mock(), mock.Mock()
         assert not self.collection.contains_item(mock_item, mock_func)
