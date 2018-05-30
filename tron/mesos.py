@@ -135,10 +135,13 @@ class MesosTask(ActionCommand):
 
         if event.terminal:
             self.log.info('Event was terminal, closing task')
+
+            exit_code = int(not getattr(event, 'success', False))
             # Returns False if we've already exited normally above
-            unexpected_error = self.exited(None)
+            unexpected_error = self.exited(exit_code)
             if unexpected_error:
                 self.log.error('Unknown failure, exiting')
+
             self.done()
 
 

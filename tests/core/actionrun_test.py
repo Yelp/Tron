@@ -883,5 +883,60 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
         assert not self.collection._is_run_blocked(self.run_map['second_name'])
 
 
+class MesosActionRunTestCase(TestCase):
+    @setup
+    def setup_action_run(self):
+        self.output_path = mock.MagicMock()
+        self.command = "do the command"
+        self.mesos_address = 'mesos-master.com'
+        self.other_task_kwargs = {
+            'cpus': 1,
+            'mem': 50,
+            'docker_image': 'container:v2',
+            'constraints': [],
+            'env': {
+                'TESTING': 'true'
+            },
+            'docker_parameters': [],
+            'extra_volumes': [],
+        }
+        self.action_run = MesosActionRun(
+            "job_run_id",
+            "action_name",
+            mock.create_autospec(node.Node),
+            rendered_command=self.command,
+            output_path=self.output_path,
+            executor=ExecutorTypes.mesos,
+            mesos_address=self.mesos_address,
+            **self.other_task_kwargs
+        )
+
+    @mock.patch('tron.core.actionrun.filehandler', autospec=True)
+    @mock.patch('tron.core.actionrun.get_mesos_cluster', autospec=True)
+    def test_submit_command(self, mock_get_cluster, mock_filehandler):
+        serializer = mock_filehandler.OutputStreamSerializer.return_value
+        with mock.patch.object(
+            self.action_run,
+            'watch',
+            autospec=True,
+        ) as mock_watch:
+            self.action_run.submit_command()
+
+            mock_get_cluster.assert_called_once_with(self.mesos_address)
+            mock_get_cluster.return_value.create_task.assert_called_once_with(
+                action_run_id=self.action_run.id,
+                command=self.command,
+                serializer=serializer,
+                **self.other_task_kwargs
+            )
+            task = mock_get_cluster.return_value.create_task.return_value
+            mock_get_cluster.return_value.submit.assert_called_once_with(task)
+            mock_watch.assert_called_once_with(task)
+
+        mock_filehandler.OutputStreamSerializer.assert_called_with(
+            self.action_run.output_path,
+        )
+
+
 if __name__ == "__main__":
     run()
