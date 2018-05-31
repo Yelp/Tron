@@ -20,16 +20,7 @@ MESOS_ROLE = '*'
 OFFER_TIMEOUT = 300
 
 log = logging.getLogger(__name__)
-_processor = None
 frameworks = {}  # TODO: improve
-
-
-def get_mesos_processor():
-    global _processor
-    if not _processor:
-        _processor = TaskProcessor()
-        _processor.load_plugin(provider_module='task_processing.plugins.mesos')
-    return _processor
 
 
 def get_mesos_leader(master_address):
@@ -148,12 +139,15 @@ class MesosTask(ActionCommand):
 class MesosCluster:
     def __init__(self, mesos_address):
         self.mesos_address = mesos_address
-        self.processor = get_mesos_processor()
+        self.processor = TaskProcessor()
         self.queue = PyDeferredQueue()
         self.deferred = None
         self.runner = None
         self.tasks = {}
 
+        self.processor.load_plugin(
+            provider_module='task_processing.plugins.mesos'
+        )
         self.connect()
 
     # TODO: Should this be done asynchronously?

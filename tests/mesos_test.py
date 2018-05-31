@@ -182,9 +182,9 @@ class MesosClusterTestCase(TestCase):
             'tron.mesos.PyDeferredQueue',
             autospec=True,
         ) as queue_cls, mock.patch(
-            'tron.mesos.get_mesos_processor',
+            'tron.mesos.TaskProcessor',
             autospec=True,
-        ) as get_processor, mock.patch(
+        ) as processor_cls, mock.patch(
             'tron.mesos.Subscription',
             autospec=True,
         ) as runner_cls, mock.patch(
@@ -192,7 +192,7 @@ class MesosClusterTestCase(TestCase):
             autospec=True,
         ) as mock_get_leader:
             self.mock_queue = queue_cls.return_value
-            self.mock_processor = get_processor.return_value
+            self.mock_processor = processor_cls.return_value
             self.mock_runner_cls = runner_cls
             self.mock_runner_cls.return_value.stopping = False
             self.mock_get_leader = mock_get_leader
