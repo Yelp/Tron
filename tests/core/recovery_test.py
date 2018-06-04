@@ -79,10 +79,12 @@ class TestRecovery(TestCase):
             job_run_id="test.succeeded",
             name="test.succeeded",
             node=mock_node,
-            action_runner=action_runner
+            action_runner=action_runner,
         )
+        action_run.machine.state = action_run.STATE_UNKNOWN
         res = recover_action_run(action_run, action_runner)
         mock_node.submit_command.assert_called_once()
+        assert action_run.machine.state == action_run.STATE_RUNNING
 
     def test_filter_recoverable_action_runs(self):
         assert filter_recoverable_action_runs(self.action_runs) == \

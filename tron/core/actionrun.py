@@ -150,6 +150,10 @@ class ActionRun(object):
     STATE_FAILED['skip'] = STATE_SKIPPED
     STATE_CANCELLED['skip'] = STATE_SKIPPED
 
+    STATE_UNKNOWN['running'] = STATE_RUNNING
+    STATE_UNKNOWN['failed'] = STATE_FAILED
+    STATE_UNKNOWN['success'] = STATE_SUCCEEDED
+
     # We can force many states to be success or failure
     for event_state in (STATE_UNKNOWN, STATE_QUEUED, STATE_SCHEDULED):
         event_state['success'] = STATE_SUCCEEDED
