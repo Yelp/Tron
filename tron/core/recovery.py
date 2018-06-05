@@ -70,6 +70,14 @@ def recover_action_run(action_run, action_runner):
     # and updates its internal state acoording to its result.
     action_run.watch(recovery_action_command)
 
+    if not action_run.machine.check('running'):
+        log.error(
+            'unable to transition action run %s from %s to start' %
+            (action_run.id, action_run.machine.state)
+        )
+    else:
+        action_run.machine.transition('running')
+
     log.info(
         "submitting recovery job with command %s to node %s" % (
             recovery_action_command.command,
