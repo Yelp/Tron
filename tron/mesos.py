@@ -1,5 +1,6 @@
 import json
 import logging
+import socket
 from urllib.parse import urlparse
 
 import requests
@@ -216,14 +217,14 @@ class MesosCluster:
         return MesosTask(action_run_id, task_config, serializer)
 
     def get_runner(self, mesos_address, queue):
+        framework_name = 'tron-{}'.format(socket.gethostname())
         executor = self.processor.executor_from_config(
             provider='mesos',
             provider_config={
                 'secret': MESOS_SECRET,
                 'mesos_address': get_mesos_leader(mesos_address),
                 'role': MESOS_ROLE,
-                # TODO: could also be in config, to include Tron cluster name
-                'framework_name': 'tron',
+                'framework_name': framework_name,
             }
         )
         return Subscription(executor, queue)

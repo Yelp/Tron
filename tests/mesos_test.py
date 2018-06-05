@@ -198,8 +198,11 @@ class MesosClusterTestCase(TestCase):
             self.mock_get_leader = mock_get_leader
             yield
 
-    def test_init(self):
+    @mock.patch('tron.mesos.socket', autospec=True)
+    def test_init(self, mock_socket):
+        mock_socket.gethostname.return_value = 'hostname'
         cluster = MesosCluster('mesos-cluster-a.me')
+
         assert_equal(cluster.queue, self.mock_queue)
         assert_equal(cluster.processor, self.mock_processor)
 
@@ -210,7 +213,7 @@ class MesosClusterTestCase(TestCase):
                 'secret': MESOS_SECRET,
                 'mesos_address': self.mock_get_leader.return_value,
                 'role': MESOS_ROLE,
-                'framework_name': 'tron',
+                'framework_name': 'tron-hostname',
             },
         )
         self.mock_runner_cls.assert_called_once_with(
