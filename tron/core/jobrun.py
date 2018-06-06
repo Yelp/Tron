@@ -51,8 +51,6 @@ class JobRun(Observable, Observer):
         action_runs=None,
         action_graph=None,
         manual=None,
-        service=None,
-        deploy_group=None,
     ):
         super(JobRun, self).__init__()
         self.job_name = maybe_decode(job_name)
@@ -65,8 +63,6 @@ class JobRun(Observable, Observer):
         self._action_runs = None
         self.action_graph = action_graph
         self.manual = manual
-        self.service = service
-        self.deploy_group = deploy_group
         self.event = event.get_recorder(self.full_id)
         self.event.ok('created')
 
@@ -91,8 +87,6 @@ class JobRun(Observable, Observer):
             job.context,
             action_graph=job.action_graph,
             manual=manual,
-            service=job.service,
-            deploy_group=job.deploy_group,
         )
 
         action_runs = ActionRunFactory.build_action_run_collection(
@@ -125,8 +119,6 @@ class JobRun(Observable, Observer):
             manual=state_data.get('manual', False),
             output_path=output_path,
             base_context=context,
-            service=state_data.get('service'),
-            deploy_group=state_data.get('deploy_group'),
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
             job_run,
@@ -147,8 +139,6 @@ class JobRun(Observable, Observer):
             'runs': self.action_runs.state_data,
             'cleanup_run': self.action_runs.cleanup_action_state_data,
             'manual': self.manual,
-            'service': self.service,
-            'deploy_group': self.deploy_group,
         }
 
     def _get_action_runs(self):

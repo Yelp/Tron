@@ -53,10 +53,6 @@ nodes:
 node_pools:
     - name: NodePool
       nodes: [node0, node1]
-
-clusters:
-    - cluster-one
-    - cluster-two
 """
 
 
@@ -83,10 +79,6 @@ nodes:
 node_pools:
     -   name: nodePool
         nodes: [node0, node1]
-
-clusters:
-    - cluster-one
-    - cluster-two
     """
 
     config = BASE_CONFIG + """
@@ -162,16 +154,18 @@ jobs:
                 name: "action4_0"
                 command: "test_command4.0"
     -
-        name: "test_job_paasta"
+        name: "test_job_mesos"
         node: nodePool
-        service: my_service
-        deploy_group: prod.non_canary
         schedule: "daily"
         actions:
             -
-                name: "action4_0"
-                executor: paasta
-                command: "test_command4.0"
+                name: "action_mesos"
+                executor: mesos
+                command: "test_command_mesos"
+                cpus: .1
+                mem: 100
+                mesos_address: the-master.mesos
+                docker_image: container:latest
 
 """
 
@@ -227,7 +221,6 @@ jobs:
                         ),
                 }
             ),
-            clusters=('cluster-one', 'cluster-two'),
             jobs=FrozenDict(
                 {
                     'MASTER.test_job0':
@@ -236,8 +229,6 @@ jobs:
                             namespace='MASTER',
                             node='node0',
                             monitoring={},
-                            service=None,
-                            deploy_group=None,
                             schedule=ConfigIntervalScheduler(
                                 timedelta=datetime.timedelta(0, 20),
                                 jitter=None,
@@ -277,8 +268,6 @@ jobs:
                             node='node0',
                             enabled=True,
                             monitoring={},
-                            service=None,
-                            deploy_group=None,
                             schedule=schedule_parse.ConfigDailyScheduler(
                                 days={1, 3, 5},
                                 hour=0,
@@ -325,8 +314,6 @@ jobs:
                             node='node1',
                             enabled=True,
                             monitoring={},
-                            service=None,
-                            deploy_group=None,
                             schedule=schedule_parse.ConfigDailyScheduler(
                                 days=set(),
                                 hour=16,
@@ -365,8 +352,6 @@ jobs:
                             schedule=ConfigConstantScheduler(),
                             enabled=True,
                             monitoring={},
-                            service=None,
-                            deploy_group=None,
                             actions=FrozenDict(
                                 {
                                     'action3_1':
@@ -416,8 +401,6 @@ jobs:
                             namespace='MASTER',
                             node='nodePool',
                             monitoring={},
-                            service=None,
-                            deploy_group=None,
                             schedule=schedule_parse.ConfigDailyScheduler(
                                 days=set(),
                                 hour=0,
@@ -449,14 +432,12 @@ jobs:
                             time_zone=None,
                             expected_runtime=datetime.timedelta(1),
                         ),
-                    'MASTER.test_job_paasta':
+                    'MASTER.test_job_mesos':
                         schema.ConfigJob(
-                            name='MASTER.test_job_paasta',
+                            name='MASTER.test_job_mesos',
                             namespace='MASTER',
                             node='nodePool',
                             monitoring={},
-                            service='my_service',
-                            deploy_group='prod.non_canary',
                             schedule=schedule_parse.ConfigDailyScheduler(
                                 days=set(),
                                 hour=0,
@@ -467,14 +448,18 @@ jobs:
                             ),
                             actions=FrozenDict(
                                 {
-                                    'action4_0':
+                                    'action_mesos':
                                         schema.ConfigAction(
-                                            name='action4_0',
-                                            command='test_command4.0',
-                                            executor='paasta',
+                                            name='action_mesos',
+                                            command='test_command_mesos',
+                                            executor='mesos',
                                             requires=(),
                                             expected_runtime=datetime.
                                             timedelta(1),
+                                            cpus=0.1,
+                                            mem=100,
+                                            mesos_address='the-master.mesos',
+                                            docker_image='container:latest',
                                         ),
                                 }
                             ),
@@ -523,8 +508,8 @@ jobs:
             expected.jobs['MASTER.test_job4'],
         )
         assert_equal(
-            test_config.jobs['MASTER.test_job_paasta'],
-            expected.jobs['MASTER.test_job_paasta'],
+            test_config.jobs['MASTER.test_job_mesos'],
+            expected.jobs['MASTER.test_job_mesos'],
         )
         assert_equal(test_config.jobs, expected.jobs)
         assert_equal(test_config, expected)
@@ -600,16 +585,18 @@ jobs:
                 name: "action4_0"
                 command: "test_command4.0"
     -
-        name: "test_job_paasta"
+        name: "test_job_mesos"
         node: NodePool
-        service: my_service
-        deploy_group: prod.non_canary
         schedule: "daily"
         actions:
             -
-                name: "action4_0"
-                executor: paasta
-                command: "test_command4.0"
+                name: "action_mesos"
+                executor: mesos
+                command: "test_command_mesos"
+                cpus: .1
+                mem: 100
+                mesos_address: the-master.mesos
+                docker_image: container:latest
 
 """
 
@@ -623,8 +610,6 @@ jobs:
                             namespace='test_namespace',
                             node='node0',
                             monitoring={},
-                            service=None,
-                            deploy_group=None,
                             schedule=ConfigIntervalScheduler(
                                 timedelta=datetime.timedelta(0, 20),
                                 jitter=None,
@@ -650,12 +635,6 @@ jobs:
                                 command='test_command0.1',
                                 node=None,
                                 executor='ssh',
-                                cluster=None,
-                                pool=None,
-                                cpus=None,
-                                mem=None,
-                                service=None,
-                                deploy_group=None,
                                 expected_runtime=datetime.timedelta(1),
                             ),
                             enabled=True,
@@ -671,8 +650,6 @@ jobs:
                             node='node0',
                             enabled=True,
                             monitoring={},
-                            service=None,
-                            deploy_group=None,
                             schedule=schedule_parse.ConfigDailyScheduler(
                                 days={1, 3, 5},
                                 hour=0,
@@ -720,8 +697,6 @@ jobs:
                             node='node1',
                             enabled=True,
                             monitoring={},
-                            service=None,
-                            deploy_group=None,
                             schedule=schedule_parse.ConfigDailyScheduler(
                                 days=set(),
                                 hour=16,
@@ -760,8 +735,6 @@ jobs:
                             schedule=ConfigConstantScheduler(),
                             enabled=True,
                             monitoring={},
-                            service=None,
-                            deploy_group=None,
                             actions=FrozenDict(
                                 {
                                     'action3_1':
@@ -811,8 +784,6 @@ jobs:
                             namespace='test_namespace',
                             node='NodePool',
                             monitoring={},
-                            service=None,
-                            deploy_group=None,
                             schedule=schedule_parse.ConfigDailyScheduler(
                                 days=set(),
                                 hour=0,
@@ -844,14 +815,12 @@ jobs:
                             time_zone=None,
                             expected_runtime=datetime.timedelta(1),
                         ),
-                    'test_job_paasta':
+                    'test_job_mesos':
                         schema.ConfigJob(
-                            name='test_job_paasta',
+                            name='test_job_mesos',
                             namespace='test_namespace',
                             node='NodePool',
                             monitoring={},
-                            service='my_service',
-                            deploy_group='prod.non_canary',
                             schedule=schedule_parse.ConfigDailyScheduler(
                                 days=set(),
                                 hour=0,
@@ -862,14 +831,18 @@ jobs:
                             ),
                             actions=FrozenDict(
                                 {
-                                    'action4_0':
+                                    'action_mesos':
                                         schema.ConfigAction(
-                                            name='action4_0',
-                                            command='test_command4.0',
-                                            executor='paasta',
+                                            name='action_mesos',
+                                            command='test_command_mesos',
+                                            executor='mesos',
                                             requires=(),
                                             expected_runtime=datetime.
                                             timedelta(1),
+                                            cpus=0.1,
+                                            mem=100,
+                                            mesos_address='the-master.mesos',
+                                            docker_image='container:latest',
                                         ),
                                 }
                             ),
@@ -897,8 +870,8 @@ jobs:
         assert_equal(test_config.jobs['test_job3'], expected.jobs['test_job3'])
         assert_equal(test_config.jobs['test_job4'], expected.jobs['test_job4'])
         assert_equal(
-            test_config.jobs['test_job_paasta'],
-            expected.jobs['test_job_paasta'],
+            test_config.jobs['test_job_mesos'],
+            expected.jobs['test_job_mesos'],
         )
         assert_equal(test_config.jobs, expected.jobs)
         assert_equal(test_config, expected)
@@ -1092,131 +1065,6 @@ jobs:
         )
         assert_equal(expected_msg, str(exception))
 
-    def test_job_with_invalid_cluster(self):
-        test_config = BASE_CONFIG + """
-jobs:
-    -
-        name: "test_job0"
-        node: node0
-        schedule: "interval 20s"
-        service: foo
-        deploy_group: prod
-        actions:
-            -
-                name: "action0_0"
-                executor: paasta
-                cluster: unknown-cluster
-                command: "test_command0.0"
-"""
-        expected_msg = "Unknown cluster name unknown-cluster"
-        exception = assert_raises(
-            ConfigError,
-            valid_config_from_yaml,
-            test_config,
-        )
-        assert_in(expected_msg, str(exception))
-
-    def test_job_with_missing_service_for_paasta_action(self):
-        test_config = BASE_CONFIG + """
-jobs:
-    -
-        name: "test_job0"
-        node: node0
-        schedule: "interval 20s"
-        actions:
-            -
-                name: "action0_0"
-                executor: paasta
-                cluster: cluster-one
-                command: "test_command0.0"
-"""
-        expected_msg = "need a service and deploy_group"
-        exception = assert_raises(
-            ConfigError,
-            valid_config_from_yaml,
-            test_config,
-        )
-        assert_in(expected_msg, str(exception))
-
-    def test_job_with_missing_service_for_paasta_cleanup_action(self):
-        test_config = BASE_CONFIG + """
-jobs:
-    -
-        name: "test_job0"
-        node: node0
-        schedule: "interval 20s"
-        actions:
-            -
-                name: "action0_0"
-                command: "test_command0.0"
-                executor: ssh
-        cleanup_action:
-            command: "test_command0.1"
-            executor: paasta
-"""
-        expected_msg = "need a service and deploy_group"
-        exception = assert_raises(
-            ConfigError,
-            valid_config_from_yaml,
-            test_config,
-        )
-        assert_in(expected_msg, str(exception))
-
-    def test_job_with_service_in_paasta_action_only_is_valid(self):
-        test_config = BASE_CONFIG + """
-jobs:
-    -
-        name: "test_job0"
-        node: node0
-        schedule: "interval 20s"
-        actions:
-            -
-                name: "action0_0"
-                executor: paasta
-                cluster: cluster-one
-                service: baz
-                deploy_group: prod
-                command: "test_command0.0"
-"""
-        expected = schema.ConfigJob(
-            name='MASTER.test_job0',
-            namespace='MASTER',
-            node='node0',
-            monitoring={},
-            service=None,
-            deploy_group=None,
-            schedule=ConfigIntervalScheduler(
-                timedelta=datetime.timedelta(0, 20),
-                jitter=None,
-            ),
-            actions=FrozenDict(
-                {
-                    'action0_0':
-                        schema.ConfigAction(
-                            name='action0_0',
-                            command='test_command0.0',
-                            executor='paasta',
-                            cluster='cluster-one',
-                            service='baz',
-                            deploy_group='prod',
-                            requires=(),
-                            expected_runtime=datetime.timedelta(1),
-                        ),
-                }
-            ),
-            queueing=True,
-            run_limit=50,
-            all_nodes=False,
-            cleanup_action=None,
-            enabled=True,
-            max_runtime=None,
-            allow_overlap=False,
-            time_zone=None,
-            expected_runtime=datetime.timedelta(1),
-        )
-        parsed_config = valid_config_from_yaml(test_config)
-        assert_equal(parsed_config.jobs['MASTER.test_job0'], expected)
-
     def test_validate_job_no_actions(self):
         job_config = dict(
             name="job_name",
@@ -1227,7 +1075,6 @@ jobs:
         config_context = config_utils.ConfigContext(
             'config',
             ['localhost'],
-            ['cluster'],
             None,
             None,
         )
@@ -1372,6 +1219,28 @@ class ValidateJobsTestCase(TestCase):
                             name: "action0_0"
                             command: "test_command0.0"
                             expected_runtime: "20m"
+                        -   name: "action_mesos"
+                            command: "test_command_mesos"
+                            executor: mesos
+                            cpus: 4
+                            mem: 300
+                            constraints:
+                                - attribute: pool
+                                  operator: LIKE
+                                  value: default
+                            docker_image: my_container:latest
+                            docker_parameters:
+                                - key: label
+                                  value: labelA
+                                - key: label
+                                  value: labelB
+                            env:
+                                USER: batch
+                            extra_volumes:
+                                - container_path: /tmp
+                                  host_path: /home/tmp
+                                  mode: RO
+                            mesos_address: http://my-mesos-master.com
                     cleanup_action:
                         command: "test_command0.1"
                     """
@@ -1383,8 +1252,6 @@ class ValidateJobsTestCase(TestCase):
                     namespace='MASTER',
                     node='node0',
                     monitoring={},
-                    service=None,
-                    deploy_group=None,
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20),
                         jitter=None,
@@ -1401,6 +1268,45 @@ class ValidateJobsTestCase(TestCase):
                                         0, 1200
                                     ),
                                 ),
+                            'action_mesos':
+                                schema.ConfigAction(
+                                    name='action_mesos',
+                                    command='test_command_mesos',
+                                    executor='mesos',
+                                    requires=(),
+                                    cpus=4.0,
+                                    mem=300.0,
+                                    constraints=(
+                                        schema.ConfigConstraint(
+                                            attribute='pool',
+                                            operator='LIKE',
+                                            value='default',
+                                        ),
+                                    ),
+                                    docker_image='my_container:latest',
+                                    docker_parameters=(
+                                        schema.ConfigParameter(
+                                            key='label',
+                                            value='labelA',
+                                        ),
+                                        schema.ConfigParameter(
+                                            key='label',
+                                            value='labelB',
+                                        ),
+                                    ),
+                                    env={'USER': 'batch'},
+                                    extra_volumes=(
+                                        schema.ConfigVolume(
+                                            container_path='/tmp',
+                                            host_path='/home/tmp',
+                                            mode='RO',
+                                        ),
+                                    ),
+                                    mesos_address='http://my-mesos-master.com',
+                                    expected_runtime=datetime.timedelta(
+                                        hours=24
+                                    ),
+                                ),
                         }
                     ),
                     queueing=True,
@@ -1411,12 +1317,6 @@ class ValidateJobsTestCase(TestCase):
                         name='cleanup',
                         node=None,
                         executor='ssh',
-                        cluster=None,
-                        pool=None,
-                        cpus=None,
-                        mem=None,
-                        service=None,
-                        deploy_group=None,
                         expected_runtime=datetime.timedelta(1),
                     ),
                     enabled=True,
@@ -1431,12 +1331,44 @@ class ValidateJobsTestCase(TestCase):
         context = config_utils.ConfigContext(
             'config',
             ['node0'],
-            ['unused-cluster'],
             None,
             MASTER_NAMESPACE,
         )
         config_parse.validate_jobs(config, context)
         assert_equal(expected_jobs, config['jobs'])
+
+
+class ValidMesosActionTestCase(TestCase):
+    def test_missing_docker_image(self):
+        config = dict(
+            name='test_missing',
+            command='echo hello',
+            executor=schema.ExecutorTypes.mesos,
+            cpus=0.2,
+            mem=150,
+            mesos_address='http://hello.org',
+        )
+        assert_raises(
+            ConfigError,
+            config_parse.valid_action,
+            config,
+            NullConfigContext,
+        )
+
+    def test_cleanup_missing_docker_image(self):
+        config = dict(
+            command='echo hello',
+            executor=schema.ExecutorTypes.mesos,
+            cpus=0.2,
+            mem=150,
+            mesos_address='http://hello.org',
+        )
+        assert_raises(
+            ConfigError,
+            config_parse.valid_action,
+            config,
+            NullConfigContext,
+        )
 
 
 class ValidCleanupActionNameTestCase(TestCase):
@@ -1516,7 +1448,6 @@ class BuildFormatStringValidatorTestCase(TestCase):
         context = config_utils.ConfigContext(
             None,
             None,
-            None,
             {'mars': 'ok'},
             None,
         )
@@ -1594,7 +1525,7 @@ class ConfigContainerTestCase(TestCase):
             'test_job3',
             'test_job2',
             'test_job4',
-            'test_job_paasta',
+            'test_job_mesos',
         ]
         assert_equal(set(job_names), set(expected))
 
@@ -1605,7 +1536,7 @@ class ConfigContainerTestCase(TestCase):
             'test_job3',
             'test_job2',
             'test_job4',
-            'test_job_paasta',
+            'test_job_mesos',
         ]
         assert_equal(set(expected), set(self.container.get_jobs().keys()))
 

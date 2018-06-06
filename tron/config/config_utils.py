@@ -197,17 +197,16 @@ class ConfigContext(object):
     """
     partial = False
 
-    def __init__(self, path, nodes, clusters, command_context, namespace):
+    def __init__(self, path, nodes, command_context, namespace):
         self.path = path
         self.nodes = set(nodes or [])
-        self.clusters = set(clusters or [])
         self.command_context = command_context or {}
         self.namespace = namespace
 
     def build_child_context(self, path):
         """Construct a new ConfigContext based on this one."""
         path = '%s.%s' % (self.path, path)
-        args = path, self.nodes, self.clusters, self.command_context, self.namespace
+        args = path, self.nodes, self.command_context, self.namespace
         return ConfigContext(*args)
 
 
@@ -231,7 +230,6 @@ class PartialConfigContext(object):
 class NullConfigContext(object):
     path = ''
     nodes = set()
-    clusters = set()
     command_context = {}
     namespace = MASTER_NAMESPACE
     partial = False

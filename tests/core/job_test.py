@@ -61,7 +61,7 @@ class JobTestCase(TestCase):
 
     @mock.patch('tron.core.job.event', autospec=True)
     def test_from_config(self, _mock_event):
-        action = mock.Mock(
+        action = mock.MagicMock(
             name='first',
             command='doit',
             node=None,
@@ -80,8 +80,6 @@ class JobTestCase(TestCase):
             run_limit=20,
             actions={action.name: action},
             cleanup_action=None,
-            service='foo',
-            deploy_group='test',
         )
         scheduler = 'scheduler_token'
         parent_context = 'parent_context_token'
@@ -101,8 +99,6 @@ class JobTestCase(TestCase):
         )
         assert_equal(new_job.enabled, True)
         assert_equal(new_job.get_monitoring()["team"], "foo")
-        assert_equal(new_job.get_service(), 'foo')
-        assert_equal(new_job.get_deploy_group(), 'test')
         assert new_job.action_graph
 
     def test_update_from_job(self):

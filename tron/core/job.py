@@ -73,8 +73,6 @@ class Job(Observable, Observer):
         'allow_overlap',
         'monitoring',
         'time_zone',
-        'service',
-        'deploy_group',
         'expected_runtime',
     ]
 
@@ -96,8 +94,6 @@ class Job(Observable, Observer):
         action_runner=None,
         max_runtime=None,
         time_zone=None,
-        service=None,
-        deploy_group=None,
         expected_runtime=None
     ):
         super(Job, self).__init__()
@@ -114,8 +110,6 @@ class Job(Observable, Observer):
         self.action_runner = action_runner
         self.max_runtime = max_runtime
         self.time_zone = time_zone
-        self.service = service
-        self.deploy_group = deploy_group
         self.expected_runtime = expected_runtime
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(name)
@@ -156,8 +150,6 @@ class Job(Observable, Observer):
             allow_overlap=job_config.allow_overlap,
             action_runner=action_runner,
             max_runtime=job_config.max_runtime,
-            service=job_config.service,
-            deploy_group=job_config.deploy_group,
             expected_runtime=job_config.expected_runtime,
         )
 
@@ -192,12 +184,6 @@ class Job(Observable, Observer):
 
     def get_time_zone(self):
         return self.time_zone
-
-    def get_service(self):
-        return self.service
-
-    def get_deploy_group(self):
-        return self.deploy_group
 
     def get_runs(self):
         return self.runs
