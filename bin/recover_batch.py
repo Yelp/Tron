@@ -5,6 +5,7 @@ from __future__ import unicode_literals
 import argparse
 import logging
 import sys
+from queue import Queue
 
 import psutil
 import yaml
@@ -34,13 +35,14 @@ def parse_args():
     return parser.parse_args()
 
 
-def notify(ignored, filepath, mask):
+def notify(notify_queue, ignored, filepath, mask):
     with open(filepath.path) as f:
         last_entry = f.readlines()[-1]
         x = yaml.load(last_entry)
         return_code = x.get('return_code')
         if return_code is not None:
             reactor.stop()
+            notify_queue.put(return_code)
 
 
 def get_key_from_last_line(filepath, key):
@@ -67,5 +69,12 @@ if __name__ == "__main__":
         #TODO: should we kill the process here?
         sys.exit(1)
 
-    watcher = StatusFileWatcher(args.filepath, notify)
+    exit_code_queue = Queue()
+    watcher = StatusFileWatcher(
+        args.filepath,
+        lambda *args, **kwargs: notify(exit_code_queue, *args, **kwargs)
+    )
     reactor.run()
+    exit_code = exit_code_queue.get()
+    assert type(exit_code) == int
+    sys.exit(exit_code)
