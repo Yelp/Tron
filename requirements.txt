@@ -12,6 +12,6 @@ pytz>=2011n
 PyYAML>=3.0
 Sphinx-PyPI-upload>=0.2.1
 Sphinx>=1.1.2
-task_processing[mesos_executor]>=0.0.8
+task_processing[mesos_executor]>=0.0.10
 testify>=0.1.12
 Twisted>=17.0.0

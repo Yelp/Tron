@@ -48,7 +48,7 @@ setup(
         'bsddb3',
         'ipython',
         'ipdb',
-        'task_processing[mesos_executor]>=0.0.8',
+        'task_processing[mesos_executor]>=0.0.10',
     ],
     packages=find_packages(exclude=['tests.*', 'tests']) + ['tronweb'],
     scripts=glob.glob('bin/*'),
