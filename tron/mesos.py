@@ -13,6 +13,8 @@ from tron.utils.dicts import get_deep
 from tron.utils.queue import PyDeferredQueue
 
 TASK_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
+TASK_OUTPUT_LOGGER = 'tron.mesos.task_output'
+
 # TODO: put in configs
 MESOS_MASTER_PORT = 5050
 DOCKERCFG_LOCATION = "file:///root/.dockercfg"
@@ -49,7 +51,8 @@ class MesosTask(ActionCommand):
     def __init__(self, id, task_config, serializer=None):
         super(MesosTask, self).__init__(id, task_config.cmd, serializer)
         self.task_config = task_config
-        self.log = self.setup_logger()
+        self.log = self.get_event_logger()
+        self.setup_output_logging()
 
         self.log.info(
             'Mesos task {} created with config {}'.format(
@@ -58,12 +61,23 @@ class MesosTask(ActionCommand):
             ),
         )
 
-    def setup_logger(self):
+    def get_event_logger(self):
         log = logging.getLogger(__name__ + '.' + self.id)
         handler = logging.StreamHandler(self.stderr)
         handler.setFormatter(logging.Formatter(TASK_LOG_FORMAT))
         log.addHandler(handler)
         return log
+
+    def setup_output_logging(self):
+        task_id = self.get_mesos_id()
+        stdout_logger = logging.getLogger(
+            '{}.{}.{}'.format(TASK_OUTPUT_LOGGER, task_id, 'stdout'),
+        )
+        stdout_logger.addHandler(logging.StreamHandler(self.stdout))
+        stderr_logger = logging.getLogger(
+            '{}.{}.{}'.format(TASK_OUTPUT_LOGGER, task_id, 'stderr'),
+        )
+        stderr_logger.addHandler(logging.StreamHandler(self.stderr))
 
     def get_mesos_id(self):
         return self.task_config.task_id
@@ -227,7 +241,26 @@ class MesosCluster:
                 'framework_name': framework_name,
             }
         )
-        return Subscription(executor, queue)
+
+        def log_output(task_id, message, stream):
+            logger = logging.getLogger(
+                '{}.{}.{}'.format(
+                    TASK_OUTPUT_LOGGER,
+                    task_id,
+                    stream,
+                )
+            )
+            logger.info(message)
+
+        logging_executor = self.processor.executor_from_config(
+            provider='logging',
+            provider_config={
+                'downstream_executor': executor,
+                'handler': log_output,
+                'format_string': '{line}',
+            },
+        )
+        return Subscription(logging_executor, queue)
 
     def _process_event(self, event):
         if event.kind == 'control':

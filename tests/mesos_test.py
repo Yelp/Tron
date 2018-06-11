@@ -207,14 +207,22 @@ class MesosClusterTestCase(TestCase):
         assert_equal(cluster.processor, self.mock_processor)
 
         self.mock_get_leader.assert_called_once_with('mesos-cluster-a.me')
-        self.mock_processor.executor_from_config.assert_called_once_with(
-            provider='mesos',
-            provider_config={
-                'secret': MESOS_SECRET,
-                'mesos_address': self.mock_get_leader.return_value,
-                'role': MESOS_ROLE,
-                'framework_name': 'tron-hostname',
-            },
+        self.mock_processor.executor_from_config.assert_has_calls(
+            [
+                mock.call(
+                    provider='mesos',
+                    provider_config={
+                        'secret': MESOS_SECRET,
+                        'mesos_address': self.mock_get_leader.return_value,
+                        'role': MESOS_ROLE,
+                        'framework_name': 'tron-hostname',
+                    },
+                ),
+                mock.call(
+                    provider='logging',
+                    provider_config=mock.ANY,
+                ),
+            ]
         )
         self.mock_runner_cls.assert_called_once_with(
             self.mock_processor.executor_from_config.return_value,
