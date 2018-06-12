@@ -10,8 +10,50 @@ from tron.mesos import DOCKERCFG_LOCATION
 from tron.mesos import MESOS_ROLE
 from tron.mesos import MESOS_SECRET
 from tron.mesos import MesosCluster
+from tron.mesos import MesosClusterRepository
 from tron.mesos import MesosTask
 from tron.mesos import OFFER_TIMEOUT
+
+
+class MesosClusterRepositoryTestCase(TestCase):
+    @setup_teardown
+    def mock_cluster(self):
+        # Ensure different mock is returned each time class is instantiated
+        def init_cluster(*args, **kwargs):
+            return mock.MagicMock(spec_set=MesosCluster)
+
+        with mock.patch(
+            'tron.mesos.MesosCluster',
+            side_effect=init_cluster,
+        ) as self.cluster_cls:
+            yield
+
+    def test_get_cluster_repeated_mesos_address(self):
+        first = MesosClusterRepository.get_cluster('master-a.com')
+        second = MesosClusterRepository.get_cluster('master-a.com')
+        assert_equal(first, second)
+        assert_equal(self.cluster_cls.call_count, 1)
+
+    def test_shutdown(self):
+        clusters = [
+            MesosClusterRepository.get_cluster(address)
+            for address in ['a', 'b', 'c']
+        ]
+        assert_equal(self.cluster_cls.call_count, 3)
+        MesosClusterRepository.shutdown()
+        for cluster in clusters:
+            assert_equal(cluster.stop.call_count, 1)
+
+    def test_configure(self):
+        clusters = [
+            MesosClusterRepository.get_cluster(address)
+            for address in ['d', 'e']
+        ]
+        MesosClusterRepository.configure(mesos_enabled=False)
+        for cluster in clusters:
+            cluster.set_enabled.assert_called_once_with(False)
+        new_cluster = MesosClusterRepository.get_cluster('f')
+        self.cluster_cls.assert_called_with('f', False)
 
 
 def mock_task_event(

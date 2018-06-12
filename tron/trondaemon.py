@@ -20,7 +20,7 @@ from twisted.internet.main import installReactor
 from twisted.python import log as twisted_log
 
 import tron
-from tron.mesos import shutdown_frameworks
+from tron.mesos import MesosClusterRepository
 from tron.utils import flockfile
 
 if platform.system() == 'Linux':
@@ -221,7 +221,7 @@ class TronDaemon(object):
         log.info("Shutdown requested: sig %s" % sig_num)
         if self.mcp:
             self.mcp.shutdown()
-        shutdown_frameworks()
+        MesosClusterRepository.shutdown()
         self.reactor.stop()
         self.context.terminate(sig_num, stack_frame)
 

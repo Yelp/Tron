@@ -912,8 +912,8 @@ class MesosActionRunTestCase(TestCase):
         )
 
     @mock.patch('tron.core.actionrun.filehandler', autospec=True)
-    @mock.patch('tron.core.actionrun.get_mesos_cluster', autospec=True)
-    def test_submit_command(self, mock_get_cluster, mock_filehandler):
+    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
+    def test_submit_command(self, mock_cluster_repo, mock_filehandler):
         serializer = mock_filehandler.OutputStreamSerializer.return_value
         with mock.patch.object(
             self.action_run,
@@ -922,6 +922,7 @@ class MesosActionRunTestCase(TestCase):
         ) as mock_watch:
             self.action_run.submit_command()
 
+            mock_get_cluster = mock_cluster_repo.get_cluster
             mock_get_cluster.assert_called_once_with(self.mesos_address)
             mock_get_cluster.return_value.create_task.assert_called_once_with(
                 action_run_id=self.action_run.id,
