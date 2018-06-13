@@ -26,6 +26,7 @@ from tron.utils import flockfile
 log = logging.getLogger(__name__)
 reactor.suggestThreadPoolSize(8)
 
+
 class PIDFile(object):
     """Create and check for a PID file for the daemon."""
 
