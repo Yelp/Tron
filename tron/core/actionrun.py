@@ -16,7 +16,7 @@ from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.config.schema import ExecutorTypes
 from tron.core import action
-from tron.mesos import get_mesos_cluster
+from tron.mesos import MesosClusterRepository
 from tron.serialize import filehandler
 from tron.utils import iteration
 from tron.utils import maybe_decode
@@ -588,7 +588,7 @@ class MesosActionRun(ActionRun, Observer):
 
     def submit_command(self):
         serializer = filehandler.OutputStreamSerializer(self.output_path)
-        mesos_cluster = get_mesos_cluster(self.mesos_address)
+        mesos_cluster = MesosClusterRepository.get_cluster(self.mesos_address)
         task = mesos_cluster.create_task(
             action_run_id=self.id,
             command=self.command,
