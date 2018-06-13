@@ -16,20 +16,15 @@ import lockfile
 import pkg_resources
 import six
 from twisted.internet import defer
-from twisted.internet.main import installReactor
+from twisted.internet import reactor
 from twisted.python import log as twisted_log
 
 import tron
 from tron.mesos import shutdown_frameworks
 from tron.utils import flockfile
 
-if platform.system() == 'Linux':
-    from twisted.internet.epollreactor import EPollReactor as Reactor
-else:
-    from twisted.internet.selectreactor import SelectReactor as Reactor
-
 log = logging.getLogger(__name__)
-
+reactor.suggestThreadPoolSize(8)
 
 class PIDFile(object):
     """Create and check for a PID file for the daemon."""
@@ -164,7 +159,6 @@ class TronDaemon(object):
         nodaemon = self.options.nodaemon
         context_class = NoDaemonContext if nodaemon else daemon.DaemonContext
         self.context = self._build_context(options, context_class)
-        self.reactor = Reactor()
 
     def _build_context(self, options, context_class):
         signal_map = {
@@ -183,21 +177,17 @@ class TronDaemon(object):
 
     def run(self):
         with self.context:
-            self.setup_reactor()
             setup_logging(self.options)
             self._run_mcp()
             self._run_www_api()
             self._run_reactor()
-
-    def setup_reactor(self):
-        installReactor(self.reactor)
 
     def _run_www_api(self):
         # Local import required because of reactor import in server and www
         from tron.api import resource
         site = resource.TronSite.create(self.mcp, self.options.web_path)
         port = self.options.listen_port
-        self.reactor.listenTCP(port, site, interface=self.options.listen_host)
+        reactor.listenTCP(port, site, interface=self.options.listen_host)
 
     def _run_mcp(self):
         # Local import required because of reactor import in mcp
@@ -215,14 +205,14 @@ class TronDaemon(object):
 
     def _run_reactor(self):
         """Run the twisted reactor."""
-        self.reactor.run()
+        reactor.run()
 
     def _handle_shutdown(self, sig_num, stack_frame):
         log.info("Shutdown requested: sig %s" % sig_num)
         if self.mcp:
             self.mcp.shutdown()
         shutdown_frameworks()
-        self.reactor.stop()
+        reactor.stop()
         self.context.terminate(sig_num, stack_frame)
 
     def _handle_graceful_shutdown(self, sig_num, stack_frame):
@@ -240,8 +230,8 @@ class TronDaemon(object):
             return
 
         log.info("Waiting for jobs to shutdown.")
-        self.reactor.callLater(self.WAIT_SECONDS, self._wait_for_jobs)
+        reactor.callLater(self.WAIT_SECONDS, self._wait_for_jobs)
 
     def _handle_reconfigure(self, _signal_number, _stack_frame):
         log.info("Reconfigure requested by SIGHUP.")
-        self.reactor.callLater(0, self.mcp.reconfigure)
+        reactor.callLater(0, self.mcp.reconfigure)

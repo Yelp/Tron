@@ -18,6 +18,7 @@ except ImportError:
     import json
 
 from twisted.web import http, resource, static, server
+from twisted.internet import reactor, threads
 
 from tron import event
 from tron.api import adapter, controller
@@ -84,7 +85,22 @@ def resource_from_collection(collection, name, child_resource):
     return child_resource(item)
 
 
-class ActionRunResource(resource.Resource):
+class AsyncResource(resource.Resource):
+    def async_GET(self, _):
+        raise NotImplemented
+
+    def _async_render(self, result, request):
+        request.write(result)
+        request.finish()
+
+    def render_GET(self, request):
+        d = threads.deferToThread(self.async_GET, request)
+        d.addCallback(self._async_render, request)
+        d.addErrback(lambda f: f)
+        return server.NOT_DONE_YET
+
+
+class ActionRunResource(AsyncResource):
 
     isLeaf = True
 
@@ -94,7 +110,7 @@ class ActionRunResource(resource.Resource):
         self.job_run = job_run
         self.controller = controller.ActionRunController(action_run, job_run)
 
-    def render_GET(self, request):
+    def async_GET(self, request):
         run_adapter = adapter.ActionRunAdapter(
             self.action_run,
             self.job_run,
@@ -108,7 +124,7 @@ class ActionRunResource(resource.Resource):
         return handle_command(request, self.controller, self.action_run)
 
 
-class JobRunResource(resource.Resource):
+class JobRunResource(AsyncResource):
     def __init__(self, job_run, job_scheduler):
         resource.Resource.__init__(self)
         self.job_run = job_run
@@ -129,7 +145,7 @@ class JobRunResource(resource.Resource):
         msg = "Cannot find action %s for %s"
         return resource.NoResource(msg % (action_name, self.job_run))
 
-    def render_GET(self, request):
+    def async_GET(self, request):
         include_runs = requestargs.get_bool(request, 'include_action_runs')
         include_graph = requestargs.get_bool(request, 'include_action_graph')
         run_adapter = adapter.JobRunAdapter(
@@ -147,7 +163,7 @@ def is_negative_int(string):
     return string.startswith('-') and string[1:].isdigit()
 
 
-class JobResource(resource.Resource):
+class JobResource(AsyncResource):
     def __init__(self, job_scheduler):
         resource.Resource.__init__(self)
         self.job_scheduler = job_scheduler
@@ -182,7 +198,7 @@ class JobResource(resource.Resource):
         msg = "Cannot find job run %s for %s"
         return resource.NoResource(msg % (run_id, job))
 
-    def render_GET(self, request):
+    def async_GET(self, request):
         include_action_runs = requestargs.get_bool(
             request,
             'include_action_runs',
@@ -208,7 +224,7 @@ class JobResource(resource.Resource):
         )
 
 
-class ActionRunHistoryResource(resource.Resource):
+class ActionRunHistoryResource(AsyncResource):
 
     isLeaf = True
 
@@ -216,14 +232,14 @@ class ActionRunHistoryResource(resource.Resource):
         resource.Resource.__init__(self)
         self.action_runs = action_runs
 
-    def render_GET(self, request):
+    def async_GET(self, request):
         return respond(
             request,
             adapter.adapt_many(adapter.ActionRunAdapter, self.action_runs),
         )
 
 
-class JobCollectionResource(resource.Resource):
+class JobCollectionResource(AsyncResource):
     def __init__(self, job_collection):
         self.job_collection = job_collection
         self.controller = controller.JobCollectionController(job_collection)
@@ -260,7 +276,7 @@ class JobCollectionResource(resource.Resource):
         )
         return {job['name']: job['actions'] for job in jobs}
 
-    def render_GET(self, request):
+    def async_GET(self, request):
         include_job_runs = requestargs.get_bool(
             request,
             'include_job_runs',
@@ -295,7 +311,7 @@ class JobCollectionResource(resource.Resource):
         return handle_command(request, self.controller, self.job_collection)
 
 
-class ConfigResource(resource.Resource):
+class ConfigResource(AsyncResource):
     """Resource for configuration changes"""
 
     isLeaf = True
@@ -307,7 +323,7 @@ class ConfigResource(resource.Resource):
     def get_config_index(self):
         return self.controller.get_namespaces()
 
-    def render_GET(self, request):
+    def async_GET(self, request):
         config_name = requestargs.get_string(request, 'name')
         no_header = requestargs.get_bool(request, 'no_header')
         if not config_name:
@@ -355,7 +371,7 @@ class ConfigResource(resource.Resource):
         return respond(request, response)
 
 
-class StatusResource(resource.Resource):
+class StatusResource(AsyncResource):
 
     isLeaf = True
 
@@ -363,11 +379,11 @@ class StatusResource(resource.Resource):
         self._master_control = master_control
         resource.Resource.__init__(self)
 
-    def render_GET(self, request):
+    def async_GET(self, request):
         return respond(request, {'status': "I'm alive."})
 
 
-class EventResource(resource.Resource):
+class EventResource(AsyncResource):
 
     isLeaf = True
 
@@ -375,7 +391,7 @@ class EventResource(resource.Resource):
         resource.Resource.__init__(self)
         self.entity_name = entity_name
 
-    def render_GET(self, request):
+    def async_GET(self, request):
         recorder = event.get_recorder(self.entity_name)
         response_data = adapter.adapt_many(
             adapter.EventAdapter,
@@ -384,7 +400,7 @@ class EventResource(resource.Resource):
         return respond(request, dict(data=response_data))
 
 
-class ApiRootResource(resource.Resource):
+class ApiRootResource(AsyncResource):
     def __init__(self, mcp):
         self._master_control = mcp
         resource.Resource.__init__(self)
@@ -400,7 +416,7 @@ class ApiRootResource(resource.Resource):
         self.putChild(b'events', EventResource(''))
         self.putChild(b'', self)
 
-    def render_GET(self, request):
+    def async_GET(self, request):
         """Return an index of urls for resources."""
         response = {
             'jobs': self.children[b'jobs'].get_job_index(),
@@ -409,7 +425,7 @@ class ApiRootResource(resource.Resource):
         return respond(request, response)
 
 
-class RootResource(resource.Resource):
+class RootResource(AsyncResource):
     def __init__(self, mcp, web_path):
         resource.Resource.__init__(self)
         self.web_path = web_path
@@ -418,7 +434,7 @@ class RootResource(resource.Resource):
         self.putChild(b'web', static.File(web_path))
         self.putChild(b'', self)
 
-    def render_GET(self, request):
+    def async_GET(self, request):
         request.redirect(request.prePathURL() + b'web')
         request.finish()
         return server.NOT_DONE_YET
