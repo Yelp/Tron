@@ -1,5 +1,7 @@
 import threading
 
+from twisted.internet import threads
+
 
 class AsyncResource():
     capacity = 10
