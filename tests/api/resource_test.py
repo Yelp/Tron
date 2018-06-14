@@ -4,8 +4,6 @@ Test cases for the web services interface to tron
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-from functools import wraps
-
 import mock
 import six
 import twisted.web.http
