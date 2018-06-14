@@ -24,7 +24,6 @@ from tron.mesos import shutdown_frameworks
 from tron.utils import flockfile
 
 log = logging.getLogger(__name__)
-reactor.suggestThreadPoolSize(8)
 
 
 class PIDFile(object):
