@@ -20,7 +20,7 @@ from twisted.internet import reactor
 from twisted.python import log as twisted_log
 
 import tron
-from tron.mesos import shutdown_frameworks
+from tron.mesos import MesosClusterRepository
 from tron.utils import flockfile
 
 log = logging.getLogger(__name__)
@@ -211,7 +211,7 @@ class TronDaemon(object):
         log.info("Shutdown requested: sig %s" % sig_num)
         if self.mcp:
             self.mcp.shutdown()
-        shutdown_frameworks()
+        MesosClusterRepository.shutdown()
         reactor.stop()
         self.context.terminate(sig_num, stack_frame)
 

@@ -23,7 +23,6 @@ MESOS_ROLE = '*'
 OFFER_TIMEOUT = 300
 
 log = logging.getLogger(__name__)
-frameworks = {}  # TODO: improve
 
 
 def get_mesos_leader(master_address):
@@ -32,17 +31,30 @@ def get_mesos_leader(master_address):
     return '{}:{}'.format(urlparse(response.url).hostname, MESOS_MASTER_PORT)
 
 
-def get_mesos_cluster(master_address):
-    global frameworks
-    if master_address not in frameworks:
-        frameworks[master_address] = MesosCluster(master_address)
-    return frameworks[master_address]
+class MesosClusterRepository:
+    """A class that stores MesosCluster objects and configuration."""
 
+    clusters = {}
+    mesos_enabled = False
 
-def shutdown_frameworks():
-    global frameworks
-    for name, framework in frameworks.items():
-        framework.stop()
+    @classmethod
+    def get_cluster(cls, master_address):
+        if master_address not in cls.clusters:
+            cls.clusters[master_address] = MesosCluster(
+                master_address, cls.mesos_enabled
+            )
+        return cls.clusters[master_address]
+
+    @classmethod
+    def shutdown(cls):
+        for cluster in cls.clusters.values():
+            cluster.stop()
+
+    @classmethod
+    def configure(cls, mesos_enabled):
+        cls.mesos_enabled = mesos_enabled
+        for cluster in cls.clusters.values():
+            cluster.set_enabled(mesos_enabled)
 
 
 class MesosTask(ActionCommand):
@@ -152,8 +164,9 @@ class MesosTask(ActionCommand):
 
 
 class MesosCluster:
-    def __init__(self, mesos_address):
+    def __init__(self, mesos_address, enabled=True):
         self.mesos_address = mesos_address
+        self.enabled = enabled
         self.processor = TaskProcessor()
         self.queue = PyDeferredQueue()
         self.deferred = None
@@ -164,6 +177,9 @@ class MesosCluster:
             provider_module='task_processing.plugins.mesos'
         )
         self.connect()
+
+    def set_enabled(self, is_enabled):
+        self.enabled = is_enabled
 
     # TODO: Should this be done asynchronously?
     # TODO: Handle/retry errors
