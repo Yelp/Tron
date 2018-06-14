@@ -436,7 +436,6 @@ class RootResource(resource.Resource):
         self.putChild(b'web', static.File(web_path))
         self.putChild(b'', self)
 
-    @AsyncResource.bounded
     def render_GET(self, request):
         request.redirect(request.prePathURL() + b'web')
         request.finish()

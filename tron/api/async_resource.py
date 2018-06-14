@@ -1,6 +1,7 @@
 import threading
 
 from twisted.internet import threads
+from twisted.web import server
 
 
 class AsyncResource():
