@@ -4,6 +4,8 @@ Test cases for the web services interface to tron
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+from functools import wraps
+
 import mock
 import six
 import twisted.web.http
@@ -26,7 +28,14 @@ from tron import event
 from tron import mcp
 from tron import node
 from tron.api import controller
-from tron.api import resource as www
+with mock.patch(
+    'tron.api.async_resource.AsyncResource.bounded', lambda fn: fn
+):
+    with mock.patch(
+        'tron.api.async_resource.AsyncResource.exclusive', lambda fn: fn
+    ):
+        from tron.api import resource as www
+
 from tron.core import job
 from tron.core import jobrun
 
