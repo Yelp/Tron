@@ -18,6 +18,7 @@ from tron import actioncommand
 from tron import node
 from tron import ssh
 from tron.config import schema
+from tron.config.ssh_options import SSHOptions
 from tron.core import actionrun
 from tron.serialize import filehandler
 
@@ -148,7 +149,7 @@ def build_node(
 ):
     config = mock.Mock(hostname=hostname, username=username, name=name)
     ssh_opts = mock.create_autospec(ssh.SSHAuthOptions)
-    node_settings = mock.create_autospec(schema.ConfigSSHOptions)
+    node_settings = SSHOptions()
     return node.Node(config, ssh_opts, pub_key, node_settings)
 
 

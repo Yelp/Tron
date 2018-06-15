@@ -33,12 +33,12 @@ from tron.config.config_utils import valid_string
 from tron.config.config_utils import Validator
 from tron.config.schedule_parse import valid_schedule
 from tron.config.schema import ConfigJob
-from tron.config.schema import ConfigSSHOptions
 from tron.config.schema import ConfigState
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.schema import NamedTronConfig
 from tron.config.schema import NotificationOptions
 from tron.config.schema import TronConfig
+from tron.config.ssh_options import SSHOptions
 from tron.core.action import Action
 from tron.core.action import ActionMap
 from tron.utils.dicts import FrozenDict
@@ -144,58 +144,6 @@ def valid_node_name(value, config_context):
     return value
 
 
-class ValidateSSHOptions(Validator):
-    """Validate SSH options."""
-    config_class = ConfigSSHOptions
-    optional = True
-    defaults = {
-        'agent': False,
-        'identities': (),
-        'known_hosts_file': None,
-        'connect_timeout': 30,
-        'idle_connection_timeout': 3600,
-        'jitter_min_load': 4,
-        'jitter_max_delay': 20,
-        'jitter_load_factor': 1,
-    }
-
-    validators = {
-        'agent':
-            valid_bool,
-        # TODO: move this config and validations outside master namespace
-        # 'identities':               build_list_of_type_validator(
-        #                                 valid_identity_file, allow_empty=True),
-        'identities':
-            build_list_of_type_validator(
-                valid_string,
-                allow_empty=True,
-            ),
-        # 'known_hosts_file':         valid_known_hosts_file,
-        'known_hosts_file':
-            valid_string,
-        'connect_timeout':
-            config_utils.valid_int,
-        'idle_connection_timeout':
-            config_utils.valid_int,
-        'jitter_min_load':
-            config_utils.valid_int,
-        'jitter_max_delay':
-            config_utils.valid_int,
-        'jitter_load_factor':
-            config_utils.valid_int,
-    }
-
-    def post_validation(self, valid_input, config_context):
-        if config_context.partial:
-            return
-
-        if valid_input['agent'] and 'SSH_AUTH_SOCK' not in os.environ:
-            raise ConfigError("No SSH Agent available ($SSH_AUTH_SOCK)")
-
-
-valid_ssh_options = ValidateSSHOptions()
-
-
 class ValidateNotificationOptions(Validator):
     """Validate notification options."""
     config_class = NotificationOptions
@@ -255,13 +203,6 @@ action_context = command_context.build_filled_context(
     command_context.JobRunContext,
     command_context.ActionRunContext,
 )
-
-
-def valid_cleanup_action_name(value, config_context):
-    if value != CLEANUP_ACTION_NAME:
-        msg = "Cleanup actions cannot have custom names %s.%s"
-        raise ConfigError(msg % (config_context.path, value))
-    return CLEANUP_ACTION_NAME
 
 
 class ValidateJob(Validator):
@@ -435,7 +376,7 @@ class ValidateConfig(Validator):
         'action_runner': {},
         'output_stream_dir': None,
         'command_context': {},
-        'ssh_options': ValidateSSHOptions.defaults,
+        'ssh_options': SSHOptions(),
         'notification_options': None,
         'time_zone': None,
         'state_persistence': DEFAULT_STATE_PERSISTENCE,
@@ -451,7 +392,7 @@ class ValidateConfig(Validator):
         'action_runner': ValidateActionRunner(),
         'output_stream_dir': valid_output_stream_dir,
         'command_context': valid_command_context,
-        'ssh_options': valid_ssh_options,
+        'ssh_options': SSHOptions.from_config,
         'notification_options': valid_notification_options,
         'time_zone': valid_time_zone,
         'state_persistence': valid_state_persistence,

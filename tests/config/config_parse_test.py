@@ -35,6 +35,7 @@ from tron.config.schedule_parse import ConfigConstantScheduler
 from tron.config.schedule_parse import ConfigIntervalScheduler
 from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import MASTER_NAMESPACE
+from tron.config.ssh_options import SSHOptions
 from tron.core.action import Action
 from tron.core.action import ActionMap
 from tron.core.action import VolumeModes
@@ -190,9 +191,9 @@ jobs:
                     'batch_dir': '/tron/batch/test/foo',
                 }
             ),
-            ssh_options=schema.ConfigSSHOptions(
+            ssh_options=SSHOptions(
                 agent=False,
-                identities=('tests/test_id_rsa', ),
+                identities=['tests/test_id_rsa'],
                 known_hosts_file=None,
                 connect_timeout=30,
                 idle_connection_timeout=3600,
@@ -1504,33 +1505,6 @@ class ConfigContainerTestCase(TestCase):
         node_names = self.container.get_node_names()
         expected = {'node0', 'node1', 'NodePool'}
         assert_equal(node_names, expected)
-
-
-class ValidateSSHOptionsTestCase(TestCase):
-    @setup
-    def setup_context(self):
-        self.context = config_utils.NullConfigContext
-        self.config = {'agent': True, 'identities': []}
-
-    @mock.patch.dict('tron.config.config_parse.os.environ')
-    def test_post_validation_failed(self):
-        if 'SSH_AUTH_SOCK' in os.environ:
-            del os.environ['SSH_AUTH_SOCK']
-        assert_raises(
-            ConfigError,
-            config_parse.valid_ssh_options.validate,
-            self.config,
-            self.context,
-        )
-
-    @mock.patch.dict('tron.config.config_parse.os.environ')
-    def test_post_validation_success(self):
-        os.environ['SSH_AUTH_SOCK'] = 'something'
-        config = config_parse.valid_ssh_options.validate(
-            self.config,
-            self.context,
-        )
-        assert_equal(config.agent, True)
 
 
 class ValidateIdentityFileTestCase(TestCase):

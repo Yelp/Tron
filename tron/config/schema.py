@@ -43,7 +43,7 @@ TronConfig = config_object_factory(
         'action_runner',  # ConfigActionRunner
         'state_persistence',  # ConfigState
         'command_context',  # FrozenDict of str
-        'ssh_options',  # ConfigSSHOptions
+        'ssh_options',  # SSHOptions
         'notification_options',  # NotificationOptions or None
         'time_zone',  # pytz time zone
         'nodes',  # FrozenDict of ConfigNode
@@ -70,20 +70,6 @@ NotificationOptions = config_object_factory(
 ConfigActionRunner = config_object_factory(
     'ConfigActionRunner',
     optional=['runner_type', 'remote_status_path', 'remote_exec_path'],
-)
-
-ConfigSSHOptions = config_object_factory(
-    name='ConfigSSHOptions',
-    optional=[
-        'agent',
-        'identities',
-        'known_hosts_file',
-        'connect_timeout',
-        'idle_connection_timeout',
-        'jitter_min_load',
-        'jitter_max_delay',
-        'jitter_load_factor',
-    ],
 )
 
 ConfigNode = config_object_factory(
