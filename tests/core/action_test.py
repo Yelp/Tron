@@ -73,13 +73,11 @@ class TestAction(TestCase):
         assert_equal(new_action.env, config.env)
         assert_equal(
             new_action.extra_volumes,
-            [
-                {
-                    'container_path': '/nail/tmp',
-                    'host_path': '/tmp',
-                    'mode': 'RO'
-                }
-            ],
+            [{
+                'container_path': '/nail/tmp',
+                'host_path': '/tmp',
+                'mode': 'RO'
+            }],
         )
         assert_equal(new_action.mesos_address, config.mesos_address)
 

@@ -720,8 +720,8 @@ class ActionRunCollection(object):
 
         def startable(action_run):
             return (
-                action_run.check_state('start')
-                and not self._is_run_blocked(action_run)
+                action_run.check_state('start') and
+                not self._is_run_blocked(action_run)
             )
 
         return self._get_runs_using(startable)

@@ -90,11 +90,10 @@ class ActionRunFactoryTestCase(TestCase):
             'end_time': None,
             'command': 'do cleanup',
             'node_name': 'anode',
-            'action_runner':
-                {
-                    'status_path': '/tmp/foo',
-                    'exec_path': '/bin/foo'
-                }
+            'action_runner': {
+                'status_path': '/tmp/foo',
+                'exec_path': '/bin/foo'
+            }
         }
         collection = ActionRunFactory.action_run_collection_from_state(
             self.job_run,

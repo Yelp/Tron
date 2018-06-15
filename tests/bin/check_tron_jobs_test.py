@@ -48,13 +48,12 @@ class CheckJobsTestCase(TestCase):
     def test_get_relevant_action_picks_the_one_that_failed(self):
         action_runs = [
             {
-                'node':
-                    {
-                        'username': 'batch',
-                        'hostname': 'localhost',
-                        'name': 'localhost',
-                        'port': 22,
-                    },
+                'node': {
+                    'username': 'batch',
+                    'hostname': 'localhost',
+                    'name': 'localhost',
+                    'port': 22,
+                },
                 'raw_command': '/bin/false',
                 'requirements': [],
                 'run_num': '582',
@@ -71,13 +70,12 @@ class CheckJobsTestCase(TestCase):
                 'job_name': 'MASTER.kwatest',
             },
             {
-                'node':
-                    {
-                        'username': 'batch',
-                        'hostname': 'localhost',
-                        'name': 'localhost',
-                        'port': 22,
-                    },
+                'node': {
+                    'username': 'batch',
+                    'hostname': 'localhost',
+                    'name': 'localhost',
+                    'port': 22,
+                },
                 'raw_command': '/bin/true',
                 'requirements': [],
                 'run_num': '582',
@@ -268,42 +266,41 @@ class CheckJobsTestCase(TestCase):
                 'running',
             'next_run':
                 None,
-            'runs':
-                [
-                    {
-                        'id':
-                            'MASTER.test.3',
-                        'state':
-                            'scheduled',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() + 600),
-                            ),
-                    },
-                    {
-                        'id':
-                            'MASTER.test.2',
-                        'state':
-                            'running',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 600),
-                            ),
-                    },
-                    {
-                        'id':
-                            'MASTER.test.1',
-                        'state':
-                            'succeeded',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 1800),
-                            ),
-                    },
-                ],
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.3',
+                    'state':
+                        'scheduled',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() + 600),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'running',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'succeeded',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1800),
+                        ),
+                },
+            ],
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.1')
@@ -315,42 +312,41 @@ class CheckJobsTestCase(TestCase):
                 'running',
             'next_run':
                 None,
-            'runs':
-                [
-                    {
-                        'id':
-                            'MASTER.test.3',
-                        'state':
-                            'scheduled',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() + 600),
-                            ),
-                    },
-                    {
-                        'id':
-                            'MASTER.test.2',
-                        'state':
-                            'running',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 600),
-                            ),
-                    },
-                    {
-                        'id':
-                            'MASTER.test.1',
-                        'state':
-                            'failed',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 1800),
-                            ),
-                    },
-                ],
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.3',
+                    'state':
+                        'scheduled',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() + 600),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'running',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'failed',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1800),
+                        ),
+                },
+            ],
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.1')
@@ -362,53 +358,51 @@ class CheckJobsTestCase(TestCase):
                 'running',
             'next_run':
                 None,
-            'runs':
-                [
-                    {
-                        'id':
-                            'MASTER.test.3',
-                        'state':
-                            'scheduled',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() + 600),
-                            ),
-                    },
-                    {
-                        'id':
-                            'MASTER.test.2',
-                        'state':
-                            'running',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 600),
-                            ),
-                        'runs':
-                            [
-                                {
-                                    'id': 'MASTER.test.2.action2',
-                                    'state': 'running',
-                                },
-                                {
-                                    'id': 'MASTER.test.1.action1',
-                                    'state': 'failed',
-                                },
-                            ],
-                    },
-                    {
-                        'id':
-                            'MASTER.test.1',
-                        'state':
-                            'succeeded',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 1800),
-                            ),
-                    },
-                ],
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.3',
+                    'state':
+                        'scheduled',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() + 600),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'running',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                    'runs': [
+                        {
+                            'id': 'MASTER.test.2.action2',
+                            'state': 'running',
+                        },
+                        {
+                            'id': 'MASTER.test.1.action1',
+                            'state': 'failed',
+                        },
+                    ],  # noqa: E122
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'succeeded',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1800),
+                        ),
+                },
+            ],
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.2')
@@ -420,53 +414,51 @@ class CheckJobsTestCase(TestCase):
                 'running',
             'next_run':
                 None,
-            'runs':
-                [
-                    {
-                        'id':
-                            'MASTER.test.3',
-                        'state':
-                            'scheduled',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() + 600),
-                            ),
-                    },
-                    {
-                        'id':
-                            'MASTER.test.2',
-                        'state':
-                            'running',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 600),
-                            ),
-                        'runs':
-                            [
-                                {
-                                    'id': 'MASTER.test.2.action2',
-                                    'state': 'running',
-                                },
-                                {
-                                    'id': 'MASTER.test.1.action1',
-                                    'state': 'unknown',
-                                },
-                            ],
-                    },
-                    {
-                        'id':
-                            'MASTER.test.1',
-                        'state':
-                            'succeeded',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 1800),
-                            ),
-                    },
-                ],
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.3',
+                    'state':
+                        'scheduled',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() + 600),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'running',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                    'runs': [
+                        {
+                            'id': 'MASTER.test.2.action2',
+                            'state': 'running',
+                        },
+                        {
+                            'id': 'MASTER.test.1.action1',
+                            'state': 'unknown',
+                        },
+                    ],  # noqa: E122
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'succeeded',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1800),
+                        ),
+                },
+            ],
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.2')
@@ -478,53 +470,51 @@ class CheckJobsTestCase(TestCase):
                 'running',
             'next_run':
                 None,
-            'runs':
-                [
-                    {
-                        'id':
-                            'MASTER.test.3',
-                        'state':
-                            'scheduled',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() + 600),
-                            ),
-                    },
-                    {
-                        'id':
-                            'MASTER.test.2',
-                        'state':
-                            'running',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 600),
-                            ),
-                        'runs':
-                            [
-                                {
-                                    'id': 'MASTER.test.2.action2',
-                                    'state': 'running',
-                                },
-                                {
-                                    'id': 'MASTER.test.1.action1',
-                                    'state': 'succeeded',
-                                },
-                            ],
-                    },
-                    {
-                        'id':
-                            'MASTER.test.1',
-                        'state':
-                            'succeeded',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 1800),
-                            ),
-                    },
-                ],
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.3',
+                    'state':
+                        'scheduled',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() + 600),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'running',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                    'runs': [
+                        {
+                            'id': 'MASTER.test.2.action2',
+                            'state': 'running',
+                        },
+                        {
+                            'id': 'MASTER.test.1.action1',
+                            'state': 'succeeded',
+                        },
+                    ],  # noqa: E122
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'succeeded',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1800),
+                        ),
+                },
+            ],
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.1')
@@ -546,31 +536,30 @@ class CheckJobsTestCase(TestCase):
                 'running',
             'next_run':
                 None,
-            'runs':
-                [
-                    {
-                        'id':
-                            'MASTER.test.2',
-                        'state':
-                            'queued',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 600),
-                            ),
-                    },
-                    {
-                        'id':
-                            'MASTER.test.1',
-                        'state':
-                            'running',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 1200),
-                            ),
-                    },
-                ],
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'queued',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'running',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1200),
+                        ),
+                },
+            ],
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.1')
@@ -584,42 +573,41 @@ class CheckJobsTestCase(TestCase):
                 None,
             'expected_runtime':
                 480.0,
-            'runs':
-                [
-                    {
-                        'id':
-                            'MASTER.test.100',
-                        'state':
-                            'scheduled',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() + 600),
-                            ),
-                        'start_time':
-                            None,
-                        'duration':
-                            '',
-                    },
-                    {
-                        'id':
-                            'MASTER.test.99',
-                        'state':
-                            'running',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 600),
-                            ),
-                        'start_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 600),
-                            ),
-                        'duration':
-                            '0:10:01.883601',
-                    },
-                ],
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.100',
+                    'state':
+                        'scheduled',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() + 600),
+                        ),
+                    'start_time':
+                        None,
+                    'duration':
+                        '',
+                },
+                {
+                    'id':
+                        'MASTER.test.99',
+                    'state':
+                        'running',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                    'start_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                    'duration':
+                        '0:10:01.883601',
+                },
+            ],
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.99')
@@ -635,81 +623,57 @@ class CheckJobsTestCase(TestCase):
                 'action1': 720.0,
                 'action2': 480.0
             },
-            'runs':
-                [
-                    {
-                        'id':
-                            'MASTER.test.3',
-                        'state':
-                            'scheduled',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() + 600),
-                            ),
-                        'duration':
-                            '',
-                    },
-                    {
-                        'id':
-                            'MASTER.test.2',
-                        'state':
-                            'running',
-                        'run_time':
-                            time.strftime(
+            'runs': [
+                dict(
+                    id='MASTER.test.3',
+                    state='scheduled',
+                    run_time=time.strftime(
+                        '%Y-%m-%d %H:%M:%S',
+                        time.localtime(time.time() + 600),
+                    ),
+                    duration='',
+                ),
+                dict(
+                    id='MASTER.test.2',
+                    state='running',
+                    run_time=time.strftime(
+                        '%Y-%m-%d %H:%M:%S',
+                        time.localtime(time.time() - 600),
+                    ),
+                    duration='0:10:01.883601',
+                    runs=[
+                        dict(
+                            id='MASTER.test.2.action2',
+                            state='running',
+                            action_name='action2',
+                            start_time=time.strftime(
                                 '%Y-%m-%d %H:%M:%S',
                                 time.localtime(time.time() - 600),
                             ),
-                        'duration':
-                            '0:10:01.883601',
-                        'runs':
-                            [
-                                {
-                                    'id':
-                                        'MASTER.test.2.action2',
-                                    'state':
-                                        'running',
-                                    'action_name':
-                                        'action2',
-                                    'start_time':
-                                        time.strftime(
-                                            '%Y-%m-%d %H:%M:%S',
-                                            time.localtime(time.time() - 600),
-                                        ),
-                                    'duration':
-                                        '0:10:01.883601',
-                                },
-                                {
-                                    'id':
-                                        'MASTER.test.1.action1',
-                                    'state':
-                                        'running',
-                                    'action_name':
-                                        'action1',
-                                    'start_time':
-                                        time.strftime(
-                                            '%Y-%m-%d %H:%M:%S',
-                                            time.localtime(time.time() - 600),
-                                        ),
-                                    'duration':
-                                        '0:10:01.885401',
-                                },
-                            ],
-                    },
-                    {
-                        'id':
-                            'MASTER.test.1',
-                        'state':
-                            'succeeded',
-                        'run_time':
-                            time.strftime(
+                            duration='0:10:01.883601',
+                        ),
+                        dict(
+                            id='MASTER.test.1.action1',
+                            state='running',
+                            action_name='action1',
+                            start_time=time.strftime(
                                 '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 1800),
+                                time.localtime(time.time() - 600),
                             ),
-                        'duration':
-                            '0:15:00.453601',
-                    },
-                ],
+                            duration='0:10:01.885401',
+                        ),
+                    ],
+                ),
+                dict(
+                    id='MASTER.test.1',
+                    state='succeeded',
+                    run_time=time.strftime(
+                        '%Y-%m-%d %H:%M:%S',
+                        time.localtime(time.time() - 1800),
+                    ),
+                    duration='0:15:00.453601',
+                ),
+            ],
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.2')
@@ -721,31 +685,30 @@ class CheckJobsTestCase(TestCase):
                 'running',
             'next_run':
                 None,
-            'runs':
-                [
-                    {
-                        'id':
-                            'MASTER.test.2',
-                        'state':
-                            'running',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 600),
-                            ),
-                    },
-                    {
-                        'id':
-                            'MASTER.test.1',
-                        'state':
-                            'scheduled',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time()),
-                            ),
-                    },
-                ],
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'running',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'scheduled',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time()),
+                        ),
+                },
+            ],
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.2')
@@ -757,31 +720,30 @@ class CheckJobsTestCase(TestCase):
                 'succeeded',
             'next_run':
                 None,
-            'runs':
-                [
-                    {
-                        'id':
-                            'MASTER.test.2',
-                        'state':
-                            'succeeded',
-                        'end_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 600),
-                            ),
-                    },
-                    {
-                        'id':
-                            'MASTER.test.1',
-                        'state':
-                            'succeeded',
-                        'end_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 1200),
-                            ),
-                    },
-                ],
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'succeeded',
+                    'end_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'succeeded',
+                    'end_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1200),
+                        ),
+                },
+            ],
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.2')
@@ -829,20 +791,17 @@ class CheckJobsTestCase(TestCase):
                 'scheduled',
             'next_run':
                 None,
-            'runs':
-                [
-                    {
-                        'id':
-                            'MASTER.test.1',
-                        'state':
-                            'scheduled',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() + 1200),
-                            ),
-                    },
-                ],
+            'runs': [{
+                'id':
+                    'MASTER.test.1',
+                'state':
+                    'scheduled',
+                'run_time':
+                    time.strftime(
+                        '%Y-%m-%d %H:%M:%S',
+                        time.localtime(time.time() + 1200),
+                    ),
+            }, ],
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.1')
@@ -864,42 +823,41 @@ class CheckJobsTestCase(TestCase):
                 'running',
             'next_run':
                 None,
-            'runs':
-                [
-                    {
-                        'id':
-                            'MASTER.test.3',
-                        'state':
-                            'scheduled',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 600),
-                            ),
-                    },
-                    {
-                        'id':
-                            'MASTER.test.2',
-                        'state':
-                            'unknown',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 1200),
-                            ),
-                    },
-                    {
-                        'id':
-                            'MASTER.test.1',
-                        'state':
-                            'succeeded',
-                        'run_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 1800),
-                            ),
-                    },
-                ],
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.3',
+                    'state':
+                        'scheduled',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'unknown',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1200),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'succeeded',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1800),
+                        ),
+                },
+            ],
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.2')
@@ -914,36 +872,35 @@ class CheckJobsTestCase(TestCase):
                     '%Y-%m-%d %H:%M:%S',
                     time.localtime(time.time() + 600),
                 ),
-            'runs':
-                [
-                    {
-                        'id': 'MASTER.test.3',
-                        'state': 'scheduled',
-                        'start_time': None,
-                    },
-                    {
-                        'id':
-                            'MASTER.test.2',
-                        'state':
-                            'failed',
-                        'start_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 600),
-                            ),
-                    },
-                    {
-                        'id':
-                            'MASTER.test.1',
-                        'state':
-                            'succeeded',
-                        'start_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 1800),
-                            ),
-                    },
-                ],
+            'runs': [
+                {
+                    'id': 'MASTER.test.3',
+                    'state': 'scheduled',
+                    'start_time': None,
+                },
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'failed',
+                    'start_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'succeeded',
+                    'start_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1800),
+                        ),
+                },
+            ],  # noqa: E122
         }
         realert_every = check_tron_jobs.guess_realert_every(job_runs)
         assert_equal(realert_every, 4)
@@ -954,36 +911,35 @@ class CheckJobsTestCase(TestCase):
                 'running',
             'next_run':
                 None,
-            'runs':
-                [
-                    {
-                        'id': 'MASTER.test.3',
-                        'state': 'queued',
-                        'start_time': None,
-                    },
-                    {
-                        'id':
-                            'MASTER.test.2',
-                        'state':
-                            'running',
-                        'start_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 600),
-                            ),
-                    },
-                    {
-                        'id':
-                            'MASTER.test.1',
-                        'state':
-                            'succeeded',
-                        'start_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 1800),
-                            ),
-                    },
-                ],
+            'runs': [
+                {
+                    'id': 'MASTER.test.3',
+                    'state': 'queued',
+                    'start_time': None,
+                },
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'running',
+                    'start_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'succeeded',
+                    'start_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1800),
+                        ),
+                },
+            ],
         }
         realert_every = check_tron_jobs.guess_realert_every(job_runs)
         assert_equal(realert_every, -1)
@@ -997,36 +953,35 @@ class CheckJobsTestCase(TestCase):
                     '%Y-%m-%d %H:%M:%S',
                     time.localtime(time.time() + 10),
                 ),
-            'runs':
-                [
-                    {
-                        'id': 'MASTER.test.3',
-                        'state': 'scheduled',
-                        'start_time': None,
-                    },
-                    {
-                        'id':
-                            'MASTER.test.2',
-                        'state':
-                            'failed',
-                        'start_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 10),
-                            ),
-                    },
-                    {
-                        'id':
-                            'MASTER.test.1',
-                        'state':
-                            'succeeded',
-                        'start_time':
-                            time.strftime(
-                                '%Y-%m-%d %H:%M:%S',
-                                time.localtime(time.time() - 20),
-                            ),
-                    },
-                ],
+            'runs': [
+                {
+                    'id': 'MASTER.test.3',
+                    'state': 'scheduled',
+                    'start_time': None,
+                },
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'failed',
+                    'start_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 10),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'succeeded',
+                    'start_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 20),
+                        ),
+                },
+            ],  # noqa: E122
         }
         realert_every = check_tron_jobs.guess_realert_every(job_runs)
         assert_equal(realert_every, 1)
@@ -1040,14 +995,11 @@ class CheckJobsTestCase(TestCase):
                     '%Y-%m-%d %H:%M:%S',
                     time.localtime(time.time() + 600),
                 ),
-            'runs':
-                [
-                    {
-                        'id': 'MASTER.test.1',
-                        'state': 'scheduled',
-                        'start_time': None,
-                    },
-                ],
+            'runs': [{
+                'id': 'MASTER.test.1',
+                'state': 'scheduled',
+                'start_time': None,
+            }, ],
         }
         realert_every = check_tron_jobs.guess_realert_every(job_runs)
         assert_equal(realert_every, -1)

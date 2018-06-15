@@ -75,12 +75,10 @@ class StateMachineMultiOptionTestCase(TestCase):
             listening=self.state_talking,
         )
 
-        self.state_talking.update(
-            {
-                'ignoring': self.state_angry,
-                'talking': self.state_listening,
-            }
-        )
+        self.state_talking.update({
+            'ignoring': self.state_angry,
+            'talking': self.state_listening,
+        })
 
         self.machine = state.StateMachine(self.state_listening)
 

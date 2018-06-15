@@ -26,6 +26,9 @@ from tron import event
 from tron import mcp
 from tron import node
 from tron.api import controller
+from tron.core import job
+from tron.core import jobrun
+
 with mock.patch(
     'tron.api.async_resource.AsyncResource.bounded', lambda fn: fn
 ):
@@ -33,9 +36,6 @@ with mock.patch(
         'tron.api.async_resource.AsyncResource.exclusive', lambda fn: fn
     ):
         from tron.api import resource as www
-
-from tron.core import job
-from tron.core import jobrun
 
 REQUEST = twisted.web.server.Request(mock.Mock(), None)
 REQUEST.childLink = lambda val: "/jobs/%s" % val

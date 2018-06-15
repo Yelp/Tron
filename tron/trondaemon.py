@@ -8,7 +8,6 @@ from __future__ import unicode_literals
 import logging
 import logging.config
 import os
-import platform
 import signal
 
 import daemon
