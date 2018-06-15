@@ -31,7 +31,7 @@ from tron.core.actionrun import ActionCommand
 from tron.core.actionrun import ActionRun
 from tron.core.actionrun import ActionRunCollection
 from tron.core.actionrun import ActionRunFactory
-from tron.core.actionrun import PaaSTAActionRun
+from tron.core.actionrun import MesosActionRun
 from tron.core.actionrun import SSHActionRun
 from tron.serialize import filehandler
 
@@ -54,8 +54,6 @@ class ActionRunFactoryTestCase(TestCase):
             self.run_time,
             mock_node,
             action_graph=self.action_graph,
-            service='foo',
-            deploy_group='test',
         )
 
         self.action_state_data = {
@@ -94,6 +92,11 @@ class ActionRunFactoryTestCase(TestCase):
             'end_time': None,
             'command': 'do cleanup',
             'node_name': 'anode',
+            'action_runner':
+                {
+                    'status_path': '/tmp/foo',
+                    'exec_path': '/bin/foo'
+                }
         }
         collection = ActionRunFactory.action_run_collection_from_state(
             self.job_run,
@@ -152,47 +155,39 @@ class ActionRunFactoryTestCase(TestCase):
         )
         assert_equal(action_run.__class__, SSHActionRun)
 
-    def test_build_run_for_paasta_action_default_service(self):
+    def test_build_run_for_mesos_action(self):
         action = Turtle(
             name='theaction',
             command="doit",
-            executor=ExecutorTypes.paasta,
-            cluster='prod',
-            pool='default',
+            executor=ExecutorTypes.mesos,
             cpus=10,
             mem=500,
-            service=None,
-            deploy_group=None,
+            constraints=[['pool', 'LIKE', 'default']],
+            docker_image='fake-docker.com:400/image',
+            docker_parameters=[{
+                'key': 'test',
+                'value': 123
+            }],
+            env={'TESTING': 'true'},
+            extra_volumes=[{
+                'path': '/tmp'
+            }],
+            mesos_address='fake-mesos-master.com',
         )
         action_run = ActionRunFactory.build_run_for_action(
             self.job_run,
             action,
             self.action_runner,
         )
-        assert_equal(action_run.__class__, PaaSTAActionRun)
-        assert_equal(action_run.cluster, action.cluster)
-        assert_equal(action_run.pool, action.pool)
+        assert_equal(action_run.__class__, MesosActionRun)
         assert_equal(action_run.cpus, action.cpus)
         assert_equal(action_run.mem, action.mem)
-        assert_equal(action_run.service, self.job_run.service)
-        assert_equal(action_run.deploy_group, self.job_run.deploy_group)
-
-    def test_build_run_for_paasta_action_overrides_service(self):
-        action = Turtle(
-            name='theaction',
-            command="doit",
-            executor=ExecutorTypes.paasta,
-            service='bar',
-            deploy_group='dev',
-        )
-        action_run = ActionRunFactory.build_run_for_action(
-            self.job_run,
-            action,
-            self.action_runner,
-        )
-        assert_equal(action_run.__class__, PaaSTAActionRun)
-        assert_equal(action_run.service, action.service)
-        assert_equal(action_run.deploy_group, action.deploy_group)
+        assert_equal(action_run.constraints, action.constraints)
+        assert_equal(action_run.docker_image, action.docker_image)
+        assert_equal(action_run.docker_parameters, action.docker_parameters)
+        assert_equal(action_run.env, action.env)
+        assert_equal(action_run.extra_volumes, action.extra_volumes)
+        assert_equal(action_run.mesos_address, action.mesos_address)
 
     def test_action_run_from_state_default(self):
         state_data = self.action_state_data
@@ -205,38 +200,43 @@ class ActionRunFactoryTestCase(TestCase):
         assert not action_run.is_cleanup
         assert_equal(action_run.__class__, SSHActionRun)
 
-    def test_action_run_from_state_paasta(self):
+    def test_action_run_from_state_mesos(self):
         state_data = self.action_state_data
-        state_data['executor'] = ExecutorTypes.paasta
-        state_data['cluster'] = 'cluster-one'
-        state_data['pool'] = 'private'
+        state_data['executor'] = ExecutorTypes.mesos
         state_data['cpus'] = 2
         state_data['mem'] = 200
-        state_data['service'] = 'baz'
-        state_data['deploy_group'] = 'test'
+        state_data['constraints'] = [['pool', 'LIKE', 'default']]
+        state_data['docker_image'] = 'fake-docker.com:400/image'
+        state_data['docker_parameters'] = [{'key': 'test', 'value': 123}]
+        state_data['env'] = {'TESTING': 'true'}
+        state_data['extra_volumes'] = [{'path': '/tmp'}]
+        state_data['mesos_address'] = 'fake-mesos-master.com'
         action_run = ActionRunFactory.action_run_from_state(
             self.job_run,
             state_data,
         )
 
         assert_equal(action_run.job_run_id, state_data['job_run_id'])
-        assert_equal(action_run.cluster, state_data['cluster'])
-        assert_equal(action_run.pool, state_data['pool'])
         assert_equal(action_run.cpus, state_data['cpus'])
         assert_equal(action_run.mem, state_data['mem'])
-        assert_equal(action_run.service, state_data['service'])
-        assert_equal(action_run.deploy_group, state_data['deploy_group'])
+        assert_equal(action_run.constraints, state_data['constraints'])
+        assert_equal(action_run.docker_image, state_data['docker_image'])
+        assert_equal(
+            action_run.docker_parameters, state_data['docker_parameters']
+        )
+        assert_equal(action_run.env, state_data['env'])
+        assert_equal(action_run.extra_volumes, state_data['extra_volumes'])
+        assert_equal(action_run.mesos_address, state_data['mesos_address'])
+
         assert not action_run.is_cleanup
-        assert_equal(action_run.__class__, PaaSTAActionRun)
+        assert_equal(action_run.__class__, MesosActionRun)
 
 
 class ActionRunTestCase(TestCase):
     @setup
     def setup_action_run(self):
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
-        self.action_runner = mock.create_autospec(
-            actioncommand.NoActionRunnerFactory,
-        )
+        self.action_runner = actioncommand.NoActionRunnerFactory()
         self.command = "do command %(actionname)s"
         self.rendered_command = "do command action_name"
         self.action_run = ActionRun(
@@ -915,6 +915,62 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
     def test_is_run_blocked_required_actions_missing(self):
         del self.run_map['action_name']
         assert not self.collection._is_run_blocked(self.run_map['second_name'])
+
+
+class MesosActionRunTestCase(TestCase):
+    @setup
+    def setup_action_run(self):
+        self.output_path = mock.MagicMock()
+        self.command = "do the command"
+        self.mesos_address = 'mesos-master.com'
+        self.other_task_kwargs = {
+            'cpus': 1,
+            'mem': 50,
+            'docker_image': 'container:v2',
+            'constraints': [],
+            'env': {
+                'TESTING': 'true'
+            },
+            'docker_parameters': [],
+            'extra_volumes': [],
+        }
+        self.action_run = MesosActionRun(
+            "job_run_id",
+            "action_name",
+            mock.create_autospec(node.Node),
+            rendered_command=self.command,
+            output_path=self.output_path,
+            executor=ExecutorTypes.mesos,
+            mesos_address=self.mesos_address,
+            **self.other_task_kwargs
+        )
+
+    @mock.patch('tron.core.actionrun.filehandler', autospec=True)
+    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
+    def test_submit_command(self, mock_cluster_repo, mock_filehandler):
+        serializer = mock_filehandler.OutputStreamSerializer.return_value
+        with mock.patch.object(
+            self.action_run,
+            'watch',
+            autospec=True,
+        ) as mock_watch:
+            self.action_run.submit_command()
+
+            mock_get_cluster = mock_cluster_repo.get_cluster
+            mock_get_cluster.assert_called_once_with(self.mesos_address)
+            mock_get_cluster.return_value.create_task.assert_called_once_with(
+                action_run_id=self.action_run.id,
+                command=self.command,
+                serializer=serializer,
+                **self.other_task_kwargs
+            )
+            task = mock_get_cluster.return_value.create_task.return_value
+            mock_get_cluster.return_value.submit.assert_called_once_with(task)
+            mock_watch.assert_called_once_with(task)
+
+        mock_filehandler.OutputStreamSerializer.assert_called_with(
+            self.action_run.output_path,
+        )
 
 
 if __name__ == "__main__":

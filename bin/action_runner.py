@@ -11,6 +11,8 @@ import logging
 import os
 import subprocess
 import sys
+import threading
+import time
 
 import yaml
 
@@ -31,6 +33,8 @@ class StatusFile(object):
             'command': command,
             'pid': proc.pid,
             'return_code': proc.returncode,
+            'runner_pid': os.getpid(),
+            'timestamp': time.time(),
         }
 
     @contextlib.contextmanager
@@ -44,6 +48,7 @@ class StatusFile(object):
                 ),
                 fh,
                 explicit_start=True,
+                width=1000000,
             )
             try:
                 yield
@@ -56,6 +61,7 @@ class StatusFile(object):
                     ),
                     fh,
                     explicit_start=True,
+                    width=1000000,
                 )
 
 
@@ -104,15 +110,31 @@ def run_command(command):
     return subprocess.Popen(
         command,
         shell=True,
-        stdout=sys.stdout,
-        stderr=sys.stderr,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
     )
+
+
+def stdout_reader(proc):
+    for line in iter(proc.stdout.readline, b''):
+        sys.stdout.write(line.decode('utf-8'))
+        sys.stdout.flush()
+
+
+def stderr_reader(proc):
+    for line in iter(proc.stderr.readline, b''):
+        sys.stderr.write(line.decode('utf-8'))
+        sys.stdout.flush()
 
 
 if __name__ == "__main__":
     logging.basicConfig()
     args = parse_args()
     proc = run_command(args.command)
+    stdout_printer_t = threading.Thread(target=stdout_reader, args=(proc, ))
+    stderr_printer_t = threading.Thread(target=stderr_reader, args=(proc, ))
+    stdout_printer_t.start()
+    stderr_printer_t.start()
     run_proc(
         output_path=args.output_dir,
         run_id=args.run_id,

@@ -52,8 +52,6 @@ def build_mock_job():
         output_path=mock.Mock(),
         context=mock.Mock(),
         action_runner=runner,
-        service='foo',
-        deploy_group='test',
     )
 
 
@@ -77,8 +75,6 @@ class JobRunTestCase(TestCase):
                 action_runs_with_cleanup=[],
                 get_startable_action_runs=lambda: [],
             ),
-            service='baz',
-            deploy_group='other',
         )
         autospec_method(self.job_run.watch)
         autospec_method(self.job_run.notify)
@@ -109,8 +105,6 @@ class JobRunTestCase(TestCase):
         assert_equal(run.run_num, run_num)
         assert_equal(run.node, mock_node)
         assert not run.manual
-        assert_equal(run.service, self.job.service)
-        assert_equal(run.deploy_group, self.job.deploy_group)
 
     def test_for_job_manual(self):
         run_num = 6
@@ -130,8 +124,6 @@ class JobRunTestCase(TestCase):
         assert_equal(state_data['run_num'], 7)
         assert not state_data['manual']
         assert_equal(state_data['run_time'], self.run_time)
-        assert_equal(state_data['service'], 'baz')
-        assert_equal(state_data['deploy_group'], 'other')
 
     def test_set_action_runs(self):
         self.job_run._action_runs = None
@@ -395,8 +387,6 @@ class JobRunFromStateTestCase(TestCase):
             'runs': self.action_run_state_data,
             'cleanup_run': None,
             'manual': True,
-            'service': 'foo',
-            'deploy_group': 'test',
         }
         self.context = mock.Mock()
 
@@ -415,8 +405,6 @@ class JobRunFromStateTestCase(TestCase):
         assert_equal(run.output_path, self.output_path)
         assert run.context.next
         assert run.action_graph
-        assert_equal(run.service, self.state_data['service'])
-        assert_equal(run.deploy_group, self.state_data['deploy_group'])
 
     def test_from_state_node_no_longer_exists(self):
         run = jobrun.JobRun.from_state(
@@ -485,8 +473,7 @@ class JobRunCollectionTestCase(TestCase):
         runs = jobrun.JobRunCollection.from_config(job_config)
         assert_equal(runs.run_limit, 20)
 
-    def test_restore_state(self):
-        run_collection = jobrun.JobRunCollection(20)
+    def test_job_runs_from_state(self):
         state_data = [
             dict(
                 run_num=i,
@@ -502,28 +489,15 @@ class JobRunCollectionTestCase(TestCase):
         output_path = mock.create_autospec(filehandler.OutputPath)
         context = mock.Mock()
         node_pool = mock.create_autospec(node.NodePool)
-
-        restored_runs = run_collection.restore_state(
+        runs = jobrun.job_runs_from_state(
             state_data,
             action_graph,
             output_path,
             context,
             node_pool,
         )
-        assert_equal(run_collection.runs[0].run_num, 3)
-        assert_equal(run_collection.runs[3].run_num, 0)
-        assert_length(restored_runs, 4)
-
-    def test_restore_state_with_runs(self):
-        assert_raises(
-            ValueError,
-            self.run_collection.restore_state,
-            None,
-            None,
-            None,
-            None,
-            None,
-        )
+        assert len(runs) == 4
+        assert all([type(job) == jobrun.JobRun for job in runs])
 
     def test_build_new_run(self):
         autospec_method(self.run_collection.remove_old_runs)

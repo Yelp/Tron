@@ -230,13 +230,13 @@ def create_action_runner_factory_from_config(config):
     constructor for ActionCommand.
     """
     if not config:
-        return NoActionRunnerFactory
+        return NoActionRunnerFactory()
 
     if config.runner_type not in schema.ActionRunnerTypes:
         raise ValueError("Unknown runner type: %s", config.runner_type)
 
     if config.runner_type == schema.ActionRunnerTypes.none:
-        return NoActionRunnerFactory
+        return NoActionRunnerFactory()
 
     if config.runner_type == schema.ActionRunnerTypes.subprocess:
         return SubprocessActionRunnerFactory.from_config(config)

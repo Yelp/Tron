@@ -14,6 +14,7 @@ from tron import eventloop
 from tron import node
 from tron.core import actiongraph
 from tron.core import jobrun
+from tron.core import recovery
 from tron.core.actionrun import ActionRun
 from tron.scheduler import scheduler_from_config
 from tron.serialize import filehandler
@@ -72,8 +73,6 @@ class Job(Observable, Observer):
         'allow_overlap',
         'monitoring',
         'time_zone',
-        'service',
-        'deploy_group',
         'expected_runtime',
     ]
 
@@ -95,8 +94,6 @@ class Job(Observable, Observer):
         action_runner=None,
         max_runtime=None,
         time_zone=None,
-        service=None,
-        deploy_group=None,
         expected_runtime=None
     ):
         super(Job, self).__init__()
@@ -113,8 +110,6 @@ class Job(Observable, Observer):
         self.action_runner = action_runner
         self.max_runtime = max_runtime
         self.time_zone = time_zone
-        self.service = service
-        self.deploy_group = deploy_group
         self.expected_runtime = expected_runtime
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(name)
@@ -155,8 +150,6 @@ class Job(Observable, Observer):
             allow_overlap=job_config.allow_overlap,
             action_runner=action_runner,
             max_runtime=job_config.max_runtime,
-            service=job_config.service,
-            deploy_group=job_config.deploy_group,
             expected_runtime=job_config.expected_runtime,
         )
 
@@ -192,12 +185,6 @@ class Job(Observable, Observer):
     def get_time_zone(self):
         return self.time_zone
 
-    def get_service(self):
-        return self.service
-
-    def get_deploy_group(self):
-        return self.deploy_group
-
     def get_runs(self):
         return self.runs
 
@@ -209,20 +196,17 @@ class Job(Observable, Observer):
             'enabled': self.enabled,
         }
 
-    def restore_state(self, state_data):
+    def get_job_runs_from_state(self, state_data):
         """Apply a previous state to this Job."""
         self.enabled = state_data['enabled']
-        job_runs = self.runs.restore_state(
+        job_runs = jobrun.job_runs_from_state(
             state_data['runs'],
             self.action_graph,
             self.output_path.clone(),
             self.context,
             self.node_pool,
         )
-        for run in job_runs:
-            self.watch(run)
-
-        self.event.ok('restored')
+        return job_runs
 
     def build_new_runs(self, run_time, manual=False):
         """Uses its JobCollection to build new JobRuns. If all_nodes is set,
@@ -276,12 +260,23 @@ class JobScheduler(Observer):
         self.shutdown_requested = False
         self.watch(job)
 
-    def restore_state(self, job_state_data):
+    def restore_state(self, job_state_data, config_action_runner):
         """Restore the job state and schedule any JobRuns."""
-        self.job.restore_state(job_state_data)
+        job_runs = self.job.get_job_runs_from_state(job_state_data)
+        for run in job_runs:
+            self.job.watch(run)
+        self.job.runs.runs.extend(job_runs)
+        self.job.event.ok('restored')
+
+        recovery.launch_recovery_actionruns_for_job_runs(
+            job_runs=job_runs, master_action_runner=config_action_runner
+        )
+
         scheduled = self.job.runs.get_scheduled()
+        # for those that were already scheduled, we reschedule them to run.
         for job_run in scheduled:
             self._set_callback(job_run)
+
         # Ensure we have at least 1 scheduled run
         self.schedule()
 
@@ -517,8 +512,10 @@ class JobCollection(object):
         job_scheduler.schedule_reconfigured()
         return True
 
-    def restore_state(self, job_state_data):
-        self.jobs.restore_state(job_state_data)
+    def restore_state(self, job_state_data, config_action_runner):
+        for name, state in job_state_data.items():
+            self.jobs[name].restore_state(state, config_action_runner)
+        log.info("Loaded state for %d jobs", len(job_state_data))
 
     def get_by_name(self, name):
         return self.jobs.get(name)

@@ -13,8 +13,10 @@ from tron import command_context
 from tron import node
 from tron.actioncommand import ActionCommand
 from tron.actioncommand import NoActionRunnerFactory
+from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.config.schema import ExecutorTypes
 from tron.core import action
+from tron.mesos import MesosClusterRepository
 from tron.serialize import filehandler
 from tron.utils import iteration
 from tron.utils import maybe_decode
@@ -82,17 +84,19 @@ class ActionRunFactory(object):
             'output_path': job_run.output_path.clone(),
             'cleanup': action.is_cleanup,
             'action_runner': action_runner,
+            'retries_remaining': action.retries,
             'executor': action.executor,
-            'cluster': action.cluster,
-            'pool': action.pool,
             'cpus': action.cpus,
             'mem': action.mem,
-            'service': action.service or job_run.service,
-            'deploy_group': action.deploy_group or job_run.deploy_group,
-            'retries_remaining': action.retries,
+            'constraints': action.constraints,
+            'docker_image': action.docker_image,
+            'docker_parameters': action.docker_parameters,
+            'env': action.env,
+            'extra_volumes': action.extra_volumes,
+            'mesos_address': action.mesos_address,
         }
-        if action.executor == ExecutorTypes.paasta:
-            return PaaSTAActionRun(**args)
+        if action.executor == ExecutorTypes.mesos:
+            return MesosActionRun(**args)
         return SSHActionRun(**args)
 
     @classmethod
@@ -106,8 +110,8 @@ class ActionRunFactory(object):
             'cleanup': cleanup,
         }
 
-        if state_data.get('executor') == ExecutorTypes.paasta:
-            return PaaSTAActionRun.from_state(**args)
+        if state_data.get('executor') == ExecutorTypes.mesos:
+            return MesosActionRun.from_state(**args)
         return SSHActionRun.from_state(**args)
 
 
@@ -145,6 +149,8 @@ class ActionRun(object):
     STATE_FAILED['skip'] = STATE_SKIPPED
     STATE_CANCELLED['skip'] = STATE_SKIPPED
 
+    STATE_UNKNOWN['running'] = STATE_RUNNING
+
     # We can force many states to be success or failure
     for event_state in (STATE_UNKNOWN, STATE_QUEUED, STATE_SCHEDULED):
         event_state['success'] = STATE_SUCCEEDED
@@ -181,15 +187,18 @@ class ActionRun(object):
         rendered_command=None,
         exit_status=None,
         action_runner=None,
-        executor=None,
-        cluster=None,
-        pool=None,
-        cpus=None,
-        mem=None,
-        service=None,
-        deploy_group=None,
         retries_remaining=None,
         exit_statuses=None,
+        machine=None,
+        executor=None,
+        cpus=None,
+        mem=None,
+        constraints=None,
+        docker_image=None,
+        docker_parameters=None,
+        env=None,
+        extra_volumes=None,
+        mesos_address=None,
     ):
         self.job_run_id = maybe_decode(job_run_id)
         self.action_name = maybe_decode(name)
@@ -199,20 +208,22 @@ class ActionRun(object):
         self.exit_status = exit_status
         self.bare_command = maybe_decode(bare_command)
         self.rendered_command = rendered_command
-        self.action_runner = action_runner or NoActionRunnerFactory
-        self.machine = state.StateMachine(
+        self.action_runner = action_runner or NoActionRunnerFactory()
+        self.machine = machine or state.StateMachine(
             self.STATE_SCHEDULED,
             delegate=self,
             force_state=run_state,
         )
         self.is_cleanup = cleanup
         self.executor = executor
-        self.cluster = cluster
-        self.pool = pool
         self.cpus = cpus
         self.mem = mem
-        self.service = service
-        self.deploy_group = deploy_group
+        self.constraints = constraints
+        self.docker_image = docker_image
+        self.docker_parameters = docker_parameters
+        self.env = env
+        self.extra_volumes = extra_volumes
+        self.mesos_address = mesos_address
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(self.id)
         self.context = command_context.build_context(self, parent_context)
@@ -263,6 +274,12 @@ class ActionRun(object):
             job_run_node,
         )
 
+        action_runner_data = state_data.get('action_runner')
+        if action_runner_data:
+            action_runner = SubprocessActionRunnerFactory(**action_runner_data)
+        else:
+            action_runner = NoActionRunnerFactory()
+
         rendered_command = state_data.get('rendered_command')
         run = cls(
             job_run_id,
@@ -282,13 +299,16 @@ class ActionRun(object):
             exit_status=state_data.get('exit_status'),
             retries_remaining=state_data.get('retries_remaining'),
             exit_statuses=state_data.get('exit_statuses'),
+            action_runner=action_runner,
             executor=state_data.get('executor', ExecutorTypes.ssh),
-            cluster=state_data.get('cluster'),
-            pool=state_data.get('pool'),
             cpus=state_data.get('cpus'),
             mem=state_data.get('mem'),
-            service=state_data.get('service'),
-            deploy_group=state_data.get('deploy_group'),
+            constraints=state_data.get('constraints'),
+            docker_image=state_data.get('docker_image'),
+            docker_parameters=state_data.get('docker_parameters'),
+            env=state_data.get('env'),
+            extra_volumes=state_data.get('extra_volumes'),
+            mesos_address=state_data.get('mesos_address'),
         )
 
         # Transition running to fail unknown because exit status was missed
@@ -389,6 +409,13 @@ class ActionRun(object):
     def state_data(self):
         """This data is used to serialize the state of this action run."""
         rendered_command = self.rendered_command
+
+        action_runner = None if type(
+            self.action_runner
+        ) == NoActionRunnerFactory else {
+            'status_path': self.action_runner.status_path,
+            'exec_path': self.action_runner.exec_path,
+        }
         # Freeze command after it's run
         command = rendered_command if rendered_command else self.bare_command
         return {
@@ -401,15 +428,18 @@ class ActionRun(object):
             'rendered_command': self.rendered_command,
             'node_name': self.node.get_name() if self.node else None,
             'exit_status': self.exit_status,
-            'executor': self.executor,
-            'cluster': self.cluster,
-            'pool': self.pool,
-            'cpus': self.cpus,
-            'mem': self.mem,
-            'service': self.service,
-            'deploy_group': self.deploy_group,
             'retries_remaining': self.retries_remaining,
             'exit_statuses': self.exit_statuses,
+            'action_runner': action_runner,
+            'executor': self.executor,
+            'cpus': self.cpus,
+            'mem': self.mem,
+            'constraints': self.constraints,
+            'docker_image': self.docker_image,
+            'docker_parameters': self.docker_parameters,
+            'env': self.env,
+            'extra_volumes': self.extra_volumes,
+            'mesos_address': self.mesos_address,
         }
 
     def render_command(self):
@@ -482,6 +512,9 @@ class SSHActionRun(ActionRun, Observer):
     """An ActionRun that executes the command on a node through SSH.
     """
 
+    def __init__(self, *args, **kwargs):
+        super(SSHActionRun, self).__init__(*args, **kwargs)
+
     def submit_command(self):
         action_command = self.build_action_command()
         try:
@@ -545,29 +578,29 @@ class SSHActionRun(ActionRun, Observer):
     handler = handle_action_command_state_change
 
 
-class PaaSTAActionRun(ActionRun):
-    """An ActionRun that executes the command on a PaaSTA Mesos cluster.
+class MesosActionRun(ActionRun, Observer):
+    """An ActionRun that executes the command on a Mesos cluster.
     """
 
     def submit_command(self):
-        self.machine.transition('started')
-        stdout = filehandler.OutputStreamSerializer(self.output_path,
-                                                    ).open('.stdout')
-        stdout.write(
-            "Would have run command for service {service} from deploy group "
-            "{deploy_group} on cluster {cluster} in the {pool} pool, with "
-            "{cpus} cpus and {mem} MB memory.".format(
-                service=self.service,
-                deploy_group=self.deploy_group,
-                cluster=self.cluster,
-                pool=self.pool,
-                cpus=self.cpus,
-                mem=self.mem,
-            ),
+        serializer = filehandler.OutputStreamSerializer(self.output_path)
+        mesos_cluster = MesosClusterRepository.get_cluster(self.mesos_address)
+        task = mesos_cluster.create_task(
+            action_run_id=self.id,
+            command=self.command,
+            cpus=self.cpus,
+            mem=self.mem,
+            constraints=self.constraints,
+            docker_image=self.docker_image,
+            docker_parameters=self.docker_parameters,
+            env=self.env,
+            extra_volumes=self.extra_volumes,
+            serializer=serializer,
         )
-        self.success()
-        stdout.close()
-        return True
+        # TODO: save task.task_id (mesos id) to state
+        mesos_cluster.submit(task)  # TODO: catch errors
+        self.watch(task)
+        return task
 
     def stop(self):
         if self.retries_remaining is not None:
@@ -580,6 +613,28 @@ class PaaSTAActionRun(ActionRun):
             self.retries_remaining = -1
 
         pass
+
+    def handle_action_command_state_change(self, action_command, event):
+        """Observe ActionCommand state changes."""
+        # TODO: consolidate? Same as SSHActionRun for now
+        log.debug("Action command state change: %s", action_command.state)
+
+        if event == ActionCommand.RUNNING:
+            return self.machine.transition('started')
+
+        if event == ActionCommand.FAILSTART:
+            return self.fail(None)
+
+        if event == ActionCommand.EXITING:
+            if action_command.exit_status is None:
+                return self.fail_unknown()
+
+            if not action_command.exit_status:
+                return self.success()
+
+            return self.fail(action_command.exit_status)
+
+    handler = handle_action_command_state_change
 
 
 class ActionRunCollection(object):
@@ -611,6 +666,7 @@ class ActionRunCollection(object):
                 proxy.func_proxy('cleanup', iteration.list_all),
                 proxy.func_proxy('stop', iteration.list_all),
                 proxy.attr_proxy('start_time', iteration.min_filter),
+                proxy.attr_proxy('state_data', iteration.list_all),
             ],
         )
 

@@ -49,7 +49,6 @@ TronConfig = config_object_factory(
         'nodes',  # FrozenDict of ConfigNode
         'node_pools',  # FrozenDict of ConfigNodePool
         'jobs',  # FrozenDict of ConfigJob
-        'clusters',  # tuple of str
     ],
 )
 
@@ -126,14 +125,43 @@ ConfigJob = config_object_factory(
         'allow_overlap',  # bool
         'max_runtime',  # datetime.Timedelta
         'time_zone',  # pytz time zone
-        'service',  # str
-        'deploy_group',  # str
         'expected_runtime',  # datetime.Timedelta
     ],
 )
 
+ConfigConstraint = config_object_factory(
+    name='ConfigConstraint',
+    required=[
+        'attribute',
+        'operator',
+        'value',
+    ],
+    optional=[],
+)
+
+ConfigVolume = config_object_factory(
+    name='ConfigVolume',
+    required=[
+        'container_path',
+        'host_path',
+        'mode',
+    ],
+    optional=[],
+)
+
+ConfigParameter = config_object_factory(
+    name='ConfigParameter',
+    required=[
+        'key',
+        'value',
+    ],
+    optional=[],
+)
+
 StatePersistenceTypes = Enum.create('shelve', 'sql', 'yaml')
 
-ExecutorTypes = Enum.create('ssh', 'paasta')
+ExecutorTypes = Enum.create('ssh', 'mesos')
 
 ActionRunnerTypes = Enum.create('none', 'subprocess')
+
+VolumeModes = Enum.create('RO', 'RW')

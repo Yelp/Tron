@@ -14,6 +14,7 @@ import os
 import pytz
 import six
 from six import string_types
+from task_processing.plugins.mesos.constraints import OPERATORS
 
 from tron import command_context
 from tron.config import config_utils
@@ -31,9 +32,12 @@ from tron.config.config_utils import valid_name_identifier
 from tron.config.config_utils import valid_string
 from tron.config.config_utils import Validator
 from tron.config.schedule_parse import valid_schedule
+from tron.config.schema import ConfigConstraint
 from tron.config.schema import ConfigJob
+from tron.config.schema import ConfigParameter
 from tron.config.schema import ConfigSSHOptions
 from tron.config.schema import ConfigState
+from tron.config.schema import ConfigVolume
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.schema import NamedTronConfig
 from tron.config.schema import NotificationOptions
@@ -143,12 +147,39 @@ def valid_node_name(value, config_context):
     return value
 
 
-def valid_cluster_name(value, config_context):
-    valid_string(value, config_context)
-    if not config_context.partial and value not in config_context.clusters:
-        msg = "Unknown cluster name %s at %s"
-        raise ConfigError(msg % (value, config_context.path))
-    return value
+class ValidateConstraint(Validator):
+    config_class = ConfigConstraint
+    validators = {
+        'attribute': valid_string,
+        'operator': config_utils.build_enum_validator(OPERATORS.keys()),
+        'value': valid_string,
+    }
+
+
+valid_constraint = ValidateConstraint()
+
+
+class ValidateDockerParameter(Validator):
+    config_class = ConfigParameter
+    validators = {
+        'key': valid_string,
+        'value': valid_string,
+    }
+
+
+valid_docker_parameter = ValidateDockerParameter()
+
+
+class ValidateVolume(Validator):
+    config_class = ConfigVolume
+    validators = {
+        'container_path': valid_string,
+        'host_path': valid_string,
+        'mode': config_utils.build_enum_validator(['RO', 'RW']),
+    }
+
+
+valid_volume = ValidateVolume()
 
 
 class ValidateSSHOptions(Validator):
@@ -264,6 +295,149 @@ action_context = command_context.build_filled_context(
 )
 
 
+def valid_mesos_action(action, config_context):
+    required_keys = {'cpus', 'mem', 'docker_image', 'mesos_address'}
+    if action.get('executor') == schema.ExecutorTypes.mesos:
+        missing_keys = required_keys - set(action.keys())
+        if missing_keys:
+            raise ConfigError(
+                'Mesos executor for action {id} is missing these required keys: {keys}'.
+                format(
+                    id=action['name'],
+                    keys=missing_keys,
+                ),
+            )
+
+
+class ValidateAction(Validator):
+    """Validate an action."""
+    config_class = ConfigAction
+
+    defaults = {
+        'node': None,
+        'requires': (),
+        'retries': None,
+        'expected_runtime': datetime.timedelta(hours=24),
+        'executor': schema.ExecutorTypes.ssh,
+        'cpus': None,
+        'mem': None,
+        'constraints': None,
+        'docker_image': None,
+        'docker_parameters': None,
+        'env': None,
+        'extra_volumes': None,
+        'mesos_address': None,
+    }
+    requires = build_list_of_type_validator(
+        valid_action_name,
+        allow_empty=True,
+    )
+    validators = {
+        'name':
+            valid_action_name,
+        'command':
+            build_format_string_validator(action_context),
+        'node':
+            valid_node_name,
+        'requires':
+            requires,
+        'retries':
+            valid_int,
+        'expected_runtime':
+            config_utils.valid_time_delta,
+        'executor':
+            config_utils.build_enum_validator(schema.ExecutorTypes),
+        'cpus':
+            valid_float,
+        'mem':
+            valid_float,
+        'constraints':
+            build_list_of_type_validator(valid_constraint, allow_empty=True),
+        'docker_image':
+            valid_string,
+        'docker_parameters':
+            build_list_of_type_validator(
+                valid_docker_parameter, allow_empty=True
+            ),
+        'env':
+            valid_dict,
+        'extra_volumes':
+            build_list_of_type_validator(valid_volume, allow_empty=True),
+        'mesos_address':
+            valid_string,
+    }
+
+    def post_validation(self, action, config_context):
+        valid_mesos_action(action, config_context)
+
+
+valid_action = ValidateAction()
+
+
+def valid_cleanup_action_name(value, config_context):
+    if value != CLEANUP_ACTION_NAME:
+        msg = "Cleanup actions cannot have custom names %s.%s"
+        raise ConfigError(msg % (config_context.path, value))
+    return CLEANUP_ACTION_NAME
+
+
+class ValidateCleanupAction(Validator):
+    config_class = ConfigCleanupAction
+    defaults = {
+        'node': None,
+        'name': CLEANUP_ACTION_NAME,
+        'retries': None,
+        'expected_runtime': datetime.timedelta(hours=24),
+        'executor': schema.ExecutorTypes.ssh,
+        'cpus': None,
+        'mem': None,
+        'constraints': None,
+        'docker_image': None,
+        'docker_parameters': None,
+        'env': None,
+        'extra_volumes': None,
+        'mesos_address': None,
+    }
+    validators = {
+        'name':
+            valid_cleanup_action_name,
+        'command':
+            build_format_string_validator(action_context),
+        'node':
+            valid_node_name,
+        'retries':
+            valid_int,
+        'expected_runtime':
+            config_utils.valid_time_delta,
+        'executor':
+            config_utils.build_enum_validator(schema.ExecutorTypes),
+        'cpus':
+            valid_float,
+        'mem':
+            valid_float,
+        'constraints':
+            build_list_of_type_validator(valid_constraint, allow_empty=True),
+        'docker_image':
+            valid_string,
+        'docker_parameters':
+            build_list_of_type_validator(
+                valid_docker_parameter, allow_empty=True
+            ),
+        'env':
+            valid_dict,
+        'extra_volumes':
+            build_list_of_type_validator(valid_volume, allow_empty=True),
+        'mesos_address':
+            valid_string,
+    }
+
+    def post_validation(self, action, config_context):
+        valid_mesos_action(action, config_context)
+
+
+valid_cleanup_action = ValidateCleanupAction()
+
+
 class ValidateJob(Validator):
     """Validate jobs."""
     config_class = ConfigJob
@@ -277,8 +451,6 @@ class ValidateJob(Validator):
         'max_runtime': None,
         'monitoring': {},
         'time_zone': None,
-        'service': None,
-        'deploy_group': None,
         'expected_runtime': datetime.timedelta(hours=24),
     }
 
@@ -296,8 +468,6 @@ class ValidateJob(Validator):
         'max_runtime': config_utils.valid_time_delta,
         'monitoring': valid_dict,
         'time_zone': valid_time_zone,
-        'service': valid_string,
-        'deploy_group': valid_string,
         'expected_runtime': config_utils.valid_time_delta,
     }
 
@@ -358,23 +528,6 @@ class ValidateJob(Validator):
 
         for _, action in six.iteritems(job['actions']):
             self._validate_dependencies(job, job['actions'], action)
-            if is_incomplete_paasta_action(action):
-                incomplete_paasta_actions.append(action)
-
-        cleanup_action = job.get('cleanup_action')
-        if cleanup_action and is_incomplete_paasta_action(cleanup_action):
-            incomplete_paasta_actions.append(action)
-
-        if incomplete_paasta_actions and not (
-            job.get('service') and job.get('deploy_group')
-        ):
-            raise ConfigError(
-                'Either job {name} or PaaSTA actions {actions} need a service '
-                'and deploy_group.'.format(
-                    name=job['name'],
-                    actions=incomplete_paasta_actions,
-                ),
-            )
 
 
 valid_job = ValidateJob()
@@ -465,11 +618,9 @@ class ValidateConfig(Validator):
         },
         'node_pools': {},
         'jobs': (),
-        'clusters': (),
     }
     node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
     nodes = build_dict_name_validator(valid_node, allow_empty=True)
-    clusters = build_list_of_type_validator(valid_string, allow_empty=True)
     validators = {
         'action_runner': ValidateActionRunner(),
         'output_stream_dir': valid_output_stream_dir,
@@ -480,7 +631,6 @@ class ValidateConfig(Validator):
         'state_persistence': valid_state_persistence,
         'nodes': nodes,
         'node_pools': node_pools,
-        'clusters': clusters,
     }
     optional = False
 
@@ -509,7 +659,6 @@ class ValidateConfig(Validator):
         config_context = ConfigContext(
             'config',
             node_names,
-            config.get('clusters'),
             config.get('command_context'),
             MASTER_NAMESPACE,
         )
@@ -562,7 +711,6 @@ def validate_config_mapping(config_mapping):
         context = ConfigContext(
             name,
             nodes,
-            master.clusters,
             master.command_context,
             name,
         )

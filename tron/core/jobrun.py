@@ -51,8 +51,6 @@ class JobRun(Observable, Observer):
         action_runs=None,
         action_graph=None,
         manual=None,
-        service=None,
-        deploy_group=None,
     ):
         super(JobRun, self).__init__()
         self.job_name = maybe_decode(job_name)
@@ -65,8 +63,6 @@ class JobRun(Observable, Observer):
         self._action_runs = None
         self.action_graph = action_graph
         self.manual = manual
-        self.service = service
-        self.deploy_group = deploy_group
         self.event = event.get_recorder(self.full_id)
         self.event.ok('created')
 
@@ -91,8 +87,6 @@ class JobRun(Observable, Observer):
             job.context,
             action_graph=job.action_graph,
             manual=manual,
-            service=job.service,
-            deploy_group=job.deploy_group,
         )
 
         run.action_runs = ActionRunFactory.build_action_run_collection(
@@ -124,8 +118,6 @@ class JobRun(Observable, Observer):
             manual=state_data.get('manual', False),
             output_path=output_path,
             base_context=context,
-            service=state_data.get('service'),
-            deploy_group=state_data.get('deploy_group'),
         )
         action_runs = ActionRunFactory.action_run_collection_from_state(
             job_run,
@@ -146,8 +138,6 @@ class JobRun(Observable, Observer):
             'runs': self.action_runs.state_data,
             'cleanup_run': self.action_runs.cleanup_action_state_data,
             'manual': self.manual,
-            'service': self.service,
-            'deploy_group': self.deploy_group,
         }
 
     def _get_action_runs(self):
@@ -316,7 +306,6 @@ class JobRun(Observable, Observer):
         if self.action_runs.is_queued:
             return ActionRun.STATE_QUEUED
 
-        log.info("%s in an unknown state: %s" % (self, self.action_runs))
         return ActionRun.STATE_UNKNOWN
 
     @property
@@ -352,31 +341,6 @@ class JobRunCollection(object):
     def from_config(cls, job_config):
         """Factory method for creating a JobRunCollection from a config."""
         return cls(job_config.run_limit)
-
-    def restore_state(
-        self,
-        state_data,
-        action_graph,
-        output_path,
-        context,
-        node_pool,
-    ):
-        """Apply state to all jobs from the state dict."""
-        if self.runs:
-            msg = "State can not be restored to a collection with runs."
-            raise ValueError(msg)
-
-        restored_runs = [
-            JobRun.from_state(
-                run_state,
-                action_graph,
-                output_path.clone(),
-                context,
-                node_pool.next(),
-            ) for run_state in state_data
-        ]
-        self.runs.extend(restored_runs)
-        return restored_runs
 
     def build_new_run(self, job, run_time, node, manual=False):
         """Create a new run for the job, add it to the runs list,
@@ -539,3 +503,21 @@ class JobRunCollection(object):
             type(self).__name__,
             ', '.join("%s(%s)" % (r.run_num, r.state) for r in self.runs),
         )
+
+
+def job_runs_from_state(
+    runs,
+    action_graph,
+    output_path,
+    context,
+    node_pool,
+):
+    return [
+        JobRun.from_state(
+            run,
+            action_graph,
+            output_path.clone(),
+            context,
+            node_pool.next(),
+        ) for run in runs
+    ]

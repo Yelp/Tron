@@ -1,3 +1,26 @@
+tron (0.9.1.1) trusty; urgency=medium
+
+  * 0.9.1.1 tagged with 'make release'
+    Commit: bump version
+
+ -- root <root@7f9302ada75f>  Fri, 15 Jun 2018 09:34:03 +0000
+
+tron (0.9.1.0) trusty; urgency=medium
+
+  * 0.9.1.0 tagged with 'make release'
+    Commit: Merge pull request #452 from Yelp/mesos-logging  Get output
+    from Mesos tasks
+
+ -- root <root@614825dc5b50>  Wed, 13 Jun 2018 13:48:43 +0000
+
+tron (0.9.0.0) trusty; urgency=medium
+
+  * 0.9.0.0 tagged with 'make release'
+    Commit: Merge pull request #451 from Yelp/fix-machine-state-during-
+    recovery  set the machine state to running before recovery
+
+ -- root <root@7686eebd0261>  Tue, 05 Jun 2018 16:48:52 +0000
+
 tron (0.8.0.6) trusty; urgency=medium
 
   * 0.8.0.6 tagged with 'make release'

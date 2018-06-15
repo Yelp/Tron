@@ -40,11 +40,6 @@ class MappingCollection(dict):
         log.info("Removing %s %s", self.item_name, name)
         self.pop(name).disable()
 
-    def restore_state(self, state_data):
-        for name, state in six.iteritems(state_data):
-            self[name].restore_state(state)
-        log.info("Loaded state for %d %s", len(state_data), self.item_name)
-
     def contains_item(self, item, handle_update_func):
         if item == self.get(item.get_name()):
             return True

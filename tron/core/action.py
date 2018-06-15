@@ -72,6 +72,13 @@ class Action(PClass):
         factory=factory_time_delta,
     )
 
+    constraints = field(initial=[])
+    docker_image = field()
+    docker_parameters = field(initial=[])
+    env = field(initial={})
+    extra_volumes = field(initial=[])
+    mesos_address = field()
+
     required_actions = field(type=PSet, initial=s(), factory=pset)
     dependent_actions = field(type=PSet, initial=s(), factory=pset)
 
