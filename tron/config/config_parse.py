@@ -32,12 +32,9 @@ from tron.config.config_utils import valid_name_identifier
 from tron.config.config_utils import valid_string
 from tron.config.config_utils import Validator
 from tron.config.schedule_parse import valid_schedule
-from tron.config.schema import ConfigConstraint
 from tron.config.schema import ConfigJob
-from tron.config.schema import ConfigParameter
 from tron.config.schema import ConfigSSHOptions
 from tron.config.schema import ConfigState
-from tron.config.schema import ConfigVolume
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.schema import NamedTronConfig
 from tron.config.schema import NotificationOptions
@@ -145,41 +142,6 @@ def valid_node_name(value, config_context):
         msg = "Unknown node name %s at %s"
         raise ConfigError(msg % (value, config_context.path))
     return value
-
-
-class ValidateConstraint(Validator):
-    config_class = ConfigConstraint
-    validators = {
-        'attribute': valid_string,
-        'operator': config_utils.build_enum_validator(OPERATORS.keys()),
-        'value': valid_string,
-    }
-
-
-valid_constraint = ValidateConstraint()
-
-
-class ValidateDockerParameter(Validator):
-    config_class = ConfigParameter
-    validators = {
-        'key': valid_string,
-        'value': valid_string,
-    }
-
-
-valid_docker_parameter = ValidateDockerParameter()
-
-
-class ValidateVolume(Validator):
-    config_class = ConfigVolume
-    validators = {
-        'container_path': valid_string,
-        'host_path': valid_string,
-        'mode': config_utils.build_enum_validator(['RO', 'RW']),
-    }
-
-
-valid_volume = ValidateVolume()
 
 
 class ValidateSSHOptions(Validator):
@@ -293,20 +255,6 @@ action_context = command_context.build_filled_context(
     command_context.JobRunContext,
     command_context.ActionRunContext,
 )
-
-
-def valid_mesos_action(action, config_context):
-    required_keys = {'cpus', 'mem', 'docker_image', 'mesos_address'}
-    if action.get('executor') == schema.ExecutorTypes.mesos:
-        missing_keys = required_keys - set(action.keys())
-        if missing_keys:
-            raise ConfigError(
-                'Mesos executor for action {id} is missing these required keys: {keys}'.
-                format(
-                    id=action['name'],
-                    keys=missing_keys,
-                ),
-            )
 
 
 def valid_cleanup_action_name(value, config_context):

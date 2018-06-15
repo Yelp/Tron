@@ -8,10 +8,9 @@ from testify import TestCase
 
 from tron import node
 from tron.config import config_utils
-from tron.config.schema import ConfigConstraint
-from tron.config.schema import ConfigParameter
-from tron.config.schema import ConfigVolume
 from tron.core import action
+from tron.core.action import Constraint
+from tron.core.action import Volume
 
 
 class TestAction(TestCase):
@@ -42,7 +41,7 @@ class TestAction(TestCase):
             cpus=1,
             mem=100,
             constraints=[
-                dict(attribute='pool', operator='LIKE', value='default'),
+                Constraint(attribute='pool', operator='LIKE', value='default'),
             ],
             docker_image='fake-docker.com:400/image',
             docker_parameters=[
@@ -50,10 +49,8 @@ class TestAction(TestCase):
             ],
             env={'TESTING': 'true'},
             extra_volumes=[
-                dict(
-                    host_path='/tmp',
-                    container_path='/nail/tmp',
-                    mode='RO',
+                Volume(
+                    host_path='/tmp', container_path='/nail/tmp', mode='RO'
                 ),
             ],
             mesos_address='fake-mesos-master.com',
@@ -68,7 +65,7 @@ class TestAction(TestCase):
         assert_equal(new_action.mem, config['mem'])
         assert_equal(
             new_action.constraints, [
-                dict(attribute='pool', operator='LIKE', value='default'),
+                Constraint(attribute='pool', operator='LIKE', value='default'),
             ]
         )
         assert_equal(new_action.docker_image, config['docker_image'])
@@ -79,13 +76,7 @@ class TestAction(TestCase):
         assert_equal(new_action.env, config['env'])
         assert_equal(
             new_action.extra_volumes,
-            [
-                {
-                    'container_path': '/nail/tmp',
-                    'host_path': '/tmp',
-                    'mode': 'RO'
-                }
-            ],
+            [Volume(container_path='/nail/tmp', host_path='/tmp', mode='RO')],
         )
         assert_equal(new_action.mesos_address, config['mesos_address'])
 

@@ -129,39 +129,8 @@ ConfigJob = config_object_factory(
     ],
 )
 
-ConfigConstraint = config_object_factory(
-    name='ConfigConstraint',
-    required=[
-        'attribute',
-        'operator',
-        'value',
-    ],
-    optional=[],
-)
-
-ConfigVolume = config_object_factory(
-    name='ConfigVolume',
-    required=[
-        'container_path',
-        'host_path',
-        'mode',
-    ],
-    optional=[],
-)
-
-ConfigParameter = config_object_factory(
-    name='ConfigParameter',
-    required=[
-        'key',
-        'value',
-    ],
-    optional=[],
-)
-
 StatePersistenceTypes = Enum.create('shelve', 'sql', 'yaml')
 
 ExecutorTypes = Enum.create('ssh', 'mesos')
 
 ActionRunnerTypes = Enum.create('none', 'subprocess')
-
-VolumeModes = Enum.create('RO', 'RW')

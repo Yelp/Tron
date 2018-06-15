@@ -3,10 +3,14 @@ from __future__ import unicode_literals
 
 import datetime
 import logging
+from enum import Enum
+from functools import reduce
 
 from pyrsistent import CheckedPMap
+from pyrsistent import CheckedPVector
 from pyrsistent import field
 from pyrsistent import PClass
+from pyrsistent import PRecord
 from pyrsistent import PSet
 from pyrsistent import pset
 from pyrsistent import s
@@ -17,7 +21,6 @@ from tron.config.config_utils import IDENTIFIER_RE
 from tron.config.config_utils import TIME_INTERVAL_RE
 from tron.config.config_utils import TIME_INTERVAL_UNITS
 from tron.config.schema import CLEANUP_ACTION_NAME
-from tron.config.schema import ConfigConstraint
 from tron.utils import maybe_decode
 
 log = logging.getLogger(__name__)
@@ -38,6 +41,40 @@ def factory_time_delta(value):
 
     time_spec = {TIME_INTERVAL_UNITS[units]: int(matches.group('value'))}
     return datetime.timedelta(**time_spec)
+
+
+class Constraint(PRecord):
+    attribute = field(mandatory=True)
+    operator = field(mandatory=True)
+    value = field(mandatory=True)
+
+
+class Constraints(CheckedPVector):
+    __type__ = Constraint
+
+
+class VolumeModes(Enum):
+    RO = 'RO'
+    RW = 'RW'
+
+
+class Volume(PRecord):
+    container_path = field(mandatory=True)
+    host_path = field(mandatory=True)
+    mode = field(mandatory=True, type=VolumeModes, factory=VolumeModes)
+
+
+class Volumes(CheckedPVector):
+    __type__ = Volume
+
+
+class DockerParam(PRecord):
+    key = field(mandatory=True)
+    value = field(mandatory=True)
+
+
+class DockerParams(CheckedPVector):
+    __type__ = DockerParam
 
 
 class Action(PClass):
@@ -73,11 +110,11 @@ class Action(PClass):
         factory=factory_time_delta,
     )
 
-    constraints = field(initial=[])
+    constraints = field(type=Constraints, initial=Constraints())
     docker_image = field(initial=None)
-    docker_parameters = field(initial=[])
-    env = field(initial={})
-    extra_volumes = field(initial=[])
+    docker_parameters = field(type=DockerParams, initial=DockerParams())
+    env = field(initial={}, type=dict)
+    extra_volumes = field(type=Volumes, initial=Volumes())
     mesos_address = field(initial=None)
 
     required_actions = field(type=PSet, initial=s(), factory=pset)
@@ -141,11 +178,14 @@ class Action(PClass):
                     ),
                 )
 
-        if config.get('executor') == 'mesos':
-            if not config.get('docker_image'):
+        if config.get('executor') == schema.ExecutorTypes.mesos:
+            required_keys = {'cpus', 'mem', 'docker_image', 'mesos_address'}
+            missing_keys = required_keys - set(config.keys())
+            if missing_keys:
+                name = config['name']
                 raise ValueError(
-                    "Docker image is required for mesos "
-                    f"action at {config_context.path}"
+                    f"Mesos executor for action {name} is missing "
+                    f"these required keys: {missing_keys}"
                 )
 
         return cls.create(config)

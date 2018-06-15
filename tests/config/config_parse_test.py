@@ -37,6 +37,7 @@ from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import MASTER_NAMESPACE
 from tron.core.action import Action
 from tron.core.action import ActionMap
+from tron.core.action import VolumeModes
 from tron.utils.dicts import FrozenDict
 
 BASE_CONFIG = """
@@ -1273,7 +1274,7 @@ class ValidateJobsTestCase(TestCase):
                                         dict(
                                             container_path='/tmp',
                                             host_path='/home/tmp',
-                                            mode='RO',
+                                            mode=VolumeModes.RO,
                                         ),
                                     ],
                                     mesos_address='http://my-mesos-master.com',
