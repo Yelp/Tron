@@ -22,6 +22,7 @@ from twisted.web import http, resource, static, server
 from tron import event
 from tron.api import adapter, controller
 from tron.api import requestargs
+from tron.api.async_resource import AsyncResource
 from tron.utils import maybe_decode
 
 log = logging.getLogger(__name__)
@@ -94,6 +95,7 @@ class ActionRunResource(resource.Resource):
         self.job_run = job_run
         self.controller = controller.ActionRunController(action_run, job_run)
 
+    @AsyncResource.bounded
     def render_GET(self, request):
         run_adapter = adapter.ActionRunAdapter(
             self.action_run,
@@ -104,6 +106,7 @@ class ActionRunResource(resource.Resource):
         )
         return respond(request, run_adapter.get_repr())
 
+    @AsyncResource.exclusive
     def render_POST(self, request):
         return handle_command(request, self.controller, self.action_run)
 
@@ -129,6 +132,7 @@ class JobRunResource(resource.Resource):
         msg = "Cannot find action %s for %s"
         return resource.NoResource(msg % (action_name, self.job_run))
 
+    @AsyncResource.bounded
     def render_GET(self, request):
         include_runs = requestargs.get_bool(request, 'include_action_runs')
         include_graph = requestargs.get_bool(request, 'include_action_graph')
@@ -139,6 +143,7 @@ class JobRunResource(resource.Resource):
         )
         return respond(request, run_adapter.get_repr())
 
+    @AsyncResource.exclusive
     def render_POST(self, request):
         return handle_command(request, self.controller, self.job_run)
 
@@ -182,6 +187,7 @@ class JobResource(resource.Resource):
         msg = "Cannot find job run %s for %s"
         return resource.NoResource(msg % (run_id, job))
 
+    @AsyncResource.bounded
     def render_GET(self, request):
         include_action_runs = requestargs.get_bool(
             request,
@@ -198,6 +204,7 @@ class JobResource(resource.Resource):
         )
         return respond(request, job_adapter.get_repr())
 
+    @AsyncResource.exclusive
     def render_POST(self, request):
         run_time = requestargs.get_datetime(request, 'run_time')
         return handle_command(
@@ -216,6 +223,7 @@ class ActionRunHistoryResource(resource.Resource):
         resource.Resource.__init__(self)
         self.action_runs = action_runs
 
+    @AsyncResource.bounded
     def render_GET(self, request):
         return respond(
             request,
@@ -260,6 +268,7 @@ class JobCollectionResource(resource.Resource):
         )
         return {job['name']: job['actions'] for job in jobs}
 
+    @AsyncResource.bounded
     def render_GET(self, request):
         include_job_runs = requestargs.get_bool(
             request,
@@ -291,6 +300,7 @@ class JobCollectionResource(resource.Resource):
         )
         return respond(request, output)
 
+    @AsyncResource.exclusive
     def render_POST(self, request):
         return handle_command(request, self.controller, self.job_collection)
 
@@ -307,6 +317,7 @@ class ConfigResource(resource.Resource):
     def get_config_index(self):
         return self.controller.get_namespaces()
 
+    @AsyncResource.bounded
     def render_GET(self, request):
         config_name = requestargs.get_string(request, 'name')
         no_header = requestargs.get_bool(request, 'no_header')
@@ -322,6 +333,7 @@ class ConfigResource(resource.Resource):
         )
         return respond(request, response)
 
+    @AsyncResource.exclusive
     def render_POST(self, request):
         config_content = requestargs.get_string(request, 'config')
         name = requestargs.get_string(request, 'name')
@@ -363,6 +375,7 @@ class StatusResource(resource.Resource):
         self._master_control = master_control
         resource.Resource.__init__(self)
 
+    @AsyncResource.bounded
     def render_GET(self, request):
         return respond(request, {'status': "I'm alive."})
 
@@ -375,6 +388,7 @@ class EventResource(resource.Resource):
         resource.Resource.__init__(self)
         self.entity_name = entity_name
 
+    @AsyncResource.bounded
     def render_GET(self, request):
         recorder = event.get_recorder(self.entity_name)
         response_data = adapter.adapt_many(
@@ -400,6 +414,7 @@ class ApiRootResource(resource.Resource):
         self.putChild(b'events', EventResource(''))
         self.putChild(b'', self)
 
+    @AsyncResource.bounded
     def render_GET(self, request):
         """Return an index of urls for resources."""
         response = {
