@@ -657,7 +657,6 @@ class ActionRunCollectionTestCase(TestCase):
             ['localhost'],
             ['cluster'],
             None,
-            None,
         )
         self.action_graph = actiongraph.ActionGraph.from_config(
             action.ActionMap.from_config(
@@ -830,7 +829,6 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
             'config',
             ['localhost'],
             ['cluster'],
-            None,
             None,
         )
         self.action_graph = actiongraph.ActionGraph.from_config(

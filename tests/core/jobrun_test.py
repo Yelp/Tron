@@ -33,14 +33,10 @@ def build_mock_job():
         ['localhost'],
         ['cluster'],
         None,
-        None,
     )
     action_graph = actiongraph.ActionGraph.from_config(
         action.ActionMap.from_config(
-            [{
-                'name': 'test',
-                'command': 'test'
-            }],
+            [dict(name='test', command='test')],
             config_context,
         ),
         config_context,

@@ -175,7 +175,6 @@ jobs:
         ['localhost'],
         ['cluster'],
         None,
-        None,
     )
 
     @mock.patch.dict('tron.config.config_parse.ValidateNode.defaults')
@@ -351,8 +350,6 @@ jobs:
                             schedule=ConfigConstantScheduler(),
                             enabled=True,
                             monitoring={},
-                            service=None,
-                            deploy_group=None,
                             actions=ActionMap.from_config(
                                 [
                                     dict(
@@ -437,9 +434,9 @@ jobs:
                             actions=ActionMap.from_config(
                                 [
                                     dict(
-                                        name='action4_0',
-                                        command='test_command4.0',
-                                        executor='paasta',
+                                        name='action_mesos',
+                                        command='test_command_mesos',
+                                        executor='mesos',
                                         expected_runtime=datetime.timedelta(1),
                                         cpus=0.1,
                                         mem=100,
@@ -592,7 +589,6 @@ jobs:
             ['localhost'],
             ['cluster'],
             None,
-            None,
         )
         expected = schema.NamedTronConfig(
             jobs=FrozenDict(
@@ -719,8 +715,6 @@ jobs:
                             schedule=ConfigConstantScheduler(),
                             enabled=True,
                             monitoring={},
-                            service=None,
-                            deploy_group=None,
                             actions=ActionMap.from_config(
                                 [
                                     dict(
@@ -806,9 +800,9 @@ jobs:
                             actions=ActionMap.from_config(
                                 [
                                     dict(
-                                        name='action4_0',
-                                        command='test_command4.0',
-                                        executor='paasta',
+                                        name='action_mesos',
+                                        command='test_command_mesos',
+                                        executor='mesos',
                                         expected_runtime=datetime.timedelta(1),
                                         cpus=0.1,
                                         mem=100,
@@ -1228,80 +1222,6 @@ class ValidateJobsTestCase(TestCase):
             None,
             MASTER_NAMESPACE,
         )
-        expected_jobs = {
-            'MASTER.test_job0':
-                schema.ConfigJob(
-                    name='MASTER.test_job0',
-                    namespace='MASTER',
-                    node='node0',
-                    monitoring={},
-                    schedule=ConfigIntervalScheduler(
-                        timedelta=datetime.timedelta(0, 20),
-                        jitter=None,
-                    ),
-                    actions=ActionMap.from_config(
-                        [
-                            dict(
-                                name='action0_0',
-                                command='test_command0.0',
-                                executor='ssh',
-                                expected_runtime=datetime.timedelta(0, 1200),
-                            ),
-                            dict(
-                                name='action_mesos',
-                                command='test_command_mesos',
-                                executor='mesos',
-                                cpus=4.0,
-                                mem=300.0,
-                                constraints=(
-                                    schema.ConfigConstraint(
-                                        attribute='pool',
-                                        operator='LIKE',
-                                        value='default',
-                                    ),
-                                ),
-                                docker_image='my_container:latest',
-                                docker_parameters=(
-                                    schema.ConfigParameter(
-                                        key='label',
-                                        value='labelA',
-                                    ),
-                                    schema.ConfigParameter(
-                                        key='label',
-                                        value='labelB',
-                                    ),
-                                ),
-                                env={'USER': 'batch'},
-                                extra_volumes=(
-                                    schema.ConfigVolume(
-                                        container_path='/tmp',
-                                        host_path='/home/tmp',
-                                        mode='RO',
-                                    ),
-                                ),
-                                mesos_address='http://my-mesos-master.com',
-                                expected_runtime=datetime.timedelta(hours=24),
-                            ),
-                        ],
-                        context,
-                    ),
-                    queueing=True,
-                    run_limit=50,
-                    all_nodes=False,
-                    cleanup_action=schema.ConfigCleanupAction(
-                        command='test_command0.1',
-                        name='cleanup',
-                        node=None,
-                        executor='ssh',
-                        expected_runtime=datetime.timedelta(1),
-                    ),
-                    enabled=True,
-                    allow_overlap=False,
-                    max_runtime=None,
-                    time_zone=None,
-                    expected_runtime=datetime.timedelta(0, 1200),
-                ),
-        }
         expected_jobs = FrozenDict(
             {
                 'MASTER.test_job0':
@@ -1310,19 +1230,57 @@ class ValidateJobsTestCase(TestCase):
                         namespace='MASTER',
                         node='node0',
                         monitoring={},
-                        service=None,
-                        deploy_group=None,
                         schedule=ConfigIntervalScheduler(
                             timedelta=datetime.timedelta(0, 20),
                             jitter=None,
                         ),
                         actions=ActionMap.from_config(
                             [
-                                {
-                                    'name': 'action0_0',
-                                    'command': 'test_command0.0',
-                                    'expected_runtime': '20m',
-                                },
+                                dict(
+                                    name='action0_0',
+                                    command='test_command0.0',
+                                    executor='ssh',
+                                    expected_runtime=datetime.timedelta(
+                                        0, 1200
+                                    ),
+                                ),
+                                dict(
+                                    name='action_mesos',
+                                    command='test_command_mesos',
+                                    executor='mesos',
+                                    cpus=4.0,
+                                    mem=300.0,
+                                    constraints=[
+                                        dict(
+                                            attribute='pool',
+                                            operator='LIKE',
+                                            value='default',
+                                        ),
+                                    ],
+                                    docker_image='my_container:latest',
+                                    docker_parameters=[
+                                        dict(
+                                            key='label',
+                                            value='labelA',
+                                        ),
+                                        dict(
+                                            key='label',
+                                            value='labelB',
+                                        ),
+                                    ],
+                                    env={'USER': 'batch'},
+                                    extra_volumes=[
+                                        dict(
+                                            container_path='/tmp',
+                                            host_path='/home/tmp',
+                                            mode='RO',
+                                        ),
+                                    ],
+                                    mesos_address='http://my-mesos-master.com',
+                                    expected_runtime=datetime.timedelta(
+                                        hours=24
+                                    ),
+                                ),
                             ],
                             context,
                         ),
@@ -1330,11 +1288,13 @@ class ValidateJobsTestCase(TestCase):
                         run_limit=50,
                         all_nodes=False,
                         cleanup_action=Action.from_config(
-                            {
-                                'command': 'test_command0.1',
-                                'name': 'cleanup',
-                            },
-                            context,
+                            dict(
+                                command='test_command0.1',
+                                name='cleanup',
+                                node=None,
+                                executor='ssh',
+                                expected_runtime=datetime.timedelta(1),
+                            ), context
                         ),
                         enabled=True,
                         allow_overlap=False,
@@ -1361,14 +1321,15 @@ class ValidMesosActionTestCase(TestCase):
             mesos_address='http://hello.org',
         )
         assert_raises(
-            ConfigError,
-            config_parse.valid_action,
+            ValueError,
+            Action.from_config,
             config,
             NullConfigContext,
         )
 
     def test_cleanup_missing_docker_image(self):
         config = dict(
+            name='cleanup',
             command='echo hello',
             executor=schema.ExecutorTypes.mesos,
             cpus=0.2,
@@ -1376,23 +1337,9 @@ class ValidMesosActionTestCase(TestCase):
             mesos_address='http://hello.org',
         )
         assert_raises(
-            ConfigError,
-            config_parse.valid_action,
+            ValueError,
+            Action.from_config,
             config,
-            NullConfigContext,
-        )
-
-
-class ValidCleanupActionNameTestCase(TestCase):
-    def test_valid_cleanup_action_name_pass(self):
-        name = valid_cleanup_action_name(CLEANUP_ACTION_NAME, None)
-        assert_equal(CLEANUP_ACTION_NAME, name)
-
-    def test_valid_cleanup_action_name_fail(self):
-        assert_raises(
-            ConfigError,
-            valid_cleanup_action_name,
-            'other',
             NullConfigContext,
         )
 

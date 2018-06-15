@@ -19,7 +19,6 @@ class ActionGraphTestCase(TestCase):
             ['localhost'],
             ['cluster'],
             None,
-            None,
         )
         self.action_names = [
             'base_one',

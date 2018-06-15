@@ -25,6 +25,8 @@ from tron import actioncommand
 from tron import event
 from tron import node
 from tron import scheduler
+from tron.config import config_utils
+from tron.config import schema
 from tron.core import job
 from tron.core import jobrun
 from tron.core.action import ActionMap
@@ -74,7 +76,6 @@ class JobTestCase(TestCase):
             'config',
             ['localhost'],
             ['cluster'],
-            None,
             None,
         )
         self.mock_node_repo.get_instance().get_by_name = mock.Mock(

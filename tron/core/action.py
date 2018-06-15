@@ -17,6 +17,7 @@ from tron.config.config_utils import IDENTIFIER_RE
 from tron.config.config_utils import TIME_INTERVAL_RE
 from tron.config.config_utils import TIME_INTERVAL_UNITS
 from tron.config.schema import CLEANUP_ACTION_NAME
+from tron.config.schema import ConfigConstraint
 from tron.utils import maybe_decode
 
 log = logging.getLogger(__name__)
@@ -73,11 +74,11 @@ class Action(PClass):
     )
 
     constraints = field(initial=[])
-    docker_image = field()
+    docker_image = field(initial=None)
     docker_parameters = field(initial=[])
     env = field(initial={})
     extra_volumes = field(initial=[])
-    mesos_address = field()
+    mesos_address = field(initial=None)
 
     required_actions = field(type=PSet, initial=s(), factory=pset)
     dependent_actions = field(type=PSet, initial=s(), factory=pset)
@@ -138,6 +139,13 @@ class Action(PClass):
                         requires,
                         config_context.path,
                     ),
+                )
+
+        if config.get('executor') == 'mesos':
+            if not config.get('docker_image'):
+                raise ValueError(
+                    "Docker image is required for mesos "
+                    f"action at {config_context.path}"
                 )
 
         return cls.create(config)
