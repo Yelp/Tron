@@ -52,7 +52,7 @@ class MesosClusterRepositoryTestCase(TestCase):
         MesosClusterRepository.configure(mesos_enabled=False)
         for cluster in clusters:
             cluster.set_enabled.assert_called_once_with(False)
-        new_cluster = MesosClusterRepository.get_cluster('f')
+        MesosClusterRepository.get_cluster('f')
         self.cluster_cls.assert_called_with('f', False)
 
 
@@ -249,23 +249,21 @@ class MesosClusterTestCase(TestCase):
         assert_equal(cluster.processor, self.mock_processor)
 
         self.mock_get_leader.assert_called_once_with('mesos-cluster-a.me')
-        self.mock_processor.executor_from_config.assert_has_calls(
-            [
-                mock.call(
-                    provider='mesos',
-                    provider_config={
-                        'secret': MESOS_SECRET,
-                        'mesos_address': self.mock_get_leader.return_value,
-                        'role': MESOS_ROLE,
-                        'framework_name': 'tron-hostname',
-                    },
-                ),
-                mock.call(
-                    provider='logging',
-                    provider_config=mock.ANY,
-                ),
-            ]
-        )
+        self.mock_processor.executor_from_config.assert_has_calls([
+            mock.call(
+                provider='mesos',
+                provider_config={
+                    'secret': MESOS_SECRET,
+                    'mesos_address': self.mock_get_leader.return_value,
+                    'role': MESOS_ROLE,
+                    'framework_name': 'tron-hostname',
+                },
+            ),
+            mock.call(
+                provider='logging',
+                provider_config=mock.ANY,
+            ),
+        ])
         self.mock_runner_cls.assert_called_once_with(
             self.mock_processor.executor_from_config.return_value,
             self.mock_queue,
@@ -274,12 +272,10 @@ class MesosClusterTestCase(TestCase):
 
         get_event_deferred = cluster.deferred
         assert_equal(get_event_deferred, self.mock_queue.get.return_value)
-        get_event_deferred.addCallback.assert_has_calls(
-            [
-                mock.call(cluster._process_event),
-                mock.call(cluster.handle_next_event),
-            ]
-        )
+        get_event_deferred.addCallback.assert_has_calls([
+            mock.call(cluster._process_event),
+            mock.call(cluster.handle_next_event),
+        ])
 
     def test_submit(self):
         cluster = MesosCluster('mesos-cluster-a.me')

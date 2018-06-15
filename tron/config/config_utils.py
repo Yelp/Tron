@@ -126,14 +126,12 @@ def valid_time(value, config_context):
 
 # Translations from possible configuration units to the argument to
 # datetime.timedelta
-TIME_INTERVAL_UNITS = dicts.invert_dict_list(
-    {
-        'days': ['d', 'day', 'days'],
-        'hours': ['h', 'hr', 'hrs', 'hour', 'hours'],
-        'minutes': ['m', 'min', 'mins', 'minute', 'minutes'],
-        'seconds': ['s', 'sec', 'secs', 'second', 'seconds'],
-    }
-)
+TIME_INTERVAL_UNITS = dicts.invert_dict_list({
+    'days': ['d', 'day', 'days'],
+    'hours': ['h', 'hr', 'hrs', 'hour', 'hours'],
+    'minutes': ['m', 'min', 'mins', 'minute', 'minutes'],
+    'seconds': ['s', 'sec', 'secs', 'second', 'seconds'],
+})
 
 TIME_INTERVAL_RE = re.compile(r"^\s*(?P<value>\d+)\s*(?P<units>[a-zA-Z]+)\s*$")
 

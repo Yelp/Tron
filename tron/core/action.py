@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import datetime
 import logging
 
 from tron import node
@@ -69,9 +68,8 @@ class Action(object):
         # Only convert config values if they are not None.
         constraints = config.constraints
         if constraints:
-            constraints = [
-                [c.attribute, c.operator, c.value] for c in constraints
-            ]
+            constraints = [[c.attribute, c.operator, c.value]
+                           for c in constraints]
         docker_parameters = config.docker_parameters
         if docker_parameters:
             docker_parameters = [c._asdict() for c in docker_parameters]

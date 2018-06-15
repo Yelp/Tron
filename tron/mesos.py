@@ -1,4 +1,3 @@
-import json
 import logging
 import socket
 from urllib.parse import urlparse

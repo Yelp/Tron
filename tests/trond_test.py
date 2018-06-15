@@ -92,8 +92,8 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
 
         def wait_on_cleanup():
             return (
-                len(client.job(job_url)['runs']) >= 2
-                and client.action_runs(action_url)['state'] ==
+                len(client.job(job_url)['runs']) >= 2 and
+                client.action_runs(action_url)['state'] ==
                 actionrun.ActionRun.STATE_SUCCEEDED.name
             )
 

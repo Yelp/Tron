@@ -14,7 +14,6 @@ from testify import teardown
 from testify import TestCase
 from testify.assertions import assert_not_equal
 
-from tests import mocks
 from tests import testingutils
 from tests.assertions import assert_call
 from tests.assertions import assert_length
@@ -151,7 +150,7 @@ class JobTestCase(TestCase):
             ) for i in range(0, 3)
         ]
         state_data = {'enabled': False, 'runs': job_runs}
-        returned_runs = self.job.get_job_runs_from_state(state_data)
+        self.job.get_job_runs_from_state(state_data)
         assert not self.job.enabled
 
     def test_build_new_runs(self):
@@ -244,14 +243,8 @@ class JobSchedulerTestCase(TestCase):
     @setup
     def setup_job(self):
         self.scheduler = scheduler.ConstantScheduler()
-        run_collection = jobrun.JobRunCollection(20)
         mock_graph = mock.Mock(autospec=True)
-
         mock_graph.get_action_map.return_value = {}
-        node_pool = node.NodePool.from_node(
-            node=mock.Mock(name="foo", autospec=True)
-        )
-
         mock_graph.action_map = {}
         self.job = mock.Mock(autospec=True)
         self.job.allow_overlap = False
