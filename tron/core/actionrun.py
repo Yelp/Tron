@@ -602,8 +602,10 @@ class MesosActionRun(ActionRun, Observer):
             serializer=serializer,
         )
         # TODO: save task.task_id (mesos id) to state
-        mesos_cluster.submit(task)  # TODO: catch errors
+
+        # Watch before submitting, in case submit causes a transition
         self.watch(task)
+        mesos_cluster.submit(task)
         return task
 
     def stop(self):
