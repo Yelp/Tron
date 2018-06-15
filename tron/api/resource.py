@@ -6,10 +6,8 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import collections
-import contextlib
 import datetime
 import logging
-import threading
 
 import six
 
@@ -20,7 +18,6 @@ except ImportError:
     import json
 
 from twisted.web import http, resource, static, server
-from twisted.internet import reactor, threads
 
 from tron import event
 from tron.api import adapter, controller
