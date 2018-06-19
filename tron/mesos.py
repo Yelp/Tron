@@ -50,7 +50,8 @@ class MesosClusterRepository:
             cluster.stop()
 
     @classmethod
-    def configure(cls, mesos_enabled):
+    def configure(cls, mesos_options):
+        mesos_enabled = mesos_options.enabled
         cls.mesos_enabled = mesos_enabled
         for cluster in cls.clusters.values():
             cluster.set_enabled(mesos_enabled)
@@ -179,6 +180,10 @@ class MesosCluster:
 
     def set_enabled(self, is_enabled):
         self.enabled = is_enabled
+        if is_enabled:
+            self.connect()
+        else:
+            self.stop()
 
     # TODO: Should this be done asynchronously?
     # TODO: Handle/retry errors
@@ -200,6 +205,14 @@ class MesosCluster:
         self.deferred.addErrback(self.handle_next_event)
 
     def submit(self, task):
+        if not task:
+            return
+
+        if not self.enabled:
+            task.log.info('Task failed to start, Mesos is disabled.')
+            task.exited(1)
+            return
+
         if self.runner.stopping:
             # Last framework was terminated for some reason, re-connect.
             self.connect()
@@ -230,6 +243,9 @@ class MesosCluster:
         extra_volumes,
         serializer,
     ):
+        if not self.runner:
+            return None
+
         task_config = self.runner.TASK_CONFIG_INTERFACE(
             name=action_run_id,
             cmd=command,
@@ -246,6 +262,14 @@ class MesosCluster:
         return MesosTask(action_run_id, task_config, serializer)
 
     def get_runner(self, mesos_address, queue):
+        if not self.enabled:
+            log.info('Mesos is disabled, not creating a framework.')
+            return None
+
+        if self.runner and not self.runner.stopping:
+            log.info('Already have a running framework, not creating one.')
+            return self.runner
+
         framework_name = 'tron-{}'.format(socket.gethostname())
         executor = self.processor.executor_from_config(
             provider='mesos',
@@ -311,5 +335,13 @@ class MesosCluster:
             log.warn('Unknown type of event: {}'.format(event))
 
     def stop(self):
-        self.runner.stop()
-        self.deferred.cancel()
+        if self.runner:
+            self.runner.stop()
+        if self.deferred:
+            self.deferred.cancel()
+        for key, task in list(self.tasks.items()):
+            task.log.warning(
+                'Still running during Mesos shutdown, becoming unknown'
+            )
+            task.exited(None)
+            del self.tasks[key]

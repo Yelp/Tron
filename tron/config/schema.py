@@ -49,6 +49,7 @@ TronConfig = config_object_factory(
         'nodes',  # FrozenDict of ConfigNode
         'node_pools',  # FrozenDict of ConfigNodePool
         'jobs',  # FrozenDict of ConfigJob
+        'mesos_options',  # ConfigMesos
     ],
 )
 
@@ -103,6 +104,13 @@ ConfigState = config_object_factory(
     optional=[
         'connection_details',
         'buffer_size',
+    ],
+)
+
+ConfigMesos = config_object_factory(
+    name='ConfigMesos',
+    optional=[
+        'enabled',
     ],
 )
 

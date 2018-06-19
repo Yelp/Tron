@@ -937,6 +937,19 @@ class MesosActionRunTestCase(TestCase):
             self.action_run.output_path,
         )
 
+    @mock.patch('tron.core.actionrun.filehandler', autospec=True)
+    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
+    def test_submit_command_task_none(
+        self, mock_cluster_repo, mock_filehandler
+    ):
+        # Task is None if Mesos is disabled
+        mock_cluster_repo.get_cluster.return_value.create_task.return_value = None
+        self.action_run.submit_command()
+
+        mock_get_cluster = mock_cluster_repo.get_cluster
+        mock_get_cluster.assert_called_once_with(self.mesos_address)
+        assert self.action_run.is_failed
+
 
 if __name__ == "__main__":
     run()

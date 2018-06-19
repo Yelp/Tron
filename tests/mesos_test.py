@@ -49,7 +49,8 @@ class MesosClusterRepositoryTestCase(TestCase):
             MesosClusterRepository.get_cluster(address)
             for address in ['d', 'e']
         ]
-        MesosClusterRepository.configure(mesos_enabled=False)
+        options = mock.Mock(enabled=False)
+        MesosClusterRepository.configure(options)
         for cluster in clusters:
             cluster.set_enabled.assert_called_once_with(False)
         MesosClusterRepository.get_cluster('f')
@@ -277,6 +278,46 @@ class MesosClusterTestCase(TestCase):
             mock.call(cluster.handle_next_event),
         ])
 
+    def test_init_disabled(self):
+        cluster = MesosCluster('mesos-cluster-a.me', enabled=False)
+
+        assert_equal(cluster.queue, self.mock_queue)
+        assert_equal(cluster.processor, self.mock_processor)
+        assert_equal(self.mock_processor.executor_from_config.call_count, 0)
+        assert cluster.runner is None
+
+    def test_set_enabled_off(self):
+        cluster = MesosCluster('mesos-cluster-a.me', enabled=True)
+        cluster.set_enabled(False)
+        assert_equal(cluster.enabled, False)
+        assert_equal(cluster.runner.stop.call_count, 1)
+
+    def test_set_enabled_on(self):
+        cluster = MesosCluster('mesos-cluster-a.me', enabled=False)
+        cluster.set_enabled(True)
+        assert_equal(cluster.enabled, True)
+        # Basically the same as regular initialization
+        assert_equal(self.mock_processor.executor_from_config.call_count, 2)
+        self.mock_runner_cls.assert_called_once_with(
+            self.mock_processor.executor_from_config.return_value,
+            self.mock_queue,
+        )
+        assert_equal(cluster.runner, self.mock_runner_cls.return_value)
+
+        get_event_deferred = cluster.deferred
+        assert_equal(get_event_deferred, self.mock_queue.get.return_value)
+        get_event_deferred.addCallback.assert_has_calls([
+            mock.call(cluster._process_event),
+            mock.call(cluster.handle_next_event),
+        ])
+
+    def test_set_enabled_on_already(self):
+        cluster = MesosCluster('mesos-cluster-a.me', enabled=True)
+        cluster.set_enabled(True)
+        assert_equal(cluster.enabled, True)
+        # Runner should have only be created once
+        assert_equal(self.mock_runner_cls.call_count, 1)
+
     def test_submit(self):
         cluster = MesosCluster('mesos-cluster-a.me')
         mock_task = mock.MagicMock(spec_set=MesosTask)
@@ -288,6 +329,15 @@ class MesosClusterTestCase(TestCase):
         cluster.runner.run.assert_called_once_with(
             mock_task.get_config.return_value,
         )
+
+    def test_submit_disabled(self):
+        cluster = MesosCluster('mesos-cluster-a.me', enabled=False)
+        mock_task = mock.MagicMock()
+        mock_task.get_mesos_id.return_value = 'this_task'
+        cluster.submit(mock_task)
+
+        assert 'this_task' not in cluster.tasks
+        mock_task.exited.assert_called_once_with(1)
 
     @mock.patch('tron.mesos.MesosTask', autospec=True)
     def test_create_task(self, mock_task):
@@ -325,6 +375,25 @@ class MesosClusterTestCase(TestCase):
             mock_serializer,
         )
 
+    @mock.patch('tron.mesos.MesosTask', autospec=True)
+    def test_create_task_disabled(self, mock_task):
+        # If Mesos is disabled, should return None
+        cluster = MesosCluster('mesos-cluster-a.me', enabled=False)
+        mock_serializer = mock.MagicMock()
+        task = cluster.create_task(
+            action_run_id='action_c',
+            command='echo hi',
+            cpus=1,
+            mem=10,
+            constraints=[],
+            docker_image='container:latest',
+            docker_parameters=[],
+            env={'TESTING': 'true'},
+            extra_volumes=[],
+            serializer=mock_serializer,
+        )
+        assert task is None
+
     def test_process_event_task(self):
         event = mock_task_event('this_task', 'some_platform_type')
         cluster = MesosCluster('mesos-cluster-a.me')
@@ -354,3 +423,18 @@ class MesosClusterTestCase(TestCase):
         cluster._process_event(event)
         assert_equal(cluster.runner.stop.call_count, 1)
         assert_equal(cluster.deferred.cancel.call_count, 1)
+
+    def test_stop(self):
+        cluster = MesosCluster('mesos-cluster-a.me')
+        mock_task = mock.MagicMock()
+        cluster.tasks = {'task_id': mock_task}
+        cluster.stop()
+        assert_equal(cluster.runner.stop.call_count, 1)
+        assert_equal(cluster.deferred.cancel.call_count, 1)
+        mock_task.exited.assert_called_once_with(None)
+        assert_equal(len(cluster.tasks), 0)
+
+    def test_stop_disabled(self):
+        # Shouldn't raise an error
+        cluster = MesosCluster('mesos-cluster-a.me', enabled=False)
+        cluster.stop()

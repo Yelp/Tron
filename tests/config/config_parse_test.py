@@ -192,6 +192,7 @@ jobs:
             notification_options=None,
             time_zone=pytz.timezone("EST"),
             state_persistence=config_parse.DEFAULT_STATE_PERSISTENCE,
+            mesos_options=schema.ConfigMesos(enabled=False),
             nodes=FrozenDict({
                 'node0':
                     schema.ConfigNode(
