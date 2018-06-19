@@ -87,12 +87,6 @@ class MesosTaskTestCase(TestCase):
         with mock.patch.object(self.task, 'log'):
             yield
 
-    def test_missing_task_config(self):
-        # Should still be able to create a task without full config,
-        # in case Mesos is disabled.
-        task = MesosTask(id=self.action_run_id, task_config={})
-        assert task.get_mesos_id() is not None
-
     def test_handle_staging(self):
         event = mock_task_event(
             task_id=self.task_id,
@@ -383,7 +377,7 @@ class MesosClusterTestCase(TestCase):
 
     @mock.patch('tron.mesos.MesosTask', autospec=True)
     def test_create_task_disabled(self, mock_task):
-        # If Mesos is disabled, should still return some task that can be transitioned
+        # If Mesos is disabled, should return None
         cluster = MesosCluster('mesos-cluster-a.me', enabled=False)
         mock_serializer = mock.MagicMock()
         task = cluster.create_task(
@@ -398,12 +392,7 @@ class MesosClusterTestCase(TestCase):
             extra_volumes=[],
             serializer=mock_serializer,
         )
-        assert_equal(task, mock_task.return_value)
-        mock_task.assert_called_once_with(
-            'action_c',
-            mock.ANY,
-            mock_serializer,
-        )
+        assert task is None
 
     def test_process_event_task(self):
         event = mock_task_event('this_task', 'some_platform_type')

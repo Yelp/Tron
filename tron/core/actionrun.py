@@ -601,6 +601,10 @@ class MesosActionRun(ActionRun, Observer):
             extra_volumes=self.extra_volumes,
             serializer=serializer,
         )
+        if not task:  # Mesos is disabled
+            self.fail(None)
+            return
+
         # TODO: save task.task_id (mesos id) to state
 
         # Watch before submitting, in case submit causes a transition

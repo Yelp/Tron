@@ -61,8 +61,7 @@ class MesosTask(ActionCommand):
     ERROR_STATES = frozenset(['failed', 'killed', 'lost', 'error'])
 
     def __init__(self, id, task_config, serializer=None):
-        command = task_config.get('cmd', None)
-        super(MesosTask, self).__init__(id, command, serializer)
+        super(MesosTask, self).__init__(id, task_config.cmd, serializer)
         self.task_config = task_config
         self.log = self.get_event_logger()
         self.setup_output_logging()
@@ -93,8 +92,7 @@ class MesosTask(ActionCommand):
         stderr_logger.addHandler(logging.StreamHandler(self.stderr))
 
     def get_mesos_id(self):
-        default = 'unknown-{}'.format(self.id)
-        return getattr(self.task_config, 'task_id', default)
+        return self.task_config.task_id
 
     def get_config(self):
         return self.task_config
@@ -207,6 +205,9 @@ class MesosCluster:
         self.deferred.addErrback(self.handle_next_event)
 
     def submit(self, task):
+        if not task:
+            return
+
         if not self.enabled:
             task.log.info('Task failed to start, Mesos is disabled.')
             task.exited(1)
@@ -243,13 +244,7 @@ class MesosCluster:
         serializer,
     ):
         if not self.runner:
-            return MesosTask(
-                action_run_id,
-                {
-                    'cmd': command,
-                },
-                serializer,
-            )
+            return None
 
         task_config = self.runner.TASK_CONFIG_INTERFACE(
             name=action_run_id,
