@@ -49,6 +49,13 @@ BASE_CONFIG = dict(
     node_pools=[dict(name='NodePool', nodes=['node0', 'node1'])]
 )
 
+MASTER_CONTEXT = config_utils.ConfigContext(
+    'config',
+    ['localhost'],
+    None,
+    MASTER_NAMESPACE,
+)
+
 
 def make_ssh_options():
     return SSHOptions(
@@ -99,24 +106,24 @@ def make_node_pools():
     })
 
 
-def make_action(**kwargs):
+def make_action(config_context=MASTER_CONTEXT, **kwargs):
     kwargs.setdefault('name', 'action'),
     kwargs.setdefault('command', 'command')
     kwargs.setdefault('executor', 'ssh')
     kwargs.setdefault('requires', ())
     kwargs.setdefault('expected_runtime', datetime.timedelta(1))
-    return Action.from_config(**kwargs)
+    return Action.from_config(config=kwargs, config_context=config_context)
 
 
-def make_cleanup_action(**kwargs):
+def make_cleanup_action(config_context=MASTER_CONTEXT, **kwargs):
     kwargs.setdefault('name', 'cleanup'),
     kwargs.setdefault('command', 'command')
     kwargs.setdefault('executor', 'ssh')
     kwargs.setdefault('expected_runtime', datetime.timedelta(1))
-    return schema.ConfigCleanupAction(**kwargs)
+    return Action.from_config(config=kwargs, config_context=config_context)
 
 
-def make_job(**kwargs):
+def make_job(config_context=MASTER_CONTEXT, **kwargs):
     kwargs.setdefault('namespace', 'MASTER')
     kwargs.setdefault('name', f"{kwargs['namespace']}.job_name")
     kwargs.setdefault('node', 'node0')
@@ -133,11 +140,13 @@ def make_job(**kwargs):
             jitter=None,
         )
     )
-    kwargs.setdefault('actions', ActionMap.create(action=make_action()))
+    kwargs.setdefault('actions', ActionMap.create(dict(action=make_action())))
     kwargs.setdefault('queueing', True)
     kwargs.setdefault('run_limit', 50)
     kwargs.setdefault('all_nodes', False)
-    kwargs.setdefault('cleanup_action', make_cleanup_action())
+    kwargs.setdefault(
+        'cleanup_action', make_cleanup_action(config_context=config_context)
+    )
     kwargs.setdefault('max_runtime')
     kwargs.setdefault('allow_overlap', False)
     kwargs.setdefault('time_zone', None)
@@ -145,10 +154,11 @@ def make_job(**kwargs):
     return schema.ConfigJob(**kwargs)
 
 
-def make_master_jobs():
+def make_master_jobs(config_context=MASTER_CONTEXT):
     return FrozenDict({
         'MASTER.test_job0':
             make_job(
+                config_context=config_context,
                 name='MASTER.test_job0',
                 schedule=schedule_parse.ConfigIntervalScheduler(
                     timedelta=datetime.timedelta(0, 20),
@@ -158,6 +168,7 @@ def make_master_jobs():
             ),
         'MASTER.test_job1':
             make_job(
+                config_context=config_context,
                 name='MASTER.test_job1',
                 schedule=schedule_parse.ConfigDailyScheduler(
                     days={1, 3, 5},
@@ -186,6 +197,7 @@ def make_master_jobs():
             ),
         'MASTER.test_job2':
             make_job(
+                config_context=config_context,
                 name='MASTER.test_job2',
                 node='node1',
                 actions=FrozenDict({
@@ -201,6 +213,7 @@ def make_master_jobs():
             ),
         'MASTER.test_job3':
             make_job(
+                config_context=config_context,
                 name='MASTER.test_job3',
                 node='node1',
                 schedule=ConfigConstantScheduler(),
@@ -221,6 +234,7 @@ def make_master_jobs():
             ),
         'MASTER.test_job4':
             make_job(
+                config_context=config_context,
                 name='MASTER.test_job4',
                 node='NodePool',
                 schedule=schedule_parse.ConfigDailyScheduler(
@@ -238,6 +252,7 @@ def make_master_jobs():
             ),
         'MASTER.test_job_mesos':
             make_job(
+                config_context=config_context,
                 name='MASTER.test_job_mesos',
                 node='NodePool',
                 schedule=schedule_parse.ConfigDailyScheduler(
@@ -278,6 +293,7 @@ def make_tron_config(
     node_pools=None,
     jobs=None,
     mesos_options=None,
+    config_context=MASTER_CONTEXT,
 ):
     return schema.TronConfig(
         action_runner=action_runner or FrozenDict(),
@@ -290,13 +306,15 @@ def make_tron_config(
         state_persistence=state_persistence,
         nodes=nodes or make_nodes(),
         node_pools=node_pools or make_node_pools(),
-        jobs=jobs or make_master_jobs(),
+        jobs=jobs or make_master_jobs(config_context=config_context),
         mesos_options=mesos_options or schema.ConfigMesos(enabled=False),
     )
 
 
-def make_named_tron_config(jobs=None):
-    return schema.NamedTronConfig(jobs=jobs or make_master_jobs())
+def make_named_tron_config(config_context=MASTER_CONTEXT, jobs=None):
+    return schema.NamedTronConfig(
+        jobs=jobs or make_master_jobs(config_context=config_context)
+    )
 
 
 class ConfigTestCase(TestCase):
@@ -390,7 +408,13 @@ class ConfigTestCase(TestCase):
     @mock.patch.dict('tron.config.config_parse.ValidateNode.defaults')
     def test_attributes(self):
         config_parse.ValidateNode.defaults['username'] = 'foo'
-        expected = make_tron_config()
+        config_context = config_utils.ConfigContext(
+            'config',
+            ['localhost'],
+            None,
+            'MASTER',
+        )
+        expected = make_tron_config(config_context=config_context)
 
         test_config = valid_config(self.config)
         assert_equal(test_config.command_context, expected.command_context)
@@ -480,7 +504,7 @@ class JobConfigTestCase(TestCase):
             **BASE_CONFIG
         )
 
-        expected_message = "Value at config.jobs.Job.test_job0.actions"
+        expected_message = "Required non-empty list at config.jobs.Job.test_job0.actions"
         exception = assert_raises(
             ConfigError,
             valid_config,
@@ -504,9 +528,9 @@ class JobConfigTestCase(TestCase):
             **BASE_CONFIG
         )
 
-        expected = "Duplicate name action at config.jobs.Job.test_job0.actions"
+        expected = "Duplicate action names found: ['action'] at config.jobs.Job.test_job0.actions.actions"
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             valid_config,
             test_config,
         )
@@ -570,7 +594,7 @@ class JobConfigTestCase(TestCase):
             **BASE_CONFIG
         )
 
-        expect = "Circular dependency in job.MASTER.test_job0: action1 -> action2"
+        expect = "Circular dependency in job.MASTER.test_job0: action2 -> action1"
         exception = assert_raises(
             ConfigError,
             valid_config,
@@ -592,9 +616,9 @@ class JobConfigTestCase(TestCase):
             ],
             **BASE_CONFIG
         )
-        expected_message = "config.jobs.Job.test_job0.actions.Action.cleanup.name"
+        expected_message = "Action name reserved for cleanup action at config.jobs.Job.test_job0.actions.cleanup"
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             valid_config,
             test_config,
         )
@@ -616,9 +640,9 @@ class JobConfigTestCase(TestCase):
             **BASE_CONFIG
         )
 
-        expected_msg = "Cleanup actions cannot have custom names"
+        expected_msg = "Cleanup actions cannot have custom names at config.jobs.Job.test_job0.cleanup_action"
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             valid_config,
             test_config,
         )
@@ -640,9 +664,9 @@ class JobConfigTestCase(TestCase):
             **BASE_CONFIG
         )
 
-        expected_msg = "Unknown keys in CleanupAction : requires"
+        expected_msg = "Cleanup action cannot have dependencies, has ['action'] at config.jobs.Job.test_job0.cleanup_action"
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             valid_config,
             test_config,
         )
@@ -831,27 +855,37 @@ class ValidateJobsTestCase(TestCase):
             **BASE_CONFIG
         )
 
+        context = config_utils.ConfigContext(
+            'config',
+            ['node0'],
+            None,
+            MASTER_NAMESPACE,
+        )
+
         expected_jobs = FrozenDict({
             'MASTER.test_job0':
                 make_job(
+                    config_context=context,
                     name='MASTER.test_job0',
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20),
                         jitter=None,
                     ),
-                    actions=FrozenDict({
+                    actions=ActionMap.create({
                         'action':
                             make_action(
+                                config_context=context,
                                 expected_runtime=datetime.timedelta(0, 1200),
                             ),
                         'action_mesos':
                             make_action(
+                                config_context=context,
                                 name='action_mesos',
                                 executor='mesos',
                                 cpus=4.0,
                                 mem=300.0,
                                 constraints=(
-                                    schema.ConfigConstraint(
+                                    dict(
                                         attribute='pool',
                                         operator='LIKE',
                                         value='default',
@@ -859,11 +893,11 @@ class ValidateJobsTestCase(TestCase):
                                 ),
                                 docker_image='my_container:latest',
                                 docker_parameters=(
-                                    schema.ConfigParameter(
+                                    dict(
                                         key='label',
                                         value='labelA',
                                     ),
-                                    schema.ConfigParameter(
+                                    dict(
                                         key='label',
                                         value='labelB',
                                     ),
@@ -883,13 +917,6 @@ class ValidateJobsTestCase(TestCase):
                     expected_runtime=datetime.timedelta(0, 1200),
                 ),
         })
-
-        context = config_utils.ConfigContext(
-            'config',
-            ['node0'],
-            None,
-            MASTER_NAMESPACE,
-        )
         config_parse.validate_jobs(test_config, context)
         assert_equal(expected_jobs, test_config['jobs'])
 

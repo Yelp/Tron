@@ -17,7 +17,6 @@ from tests.testingutils import autospec_method
 from tron import actioncommand
 from tron import node
 from tron import ssh
-from tron.config import schema
 from tron.config.ssh_options import SSHOptions
 from tron.core import actionrun
 from tron.serialize import filehandler
