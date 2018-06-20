@@ -6,7 +6,6 @@ from testify import run
 from testify import setup
 from testify import TestCase
 
-from tron import node
 from tron.config import config_utils
 from tron.core import action
 from tron.core.action import Constraint

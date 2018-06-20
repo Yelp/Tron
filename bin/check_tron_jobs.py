@@ -13,8 +13,6 @@ from tron.commands import cmd_utils
 from tron.commands import display
 from tron.commands.client import Client
 from tron.commands.client import get_object_type_from_identifier
-from tron.config import config_utils
-from tron.utils import timeutils
 
 log = logging.getLogger('check_tron_jobs')
 
@@ -46,8 +44,9 @@ def parse_cli():
     )
     parser.add_argument(
         "--run-interval",
-        help=
-        "Run interval for this monitoring script. This is used to calculate realert and alert_after setting. Default to %(default)s (seconds)",
+        help="Run interval for this monitoring script. This is used to "
+        "calculate realert and alert_after setting. "
+        "Default to %(default)s (seconds)",
         type=int,
         dest="run_interval",
         default=300,
@@ -72,11 +71,8 @@ def compute_check_result_for_job_runs(client, job, job_content):
 
     relevant_job_run, last_state = get_relevant_run_and_state(job_content)
     if relevant_job_run is None:
-        kwargs["output"
-               ] = "CRIT: {} hasn't had a successful run yet.\n{}".format(
-                   job['name'],
-                   pretty_print_job(job_content),
-               )
+        kwargs["output"] = f"CRIT: {job['name']} hasn't had a successful " \
+            f"run yet.\n{pretty_print_job(job_content)}"
         kwargs["status"] = 2
         return kwargs
 

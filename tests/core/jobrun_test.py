@@ -361,18 +361,16 @@ class JobRunFromStateTestCase(TestCase):
         self.path = ['base', 'path']
         self.output_path = mock.create_autospec(filehandler.OutputPath)
         self.node_pool = mock.create_autospec(node.NodePool)
-        self.action_run_state_data = [
-            {
-                'job_run_id': 'thejobname.22',
-                'action_name': 'blingaction',
-                'state': 'succeeded',
-                'run_time': 'sometime',
-                'start_time': 'sometime',
-                'end_time': 'sometime',
-                'command': 'doit',
-                'node_name': 'thenode',
-            }
-        ]
+        self.action_run_state_data = [{
+            'job_run_id': 'thejobname.22',
+            'action_name': 'blingaction',
+            'state': 'succeeded',
+            'run_time': 'sometime',
+            'start_time': 'sometime',
+            'end_time': 'sometime',
+            'command': 'doit',
+            'node_name': 'thenode',
+        }]
         self.state_data = {
             'job_name': 'thejobname',
             'run_num': 22,

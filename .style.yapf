@@ -49,7 +49,7 @@ blank_line_before_nested_class_or_def=False
 #        'key1': 'value1',
 #        'key2': 'value2',
 #    })
-coalesce_brackets=False
+coalesce_brackets=True
 
 # The column limit.
 column_limit=79
@@ -175,7 +175,7 @@ split_before_first_argument=False
 
 # Set to True to prefer splitting before 'and' or 'or' rather than
 # after.
-split_before_logical_operator=True
+split_before_logical_operator=False
 
 # Split named assignments onto individual lines.
 split_before_named_assigns=True

@@ -92,11 +92,10 @@ class ActionRunFactoryTestCase(TestCase):
             'end_time': None,
             'command': 'do cleanup',
             'node_name': 'anode',
-            'action_runner':
-                {
-                    'status_path': '/tmp/foo',
-                    'exec_path': '/bin/foo'
-                }
+            'action_runner': {
+                'status_path': '/tmp/foo',
+                'exec_path': '/bin/foo'
+            }
         }
         collection = ActionRunFactory.action_run_collection_from_state(
             self.job_run,
@@ -885,11 +884,9 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
             required_actions=['second_name'],
             node_pool='testpool',
         )
-        self.action_graph.action_map = self.action_graph.action_map.update(
-            {
-                'third_act': third_act
-            },
-        )
+        self.action_graph.action_map = self.action_graph.action_map.update({
+            'third_act': third_act
+        }, )
         self.run_map['third_act'] = self._build_run('third_act')
         self.run_map['action_name'].machine.state = ActionRun.STATE_FAILED
         assert self.collection._is_run_blocked(self.run_map['third_act'])
@@ -969,6 +966,19 @@ class MesosActionRunTestCase(TestCase):
         mock_filehandler.OutputStreamSerializer.assert_called_with(
             self.action_run.output_path,
         )
+
+    @mock.patch('tron.core.actionrun.filehandler', autospec=True)
+    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
+    def test_submit_command_task_none(
+        self, mock_cluster_repo, mock_filehandler
+    ):
+        # Task is None if Mesos is disabled
+        mock_cluster_repo.get_cluster.return_value.create_task.return_value = None
+        self.action_run.submit_command()
+
+        mock_get_cluster = mock_cluster_repo.get_cluster
+        mock_get_cluster.assert_called_once_with(self.mesos_address)
+        assert self.action_run.is_failed
 
 
 if __name__ == "__main__":

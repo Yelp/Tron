@@ -14,7 +14,6 @@ import os
 import pytz
 import six
 from six import string_types
-from task_processing.plugins.mesos.constraints import OPERATORS
 
 from tron import command_context
 from tron.config import config_utils
@@ -33,6 +32,7 @@ from tron.config.config_utils import valid_string
 from tron.config.config_utils import Validator
 from tron.config.schedule_parse import valid_schedule
 from tron.config.schema import ConfigJob
+from tron.config.schema import ConfigMesos
 from tron.config.schema import ConfigState
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.schema import NamedTronConfig
@@ -285,12 +285,10 @@ class ValidateJob(Validator):
                 ),
             )
 
-        incomplete_paasta_actions = []
-
         def is_incomplete_paasta_action(action):
             return (
-                action.executor == schema.ExecutorTypes.paasta
-                and (action.service is None or action.deploy_group is None)
+                action.executor == schema.ExecutorTypes.paasta and
+                (action.service is None or action.deploy_group is None)
             )
 
         for _, action in six.iteritems(job['actions']):
@@ -348,6 +346,21 @@ class ValidateStatePersistence(Validator):
 valid_state_persistence = ValidateStatePersistence()
 
 
+class ValidateMesos(Validator):
+    config_class = ConfigMesos
+    option = True
+    defaults = {
+        'enabled': False,
+    }
+
+    validators = {
+        'enabled': valid_bool,
+    }
+
+
+valid_mesos_options = ValidateMesos()
+
+
 def validate_jobs(config, config_context):
     """Validate jobs"""
     valid_jobs = build_dict_name_validator(valid_job, allow_empty=True)
@@ -385,6 +398,7 @@ class ValidateConfig(Validator):
         },
         'node_pools': {},
         'jobs': (),
+        'mesos_options': ConfigMesos(**ValidateMesos.defaults),
     }
     node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
     nodes = build_dict_name_validator(valid_node, allow_empty=True)
@@ -398,6 +412,7 @@ class ValidateConfig(Validator):
         'state_persistence': valid_state_persistence,
         'nodes': nodes,
         'node_pools': node_pools,
+        'mesos_options': valid_mesos_options,
     }
     optional = False
 

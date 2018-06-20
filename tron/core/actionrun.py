@@ -597,9 +597,15 @@ class MesosActionRun(ActionRun, Observer):
             extra_volumes=self.extra_volumes,
             serializer=serializer,
         )
+        if not task:  # Mesos is disabled
+            self.fail(None)
+            return
+
         # TODO: save task.task_id (mesos id) to state
-        mesos_cluster.submit(task)  # TODO: catch errors
+
+        # Watch before submitting, in case submit causes a transition
         self.watch(task)
+        mesos_cluster.submit(task)
         return task
 
     def stop(self):
@@ -714,8 +720,8 @@ class ActionRunCollection(object):
 
         def startable(action_run):
             return (
-                action_run.check_state('start')
-                and not self._is_run_blocked(action_run)
+                action_run.check_state('start') and
+                not self._is_run_blocked(action_run)
             )
 
         return self._get_runs_using(startable)

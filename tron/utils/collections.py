@@ -4,8 +4,6 @@ from __future__ import unicode_literals
 
 import logging
 
-import six
-
 log = logging.getLogger(__name__)
 
 

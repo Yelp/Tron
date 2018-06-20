@@ -82,7 +82,7 @@ class TestRecovery(TestCase):
             action_runner=action_runner,
         )
         action_run.machine.state = action_run.STATE_UNKNOWN
-        res = recover_action_run(action_run, action_runner)
+        recover_action_run(action_run, action_runner)
         mock_node.submit_command.assert_called_once()
         assert action_run.machine.state == action_run.STATE_RUNNING
 
@@ -105,7 +105,7 @@ class TestRecovery(TestCase):
 
     def test_launch_recovery_actionruns_for_job_runs(self):
         with mock.patch('tron.core.recovery.filter_recovery_candidates') as mock_filter_recovery_candidates, \
-                 mock.patch('tron.core.recovery.recover_action_run') as mock_recover_action_run:
+                mock.patch('tron.core.recovery.recover_action_run') as mock_recover_action_run:
 
             mock_values = [
                 mock.Mock(
@@ -119,18 +119,14 @@ class TestRecovery(TestCase):
                 ),
             ]
 
-            mock_job_runs = []
             mock_filter_recovery_candidates.return_value = mock_values
             mock_action_runner = mock.Mock(autospec=True)
 
             mock_job_run = mock.Mock()
-            launch_recovery_actionruns_for_job_runs(
-                [mock_job_run], mock_action_runner
-            )
-            mock_recover_action_run.assert_has_calls(
-                [
-                    call(mock_values[0], mock_action_runner),
-                    call(mock_values[1], mock_values[1].action_runner)
-                ],
-                any_order=True
-            )
+            launch_recovery_actionruns_for_job_runs([mock_job_run],
+                                                    mock_action_runner)
+            calls = [
+                call(mock_values[0], mock_action_runner),
+                call(mock_values[1], mock_values[1].action_runner)
+            ]
+            mock_recover_action_run.assert_has_calls(calls, any_order=True)

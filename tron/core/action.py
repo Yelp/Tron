@@ -4,7 +4,6 @@ from __future__ import unicode_literals
 import datetime
 import logging
 from enum import Enum
-from functools import reduce
 
 from pyrsistent import CheckedPMap
 from pyrsistent import CheckedPVector
@@ -30,14 +29,14 @@ def factory_time_delta(value):
     if isinstance(value, datetime.timedelta):
         return value
 
-    error_msg = "Value at %s is not a valid time delta: %s"
+    error_msg = "Value is not a valid time delta: %s"
     matches = TIME_INTERVAL_RE.match(value)
     if not matches:
-        raise RuntimeError(error_msg % (config_context.path, value))
+        raise RuntimeError(error_msg % value)
 
     units = matches.group('units')
     if units not in TIME_INTERVAL_UNITS:
-        raise RuntimeError(error_msg % (config_context.path, value))
+        raise RuntimeError(error_msg % value)
 
     time_spec = {TIME_INTERVAL_UNITS[units]: int(matches.group('value'))}
     return datetime.timedelta(**time_spec)
@@ -212,12 +211,10 @@ class ActionMap(CheckedPMap):
                 ),
             )
 
-        return cls.create(
-            {
-                item['name']: Action.from_config(
-                    item,
-                    config_context=config_context,
-                )
-                for item in items
-            }
-        )
+        return cls.create({
+            item['name']: Action.from_config(
+                item,
+                config_context=config_context,
+            )
+            for item in items
+        })

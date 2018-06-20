@@ -277,10 +277,10 @@ class Node(object):
         if not isinstance(other, self.__class__):
             return False
         return (
-            self.config == other.config
-            and self.conch_options == other.conch_options
-            and self.pub_key == other.pub_key
-            and self.node_settings == other.node_settings
+            self.config == other.config and
+            self.conch_options == other.conch_options and
+            self.pub_key == other.pub_key and
+            self.node_settings == other.node_settings
         )
 
     def __ne__(self, other):

@@ -254,20 +254,18 @@ def build_groc_schedule_parser_re():
     # [at] 00:00
     TIME_EXPR = r'((at\s+)?(?P<time>\d\d:\d\d))?'
 
-    DAILY_SCHEDULE_EXPR = ''.join(
-        [
-            r'^',
-            MONTH_DAYS_EXPR,
-            r'\s*',
-            DAYS_EXPR,
-            r'\s*',
-            MONTHS_EXPR,
-            r'\s*',
-            TIME_EXPR,
-            r'\s*',
-            r'$',
-        ]
-    )
+    DAILY_SCHEDULE_EXPR = ''.join([
+        r'^',
+        MONTH_DAYS_EXPR,
+        r'\s*',
+        DAYS_EXPR,
+        r'\s*',
+        MONTHS_EXPR,
+        r'\s*',
+        TIME_EXPR,
+        r'\s*',
+        r'$',
+    ])
     return re.compile(DAILY_SCHEDULE_EXPR)
 
 
