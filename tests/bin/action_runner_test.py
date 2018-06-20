@@ -53,6 +53,7 @@ class RegisterTestCase(TestCase):
             self.command = 'command'
             self.run_id = 'Job.test.1'
             self.proc = mock.Mock()
+            self.proc.wait.return_value = 0
             yield
 
     def test_get_status_file_dir_does_not_exist(self):
@@ -99,4 +100,4 @@ class RegisterTestCase(TestCase):
             proc=self.proc,
         )
         self.proc.wait.assert_called_with()
-        mock_sys_exit.assert_called_with(self.proc.returncode)
+        mock_sys_exit.assert_called_with(0)

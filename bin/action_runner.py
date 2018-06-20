@@ -85,8 +85,9 @@ def run_proc(output_path, command, run_id, proc):
         run_id=run_id,
         proc=proc,
     ):
-        proc.wait()
-    sys.exit(proc.returncode)
+        returncode = proc.wait()
+        log.warn(f'pid {proc.pid} exited with returncode {returncode}')
+        sys.exit(returncode)
 
 
 def parse_args():
@@ -131,8 +132,12 @@ if __name__ == "__main__":
     logging.basicConfig()
     args = parse_args()
     proc = run_command(args.command)
-    stdout_printer_t = threading.Thread(target=stdout_reader, args=(proc, ))
-    stderr_printer_t = threading.Thread(target=stderr_reader, args=(proc, ))
+    stdout_printer_t = threading.Thread(
+        target=stdout_reader, args=(proc, ), daemon=True
+    )
+    stderr_printer_t = threading.Thread(
+        target=stderr_reader, args=(proc, ), daemon=True
+    )
     stdout_printer_t.start()
     stderr_printer_t.start()
     run_proc(
