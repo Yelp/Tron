@@ -1,3 +1,11 @@
+tron (0.9.1.2) trusty; urgency=medium
+
+  * 0.9.1.2 tagged with 'make release'
+    Commit: Merge pull request #462 from Yelp/missing-deps  add missing
+    requests and psutil deps
+
+ -- root <root@c9cde1a47f3b>  Wed, 20 Jun 2018 17:56:19 +0000
+
 tron (0.9.1.1) trusty; urgency=medium
 
   * 0.9.1.1 tagged with 'make release'
