@@ -594,7 +594,7 @@ class JobConfigTestCase(TestCase):
             **BASE_CONFIG
         )
 
-        expect = "Circular dependency in job.MASTER.test_job0: action2 -> action1"
+        expect = "Circular dependency in job.MASTER.test_job0"
         exception = assert_raises(
             ConfigError,
             valid_config,
