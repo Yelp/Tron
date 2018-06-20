@@ -90,7 +90,7 @@ class GeneralSchedulerTestCase(testingutils.MockTimeTestCase):
         next_run = self.scheduler.next_run_time(self.yesterday)
         assert_equal(self.expected_time(self.today), next_run)
 
-    @mock.patch('tron.scheduler.get_jitter', autospec=True)
+    @mock.patch('tron.scheduler.general_scheduler.get_jitter', autospec=True)
     def test_next_run_time_with_jitter(self, mock_jitter):
         mock_jitter.return_value = delta = datetime.timedelta(seconds=-300)
         self.scheduler.jitter = datetime.timedelta(seconds=400)
@@ -396,7 +396,7 @@ class IntervalSchedulerTestCase(TestCase):
     @setup_teardown
     def patch_time(self):
         with mock.patch(
-            'tron.scheduler.timeutils.current_time',
+            'tron.utils.timeutils.current_time',
         ) as self.mock_now:
             self.mock_now.return_value = self.now
             yield
@@ -420,7 +420,7 @@ class IntervalSchedulerTestCase(TestCase):
         run_time = self.scheduler.next_run_time(None)
         assert_equal(self.now + self.interval, run_time)
 
-    @mock.patch('tron.scheduler.random', autospec=True)
+    @mock.patch('tron.scheduler.common.random', autospec=True)
     def test_next_run_time_with_jitter(self, mock_random):
         jitter = datetime.timedelta(seconds=234)
         mock_random.randint.return_value = random_jitter = -200

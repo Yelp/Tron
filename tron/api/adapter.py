@@ -13,7 +13,7 @@ import six
 from six.moves.urllib.parse import quote
 
 from tron import actioncommand
-from tron import scheduler
+from tron.scheduler.common import get_jitter_str
 from tron.serialize import filehandler
 from tron.utils import timeutils
 from tron.utils.timeutils import delta_total_seconds
@@ -353,7 +353,7 @@ class SchedulerAdapter(ReprAdapter):
         return self._obj.get_name()
 
     def get_jitter(self):
-        return scheduler.get_jitter_str(self._obj.get_jitter())
+        return get_jitter_str(self._obj.get_jitter())
 
 
 class EventAdapter(ReprAdapter):
