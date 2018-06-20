@@ -76,9 +76,16 @@ class ActionRunControllerTestCase(TestCase):
         result = self.controller.handle_termination('stop')
         assert_in("Failed to stop", result)
 
-    def test_handle_termination_success(self):
+    def test_handle_termination_success_without_extra_msg(self):
+        self.action_run.kill.return_value = None
         result = self.controller.handle_termination('kill')
         assert_in("Attempting to kill", result)
+
+    def test_handle_termination_success_with_extra_msg(self):
+        self.action_run.kill.return_value = "Warning Message"
+        result = self.controller.handle_termination('kill')
+        assert_in("Attempting to kill", result)
+        assert_in("Warning Message", result)
 
 
 class JobRunControllerTestCase(TestCase):
