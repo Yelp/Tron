@@ -274,6 +274,7 @@ def make_tron_config(
     nodes=None,
     node_pools=None,
     jobs=None,
+    mesos_options=None,
 ):
     return schema.TronConfig(
         action_runner=action_runner or FrozenDict(),
@@ -287,6 +288,7 @@ def make_tron_config(
         nodes=nodes or make_nodes(),
         node_pools=node_pools or make_node_pools(),
         jobs=jobs or make_master_jobs(),
+        mesos_options=mesos_options or schema.ConfigMesos(enabled=False),
     )
 
 

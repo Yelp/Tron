@@ -38,6 +38,7 @@ from tron.config.schema import ConfigAction
 from tron.config.schema import ConfigCleanupAction
 from tron.config.schema import ConfigConstraint
 from tron.config.schema import ConfigJob
+from tron.config.schema import ConfigMesos
 from tron.config.schema import ConfigParameter
 from tron.config.schema import ConfigSSHOptions
 from tron.config.schema import ConfigState
@@ -577,6 +578,21 @@ class ValidateStatePersistence(Validator):
 valid_state_persistence = ValidateStatePersistence()
 
 
+class ValidateMesos(Validator):
+    config_class = ConfigMesos
+    option = True
+    defaults = {
+        'enabled': False,
+    }
+
+    validators = {
+        'enabled': valid_bool,
+    }
+
+
+valid_mesos_options = ValidateMesos()
+
+
 def validate_jobs(config, config_context):
     """Validate jobs"""
     valid_jobs = build_dict_name_validator(valid_job, allow_empty=True)
@@ -605,7 +621,7 @@ class ValidateConfig(Validator):
         'action_runner': {},
         'output_stream_dir': None,
         'command_context': {},
-        'ssh_options': ValidateSSHOptions.defaults,
+        'ssh_options': ConfigSSHOptions(**ValidateSSHOptions.defaults),
         'notification_options': None,
         'time_zone': None,
         'state_persistence': DEFAULT_STATE_PERSISTENCE,
@@ -614,6 +630,7 @@ class ValidateConfig(Validator):
         },
         'node_pools': {},
         'jobs': (),
+        'mesos_options': ConfigMesos(**ValidateMesos.defaults),
     }
     node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
     nodes = build_dict_name_validator(valid_node, allow_empty=True)
@@ -627,6 +644,7 @@ class ValidateConfig(Validator):
         'state_persistence': valid_state_persistence,
         'nodes': nodes,
         'node_pools': node_pools,
+        'mesos_options': valid_mesos_options,
     }
     optional = False
 
