@@ -583,10 +583,20 @@ class ValidateMesos(Validator):
     option = True
     defaults = {
         'enabled': False,
+        'default_volumes': (),
+        'dockercfg_location': None,
+        'offer_timeout': 300,
     }
 
     validators = {
-        'enabled': valid_bool,
+        'enabled':
+            valid_bool,
+        'default_volumes':
+            build_list_of_type_validator(valid_volume, allow_empty=True),
+        'dockercfg_location':
+            valid_string,
+        'offer_timeout':
+            valid_int,
     }
 
 

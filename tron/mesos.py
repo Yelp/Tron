@@ -16,10 +16,8 @@ TASK_OUTPUT_LOGGER = 'tron.mesos.task_output'
 
 # TODO: put in configs
 MESOS_MASTER_PORT = 5050
-DOCKERCFG_LOCATION = "file:///root/.dockercfg"
 MESOS_SECRET = ''
 MESOS_ROLE = '*'
-OFFER_TIMEOUT = 300
 
 log = logging.getLogger(__name__)
 
@@ -30,17 +28,35 @@ def get_mesos_leader(master_address):
     return '{}:{}'.format(urlparse(response.url).hostname, MESOS_MASTER_PORT)
 
 
+def combine_volumes(defaults, overrides):
+    """Helper to reconcile lists of volume mounts.
+
+    If any volumes have the same container path, the one in overrides wins.
+    """
+    result = {mount['container_path']: mount for mount in defaults}
+    for mount in overrides:
+        result[mount['container_path']] = mount
+    return list(result.values())
+
+
 class MesosClusterRepository:
     """A class that stores MesosCluster objects and configuration."""
 
     clusters = {}
     mesos_enabled = False
+    default_volumes = ()
+    dockercfg_location = None
+    offer_timeout = None
 
     @classmethod
     def get_cluster(cls, master_address):
         if master_address not in cls.clusters:
             cls.clusters[master_address] = MesosCluster(
-                master_address, cls.mesos_enabled
+                master_address,
+                cls.mesos_enabled,
+                cls.default_volumes,
+                cls.dockercfg_location,
+                cls.offer_timeout,
             )
         return cls.clusters[master_address]
 
@@ -51,10 +67,20 @@ class MesosClusterRepository:
 
     @classmethod
     def configure(cls, mesos_options):
-        mesos_enabled = mesos_options.enabled
-        cls.mesos_enabled = mesos_enabled
+        cls.mesos_enabled = mesos_options.enabled
+        cls.default_volumes = [
+            vol._asdict() for vol in mesos_options.default_volumes
+        ]
+        cls.dockercfg_location = mesos_options.dockercfg_location
+        cls.offer_timeout = mesos_options.offer_timeout
+
         for cluster in cls.clusters.values():
-            cluster.set_enabled(mesos_enabled)
+            cluster.set_enabled(cls.mesos_enabled)
+            cluster.configure_tasks(
+                default_volumes=cls.default_volumes,
+                dockercfg_location=cls.dockercfg_location,
+                offer_timeout=cls.offer_timeout,
+            )
 
 
 class MesosTask(ActionCommand):
@@ -164,9 +190,20 @@ class MesosTask(ActionCommand):
 
 
 class MesosCluster:
-    def __init__(self, mesos_address, enabled=True):
+    def __init__(
+        self,
+        mesos_address,
+        enabled=True,
+        default_volumes=None,
+        dockercfg_location=None,
+        offer_timeout=None,
+    ):
         self.mesos_address = mesos_address
         self.enabled = enabled
+        self.default_volumes = default_volumes or []
+        self.dockercfg_location = dockercfg_location
+        self.offer_timeout = offer_timeout
+
         self.processor = TaskProcessor()
         self.queue = PyDeferredQueue()
         self.deferred = None
@@ -184,6 +221,16 @@ class MesosCluster:
             self.connect()
         else:
             self.stop()
+
+    def configure_tasks(
+        self,
+        default_volumes,
+        dockercfg_location,
+        offer_timeout,
+    ):
+        self.default_volumes = default_volumes
+        self.dockercfg_location = dockercfg_location
+        self.offer_timeout = offer_timeout
 
     # TODO: Should this be done asynchronously?
     # TODO: Handle/retry errors
@@ -246,6 +293,8 @@ class MesosCluster:
         if not self.runner:
             return None
 
+        uris = [self.dockercfg_location] if self.dockercfg_location else []
+        volumes = combine_volumes(self.default_volumes, extra_volumes)
         task_config = self.runner.TASK_CONFIG_INTERFACE(
             name=action_run_id,
             cmd=command,
@@ -255,9 +304,9 @@ class MesosCluster:
             image=docker_image,
             docker_parameters=docker_parameters,
             environment=env,
-            volumes=extra_volumes,  # TODO: add default volumes
-            uris=[DOCKERCFG_LOCATION],
-            offer_timeout=OFFER_TIMEOUT,
+            volumes=volumes,
+            uris=uris,
+            offer_timeout=self.offer_timeout,
         )
         return MesosTask(action_run_id, task_config, serializer)
 

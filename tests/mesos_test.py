@@ -6,13 +6,11 @@ from testify import assert_equal
 from testify import setup_teardown
 from testify import TestCase
 
-from tron.mesos import DOCKERCFG_LOCATION
 from tron.mesos import MESOS_ROLE
 from tron.mesos import MESOS_SECRET
 from tron.mesos import MesosCluster
 from tron.mesos import MesosClusterRepository
 from tron.mesos import MesosTask
-from tron.mesos import OFFER_TIMEOUT
 
 
 class MesosClusterRepositoryTestCase(TestCase):
@@ -49,12 +47,33 @@ class MesosClusterRepositoryTestCase(TestCase):
             MesosClusterRepository.get_cluster(address)
             for address in ['d', 'e']
         ]
-        options = mock.Mock(enabled=False)
+        mock_volume = mock.Mock()
+        options = mock.Mock(
+            enabled=False,
+            default_volumes=[mock_volume],
+            dockercfg_location='auth',
+            offer_timeout=1000,
+        )
         MesosClusterRepository.configure(options)
+
+        expected_volume = mock_volume._asdict.return_value
         for cluster in clusters:
             cluster.set_enabled.assert_called_once_with(False)
+            cluster.configure_tasks.assert_called_once_with(
+                default_volumes=[expected_volume],
+                dockercfg_location='auth',
+                offer_timeout=1000,
+            )
+
+        # Next cluster we get should be initialized with the same settings
         MesosClusterRepository.get_cluster('f')
-        self.cluster_cls.assert_called_with('f', False)
+        self.cluster_cls.assert_called_with(
+            'f',
+            False,
+            [expected_volume],
+            'auth',
+            1000,
+        )
 
 
 def mock_task_event(
@@ -318,6 +337,31 @@ class MesosClusterTestCase(TestCase):
         # Runner should have only be created once
         assert_equal(self.mock_runner_cls.call_count, 1)
 
+    def test_configure_tasks(self):
+        cluster = MesosCluster(
+            'mesos-cluster-a.me',
+            default_volumes=[],
+            dockercfg_location='first',
+            offer_timeout=60,
+        )
+        assert_equal(cluster.default_volumes, [])
+        assert_equal(cluster.dockercfg_location, 'first')
+        assert_equal(cluster.offer_timeout, 60)
+
+        expected_volumes = [{
+            'container_path': '/tmp',
+            'host_path': '/host',
+            'mode': 'RO',
+        }]
+        cluster.configure_tasks(
+            default_volumes=expected_volumes,
+            dockercfg_location='second',
+            offer_timeout=300,
+        )
+        assert_equal(cluster.default_volumes, expected_volumes)
+        assert_equal(cluster.dockercfg_location, 'second')
+        assert_equal(cluster.offer_timeout, 300)
+
     def test_submit(self):
         cluster = MesosCluster('mesos-cluster-a.me')
         mock_task = mock.MagicMock(spec_set=MesosTask)
@@ -340,7 +384,7 @@ class MesosClusterTestCase(TestCase):
         mock_task.exited.assert_called_once_with(1)
 
     @mock.patch('tron.mesos.MesosTask', autospec=True)
-    def test_create_task(self, mock_task):
+    def test_create_task_defaults(self, mock_task):
         cluster = MesosCluster('mesos-cluster-a.me')
         mock_serializer = mock.MagicMock()
         task = cluster.create_task(
@@ -365,8 +409,8 @@ class MesosClusterTestCase(TestCase):
             docker_parameters=[],
             environment={'TESTING': 'true'},
             volumes=[],
-            uris=[DOCKERCFG_LOCATION],
-            offer_timeout=OFFER_TIMEOUT,
+            uris=[],
+            offer_timeout=None,
         )
         assert_equal(task, mock_task.return_value)
         mock_task.assert_called_once_with(
@@ -393,6 +437,76 @@ class MesosClusterTestCase(TestCase):
             serializer=mock_serializer,
         )
         assert task is None
+
+    @mock.patch('tron.mesos.MesosTask', autospec=True)
+    def test_create_task_with_configuration(self, mock_task):
+        cluster = MesosCluster(
+            'mesos-cluster-a.me',
+            default_volumes=[
+                {
+                    'container_path': '/tmp',
+                    'host_path': '/host',
+                    'mode': 'RO',
+                },
+                {
+                    'container_path': '/other',
+                    'host_path': '/other',
+                    'mode': 'RW',
+                },
+            ],
+            dockercfg_location='some_place',
+            offer_timeout=202,
+        )
+        mock_serializer = mock.MagicMock()
+        task = cluster.create_task(
+            action_run_id='action_c',
+            command='echo hi',
+            cpus=1,
+            mem=10,
+            constraints=[],
+            docker_image='container:latest',
+            docker_parameters=[],
+            env={'TESTING': 'true'},
+            # This should override the default volume for /tmp
+            extra_volumes=[
+                {
+                    'container_path': '/tmp',
+                    'host_path': '/custom',
+                    'mode': 'RW',
+                },
+            ],
+            serializer=mock_serializer,
+        )
+        cluster.runner.TASK_CONFIG_INTERFACE.assert_called_once_with(
+            name='action_c',
+            cmd='echo hi',
+            cpus=1,
+            mem=10,
+            constraints=[],
+            image='container:latest',
+            docker_parameters=[],
+            environment={'TESTING': 'true'},
+            volumes=[
+                {
+                    'container_path': '/tmp',
+                    'host_path': '/custom',
+                    'mode': 'RW',
+                },
+                {
+                    'container_path': '/other',
+                    'host_path': '/other',
+                    'mode': 'RW',
+                },
+            ],
+            uris=['some_place'],
+            offer_timeout=202,
+        )
+        assert_equal(task, mock_task.return_value)
+        mock_task.assert_called_once_with(
+            'action_c',
+            cluster.runner.TASK_CONFIG_INTERFACE.return_value,
+            mock_serializer,
+        )
 
     def test_process_event_task(self):
         event = mock_task_event('this_task', 'some_platform_type')
