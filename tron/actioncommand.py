@@ -99,7 +99,7 @@ class ActionCommand(object):
 
     def handle_errback(self, result):
         """Handle an unexpected error while being run.  This will likely be
-        an interval error. Cleanup the state of this AcctionCommand and log
+        an interval error. Cleanup the state of this ActionCommand and log
         something useful for debugging.
         """
         log.error(
