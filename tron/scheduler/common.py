@@ -2,12 +2,9 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import datetime
-import logging
 import random
 
 from tron.utils import timeutils
-
-log = logging.getLogger(__name__)
 
 
 def get_jitter(time_delta):
