@@ -113,19 +113,18 @@ def run_command(command):
         shell=True,
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
+        stdin=subprocess.PIPE,
     )
 
 
-def stdout_reader(proc):
-    for line in iter(proc.stdout.readline, b''):
-        sys.stdout.write(line.decode('utf-8'))
-        sys.stdout.flush()
-
-
-def stderr_reader(proc):
-    for line in iter(proc.stderr.readline, b''):
-        sys.stderr.write(line.decode('utf-8'))
-        sys.stdout.flush()
+def stream_copy(src, dst):
+    try:
+        for line in iter(src.readline, b''):
+            dst.write(line.decode('utf-8'))
+            dst.flush()
+    except Exception as e:
+        dst.write()
+        dst.flush()
 
 
 if __name__ == "__main__":
@@ -133,10 +132,10 @@ if __name__ == "__main__":
     args = parse_args()
     proc = run_command(args.command)
     stdout_printer_t = threading.Thread(
-        target=stdout_reader, args=(proc, ), daemon=True
+        target=stream_copy, args=(proc.stdout, sys.stdout), daemon=True
     )
     stderr_printer_t = threading.Thread(
-        target=stderr_reader, args=(proc, ), daemon=True
+        target=stream_copy, args=(proc.stderr, sys.stderr), daemon=True
     )
     stdout_printer_t.start()
     stderr_printer_t.start()
