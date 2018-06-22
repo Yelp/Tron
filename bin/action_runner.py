@@ -126,7 +126,7 @@ def stream(source, dst):
                 logging.warning(f'{dst.name}: {line}')
             except Exception as e:
                 logging.warning(f'failed writing to {dst}: {e}')
-                logging.warning(line)
+                logging.warning(f'{dst.name}: {line}')
                 is_connected = False
         else:
             logging.warning(f'{dst.name}: {line}')
