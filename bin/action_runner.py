@@ -86,7 +86,7 @@ def run_proc(output_path, command, run_id, proc):
         proc=proc,
     ):
         returncode = proc.wait()
-        log.warn(f'pid {proc.pid} exited with returncode {returncode}')
+        log.warning(f'pid {proc.pid} exited with returncode {returncode}')
         sys.exit(returncode)
 
 
@@ -117,15 +117,27 @@ def run_command(command):
 
 
 def stdout_reader(proc):
+    is_connected = True
     for line in iter(proc.stdout.readline, b''):
-        sys.stdout.write(line.decode('utf-8'))
-        sys.stdout.flush()
+        if is_connected:
+            try:
+                sys.stdout.write(line.decode('utf-8'))
+                sys.stdout.flush()
+            except Exception as e:
+                log.warning(f'failed writing to stdout: {e}')
+                is_connected = False
 
 
 def stderr_reader(proc):
+    is_connected = True
     for line in iter(proc.stderr.readline, b''):
-        sys.stderr.write(line.decode('utf-8'))
-        sys.stdout.flush()
+        if is_connected:
+            try:
+                sys.stderr.write(line.decode('utf-8'))
+                sys.stderr.flush()
+            except Exception as e:
+                log.warning(f'failed writing to stderr: {e}')
+                is_connected = False
 
 
 if __name__ == "__main__":
