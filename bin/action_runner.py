@@ -16,8 +16,6 @@ import time
 
 import yaml
 
-log = logging.getLogger("tron.action_runner")
-
 STATUS_FILE = 'status'
 
 
@@ -79,6 +77,7 @@ def get_status_file(output_path):
 
 
 def run_proc(output_path, command, run_id, proc):
+    logging.warning(f'{run_id} running as pid {proc.pid}')
     status_file = get_status_file(output_path)
     with status_file.wrap(
         command=command,
@@ -86,7 +85,7 @@ def run_proc(output_path, command, run_id, proc):
         proc=proc,
     ):
         returncode = proc.wait()
-        log.warn(f'pid {proc.pid} exited with returncode {returncode}')
+        logging.warning(f'pid {proc.pid} exited with returncode {returncode}')
         sys.exit(returncode)
 
 
@@ -116,30 +115,36 @@ def run_command(command):
     )
 
 
-def stdout_reader(proc):
-    for line in iter(proc.stdout.readline, b''):
-        sys.stdout.write(line.decode('utf-8'))
-        sys.stdout.flush()
+def stream(source, dst):
+    is_connected = True
+    logging.warning(f'streaming {source.name} to {dst.name}')
+    for line in iter(source.readline, b''):
+        if is_connected:
+            try:
+                dst.write(line.decode('utf-8'))
+                dst.flush()
+                logging.warning(f'{dst.name}: {line}')
+            except Exception as e:
+                logging.warning(f'failed writing to {dst}: {e}')
+                logging.warning(f'{dst.name}: {line}')
+                is_connected = False
+        else:
+            logging.warning(f'{dst.name}: {line}')
+            is_connected = False
 
 
-def stderr_reader(proc):
-    for line in iter(proc.stderr.readline, b''):
-        sys.stderr.write(line.decode('utf-8'))
-        sys.stdout.flush()
+def configure_logging(run_id):
+    logging.basicConfig(filename=f'/tmp/{run_id}.{os.getpid()}.log')
 
 
 if __name__ == "__main__":
-    logging.basicConfig()
     args = parse_args()
+    configure_logging(args.run_id)
     proc = run_command(args.command)
-    stdout_printer_t = threading.Thread(
-        target=stdout_reader, args=(proc, ), daemon=True
-    )
-    stderr_printer_t = threading.Thread(
-        target=stderr_reader, args=(proc, ), daemon=True
-    )
-    stdout_printer_t.start()
-    stderr_printer_t.start()
+    for p in [(proc.stdout, sys.stdout), (proc.stderr, sys.stderr)]:
+        t = threading.Thread(target=stream, args=p, daemon=True)
+        t.start()
+
     run_proc(
         output_path=args.output_dir,
         run_id=args.run_id,
