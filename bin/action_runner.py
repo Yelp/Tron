@@ -117,39 +117,32 @@ def run_command(command):
 
 def stream(source, dst):
     is_connected = True
-    logging.warning(f'streaming {source} to {dst}')
+    logging.warning(f'streaming {source.name} to {dst.name}')
     for line in iter(source.readline, b''):
         if is_connected:
             try:
                 dst.write(line.decode('utf-8'))
                 dst.flush()
-                logging.warning(line)
+                logging.warning(f'{dst.name}: {line}')
             except Exception as e:
                 logging.warning(f'failed writing to {dst}: {e}')
                 logging.warning(line)
                 is_connected = False
         else:
-            logging.warning(line)
+            logging.warning(f'{dst.name}: {line}')
             is_connected = False
 
 
 def configure_logging(run_id):
-    logging.basicConfig(filename=f'/tmp/{run_id}.log')
+    logging.basicConfig(filename=f'/tmp/{run_id}.{os.getpid()}.log')
 
 
 if __name__ == "__main__":
     args = parse_args()
     configure_logging(args.run_id)
     proc = run_command(args.command)
-    streaming_threads = [
-        threading.Thread(
-            target=stream, args=(
-                pair[0],
-                pair[1],
-            ), daemon=True
-        ) for pair in [(proc.stdout, sys.stdout), (proc.stderr, sys.stderr)]
-    ]
-    for t in streaming_threads:
+    for p in [(proc.stdout, sys.stdout), (proc.stderr, sys.stderr)]:
+        t = threading.Thread(target=stream, args=p, daemon=True)
         t.start()
 
     run_proc(
