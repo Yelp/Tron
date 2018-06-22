@@ -13,6 +13,7 @@ import subprocess
 import sys
 import threading
 import time
+import traceback
 
 import yaml
 
@@ -122,8 +123,8 @@ def stream_copy(src, dst):
         for line in iter(src.readline, b''):
             dst.write(line.decode('utf-8'))
             dst.flush()
-    except Exception as e:
-        dst.write()
+    except Exception:
+        dst.write(traceback.format_exc())
         dst.flush()
 
 
