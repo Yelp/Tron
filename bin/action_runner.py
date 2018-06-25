@@ -133,13 +133,18 @@ def stream(source, dst):
             is_connected = False
 
 
-def configure_logging(run_id):
-    logging.basicConfig(filename=f'/tmp/{run_id}.{os.getpid()}.log')
+def configure_logging(run_id, output_dir):
+    output_file = os.path.join(output_dir, f'{run_id}-{os.getpid()}.log')
+    logging.basicConfig(
+        filename=output_file,
+        format='%(asctime)s %(levelname)s %(message)s',
+        datefmt='%Y-%m-%dT%H:%M:%S%z'
+    )
 
 
 if __name__ == "__main__":
     args = parse_args()
-    configure_logging(args.run_id)
+    configure_logging(run_id=args.run_id, output_dir=args.output_dir)
     proc = run_command(args.command)
     for p in [(proc.stdout, sys.stdout), (proc.stderr, sys.stderr)]:
         t = threading.Thread(target=stream, args=p, daemon=True)
