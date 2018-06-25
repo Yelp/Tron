@@ -63,22 +63,21 @@ class StatusFile(object):
                 )
 
 
-def get_status_file(output_path):
-    if os.path.isdir(output_path):
-        if not os.access(output_path, os.W_OK):
-            raise OSError("Output dir %s not writable" % output_path)
-        return StatusFile(os.path.join(output_path, STATUS_FILE))
+def validate_output_dir(path):
+    if os.path.isdir(path):
+        if not os.access(path, os.W_OK):
+            raise OSError("Output dir %s not writable" % path)
+        return
     else:
         try:
-            os.makedirs(output_path)
+            os.makedirs(path)
         except OSError:
-            raise OSError("Could not create output dir %s" % output_path)
-        return StatusFile(os.path.join(output_path, STATUS_FILE))
+            raise OSError("Could not create output dir %s" % path)
 
 
 def run_proc(output_path, command, run_id, proc):
     logging.warning(f'{run_id} running as pid {proc.pid}')
-    status_file = get_status_file(output_path)
+    status_file = StatusFile(os.path.join(output_path, STATUS_FILE))
     with status_file.wrap(
         command=command,
         run_id=run_id,
@@ -144,6 +143,7 @@ def configure_logging(run_id, output_dir):
 
 if __name__ == "__main__":
     args = parse_args()
+    validate_output_dir(args.output_dir)
     configure_logging(run_id=args.run_id, output_dir=args.output_dir)
     proc = run_command(args.command)
     for p in [(proc.stdout, sys.stdout), (proc.stderr, sys.stderr)]:
