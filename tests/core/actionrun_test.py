@@ -950,6 +950,42 @@ class MesosActionRunTestCase(TestCase):
         mock_get_cluster.assert_called_once_with(self.mesos_address)
         assert self.action_run.is_failed
 
+    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
+    def test_kill_task(self, mock_cluster_repo):
+        mock_get_cluster = mock_cluster_repo.get_cluster
+        self.action_run.task_id = 'fake_task_id'
+        error_message = self.action_run.kill()
+        mock_get_cluster.return_value.kill.assert_called_once_with(
+            self.action_run.task_id
+        )
+        assert_equal(
+            error_message,
+            "Warning: It might take up to docker_stop_timeout (current setting is 2 mins) for killing."
+        )
+
+    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
+    def test_kill_task_not_running(self, mock_cluster_repo):
+        error_message = self.action_run.kill()
+        assert_equal(
+            error_message, "Error: Can't find task id for the action."
+        )
+
+    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
+    def test_stop_task(self, mock_cluster_repo):
+        mock_get_cluster = mock_cluster_repo.get_cluster
+        self.action_run.task_id = 'fake_task_id'
+        self.action_run.stop()
+        mock_get_cluster.return_value.kill.assert_called_once_with(
+            self.action_run.task_id
+        )
+
+    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
+    def test_stop_task_not_running(self, mock_cluster_repo):
+        error_message = self.action_run.stop()
+        assert_equal(
+            error_message, "Error: Can't find task id for the action."
+        )
+
 
 if __name__ == "__main__":
     run()

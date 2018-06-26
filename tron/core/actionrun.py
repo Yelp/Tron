@@ -605,6 +605,7 @@ class MesosActionRun(ActionRun, Observer):
             self.fail(None)
             return
 
+        self.task_id = task.get_mesos_id()
         # TODO: save task.task_id (mesos id) to state
 
         # Watch before submitting, in case submit causes a transition
@@ -616,13 +617,25 @@ class MesosActionRun(ActionRun, Observer):
         if self.retries_remaining is not None:
             self.retries_remaining = -1
 
-        pass
+        return self._kill_mesos_task()
 
     def kill(self, final=True):
         if self.retries_remaining is not None and final:
             self.retries_remaining = -1
 
-        pass
+        error_message = self._kill_mesos_task()
+        if error_message is not None:
+            return error_message
+        return "Warning: It might take up to docker_stop_timeout (current setting is 2 mins) for killing."
+
+    def _kill_mesos_task(self):
+        try:
+            mesos_cluster = MesosClusterRepository.get_cluster(
+                self.mesos_address
+            )
+            mesos_cluster.kill(self.task_id)
+        except AttributeError:
+            return "Error: Can't find task id for the action."
 
     def handle_action_command_state_change(self, action_command, event):
         """Observe ActionCommand state changes."""
