@@ -76,6 +76,8 @@ def recover_action_run(action_run, action_runner):
             (action_run.id, action_run.machine.state)
         )
     else:
+        action_run.exit_status = None
+        action_run.end_time = None
         action_run.machine.transition('running')
 
     log.info(

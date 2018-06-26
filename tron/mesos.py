@@ -345,3 +345,6 @@ class MesosCluster:
             )
             task.exited(None)
             del self.tasks[key]
+
+    def kill(self, task_id):
+        self.runner.kill(task_id)

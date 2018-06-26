@@ -18,6 +18,7 @@ from tron.core.recovery import filter_recoverable_action_runs
 from tron.core.recovery import filter_recovery_candidates
 from tron.core.recovery import launch_recovery_actionruns_for_job_runs
 from tron.core.recovery import recover_action_run
+from tron.utils import timeutils
 
 
 class TestRecovery(TestCase):
@@ -80,11 +81,15 @@ class TestRecovery(TestCase):
             name="test.succeeded",
             node=mock_node,
             action_runner=action_runner,
+            end_time=timeutils.current_time(),
+            exit_status=0
         )
         action_run.machine.state = action_run.STATE_UNKNOWN
         recover_action_run(action_run, action_runner)
         mock_node.submit_command.assert_called_once()
         assert action_run.machine.state == action_run.STATE_RUNNING
+        assert action_run.end_time is None
+        assert action_run.exit_status is None
 
     def test_filter_recoverable_action_runs(self):
         assert filter_recoverable_action_runs(self.action_runs) == \

@@ -10,6 +10,7 @@ pycrypto>=2.4
 Pygments>=1.4
 pytz>=2011n
 PyYAML>=3.0
+requests
 Sphinx-PyPI-upload>=0.2.1
 Sphinx>=1.1.2
 task_processing[mesos_executor]>=0.0.10
