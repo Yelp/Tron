@@ -40,7 +40,7 @@ TronConfig = config_object_factory(
     name='TronConfig',
     optional=[
         'output_stream_dir',  # str
-        'action_runner',  # ConfigActionRunner
+        'action_runner',  # ActionRunner
         'state_persistence',  # ConfigState
         'command_context',  # FrozenDict of str
         'ssh_options',  # SSHOptions
@@ -66,11 +66,6 @@ NotificationOptions = config_object_factory(
         'smtp_host',  # str
         'notification_addr',  # str
     ],
-)
-
-ConfigActionRunner = config_object_factory(
-    'ConfigActionRunner',
-    optional=['runner_type', 'remote_status_path', 'remote_exec_path'],
 )
 
 ConfigNode = config_object_factory(
@@ -126,5 +121,3 @@ ConfigJob = config_object_factory(
 StatePersistenceTypes = Enum.create('shelve', 'sql', 'yaml')
 
 ExecutorTypes = Enum.create('ssh', 'mesos')
-
-ActionRunnerTypes = Enum.create('none', 'subprocess')

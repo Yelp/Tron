@@ -19,6 +19,7 @@ from tron import command_context
 from tron.config import config_utils
 from tron.config import ConfigError
 from tron.config import schema
+from tron.config.action_runner import ActionRunner
 from tron.config.config_utils import build_dict_name_validator
 from tron.config.config_utils import build_list_of_type_validator
 from tron.config.config_utils import ConfigContext
@@ -298,25 +299,6 @@ class ValidateJob(Validator):
 valid_job = ValidateJob()
 
 
-class ValidateActionRunner(Validator):
-    config_class = schema.ConfigActionRunner
-    optional = True
-    defaults = {
-        'runner_type': None,
-        'remote_exec_path': '',
-        'remote_status_path': '/tmp',
-    }
-
-    validators = {
-        'runner_type':
-            config_utils.build_enum_validator(schema.ActionRunnerTypes, ),
-        'remote_status_path':
-            valid_string,
-        'remote_exec_path':
-            valid_string,
-    }
-
-
 class ValidateStatePersistence(Validator):
     config_class = schema.ConfigState
     defaults = {
@@ -400,10 +382,11 @@ class ValidateConfig(Validator):
         'jobs': (),
         'mesos_options': ConfigMesos(**ValidateMesos.defaults),
     }
+
     node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
     nodes = build_dict_name_validator(valid_node, allow_empty=True)
     validators = {
-        'action_runner': ValidateActionRunner(),
+        'action_runner': ActionRunner.from_config,
         'output_stream_dir': valid_output_stream_dir,
         'command_context': valid_command_context,
         'ssh_options': SSHOptions.from_config,
