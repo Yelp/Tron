@@ -16,8 +16,6 @@ import time
 
 import yaml
 
-log = logging.getLogger("tron.action_runner")
-
 STATUS_FILE = 'status'
 
 
@@ -65,28 +63,29 @@ class StatusFile(object):
                 )
 
 
-def get_status_file(output_path):
-    if os.path.isdir(output_path):
-        if not os.access(output_path, os.W_OK):
-            raise OSError("Output dir %s not writable" % output_path)
-        return StatusFile(os.path.join(output_path, STATUS_FILE))
+def validate_output_dir(path):
+    if os.path.isdir(path):
+        if not os.access(path, os.W_OK):
+            raise OSError("Output dir %s not writable" % path)
+        return
     else:
         try:
-            os.makedirs(output_path)
+            os.makedirs(path)
         except OSError:
-            raise OSError("Could not create output dir %s" % output_path)
-        return StatusFile(os.path.join(output_path, STATUS_FILE))
+            raise OSError("Could not create output dir %s" % path)
 
 
 def run_proc(output_path, command, run_id, proc):
-    status_file = get_status_file(output_path)
+    logging.warning(f'{run_id} running as pid {proc.pid}')
+    status_file = StatusFile(os.path.join(output_path, STATUS_FILE))
     with status_file.wrap(
         command=command,
         run_id=run_id,
         proc=proc,
     ):
-        proc.wait()
-    sys.exit(proc.returncode)
+        returncode = proc.wait()
+        logging.warning(f'pid {proc.pid} exited with returncode {returncode}')
+        sys.exit(returncode)
 
 
 def parse_args():
@@ -115,26 +114,42 @@ def run_command(command):
     )
 
 
-def stdout_reader(proc):
-    for line in iter(proc.stdout.readline, b''):
-        sys.stdout.write(line.decode('utf-8'))
-        sys.stdout.flush()
+def stream(source, dst):
+    is_connected = True
+    logging.warning(f'streaming {source.name} to {dst.name}')
+    for line in iter(source.readline, b''):
+        if is_connected:
+            try:
+                dst.write(line.decode('utf-8'))
+                dst.flush()
+                logging.warning(f'{dst.name}: {line}')
+            except Exception as e:
+                logging.warning(f'failed writing to {dst}: {e}')
+                logging.warning(f'{dst.name}: {line}')
+                is_connected = False
+        else:
+            logging.warning(f'{dst.name}: {line}')
+            is_connected = False
 
 
-def stderr_reader(proc):
-    for line in iter(proc.stderr.readline, b''):
-        sys.stderr.write(line.decode('utf-8'))
-        sys.stdout.flush()
+def configure_logging(run_id, output_dir):
+    output_file = os.path.join(output_dir, f'{run_id}-{os.getpid()}.log')
+    logging.basicConfig(
+        filename=output_file,
+        format='%(asctime)s %(levelname)s %(message)s',
+        datefmt='%Y-%m-%dT%H:%M:%S%z'
+    )
 
 
 if __name__ == "__main__":
-    logging.basicConfig()
     args = parse_args()
+    validate_output_dir(args.output_dir)
+    configure_logging(run_id=args.run_id, output_dir=args.output_dir)
     proc = run_command(args.command)
-    stdout_printer_t = threading.Thread(target=stdout_reader, args=(proc, ))
-    stderr_printer_t = threading.Thread(target=stderr_reader, args=(proc, ))
-    stdout_printer_t.start()
-    stderr_printer_t.start()
+    for p in [(proc.stdout, sys.stdout), (proc.stderr, sys.stderr)]:
+        t = threading.Thread(target=stream, args=p, daemon=True)
+        t.start()
+
     run_proc(
         output_path=args.output_dir,
         run_id=args.run_id,

@@ -53,30 +53,31 @@ class RegisterTestCase(TestCase):
             self.command = 'command'
             self.run_id = 'Job.test.1'
             self.proc = mock.Mock()
+            self.proc.wait.return_value = 0
             yield
 
-    def test_get_status_file_dir_does_not_exist(self):
+    def test_validate_output_dir_does_not_exist(self):
         self.mock_isdir.return_value = False
         self.mock_access.return_value = True
-        action_runner.get_status_file(self.output_path)
+        action_runner.validate_output_dir(self.output_path)
         self.mock_makedirs.assert_called_with(self.output_path)
 
-    def test_get_status_file_dir_does_not_exist_create_fails(self):
+    def test_validate_output_dir_does_not_exist_create_fails(self):
         self.mock_isdir.return_value = False
         self.mock_access.return_value = True
         self.mock_makedirs.side_effect = OSError
         self.failUnlessRaises(
             OSError,
-            action_runner.get_status_file,
+            action_runner.validate_output_dir,
             self.output_path,
         )
 
-    def test_get_status_file_exists_not_writable(self):
+    def test_validate_output_dir_exists_not_writable(self):
         self.mock_isdir.return_value = True
         self.mock_access.return_value = False
         self.failUnlessRaises(
             OSError,
-            action_runner.get_status_file,
+            action_runner.validate_output_dir,
             self.output_path,
         )
 
@@ -99,4 +100,4 @@ class RegisterTestCase(TestCase):
             proc=self.proc,
         )
         self.proc.wait.assert_called_with()
-        mock_sys_exit.assert_called_with(self.proc.returncode)
+        mock_sys_exit.assert_called_with(0)

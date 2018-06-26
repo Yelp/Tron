@@ -188,6 +188,9 @@ def is_job_scheduled(job_runs):
 
 def _get_seconds_from_duration(duration):
     seconds = 0.0
+    if "day" in duration:
+        seconds = 86400.0 * float(duration.split(" ")[0])
+        duration = duration.split(" ")[2]
     for dur in duration.split(":"):
         if not dur:
             dur = 0

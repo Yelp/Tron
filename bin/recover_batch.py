@@ -4,6 +4,7 @@ from __future__ import unicode_literals
 
 import argparse
 import logging
+import signal
 import sys
 from queue import Queue
 
@@ -13,7 +14,7 @@ from twisted.internet import inotify
 from twisted.internet import reactor
 from twisted.python import filepath
 
-log = logging.getLogger(__name__)
+log = logging.getLogger('tron.recover_batch')
 
 
 class StatusFileWatcher(object):
@@ -62,7 +63,7 @@ if __name__ == "__main__":
 
     runner_pid = get_key_from_last_line(args.filepath, 'runner_pid')
     if not psutil.pid_exists(runner_pid):
-        log.info(
+        log.warning(
             "action_runner pid %d no longer running; unable to recover batch" %
             runner_pid
         )
@@ -77,4 +78,12 @@ if __name__ == "__main__":
     reactor.run()
     exit_code = exit_code_queue.get()
     assert type(exit_code) == int
+    if exit_code < 0:
+        # from the subprocess docs on the return code of a process:
+        # "A negative value -N indicates that the child was terminated by signal N (POSIX only)."
+        # We should always exit with a positive code, so we take the absolute value of the returncode
+        log.warning(
+            f'action run killed by signal {signal.Signals(abs(exit_code)).name}'
+        )
+        exit_code = abs(exit_code)
     sys.exit(exit_code)

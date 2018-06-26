@@ -20,6 +20,6 @@
             entry: yapf
             language: python
             args: ["-i", "-p"]
-            exclude: ^docs/conf.py$
+            exclude: ^(docs/conf.py|setup.py)$
             types: [python]
             additional_dependencies: ['yapf']

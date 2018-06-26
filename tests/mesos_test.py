@@ -438,3 +438,8 @@ class MesosClusterTestCase(TestCase):
         # Shouldn't raise an error
         cluster = MesosCluster('mesos-cluster-a.me', enabled=False)
         cluster.stop()
+
+    def test_kill(self):
+        cluster = MesosCluster('mesos-cluster-a.me')
+        cluster.kill('fake_task_id')
+        cluster.runner.kill.assert_called_once_with('fake_task_id')

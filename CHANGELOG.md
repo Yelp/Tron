@@ -1,5 +1,82 @@
 # Change Log
 
+## [v0.9.1.3](https://github.com/Yelp/Tron/tree/v0.9.1.3) (2018-06-22)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.1.2...v0.9.1.3)
+
+**Merged pull requests:**
+
+- handle failures streaming  to stdout/stderr [\#468](https://github.com/Yelp/Tron/pull/468) ([Rob-Johnson](https://github.com/Rob-Johnson))
+- reset exit status on recovery [\#465](https://github.com/Yelp/Tron/pull/465) ([Rob-Johnson](https://github.com/Rob-Johnson))
+
+## [v0.9.1.2](https://github.com/Yelp/Tron/tree/v0.9.1.2) (2018-06-20)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.1.1...v0.9.1.2)
+
+**Merged pull requests:**
+
+- add missing requests and psutil deps [\#462](https://github.com/Yelp/Tron/pull/462) ([Rob-Johnson](https://github.com/Rob-Johnson))
+- reset actionrun endtime on recovery [\#461](https://github.com/Yelp/Tron/pull/461) ([Rob-Johnson](https://github.com/Rob-Johnson))
+- Refactor config parse tests [\#460](https://github.com/Yelp/Tron/pull/460) ([keymone](https://github.com/keymone))
+- Improve exit handling [\#459](https://github.com/Yelp/Tron/pull/459) ([Rob-Johnson](https://github.com/Rob-Johnson))
+- Toggle for Mesos actions [\#458](https://github.com/Yelp/Tron/pull/458) ([qui](https://github.com/qui))
+- Add flake8 hook, make it stop arguing with yapf [\#457](https://github.com/Yelp/Tron/pull/457) ([keymone](https://github.com/keymone))
+- deploy prod namespaces and jobs at playground [\#449](https://github.com/Yelp/Tron/pull/449) ([chlgit](https://github.com/chlgit))
+
+## [v0.9.1.1](https://github.com/Yelp/Tron/tree/v0.9.1.1) (2018-06-15)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.1.0...v0.9.1.1)
+
+**Merged pull requests:**
+
+- stream action\_runner output from subprocess [\#456](https://github.com/Yelp/Tron/pull/456) ([Rob-Johnson](https://github.com/Rob-Johnson))
+- Bounded asynchronous API request handling [\#455](https://github.com/Yelp/Tron/pull/455) ([keymone](https://github.com/keymone))
+- ClusterRepository for accessing Mesos clusters [\#454](https://github.com/Yelp/Tron/pull/454) ([qui](https://github.com/qui))
+
+## [v0.9.1.0](https://github.com/Yelp/Tron/tree/v0.9.1.0) (2018-06-13)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.0.0...v0.9.1.0)
+
+**Merged pull requests:**
+
+- exit the recovery batch with the correct exit code [\#453](https://github.com/Yelp/Tron/pull/453) ([Rob-Johnson](https://github.com/Rob-Johnson))
+- Get output from Mesos tasks [\#452](https://github.com/Yelp/Tron/pull/452) ([qui](https://github.com/qui))
+- run tasks on Mesos [\#448](https://github.com/Yelp/Tron/pull/448) ([qui](https://github.com/qui))
+
+## [v0.9.0.0](https://github.com/Yelp/Tron/tree/v0.9.0.0) (2018-06-05)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.8.0.6...v0.9.0.0)
+
+**Merged pull requests:**
+
+- set the machine state to 'running' before recovery [\#451](https://github.com/Yelp/Tron/pull/451) ([Rob-Johnson](https://github.com/Rob-Johnson))
+- Action runner factory should always be an instance [\#450](https://github.com/Yelp/Tron/pull/450) ([qui](https://github.com/qui))
+- Revert "Fix reloading config ignores changes in `enabled`" [\#447](https://github.com/Yelp/Tron/pull/447) ([vkhromov](https://github.com/vkhromov))
+- Fix reloading config ignores changes in `enabled` [\#446](https://github.com/Yelp/Tron/pull/446) ([vkhromov](https://github.com/vkhromov))
+- Fixed the example Docker container name in README.md [\#445](https://github.com/Yelp/Tron/pull/445) ([vkhromov](https://github.com/vkhromov))
+- Recover unknown batches [\#425](https://github.com/Yelp/Tron/pull/425) ([Rob-Johnson](https://github.com/Rob-Johnson))
+
+## [v0.8.0.6](https://github.com/Yelp/Tron/tree/v0.8.0.6) (2018-05-16)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.8.0.5...v0.8.0.6)
+
+**Fixed bugs:**
+
+- node reconfig should not cause all services to restart [\#223](https://github.com/Yelp/Tron/issues/223)
+
+**Closed issues:**
+
+- Enhancement: "tron restart", but for actions rather than jobs. [\#309](https://github.com/Yelp/Tron/issues/309)
+- Support retrying action runs [\#120](https://github.com/Yelp/Tron/issues/120)
+
+**Merged pull requests:**
+
+- add expected runtime for cleanup actions [\#444](https://github.com/Yelp/Tron/pull/444) ([chlgit](https://github.com/chlgit))
+- bug fixes: namespace deletion, reading long status files [\#443](https://github.com/Yelp/Tron/pull/443) ([qui](https://github.com/qui))
+- fix a bug at check\_tron\_jobs scripts [\#442](https://github.com/Yelp/Tron/pull/442) ([chlgit](https://github.com/chlgit))
+- set check\_every in monitoring script [\#441](https://github.com/Yelp/Tron/pull/441) ([chlgit](https://github.com/chlgit))
+- Added docker-compose dependency to fix example-cluster on Trusty [\#440](https://github.com/Yelp/Tron/pull/440) ([vkhromov](https://github.com/vkhromov))
+- Chl/use indent dictionary value for yapf [\#439](https://github.com/Yelp/Tron/pull/439) ([chlgit](https://github.com/chlgit))
+- add support for expected\_runtime alerting [\#438](https://github.com/Yelp/Tron/pull/438) ([chlgit](https://github.com/chlgit))
+- Pre calculate state machine transitions [\#437](https://github.com/Yelp/Tron/pull/437) ([keymone](https://github.com/keymone))
+- Added retry docs [\#436](https://github.com/Yelp/Tron/pull/436) ([solarkennedy](https://github.com/solarkennedy))
+- Yapf formatting [\#433](https://github.com/Yelp/Tron/pull/433) ([keymone](https://github.com/keymone))
+- Remove tron/utils/collections [\#387](https://github.com/Yelp/Tron/pull/387) ([keymone](https://github.com/keymone))
+
 ## [v0.8.0.5](https://github.com/Yelp/Tron/tree/v0.8.0.5) (2018-04-24)
 [Full Changelog](https://github.com/Yelp/Tron/compare/v0.8.0.4...v0.8.0.5)
 

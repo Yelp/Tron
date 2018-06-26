@@ -77,8 +77,11 @@ class ActionRunController(object):
 
     def handle_termination(self, command):
         try:
-            getattr(self.action_run, command)()
+            # Extra message is only used for killing mesos action as warning so far.
+            extra_msg = getattr(self.action_run, command)()
             msg = "Attempting to %s %s"
+            if extra_msg is not None:
+                msg = msg + "\n" + extra_msg
             return msg % (command, self.action_run)
         except NotImplementedError as e:
             msg = "Failed to %s: %s"
