@@ -31,12 +31,12 @@ from tron.config.config_utils import valid_int
 from tron.config.config_utils import valid_name_identifier
 from tron.config.config_utils import valid_string
 from tron.config.config_utils import Validator
+from tron.config.notification_options import NotificationOptions
 from tron.config.schedule_parse import valid_schedule
 from tron.config.schema import ConfigJob
 from tron.config.schema import ConfigMesos
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.schema import NamedTronConfig
-from tron.config.schema import NotificationOptions
 from tron.config.schema import TronConfig
 from tron.config.ssh_options import SSHOptions
 from tron.config.state_persistence import StatePersistence
@@ -143,15 +143,6 @@ def valid_node_name(value, config_context):
         msg = "Unknown node name %s at %s"
         raise ConfigError(msg % (value, config_context.path))
     return value
-
-
-class ValidateNotificationOptions(Validator):
-    """Validate notification options."""
-    config_class = NotificationOptions
-    optional = True
-
-
-valid_notification_options = ValidateNotificationOptions()
 
 
 class ValidateNode(Validator):
@@ -354,7 +345,7 @@ class ValidateConfig(Validator):
         'output_stream_dir': valid_output_stream_dir,
         'command_context': valid_command_context,
         'ssh_options': SSHOptions.from_config,
-        'notification_options': valid_notification_options,
+        'notification_options': NotificationOptions.from_config,
         'time_zone': valid_time_zone,
         'state_persistence': StatePersistence.from_config,
         'nodes': nodes,

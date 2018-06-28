@@ -60,14 +60,6 @@ NamedTronConfig = config_object_factory(
     ],
 )
 
-NotificationOptions = config_object_factory(
-    name='NotificationOptions',
-    required=[
-        'smtp_host',  # str
-        'notification_addr',  # str
-    ],
-)
-
 ConfigNode = config_object_factory(
     name='ConfigNode',
     required=['hostname'],
