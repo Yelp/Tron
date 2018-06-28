@@ -158,6 +158,9 @@ class ConfigManager(object):
     def get_namespaces(self):
         return self.manifest.get_file_mapping().keys()
 
+    def check_config(self, name, content):
+        log.info("checking config for {}".format(name))
+
 
 def create_new_config(path, master_content):
     """Create a new configuration directory with master config."""

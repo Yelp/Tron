@@ -20,6 +20,7 @@ from tron import command_context
 from tron.config import config_utils
 from tron.config import ConfigError
 from tron.config import schema
+from tron.config.config_utils import _build_dict_from_str
 from tron.config.config_utils import build_dict_name_validator
 from tron.config.config_utils import build_list_of_type_validator
 from tron.config.config_utils import ConfigContext
@@ -726,12 +727,14 @@ def validate_config_mapping(config_mapping):
     if MASTER_NAMESPACE not in config_mapping:
         msg = "A config mapping requires a %s namespace"
         raise ConfigError(msg % MASTER_NAMESPACE)
-
-    master = valid_config(config_mapping.pop(MASTER_NAMESPACE))
+    in_dict = _build_dict_from_str(config_mapping.pop(MASTER_NAMESPACE))
+    master = valid_config(in_dict)
     nodes = get_nodes_from_master_namespace(master)
     yield MASTER_NAMESPACE, master
 
     for name, content in six.iteritems(config_mapping):
+        content = _build_dict_from_str(content)
+
         context = ConfigContext(
             name,
             nodes,

@@ -8,6 +8,7 @@ import itertools
 import re
 
 import six
+import yaml
 from six import string_types
 
 from tron.config import ConfigError
@@ -172,6 +173,12 @@ def build_list_of_type_validator(item_validator, allow_empty=False):
         return tuple(item_validator(item, config_context) for item in seq)
 
     return validator
+
+
+def _build_dict_from_str(in_dict):
+    if isinstance(in_dict, str):
+        return yaml.safe_load(in_dict)
+    return in_dict
 
 
 def build_dict_name_validator(item_validator, allow_empty=False):
