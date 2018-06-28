@@ -260,6 +260,65 @@ class CheckJobsTestCase(TestCase):
         )
         assert_equal(actual["id"], "MASTER.test.1.action3")
 
+    def test_get_relevant_action_pick_the_one_exceeds_expected_runtime_with_long_duration(
+        self
+    ):
+        action_runs = [
+            {
+                'id':
+                    'MASTER.test.1.action3',
+                'action_name':
+                    'action3',
+                'state':
+                    'running',
+                'start_time':
+                    time.strftime(
+                        '%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)
+                    ),
+                'duration':
+                    '1 day, 0:10:00.006305',
+            },
+            {
+                'id':
+                    'MASTER.test.1.action2',
+                'action_name':
+                    'action2',
+                'state':
+                    'running',
+                'start_time':
+                    time.strftime(
+                        '%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)
+                    ),
+                'duration':
+                    '2 days, 0:10:00.006383',
+            },
+            {
+                'id':
+                    'MASTER.test.1.action1',
+                'action_name':
+                    'action1',
+                'state':
+                    'succeeded',
+                'start_time':
+                    time.strftime(
+                        '%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)
+                    ),
+                'duration':
+                    '1 day, 0:10:00.006331',
+            },
+        ]
+        actions_expected_runtime = {
+            'action3': 100000.0,
+            'action2': 100000.0,
+            'action1': 100000.0
+        }
+        actual = check_tron_jobs.get_relevant_action(
+            action_runs=action_runs,
+            last_state=State.STUCK,
+            actions_expected_runtime=actions_expected_runtime
+        )
+        assert_equal(actual["id"], "MASTER.test.1.action2")
+
     def test_job_succeeded(self):
         job_runs = {
             'status':
