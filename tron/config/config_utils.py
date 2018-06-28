@@ -8,9 +8,9 @@ import itertools
 import re
 
 import six
-import yaml
 from six import string_types
 
+from tron import yaml
 from tron.config import ConfigError
 from tron.config.schema import MASTER_NAMESPACE
 from tron.utils import dicts
@@ -177,7 +177,7 @@ def build_list_of_type_validator(item_validator, allow_empty=False):
 
 def _build_dict_from_str(in_dict):
     if isinstance(in_dict, str):
-        return yaml.safe_load(in_dict)
+        return yaml.load(in_dict)
     return in_dict
 
 
