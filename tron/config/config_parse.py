@@ -6,22 +6,18 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import datetime
-import getpass
 import itertools
 import logging
 import os
 
 import pytz
 import six
-from six import string_types
 
 from tron import command_context
 from tron.config import config_utils
 from tron.config import ConfigError
-from tron.config import schema
 from tron.config.action_runner import ActionRunner
 from tron.config.config_utils import build_dict_name_validator
-from tron.config.config_utils import build_list_of_type_validator
 from tron.config.config_utils import ConfigContext
 from tron.config.config_utils import PartialConfigContext
 from tron.config.config_utils import valid_bool
@@ -32,6 +28,8 @@ from tron.config.config_utils import valid_name_identifier
 from tron.config.config_utils import valid_string
 from tron.config.config_utils import Validator
 from tron.config.mesos_options import MesosOptions
+from tron.config.node import NodeMap
+from tron.config.node import NodePoolMap
 from tron.config.notification_options import NotificationOptions
 from tron.config.schedule_parse import valid_schedule
 from tron.config.schema import ConfigJob
@@ -145,51 +143,6 @@ def valid_node_name(value, config_context):
     return value
 
 
-class ValidateNode(Validator):
-    config_class = schema.ConfigNode
-    validators = {
-        'name': config_utils.valid_identifier,
-        'username': config_utils.valid_string,
-        'hostname': config_utils.valid_string,
-        'port': config_utils.valid_int,
-    }
-
-    defaults = {
-        'port': 22,
-        'username': getpass.getuser(),
-    }
-
-    def do_shortcut(self, node):
-        """Nodes can be specified with just a hostname string."""
-        if isinstance(node, string_types):
-            return schema.ConfigNode(hostname=node, name=node, **self.defaults)
-
-    def set_defaults(self, output_dict, config_context):
-        super(ValidateNode, self).set_defaults(output_dict, config_context)
-        output_dict.setdefault('name', output_dict['hostname'])
-
-
-valid_node = ValidateNode()
-
-
-class ValidateNodePool(Validator):
-    config_class = schema.ConfigNodePool
-    validators = {
-        'name': valid_identifier,
-        'nodes': build_list_of_type_validator(valid_identifier),
-    }
-
-    def cast(self, node_pool, _context):
-        if isinstance(node_pool, list):
-            node_pool = dict(nodes=node_pool)
-        return node_pool
-
-    def set_defaults(self, node_pool, _):
-        node_pool.setdefault('name', '_'.join(node_pool['nodes']))
-
-
-valid_node_pool = ValidateNodePool()
-
 action_context = command_context.build_filled_context(
     command_context.JobContext,
     command_context.JobRunContext,
@@ -297,9 +250,6 @@ def validate_jobs(config, config_context):
     config_utils.unique_names(fmt_string, config['jobs'])
 
 
-DEFAULT_NODE = ValidateNode().do_shortcut(node='localhost')
-
-
 class ValidateConfig(Validator):
     """Given a parsed config file (should be only basic literals and
     containers), return an immutable, fully populated series of namedtuples and
@@ -309,22 +259,27 @@ class ValidateConfig(Validator):
     config_class = TronConfig
     defaults = {
         'action_runner': {},
-        'output_stream_dir': None,
+        'output_stream_dir':
+            None,
         'command_context': {},
-        'ssh_options': SSHOptions(),
-        'notification_options': None,
-        'time_zone': None,
-        'state_persistence': StatePersistence(name='tron_state'),
-        'nodes': {
-            'localhost': DEFAULT_NODE,
-        },
-        'node_pools': {},
+        'ssh_options':
+            SSHOptions(),
+        'notification_options':
+            None,
+        'time_zone':
+            None,
+        'state_persistence':
+            StatePersistence(name='tron_state'),
+        'nodes':
+            NodeMap.from_config([dict(name='localhost', hostname='localhost')],
+                                None),
+        'node_pools':
+            NodePoolMap(),
         'jobs': (),
-        'mesos_options': MesosOptions(),
+        'mesos_options':
+            MesosOptions(),
     }
 
-    node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
-    nodes = build_dict_name_validator(valid_node, allow_empty=True)
     validators = {
         'action_runner': ActionRunner.from_config,
         'output_stream_dir': valid_output_stream_dir,
@@ -333,8 +288,8 @@ class ValidateConfig(Validator):
         'notification_options': NotificationOptions.from_config,
         'time_zone': valid_time_zone,
         'state_persistence': StatePersistence.from_config,
-        'nodes': nodes,
-        'node_pools': node_pools,
+        'nodes': NodeMap.from_config,
+        'node_pools': NodePoolMap.from_config,
         'mesos_options': MesosOptions.from_config,
     }
     optional = False

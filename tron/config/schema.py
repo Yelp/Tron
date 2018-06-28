@@ -41,15 +41,15 @@ TronConfig = config_object_factory(
     optional=[
         'output_stream_dir',  # str
         'action_runner',  # ActionRunner
-        'state_persistence',  # ConfigState
+        'state_persistence',  # StatePersistence
         'command_context',  # FrozenDict of str
         'ssh_options',  # SSHOptions
-        'notification_options',  # NotificationOptions or None
+        'notification_options',  # [NotificationOptions]
         'time_zone',  # pytz time zone
-        'nodes',  # FrozenDict of ConfigNode
-        'node_pools',  # FrozenDict of ConfigNodePool
+        'nodes',  # NodeMap
+        'node_pools',  # NodePoolMap
         'jobs',  # FrozenDict of ConfigJob
-        'mesos_options',  # ConfigMesos
+        'mesos_options',  # MesosOptions
     ],
 )
 
@@ -59,14 +59,6 @@ NamedTronConfig = config_object_factory(
         'jobs',  # FrozenDict of ConfigJob
     ],
 )
-
-ConfigNode = config_object_factory(
-    name='ConfigNode',
-    required=['hostname'],
-    optional=['name', 'username', 'port'],
-)
-
-ConfigNodePool = config_object_factory('ConfigNodePool', ['nodes'], ['name'])
 
 ConfigJob = config_object_factory(
     name='ConfigJob',

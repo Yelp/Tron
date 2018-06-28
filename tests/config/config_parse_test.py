@@ -24,11 +24,14 @@ from tron.config import schema
 from tron.config.config_parse import build_format_string_validator
 from tron.config.config_parse import valid_config
 from tron.config.config_parse import valid_job
-from tron.config.config_parse import valid_node_pool
 from tron.config.config_parse import valid_output_stream_dir
 from tron.config.config_parse import validate_fragment
 from tron.config.config_utils import NullConfigContext
 from tron.config.mesos_options import MesosOptions
+from tron.config.node import Node
+from tron.config.node import NodeMap
+from tron.config.node import NodePool
+from tron.config.node import NodePoolMap
 from tron.config.schedule_parse import ConfigConstantScheduler
 from tron.config.schedule_parse import ConfigIntervalScheduler
 from tron.config.schema import CLEANUP_ACTION_NAME
@@ -44,9 +47,10 @@ BASE_CONFIG = dict(
     ssh_options=dict(agent=False, identities=['tests/test_id_rsa']),
     time_zone="EST",
     output_stream_dir="/tmp",
+    # TODO: fix mocking username
     nodes=[
-        dict(name='node0', hostname='node0'),
-        dict(name='node1', hostname='node1'),
+        dict(name='node0', hostname='node0', username='foo'),
+        dict(name='node1', hostname='node1', username='foo'),
     ],
     node_pools=[dict(name='NodePool', nodes=['node0', 'node1'])]
 )
@@ -80,16 +84,16 @@ def make_command_context():
 
 
 def make_nodes():
-    return FrozenDict({
+    return NodeMap({
         'node0':
-            schema.ConfigNode(
+            Node(
                 name='node0',
                 username='foo',
                 hostname='node0',
                 port=22,
             ),
         'node1':
-            schema.ConfigNode(
+            Node(
                 name='node1',
                 username='foo',
                 hostname='node1',
@@ -99,13 +103,9 @@ def make_nodes():
 
 
 def make_node_pools():
-    return FrozenDict({
-        'NodePool':
-            schema.ConfigNodePool(
-                nodes=('node0', 'node1'),
-                name='NodePool',
-            ),
-    })
+    return NodePoolMap.from_config(
+        [dict(name='NodePool', nodes=['node0', 'node1'])], None
+    )
 
 
 def make_action(config_context=MASTER_CONTEXT, **kwargs):
@@ -407,9 +407,7 @@ class ConfigTestCase(TestCase):
         **JOBS_CONFIG
     )
 
-    @mock.patch.dict('tron.config.config_parse.ValidateNode.defaults')
     def test_attributes(self):
-        config_parse.ValidateNode.defaults['username'] = 'foo'
         config_context = config_utils.ConfigContext(
             'config',
             ['localhost'],
@@ -699,8 +697,9 @@ class JobConfigTestCase(TestCase):
 
 class NodeConfigTestCase(TestCase):
     def test_validate_node_pool(self):
-        config_node_pool = valid_node_pool(
+        config_node_pool = NodePool.from_config(
             dict(name="theName", nodes=["node1", "node2"]),
+            None,
         )
         assert_equal(config_node_pool.name, "theName")
         assert_equal(len(config_node_pool.nodes), 2)
@@ -787,9 +786,9 @@ class NodeConfigTestCase(TestCase):
             ]
         )
 
-        expected_msg = "NodePool pool0 is missing options"
+        expected_msg = "hostname"
         exception = assert_raises(
-            ConfigError,
+            AttributeError,
             valid_config,
             test_config,
         )
