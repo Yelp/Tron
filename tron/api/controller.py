@@ -10,6 +10,7 @@ import pkg_resources
 import six
 
 import tron
+from tron import yaml
 from tron.config import schema
 
 log = logging.getLogger(__name__)
@@ -213,11 +214,10 @@ class ConfigController(object):
         content = self.strip_header(name, content)
 
         try:
+            content = yaml.load(content)
             self.config_manager.validate_with_fragment(name, content)
         except Exception as e:
             return "Configuration update will fail: %s" % str(e)
-
-        return self.config_manager.check_config(name, content)
 
     def update_config(self, name, content, config_hash):
         """Update a configuration fragment and reload the MCP."""

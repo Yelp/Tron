@@ -10,7 +10,6 @@ import re
 import six
 from six import string_types
 
-from tron import yaml
 from tron.config import ConfigError
 from tron.config.schema import MASTER_NAMESPACE
 from tron.utils import dicts
@@ -173,12 +172,6 @@ def build_list_of_type_validator(item_validator, allow_empty=False):
         return tuple(item_validator(item, config_context) for item in seq)
 
     return validator
-
-
-def _build_dict_from_str(in_dict):
-    if isinstance(in_dict, str):
-        return yaml.load(in_dict)
-    return in_dict
 
 
 def build_dict_name_validator(item_validator, allow_empty=False):
