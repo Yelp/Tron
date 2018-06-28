@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import datetime
 import logging
 from enum import Enum
@@ -8,13 +5,13 @@ from enum import Enum
 from pyrsistent import CheckedPMap
 from pyrsistent import CheckedPVector
 from pyrsistent import field
-from pyrsistent import PClass
 from pyrsistent import PRecord
 from pyrsistent import PSet
 from pyrsistent import pset
 from pyrsistent import s
 
 from tron import node
+from tron.config import ConfigRecord
 from tron.config import schema
 from tron.config.config_utils import IDENTIFIER_RE
 from tron.config.config_utils import TIME_INTERVAL_RE
@@ -76,7 +73,7 @@ class DockerParams(CheckedPVector):
     __type__ = DockerParam
 
 
-class Action(PClass):
+class Action(ConfigRecord):
     """A configurable data object for an Action."""
 
     name = field(

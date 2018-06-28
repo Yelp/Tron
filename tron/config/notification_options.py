@@ -1,11 +1,8 @@
 from pyrsistent import field
-from pyrsistent import PRecord
+
+from tron.config import ConfigRecord
 
 
-class NotificationOptions(PRecord):
+class NotificationOptions(ConfigRecord):
     smtp_host = field(type=(str, type(None)), initial=None)
     notification_addr = field(type=(str, type(None)), initial=None)
-
-    @staticmethod
-    def from_config(val, _):
-        return NotificationOptions.create(val)

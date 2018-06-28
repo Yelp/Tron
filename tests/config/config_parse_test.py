@@ -28,6 +28,7 @@ from tron.config.config_parse import valid_node_pool
 from tron.config.config_parse import valid_output_stream_dir
 from tron.config.config_parse import validate_fragment
 from tron.config.config_utils import NullConfigContext
+from tron.config.mesos_options import MesosOptions
 from tron.config.schedule_parse import ConfigConstantScheduler
 from tron.config.schedule_parse import ConfigIntervalScheduler
 from tron.config.schema import CLEANUP_ACTION_NAME
@@ -308,7 +309,7 @@ def make_tron_config(
         nodes=nodes or make_nodes(),
         node_pools=node_pools or make_node_pools(),
         jobs=jobs or make_master_jobs(config_context=config_context),
-        mesos_options=mesos_options or schema.ConfigMesos(enabled=False),
+        mesos_options=mesos_options or MesosOptions(enabled=False),
     )
 
 

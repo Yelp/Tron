@@ -31,10 +31,10 @@ from tron.config.config_utils import valid_int
 from tron.config.config_utils import valid_name_identifier
 from tron.config.config_utils import valid_string
 from tron.config.config_utils import Validator
+from tron.config.mesos_options import MesosOptions
 from tron.config.notification_options import NotificationOptions
 from tron.config.schedule_parse import valid_schedule
 from tron.config.schema import ConfigJob
-from tron.config.schema import ConfigMesos
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.schema import NamedTronConfig
 from tron.config.schema import TronConfig
@@ -284,21 +284,6 @@ class ValidateJob(Validator):
 valid_job = ValidateJob()
 
 
-class ValidateMesos(Validator):
-    config_class = ConfigMesos
-    option = True
-    defaults = {
-        'enabled': False,
-    }
-
-    validators = {
-        'enabled': valid_bool,
-    }
-
-
-valid_mesos_options = ValidateMesos()
-
-
 def validate_jobs(config, config_context):
     """Validate jobs"""
     valid_jobs = build_dict_name_validator(valid_job, allow_empty=True)
@@ -335,7 +320,7 @@ class ValidateConfig(Validator):
         },
         'node_pools': {},
         'jobs': (),
-        'mesos_options': ConfigMesos(**ValidateMesos.defaults),
+        'mesos_options': MesosOptions(),
     }
 
     node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
@@ -350,7 +335,7 @@ class ValidateConfig(Validator):
         'state_persistence': StatePersistence.from_config,
         'nodes': nodes,
         'node_pools': node_pools,
-        'mesos_options': valid_mesos_options,
+        'mesos_options': MesosOptions.from_config,
     }
     optional = False
 

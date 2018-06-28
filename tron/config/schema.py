@@ -68,13 +68,6 @@ ConfigNode = config_object_factory(
 
 ConfigNodePool = config_object_factory('ConfigNodePool', ['nodes'], ['name'])
 
-ConfigMesos = config_object_factory(
-    name='ConfigMesos',
-    optional=[
-        'enabled',
-    ],
-)
-
 ConfigJob = config_object_factory(
     name='ConfigJob',
     required=[
