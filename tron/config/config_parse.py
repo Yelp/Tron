@@ -34,12 +34,12 @@ from tron.config.config_utils import Validator
 from tron.config.schedule_parse import valid_schedule
 from tron.config.schema import ConfigJob
 from tron.config.schema import ConfigMesos
-from tron.config.schema import ConfigState
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.schema import NamedTronConfig
 from tron.config.schema import NotificationOptions
 from tron.config.schema import TronConfig
 from tron.config.ssh_options import SSHOptions
+from tron.config.state_persistence import StatePersistence
 from tron.core.action import Action
 from tron.core.action import ActionMap
 from tron.utils.dicts import FrozenDict
@@ -286,46 +286,11 @@ class ValidateJob(Validator):
                 ),
             )
 
-        def is_incomplete_paasta_action(action):
-            return (
-                action.executor == schema.ExecutorTypes.paasta and
-                (action.service is None or action.deploy_group is None)
-            )
-
         for _, action in six.iteritems(job['actions']):
             self._validate_dependencies(job, job['actions'], action)
 
 
 valid_job = ValidateJob()
-
-
-class ValidateStatePersistence(Validator):
-    config_class = schema.ConfigState
-    defaults = {
-        'buffer_size': 1,
-        'connection_details': None,
-    }
-
-    validators = {
-        'name':
-            valid_string,
-        'store_type':
-            config_utils.build_enum_validator(schema.StatePersistenceTypes, ),
-        'connection_details':
-            valid_string,
-        'buffer_size':
-            valid_int,
-    }
-
-    def post_validation(self, config, config_context):
-        buffer_size = config.get('buffer_size')
-
-        if buffer_size and buffer_size < 1:
-            path = config_context.path
-            raise ConfigError("%s buffer_size must be >= 1." % path)
-
-
-valid_state_persistence = ValidateStatePersistence()
 
 
 class ValidateMesos(Validator):
@@ -356,7 +321,6 @@ def validate_jobs(config, config_context):
     config_utils.unique_names(fmt_string, config['jobs'])
 
 
-DEFAULT_STATE_PERSISTENCE = ConfigState('tron_state', 'shelve', None, 1)
 DEFAULT_NODE = ValidateNode().do_shortcut(node='localhost')
 
 
@@ -374,7 +338,7 @@ class ValidateConfig(Validator):
         'ssh_options': SSHOptions(),
         'notification_options': None,
         'time_zone': None,
-        'state_persistence': DEFAULT_STATE_PERSISTENCE,
+        'state_persistence': StatePersistence(name='tron_state'),
         'nodes': {
             'localhost': DEFAULT_NODE,
         },
@@ -392,7 +356,7 @@ class ValidateConfig(Validator):
         'ssh_options': SSHOptions.from_config,
         'notification_options': valid_notification_options,
         'time_zone': valid_time_zone,
-        'state_persistence': valid_state_persistence,
+        'state_persistence': StatePersistence.from_config,
         'nodes': nodes,
         'node_pools': node_pools,
         'mesos_options': valid_mesos_options,

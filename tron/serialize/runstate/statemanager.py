@@ -8,7 +8,7 @@ from contextlib import contextmanager
 
 import six
 
-from tron.config import schema
+from tron.config.state_persistence import StatePersistenceTypes
 from tron.core import job
 from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
@@ -38,17 +38,16 @@ class PersistenceManagerFactory(object):
         buffer_size = persistence_config.buffer_size
         store = None
 
-        if store_type not in schema.StatePersistenceTypes:
-            raise PersistenceStoreError("Unknown store type: %s" % store_type)
-
-        if store_type == schema.StatePersistenceTypes.shelve:
+        if store_type == StatePersistenceTypes.shelve:
             store = ShelveStateStore(name)
-
-        if store_type == schema.StatePersistenceTypes.sql:
+        elif store_type == StatePersistenceTypes.sql:
             store = SQLAlchemyStateStore(name, connection_details)
-
-        if store_type == schema.StatePersistenceTypes.yaml:
+        elif store_type == StatePersistenceTypes.yaml:
             store = YamlStateStore(name)
+        else:
+            raise PersistenceStoreError(
+                f"Unknown persistence type: {store_type}"
+            )
 
         buffer = StateSaveBuffer(buffer_size)
         return PersistentStateManager(store, buffer)

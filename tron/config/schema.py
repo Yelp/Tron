@@ -76,18 +76,6 @@ ConfigNode = config_object_factory(
 
 ConfigNodePool = config_object_factory('ConfigNodePool', ['nodes'], ['name'])
 
-ConfigState = config_object_factory(
-    name='ConfigState',
-    required=[
-        'name',
-        'store_type',
-    ],
-    optional=[
-        'connection_details',
-        'buffer_size',
-    ],
-)
-
 ConfigMesos = config_object_factory(
     name='ConfigMesos',
     optional=[
@@ -117,7 +105,5 @@ ConfigJob = config_object_factory(
         'expected_runtime',  # datetime.Timedelta
     ],
 )
-
-StatePersistenceTypes = Enum.create('shelve', 'sql', 'yaml')
 
 ExecutorTypes = Enum.create('ssh', 'mesos')

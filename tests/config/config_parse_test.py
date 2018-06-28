@@ -33,6 +33,7 @@ from tron.config.schedule_parse import ConfigIntervalScheduler
 from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.ssh_options import SSHOptions
+from tron.config.state_persistence import StatePersistence
 from tron.core.action import Action
 from tron.core.action import ActionMap
 from tron.core.action import VolumeModes
@@ -288,7 +289,7 @@ def make_tron_config(
     ssh_options=None,
     notification_options=None,
     time_zone=pytz.timezone("EST"),
-    state_persistence=config_parse.DEFAULT_STATE_PERSISTENCE,
+    state_persistence=StatePersistence(name='tron_state'),
     nodes=None,
     node_pools=None,
     jobs=None,
