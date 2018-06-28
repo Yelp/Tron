@@ -111,6 +111,9 @@ ConfigMesos = config_object_factory(
     name='ConfigMesos',
     optional=[
         'enabled',
+        'default_volumes',
+        'dockercfg_location',
+        'offer_timeout',
     ],
 )
 

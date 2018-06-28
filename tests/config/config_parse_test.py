@@ -96,6 +96,15 @@ def make_node_pools():
     })
 
 
+def make_mesos_options():
+    return schema.ConfigMesos(
+        enabled=False,
+        default_volumes=(),
+        dockercfg_location=None,
+        offer_timeout=300,
+    )
+
+
 def make_action(**kwargs):
     kwargs.setdefault('name', 'action'),
     kwargs.setdefault('command', 'command')
@@ -288,7 +297,7 @@ def make_tron_config(
         nodes=nodes or make_nodes(),
         node_pools=node_pools or make_node_pools(),
         jobs=jobs or make_master_jobs(),
-        mesos_options=mesos_options or schema.ConfigMesos(enabled=False),
+        mesos_options=mesos_options or make_mesos_options(),
     )
 
 
@@ -1186,6 +1195,89 @@ class ValidKnownHostsFileTestCase(TestCase):
             context,
         )
         assert_equal(filename, expected)
+
+
+class ValidateVolumeTestCase(TestCase):
+    @setup
+    def setup_context(self):
+        self.context = config_utils.NullConfigContext
+
+    def test_missing_container_path(self):
+        config = {
+            'container_path_typo': '/nail/srv',
+            'host_path': '/tmp',
+            'mode': 'RO',
+        }
+        assert_raises(
+            ConfigError,
+            config_parse.valid_volume.validate,
+            config,
+            self.context,
+        )
+
+    def test_missing_host_path(self):
+        config = {
+            'container_path': '/nail/srv',
+            'hostPath': '/tmp',
+            'mode': 'RO',
+        }
+        assert_raises(
+            ConfigError,
+            config_parse.valid_volume.validate,
+            config,
+            self.context,
+        )
+
+    def test_invalid_mode(self):
+        config = {
+            'container_path': '/nail/srv',
+            'host_path': '/tmp',
+            'mode': 'RA',
+        }
+        assert_raises(
+            ConfigError,
+            config_parse.valid_volume.validate,
+            config,
+            self.context,
+        )
+
+    def test_valid(self):
+        config = {
+            'container_path': '/nail/srv',
+            'host_path': '/tmp',
+            'mode': 'RO',
+        }
+        assert_equal(
+            schema.ConfigVolume(**config),
+            config_parse.valid_volume.validate(config, self.context),
+        )
+
+    def test_mesos_default_volumes(self):
+        mesos_options = {}
+        mesos_options['default_volumes'] = [
+            {
+                'container_path': '/nail/srv',
+                'host_path': '/tmp',
+                'mode': 'RO',
+            },
+            {
+                'container_path': '/nail/srv',
+                'host_path': '/tmp',
+                'mode': 'invalid',
+            },
+        ]
+        assert_raises(
+            ConfigError,
+            config_parse.valid_mesos_options.validate,
+            mesos_options,
+            self.context,
+        )
+        # After we fix the error, expect error to go away.
+        mesos_options['default_volumes'][1]['mode'] = 'RW'
+        assert config_parse.valid_mesos_options.validate(
+            mesos_options,
+            self.context,
+        )
 
 
 if __name__ == '__main__':
