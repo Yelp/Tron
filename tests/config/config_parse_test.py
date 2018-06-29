@@ -103,9 +103,10 @@ def make_nodes():
 
 
 def make_node_pools():
-    return NodePoolMap.from_config(
-        [dict(name='NodePool', nodes=['node0', 'node1'])], None
-    )
+    return NodePoolMap.from_config([{
+        'name': 'NodePool',
+        'nodes': ['node0', 'node1']
+    }], None)
 
 
 def make_action(config_context=MASTER_CONTEXT, **kwargs):
