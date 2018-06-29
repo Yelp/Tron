@@ -59,7 +59,9 @@ class TestAction(TestCase):
         assert_equal(new_action.command, config['command'])
         assert_equal(new_action.node_pool, None)
         assert_equal(list(new_action.required_actions), [])
-        assert_equal(new_action.executor, config['executor'])
+        assert_equal(
+            new_action.executor, action.ExecutorTypes(config['executor'])
+        )
         assert_equal(new_action.cpus, config['cpus'])
         assert_equal(new_action.mem, config['mem'])
         assert_equal(
@@ -90,7 +92,9 @@ class TestAction(TestCase):
         assert_equal(new_action.name, config['name'])
         assert_equal(new_action.command, config['command'])
         assert_equal(list(new_action.required_actions), [])
-        assert_equal(new_action.executor, config['executor'])
+        assert_equal(
+            new_action.executor, action.ExecutorTypes(config['executor'])
+        )
         assert_equal(new_action.constraints, [])
         assert_equal(new_action.docker_image, None)
         assert_equal(new_action.docker_parameters, [])

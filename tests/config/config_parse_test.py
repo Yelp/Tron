@@ -40,6 +40,7 @@ from tron.config.ssh_options import SSHOptions
 from tron.config.state_persistence import StatePersistence
 from tron.core.action import Action
 from tron.core.action import ActionMap
+from tron.core.action import ExecutorTypes
 from tron.core.action import VolumeModes
 from tron.utils.dicts import FrozenDict
 
@@ -928,7 +929,7 @@ class ValidMesosActionTestCase(TestCase):
         config = dict(
             name='test_missing',
             command='echo hello',
-            executor=schema.ExecutorTypes.mesos,
+            executor=ExecutorTypes.mesos,
             cpus=0.2,
             mem=150,
             mesos_address='http://hello.org',
@@ -944,7 +945,7 @@ class ValidMesosActionTestCase(TestCase):
         config = dict(
             name='cleanup',
             command='echo hello',
-            executor=schema.ExecutorTypes.mesos,
+            executor=ExecutorTypes.mesos,
             cpus=0.2,
             mem=150,
             mesos_address='http://hello.org',

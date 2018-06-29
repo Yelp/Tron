@@ -14,8 +14,8 @@ from tron import node
 from tron.actioncommand import ActionCommand
 from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
-from tron.config.schema import ExecutorTypes
 from tron.core import action
+from tron.core.action import ExecutorTypes
 from tron.mesos import MesosClusterRepository
 from tron.serialize import filehandler
 from tron.utils import iteration
@@ -300,7 +300,7 @@ class ActionRun(object):
             retries_remaining=state_data.get('retries_remaining'),
             exit_statuses=state_data.get('exit_statuses'),
             action_runner=action_runner,
-            executor=state_data.get('executor', ExecutorTypes.ssh),
+            executor=ExecutorTypes(state_data.get('executor', 'ssh')),
             cpus=state_data.get('cpus'),
             mem=state_data.get('mem'),
             constraints=state_data.get('constraints'),

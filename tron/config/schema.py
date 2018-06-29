@@ -6,8 +6,6 @@ from __future__ import unicode_literals
 
 from collections import namedtuple
 
-from tron.utils.collections import Enum
-
 MASTER_NAMESPACE = "MASTER"
 
 CLEANUP_ACTION_NAME = 'cleanup'
@@ -82,5 +80,3 @@ ConfigJob = config_object_factory(
         'expected_runtime',  # datetime.Timedelta
     ],
 )
-
-ExecutorTypes = Enum.create('ssh', 'mesos')

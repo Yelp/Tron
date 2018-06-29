@@ -23,10 +23,10 @@ from tests.testingutils import Turtle
 from tron import actioncommand
 from tron import node
 from tron.config import config_utils
-from tron.config.schema import ExecutorTypes
 from tron.core import action
 from tron.core import actiongraph
 from tron.core import jobrun
+from tron.core.action import ExecutorTypes
 from tron.core.actionrun import ActionCommand
 from tron.core.actionrun import ActionRun
 from tron.core.actionrun import ActionRunCollection

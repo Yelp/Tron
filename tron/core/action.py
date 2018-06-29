@@ -12,7 +12,6 @@ from pyrsistent import s
 
 from tron import node
 from tron.config import ConfigRecord
-from tron.config import schema
 from tron.config.config_utils import IDENTIFIER_RE
 from tron.config.config_utils import TIME_INTERVAL_RE
 from tron.config.config_utils import TIME_INTERVAL_UNITS
@@ -73,6 +72,11 @@ class DockerParams(CheckedPVector):
     __type__ = DockerParam
 
 
+class ExecutorTypes(Enum):
+    ssh = 'ssh'
+    mesos = 'mesos'
+
+
 class Action(ConfigRecord):
     """A configurable data object for an Action."""
 
@@ -90,9 +94,9 @@ class Action(ConfigRecord):
     requires = field(type=PSet, initial=s(), factory=pset)
     retries = field(type=(int, type(None)), initial=None)
     executor = field(
-        type=(str, type(None)),
-        invariant=lambda x: (x in schema.ExecutorTypes, 'Invalid executor'),
-        initial=schema.ExecutorTypes.ssh,
+        type=ExecutorTypes,
+        initial=ExecutorTypes.ssh,
+        factory=ExecutorTypes,
     )
     cluster = field(type=(str, type(None)), initial=None)
     pool = field(type=(str, type(None)), initial=None)
@@ -174,7 +178,7 @@ class Action(ConfigRecord):
                     ),
                 )
 
-        if config.get('executor') == schema.ExecutorTypes.mesos:
+        if config.get('executor') == ExecutorTypes.mesos:
             required_keys = {'cpus', 'mem', 'docker_image', 'mesos_address'}
             missing_keys = required_keys - set(config.keys())
             if missing_keys:
