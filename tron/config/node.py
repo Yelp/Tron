@@ -12,7 +12,7 @@ class Node(ConfigRecord):
         type=str,
         invariant=lambda n: (
             bool(IDENTIFIER_RE.match(n)),
-            f"name {n} is not a valid identifier"
+            "name {} is not a valid identifier".format(n)
         )
     )
     hostname = field(type=str, mandatory=True)
@@ -23,6 +23,10 @@ class Node(ConfigRecord):
     def from_config(kls, val, _):
         if type(val) is str:
             val = dict(name=val, hostname=val)
+
+        # Allow only hostname or only name to be specified
+        val.setdefault('name', val.get('hostname'))
+        val.setdefault('hostname', val.get('name'))
 
         if val.get('username') is None:
             val['username'] = getpass.getuser()
@@ -43,9 +47,16 @@ class NodeMap(CheckedPMap):
             nval = {}
             for v in val:
                 if isinstance(v, str):
-                    nval[v] = Node.from_config(dict(name=v, hostname=v), ctx)
+                    node = Node.from_config(dict(name=v, hostname=v), ctx)
+                elif isinstance(v, dict):
+                    node = Node.from_config(v, ctx)
                 else:
-                    nval[v['name']] = Node.from_config(v, ctx)
+                    raise ValueError(
+                        "Can't make tron.config.Node out of {}".format(
+                            type(v)
+                        )
+                    )
+                nval[node.name] = node
             val = nval
 
         return kls.create(val)
@@ -56,7 +67,7 @@ class NodePool(ConfigRecord):
         type=str,
         invariant=lambda n: (
             bool(IDENTIFIER_RE.match(n)),
-            f"name {n} is not a valid identifier"
+            "name {} is not a valid identifier".format(n)
         )
     )
     nodes = field(type=NodeMap, initial=NodeMap())
