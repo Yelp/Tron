@@ -128,7 +128,7 @@ class ValidTimeDeltaTestCase(TestCase):
             'no time',
             self.context,
         )
-        assert_in('not a valid time delta: no time', str(exception))
+        assert_in('not a valid time delta', str(exception))
 
     def test_valid_time_delta_valid_seconds(self):
         for jitter in [' 82s ', '82 s', '82 sec', '82seconds  ']:

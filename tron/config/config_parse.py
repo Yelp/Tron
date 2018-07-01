@@ -158,7 +158,8 @@ class ValidateConfig(Validator):
                                 None),
         'node_pools':
             NodePoolMap(),
-        'jobs': (),
+        'jobs':
+            JobMap(),
         'mesos_options':
             MesosOptions(),
     }
@@ -217,7 +218,7 @@ class ValidateNamedConfig(Validator):
     config_class = NamedTronConfig
     type_name = "NamedConfigFragment"
     defaults = {
-        'jobs': (),
+        'jobs': JobMap(),
     }
 
     optional = False

@@ -430,12 +430,12 @@ class ConfigTestCase(TestCase):
         assert_equal(test_config.nodes, expected.nodes)
         assert_equal(test_config.node_pools, expected.node_pools)
         for key in ['0', '1', '2', '3', '4', '_mesos']:
-            job_name = f"MASTER.test_job{key}"
-            assert job_name in test_config.jobs, f"{job_name} in test_config.jobs"
-            assert job_name in expected.jobs, f"{job_name} in test_config.jobs"
-            assert_equal(test_config.jobs[job_name], expected.jobs[job_name])
-
-        assert_equal(test_config, expected)
+            assert f"test_job{key}" in test_config.jobs, f"{key} in test_config.jobs"
+            assert f"MASTER.test_job{key}" in expected.jobs, f"{key} in test_config.jobs"
+            assert_equal(
+                test_config.jobs[f"test_job{key}"],
+                expected.jobs[f"MASTER.test_job{key}"]
+            )
 
     def test_empty_node_test(self):
         valid_config(dict(nodes=None))
@@ -486,9 +486,9 @@ class JobConfigTestCase(TestCase):
             **BASE_CONFIG
         )
 
-        expected_message = "Job test_job0 is missing options: actions"
+        expected_message = "Job.actions"
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             valid_config,
             test_config,
         )
@@ -507,9 +507,9 @@ class JobConfigTestCase(TestCase):
             **BASE_CONFIG
         )
 
-        expected_message = "Required non-empty list at config.jobs.Job.test_job0.actions"
+        expected_message = "`actions` can't be empty"
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             valid_config,
             test_config,
         )
@@ -531,7 +531,7 @@ class JobConfigTestCase(TestCase):
             **BASE_CONFIG
         )
 
-        expected = "Duplicate action names found: ['action'] at config.jobs.Job.test_job0.actions.actions"
+        expected = "Duplicate action names found: ['action']"
         exception = assert_raises(
             ValueError,
             valid_config,
@@ -562,12 +562,9 @@ class JobConfigTestCase(TestCase):
             **BASE_CONFIG
         )
 
-        expected_message = (
-            'jobs.MASTER.test_job1.action1 has a dependency '
-            '"action" that is not in the same job!'
-        )
+        expected_message = 'contains external dependency'
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             valid_config,
             test_config,
         )
@@ -597,9 +594,9 @@ class JobConfigTestCase(TestCase):
             **BASE_CONFIG
         )
 
-        expect = "Circular dependency in job.MASTER.test_job0"
+        expect = "contains circular dependency"
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             valid_config,
             test_config,
         )
@@ -619,7 +616,7 @@ class JobConfigTestCase(TestCase):
             ],
             **BASE_CONFIG
         )
-        expected_message = "Action name reserved for cleanup action at config.jobs.Job.test_job0.actions.cleanup"
+        expected_message = "Action name reserved for cleanup action"
         exception = assert_raises(
             ValueError,
             valid_config,
@@ -643,7 +640,7 @@ class JobConfigTestCase(TestCase):
             **BASE_CONFIG
         )
 
-        expected_msg = "Cleanup actions cannot have custom names at config.jobs.Job.test_job0.cleanup_action"
+        expected_msg = "Cleanup actions cannot have custom names"
         exception = assert_raises(
             ValueError,
             valid_config,
@@ -667,13 +664,13 @@ class JobConfigTestCase(TestCase):
             **BASE_CONFIG
         )
 
-        expected_msg = "Cleanup action cannot have dependencies, has ['action'] at config.jobs.Job.test_job0.cleanup_action"
+        expected_msg = "Cleanup action cannot have dependencies, has ['action']"
         exception = assert_raises(
             ValueError,
             valid_config,
             test_config,
         )
-        assert_equal(expected_msg, str(exception))
+        assert_in(expected_msg, str(exception))
 
     def test_validate_job_no_actions(self):
         job_config = dict(
@@ -688,9 +685,9 @@ class JobConfigTestCase(TestCase):
             None,
             None,
         )
-        expected_msg = "Required non-empty list at config.Job.job_name.actions"
+        expected_msg = "`actions` can't be empty"
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             Job.from_config,
             job_config,
             config_context,
@@ -733,7 +730,7 @@ class NodeConfigTestCase(TestCase):
             **BASE_CONFIG
         )
 
-        expected_msg = "Unknown node name unknown_node at config.jobs.Job.test_job0.node"
+        expected_msg = "Failed to create job config.test_job0: Unknown node name unknown_node"
         exception = assert_raises(
             ValueError,
             valid_config,

@@ -33,8 +33,21 @@ def inv_name_identifier(name: str):
     return inv_identifier(name)
 
 
-def inv_acyclic(actions):
-    def inv_acyclic_rec(actions, base_action, current_action=None, stack=None):
+def inv_actions(actions):
+    if len(actions) == 0:
+        return (False, "`actions` can't be empty")
+
+    for an, av in actions.items():
+        for dep in av.requires:
+            if dep not in actions:
+                return (
+                    False,
+                    "`actions` contains external dependency: {} -> {}".format(
+                        an, dep
+                    )
+                )
+
+    def acyclic(actions, base_action, current_action=None, stack=None):
         """Check for circular or misspelled dependencies."""
         stack = stack or []
         current_action = current_action or base_action
@@ -44,30 +57,21 @@ def inv_acyclic(actions):
             if dep == base_action.name and len(stack) > 0:
                 return ' -> '.join(stack)
 
-            cycle = inv_acyclic_rec(actions, base_action, actions[dep], stack)
+            cycle = acyclic(actions, base_action, actions[dep], stack)
             if cycle:
                 return cycle
 
         stack.pop()
 
     for _, action in actions.items():
-        cycle = inv_acyclic_rec(actions, action)
+        cycle = acyclic(actions, action)
         if cycle:
-            return (False, "graph contains cycles: {}".format(cycle))
+            return (
+                False,
+                "`actions` contains circular dependency: {}".format(cycle)
+            )
 
-    return (True, "no cycles detected")
-
-
-def inv_no_external_deps(actions):
-    for an, av in actions.items():
-        for dep in av.requires:
-            if dep not in actions:
-                return (
-                    False,
-                    "external dependency detected: {} -> {}".format(an, dep)
-                )
-
-    return (True, "no external dependencies")
+    return (True, "all ok")
 
 
 class Job(ConfigRecord):
@@ -78,15 +82,7 @@ class Job(ConfigRecord):
         mandatory=True,
         factory=lambda s: schedule_parse.valid_schedule(s, None)
     )
-    actions = field(
-        type=ActionMap,
-        mandatory=True,
-        invariant=lambda ac: (
-            (len(ac) > 0, "can't be empty"),
-            inv_no_external_deps(ac),
-            inv_acyclic(ac),
-        )
-    )
+    actions = field(type=ActionMap, mandatory=True, invariant=inv_actions)
     namespace = field(type=str, mandatory=True)
 
     monitoring = field(type=PMap, initial=m(), factory=pmap)
@@ -104,7 +100,7 @@ class Job(ConfigRecord):
     time_zone = field(
         type=(datetime.tzinfo, type(None)),
         initial=None,
-        factory=lambda tz: tz if tz is None else pytz.timezone(tz)
+        factory=lambda tz: tz if isinstance(tz, (datetime.tzinfo, type(None))) else pytz.timezone(tz)
     )
     expected_runtime = field(
         type=(datetime.timedelta, type(None)),
@@ -122,11 +118,23 @@ class Job(ConfigRecord):
             if not context.partial and job['node'] not in context.nodes:
                 raise ValueError("Unknown node name {}".format(job['node']))
 
-            job['actions'] = ActionMap.from_config(job['actions'], context)
+            if 'actions' in job:
+                job['actions'] = ActionMap.from_config(
+                    job['actions'], context.build_child_context("actions")
+                )
+                if CLEANUP_ACTION_NAME in job['actions']:
+                    raise ValueError("Action name reserved for cleanup action")
+
             if job.get('cleanup_action') is not None:
+                if 'name' in job['cleanup_action'] \
+                        and job['cleanup_action']['name'] != CLEANUP_ACTION_NAME:
+                    raise ValueError(
+                        "Cleanup actions cannot have custom names"
+                    )
+
                 job['cleanup_action'] = Action.from_config(
                     dict(name=CLEANUP_ACTION_NAME, **job['cleanup_action']),
-                    context
+                    context.build_child_context("cleanup_action")
                 )
 
             if 'namespace' not in job or not job['namespace']:
@@ -138,9 +146,7 @@ class Job(ConfigRecord):
             return kls.create(job)
         except Exception as e:
             raise ValueError(
-                "Failed to create job '{}' at {}: {}".format(
-                    job.get('name'), context.path, e
-                )
+                "Failed to create job {}: {}".format(context.path, e)
             ).with_traceback(e.__traceback__)
 
 
@@ -158,6 +164,7 @@ class JobMap(CheckedPMap):
                 nameset.add(j['name'])
 
         return JobMap.create({
-            j['name']: Job.from_config(j, context)
+            j['name']:
+            Job.from_config(j, context.build_child_context(j['name']))
             for j in jobs
         })
