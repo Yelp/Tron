@@ -25,10 +25,9 @@ from tron import event
 from tron import node
 from tron import scheduler
 from tron.config import config_utils
-from tron.config import schema
+from tron.config.job import Job as JobConfig
 from tron.core import job
 from tron.core import jobrun
-from tron.core.action import ActionMap
 from tron.core.actionrun import ActionRun
 from tron.core.job import Job
 from tron.core.job import JobCollection
@@ -80,21 +79,23 @@ class JobTestCase(TestCase):
         self.mock_node_repo.get_instance().get_by_name = mock.Mock(
             return_value='thenode'
         )
-        job_config = schema.ConfigJob(
-            name='ajob',
-            node='thenodepool',
-            schedule=mock.Mock(),
-            namespace=mock.Mock(),
-            monitoring={
-                "team": "foo",
-                "page": True
-            },
-            all_nodes=False,
-            queueing=True,
-            enabled=True,
-            run_limit=20,
-            actions=ActionMap.from_config([action], parent_context),
-            cleanup_action=None,
+        job_config = JobConfig.from_config(
+            dict(
+                name='ajob',
+                node='localhost',
+                schedule='cron * * * * *',
+                namespace=None,
+                monitoring={
+                    "team": "foo",
+                    "page": True
+                },
+                all_nodes=False,
+                queueing=True,
+                enabled=True,
+                run_limit=20,
+                actions=[action],
+                cleanup_action=None,
+            ), parent_context
         )
         scheduler = 'scheduler_token'
         output_path = ["base_path"]

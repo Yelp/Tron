@@ -23,10 +23,11 @@ from tron.config import schedule_parse
 from tron.config import schema
 from tron.config.config_parse import build_format_string_validator
 from tron.config.config_parse import valid_config
-from tron.config.config_parse import valid_job
 from tron.config.config_parse import valid_output_stream_dir
 from tron.config.config_parse import validate_fragment
 from tron.config.config_utils import NullConfigContext
+from tron.config.job import Job
+from tron.config.job import JobMap
 from tron.config.mesos_options import MesosOptions
 from tron.config.node import Node
 from tron.config.node import NodeMap
@@ -155,7 +156,7 @@ def make_job(config_context=MASTER_CONTEXT, **kwargs):
     kwargs.setdefault('allow_overlap', False)
     kwargs.setdefault('time_zone', None)
     kwargs.setdefault('expected_runtime', datetime.timedelta(0, 3600))
-    return schema.ConfigJob(**kwargs)
+    return Job.from_config(**kwargs)
 
 
 def make_master_jobs(config_context=MASTER_CONTEXT):
@@ -690,7 +691,7 @@ class JobConfigTestCase(TestCase):
         expected_msg = "Required non-empty list at config.Job.job_name.actions"
         exception = assert_raises(
             ConfigError,
-            valid_job,
+            Job.from_config,
             job_config,
             config_context,
         )
@@ -920,7 +921,7 @@ class ValidateJobsTestCase(TestCase):
                     expected_runtime=datetime.timedelta(0, 1200),
                 ),
         })
-        config_parse.validate_jobs(test_config, context)
+        JobMap.from_config(test_config, context)
         assert_equal(expected_jobs, test_config['jobs'])
 
 

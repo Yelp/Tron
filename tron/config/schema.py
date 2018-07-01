@@ -46,7 +46,7 @@ TronConfig = config_object_factory(
         'time_zone',  # pytz time zone
         'nodes',  # NodeMap
         'node_pools',  # NodePoolMap
-        'jobs',  # FrozenDict of ConfigJob
+        'jobs',  # JobMap
         'mesos_options',  # MesosOptions
     ],
 )
@@ -54,29 +54,6 @@ TronConfig = config_object_factory(
 NamedTronConfig = config_object_factory(
     name='NamedTronConfig',
     optional=[
-        'jobs',  # FrozenDict of ConfigJob
-    ],
-)
-
-ConfigJob = config_object_factory(
-    name='ConfigJob',
-    required=[
-        'name',  # str
-        'node',  # str
-        'schedule',  # Config*Scheduler
-        'actions',  # FrozenDict of ConfigAction
-        'namespace',  # str
-    ],
-    optional=[
-        'monitoring',  # dict
-        'queueing',  # bool
-        'run_limit',  # int
-        'all_nodes',  # bool
-        'cleanup_action',  # ConfigAction
-        'enabled',  # bool
-        'allow_overlap',  # bool
-        'max_runtime',  # datetime.Timedelta
-        'time_zone',  # pytz time zone
-        'expected_runtime',  # datetime.Timedelta
+        'jobs',  # JobMap
     ],
 )

@@ -5,7 +5,6 @@ contain a validated configuration.
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import datetime
 import itertools
 import logging
 import os
@@ -17,29 +16,21 @@ from tron import command_context
 from tron.config import config_utils
 from tron.config import ConfigError
 from tron.config.action_runner import ActionRunner
-from tron.config.config_utils import build_dict_name_validator
 from tron.config.config_utils import ConfigContext
 from tron.config.config_utils import PartialConfigContext
-from tron.config.config_utils import valid_bool
 from tron.config.config_utils import valid_dict
-from tron.config.config_utils import valid_identifier
-from tron.config.config_utils import valid_int
-from tron.config.config_utils import valid_name_identifier
 from tron.config.config_utils import valid_string
 from tron.config.config_utils import Validator
+from tron.config.job import JobMap
 from tron.config.mesos_options import MesosOptions
 from tron.config.node import NodeMap
 from tron.config.node import NodePoolMap
 from tron.config.notification_options import NotificationOptions
-from tron.config.schedule_parse import valid_schedule
-from tron.config.schema import ConfigJob
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.schema import NamedTronConfig
 from tron.config.schema import TronConfig
 from tron.config.ssh_options import SSHOptions
 from tron.config.state_persistence import StatePersistence
-from tron.core.action import Action
-from tron.core.action import ActionMap
 from tron.utils.dicts import FrozenDict
 
 log = logging.getLogger(__name__)
@@ -135,119 +126,11 @@ def valid_time_zone(tz, config_context):
         raise ConfigError('%s is not a valid time zone' % tz)
 
 
-def valid_node_name(value, config_context):
-    valid_identifier(value, config_context)
-    if not config_context.partial and value not in config_context.nodes:
-        msg = "Unknown node name %s at %s"
-        raise ConfigError(msg % (value, config_context.path))
-    return value
-
-
 action_context = command_context.build_filled_context(
     command_context.JobContext,
     command_context.JobRunContext,
     command_context.ActionRunContext,
 )
-
-
-class ValidateJob(Validator):
-    """Validate jobs."""
-    config_class = ConfigJob
-    defaults = {
-        'run_limit': 50,
-        'all_nodes': False,
-        'cleanup_action': None,
-        'enabled': True,
-        'queueing': True,
-        'allow_overlap': False,
-        'max_runtime': None,
-        'monitoring': {},
-        'time_zone': None,
-        'expected_runtime': datetime.timedelta(hours=24),
-    }
-
-    validators = {
-        'name': valid_name_identifier,
-        'schedule': valid_schedule,
-        'run_limit': valid_int,
-        'all_nodes': valid_bool,
-        'actions': ActionMap.from_config,
-        'cleanup_action': Action.from_config,
-        'node': valid_node_name,
-        'queueing': valid_bool,
-        'enabled': valid_bool,
-        'allow_overlap': valid_bool,
-        'max_runtime': config_utils.valid_time_delta,
-        'monitoring': valid_dict,
-        'time_zone': valid_time_zone,
-        'expected_runtime': config_utils.valid_time_delta,
-    }
-
-    def cast(self, in_dict, config_context):
-        in_dict['namespace'] = config_context.namespace
-        return in_dict
-
-    # TODO: extract common code to a util function
-    def _validate_dependencies(
-        self,
-        job,
-        actions,
-        base_action,
-        current_action=None,
-        stack=None,
-    ):
-        """Check for circular or misspelled dependencies."""
-        stack = stack or []
-        current_action = current_action or base_action
-
-        stack.append(current_action.name)
-        for dep in current_action.requires:
-            if dep == base_action.name and len(stack) > 0:
-                msg = 'Circular dependency in job.%s: %s'
-                raise ConfigError(msg % (job['name'], ' -> '.join(stack)))
-            if dep not in actions:
-                raise ConfigError(
-                    'Action jobs.%s.%s has a dependency "%s"'
-                    ' that is not in the same job!' %
-                    (job['name'], current_action.name, dep),
-                )
-            self._validate_dependencies(
-                job,
-                actions,
-                base_action,
-                actions[dep],
-                stack,
-            )
-
-        stack.pop()
-
-    def post_validation(self, job, config_context):
-        """Validate actions for the job."""
-        if len(job['actions']) == 0:
-            raise ConfigError(
-                'Required non-empty list at {}.actions'.format(
-                    config_context.path,
-                ),
-            )
-
-        for _, action in six.iteritems(job['actions']):
-            self._validate_dependencies(job, job['actions'], action)
-
-
-valid_job = ValidateJob()
-
-
-def validate_jobs(config, config_context):
-    """Validate jobs"""
-    valid_jobs = build_dict_name_validator(valid_job, allow_empty=True)
-    validation = [('jobs', valid_jobs)]
-
-    for config_name, valid in validation:
-        child_context = config_context.build_child_context(config_name)
-        config[config_name] = valid(config.get(config_name, []), child_context)
-
-    fmt_string = 'Job names must be unique %s'
-    config_utils.unique_names(fmt_string, config['jobs'])
 
 
 class ValidateConfig(Validator):
@@ -322,7 +205,7 @@ class ValidateConfig(Validator):
             config.get('command_context'),
             MASTER_NAMESPACE,
         )
-        validate_jobs(config, config_context)
+        config['jobs'] = JobMap.from_config(config['jobs'], config_context)
 
 
 class ValidateNamedConfig(Validator):
@@ -339,7 +222,7 @@ class ValidateNamedConfig(Validator):
     optional = False
 
     def post_validation(self, config, config_context):
-        validate_jobs(config, config_context)
+        config['jobs'] = JobMap.from_config(config['jobs'], config_context)
 
 
 valid_config = ValidateConfig()
