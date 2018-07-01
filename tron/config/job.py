@@ -23,6 +23,16 @@ def inv_identifier(v):
     )
 
 
+def inv_name_identifier(name: str):
+    name_parts = name.split('.', 1)
+    if len(name_parts) == 1:
+        name = name_parts[0]
+    else:
+        name = name_parts[1]
+
+    return inv_identifier(name)
+
+
 def inv_acyclic(actions):
     def inv_acyclic_rec(actions, base_action, current_action=None, stack=None):
         """Check for circular or misspelled dependencies."""
@@ -62,7 +72,7 @@ def inv_no_external_deps(actions):
 
 class Job(ConfigRecord):
     # required
-    name = field(type=str, mandatory=True, invariant=inv_identifier)
+    name = field(type=str, mandatory=True, invariant=inv_name_identifier)
     node = field(type=str, mandatory=True, invariant=inv_identifier)
     schedule = field(
         mandatory=True,
@@ -88,37 +98,50 @@ class Job(ConfigRecord):
     allow_overlap = field(type=bool, initial=False)
     max_runtime = field(
         type=(datetime.timedelta, type(None)),
-        factory=lambda td: config_utils.valid_time_delta(td, None),
+        factory=config_utils.valid_time_delta,
         initial=None
     )
     time_zone = field(
         type=(datetime.tzinfo, type(None)),
         initial=None,
-        factory=pytz.timezone
+        factory=lambda tz: tz if tz is None else pytz.timezone(tz)
     )
     expected_runtime = field(
-        type=datetime.timedelta,
-        factory=lambda td: config_utils.valid_time_delta(td, None),
+        type=(datetime.timedelta, type(None)),
+        factory=config_utils.valid_time_delta,
         initial=datetime.timedelta(hours=24)
     )
 
     @classmethod
     def from_config(kls, job, context):
-        if not context.partial and job['node'] not in context.nodes:
-            msg = "Unknown node name %s at %s"
-            raise ValueError(msg % (job['node'], context.path))
+        """ Create Job instance from raw JSON/YAML data.
+        """
+        try:
+            job = dict(**job)
 
-        job['actions'] = ActionMap.from_config(job['actions'], context)
-        if job.get('cleanup_action') is not None:
-            job['cleanup_action'] = Action.from_config(
-                dict(name=CLEANUP_ACTION_NAME, **job['cleanup_action']),
-                context
-            )
+            if not context.partial and job['node'] not in context.nodes:
+                raise ValueError("Unknown node name {}".format(job['node']))
 
-        if 'namespace' in job and not job['namespace']:
-            job['namespace'] = context.namespace or MASTER_NAMESPACE
+            job['actions'] = ActionMap.from_config(job['actions'], context)
+            if job.get('cleanup_action') is not None:
+                job['cleanup_action'] = Action.from_config(
+                    dict(name=CLEANUP_ACTION_NAME, **job['cleanup_action']),
+                    context
+                )
 
-        return kls.create(job)
+            if 'namespace' not in job or not job['namespace']:
+                job['namespace'] = context.namespace or MASTER_NAMESPACE
+
+            if not context.partial:
+                job['name'] = '{}.{}'.format(job['namespace'], job['name'])
+
+            return kls.create(job)
+        except Exception as e:
+            raise ValueError(
+                "Failed to create job '{}' at {}: {}".format(
+                    job.get('name'), context.path, e
+                )
+            ).with_traceback(e.__traceback__)
 
 
 class JobMap(CheckedPMap):

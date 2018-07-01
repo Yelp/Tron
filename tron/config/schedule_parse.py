@@ -12,7 +12,6 @@ from collections import namedtuple
 from six import string_types
 
 from tron.config import config_utils
-from tron.config import ConfigError
 from tron.config import schema
 from tron.utils import crontab
 
@@ -45,10 +44,6 @@ ConfigIntervalScheduler = namedtuple(
 )
 
 
-class ScheduleParseError(ConfigError):
-    pass
-
-
 def pad_sequence(seq, size, padding=None):
     """Force a sequence to size. Pad with padding if too short, and ignore
     extra pieces if too long."""
@@ -78,6 +73,17 @@ def validate_generic_schedule_config(config, config_context):
 # TODO: remove in 0.7
 def schedule_config_from_legacy_dict(schedule, config_context):
     """Support old style schedules as dicts."""
+    if isinstance(
+        schedule, (
+            ConfigConstantScheduler, ConfigCronScheduler, ConfigDailyScheduler,
+            ConfigGrocScheduler, ConfigIntervalScheduler
+        )
+    ):
+        return schedule
+
+    if isinstance(schedule, ConfigGenericSchedule):
+        return validate_generic_schedule_config(schedule, config_context)
+
     if 'interval' in schedule:
         config = ConfigGenericSchedule('interval', schedule['interval'], None)
         return valid_interval_scheduler(config, config_context)
@@ -89,8 +95,7 @@ def schedule_config_from_legacy_dict(schedule, config_context):
         config = ConfigGenericSchedule('daily', scheduler_config, None)
         return valid_daily_scheduler(config, config_context)
 
-    path = config_context.path
-    raise ConfigError("Unknown scheduler at %s: %s" % (path, schedule))
+    raise ValueError("Unknown scheduler: {}".format(schedule))
 
 
 def valid_schedule(schedule, config_context):
@@ -119,9 +124,7 @@ def valid_daily_scheduler(config, config_context):
 
     def valid_day(day):
         if day not in CONVERT_DAYS_INT:
-            raise ConfigError(
-                "Unknown day %s at %s" % (day, config_context.path)
-            )
+            raise ValueError("Unknown day %s" % day)
         return CONVERT_DAYS_INT[day]
 
     original = "%s %s" % (time_string, days)
@@ -288,7 +291,7 @@ def parse_groc_expression(config, config_context):
     m = DAILY_SCHEDULE_RE.match(expression.lower())
     if not m:
         msg = 'Schedule at %s is not a valid expression: %s'
-        raise ScheduleParseError(msg % (config_context.path, expression))
+        raise ValueError(msg % (config_context.path, expression))
 
     timestr = m.group('time')
     if timestr is None:
@@ -333,8 +336,7 @@ def valid_cron_scheduler(config, config_context):
             original=config.value, jitter=config.jitter, **crontab_kwargs
         )
     except ValueError as e:
-        msg = "Invalid cron scheduler %s: %s"
-        raise ConfigError(msg % (config_context.path, e))
+        raise ValueError("Invalid cron scheduler: %s" % e)
 
 
 schedulers = {

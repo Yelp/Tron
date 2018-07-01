@@ -205,7 +205,8 @@ class ValidateConfig(Validator):
             config.get('command_context'),
             MASTER_NAMESPACE,
         )
-        config['jobs'] = JobMap.from_config(config['jobs'], config_context)
+        if 'jobs' in config:
+            config['jobs'] = JobMap.from_config(config['jobs'], config_context)
 
 
 class ValidateNamedConfig(Validator):

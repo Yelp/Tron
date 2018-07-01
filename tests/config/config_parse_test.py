@@ -156,7 +156,7 @@ def make_job(config_context=MASTER_CONTEXT, **kwargs):
     kwargs.setdefault('allow_overlap', False)
     kwargs.setdefault('time_zone', None)
     kwargs.setdefault('expected_runtime', datetime.timedelta(0, 3600))
-    return Job.from_config(**kwargs)
+    return Job.create(kwargs)
 
 
 def make_master_jobs(config_context=MASTER_CONTEXT):
@@ -735,7 +735,7 @@ class NodeConfigTestCase(TestCase):
 
         expected_msg = "Unknown node name unknown_node at config.jobs.Job.test_job0.node"
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             valid_config,
             test_config,
         )
@@ -855,8 +855,7 @@ class ValidateJobsTestCase(TestCase):
                     ],
                     cleanup_action=dict(command="command")
                 )
-            ],
-            **BASE_CONFIG
+            ]
         )
 
         context = config_utils.ConfigContext(
@@ -866,8 +865,8 @@ class ValidateJobsTestCase(TestCase):
             MASTER_NAMESPACE,
         )
 
-        expected_jobs = FrozenDict({
-            'MASTER.test_job0':
+        expected_jobs = JobMap.create({
+            'test_job0':
                 make_job(
                     config_context=context,
                     name='MASTER.test_job0',
@@ -921,8 +920,8 @@ class ValidateJobsTestCase(TestCase):
                     expected_runtime=datetime.timedelta(0, 1200),
                 ),
         })
-        JobMap.from_config(test_config, context)
-        assert_equal(expected_jobs, test_config['jobs'])
+        parsed_jobs = JobMap.from_config(test_config['jobs'], context)
+        assert_equal(expected_jobs, parsed_jobs)
 
 
 class ValidMesosActionTestCase(TestCase):

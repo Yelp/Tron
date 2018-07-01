@@ -130,7 +130,7 @@ class Action(ConfigRecord):
         if config is None:
             config = {}
 
-        config.update(kwargs)
+        config = dict(**config, **kwargs)
 
         if 'node_pool' not in config:
             node_name = config.get('node')
