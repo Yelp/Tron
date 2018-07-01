@@ -158,8 +158,6 @@ class ValidateConfig(Validator):
                                 None),
         'node_pools':
             NodePoolMap(),
-        'jobs':
-            JobMap(),
         'mesos_options':
             MesosOptions(),
     }
@@ -206,8 +204,10 @@ class ValidateConfig(Validator):
             config.get('command_context'),
             MASTER_NAMESPACE,
         )
-        if 'jobs' in config:
+        if config.get('jobs'):
             config['jobs'] = JobMap.from_config(config['jobs'], config_context)
+        else:
+            config['jobs'] = JobMap()
 
 
 class ValidateNamedConfig(Validator):
