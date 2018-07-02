@@ -58,11 +58,6 @@ class MasterControlProgramTestCase(TestCase):
             reconfigure=False,
         )
 
-    def test_graceful_shutdown(self):
-        self.mcp.graceful_shutdown()
-        for job_sched in self.mcp.get_job_collection():
-            assert job_sched.shutdown_requested
-
     @mock.patch('tron.mcp.MesosClusterRepository', autospec=True)
     @mock.patch('tron.mcp.node.NodePoolRepository', autospec=True)
     def test_apply_config(self, mock_repo, mock_cluster_repo):

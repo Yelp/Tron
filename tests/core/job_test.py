@@ -296,15 +296,6 @@ class JobSchedulerTestCase(TestCase):
         assert job_run.start.called_once()
         assert self.job_scheduler.schedule.called_once()
 
-    def test_run_job_shutdown_requested(self):
-        self.job_scheduler.shutdown_requested = True
-        self.job_scheduler.schedule = mock.Mock(autospec=True)
-        job_run = mock.Mock(autospec=True)
-        self.job_scheduler.run_job(job_run)
-        assert not self.job_scheduler.schedule.called
-        assert not job_run.start.called
-        assert not job_run.cancel.called
-
     def test_run_job_job_disabled(self):
         self.job_scheduler.schedule = Turtle()
         job_run = Turtle()

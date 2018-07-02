@@ -44,10 +44,6 @@ class MasterControlProgram(object):
     def shutdown(self):
         self.state_watcher.shutdown()
 
-    def graceful_shutdown(self):
-        """Inform JobCollection that a shutdown has been requested."""
-        self.jobs.request_shutdown()
-
     def reconfigure(self):
         """Reconfigure MCP while Tron is already running."""
         self.event_recorder.ok("reconfigured")
