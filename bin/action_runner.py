@@ -7,8 +7,10 @@ from __future__ import unicode_literals
 
 import argparse
 import contextlib
+import functools
 import logging
 import os
+import signal
 import subprocess
 import sys
 import threading
@@ -75,7 +77,7 @@ def validate_output_dir(path):
             raise OSError("Could not create output dir %s" % path)
 
 
-def run_proc(output_path, command, run_id, proc):
+def run_proc(output_path, command, run_id, proc, kill_info):
     logging.warning(f'{run_id} running as pid {proc.pid}')
     status_file = StatusFile(os.path.join(output_path, STATUS_FILE))
     with status_file.wrap(
@@ -83,9 +85,17 @@ def run_proc(output_path, command, run_id, proc):
         run_id=run_id,
         proc=proc,
     ):
-        returncode = proc.wait()
-        logging.warning(f'pid {proc.pid} exited with returncode {returncode}')
-        sys.exit(returncode)
+        while True:
+            if proc.poll():
+                returncode = proc.returncode
+                logging.warning(
+                    f'pid {proc.pid} exited with returncode {returncode}'
+                )
+                return
+            elif kill_info[0].is_set():
+                print('is set!')
+                proc.send_signal(kill_info[1])
+                return
 
 
 def parse_args():
@@ -114,10 +124,20 @@ def run_command(command):
     )
 
 
-def stream(source, dst):
+def stream(source, dst, close_event):
     is_connected = True
     logging.warning(f'streaming {source.name} to {dst.name}')
-    for line in iter(source.readline, b''):
+    source = iter(source.readline, b'')
+    while True:
+        if close_event.is_set():
+            print('should finish here')
+            break
+        try:
+            line = next(source)
+            time.sleep(1)
+        except StopIteration:
+            continue
+
         if is_connected:
             try:
                 dst.write(line.decode('utf-8'))
@@ -131,6 +151,10 @@ def stream(source, dst):
             logging.warning(f'{dst.name}: {line}')
             is_connected = False
 
+    print(f'stopping {dst}')
+    logging.warning(f'stopping streaming of {dst}')
+    dst.flush()
+
 
 def configure_logging(run_id, output_dir):
     output_file = os.path.join(output_dir, f'{run_id}-{os.getpid()}.log')
@@ -141,13 +165,32 @@ def configure_logging(run_id, output_dir):
     )
 
 
+def exit_handler(killtuple, signum, frame):
+    killtuple[0].set()
+    killtuple[1] = signum
+
+
 if __name__ == "__main__":
     args = parse_args()
     validate_output_dir(args.output_dir)
     configure_logging(run_id=args.run_id, output_dir=args.output_dir)
     proc = run_command(args.command)
-    for p in [(proc.stdout, sys.stdout), (proc.stderr, sys.stderr)]:
-        t = threading.Thread(target=stream, args=p, daemon=True)
+
+    close_event = threading.Event()
+
+    kill_info = [close_event, None]
+
+    _exit_handler = functools.partial(exit_handler, kill_info)
+
+    signal.signal(signal.SIGTERM, _exit_handler)
+    signal.signal(signal.SIGKILL, exit_handler)
+
+    threads = [
+        threading.Thread(target=stream, args=p)
+        for p in [(proc.stdout, sys.stdout,
+                   close_event), (proc.stderr, sys.stderr, close_event)]
+    ]
+    for t in threads:
         t.start()
 
     run_proc(
@@ -155,4 +198,8 @@ if __name__ == "__main__":
         run_id=args.run_id,
         command=args.command,
         proc=proc,
+        kill_info=kill_info
     )
+
+    for t in threads:
+        t.join()
