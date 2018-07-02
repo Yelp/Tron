@@ -93,7 +93,6 @@ def run_proc(output_path, command, run_id, proc, kill_info):
                 )
                 return
             elif kill_info[0].is_set():
-                print('is set!')
                 proc.send_signal(kill_info[1])
                 return
 
@@ -130,7 +129,6 @@ def stream(source, dst, close_event):
     source = iter(source.readline, b'')
     while True:
         if close_event.is_set():
-            print('should finish here')
             break
         try:
             line = next(source)
@@ -151,7 +149,6 @@ def stream(source, dst, close_event):
             logging.warning(f'{dst.name}: {line}')
             is_connected = False
 
-    print(f'stopping {dst}')
     logging.warning(f'stopping streaming of {dst}')
     dst.flush()
 
