@@ -19,6 +19,7 @@ from twisted.internet import reactor
 from twisted.python import log as twisted_log
 
 import tron
+from tron.manhole import make_manhole
 from tron.mesos import MesosClusterRepository
 from tron.utils import flockfile
 
@@ -177,7 +178,13 @@ class TronDaemon(object):
             setup_logging(self.options)
             self._run_mcp()
             self._run_www_api()
+            self._run_manhole()
             self._run_reactor()
+
+    def _run_manhole(self):
+        self.manhole = make_manhole(dict(trond=self, mcp=self.mcp))
+        reactor.listenTCP(8087, self.manhole)
+        log.info("manhole started on 8087")
 
     def _run_www_api(self):
         # Local import required because of reactor import in server and www
