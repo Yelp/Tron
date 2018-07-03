@@ -81,8 +81,7 @@ class RegisterTestCase(TestCase):
             self.output_path,
         )
 
-    @mock.patch('action_runner.sys.exit', autospec=True)
-    def test_run_proc(self, mock_sys_exit):
+    def test_run_proc(self):
         self.mock_isdir.return_value = True
         self.mock_access.return_value = True
         action_runner.run_proc(
@@ -100,4 +99,3 @@ class RegisterTestCase(TestCase):
             proc=self.proc,
         )
         self.proc.wait.assert_called_with()
-        mock_sys_exit.assert_called_with(0)
