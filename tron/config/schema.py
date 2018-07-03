@@ -32,28 +32,3 @@ def config_object_factory(name, required=None, optional=None):
     config_class.optional_keys = optional
 
     return config_class
-
-
-TronConfig = config_object_factory(
-    name='TronConfig',
-    optional=[
-        'output_stream_dir',  # str
-        'action_runner',  # ActionRunner
-        'state_persistence',  # StatePersistence
-        'command_context',  # FrozenDict of str
-        'ssh_options',  # SSHOptions
-        'notification_options',  # [NotificationOptions]
-        'time_zone',  # pytz time zone
-        'nodes',  # NodeMap
-        'node_pools',  # NodePoolMap
-        'jobs',  # JobMap
-        'mesos_options',  # MesosOptions
-    ],
-)
-
-NamedTronConfig = config_object_factory(
-    name='NamedTronConfig',
-    optional=[
-        'jobs',  # JobMap
-    ],
-)

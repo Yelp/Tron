@@ -20,7 +20,7 @@ class Node(ConfigRecord):
     port = field(type=int, initial=22)
 
     @classmethod
-    def from_config(kls, val, _):
+    def from_config(kls, val, *_):
         if type(val) is str:
             val = dict(name=val, hostname=val)
 
@@ -39,7 +39,7 @@ class NodeMap(CheckedPMap):
     __value_type__ = Node
 
     @classmethod
-    def from_config(kls, val, ctx):
+    def from_config(kls, val):
         if val is None:
             return NodeMap()
 
@@ -47,9 +47,9 @@ class NodeMap(CheckedPMap):
             nval = {}
             for v in val:
                 if isinstance(v, str):
-                    node = Node.from_config(dict(name=v, hostname=v), ctx)
+                    node = Node.from_config(dict(name=v, hostname=v))
                 elif isinstance(v, dict):
-                    node = Node.from_config(v, ctx)
+                    node = Node.from_config(v)
                 else:
                     raise ValueError(
                         "Can't make tron.config.Node out of {}".format(
@@ -73,7 +73,7 @@ class NodePool(ConfigRecord):
     nodes = field(type=NodeMap, initial=NodeMap())
 
     @classmethod
-    def from_config(kls, val, ctx):
+    def from_config(kls, val):
         if isinstance(val, list):
             val = dict(
                 name='_'.join(val),
@@ -81,7 +81,7 @@ class NodePool(ConfigRecord):
             )
 
         if isinstance(val.get('nodes'), list):
-            val['nodes'] = NodeMap.from_config(val['nodes'], ctx)
+            val['nodes'] = NodeMap.from_config(val['nodes'])
 
         return kls.create(val)
 
@@ -91,11 +91,11 @@ class NodePoolMap(CheckedPMap):
     __value_type__ = NodePool
 
     @classmethod
-    def from_config(kls, val, ctx):
+    def from_config(kls, val):
         if isinstance(val, list):
             val = {v['name']: v for v in val}
 
         for k in val:
-            val[k] = NodePool.from_config(val[k], ctx)
+            val[k] = NodePool.from_config(val[k])
 
         return kls.create(val)

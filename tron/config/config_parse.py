@@ -1,36 +1,16 @@
-"""
-Parse a dictionary structure and return an immutable structure that
-contain a validated configuration.
-"""
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import itertools
 import logging
 import os
 
-import pytz
 import six
 
 from tron import command_context
-from tron.config import config_utils
 from tron.config import ConfigError
-from tron.config.action_runner import ActionRunner
-from tron.config.config_utils import ConfigContext
-from tron.config.config_utils import PartialConfigContext
 from tron.config.config_utils import valid_dict
 from tron.config.config_utils import valid_string
-from tron.config.config_utils import Validator
-from tron.config.job import JobMap
-from tron.config.mesos_options import MesosOptions
-from tron.config.node import NodeMap
-from tron.config.node import NodePoolMap
-from tron.config.notification_options import NotificationOptions
 from tron.config.schema import MASTER_NAMESPACE
-from tron.config.schema import NamedTronConfig
-from tron.config.schema import TronConfig
-from tron.config.ssh_options import SSHOptions
-from tron.config.state_persistence import StatePersistence
+from tron.config.tron_config import NamedTronConfig
+from tron.config.tron_config import TronConfig
 from tron.utils.dicts import FrozenDict
 
 log = logging.getLogger(__name__)
@@ -116,16 +96,6 @@ def valid_command_context(context, config_context):
     return FrozenDict(**valid_dict(context or {}, config_context))
 
 
-def valid_time_zone(tz, config_context):
-    if tz is None:
-        return None
-    valid_string(tz, config_context)
-    try:
-        return pytz.timezone(tz)
-    except pytz.exceptions.UnknownTimeZoneError:
-        raise ConfigError('%s is not a valid time zone' % tz)
-
-
 action_context = command_context.build_filled_context(
     command_context.JobContext,
     command_context.JobRunContext,
@@ -133,110 +103,11 @@ action_context = command_context.build_filled_context(
 )
 
 
-class ValidateConfig(Validator):
-    """Given a parsed config file (should be only basic literals and
-    containers), return an immutable, fully populated series of namedtuples and
-    FrozenDicts with all defaults filled in, all valid values, and no unused
-    values. Throws a ConfigError if any part of the input dict is invalid.
-    """
-    config_class = TronConfig
-    defaults = {
-        'action_runner': {},
-        'output_stream_dir':
-            None,
-        'command_context': {},
-        'ssh_options':
-            SSHOptions(),
-        'notification_options':
-            None,
-        'time_zone':
-            None,
-        'state_persistence':
-            StatePersistence(name='tron_state'),
-        'nodes':
-            NodeMap.from_config([dict(name='localhost', hostname='localhost')],
-                                None),
-        'node_pools':
-            NodePoolMap(),
-        'mesos_options':
-            MesosOptions(),
-    }
-
-    validators = {
-        'action_runner': ActionRunner.from_config,
-        'output_stream_dir': valid_output_stream_dir,
-        'command_context': valid_command_context,
-        'ssh_options': SSHOptions.from_config,
-        'notification_options': NotificationOptions.from_config,
-        'time_zone': valid_time_zone,
-        'state_persistence': StatePersistence.from_config,
-        'nodes': NodeMap.from_config,
-        'node_pools': NodePoolMap.from_config,
-        'mesos_options': MesosOptions.from_config,
-    }
-    optional = False
-
-    def validate_node_pool_nodes(self, config):
-        """Validate that each node in a node_pool is in fact a node, and not
-        another pool.
-        """
-        all_node_names = set(config['nodes'])
-        for node_pool in six.itervalues(config['node_pools']):
-            invalid_names = set(node_pool.nodes) - all_node_names
-            if invalid_names:
-                msg = "NodePool %s contains other NodePools: " % node_pool.name
-                raise ConfigError(msg + ",".join(invalid_names))
-
-    def post_validation(self, config, _):
-        """Validate a non-named config."""
-        node_names = config_utils.unique_names(
-            'Node and NodePool names must be unique %s',
-            config['nodes'],
-            config.get('node_pools', []),
-        )
-
-        if config.get('node_pools'):
-            self.validate_node_pool_nodes(config)
-
-        config_context = ConfigContext(
-            'config',
-            node_names,
-            config.get('command_context'),
-            MASTER_NAMESPACE,
-        )
-        if config.get('jobs'):
-            config['jobs'] = JobMap.from_config(config['jobs'], config_context)
-        else:
-            config['jobs'] = JobMap()
-
-
-class ValidateNamedConfig(Validator):
-    """A shorter validator for named configurations, which allow for
-    jobs to be defined as configuration fragments that
-    are, in turn, reconciled by Tron.
-    """
-    config_class = NamedTronConfig
-    type_name = "NamedConfigFragment"
-    defaults = {
-        'jobs': JobMap(),
-    }
-
-    optional = False
-
-    def post_validation(self, config, config_context):
-        config['jobs'] = JobMap.from_config(config['jobs'], config_context)
-
-
-valid_config = ValidateConfig()
-valid_named_config = ValidateNamedConfig()
-
-
 def validate_fragment(name, fragment):
     """Validate a fragment with a partial context."""
-    config_context = PartialConfigContext(name, name)
     if name == MASTER_NAMESPACE:
-        return valid_config(fragment, config_context=config_context)
-    return valid_named_config(fragment, config_context=config_context)
+        return TronConfig.from_config(fragment)
+    return NamedTronConfig.from_config(dict(namespace=name, **fragment))
 
 
 def get_nodes_from_master_namespace(master):
@@ -248,18 +119,19 @@ def validate_config_mapping(config_mapping):
         msg = "A config mapping requires a %s namespace"
         raise ConfigError(msg % MASTER_NAMESPACE)
 
-    master = valid_config(config_mapping.pop(MASTER_NAMESPACE))
+    master = TronConfig.from_config(config_mapping.pop(MASTER_NAMESPACE))
     nodes = get_nodes_from_master_namespace(master)
     yield MASTER_NAMESPACE, master
 
     for name, content in six.iteritems(config_mapping):
-        context = ConfigContext(
-            name,
-            nodes,
-            master.command_context,
-            name,
+        yield name, NamedTronConfig.from_config(
+            dict(
+                namespace=name,
+                nodes=nodes,
+                command_context=master.command_context,
+                **content
+            )
         )
-        yield name, valid_named_config(content, config_context=context)
 
 
 class ConfigContainer(object):

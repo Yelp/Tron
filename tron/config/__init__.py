@@ -8,5 +8,5 @@ class ConfigError(Exception):
 
 class ConfigRecord(PClass):
     @classmethod
-    def from_config(kls, config, _):
+    def from_config(kls, config, *_):
         return kls.create(config)

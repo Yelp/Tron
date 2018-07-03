@@ -25,5 +25,5 @@ class SSHOptions(PRecord):
     jitter_load_factor = field(type=int, initial=1)
 
     @staticmethod
-    def from_config(val, _):
+    def from_config(val, *_):
         return SSHOptions.create(val)

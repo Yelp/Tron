@@ -12,7 +12,6 @@ from tron.config import ConfigRecord
 from tron.config import schedule_parse
 from tron.config.config_utils import IDENTIFIER_RE
 from tron.config.schema import CLEANUP_ACTION_NAME
-from tron.config.schema import MASTER_NAMESPACE
 from tron.core.action import Action
 from tron.core.action import ActionMap
 
@@ -82,14 +81,21 @@ class Job(ConfigRecord):
         mandatory=True,
         factory=lambda s: schedule_parse.valid_schedule(s, None)
     )
-    actions = field(type=ActionMap, mandatory=True, invariant=inv_actions)
+    actions = field(
+        type=ActionMap,
+        mandatory=True,
+        invariant=inv_actions,
+        factory=ActionMap.from_config
+    )
     namespace = field(type=str, mandatory=True)
 
     monitoring = field(type=PMap, initial=m(), factory=pmap)
     queueing = field(type=bool, initial=True)
     run_limit = field(type=int, initial=50)
     all_nodes = field(type=bool, initial=False)
-    cleanup_action = field(type=(Action, type(None)), initial=None)
+    cleanup_action = field(
+        type=(Action, type(None)), initial=None, factory=Action.from_config
+    )
     enabled = field(type=bool, initial=True)
     allow_overlap = field(type=bool, initial=False)
     max_runtime = field(
@@ -109,44 +115,32 @@ class Job(ConfigRecord):
     )
 
     @classmethod
-    def from_config(kls, job, context):
+    def from_config(kls, job):
         """ Create Job instance from raw JSON/YAML data.
         """
         try:
             job = dict(**job)
 
-            if not context.partial and job['node'] not in context.nodes:
-                raise ValueError("Unknown node name {}".format(job['node']))
-
             if 'actions' in job:
-                job['actions'] = ActionMap.from_config(
-                    job['actions'], context.build_child_context("actions")
-                )
+                job['actions'] = ActionMap.from_config(job['actions'])
                 if CLEANUP_ACTION_NAME in job['actions']:
-                    raise ValueError("Action name reserved for cleanup action")
-
-            if job.get('cleanup_action') is not None:
-                if 'name' in job['cleanup_action'] \
-                        and job['cleanup_action']['name'] != CLEANUP_ACTION_NAME:
                     raise ValueError(
-                        "Cleanup actions cannot have custom names"
+                        "actions.cleanup name reserved for cleanup action"
                     )
 
-                job['cleanup_action'] = Action.from_config(
-                    dict(name=CLEANUP_ACTION_NAME, **job['cleanup_action']),
-                    context.build_child_context("cleanup_action")
-                )
+            cleanup_action = job.get('cleanup_action')
+            if cleanup_action is not None:
+                cleanup_action.setdefault('name', CLEANUP_ACTION_NAME)
 
-            if 'namespace' not in job or not job['namespace']:
-                job['namespace'] = context.namespace or MASTER_NAMESPACE
+                if cleanup_action['name'] != CLEANUP_ACTION_NAME:
+                    raise ValueError("cleanup_action cannot have name")
 
-            if not context.partial:
-                job['name'] = '{}.{}'.format(job['namespace'], job['name'])
+                job['cleanup_action'] = Action.from_config(cleanup_action)
 
             return kls.create(job)
         except Exception as e:
             raise ValueError(
-                "Failed to create job {}: {}".format(context.path, e)
+                "jobs.{}.{}".format(job.get('name', 'unnamed'), e)
             ).with_traceback(e.__traceback__)
 
 
@@ -155,16 +149,17 @@ class JobMap(CheckedPMap):
     __value_type__ = Job
 
     @staticmethod
-    def from_config(jobs, context):
-        nameset = set()
-        for j in jobs:
-            if j['name'] in nameset:
-                raise ValueError("duplicate name found: {}", j['name'])
-            else:
-                nameset.add(j['name'])
+    def from_config(jobs):
+        if jobs is None or isinstance(jobs, JobMap):
+            return jobs
 
-        return JobMap.create({
-            j['name']:
-            Job.from_config(j, context.build_child_context(j['name']))
-            for j in jobs
-        })
+        if isinstance(jobs, list):
+            nameset = set()
+            for j in jobs:
+                if j['name'] in nameset:
+                    raise ValueError("duplicate name found: {}", j['name'])
+                else:
+                    nameset.add(j['name'])
+            jobs = {j['name']: j for j in jobs}
+
+        return JobMap.create({n: Job.from_config(j) for n, j in jobs.items()})

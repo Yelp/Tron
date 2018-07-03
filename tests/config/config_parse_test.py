@@ -1,6 +1,3 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import datetime
 import os
 import shutil
@@ -20,11 +17,8 @@ from tron.config import config_parse
 from tron.config import config_utils
 from tron.config import ConfigError
 from tron.config import schedule_parse
-from tron.config import schema
 from tron.config.config_parse import build_format_string_validator
-from tron.config.config_parse import valid_config
 from tron.config.config_parse import valid_output_stream_dir
-from tron.config.config_parse import validate_fragment
 from tron.config.config_utils import NullConfigContext
 from tron.config.job import Job
 from tron.config.job import JobMap
@@ -39,6 +33,8 @@ from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.ssh_options import SSHOptions
 from tron.config.state_persistence import StatePersistence
+from tron.config.tron_config import NamedTronConfig
+from tron.config.tron_config import TronConfig
 from tron.core.action import Action
 from tron.core.action import ActionMap
 from tron.core.action import ExecutorTypes
@@ -108,7 +104,7 @@ def make_node_pools():
     return NodePoolMap.from_config([{
         'name': 'NodePool',
         'nodes': ['node0', 'node1']
-    }], None)
+    }])
 
 
 def make_action(config_context=MASTER_CONTEXT, **kwargs):
@@ -117,7 +113,7 @@ def make_action(config_context=MASTER_CONTEXT, **kwargs):
     kwargs.setdefault('executor', 'ssh')
     kwargs.setdefault('requires', ())
     kwargs.setdefault('expected_runtime', datetime.timedelta(1))
-    return Action.from_config(config=kwargs, config_context=config_context)
+    return Action.from_config(config=kwargs)
 
 
 def make_cleanup_action(config_context=MASTER_CONTEXT, **kwargs):
@@ -125,7 +121,7 @@ def make_cleanup_action(config_context=MASTER_CONTEXT, **kwargs):
     kwargs.setdefault('command', 'command')
     kwargs.setdefault('executor', 'ssh')
     kwargs.setdefault('expected_runtime', datetime.timedelta(1))
-    return Action.from_config(config=kwargs, config_context=config_context)
+    return Action.from_config(config=kwargs)
 
 
 def make_job(config_context=MASTER_CONTEXT, **kwargs):
@@ -159,11 +155,10 @@ def make_job(config_context=MASTER_CONTEXT, **kwargs):
     return Job.create(kwargs)
 
 
-def make_master_jobs(config_context=MASTER_CONTEXT):
+def make_master_jobs():
     return FrozenDict({
         'MASTER.test_job0':
             make_job(
-                config_context=config_context,
                 name='MASTER.test_job0',
                 schedule=schedule_parse.ConfigIntervalScheduler(
                     timedelta=datetime.timedelta(0, 20),
@@ -173,7 +168,6 @@ def make_master_jobs(config_context=MASTER_CONTEXT):
             ),
         'MASTER.test_job1':
             make_job(
-                config_context=config_context,
                 name='MASTER.test_job1',
                 schedule=schedule_parse.ConfigDailyScheduler(
                     days={1, 3, 5},
@@ -202,7 +196,6 @@ def make_master_jobs(config_context=MASTER_CONTEXT):
             ),
         'MASTER.test_job2':
             make_job(
-                config_context=config_context,
                 name='MASTER.test_job2',
                 node='node1',
                 actions=FrozenDict({
@@ -218,7 +211,6 @@ def make_master_jobs(config_context=MASTER_CONTEXT):
             ),
         'MASTER.test_job3':
             make_job(
-                config_context=config_context,
                 name='MASTER.test_job3',
                 node='node1',
                 schedule=ConfigConstantScheduler(),
@@ -239,7 +231,6 @@ def make_master_jobs(config_context=MASTER_CONTEXT):
             ),
         'MASTER.test_job4':
             make_job(
-                config_context=config_context,
                 name='MASTER.test_job4',
                 node='NodePool',
                 schedule=schedule_parse.ConfigDailyScheduler(
@@ -257,7 +248,6 @@ def make_master_jobs(config_context=MASTER_CONTEXT):
             ),
         'MASTER.test_job_mesos':
             make_job(
-                config_context=config_context,
                 name='MASTER.test_job_mesos',
                 node='NodePool',
                 schedule=schedule_parse.ConfigDailyScheduler(
@@ -298,9 +288,8 @@ def make_tron_config(
     node_pools=None,
     jobs=None,
     mesos_options=None,
-    config_context=MASTER_CONTEXT,
 ):
-    return schema.TronConfig(
+    return TronConfig.create(
         action_runner=action_runner or FrozenDict(),
         output_stream_dir=output_stream_dir,
         command_context=command_context or
@@ -311,15 +300,13 @@ def make_tron_config(
         state_persistence=state_persistence,
         nodes=nodes or make_nodes(),
         node_pools=node_pools or make_node_pools(),
-        jobs=jobs or make_master_jobs(config_context=config_context),
+        jobs=jobs or make_master_jobs(),
         mesos_options=mesos_options or MesosOptions(enabled=False),
     )
 
 
-def make_named_tron_config(config_context=MASTER_CONTEXT, jobs=None):
-    return schema.NamedTronConfig(
-        jobs=jobs or make_master_jobs(config_context=config_context)
-    )
+def make_named_tron_config(jobs=None):
+    return NamedTronConfig.from_config(jobs=jobs or make_master_jobs())
 
 
 class ConfigTestCase(TestCase):
@@ -411,15 +398,9 @@ class ConfigTestCase(TestCase):
     )
 
     def test_attributes(self):
-        config_context = config_utils.ConfigContext(
-            'config',
-            ['localhost'],
-            None,
-            'MASTER',
-        )
-        expected = make_tron_config(config_context=config_context)
+        expected = make_tron_config()
 
-        test_config = valid_config(self.config)
+        test_config = TronConfig.from_config(self.config)
         assert_equal(test_config.command_context, expected.command_context)
         assert_equal(test_config.ssh_options, expected.ssh_options)
         assert_equal(
@@ -438,7 +419,7 @@ class ConfigTestCase(TestCase):
             )
 
     def test_empty_node_test(self):
-        valid_config(dict(nodes=None))
+        TronConfig.from_config(dict(nodes=None))
 
 
 class NamedConfigTestCase(TestCase):
@@ -459,9 +440,9 @@ class NamedConfigTestCase(TestCase):
                     )
             })
         )
-        test_config = validate_fragment(
-            'test_namespace',
+        test_config = NamedTronConfig.from_config(
             dict(
+                namespace='test_namespace',
                 jobs=[
                     dict(
                         name="test_job",
@@ -489,7 +470,7 @@ class JobConfigTestCase(TestCase):
         expected_message = "Job.actions"
         exception = assert_raises(
             ValueError,
-            valid_config,
+            TronConfig.from_config,
             test_config,
         )
         assert_in(expected_message, str(exception))
@@ -510,7 +491,7 @@ class JobConfigTestCase(TestCase):
         expected_message = "`actions` can't be empty"
         exception = assert_raises(
             ValueError,
-            valid_config,
+            TronConfig.from_config,
             test_config,
         )
         assert_in(expected_message, str(exception))
@@ -534,7 +515,7 @@ class JobConfigTestCase(TestCase):
         expected = "Duplicate action names found: ['action']"
         exception = assert_raises(
             ValueError,
-            valid_config,
+            TronConfig.from_config,
             test_config,
         )
         assert_in(expected, str(exception))
@@ -565,7 +546,7 @@ class JobConfigTestCase(TestCase):
         expected_message = 'contains external dependency'
         exception = assert_raises(
             ValueError,
-            valid_config,
+            TronConfig.from_config,
             test_config,
         )
         assert_in(expected_message, str(exception))
@@ -597,7 +578,7 @@ class JobConfigTestCase(TestCase):
         expect = "contains circular dependency"
         exception = assert_raises(
             ValueError,
-            valid_config,
+            TronConfig.from_config,
             test_config,
         )
         assert_in(expect, str(exception))
@@ -619,7 +600,7 @@ class JobConfigTestCase(TestCase):
         expected_message = "Action name reserved for cleanup action"
         exception = assert_raises(
             ValueError,
-            valid_config,
+            TronConfig.from_config,
             test_config,
         )
         assert_in(expected_message, str(exception))
@@ -643,7 +624,7 @@ class JobConfigTestCase(TestCase):
         expected_msg = "Cleanup actions cannot have custom names"
         exception = assert_raises(
             ValueError,
-            valid_config,
+            TronConfig.from_config,
             test_config,
         )
         assert_in(expected_msg, str(exception))
@@ -667,7 +648,7 @@ class JobConfigTestCase(TestCase):
         expected_msg = "Cleanup action cannot have dependencies, has ['action']"
         exception = assert_raises(
             ValueError,
-            valid_config,
+            TronConfig.from_config,
             test_config,
         )
         assert_in(expected_msg, str(exception))
@@ -679,18 +660,11 @@ class JobConfigTestCase(TestCase):
             schedule="constant",
             actions=[],
         )
-        config_context = config_utils.ConfigContext(
-            'config',
-            ['localhost'],
-            None,
-            None,
-        )
         expected_msg = "`actions` can't be empty"
         exception = assert_raises(
             ValueError,
             Job.from_config,
             job_config,
-            config_context,
         )
         assert_in(expected_msg, str(exception))
 
@@ -714,7 +688,9 @@ class NodeConfigTestCase(TestCase):
             ],
         )
         expected_msg = "Node and NodePool names must be unique sameName"
-        exception = assert_raises(ConfigError, valid_config, tron_config)
+        exception = assert_raises(
+            ConfigError, TronConfig.from_config, tron_config
+        )
         assert_in(expected_msg, str(exception))
 
     def test_invalid_node_name(self):
@@ -733,7 +709,7 @@ class NodeConfigTestCase(TestCase):
         expected_msg = "Failed to create job config.test_job0: Unknown node name unknown_node"
         exception = assert_raises(
             ValueError,
-            valid_config,
+            TronConfig.from_config,
             test_config,
         )
         assert_equal(expected_msg, str(exception))
@@ -761,7 +737,7 @@ class NodeConfigTestCase(TestCase):
         expected_msg = "NodePool pool1 contains other NodePools: pool0"
         exception = assert_raises(
             ConfigError,
-            valid_config,
+            TronConfig.from_config,
             test_config,
         )
         assert_in(expected_msg, str(exception))
@@ -789,18 +765,17 @@ class NodeConfigTestCase(TestCase):
         expected_msg = "hostname"
         exception = assert_raises(
             AttributeError,
-            valid_config,
+            TronConfig.from_config,
             test_config,
         )
         assert_in(expected_msg, str(exception))
 
     def test_invalid_named_update(self):
-        test_config = dict(bozray=None)
+        test_config = dict(bozray=None, namespace='foobar')
         expected_message = "Unknown keys in NamedConfigFragment : bozray"
         exception = assert_raises(
             ConfigError,
-            validate_fragment,
-            'foo',
+            NamedTronConfig.from_config,
             test_config,
         )
         assert_in(expected_message, str(exception))
@@ -812,7 +787,7 @@ class ValidateJobsTestCase(TestCase):
             jobs=[
                 dict(
                     name="test_job0",
-                    node='node0',
+                    node='localhost',
                     schedule="interval 20s",
                     expected_runtime="20m",
                     actions=[
@@ -855,17 +830,10 @@ class ValidateJobsTestCase(TestCase):
             ]
         )
 
-        context = config_utils.ConfigContext(
-            'config',
-            ['node0'],
-            None,
-            MASTER_NAMESPACE,
-        )
-
         expected_jobs = JobMap.create({
             'test_job0':
                 make_job(
-                    config_context=context,
+                    node='localhost',
                     name='MASTER.test_job0',
                     schedule=ConfigIntervalScheduler(
                         timedelta=datetime.timedelta(0, 20),
@@ -874,12 +842,10 @@ class ValidateJobsTestCase(TestCase):
                     actions=ActionMap.create({
                         'action':
                             make_action(
-                                config_context=context,
                                 expected_runtime=datetime.timedelta(0, 1200),
                             ),
                         'action_mesos':
                             make_action(
-                                config_context=context,
                                 name='action_mesos',
                                 executor='mesos',
                                 cpus=4.0,
@@ -917,8 +883,8 @@ class ValidateJobsTestCase(TestCase):
                     expected_runtime=datetime.timedelta(0, 1200),
                 ),
         })
-        parsed_jobs = JobMap.from_config(test_config['jobs'], context)
-        assert_equal(expected_jobs, parsed_jobs)
+        parsed_config = TronConfig.from_config(test_config)
+        assert_equal(expected_jobs, parsed_config.jobs)
 
 
 class ValidMesosActionTestCase(TestCase):
@@ -935,7 +901,6 @@ class ValidMesosActionTestCase(TestCase):
             ValueError,
             Action.from_config,
             config,
-            NullConfigContext,
         )
 
     def test_cleanup_missing_docker_image(self):
@@ -951,7 +916,6 @@ class ValidMesosActionTestCase(TestCase):
             ValueError,
             Action.from_config,
             config,
-            NullConfigContext,
         )
 
 
@@ -1053,8 +1017,8 @@ class ConfigContainerTestCase(TestCase):
     def setup_container(self):
         other_config = NamedConfigTestCase.config
         self.config_mapping = {
-            MASTER_NAMESPACE: valid_config(self.config),
-            'other': validate_fragment('other', other_config),
+            MASTER_NAMESPACE: TronConfig.from_config(self.config),
+            'other': NamedTronConfig.from_config('other', other_config),
         }
         self.container = config_parse.ConfigContainer(self.config_mapping)
 

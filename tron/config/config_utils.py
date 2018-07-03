@@ -1,48 +1,18 @@
-"""Utilities used for configuration parsing and validation."""
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
+# pylint: disable=E1102
 import datetime
 import functools
-import itertools
 import re
 
+import pytz
 import six
 from six import string_types
 
 from tron.config import ConfigError
 from tron.config.schema import MASTER_NAMESPACE
 from tron.utils import dicts
-from tron.utils.dicts import FrozenDict
 
 MAX_IDENTIFIER_LENGTH = 255
 IDENTIFIER_RE = re.compile(r'^[A-Za-z_][\w\-]{0,254}$')
-
-
-class UniqueNameDict(dict):
-    """A dict like object that throws a ConfigError if a key exists and
-    __setitem__ is called to change the value of that key.
-
-     fmt_string - format string used to create an error message, expects a
-                  single format argument of 'key'
-    """
-
-    def __init__(self, fmt_string):
-        super(dict, self).__init__()
-        self.fmt_string = fmt_string
-
-    def __setitem__(self, key, value):
-        if key in self:
-            raise ConfigError(self.fmt_string % key)
-        super(UniqueNameDict, self).__setitem__(key, value)
-
-
-def unique_names(fmt_string, *seqs):
-    """Validate that each object in all sequences has a unique name."""
-    name_dict = UniqueNameDict(fmt_string)
-    for item in itertools.chain.from_iterable(seqs):
-        name_dict[item] = True
-    return name_dict
 
 
 def build_type_validator(validator, error_fmt):
@@ -124,6 +94,19 @@ def valid_time(value, config_context):
     raise ConfigError(msg % config_context.path)
 
 
+def valid_time_zone(tz):
+    if tz is None:
+        return None
+
+    if isinstance(tz, datetime.tzinfo):
+        return tz
+
+    try:
+        return pytz.timezone(tz)
+    except pytz.exceptions.UnknownTimeZoneError:
+        raise ValueError(f'{tz} is not a valid time zone')
+
+
 # Translations from possible configuration units to the argument to
 # datetime.timedelta
 TIME_INTERVAL_UNITS = dicts.invert_dict_list({
@@ -169,20 +152,6 @@ def build_list_of_type_validator(item_validator, allow_empty=False):
             msg = "Required non-empty list at %s"
             raise ConfigError(msg % config_context.path)
         return tuple(item_validator(item, config_context) for item in seq)
-
-    return validator
-
-
-def build_dict_name_validator(item_validator, allow_empty=False):
-    """Build a validator which validates a list, and returns a dict."""
-    valid = build_list_of_type_validator(item_validator, allow_empty)
-
-    def validator(value, config_context):
-        msg = "Duplicate name %%s at %s" % config_context.path
-        name_dict = UniqueNameDict(msg)
-        for item in valid(value, config_context):
-            name_dict[item.name] = item
-        return FrozenDict(**name_dict)
 
     return validator
 

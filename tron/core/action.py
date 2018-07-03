@@ -125,12 +125,12 @@ class Action(ConfigRecord):
         return self.name == CLEANUP_ACTION_NAME
 
     @classmethod
-    def from_config(cls, config, config_context, **kwargs):
+    def from_config(cls, config):
         """Factory method for creating a new Action."""
-        if config is None:
-            config = {}
+        if config is None or isinstance(config, Action):
+            return config
 
-        config = dict(**config, **kwargs)
+        config = dict(**config)
 
         if 'node_pool' not in config:
             node_name = config.get('node')
@@ -139,43 +139,12 @@ class Action(ConfigRecord):
             if 'node' in config:
                 del config['node']
 
-        cluster = config.get('cluster')
-        if cluster is not None and \
-                not config_context.partial and \
-                cluster not in config_context.clusters:
-            raise ValueError(
-                "Unknown cluster name {} at {}".format(
-                    cluster,
-                    config_context.path,
-                ),
-            )
-
-        if config_context.path[-15:] == '.cleanup_action':
-            if 'name' in config and config['name'] != CLEANUP_ACTION_NAME:
-                raise ValueError(
-                    "Cleanup actions cannot have custom names at {}".format(
-                        config_context.path,
-                    ),
-                )
-            config['name'] = CLEANUP_ACTION_NAME
-
         if config['name'] == CLEANUP_ACTION_NAME:
-            if config_context.path[-8:] == '.actions':
-                raise ValueError(
-                    "Action name reserved for cleanup action at {}.{}".format(
-                        config_context.path,
-                        config['name'],
-                    ),
-                )
-
             requires = config.get('requires')
             if requires is not None and len(requires) > 0:
                 raise ValueError(
-                    "Cleanup action cannot have dependencies, "
-                    "has {} at {}".format(
-                        requires,
-                        config_context.path,
-                    ),
+                    "Cleanup action cannot have dependencies, has {}".
+                    format(requires)
                 )
 
         if config.get('executor') == ExecutorTypes.mesos:
@@ -196,26 +165,22 @@ class ActionMap(CheckedPMap):
     __value_type__ = Action
 
     @classmethod
-    def from_config(cls, items, config_context):
+    def from_config(cls, items):
         """Factory method for creating a new ActionMap."""
-        if items is None:
-            items = []
+        if items is None or isinstance(items, ActionMap):
+            return items
 
         all_names = [item['name'] for item in items]
         uniq_names = set(all_names)
 
         if len(uniq_names) < len(all_names):
             raise ValueError(
-                "Duplicate action names found: {} at {}.actions".format(
-                    [name for name in uniq_names if all_names.count(name) > 1],
-                    config_context.path,
-                ),
+                "Duplicate action names found: {}".format([
+                    name for name in uniq_names if all_names.count(name) > 1
+                ])
             )
 
         return cls.create({
-            item['name']: Action.from_config(
-                item,
-                config_context=config_context,
-            )
+            item['name']: Action.from_config(item)
             for item in items
         })

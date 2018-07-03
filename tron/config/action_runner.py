@@ -15,5 +15,5 @@ class ActionRunner(PRecord):
     remote_status_path = field(type=(str, None.__class__), initial='/tmp')
 
     @staticmethod
-    def from_config(val, _):
+    def from_config(val, *_):
         return ActionRunner.create(val)
