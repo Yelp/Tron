@@ -1,6 +1,5 @@
 import itertools
 import logging
-import os
 
 import six
 
@@ -35,57 +34,6 @@ def build_format_string_validator(context_object):
             raise ValueError(error_msg % (e, config_context.path, value))
 
     return validator
-
-
-def valid_output_stream_dir(output_dir, config_context):
-    """Returns a valid string for the output directory, or raises ValueError
-    if the output_dir is not valid.
-    """
-    if not output_dir:
-        return
-
-    if config_context.partial:
-        return output_dir
-
-    valid_string(output_dir, config_context)
-    if not os.path.isdir(output_dir):
-        msg = "output_stream_dir '%s' is not a directory"
-        raise ValueError(msg % output_dir)
-
-    if not os.access(output_dir, os.W_OK):
-        raise ValueError(
-            "output_stream_dir '%s' is not writable" % output_dir,
-        )
-
-    return output_dir
-
-
-def valid_identity_file(file_path, config_context):
-    valid_string(file_path, config_context)
-
-    if config_context.partial:
-        return file_path
-
-    file_path = os.path.expanduser(file_path)
-    if not os.path.exists(file_path):
-        raise ValueError("Private key file %s doesn't exist" % file_path)
-
-    public_key_path = file_path + '.pub'
-    if not os.path.exists(public_key_path):
-        raise ValueError("Public key file %s doesn't exist" % public_key_path)
-    return file_path
-
-
-def valid_known_hosts_file(file_path, config_context):
-    valid_string(file_path, config_context)
-
-    if config_context.partial:
-        return file_path
-
-    file_path = os.path.expanduser(file_path)
-    if not os.path.exists(file_path):
-        raise ValueError("Known hosts file %s doesn't exist" % file_path)
-    return file_path
 
 
 action_context = command_context.build_filled_context(

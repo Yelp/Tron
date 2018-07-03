@@ -1,5 +1,4 @@
 import datetime
-import os
 import shutil
 import tempfile
 
@@ -18,7 +17,6 @@ from tron.config import config_utils
 from tron.config import schedule_parse
 from tron.config.action_runner import ActionRunner
 from tron.config.config_parse import build_format_string_validator
-from tron.config.config_parse import valid_output_stream_dir
 from tron.config.config_utils import NullConfigContext
 from tron.config.job import Job
 from tron.config.job import JobMap
@@ -914,32 +912,16 @@ class ValidOutputStreamDirTestCase(TestCase):
         shutil.rmtree(self.dir)
 
     def test_valid_dir(self):
-        path = valid_output_stream_dir(self.dir, NullConfigContext)
-        assert_equal(self.dir, path)
+        config = make_tron_config(output_stream_dir=self.dir)
+        assert_equal(config.output_stream_dir, self.dir)
 
     def test_missing_dir(self):
         exception = assert_raises(
-            ValueError,
-            valid_output_stream_dir,
-            'bogus-dir',
-            NullConfigContext,
+            Exception,
+            make_tron_config,
+            output_stream_dir='bogus-dir',
         )
-        assert_in("is not a directory", str(exception))
-
-    # TODO: docker tests run as root so everything is writeable
-    # def test_no_ro_dir(self):
-    #     os.chmod(self.dir, stat.S_IRUSR)
-    #     exception = assert_raises(
-    #         ValueError,
-    #         valid_output_stream_dir, self.dir, NullConfigContext,
-    #     )
-    #     assert_in("is not writable", str(exception))
-
-    def test_missing_with_partial_context(self):
-        dir = '/bogus/path/does/not/exist'
-        context = config_utils.PartialConfigContext('path', 'MASTER')
-        path = config_parse.valid_output_stream_dir(dir, context)
-        assert_equal(path, dir)
+        assert_in("is writable", str(exception))
 
 
 class BuildFormatStringValidatorTestCase(TestCase):
@@ -1057,80 +1039,6 @@ class ConfigContainerTestCase(TestCase):
         node_names = self.container.get_node_names()
         expected = {'node0', 'node1', 'NodePool'}
         assert_equal(node_names, expected)
-
-
-class ValidateIdentityFileTestCase(TestCase):
-    @setup
-    def setup_context(self):
-        self.context = config_utils.NullConfigContext
-        self.private_file = tempfile.NamedTemporaryFile()
-
-    def test_valid_identity_file_missing_private_key(self):
-        exception = assert_raises(
-            ValueError,
-            config_parse.valid_identity_file,
-            '/file/not/exist',
-            self.context,
-        )
-        assert_in("Private key file", str(exception))
-
-    def test_valid_identity_files_missing_public_key(self):
-        filename = self.private_file.name
-        exception = assert_raises(
-            ValueError,
-            config_parse.valid_identity_file,
-            filename,
-            self.context,
-        )
-        assert_in("Public key file", str(exception))
-
-    def test_valid_identity_files_valid(self):
-        filename = self.private_file.name
-        fh_private = open(filename + '.pub', 'w')
-        try:
-            config = config_parse.valid_identity_file(filename, self.context)
-        finally:
-            fh_private.close()
-            os.unlink(fh_private.name)
-        assert_equal(config, filename)
-
-    def test_valid_identity_files_missing_with_partial_context(self):
-        path = '/bogus/file/does/not/exist'
-        context = config_utils.PartialConfigContext('path', 'MASTER')
-        file_path = config_parse.valid_identity_file(path, context)
-        assert_equal(path, file_path)
-
-
-class ValidKnownHostsFileTestCase(TestCase):
-    @setup
-    def setup_context(self):
-        self.context = config_utils.NullConfigContext
-        self.known_hosts_file = tempfile.NamedTemporaryFile()
-
-    def test_valid_known_hosts_file_exists(self):
-        filename = config_parse.valid_known_hosts_file(
-            self.known_hosts_file.name,
-            self.context,
-        )
-        assert_equal(filename, self.known_hosts_file.name)
-
-    def test_valid_known_hosts_file_missing(self):
-        exception = assert_raises(
-            ValueError,
-            config_parse.valid_known_hosts_file,
-            '/bogus/path',
-            self.context,
-        )
-        assert_in('Known hosts file /bogus/path', str(exception))
-
-    def test_valid_known_hosts_file_missing_partial_context(self):
-        context = config_utils.PartialConfigContext
-        expected = '/bogus/does/not/exist'
-        filename = config_parse.valid_known_hosts_file(
-            expected,
-            context,
-        )
-        assert_equal(filename, expected)
 
 
 class ValidateVolumeTestCase(TestCase):
