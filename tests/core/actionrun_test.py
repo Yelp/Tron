@@ -22,7 +22,6 @@ from tests.testingutils import autospec_method
 from tests.testingutils import Turtle
 from tron import actioncommand
 from tron import node
-from tron.config import config_utils
 from tron.core import action
 from tron.core import actiongraph
 from tron.core import jobrun
@@ -651,21 +650,10 @@ class ActionRunCollectionTestCase(TestCase):
     @setup
     def setup_runs(self):
         action_names = ['action_name', 'second_name', 'cleanup']
-        config_context = config_utils.ConfigContext(
-            'config',
-            ['localhost'],
-            ['cluster'],
-            None,
-        )
         self.action_graph = actiongraph.ActionGraph.from_config(
-            action.ActionMap.from_config(
-                [{
-                    'name': name,
-                    'command': 'test'
-                } for name in action_names],
-                config_context,
-            ),
-            config_context,
+            action.ActionMap.from_config([
+                dict(name=name, command='test') for name in action_names
+            ])
         )
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.command = "do command"
@@ -824,32 +812,22 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
     @setup
     def setup_collection(self):
         action_names = ['action_name', 'second_name', 'cleanup']
-        config_context = config_utils.ConfigContext(
-            'config',
-            ['localhost'],
-            ['cluster'],
-            None,
-        )
         self.action_graph = actiongraph.ActionGraph.from_config(
-            action.ActionMap.from_config(
-                [
-                    {
-                        'name': 'action_name',
-                        'command': 'test'
-                    },
-                    {
-                        'name': 'second_name',
-                        'command': 'test',
-                        'requires': ['action_name'],
-                    },
-                    {
-                        'name': 'cleanup',
-                        'command': 'test'
-                    },
-                ],
-                config_context,
-            ),
-            config_context,
+            action.ActionMap.from_config([
+                {
+                    'name': 'action_name',
+                    'command': 'test'
+                },
+                {
+                    'name': 'second_name',
+                    'command': 'test',
+                    'requires': ['action_name'],
+                },
+                {
+                    'name': 'cleanup',
+                    'command': 'test'
+                },
+            ])
         )
 
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())

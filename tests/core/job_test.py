@@ -84,7 +84,7 @@ class JobTestCase(TestCase):
                 name='ajob',
                 node='localhost',
                 schedule='cron * * * * *',
-                namespace=None,
+                namespace='MASTER',
                 monitoring={
                     "team": "foo",
                     "page": True
@@ -95,7 +95,7 @@ class JobTestCase(TestCase):
                 run_limit=20,
                 actions=[action],
                 cleanup_action=None,
-            ), parent_context
+            )
         )
         scheduler = 'scheduler_token'
         output_path = ["base_path"]

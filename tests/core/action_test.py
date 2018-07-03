@@ -6,7 +6,6 @@ from testify import run
 from testify import setup
 from testify import TestCase
 
-from tron.config import config_utils
 from tron.core import action
 from tron.core.action import Constraint
 from tron.core.action import Volume
@@ -15,21 +14,12 @@ from tron.core.action import Volume
 class TestAction(TestCase):
     @setup
     def setup_action(self):
-        self.config_context = config_utils.ConfigContext(
-            'config',
-            ['localhost'],
-            ['cluster'],
-            None,
-        )
         self.node_pool = 'node_pool'
-        self.action = action.Action.from_config(
-            {
-                'name': "my_action",
-                'command': "doit",
-                'node_pool': self.node_pool,
-            },
-            self.config_context,
-        )
+        self.action = action.Action.from_config({
+            'name': "my_action",
+            'command': "doit",
+            'node_pool': self.node_pool,
+        })
 
     def test_from_config_full(self):
         config = dict(
@@ -54,7 +44,7 @@ class TestAction(TestCase):
             ],
             mesos_address='fake-mesos-master.com',
         )
-        new_action = action.Action.from_config(config, self.config_context)
+        new_action = action.Action.from_config(config)
         assert_equal(new_action.name, config['name'])
         assert_equal(new_action.command, config['command'])
         assert_equal(new_action.node_pool, None)
@@ -88,7 +78,7 @@ class TestAction(TestCase):
             node="first",
             executor="ssh",
         )
-        new_action = action.Action.from_config(config, self.config_context)
+        new_action = action.Action.from_config(config)
         assert_equal(new_action.name, config['name'])
         assert_equal(new_action.command, config['command'])
         assert_equal(list(new_action.required_actions), [])
@@ -102,14 +92,11 @@ class TestAction(TestCase):
         assert_equal(new_action.extra_volumes, [])
 
     def test__eq__(self):
-        new_action = action.Action.from_config(
-            {
-                'name': self.action.name,
-                'command': self.action.command,
-                'node_pool': self.node_pool,
-            },
-            self.config_context,
-        )
+        new_action = action.Action.from_config({
+            'name': self.action.name,
+            'command': self.action.command,
+            'node_pool': self.node_pool,
+        })
         assert_equal(new_action, self.action)
 
 

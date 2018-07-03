@@ -19,21 +19,6 @@ from tron.config.config_utils import ConfigContext
 from tron.config.config_utils import valid_identifier
 
 
-class UniqueNameDictTestCase(TestCase):
-    @setup
-    def setup_dict(self):
-        self.msg = "The key %s was there."
-        self.dict = config_utils.UniqueNameDict(self.msg)
-
-    def test_set_item_no_conflict(self):
-        self.dict['a'] = 'something'
-        assert_in('a', self.dict)
-
-    def test_set_item_conflict(self):
-        self.dict['a'] = 'something'
-        assert_raises(ConfigError, self.dict.__setitem__, 'a', 'next_thing')
-
-
 class ValidatorIdentifierTestCase(TestCase):
     def test_valid_identifier_too_long(self):
         assert_raises(ConfigError, valid_identifier, 'a' * 256, mock.Mock())

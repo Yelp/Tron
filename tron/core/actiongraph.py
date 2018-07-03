@@ -16,7 +16,7 @@ class ActionGraph(object):
         self.action_map = action_map
 
     @classmethod
-    def from_config(cls, action_map, config_context, cleanup_action=None):
+    def from_config(cls, action_map, cleanup_action=None):
         """Create this graph from a job config."""
         if cleanup_action:
             action_map = action_map.set(cleanup_action.name, cleanup_action)
