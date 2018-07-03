@@ -1,5 +1,26 @@
 # Change Log
 
+## [0.9.1.5](https://github.com/Yelp/Tron/tree/0.9.1.5) (2018-07-03)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.1.4...0.9.1.5)
+
+**Merged pull requests:**
+
+- wait daemon thread finish before exit [\#475](https://github.com/Yelp/Tron/pull/475) ([chlgit](https://github.com/chlgit))
+- Remove the graceful\_shutdown aspect of Tron [\#474](https://github.com/Yelp/Tron/pull/474) ([solarkennedy](https://github.com/solarkennedy))
+- fix tronfig -C bug [\#473](https://github.com/Yelp/Tron/pull/473) ([chlgit](https://github.com/chlgit))
+- add test case for long duration jobs [\#472](https://github.com/Yelp/Tron/pull/472) ([chlgit](https://github.com/chlgit))
+- fix duration is longer than 1 day bug [\#471](https://github.com/Yelp/Tron/pull/471) ([chlgit](https://github.com/chlgit))
+- Check output dir first [\#470](https://github.com/Yelp/Tron/pull/470) ([qui](https://github.com/qui))
+- Add default volumes and some other Mesos task settings to master config [\#466](https://github.com/Yelp/Tron/pull/466) ([qui](https://github.com/qui))
+- implement kill terminate for mesos actions [\#464](https://github.com/Yelp/Tron/pull/464) ([chlgit](https://github.com/chlgit))
+
+## [v0.9.1.4](https://github.com/Yelp/Tron/tree/v0.9.1.4) (2018-06-25)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.1.3...v0.9.1.4)
+
+**Merged pull requests:**
+
+- action\_runner logs to the output\_dir; add timestamps to logs [\#469](https://github.com/Yelp/Tron/pull/469) ([Rob-Johnson](https://github.com/Rob-Johnson))
+
 ## [v0.9.1.3](https://github.com/Yelp/Tron/tree/v0.9.1.3) (2018-06-22)
 [Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.1.2...v0.9.1.3)
 
