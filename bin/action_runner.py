@@ -85,7 +85,7 @@ def run_proc(output_path, command, run_id, proc):
     ):
         returncode = proc.wait()
         logging.warning(f'pid {proc.pid} exited with returncode {returncode}')
-        sys.exit(returncode)
+        return returncode
 
 
 def parse_args():
@@ -146,13 +146,17 @@ if __name__ == "__main__":
     validate_output_dir(args.output_dir)
     configure_logging(run_id=args.run_id, output_dir=args.output_dir)
     proc = run_command(args.command)
-    for p in [(proc.stdout, sys.stdout), (proc.stderr, sys.stderr)]:
-        t = threading.Thread(target=stream, args=p, daemon=True)
+    threads = [threading.Thread(target=stream, args=p, daemon=True) for p in [
+        (proc.stdout, sys.stdout), (proc.stderr, sys.stderr)]]
+    for t in threads:
         t.start()
-
-    run_proc(
+    returncode = run_proc(
         output_path=args.output_dir,
         run_id=args.run_id,
         command=args.command,
         proc=proc,
     )
+
+    for t in threads:
+        t.join()
+    sys.exit(returncode)

@@ -15,7 +15,6 @@ from testify import TestCase
 from tests.assertions import assert_raises
 from tron.config import config_parse
 from tron.config import config_utils
-from tron.config import ConfigError
 from tron.config import schedule_parse
 from tron.config.config_parse import build_format_string_validator
 from tron.config.config_parse import valid_output_stream_dir
@@ -38,6 +37,7 @@ from tron.config.tron_config import TronConfig
 from tron.core.action import Action
 from tron.core.action import ActionMap
 from tron.core.action import ExecutorTypes
+from tron.core.action import Volume
 from tron.core.action import VolumeModes
 from tron.utils.dicts import FrozenDict
 
@@ -107,7 +107,16 @@ def make_node_pools():
     }])
 
 
-def make_action(config_context=MASTER_CONTEXT, **kwargs):
+def make_mesos_options():
+    return MesosOptions(
+        enabled=False,
+        default_volumes=(),
+        dockercfg_location=None,
+        offer_timeout=300,
+    )
+
+
+def make_action(**kwargs):
     kwargs.setdefault('name', 'action'),
     kwargs.setdefault('command', 'command')
     kwargs.setdefault('executor', 'ssh')
@@ -301,7 +310,7 @@ def make_tron_config(
         nodes=nodes or make_nodes(),
         node_pools=node_pools or make_node_pools(),
         jobs=jobs or make_master_jobs(),
-        mesos_options=mesos_options or MesosOptions(enabled=False),
+        mesos_options=mesos_options or make_mesos_options(),
     )
 
 
@@ -689,7 +698,7 @@ class NodeConfigTestCase(TestCase):
         )
         expected_msg = "Node and NodePool names must be unique sameName"
         exception = assert_raises(
-            ConfigError, TronConfig.from_config, tron_config
+            ValueError, TronConfig.from_config, tron_config
         )
         assert_in(expected_msg, str(exception))
 
@@ -736,7 +745,7 @@ class NodeConfigTestCase(TestCase):
 
         expected_msg = "NodePool pool1 contains other NodePools: pool0"
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             TronConfig.from_config,
             test_config,
         )
@@ -774,7 +783,7 @@ class NodeConfigTestCase(TestCase):
         test_config = dict(bozray=None, namespace='foobar')
         expected_message = "Unknown keys in NamedConfigFragment : bozray"
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             NamedTronConfig.from_config,
             test_config,
         )
@@ -934,7 +943,7 @@ class ValidOutputStreamDirTestCase(TestCase):
 
     def test_missing_dir(self):
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             valid_output_stream_dir,
             'bogus-dir',
             NullConfigContext,
@@ -945,7 +954,7 @@ class ValidOutputStreamDirTestCase(TestCase):
     # def test_no_ro_dir(self):
     #     os.chmod(self.dir, stat.S_IRUSR)
     #     exception = assert_raises(
-    #         ConfigError,
+    #         ValueError,
     #         valid_output_stream_dir, self.dir, NullConfigContext,
     #     )
     #     assert_in("is not writable", str(exception))
@@ -970,7 +979,7 @@ class BuildFormatStringValidatorTestCase(TestCase):
     def test_validator_error(self):
         template = "The %(one)s thing I %(seven)s is %(unknown)s"
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             self.validator,
             template,
             NullConfigContext,
@@ -994,7 +1003,7 @@ class ValidateConfigMappingTestCase(TestCase):
     def test_validate_config_mapping_missing_master(self):
         config_mapping = {'other': mock.Mock()}
         seq = config_parse.validate_config_mapping(config_mapping)
-        exception = assert_raises(ConfigError, list, seq)
+        exception = assert_raises(ValueError, list, seq)
         assert_in('requires a MASTER namespace', str(exception))
 
     def test_validate_config_mapping(self):
@@ -1034,7 +1043,7 @@ class ConfigContainerTestCase(TestCase):
     def test_create_missing_master(self):
         config_mapping = {'other': mock.Mock()}
         assert_raises(
-            ConfigError,
+            ValueError,
             config_parse.ConfigContainer.create,
             config_mapping,
         )
@@ -1076,7 +1085,7 @@ class ValidateIdentityFileTestCase(TestCase):
 
     def test_valid_identity_file_missing_private_key(self):
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             config_parse.valid_identity_file,
             '/file/not/exist',
             self.context,
@@ -1086,7 +1095,7 @@ class ValidateIdentityFileTestCase(TestCase):
     def test_valid_identity_files_missing_public_key(self):
         filename = self.private_file.name
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             config_parse.valid_identity_file,
             filename,
             self.context,
@@ -1125,7 +1134,7 @@ class ValidKnownHostsFileTestCase(TestCase):
 
     def test_valid_known_hosts_file_missing(self):
         exception = assert_raises(
-            ConfigError,
+            ValueError,
             config_parse.valid_known_hosts_file,
             '/bogus/path',
             self.context,
@@ -1140,6 +1149,79 @@ class ValidKnownHostsFileTestCase(TestCase):
             context,
         )
         assert_equal(filename, expected)
+
+
+class ValidateVolumeTestCase(TestCase):
+    @setup
+    def setup_context(self):
+        self.context = config_utils.NullConfigContext
+
+    def test_missing_container_path(self):
+        config = {
+            'container_path_typo': '/nail/srv',
+            'host_path': '/tmp',
+            'mode': 'RO',
+        }
+        assert_raises(
+            ValueError,
+            Volume.create,
+            config,
+        )
+
+    def test_missing_host_path(self):
+        config = {
+            'container_path': '/nail/srv',
+            'hostPath': '/tmp',
+            'mode': 'RO',
+        }
+        assert_raises(
+            ValueError,
+            Volume.create,
+            config,
+        )
+
+    def test_invalid_mode(self):
+        config = {
+            'container_path': '/nail/srv',
+            'host_path': '/tmp',
+            'mode': 'RA',
+        }
+        assert_raises(
+            ValueError,
+            Volume.create,
+            config,
+        )
+
+    def test_valid(self):
+        config = {
+            'container_path': '/nail/srv',
+            'host_path': '/tmp',
+            'mode': 'RO',
+        }
+        assert(Volume.create(config))
+
+    def test_mesos_default_volumes(self):
+        mesos_options = {}
+        mesos_options['default_volumes'] = [
+            {
+                'container_path': '/nail/srv',
+                'host_path': '/tmp',
+                'mode': 'RO',
+            },
+            {
+                'container_path': '/nail/srv',
+                'host_path': '/tmp',
+                'mode': 'invalid',
+            },
+        ]
+        assert_raises(
+            ValueError,
+            MesosOptions.from_config,
+            mesos_options,
+        )
+        # After we fix the error, expect error to go away.
+        mesos_options['default_volumes'][1]['mode'] = 'RW'
+        assert MesosOptions.from_config(mesos_options)
 
 
 if __name__ == '__main__':

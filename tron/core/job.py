@@ -257,7 +257,6 @@ class JobScheduler(Observer):
 
     def __init__(self, job):
         self.job = job
-        self.shutdown_requested = False
         self.watch(job)
 
     def restore_state(self, job_state_data, config_action_runner):
@@ -296,11 +295,6 @@ class JobScheduler(Observer):
         """Disable the job and cancel and pending scheduled jobs."""
         self.job.enabled = False
         self.job.runs.cancel_pending()
-
-    @property
-    def is_shutdown(self):
-        """Return True if there are no running or starting runs."""
-        return not any(self.job.runs.get_active())
 
     def manual_start(self, run_time=None):
         """Trigger a job run manually (instead of from the scheduler)."""
@@ -341,9 +335,6 @@ class JobScheduler(Observer):
         """Triggered by a callback to actually start the JobRun. Also
         schedules the next JobRun.
         """
-        if self.shutdown_requested:
-            return
-
         # If the Job has been disabled after this run was scheduled, then cancel
         # the JobRun and do not schedule another
         if not self.job.enabled:
@@ -424,9 +415,6 @@ class JobScheduler(Observer):
         next_run_time = self.job.scheduler.next_run_time(last_run_time)
         return self.job.build_new_runs(next_run_time)
 
-    def request_shutdown(self):
-        self.shutdown_requested = True
-
     def __str__(self):
         return "%s(%s)" % (self.__class__.__name__, self.job)
 
@@ -478,12 +466,10 @@ class JobCollection(object):
         self.proxy = proxy.CollectionProxy(
             lambda: six.itervalues(self.jobs),
             [
-                proxy.func_proxy('request_shutdown', iteration.list_all),
                 proxy.func_proxy('enable', iteration.list_all),
                 proxy.func_proxy('disable', iteration.list_all),
                 proxy.func_proxy('schedule', iteration.list_all),
                 proxy.func_proxy('run_queue_schedule', iteration.list_all),
-                proxy.attr_proxy('is_shutdown', all),
             ],
         )
 
