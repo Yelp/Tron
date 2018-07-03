@@ -5,12 +5,10 @@ import os
 import six
 
 from tron import command_context
-from tron.config.config_utils import valid_dict
 from tron.config.config_utils import valid_string
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.tron_config import NamedTronConfig
 from tron.config.tron_config import TronConfig
-from tron.utils.dicts import FrozenDict
 
 log = logging.getLogger(__name__)
 
@@ -88,11 +86,6 @@ def valid_known_hosts_file(file_path, config_context):
     if not os.path.exists(file_path):
         raise ValueError("Known hosts file %s doesn't exist" % file_path)
     return file_path
-
-
-def valid_command_context(context, config_context):
-    # context can be any dict.
-    return FrozenDict(**valid_dict(context or {}, config_context))
 
 
 action_context = command_context.build_filled_context(
