@@ -27,8 +27,7 @@ from tron.config.node import Node
 from tron.config.node import NodeMap
 from tron.config.node import NodePool
 from tron.config.node import NodePoolMap
-from tron.config.schedule_parse import ConfigConstantScheduler
-from tron.config.schedule_parse import ConfigIntervalScheduler
+from tron.config.schedule_parse import ConfigGenericSchedule
 from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.ssh_options import SSHOptions
@@ -129,12 +128,12 @@ def make_job(**kwargs):
     kwargs.setdefault(
         'schedule',
         schedule_parse.ConfigDailyScheduler(
+            scheduler='daily',
+            original="16:30:00",
             days=set(),
             hour=16,
             minute=30,
             second=0,
-            original="16:30:00 ",
-            jitter=None,
         )
     )
     kwargs.setdefault('actions', ActionMap.create(dict(action=make_action())))
@@ -154,10 +153,7 @@ def make_master_jobs():
         'MASTER.test_job0':
             make_job(
                 name='MASTER.test_job0',
-                schedule=schedule_parse.ConfigIntervalScheduler(
-                    timedelta=datetime.timedelta(0, 20),
-                    jitter=None,
-                ),
+                schedule=ConfigGenericSchedule.from_config('interval 20s'),
                 expected_runtime=datetime.timedelta(1)
             ),
         'MASTER.test_job1':
@@ -168,8 +164,8 @@ def make_master_jobs():
                     hour=0,
                     minute=30,
                     second=0,
+                    scheduler='daily',
                     original="00:30:00 MWF",
-                    jitter=None,
                 ),
                 actions=FrozenDict({
                     'action':
@@ -192,7 +188,7 @@ def make_master_jobs():
             make_job(
                 name='MASTER.test_job2',
                 node='node1',
-                actions=FrozenDict({
+                actions=ActionMap({
                     'action2_0':
                         make_action(
                             name='action2_0',
@@ -207,8 +203,8 @@ def make_master_jobs():
             make_job(
                 name='MASTER.test_job3',
                 node='node1',
-                schedule=ConfigConstantScheduler(),
-                actions=FrozenDict({
+                schedule=ConfigGenericSchedule.from_config('constant'),
+                actions=ActionMap({
                     'action':
                         make_action(),
                     'action1':
@@ -228,12 +224,12 @@ def make_master_jobs():
                 name='MASTER.test_job4',
                 node='NodePool',
                 schedule=schedule_parse.ConfigDailyScheduler(
-                    original="00:00:00 ",
+                    scheduler='daily',
+                    original="",
                     hour=0,
                     minute=0,
                     second=0,
                     days=set(),
-                    jitter=None,
                 ),
                 all_nodes=True,
                 enabled=False,
@@ -245,14 +241,14 @@ def make_master_jobs():
                 name='MASTER.test_job_mesos',
                 node='NodePool',
                 schedule=schedule_parse.ConfigDailyScheduler(
-                    original="00:00:00 ",
+                    scheduler='daily',
+                    original="",
                     hour=0,
                     minute=0,
                     second=0,
                     days=set(),
-                    jitter=None,
                 ),
-                actions=FrozenDict({
+                actions=ActionMap({
                     'action_mesos':
                         make_action(
                             name='action_mesos',
@@ -428,10 +424,8 @@ class NamedConfigTestCase(TestCase):
                     make_job(
                         name="test_job",
                         namespace='test_namespace',
-                        schedule=ConfigIntervalScheduler(
-                            timedelta=datetime.timedelta(0, 20),
-                            jitter=None,
-                        ),
+                        schedule=ConfigGenericSchedule.
+                        from_config('interval 20s'),
                         expected_runtime=datetime.timedelta(1),
                     )
             })
@@ -829,10 +823,7 @@ class ValidateJobsTestCase(TestCase):
                 make_job(
                     node='localhost',
                     name='MASTER.test_job0',
-                    schedule=ConfigIntervalScheduler(
-                        timedelta=datetime.timedelta(0, 20),
-                        jitter=None,
-                    ),
+                    schedule=ConfigGenericSchedule.from_config('interval 20s'),
                     actions=ActionMap.create({
                         'action':
                             make_action(

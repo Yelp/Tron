@@ -93,12 +93,12 @@ class ValidTimeTestCase(TestCase):
 
     def test_valid_time_invalid(self):
         assert_raises(
-            ConfigError,
+            ValueError,
             config_utils.valid_time,
             "14:32:12:34",
             self.context,
         )
-        assert_raises(ConfigError, config_utils.valid_time, None, self.context)
+        assert_raises(ValueError, config_utils.valid_time, None, self.context)
 
 
 class ValidTimeDeltaTestCase(TestCase):

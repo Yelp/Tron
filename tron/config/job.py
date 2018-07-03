@@ -79,7 +79,7 @@ class Job(ConfigRecord):
     node = field(type=str, mandatory=True, invariant=inv_identifier)
     schedule = field(
         mandatory=True,
-        factory=lambda s: schedule_parse.valid_schedule(s, None)
+        factory=schedule_parse.ConfigGenericSchedule.from_config
     )
     actions = field(
         type=ActionMap,
@@ -137,9 +137,8 @@ class Job(ConfigRecord):
 
             return kls.create(job)
         except Exception as e:
-            raise ValueError(
-                f"jobs {job.get('name', 'unnamed')} {e}"
-            ).with_traceback(e.__traceback__)
+            raise ValueError(f"jobs {job.get('name', 'unnamed')} {e}"
+                             ).with_traceback(e.__traceback__)
 
 
 class JobMap(CheckedPMap):

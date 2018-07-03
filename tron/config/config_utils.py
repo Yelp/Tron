@@ -83,15 +83,13 @@ def build_enum_validator(enum):
     return build_type_validator(enum.__contains__, msg)
 
 
-def valid_time(value, config_context):
-    valid_string(value, config_context)
+def valid_time(value, *_):
     for format in ['%H:%M', '%H:%M:%S']:
         try:
             return datetime.datetime.strptime(value, format)
-        except ValueError:
+        except Exception:
             pass
-    msg = 'Value at %s is not a valid time'
-    raise ConfigError(msg % config_context.path)
+    raise ValueError(f'{value} is not a valid time')
 
 
 def valid_time_zone(tz):
