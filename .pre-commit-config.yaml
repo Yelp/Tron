@@ -13,13 +13,3 @@
     hooks:
     -   id: reorder-python-imports
         language_version: python3.6
--   repo: local
-    hooks:
-        -   id: yapf
-            name: yapf || true
-            entry: yapf
-            language: python
-            args: ["-i", "-p"]
-            exclude: ^(docs/conf.py|setup.py)$
-            types: [python]
-            additional_dependencies: ['yapf']
