@@ -5,7 +5,6 @@ import os
 import six
 
 from tron import command_context
-from tron.config import ConfigError
 from tron.config.config_utils import valid_dict
 from tron.config.config_utils import valid_string
 from tron.config.schema import MASTER_NAMESPACE
@@ -35,13 +34,13 @@ def build_format_string_validator(context_object):
             return value
         except (KeyError, ValueError) as e:
             error_msg = "Unknown context variable %s at %s: %s"
-            raise ConfigError(error_msg % (e, config_context.path, value))
+            raise ValueError(error_msg % (e, config_context.path, value))
 
     return validator
 
 
 def valid_output_stream_dir(output_dir, config_context):
-    """Returns a valid string for the output directory, or raises ConfigError
+    """Returns a valid string for the output directory, or raises ValueError
     if the output_dir is not valid.
     """
     if not output_dir:
@@ -53,10 +52,10 @@ def valid_output_stream_dir(output_dir, config_context):
     valid_string(output_dir, config_context)
     if not os.path.isdir(output_dir):
         msg = "output_stream_dir '%s' is not a directory"
-        raise ConfigError(msg % output_dir)
+        raise ValueError(msg % output_dir)
 
     if not os.access(output_dir, os.W_OK):
-        raise ConfigError(
+        raise ValueError(
             "output_stream_dir '%s' is not writable" % output_dir,
         )
 
@@ -71,11 +70,11 @@ def valid_identity_file(file_path, config_context):
 
     file_path = os.path.expanduser(file_path)
     if not os.path.exists(file_path):
-        raise ConfigError("Private key file %s doesn't exist" % file_path)
+        raise ValueError("Private key file %s doesn't exist" % file_path)
 
     public_key_path = file_path + '.pub'
     if not os.path.exists(public_key_path):
-        raise ConfigError("Public key file %s doesn't exist" % public_key_path)
+        raise ValueError("Public key file %s doesn't exist" % public_key_path)
     return file_path
 
 
@@ -87,7 +86,7 @@ def valid_known_hosts_file(file_path, config_context):
 
     file_path = os.path.expanduser(file_path)
     if not os.path.exists(file_path):
-        raise ConfigError("Known hosts file %s doesn't exist" % file_path)
+        raise ValueError("Known hosts file %s doesn't exist" % file_path)
     return file_path
 
 
@@ -117,7 +116,7 @@ def get_nodes_from_master_namespace(master):
 def validate_config_mapping(config_mapping):
     if MASTER_NAMESPACE not in config_mapping:
         msg = "A config mapping requires a %s namespace"
-        raise ConfigError(msg % MASTER_NAMESPACE)
+        raise ValueError(msg % MASTER_NAMESPACE)
 
     master = TronConfig.from_config(config_mapping.pop(MASTER_NAMESPACE))
     nodes = get_nodes_from_master_namespace(master)

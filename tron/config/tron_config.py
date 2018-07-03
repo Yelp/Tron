@@ -79,25 +79,21 @@ class TronConfig(ConfigRecord):
             self.node_pools.keys()
         )
         if non_unique:
-            return (
-                False,
-                "names present in nodes and node pools: {}".format(non_unique)
-            )
+            return (False, f"nodes/node_pools: {non_unique} is both node and node pool")
 
         all_node_names = set(self.nodes.keys())
         for _, node_pool in self.node_pools.items():
             invalid_names = set(node_pool.nodes.keys()) - all_node_names
             if invalid_names:
                 return (
-                    False, "NodePool {} contains other NodePools: {}".format(
-                        node_pool.name, ",".join(invalid_names)
-                    )
+                    False,
+                    f"node_pools.{node_pool.name}: contains other node pools: {invalid_names}"
                 )
 
         nodes_and_pools = set(self.nodes.keys() + self.node_pools.keys())
         for _, job in self.jobs.items():
             if job.node not in nodes_and_pools:
-                return (False, "Unknown node name {}".format(job.node))
+                return (False, f"jobs.{job.name}: unknown node {job.node}")
 
         return (True, "all ok")
 

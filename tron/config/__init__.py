@@ -9,4 +9,6 @@ class ConfigError(Exception):
 class ConfigRecord(PClass):
     @classmethod
     def from_config(kls, config, *_):
+        if config is None or isinstance(config, kls):
+            return config
         return kls.create(config)

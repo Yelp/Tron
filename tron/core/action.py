@@ -62,6 +62,13 @@ class Volume(PRecord):
 class Volumes(CheckedPVector):
     __type__ = Volume
 
+    @staticmethod
+    def from_config(items):
+        if not items:
+            return Volumes()
+
+        return Volumes([Volume(**item) for item in items])
+
 
 class DockerParam(PRecord):
     key = field(mandatory=True)
@@ -165,22 +172,26 @@ class ActionMap(CheckedPMap):
     __value_type__ = Action
 
     @classmethod
-    def from_config(cls, items):
+    def from_config(cls, actions):
         """Factory method for creating a new ActionMap."""
-        if items is None or isinstance(items, ActionMap):
-            return items
+        if actions is None or isinstance(actions, ActionMap):
+            return actions
 
-        all_names = [item['name'] for item in items]
-        uniq_names = set(all_names)
+        if isinstance(actions, list):
+            all_names = [item['name'] for item in actions]
+            uniq_names = set(all_names)
 
-        if len(uniq_names) < len(all_names):
-            raise ValueError(
-                "Duplicate action names found: {}".format([
-                    name for name in uniq_names if all_names.count(name) > 1
-                ])
-            )
+            if len(uniq_names) < len(all_names):
+                raise ValueError(
+                    "Duplicate action names found: {}".format([
+                        name for name in uniq_names
+                        if all_names.count(name) > 1
+                    ])
+                )
+
+            actions = {item['name']: item for item in actions}
 
         return cls.create({
-            item['name']: Action.from_config(item)
-            for item in items
+            name: Action.from_config(action)
+            for name, action in actions.items()
         })

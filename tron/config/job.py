@@ -114,6 +114,16 @@ class Job(ConfigRecord):
         initial=datetime.timedelta(hours=24)
     )
 
+    def __invariant__(self):
+        if CLEANUP_ACTION_NAME in self.actions:
+            return (False, "actions.cleanup reserved for cleanup action")
+
+        if self.cleanup_action and \
+                self.cleanup_action.name != CLEANUP_ACTION_NAME:
+            return (False, "cleanup_action cannot have name")
+
+        return (True, "all ok")
+
     @classmethod
     def from_config(kls, job):
         """ Create Job instance from raw JSON/YAML data.
@@ -121,26 +131,14 @@ class Job(ConfigRecord):
         try:
             job = dict(**job)
 
-            if 'actions' in job:
-                job['actions'] = ActionMap.from_config(job['actions'])
-                if CLEANUP_ACTION_NAME in job['actions']:
-                    raise ValueError(
-                        "actions.cleanup name reserved for cleanup action"
-                    )
-
             cleanup_action = job.get('cleanup_action')
             if cleanup_action is not None:
                 cleanup_action.setdefault('name', CLEANUP_ACTION_NAME)
 
-                if cleanup_action['name'] != CLEANUP_ACTION_NAME:
-                    raise ValueError("cleanup_action cannot have name")
-
-                job['cleanup_action'] = Action.from_config(cleanup_action)
-
             return kls.create(job)
         except Exception as e:
             raise ValueError(
-                "jobs.{}.{}".format(job.get('name', 'unnamed'), e)
+                f"jobs {job.get('name', 'unnamed')} {e}"
             ).with_traceback(e.__traceback__)
 
 

@@ -51,11 +51,7 @@ class NodeMap(CheckedPMap):
                 elif isinstance(v, dict):
                     node = Node.from_config(v)
                 else:
-                    raise ValueError(
-                        "Can't make tron.config.Node out of {}".format(
-                            type(v)
-                        )
-                    )
+                    raise ValueError(f"tron.config.Node from {type(v)}")
                 nval[node.name] = node
             val = nval
 
@@ -67,13 +63,16 @@ class NodePool(ConfigRecord):
         type=str,
         invariant=lambda n: (
             bool(IDENTIFIER_RE.match(n)),
-            "name {} is not a valid identifier".format(n)
+            "{} is not a valid identifier".format(n)
         )
     )
     nodes = field(type=NodeMap, initial=NodeMap())
 
     @classmethod
     def from_config(kls, val):
+        if val is None or isinstance(val, NodePool):
+            return val
+
         if isinstance(val, list):
             val = dict(
                 name='_'.join(val),
@@ -92,6 +91,9 @@ class NodePoolMap(CheckedPMap):
 
     @classmethod
     def from_config(kls, val):
+        if val is None or isinstance(val, NodePoolMap):
+            return val
+
         if isinstance(val, list):
             val = {v['name']: v for v in val}
 
