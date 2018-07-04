@@ -10,10 +10,14 @@ class ActionRunnerTypes(Enum):
 
 
 class ActionRunner(PRecord):
-    runner_type = field(factory=ActionRunnerTypes)
-    remote_exec_path = field(type=(str, None.__class__), initial='')
-    remote_status_path = field(type=(str, None.__class__), initial='/tmp')
+    runner_type = field(
+        type=ActionRunnerTypes,
+        initial=ActionRunnerTypes.subprocess,
+        factory=lambda rt: ActionRunnerTypes(rt or 'subprocess')
+    )
+    remote_exec_path = field(type=(str, type(None)), initial='')
+    remote_status_path = field(type=(str, type(None)), initial='/tmp')
 
     @staticmethod
     def from_config(val, *_):
-        return ActionRunner.create(val)
+        return ActionRunner.create(val or {})
