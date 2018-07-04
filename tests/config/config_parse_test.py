@@ -295,6 +295,7 @@ def make_tron_config(
 
 def make_named_tron_config(**kwargs):
     kwargs.setdefault('jobs', make_master_jobs())
+    kwargs.setdefault('nodes', ['node0'])
     return NamedTronConfig(**kwargs)
 
 
@@ -410,6 +411,31 @@ class ConfigTestCase(TestCase):
     def test_empty_node_test(self):
         TronConfig.from_config(dict(nodes=None))
 
+    def test_substitution(self):
+        def test_config():
+            return dict(
+                nodes=['node0'],
+                jobs=[
+                    dict(
+                        name="test_job",
+                        namespace='MASTER',
+                        node='node0',
+                        schedule="interval 20s",
+                        actions=[dict(name="action", command="%(hello)s")],
+                    )
+                ]
+            )
+
+        msg = assert_raises(ValueError, TronConfig.from_config, test_config())
+        assert_in("substitution", str(msg))
+
+        try:
+            TronConfig.from_config(
+                dict(command_context=dict(hello=123), **test_config())
+            )
+        except Exception as e:
+            assert False, f"Unexpected exception: {e}"
+
 
 class NamedConfigTestCase(TestCase):
     config = ConfigTestCase.JOBS_CONFIG
@@ -431,6 +457,7 @@ class NamedConfigTestCase(TestCase):
         test_config = NamedTronConfig.from_config(
             dict(
                 namespace='test_namespace',
+                nodes=['node0'],
                 jobs=[
                     dict(
                         name="test_job",
@@ -444,6 +471,32 @@ class NamedConfigTestCase(TestCase):
             )
         )
         assert_equal(test_config, expected)
+
+    def test_substitution(self):
+        test_config = dict(
+            namespace='test_namespace',
+            nodes=['node0'],
+            jobs=[
+                dict(
+                    name="test_job",
+                    namespace='test_namespace',
+                    node="node0",
+                    schedule="interval 20s",
+                    actions=[dict(name="action", command="%(hello)s")],
+                )
+            ]
+        )
+        msg = assert_raises(
+            ValueError, NamedTronConfig.from_config, test_config
+        )
+        assert_in("substitution", str(msg))
+
+        try:
+            NamedTronConfig.from_config(
+                dict(command_context=dict(hello=123), **test_config)
+            )
+        except Exception as e:
+            assert False, f"Unexpected exception: {e}"
 
 
 class JobConfigTestCase(TestCase):
@@ -990,7 +1043,11 @@ class ConfigContainerTestCase(TestCase):
                 TronConfig.from_config(self.config),
             'other':
                 NamedTronConfig.from_config(
-                    dict(namespace='other', **other_config)
+                    dict(
+                        namespace='other',
+                        nodes=['node0', 'node1', 'NodePool'],
+                        **other_config
+                    )
                 ),
         }
         self.container = config_parse.ConfigContainer(self.config_mapping)

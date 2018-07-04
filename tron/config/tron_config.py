@@ -10,6 +10,7 @@ from pyrsistent import PSet
 from pyrsistent import PVector
 from pyrsistent import v
 
+from tron import command_context
 from tron.config import ConfigRecord
 from tron.config.action_runner import ActionRunner
 from tron.config.config_utils import valid_time_zone
@@ -21,6 +22,31 @@ from tron.config.notification_options import NotificationOptions
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.ssh_options import SSHOptions
 from tron.config.state_persistence import StatePersistence
+
+action_context = command_context.build_filled_context(
+    command_context.JobContext,
+    command_context.JobRunContext,
+    command_context.ActionRunContext,
+)
+
+
+def jobs_actions_sanity(config, nodes):
+    for jname, job in config.jobs.items():
+        if job.node not in nodes:
+            return (False, f"jobs.{jname}: unknown node {job.node}")
+
+        for aname, action in job.actions.items():
+            context = command_context.CommandContext(
+                config.command_context, action_context
+            )
+
+            try:
+                action.command % context
+            except (KeyError, ValueError) as e:
+                return (
+                    False,
+                    f"jobs.{jname}.actions.{aname}.command: Unknown substitution {e}"
+                )
 
 
 class TronConfig(ConfigRecord):
@@ -79,7 +105,10 @@ class TronConfig(ConfigRecord):
             self.node_pools.keys()
         )
         if non_unique:
-            return (False, f"nodes/node_pools: {non_unique} is both node and node pool")
+            return (
+                False,
+                f"nodes/node_pools: {non_unique} is both node and node pool"
+            )
 
         all_node_names = set(self.nodes.keys())
         for _, node_pool in self.node_pools.items():
@@ -91,9 +120,9 @@ class TronConfig(ConfigRecord):
                 )
 
         nodes_and_pools = set(self.nodes.keys() + self.node_pools.keys())
-        for _, job in self.jobs.items():
-            if job.node not in nodes_and_pools:
-                return (False, f"jobs.{job.name}: unknown node {job.node}")
+        not_sane = jobs_actions_sanity(self, nodes_and_pools)
+        if not_sane:
+            return not_sane
 
         return (True, "all ok")
 
@@ -124,6 +153,13 @@ class NamedTronConfig(ConfigRecord):
     nodes = field(type=(PVector, PSet), initial=v(), factory=freeze)
     command_context = field(type=PMap, initial=m(), factory=freeze)
     jobs = field(type=JobMap, initial=JobMap(), factory=JobMap.from_config)
+
+    def __invariant__(self):
+        not_sane = jobs_actions_sanity(self, self.nodes)
+        if not_sane:
+            return not_sane
+
+        return (True, "all ok")
 
     @classmethod
     def from_config(kls, config):
