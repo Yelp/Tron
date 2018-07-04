@@ -68,7 +68,9 @@ class TronConfig(ConfigRecord):
         initial=StatePersistence(name='tron_state'),
         factory=StatePersistence.from_config
     )
-    command_context = field(type=PMap, initial=m(), factory=freeze)
+    command_context = field(
+        type=PMap, initial=m(), factory=lambda cc: freeze(cc) if cc else m()
+    )
     ssh_options = field(
         type=SSHOptions, initial=SSHOptions, factory=SSHOptions.from_config
     )
@@ -151,7 +153,9 @@ class TronConfig(ConfigRecord):
 class NamedTronConfig(ConfigRecord):
     namespace = field(type=str, mandatory=True)
     nodes = field(type=(PVector, PSet), initial=v(), factory=freeze)
-    command_context = field(type=PMap, initial=m(), factory=freeze)
+    command_context = field(
+        type=PMap, initial=m(), factory=lambda cc: freeze(cc) if cc else m()
+    )
     jobs = field(type=(JobMap), initial=JobMap(), factory=JobMap.from_config)
 
     def __invariant__(self):
