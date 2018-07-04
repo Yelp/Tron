@@ -152,7 +152,7 @@ class NamedTronConfig(ConfigRecord):
     namespace = field(type=str, mandatory=True)
     nodes = field(type=(PVector, PSet), initial=v(), factory=freeze)
     command_context = field(type=PMap, initial=m(), factory=freeze)
-    jobs = field(type=JobMap, initial=JobMap(), factory=JobMap.from_config)
+    jobs = field(type=(JobMap), initial=JobMap(), factory=JobMap.from_config)
 
     def __invariant__(self):
         not_sane = jobs_actions_sanity(self, self.nodes)

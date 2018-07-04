@@ -147,7 +147,9 @@ class JobMap(CheckedPMap):
 
     @staticmethod
     def from_config(jobs):
-        if jobs is None or isinstance(jobs, JobMap):
+        if jobs is None:
+            return JobMap()
+        elif isinstance(jobs, JobMap):
             return jobs
 
         if isinstance(jobs, list):
