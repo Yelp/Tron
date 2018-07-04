@@ -13,11 +13,8 @@ from testify import TestCase
 
 from tests.assertions import assert_raises
 from tron.config import config_parse
-from tron.config import config_utils
 from tron.config import schedule_parse
 from tron.config.action_runner import ActionRunner
-from tron.config.config_parse import build_format_string_validator
-from tron.config.config_utils import NullConfigContext
 from tron.config.job import Job
 from tron.config.job import JobMap
 from tron.config.mesos_options import MesosOptions
@@ -977,37 +974,6 @@ class ValidOutputStreamDirTestCase(TestCase):
         assert_in("is writable", str(exception))
 
 
-class BuildFormatStringValidatorTestCase(TestCase):
-    @setup
-    def setup_keys(self):
-        self.context = dict.fromkeys(['one', 'seven', 'stars'])
-        self.validator = build_format_string_validator(self.context)
-
-    def test_validator_passes(self):
-        template = "The %(one)s thing I %(seven)s is %(stars)s"
-        assert self.validator(template, NullConfigContext)
-
-    def test_validator_error(self):
-        template = "The %(one)s thing I %(seven)s is %(unknown)s"
-        exception = assert_raises(
-            ValueError,
-            self.validator,
-            template,
-            NullConfigContext,
-        )
-        assert_in("Unknown context variable", str(exception))
-
-    def test_validator_passes_with_context(self):
-        template = "The %(one)s thing I %(seven)s is %(mars)s"
-        context = config_utils.ConfigContext(
-            None,
-            None,
-            {'mars': 'ok'},
-            None,
-        )
-        assert self.validator(template, context)
-
-
 class ValidateConfigMappingTestCase(TestCase):
     config = dict(
         **make_base_config(), command_context=dict(some_var="The string")
@@ -1099,10 +1065,6 @@ class ConfigContainerTestCase(TestCase):
 
 
 class ValidateVolumeTestCase(TestCase):
-    @setup
-    def setup_context(self):
-        self.context = config_utils.NullConfigContext
-
     def test_missing_container_path(self):
         config = {
             'container_path_typo': '/nail/srv',

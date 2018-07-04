@@ -3,44 +3,11 @@ import logging
 
 import six
 
-from tron import command_context
-from tron.config.config_utils import valid_string
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.tron_config import NamedTronConfig
 from tron.config.tron_config import TronConfig
 
 log = logging.getLogger(__name__)
-
-
-def build_format_string_validator(context_object):
-    """Validate that a string does not contain any unexpected formatting keys.
-        valid_keys - a sequence of strings
-    """
-
-    def validator(value, config_context):
-        if config_context.partial:
-            return valid_string(value, config_context)
-
-        context = command_context.CommandContext(
-            context_object,
-            config_context.command_context,
-        )
-
-        try:
-            value % context
-            return value
-        except (KeyError, ValueError) as e:
-            error_msg = "Unknown context variable %s at %s: %s"
-            raise ValueError(error_msg % (e, config_context.path, value))
-
-    return validator
-
-
-action_context = command_context.build_filled_context(
-    command_context.JobContext,
-    command_context.JobRunContext,
-    command_context.ActionRunContext,
-)
 
 
 def validate_fragment(name, fragment):
