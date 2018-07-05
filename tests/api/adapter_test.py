@@ -236,7 +236,7 @@ class SchedulerAdapterTestCase(TestCase):
         self.scheduler = mock.create_autospec(scheduler.GeneralScheduler)
         self.adapter = adapter.SchedulerAdapter(self.scheduler)
 
-    @mock.patch('tron.api.adapter.scheduler.get_jitter_str', autospec=True)
+    @mock.patch('tron.api.adapter.get_jitter_str', autospec=True)
     def test_repr(self, mock_get_jitter):
         result = self.adapter.get_repr()
         expected = {
