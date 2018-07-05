@@ -183,7 +183,7 @@ class TronDaemon(object):
 
     def _run_manhole(self):
         self.manhole = make_manhole(dict(trond=self, mcp=self.mcp))
-        reactor.listenTCP(8087, self.manhole)
+        reactor.listenUNIX(f"{self.options.working_dir}/manhole.sock", self.manhole)
         log.info("manhole started on 8087")
 
     def _run_www_api(self):
