@@ -102,7 +102,7 @@ def compute_check_result_for_job_runs(client, job, job_content):
         prefix = "OK: The job is 'new' and waiting for the first run"
         status = 0
     elif last_state == State.STUCK:
-        prefix = "WARN: Job still running when next job is scheduled to run (stuck?)"
+        prefix = "WARN: Job exceeded expected runtime or still running when next job is scheduled"
         status = 1
     elif last_state == State.FAILED:
         prefix = "CRIT: The last job run failed!"
@@ -111,8 +111,8 @@ def compute_check_result_for_job_runs(client, job, job_content):
         prefix = "CRIT: Job is not scheduled at all!"
         status = 2
     elif last_state == State.UNKNOWN:
-        prefix = "WARN: Job has gone 'unknown' and might need manual intervention"
-        status = 1
+        prefix = "CRIT: Job has gone 'unknown' and might need manual intervention"
+        status = 2
     else:
         prefix = "UNKNOWN: The job is in a state that check_tron_jobs doesn't understand"
         status = 3

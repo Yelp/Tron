@@ -1,3 +1,12 @@
+tron (0.9.1.6) trusty; urgency=medium
+
+  * 0.9.1.6 tagged with 'make release'
+  * Bug fixes
+  * Remove graceful shutdown
+  * Mesos: Add default volume configs, implement kill/stop commmands
+
+ -- root <root@7406049997a9>  Tue, 03 Jul 2018 17:08:51 +0000
+
 tron (0.9.1.5) trusty; urgency=medium
 
   * 0.9.1.5 tagged with 'make release'
