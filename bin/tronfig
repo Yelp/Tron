@@ -61,7 +61,7 @@ def parse_cli():
     parser.add_argument(
         "-D",
         "--validate-dir",
-        action="store",
+        action="store_true",
         dest="validate_dir",
         help="Full validation of a folder, don't upload, "
         "same as -V but checks for more edge-cases",
@@ -128,7 +128,7 @@ def validate_dir(path):
         manifest.create()
         for fname in os.listdir(path):
             name, ext = os.path.splitext(fname)
-            if ext == 'yaml':
+            if ext == '.yaml':
                 namespace = name
                 manifest.add(namespace, os.path.join(path, fname))
 
@@ -167,8 +167,8 @@ if __name__ == '__main__':
         if args.validate:
             name, content = get_config_input(args.namespace, args.source)
             result = validate(name, content)
-        elif args.validate_dir is not None:
-            result = validate_dir(args.validate_dir)
+        elif args.validate_dir:
+            result = validate_dir(args.source)
 
         if not result:
             print("OK")
