@@ -184,7 +184,7 @@ class TronDaemon(object):
     def _run_manhole(self):
         self.manhole = make_manhole(dict(trond=self, mcp=self.mcp))
         reactor.listenUNIX(f"{self.options.working_dir}/manhole.sock", self.manhole)
-        log.info("manhole started on 8087")
+        log.info(f"manhole started on {self.options.working_dir}/manhole.sock")
 
     def _run_www_api(self):
         # Local import required because of reactor import in server and www
