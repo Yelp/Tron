@@ -298,7 +298,7 @@ class CheckJobsTestCase(TestCase):
                 'action_name':
                     'action1',
                 'state':
-                    'succeeded',
+                    'running',
                 'start_time':
                     time.strftime(
                         '%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)
