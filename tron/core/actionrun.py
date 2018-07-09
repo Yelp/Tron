@@ -375,6 +375,9 @@ class ActionRun(object):
             return self.machine.transition(target)
 
     def retry(self):
+        """Invoked externally (via API) when action needs to be re-tried
+        manually.
+        """
         if self.retries_remaining is None or self.retries_remaining <= 0:
             self.retries_remaining = 1
 
@@ -390,6 +393,7 @@ class ActionRun(object):
         self.start()
 
     def restart(self):
+        """Used by `fail` when action run has to be re-tried."""
         self.machine.reset()
         if self.retries_delay:
             log.debug(f"Suspending action run {self.id} for {self.retries_delay}")
