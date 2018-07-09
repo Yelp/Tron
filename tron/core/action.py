@@ -17,7 +17,7 @@ class Action(object):
         'name', 'command', 'node_pool', 'is_cleanup', 'retries',
         'expected_runtime', 'executor', 'cpus', 'mem', 'constraints',
         'docker_image', 'docker_parameters', 'env', 'extra_volumes',
-        'mesos_address'
+        'mesos_address', 'retries_delay'
     ]
 
     def __init__(
@@ -28,6 +28,7 @@ class Action(object):
         required_actions=None,
         dependent_actions=None,
         retries=None,
+        retries_delay=None,
         expected_runtime=None,
         executor=None,
         cpus=None,
@@ -43,6 +44,7 @@ class Action(object):
         self.command = command
         self.node_pool = node_pool
         self.retries = retries
+        self.retries_delay = retries_delay
         self.required_actions = required_actions or []
         self.dependent_actions = dependent_actions or []
         self.expected_runtime = expected_runtime
@@ -82,6 +84,7 @@ class Action(object):
             command=config.command,
             node_pool=node_repo.get_by_name(config.node),
             retries=config.retries,
+            retries_delay=config.retries_delay,
             expected_runtime=config.expected_runtime,
             executor=config.executor,
             cpus=config.cpus,

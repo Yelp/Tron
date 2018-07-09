@@ -150,6 +150,7 @@ ConfigAction = config_object_factory(
         'requires',  # tuple of str
         'node',  # str
         'retries',  # int
+        'retries_delay',  # datetime.Timedelta
         'executor',  # str
         'cpus',  # float
         'mem',  # float
@@ -172,6 +173,7 @@ ConfigCleanupAction = config_object_factory(
         'name',  # str
         'node',  # str
         'retries',  # int
+        'retries_delay',  # datetime.Timedelta
         'expected_runtime',  # datetime.Timedelta
         'executor',  # str
         'cpus',  # float

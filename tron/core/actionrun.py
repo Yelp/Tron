@@ -1,13 +1,11 @@
 """
  tron.core.actionrun
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import logging
 
 import six
 from six.moves import filter
+from twisted.internet import reactor
 
 from tron import command_context
 from tron import node
@@ -89,6 +87,7 @@ class ActionRunFactory(object):
             'cleanup': action.is_cleanup,
             'action_runner': action_runner,
             'retries_remaining': action.retries,
+            'retries_delay': action.retries_delay,
             'executor': action.executor,
             'cpus': action.cpus,
             'mem': action.mem,
@@ -192,6 +191,7 @@ class ActionRun(object):
         exit_status=None,
         action_runner=None,
         retries_remaining=None,
+        retries_delay=None,
         exit_statuses=None,
         machine=None,
         executor=None,
@@ -232,6 +232,7 @@ class ActionRun(object):
         self.output_path.append(self.id)
         self.context = command_context.build_context(self, parent_context)
         self.retries_remaining = retries_remaining
+        self.retries_delay = retries_delay
         self.exit_statuses = exit_statuses
         if self.exit_statuses is None:
             self.exit_statuses = []
@@ -302,6 +303,7 @@ class ActionRun(object):
             ),
             exit_status=state_data.get('exit_status'),
             retries_remaining=state_data.get('retries_remaining'),
+            retries_delay=state_data.get('retries_delay'),
             exit_statuses=state_data.get('exit_statuses'),
             action_runner=action_runner,
             executor=state_data.get('executor', ExecutorTypes.ssh),
@@ -379,12 +381,22 @@ class ActionRun(object):
         if self.is_done:
             return self.fail(self.exit_status)
         else:
-            log.info("Killing the current action run for a retry")
+            log.info(f"Killing action run {self.id} for a retry")
             return self.kill(final=False)
+
+    def start_after_delay(self):
+        log.debug(f"Resuming action run {self.id} after backoff")
+        self.self.in_delay = False
+        self.start()
 
     def restart(self):
         self.machine.reset()
-        return self.start()
+        if self.retries_delay:
+            log.debug(f"Suspending action run {self.id} for {self.retries_delay}")
+            self.in_delay = True
+            reactor.callLater(self.retries_delay, self.start_after_delay)
+        else:
+            return self.start()
 
     def fail(self, exit_status=0):
         if self.retries_remaining is not None:
