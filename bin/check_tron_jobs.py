@@ -7,7 +7,7 @@ import sys
 import time
 from enum import Enum
 
-import pandas
+import pytimeparse
 from pysensu_yelp import send_event
 
 from tron.commands import cmd_utils
@@ -222,7 +222,7 @@ def is_job_run_exceeding_expected_runtime(job_run, job_expected_runtime):
     if job_expected_runtime is not None and job_run.get(
         'state', 'unknown'
     ) == "running":
-        duration_seconds = pandas.to_timedelta(job_run.get('duration', '')).total_seconds()
+        duration_seconds = pytimeparse.parse(job_run.get('duration', ''))
         if duration_seconds > job_expected_runtime:
             return True
     return False
@@ -236,7 +236,7 @@ def is_action_run_exceeding_expected_runtime(
         if action_name in actions_expected_runtime and actions_expected_runtime[
             action_name
         ] is not None:
-            duration_seconds = pandas.to_timedelta(action_run.get('duration', '')).total_seconds()
+            duration_seconds = pytimeparse.parse(action_run.get('duration', ''))
             if duration_seconds > actions_expected_runtime[action_name]:
                 return True
     return False

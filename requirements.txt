@@ -4,11 +4,11 @@ docutils>=0.8.1
 ipdb
 ipython
 Jinja2>=2.6
-pandas
 psutil
 pyasn1>=0.0.13
 pycrypto>=2.4
 Pygments>=1.4
+pytimeparse
 pytz>=2011n
 PyYAML>=3.0
 requests
