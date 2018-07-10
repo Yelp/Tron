@@ -24,9 +24,15 @@ from tron import actioncommand
 from tron import event
 from tron import node
 from tron import scheduler
+from tron.config import config_utils
+from tron.config.job import Job as JobConfig
 from tron.core import job
 from tron.core import jobrun
 from tron.core.actionrun import ActionRun
+from tron.core.job import Job
+from tron.core.job import JobCollection
+from tron.core.job import JobScheduler
+from tron.core.job import JobSchedulerFactory
 
 
 class JobTestCase(TestCase):
@@ -42,7 +48,7 @@ class JobTestCase(TestCase):
 
         patcher = mock.patch('tron.core.job.node.NodePoolRepository')
         with patcher as self.mock_node_repo:
-            self.job = job.Job(
+            self.job = Job(
                 "jobname",
                 scheduler,
                 run_collection=run_collection,
@@ -60,30 +66,40 @@ class JobTestCase(TestCase):
 
     @mock.patch('tron.core.job.event', autospec=True)
     def test_from_config(self, _mock_event):
-        action = mock.MagicMock(
-            name='first',
-            command='doit',
-            node=None,
-            requires=[],
+        action = {
+            'name': 'first',
+            'command': 'doit',
+        }
+        parent_context = config_utils.ConfigContext(
+            'config',
+            ['localhost'],
+            ['cluster'],
+            None,
         )
-        job_config = mock.Mock(
-            name='ajob',
-            node='thenodepool',
-            monitoring={
-                "team": "foo",
-                "page": True,
-            },
-            all_nodes=False,
-            queueing=True,
-            enabled=True,
-            run_limit=20,
-            actions={action.name: action},
-            cleanup_action=None,
+        self.mock_node_repo.get_instance().get_by_name = mock.Mock(
+            return_value='thenode'
+        )
+        job_config = JobConfig.from_config(
+            dict(
+                name='ajob',
+                node='localhost',
+                schedule='cron * * * * *',
+                namespace='MASTER',
+                monitoring={
+                    "team": "foo",
+                    "page": True
+                },
+                all_nodes=False,
+                queueing=True,
+                enabled=True,
+                run_limit=20,
+                actions=[action],
+                cleanup_action=None,
+            )
         )
         scheduler = 'scheduler_token'
-        parent_context = 'parent_context_token'
         output_path = ["base_path"]
-        new_job = job.Job.from_config(
+        new_job = Job.from_config(
             job_config,
             scheduler,
             parent_context,
@@ -102,7 +118,7 @@ class JobTestCase(TestCase):
 
     def test_update_from_job(self):
         action_runner = mock.Mock()
-        other_job = job.Job(
+        other_job = Job(
             'otherjob',
             'scheduler',
             action_runner=action_runner,
@@ -216,26 +232,26 @@ class JobTestCase(TestCase):
         self.job.notify.assert_called_with(self.job.NOTIFY_RUN_DONE)
 
     def test__eq__(self):
-        other_job = job.Job("jobname", 'scheduler')
+        other_job = Job("jobname", 'scheduler')
         assert not self.job == other_job
         other_job.update_from_job(self.job)
         assert_equal(self.job, other_job)
 
     def test__ne__(self):
-        other_job = job.Job("jobname", 'scheduler')
+        other_job = Job("jobname", 'scheduler')
         assert self.job != other_job
         other_job.update_from_job(self.job)
         assert not self.job != other_job
 
     def test__eq__true(self):
         action_runner = mock.Mock()
-        first = job.Job("jobname", 'scheduler', action_runner=action_runner)
-        second = job.Job("jobname", 'scheduler', action_runner=action_runner)
+        first = Job("jobname", 'scheduler', action_runner=action_runner)
+        second = Job("jobname", 'scheduler', action_runner=action_runner)
         assert_equal(first, second)
 
     def test__eq__false(self):
-        first = job.Job("jobname", 'scheduler', action_runner=mock.Mock())
-        second = job.Job("jobname", 'scheduler', action_runner=mock.Mock())
+        first = Job("jobname", 'scheduler', action_runner=mock.Mock())
+        second = Job("jobname", 'scheduler', action_runner=mock.Mock())
         assert_not_equal(first, second)
 
 
@@ -367,13 +383,13 @@ class JobSchedulerGetRunsToScheduleTestCase(TestCase):
         self.scheduler = mock.Mock()
         run_collection = mock.Mock(has_pending=False)
         node_pool = mock.Mock()
-        self.job = job.Job(
+        self.job = Job(
             "jobname",
             self.scheduler,
             run_collection=run_collection,
             node_pool=node_pool,
         )
-        self.job_scheduler = job.JobScheduler(self.job)
+        self.job_scheduler = JobScheduler(self.job)
         self.job.runs.get_pending.return_value = False
         self.scheduler.queue_overlapping = True
 
@@ -430,13 +446,13 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
         self.scheduler = mock.Mock()
         run_collection = mock.Mock()
         node_pool = mock.Mock()
-        self.job = job.Job(
+        self.job = Job(
             "jobname",
             self.scheduler,
             run_collection=run_collection,
             node_pool=node_pool,
         )
-        self.job_scheduler = job.JobScheduler(self.job)
+        self.job_scheduler = JobScheduler(self.job)
         self.manual_run = mock.Mock()
         self.job.build_new_runs = mock.Mock(return_value=[self.manual_run])
 
@@ -486,13 +502,13 @@ class JobSchedulerScheduleTestCase(TestCase):
         run_collection.build_new_run.return_value = mock_build_new_run
         mock_build_new_run.seconds_until_run_time.return_value = 0
         node_pool = mock.Mock()
-        self.job = job.Job(
+        self.job = Job(
             name="jobname",
             scheduler=self.scheduler,
             run_collection=run_collection,
             node_pool=node_pool,
         )
-        self.job_scheduler = job.JobScheduler(self.job)
+        self.job_scheduler = JobScheduler(self.job)
         self.original_build_new_runs = self.job.build_new_runs
         self.job.build_new_runs = mock.Mock(return_value=[mock_run])
 
@@ -543,7 +559,7 @@ class JobSchedulerScheduleTestCase(TestCase):
         self.job.scheduler.schedule_on_complete = False
         queued_job_run = mock.Mock()
         self.job.runs.get_first_queued = lambda: queued_job_run
-        self.job_scheduler.handle_job_events(self.job, job.Job.NOTIFY_RUN_DONE)
+        self.job_scheduler.handle_job_events(self.job, Job.NOTIFY_RUN_DONE)
         self.eventloop.call_later.assert_any_call(
             0,
             self.job_scheduler.run_job,
@@ -554,7 +570,7 @@ class JobSchedulerScheduleTestCase(TestCase):
     def test_handle_job_events_schedule_on_complete(self):
         self.job_scheduler.schedule = mock.Mock()
         self.job.scheduler.schedule_on_complete = True
-        self.job_scheduler.handle_job_events(self.job, job.Job.NOTIFY_RUN_DONE)
+        self.job_scheduler.handle_job_events(self.job, Job.NOTIFY_RUN_DONE)
         self.job_scheduler.schedule.assert_called_with()
 
     def test_handler_unknown_event(self):
@@ -570,7 +586,7 @@ class JobSchedulerScheduleTestCase(TestCase):
                 return []
 
         self.job.runs.get_runs_by_state = get_queued
-        self.job_scheduler.handler(self.job, job.Job.NOTIFY_RUN_DONE)
+        self.job_scheduler.handler(self.job, Job.NOTIFY_RUN_DONE)
         self.job_scheduler.run_job.assert_not_called()
 
     def test_run_queue_schedule(self):
@@ -601,7 +617,7 @@ class JobSchedulerFactoryTestCase(TestCase):
         self.action_runner = mock.create_autospec(
             actioncommand.SubprocessActionRunnerFactory,
         )
-        self.factory = job.JobSchedulerFactory(
+        self.factory = JobSchedulerFactory(
             self.context,
             self.output_stream_dir,
             self.time_zone,
@@ -627,12 +643,12 @@ class JobSchedulerFactoryTestCase(TestCase):
 class JobCollectionTestCase(TestCase):
     @setup
     def setup_collection(self):
-        self.collection = job.JobCollection()
+        self.collection = JobCollection()
 
     def test_load_from_config(self):
         autospec_method(self.collection.jobs.filter_by_name)
         autospec_method(self.collection.add)
-        factory = mock.create_autospec(job.JobSchedulerFactory)
+        factory = mock.create_autospec(JobSchedulerFactory)
         job_configs = {'a': mock.Mock(), 'b': mock.Mock()}
         result = self.collection.load_from_config(job_configs, factory, True)
         result = list(result)
@@ -649,8 +665,8 @@ class JobCollectionTestCase(TestCase):
             job_scheduler.get_job.assert_called_with()
 
     def test_update(self):
-        mock_scheduler = mock.create_autospec(job.JobScheduler)
-        existing_scheduler = mock.create_autospec(job.JobScheduler)
+        mock_scheduler = mock.create_autospec(JobScheduler)
+        existing_scheduler = mock.create_autospec(JobScheduler)
         autospec_method(
             self.collection.get_by_name,
             return_value=existing_scheduler,

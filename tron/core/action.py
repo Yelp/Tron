@@ -1,60 +1,131 @@
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
+import datetime
 import logging
+from enum import Enum
+
+from pyrsistent import CheckedPMap
+from pyrsistent import CheckedPVector
+from pyrsistent import field
+from pyrsistent import PRecord
+from pyrsistent import PSet
+from pyrsistent import pset
+from pyrsistent import s
 
 from tron import node
+from tron.config import ConfigRecord
+from tron.config.config_utils import IDENTIFIER_RE
+from tron.config.config_utils import TIME_INTERVAL_RE
+from tron.config.config_utils import TIME_INTERVAL_UNITS
 from tron.config.schema import CLEANUP_ACTION_NAME
 from tron.utils import maybe_decode
 
 log = logging.getLogger(__name__)
 
 
-class Action(object):
+def factory_time_delta(value):
+    if isinstance(value, datetime.timedelta):
+        return value
+
+    error_msg = "Value is not a valid time delta: %s"
+    matches = TIME_INTERVAL_RE.match(value)
+    if not matches:
+        raise RuntimeError(error_msg % value)
+
+    units = matches.group('units')
+    if units not in TIME_INTERVAL_UNITS:
+        raise RuntimeError(error_msg % value)
+
+    time_spec = {TIME_INTERVAL_UNITS[units]: int(matches.group('value'))}
+    return datetime.timedelta(**time_spec)
+
+
+class Constraint(PRecord):
+    attribute = field(mandatory=True)
+    operator = field(mandatory=True)
+    value = field(mandatory=True)
+
+
+class Constraints(CheckedPVector):
+    __type__ = Constraint
+
+
+class VolumeModes(Enum):
+    RO = 'RO'
+    RW = 'RW'
+
+
+class Volume(PRecord):
+    container_path = field(mandatory=True)
+    host_path = field(mandatory=True)
+    mode = field(mandatory=True, type=VolumeModes, factory=VolumeModes)
+
+
+class Volumes(CheckedPVector):
+    __type__ = Volume
+
+    @staticmethod
+    def from_config(items):
+        if not items:
+            return Volumes()
+
+        return Volumes([Volume(**item) for item in items])
+
+
+class DockerParam(PRecord):
+    key = field(mandatory=True)
+    value = field(mandatory=True)
+
+
+class DockerParams(CheckedPVector):
+    __type__ = DockerParam
+
+
+class ExecutorTypes(Enum):
+    ssh = 'ssh'
+    mesos = 'mesos'
+
+
+class Action(ConfigRecord):
     """A configurable data object for an Action."""
 
-    equality_attributes = [
-        'name', 'command', 'node_pool', 'is_cleanup', 'retries',
-        'expected_runtime', 'executor', 'cpus', 'mem', 'constraints',
-        'docker_image', 'docker_parameters', 'env', 'extra_volumes',
-        'mesos_address'
-    ]
+    name = field(
+        type=str,
+        factory=maybe_decode,
+        mandatory=True,
+        invariant=lambda x: (
+            bool(IDENTIFIER_RE.match(x)),
+            'Invalid action name: %s' % x,
+        ),
+    )
+    command = field(type=str, mandatory=True)
+    node_pool = field(type=(str, type(None)), mandatory=True)
+    requires = field(type=PSet, initial=s(), factory=pset)
+    retries = field(type=(int, type(None)), initial=None)
+    executor = field(
+        type=ExecutorTypes,
+        initial=ExecutorTypes.ssh,
+        factory=ExecutorTypes,
+    )
+    cluster = field(type=(str, type(None)), initial=None)
+    pool = field(type=(str, type(None)), initial=None)
+    cpus = field(type=(float, type(None)), initial=None, factory=float)
+    mem = field(type=(float, type(None)), initial=None, factory=float)
+    service = field(type=(str, type(None)), initial=None)
+    deploy_group = field(type=(str, type(None)), initial=None)
+    expected_runtime = field(
+        type=(datetime.timedelta, type(None)),
+        initial=datetime.timedelta(hours=24),
+        factory=factory_time_delta,
+    )
 
-    def __init__(
-        self,
-        name,
-        command,
-        node_pool,
-        required_actions=None,
-        dependent_actions=None,
-        retries=None,
-        expected_runtime=None,
-        executor=None,
-        cpus=None,
-        mem=None,
-        constraints=None,
-        docker_image=None,
-        docker_parameters=None,
-        env=None,
-        extra_volumes=None,
-        mesos_address=None,
-    ):
-        self.name = maybe_decode(name)
-        self.command = command
-        self.node_pool = node_pool
-        self.retries = retries
-        self.required_actions = required_actions or []
-        self.dependent_actions = dependent_actions or []
-        self.expected_runtime = expected_runtime
-        self.executor = executor
-        self.cpus = cpus
-        self.mem = mem
-        self.constraints = constraints or []
-        self.docker_image = docker_image
-        self.docker_parameters = docker_parameters or []
-        self.env = env or {}
-        self.extra_volumes = extra_volumes or []
-        self.mesos_address = mesos_address
+    constraints = field(type=Constraints, initial=Constraints())
+    docker_image = field(initial=None)
+    docker_parameters = field(type=DockerParams, initial=DockerParams())
+    env = field(initial={}, type=dict)
+    extra_volumes = field(type=Volumes, initial=Volumes())
+    mesos_address = field(initial=None)
+
+    required_actions = field(type=PSet, initial=s(), factory=pset)
+    dependent_actions = field(type=PSet, initial=s(), factory=pset)
 
     @property
     def is_cleanup(self):
@@ -63,51 +134,64 @@ class Action(object):
     @classmethod
     def from_config(cls, config):
         """Factory method for creating a new Action."""
-        node_repo = node.NodePoolRepository.get_instance()
+        if config is None or isinstance(config, Action):
+            return config
 
-        # Only convert config values if they are not None.
-        constraints = config.constraints
-        if constraints:
-            constraints = [[c.attribute, c.operator, c.value]
-                           for c in constraints]
-        docker_parameters = config.docker_parameters
-        if docker_parameters:
-            docker_parameters = [c._asdict() for c in docker_parameters]
-        extra_volumes = config.extra_volumes
-        if extra_volumes:
-            extra_volumes = [c._asdict() for c in extra_volumes]
+        config = dict(**config)
 
-        return cls(
-            name=config.name,
-            command=config.command,
-            node_pool=node_repo.get_by_name(config.node),
-            retries=config.retries,
-            expected_runtime=config.expected_runtime,
-            executor=config.executor,
-            cpus=config.cpus,
-            mem=config.mem,
-            constraints=constraints,
-            docker_image=config.docker_image,
-            docker_parameters=docker_parameters,
-            env=config.env,
-            extra_volumes=extra_volumes,
-            mesos_address=config.mesos_address,
-        )
+        if 'node_pool' not in config:
+            node_name = config.get('node')
+            node_repo = node.NodePoolRepository.get_instance()
+            config['node_pool'] = node_repo.get_by_name(node_name)
+            if 'node' in config:
+                del config['node']
 
-    def __eq__(self, other):
-        attributes_match = all(
-            getattr(self, attr, None) == getattr(other, attr, None)
-            for attr in self.equality_attributes
-        )
-        return attributes_match and all(
-            self_act == other_act for (
-                self_act,
-                other_act,
-            ) in zip(self.required_actions, other.required_actions)
-        )
+        if config['name'] == CLEANUP_ACTION_NAME:
+            requires = config.get('requires')
+            if requires is not None and len(requires) > 0:
+                raise ValueError(
+                    "Cleanup action cannot have dependencies, has {}".
+                    format(requires)
+                )
 
-    def __ne__(self, other):
-        return not self == other
+        if config.get('executor') == ExecutorTypes.mesos:
+            required_keys = {'cpus', 'mem', 'docker_image', 'mesos_address'}
+            missing_keys = required_keys - set(config.keys())
+            if missing_keys:
+                name = config['name']
+                raise ValueError(
+                    f"Mesos executor for action {name} is missing "
+                    f"these required keys: {missing_keys}"
+                )
 
-    def __hash__(self):
-        return hash(self.name)
+        return cls.create(config)
+
+
+class ActionMap(CheckedPMap):
+    __key_type__ = str
+    __value_type__ = Action
+
+    @classmethod
+    def from_config(cls, actions):
+        """Factory method for creating a new ActionMap."""
+        if actions is None or isinstance(actions, ActionMap):
+            return actions
+
+        if isinstance(actions, list):
+            all_names = [item['name'] for item in actions]
+            uniq_names = set(all_names)
+
+            if len(uniq_names) < len(all_names):
+                raise ValueError(
+                    "Duplicate action names found: {}".format([
+                        name for name in uniq_names
+                        if all_names.count(name) > 1
+                    ])
+                )
+
+            actions = {item['name']: item for item in actions}
+
+        return cls.create({
+            name: Action.from_config(action)
+            for name, action in actions.items()
+        })

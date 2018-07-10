@@ -19,7 +19,6 @@ setup(
     description='Job scheduling and monitoring system',
     classifiers=[
         "Programming Language :: Python",
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3.6',
         "Operating System :: OS Independent",
         "License :: OSI Approved :: Apache Software License",
@@ -48,6 +47,7 @@ setup(
         'bsddb3',
         'ipython',
         'ipdb',
+        'pyrsistent >= 0.14.2',
         'task_processing[mesos_executor]>=0.0.10',
         'requests',
         'psutil'

@@ -12,7 +12,7 @@ from testify.assertions import assert_not_equal
 from tests.testingutils import autospec_method
 from tron import actioncommand
 from tron.actioncommand import ActionCommand
-from tron.config import schema
+from tron.config.action_runner import ActionRunner
 from tron.serialize import filehandler
 
 
@@ -120,7 +120,11 @@ class CreateActionCommandFactoryFromConfigTestCase(TestCase):
         assert_equal(type(factory), actioncommand.NoActionRunnerFactory)
 
     def test_create_default_action_command(self):
-        config = schema.ConfigActionRunner('none', None, None)
+        config = ActionRunner(
+            runner_type='none',
+            remote_exec_path=None,
+            remote_status_path=None,
+        )
         factory = actioncommand.create_action_runner_factory_from_config(
             config,
         )
@@ -128,10 +132,10 @@ class CreateActionCommandFactoryFromConfigTestCase(TestCase):
 
     def test_create_action_command_with_simple_runner(self):
         status_path, exec_path = '/tmp/what', '/remote/bin'
-        config = schema.ConfigActionRunner(
-            'subprocess',
-            status_path,
-            exec_path,
+        config = ActionRunner(
+            runner_type='subprocess',
+            remote_status_path=status_path,
+            remote_exec_path=exec_path,
         )
         factory = actioncommand.create_action_runner_factory_from_config(
             config,

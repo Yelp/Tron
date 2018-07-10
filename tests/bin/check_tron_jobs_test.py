@@ -102,100 +102,49 @@ class CheckJobsTestCase(TestCase):
     def test_get_relevant_action_picks_the_first_one_succeeded(self):
         action_runs = [
             {
-                'id':
-                    'MASTER.test.action1',
-                'action_name':
-                    'action1',
-                'state':
-                    'succeeded',
-                'start_time':
-                    time.strftime(
-                        '%Y-%m-%d %H:%M:%S',
-                        time.localtime(time.time() - 1200)
-                    ),
-                'duration':
-                    '0:18:01.475067',
+                'id': 'MASTER.test.action1',
+                'action_name': 'action1',
+                'state': 'succeeded',
+                'start_time': time.localtime(time.time() - 1200),
             },
             {
-                'id':
-                    'MASTER.test.action2',
-                'action_name':
-                    'action2',
-                'state':
-                    'succeeded',
-                'start_time':
-                    time.strftime(
-                        '%Y-%m-%d %H:%M:%S', time.localtime(time.time() - 600)
-                    ),
-                'duration':
-                    '0:08:02.005783',
+                'id': 'MASTER.test.action2',
+                'action_name': 'action2',
+                'state': 'succeeded',
+                'start_time': time.localtime(time.time() - 600),
             },
             {
-                'id':
-                    'MASTER.test.action1',
-                'action_name':
-                    'action1',
-                'state':
-                    'succeeded',
-                'start_time':
-                    time.strftime(
-                        '%Y-%m-%d %H:%M:%S', time.localtime(time.time())
-                    ),
-                'duration':
-                    '0:00:01.006305',
+                'id': 'MASTER.test.action1',
+                'action_name': 'action1',
+                'state': 'succeeded',
+                'start_time': time.localtime(time.time()),
             },
         ]
         actual = check_tron_jobs.get_relevant_action(
             action_runs=action_runs,
             last_state=State.SUCCEEDED,
-            actions_expected_runtime={
-                'action1': 86400.0,
-                'action2': 86400.0,
-                'action3': 86400.0
-            },
         )
         assert_equal(actual["id"], "MASTER.test.action1")
 
     def test_get_relevant_action_pick_the_one_stuck(self):
         action_runs = [
             {
-                'id':
-                    'MASTER.test.1.action3',
-                'state':
-                    'succeeded',
-                'start_time':
-                    time.strftime(
-                        '%Y-%m-%d %H:%M:%S',
-                        time.localtime(time.time() - 1200)
-                    ),
-                'duration':
-                    '0:18:01.475067',
+                'id': 'MASTER.test.action1',
+                'action_name': 'action1',
+                'state': 'succeeded',
+                'start_time': time.localtime(time.time() - 1200),
             },
             {
-                'id':
-                    'MASTER.test.1.action2',
-                'state':
-                    'running',
-                'start_time':
-                    time.strftime(
-                        '%Y-%m-%d %H:%M:%S',
-                        time.localtime(time.time() - 1100)
-                    ),
-                'duration':
-                    '0:18:40.005783',
+                'id': 'MASTER.test.action2',
+                'action_name': 'action2',
+                'state': 'running',
+                'start_time': time.localtime(time.time() - 1100),
             },
             {
-                'id':
-                    'MASTER.test.1.action1',
-                'state':
-                    'succeeded',
-                'start_time':
-                    time.strftime(
-                        '%Y-%m-%d %H:%M:%S',
-                        time.localtime(time.time() - 1000)
-                    ),
-                'duration':
-                    '0:00:01.006305',
+                'id': 'MASTER.test.action1',
+                'action_name': 'action1',
+                'state': 'succeeded',
+                'start_time': time.localtime(time.time() - 1000),
             },
         ]
         actual = check_tron_jobs.get_relevant_action(
@@ -207,7 +156,7 @@ class CheckJobsTestCase(TestCase):
                 'action3': 86400.0,
             }
         )
-        assert_equal(actual["id"], "MASTER.test.1.action2")
+        assert_equal(actual["id"], "MASTER.test.action2")
 
     def test_get_relevant_action_pick_the_one_exceeds_expected_runtime(self):
         action_runs = [

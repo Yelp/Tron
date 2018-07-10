@@ -18,6 +18,7 @@ from tests.testingutils import Turtle
 from tron import actioncommand
 from tron import event
 from tron import node
+from tron.core import action
 from tron.core import actiongraph
 from tron.core import actionrun
 from tron.core import job
@@ -26,7 +27,9 @@ from tron.serialize import filehandler
 
 
 def build_mock_job():
-    action_graph = mock.create_autospec(actiongraph.ActionGraph)
+    action_graph = actiongraph.ActionGraph.from_config(
+        action.ActionMap.from_config([dict(name='test', command='test')])
+    )
     runner = mock.create_autospec(actioncommand.SubprocessActionRunnerFactory)
     return mock.create_autospec(
         job.Job,

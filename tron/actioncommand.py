@@ -6,7 +6,7 @@ import os
 
 from six.moves import shlex_quote
 
-from tron.config import schema
+from tron.config.action_runner import ActionRunnerTypes
 from tron.serialize import filehandler
 from tron.utils import state
 from tron.utils import timeutils
@@ -232,11 +232,8 @@ def create_action_runner_factory_from_config(config):
     if not config:
         return NoActionRunnerFactory()
 
-    if config.runner_type not in schema.ActionRunnerTypes:
-        raise ValueError("Unknown runner type: %s", config.runner_type)
-
-    if config.runner_type == schema.ActionRunnerTypes.none:
+    if config.runner_type == ActionRunnerTypes.none:
         return NoActionRunnerFactory()
 
-    if config.runner_type == schema.ActionRunnerTypes.subprocess:
+    if config.runner_type == ActionRunnerTypes.subprocess:
         return SubprocessActionRunnerFactory.from_config(config)

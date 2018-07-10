@@ -9,7 +9,6 @@ import six
 from twisted.conch.client.knownhosts import KnownHostsFile
 from twisted.internet import defer
 from twisted.internet import protocol
-from twisted.internet import reactor
 from twisted.python import failure
 from twisted.python.filepath import FilePath
 
@@ -485,7 +484,7 @@ class Node(object):
         #  1. Transport is created (our client creator does this)
         #  2. Our transport is secure, and we can create our connection
         #  3. The connection service is started, so we can use it
-
+        from twisted.internet import reactor
         client_creator = protocol.ClientCreator(
             reactor,
             ssh.ClientTransport,

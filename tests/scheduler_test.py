@@ -18,18 +18,14 @@ from testify import TestCase
 
 from tests import testingutils
 from tron import scheduler
-from tron.config import config_utils
 from tron.config import schedule_parse
-from tron.config.config_utils import NullConfigContext
-from tron.config.schedule_parse import parse_groc_expression
 from tron.utils import timeutils
 
 
 class SchedulerFromConfigTestCase(TestCase):
     def test_cron_scheduler(self):
         line = "cron */5 * * 7,8 *"
-        config_context = mock.Mock(path='test')
-        config = schedule_parse.valid_schedule(line, config_context)
+        config = schedule_parse.ConfigGenericSchedule.from_config(line)
         sched = scheduler.scheduler_from_config(config=config, time_zone=None)
         start_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
         next_time = sched.next_run_time(start_time)
@@ -37,9 +33,8 @@ class SchedulerFromConfigTestCase(TestCase):
         assert_equal(str(sched), "cron */5 * * 7,8 *")
 
     def test_daily_scheduler(self):
-        config_context = config_utils.NullConfigContext
         line = "daily 17:32 MWF"
-        config = schedule_parse.valid_schedule(line, config_context)
+        config = schedule_parse.ConfigGenericSchedule.from_config(line)
         sched = scheduler.scheduler_from_config(config=config, time_zone=None)
         assert_equal(sched.time_spec.hours, [17])
         assert_equal(sched.time_spec.minutes, [32])
@@ -269,8 +264,7 @@ class GeneralSchedulerDSTTest(testingutils.MockTimeTestCase):
 
 
 def parse_groc(config):
-    config = schedule_parse.ConfigGenericSchedule('groc daily', config, None)
-    return parse_groc_expression(config, NullConfigContext)
+    return schedule_parse.ConfigGenericSchedule.from_config(config)
 
 
 def scheduler_from_config(config):

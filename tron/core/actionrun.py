@@ -14,8 +14,8 @@ from tron import node
 from tron.actioncommand import ActionCommand
 from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
-from tron.config.schema import ExecutorTypes
 from tron.core import action
+from tron.core.action import ExecutorTypes
 from tron.mesos import MesosClusterRepository
 from tron.serialize import filehandler
 from tron.utils import iteration
@@ -36,14 +36,10 @@ class ActionRunFactory(object):
     @classmethod
     def build_action_run_collection(cls, job_run, action_runner):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
-        action_map = six.iteritems(job_run.action_graph.get_action_map())
         action_run_map = {
-            maybe_decode(name): cls.build_run_for_action(
-                job_run,
-                action_inst,
-                action_runner,
-            )
-            for name, action_inst in action_map
+            name:
+            cls.build_run_for_action(job_run, action_inst, action_runner)
+            for name, action_inst in job_run.action_graph.action_map.items()
         }
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
@@ -304,7 +300,7 @@ class ActionRun(object):
             retries_remaining=state_data.get('retries_remaining'),
             exit_statuses=state_data.get('exit_statuses'),
             action_runner=action_runner,
-            executor=state_data.get('executor', ExecutorTypes.ssh),
+            executor=ExecutorTypes(state_data.get('executor', 'ssh')),
             cpus=state_data.get('cpus'),
             mem=state_data.get('mem'),
             constraints=state_data.get('constraints'),
@@ -694,9 +690,7 @@ class ActionRunCollection(object):
         )
 
     def action_runs_for_actions(self, actions):
-        return (
-            self.run_map[a.name] for a in actions if a.name in self.run_map
-        )
+        return [self.run_map[a] for a in actions if a in self.run_map]
 
     def get_action_runs_with_cleanup(self):
         return six.itervalues(self.run_map)
@@ -756,9 +750,8 @@ class ActionRunCollection(object):
         if action_run.is_done or action_run.is_active:
             return False
 
-        required_actions = self.action_graph.get_required_actions(
-            action_run.action_name,
-        )
+        action_name = action_run.action_name
+        required_actions = self.action_graph[action_name].required_actions
         if not required_actions:
             return False
 

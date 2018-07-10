@@ -13,7 +13,7 @@ from testify import TestCase
 
 from tests.assertions import assert_raises
 from tests.testingutils import autospec_method
-from tron.config import schema
+from tron.config.state_persistence import StatePersistence
 from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 from tron.serialize.runstate.statemanager import PersistenceManagerFactory
@@ -30,12 +30,7 @@ class PersistenceManagerFactoryTestCase(TestCase):
         tmpdir = tempfile.mkdtemp()
         try:
             fname = os.path.join(tmpdir, 'state')
-            config = schema.ConfigState(
-                store_type='shelve',
-                name=fname,
-                buffer_size=0,
-                connection_details=None,
-            )
+            config = StatePersistence(name=fname)
             manager = PersistenceManagerFactory.from_config(config)
             store = manager._impl
             assert_equal(store.filename, config.name)
