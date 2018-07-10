@@ -7,6 +7,7 @@ import sys
 import time
 from enum import Enum
 
+import pytimeparse
 from pysensu_yelp import send_event
 
 from tron.commands import cmd_utils
@@ -186,16 +187,6 @@ def is_job_scheduled(job_runs):
     return None
 
 
-def _get_seconds_from_duration(duration):
-    seconds = 0.0
-    if "day" in duration:
-        seconds = 86400.0 * float(duration.split(" ")[0])
-        duration = duration.split(" ")[2]
-    for dur in duration.split(":"):
-        seconds = seconds * 60 + float(dur)
-    return seconds
-
-
 def is_job_stuck(job_runs):
     next_run_time = None
 
@@ -231,9 +222,7 @@ def is_job_run_exceeding_expected_runtime(job_run, job_expected_runtime):
     if job_expected_runtime is not None and job_run.get(
         'state', 'unknown'
     ) == "running":
-        duration_seconds = _get_seconds_from_duration(
-            job_run.get('duration', '')
-        )
+        duration_seconds = pytimeparse.parse(job_run.get('duration', ''))
         if duration_seconds > job_expected_runtime:
             return True
     return False
@@ -247,9 +236,7 @@ def is_action_run_exceeding_expected_runtime(
         if action_name in actions_expected_runtime and actions_expected_runtime[
             action_name
         ] is not None:
-            duration_seconds = _get_seconds_from_duration(
-                action_run.get('duration', '')
-            )
+            duration_seconds = pytimeparse.parse(action_run.get('duration', ''))
             if duration_seconds > actions_expected_runtime[action_name]:
                 return True
     return False
