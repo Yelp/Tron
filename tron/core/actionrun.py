@@ -388,17 +388,16 @@ class ActionRun(object):
             return self.kill(final=False)
 
     def start_after_delay(self):
-        log.debug(f"Resuming action run {self.id} after backoff")
-        self.self.in_delay = False
+        log.info(f"Resuming action run {self.id} after backoff")
+        self.in_delay = False
         self.start()
 
     def restart(self):
         """Used by `fail` when action run has to be re-tried."""
         self.machine.reset()
         if self.retries_delay:
-            log.debug(f"Suspending action run {self.id} for {self.retries_delay}")
-            self.in_delay = True
-            reactor.callLater(self.retries_delay, self.start_after_delay)
+            self.in_delay = reactor.callLater(self.retries_delay.seconds, self.start_after_delay)
+            log.info(f"Suspending action run {self.id} for {self.retries_delay}")
         else:
             return self.start()
 
@@ -449,6 +448,7 @@ class ActionRun(object):
             'node_name': self.node.get_name() if self.node else None,
             'exit_status': self.exit_status,
             'retries_remaining': self.retries_remaining,
+            'retries_delay': self.retries_delay,
             'exit_statuses': self.exit_statuses,
             'action_runner': action_runner,
             'executor': self.executor,
