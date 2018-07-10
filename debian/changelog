@@ -1,3 +1,10 @@
+tron (0.9.1.8) trusty; urgency=medium
+
+  * 0.9.1.8 tagged with 'make release'
+  * fix _get_seconds_from_duration bug in monitoring
+
+ -- root <root@7cb213fae950>  Tue, 10 Jul 2018 20:49:53 +0000
+
 tron (0.9.1.7) trusty; urgency=medium
 
   * 0.9.1.7 tagged with 'make release'
