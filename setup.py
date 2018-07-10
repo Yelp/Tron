@@ -50,7 +50,8 @@ setup(
         'ipdb',
         'task_processing[mesos_executor]>=0.0.10',
         'requests',
-        'psutil'
+        'psutil',
+        'cassandra-driver'
     ],
     packages=find_packages(exclude=['tests.*', 'tests']) + ['tronweb'],
     scripts=glob.glob('bin/*'),

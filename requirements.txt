@@ -1,4 +1,5 @@
 bsddb3
+cassandra-driver>=3.14.0
 cryptography>=2.1.4
 docutils>=0.8.1
 ipdb
