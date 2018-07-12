@@ -1,3 +1,19 @@
+tron (0.9.1.8) trusty; urgency=medium
+
+  * 0.9.1.8 tagged with 'make release'
+  * fix _get_seconds_from_duration bug in monitoring
+
+ -- root <root@7cb213fae950>  Tue, 10 Jul 2018 20:49:53 +0000
+
+tron (0.9.1.7) trusty; urgency=medium
+
+  * 0.9.1.7 tagged with 'make release'
+  * Make unknown alerts critical instead of warning
+  * Add manhole for debugging
+  * Fix validation of full tronfig directory
+
+ -- root <root@4a9f80473a39>  Mon, 09 Jul 2018 17:35:38 +0000
+
 tron (0.9.1.6) trusty; urgency=medium
 
   * 0.9.1.6 tagged with 'make release'

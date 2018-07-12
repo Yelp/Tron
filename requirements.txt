@@ -8,6 +8,7 @@ psutil
 pyasn1>=0.0.13
 pycrypto>=2.4
 Pygments>=1.4
+pytimeparse
 pytz>=2011n
 PyYAML>=3.0
 requests
