@@ -164,7 +164,13 @@ def get_relevant_run_and_state(job_content):
     run = is_job_scheduled(job_runs)
     if run is None:
         return job_runs[0], State.NOT_SCHEDULED
-    run = is_job_stuck(job_runs, job_content.get('expected_runtime', None), job_content.get('actions_expected_runtime', {}))
+    job_expected_runtime = job_content.get('expected_runtime', None)
+    actions_expected_runtime = job_content.get('actions_expected_runtime', {})
+    run = is_job_stuck(
+        job_runs=job_runs,
+        job_expected_runtime=job_expected_runtime,
+        actions_expected_runtime=actions_expected_runtime
+    )
     if run is not None:
         return run, State.STUCK
     for run in job_runs:
