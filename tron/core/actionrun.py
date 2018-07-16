@@ -238,6 +238,7 @@ class ActionRun(object):
             self.exit_statuses = []
 
         self.action_command = None
+        self.in_delay = None
 
     @property
     def state(self):
@@ -329,6 +330,11 @@ class ActionRun(object):
         if not self.machine.check('start'):
             return False
 
+        if self.in_delay is not None:
+            log.warning(f"Start of suspended action run {self.id}, cancelling suspend timer")
+            self.in_delay.cancel()
+            self.in_delay = None
+
         if len(self.exit_statuses) == 0:
             log.info("Starting action run %s", self.id)
         else:
@@ -389,7 +395,7 @@ class ActionRun(object):
 
     def start_after_delay(self):
         log.info(f"Resuming action run {self.id} after backoff")
-        self.in_delay = False
+        self.in_delay = None
         self.start()
 
     def restart(self):
