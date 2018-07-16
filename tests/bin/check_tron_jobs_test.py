@@ -411,6 +411,52 @@ class CheckJobsTestCase(TestCase):
         assert_equal(run['id'], 'MASTER.test.1')
         assert_equal(state, State.FAILED)
 
+    def test_most_recent_job_with_smaller_run_id_failed(self):
+        job_runs = {
+            'status':
+                'scheduled',
+            'next_run':
+                None,
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.3',
+                    'state':
+                        'scheduled',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() + 600),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'succeeded',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1800),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'failed',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                },
+            ],
+        }
+        run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
+        assert_equal(run['id'], 'MASTER.test.1')
+        assert_equal(state, State.FAILED)
+
     def test_job_running_but_action_failed_already(self):
         job_runs = {
             'status':
@@ -785,6 +831,11 @@ class CheckJobsTestCase(TestCase):
                         'MASTER.test.2',
                     'state':
                         'succeeded',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 300),
+                        ),
                     'end_time':
                         time.strftime(
                             '%Y-%m-%d %H:%M:%S',
@@ -796,6 +847,11 @@ class CheckJobsTestCase(TestCase):
                         'MASTER.test.1',
                     'state':
                         'succeeded',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 900),
+                        ),
                     'end_time':
                         time.strftime(
                             '%Y-%m-%d %H:%M:%S',
