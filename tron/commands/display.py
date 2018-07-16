@@ -414,7 +414,7 @@ def display_state_delayed(_, obj):
     state = obj['state']
     in_delay = obj['in_delay']
     if in_delay:
-        return f"{state} (retry delayed for {in_delay}s)"
+        return f"{state} (retry delayed for {int(in_delay)}s)"
     else:
         return state
 

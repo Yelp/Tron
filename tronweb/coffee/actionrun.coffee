@@ -165,7 +165,7 @@ class module.ActionRunView extends Backbone.View
                 <table class="table details">
                     <tbody>
                     <tr><td class="span2">State</td>
-                        <td><%= formatState(state) %></td></tr>
+                        <td><%= formatState(state) %><%= formatDelay(in_delay) %></td></tr>
                     <tr><td>Node</td>
                         <td><%= displayNode(node) %></td></tr>
                     <tr><td>Raw command</td>
