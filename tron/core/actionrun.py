@@ -327,13 +327,15 @@ class ActionRun(object):
 
     def start(self):
         """Start this ActionRun."""
-        if not self.machine.check('start'):
-            return False
-
         if self.in_delay is not None:
-            log.warning(f"Start of suspended action run {self.id}, cancelling suspend timer")
+            log.warning(
+                f"Start of suspended action run {self.id}, cancelling suspend timer"
+            )
             self.in_delay.cancel()
             self.in_delay = None
+
+        if not self.machine.check('start'):
+            return False
 
         if len(self.exit_statuses) == 0:
             log.info("Starting action run %s", self.id)
@@ -401,9 +403,13 @@ class ActionRun(object):
     def restart(self):
         """Used by `fail` when action run has to be re-tried."""
         self.machine.reset()
-        if self.retries_delay:
-            self.in_delay = reactor.callLater(self.retries_delay.seconds, self.start_after_delay)
-            log.info(f"Suspending action run {self.id} for {self.retries_delay}")
+        if self.retries_delay is not None:
+            self.in_delay = reactor.callLater(
+                self.retries_delay.seconds, self.start_after_delay
+            )
+            log.info(
+                f"Suspending action run {self.id} for {self.retries_delay}"
+            )
         else:
             return self.start()
 
