@@ -392,19 +392,19 @@ class DisplayEvents(TableDisplay):
     resize_fields = ['entity']
 
 
-def display_node(source, _):
+def display_node(source, _=None):
     if not source:
         return ''
     return '%s@%s' % (source['username'], source['hostname'])
 
 
-def display_node_pool(source, _):
+def display_node_pool(source, _=None):
     if not source:
         return ''
     return "%s (%d node(s))" % (source['name'], len(source['nodes']))
 
 
-def display_scheduler(source, _):
+def display_scheduler(source, _=None):
     if not source:
         return ''
     return "%s %s%s" % (source['type'], source['value'], source['jitter'])
