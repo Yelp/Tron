@@ -396,19 +396,19 @@ class ActionRun(object):
             return self.kill(final=False)
 
     def start_after_delay(self):
-        log.info(f"Resuming action run {self.id} after backoff")
+        log.info(f"Resuming action run {self.id} after retry delay")
+        self.machine.reset()
         self.in_delay = None
         self.start()
 
     def restart(self):
         """Used by `fail` when action run has to be re-tried."""
-        self.machine.reset()
         if self.retries_delay is not None:
             self.in_delay = reactor.callLater(
                 self.retries_delay.seconds, self.start_after_delay
             )
             log.info(
-                f"Suspending action run {self.id} for {self.retries_delay}"
+                f"Delaying action run {self.id} for a retry in {self.retries_delay}s"
             )
         else:
             return self.start()
