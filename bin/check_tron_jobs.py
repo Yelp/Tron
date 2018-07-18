@@ -153,16 +153,27 @@ def pretty_print_actions(action_run):
     return display.format_action_run_details(action_run)
 
 
-def get_relevant_run_and_state(job_runs):
-    if len(job_runs['runs']) == 0:
+def get_relevant_run_and_state(job_content):
+    job_runs = sorted(
+        job_content.get('runs', []),
+        key=lambda k: k['run_time'],
+        reverse=True,
+    )
+    if len(job_runs) == 0:
         return None, State.NO_RUN_YET
     run = is_job_scheduled(job_runs)
     if run is None:
-        return job_runs['runs'][0], State.NOT_SCHEDULED
-    run = is_job_stuck(job_runs)
+        return job_runs[0], State.NOT_SCHEDULED
+    job_expected_runtime = job_content.get('expected_runtime', None)
+    actions_expected_runtime = job_content.get('actions_expected_runtime', {})
+    run = is_job_stuck(
+        job_runs=job_runs,
+        job_expected_runtime=job_expected_runtime,
+        actions_expected_runtime=actions_expected_runtime
+    )
     if run is not None:
         return run, State.STUCK
-    for run in job_runs['runs']:
+    for run in job_runs:
         state = run.get('state', 'unknown')
         if state in ["failed", "succeeded", "unknown"]:
             return run, State(state)
@@ -170,7 +181,7 @@ def get_relevant_run_and_state(job_runs):
             action_state = is_action_failed_or_unknown(run)
             if action_state != State.SUCCEEDED:
                 return run, action_state
-    return job_runs['runs'][0], State.WAITING_FOR_FIRST_RUN
+    return job_runs[0], State.WAITING_FOR_FIRST_RUN
 
 
 def is_action_failed_or_unknown(job_run):
@@ -181,23 +192,15 @@ def is_action_failed_or_unknown(job_run):
 
 
 def is_job_scheduled(job_runs):
-    for run in job_runs['runs']:
-        if run.get('state', 'unknown') in ["scheduled", "queued"]:
-            return run
+    for job_run in job_runs:
+        if job_run.get('state', 'unknown') in ["scheduled", "queued"]:
+            return job_run
     return None
 
 
-def is_job_stuck(job_runs):
+def is_job_stuck(job_runs, job_expected_runtime, actions_expected_runtime):
     next_run_time = None
-
-    job_expected_runtime = job_runs.get('expected_runtime', None)
-    actions_expected_runtime = job_runs.get('actions_expected_runtime', {})
-
-    for job_run in sorted(
-        job_runs['runs'],
-        key=lambda k: k['run_time'],
-        reverse=True,
-    ):
+    for job_run in job_runs:
         if job_run.get('state', 'unknown') == "running":
             if is_job_run_exceeding_expected_runtime(
                 job_run, job_expected_runtime
@@ -361,7 +364,6 @@ def main():
     client = Client(args.server)
 
     error_code = 0
-
     global _run_interval
     _run_interval = args.run_interval
     if args.job is None:
