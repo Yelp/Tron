@@ -411,6 +411,7 @@ class ActionRun(object):
                 f"Delaying action run {self.id} for a retry in {self.retries_delay}s"
             )
         else:
+            self.machine.reset()
             return self.start()
 
     def fail(self, exit_status=0):
