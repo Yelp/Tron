@@ -454,6 +454,17 @@ class SSHActionRunTestCase(TestCase):
         assert_equal(self.action_run.exit_statuses, [-1])
         assert_equal(self.action_run.retries_remaining, 0)
 
+    @mock.patch('twisted.internet.reactor.callLater')
+    def test_retries_delay(self, callLater):
+        self.action_run.retries_delay = datetime.timedelta()
+        self.action_run.retries_remaining = 2
+        self.action_run.build_action_command()
+        self.action_run.action_command.exit_status = -1
+        self.action_run.machine.transition('start')
+        callLater.return_value = "delayed call"
+        self.action_run.fail(-1)
+        assert self.action_run.in_delay == "delayed call"
+
     def test_handler_running(self):
         self.action_run.build_action_command()
         self.action_run.machine.transition('start')

@@ -8,6 +8,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import functools
+import time
 
 import six
 from six.moves.urllib.parse import quote
@@ -99,6 +100,7 @@ class ActionRunAdapter(RunAdapter):
         'exit_status',
         'action_name',
         'exit_statuses',
+        'retries_remaining',
     ]
 
     translated_field_names = [
@@ -112,6 +114,8 @@ class ActionRunAdapter(RunAdapter):
         'duration',
         'job_name',
         'run_num',
+        'retries_delay',
+        'in_delay',
     ]
 
     def __init__(
@@ -158,6 +162,14 @@ class ActionRunAdapter(RunAdapter):
 
     def get_run_num(self):
         return self._obj.job_run_id.split('.')[-1]
+
+    def get_retries_delay(self):
+        if self._obj.retries_delay:
+            return str(self._obj.retries_delay)
+
+    def get_in_delay(self):
+        if self._obj.in_delay is not None:
+            return self._obj.in_delay.getTime() - time.time()
 
 
 class ActionGraphAdapter(object):

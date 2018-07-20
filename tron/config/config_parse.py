@@ -329,6 +329,7 @@ class ValidateAction(Validator):
         'node': None,
         'requires': (),
         'retries': None,
+        'retries_delay': None,
         'expected_runtime': datetime.timedelta(hours=24),
         'executor': schema.ExecutorTypes.ssh,
         'cpus': None,
@@ -355,6 +356,8 @@ class ValidateAction(Validator):
             requires,
         'retries':
             valid_int,
+        'retries_delay':
+            config_utils.valid_time_delta,
         'expected_runtime':
             config_utils.valid_time_delta,
         'executor':
@@ -399,6 +402,7 @@ class ValidateCleanupAction(Validator):
         'node': None,
         'name': CLEANUP_ACTION_NAME,
         'retries': None,
+        'retries_delay': None,
         'expected_runtime': datetime.timedelta(hours=24),
         'executor': schema.ExecutorTypes.ssh,
         'cpus': None,
@@ -419,6 +423,8 @@ class ValidateCleanupAction(Validator):
             valid_node_name,
         'retries':
             valid_int,
+        'retries_delay':
+            config_utils.valid_time_delta,
         'expected_runtime':
             config_utils.valid_time_delta,
         'executor':

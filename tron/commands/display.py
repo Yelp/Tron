@@ -219,10 +219,8 @@ def format_fields(display_obj, content):
         return display_obj.colors[field](field_value)
 
     def format_field(field):
-        value = content.get(field)
-        if value is None:
-            return ''
-        return field_display_mapping.get(field, lambda f: f)(value)
+        formatter = field_display_mapping.get(field, lambda f, _: f)
+        return formatter(content.get(field), content)
 
     def build_field(label, field):
         return "%-20s: %s" % (label, add_color(field, format_field(field)))
@@ -346,7 +344,7 @@ class DisplayActionRuns(TableDisplay):
 
     detail_labels = [
         ('Action Run', 'id'),
-        ('State', 'state'),
+        ('State', 'state_delayed'),
         ('Node', 'node'),
         ('Command', 'command'),
         ('Bare command', 'raw_command'),
@@ -394,22 +392,38 @@ class DisplayEvents(TableDisplay):
     resize_fields = ['entity']
 
 
-def display_node(source):
+def display_node(source, _=None):
+    if not source:
+        return ''
     return '%s@%s' % (source['username'], source['hostname'])
 
 
-def display_node_pool(source):
+def display_node_pool(source, _=None):
+    if not source:
+        return ''
     return "%s (%d node(s))" % (source['name'], len(source['nodes']))
 
 
-def display_scheduler(source):
+def display_scheduler(source, _=None):
+    if not source:
+        return ''
     return "%s %s%s" % (source['type'], source['value'], source['jitter'])
+
+
+def display_state_delayed(_, obj):
+    state = obj['state']
+    in_delay = obj['in_delay']
+    if in_delay:
+        return f"{state} (retry delayed for {int(in_delay)}s)"
+    else:
+        return state
 
 
 field_display_mapping = {
     'node': display_node,
     'node_pool': display_node_pool,
     'scheduler': display_scheduler,
+    'state_delayed': display_state_delayed,
 }
 
 

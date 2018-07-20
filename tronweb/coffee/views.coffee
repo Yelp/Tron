@@ -68,6 +68,12 @@ window.formatState = (state) =>
     """<span class="label #{state}">#{state}</span>"""
 
 
+window.formatDelay = (delay) ->
+    if delay
+        """<small> (retry delayed for #{Math.round(delay)}s)</small>"""
+    else
+        ""
+
 module.makeHeaderToggle = (root) ->
     headers = root.find('.outline-block h2')
     headers.click (event) -> $(event.target).nextAll().slideToggle()

@@ -1,13 +1,11 @@
 """
  tron.core.actionrun
 """
-from __future__ import absolute_import
-from __future__ import unicode_literals
-
 import logging
 
 import six
 from six.moves import filter
+from twisted.internet import reactor
 
 from tron import command_context
 from tron import node
@@ -89,6 +87,7 @@ class ActionRunFactory(object):
             'cleanup': action.is_cleanup,
             'action_runner': action_runner,
             'retries_remaining': action.retries,
+            'retries_delay': action.retries_delay,
             'executor': action.executor,
             'cpus': action.cpus,
             'mem': action.mem,
@@ -192,6 +191,7 @@ class ActionRun(object):
         exit_status=None,
         action_runner=None,
         retries_remaining=None,
+        retries_delay=None,
         exit_statuses=None,
         machine=None,
         executor=None,
@@ -232,11 +232,13 @@ class ActionRun(object):
         self.output_path.append(self.id)
         self.context = command_context.build_context(self, parent_context)
         self.retries_remaining = retries_remaining
+        self.retries_delay = retries_delay
         self.exit_statuses = exit_statuses
         if self.exit_statuses is None:
             self.exit_statuses = []
 
         self.action_command = None
+        self.in_delay = None
 
     @property
     def state(self):
@@ -302,6 +304,7 @@ class ActionRun(object):
             ),
             exit_status=state_data.get('exit_status'),
             retries_remaining=state_data.get('retries_remaining'),
+            retries_delay=state_data.get('retries_delay'),
             exit_statuses=state_data.get('exit_statuses'),
             action_runner=action_runner,
             executor=state_data.get('executor', ExecutorTypes.ssh),
@@ -324,6 +327,13 @@ class ActionRun(object):
 
     def start(self):
         """Start this ActionRun."""
+        if self.in_delay is not None:
+            log.warning(
+                f"Start of suspended action run {self.id}, cancelling suspend timer"
+            )
+            self.in_delay.cancel()
+            self.in_delay = None
+
         if not self.machine.check('start'):
             return False
 
@@ -373,18 +383,36 @@ class ActionRun(object):
             return self.machine.transition(target)
 
     def retry(self):
+        """Invoked externally (via API) when action needs to be re-tried
+        manually.
+        """
         if self.retries_remaining is None or self.retries_remaining <= 0:
             self.retries_remaining = 1
 
         if self.is_done:
             return self.fail(self.exit_status)
         else:
-            log.info("Killing the current action run for a retry")
+            log.info(f"Killing action run {self.id} for a retry")
             return self.kill(final=False)
 
-    def restart(self):
+    def start_after_delay(self):
+        log.info(f"Resuming action run {self.id} after retry delay")
         self.machine.reset()
-        return self.start()
+        self.in_delay = None
+        self.start()
+
+    def restart(self):
+        """Used by `fail` when action run has to be re-tried."""
+        if self.retries_delay is not None:
+            self.in_delay = reactor.callLater(
+                self.retries_delay.seconds, self.start_after_delay
+            )
+            log.info(
+                f"Delaying action run {self.id} for a retry in {self.retries_delay}s"
+            )
+        else:
+            self.machine.reset()
+            return self.start()
 
     def fail(self, exit_status=0):
         if self.retries_remaining is not None:
@@ -433,6 +461,7 @@ class ActionRun(object):
             'node_name': self.node.get_name() if self.node else None,
             'exit_status': self.exit_status,
             'retries_remaining': self.retries_remaining,
+            'retries_delay': self.retries_delay,
             'exit_statuses': self.exit_statuses,
             'action_runner': action_runner,
             'executor': self.executor,
