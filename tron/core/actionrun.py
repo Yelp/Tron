@@ -572,11 +572,16 @@ class SSHActionRun(ActionRun, Observer):
         if self.retries_remaining is not None and final:
             self.retries_remaining = -1
 
-        kill_command = self.action_runner.build_stop_action_command(
-            self.id,
-            'kill',
-        )
-        self.node.submit_command(kill_command)
+        if self.in_delay is None:
+            kill_command = self.action_runner.build_stop_action_command(
+                self.id,
+                'kill',
+            )
+            self.node.submit_command(kill_command)
+        else:
+            self.in_delay.cancel()
+            self.in_delay = None
+            self.fail(-3)
 
     def build_action_command(self):
         """Create a new ActionCommand instance to send to the node."""
@@ -652,10 +657,15 @@ class MesosActionRun(ActionRun, Observer):
         if self.retries_remaining is not None and final:
             self.retries_remaining = -1
 
-        error_message = self._kill_mesos_task()
-        if error_message is not None:
-            return error_message
-        return "Warning: It might take up to docker_stop_timeout (current setting is 2 mins) for killing."
+        if self.in_delay is None:
+            error_message = self._kill_mesos_task()
+            if error_message is not None:
+                return error_message
+            return "Warning: It might take up to docker_stop_timeout (current setting is 2 mins) for killing."
+        else:
+            self.in_delay.cancel()
+            self.in_delay = None
+            self.fail(-3)
 
     def _kill_mesos_task(self):
         try:
