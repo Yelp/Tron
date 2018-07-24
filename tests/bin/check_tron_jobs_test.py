@@ -336,6 +336,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() + 600),
                         ),
+                    'end_time': None,
                 },
                 {
                     'id':
@@ -347,6 +348,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
+                    'end_time': None,
                 },
                 {
                     'id':
@@ -357,6 +359,11 @@ class CheckJobsTestCase(TestCase):
                         time.strftime(
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 1800),
+                        ),
+                    'end_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1700),
                         ),
                 },
             ],
@@ -382,6 +389,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() + 600),
                         ),
+                    'end_time': None,
                 },
                 {
                     'id':
@@ -393,6 +401,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
+                    'end_time': None,
                 },
                 {
                     'id':
@@ -403,6 +412,11 @@ class CheckJobsTestCase(TestCase):
                         time.strftime(
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 1800),
+                        ),
+                    'end_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1700),
                         ),
                 },
             ],
@@ -428,6 +442,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() + 600),
                         ),
+                    'end_time': None
                 },
                 {
                     'id':
@@ -438,6 +453,11 @@ class CheckJobsTestCase(TestCase):
                         time.strftime(
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 1800),
+                        ),
+                    'end_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1700),
                         ),
                 },
                 {
@@ -450,11 +470,89 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
+                    'end_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 500),
+                        ),
                 },
             ],
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.1')
+        assert_equal(state, State.FAILED)
+
+    def test_rerun_job_failed(self):
+        job_runs = {
+            'status':
+                'scheduled',
+            'next_run':
+                None,
+            'runs': [
+                {
+                    'id':
+                        'MASTER.test.4',
+                    'state':
+                        'scheduled',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() + 600),
+                        ),
+                    'end_time': None,
+                },
+                {
+                    'id':
+                        'MASTER.test.3',
+                    'state':
+                        'failed',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1800),
+                        ),
+                    'end_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 100),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.2',
+                    'state':
+                        'succeeded',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 600),
+                        ),
+                    'end_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 500),
+                        ),
+                },
+                {
+                    'id':
+                        'MASTER.test.1',
+                    'state':
+                        'failed',
+                    'run_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1800),
+                        ),
+                    'end_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1700),
+                        ),
+                },
+            ],
+        }
+        run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
+        assert_equal(run['id'], 'MASTER.test.3')
         assert_equal(state, State.FAILED)
 
     def test_job_running_but_action_failed_already(self):
@@ -474,6 +572,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() + 600),
                         ),
+                    'end_time': None,
                 },
                 {
                     'id':
@@ -485,6 +584,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
+                    'end_time': None,
                     'runs': [
                         {
                             'id': 'MASTER.test.2.action2',
@@ -505,6 +605,11 @@ class CheckJobsTestCase(TestCase):
                         time.strftime(
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 1800),
+                        ),
+                    'end_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1700),
                         ),
                 },
             ],
@@ -530,6 +635,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() + 600),
                         ),
+                    'end_time': None,
                 },
                 {
                     'id':
@@ -541,6 +647,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
+                    'end_time': None,
                     'runs': [
                         {
                             'id': 'MASTER.test.2.action2',
@@ -562,6 +669,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 1800),
                         ),
+                    'end_time': None,
                 },
             ],
         }
@@ -586,6 +694,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() + 600),
                         ),
+                    'end_time': None,
                 },
                 {
                     'id':
@@ -597,6 +706,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
+                    'end_time': None,
                     'runs': [
                         {
                             'id': 'MASTER.test.2.action2',
@@ -617,6 +727,11 @@ class CheckJobsTestCase(TestCase):
                         time.strftime(
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 1800),
+                        ),
+                    'end_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1700),
                         ),
                 },
             ],
@@ -652,6 +767,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
+                    'end_time': None,
                 },
                 {
                     'id':
@@ -663,6 +779,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 1200),
                         ),
+                    'end_time': None,
                 },
             ],
         }
@@ -689,10 +806,9 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() + 600),
                         ),
-                    'start_time':
-                        None,
-                    'duration':
-                        '',
+                    'end_time': None,
+                    'start_time': None,
+                    'duration': '',
                 },
                 {
                     'id':
@@ -709,6 +825,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
+                    'end_time': None,
                     'duration':
                         '0:10:01.883601',
                 },
@@ -736,6 +853,7 @@ class CheckJobsTestCase(TestCase):
                         '%Y-%m-%d %H:%M:%S',
                         time.localtime(time.time() + 600),
                     ),
+                    end_time=None,
                     duration='',
                 ),
                 dict(
@@ -745,6 +863,7 @@ class CheckJobsTestCase(TestCase):
                         '%Y-%m-%d %H:%M:%S',
                         time.localtime(time.time() - 600),
                     ),
+                    end_time=None,
                     duration='0:10:01.883601',
                     runs=[
                         dict(
@@ -776,6 +895,10 @@ class CheckJobsTestCase(TestCase):
                         '%Y-%m-%d %H:%M:%S',
                         time.localtime(time.time() - 1800),
                     ),
+                    end_time=time.strftime(
+                        '%Y-%m-%d %H:%M:%S',
+                        time.localtime(time.time() - 1700),
+                    ),
                     duration='0:15:00.453601',
                 ),
             ],
@@ -801,6 +924,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
+                    'end_time': None,
                 },
                 {
                     'id':
@@ -812,6 +936,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time()),
                         ),
+                    'end_time': None,
                 },
             ],
         }
@@ -916,6 +1041,7 @@ class CheckJobsTestCase(TestCase):
                         '%Y-%m-%d %H:%M:%S',
                         time.localtime(time.time() + 1200),
                     ),
+                'end_time': None,
             }, ],
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
@@ -949,6 +1075,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
+                    'end_time': None,
                 },
                 {
                     'id':
@@ -960,6 +1087,7 @@ class CheckJobsTestCase(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 1200),
                         ),
+                    'end_time': None,
                 },
                 {
                     'id':
@@ -970,6 +1098,11 @@ class CheckJobsTestCase(TestCase):
                         time.strftime(
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 1800),
+                        ),
+                    'end_time':
+                        time.strftime(
+                            '%Y-%m-%d %H:%M:%S',
+                            time.localtime(time.time() - 1700),
                         ),
                 },
             ],

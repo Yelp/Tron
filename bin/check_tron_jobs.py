@@ -156,7 +156,7 @@ def pretty_print_actions(action_run):
 def get_relevant_run_and_state(job_content):
     job_runs = sorted(
         job_content.get('runs', []),
-        key=lambda k: k['run_time'],
+        key=lambda k: (k['end_time'] is None, k['end_time'], k['run_time']),
         reverse=True,
     )
     if len(job_runs) == 0:
