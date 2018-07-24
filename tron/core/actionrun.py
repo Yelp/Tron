@@ -437,6 +437,13 @@ class ActionRun(object):
         log.warning("Lost communication with action run %s", self.id)
         return self.machine.transition('fail_unknown')
 
+    def cancel_delay(self):
+        if self.in_delay is not None:
+            self.in_delay.cancel()
+            self.in_delay = None
+            self.fail(-3)
+            return True
+
     @property
     def state_data(self):
         """This data is used to serialize the state of this action run."""
@@ -562,6 +569,9 @@ class SSHActionRun(ActionRun, Observer):
         if self.retries_remaining is not None:
             self.retries_remaining = -1
 
+        if self.cancel_delay():
+            return
+
         stop_command = self.action_runner.build_stop_action_command(
             self.id,
             'terminate',
@@ -571,6 +581,9 @@ class SSHActionRun(ActionRun, Observer):
     def kill(self, final=True):
         if self.retries_remaining is not None and final:
             self.retries_remaining = -1
+
+        if self.cancel_delay():
+            return
 
         kill_command = self.action_runner.build_stop_action_command(
             self.id,
@@ -646,11 +659,17 @@ class MesosActionRun(ActionRun, Observer):
         if self.retries_remaining is not None:
             self.retries_remaining = -1
 
+        if self.cancel_delay():
+            return
+
         return self._kill_mesos_task()
 
     def kill(self, final=True):
         if self.retries_remaining is not None and final:
             self.retries_remaining = -1
+
+        if self.cancel_delay():
+            return
 
         error_message = self._kill_mesos_task()
         if error_message is not None:
