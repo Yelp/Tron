@@ -1,3 +1,11 @@
+tron (0.9.1.9) trusty; urgency=medium
+
+  * 0.9.1.9 tagged with 'make release'
+    Commit: Merge pull request #483 from Yelp/retries-delay-kill
+    Retries delay: kill delayed action correctly
+
+ -- root <root@230c51e7feb1>  Tue, 24 Jul 2018 11:00:12 +0000
+
 tron (0.9.1.8) trusty; urgency=medium
 
   * 0.9.1.8 tagged with 'make release'
