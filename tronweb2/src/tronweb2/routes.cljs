@@ -17,11 +17,8 @@
 (defn fetch! [state url params key extract-fn]
   (GET url
     :params params
-    :handler
-    #(swap! state merge {key (extract-fn %)
-                          :error-message nil})
-    :error-handler
-    #(swap! state merge {:error-message (str "Failed to load " url)})))
+    :handler #(swap! state merge {key (extract-fn %) :error-message nil})
+    :error-handler #(swap! state merge {:error-message (str "Failed to load " url)})))
 
 (defn setup [state]
   (secretary/set-config! :prefix "#")
