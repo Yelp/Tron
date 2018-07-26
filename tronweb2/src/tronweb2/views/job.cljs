@@ -2,7 +2,9 @@
   (:require [tronweb2.util :refer [format-time format-duration
                                    parse-in-local-time str->duration]]
             [cljs-time.core :as t]
-            [cljs-time.coerce :as tc]))
+            [cljs-time.coerce :as tc]
+            [clojure.string :as str]
+            [alanlcode.dagre]))
 
 (defn job-run [jr even]
   [:a.row.mb-1.text-dark
@@ -17,27 +19,58 @@
    [:div.col.small (format-time (jr "end_time"))]
    [:div.col.small (format-duration (jr "duration"))]])
 
-(defn job-ag-node [[node deps]]
-  [:div.d-inline-flex.flex-row.pl-1.mb-2
-   {:key node
-    :class (if (> (count deps) 1) "border" "")}
-   [:div.align-top.pr-2 node]
-   (when (> (count deps) 0)
-     (list [:div.align-top.pr-2 {:key 1} "←"]
-           [:div.align-top
-            {:key 2 :class (if (> (count deps) 1) "border-left" "")}
-            (map job-ag-node deps)]
-           [:div.w-100 {:key 3} ""]))])
-
-(defn job-ag [jobs]
-  [:div.col
-   (let [jobs-map (into {} (map #(do [(% "name") (% "dependent")]) jobs))
-         in-deps (fn [n nd] (some #(= n %) (last nd)))
-         deps-of (fn [n] (map first (filter #(in-deps n %) jobs-map)))
-         build-dag (fn f [n] [n (map f (deps-of n))])
-         root-nodes (map first (filter #(= [] (last %)) jobs-map))
-         dag (map build-dag root-nodes)]
-     (map job-ag-node dag))])
+(defn job-ag [ag]
+  (let [g (js/dagre.graphlib.Graph.)]
+    (.setGraph g #js {})
+    (.setDefaultEdgeLabel g #(do #js {}))
+    (dorun
+      (for [{name "name"} ag]
+        (.setNode g name #js {"label" name "width" 150 "height" 50})))
+    (dorun
+      (for [{parent "name" children "dependent"} ag
+            child children]
+        (.setEdge g parent child)))
+    (.layout js/dagre g)
+    (let [all-x (mapv #(.-x (.node g %)) (.nodes g))
+          all-y (mapv #(.-y (.node g %)) (.nodes g))
+          max-x (+ (apply max all-x) 50)
+          min-x (- (apply min all-x) 150)
+          max-y (+ (apply max all-y))
+          min-y (- (apply min all-x) 50)]
+      [:div.col.p-0.m-0
+        [:svg {:style {:border "0px"
+                       :stroke-width 2
+                       :background "white"
+                       :width "400px"
+                       :height "400px"}
+               :viewBox (str min-x " " min-y " " (+ 150 max-x) " " max-y)}
+          [:defs
+            [:marker {:id "head" :orient "auto"
+                      :markerWidth 10 :markerHeight 10
+                      :refX 3 :refY 3}
+              [:path {:d "M0,0 V6 L3,3 Z" :fill "black"}]]]
+          (for [node-id (.nodes g)]
+            (let [node (js->clj (.node g node-id))]
+              [:g {:key node-id}
+                [:rect (merge node {:fill "white" :stroke "black"
+                                    "y" (- (node "y") (/ (node "height") 2))
+                                    "x" (- (node "x") (/ (node "width") 2))})]
+                [:text (merge node {:text-anchor "middle"
+                                    :alignment-baseline "central"
+                                    :style {:font-size "25px"}})
+                       (node "label")]]))
+          (for [edge-id (.edges g)]
+            (let [edge (.edge g edge-id)
+                  [p1 p2 & prest] (map #(str (.-x %) " " (.-y %)) (.-points edge))
+                  path (str "M " p1 " Q " p2 " " (str/join " T " prest))]
+              [:g
+                (for [p (.-points edge)]
+                  [:circle {:x (.-x p) :y (.-y p) :radius 4 :fill "red"}])
+                [:path {:key (str (.-v edge-id) "-" (.-w edge-id))
+                        :stroke "black"
+                        :fill "none"
+                        :d path
+                        :marker-end "url(#head)"}]]))]])))
 
 (defn non-overlap-timelines [runs]
   (reduce
@@ -93,7 +126,7 @@
      [:div.row [:div.col "Settings"] [:div.col "-"]]
      [:div.row [:div.col "Last run"] [:div.col (format-time (j "last_run"))]]
      [:div.row [:div.col "Next run"] [:div.col (format-time (j "next_run"))]]]
-    [:div.col.border.ml-3
+    [:div.col.border.ml-3 {:style {:height 500}}
      [:h5.row.p-3.bg-dark.text-light "Action graph"]
      (job-ag (j "action_graph"))]]
    [:div.row.border.border-bottom-0

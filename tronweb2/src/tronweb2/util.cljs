@@ -5,7 +5,7 @@
             [clojure.string :as str]))
 
 (defn str->duration [s]
-  (let [[h m s] (str/split s #":(0?)")]
+  (let [[h m s] (str/split s #":")]
     (* 1000
        (+ (* 3600 (js/parseFloat h))
           (* 60 (js/parseFloat m))

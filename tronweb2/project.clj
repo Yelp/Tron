@@ -5,7 +5,8 @@
                  [secretary "1.2.3"]
                  [cljs-ajax "0.7.3"]
                  [clojure-humanize "0.2.2"]
-                 [com.andrewmcveigh/cljs-time "0.5.2"]]
+                 [com.andrewmcveigh/cljs-time "0.5.2"]
+                 [alanlcode/dagre "0.7.5-fork-0"]]
 
   :plugins [[lein-cljsbuild "1.1.5"]
             [lein-figwheel "0.5.16"]]
