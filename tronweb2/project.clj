@@ -6,7 +6,8 @@
                  [cljs-ajax "0.7.3"]
                  [clojure-humanize "0.2.2"]
                  [com.andrewmcveigh/cljs-time "0.5.2"]
-                 [alanlcode/dagre "0.7.5-fork-0"]]
+                 [alanlcode/dagre "0.7.5-fork-0"]
+                 [cljsjs/d3 "4.12.0-0"]]
 
   :plugins [[lein-cljsbuild "1.1.5"]
             [lein-figwheel "0.5.16"]]
@@ -29,7 +30,11 @@
                     :asset-path           "js/compiled/out"
                     :source-map-timestamp true
                     :preloads             [devtools.preload]
-                    :external-config      {:devtools/config {:features-to-install :all}}}}
+                    :closure-defines      {tronweb2.routes/api-uri "http://localhost:8089"}
+                    :external-config      {:devtools/config {:features-to-install :all}}
+                    :foreign-libs         [{:file "d3-timelines.js"
+                                            :provides ["timelines"]}]}}
+
 
     {:id           "min"
      :source-paths ["src"]

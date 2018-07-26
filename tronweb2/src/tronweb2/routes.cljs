@@ -6,6 +6,9 @@
             [goog.history.EventType :as EventType]
             [ajax.core :refer [GET]]))
 
+(goog-define api-uri "")
+(print "API URI: " api-uri)
+
 (defn hook-browser-navigation! []
   (doto (History.)
     (gevents/listen
@@ -15,7 +18,7 @@
     (.setEnabled true)))
 
 (defn fetch! [state url params key extract-fn]
-  (GET url
+  (GET (str api-uri url)
     :params params
     :handler #(swap! state merge {key (extract-fn %) :error-message nil})
     :error-handler #(swap! state merge {:error-message (str "Failed to load " url)})))

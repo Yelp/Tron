@@ -1,9 +1,9 @@
 (ns tronweb2.core
   (:require [reagent.core :as reagent]
             [tronweb2.routes :as routes]
-            [tronweb2.views.root :as root]))
+            [tronweb2.views.root :as root]
+            [tronweb2.state :refer [app-state]]))
 
-(defonce app-state (reagent/atom {}))
 (defn root-view []
   (root/view @app-state))
 

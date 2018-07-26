@@ -1,10 +1,13 @@
 (ns tronweb2.views.job
   (:require [tronweb2.util :refer [format-time format-duration
                                    parse-in-local-time str->duration]]
+            [reagent.core :as reagent]
             [cljs-time.core :as t]
             [cljs-time.coerce :as tc]
             [clojure.string :as str]
-            [alanlcode.dagre]))
+            [alanlcode.dagre]
+            [cljsjs.d3]
+            [timelines]))
 
 (defn job-run [jr even]
   [:a.row.mb-1.text-dark
@@ -63,56 +66,41 @@
             (let [edge (.edge g edge-id)
                   [p1 p2 & prest] (map #(str (.-x %) " " (.-y %)) (.-points edge))
                   path (str "M " p1 " Q " p2 " " (str/join " T " prest))]
-              [:g
-                (for [p (.-points edge)]
-                  [:circle {:x (.-x p) :y (.-y p) :radius 4 :fill "red"}])
-                [:path {:key (str (.-v edge-id) "-" (.-w edge-id))
-                        :stroke "black"
-                        :fill "none"
-                        :d path
-                        :marker-end "url(#head)"}]]))]])))
+              [:path {:key (str (.-v edge-id) "-" (.-w edge-id))
+                      :stroke "black"
+                      :fill "none"
+                      :d path
+                      :marker-end "url(#head)"}]))]])))
 
-(defn non-overlap-timelines [runs]
-  (reduce
-   (fn [tls {st "start_time" dr "duration" :as run}]
-     (let [time (parse-in-local-time st)
-           ms (str->duration dr)
-           period (t/Period. 0 0 0 0 0 0 0 ms)
-           interval (t/interval time (t/plus time period))
-           non-ol-tls (filter #(t/overlap interval (last (first %)))
-                              (map-indexed vector tls))
-           idx (or (get-in non-ol-tls [0 0]) 0)]
-       (update-in tls [idx] (fnil conj []) (assoc run :interval interval))))
-   []
-   (filter
-    #(not= "" (apply str (vals (select-keys % ["start_time" "duration"]))))
-    (reverse runs))))
+(defn runs->d3tl [runs]
+  (map
+    #(let [start-time (parse-in-local-time (% "start_time"))]
+      {"times" [{"starting_time"
+                 (tc/to-long start-time)
+                 "ending_time"
+                 (tc/to-long
+                  (if (% "duration")
+                   (t/plus start-time (t/Period. 0 0 0 0 0 0 0 (str->duration (% "duration"))))
+                   (t/now)))
+                 "color" (case (% "state")
+                          "failed" "red"
+                          "succeeded" "green"
+                          "running" "magenta"
+                          "grey")
+                 "label" (% "run_num")}]})
+    (filter #(% "start_time") runs)))
 
-(defn job-timeline [runs]
-  (let [tls (non-overlap-timelines runs)
-        intervals (map :interval (mapcat identity tls))
-        gstart (apply min (map :start intervals))
-        gend (apply max (map :end intervals))
-        [gstart gend] (map tc/to-long [gstart gend])
-        gduration (- gend gstart)]
-    (for [[idx runs] (map-indexed vector tls)]
-      [:div.row {:key idx}
-       (for [run runs
-             :let [{{:keys [start end]} :interval} run
-                   [start end] (map tc/to-long [start end])
-                   duration (- end start)]]
-         [:div.col.m-0.p-0.position-absolute.text-light.small
-          {:key (run "run_num")
-           :style {:height "2rem"
-                   :width (str (* 100 (/ duration gduration)) "%")
-                   :top "0"
-                   :left (str (* 100 (/ (- start gstart) gduration)) "%")}
-           :class (case (run "state")
-                    "scheduled" "bg-secondary"
-                    "running" "bg-warning"
-                    "succeeded" "bg-success"
-                    "failed" "bg-danger"
-                    "")}])])))
+(defn timeline [runs]
+  (let [svg (reagent/atom nil) show 10]
+    (fn [runs]
+      (when @svg
+        (-> (js/d3.select @svg)
+            (.datum (clj->js (runs->d3tl (take show (sort-by #(% "start_date") runs)))))
+            (.call (-> (.timelines js/d3)
+                       (.tickFormat #js {:tickInterval 2 :tickSize 10})
+                       (.stack)))))
+      [:div.row.border.border-top-0.mb-3
+        [:div.col.p-3 [:svg {:width 896 :height (+ (* show 30) 50) :ref #(if-not @svg (reset! svg %))}]]])))
 
 (defn job [j]
   [:div.container
@@ -128,11 +116,10 @@
      [:div.row [:div.col "Next run"] [:div.col (format-time (j "next_run"))]]]
     [:div.col.border.ml-3 {:style {:height 500}}
      [:h5.row.p-3.bg-dark.text-light "Action graph"]
-     (job-ag (j "action_graph"))]]
+     [job-ag (j "action_graph")]]]
    [:div.row.border.border-bottom-0
     [:div.col.p-3.mb-0.bg-dark.text-light.h5 "Timeline"]]
-   [:div.row.border.border-top-0.mb-3
-    [:div.col.p-3 (job-timeline (j "runs"))]]
+   [timeline (j "runs")]
    [:div.row.mb-3.border.border-bottom-0
     [:div.col.p-3.mb-0.bg-dark.text-light.h5 "Job runs"]]
    [:div.row.border.border-top-0
@@ -149,5 +136,5 @@
 
 (defn view [state]
   (if-let [job-data (:job state)]
-    (job job-data)
+    [job job-data]
     [:div.container "Loading..."]))
