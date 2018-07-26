@@ -166,7 +166,7 @@ class RootResourceTestCase(WWWTestCase):
         request.finish.assert_called_with()
 
     def test_get_children(self):
-        assert_equal(set(self.resource.children), {b'api', b'web', b''})
+        assert_equal(set(self.resource.children), {b'api', b'web', b'', b'web2'})
 
 
 class ActionRunHistoryResourceTestCase(WWWTestCase):

@@ -42,4 +42,6 @@
                     :output-to       "resources/public/js/compiled/app.js"
                     :optimizations   :advanced
                     :closure-defines {goog.DEBUG false}
-                    :pretty-print    false}}]})
+                    :pretty-print    false
+                    :foreign-libs    [{:file "d3-timelines.js"
+                                       :provides ["timelines"]}]}}]})
