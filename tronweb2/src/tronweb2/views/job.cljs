@@ -22,8 +22,20 @@
    [:div.col.small (format-time (jr "end_time"))]
    [:div.col.small (format-duration (jr "duration"))]])
 
-(defn job-ag [ag]
-  (let [g (js/dagre.graphlib.Graph.)]
+(defn state->color [state]
+  (case state
+    "failed" "red"
+    "succeeded" "green"
+    "running" "magenta"
+    "grey"))
+
+(defn job-ag [ag ar]
+  (let [g (js/dagre.graphlib.Graph.)
+        runs (if ar
+               (into {}
+                     (map #(vector (% "action_name") %)
+                          (ar "runs")))
+               {})]
     (.setGraph g #js {})
     (.setDefaultEdgeLabel g #(do #js {}))
     (dorun
@@ -53,15 +65,18 @@
                       :refX 3 :refY 3}
               [:path {:d "M0,0 V6 L3,3 Z" :fill "black"}]]]
           (for [node-id (.nodes g)]
-            (let [node (js->clj (.node g node-id))]
+            (let [node (js->clj (.node g node-id))
+                  run (or (runs (node "label")) {})]
               [:g {:key node-id}
-                [:rect (merge node {:fill "white" :stroke "black"
+                [:rect (merge node {:fill "white" :stroke (state->color (run "state"))
+                                    :stroke-width 3
                                     "y" (- (node "y") (/ (node "height") 2))
                                     "x" (- (node "x") (/ (node "width") 2))})]
-                [:text (merge node {:text-anchor "middle"
-                                    :alignment-baseline "central"
-                                    :style {:font-size "25px"}})
-                       (node "label")]]))
+                [:a {:href (str "#/job/" (run "job_name") "/" (run "run_num") "/" (node "label"))}
+                  [:text (merge node {:text-anchor "middle"
+                                      :alignment-baseline "central"
+                                      :style {:font-size "25px"}})
+                         (node "label")]]]))
           (for [edge-id (.edges g)]
             (let [edge (.edge g edge-id)
                   [p1 p2 & prest] (map #(str (.-x %) " " (.-y %)) (.-points edge))
@@ -73,21 +88,17 @@
                       :marker-end "url(#head)"}]))]])))
 
 (defn runs->d3tl [runs]
-  (map
+  (mapv
     #(let [start-time (parse-in-local-time (% "start_time"))]
-      {"times" [{"starting_time"
+      {"label" (% "run_num")
+       "times" [{"starting_time"
                  (tc/to-long start-time)
                  "ending_time"
                  (tc/to-long
                   (if (% "duration")
                    (t/plus start-time (t/Period. 0 0 0 0 0 0 0 (str->duration (% "duration"))))
                    (t/now)))
-                 "color" (case (% "state")
-                          "failed" "red"
-                          "succeeded" "green"
-                          "running" "magenta"
-                          "grey")
-                 "label" (% "run_num")}]})
+                 "color" (state->color (% "state"))}]})
     (filter #(% "start_time") runs)))
 
 (defn timeline [runs]
@@ -100,9 +111,11 @@
                        (.tickFormat #js {:tickInterval 2 :tickSize 10})
                        (.stack)))))
       [:div.row.border.border-top-0.mb-3
-        [:div.col.p-3 [:svg {:width 896 :height (+ (* show 30) 50) :ref #(if-not @svg (reset! svg %))}]]])))
+        [:div.col.p-3
+          [:svg {:width 896 :height (+ (* show 30) 50)
+                 :ref #(if-not @svg (reset! svg %))}]]])))
 
-(defn job [j]
+(defn job [j ar]
   [:div.container
    [:div.row.mb-3
     [:div.col.border.mr-3
@@ -116,7 +129,7 @@
      [:div.row [:div.col "Next run"] [:div.col (format-time (j "next_run"))]]]
     [:div.col.border.ml-3 {:style {:height 500}}
      [:h5.row.p-3.bg-dark.text-light "Action graph"]
-     [job-ag (j "action_graph")]]]
+     [job-ag (j "action_graph") ar]]]
    [:div.row.border.border-bottom-0
     [:div.col.p-3.mb-0.bg-dark.text-light.h5 "Timeline"]]
    [timeline (j "runs")]
@@ -136,5 +149,5 @@
 
 (defn view [state]
   (if-let [job-data (:job state)]
-    [job job-data]
+    [job job-data (:job-actionrun state)]
     [:div.container "Loading..."]))

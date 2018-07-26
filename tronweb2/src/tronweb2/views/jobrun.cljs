@@ -32,7 +32,7 @@
         [:div.col (format-time (jr "end_time"))]]]
       [:div.col.border.ml-3
        [:h5.row.p-3.bg-dark.text-light "Action graph"]
-       (job-ag (jr "action_graph"))]]
+       [job-ag (jr "action_graph") nil]]]
      [:div.row.border.border-bottom-0
       [:div.col.p-3.mb-0.bg-dark.text-light.h5 "Action runs"]]
      [:div.row.border.border-top-0
