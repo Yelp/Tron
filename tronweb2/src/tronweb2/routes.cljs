@@ -49,7 +49,11 @@
         job)))
 
   (defroute "/job/:name/:run" [name run]
-    (swap! state merge {:view :jobrun :view-title (str "Job run: " name) :jobrun nil})
+    (swap! state merge {:view :jobrun
+                        :view-title [:span "Job run: "
+                                           [:a {:href (str "#/job/" name)} name]
+                                           "." run]
+                        :jobrun nil})
     (fetch! state
             (str "/api/jobs/" name "/" run)
             {:include_action_graph 1

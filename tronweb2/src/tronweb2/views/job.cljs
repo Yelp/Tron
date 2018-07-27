@@ -7,7 +7,8 @@
             [clojure.string :as str]
             [alanlcode.dagre]
             [cljsjs.d3]
-            [timelines]))
+            [timelines]
+            [clojure.contrib.humanize :as humanize]))
 
 (defn job-run [jr even]
   [:a.row.mb-1.text-dark
@@ -120,13 +121,27 @@
    [:div.row.mb-3
     [:div.col.border.mr-3
      [:h5.row.p-3.bg-dark.text-light "Details"]
-     [:div.row [:div.col "Status"] [:div.col (j "status")]]
-     [:div.row [:div.col "Node pool"]
-      [:div.col (get-in j ["node_pool" "name"])]]
-     [:div.row [:div.col "Schedule"] [:div.col (j "schedule")]]
-     [:div.row [:div.col "Settings"] [:div.col "-"]]
-     [:div.row [:div.col "Last run"] [:div.col (format-time (j "last_run"))]]
-     [:div.row [:div.col "Next run"] [:div.col (format-time (j "next_run"))]]]
+     [:div.row [:div.col-md-3 "Status"] [:div.col (j "status")]]
+     [:div.row [:div.col-md-3 "Node pool"] [:div.col (get-in j ["node_pool" "name"])]]
+     [:div.row [:div.col-md-3 "Schedule"]
+               [:div.col (let [s (j "scheduler")]
+                          (str (s "type") ": " (s "value")))]]
+     [:div.row [:div.col-md-3 "Settings"]
+               [:div.col
+                 [:div.row [:div.col "all nodes"] [:div.col (str (j "all_nodes"))]]
+                 [:div.row [:div.col "overlap"]  [:div.col (str (j "allow_overlap"))]]
+                 [:div.row [:div.col "expected runtime"]
+                           [:div.col (let [d (j "expected_runtime")]
+                                       (if (and d (not= d "None"))
+                                        (str (/ (js/Math.round d 2) 3600) "h")
+                                        "-"))]]
+                 [:div.row [:div.col "max runtime"]
+                           [:div.col (let [d (j "max_runtime")]
+                                       (if (and d (not= d "None"))
+                                         (str (/ (js/Math.round d 2) 3600) "h")
+                                         "-"))]]]]
+     [:div.row [:div.col-md-3 "Last run"] [:div.col ((second (j "runs")) "start_time")]]
+     [:div.row [:div.col-md-3 "Next run"] [:div.col ((first (j "runs")) "run_time")]]]
     [:div.col.border.ml-3 {:style {:height 500}}
      [:h5.row.p-3.bg-dark.text-light "Action graph"]
      [job-ag (j "action_graph") ar]]]

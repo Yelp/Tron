@@ -43,7 +43,7 @@ cljs:
 	$(DOCKER_RUN) tron-cljsbuild /bin/bash -c '           \
 		cd /work/tronweb2 &&                                \
 		rm -rf resources/public/js/compiled &&              \
-		lein cljsbuild once min &&                          \
+		lein cljsbuild once dev &&                          \
 		chown -R $(UID):$(GID) resources/public/js/compiled \
 	'
 
