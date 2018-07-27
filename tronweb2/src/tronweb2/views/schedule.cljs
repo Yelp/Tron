@@ -3,14 +3,10 @@
 (defn schedule [data]
   [:div.col
     [:div.row
-      [:div.col "Name"]
-      [:div.col "Status"]
-      [:div.col "Schedule"]
-      [:div.col "Node Pool"]
-      [:div.col "Last Success"]
-      [:div.col "Next Run"]]
+      (for [field ["Name" "Status" "Schedule" "Node Pool" "Last Success" "Next Run"]]
+        [:div.col {:key field} field])]
     (for [job data]
-      [:a {:href (str "#/job/" (job "name"))}
+      [:a {:key (job "name") :href (str "#/job/" (job "name"))}
         [:div.row
           [:div.col (job "name")]
           [:div.col (job "status")]
