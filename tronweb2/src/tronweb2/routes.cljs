@@ -26,7 +26,15 @@
 (defn setup [state]
   (secretary/set-config! :prefix "#")
 
+  (defroute "/schedule" []
+    (swap! state merge {:view :schedule :view-title "Schedule"})
+    (fetch! state "/api/jobs" {} :schedule #(% "jobs")))
+
   (defroute "/" []
+    (swap! state merge {:view :jobs :view-title "Jobs"})
+    (fetch! state "/api/jobs" {:include_job_runs 1} :jobs #(% "jobs")))
+
+  (defroute "/jobs" []
     (swap! state merge {:view :jobs :view-title "Jobs"})
     (fetch! state "/api/jobs" {:include_job_runs 1} :jobs #(% "jobs")))
 
