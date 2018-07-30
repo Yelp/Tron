@@ -8,6 +8,7 @@ from __future__ import unicode_literals
 import collections
 import datetime
 import logging
+import traceback
 
 import six
 
@@ -73,6 +74,10 @@ def handle_command(request, api_controller, obj, **kwargs):
     except controller.UnknownCommandError as e:
         log.warning("Unknown command %s for %s", command, obj)
         return respond(request, {'error': str(e)}, code=http.NOT_IMPLEMENTED)
+    except Exception as e:
+        log.exception('%r while executing command %s for %s', e, command, obj)
+        trace = traceback.format_exc()
+        return respond(request, {'error': trace}, code=http.INTERNAL_SERVER_ERROR)
 
 
 def resource_from_collection(collection, name, child_resource):

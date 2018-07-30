@@ -88,6 +88,7 @@ def edit(args, uri):
     response = client.request(uri, data=data)
 
     if response.error:
+        log.error(response.content)
         return
 
     print(response.content['result'])
