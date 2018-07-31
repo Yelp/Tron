@@ -216,13 +216,14 @@ class PartialConfigContext(object):
     """
     partial = True
 
-    def __init__(self, path, namespace):
+    def __init__(self, path, namespace, master_context=None):
         self.path = path
         self.namespace = namespace
+        self.master_context = master_context
 
     def build_child_context(self, path):
         path = '%s.%s' % (self.path, path)
-        return PartialConfigContext(path, self.namespace)
+        return PartialConfigContext(path, self.namespace, self.master_context)
 
 
 class NullConfigContext(object):

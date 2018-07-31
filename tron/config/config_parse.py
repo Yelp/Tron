@@ -58,6 +58,7 @@ def build_format_string_validator(context_object):
     """
 
     def validator(value, config_context):
+
         if config_context.partial:
             return valid_string(value, config_context)
 
@@ -142,11 +143,28 @@ def valid_time_zone(tz, config_context):
         raise ConfigError('%s is not a valid time zone' % tz)
 
 
+def check_valid_nodes(value, path, master_config):
+    node_names = [
+        node.get('hostname')
+        if not node.get('name')
+        else node.get('name')
+        for node in master_config.get('nodes')
+    ]
+
+    nodepools = [nodepool['name'] for nodepool in master_config.get('node_pools')]
+    all_nodes_nodepools = node_names + nodepools
+    if value not in all_nodes_nodepools:
+        msg = "Unknown node name %s at %s"
+        raise ConfigError(msg % (value, path))
+
+
 def valid_node_name(value, config_context):
     valid_identifier(value, config_context)
     if not config_context.partial and value not in config_context.nodes:
         msg = "Unknown node name %s at %s"
         raise ConfigError(msg % (value, config_context.path))
+    if config_context.master_context is not None:
+        check_valid_nodes(value, config_context.path, config_context.master_context)
     return value
 
 
@@ -716,9 +734,9 @@ valid_config = ValidateConfig()
 valid_named_config = ValidateNamedConfig()
 
 
-def validate_fragment(name, fragment):
+def validate_fragment(name, fragment, master_context=None):
     """Validate a fragment with a partial context."""
-    config_context = PartialConfigContext(name, name)
+    config_context = PartialConfigContext(name, name, master_context)
     if name == MASTER_NAMESPACE:
         return valid_config(fragment, config_context=config_context)
     return valid_named_config(fragment, config_context=config_context)

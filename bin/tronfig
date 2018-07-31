@@ -72,6 +72,13 @@ def parse_cli():
         action="store",
         help="Alternate namespace to use",
     )
+    parser.add_argument(
+        "-m",
+        "--master-config",
+        action="store",
+        dest="master_config",
+        help="Source of master configuration file",
+    )
     parser.add_argument('source')
 
     return parser.parse_args()
@@ -93,10 +100,13 @@ def upload_config(client, config_name, contents, config_hash, check=False):
     return True
 
 
-def validate(config_name, config_content):
+def validate(config_name, config_content, master_content=None):
     try:
         config_data = manager.from_string(config_content)
-        config_parse.validate_fragment(config_name, config_data)
+        master_data = None
+        if master_content is not None:
+            master_data = manager.from_string(master_content)
+        config_parse.validate_fragment(name=config_name, fragment=config_data, master_context=master_data)
     except ConfigError as e:
         return str(e)
 
@@ -154,7 +164,6 @@ def get_config_input(namespace, source):
             namespace = name
 
     content = source_io.read()
-
     return namespace, content
 
 
@@ -166,7 +175,10 @@ if __name__ == '__main__':
     if args.validate or args.validate_dir:
         if args.validate:
             name, content = get_config_input(args.namespace, args.source)
-            result = validate(name, content)
+            master_content = None
+            if args.master_config:
+                _, master_content = get_config_input(schema.MASTER_NAMESPACE, args.master_config)
+            result = validate(config_name=name, config_content=content, master_content=master_content)
         elif args.validate_dir:
             result = validate_dir(args.source)
 
