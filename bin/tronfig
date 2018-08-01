@@ -103,9 +103,7 @@ def upload_config(client, config_name, contents, config_hash, check=False):
 def validate(config_name, config_content, master_content=None):
     try:
         config_data = manager.from_string(config_content)
-        master_data = None
-        if master_content is not None:
-            master_data = manager.from_string(master_content)
+        master_data = manager.from_string(master_content) if master_content else None
         config_parse.validate_fragment(name=config_name, fragment=config_data, master_context=master_data)
     except ConfigError as e:
         return str(e)
@@ -164,6 +162,7 @@ def get_config_input(namespace, source):
             namespace = name
 
     content = source_io.read()
+
     return namespace, content
 
 

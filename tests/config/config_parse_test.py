@@ -458,10 +458,10 @@ class NamedConfigTestCase(TestCase):
     def test_attributes_with_master_context(self):
         expected = make_named_tron_config(
             jobs=FrozenDict({
-                'test_job':
+                'test_namespace.test_job':
                     make_job(
-                        name="test_job",
-                        namespace='test_namespace',
+                        name="test_namespace.test_job",
+                        namespace="test_namespace",
                         schedule=ConfigIntervalScheduler(
                             timedelta=datetime.timedelta(0, 20),
                             jitter=None,
@@ -474,11 +474,13 @@ class NamedConfigTestCase(TestCase):
             nodes=[
                 dict(
                     name="node0",
+                    hostname="node0",
                 )
             ],
             node_pools=[
                 dict(
                     name="nodepool0",
+                    nodes=["node0"],
                 )
             ]
         )
@@ -505,11 +507,13 @@ class NamedConfigTestCase(TestCase):
             nodes=[
                 dict(
                     name="node0",
+                    hostname="node0",
                 )
             ],
             node_pools=[
                 dict(
                     name="nodepool0",
+                    nodes=["node0"],
                 )
             ]
         )
@@ -540,11 +544,13 @@ class NamedConfigTestCase(TestCase):
             nodes=[
                 dict(
                     name="node0",
+                    hostname="node0",
                 )
             ],
             node_pools=[
                 dict(
                     name="nodepool0",
+                    nodes=["node0"],
                 )
             ]
         )
