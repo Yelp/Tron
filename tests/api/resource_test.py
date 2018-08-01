@@ -99,6 +99,21 @@ class HandleCommandTestCase(TestCase):
             {'result': mock_controller.handle_command.return_value},
         )
 
+    def test_handle_command_error(self):
+        command = 'the command'
+        request = build_request(command=command)
+        mock_controller, obj = mock.Mock(), mock.Mock()
+        error = Exception("uncaught exception")
+        mock_controller.handle_command.side_effect = error
+        response = www.handle_command(request, mock_controller, obj)
+        mock_controller.handle_command.assert_called_with(command)
+        assert_equal(response, self.respond.return_value)
+        self.respond.assert_called_with(
+            request,
+            {'error': mock.ANY},
+            code=http.INTERNAL_SERVER_ERROR,
+        )
+
 
 class ActionRunResourceTestCase(WWWTestCase):
     @setup
