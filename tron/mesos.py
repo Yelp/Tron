@@ -321,7 +321,7 @@ class MesosCluster:
 
         framework_name = 'tron-{}'.format(socket.gethostname())
         executor = self.processor.executor_from_config(
-            provider='mesos',
+            provider='mesos_task',
             provider_config={
                 'secret': MESOS_SECRET,
                 'mesos_address': get_mesos_leader(mesos_address),
@@ -396,4 +396,4 @@ class MesosCluster:
             del self.tasks[key]
 
     def kill(self, task_id):
-        self.runner.kill(task_id)
+        return self.runner.kill(task_id)

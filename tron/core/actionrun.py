@@ -681,7 +681,9 @@ class MesosActionRun(ActionRun, Observer):
             mesos_cluster = MesosClusterRepository.get_cluster(
                 self.mesos_address
             )
-            mesos_cluster.kill(self.task_id)
+            succeeded = mesos_cluster.kill(self.task_id)
+            if not succeeded:
+                return "Error while killing task. Please try again."
         except AttributeError:
             return "Error: Can't find task id for the action."
 
