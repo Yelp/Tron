@@ -58,7 +58,6 @@ def build_format_string_validator(context_object):
     """
 
     def validator(value, config_context):
-
         if config_context.partial:
             return valid_string(value, config_context)
 
@@ -163,7 +162,7 @@ def valid_node_name(value, config_context):
     if not config_context.partial and value not in config_context.nodes:
         msg = "Unknown node name %s at %s"
         raise ConfigError(msg % (value, config_context.path))
-    if config_context.master_context is not None:
+    if hasattr(config_context, 'master_context') and config_context.master_context is not None:
         check_valid_nodes(value, config_context.path, config_context.master_context)
     return value
 

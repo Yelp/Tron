@@ -455,6 +455,122 @@ class NamedConfigTestCase(TestCase):
         )
         assert_equal(test_config, expected)
 
+    def test_attributes_with_master_context(self):
+        expected = make_named_tron_config(
+            jobs=FrozenDict({
+                'test_job':
+                    make_job(
+                        name="test_job",
+                        namespace='test_namespace',
+                        schedule=ConfigIntervalScheduler(
+                            timedelta=datetime.timedelta(0, 20),
+                            jitter=None,
+                        ),
+                        expected_runtime=datetime.timedelta(1),
+                    )
+            })
+        )
+        master_context = dict(
+            nodes=[
+                dict(
+                    name="node0",
+                )
+            ],
+            node_pools=[
+                dict(
+                    name="nodepool0",
+                )
+            ]
+        )
+        test_config = validate_fragment(
+            'test_namespace',
+            dict(
+                jobs=[
+                    dict(
+                        name="test_job",
+                        namespace='test_namespace',
+                        node="node0",
+                        schedule="interval 20s",
+                        actions=[dict(name="action", command="command")],
+                        cleanup_action=dict(command="command"),
+                    )
+                ]
+            ),
+            master_context=master_context
+        )
+        assert_equal(test_config, expected)
+
+    def test_invalid_job_node_with_master_context(self):
+        master_context = dict(
+            nodes=[
+                dict(
+                    name="node0",
+                )
+            ],
+            node_pools=[
+                dict(
+                    name="nodepool0",
+                )
+            ]
+        )
+        test_config = dict(
+            jobs=[
+                dict(
+                    name="test_job",
+                    namespace='test_namespace',
+                    node="node1",
+                    schedule="interval 20s",
+                    actions=[dict(name="action", command="command")],
+                    cleanup_action=dict(command="command"),
+                )
+            ]
+        )
+        expected_message = "Unknown node name node1 at test_namespace.NamedConfigFragment.jobs.Job.test_job.node"
+        exception = assert_raises(
+            ConfigError,
+            validate_fragment,
+            'test_namespace',
+            test_config,
+            master_context,
+        )
+        assert_in(expected_message, str(exception))
+
+    def test_invalid_action_node_with_master_context(self):
+        master_context = dict(
+            nodes=[
+                dict(
+                    name="node0",
+                )
+            ],
+            node_pools=[
+                dict(
+                    name="nodepool0",
+                )
+            ]
+        )
+        test_config = dict(
+            jobs=[
+                dict(
+                    name="test_job",
+                    namespace='test_namespace',
+                    node="node0",
+                    schedule="interval 20s",
+                    actions=[dict(name="action", node="nodepool1", command="command")],
+                    cleanup_action=dict(command="command"),
+                )
+            ]
+        )
+        expected_message = "Unknown node name nodepool1 at test_namespace.NamedConfigFragment.jobs.Job.test_job.actions.Action.action.node"
+
+        exception = assert_raises(
+            ConfigError,
+            validate_fragment,
+            'test_namespace',
+            test_config,
+            master_context,
+        )
+        assert_in(expected_message, str(exception))
+
 
 class JobConfigTestCase(TestCase):
     def test_no_actions(self):
