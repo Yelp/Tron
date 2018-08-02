@@ -104,7 +104,7 @@ def validate(config_name, config_content, master_content=None):
     try:
         config_data = manager.from_string(config_content)
         master_data = manager.from_string(master_content) if master_content else None
-        config_parse.validate_fragment(name=config_name, fragment=config_data, master_context=master_data)
+        config_parse.validate_fragment(name=config_name, fragment=config_data, master_config=master_data)
     except ConfigError as e:
         return str(e)
 

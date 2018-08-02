@@ -470,7 +470,7 @@ class NamedConfigTestCase(TestCase):
                     )
             })
         )
-        master_context = dict(
+        master_config = dict(
             nodes=[
                 dict(
                     name="node0",
@@ -498,24 +498,18 @@ class NamedConfigTestCase(TestCase):
                     )
                 ]
             ),
-            master_context=master_context
+            master_config=master_config
         )
         assert_equal(test_config, expected)
 
     def test_invalid_job_node_with_master_context(self):
-        master_context = dict(
+        master_config = dict(
             nodes=[
                 dict(
                     name="node0",
                     hostname="node0",
                 )
             ],
-            node_pools=[
-                dict(
-                    name="nodepool0",
-                    nodes=["node0"],
-                )
-            ]
         )
         test_config = dict(
             jobs=[
@@ -535,12 +529,12 @@ class NamedConfigTestCase(TestCase):
             validate_fragment,
             'test_namespace',
             test_config,
-            master_context,
+            master_config,
         )
         assert_in(expected_message, str(exception))
 
     def test_invalid_action_node_with_master_context(self):
-        master_context = dict(
+        master_config = dict(
             nodes=[
                 dict(
                     name="node0",
@@ -573,7 +567,7 @@ class NamedConfigTestCase(TestCase):
             validate_fragment,
             'test_namespace',
             test_config,
-            master_context,
+            master_config,
         )
         assert_in(expected_message, str(exception))
 
