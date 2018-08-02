@@ -716,12 +716,18 @@ valid_config = ValidateConfig()
 valid_named_config = ValidateNamedConfig()
 
 
-def validate_fragment(name, fragment):
+def validate_fragment(name, fragment, master_config=None):
     """Validate a fragment with a partial context."""
     config_context = PartialConfigContext(name, name)
     if name == MASTER_NAMESPACE:
         return valid_config(fragment, config_context=config_context)
-    return valid_named_config(fragment, config_context=config_context)
+    if master_config is None:
+        return valid_named_config(fragment, config_context=config_context)
+
+    config_mapping = {MASTER_NAMESPACE: master_config, name: fragment}
+    for config_name, config in validate_config_mapping(config_mapping):
+        if config_name == name:
+            return config
 
 
 def get_nodes_from_master_namespace(master):
