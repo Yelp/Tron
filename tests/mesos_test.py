@@ -271,7 +271,7 @@ class MesosClusterTestCase(TestCase):
         self.mock_get_leader.assert_called_once_with('mesos-cluster-a.me')
         self.mock_processor.executor_from_config.assert_has_calls([
             mock.call(
-                provider='mesos',
+                provider='mesos_task',
                 provider_config={
                     'secret': MESOS_SECRET,
                     'mesos_address': self.mock_get_leader.return_value,
