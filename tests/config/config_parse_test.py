@@ -1111,8 +1111,28 @@ class BuildFormatStringValidatorTestCase(TestCase):
         template = "The %(one)s thing I %(seven)s is %(stars)s"
         assert self.validator(template, NullConfigContext)
 
-    def test_validator_error(self):
+    def test_validator_unknown_variable_error(self):
         template = "The %(one)s thing I %(seven)s is %(unknown)s"
+        exception = assert_raises(
+            ConfigError,
+            self.validator,
+            template,
+            NullConfigContext,
+        )
+        assert_in("Unknown context variable", str(exception))
+
+    def test_validator_no_type_error(self):
+        template = "The %(one) %(seven)s thing is %(stars)s"
+        exception = assert_raises(
+            ConfigError,
+            self.validator,
+            template,
+            NullConfigContext,
+        )
+        assert_in("Unknown context variable", str(exception))
+
+    def test_validator_wrong_type_error(self):
+        template = "The %(one)d %(seven)s thing is %(stars)s"
         exception = assert_raises(
             ConfigError,
             self.validator,

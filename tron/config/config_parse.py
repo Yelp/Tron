@@ -67,9 +67,13 @@ def build_format_string_validator(context_object):
         )
 
         try:
-            value % context
+            render_command = value % context
+            # This checks wrong format like "$(A) $(A)s"
+            if render_command != (render_command % context):
+                raise TypeError("type is not specified")
+
             return value
-        except (KeyError, ValueError) as e:
+        except (KeyError, ValueError, TypeError) as e:
             error_msg = "Unknown context variable %s at %s: %s"
             raise ConfigError(error_msg % (e, config_context.path, value))
 
