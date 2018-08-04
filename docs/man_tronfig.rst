@@ -3,7 +3,7 @@
 tronfig
 =======
 
-Synopsys
+Synopsis
 --------
 
 ``tronfig [--server server_name ] [--verbose | -v] [<namespace>] [-p] [-]``

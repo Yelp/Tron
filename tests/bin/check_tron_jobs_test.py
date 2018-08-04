@@ -881,7 +881,7 @@ class CheckJobsTestCase(TestCase):
         )
         assert_equal(actual["id"], "MASTER.test.1.action2")
 
-# Thsee tests test job has no scheduled run scenarios
+# These tests test job has no scheduled run scenarios
 
     def test_no_job_scheduled_or_queuing(self):
         job_runs = {

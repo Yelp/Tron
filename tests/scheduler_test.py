@@ -364,7 +364,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         )
 
     def test_weekly_in_month(self):
-        sch = scheduler_from_config('every monday of january at 00:01')
+        sch = scheduler_from_config('every monday of January at 00:01')
         next_run_date = sch.next_run_time(None)
 
         assert_gte(next_run_date, self.now)

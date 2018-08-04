@@ -36,7 +36,7 @@ Running Tron in a Sandbox
 -------------------------
 
 The source package includes a development logging.conf and a
-sample configuration file with a few test cases. To run a development intsance
+sample configuration file with a few test cases. To run a development instance
 of Tron create a working directory and start
 :command:`trond` using the following::
 

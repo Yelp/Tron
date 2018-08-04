@@ -8,7 +8,7 @@ import re
 
 PREDEFINED_SCHEDULE = {
     "@yearly": "0 0 1 1 *",
-    "@anually": "0 0 1 1 *",
+    "@annually": "0 0 1 1 *",
     "@monthly": "0 0 1 * *",
     "@weekly": "0 0 * * 0",
     "@daily": "0 0 * * *",

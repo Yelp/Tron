@@ -3,7 +3,7 @@
 tronview
 ========
 
-Synopsys
+Synopsis
 --------
 
 ``tronview [-n <numshown>] [--server <server_name>] [--verbose] [<job_name> | <job_run_id> | <action_run_id>]``

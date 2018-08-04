@@ -67,7 +67,7 @@ def recover_action_run(action_run, action_runner):
 
     # this line is where the magic happens.
     # the action run watches another actioncommand,
-    # and updates its internal state acoording to its result.
+    # and updates its internal state according to its result.
     action_run.watch(recovery_action_command)
 
     if not action_run.machine.check('running'):
