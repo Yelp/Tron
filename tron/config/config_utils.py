@@ -157,6 +157,18 @@ def valid_name_identifier(value, config_context):
     return '%s.%s' % (config_context.namespace, value)
 
 
+def valid_context_variable_expr(command):
+    """ This funtion checks wrong format like '$(A) $(A)s' """
+    prefix = command.find("%(")
+    while prefix >= 0:
+        postfix = command.find(")s", prefix)
+        if postfix < 0:
+            raise TypeError("Context variable expression is invalid")
+        prefix = command.find("%(", prefix + 1)
+        if prefix >= 0 and prefix < postfix:
+            raise TypeError("Context variable expression is invalid")
+
+
 def build_list_of_type_validator(item_validator, allow_empty=False):
     """Build a validator which validates a list contains items which pass
     item_validator.
