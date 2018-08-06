@@ -244,7 +244,7 @@ Action Runners
                 Run actions with a script which records the pid and runs the
                 action command in a subprocess (on the remote node). This
                 requires that :command:`bin/action_runner.py` and
-                :command:`bin/action_status.py` are avialable on the remote
+                :command:`bin/action_status.py` are available on the remote
                 host.
 
     **remote_status_path**

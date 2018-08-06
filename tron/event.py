@@ -49,8 +49,8 @@ class EventLevel(object):
 
 
 LEVEL_INFO = EventLevel(0, "INFO")  # Troubleshooting information
-LEVEL_OK = EventLevel(1, "OK")  # Expected behaviour
-LEVEL_NOTICE = EventLevel(2, "NOTICE")  # Troubling behaviour
+LEVEL_OK = EventLevel(1, "OK")  # Expected behavior
+LEVEL_NOTICE = EventLevel(2, "NOTICE")  # Troubling behavior
 LEVEL_CRITICAL = EventLevel(3, "CRITICAL")  # Major Failure
 
 

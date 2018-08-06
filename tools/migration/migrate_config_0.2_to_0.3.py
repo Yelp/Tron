@@ -36,7 +36,7 @@ def strip_tags(source):
 
 
 def name_from_doc(doc):
-    """Find the string idenfitier for a doc."""
+    """Find the string identifier for a doc."""
     if 'name' in doc:
         return doc['name']
 

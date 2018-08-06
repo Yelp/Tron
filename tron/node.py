@@ -305,7 +305,7 @@ class Node(object):
         log.info("Running %s for %s on %s", run.command, run.id, self.hostname)
 
         # When this run completes, for good or bad, we'll inform the caller by
-        # calling 'succeed' or 'fail' on the run Since the definined interface
+        # calling 'succeed' or 'fail' on the run Since the defined interface
         # is on these specific callbacks, we won't bother returning the
         # deferred here. This allows the caller to not really care about
         # twisted specific stuff at all, all it needs to know is that one of
@@ -388,7 +388,7 @@ class Node(object):
             return
 
         # Add a dummy errback handler to prevent Unhandled error messages.
-        # Unless somone is explicitly caring about this defer the error will
+        # Unless someone is explicitly caring about this defer the error will
         # have been reported elsewhere.
         self.run_states[run.id].deferred.addErrback(lambda failure: None)
 
@@ -459,7 +459,7 @@ class Node(object):
 
                     # This means our run IS still waiting to start. There
                     # should be an outstanding timeout sitting on this guy as
-                    # well. We'll just short circut it.
+                    # well. We'll just short circuit it.
                     twistedutils.defer_timeout(run.channel.start_defer, 0)
                 else:
                     # Doesn't seem like this should ever happen.

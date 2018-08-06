@@ -3,7 +3,7 @@
 tronctl
 =======
 
-Synopsys
+Synopsis
 --------
 
 ``tronctl [--server <host:port>] [--verbose] <command> <job_name | job_run_id | action_run_id>``
@@ -67,11 +67,11 @@ cancel <job_run_id | action_run_id>
 
 success <job_run_id | action_run_id>
     Marks the specified job run or action run as succeeded.  This behaves the
-    same as the run actually completing.  Dependant actions are run and queued
+    same as the run actually completing.  Dependent actions are run and queued
     runs start.
 
 skip <action_run_id>
-    Marks the specified action run as skipped.  This allows dependant actions
+    Marks the specified action run as skipped.  This allows dependent actions
     to run.
 
 fail <job_run_id | action_run_id>

@@ -20,7 +20,7 @@ The easiest way to install Tron is from PyPI::
 
     $ sudo pip install tron
 
-You can also get a copy of the current developmnent release from
+You can also get a copy of the current development release from
 `github <http://github.com/yelp/Tron>`_. See `setup.py` in the source package
 for a full list of required packages.
 
