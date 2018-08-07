@@ -6,6 +6,7 @@ import datetime
 import functools
 import itertools
 import re
+from string import Formatter
 
 import six
 from six import string_types
@@ -17,6 +18,21 @@ from tron.utils.dicts import FrozenDict
 
 MAX_IDENTIFIER_LENGTH = 255
 IDENTIFIER_RE = re.compile(r'^[A-Za-z_][\w\-]{0,254}$')
+
+
+class StringFormatter(Formatter):
+    def __init__(self, context=None):
+        Formatter.__init__(self)
+        self.context = context
+
+    def get_value(self, key, args, kwds):
+        if isinstance(key, str):
+            try:
+                return kwds[key]
+            except KeyError:
+                return self.context[key]
+        else:
+            Formatter.get_value(key, args, kwds)
 
 
 class UniqueNameDict(dict):

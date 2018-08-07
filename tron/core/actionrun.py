@@ -12,6 +12,7 @@ from tron import node
 from tron.actioncommand import ActionCommand
 from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
+from tron.config.config_utils import StringFormatter
 from tron.config.schema import ExecutorTypes
 from tron.core import action
 from tron.mesos import MesosClusterRepository
@@ -499,7 +500,11 @@ class ActionRun(object):
 
     def render_command(self):
         """Render our configured command using the command context."""
-        return self.bare_command % self.context
+        if "%" in self.bare_command:
+            return self.bare_command % self.context
+        else:
+            fmt = StringFormatter(self.context)
+            return fmt.format(self.bare_command)
 
     @property
     def command(self):
