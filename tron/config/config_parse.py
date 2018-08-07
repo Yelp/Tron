@@ -68,7 +68,7 @@ def build_format_string_validator(context_object):
         )
 
         try:
-            valid_context_variable_expr(value)
+            valid_context_variable_expr(value, config_context)
             value % context
             return value
         except (KeyError, ValueError) as e:

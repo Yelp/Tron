@@ -1135,7 +1135,7 @@ class BuildFormatStringValidatorTestCase(TestCase):
                 template,
                 NullConfigContext,
             )
-            assert_in("Wrong command format", str(exception))
+            assert_in("Context variable expression is invalid", str(exception))
 
     def test_validator_wrong_type_error(self):
         template = "The %(one)d %(seven)s thing is %(stars)s"
@@ -1145,7 +1145,7 @@ class BuildFormatStringValidatorTestCase(TestCase):
             template,
             NullConfigContext,
         )
-        assert_in("Wrong command format", str(exception))
+        assert_in("Context variable expression is invalid", str(exception))
 
     def test_validator_passes_with_context(self):
         template = "The %(one)s thing I %(seven)s is %(mars)s"
