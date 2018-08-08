@@ -96,8 +96,8 @@ class TestRecovery(TestCase):
             [self.action_runs[0], self.action_runs[1]]
 
     def test_filter_recovery_candidates(self):
-        with mock.patch('tron.core.recovery.filter_recoverable_action_runs') as mock_filter_recoverable, \
-                mock.patch('tron.core.recovery.filter_action_runs_needing_recovery') as mock_filter_needing_recovery:
+        with mock.patch('tron.core.recovery.filter_recoverable_action_runs', autospec=True) as mock_filter_recoverable, \
+                mock.patch('tron.core.recovery.filter_action_runs_needing_recovery', autospec=True) as mock_filter_needing_recovery:
 
             mock_filter_needing_recovery.return_value = ['foo']
             filter_recovery_candidates(self.action_runs)
@@ -109,8 +109,8 @@ class TestRecovery(TestCase):
             )
 
     def test_launch_recovery_actionruns_for_job_runs(self):
-        with mock.patch('tron.core.recovery.filter_recovery_candidates') as mock_filter_recovery_candidates, \
-                mock.patch('tron.core.recovery.recover_action_run') as mock_recover_action_run:
+        with mock.patch('tron.core.recovery.filter_recovery_candidates', autospec=True) as mock_filter_recovery_candidates, \
+                mock.patch('tron.core.recovery.recover_action_run', autospec=True) as mock_recover_action_run:
 
             mock_values = [
                 mock.Mock(

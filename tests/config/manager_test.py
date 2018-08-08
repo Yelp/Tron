@@ -65,7 +65,7 @@ class ManifestFileTestCase(TestCase):
     def teardown_dir(self):
         shutil.rmtree(self.temp_dir)
 
-    @mock.patch('tron.config.manager.os.path')
+    @mock.patch('tron.config.manager.os.path', autospec=True)
     @mock.patch('tron.config.manager.write', autospec=True)
     def test_create_exists(self, mock_write, mock_os):
         mock_os.isfile.return_value = True
@@ -193,7 +193,7 @@ class ConfigManagerTestCase(TestCase):
         expected_mapping[name] = self.content
         mock_config_container.create.assert_called_with(expected_mapping)
 
-    @mock.patch('tron.config.manager.read')
+    @mock.patch('tron.config.manager.read', autospec=True)
     @mock.patch(
         'tron.config.manager.config_parse.ConfigContainer',
         autospec=True,

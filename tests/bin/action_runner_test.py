@@ -19,7 +19,7 @@ class StatusFileTestCase(TestCase):
 
     def test_get_content(self):
         command, proc, run_id = 'do this', mock.Mock(), 'Job.test.1'
-        with mock.patch('action_runner.time.time', autospace=True) as faketime, \
+        with mock.patch('action_runner.time.time', autospec=True) as faketime, \
                 mock.patch('action_runner.os.getpid', autospec=True) as fakepid:
             faketime.return_value = 0
             fakepid.return_value = 2

@@ -142,7 +142,7 @@ class ClientProxy(object):
             return f.read()
 
     def wrap(self, func, *args, **kwargs):
-        with mock.patch('tron.commands.client.log'):
+        with mock.patch('tron.commands.client.log', autospec=True):
             try:
                 return func(*args, **kwargs)
             except (client.RequestError, ValueError) as e:
