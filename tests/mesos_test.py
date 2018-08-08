@@ -6,8 +6,6 @@ from testify import assert_equal
 from testify import setup_teardown
 from testify import TestCase
 
-from tron.mesos import MESOS_ROLE
-from tron.mesos import MESOS_SECRET
 from tron.mesos import MesosCluster
 from tron.mesos import MesosClusterRepository
 from tron.mesos import MesosTask
@@ -49,6 +47,9 @@ class MesosClusterRepositoryTestCase(TestCase):
         ]
         mock_volume = mock.Mock()
         options = mock.Mock(
+            mesos_master_port=5000,
+            mesos_secret='my_secret',
+            mesos_role='tron',
             enabled=False,
             default_volumes=[mock_volume],
             dockercfg_location='auth',
@@ -69,6 +70,9 @@ class MesosClusterRepositoryTestCase(TestCase):
         MesosClusterRepository.get_cluster('f')
         self.cluster_cls.assert_called_with(
             'f',
+            5000,
+            'my_secret',
+            'tron',
             False,
             [expected_volume],
             'auth',
@@ -263,19 +267,24 @@ class MesosClusterTestCase(TestCase):
     @mock.patch('tron.mesos.socket', autospec=True)
     def test_init(self, mock_socket):
         mock_socket.gethostname.return_value = 'hostname'
-        cluster = MesosCluster('mesos-cluster-a.me')
+        cluster = MesosCluster(
+            mesos_address='mesos-cluster-a.me',
+            mesos_master_port=5000,
+            mesos_secret='my_secret',
+            mesos_role='tron',
+        )
 
         assert_equal(cluster.queue, self.mock_queue)
         assert_equal(cluster.processor, self.mock_processor)
 
-        self.mock_get_leader.assert_called_once_with('mesos-cluster-a.me')
+        self.mock_get_leader.assert_called_once_with('mesos-cluster-a.me', 5000)
         self.mock_processor.executor_from_config.assert_has_calls([
             mock.call(
                 provider='mesos_task',
                 provider_config={
-                    'secret': MESOS_SECRET,
+                    'secret': 'my_secret',
                     'mesos_address': self.mock_get_leader.return_value,
-                    'role': MESOS_ROLE,
+                    'role': 'tron',
                     'framework_name': 'tron-hostname',
                 },
             ),

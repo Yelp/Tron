@@ -14,18 +14,13 @@ from tron.utils.queue import PyDeferredQueue
 TASK_LOG_FORMAT = '%(asctime)s %(name)s %(levelname)s %(message)s'
 TASK_OUTPUT_LOGGER = 'tron.mesos.task_output'
 
-# TODO: put in configs
-MESOS_MASTER_PORT = 5050
-MESOS_SECRET = ''
-MESOS_ROLE = '*'
-
 log = logging.getLogger(__name__)
 
 
-def get_mesos_leader(master_address):
-    url = "http://%s:%s/redirect" % (master_address, MESOS_MASTER_PORT)
+def get_mesos_leader(master_address, mesos_master_port):
+    url = "http://%s:%s/redirect" % (master_address, mesos_master_port)
     response = requests.get(url)
-    return '{}:{}'.format(urlparse(response.url).hostname, MESOS_MASTER_PORT)
+    return '{}:{}'.format(urlparse(response.url).hostname, mesos_master_port)
 
 
 def combine_volumes(defaults, overrides):
@@ -43,6 +38,9 @@ class MesosClusterRepository:
     """A class that stores MesosCluster objects and configuration."""
 
     clusters = {}
+    mesos_master_port = None,
+    mesos_secret = None,
+    mesos_role = None,
     mesos_enabled = False
     default_volumes = ()
     dockercfg_location = None
@@ -53,6 +51,9 @@ class MesosClusterRepository:
         if master_address not in cls.clusters:
             cls.clusters[master_address] = MesosCluster(
                 master_address,
+                cls.mesos_master_port,
+                cls.mesos_secret,
+                cls.mesos_role,
                 cls.mesos_enabled,
                 cls.default_volumes,
                 cls.dockercfg_location,
@@ -67,6 +68,9 @@ class MesosClusterRepository:
 
     @classmethod
     def configure(cls, mesos_options):
+        cls.mesos_master_port = mesos_options.mesos_master_port
+        cls.mesos_secret = mesos_options.mesos_secret
+        cls.mesos_role = mesos_options.mesos_role
         cls.mesos_enabled = mesos_options.enabled
         cls.default_volumes = [
             vol._asdict() for vol in mesos_options.default_volumes
@@ -193,12 +197,18 @@ class MesosCluster:
     def __init__(
         self,
         mesos_address,
+        mesos_master_port=None,
+        mesos_secret=None,
+        mesos_role=None,
         enabled=True,
         default_volumes=None,
         dockercfg_location=None,
         offer_timeout=None,
     ):
         self.mesos_address = mesos_address
+        self.mesos_master_port = mesos_master_port
+        self.mesos_secret = mesos_secret
+        self.mesos_role = mesos_role
         self.enabled = enabled
         self.default_volumes = default_volumes or []
         self.dockercfg_location = dockercfg_location
@@ -323,9 +333,9 @@ class MesosCluster:
         executor = self.processor.executor_from_config(
             provider='mesos_task',
             provider_config={
-                'secret': MESOS_SECRET,
-                'mesos_address': get_mesos_leader(mesos_address),
-                'role': MESOS_ROLE,
+                'secret': self.mesos_secret,
+                'mesos_address': get_mesos_leader(mesos_address, self.mesos_master_port),
+                'role': self.mesos_role,
                 'framework_name': framework_name,
             }
         )
