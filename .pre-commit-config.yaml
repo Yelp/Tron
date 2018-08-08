@@ -13,3 +13,11 @@
     hooks:
     -   id: reorder-python-imports
         language_version: python3.6
+-   repo: local
+    hooks:
+    -   id: patch-enforce-autospec
+        name: mock.patch enforce autospec
+        description: This hook ensures all mock.patch invocations specify an autospec
+        entry: contrib/mock_patch_checker.py
+        language: script
+        files: ^tests/.*\.py$

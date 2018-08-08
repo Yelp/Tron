@@ -160,7 +160,7 @@ class JobRunAdapterTestCase(TestCase):
         assert self.adapter.include_action_runs
 
     def test_get_runs(self):
-        with mock.patch('tron.api.adapter.ActionRunAdapter'):
+        with mock.patch('tron.api.adapter.ActionRunAdapter', autospec=True):
             assert_length(self.adapter.get_runs(), 2)
 
     def test_get_runs_without_action_runs(self):

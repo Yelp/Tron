@@ -40,7 +40,7 @@ class JobTestCase(TestCase):
             actioncommand.SubprocessActionRunnerFactory,
         )
 
-        patcher = mock.patch('tron.core.job.node.NodePoolRepository')
+        patcher = mock.patch('tron.core.job.node.NodePoolRepository', autospec=True)
         with patcher as self.mock_node_repo:
             self.job = job.Job(
                 "jobname",
@@ -264,14 +264,14 @@ class JobSchedulerTestCase(TestCase):
         self.job.get_job_runs_from_state.return_value = mock_runs
 
         with mock.patch(
-            'tron.core.job.recovery.launch_recovery_actionruns_for_job_runs'
+            'tron.core.job.recovery.launch_recovery_actionruns_for_job_runs', autospec=True,
         ) as mock_launch_recovery:
             mock_launch_recovery.return_value = mock.Mock(autospec=True)
             self.job_scheduler.restore_state(
                 job_state_data, mock_action_runner
             )
             assert self.job.runs.runs == collections.deque(mock_runs)
-            assert mock_launch_recovery.called_once_with(
+            mock_launch_recovery.assert_called_once_with(
                 job_runs=mock_runs, master_action_runner=mock_action_runner
             )
             calls = [mock.call(mock_runs[i]) for i in range(0, len(mock_runs))]
@@ -450,7 +450,7 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
     def test_manual_start_default_with_timezone(self):
         self.job.time_zone = mock.Mock()
         with mock.patch(
-            'tron.core.job.timeutils.current_time',
+            'tron.core.job.timeutils.current_time', autospec=True,
         ) as mock_current:
             manual_runs = self.job_scheduler.manual_start()
             mock_current.assert_called_with(tz=self.job.time_zone)

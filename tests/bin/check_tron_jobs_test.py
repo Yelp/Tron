@@ -12,10 +12,10 @@ from testify import TestCase
 
 
 class CheckJobsTestCase(TestCase):
-    @patch('check_tron_jobs.check_job_result')
-    @patch('check_tron_jobs.Client')
-    @patch('check_tron_jobs.cmd_utils')
-    @patch('check_tron_jobs.parse_cli')
+    @patch('check_tron_jobs.check_job_result', autospec=True)
+    @patch('check_tron_jobs.Client', autospec=True)
+    @patch('check_tron_jobs.cmd_utils', autospec=True)
+    @patch('check_tron_jobs.parse_cli', autospec=True)
     def test_check_job_result_exception(
         self,
         mock_args,

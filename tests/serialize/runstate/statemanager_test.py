@@ -210,18 +210,15 @@ class StateChangeWatcherTestCase(TestCase):
             mock_job.state_data,
         )
 
-    def test_save_metadata(self):
-        patcher = mock.patch(
-            'tron.serialize.runstate.statemanager.StateMetadata',
+    @mock.patch('tron.serialize.runstate.statemanager.StateMetadata', autospec=None)
+    def test_save_metadata(self, mock_state_metadata):
+        self.watcher.save_metadata()
+        meta_data = mock_state_metadata.return_value
+        self.watcher.state_manager.save.assert_called_with(
+            runstate.MCP_STATE,
+            meta_data.name,
+            meta_data.state_data,
         )
-        with patcher as mock_state_metadata:
-            self.watcher.save_metadata()
-            meta_data = mock_state_metadata.return_value
-            self.watcher.state_manager.save.assert_called_with(
-                runstate.MCP_STATE,
-                meta_data.name,
-                meta_data.state_data,
-            )
 
     def test_shutdown(self):
         self.watcher.shutdown()

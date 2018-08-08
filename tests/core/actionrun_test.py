@@ -263,7 +263,7 @@ class ActionRunTestCase(TestCase):
         self.action_run.fail()
         assert not self.action_run.start()
 
-    @mock.patch('tron.core.actionrun.log')
+    @mock.patch('tron.core.actionrun.log', autospec=True)
     def test_start_invalid_command(self, _log):
         self.action_run.bare_command = "%(notfound)s"
         self.action_run.machine.transition('ready')
@@ -336,7 +336,7 @@ class ActionRunTestCase(TestCase):
         self.action_run.bare_command = "new command"
         assert_equal(self.action_run.command, self.rendered_command)
 
-    @mock.patch('tron.core.actionrun.log')
+    @mock.patch('tron.core.actionrun.log', autospec=True)
     def test_command_failed_render(self, _log):
         self.action_run.bare_command = "%(this_is_missing)s"
         assert_equal(self.action_run.command, ActionRun.FAILED_RENDER)
@@ -454,7 +454,7 @@ class SSHActionRunTestCase(TestCase):
         assert_equal(self.action_run.exit_statuses, [-1])
         assert_equal(self.action_run.retries_remaining, 0)
 
-    @mock.patch('twisted.internet.reactor.callLater')
+    @mock.patch('twisted.internet.reactor.callLater', autospec=True)
     def test_retries_delay(self, callLater):
         self.action_run.retries_delay = datetime.timedelta()
         self.action_run.retries_remaining = 2
@@ -597,7 +597,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         )
         assert_equal(action_run.node, self.run_node)
 
-    @mock.patch('tron.core.actionrun.node.NodePoolRepository')
+    @mock.patch('tron.core.actionrun.node.NodePoolRepository', autospec=True)
     def test_from_state_with_node_exists(self, mock_store):
         ActionRun.from_state(
             self.state_data,

@@ -23,6 +23,7 @@ class MesosClusterRepositoryTestCase(TestCase):
         with mock.patch(
             'tron.mesos.MesosCluster',
             side_effect=init_cluster,
+            autospec=True,
         ) as self.cluster_cls:
             yield
 

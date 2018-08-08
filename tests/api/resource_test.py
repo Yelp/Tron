@@ -30,10 +30,10 @@ from tron.core import job
 from tron.core import jobrun
 
 with mock.patch(
-    'tron.api.async_resource.AsyncResource.bounded', lambda fn: fn
+    'tron.api.async_resource.AsyncResource.bounded', lambda fn: fn, autospec=None,
 ):
     with mock.patch(
-        'tron.api.async_resource.AsyncResource.exclusive', lambda fn: fn
+        'tron.api.async_resource.AsyncResource.exclusive', lambda fn: fn, autospec=None,
     ):
         from tron.api import resource as www
 
