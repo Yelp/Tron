@@ -25,6 +25,7 @@ from tron.config.config_utils import build_list_of_type_validator
 from tron.config.config_utils import ConfigContext
 from tron.config.config_utils import PartialConfigContext
 from tron.config.config_utils import valid_bool
+from tron.config.config_utils import valid_context_variable_expr
 from tron.config.config_utils import valid_dict
 from tron.config.config_utils import valid_float
 from tron.config.config_utils import valid_identifier
@@ -67,11 +68,15 @@ def build_format_string_validator(context_object):
         )
 
         try:
+            valid_context_variable_expr(value, config_context)
             value % context
             return value
         except (KeyError, ValueError) as e:
             error_msg = "Unknown context variable %s at %s: %s"
             raise ConfigError(error_msg % (e, config_context.path, value))
+        except (TypeError) as e:
+            error_msg = "Wrong command format %s: %s at %s"
+            raise ConfigError(error_msg % (value, e, config_context.path))
 
     return validator
 
