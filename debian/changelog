@@ -1,3 +1,11 @@
+tron (0.9.2.0) trusty; urgency=medium
+
+  * 0.9.2.0 tagged with 'make release'
+    Commit: catch command rendering type error (#488)  * catch command
+    rendering type error
+
+ -- root <root@76f71f6f3016>  Thu, 09 Aug 2018 20:46:45 +0000
+
 tron (0.9.1.9) trusty; urgency=medium
 
   * 0.9.1.9 tagged with 'make release'
