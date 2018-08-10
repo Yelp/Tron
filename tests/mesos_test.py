@@ -47,9 +47,9 @@ class MesosClusterRepositoryTestCase(TestCase):
         ]
         mock_volume = mock.Mock()
         options = mock.Mock(
-            mesos_master_port=5000,
-            mesos_secret='my_secret',
-            mesos_role='tron',
+            master_port=5000,
+            secret='my_secret',
+            role='tron',
             enabled=False,
             default_volumes=[mock_volume],
             dockercfg_location='auth',

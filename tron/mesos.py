@@ -68,9 +68,9 @@ class MesosClusterRepository:
 
     @classmethod
     def configure(cls, mesos_options):
-        cls.mesos_master_port = mesos_options.mesos_master_port
-        cls.mesos_secret = mesos_options.mesos_secret
-        cls.mesos_role = mesos_options.mesos_role
+        cls.mesos_master_port = mesos_options.master_port
+        cls.mesos_secret = mesos_options.secret
+        cls.mesos_role = mesos_options.role
         cls.mesos_enabled = mesos_options.enabled
         cls.default_volumes = [
             vol._asdict() for vol in mesos_options.default_volumes

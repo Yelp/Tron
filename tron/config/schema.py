@@ -110,9 +110,9 @@ ConfigState = config_object_factory(
 ConfigMesos = config_object_factory(
     name='ConfigMesos',
     optional=[
-        'mesos_master_port',
-        'mesos_secret',
-        'mesos_role',
+        'master_port',
+        'secret',
+        'role',
         'enabled',
         'default_volumes',
         'dockercfg_location',
