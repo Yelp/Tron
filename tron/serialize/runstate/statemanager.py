@@ -10,6 +10,7 @@ import six
 
 from tron.config import schema
 from tron.core import job
+from tron.mesos import MesosClusterRepository
 from tron.serialize import runstate
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 from tron.serialize.runstate.sqlalchemystore import SQLAlchemyStateStore
@@ -149,7 +150,12 @@ class PersistentStateManager(object):
         if not skip_validation:
             self._restore_metadata()
 
-        return self._restore_dicts(runstate.JOB_STATE, job_names)
+        jobs = self._restore_dicts(runstate.JOB_STATE, job_names)
+        frameworks = self._restore_dicts(runstate.MESOS_STATE, ['frameworks'])
+        return {
+            runstate.JOB_STATE: jobs,
+            runstate.MESOS_STATE: frameworks,
+        }
 
     def _restore_metadata(self):
         metadata = self._impl.restore([self.metadata_key])
@@ -254,9 +260,14 @@ class StateChangeWatcher(observer.Observer):
         """Handle a state change in an observable by saving its state."""
         if isinstance(observable, job.Job):
             self.save_job(observable)
+        elif observable == MesosClusterRepository:
+            self.save_frameworks(observable)
 
     def save_job(self, job):
         self._save_object(runstate.JOB_STATE, job)
+
+    def save_frameworks(self, clusters):
+        self._save_object(runstate.MESOS_STATE, clusters)
 
     def save_metadata(self):
         self._save_object(runstate.MCP_STATE, StateMetadata())
