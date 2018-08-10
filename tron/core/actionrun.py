@@ -500,11 +500,8 @@ class ActionRun(object):
 
     def render_command(self):
         """Render our configured command using the command context."""
-        if "%" in self.bare_command:
-            return self.bare_command % self.context
-        else:
-            fmt = StringFormatter(self.context)
-            return fmt.format(self.bare_command)
+        parse_str = self.bare_command % self.context
+        return StringFormatter(self.context).format(parse_str)
 
     @property
     def command(self):
