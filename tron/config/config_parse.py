@@ -593,6 +593,9 @@ class ValidateMesos(Validator):
     config_class = ConfigMesos
     option = True
     defaults = {
+        'master_port': 5050,
+        'secret': '',
+        'role': '*',
         'enabled': False,
         'default_volumes': (),
         'dockercfg_location': None,

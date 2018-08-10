@@ -98,6 +98,9 @@ def make_node_pools():
 
 def make_mesos_options():
     return schema.ConfigMesos(
+        master_port=5050,
+        secret='',
+        role='*',
         enabled=False,
         default_volumes=(),
         dockercfg_location=None,
