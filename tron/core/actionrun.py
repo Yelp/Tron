@@ -203,6 +203,7 @@ class ActionRun(object):
         env=None,
         extra_volumes=None,
         mesos_address=None,
+        mesos_task_id=None,
     ):
         self.job_run_id = maybe_decode(job_run_id)
         self.action_name = maybe_decode(name)
@@ -228,6 +229,7 @@ class ActionRun(object):
         self.env = env
         self.extra_volumes = extra_volumes
         self.mesos_address = mesos_address
+        self.mesos_task_id = mesos_task_id
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(self.id)
         self.context = command_context.build_context(self, parent_context)
@@ -316,6 +318,7 @@ class ActionRun(object):
             env=state_data.get('env'),
             extra_volumes=state_data.get('extra_volumes'),
             mesos_address=state_data.get('mesos_address'),
+            mesos_task_id=state_data.get('mesos_task_id'),
         )
 
         # Transition running to fail unknown because exit status was missed
@@ -480,6 +483,7 @@ class ActionRun(object):
             'env': self.env,
             'extra_volumes': self.extra_volumes,
             'mesos_address': self.mesos_address,
+            'mesos_task_id': self.mesos_task_id,
         }
 
     def render_command(self):
@@ -647,8 +651,7 @@ class MesosActionRun(ActionRun, Observer):
             self.fail(None)
             return
 
-        self.task_id = task.get_mesos_id()
-        # TODO: save task.task_id (mesos id) to state
+        self.mesos_task_id = task.get_mesos_id()
 
         # Watch before submitting, in case submit causes a transition
         self.watch(task)
@@ -677,15 +680,14 @@ class MesosActionRun(ActionRun, Observer):
         return "Warning: It might take up to docker_stop_timeout (current setting is 2 mins) for killing."
 
     def _kill_mesos_task(self):
-        try:
-            mesos_cluster = MesosClusterRepository.get_cluster(
-                self.mesos_address
-            )
-            succeeded = mesos_cluster.kill(self.task_id)
-            if not succeeded:
-                return "Error while killing task. Please try again."
-        except AttributeError:
+        mesos_cluster = MesosClusterRepository.get_cluster(
+            self.mesos_address
+        )
+        if self.mesos_task_id is None:
             return "Error: Can't find task id for the action."
+        succeeded = mesos_cluster.kill(self.mesos_task_id)
+        if not succeeded:
+            return "Error while killing task. Please try again."
 
     def handle_action_command_state_change(self, action_command, event):
         """Observe ActionCommand state changes."""
