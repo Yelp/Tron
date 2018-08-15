@@ -3,14 +3,6 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 from twisted.internet import reactor
-from twisted.internet.base import DelayedCall
-
-
-class Callback(DelayedCall):
-    """
-        active() - not (cancelled or called)
-    """
-    pass
 
 
 class NullCallback(object):
