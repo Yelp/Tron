@@ -1,5 +1,4 @@
 import logging
-import marshal
 import os
 import pickle
 import time
@@ -112,7 +111,7 @@ class EventBus:
         consume_dequeue(self.publish_queue, self.sync_publish)
 
     def sync_publish(self, event):
-        event = marshal.loads(marshal.dumps(event))
+        event = pickle.loads(pickle.dumps(event))
         event_id = event['id']
         if event_id in self.event_log:
             if self.event_log[event_id] != event:
