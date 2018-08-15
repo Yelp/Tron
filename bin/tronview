@@ -105,7 +105,11 @@ def view_job(args, job_id, client):
     if args.show_events:
         return display_events(client.object_events(job_id.url))
 
-    job_content = client.job(job_id.url, count=args.num_displays)
+    job_content = client.job(
+        job_url=job_id.url,
+        include_action_graph=True,
+        count=args.num_displays,
+    )
     return display.format_job_details(job_content)
 
 
@@ -160,10 +164,10 @@ def main():
         print("Unrecognized identifier: %s" % args.name, file=sys.stderr)
         sys.exit(ExitCode.fail)
 
-    if sys.stdout.isatty() and len(output.split('\n')) > console_height():
-        display.view_with_less(output, args.display_color)
-    else:
+    if type(output) is str:
         print(output)
+    else:
+        sys.stdout.buffer.write(output)
 
 
 if __name__ == '__main__':
