@@ -152,10 +152,9 @@ class MasterControlProgram(object):
         """
         self.event_recorder.notice('restoring')
         states = self.state_watcher.restore(self.jobs.get_names())
+        MesosClusterRepository.restore_state(states.get('mesos_state', {}))
 
-        MesosClusterRepository.restore_state(states['mesos_state'])
-
-        self.jobs.restore_state(states['job_state'], action_runner)
+        self.jobs.restore_state(states.get('job_state', {}), action_runner)
         self.state_watcher.save_metadata()
 
     def __str__(self):
