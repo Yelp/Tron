@@ -5,6 +5,7 @@ import argparse
 
 import mock
 from testify import assert_equal
+from testify import assert_in
 from testify import setup_teardown
 from testify import TestCase
 
@@ -139,3 +140,20 @@ class BuildOptionParserTestCase(TestCase):
             call[2].get('default') for call in parser.add_argument.mock_calls
         ]
         assert_equal(defaults, [None, None, None, None])
+
+
+class SuggestionsTestCase(TestCase):
+    def test_suggest_possibilities_none(self):
+        expected = ""
+        actual = cmd_utils.suggest_possibilities(word='FOO', possibilities=[])
+        assert_equal(actual, expected)
+
+    def test_suggest_possibilities_many(self):
+        expected = "FOOO, FOOBAR"
+        actual = cmd_utils.suggest_possibilities(word='FOO', possibilities=["FOOO", "FOOBAR"])
+        assert_in(expected, actual)
+
+    def test_suggest_possibilities_one(self):
+        expected = "FOOBAR?"
+        actual = cmd_utils.suggest_possibilities(word='FOO', possibilities=["FOOBAR", "BAZ"])
+        assert_in(expected, actual)
