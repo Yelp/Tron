@@ -11,7 +11,7 @@ from tron import event
 from tron import node
 from tron.config import manager
 from tron.core import job
-from tron.mesos import MesosClusterRepository
+from tron.mesos import MesosCluster
 from tron.serialize.runstate import statemanager
 from tron.utils import emailer
 
@@ -85,7 +85,7 @@ class MasterControlProgram(object):
                 'node_pools',
                 'ssh_options',
             ), (self.apply_notification_options, 'notification_options'),
-            (MesosClusterRepository.configure, 'mesos_options')
+            (MesosCluster.configure, 'mesos_options')
         ]
         master_config = config_container.get_master()
         apply_master_configuration(master_config_directives, master_config)
