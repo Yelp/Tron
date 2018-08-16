@@ -1,0 +1,38 @@
+state_persistence:
+  name: "/tmp/tron_state"
+  store_type: "shelve"
+  buffer_size: 10
+
+mesos_options:
+    enabled: True
+    dockercfg_location: 'file:///root/.dockercfg'
+
+ssh_options:
+  agent: False
+  identities:
+    - /work/example-cluster/insecure_key
+
+action_runner:
+  runner_type: "subprocess"
+  remote_status_path: "/tmp/tron"
+  remote_exec_path: "/work/bin/"
+
+nodes:
+  - hostname: localhost
+    username: root
+
+time_zone: US/Eastern
+
+jobs:
+  - name: "test"
+    node: localhost
+    schedule: "cron * * * * *"
+    time_zone: "US/Pacific"
+    actions:
+      - name: "first"
+        executor: mesos
+        command: "sleep 5m"
+        docker_image: busybox
+        cpus: 0.1
+        mem: 100
+        mesos_address: mesosmaster
