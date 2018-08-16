@@ -118,6 +118,7 @@ class module.ActionRunListEntryView extends ClickableListEntry
             <%= formatName(action_name) %></a></td>
         <td><%= formatState(state) %></td>
         <td><code class="command"><%= command || raw_command %></code></td>
+        <td><code class="command"><%= paasta_command %></code></td>
         <td><%= displayNode(node) %></td>
         <td><%= dateFromNow(start_time, "None") %></td>
         <td><%= dateFromNow(end_time, "") %></td>
@@ -174,6 +175,8 @@ class module.ActionRunView extends Backbone.View
                     <tr><td>Command</td>
                         <td><code class="command"><%= command %></code></td></tr>
                     <% } %>
+                    <tr><td>Paasta command</td>
+                        <td><code class="command"><%= paasta_command %></code></td></tr>
                     <tr><td>Exit codes</td>
                         <td>
                             <%= modules.actionrun.formatExit(exit_status) %>

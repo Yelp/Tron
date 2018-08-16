@@ -58,7 +58,7 @@ itest_%: test_in_docker_% debitest_%
 cluster_itests:
 	tox -e cluster_itests
 
-dev:
+dev: coffee_xenial
 	.tox/py36/bin/trond --debug --working-dir=dev -l logging.conf --host=$(shell hostname -f)
 
 example_cluster:

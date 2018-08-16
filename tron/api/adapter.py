@@ -108,6 +108,7 @@ class ActionRunAdapter(RunAdapter):
         'node',
         'command',
         'raw_command',
+        'paasta_command',
         'requirements',
         'stdout',
         'stderr',
@@ -134,6 +135,9 @@ class ActionRunAdapter(RunAdapter):
 
     def get_raw_command(self):
         return self._obj.bare_command
+
+    def get_paasta_command(self):
+        return self._obj.paasta_command
 
     def get_command(self):
         return self._obj.rendered_command

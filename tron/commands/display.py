@@ -348,6 +348,7 @@ class DisplayActionRuns(TableDisplay):
         ('Node', 'node'),
         ('Command', 'command'),
         ('Bare command', 'raw_command'),
+        ('Paasta command', 'paasta_command'),
         ('Start time', 'start_time'),
         ('End time', 'end_time'),
         ('Final exit status', 'exit_status'),

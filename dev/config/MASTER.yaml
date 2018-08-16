@@ -13,3 +13,4 @@ jobs:
       actions:
         - name: "first"
           command: "echo hi"
+          docker_image: 'https://docker-dev.yelpcorp.com/paasta-foo'
