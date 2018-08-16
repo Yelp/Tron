@@ -4,9 +4,17 @@ Format and color output for tron commands.
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import base64
 import contextlib
 from functools import partial
 from operator import itemgetter
+
+import matplotlib
+matplotlib.use('agg') # noqa
+import networkx as nx
+import matplotlib.pyplot as plt
+import io
+import os
 
 from tron.core import actionrun
 from tron.core import job
@@ -234,7 +242,8 @@ def format_job_details(job_content):
     actions = "\n\nList of Actions:\n%s" % '\n'.join(
         job_content['action_names'],
     )
-    return details + actions + "\n" + job_runs
+    graph = action_graph_to_image(job_content.get('action_graph'))
+    return details.encode('utf8') + actions.encode('utf8') + "\n".encode('utf8') + graph + job_runs.encode('utf8')
 
 
 def format_action_run_details(content, stdout=True, stderr=True):
@@ -438,3 +447,56 @@ def view_with_less(content, color=True):
     less_proc.stdin.write(maybe_encode(content))
     less_proc.stdin.close()
     less_proc.wait()
+
+
+def action_graph_to_image(action_graph):
+    if is_iterm2_shell():
+        options = {
+            'node_color': 'white',
+            'node_size': 300,
+            'width': 1,
+            'arrowstyle': '->',
+            'arrowsize': 12,
+            'arrows': True,
+            'font_size': 6
+        }
+        G = nx.DiGraph()
+        for n in action_graph:
+            G.add_node(n['name'])
+            for edge in n['dependent']:
+                G.add_edge(n['name'], edge)
+
+        plt.tight_layout()
+        f = plt.figure()
+        nx.draw_networkx(G, with_labels=True, ax=f.add_subplot(111), **options)
+        ax = plt.gca()
+        ax.set_axis_off()
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png')
+        buf.seek(0)
+        return bytes_to_iterm(buf.getbuffer())
+    else:
+        return ""
+
+
+def bytes_to_iterm(b):
+    """
+    Return a bytes string that displays image given by bytes b in the terminal
+    See https://www.iterm2.com/documentation-images.html
+    """
+    IMAGE_CODE = '\033]1337;File=name={name};inline={inline};size={size};width={width};height={height};preserveAspectRatio={preserve_aspect_ratio}:{base64_img}\a'
+    data = {
+        'name': '',
+        'inline': 1,
+        'size': len(b),
+        'base64_img': base64.b64encode(b).decode('ascii'),
+        'width': 'auto',
+        'height': 'auto',
+        'preserve_aspect_ratio': 1,
+    }
+    # IMAGE_CODE is a string because bytes doesn't support formatting
+    return IMAGE_CODE.format(**data).encode('ascii')
+
+
+def is_iterm2_shell():
+    return 'iTerm.app' in os.environ.get('TERM_PROGRAM', '')

@@ -157,10 +157,11 @@ class Client(object):
         }
         return self.http_get('/api/jobs', params).get('jobs')
 
-    def job(self, job_url, include_action_runs=False, count=0):
+    def job(self, job_url, include_action_runs=False, count=0, include_action_graph=False):
         params = {
             'include_action_runs': int(include_action_runs),
             'num_runs': count,
+            'include_action_graph': int(include_action_graph),
         }
         return self.http_get(job_url, params)
 
