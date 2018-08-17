@@ -347,6 +347,7 @@ class MesosCluster:
         if cls.deferred:
             cls.deferred.cancel()
         for key, task in list(cls.tasks.items()):
+            print('key = {}'.format(key))
             task.log.warning(
                 'Still running during Mesos shutdown, becoming unknown'
             )

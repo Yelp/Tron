@@ -58,9 +58,9 @@ class MasterControlProgramTestCase(TestCase):
             reconfigure=False,
         )
 
-    @mock.patch('tron.mcp.MesosClusterRepository', autospec=True)
+    @mock.patch('tron.mcp.MesosCluster', autospec=True)
     @mock.patch('tron.mcp.node.NodePoolRepository', autospec=True)
-    def test_apply_config(self, mock_repo, mock_cluster_repo):
+    def test_apply_config(self, mock_repo, mock_cluster):
         config_container = mock.create_autospec(config_parse.ConfigContainer)
         master_config = config_container.get_master.return_value
         autospec_method(self.mcp.apply_collection_config)
@@ -80,7 +80,7 @@ class MasterControlProgramTestCase(TestCase):
             master_config.node_pools,
             master_config.ssh_options,
         )
-        mock_cluster_repo.configure.assert_called_with(
+        mock_cluster.configure.assert_called_with(
             master_config.mesos_options,
         )
         self.mcp.build_job_scheduler_factory(master_config)

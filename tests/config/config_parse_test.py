@@ -98,6 +98,7 @@ def make_node_pools():
 
 def make_mesos_options():
     return schema.ConfigMesos(
+        master_address=None,
         master_port=5050,
         secret='',
         role='*',
@@ -265,8 +266,8 @@ def make_master_jobs():
                             executor='mesos',
                             cpus=0.1,
                             mem=100,
-                            mesos_address='the-master.mesos',
                             docker_image='container:latest',
+                            env=None,
                         ),
                 }),
                 cleanup_action=None,
@@ -289,7 +290,7 @@ def make_tron_config(
     mesos_options=None,
 ):
     return schema.TronConfig(
-        action_runner=action_runner or FrozenDict(),
+        action_runner=action_runner or dict(),
         output_stream_dir=output_stream_dir,
         command_context=command_context or
         FrozenDict(batch_dir='/tron/batch/test/foo', python='/usr/bin/python'),
@@ -380,7 +381,6 @@ class ConfigTestCase(TestCase):
                         command="test_command_mesos",
                         cpus=.1,
                         mem=100,
-                        mesos_address='the-master.mesos',
                         docker_image='container:latest',
                     )
                 ]
@@ -947,7 +947,6 @@ class ValidateJobsTestCase(TestCase):
                                     mode='RO'
                                 )
                             ],
-                            mesos_address='http://my-mesos-master.com'
                         )
                     ],
                     cleanup_action=dict(command="command")
@@ -1001,7 +1000,6 @@ class ValidateJobsTestCase(TestCase):
                                         mode='RO',
                                     ),
                                 ),
-                                mesos_address='http://my-mesos-master.com',
                                 expected_runtime=datetime.timedelta(hours=24),
                             ),
                     }),
@@ -1027,7 +1025,6 @@ class ValidMesosActionTestCase(TestCase):
             executor=schema.ExecutorTypes.mesos,
             cpus=0.2,
             mem=150,
-            mesos_address='http://hello.org',
         )
         assert_raises(
             ConfigError,
@@ -1042,7 +1039,6 @@ class ValidMesosActionTestCase(TestCase):
             executor=schema.ExecutorTypes.mesos,
             cpus=0.2,
             mem=150,
-            mesos_address='http://hello.org',
         )
         assert_raises(
             ConfigError,
