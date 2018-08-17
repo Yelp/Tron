@@ -6,6 +6,7 @@ from __future__ import unicode_literals
 from __future__ import with_statement
 
 import argparse
+import difflib
 import logging
 import os
 import sys
@@ -80,10 +81,13 @@ def tron_jobs_completer(prefix, **kwargs):
             inputs=[job.strip('\n\r') for job in jobs],
         )
     else:
-        default_client = Client(get_default_server())
+        if 'client' not in kwargs:
+            client = Client(get_default_server())
+        else:
+            client = kwargs['client']
         return filter_jobs_actions_runs(
             prefix=prefix,
-            inputs=[job['name'] for job in default_client.jobs()],
+            inputs=[job['name'] for job in client.jobs()],
         )
 
 
@@ -194,3 +198,13 @@ def setup_logging(options):
         format='%(name)s %(levelname)s %(message)s',
         stream=sys.stdout,
     )
+
+
+def suggest_possibilities(word, possibilities, max_suggestions=6):
+    suggestions = difflib.get_close_matches(word=word, possibilities=possibilities, n=max_suggestions)
+    if len(suggestions) == 1:
+        return f"\nDid you mean: {suggestions[0]}?"
+    elif len(suggestions) >= 1:
+        return f"\nDid you mean one of: {', '.join(suggestions)}?"
+    else:
+        return ""
