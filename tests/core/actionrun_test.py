@@ -964,10 +964,10 @@ class MesosActionRunTestCase(TestCase):
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_kill_task(self, mock_cluster_repo):
         mock_get_cluster = mock_cluster_repo.get_cluster
-        self.action_run.task_id = 'fake_task_id'
+        self.action_run.mesos_task_id = 'fake_task_id'
         error_message = self.action_run.kill()
         mock_get_cluster.return_value.kill.assert_called_once_with(
-            self.action_run.task_id
+            self.action_run.mesos_task_id
         )
         assert_equal(
             error_message,
@@ -984,10 +984,10 @@ class MesosActionRunTestCase(TestCase):
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_stop_task(self, mock_cluster_repo):
         mock_get_cluster = mock_cluster_repo.get_cluster
-        self.action_run.task_id = 'fake_task_id'
+        self.action_run.mesos_task_id = 'fake_task_id'
         self.action_run.stop()
         mock_get_cluster.return_value.kill.assert_called_once_with(
-            self.action_run.task_id
+            self.action_run.mesos_task_id
         )
 
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
