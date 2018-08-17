@@ -1,6 +1,6 @@
 
-window.modules = window.modules || {}
-module = window.modules.timeline = {}
+#window.modules = window.modules || {}
+#module = window.modules.timeline = {}
 
 
 module.padMaxDate = (dateRange, padding) ->

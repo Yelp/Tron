@@ -1,7 +1,7 @@
 
 # Jobs
-window.modules = window.modules || {}
-window.modules.job = module = {}
+#window.modules = window.modules || {}
+#window.modules.job = module = {}
 
 
 class window.Job extends Backbone.Model

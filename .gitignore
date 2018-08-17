@@ -12,7 +12,6 @@ docs/_build/
 tron.iml
 docs/images/
 *.dot
-tronweb/js/cs/*.js
 tronweb_tests/spec/*.js
 tronweb_tests/lib/
 .tox
@@ -38,3 +37,9 @@ debian/tron.postinst.debhelper
 debian/tron.postrm.debhelper
 debian/tron.prerm.debhelper
 debian/debhelper-build-stamp
+
+# TMP
+dev/tron.pid
+dev/tron_state
+node_modules/
+package-lock.json

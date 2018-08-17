@@ -1,7 +1,7 @@
 
 # Common view elements
 window.modules = window.modules || {}
-window.modules.views = module = {}
+#window.modules.views = module = {}
 
 
 # Note about subview

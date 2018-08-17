@@ -1,7 +1,7 @@
 
 # Dashboard
-window.modules = window.modules || {}
-window.modules.dashboard = module = {}
+#window.modules = window.modules || {}
+#window.modules.dashboard = module = {}
 
 class window.Dashboard extends Backbone.Model
 

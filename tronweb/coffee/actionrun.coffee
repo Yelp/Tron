@@ -1,7 +1,7 @@
 
 
-window.modules = window.modules || {}
-module = window.modules.actionrun = {}
+#window.modules = window.modules || {}
+#module = window.modules.actionrun = {}
 
 
 class module.ActionRun extends Backbone.Model

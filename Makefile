@@ -19,22 +19,13 @@ docker_%:
 	[ -d dist ] || mkdir -p dist
 	cd ./yelp_package/$* && docker build -t tron-builder-$* .
 
-deb_%: clean docker_% coffee_%
+deb_%: clean docker_%
 	@echo "Building deb for $*"
 	$(DOCKER_RUN) tron-builder-$* /bin/bash -c ' \
 		dpkg-buildpackage -d &&                  \
 		mv ../*.deb dist/ &&                     \
 		rm -rf debian/tron &&                    \
 		chown -R $(UID):$(GID) dist debian       \
-	'
-
-coffee_%: docker_%
-	@echo "Building tronweb"
-	$(DOCKER_RUN) tron-builder-$* /bin/bash -c '       \
-		rm -rf tronweb/js/cs &&                        \
-		mkdir -p tronweb/js/cs &&                      \
-		coffee -o tronweb/js/cs/ -c tronweb/coffee/ && \
-		chown -R $(UID):$(GID) tronweb/js/cs/          \
 	'
 
 test:
@@ -86,5 +77,4 @@ man:
 	@echo "Build finished. The manual pages are in $(DOCS_BUILDDIR)/man."
 
 clean:
-	rm -rf tronweb/js/cs
 	find . -name '*.pyc' -delete

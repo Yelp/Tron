@@ -7,7 +7,6 @@ RUN apt-get -q update && \
 
 RUN apt-get -q update && \
     DEBIAN_FRONTEND=noninteractive apt-get -q install -y --no-install-recommends \
-        coffeescript \
         debhelper \
         devscripts \
         dpkg-dev \

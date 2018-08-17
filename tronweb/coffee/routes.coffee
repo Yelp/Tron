@@ -1,7 +1,7 @@
 
 # Routes
-window.modules = window.modules || {}
-module = window.modules.routes = {}
+#window.modules = window.modules || {}
+#module = window.modules.routes = {}
 
 class module.TronRoutes extends Backbone.Router
 
