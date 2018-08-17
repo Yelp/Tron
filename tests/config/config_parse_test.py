@@ -99,8 +99,9 @@ def make_node_pools():
 def make_mesos_options():
     return schema.ConfigMesos(
         master_port=5050,
-        secret='',
+        secret_file=None,
         role='*',
+        principal="tron",
         enabled=False,
         default_volumes=(),
         dockercfg_location=None,
@@ -402,22 +403,20 @@ class ConfigTestCase(TestCase):
         expected = make_tron_config()
 
         test_config = valid_config(self.config)
-        assert_equal(test_config.command_context, expected.command_context)
-        assert_equal(test_config.ssh_options, expected.ssh_options)
-        assert_equal(
-            test_config.notification_options,
-            expected.notification_options,
-        )
-        assert_equal(test_config.time_zone, expected.time_zone)
-        assert_equal(test_config.nodes, expected.nodes)
-        assert_equal(test_config.node_pools, expected.node_pools)
+        assert test_config.command_context == expected.command_context
+        assert test_config.ssh_options == expected.ssh_options
+        assert test_config.mesos_options == expected.mesos_options
+        assert test_config.notification_options == expected.notification_options
+        assert test_config.time_zone == expected.time_zone
+        assert test_config.nodes == expected.nodes
+        assert test_config.node_pools == expected.node_pools
         for key in ['0', '1', '2', '3', '4', '_mesos']:
             job_name = f"MASTER.test_job{key}"
             assert job_name in test_config.jobs, f"{job_name} in test_config.jobs"
             assert job_name in expected.jobs, f"{job_name} in test_config.jobs"
             assert_equal(test_config.jobs[job_name], expected.jobs[job_name])
 
-        assert_equal(test_config, expected)
+        assert test_config == expected
 
     def test_empty_node_test(self):
         valid_config(dict(nodes=None))

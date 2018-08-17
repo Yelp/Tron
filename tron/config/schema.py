@@ -111,7 +111,8 @@ ConfigMesos = config_object_factory(
     name='ConfigMesos',
     optional=[
         'master_port',
-        'secret',
+        'secret_file',
+        'principal',
         'role',
         'enabled',
         'default_volumes',

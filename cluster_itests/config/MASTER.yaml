@@ -6,6 +6,8 @@ state_persistence:
 mesos_options:
     enabled: True
     dockercfg_location: 'file:///root/.dockercfg'
+    secret_file: '/work/cluster_itests/tron_framework_secret'
+    principal: 'tron'
 
 ssh_options:
   agent: False
@@ -26,7 +28,7 @@ time_zone: US/Eastern
 jobs:
   - name: "mesostest"
     node: localhost
-    schedule: "cron * * * * *"
+    schedule: "cron 0 0 1 1 *"
     time_zone: "US/Pacific"
     actions:
       - name: "first"
