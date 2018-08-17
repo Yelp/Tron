@@ -42,17 +42,6 @@
         }
       }
     },
-    "notification_options": {
-      "type": "object",
-      "properties": {
-        "smtp_host": {
-          "type": "string"
-        },
-        "notification_addr": {
-          "type": "string"
-        }
-      }
-    },
     "time_zone": {
       "type": "string"
     },

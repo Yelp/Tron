@@ -12,7 +12,6 @@ from testify import teardown
 from testify import TestCase
 
 from tests.assertions import assert_length
-from tron import event
 from tron import mcp
 from tron.config import config_parse
 from tron.config import schema
@@ -180,7 +179,6 @@ class MCPReconfigureTestCase(TestCase):
 
     @teardown
     def teardown_mcp(self):
-        event.EventManager.reset()
         filehandler.OutputPath(self.test_dir).delete()
         filehandler.FileHandleManager.reset()
 

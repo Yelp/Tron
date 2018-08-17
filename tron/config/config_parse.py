@@ -46,7 +46,6 @@ from tron.config.schema import ConfigState
 from tron.config.schema import ConfigVolume
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.schema import NamedTronConfig
-from tron.config.schema import NotificationOptions
 from tron.config.schema import TronConfig
 from tron.utils.dicts import FrozenDict
 
@@ -240,15 +239,6 @@ class ValidateSSHOptions(Validator):
 
 
 valid_ssh_options = ValidateSSHOptions()
-
-
-class ValidateNotificationOptions(Validator):
-    """Validate notification options."""
-    config_class = NotificationOptions
-    optional = True
-
-
-valid_notification_options = ValidateNotificationOptions()
 
 
 class ValidateNode(Validator):
@@ -646,7 +636,6 @@ class ValidateConfig(Validator):
         'output_stream_dir': None,
         'command_context': {},
         'ssh_options': ConfigSSHOptions(**ValidateSSHOptions.defaults),
-        'notification_options': None,
         'time_zone': None,
         'state_persistence': DEFAULT_STATE_PERSISTENCE,
         'nodes': {
@@ -663,7 +652,6 @@ class ValidateConfig(Validator):
         'output_stream_dir': valid_output_stream_dir,
         'command_context': valid_command_context,
         'ssh_options': valid_ssh_options,
-        'notification_options': valid_notification_options,
         'time_zone': valid_time_zone,
         'state_persistence': valid_state_persistence,
         'nodes': nodes,

@@ -14,7 +14,6 @@ from testify import class_setup
 from testify import run
 from testify import setup
 from testify import setup_teardown
-from testify import teardown
 from testify import TestCase
 from twisted.web import http
 
@@ -22,7 +21,6 @@ from tests import mocks
 from tests.assertions import assert_call
 from tests.testingutils import autospec_method
 from tests.testingutils import Turtle
-from tron import event
 from tron import mcp
 from tron import node
 from tron.api import controller
@@ -30,10 +28,14 @@ from tron.core import job
 from tron.core import jobrun
 
 with mock.patch(
-    'tron.api.async_resource.AsyncResource.bounded', lambda fn: fn, autospec=None,
+    'tron.api.async_resource.AsyncResource.bounded',
+    lambda fn: fn,
+    autospec=None,
 ):
     with mock.patch(
-        'tron.api.async_resource.AsyncResource.exclusive', lambda fn: fn, autospec=None,
+        'tron.api.async_resource.AsyncResource.exclusive',
+        lambda fn: fn,
+        autospec=None,
     ):
         from tron.api import resource as www
 
@@ -151,7 +153,6 @@ class ApiRootResourceTestCase(WWWTestCase):
             b'jobs',
             b'config',
             b'status',
-            b'events',
             b'',
         ]
         assert_equal(set(expected_children), set(self.resource.children))
@@ -297,26 +298,6 @@ class JobResourceTestCase(WWWTestCase):
         resource = self.resource.getChild(action_name, None)
         assert_equal(resource.__class__, www.ActionRunHistoryResource)
         assert_equal(resource.action_runs, action_runs)
-
-
-class EventResourceTestCase(WWWTestCase):
-    @setup
-    def setup_resource(self):
-        self.name = 'the_name'
-        self.resource = www.EventResource(self.name)
-
-    @teardown
-    def teardown_resource(self):
-        event.EventManager.reset()
-
-    def test_render_GET(self):
-        recorder = event.get_recorder(self.name)
-        ok_message, critical_message = 'ok message', 'critical message'
-        recorder.ok(ok_message)
-        recorder.critical(critical_message)
-        response = self.resource.render_GET(self.request())
-        names = [e['name'] for e in response['data']]
-        assert_equal(names, [critical_message, ok_message])
 
 
 class ConfigResourceTestCase(TestCase):

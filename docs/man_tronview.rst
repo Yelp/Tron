@@ -63,9 +63,6 @@ Options
 ``-e, --stderr``
     Solely displays stderr
 
-``--events``
-    Show events for the specified entity
-
 ``-s, --save``
     Save server and color options to client config file (~/.tron)
 

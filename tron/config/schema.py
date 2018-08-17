@@ -44,7 +44,6 @@ TronConfig = config_object_factory(
         'state_persistence',  # ConfigState
         'command_context',  # FrozenDict of str
         'ssh_options',  # ConfigSSHOptions
-        'notification_options',  # NotificationOptions or None
         'time_zone',  # pytz time zone
         'nodes',  # FrozenDict of ConfigNode
         'node_pools',  # FrozenDict of ConfigNodePool
@@ -57,14 +56,6 @@ NamedTronConfig = config_object_factory(
     name='NamedTronConfig',
     optional=[
         'jobs',  # FrozenDict of ConfigJob
-    ],
-)
-
-NotificationOptions = config_object_factory(
-    name='NotificationOptions',
-    required=[
-        'smtp_host',  # str
-        'notification_addr',  # str
     ],
 )
 

@@ -6,11 +6,6 @@ ssh_options:
     #     - /home/tron/.ssh/id_dsa
     agent: true
 
-# notification_options:
-    ## In case of trond failures, where should we send notifications to ?
-    # smtp_host: localhost
-    # notification_addr: nobody@localhost
-
 ## Directory used to store stdout/stderr from jobs. Defaults
 ## to the working directory
 # output_stream_dir: /tmp/tron/streams/
