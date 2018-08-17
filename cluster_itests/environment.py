@@ -21,8 +21,8 @@ import requests
 
 
 def before_all(context):
-    wait_for_http('tron')
-    wait_for_http('mesos')
+    wait_for_http('tronmaster:8089')
+    wait_for_http('mesosmaster:5050')
 
 
 def after_all(context):
@@ -68,13 +68,12 @@ def timeout(seconds=10, error_message=os.strerror(errno.ETIME)):
     return decorator
 
 
-@timeout(30, error_message='Service is not available. Cancelling integration tests')
+@timeout(120, error_message='Service is not available. Cancelling integration tests')
 def wait_for_http(service):
-    connection_string = get_service_connection_string(service)
     while True:
-        print(f'Connecting to {service}')
+        print(f'Waiting for {service} to be up...')
         try:
-            response = requests.get('http://%s/' % connection_string, timeout=5)
+            response = requests.get('http://%s/' % service, timeout=5)
         except (
             requests.exceptions.ConnectionError,
             requests.exceptions.Timeout,
@@ -84,16 +83,3 @@ def wait_for_http(service):
         if response.status_code == 200:
             print(f"{service} is up and running!")
             break
-
-
-def get_service_connection_string(service):
-    """Given a container name this function returns
-    the host and ephemeral port that you need to use to connect to. For example
-    if you are spinning up a 'web' container that inside listens on 80, this
-    function would return 0.0.0.0:23493 or whatever ephemeral forwarded port
-    it has from docker-compose"""
-    service = service.upper()
-    raw_host_port = os.environ['%s_PORT' % service]
-    # Remove leading tcp:// or similar
-    host_port = raw_host_port.split("://")[1]
-    return host_port

@@ -29,7 +29,7 @@ services:
     build:
       context: ../
       dockerfile: ./yelp_package/itest_dockerfiles/tronmaster/Dockerfile
-    command: bash -c 'pip3 install -e /work && exec trond --debug -c /work/cluster_itests/config/   -l /work/example-cluster/logging.conf'
+    command: bash -c 'pip3 install -e /work && exec trond --debug -c /work/cluster_itests/config/   -l /work/example-cluster/logging.conf  -H 0.0.0.0'
     ports:
       - 8089
     depends_on:
