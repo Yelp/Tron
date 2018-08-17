@@ -1,5 +1,6 @@
 /*
  * decaffeinate suggestions:
+ * DS001: Remove Babel/TypeScript constructor workaround
  * DS101: Remove unnecessary use of Array.from
  * DS102: Remove unnecessary code created because of implicit returns
  * DS205: Consider reworking code to avoid use of IIFEs
@@ -8,12 +9,19 @@
  */
 
 // Dashboard
-//window.modules = window.modules || {}
-//window.modules.dashboard = module = {}
+window.modules = window.modules || {}
+window.modules.dashboard = module = {}
 
 window.Dashboard = class Dashboard extends Backbone.Model {
 
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.fetch = this.fetch.bind(this);
         this.models = this.models.bind(this);
         this.sorted = this.sorted.bind(this);
@@ -94,6 +102,13 @@ Cls.initClass();
 
 Cls = (window.DashboardView = class DashboardView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         this.makeView = this.makeView.bind(this);
         this.renderBoxes = this.renderBoxes.bind(this);
@@ -163,6 +178,13 @@ Cls.initClass();
 
 Cls = (window.StatusBoxView = class StatusBoxView extends ClickableListEntry {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         this.className = this.className.bind(this);
         this.render = this.render.bind(this);
@@ -209,6 +231,13 @@ Cls.initClass();
 
 Cls = (module.JobStatusBoxView = class JobStatusBoxView extends StatusBoxView {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.buildUrl = this.buildUrl.bind(this);
         this.getState = this.getState.bind(this);
         this.count = this.count.bind(this);

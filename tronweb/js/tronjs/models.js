@@ -1,5 +1,6 @@
 /*
  * decaffeinate suggestions:
+ * DS001: Remove Babel/TypeScript constructor workaround
  * DS101: Remove unnecessary use of Array.from
  * DS102: Remove unnecessary code created because of implicit returns
  * DS205: Consider reworking code to avoid use of IIFEs
@@ -23,6 +24,13 @@ Backbone.sync = function(method, model, options) {
 window.RefreshModel = class RefreshModel extends Backbone.Model {
 
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         this.toggle = this.toggle.bind(this);
         this.enableRefresh = this.enableRefresh.bind(this);
@@ -98,6 +106,13 @@ window.nestedName = field => item => item.get(field)['name'];
 
 let Cls = (window.FilterModel = class FilterModel extends Backbone.Model {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.createFilter = this.createFilter.bind(this);
         super(...args);
     }
@@ -150,11 +165,11 @@ class IndexEntry {
     }
 
     replace(...args) {
-        return this.name.replace(...args);
+        return this.name.replace(...Array.from(args || []));
     }
 
     indexOf(...args) {
-        return this.name.indexOf(...args);
+        return this.name.indexOf(...Array.from(args || []));
     }
 
     toString() {
@@ -165,6 +180,13 @@ class IndexEntry {
 
 class JobIndexEntry extends IndexEntry {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.getUrl = this.getUrl.bind(this);
         super(...args);
     }
@@ -182,6 +204,13 @@ JobIndexEntry.initClass();
 
 class ConfigIndexEntry extends IndexEntry {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.getUrl = this.getUrl.bind(this);
         super(...args);
     }
@@ -204,6 +233,13 @@ class CommandIndexEntry extends IndexEntry {
     }
 
     constructor(name, job_name, action_name) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.getUrl = this.getUrl.bind(this);
         this.name = name;
         this.job_name = job_name;
@@ -220,6 +256,13 @@ CommandIndexEntry.initClass();
 
 Cls = (module.QuickFindModel = class QuickFindModel extends Backbone.Model {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.getJobEntries = this.getJobEntries.bind(this);
         this.parse = this.parse.bind(this);
         super(...args);

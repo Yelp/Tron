@@ -1,5 +1,6 @@
 /*
  * decaffeinate suggestions:
+ * DS001: Remove Babel/TypeScript constructor workaround
  * DS101: Remove unnecessary use of Array.from
  * DS102: Remove unnecessary code created because of implicit returns
  * DS206: Consider reworking classes to avoid initClass
@@ -11,6 +12,13 @@
 
 Cls = (window.GraphView = class GraphView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         this.buildNodeMap = this.buildNodeMap.bind(this);
         this.getLinks = this.getLinks.bind(this);
@@ -157,6 +165,13 @@ Cls.initClass();
 
 class GraphModalView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         this.attachEvents = this.attachEvents.bind(this);
         this.showModal = this.showModal.bind(this);

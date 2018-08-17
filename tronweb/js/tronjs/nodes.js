@@ -1,5 +1,6 @@
 /*
  * decaffeinate suggestions:
+ * DS001: Remove Babel/TypeScript constructor workaround
  * DS102: Remove unnecessary code created because of implicit returns
  * DS206: Consider reworking classes to avoid initClass
  * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
@@ -16,6 +17,13 @@ class NodePoolModel extends Backbone.Model {}
 
 class NodeInlineView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.render = this.render.bind(this);
         super(...args);
     }
@@ -42,6 +50,13 @@ NodeInlineView.initClass();
 
 class NodePoolInlineView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.render = this.render.bind(this);
         super(...args);
     }

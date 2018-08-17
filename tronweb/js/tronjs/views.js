@@ -1,5 +1,7 @@
 /*
  * decaffeinate suggestions:
+ * DS001: Remove Babel/TypeScript constructor workaround
+ * DS101: Remove unnecessary use of Array.from
  * DS102: Remove unnecessary code created because of implicit returns
  * DS205: Consider reworking code to avoid use of IIFEs
  * DS206: Consider reworking classes to avoid initClass
@@ -9,7 +11,7 @@
 
 // Common view elements
 window.modules = window.modules || {};
-//window.modules.views = module = {}
+window.modules.views = module = {}
 
 
 // Note about subview
@@ -51,8 +53,8 @@ window.dateFromNow = function(string, defaultString) {
 
 window.getDuration = function(time) {
     let ms;
-    [time, ms] = time.split('.');
-    const [hours, minutes, seconds] = time.split(':');
+    [time, ms] = Array.from(time.split('.'));
+    const [hours, minutes, seconds] = Array.from(time.split(':'));
     return moment.duration({
         hours: parseInt(hours),
         minutes: parseInt(minutes),
@@ -108,6 +110,13 @@ module.makeHeaderToggle = function(root) {
 
 Cls = (window.FilterView = class FilterView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.getFilterTemplate = this.getFilterTemplate.bind(this);
         this.renderFilters = this.renderFilters.bind(this);
         this.render = this.render.bind(this);
@@ -204,13 +213,13 @@ Cls = (window.FilterView = class FilterView extends Backbone.View {
     }
 
     filterChange(event) {
-        const [filterName, filterValue] = this.getFilterFromEvent(event);
+        const [filterName, filterValue] = Array.from(this.getFilterFromEvent(event));
         this.model.set(filterName, filterValue);
         return this.trigger('filter:change', filterName, filterValue);
     }
 
     filterDone(event) {
-        const [filterName, filterValue] = this.getFilterFromEvent(event);
+        const [filterName, filterValue] = Array.from(this.getFilterFromEvent(event));
         this.trigger('filter:done', filterName, filterValue);
         return window.modules.routes.updateLocationParam(filterName, filterValue);
     }
@@ -229,6 +238,13 @@ Cls.initClass();
 
 Cls = (window.RefreshToggleView = class RefreshToggleView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.render = this.render.bind(this);
         this.toggle = this.toggle.bind(this);
         this.triggerRefresh = this.triggerRefresh.bind(this);
@@ -294,6 +310,13 @@ Cls.initClass();
 
 Cls = (window.ClickableListEntry = class ClickableListEntry extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.propogateClick = this.propogateClick.bind(this);
         super(...args);
     }
@@ -323,6 +346,13 @@ module.makeSlider = (root, options) => root.find('.slider-bar').slider(options);
 
 Cls = (module.SliderView = class SliderView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.handleSliderMove = this.handleSliderMove.bind(this);
         this.updateDisplayCount = this.updateDisplayCount.bind(this);
         super(...args);

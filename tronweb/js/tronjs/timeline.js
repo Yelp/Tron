@@ -1,17 +1,18 @@
 /*
  * decaffeinate suggestions:
+ * DS001: Remove Babel/TypeScript constructor workaround
  * DS101: Remove unnecessary use of Array.from
  * DS102: Remove unnecessary code created because of implicit returns
  * DS206: Consider reworking classes to avoid initClass
  * Full docs: https://github.com/decaffeinate/decaffeinate/blob/master/docs/suggestions.md
  */
 
-//window.modules = window.modules || {}
-//module = window.modules.timeline = {}
+window.modules = window.modules || {}
+module = window.modules.timeline = {}
 
 
 module.padMaxDate = function(dateRange, padding) {
-    const [minDate, maxDate] = (Array.from(dateRange).map((date) => moment(date)));
+    const [minDate, maxDate] = Array.from((Array.from(dateRange).map((date) => moment(date))));
     const delta = maxDate.diff(minDate);
     maxDate.add('ms', delta * padding);
     return [minDate.toDate(), maxDate.toDate()];
@@ -23,6 +24,13 @@ const call = field => item => item[field]();
 
 Cls = (module.TimelineView = class TimelineView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         this.innerHeight = this.innerHeight.bind(this);
         this.innerWidth = this.innerWidth.bind(this);
@@ -127,8 +135,8 @@ Cls = (module.TimelineView = class TimelineView extends Backbone.View {
     render() {
         this.$el.html('');
         const data = this.model;
-        const [x, y] = [this.buildX(data), this.buildY(data)];
-        const [xAxis, yAxis] = this.buildAxis(x, y);
+        const [x, y] = Array.from([this.buildX(data), this.buildY(data)]);
+        const [xAxis, yAxis] = Array.from(this.buildAxis(x, y));
         const svg = this.buildSvg();
         this.buildSvgAxis(svg, xAxis, yAxis);
         this.buildSvgBars(svg, data, x, y);

@@ -1,5 +1,6 @@
 /*
  * decaffeinate suggestions:
+ * DS001: Remove Babel/TypeScript constructor workaround
  * DS101: Remove unnecessary use of Array.from
  * DS102: Remove unnecessary code created because of implicit returns
  * DS206: Consider reworking classes to avoid initClass
@@ -101,6 +102,13 @@ Cls.initClass();
 
 class MainView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.updateMain = this.updateMain.bind(this);
         this.updateFullView = this.updateFullView.bind(this);
         this.render = this.render.bind(this);
@@ -178,7 +186,7 @@ module.buildLocationString = function(base, params) {
 
 
 module.updateLocationParam = function(name, value) {
-    const [base, params] = module.getLocationParams();
+    const [base, params] = Array.from(module.getLocationParams());
     params[name] = value;
     return routes.navigate(module.buildLocationString(base, params));
 };

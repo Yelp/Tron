@@ -1,5 +1,6 @@
 /*
  * decaffeinate suggestions:
+ * DS001: Remove Babel/TypeScript constructor workaround
  * DS101: Remove unnecessary use of Array.from
  * DS102: Remove unnecessary code created because of implicit returns
  * DS205: Consider reworking code to avoid use of IIFEs
@@ -9,12 +10,19 @@
  */
 
 // Jobs
-//window.modules = window.modules || {}
-//window.modules.job = module = {}
+window.modules = window.modules || {}
+window.modules.job = module = {}
 
 
 Cls = (window.Job = class Job extends Backbone.Model {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         super(...args);
     }
@@ -41,6 +49,13 @@ Cls.initClass();
 
 Cls = (window.JobCollection = class JobCollection extends Backbone.Collection {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         this.parse = this.parse.bind(this);
         this.comparator = this.comparator.bind(this);
@@ -74,6 +89,13 @@ Cls.initClass();
 
 Cls = (window.JobRun = class JobRun extends Backbone.Model {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         this.url = this.url.bind(this);
         this.parse = this.parse.bind(this);
@@ -122,6 +144,13 @@ Cls.initClass();
 
 Cls = (window.JobListView = class JobListView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         this.renderList = this.renderList.bind(this);
         this.renderFilter = this.renderFilter.bind(this);
@@ -197,6 +226,13 @@ Cls.initClass();
 
 class JobListEntryView extends ClickableListEntry {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         super(...args);
     }
@@ -273,6 +309,13 @@ class JobRunTimelineEntry {
 
 Cls = (window.JobView = class JobView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         this.renderGraph = this.renderGraph.bind(this);
         this.renderTimeline = this.renderTimeline.bind(this);
@@ -370,12 +413,12 @@ Cls = (window.JobView = class JobView extends Backbone.View {
 `
         );
 
-        const [icon, title] = attrs.allow_overlap ?
+        const [icon, title] = Array.from(attrs.allow_overlap ?
             ['layers', "Allow overlapping runs"]
         : attrs.queueing ?
             ['circlepauseempty', "Queue overlapping runs"]
         :
-            ['remove-circle', "Cancel overlapping runs"];
+            ['remove-circle', "Cancel overlapping runs"]);
 
         const content = attrs.all_nodes ?
             template({icon: 'treediagram', title: "Run on all nodes"})
@@ -419,6 +462,13 @@ class JobRunListSliderModel {
 
 Cls = (module.JobRunListView = class JobRunListView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         this.renderList = this.renderList.bind(this);
         this.render = this.render.bind(this);
@@ -498,13 +548,13 @@ const formatInterval = function(interval) {
 };
 
 window.formatScheduler = function(scheduler) {
-    const [icon, value] = (() => { switch (scheduler.type) {
+    const [icon, value] = Array.from((() => { switch (scheduler.type) {
         case 'constant': return ['icon-repeatone', 'constant'];
         case 'interval': return ['icon-time', formatInterval(scheduler.value)];
         case 'groc':     return ['icon-calendarthree', scheduler.value];
         case 'daily':    return ['icon-notestasks', scheduler.value];
         case 'cron':     return ['icon-calendaralt-cronjobs', scheduler.value];
-    } })();
+    } })());
 
     return _.template(`\
     <i class="<%= icon %> tt-enable"
@@ -525,6 +575,13 @@ window.formatScheduler = function(scheduler) {
 
 class JobRunListEntryView extends ClickableListEntry {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         super(...args);
     }
@@ -563,6 +620,13 @@ JobRunListEntryView.initClass();
 
 Cls = (window.JobRunView = class JobRunView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         this.renderList = this.renderList.bind(this);
         this.getMaxDate = this.getMaxDate.bind(this);

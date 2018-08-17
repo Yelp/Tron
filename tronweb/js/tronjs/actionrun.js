@@ -1,5 +1,6 @@
 /*
  * decaffeinate suggestions:
+ * DS001: Remove Babel/TypeScript constructor workaround
  * DS101: Remove unnecessary use of Array.from
  * DS102: Remove unnecessary code created because of implicit returns
  * DS205: Consider reworking code to avoid use of IIFEs
@@ -9,12 +10,19 @@
  */
 
 
-//window.modules = window.modules || {}
-//module = window.modules.actionrun = {}
+window.modules = window.modules || {}
+module = window.modules.actionrun = {}
 
 
 Cls = (module.ActionRun = class ActionRun extends Backbone.Model {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         this.url = this.url.bind(this);
         this.parse = this.parse.bind(this);
@@ -54,6 +62,13 @@ Cls.initClass();
 
 Cls = (module.ActionRunHistoryEntry = class ActionRunHistoryEntry extends module.ActionRun {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.parse = this.parse.bind(this);
         super(...args);
     }
@@ -72,6 +87,13 @@ Cls.initClass();
 
 Cls = (module.ActionRunHistory = class ActionRunHistory extends Backbone.Collection {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         this.url = this.url.bind(this);
         this.parse = this.parse.bind(this);
@@ -182,6 +204,13 @@ module.ActionRunTimelineEntry = class ActionRunTimelineEntry {
 
 Cls = (module.ActionRunListEntryView = class ActionRunListEntryView extends ClickableListEntry {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         super(...args);
     }
@@ -228,6 +257,13 @@ module.formatExit = function(exit) {
 
 Cls = (module.ActionRunView = class ActionRunView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         super(...args);
     }
@@ -341,6 +377,13 @@ class ActionRunHistorySliderModel {
 
 Cls = (module.ActionRunHistoryView = class ActionRunHistoryView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.initialize = this.initialize.bind(this);
         this.renderList = this.renderList.bind(this);
         this.render = this.render.bind(this);

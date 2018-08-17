@@ -1,5 +1,6 @@
 /*
  * decaffeinate suggestions:
+ * DS001: Remove Babel/TypeScript constructor workaround
  * DS101: Remove unnecessary use of Array.from
  * DS102: Remove unnecessary code created because of implicit returns
  * DS205: Consider reworking code to avoid use of IIFEs
@@ -8,12 +9,19 @@
  */
 
 
-//window.modules = window.modules || {}
-//module = window.modules.navbar = {}
+window.modules = window.modules || {}
+module = window.modules.navbar = {}
 
 
 Cls = (module.NavView = class NavView extends Backbone.View {
     constructor(...args) {
+        {
+          // Hack: trick Babel/TypeScript into allowing this before super.
+          if (false) { super(); }
+          let thisFn = (() => { return this; }).toString();
+          let thisName = thisFn.slice(thisFn.indexOf('return') + 6 + 1, thisFn.indexOf(';')).trim();
+          eval(`${thisName} = this;`);
+        }
         this.render = this.render.bind(this);
         this.updater = this.updater.bind(this);
         this.source = this.source.bind(this);
@@ -105,7 +113,7 @@ Cls = (module.NavView = class NavView extends Backbone.View {
     }
 
     sorter(items) {
-        const [startsWithQuery, containsQuery] = [[], []];
+        const [startsWithQuery, containsQuery] = Array.from([[], []]);
         const query = this.query.toLowerCase();
         for (let item of Array.from(items)) {
             const uncasedItem = item.toLowerCase();
@@ -131,7 +139,7 @@ Cls = (module.NavView = class NavView extends Backbone.View {
 
     setActive() {
         this.$('li').removeClass('active');
-        let [path, params] = modules.routes.getLocationParams();
+        let [path, params] = Array.from(modules.routes.getLocationParams());
         path = path.split('/')[0];
         return this.$(`a[href=${path}]`).parent('li').addClass('active');
     }
