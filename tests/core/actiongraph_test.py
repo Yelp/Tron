@@ -1,12 +1,13 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+from unittest import mock
+
 from testify import assert_equal
 from testify import assert_raises
 from testify import run
 from testify import setup
 from testify import TestCase
-from testify import turtle
 
 from tron.core import actiongraph
 
@@ -21,10 +22,10 @@ class ActionGraphTestCase(TestCase):
             'dep_one_one',
             'dep_multi',
         ]
-        am = self.action_map = {
-            name: turtle.Turtle(name=name)
-            for name in self.action_names
-        }
+        am = self.action_map = {}
+        for name in self.action_names:
+            am[name] = mock.MagicMock()
+            am[name].name = name
 
         am['dep_multi'].required_actions = [am['dep_one_one'], am['base_two']]
         am['dep_one_one'].required_actions = [am['dep_one']]
@@ -34,10 +35,12 @@ class ActionGraphTestCase(TestCase):
         self.action_graph = actiongraph.ActionGraph(self.graph, am)
 
     def test_from_config(self):
-        config = {
-            name: turtle.Turtle(name=name, node='first', requires=[])
-            for name in self.action_names
-        }
+        config = {}
+        for name in self.action_names:
+            config[name] = mock.MagicMock(name=name, node='first', requires=[])
+            config[name].name = name
+            config[name].node = 'first'
+            config[name].requires = []
         config['dep_multi'].requires = ['dep_one_one', 'base_two']
         config['dep_one_one'].requires = ['dep_one']
         config['dep_one'].requires = ['base_one']
@@ -77,7 +80,7 @@ class ActionGraphTestCase(TestCase):
         assert_raises(KeyError, lambda: self.action_graph['unknown'])
 
     def test__eq__(self):
-        other_graph = turtle.Turtle(
+        other_graph = mock.MagicMock(
             graph=self.graph,
             action_map=self.action_map,
         )
@@ -87,7 +90,7 @@ class ActionGraphTestCase(TestCase):
         assert not self.action_graph == other_graph
 
     def test__ne__(self):
-        other_graph = turtle.Turtle
+        other_graph = mock.MagicMock()
         assert self.graph != other_graph
 
 
