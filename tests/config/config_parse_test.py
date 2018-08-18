@@ -148,7 +148,7 @@ def make_job(**kwargs):
     kwargs.setdefault('all_nodes', False)
     kwargs.setdefault('cleanup_action', make_cleanup_action())
     kwargs.setdefault('max_runtime')
-    kwargs.setdefault('allow_overlap', False)
+    kwargs.setdefault('allow_overlap', 1)
     kwargs.setdefault('time_zone', None)
     kwargs.setdefault('expected_runtime', datetime.timedelta(0, 3600))
     return schema.ConfigJob(**kwargs)

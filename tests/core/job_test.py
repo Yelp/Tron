@@ -247,7 +247,7 @@ class JobSchedulerTestCase(TestCase):
         mock_graph.get_action_map.return_value = {}
         mock_graph.action_map = {}
         self.job = mock.Mock(autospec=True)
-        self.job.allow_overlap = False
+        self.job.allow_overlap = 1
         self.job.max_runtime = datetime.timedelta(days=1)
         self.job_scheduler = job.JobScheduler(job=self.job)
 
@@ -325,6 +325,7 @@ class JobSchedulerTestCase(TestCase):
     def test_run_job_already_running_cancel(self):
         self.job_scheduler.schedule = mock.Mock(autospec=True)
         self.job.runs.get_active = lambda s: [mock.Mock(autospec=True)]
+        self.job.allow_overlap = 1
         self.job.queueing = False
         job_run = mock.Mock(autospec=True)
         job_run.is_cancelled = False
@@ -336,7 +337,7 @@ class JobSchedulerTestCase(TestCase):
     def test_run_job_already_running_allow_overlap(self):
         self.job_scheduler.schedule = mock.Mock()
         self.job.runs.get_active = lambda s: [mock.Mock()]
-        self.job.allow_overlap = True
+        self.job.allow_overlap = 2
         job_run = Turtle(is_cancelled=False)
         self.job_scheduler.run_job(job_run)
         job_run.start.assert_called_with()

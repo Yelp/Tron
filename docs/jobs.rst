@@ -40,9 +40,9 @@ Optional Fields
     not defined to queue overlapping then this setting is ignored.
     The ConstantScheduler will not queue overlapping.
 
-**allow_overlap** (default **False**)
-    If **True** new job runs will start even if the previous run is still running.
-    By default new job runs are either cancelled or queued (see **queuing**).
+**allow_overlap** (default **1**)
+    Determines how many current (overlapping) jobs are allowed to run simultaneously.
+    Defaults to 1, which means only 1 job will run at a time.
 
 **run_limit** (default **50**)
     Number of runs which will be stored. Once a Job has more then run_limit

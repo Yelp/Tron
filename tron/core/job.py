@@ -356,7 +356,7 @@ class JobScheduler(Observer):
 
         node = job_run.node if self.job.all_nodes else None
         # If there is another job run still running, queue or cancel this one
-        if not self.job.allow_overlap and any(self.job.runs.get_active(node)):
+        if not self.job.allow_overlap and len(self.job.runs.get_active(node)) >= self.job.allow_overlap:
             self._queue_or_cancel_active(job_run)
             return
 

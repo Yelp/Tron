@@ -318,7 +318,7 @@ class DisplayJobs(TableDisplay):
         ('Max runtime', 'max_runtime'),
         ('Node Pool', 'node_pool'),
         ('Run on all nodes', 'all_nodes'),
-        ('Allow overlapping', 'allow_overlap'),
+        ('Max overlapping jobs', 'allow_overlap'),
         ('Queue overlapping', 'queueing'),
     ]
 

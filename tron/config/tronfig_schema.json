@@ -180,8 +180,8 @@
             "default": true
           },
           "allow_overlap": {
-            "type": "boolean",
-            "default": false
+            "type": "number",
+            "default": 1
           },
           "run_limit": {
             "type": "number",

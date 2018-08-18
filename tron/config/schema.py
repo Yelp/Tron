@@ -136,7 +136,7 @@ ConfigJob = config_object_factory(
         'all_nodes',  # bool
         'cleanup_action',  # ConfigAction
         'enabled',  # bool
-        'allow_overlap',  # bool
+        'allow_overlap',  # int
         'max_runtime',  # datetime.Timedelta
         'time_zone',  # pytz time zone
         'expected_runtime',  # datetime.Timedelta

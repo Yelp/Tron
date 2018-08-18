@@ -235,7 +235,7 @@ class JobResourceTestCase(WWWTestCase):
             job.Job,
             runs=self.job_runs,
             all_nodes=False,
-            allow_overlap=True,
+            allow_overlap=1,
             queueing=True,
             action_graph=mock.MagicMock(),
             scheduler=mock.Mock(),
