@@ -331,13 +331,14 @@ class MesosClusterTestCase(TestCase):
     def _test_stop(self):
         mock_task = mock.MagicMock()
         MesosCluster.tasks = {'task_id': mock_task}
-        MesosCluster.stop()
-#        MesosCluster.runner.stop.assert_called_once_with()
-#        assert_equal(MesosCluster.runner.stop.call_count, 1)
-#        MesosCluster.deferred.cancel.assert_called_once_with()
-#        assert_equal(MesosCluster.deferred.cancel.call_count, 1)
-        mock_task.exited.assert_called_once_with(None)
-        assert_equal(len(MesosCluster.tasks), 0)
+
+        with mock.patch('tron.mesos.MesosCluster.runner', autospec=None), \
+                mock.patch('tron.mesos.MesosCluster.deferred', autospec=None):
+            MesosCluster.stop()
+            assert_equal(MesosCluster.runner.stop.call_count, 1)
+            assert_equal(MesosCluster.deferred.cancel.call_count, 1)
+            mock_task.exited.assert_called_once_with(None)
+            assert_equal(len(MesosCluster.tasks), 0)
 
     def _test_stop_disabled(self):
         # Shouldn't raise an error

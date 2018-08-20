@@ -4,6 +4,7 @@ state_persistence:
   buffer_size: 10
 
 mesos_options:
+    master_address: mesosmaster
     enabled: True
     dockercfg_location: 'file:///root/.dockercfg'
 
@@ -35,4 +36,3 @@ jobs:
         docker_image: busybox
         cpus: 0.1
         mem: 100
-        mesos_address: mesosmaster

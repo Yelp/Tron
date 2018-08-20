@@ -213,7 +213,7 @@ class MesosCluster:
             task.exited(1)
             return
 
-        if cls.runner.stopping:
+        if cls.runner is None or cls.runner.stopping:
             # Last framework was terminated for some reason, re-connect.
             cls.connect()
         elif cls.deferred.called:
