@@ -25,7 +25,7 @@ from tron.config.schedule_parse import parse_groc_expression
 from tron.utils import timeutils
 
 
-class TestSchedulerFromConfig(object):
+class TestSchedulerFromConfig(TestCase):
     def test_cron_scheduler(self):
         line = "cron */5 * * 7,8 *"
         config_context = mock.Mock(path='test')
@@ -389,7 +389,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         assert_equal(next_run_date.month, 7)
 
 
-class TestIntervalScheduler(object):
+class TestIntervalScheduler(TestCase):
 
     now = datetime.datetime(2012, 3, 14)
 

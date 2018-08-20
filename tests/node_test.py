@@ -33,7 +33,7 @@ def create_mock_pool():
     return mock.create_autospec(node.NodePool)
 
 
-class TestNodePoolRepository(object):
+class TestNodePoolRepository(TestCase):
     @setup
     def setup_store(self):
         self.node = create_mock_node()
@@ -92,7 +92,7 @@ class TestNodePoolRepository(object):
         assert_equal(returned_node, self.node)
 
 
-class TestKnownHost(object):
+class TestKnownHost(TestCase):
     @setup
     def setup_known_hosts(self):
         self.known_hosts = node.KnownHosts(None)
@@ -110,7 +110,7 @@ class TestKnownHost(object):
         assert not self.known_hosts.get_public_key('hostname')
 
 
-class TestDetermineJitter(object):
+class TestDetermineJitter(TestCase):
     @setup
     def setup_node_settings(self):
         self.settings = mock.Mock(
@@ -152,7 +152,7 @@ def build_node(
     return node.Node(config, ssh_opts, pub_key, node_settings)
 
 
-class TestNode(object):
+class TestNode(TestCase):
     class TestConnection(object):
         def openChannel(self, chan):
             self.chan = chan
@@ -236,7 +236,7 @@ class TestNode(object):
         assert_equal(self.node._fail_run.call_count, 1)
 
 
-class TestNodePool(object):
+class TestNodePool(TestCase):
     @setup
     def setup_nodes(self):
         self.nodes = [build_node(name='node%s' % i) for i in range(5)]

@@ -11,7 +11,7 @@ from tron.utils import state
 from tron.utils.state import NamedEventState
 
 
-class TestStateMachineSimple(object):
+class TestStateMachineSimple(TestCase):
     @setup
     def build_machine(self):
         self.state_green = NamedEventState('green')
@@ -58,7 +58,7 @@ class TestStateMachineSimple(object):
         )
 
 
-class TestStateMachineMultiOption(object):
+class TestStateMachineMultiOption(TestCase):
     @setup
     def build_machine(self):
         # Generalized rules of a conversation
@@ -103,7 +103,7 @@ class TestStateMachineMultiOption(object):
         assert_equal(set(self.machine.transitions), expected)
 
 
-class TestTraverseCircular(object):
+class TestTraverseCircular(TestCase):
     @setup
     def build_machine(self):
         # Going around and around in circles
@@ -125,7 +125,7 @@ class TestTraverseCircular(object):
         )
 
 
-class TestNamedEventByName(object):
+class TestNamedEventByName(TestCase):
     @setup
     def create_state_graph(self):
         self.start = STATE_A = state.NamedEventState("a")

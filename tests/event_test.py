@@ -13,16 +13,17 @@ from tests.assertions import assert_length
 from tron import event
 
 limits = {
-     event.LEVEL_INFO: 2,
-     event.LEVEL_CRITICAL: 3,
+    event.LEVEL_INFO: 2,
+    event.LEVEL_CRITICAL: 3,
 }
+
 
 @pytest.fixture(scope="module")
 def store():
     return event.EventStore(limits)
 
 
-class TestEventStore(object):
+class TestEventStore(TestCase):
     def _build_event(self, level, name):
         return event.Event('entity', level, name)
 
@@ -63,7 +64,7 @@ class TestEventStore(object):
         assert_equal(values, expected)
 
 
-class TestEventRecorder(object):
+class TestEventRecorder(TestCase):
     @setup
     def build_recorders(self):
         self.entity_name = 'the_name'
@@ -124,7 +125,7 @@ class TestEventRecorder(object):
         assert_length(self.recorder.list(child_events=False), 0)
 
 
-class TestEventManager(object):
+class TestEventManager(TestCase):
     @setup
     def setup_manager(self):
         self.manager = event.EventManager.get_instance()

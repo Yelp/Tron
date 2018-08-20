@@ -25,7 +25,7 @@ def build_file_mock(content):
     )
 
 
-class TestRequest(object):
+class TestRequest(TestCase):
     @setup
     def setup_options(self):
         self.url = 'http://localhost:8089/jobs/'
@@ -89,7 +89,7 @@ class TestRequest(object):
         assert_equal(response, expected)
 
 
-class TestClientRequest(object):
+class TestClientRequest(TestCase):
     @setup
     def setup_client(self):
         self.url = 'http://localhost:8089/'
@@ -115,7 +115,7 @@ class TestClientRequest(object):
         assert_equal(response, ok_response)
 
 
-class TestClient(object):
+class TestClient(TestCase):
     @setup
     def setup_client(self):
         self.url = 'http://localhost:8089/'
@@ -168,7 +168,7 @@ class TestClient(object):
         )
 
 
-class TestGetUrl(object):
+class TestGetUrl(TestCase):
     def test_get_job_url_for_action_run(self):
         url = client.get_job_url('MASTER.name.1.act')
         assert_equal(url, '/api/jobs/MASTER.name/1/act')
@@ -178,7 +178,7 @@ class TestGetUrl(object):
         assert_equal(url, '/api/jobs/MASTER.name')
 
 
-class TestGetContentFromIdentifier(object):
+class TestGetContentFromIdentifier(TestCase):
     @setup
     def setup_client(self):
         self.options = mock.Mock()

@@ -12,7 +12,7 @@ from testifycompat import TestCase
 from tron.commands import cmd_utils
 
 
-class TestGetConfig(object):
+class TestGetConfig(TestCase):
     @setup_teardown
     def patch_environment(self):
         with mock.patch('tron.commands.cmd_utils.opener', autospec=True) as self.mock_opener, \
@@ -108,7 +108,7 @@ class TestGetConfig(object):
         )
 
 
-class TestBuildOptionParser(object):
+class TestBuildOptionParser(TestCase):
     def test_build_option_parser(self):
         """Assert that we don't set default options so that we can load
         the defaults from the config.
@@ -142,7 +142,7 @@ class TestBuildOptionParser(object):
         assert_equal(defaults, [None, None, None, None])
 
 
-class TestSuggestions(object):
+class TestSuggestions(TestCase):
     def test_suggest_possibilities_none(self):
         expected = ""
         actual = cmd_utils.suggest_possibilities(word='FOO', possibilities=[])

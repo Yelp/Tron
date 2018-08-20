@@ -6,7 +6,7 @@ from testifycompat import TestCase
 from tron.utils import dicts
 
 
-class TestInvertDictList(object):
+class TestInvertDictList(TestCase):
     def test_invert_dict_list(self):
         expected = {
             'a': 1,
@@ -24,7 +24,7 @@ class TestInvertDictList(object):
         assert_equal(dicts.invert_dict_list(original), expected)
 
 
-class TestGetDeep(object):
+class TestGetDeep(TestCase):
 
     data = {'foo': 23, 'bar': {'car': 'hello'}}
 

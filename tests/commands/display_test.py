@@ -16,7 +16,7 @@ from tron.core import actionrun
 from tron.core import job
 
 
-class TestDisplayJobRuns(object):
+class TestDisplayJobRuns(TestCase):
     @setup
     def setup_data(self):
         self.data = [
@@ -50,7 +50,7 @@ class TestDisplayJobRuns(object):
         assert_equal(len(lines), 7)
 
 
-class TestDisplayJobs(object):
+class TestDisplayJobs(TestCase):
     @setup
     def setup_data(self):
         self.data = [
@@ -78,7 +78,7 @@ class TestDisplayJobs(object):
         assert_equal(len(lines), 5)
 
 
-class TestDisplayActions(object):
+class TestDisplayActions(TestCase):
     @setup
     def setup_data(self):
         self.data = {
@@ -145,7 +145,7 @@ class TestDisplayActions(object):
         assert_equal(len(lines), 13)
 
 
-class TestAddColorForState(object):
+class TestAddColorForState(TestCase):
     @setup_teardown
     def enable_color(self):
         with display.Color.enable():
@@ -168,7 +168,7 @@ class TestAddColorForState(object):
         assert text.startswith(display.Color.colors['blue']), text
 
 
-class TestDisplayNode(object):
+class TestDisplayNode(TestCase):
 
     node_source = {
         'name': 'name',
@@ -186,7 +186,7 @@ class TestDisplayNode(object):
         assert_equal(result, 'name (1 node(s))')
 
 
-class TestDisplayScheduler(object):
+class TestDisplayScheduler(TestCase):
     def test_display_scheduler_no_jitter(self):
         source = {'value': '5 minutes', 'type': 'interval', 'jitter': ''}
         result = display.display_scheduler(source)

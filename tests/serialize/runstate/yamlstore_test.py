@@ -13,7 +13,7 @@ from tron import yaml
 from tron.serialize.runstate import yamlstore
 
 
-class TestYamlStateStore(object):
+class TestYamlStateStore(TestCase):
     @setup
     def setup_store(self):
         self.filename = os.path.join(tempfile.gettempdir(), 'yaml_state')

@@ -9,7 +9,7 @@ from testifycompat import TestCase
 from tron import eventloop
 
 
-class TestUniqueCall(object):
+class TestUniqueCall(TestCase):
     @setup
     def setup_monitor(self):
         self.func = mock.Mock()

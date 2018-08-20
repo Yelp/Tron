@@ -12,7 +12,7 @@ from tests.testingutils import autospec_method
 from tron import ssh
 
 
-class TestClientTransport(object):
+class TestClientTransport(TestCase):
     @setup
     def setup_transport(self):
         self.username = 'username'
@@ -53,7 +53,7 @@ class TestClientTransport(object):
         assert isinstance(auth_service, ssh.NoPasswordAuthClient)
 
 
-class TestSSHAuthOptions(object):
+class TestSSHAuthOptions(TestCase):
     def test_from_config_none(self):
         ssh_conf = mock.Mock(agent=False, identities=[])
         ssh_options = ssh.SSHAuthOptions.from_config(ssh_conf)

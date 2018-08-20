@@ -12,7 +12,7 @@ from testifycompat import setup_teardown
 from testifycompat import TestCase
 
 
-class TestActionStatus(object):
+class TestActionStatus(TestCase):
     @setup_teardown
     def setup_status_file(self):
         self.status_file = tempfile.NamedTemporaryFile(mode='r+')

@@ -16,7 +16,7 @@ from tron.config import schema
 from tron.serialize import filehandler
 
 
-class TestActionCommand(object):
+class TestActionCommand(TestCase):
     @setup
     def setup_command(self):
         self.serializer = mock.create_autospec(filehandler.FileHandleManager)
@@ -111,7 +111,7 @@ class TestActionCommand(object):
         assert self.ac.is_done, self.ac.machine.state
 
 
-class TestCreateActionCommandFactoryFromConfig(object):
+class TestCreateActionCommandFactoryFromConfig(TestCase):
     def test_create_default_action_command_no_config(self):
         config = ()
         factory = actioncommand.create_action_runner_factory_from_config(
@@ -140,7 +140,7 @@ class TestCreateActionCommandFactoryFromConfig(object):
         assert_equal(factory.exec_path, exec_path)
 
 
-class TestSubprocessActionRunnerFactory(object):
+class TestSubprocessActionRunnerFactory(TestCase):
     @setup
     def setup_factory(self):
         self.status_path = 'status_path'

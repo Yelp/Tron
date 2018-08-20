@@ -23,7 +23,7 @@ from tron.serialize.filehandler import OutputPath
 from tron.serialize.filehandler import OutputStreamSerializer
 
 
-class TestFileHandleWrapper(object):
+class TestFileHandleWrapper(TestCase):
     @setup
     def setup_fh_wrapper(self):
         self.file = NamedTemporaryFile('r')
@@ -85,7 +85,7 @@ class TestFileHandleWrapper(object):
             assert_equal(fh.read(), "123")
 
 
-class TestFileHandleManager(object):
+class TestFileHandleManager(TestCase):
     @setup
     def setup_fh_manager(self):
         FileHandleManager.reset()
@@ -218,7 +218,7 @@ class TestFileHandleManager(object):
         )
 
 
-class TestOutputStreamSerializer(object):
+class TestOutputStreamSerializer(TestCase):
     @setup
     def setup_serializer(self):
         self.test_dir = mkdtemp()
@@ -263,7 +263,7 @@ class TestOutputStreamSerializer(object):
         assert_equal(self.serial.tail(file_dne), [])
 
 
-class TestOutputPath(object):
+class TestOutputPath(TestCase):
     @setup
     def setup_path(self):
         self.path = OutputPath('one', 'two', 'three')

@@ -36,7 +36,7 @@ class MockAdapter(ReprAdapter):
         return 4
 
 
-class TestReprAdapter(object):
+class TestReprAdapter(TestCase):
     @setup
     def setup_adapter(self):
         self.original = mock.Mock(one=1, two=2)
@@ -72,7 +72,7 @@ class SampleClassStub(object):
         return "This is false"
 
 
-class TestToggleFlag(object):
+class TestToggleFlag(TestCase):
     @setup
     def setup_stub(self):
         self.stub = SampleClassStub()
@@ -84,7 +84,7 @@ class TestToggleFlag(object):
         assert not self.stub.expects_false()
 
 
-class TestRunAdapter(object):
+class TestRunAdapter(TestCase):
     @setup
     def setup_adapter(self):
         self.original = mock.Mock()
@@ -106,7 +106,7 @@ class TestRunAdapter(object):
         assert_equal(self.adapter.get_duration(), '')
 
 
-class TestActionRunAdapter(object):
+class TestActionRunAdapter(TestCase):
     @setup
     def setup_adapter(self):
         self.temp_dir = tempfile.mkdtemp()
@@ -128,7 +128,7 @@ class TestActionRunAdapter(object):
         assert_equal(result['command'], self.action_run.rendered_command)
 
 
-class TestActionRunGraphAdapter(object):
+class TestActionRunGraphAdapter(TestCase):
     @setup
     def setup_adapter(self):
         self.action_runs = mock.create_autospec(
@@ -145,7 +145,7 @@ class TestActionRunGraphAdapter(object):
         assert_equal(self.action_run.id, result[0]['id'])
 
 
-class TestJobRunAdapter(object):
+class TestJobRunAdapter(TestCase):
     @setup
     def setup_adapter(self):
         action_runs = mock.MagicMock()
@@ -168,7 +168,7 @@ class TestJobRunAdapter(object):
         assert_equal(self.adapter.get_runs(), None)
 
 
-class TestNodeAdapter(object):
+class TestNodeAdapter(TestCase):
     @setup
     def setup_adapter(self):
         self.node = mock.create_autospec(node.Node)
@@ -180,7 +180,7 @@ class TestNodeAdapter(object):
         assert_equal(result['username'], self.node.username)
 
 
-class TestNodePoolAdapter(object):
+class TestNodePoolAdapter(TestCase):
     @setup
     def setup_adapter(self):
         self.pool = mock.create_autospec(node.NodePool)
@@ -196,7 +196,7 @@ class TestNodePoolAdapter(object):
         )
 
 
-class TestJobIndexAdapter(object):
+class TestJobIndexAdapter(TestCase):
     @setup
     def setup_adapter(self):
         self.job = mock.create_autospec(job.Job)
@@ -230,7 +230,7 @@ class TestJobIndexAdapter(object):
         assert_equal(result, [])
 
 
-class TestSchedulerAdapter(object):
+class TestSchedulerAdapter(TestCase):
     @setup
     def setup_adapter(self):
         self.scheduler = mock.create_autospec(scheduler.GeneralScheduler)

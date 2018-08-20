@@ -11,7 +11,7 @@ from testifycompat import TestCase
 from tron.core import actiongraph
 
 
-class TestActionGraph(object):
+class TestActionGraph(TestCase):
     @setup
     def setup_graph(self):
         self.action_names = [

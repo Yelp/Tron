@@ -9,7 +9,7 @@ from testifycompat import TestCase
 from tron.utils import crontab
 
 
-class TestConvertPredefined(object):
+class TestConvertPredefined(TestCase):
     def test_convert_predefined_valid(self):
         expected = crontab.PREDEFINED_SCHEDULE['@hourly']
         assert_equal(crontab.convert_predefined('@hourly'), expected)
@@ -22,7 +22,7 @@ class TestConvertPredefined(object):
         assert_equal(crontab.convert_predefined(line), line)
 
 
-class TestParseCrontab(object):
+class TestParseCrontab(TestCase):
     def test_parse_asterisk(self):
         line = '* * * * *'
         actual = crontab.parse_crontab(line)
@@ -31,7 +31,7 @@ class TestParseCrontab(object):
         assert_equal(actual['months'], None)
 
 
-class TestMinuteFieldParser(object):
+class TestMinuteFieldParser(TestCase):
     @setup
     def setup_parser(self):
         self.parser = crontab.MinuteFieldParser()
@@ -65,7 +65,7 @@ class TestMinuteFieldParser(object):
         assert_equal(self.parser.parse("1,11-22/2,*/20"), expected)
 
 
-class TestMonthFieldParser(object):
+class TestMonthFieldParser(TestCase):
     @setup
     def setup_parser(self):
         self.parser = crontab.MonthFieldParser()
@@ -75,7 +75,7 @@ class TestMonthFieldParser(object):
         assert_equal(self.parser.parse("DEC, Jan-Feb, jul, MaR"), expected)
 
 
-class TestWeekdayFieldParser(object):
+class TestWeekdayFieldParser(TestCase):
     @setup
     def setup_parser(self):
         self.parser = crontab.WeekdayFieldParser()
@@ -85,7 +85,7 @@ class TestWeekdayFieldParser(object):
         assert_equal(self.parser.parse("Sun, 3, FRI, SaT-Sun"), expected)
 
 
-class TestMonthdayFieldParser(object):
+class TestMonthdayFieldParser(TestCase):
     @setup
     def setup_parser(self):
         self.parser = crontab.MonthdayFieldParser()

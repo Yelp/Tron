@@ -13,7 +13,7 @@ from tests.assertions import assert_length
 from tron import crash_reporter
 
 
-class TestSimpleDeferred(object):
+class TestSimpleDeferred(TestCase):
     @setup
     def setup_crash_reporter(self):
         self.emailer = mock.MagicMock()

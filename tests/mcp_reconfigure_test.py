@@ -2,6 +2,7 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import os
 import tempfile
 
 from testifycompat import assert_equal
@@ -16,10 +17,9 @@ from tron import mcp
 from tron.config import config_parse
 from tron.config import schema
 from tron.serialize import filehandler
-import os
 
 
-class TestMCPReconfigure(object):
+class TestMCPReconfigure(TestCase):
 
     os.environ['SSH_AUTH_SOCK'] = "test-socket"
     pre_config = dict(
@@ -218,8 +218,8 @@ class TestMCPReconfigure(object):
 
         assert_equal(len(job_sched.job.runs.runs), 2)
         assert_equal(job_sched.job.runs.runs[1], run0)
-        #assert_equal(job_sched.job.runs.runs[0], run1)
-        #assert run1.is_scheduled
+        assert_equal(job_sched.job.runs.runs[0], run1)
+        assert run1.is_scheduled
         assert_equal(job_sched.job.context['a_variable'], 'is_constant')
         assert_equal(job_sched.job.context['thischanges'], 'tob')
 

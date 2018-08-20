@@ -11,7 +11,7 @@ from tron.serialize import runstate
 sqlalchemystore = None  # pyflakes
 
 
-class TestSQLAlchmeyStateStore(object):
+class TestSQLAlchmeyStateStore(TestCase):
     _suites = ['sqlalchemy']
 
     @setup

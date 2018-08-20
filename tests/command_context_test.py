@@ -19,7 +19,7 @@ from tron.core import jobrun
 from tron.core.jobrun import JobRunCollection
 
 
-class TestEmptyContext(object):
+class TestEmptyContext(TestCase):
     @setup
     def build_context(self):
         self.context = command_context.CommandContext(None)
@@ -31,7 +31,7 @@ class TestEmptyContext(object):
         assert not self.context.get('foo')
 
 
-class TestBuildFilledContext(object):
+class TestBuildFilledContext(TestCase):
     def test_build_filled_context_no_objects(self):
         output = command_context.build_filled_context()
         assert not output.base
@@ -116,7 +116,7 @@ class ChainedDictOverrideContextTestCase(SimpleContextTestCaseBase):
 class ChainedObjectOverrideContextTestCase(SimpleContextTestCaseBase):
     @setup
     def build_context(self):
-        class MyObject(object):
+        class MyObject(TestCase):
             pass
 
         obj = MyObject()
@@ -131,7 +131,7 @@ class ChainedObjectOverrideContextTestCase(SimpleContextTestCaseBase):
         assert_equal(self.context['next_foo'], 'next_bar')
 
 
-class TestJobContext(object):
+class TestJobContext(TestCase):
     @setup
     def setup_job(self):
         self.last_success = mock.Mock(run_time=datetime.datetime(2012, 3, 14))
@@ -174,7 +174,7 @@ class TestJobContext(object):
         assert_raises(KeyError, lambda: self.context['bogus'])
 
 
-class TestJobRunContext(object):
+class TestJobRunContext(TestCase):
     @setup
     def setup_context(self):
         self.jobrun = mock.create_autospec(jobrun.JobRun, run_time='sometime')
@@ -200,7 +200,7 @@ class TestJobRunContext(object):
         assert_equal(time_value, mock_date_math.parse.return_value)
 
 
-class TestActionRunContext(object):
+class TestActionRunContext(TestCase):
     @setup
     def build_context(self):
         mock_node = mock.create_autospec(node.Node, hostname='something')
@@ -218,7 +218,7 @@ class TestActionRunContext(object):
         assert_equal(self.context.node, self.action_run.node.hostname)
 
 
-class TestFiller(object):
+class TestFiller(TestCase):
     @setup
     def setup_filler(self):
         self.filler = command_context.Filler()

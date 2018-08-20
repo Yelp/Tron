@@ -19,7 +19,7 @@ from tron.config.config_utils import ConfigContext
 from tron.config.config_utils import valid_identifier
 
 
-class TestUniqueNameDict(object):
+class TestUniqueNameDict(TestCase):
     @setup
     def setup_dict(self):
         self.msg = "The key %s was there."
@@ -34,7 +34,7 @@ class TestUniqueNameDict(object):
         assert_raises(ConfigError, self.dict.__setitem__, 'a', 'next_thing')
 
 
-class TestValidatorIdentifier(object):
+class TestValidatorIdentifier(TestCase):
     def test_valid_identifier_too_long(self):
         assert_raises(ConfigError, valid_identifier, 'a' * 256, mock.Mock())
 
@@ -47,7 +47,7 @@ class TestValidatorIdentifier(object):
             assert_raises(ConfigError, valid_identifier, name, mock.Mock())
 
 
-class TestBuildListOfTypeValidator(object):
+class TestBuildListOfTypeValidator(TestCase):
     @setup
     def setup_validator(self):
         self.item_validator = mock.Mock()
@@ -65,7 +65,7 @@ class TestBuildListOfTypeValidator(object):
         assert_raises(ConfigError, self.validator, items, context)
 
 
-class TestBuildEnumValidator(object):
+class TestBuildEnumValidator(TestCase):
     @setup
     def setup_enum_validator(self):
         self.enum = dict(a=1, b=2)
@@ -89,7 +89,7 @@ class TestBuildEnumValidator(object):
         )
 
 
-class TestValidTime(object):
+class TestValidTime(TestCase):
     @setup
     def setup_config(self):
         self.context = config_utils.NullConfigContext
@@ -116,7 +116,7 @@ class TestValidTime(object):
         assert_raises(ConfigError, config_utils.valid_time, None, self.context)
 
 
-class TestValidTimeDelta(object):
+class TestValidTimeDelta(TestCase):
     @setup
     def setup_config(self):
         self.context = config_utils.NullConfigContext
@@ -162,7 +162,7 @@ class TestValidTimeDelta(object):
             )
 
 
-class TestConfigContext(object):
+class TestConfigContext(TestCase):
     def test_build_config_context(self):
         path, nodes, namespace = 'path', {1, 2, 3}, 'namespace'
         command_context = mock.MagicMock()
@@ -192,7 +192,7 @@ class StubValidator(config_utils.Validator):
     config_class = StubConfigObject
 
 
-class TestValidator(object):
+class TestValidator(TestCase):
     @setup
     def setup_validator(self):
         self.validator = StubValidator()

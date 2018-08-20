@@ -7,6 +7,7 @@ from __future__ import unicode_literals
 from unittest.mock import MagicMock
 
 import mock
+import pytest
 import six
 import twisted.web.http
 import twisted.web.resource
@@ -14,7 +15,6 @@ import twisted.web.server
 from twisted.web import http
 
 from testifycompat import assert_equal
-from testifycompat import class_setup
 from testifycompat import run
 from testifycompat import setup
 from testifycompat import setup_teardown
@@ -47,7 +47,7 @@ def build_request(**kwargs):
     return mock.create_autospec(twisted.web.server.Request, args=args)
 
 
-class WWWTestCase(object):
+class WWWTestCase(TestCase):
     """Patch www.response to not json encode."""
 
     @setup_teardown
@@ -64,7 +64,7 @@ class WWWTestCase(object):
         self.request = build_request()
 
 
-class TestHandleCommand(object):
+class TestHandleCommand(TestCase):
     @setup_teardown
     def mock_respond(self):
         with mock.patch(
@@ -196,7 +196,6 @@ class TestActionRunHistoryResource(WWWTestCase):
         assert_equal(len(response), len(self.action_runs))
 
 
-import pytest
 @pytest.fixture(scope="module")
 def resource():
     job = mock.Mock(
@@ -321,7 +320,7 @@ class TestEventResource(WWWTestCase):
         assert_equal(names, [critical_message, ok_message])
 
 
-class TestConfigResource(object):
+class TestConfigResource(TestCase):
     @setup_teardown
     def setup_resource(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)

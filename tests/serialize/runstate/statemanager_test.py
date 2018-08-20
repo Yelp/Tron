@@ -25,7 +25,7 @@ from tron.serialize.runstate.statemanager import StateSaveBuffer
 from tron.serialize.runstate.statemanager import VersionMismatchError
 
 
-class TestPersistenceManagerFactory(object):
+class TestPersistenceManagerFactory(TestCase):
     def test_from_config_shelve(self):
         tmpdir = tempfile.mkdtemp()
         try:
@@ -44,7 +44,7 @@ class TestPersistenceManagerFactory(object):
             shutil.rmtree(tmpdir)
 
 
-class TestStateMetadata(object):
+class TestStateMetadata(TestCase):
     def test_validate_metadata(self):
         metadata = {'version': (0, 5, 2)}
         StateMetadata.validate_metadata(metadata)
@@ -62,7 +62,7 @@ class TestStateMetadata(object):
         )
 
 
-class TestStateSaveBuffer(object):
+class TestStateSaveBuffer(TestCase):
     @setup
     def setup_buffer(self):
         self.buffer_size = 5
@@ -85,7 +85,7 @@ class TestStateSaveBuffer(object):
         assert_equal(items, [(1, 2), (2, 3)])
 
 
-class TestPersistentStateManager(object):
+class TestPersistentStateManager(TestCase):
     @setup
     def setup_manager(self):
         self.store = mock.Mock()
@@ -171,7 +171,7 @@ class TestPersistentStateManager(object):
         assert not self.manager.enabled
 
 
-class TestStateChangeWatcher(object):
+class TestStateChangeWatcher(TestCase):
     @setup
     def setup_watcher(self):
         self.watcher = StateChangeWatcher()

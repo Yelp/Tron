@@ -17,7 +17,7 @@ from tests.assertions import assert_raises
 from tron.trondaemon import PIDFile
 
 
-class TestPIDFile(object):
+class TestPIDFile(TestCase):
     @setup
     def setup_pidfile(self):
         self.filename = os.path.join(tempfile.gettempdir(), 'test.pid')

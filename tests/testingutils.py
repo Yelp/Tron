@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 # TODO: remove when replaced with tron.eventloop
 
 
-class MockReactorTestCase(object):
+class MockReactorTestCase(TestCase):
     """Patch the reactor to a MockReactor."""
 
     # Override this in subclasses
@@ -42,7 +42,7 @@ class MockReactorTestCase(object):
 
 
 # TODO: remove
-class MockTimeTestCase(object):
+class MockTimeTestCase(TestCase):
 
     now = None
 

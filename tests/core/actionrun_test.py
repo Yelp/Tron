@@ -33,7 +33,7 @@ from tron.core.actionrun import SSHActionRun
 from tron.serialize import filehandler
 
 
-class TestActionRunFactory(object):
+class TestActionRunFactory(TestCase):
     @setup
     def setup_action_runs(self):
         self.run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
@@ -233,7 +233,7 @@ class TestActionRunFactory(object):
         assert_equal(action_run.__class__, MesosActionRun)
 
 
-class TestActionRun(object):
+class TestActionRun(TestCase):
     @setup
     def setup_action_run(self):
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
@@ -377,7 +377,7 @@ class TestActionRun(object):
         )
 
 
-class TestSSHActionRun(object):
+class TestSSHActionRun(TestCase):
     @setup
     def setup_action_run(self):
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
@@ -651,7 +651,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         assert_equal(action_run.rendered_command, self.state_data['command'])
 
 
-class TestActionRunCollection(object):
+class TestActionRunCollection(TestCase):
     def _build_run(self, name):
         mock_node = mock.create_autospec(node.Node)
         return ActionRun(
@@ -821,7 +821,7 @@ class TestActionRunCollection(object):
         assert_equal(self.collection.end_time, None)
 
 
-class TestActionRunCollectionIsRunBlocked(object):
+class TestActionRunCollectionIsRunBlocked(TestCase):
     def _build_run(self, name):
         mock_node = mock.create_autospec(node.Node)
         return ActionRun(
@@ -905,7 +905,7 @@ class TestActionRunCollectionIsRunBlocked(object):
         assert not self.collection._is_run_blocked(self.run_map['second_name'])
 
 
-class TestMesosActionRun(object):
+class TestMesosActionRun(TestCase):
     @setup
     def setup_action_run(self):
         self.output_path = mock.MagicMock()

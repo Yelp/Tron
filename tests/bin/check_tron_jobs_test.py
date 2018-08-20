@@ -12,7 +12,7 @@ from testifycompat import assert_equal
 from testifycompat import TestCase
 
 
-class TestCheckJobs(object):
+class TestCheckJobs(TestCase):
     @patch('check_tron_jobs.check_job_result', autospec=True)
     @patch('check_tron_jobs.Client', autospec=True)
     @patch('check_tron_jobs.cmd_utils', autospec=True)

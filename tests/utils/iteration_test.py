@@ -11,7 +11,7 @@ from tron.utils.iteration import max_filter
 from tron.utils.iteration import min_filter
 
 
-class TestFilterFunc(object):
+class TestFilterFunc(TestCase):
 
     __test__ = False
 
@@ -35,7 +35,7 @@ class TestFilterFunc(object):
         assert_equal(self.test_func([None, 4, None, None]), 4)
 
 
-class TestFilteredMin(object):
+class TestFilteredMin(TestFilterFunc):
     @setup
     def setup_func(self):
         self.test_func = min_filter
@@ -45,7 +45,7 @@ class TestFilteredMin(object):
         assert_equal(min_filter(seq), 1)
 
 
-class TestFilteredMax(object):
+class TestFilteredMax(TestFilterFunc):
     @setup
     def setup_func(self):
         self.test_func = max_filter
@@ -55,7 +55,7 @@ class TestFilteredMax(object):
         assert_equal(max_filter(seq), 12)
 
 
-class TestListAll(object):
+class TestListAll(TestCase):
     def test_all_true(self):
         assert list_all(range(1, 5))
 

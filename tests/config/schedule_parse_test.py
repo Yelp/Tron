@@ -15,7 +15,7 @@ from tron.config import ConfigError
 from tron.config import schedule_parse
 
 
-class TestPadSequence(object):
+class TestPadSequence(TestCase):
     def test_pad_sequence_short(self):
         expected = [0, 1, 2, 3, None, None]
         assert_equal(schedule_parse.pad_sequence(range(4), 6), expected)
@@ -36,7 +36,7 @@ class TestPadSequence(object):
         assert_equal(schedule_parse.pad_sequence([], -2, "a"), [])
 
 
-class TestScheduleConfigFromString(object):
+class TestScheduleConfigFromString(TestCase):
     @mock.patch(
         'tron.config.schedule_parse.parse_groc_expression',
         autospec=True,
@@ -60,7 +60,7 @@ class TestScheduleConfigFromString(object):
         assert_equal(config, schedule_parse.ConfigConstantScheduler())
 
 
-class TestValidScheduler(object):
+class TestValidScheduler(TestCase):
     @mock.patch('tron.config.schedule_parse.schedulers', autospec=True)
     def assert_validation(self, schedule, expected, mock_schedulers):
         context = config_utils.NullConfigContext
@@ -89,7 +89,7 @@ class TestValidScheduler(object):
         self.assert_validation(schedule, config)
 
 
-class TestValidCronScheduler(object):
+class TestValidCronScheduler(TestCase):
     _suites = ['integration']
 
     def validate(self, line):
@@ -107,7 +107,7 @@ class TestValidCronScheduler(object):
         assert_raises(ConfigError, self.validate, '* * *')
 
 
-class TestValidDailyScheduler(object):
+class TestValidDailyScheduler(TestCase):
     def validate(self, config):
         context = config_utils.NullConfigContext
         config = schedule_parse.ConfigGenericSchedule('daily', config, None)
@@ -140,7 +140,7 @@ class TestValidDailyScheduler(object):
         assert_raises(ConfigError, self.validate, "3")
 
 
-class TestValidIntervalScheduler(object):
+class TestValidIntervalScheduler(TestCase):
     def validate(self, config_value):
         context = config_utils.NullConfigContext
         config = schedule_parse.ConfigGenericSchedule(

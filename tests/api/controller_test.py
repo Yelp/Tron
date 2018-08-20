@@ -21,7 +21,7 @@ from tron.core import job
 from tron.core import jobrun
 
 
-class TestJobCollectionController(object):
+class TestJobCollectionController(TestCase):
     @setup
     def setup_controller(self):
         self.collection = mock.create_autospec(
@@ -40,7 +40,7 @@ class TestJobCollectionController(object):
         self.collection.disable.assert_called_with()
 
 
-class TestActionRunController(object):
+class TestActionRunController(TestCase):
     @setup
     def setup_controller(self):
         self.action_run = mock.create_autospec(
@@ -88,7 +88,7 @@ class TestActionRunController(object):
         assert_in("Warning Message", result)
 
 
-class TestJobRunController(object):
+class TestJobRunController(TestCase):
     @setup
     def setup_controller(self):
         self.job_run = mock.create_autospec(
@@ -120,7 +120,7 @@ class TestJobRunController(object):
         assert_in('Failed to cancel', result)
 
 
-class TestJobController(object):
+class TestJobController(TestCase):
     @setup
     def setup_controller(self):
         self.job_scheduler = mock.create_autospec(job.JobScheduler)
@@ -140,7 +140,7 @@ class TestJobController(object):
         self.job_scheduler.manual_start.assert_called_with(run_time=run_time)
 
 
-class TestConfigController(object):
+class TestConfigController(TestCase):
     @setup
     def setup_controller(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)

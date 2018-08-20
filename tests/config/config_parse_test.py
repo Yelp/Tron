@@ -308,7 +308,7 @@ def make_named_tron_config(jobs=None):
     return schema.NamedTronConfig(jobs=jobs or make_master_jobs())
 
 
-class ConfigTestCase(object):
+class ConfigTestCase(TestCase):
     JOBS_CONFIG = dict(
         jobs=[
             dict(
@@ -423,7 +423,7 @@ class ConfigTestCase(object):
         valid_config(dict(nodes=None))
 
 
-class TestNamedConfig(object):
+class TestNamedConfig(TestCase):
     config = ConfigTestCase.JOBS_CONFIG
 
     def test_attributes(self):
@@ -575,7 +575,7 @@ class TestNamedConfig(object):
         assert_in(expected_message, str(exception))
 
 
-class TestJobConfig(object):
+class TestJobConfig(TestCase):
     def test_no_actions(self):
         test_config = dict(
             jobs=[
@@ -796,7 +796,7 @@ class TestJobConfig(object):
         assert_in(expected_msg, str(exception))
 
 
-class TestNodeConfig(object):
+class TestNodeConfig(TestCase):
     def test_validate_node_pool(self):
         config_node_pool = valid_node_pool(
             dict(name="theName", nodes=["node1", "node2"]),
@@ -906,7 +906,7 @@ class TestNodeConfig(object):
         assert_in(expected_message, str(exception))
 
 
-class TestValidateJobs(object):
+class TestValidateJobs(TestCase):
     def test_valid_jobs_success(self):
         test_config = dict(
             jobs=[
@@ -1019,7 +1019,7 @@ class TestValidateJobs(object):
         assert_equal(expected_jobs, test_config['jobs'])
 
 
-class TestValidMesosAction(object):
+class TestValidMesosAction(TestCase):
     def test_missing_docker_image(self):
         config = dict(
             name='test_missing',
@@ -1052,7 +1052,7 @@ class TestValidMesosAction(object):
         )
 
 
-class TestValidCleanupActionName(object):
+class TestValidCleanupActionName(TestCase):
     def test_valid_cleanup_action_name_pass(self):
         name = valid_cleanup_action_name(CLEANUP_ACTION_NAME, None)
         assert_equal(CLEANUP_ACTION_NAME, name)
@@ -1066,7 +1066,7 @@ class TestValidCleanupActionName(object):
         )
 
 
-class TestValidOutputStreamDir(object):
+class TestValidOutputStreamDir(TestCase):
     @setup
     def setup_dir(self):
         self.dir = tempfile.mkdtemp()
@@ -1104,7 +1104,7 @@ class TestValidOutputStreamDir(object):
         assert_equal(path, dir)
 
 
-class TestBuildFormatStringValidator(object):
+class TestBuildFormatStringValidator(TestCase):
     @setup
     def setup_keys(self):
         self.context = dict.fromkeys(['one', 'seven', 'stars'])
@@ -1161,7 +1161,7 @@ class TestBuildFormatStringValidator(object):
         assert self.validator(template, context)
 
 
-class TestValidateConfigMapping(object):
+class TestValidateConfigMapping(TestCase):
     config = dict(**BASE_CONFIG, command_context=dict(some_var="The string"))
 
     def test_validate_config_mapping_missing_master(self):
@@ -1183,7 +1183,7 @@ class TestValidateConfigMapping(object):
         assert_equal(result[1][0], 'other')
 
 
-class TestConfigContainer(object):
+class TestConfigContainer(TestCase):
     config = BASE_CONFIG
 
     @setup
@@ -1241,7 +1241,7 @@ class TestConfigContainer(object):
         assert_equal(node_names, expected)
 
 
-class TestValidateSSHOptions(object):
+class TestValidateSSHOptions(TestCase):
     @setup
     def setup_context(self):
         self.context = config_utils.NullConfigContext
@@ -1268,7 +1268,7 @@ class TestValidateSSHOptions(object):
         assert_equal(config.agent, True)
 
 
-class TestValidateIdentityFile(object):
+class TestValidateIdentityFile(TestCase):
     @setup
     def setup_context(self):
         self.context = config_utils.NullConfigContext
@@ -1310,7 +1310,7 @@ class TestValidateIdentityFile(object):
         assert_equal(path, file_path)
 
 
-class TestValidKnownHostsFile(object):
+class TestValidKnownHostsFile(TestCase):
     @setup
     def setup_context(self):
         self.context = config_utils.NullConfigContext
@@ -1342,7 +1342,7 @@ class TestValidKnownHostsFile(object):
         assert_equal(filename, expected)
 
 
-class TestValidateVolume(object):
+class TestValidateVolume(TestCase):
     @setup
     def setup_context(self):
         self.context = config_utils.NullConfigContext

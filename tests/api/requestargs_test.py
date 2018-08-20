@@ -14,7 +14,7 @@ from tron.api.requestargs import get_integer
 from tron.api.requestargs import get_string
 
 
-class TestRequestArgs(object):
+class TestRequestArgs(TestCase):
     @setup
     def setup_args(self):
         self.args = {

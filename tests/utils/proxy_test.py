@@ -36,7 +36,7 @@ class DummyObject(object):
         return self.proxy.perform(item)
 
 
-class TestCollectionProxy(object):
+class TestCollectionProxy(TestCase):
     @setup
     def setup_proxy(self):
         self.target_list = [DummyTarget(1), DummyTarget(2), DummyTarget(0)]
@@ -70,7 +70,7 @@ class TestCollectionProxy(object):
         )
 
 
-class TestAttributeProxy(object):
+class TestAttributeProxy(TestCase):
     @setup
     def setup_proxy(self):
         self.target = DummyTarget(1)

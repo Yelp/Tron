@@ -29,7 +29,7 @@ from tron.core import jobrun
 from tron.core.actionrun import ActionRun
 
 
-class TestJob(object):
+class TestJob(TestCase):
     @setup_teardown
     def setup_job(self):
         action_graph = mock.Mock(names=lambda: ['one', 'two'])
@@ -242,7 +242,7 @@ class TestJob(object):
         assert_not_equal(first, second)
 
 
-class TestJobScheduler(object):
+class TestJobScheduler(TestCase):
     @setup
     def setup_job(self):
         self.scheduler = scheduler.ConstantScheduler()
@@ -364,7 +364,7 @@ class TestJobScheduler(object):
         assert_length(self.job_scheduler.schedule.mock_calls, 0)
 
 
-class TestJobSchedulerGetRunsToSchedule(object):
+class TestJobSchedulerGetRunsToSchedule(TestCase):
     @setup
     def setup_job(self):
         self.scheduler = mock.Mock()
@@ -473,7 +473,7 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
         self.manual_run.start.assert_called_once_with()
 
 
-class TestJobSchedulerSchedule(object):
+class TestJobSchedulerSchedule(TestCase):
     @setup
     def setup_job(self):
         self.scheduler = mock.Mock(autospec=True)
@@ -595,7 +595,7 @@ class TestJobSchedulerSchedule(object):
             mock_schedule.assert_called_once_with()
 
 
-class TestJobSchedulerFactory(object):
+class TestJobSchedulerFactory(TestCase):
     @setup
     def setup_factory(self):
         self.context = mock.Mock()
@@ -627,7 +627,7 @@ class TestJobSchedulerFactory(object):
             assert_equal(action_runner, self.action_runner)
 
 
-class TestJobCollection(object):
+class TestJobCollection(TestCase):
     @setup
     def setup_collection(self):
         self.collection = job.JobCollection()

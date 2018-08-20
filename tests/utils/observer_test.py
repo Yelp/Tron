@@ -12,7 +12,7 @@ from tron.utils.observer import Observable
 from tron.utils.observer import Observer
 
 
-class TestObservable(object):
+class TestObservable(TestCase):
     @setup
     def setup_observer(self):
         self.obs = Observable()
@@ -43,7 +43,7 @@ class TestObservable(object):
         assert_equal(len(handler.handler.mock_calls), 2)
 
 
-class TestObserverClear(object):
+class TestObserverClear(TestCase):
     @setup
     def setup_observer(self):
         self.obs = Observable()
@@ -101,7 +101,7 @@ class MockObserver(Observer):
         self.has_watched += 1
 
 
-class TestObserver(object):
+class TestObserver(TestCase):
     @setup
     def setup_observer(self):
         self.obs = Observable()

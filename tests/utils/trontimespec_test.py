@@ -9,7 +9,7 @@ from testifycompat import TestCase
 from tron.utils import trontimespec
 
 
-class TestGetTime(object):
+class TestGetTime(TestCase):
     def test_get_time(self):
         assert_equal(datetime.time(4, 15), trontimespec.get_time("4:15"))
         assert_equal(datetime.time(22, 59), trontimespec.get_time("22:59"))
@@ -19,7 +19,7 @@ class TestGetTime(object):
         assert not trontimespec.get_time("22:61")
 
 
-class TestTimeSpecification(object):
+class TestTimeSpecification(TestCase):
     def _cmp(self, start_time, expected):
         start_time = datetime.datetime(*start_time)
         expected = datetime.datetime(*expected)

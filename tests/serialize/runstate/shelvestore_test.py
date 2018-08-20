@@ -15,7 +15,7 @@ from tron.serialize.runstate.shelvestore import ShelveKey
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 
 
-class TestShelveStateStore(object):
+class TestShelveStateStore(TestCase):
     @setup
     def setup_store(self):
         self.tmpdir = tempfile.mkdtemp()

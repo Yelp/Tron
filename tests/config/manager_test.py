@@ -20,7 +20,7 @@ from tron.config import manager
 from tron.config import schema
 
 
-class TestFromString(object):
+class TestFromString(TestCase):
     def test_from_string_valid(self):
         content = "{'one': 'thing', 'another': 'thing'}\n"
         actual = manager.from_string(content)
@@ -32,7 +32,7 @@ class TestFromString(object):
         assert_raises(ConfigError, manager.from_string, content)
 
 
-class TestReadWrite(object):
+class TestReadWrite(TestCase):
     @setup
     def setup_tempfile(self):
         self.filename = tempfile.NamedTemporaryFile().name
@@ -54,7 +54,7 @@ class TestReadWrite(object):
         assert_equal(content, actual)
 
 
-class TestManifestFile(object):
+class TestManifestFile(TestCase):
     @setup
     def setup_manifest(self):
         self.temp_dir = tempfile.mkdtemp()
@@ -99,7 +99,7 @@ class TestManifestFile(object):
         assert_equal(self.manifest.get_file_mapping(), file_mapping)
 
 
-class TestConfigManager(object):
+class TestConfigManager(TestCase):
 
     content = {'one': 'stars', 'two': 'other'}
     raw_content = "{'one': 'stars', 'two': 'other'}\n"
@@ -224,7 +224,7 @@ class TestConfigManager(object):
         assert_equal(hash_digest, manager.hash_digest(content))
 
 
-class TestCreateNewConfig(object):
+class TestCreateNewConfig(TestCase):
     @mock.patch('tron.config.manager.os.makedirs', autospec=True)
     @mock.patch('tron.config.manager.ManifestFile', autospec=True)
     @mock.patch('tron.config.manager.write_raw', autospec=True)

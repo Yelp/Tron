@@ -20,7 +20,7 @@ from tron.core import job
 from tron.serialize.runstate import statemanager
 
 
-class TestMasterControlProgram(object):
+class TestMasterControlProgram(TestCase):
 
     TEST_CONFIG = 'tests/data/test_config.yaml'
 
@@ -110,7 +110,7 @@ class TestMasterControlProgram(object):
         assert not self.mcp.state_watcher.save_job.mock_calls
 
 
-class TestMasterControlProgramRestoreState(object):
+class TestMasterControlProgramRestoreState(TestCase):
     @setup
     def setup_mcp(self):
         self.working_dir = tempfile.mkdtemp()

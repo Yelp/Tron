@@ -15,7 +15,7 @@ from tron.utils.timeutils import duration
 from tron.utils.timeutils import macro_timedelta
 
 
-class TestToTimestamp(object):
+class TestToTimestamp(TestCase):
     def test_normal_time_with_timezone(self):
         # 62 minutes after the epoch
         start_date = pytz.utc.localize(datetime.datetime(1970, 1, 1, 1, 2))
@@ -38,7 +38,7 @@ class TestToTimestamp(object):
         assert_equal(after_fall_back - before_fall_back, 60 * 60)
 
 
-class TestTimeDelta(object):
+class TestTimeDelta(TestCase):
     @setup
     def make_dates(self):
         self.start_nonleap = datetime.datetime(year=2011, month=1, day=1)
@@ -170,7 +170,7 @@ class TestTimeDelta(object):
         )
 
 
-class TestDuration(object):
+class TestDuration(TestCase):
     @setup
     def setup_times(self):
         self.earliest = datetime.datetime(2012, 2, 1, 3, 0, 0)
@@ -190,7 +190,7 @@ class TestDuration(object):
         assert_equal(duration(None), None)
 
 
-class TestDeltaTotalSeconds(object):
+class TestDeltaTotalSeconds(TestCase):
     def test(self):
         expected = 86702.004002999995
         delta = datetime.timedelta(*range(1, 6))

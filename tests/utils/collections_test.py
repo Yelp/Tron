@@ -14,7 +14,7 @@ from tests.testingutils import autospec_method
 from tron.utils import collections
 
 
-class TestMappingCollections(object):
+class TestMappingCollections(TestCase):
     @setup
     def setup_collection(self):
         self.name = 'some_name'
@@ -76,7 +76,7 @@ class TestMappingCollections(object):
         )
 
 
-class TestEnum(object):
+class TestEnum(TestCase):
     @setup
     def setup_enum(self):
         self.values = ['one', 'two', 'three']

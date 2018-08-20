@@ -96,7 +96,7 @@ class TronSandboxException(Exception):
     pass
 
 
-class SandboxTestCase(object):
+class SandboxTestCase(TestCase):
 
     _suites = ['sandbox']
 

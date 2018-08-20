@@ -6,12 +6,14 @@ import textwrap
 from subprocess import CalledProcessError
 from textwrap import dedent
 
+import pytest
+
 from testifycompat import assert_equal
 from testifycompat import assert_gt
 from testifycompat import assert_in
 from tests import sandbox
 from tron.core import actionrun
-#from testifycompat import assert_raises_such_that
+
 
 BASIC_CONFIG = """
 ssh_options:
@@ -227,12 +229,8 @@ class TronCommandsTestCase(sandbox.SandboxTestCase):
         def test_return_code(exc):
             assert_equal(exc.returncode, 1)
 
-        #assert_raises_such_that(
-        #    CalledProcessError,
-        #    test_return_code,
-        #    self.sandbox.tronfig,
-        #    bad_config,
-        #)
+        with pytest.raises(CalledProcessError):
+            test_return_code(self.sandbox.tronfig, bad_config)
 
     def test_tronfig_no_header(self):
         self.start_with_config(SINGLE_ECHO_CONFIG)
