@@ -508,6 +508,18 @@ class ActionRun(object):
         return self.rendered_command
 
     @property
+    def paasta_command(self):
+        if self.docker_image is None:
+            return "N/A"
+        service = parse_service_from_docker_image(self.docker_image)
+        # TODO
+        job_name = 'unknown'
+        instance = f"{job_name}.{self.action_name}"
+        # TODO
+        cluster = 'unknown'
+        return f"paasta local-run --service {service} --instance {instance} --cluster={cluster} --command {self.command}"
+
+    @property
     def is_valid_command(self):
         """Returns True if the bare_command was rendered without any errors.
         This has the side effect of actually rendering the bare_command.
@@ -887,3 +899,7 @@ class ActionRunCollection(object):
 
     def get(self, name):
         return self.run_map.get(name)
+
+
+def parse_service_from_docker_image(docker_image):
+    return 'unknown'
