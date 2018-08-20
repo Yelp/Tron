@@ -13,10 +13,6 @@ from tests.assertions import assert_length
 from tron import crash_reporter
 
 
-class TestError(Exception):
-    pass
-
-
 class TestSimpleDeferred(object):
     @setup
     def setup_crash_reporter(self):

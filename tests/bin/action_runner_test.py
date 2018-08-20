@@ -10,6 +10,7 @@ from testifycompat import assert_equal
 from testifycompat import setup
 from testifycompat import setup_teardown
 from testifycompat import TestCase
+import pytest
 
 
 class TestStatusFile(object):
@@ -67,20 +68,14 @@ class TestRegister(object):
         self.mock_isdir.return_value = False
         self.mock_access.return_value = True
         self.mock_makedirs.side_effect = OSError
-        self.failUnlessRaises(
-            OSError,
-            action_runner.validate_output_dir,
-            self.output_path,
-        )
+        with pytest.raises(OSError):
+            action_runner.validate_output_dir(self.output_path)
 
     def test_validate_output_dir_exists_not_writable(self):
         self.mock_isdir.return_value = True
         self.mock_access.return_value = False
-        self.failUnlessRaises(
-            OSError,
-            action_runner.validate_output_dir,
-            self.output_path,
-        )
+        with pytest.raises(OSError):
+            action_runner.validate_output_dir(self.output_path)
 
     def test_run_proc(self):
         self.mock_isdir.return_value = True
