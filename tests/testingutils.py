@@ -6,12 +6,12 @@ import logging
 import time
 
 import mock
-from testify import class_setup
-from testify import class_teardown
-from testify import setup
-from testify import teardown
-from testify import TestCase
 
+from testifycompat import class_setup
+from testifycompat import class_teardown
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tron.utils import timeutils
 
 log = logging.getLogger(__name__)
@@ -19,7 +19,7 @@ log = logging.getLogger(__name__)
 # TODO: remove when replaced with tron.eventloop
 
 
-class MockReactorTestCase(TestCase):
+class MockReactorTestCase(object):
     """Patch the reactor to a MockReactor."""
 
     # Override this in subclasses
@@ -42,7 +42,7 @@ class MockReactorTestCase(TestCase):
 
 
 # TODO: remove
-class MockTimeTestCase(TestCase):
+class MockTimeTestCase(object):
 
     now = None
 

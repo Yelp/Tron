@@ -3,17 +3,16 @@ from __future__ import unicode_literals
 
 from unittest import mock
 
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import TestCase
 from tests.assertions import assert_length
 from tron.utils.observer import Observable
 from tron.utils.observer import Observer
 
 
-class ObservableTestCase(TestCase):
+class TestObservable(object):
     @setup
     def setup_observer(self):
         self.obs = Observable()
@@ -44,7 +43,7 @@ class ObservableTestCase(TestCase):
         assert_equal(len(handler.handler.mock_calls), 2)
 
 
-class ObserverClearTestCase(TestCase):
+class TestObserverClear(object):
     @setup
     def setup_observer(self):
         self.obs = Observable()
@@ -102,7 +101,7 @@ class MockObserver(Observer):
         self.has_watched += 1
 
 
-class ObserverTestCase(TestCase):
+class TestObserver(object):
     @setup
     def setup_observer(self):
         self.obs = Observable()

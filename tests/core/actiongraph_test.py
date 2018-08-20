@@ -3,16 +3,15 @@ from __future__ import unicode_literals
 
 from unittest import mock
 
-from testify import assert_equal
-from testify import assert_raises
-from testify import run
-from testify import setup
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import assert_raises
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import TestCase
 from tron.core import actiongraph
 
 
-class ActionGraphTestCase(TestCase):
+class TestActionGraph(object):
     @setup
     def setup_graph(self):
         self.action_names = [

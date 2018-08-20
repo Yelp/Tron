@@ -1,18 +1,17 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import TestCase
 from tests.assertions import assert_raises
 from tron.utils.iteration import list_all
 from tron.utils.iteration import max_filter
 from tron.utils.iteration import min_filter
 
 
-class FilterFuncTestCase(TestCase):
+class TestFilterFunc(object):
 
     __test__ = False
 
@@ -36,7 +35,7 @@ class FilterFuncTestCase(TestCase):
         assert_equal(self.test_func([None, 4, None, None]), 4)
 
 
-class FilteredMinTestCase(FilterFuncTestCase):
+class TestFilteredMin(object):
     @setup
     def setup_func(self):
         self.test_func = min_filter
@@ -46,7 +45,7 @@ class FilteredMinTestCase(FilterFuncTestCase):
         assert_equal(min_filter(seq), 1)
 
 
-class FilteredMaxTestCase(FilterFuncTestCase):
+class TestFilteredMax(object):
     @setup
     def setup_func(self):
         self.test_func = max_filter
@@ -56,7 +55,7 @@ class FilteredMaxTestCase(FilterFuncTestCase):
         assert_equal(max_filter(seq), 12)
 
 
-class ListAllTestCase(TestCase):
+class TestListAll(object):
     def test_all_true(self):
         assert list_all(range(1, 5))
 

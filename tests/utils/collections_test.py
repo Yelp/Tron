@@ -2,19 +2,19 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import mock
-from testify import setup
-from testify import TestCase
-from testify.assertions import assert_equal
-from testify.assertions import assert_in
-from testify.assertions import assert_not_in
-from testify.assertions import assert_raises
 
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import assert_not_in
+from testifycompat import assert_raises
+from testifycompat import setup
+from testifycompat import TestCase
 from tests.assertions import assert_mock_calls
 from tests.testingutils import autospec_method
 from tron.utils import collections
 
 
-class MappingCollectionsTestCase(TestCase):
+class TestMappingCollections(object):
     @setup
     def setup_collection(self):
         self.name = 'some_name'
@@ -76,7 +76,7 @@ class MappingCollectionsTestCase(TestCase):
         )
 
 
-class EnumTestCase(TestCase):
+class TestEnum(object):
     @setup
     def setup_enum(self):
         self.values = ['one', 'two', 'three']

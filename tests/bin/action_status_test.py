@@ -7,11 +7,12 @@ import tempfile
 import action_status
 import mock
 import yaml
-from testify import setup_teardown
-from testify import TestCase
+
+from testifycompat import setup_teardown
+from testifycompat import TestCase
 
 
-class ActionStatusTestCase(TestCase):
+class TestActionStatus(object):
     @setup_teardown
     def setup_status_file(self):
         self.status_file = tempfile.NamedTemporaryFile(mode='r+')

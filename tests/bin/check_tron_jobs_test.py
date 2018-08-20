@@ -7,11 +7,12 @@ import check_tron_jobs
 from check_tron_jobs import State
 from mock import patch
 from mock import PropertyMock
-from testify import assert_equal
-from testify import TestCase
+
+from testifycompat import assert_equal
+from testifycompat import TestCase
 
 
-class CheckJobsTestCase(TestCase):
+class TestCheckJobs(object):
     @patch('check_tron_jobs.check_job_result', autospec=True)
     @patch('check_tron_jobs.Client', autospec=True)
     @patch('check_tron_jobs.cmd_utils', autospec=True)

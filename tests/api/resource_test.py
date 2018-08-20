@@ -11,15 +11,15 @@ import six
 import twisted.web.http
 import twisted.web.resource
 import twisted.web.server
-from testify import assert_equal
-from testify import class_setup
-from testify import run
-from testify import setup
-from testify import setup_teardown
-from testify import teardown
-from testify import TestCase
 from twisted.web import http
 
+from testifycompat import assert_equal
+from testifycompat import class_setup
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import setup_teardown
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests import mocks
 from tests.assertions import assert_call
 from tests.testingutils import autospec_method
@@ -47,7 +47,7 @@ def build_request(**kwargs):
     return mock.create_autospec(twisted.web.server.Request, args=args)
 
 
-class WWWTestCase(TestCase):
+class WWWTestCase(object):
     """Patch www.response to not json encode."""
 
     @setup_teardown
@@ -64,7 +64,7 @@ class WWWTestCase(TestCase):
         self.request = build_request()
 
 
-class HandleCommandTestCase(TestCase):
+class TestHandleCommand(object):
     @setup_teardown
     def mock_respond(self):
         with mock.patch(
@@ -116,7 +116,7 @@ class HandleCommandTestCase(TestCase):
         )
 
 
-class ActionRunResourceTestCase(WWWTestCase):
+class TestActionRunResource(WWWTestCase):
     @setup
     def setup_resource(self):
         self.job_run = mock.MagicMock()
@@ -129,7 +129,7 @@ class ActionRunResourceTestCase(WWWTestCase):
         assert_equal(response['id'], self.action_run.id)
 
 
-class JobrunResourceTestCase(WWWTestCase):
+class TestJobrunResource(WWWTestCase):
     @setup
     def setup_resource(self):
         self.job_run = mock.MagicMock()
@@ -141,7 +141,7 @@ class JobrunResourceTestCase(WWWTestCase):
         assert_equal(response['id'], self.job_run.id)
 
 
-class ApiRootResourceTestCase(WWWTestCase):
+class TestApiRootResource(WWWTestCase):
     @setup
     def build_resource(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)
@@ -167,7 +167,7 @@ class ApiRootResourceTestCase(WWWTestCase):
         self.mcp.get_job_collection().get_jobs.assert_called_with()
 
 
-class RootResourceTestCase(WWWTestCase):
+class TestRootResource(WWWTestCase):
     @setup
     def build_resource(self):
         self.web_path = '/bogus/path'
@@ -185,7 +185,7 @@ class RootResourceTestCase(WWWTestCase):
         assert_equal(set(self.resource.children), {b'api', b'web', b''})
 
 
-class ActionRunHistoryResourceTestCase(WWWTestCase):
+class TestActionRunHistoryResource(WWWTestCase):
     @setup
     def setup_resource(self):
         self.action_runs = [mock.MagicMock(), mock.MagicMock()]
@@ -196,7 +196,7 @@ class ActionRunHistoryResourceTestCase(WWWTestCase):
         assert_equal(len(response), len(self.action_runs))
 
 
-class JobCollectionResourceTestCase(WWWTestCase):
+class TestJobCollectionResource(WWWTestCase):
     @class_setup
     def build_resource(self):
         self.job = mock.Mock(
@@ -227,7 +227,7 @@ class JobCollectionResourceTestCase(WWWTestCase):
         assert isinstance(child, twisted.web.resource.NoResource)
 
 
-class JobResourceTestCase(WWWTestCase):
+class TestJobResource(WWWTestCase):
     @setup
     def setup_resource(self):
         self.job_scheduler = mock.create_autospec(job.JobScheduler)
@@ -300,7 +300,7 @@ class JobResourceTestCase(WWWTestCase):
         assert_equal(resource.action_runs, action_runs)
 
 
-class EventResourceTestCase(WWWTestCase):
+class TestEventResource(WWWTestCase):
     @setup
     def setup_resource(self):
         self.name = 'the_name'
@@ -320,7 +320,7 @@ class EventResourceTestCase(WWWTestCase):
         assert_equal(names, [critical_message, ok_message])
 
 
-class ConfigResourceTestCase(TestCase):
+class TestConfigResource(object):
     @setup_teardown
     def setup_resource(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)

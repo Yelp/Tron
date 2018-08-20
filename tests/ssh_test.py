@@ -2,17 +2,17 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import mock
-from testify import assert_equal
-from testify import setup
-from testify import TestCase
-from testify.assertions import assert_not_equal
 from twisted.python import failure
 
+from testifycompat import assert_equal
+from testifycompat import assert_not_equal
+from testifycompat import setup
+from testifycompat import TestCase
 from tests.testingutils import autospec_method
 from tron import ssh
 
 
-class ClientTransportTestCase(TestCase):
+class TestClientTransport(object):
     @setup
     def setup_transport(self):
         self.username = 'username'
@@ -53,7 +53,7 @@ class ClientTransportTestCase(TestCase):
         assert isinstance(auth_service, ssh.NoPasswordAuthClient)
 
 
-class SSHAuthOptionsTestCase(TestCase):
+class TestSSHAuthOptions(object):
     def test_from_config_none(self):
         ssh_conf = mock.Mock(agent=False, identities=[])
         ssh_options = ssh.SSHAuthOptions.from_config(ssh_conf)

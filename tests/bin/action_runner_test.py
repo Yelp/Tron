@@ -5,13 +5,14 @@ import tempfile
 
 import action_runner
 import mock
-from testify import assert_equal
-from testify import setup
-from testify import setup_teardown
-from testify import TestCase
+
+from testifycompat import assert_equal
+from testifycompat import setup
+from testifycompat import setup_teardown
+from testifycompat import TestCase
 
 
-class StatusFileTestCase(TestCase):
+class TestStatusFile(object):
     @setup
     def setup_status_file(self):
         self.filename = tempfile.NamedTemporaryFile().name
@@ -39,7 +40,7 @@ class StatusFileTestCase(TestCase):
         assert_equal(content, expected)
 
 
-class RegisterTestCase(TestCase):
+class TestRegister(object):
     mock_isdir = mock_status_file = None
     mock_makedirs = None
 

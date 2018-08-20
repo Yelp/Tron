@@ -4,18 +4,17 @@ from __future__ import unicode_literals
 import os
 import tempfile
 
-from testify import assert_equal
-from testify import class_teardown
-from testify import run
-from testify import setup
-from testify import teardown
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import class_teardown
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests.assertions import assert_raises
 from tron.utils import tool_utils
 
 
-class WorkingDirTestCase(TestCase):
+class TestWorkingDir(object):
     @setup
     def setup_cwd(self):
         self.cwd = os.getcwd()

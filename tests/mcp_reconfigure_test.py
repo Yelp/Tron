@@ -4,13 +4,12 @@ from __future__ import unicode_literals
 
 import tempfile
 
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import suite
-from testify import teardown
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import suite
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests.assertions import assert_length
 from tron import event
 from tron import mcp
@@ -19,7 +18,7 @@ from tron.config import schema
 from tron.serialize import filehandler
 
 
-class MCPReconfigureTestCase(TestCase):
+class TestMCPReconfigure(object):
 
     pre_config = dict(
         ssh_options=dict(

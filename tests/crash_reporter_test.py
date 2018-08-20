@@ -4,11 +4,10 @@ from __future__ import unicode_literals
 import logging
 from unittest import mock
 
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import TestCase
 from tests.assertions import assert_call
 from tests.assertions import assert_length
 from tron import crash_reporter
@@ -18,7 +17,7 @@ class TestError(Exception):
     pass
 
 
-class SimpleDeferredTestCase(TestCase):
+class TestSimpleDeferred(object):
     @setup
     def setup_crash_reporter(self):
         self.emailer = mock.MagicMock()

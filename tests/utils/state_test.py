@@ -3,16 +3,15 @@ from __future__ import unicode_literals
 
 from unittest import mock
 
-from testify import assert_equal
-from testify import assert_raises
-from testify import setup
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import assert_raises
+from testifycompat import setup
+from testifycompat import TestCase
 from tron.utils import state
 from tron.utils.state import NamedEventState
 
 
-class StateMachineSimpleTestCase(TestCase):
+class TestStateMachineSimple(object):
     @setup
     def build_machine(self):
         self.state_green = NamedEventState('green')
@@ -59,7 +58,7 @@ class StateMachineSimpleTestCase(TestCase):
         )
 
 
-class StateMachineMultiOptionTestCase(TestCase):
+class TestStateMachineMultiOption(object):
     @setup
     def build_machine(self):
         # Generalized rules of a conversation
@@ -104,7 +103,7 @@ class StateMachineMultiOptionTestCase(TestCase):
         assert_equal(set(self.machine.transitions), expected)
 
 
-class TraverseCircularTestCase(TestCase):
+class TestTraverseCircular(object):
     @setup
     def build_machine(self):
         # Going around and around in circles
@@ -126,7 +125,7 @@ class TraverseCircularTestCase(TestCase):
         )
 
 
-class NamedEventByNameTestCase(TestCase):
+class TestNamedEventByName(object):
     @setup
     def create_state_graph(self):
         self.start = STATE_A = state.NamedEventState("a")

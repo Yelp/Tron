@@ -4,9 +4,9 @@ from __future__ import unicode_literals
 import mock
 from mock import call
 from mock import Mock
-from testify import setup
-from testify import TestCase
 
+from testifycompat import setup
+from testifycompat import TestCase
 from tron.actioncommand import NoActionRunnerFactory
 from tron.actioncommand import SubprocessActionRunnerFactory
 from tron.core.actionrun import ActionRun

@@ -5,12 +5,12 @@ import shutil
 import tempfile
 
 import mock
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import teardown
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests.testingutils import autospec_method
 from tron import event
 from tron import mcp
@@ -20,7 +20,7 @@ from tron.core import job
 from tron.serialize.runstate import statemanager
 
 
-class MasterControlProgramTestCase(TestCase):
+class TestMasterControlProgram(object):
 
     TEST_CONFIG = 'tests/data/test_config.yaml'
 
@@ -110,7 +110,7 @@ class MasterControlProgramTestCase(TestCase):
         assert not self.mcp.state_watcher.save_job.mock_calls
 
 
-class MasterControlProgramRestoreStateTestCase(TestCase):
+class TestMasterControlProgramRestoreState(object):
     @setup
     def setup_mcp(self):
         self.working_dir = tempfile.mkdtemp()

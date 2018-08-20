@@ -16,11 +16,11 @@ from subprocess import PIPE
 from subprocess import Popen
 
 import mock
-from testify import setup
-from testify import teardown
-from testify import TestCase
-from testify.assertions import assert_not_equal
 
+from testifycompat import assert_not_equal
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tron.commands import client
 from tron.config import manager
 from tron.config import schema
@@ -96,7 +96,7 @@ class TronSandboxException(Exception):
     pass
 
 
-class SandboxTestCase(TestCase):
+class SandboxTestCase(object):
 
     _suites = ['sandbox']
 

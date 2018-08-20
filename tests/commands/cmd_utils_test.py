@@ -4,15 +4,15 @@ from __future__ import unicode_literals
 import argparse
 
 import mock
-from testify import assert_equal
-from testify import assert_in
-from testify import setup_teardown
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import setup_teardown
+from testifycompat import TestCase
 from tron.commands import cmd_utils
 
 
-class GetConfigTestCase(TestCase):
+class TestGetConfig(object):
     @setup_teardown
     def patch_environment(self):
         with mock.patch('tron.commands.cmd_utils.opener', autospec=True) as self.mock_opener, \
@@ -108,7 +108,7 @@ class GetConfigTestCase(TestCase):
         )
 
 
-class BuildOptionParserTestCase(TestCase):
+class TestBuildOptionParser(object):
     def test_build_option_parser(self):
         """Assert that we don't set default options so that we can load
         the defaults from the config.
@@ -142,7 +142,7 @@ class BuildOptionParserTestCase(TestCase):
         assert_equal(defaults, [None, None, None, None])
 
 
-class SuggestionsTestCase(TestCase):
+class TestSuggestions(object):
     def test_suggest_possibilities_none(self):
         expected = ""
         actual = cmd_utils.suggest_possibilities(word='FOO', possibilities=[])

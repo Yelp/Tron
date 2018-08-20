@@ -1,16 +1,15 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-from testify import assert_equal
-from testify import assert_raises
-from testify import run
-from testify import setup
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import assert_raises
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import TestCase
 from tron.utils import crontab
 
 
-class ConvertPredefinedTestCase(TestCase):
+class TestConvertPredefined(object):
     def test_convert_predefined_valid(self):
         expected = crontab.PREDEFINED_SCHEDULE['@hourly']
         assert_equal(crontab.convert_predefined('@hourly'), expected)
@@ -23,7 +22,7 @@ class ConvertPredefinedTestCase(TestCase):
         assert_equal(crontab.convert_predefined(line), line)
 
 
-class ParseCrontabTestCase(TestCase):
+class TestParseCrontab(object):
     def test_parse_asterisk(self):
         line = '* * * * *'
         actual = crontab.parse_crontab(line)
@@ -32,7 +31,7 @@ class ParseCrontabTestCase(TestCase):
         assert_equal(actual['months'], None)
 
 
-class MinuteFieldParserTestCase(TestCase):
+class TestMinuteFieldParser(object):
     @setup
     def setup_parser(self):
         self.parser = crontab.MinuteFieldParser()
@@ -66,7 +65,7 @@ class MinuteFieldParserTestCase(TestCase):
         assert_equal(self.parser.parse("1,11-22/2,*/20"), expected)
 
 
-class MonthFieldParserTestCase(TestCase):
+class TestMonthFieldParser(object):
     @setup
     def setup_parser(self):
         self.parser = crontab.MonthFieldParser()
@@ -76,7 +75,7 @@ class MonthFieldParserTestCase(TestCase):
         assert_equal(self.parser.parse("DEC, Jan-Feb, jul, MaR"), expected)
 
 
-class WeekdayFieldParserTestCase(TestCase):
+class TestWeekdayFieldParser(object):
     @setup
     def setup_parser(self):
         self.parser = crontab.WeekdayFieldParser()
@@ -86,7 +85,7 @@ class WeekdayFieldParserTestCase(TestCase):
         assert_equal(self.parser.parse("Sun, 3, FRI, SaT-Sun"), expected)
 
 
-class MonthdayFieldParserTestCase(TestCase):
+class TestMonthdayFieldParser(object):
     @setup
     def setup_parser(self):
         self.parser = crontab.MonthdayFieldParser()

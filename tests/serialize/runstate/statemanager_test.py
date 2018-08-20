@@ -6,11 +6,11 @@ import shutil
 import tempfile
 
 import mock
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import TestCase
 from tests.assertions import assert_raises
 from tests.testingutils import autospec_method
 from tron.config import schema
@@ -25,7 +25,7 @@ from tron.serialize.runstate.statemanager import StateSaveBuffer
 from tron.serialize.runstate.statemanager import VersionMismatchError
 
 
-class PersistenceManagerFactoryTestCase(TestCase):
+class TestPersistenceManagerFactory(object):
     def test_from_config_shelve(self):
         tmpdir = tempfile.mkdtemp()
         try:
@@ -44,7 +44,7 @@ class PersistenceManagerFactoryTestCase(TestCase):
             shutil.rmtree(tmpdir)
 
 
-class StateMetadataTestCase(TestCase):
+class TestStateMetadata(object):
     def test_validate_metadata(self):
         metadata = {'version': (0, 5, 2)}
         StateMetadata.validate_metadata(metadata)
@@ -62,7 +62,7 @@ class StateMetadataTestCase(TestCase):
         )
 
 
-class StateSaveBufferTestCase(TestCase):
+class TestStateSaveBuffer(object):
     @setup
     def setup_buffer(self):
         self.buffer_size = 5
@@ -85,7 +85,7 @@ class StateSaveBufferTestCase(TestCase):
         assert_equal(items, [(1, 2), (2, 3)])
 
 
-class PersistentStateManagerTestCase(TestCase):
+class TestPersistentStateManager(object):
     @setup
     def setup_manager(self):
         self.store = mock.Mock()
@@ -171,7 +171,7 @@ class PersistentStateManagerTestCase(TestCase):
         assert not self.manager.enabled
 
 
-class StateChangeWatcherTestCase(TestCase):
+class TestStateChangeWatcher(object):
     @setup
     def setup_watcher(self):
         self.watcher = StateChangeWatcher()

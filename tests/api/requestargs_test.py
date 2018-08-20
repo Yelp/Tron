@@ -4,18 +4,17 @@ from __future__ import unicode_literals
 import datetime
 from unittest.mock import MagicMock
 
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import TestCase
 from tron.api.requestargs import get_bool
 from tron.api.requestargs import get_datetime
 from tron.api.requestargs import get_integer
 from tron.api.requestargs import get_string
 
 
-class RequestArgsTestCase(TestCase):
+class TestRequestArgs(object):
     @setup
     def setup_args(self):
         self.args = {

@@ -2,17 +2,17 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import mock
-from testify import assert_equal
-from testify import assert_in
-from testify import assert_raises
-from testify import run
-from testify import setup
-from testify import setup_teardown
-from testify import teardown
-from testify import TestCase
-from testify.assertions import assert_not_equal
-from testify.assertions import assert_not_in
 
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import assert_not_equal
+from testifycompat import assert_not_in
+from testifycompat import assert_raises
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import setup_teardown
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests.testingutils import autospec_method
 from tron import actioncommand
 from tron import node
@@ -33,7 +33,7 @@ def create_mock_pool():
     return mock.create_autospec(node.NodePool)
 
 
-class NodePoolRepositoryTestCase(TestCase):
+class TestNodePoolRepository(object):
     @setup
     def setup_store(self):
         self.node = create_mock_node()
@@ -92,7 +92,7 @@ class NodePoolRepositoryTestCase(TestCase):
         assert_equal(returned_node, self.node)
 
 
-class KnownHostTestCase(TestCase):
+class TestKnownHost(object):
     @setup
     def setup_known_hosts(self):
         self.known_hosts = node.KnownHosts(None)
@@ -110,7 +110,7 @@ class KnownHostTestCase(TestCase):
         assert not self.known_hosts.get_public_key('hostname')
 
 
-class DetermineJitterTestCase(TestCase):
+class TestDetermineJitter(object):
     @setup
     def setup_node_settings(self):
         self.settings = mock.Mock(
@@ -152,7 +152,7 @@ def build_node(
     return node.Node(config, ssh_opts, pub_key, node_settings)
 
 
-class NodeTestCase(TestCase):
+class TestNode(object):
     class TestConnection(object):
         def openChannel(self, chan):
             self.chan = chan
@@ -236,7 +236,7 @@ class NodeTestCase(TestCase):
         assert_equal(self.node._fail_run.call_count, 1)
 
 
-class NodePoolTestCase(TestCase):
+class TestNodePool(object):
     @setup
     def setup_nodes(self):
         self.nodes = [build_node(name='node%s' % i) for i in range(5)]

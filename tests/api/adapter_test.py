@@ -5,12 +5,12 @@ import shutil
 import tempfile
 
 import mock
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import teardown
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests import mocks
 from tests.assertions import assert_length
 from tron import node
@@ -36,7 +36,7 @@ class MockAdapter(ReprAdapter):
         return 4
 
 
-class ReprAdapterTestCase(TestCase):
+class TestReprAdapter(object):
     @setup
     def setup_adapter(self):
         self.original = mock.Mock(one=1, two=2)
@@ -72,7 +72,7 @@ class SampleClassStub(object):
         return "This is false"
 
 
-class ToggleFlagTestCase(TestCase):
+class TestToggleFlag(object):
     @setup
     def setup_stub(self):
         self.stub = SampleClassStub()
@@ -84,7 +84,7 @@ class ToggleFlagTestCase(TestCase):
         assert not self.stub.expects_false()
 
 
-class RunAdapterTestCase(TestCase):
+class TestRunAdapter(object):
     @setup
     def setup_adapter(self):
         self.original = mock.Mock()
@@ -106,7 +106,7 @@ class RunAdapterTestCase(TestCase):
         assert_equal(self.adapter.get_duration(), '')
 
 
-class ActionRunAdapterTestCase(TestCase):
+class TestActionRunAdapter(object):
     @setup
     def setup_adapter(self):
         self.temp_dir = tempfile.mkdtemp()
@@ -128,7 +128,7 @@ class ActionRunAdapterTestCase(TestCase):
         assert_equal(result['command'], self.action_run.rendered_command)
 
 
-class ActionRunGraphAdapterTestCase(TestCase):
+class TestActionRunGraphAdapter(object):
     @setup
     def setup_adapter(self):
         self.action_runs = mock.create_autospec(
@@ -145,7 +145,7 @@ class ActionRunGraphAdapterTestCase(TestCase):
         assert_equal(self.action_run.id, result[0]['id'])
 
 
-class JobRunAdapterTestCase(TestCase):
+class TestJobRunAdapter(object):
     @setup
     def setup_adapter(self):
         action_runs = mock.MagicMock()
@@ -168,7 +168,7 @@ class JobRunAdapterTestCase(TestCase):
         assert_equal(self.adapter.get_runs(), None)
 
 
-class NodeAdapterTestCase(TestCase):
+class TestNodeAdapter(object):
     @setup
     def setup_adapter(self):
         self.node = mock.create_autospec(node.Node)
@@ -180,7 +180,7 @@ class NodeAdapterTestCase(TestCase):
         assert_equal(result['username'], self.node.username)
 
 
-class NodePoolAdapterTestCase(TestCase):
+class TestNodePoolAdapter(object):
     @setup
     def setup_adapter(self):
         self.pool = mock.create_autospec(node.NodePool)
@@ -196,7 +196,7 @@ class NodePoolAdapterTestCase(TestCase):
         )
 
 
-class JobIndexAdapterTestCase(TestCase):
+class TestJobIndexAdapter(object):
     @setup
     def setup_adapter(self):
         self.job = mock.create_autospec(job.Job)
@@ -230,7 +230,7 @@ class JobIndexAdapterTestCase(TestCase):
         assert_equal(result, [])
 
 
-class SchedulerAdapterTestCase(TestCase):
+class TestSchedulerAdapter(object):
     @setup
     def setup_adapter(self):
         self.scheduler = mock.create_autospec(scheduler.GeneralScheduler)

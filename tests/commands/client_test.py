@@ -4,13 +4,13 @@ from __future__ import unicode_literals
 import mock
 from six.moves.urllib.error import HTTPError
 from six.moves.urllib.error import URLError
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import setup_teardown
-from testify import TestCase
-from testify.assertions import assert_in
 
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import setup_teardown
+from testifycompat import TestCase
 from tests.assertions import assert_raises
 from tests.testingutils import autospec_method
 from tron.commands import client
@@ -25,7 +25,7 @@ def build_file_mock(content):
     )
 
 
-class RequestTestCase(TestCase):
+class TestRequest(object):
     @setup
     def setup_options(self):
         self.url = 'http://localhost:8089/jobs/'
@@ -89,7 +89,7 @@ class RequestTestCase(TestCase):
         assert_equal(response, expected)
 
 
-class ClientRequestTestCase(TestCase):
+class TestClientRequest(object):
     @setup
     def setup_client(self):
         self.url = 'http://localhost:8089/'
@@ -115,7 +115,7 @@ class ClientRequestTestCase(TestCase):
         assert_equal(response, ok_response)
 
 
-class ClientTestCase(TestCase):
+class TestClient(object):
     @setup
     def setup_client(self):
         self.url = 'http://localhost:8089/'
@@ -168,7 +168,7 @@ class ClientTestCase(TestCase):
         )
 
 
-class GetUrlTestCase(TestCase):
+class TestGetUrl(object):
     def test_get_job_url_for_action_run(self):
         url = client.get_job_url('MASTER.name.1.act')
         assert_equal(url, '/api/jobs/MASTER.name/1/act')
@@ -178,7 +178,7 @@ class GetUrlTestCase(TestCase):
         assert_equal(url, '/api/jobs/MASTER.name')
 
 
-class GetContentFromIdentifierTestCase(TestCase):
+class TestGetContentFromIdentifier(object):
     @setup
     def setup_client(self):
         self.options = mock.Mock()

@@ -2,12 +2,12 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import mock
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import setup_teardown
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import setup_teardown
+from testifycompat import TestCase
 from tron.commands import display
 from tron.commands.display import DisplayActionRuns
 from tron.commands.display import DisplayJobRuns
@@ -16,7 +16,7 @@ from tron.core import actionrun
 from tron.core import job
 
 
-class DisplayJobRunsTestCase(TestCase):
+class TestDisplayJobRuns(object):
     @setup
     def setup_data(self):
         self.data = [
@@ -50,7 +50,7 @@ class DisplayJobRunsTestCase(TestCase):
         assert_equal(len(lines), 7)
 
 
-class DisplayJobsTestCase(TestCase):
+class TestDisplayJobs(object):
     @setup
     def setup_data(self):
         self.data = [
@@ -78,7 +78,7 @@ class DisplayJobsTestCase(TestCase):
         assert_equal(len(lines), 5)
 
 
-class DisplayActionsTestCase(TestCase):
+class TestDisplayActions(object):
     @setup
     def setup_data(self):
         self.data = {
@@ -145,7 +145,7 @@ class DisplayActionsTestCase(TestCase):
         assert_equal(len(lines), 13)
 
 
-class AddColorForStateTestCase(TestCase):
+class TestAddColorForState(object):
     @setup_teardown
     def enable_color(self):
         with display.Color.enable():
@@ -168,7 +168,7 @@ class AddColorForStateTestCase(TestCase):
         assert text.startswith(display.Color.colors['blue']), text
 
 
-class DisplayNodeTestCase(TestCase):
+class TestDisplayNode(object):
 
     node_source = {
         'name': 'name',
@@ -186,7 +186,7 @@ class DisplayNodeTestCase(TestCase):
         assert_equal(result, 'name (1 node(s))')
 
 
-class DisplaySchedulerTestCase(TestCase):
+class TestDisplayScheduler(object):
     def test_display_scheduler_no_jitter(self):
         source = {'value': '5 minutes', 'type': 'interval', 'jitter': ''}
         result = display.display_scheduler(source)

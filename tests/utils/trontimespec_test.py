@@ -3,14 +3,13 @@ from __future__ import unicode_literals
 
 import datetime
 
-from testify import assert_equal
-from testify import run
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import TestCase
 from tron.utils import trontimespec
 
 
-class GetTimeTestCase(TestCase):
+class TestGetTime(object):
     def test_get_time(self):
         assert_equal(datetime.time(4, 15), trontimespec.get_time("4:15"))
         assert_equal(datetime.time(22, 59), trontimespec.get_time("22:59"))
@@ -20,7 +19,7 @@ class GetTimeTestCase(TestCase):
         assert not trontimespec.get_time("22:61")
 
 
-class TimeSpecificationTestCase(TestCase):
+class TestTimeSpecification(object):
     def _cmp(self, start_time, expected):
         start_time = datetime.datetime(*start_time)
         expected = datetime.datetime(*expected)
