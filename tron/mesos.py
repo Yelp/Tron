@@ -182,6 +182,9 @@ class MesosCluster:
         cls.dockercfg_location = mesos_options.dockercfg_location
         cls.offer_timeout = mesos_options.offer_timeout
 
+        if cls.mesos_enabled is False:
+            cls.stop()
+
     # TODO: Should this be done asynchronously?
     # TODO: Handle/retry errors
     @classmethod
@@ -213,7 +216,7 @@ class MesosCluster:
             task.exited(1)
             return
 
-        if cls.runner.stopping:
+        if cls.runner is None or cls.runner.stopping:
             # Last framework was terminated for some reason, re-connect.
             cls.connect()
         elif cls.deferred.called:
@@ -244,7 +247,7 @@ class MesosCluster:
         extra_volumes,
         serializer,
     ):
-        if not cls.runner:
+        if cls.mesos_enabled is False:
             return None
 
         uris = [cls.dockercfg_location] if cls.dockercfg_location else []
@@ -275,7 +278,6 @@ class MesosCluster:
             return cls.runner
 
         framework_name = 'tron-{}'.format(socket.gethostname())
-        print("At get_runner, framework_id = {}".format(cls.framework_id))
 
         executor = cls.processor.executor_from_config(
             provider='mesos_task',
@@ -322,8 +324,8 @@ class MesosCluster:
                     'Unknown error from Mesos master: {}'.format(event.raw)
                 )
             elif message == 'registered':
-                framework_id = event.raw['framework_id']['value']
-                cls.save(framework_id)
+                cls.framework_id = event.raw['framework_id']['value']
+                cls.save()
             else:
                 log.warn('Unknown type of control event: {}'.format(event))
 
@@ -375,6 +377,6 @@ class MesosCluster:
             cls.connect()
 
     @classmethod
-    def save(cls, framework_id):
-        cls.state_data[cls.mesos_master_address] = framework_id
+    def save(cls):
+        cls.state_data[cls.mesos_master_address] = cls.framework_id
         cls.state_watcher.handler(cls, None)

@@ -194,27 +194,15 @@ class MesosClusterTestCase(TestCase):
             self.mock_get_leader = mock_get_leader
             yield
 
-    def test_mesos_cluster(self):
-        self._test_init_disabled()
-        self._test_submit_disabled()
-        self._test_create_task_disabled()
-        self._test_stop_disabled()
-
-        # Configure mesos cluster to enable it
-        self._test_configure()
-
-        self._test_submit_enabled()
-        self._test_create_task_defaults()
-
-        self._test_kill()
-        self._test_stop()
-
-    def _test_init_disabled(self):
-        assert_equal(MesosCluster.mesos_enabled, False)
-
-    def _test_submit_enabled(self):
+    @mock.patch('task_processing.runners.subscription.Subscription', autospec=True, stopping=True)
+    @mock.patch('twisted.internet.defer.Deferred', autospec=True)
+    def test_submit_enabled(self, mock_deferred, mock_runner):
         mock_task = mock.MagicMock(spec_set=MesosTask)
         mock_task.get_mesos_id.return_value = 'this_task'
+        MesosCluster.mesos_enabled = mock.PropertyMock(return_value=True)
+        MesosCluster.runner = mock_runner
+        MesosCluster.deferred = mock_deferred
+        MesosCluster.tasks = {}
         MesosCluster.submit(mock_task)
 
         assert 'this_task' in MesosCluster.tasks
@@ -223,15 +211,17 @@ class MesosClusterTestCase(TestCase):
             mock_task.get_config.return_value,
         )
 
-    def _test_submit_disabled(self):
+    def test_submit_disabled(self):
+        MesosCluster.mesos_enabled = mock.PropertyMock(return_value=False)
         mock_task = mock.MagicMock()
         mock_task.get_mesos_id.return_value = 'this_task'
+        MesosCluster.tasks = {}
         MesosCluster.submit(mock_task)
 
         assert 'this_task' not in MesosCluster.tasks
         mock_task.exited.assert_called_once_with(1)
 
-    def _test_configure(self):
+    def test_configure(self):
         mock_volume = mock.MagicMock()
         options = mock.Mock(
             master_address="master-b.com",
@@ -256,10 +246,15 @@ class MesosClusterTestCase(TestCase):
         assert_equal(MesosCluster.dockercfg_location, 'auth')
         assert_equal(MesosCluster.offer_timeout, 1000)
 
+    @mock.patch('task_processing.runners.subscription.Subscription', autospec=True, stopping=True)
+    @mock.patch('twisted.internet.defer.Deferred', autospec=True)
     @mock.patch('tron.mesos.MesosTask', autospec=True)
-    def _test_create_task_defaults(self, mock_task):
+    def test_create_task_defaults(self, mock_task, mock_deferred, mock_runner):
         mock_serializer = mock.MagicMock()
         mock_volume = MesosCluster.default_volumes[0]
+        MesosCluster.runner = mock_runner
+        MesosCluster.deferred = mock_deferred
+        MesosCluster.mesos_enabled = mock.PropertyMock(return_value=True)
         task = MesosCluster.create_task(
             action_run_id='action_c',
             command='echo hi',
@@ -293,9 +288,10 @@ class MesosClusterTestCase(TestCase):
         )
 
     @mock.patch('tron.mesos.MesosTask', autospec=True)
-    def _test_create_task_disabled(self, mock_task):
+    def test_create_task_disabled(self, mock_task):
         # If Mesos is disabled, should return None
         mock_serializer = mock.MagicMock()
+        MesosCluster.mesos_enabled = mock.PropertyMock(return_value=False)
         task = MesosCluster.create_task(
             action_run_id='action_c',
             command='echo hi',
@@ -328,21 +324,41 @@ class MesosClusterTestCase(TestCase):
         MesosCluster._process_event(event)
         assert_equal(mock_task.handle_event.call_count, 0)
 
-    def _test_stop(self):
+    @mock.patch('task_processing.runners.subscription.Subscription', autospec=True)
+    @mock.patch('twisted.internet.defer.Deferred', autospec=True)
+    def test_process_event_control_stop(self, mock_deferred, mock_runner):
+        event = mock.MagicMock(
+            kind='control',
+            message='stop',
+        )
+        MesosCluster.runner = mock_runner
+        MesosCluster.deferred = mock_deferred
+        MesosCluster._process_event(event)
+        assert_equal(MesosCluster.runner.stop.call_count, 1)
+        assert_equal(MesosCluster.deferred.cancel.call_count, 1)
+
+    @mock.patch('task_processing.runners.subscription.Subscription', autospec=True)
+    @mock.patch('twisted.internet.defer.Deferred', autospec=True)
+    def test_stop(self, mock_deferred, mock_runner):
         mock_task = mock.MagicMock()
         MesosCluster.tasks = {'task_id': mock_task}
+        MesosCluster.runner = mock_runner
+        MesosCluster.deferred = mock_deferred
+        MesosCluster.mesos_enabled = mock.PropertyMock(return_value=True)
+
         MesosCluster.stop()
-#        MesosCluster.runner.stop.assert_called_once_with()
-#        assert_equal(MesosCluster.runner.stop.call_count, 1)
-#        MesosCluster.deferred.cancel.assert_called_once_with()
-#        assert_equal(MesosCluster.deferred.cancel.call_count, 1)
+        assert_equal(MesosCluster.runner.stop.call_count, 1)
+        assert_equal(MesosCluster.deferred.cancel.call_count, 1)
         mock_task.exited.assert_called_once_with(None)
         assert_equal(len(MesosCluster.tasks), 0)
 
-    def _test_stop_disabled(self):
+    def test_stop_disabled(self):
         # Shouldn't raise an error
+        MesosCluster.mesos_enabled = mock.PropertyMock(return_value=False)
         MesosCluster.stop()
 
-    def _test_kill(self):
+    @mock.patch('task_processing.runners.subscription.Subscription', autospec=True)
+    def test_kill(self, mock_runner):
+        MesosCluster.runner = mock_runner
         MesosCluster.kill('fake_task_id')
         MesosCluster.runner.kill.assert_called_once_with('fake_task_id')
