@@ -149,6 +149,7 @@ class MesosCluster:
     default_volumes = ()
     dockercfg_location = None
     offer_timeout = None
+    framework_id = None
 
     processor = TaskProcessor()
     queue = PyDeferredQueue()
@@ -159,6 +160,14 @@ class MesosCluster:
     processor.load_plugin(
         provider_module='task_processing.plugins.mesos'
     )
+
+    name = 'frameworks'
+    state_data = {}
+    state_watcher = None
+
+    @classmethod
+    def attach(cls, _, observer):
+        cls.state_watcher = observer
 
     @classmethod
     def configure(cls, mesos_options):
@@ -172,11 +181,6 @@ class MesosCluster:
         ]
         cls.dockercfg_location = mesos_options.dockercfg_location
         cls.offer_timeout = mesos_options.offer_timeout
-
-        if cls.mesos_enabled:
-            cls.connect()
-        else:
-            cls.stop()
 
     # TODO: Should this be done asynchronously?
     # TODO: Handle/retry errors
@@ -271,6 +275,8 @@ class MesosCluster:
             return cls.runner
 
         framework_name = 'tron-{}'.format(socket.gethostname())
+        print("At get_runner, framework_id = {}".format(cls.framework_id))
+
         executor = cls.processor.executor_from_config(
             provider='mesos_task',
             provider_config={
@@ -278,7 +284,7 @@ class MesosCluster:
                 'mesos_address': get_mesos_leader(cls.mesos_master_address, cls.mesos_master_port),
                 'role': cls.mesos_role,
                 'framework_name': framework_name,
-                'framework_id': self.framework_id,
+                'framework_id': cls.framework_id,
                 'failover': True,
             }
         )
@@ -317,7 +323,7 @@ class MesosCluster:
                 )
             elif message == 'registered':
                 framework_id = event.raw['framework_id']['value']
-                MesosClusterRepository.save(self.mesos_address, framework_id)
+                cls.save(framework_id)
             else:
                 log.warn('Unknown type of control event: {}'.format(event))
 
@@ -342,12 +348,12 @@ class MesosCluster:
 
     @classmethod
     def stop(cls):
+        cls.framework_id = None
         if cls.runner:
             cls.runner.stop()
         if cls.deferred:
             cls.deferred.cancel()
         for key, task in list(cls.tasks.items()):
-            print('key = {}'.format(key))
             task.log.warning(
                 'Still running during Mesos shutdown, becoming unknown'
             )
@@ -357,3 +363,18 @@ class MesosCluster:
     @classmethod
     def kill(cls, task_id):
         return cls.runner.kill(task_id)
+
+    @classmethod
+    def restore_state(cls, mesos_state):
+        cls.state_data = mesos_state.get(cls.name, {})
+        if cls.mesos_enabled:
+            try:
+                cls.framework_id = cls.state_data.get(cls.mesos_master_address)
+            except AttributeError:
+                log.warn('Can not retrieve framework_id from state file. Tron would create a new framework')
+            cls.connect()
+
+    @classmethod
+    def save(cls, framework_id):
+        cls.state_data[cls.mesos_master_address] = framework_id
+        cls.state_watcher.handler(cls, None)
