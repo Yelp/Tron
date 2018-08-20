@@ -23,7 +23,7 @@ def store():
     return event.EventStore(limits)
 
 
-class TestEventStore(TestCase):
+class TestEventStore(object):
     def _build_event(self, level, name):
         return event.Event('entity', level, name)
 

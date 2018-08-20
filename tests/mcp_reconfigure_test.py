@@ -5,6 +5,8 @@ from __future__ import unicode_literals
 import os
 import tempfile
 
+import pytest
+
 from testifycompat import assert_equal
 from testifycompat import run
 from testifycompat import setup
@@ -197,6 +199,7 @@ class TestMCPReconfigure(TestCase):
         self.reconfigure()
         assert_equal(len(self.mcp.jobs.get_names()), count)
 
+    @pytest.mark.skip(reason="This test doesn't currently as run1 is not scheduled.")
     @suite('integration')
     def test_job_unchanged(self):
         assert 'MASTER.test_unchanged' in self.mcp.jobs

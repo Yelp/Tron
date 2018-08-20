@@ -197,7 +197,7 @@ class TestActionRunHistoryResource(WWWTestCase):
 
 
 @pytest.fixture(scope="module")
-def resource():
+def resource_fixture():
     job = mock.Mock(
         repr_data=lambda: {'name': 'testname'},
         name="testname",
@@ -212,19 +212,22 @@ def resource():
 
 
 class TestJobCollectionResource(WWWTestCase):
-    def test_render_GET(self, resource):
+    def test_render_GET(self):
+        resource = resource_fixture()
         resource.get_data = MagicMock()
         result = resource.render_GET(REQUEST)
         assert_call(resource.get_data, 0, False, False, True, True)
         assert 'jobs' in result
 
-#    def test_getChild(self, resource):
-#        child = resource.getChild(b"testname", mock.Mock())
-#        assert isinstance(child, www.JobResource)
+    @pytest.mark.skip(reason="currently this fixture doesn't work")
+    def test_getChild(self, resource):
+        child = resource.getChild(b"testname", mock.Mock())
+        assert isinstance(child, www.JobResource)
 
-#    def test_getChild_missing_job(self):
-#        child = resource.getChild(b"bar", mock.Mock())
-#        assert isinstance(child, twisted.web.resource.NoResource)
+    @pytest.mark.skip(reason="currently this fixture doesn't work")
+    def test_getChild_missing_job(self, resource):
+        child = resource.getChild(b"bar", mock.Mock())
+        assert isinstance(child, twisted.web.resource.NoResource)
 
 
 class TestJobResource(WWWTestCase):

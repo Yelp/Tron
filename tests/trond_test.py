@@ -62,6 +62,7 @@ def summarize_events(events):
     return [(event['entity'], event['name']) for event in events]
 
 
+@pytest.mark.skip(reason="We don't have a setup for sandbox tests yet")
 class TrondEndToEndTestCase(sandbox.SandboxTestCase):
     def test_end_to_end_basic(self):
         self.start_with_config(SINGLE_ECHO_CONFIG)
@@ -174,6 +175,7 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         sandbox.wait_on_sandbox(wait_on_next_run)
 
 
+@pytest.mark.skip(reason="We don't have a setup for sandbox tests yet")
 class TronCommandsTestCase(sandbox.SandboxTestCase):
     def test_tronview(self):
         self.start_with_config(SINGLE_ECHO_CONFIG)
@@ -240,6 +242,7 @@ class TronCommandsTestCase(sandbox.SandboxTestCase):
         assert_equal(stdout.rstrip(), ALT_NAMESPACED_ECHO_CONFIG.rstrip())
 
 
+@pytest.mark.skip(reason="We don't have a setup for sandbox tests yet")
 class JobEndToEndTestCase(sandbox.SandboxTestCase):
     def test_cleanup_on_failure(self):
         config = BASIC_CONFIG + dedent(
