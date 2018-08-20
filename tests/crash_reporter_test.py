@@ -2,12 +2,12 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import logging
+from unittest import mock
 
 from testify import assert_equal
 from testify import run
 from testify import setup
 from testify import TestCase
-from testify.utils import turtle
 
 from tests.assertions import assert_call
 from tests.assertions import assert_length
@@ -21,8 +21,9 @@ class TestError(Exception):
 class SimpleDeferredTestCase(TestCase):
     @setup
     def setup_crash_reporter(self):
-        self.emailer = turtle.Turtle()
-        self.mcp = turtle.Turtle()
+        self.emailer = mock.MagicMock()
+        self.emailer.send = mock.MagicMock()
+        self.mcp = mock.MagicMock()
         self.reporter = crash_reporter.CrashReporter(self.emailer)
         self.event_dict = {'isError': False, 'message': ['']}
 
@@ -43,18 +44,18 @@ class SimpleDeferredTestCase(TestCase):
 
     def test_emit_no_text(self):
         self.reporter.emit(self.event_dict)
-        assert_length(self.emailer.send.calls, 0)
+        assert_length(self.emailer.send.mock_calls, 0)
 
     def test_emit_unhandled(self):
         self.event_dict['message'] = ["Unhandled error in Deferred:"]
         self.event_dict['isError'] = True
         self.reporter.emit(self.event_dict)
-        assert_length(self.emailer.send.calls, 0)
+        assert_length(self.emailer.send.mock_calls, 0)
 
     def test_emit_ignored_level(self):
         self.event_dict['message'] = "Some message."
         self.reporter.emit(self.event_dict)
-        assert_length(self.emailer.send.calls, 0)
+        assert_length(self.emailer.send.mock_calls, 0)
 
     def test_emit_crash(self):
         self.event_dict['message'] = ["Ooops"]

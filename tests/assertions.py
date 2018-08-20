@@ -27,9 +27,9 @@ def assert_length(sequence, expected, msg=None):
     assert length == expected, msg % locals()
 
 
-def assert_call(turtle, call_idx, *args, **kwargs):
-    """Assert that a function was called on turtle with the correct args."""
-    actual = turtle.calls[call_idx] if turtle.calls else None
+def assert_call(mock, call_idx, *args, **kwargs):
+    """Assert that a function was called on mock with the correct args."""
+    actual = mock.mock_calls[call_idx] if mock.mock_calls else None
     msg = "Call %s expected %s, was %s" % (call_idx, (args, kwargs), actual)
     assert actual == (args, kwargs), msg
 

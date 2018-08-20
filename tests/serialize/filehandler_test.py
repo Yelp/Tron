@@ -6,6 +6,7 @@ import shutil
 import time
 from tempfile import mkdtemp
 from tempfile import NamedTemporaryFile
+from unittest import mock
 
 from testify import assert_equal
 from testify import assert_in
@@ -16,7 +17,6 @@ from testify import setup
 from testify import suite
 from testify import teardown
 from testify import TestCase
-from testify import turtle
 
 from tron.serialize.filehandler import FileHandleManager
 from tron.serialize.filehandler import NullFileHandle
@@ -309,11 +309,11 @@ class OutputPathTestCase(TestCase):
         assert not os.path.exists(tmp_dir)
 
     def test__eq__(self):
-        other = turtle.Turtle(base='one', parts=['two', 'three'])
+        other = mock.MagicMock(base='one', parts=['two', 'three'])
         assert_equal(self.path, other)
 
     def test__ne__(self):
-        other = turtle.Turtle(base='one/two', parts=['three'])
+        other = mock.MagicMock(base='one/two', parts=['three'])
         assert_not_equal(self.path, other)
 
 

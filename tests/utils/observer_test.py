@@ -1,11 +1,12 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+from unittest import mock
+
 from testify import assert_equal
 from testify import run
 from testify import setup
 from testify import TestCase
-from testify import turtle
 
 from tests.assertions import assert_length
 from tron.utils.observer import Observable
@@ -35,12 +36,12 @@ class ObservableTestCase(TestCase):
         assert_equal(self.obs._observers['b'], [func])
 
     def test_notify(self):
-        handler = turtle.Turtle()
+        handler = mock.MagicMock()
         self.obs.attach(['a', 'b'], handler)
         self.obs.notify('a')
-        assert_equal(len(handler.handler.calls), 1)
+        assert_equal(len(handler.handler.mock_calls), 1)
         self.obs.notify('b')
-        assert_equal(len(handler.handler.calls), 2)
+        assert_equal(len(handler.handler.mock_calls), 2)
 
 
 class ObserverClearTestCase(TestCase):
