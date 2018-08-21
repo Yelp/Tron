@@ -303,7 +303,7 @@ action_context = command_context.build_filled_context(
 
 
 def valid_mesos_action(action, config_context):
-    required_keys = {'cpus', 'mem', 'docker_image', 'mesos_address'}
+    required_keys = {'cpus', 'mem', 'docker_image'}
     if action.get('executor') == schema.ExecutorTypes.mesos:
         missing_keys = required_keys - set(action.keys())
         if missing_keys:
@@ -334,7 +334,6 @@ class ValidateAction(Validator):
         'docker_parameters': None,
         'env': None,
         'extra_volumes': None,
-        'mesos_address': None,
     }
     requires = build_list_of_type_validator(
         valid_action_name,
@@ -373,8 +372,6 @@ class ValidateAction(Validator):
             valid_dict,
         'extra_volumes':
             build_list_of_type_validator(valid_volume, allow_empty=True),
-        'mesos_address':
-            valid_string,
     }
 
     def post_validation(self, action, config_context):
@@ -407,7 +404,6 @@ class ValidateCleanupAction(Validator):
         'docker_parameters': None,
         'env': None,
         'extra_volumes': None,
-        'mesos_address': None,
     }
     validators = {
         'name':
@@ -440,8 +436,6 @@ class ValidateCleanupAction(Validator):
             valid_dict,
         'extra_volumes':
             build_list_of_type_validator(valid_volume, allow_empty=True),
-        'mesos_address':
-            valid_string,
     }
 
     def post_validation(self, action, config_context):
@@ -583,6 +577,7 @@ class ValidateMesos(Validator):
     config_class = ConfigMesos
     option = True
     defaults = {
+        'master_address': None,
         'master_port': 5050,
         'secret_file': None,
         'role': '*',
@@ -594,6 +589,14 @@ class ValidateMesos(Validator):
     }
 
     validators = {
+        'master_address':
+            valid_string,
+        'master_port':
+            valid_int,
+        'secret':
+            valid_string,
+        'role':
+            valid_string,
         'enabled':
             valid_bool,
         'default_volumes':

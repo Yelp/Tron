@@ -47,6 +47,7 @@ class MesosClusterRepository:
     """A class that stores MesosCluster objects and configuration."""
 
     clusters = {}
+    mesos_master_address = None
     mesos_master_port = None
     mesos_secret_file = None
     mesos_role = None
@@ -66,7 +67,9 @@ class MesosClusterRepository:
         cls.state_watcher = observer
 
     @classmethod
-    def get_cluster(cls, master_address):
+    def get_cluster(cls, master_address=None):
+        if master_address is None:
+            master_address = cls.mesos_master_address
         if master_address not in cls.clusters:
             framework_id = cls.state_data.get(master_address)
             cluster = MesosCluster(
@@ -91,6 +94,7 @@ class MesosClusterRepository:
 
     @classmethod
     def configure(cls, mesos_options):
+        cls.mesos_master_address = mesos_options.master_address
         cls.master_port = mesos_options.master_port
         cls.secret_file = mesos_options.secret_file
         cls.role = mesos_options.role

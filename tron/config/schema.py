@@ -100,6 +100,9 @@ ConfigState = config_object_factory(
 
 ConfigMesos = config_object_factory(
     name='ConfigMesos',
+    required=[
+        'master_address',
+    ],
     optional=[
         'master_port',
         'secret_file',
@@ -154,7 +157,6 @@ ConfigAction = config_object_factory(
         'docker_parameters',  # List of ConfigParameter
         'env',  # dict
         'extra_volumes',  # List of ConfigVolume
-        'mesos_address',  # str
         'expected_runtime',  # datetime.Timedelta
     ],
 )
@@ -178,7 +180,6 @@ ConfigCleanupAction = config_object_factory(
         'docker_parameters',  # List of ConfigParameter
         'env',  # dict
         'extra_volumes',  # List of ConfigVolume
-        'mesos_address',  # str
     ],
 )
 
