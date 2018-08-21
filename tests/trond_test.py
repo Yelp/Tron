@@ -8,7 +8,6 @@ from textwrap import dedent
 
 from testify import assert_equal
 from testify import assert_gt
-from testify.assertions import assert_in
 from testify.assertions import assert_raises_such_that
 
 from tests import sandbox
@@ -57,10 +56,6 @@ TOUCH_CLEANUP_FMT = """
 """
 
 
-def summarize_events(events):
-    return [(event['entity'], event['name']) for event in events]
-
-
 class TrondEndToEndTestCase(sandbox.SandboxTestCase):
     def test_end_to_end_basic(self):
         self.start_with_config(SINGLE_ECHO_CONFIG)
@@ -74,9 +69,6 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         # reconfigure and confirm results
         second_config = DOUBLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT
         self.sandbox.tronfig(second_config)
-        events = summarize_events(client.events())
-        assert_in(('', 'restoring'), events)
-        assert_in(('MASTER.echo_job.0', 'created'), events)
         assert_equal(client.config('MASTER')['config'], second_config)
 
         # reconfigure, by uploading a third configuration
