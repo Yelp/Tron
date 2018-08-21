@@ -3,7 +3,7 @@ DOCKER_RUN = docker run -t -v $(CURDIR):/work:rw
 UID:=$(shell id -u)
 GID:=$(shell id -g)
 
-.PHONY : all clean tests docs dev
+.PHONY : all clean tests docs dev cluster_itests
 
 -usage:
 	@echo "make test - Run tests"
@@ -55,13 +55,14 @@ debitest_%: deb_% _itest_%
 itest_%: test_in_docker_% debitest_%
 	@echo "itest $* OK"
 
+cluster_itests:
+	tox -e cluster_itests
+
 dev:
 	.tox/py36/bin/trond --debug --working-dir=dev -l logging.conf --host=$(shell hostname -f)
 
 example_cluster:
 	tox -e example-cluster
-
-# Release
 
 LAST_COMMIT_MSG = $(shell git log -1 --pretty=%B | sed -e 's/\x27/"/g')
 release: docker_trusty docs
@@ -75,8 +76,6 @@ release: docker_trusty docs
 	@echo 'git commit -a -m "Released $(VERSION) via make release"'
 	@echo 'git tag --force v$(VERSION)'
 	@echo 'git push --tags origin master'
-
-# Docs
 
 docs:
 	tox -r -e docs

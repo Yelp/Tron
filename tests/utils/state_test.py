@@ -1,11 +1,12 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+from unittest import mock
+
 from testify import assert_equal
 from testify import assert_raises
 from testify import setup
 from testify import TestCase
-from testify.utils import turtle
 
 from tron.utils import state
 from tron.utils.state import NamedEventState
@@ -38,22 +39,22 @@ class StateMachineSimpleTestCase(TestCase):
         assert_equal(self.machine.state, self.state_red)
 
     def test_transition(self):
-        handler = turtle.Turtle()
+        handler = mock.MagicMock()
         self.machine.attach(True, handler)
         self.machine.transition('true')
         assert_equal(
-            handler.handler.calls,
+            handler.handler.mock_calls,
             [((self.machine, self.state_green), {})],
         )
 
     def test_notify_delegate(self):
-        delegate = turtle.Turtle()
-        handler = turtle.Turtle()
+        delegate = mock.MagicMock()
+        handler = mock.MagicMock()
         self.machine = state.StateMachine(self.state_red, delegate=delegate)
         self.machine.attach(True, handler)
         self.machine.transition('true')
         assert_equal(
-            handler.handler.calls,
+            handler.handler.mock_calls,
             [((delegate, self.state_green), {})],
         )
 

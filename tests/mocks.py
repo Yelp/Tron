@@ -6,11 +6,10 @@ import datetime
 import itertools
 import shutil
 import tempfile
+from unittest.mock import MagicMock
 
-from tests.testingutils import Turtle
 
-
-class MockAction(Turtle):
+class MockAction(MagicMock):
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('name', 'action_name')
         kwargs.setdefault('required_actions', [])
@@ -18,7 +17,7 @@ class MockAction(Turtle):
         super(MockAction, self).__init__(*args, **kwargs)
 
 
-class MockActionGraph(Turtle):
+class MockActionGraph(MagicMock):
     def __init__(self, *args, **kwargs):
         action = MockAction()
         kwargs.setdefault('graph', [action])
@@ -34,7 +33,7 @@ class MockActionGraph(Turtle):
         return []
 
 
-class MockActionRun(Turtle):
+class MockActionRun(MagicMock):
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('output_path', [tempfile.mkdtemp()])
         kwargs.setdefault('start_time', datetime.datetime.now())
@@ -43,7 +42,7 @@ class MockActionRun(Turtle):
         super(MockActionRun, self).__init__(*args, **kwargs)
 
 
-class MockActionRunCollection(Turtle):
+class MockActionRunCollection(MagicMock):
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('action_graph', MockActionGraph())
         kwargs.setdefault('run_map', {})
@@ -55,7 +54,7 @@ class MockActionRunCollection(Turtle):
         return self.run_map[item]
 
 
-class MockJobRun(Turtle):
+class MockJobRun(MagicMock):
     def __init__(self, *args, **kwargs):
         kwargs.setdefault('output_path', [tempfile.mkdtemp()])
         kwargs.setdefault('action_graph', MockActionGraph())
@@ -67,7 +66,7 @@ class MockJobRun(Turtle):
         super(MockJobRun, self).__init__(*args, **kwargs)
 
 
-class MockNode(Turtle):
+class MockNode(MagicMock):
     def __init__(self, hostname=None):
         super(MockNode, self).__init__()
         self.name = self.hostname = hostname
@@ -108,6 +107,6 @@ class MockNodePool(object):
     next_round_robin = next
 
 
-class MockJobRunCollection(Turtle):
+class MockJobRunCollection(MagicMock):
     def __iter__(self):
         return iter(self.runs)

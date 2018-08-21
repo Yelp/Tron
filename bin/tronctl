@@ -18,6 +18,8 @@ from six.moves.urllib.parse import urljoin
 from tron.commands import client
 from tron.commands import cmd_utils
 from tron.commands.cmd_utils import ExitCode
+from tron.commands.cmd_utils import suggest_possibilities
+from tron.commands.cmd_utils import tron_jobs_completer
 
 COMMAND_HELP = (
     ('start', 'Start the selected job, job run, or action'),
@@ -105,7 +107,9 @@ def control_objects(args):
                 identifier,
             )
         except ValueError as e:
-            raise SystemExit("Error: %s" % e)
+            possibilities = list(tron_jobs_completer(prefix='', client=tron_client))
+            suggestions = suggest_possibilities(word=identifier, possibilities=possibilities)
+            raise SystemExit(f"Error: {e}{suggestions}")
 
         yield edit(args, tron_id.url)
 
