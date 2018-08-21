@@ -173,7 +173,6 @@ class ActionRunFactoryTestCase(TestCase):
             extra_volumes=[{
                 'path': '/tmp'
             }],
-            mesos_address='fake-mesos-master.com',
         )
         action_run = ActionRunFactory.build_run_for_action(
             self.job_run,
@@ -188,7 +187,6 @@ class ActionRunFactoryTestCase(TestCase):
         assert_equal(action_run.docker_parameters, action.docker_parameters)
         assert_equal(action_run.env, action.env)
         assert_equal(action_run.extra_volumes, action.extra_volumes)
-        assert_equal(action_run.mesos_address, action.mesos_address)
 
     def test_action_run_from_state_default(self):
         state_data = self.action_state_data
@@ -211,7 +209,6 @@ class ActionRunFactoryTestCase(TestCase):
         state_data['docker_parameters'] = [{'key': 'test', 'value': 123}]
         state_data['env'] = {'TESTING': 'true'}
         state_data['extra_volumes'] = [{'path': '/tmp'}]
-        state_data['mesos_address'] = 'fake-mesos-master.com'
         action_run = ActionRunFactory.action_run_from_state(
             self.job_run,
             state_data,
@@ -227,7 +224,6 @@ class ActionRunFactoryTestCase(TestCase):
         )
         assert_equal(action_run.env, state_data['env'])
         assert_equal(action_run.extra_volumes, state_data['extra_volumes'])
-        assert_equal(action_run.mesos_address, state_data['mesos_address'])
 
         assert not action_run.is_cleanup
         assert_equal(action_run.__class__, MesosActionRun)
@@ -910,7 +906,6 @@ class MesosActionRunTestCase(TestCase):
     def setup_action_run(self):
         self.output_path = mock.MagicMock()
         self.command = "do the command"
-        self.mesos_address = 'mesos-master.com'
         self.other_task_kwargs = {
             'cpus': 1,
             'mem': 50,
@@ -929,13 +924,12 @@ class MesosActionRunTestCase(TestCase):
             rendered_command=self.command,
             output_path=self.output_path,
             executor=ExecutorTypes.mesos,
-            mesos_address=self.mesos_address,
             **self.other_task_kwargs
         )
 
     @mock.patch('tron.core.actionrun.filehandler', autospec=True)
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_submit_command(self, mock_cluster_repo, mock_filehandler):
+    @mock.patch('tron.core.actionrun.MesosCluster', autospec=True)
+    def test_submit_command(self, mock_cluster, mock_filehandler):
         serializer = mock_filehandler.OutputStreamSerializer.return_value
         with mock.patch.object(
             self.action_run,
@@ -944,16 +938,14 @@ class MesosActionRunTestCase(TestCase):
         ) as mock_watch:
             self.action_run.submit_command()
 
-            mock_get_cluster = mock_cluster_repo.get_cluster
-            mock_get_cluster.assert_called_once_with(self.mesos_address)
-            mock_get_cluster.return_value.create_task.assert_called_once_with(
+            mock_cluster.create_task.assert_called_once_with(
                 action_run_id=self.action_run.id,
                 command=self.command,
                 serializer=serializer,
                 **self.other_task_kwargs
             )
-            task = mock_get_cluster.return_value.create_task.return_value
-            mock_get_cluster.return_value.submit.assert_called_once_with(task)
+            task = mock_cluster.create_task.return_value
+            mock_cluster.submit.assert_called_once_with(task)
             mock_watch.assert_called_once_with(task)
 
         mock_filehandler.OutputStreamSerializer.assert_called_with(
@@ -961,24 +953,21 @@ class MesosActionRunTestCase(TestCase):
         )
 
     @mock.patch('tron.core.actionrun.filehandler', autospec=True)
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
+    @mock.patch('tron.core.actionrun.MesosCluster', autospec=True)
     def test_submit_command_task_none(
-        self, mock_cluster_repo, mock_filehandler
+        self, mock_cluster, mock_filehandler
     ):
         # Task is None if Mesos is disabled
-        mock_cluster_repo.get_cluster.return_value.create_task.return_value = None
+        mock_cluster.create_task.return_value = None
         self.action_run.submit_command()
 
-        mock_get_cluster = mock_cluster_repo.get_cluster
-        mock_get_cluster.assert_called_once_with(self.mesos_address)
         assert self.action_run.is_failed
 
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_kill_task(self, mock_cluster_repo):
-        mock_get_cluster = mock_cluster_repo.get_cluster
+    @mock.patch('tron.core.actionrun.MesosCluster', autospec=True)
+    def test_kill_task(self, mock_cluster):
         self.action_run.mesos_task_id = 'fake_task_id'
         error_message = self.action_run.kill()
-        mock_get_cluster.return_value.kill.assert_called_once_with(
+        mock_cluster.kill.assert_called_once_with(
             self.action_run.mesos_task_id
         )
         assert_equal(
@@ -986,24 +975,23 @@ class MesosActionRunTestCase(TestCase):
             "Warning: It might take up to docker_stop_timeout (current setting is 2 mins) for killing."
         )
 
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_kill_task_not_running(self, mock_cluster_repo):
+    @mock.patch('tron.core.actionrun.MesosCluster', autospec=True)
+    def test_kill_task_not_running(self, mock_cluster):
         error_message = self.action_run.kill()
         assert_equal(
             error_message, "Error: Can't find task id for the action."
         )
 
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_stop_task(self, mock_cluster_repo):
-        mock_get_cluster = mock_cluster_repo.get_cluster
+    @mock.patch('tron.core.actionrun.MesosCluster', autospec=True)
+    def test_stop_task(self, mock_cluster):
         self.action_run.mesos_task_id = 'fake_task_id'
         self.action_run.stop()
-        mock_get_cluster.return_value.kill.assert_called_once_with(
+        mock_cluster.kill.assert_called_once_with(
             self.action_run.mesos_task_id
         )
 
-    @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
-    def test_stop_task_not_running(self, mock_cluster_repo):
+    @mock.patch('tron.core.actionrun.MesosCluster', autospec=True)
+    def test_stop_task_not_running(self, mock_cluster):
         error_message = self.action_run.stop()
         assert_equal(
             error_message, "Error: Can't find task id for the action."

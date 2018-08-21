@@ -11,7 +11,7 @@ from tron import event
 from tron import node
 from tron.config import manager
 from tron.core import job
-from tron.mesos import MesosClusterRepository
+from tron.mesos import MesosCluster
 from tron.serialize.runstate import statemanager
 from tron.utils import emailer
 
@@ -85,12 +85,12 @@ class MasterControlProgram(object):
                 'node_pools',
                 'ssh_options',
             ), (self.apply_notification_options, 'notification_options'),
-            (MesosClusterRepository.configure, 'mesos_options')
+            (MesosCluster.configure, 'mesos_options')
         ]
         master_config = config_container.get_master()
         apply_master_configuration(master_config_directives, master_config)
 
-        self.state_watcher.watch(MesosClusterRepository)
+        self.state_watcher.watch(MesosCluster)
 
         # TODO: unify NOTIFY_STATE_CHANGE and simplify this
         factory = self.build_job_scheduler_factory(master_config)
@@ -152,7 +152,7 @@ class MasterControlProgram(object):
         """
         self.event_recorder.notice('restoring')
         states = self.state_watcher.restore(self.jobs.get_names())
-        MesosClusterRepository.restore_state(states.get('mesos_state', {}))
+        MesosCluster.restore_state(states.get('mesos_state', {}))
 
         self.jobs.restore_state(states.get('job_state', {}), action_runner)
         self.state_watcher.save_metadata()

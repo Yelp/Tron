@@ -58,9 +58,9 @@ class MasterControlProgramTestCase(TestCase):
             reconfigure=False,
         )
 
-    @mock.patch('tron.mcp.MesosClusterRepository', autospec=True)
+    @mock.patch('tron.mcp.MesosCluster', autospec=True)
     @mock.patch('tron.mcp.node.NodePoolRepository', autospec=True)
-    def test_apply_config(self, mock_repo, mock_cluster_repo):
+    def test_apply_config(self, mock_repo, mock_cluster):
         config_container = mock.create_autospec(config_parse.ConfigContainer)
         master_config = config_container.get_master.return_value
         autospec_method(self.mcp.apply_collection_config)
@@ -80,7 +80,7 @@ class MasterControlProgramTestCase(TestCase):
             master_config.node_pools,
             master_config.ssh_options,
         )
-        mock_cluster_repo.configure.assert_called_with(
+        mock_cluster.configure.assert_called_with(
             master_config.mesos_options,
         )
         self.mcp.build_job_scheduler_factory(master_config)
@@ -130,15 +130,15 @@ class MasterControlProgramRestoreStateTestCase(TestCase):
         shutil.rmtree(self.working_dir)
         shutil.rmtree(self.config_path)
 
-    @mock.patch('tron.mcp.MesosClusterRepository', autospec=True)
-    def test_restore_state(self, mock_cluster_repo):
+    @mock.patch('tron.mcp.MesosCluster', autospec=True)
+    def test_restore_state(self, mock_cluster):
         job_state_data = {'1': 'things', '2': 'things'}
         mesos_state_data = {'3': 'things', '4': 'things'}
         state_data = {'mesos_state': mesos_state_data, 'job_state': job_state_data}
         self.mcp.state_watcher.restore.return_value = state_data
         action_runner = mock.Mock()
         self.mcp.restore_state(action_runner)
-        mock_cluster_repo.restore_state.assert_called_with(
+        mock_cluster.restore_state.assert_called_with(
             mesos_state_data,
         )
         self.mcp.jobs.restore_state.assert_called_with(
