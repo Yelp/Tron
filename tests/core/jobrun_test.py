@@ -2,6 +2,7 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import datetime
+from unittest.mock import MagicMock
 
 import mock
 import pytz
@@ -14,7 +15,6 @@ from tests.assertions import assert_call
 from tests.assertions import assert_length
 from tests.assertions import assert_raises
 from tests.testingutils import autospec_method
-from tests.testingutils import Turtle
 from tron import actioncommand
 from tron import node
 from tron.core import actiongraph
@@ -52,7 +52,7 @@ class JobRunTestCase(TestCase):
             7,
             self.run_time,
             mock_node,
-            action_runs=Turtle(
+            action_runs=MagicMock(
                 action_runs_with_cleanup=[],
                 get_startable_action_runs=lambda: [],
             ),
@@ -383,7 +383,7 @@ class JobRunFromStateTestCase(TestCase):
         assert_equal(run.node, self.node_pool)
 
 
-class MockJobRun(Turtle):
+class MockJobRun(MagicMock):
 
     manual = False
 

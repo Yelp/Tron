@@ -4,6 +4,8 @@ Test cases for the web services interface to tron
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+from unittest.mock import MagicMock
+
 import mock
 import six
 import twisted.web.http
@@ -20,7 +22,6 @@ from twisted.web import http
 from tests import mocks
 from tests.assertions import assert_call
 from tests.testingutils import autospec_method
-from tests.testingutils import Turtle
 from tron import mcp
 from tron import node
 from tron.api import controller
@@ -211,7 +212,7 @@ class JobCollectionResourceTestCase(WWWTestCase):
         self.resource = www.JobCollectionResource(self.job_collection)
 
     def test_render_GET(self):
-        self.resource.get_data = Turtle()
+        self.resource.get_data = MagicMock()
         result = self.resource.render_GET(REQUEST)
         assert_call(self.resource.get_data, 0, False, False, True, True)
         assert 'jobs' in result

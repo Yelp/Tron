@@ -3,6 +3,7 @@ from __future__ import unicode_literals
 
 import collections
 import datetime
+from unittest.mock import MagicMock
 
 import mock
 import six
@@ -18,7 +19,6 @@ from tests.assertions import assert_call
 from tests.assertions import assert_length
 from tests.assertions import assert_mock_calls
 from tests.testingutils import autospec_method
-from tests.testingutils import Turtle
 from tron import actioncommand
 from tron import node
 from tron import scheduler
@@ -32,7 +32,7 @@ class JobTestCase(TestCase):
     def setup_job(self):
         action_graph = mock.Mock(names=lambda: ['one', 'two'])
         scheduler = mock.Mock()
-        run_collection = Turtle()
+        run_collection = MagicMock()
         self.nodes = mock.create_autospec(node.NodePool)
         self.action_runner = mock.create_autospec(
             actioncommand.SubprocessActionRunnerFactory,
@@ -122,7 +122,7 @@ class JobTestCase(TestCase):
         assert_equal(self.job.status, self.job.STATUS_ENABLED)
 
     def test_status_running(self):
-        self.job.runs.get_run_by_state = lambda s: Turtle()
+        self.job.runs.get_run_by_state = lambda s:  MagicMock()
         assert_equal(self.job.status, self.job.STATUS_RUNNING)
 
     def test_status_unknown(self):
@@ -186,7 +186,10 @@ class JobTestCase(TestCase):
                 manual=False,
             )
 
-        self.job.watch.assert_has_calls([mock.call(run) for run in runs])
+        calls = []
+        for r in runs:
+            calls.extend(r.mock_calls)
+        self.job.watch.assert_has_calls(calls)
 
     def test_build_new_runs_manual(self):
         run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
@@ -295,20 +298,20 @@ class JobSchedulerTestCase(TestCase):
         assert self.job_scheduler.schedule.called_once()
 
     def test_run_job_job_disabled(self):
-        self.job_scheduler.schedule = Turtle()
-        job_run = Turtle()
+        self.job_scheduler.schedule = MagicMock()
+        job_run = MagicMock()
         self.job.enabled = False
         self.job_scheduler.run_job(job_run)
-        assert_length(self.job_scheduler.schedule.calls, 0)
-        assert_length(job_run.start.calls, 0)
-        assert_length(job_run.cancel.calls, 1)
+        assert_length(self.job_scheduler.schedule.mock_calls, 0)
+        assert_length(job_run.start.mock_calls, 0)
+        assert_length(job_run.cancel.mock_calls, 1)
 
     def test_run_job_cancelled(self):
-        self.job_scheduler.schedule = Turtle()
-        job_run = Turtle(is_scheduled=False)
+        self.job_scheduler.schedule = MagicMock()
+        job_run = MagicMock(is_scheduled=False)
         self.job_scheduler.run_job(job_run)
-        assert_length(job_run.start.calls, 0)
-        assert_length(self.job_scheduler.schedule.calls, 1)
+        assert_length(job_run.start.mock_calls, 0)
+        assert_length(self.job_scheduler.schedule.mock_calls, 1)
 
     def test_run_job_already_running_queuing(self):
         self.job_scheduler.schedule = mock.Mock(autospec=True)
@@ -335,7 +338,7 @@ class JobSchedulerTestCase(TestCase):
         self.job_scheduler.schedule = mock.Mock()
         self.job.runs.get_active = lambda s: [mock.Mock()]
         self.job.allow_overlap = True
-        job_run = Turtle(is_cancelled=False)
+        job_run = MagicMock(is_cancelled=False)
         self.job_scheduler.run_job(job_run)
         job_run.start.assert_called_with()
 
@@ -350,13 +353,13 @@ class JobSchedulerTestCase(TestCase):
         assert not self.job_scheduler.schedule.called
 
     def test_run_job_schedule_on_complete(self):
-        self.job_scheduler.schedule = Turtle()
+        self.job_scheduler.schedule = MagicMock()
         self.scheduler.schedule_on_complete = True
         self.job.runs.get_active = lambda s: []
-        job_run = Turtle(is_cancelled=False)
+        job_run = MagicMock(is_cancelled=False)
         self.job_scheduler.run_job(job_run)
-        assert_length(job_run.start.calls, 1)
-        assert_length(self.job_scheduler.schedule.calls, 0)
+        assert_length(job_run.start.mock_calls, 1)
+        assert_length(self.job_scheduler.schedule.mock_calls, 0)
 
 
 class JobSchedulerGetRunsToScheduleTestCase(TestCase):

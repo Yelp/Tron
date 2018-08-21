@@ -24,7 +24,7 @@ nodes:
 time_zone: US/Eastern
 
 jobs:
-  - name: "test"
+  - name: "mesostest"
     node: localhost
     schedule: "cron * * * * *"
     time_zone: "US/Pacific"

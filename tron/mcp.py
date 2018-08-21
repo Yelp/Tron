@@ -83,6 +83,8 @@ class MasterControlProgram(object):
         master_config = config_container.get_master()
         apply_master_configuration(master_config_directives, master_config)
 
+        self.state_watcher.watch(MesosClusterRepository)
+
         # TODO: unify NOTIFY_STATE_CHANGE and simplify this
         factory = self.build_job_scheduler_factory(master_config)
         self.apply_collection_config(
@@ -131,9 +133,10 @@ class MasterControlProgram(object):
         to the configured Jobs.
         """
         log.info('restoring')
-        job_states = self.state_watcher.restore(self.jobs.get_names())
+        states = self.state_watcher.restore(self.jobs.get_names())
+        MesosClusterRepository.restore_state(states.get('mesos_state', {}))
 
-        self.jobs.restore_state(job_states, action_runner)
+        self.jobs.restore_state(states.get('job_state', {}), action_runner)
         self.state_watcher.save_metadata()
 
     def __str__(self):

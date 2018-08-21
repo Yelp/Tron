@@ -74,6 +74,7 @@ class MesosClusterRepositoryTestCase(TestCase):
             5000,
             'my_secret',
             'tron',
+            None,
             False,
             [expected_volume],
             'auth',
@@ -273,6 +274,7 @@ class MesosClusterTestCase(TestCase):
             mesos_master_port=5000,
             mesos_secret='my_secret',
             mesos_role='tron',
+            framework_id='fake_framework_id',
         )
 
         assert_equal(cluster.queue, self.mock_queue)
@@ -287,6 +289,8 @@ class MesosClusterTestCase(TestCase):
                     'mesos_address': self.mock_get_leader.return_value,
                     'role': 'tron',
                     'framework_name': 'tron-hostname',
+                    'framework_id': 'fake_framework_id',
+                    'failover': True,
                 },
             ),
             mock.call(

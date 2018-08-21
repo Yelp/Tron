@@ -14,6 +14,8 @@ from tron.commands.client import Client
 from tron.commands.client import get_object_type_from_identifier
 from tron.commands.client import TronObjectType
 from tron.commands.cmd_utils import ExitCode
+from tron.commands.cmd_utils import suggest_possibilities
+from tron.commands.cmd_utils import tron_jobs_completer
 
 
 def parse_cli():
@@ -135,7 +137,12 @@ obj_type_to_view_map = {
 
 def get_view_output(name, args, client):
     url_index = client.index()
-    tron_id = get_object_type_from_identifier(url_index, name)
+    try:
+        tron_id = get_object_type_from_identifier(url_index, name)
+    except ValueError as e:
+        possibilities = list(tron_jobs_completer(prefix='', client=client))
+        suggestions = suggest_possibilities(word=name, possibilities=possibilities)
+        raise SystemExit(f"Error: {e}{suggestions}")
 
     if tron_id.type not in obj_type_to_view_map:
         return
