@@ -598,6 +598,14 @@ class ValidateMesos(Validator):
     }
 
     validators = {
+        'master_address':
+            valid_string,
+        'master_port':
+            valid_int,
+        'secret':
+            valid_string,
+        'role':
+            valid_string,
         'enabled':
             valid_bool,
         'default_volumes':

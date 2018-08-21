@@ -10,10 +10,6 @@ mesos_options:
   secret: ''
   role: '*'
   enabled: True
-  default_volumes:
-      - host_path: "/nail/etc/services"
-        container_path: "/nail/etc/services"
-        mode: "RO"
   dockercfg_location: file:///root/.dockercfg
 
 jobs:
