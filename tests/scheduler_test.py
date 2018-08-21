@@ -6,16 +6,16 @@ import datetime
 
 import mock
 import pytz
-from testify import assert_equal
-from testify import assert_gt
-from testify import assert_gte
-from testify import assert_lt
-from testify import assert_lte
-from testify import run
-from testify import setup
-from testify import setup_teardown
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import assert_gt
+from testifycompat import assert_gte
+from testifycompat import assert_lt
+from testifycompat import assert_lte
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import setup_teardown
+from testifycompat import TestCase
 from tests import testingutils
 from tron import scheduler
 from tron.config import config_utils
@@ -25,7 +25,7 @@ from tron.config.schedule_parse import parse_groc_expression
 from tron.utils import timeutils
 
 
-class SchedulerFromConfigTestCase(TestCase):
+class TestSchedulerFromConfig(TestCase):
     def test_cron_scheduler(self):
         line = "cron */5 * * 7,8 *"
         config_context = mock.Mock(path='test')
@@ -389,7 +389,7 @@ class ComplexParserTest(testingutils.MockTimeTestCase):
         assert_equal(next_run_date.month, 7)
 
 
-class IntervalSchedulerTestCase(TestCase):
+class TestIntervalScheduler(TestCase):
 
     now = datetime.datetime(2012, 3, 14)
 

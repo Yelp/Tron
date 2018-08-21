@@ -4,17 +4,16 @@ from __future__ import unicode_literals
 import os
 import tempfile
 
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import teardown
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tron import yaml
 from tron.serialize.runstate import yamlstore
 
 
-class YamlStateStoreTestCase(TestCase):
+class TestYamlStateStore(TestCase):
     @setup
     def setup_store(self):
         self.filename = os.path.join(tempfile.gettempdir(), 'yaml_state')

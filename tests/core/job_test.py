@@ -7,14 +7,14 @@ from unittest.mock import MagicMock
 
 import mock
 import six
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import setup_teardown
-from testify import teardown
-from testify import TestCase
-from testify.assertions import assert_not_equal
 
+from testifycompat import assert_equal
+from testifycompat import assert_not_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import setup_teardown
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests import testingutils
 from tests.assertions import assert_call
 from tests.assertions import assert_length
@@ -29,7 +29,7 @@ from tron.core import jobrun
 from tron.core.actionrun import ActionRun
 
 
-class JobTestCase(TestCase):
+class TestJob(TestCase):
     @setup_teardown
     def setup_job(self):
         action_graph = mock.Mock(names=lambda: ['one', 'two'])
@@ -242,7 +242,7 @@ class JobTestCase(TestCase):
         assert_not_equal(first, second)
 
 
-class JobSchedulerTestCase(TestCase):
+class TestJobScheduler(TestCase):
     @setup
     def setup_job(self):
         self.scheduler = scheduler.ConstantScheduler()
@@ -364,7 +364,7 @@ class JobSchedulerTestCase(TestCase):
         assert_length(self.job_scheduler.schedule.mock_calls, 0)
 
 
-class JobSchedulerGetRunsToScheduleTestCase(TestCase):
+class TestJobSchedulerGetRunsToSchedule(TestCase):
     @setup
     def setup_job(self):
         self.scheduler = mock.Mock()
@@ -473,7 +473,7 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
         self.manual_run.start.assert_called_once_with()
 
 
-class JobSchedulerScheduleTestCase(TestCase):
+class TestJobSchedulerSchedule(TestCase):
     @setup
     def setup_job(self):
         self.scheduler = mock.Mock(autospec=True)
@@ -595,7 +595,7 @@ class JobSchedulerScheduleTestCase(TestCase):
             mock_schedule.assert_called_once_with()
 
 
-class JobSchedulerFactoryTestCase(TestCase):
+class TestJobSchedulerFactory(TestCase):
     @setup
     def setup_factory(self):
         self.context = mock.Mock()
@@ -627,7 +627,7 @@ class JobSchedulerFactoryTestCase(TestCase):
             assert_equal(action_runner, self.action_runner)
 
 
-class JobCollectionTestCase(TestCase):
+class TestJobCollection(TestCase):
     @setup
     def setup_collection(self):
         self.collection = job.JobCollection()

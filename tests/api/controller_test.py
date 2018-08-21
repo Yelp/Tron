@@ -2,12 +2,12 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import mock
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import TestCase
-from testify.assertions import assert_in
 
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import TestCase
 from tests.testingutils import autospec_method
 from tron import mcp
 from tron.api import controller
@@ -21,7 +21,7 @@ from tron.core import job
 from tron.core import jobrun
 
 
-class JobCollectionControllerTestCase(TestCase):
+class TestJobCollectionController(TestCase):
     @setup
     def setup_controller(self):
         self.collection = mock.create_autospec(
@@ -40,7 +40,7 @@ class JobCollectionControllerTestCase(TestCase):
         self.collection.disable.assert_called_with()
 
 
-class ActionRunControllerTestCase(TestCase):
+class TestActionRunController(TestCase):
     @setup
     def setup_controller(self):
         self.action_run = mock.create_autospec(
@@ -88,7 +88,7 @@ class ActionRunControllerTestCase(TestCase):
         assert_in("Warning Message", result)
 
 
-class JobRunControllerTestCase(TestCase):
+class TestJobRunController(TestCase):
     @setup
     def setup_controller(self):
         self.job_run = mock.create_autospec(
@@ -120,7 +120,7 @@ class JobRunControllerTestCase(TestCase):
         assert_in('Failed to cancel', result)
 
 
-class JobControllerTestCase(TestCase):
+class TestJobController(TestCase):
     @setup
     def setup_controller(self):
         self.job_scheduler = mock.create_autospec(job.JobScheduler)
@@ -140,7 +140,7 @@ class JobControllerTestCase(TestCase):
         self.job_scheduler.manual_start.assert_called_with(run_time=run_time)
 
 
-class ConfigControllerTestCase(TestCase):
+class TestConfigController(TestCase):
     @setup
     def setup_controller(self):
         self.mcp = mock.create_autospec(mcp.MasterControlProgram)

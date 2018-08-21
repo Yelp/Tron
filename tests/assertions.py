@@ -4,8 +4,8 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-from testify.assertions import assert_in
-from testify.assertions import assert_not_reached
+from testifycompat import assert_in
+from testifycompat import assert_not_reached
 
 
 def assert_raises(expected_exception_class, callable_obj, *args, **kwargs):

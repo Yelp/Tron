@@ -1,33 +1,36 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
+import pytest
 import six
-from testify import assert_equal
-from testify import assert_raises
-from testify import setup
-from testify import teardown
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import assert_raises
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests.assertions import assert_length
 from tron import event
 
+limits = {
+    event.LEVEL_INFO: 2,
+    event.LEVEL_CRITICAL: 3,
+}
 
-class EventStoreTestCase(TestCase):
-    @setup
-    def build_store(self):
-        self.limits = {
-            event.LEVEL_INFO: 2,
-            event.LEVEL_CRITICAL: 3,
-        }
-        self.store = event.EventStore(self.limits)
 
+@pytest.fixture(scope="module")
+def store():
+    return event.EventStore(limits)
+
+
+class TestEventStore(object):
     def _build_event(self, level, name):
         return event.Event('entity', level, name)
 
     @setup
-    def add_data(self):
+    def add_data(self, store):
         for i in range(1, 5):
-            self.store.append(
+            store.append(
                 self._build_event(
                     event.LEVEL_INFO,
                     "test%s" % i,
@@ -36,32 +39,32 @@ class EventStoreTestCase(TestCase):
 
         for i in range(5, 10):
             e = self._build_event(event.LEVEL_CRITICAL, "test%s" % i)
-            self.store.append(e)
+            store.append(e)
 
-        self.store.append(self._build_event(event.LEVEL_OK, "alpha"))
+        store.append(self._build_event(event.LEVEL_OK, "alpha"))
 
-    def test_build_deque(self):
-        deq = self.store._build_deque('stars')
+    def test_build_deque(self, store):
+        deq = store._build_deque('stars')
         deq.extend(range(12))
         assert_equal(len(deq), event.EventStore.DEFAULT_LIMIT)
 
-    def test_append(self):
-        assert_equal(len(self.store.events), 3)
-        for level, limit in six.iteritems(self.limits):
-            assert_equal(len(self.store.events[level]), limit)
+    def test_append(self, store):
+        assert_equal(len(store.events), 3)
+        for level, limit in six.iteritems(limits):
+            assert_equal(len(store.events[level]), limit)
 
-    def test_get_events(self):
-        values = {e.name for e in self.store.get_events()}
+    def test_get_events(self, store):
+        values = {e.name for e in store.get_events()}
         expected = {'test3', 'test4', 'test7', 'test8', 'test9', 'alpha'}
         assert_equal(values, expected)
 
-    def test_get_events_with_min_level(self):
-        values = {e.name for e in self.store.get_events(event.LEVEL_OK)}
+    def test_get_events_with_min_level(self, store):
+        values = {e.name for e in store.get_events(event.LEVEL_OK)}
         expected = {'test7', 'test8', 'test9', 'alpha'}
         assert_equal(values, expected)
 
 
-class EventRecorderTestCase(TestCase):
+class TestEventRecorder(TestCase):
     @setup
     def build_recorders(self):
         self.entity_name = 'the_name'
@@ -122,7 +125,7 @@ class EventRecorderTestCase(TestCase):
         assert_length(self.recorder.list(child_events=False), 0)
 
 
-class EventManagerTestCase(TestCase):
+class TestEventManager(TestCase):
     @setup
     def setup_manager(self):
         self.manager = event.EventManager.get_instance()

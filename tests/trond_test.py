@@ -6,13 +6,14 @@ import textwrap
 from subprocess import CalledProcessError
 from textwrap import dedent
 
-from testify import assert_equal
-from testify import assert_gt
-from testify.assertions import assert_in
-from testify.assertions import assert_raises_such_that
+import pytest
 
+from testifycompat import assert_equal
+from testifycompat import assert_gt
+from testifycompat import assert_in
 from tests import sandbox
 from tron.core import actionrun
+
 
 BASIC_CONFIG = """
 ssh_options:
@@ -61,6 +62,7 @@ def summarize_events(events):
     return [(event['entity'], event['name']) for event in events]
 
 
+@pytest.mark.skip(reason="We don't have a setup for sandbox tests yet")
 class TrondEndToEndTestCase(sandbox.SandboxTestCase):
     def test_end_to_end_basic(self):
         self.start_with_config(SINGLE_ECHO_CONFIG)
@@ -173,6 +175,7 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         sandbox.wait_on_sandbox(wait_on_next_run)
 
 
+@pytest.mark.skip(reason="We don't have a setup for sandbox tests yet")
 class TronCommandsTestCase(sandbox.SandboxTestCase):
     def test_tronview(self):
         self.start_with_config(SINGLE_ECHO_CONFIG)
@@ -228,12 +231,8 @@ class TronCommandsTestCase(sandbox.SandboxTestCase):
         def test_return_code(exc):
             assert_equal(exc.returncode, 1)
 
-        assert_raises_such_that(
-            CalledProcessError,
-            test_return_code,
-            self.sandbox.tronfig,
-            bad_config,
-        )
+        with pytest.raises(CalledProcessError):
+            test_return_code(self.sandbox.tronfig, bad_config)
 
     def test_tronfig_no_header(self):
         self.start_with_config(SINGLE_ECHO_CONFIG)
@@ -243,6 +242,7 @@ class TronCommandsTestCase(sandbox.SandboxTestCase):
         assert_equal(stdout.rstrip(), ALT_NAMESPACED_ECHO_CONFIG.rstrip())
 
 
+@pytest.mark.skip(reason="We don't have a setup for sandbox tests yet")
 class JobEndToEndTestCase(sandbox.SandboxTestCase):
     def test_cleanup_on_failure(self):
         config = BASIC_CONFIG + dedent(

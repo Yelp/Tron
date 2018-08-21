@@ -8,14 +8,14 @@ from unittest import mock
 from unittest.mock import MagicMock
 
 import six
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import teardown
-from testify import TestCase
-from testify.assertions import assert_in
-from testify.assertions import assert_raises
 
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import assert_raises
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests import testingutils
 from tests.assertions import assert_length
 from tests.testingutils import autospec_method
@@ -33,7 +33,7 @@ from tron.core.actionrun import SSHActionRun
 from tron.serialize import filehandler
 
 
-class ActionRunFactoryTestCase(TestCase):
+class TestActionRunFactory(TestCase):
     @setup
     def setup_action_runs(self):
         self.run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
@@ -233,7 +233,7 @@ class ActionRunFactoryTestCase(TestCase):
         assert_equal(action_run.__class__, MesosActionRun)
 
 
-class ActionRunTestCase(TestCase):
+class TestActionRun(TestCase):
     @setup
     def setup_action_run(self):
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
@@ -377,7 +377,7 @@ class ActionRunTestCase(TestCase):
         )
 
 
-class SSHActionRunTestCase(TestCase):
+class TestSSHActionRun(TestCase):
     @setup
     def setup_action_run(self):
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
@@ -651,7 +651,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         assert_equal(action_run.rendered_command, self.state_data['command'])
 
 
-class ActionRunCollectionTestCase(TestCase):
+class TestActionRunCollection(TestCase):
     def _build_run(self, name):
         mock_node = mock.create_autospec(node.Node)
         return ActionRun(
@@ -821,7 +821,7 @@ class ActionRunCollectionTestCase(TestCase):
         assert_equal(self.collection.end_time, None)
 
 
-class ActionRunCollectionIsRunBlockedTestCase(TestCase):
+class TestActionRunCollectionIsRunBlocked(TestCase):
     def _build_run(self, name):
         mock_node = mock.create_autospec(node.Node)
         return ActionRun(
@@ -905,7 +905,7 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
         assert not self.collection._is_run_blocked(self.run_map['second_name'])
 
 
-class MesosActionRunTestCase(TestCase):
+class TestMesosActionRun(TestCase):
     @setup
     def setup_action_run(self):
         self.output_path = mock.MagicMock()

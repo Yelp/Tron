@@ -2,16 +2,16 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import mock
-from testify import assert_equal
-from testify import setup_teardown
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import setup_teardown
+from testifycompat import TestCase
 from tron.mesos import MesosCluster
 from tron.mesos import MesosClusterRepository
 from tron.mesos import MesosTask
 
 
-class MesosClusterRepositoryTestCase(TestCase):
+class TestMesosClusterRepository(TestCase):
     @setup_teardown
     def mock_cluster(self):
         # Ensure different mock is returned each time class is instantiated
@@ -96,7 +96,7 @@ def mock_task_event(
     )
 
 
-class MesosTaskTestCase(TestCase):
+class TestMesosTask(TestCase):
     @setup_teardown
     def setup(self):
         self.action_run_id = 'my_service.job.1.action'
@@ -243,7 +243,7 @@ class MesosTaskTestCase(TestCase):
         assert self.task.state == MesosTask.RUNNING
 
 
-class MesosClusterTestCase(TestCase):
+class TestMesosCluster(TestCase):
     @setup_teardown
     def setup_mocks(self):
         with mock.patch(

@@ -6,18 +6,18 @@ import tempfile
 
 import lockfile
 import mock
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import teardown
-from testify import TestCase
-from testify.assertions import assert_in
 
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests.assertions import assert_raises
 from tron.trondaemon import PIDFile
 
 
-class PIDFileTestCase(TestCase):
+class TestPIDFile(TestCase):
     @setup
     def setup_pidfile(self):
         self.filename = os.path.join(tempfile.gettempdir(), 'test.pid')
