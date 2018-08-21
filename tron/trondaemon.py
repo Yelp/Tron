@@ -181,8 +181,22 @@ class TronDaemon(object):
             self._run_reactor()
             self._run_eventbus()
 
+    def setup_eventbus_dir(self):
+        """Create log directory and link to current log if those don't
+        already exist"""
+        if not os.path.exists(self.eventbus.log_dir):
+            log.warning(f"eventbus: creating {self.eventbus.log_dir}")
+            os.mkdir(self.eventbus.log_dir)
+
+        if not os.path.exists(self.eventbus.log_current) or not os.path.exists(
+            os.readlink(self.eventbus.log_current)
+        ):
+            log.warning(f"eventbus: creating {self.eventbus.log_current}")
+            self.eventbus.sync_save_log("initial save")
+
     def _run_eventbus(self):
         self.eventbus = make_eventbus(f"{self.options.working_dir}/_events")
+        self.setup_eventbus_dir()
         # self.eventbus.start()
 
     def _run_manhole(self):

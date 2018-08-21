@@ -22,25 +22,11 @@ class EventBusTestCase(TestCase):
 
     @mock.patch('tron.eventbus.reactor', autospec=None)
     def test_start(self, reactor):
-        self.eventbus.setup_log_dir = mock.Mock()
         self.eventbus.sync_load_log = mock.Mock()
         reactor.callLater = mock.Mock()
         self.eventbus.start()
-        assert self.eventbus.setup_log_dir.call_count is 1
         assert self.eventbus.sync_load_log.call_count is 1
         assert reactor.callLater.call_count is 1
-
-    @mock.patch('tron.eventbus.log', autospec=None)
-    def test_setup_log_dir(self, _):
-        os.rmdir(self.log_dir.name)
-        self.eventbus.event_log = {"foo": "bar"}
-        self.eventbus.setup_log_dir()
-        assert os.path.exists(self.log_dir.name)
-        assert os.path.exists(os.path.join(self.log_dir.name, "current"))
-
-        new_eb = eventbus.EventBus(self.log_dir.name)
-        new_eb.sync_load_log()
-        assert new_eb.event_log == self.eventbus.event_log
 
     def test_shutdown(self):
         assert not self.eventbus.must_shutdown

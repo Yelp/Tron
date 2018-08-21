@@ -35,22 +35,8 @@ class EventBus:
 
     def start(self):
         log.info("starting")
-        self.setup_log_dir()
         self.sync_load_log()
         reactor.callLater(0, self.sync_loop)
-
-    def setup_log_dir(self):
-        """Create log directory and link to current log if those don't
-        already exist"""
-        if not os.path.exists(self.log_dir):
-            log.warning(f"creating {self.log_dir}")
-            os.mkdir(self.log_dir)
-
-        if not os.path.exists(self.log_current) or not os.path.exists(
-            os.readlink(self.log_current)
-        ):
-            log.warning(f"creating {self.log_current}")
-            self.sync_save_log("initial save")
 
     def shutdown(self):
         self.must_shutdown = True
