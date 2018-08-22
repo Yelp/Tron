@@ -67,10 +67,6 @@ file. Edit your file to be something like this::
     ssh_options:
       agent: true
 
-    notification_options:
-      smtp_host: localhost
-      notification_addr: <your email address>
-
     nodes:
       - name: local
         hostname: 'localhost'

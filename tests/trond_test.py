@@ -10,10 +10,8 @@ import pytest
 
 from testifycompat import assert_equal
 from testifycompat import assert_gt
-from testifycompat import assert_in
 from tests import sandbox
 from tron.core import actionrun
-
 
 BASIC_CONFIG = """
 ssh_options:
@@ -58,10 +56,6 @@ TOUCH_CLEANUP_FMT = """
 """
 
 
-def summarize_events(events):
-    return [(event['entity'], event['name']) for event in events]
-
-
 @pytest.mark.skip(reason="We don't have a setup for sandbox tests yet")
 class TrondEndToEndTestCase(sandbox.SandboxTestCase):
     def test_end_to_end_basic(self):
@@ -76,9 +70,6 @@ class TrondEndToEndTestCase(sandbox.SandboxTestCase):
         # reconfigure and confirm results
         second_config = DOUBLE_ECHO_CONFIG + TOUCH_CLEANUP_FMT
         self.sandbox.tronfig(second_config)
-        events = summarize_events(client.events())
-        assert_in(('', 'restoring'), events)
-        assert_in(('MASTER.echo_job.0', 'created'), events)
         assert_equal(client.config('MASTER')['config'], second_config)
 
         # reconfigure, by uploading a third configuration
