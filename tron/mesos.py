@@ -34,17 +34,28 @@ def combine_volumes(defaults, overrides):
     return list(result.values())
 
 
+def get_secret_from_file(file_path):
+    if file_path is not None:
+        with open(file_path) as f:
+            secret = f.read().strip()
+    else:
+        secret = None
+    return secret
+
+
 class MesosClusterRepository:
     """A class that stores MesosCluster objects and configuration."""
 
     clusters = {}
-    mesos_master_port = None,
-    mesos_secret = None,
-    mesos_role = None,
+    mesos_master_port = None
+    mesos_secret_file = None
+    mesos_role = None
+    mesos_principal = None
     mesos_enabled = False
     default_volumes = ()
     dockercfg_location = None
     offer_timeout = None
+    secret = None
 
     name = 'frameworks'
     state_data = {}
@@ -59,15 +70,16 @@ class MesosClusterRepository:
         if master_address not in cls.clusters:
             framework_id = cls.state_data.get(master_address)
             cluster = MesosCluster(
-                master_address,
-                cls.mesos_master_port,
-                cls.mesos_secret,
-                cls.mesos_role,
-                framework_id,
-                cls.mesos_enabled,
-                cls.default_volumes,
-                cls.dockercfg_location,
-                cls.offer_timeout,
+                mesos_address=master_address,
+                mesos_master_port=cls.master_port,
+                secret=cls.secret,
+                principal=cls.principal,
+                mesos_role=cls.role,
+                framework_id=framework_id,
+                enabled=cls.mesos_enabled,
+                default_volumes=cls.default_volumes,
+                dockercfg_location=cls.dockercfg_location,
+                offer_timeout=cls.offer_timeout,
             )
             cls.clusters[master_address] = cluster
         return cls.clusters[master_address]
@@ -79,9 +91,11 @@ class MesosClusterRepository:
 
     @classmethod
     def configure(cls, mesos_options):
-        cls.mesos_master_port = mesos_options.master_port
-        cls.mesos_secret = mesos_options.secret
-        cls.mesos_role = mesos_options.role
+        cls.master_port = mesos_options.master_port
+        cls.secret_file = mesos_options.secret_file
+        cls.role = mesos_options.role
+        cls.secret = get_secret_from_file(cls.secret_file)
+        cls.principal = mesos_options.principal
         cls.mesos_enabled = mesos_options.enabled
         cls.default_volumes = [
             vol._asdict() for vol in mesos_options.default_volumes
@@ -224,7 +238,8 @@ class MesosCluster:
         self,
         mesos_address,
         mesos_master_port=None,
-        mesos_secret=None,
+        secret=None,
+        principal=None,
         mesos_role=None,
         framework_id=None,
         enabled=True,
@@ -234,7 +249,8 @@ class MesosCluster:
     ):
         self.mesos_address = mesos_address
         self.mesos_master_port = mesos_master_port
-        self.mesos_secret = mesos_secret
+        self.secret = secret
+        self.principal = principal
         self.mesos_role = mesos_role
         self.enabled = enabled
         self.default_volumes = default_volumes or []
@@ -362,7 +378,8 @@ class MesosCluster:
         executor = self.processor.executor_from_config(
             provider='mesos_task',
             provider_config={
-                'secret': self.mesos_secret,
+                'secret': self.secret,
+                'principal': self.principal,
                 'mesos_address': get_mesos_leader(mesos_address, self.mesos_master_port),
                 'role': self.mesos_role,
                 'framework_name': framework_name,

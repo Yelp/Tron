@@ -3,7 +3,7 @@
     hooks:
     -   id: trailing-whitespace
     -   id: end-of-file-fixer
-        exclude: CHANGELOG.md
+        exclude: CHANGELOG.md|cluster_itests/tron_framework_secret
     -   id: check-json
     -   id: check-yaml
     -   id: requirements-txt-fixer

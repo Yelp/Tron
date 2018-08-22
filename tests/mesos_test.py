@@ -49,14 +49,16 @@ class TestMesosClusterRepository(TestCase):
         mock_volume = mock.Mock()
         options = mock.Mock(
             master_port=5000,
-            secret='my_secret',
+            secret='/dev/null',
+            principal="fake-principal",
             role='tron',
             enabled=False,
             default_volumes=[mock_volume],
             dockercfg_location='auth',
             offer_timeout=1000,
         )
-        MesosClusterRepository.configure(options)
+        with mock.patch('tron.mesos.get_secret_from_file', autospec=True, return_value='test-secret'):
+            MesosClusterRepository.configure(options)
 
         expected_volume = mock_volume._asdict.return_value
         for cluster in clusters:
@@ -70,15 +72,16 @@ class TestMesosClusterRepository(TestCase):
         # Next cluster we get should be initialized with the same settings
         MesosClusterRepository.get_cluster('f')
         self.cluster_cls.assert_called_with(
-            'f',
-            5000,
-            'my_secret',
-            'tron',
-            None,
-            False,
-            [expected_volume],
-            'auth',
-            1000,
+            mesos_address='f',
+            mesos_master_port=5000,
+            secret='test-secret',
+            principal="fake-principal",
+            mesos_role='tron',
+            framework_id=None,
+            enabled=False,
+            default_volumes=[expected_volume],
+            dockercfg_location='auth',
+            offer_timeout=1000,
         )
 
 
@@ -272,9 +275,10 @@ class TestMesosCluster(TestCase):
         cluster = MesosCluster(
             mesos_address='mesos-cluster-a.me',
             mesos_master_port=5000,
-            mesos_secret='my_secret',
+            secret='my_secret',
             mesos_role='tron',
             framework_id='fake_framework_id',
+            principal="fake-principal",
         )
 
         assert_equal(cluster.queue, self.mock_queue)
@@ -286,6 +290,7 @@ class TestMesosCluster(TestCase):
                 provider='mesos_task',
                 provider_config={
                     'secret': 'my_secret',
+                    'principal': 'fake-principal',
                     'mesos_address': self.mock_get_leader.return_value,
                     'role': 'tron',
                     'framework_name': 'tron-hostname',
