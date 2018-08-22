@@ -19,6 +19,8 @@ tronweb_tests/lib/
 .tox-docker
 tron.iml
 __pycache__/
+.pytest_cache/
+tron_state
 
 # Example cluster
 example-cluster/config

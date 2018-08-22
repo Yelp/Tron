@@ -6,11 +6,11 @@ from unittest.mock import MagicMock
 
 import mock
 import pytz
-from testify import assert_equal
-from testify import setup
-from testify import TestCase
-from testify.assertions import assert_in
 
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import setup
+from testifycompat import TestCase
 from tests.assertions import assert_call
 from tests.assertions import assert_length
 from tests.assertions import assert_raises
@@ -36,7 +36,7 @@ def build_mock_job():
     )
 
 
-class JobRunTestCase(TestCase):
+class TestJobRun(TestCase):
 
     now = datetime.datetime(2012, 3, 14, 15, 9, 20, tzinfo=None)
     now_with_tz = datetime.datetime(2012, 3, 14, 15, 9, 20, tzinfo=pytz.utc)
@@ -322,7 +322,7 @@ class JobRunTestCase(TestCase):
         assert_raises(AttributeError, lambda: self.job_run.bogus)
 
 
-class JobRunFromStateTestCase(TestCase):
+class TestJobRunFromState(TestCase):
     @setup
     def setup_jobrun(self):
         self.action_graph = mock.create_autospec(actiongraph.ActionGraph)
@@ -409,7 +409,7 @@ class MockJobRun(MagicMock):
         return str(self.__dict__)
 
 
-class JobRunCollectionTestCase(TestCase):
+class TestJobRunCollection(TestCase):
     def _mock_run(self, **kwargs):
         return MockJobRun(**kwargs)
 

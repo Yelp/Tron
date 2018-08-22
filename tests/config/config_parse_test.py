@@ -8,13 +8,13 @@ import tempfile
 
 import mock
 import pytz
-from testify import assert_equal
-from testify import assert_in
-from testify import run
-from testify import setup
-from testify import teardown
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests.assertions import assert_raises
 from tron.config import config_parse
 from tron.config import config_utils
@@ -417,7 +417,7 @@ class ConfigTestCase(TestCase):
         valid_config(dict(nodes=None))
 
 
-class NamedConfigTestCase(TestCase):
+class TestNamedConfig(TestCase):
     config = ConfigTestCase.JOBS_CONFIG
 
     def test_attributes(self):
@@ -569,7 +569,7 @@ class NamedConfigTestCase(TestCase):
         assert_in(expected_message, str(exception))
 
 
-class JobConfigTestCase(TestCase):
+class TestJobConfig(TestCase):
     def test_no_actions(self):
         test_config = dict(
             jobs=[
@@ -790,7 +790,7 @@ class JobConfigTestCase(TestCase):
         assert_in(expected_msg, str(exception))
 
 
-class NodeConfigTestCase(TestCase):
+class TestNodeConfig(TestCase):
     def test_validate_node_pool(self):
         config_node_pool = valid_node_pool(
             dict(name="theName", nodes=["node1", "node2"]),
@@ -900,7 +900,7 @@ class NodeConfigTestCase(TestCase):
         assert_in(expected_message, str(exception))
 
 
-class ValidateJobsTestCase(TestCase):
+class TestValidateJobs(TestCase):
     def test_valid_jobs_success(self):
         test_config = dict(
             jobs=[
@@ -1013,7 +1013,7 @@ class ValidateJobsTestCase(TestCase):
         assert_equal(expected_jobs, test_config['jobs'])
 
 
-class ValidMesosActionTestCase(TestCase):
+class TestValidMesosAction(TestCase):
     def test_missing_docker_image(self):
         config = dict(
             name='test_missing',
@@ -1046,7 +1046,7 @@ class ValidMesosActionTestCase(TestCase):
         )
 
 
-class ValidCleanupActionNameTestCase(TestCase):
+class TestValidCleanupActionName(TestCase):
     def test_valid_cleanup_action_name_pass(self):
         name = valid_cleanup_action_name(CLEANUP_ACTION_NAME, None)
         assert_equal(CLEANUP_ACTION_NAME, name)
@@ -1060,7 +1060,7 @@ class ValidCleanupActionNameTestCase(TestCase):
         )
 
 
-class ValidOutputStreamDirTestCase(TestCase):
+class TestValidOutputStreamDir(TestCase):
     @setup
     def setup_dir(self):
         self.dir = tempfile.mkdtemp()
@@ -1098,7 +1098,7 @@ class ValidOutputStreamDirTestCase(TestCase):
         assert_equal(path, dir)
 
 
-class BuildFormatStringValidatorTestCase(TestCase):
+class TestBuildFormatStringValidator(TestCase):
     @setup
     def setup_keys(self):
         self.context = dict.fromkeys(['one', 'seven', 'stars'])
@@ -1155,7 +1155,7 @@ class BuildFormatStringValidatorTestCase(TestCase):
         assert self.validator(template, context)
 
 
-class ValidateConfigMappingTestCase(TestCase):
+class TestValidateConfigMapping(TestCase):
     config = dict(**BASE_CONFIG, command_context=dict(some_var="The string"))
 
     def test_validate_config_mapping_missing_master(self):
@@ -1166,7 +1166,7 @@ class ValidateConfigMappingTestCase(TestCase):
 
     def test_validate_config_mapping(self):
         master_config = self.config
-        other_config = NamedConfigTestCase.config
+        other_config = TestNamedConfig.config
         config_mapping = {
             'other': other_config,
             MASTER_NAMESPACE: master_config,
@@ -1177,12 +1177,12 @@ class ValidateConfigMappingTestCase(TestCase):
         assert_equal(result[1][0], 'other')
 
 
-class ConfigContainerTestCase(TestCase):
+class TestConfigContainer(TestCase):
     config = BASE_CONFIG
 
     @setup
     def setup_container(self):
-        other_config = NamedConfigTestCase.config
+        other_config = TestNamedConfig.config
         self.config_mapping = {
             MASTER_NAMESPACE: valid_config(self.config),
             'other': validate_fragment('other', other_config),
@@ -1192,7 +1192,7 @@ class ConfigContainerTestCase(TestCase):
     def test_create(self):
         config_mapping = {
             MASTER_NAMESPACE: self.config,
-            'other': NamedConfigTestCase.config,
+            'other': TestNamedConfig.config,
         }
 
         container = config_parse.ConfigContainer.create(config_mapping)
@@ -1235,7 +1235,7 @@ class ConfigContainerTestCase(TestCase):
         assert_equal(node_names, expected)
 
 
-class ValidateSSHOptionsTestCase(TestCase):
+class TestValidateSSHOptions(TestCase):
     @setup
     def setup_context(self):
         self.context = config_utils.NullConfigContext
@@ -1262,7 +1262,7 @@ class ValidateSSHOptionsTestCase(TestCase):
         assert_equal(config.agent, True)
 
 
-class ValidateIdentityFileTestCase(TestCase):
+class TestValidateIdentityFile(TestCase):
     @setup
     def setup_context(self):
         self.context = config_utils.NullConfigContext
@@ -1304,7 +1304,7 @@ class ValidateIdentityFileTestCase(TestCase):
         assert_equal(path, file_path)
 
 
-class ValidKnownHostsFileTestCase(TestCase):
+class TestValidKnownHostsFile(TestCase):
     @setup
     def setup_context(self):
         self.context = config_utils.NullConfigContext
@@ -1336,7 +1336,7 @@ class ValidKnownHostsFileTestCase(TestCase):
         assert_equal(filename, expected)
 
 
-class ValidateVolumeTestCase(TestCase):
+class TestValidateVolume(TestCase):
     @setup
     def setup_context(self):
         self.context = config_utils.NullConfigContext

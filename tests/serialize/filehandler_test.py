@@ -8,23 +8,22 @@ from tempfile import mkdtemp
 from tempfile import NamedTemporaryFile
 from unittest import mock
 
-from testify import assert_equal
-from testify import assert_in
-from testify import assert_not_equal
-from testify import assert_not_in
-from testify import run
-from testify import setup
-from testify import suite
-from testify import teardown
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import assert_not_equal
+from testifycompat import assert_not_in
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import suite
+from testifycompat import teardown
+from testifycompat import TestCase
 from tron.serialize.filehandler import FileHandleManager
 from tron.serialize.filehandler import NullFileHandle
 from tron.serialize.filehandler import OutputPath
 from tron.serialize.filehandler import OutputStreamSerializer
 
 
-class FileHandleWrapperTestCase(TestCase):
+class TestFileHandleWrapper(TestCase):
     @setup
     def setup_fh_wrapper(self):
         self.file = NamedTemporaryFile('r')
@@ -86,7 +85,7 @@ class FileHandleWrapperTestCase(TestCase):
             assert_equal(fh.read(), "123")
 
 
-class FileHandleManagerTestCase(TestCase):
+class TestFileHandleManager(TestCase):
     @setup
     def setup_fh_manager(self):
         FileHandleManager.reset()
@@ -219,7 +218,7 @@ class FileHandleManagerTestCase(TestCase):
         )
 
 
-class OutputStreamSerializerTestCase(TestCase):
+class TestOutputStreamSerializer(TestCase):
     @setup
     def setup_serializer(self):
         self.test_dir = mkdtemp()
@@ -264,7 +263,7 @@ class OutputStreamSerializerTestCase(TestCase):
         assert_equal(self.serial.tail(file_dne), [])
 
 
-class OutputPathTestCase(TestCase):
+class TestOutputPath(TestCase):
     @setup
     def setup_path(self):
         self.path = OutputPath('one', 'two', 'three')
