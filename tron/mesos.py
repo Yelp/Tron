@@ -132,7 +132,7 @@ class MesosClusterRepository:
 
 
 class MesosTask(ActionCommand):
-    ERROR_STATES = frozenset(['failed', 'killed', 'lost', 'error'])
+    ERROR_STATES = frozenset(['failed', 'killed', 'error'])
 
     def __init__(self, id, task_config, serializer=None):
         super(MesosTask, self).__init__(id, task_config.cmd, serializer)
@@ -218,6 +218,8 @@ class MesosTask(ActionCommand):
             self.started()
         elif mesos_type == 'finished':
             self.exited(0)
+        elif mesos_type == 'lost':
+            self.exited(None)
         elif mesos_type in self.ERROR_STATES:
             self.exited(1)
         else:
@@ -309,13 +311,17 @@ class MesosCluster:
         self.deferred.addErrback(logError)
         self.deferred.addErrback(self.handle_next_event)
 
-    def submit(self, task):
+    def submit(self, task, recover=False):
         if not task:
             return
 
         if not self.enabled:
-            task.log.info('Task failed to start, Mesos is disabled.')
-            task.exited(1)
+            if recover:
+                task.log.info('Could not recover task, Mesos is disabled.')
+                task.exited(None)
+            else:
+                task.log.info('Task failed to start, Mesos is disabled.')
+                task.exited(1)
             return
 
         if self.runner.stopping:
@@ -328,13 +334,18 @@ class MesosCluster:
 
         mesos_task_id = task.get_mesos_id()
         self.tasks[mesos_task_id] = task
-        self.runner.run(task.get_config())
-        log.info(
-            'Submitting task {} to {}'.format(
-                mesos_task_id,
-                self.mesos_address,
-            ),
-        )
+        if recover:
+            task.log.info('Reconciling state for this task from Mesos')
+            task.started()
+            self.runner.reconcile(task.get_config())
+        else:
+            self.runner.run(task.get_config())
+            log.info(
+                'Submitting task {} to {}'.format(
+                    mesos_task_id,
+                    self.mesos_address,
+                ),
+            )
 
     def create_task(
         self,
@@ -348,25 +359,42 @@ class MesosCluster:
         env,
         extra_volumes,
         serializer,
+        task_id=None,
     ):
         if not self.runner:
             return None
 
+        if task_id is not None:
+            try:
+                name, uuid = task_id.rsplit('.', maxsplit=1)
+            except ValueError:
+                log.error(f'Invalid {task_id} for {action_run_id}')
+                return
+            if name != action_run_id:
+                log.error(
+                    f'Task id must start with {action_run_id}, got {task_id}'
+                )
+                return
+
         uris = [self.dockercfg_location] if self.dockercfg_location else []
         volumes = combine_volumes(self.default_volumes, extra_volumes)
-        task_config = self.runner.TASK_CONFIG_INTERFACE(
-            name=action_run_id,
-            cmd=command,
-            cpus=cpus,
-            mem=mem,
-            constraints=constraints,
-            image=docker_image,
-            docker_parameters=docker_parameters,
-            environment=env,
-            volumes=volumes,
-            uris=uris,
-            offer_timeout=self.offer_timeout,
-        )
+        task_kwargs = {
+            'name': action_run_id,
+            'cmd': command,
+            'cpus': cpus,
+            'mem': mem,
+            'constraints': constraints,
+            'image': docker_image,
+            'docker_parameters': docker_parameters,
+            'environment': env,
+            'volumes': volumes,
+            'uris': uris,
+            'offer_timeout': self.offer_timeout,
+        }
+        if task_id is not None:
+            task_kwargs['uuid'] = uuid
+
+        task_config = self.runner.TASK_CONFIG_INTERFACE(**task_kwargs)
         return MesosTask(action_run_id, task_config, serializer)
 
     def get_runner(self, mesos_address, queue):

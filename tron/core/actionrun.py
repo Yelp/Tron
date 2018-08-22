@@ -653,6 +653,52 @@ class MesosActionRun(ActionRun, Observer):
         mesos_cluster.submit(task)
         return task
 
+    def recover(self):
+        if self.mesos_task_id is None:
+            log.error(f'No task ID, cannot recover {self}')
+            return
+
+        if not self.machine.check('running'):
+            log.error(
+                f'Unable to transition {self} from {self.machine.state}'
+                'to running for recovery'
+            )
+            return
+
+        log.info(f'Recovering Mesos run {self}')
+
+        serializer = filehandler.OutputStreamSerializer(self.output_path)
+        mesos_cluster = MesosClusterRepository.get_cluster()
+        task = mesos_cluster.create_task(
+            action_run_id=self.id,
+            command=self.command,
+            cpus=self.cpus,
+            mem=self.mem,
+            constraints=self.constraints,
+            docker_image=self.docker_image,
+            docker_parameters=self.docker_parameters,
+            env=self.env,
+            extra_volumes=self.extra_volumes,
+            serializer=serializer,
+            task_id=self.mesos_task_id,
+        )
+        if not task:
+            log.warning(
+                f'Cannot recover {self}, Mesos is disabled or invalid task ID'
+            )
+            self.fail_unknown()
+            return
+
+        self.watch(task)
+        mesos_cluster.submit(task, recover=True)
+
+        # Reset status
+        self.exit_status = None
+        self.end_time = None
+        self.machine.transition('running')
+
+        return task
+
     def stop(self):
         if self.retries_remaining is not None:
             self.retries_remaining = -1

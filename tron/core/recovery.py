@@ -5,6 +5,7 @@ import logging
 
 from tron.actioncommand import NoActionRunnerFactory
 from tron.core.actionrun import ActionRun
+from tron.core.actionrun import MesosActionRun
 from tron.core.actionrun import SSHActionRun
 
 log = logging.getLogger(__name__)
@@ -19,13 +20,17 @@ def filter_action_runs_needing_recovery(action_runs):
 
 def filter_recoverable_action_runs(action_runs):
     """
-    Given a list of action_runs, create a filtered list that only includes those that can be recovered
-    For now, the only test is whether the run is an SSHActionRun
+    Given a list of action_runs, return those that can be recovered.
+    SSHActionRuns and MesosActionRuns are returned separately.
     """
-    return [
-        action_run for action_run in action_runs
-        if isinstance(action_run, SSHActionRun)
-    ]
+    ssh_runs = []
+    mesos_runs = []
+    for action_run in action_runs:
+        if isinstance(action_run, SSHActionRun):
+            ssh_runs.append(action_run)
+        elif isinstance(action_run, MesosActionRun):
+            mesos_runs.append(action_run)
+    return ssh_runs, mesos_runs
 
 
 def filter_recovery_candidates(runs):
@@ -95,8 +100,8 @@ def recover_action_run(action_run, action_runner):
 
 def launch_recovery_actionruns_for_job_runs(job_runs, master_action_runner):
     for run in job_runs:
-        runs_to_recover = filter_recovery_candidates(run._action_runs)
-        for action_run in runs_to_recover:
+        ssh_runs, mesos_runs = filter_recovery_candidates(run._action_runs)
+        for action_run in ssh_runs:
             if type(action_run.action_runner) == NoActionRunnerFactory and \
                type(master_action_runner) != NoActionRunnerFactory:
                 action_runner = master_action_runner
@@ -105,3 +110,6 @@ def launch_recovery_actionruns_for_job_runs(job_runs, master_action_runner):
             deferred = recover_action_run(action_run, action_runner)
             if not deferred:
                 log.debug("unable to recover action run %s" % action_run.id)
+
+        for action_run in mesos_runs:
+            action_run.recover()
