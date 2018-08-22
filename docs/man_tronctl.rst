@@ -26,14 +26,16 @@ Options
 ``--run-date=<YYYY-MM-DD>``
         For starting a new job, specifies the run date that should be set. Defaults to today.
 
+``--start-date=<YYYY-MM-DD>``
+        For backfills, specifies the starting date of the first job of the backfill.
+        Note that many jobs operate on the previous day's data.
+
+``--end-date=<YYYY-MM-DD>``
+        For backfills, specifies the final date of the backfill. Defaults to today.
+        Note that many jobs operate on the previous day's data.
+
 Job Commands
 ------------
-
-disableall
-    Disables all jobs
-
-enableall
-    Enables all jobs
 
 disable <job_name>
     Disables the job. Cancels all scheduled and queued runs. Doesn't
@@ -61,6 +63,10 @@ retry <action_run_id>
 
 rerun <job_run_id>
     Creates a new job run with the same run time as this job (same as restart).
+
+backfill <job_id>
+    Creates a series of start jobs for a sequence of dates.
+    --start-date must be provided for a backfill.
 
 cancel <job_run_id | action_run_id>
     Cancels the specified job run or action run.
