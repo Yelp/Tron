@@ -199,6 +199,8 @@ def make_master_jobs():
             make_job(
                 name='MASTER.test_job2',
                 node='node1',
+                deploy_group='everywhere',
+                service='other-service',
                 actions=FrozenDict({
                     'action2_0':
                         make_action(
@@ -225,6 +227,8 @@ def make_master_jobs():
                             name='action2',
                             requires=('action', 'action1'),
                             node='node0',
+                            deploy_group='everywhere',
+                            service='other-service',
                         ),
                 }),
                 cleanup_action=None,
@@ -343,6 +347,8 @@ class ConfigTestCase(TestCase):
                 schedule="daily 16:30:00",
                 expected_runtime="1d",
                 time_zone="Pacific/Auckland",
+                deploy_group='everywhere',
+                service='other-service',
                 actions=[dict(name="action2_0", command="test_command2.0")]
             ),
             dict(
@@ -356,7 +362,9 @@ class ConfigTestCase(TestCase):
                         name="action2",
                         node='node0',
                         command="command",
-                        requires=['action', 'action1']
+                        requires=['action', 'action1'],
+                        deploy_group='everywhere',
+                        service='other-service',
                     )
                 ]
             ),
