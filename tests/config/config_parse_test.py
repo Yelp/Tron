@@ -98,6 +98,7 @@ def make_node_pools():
 
 def make_mesos_options():
     return schema.ConfigMesos(
+        master_address=None,
         master_port=5050,
         secret_file=None,
         role='*',
@@ -266,7 +267,6 @@ def make_master_jobs():
                             executor='mesos',
                             cpus=0.1,
                             mem=100,
-                            mesos_address='the-master.mesos',
                             docker_image='container:latest',
                         ),
                 }),
@@ -379,7 +379,6 @@ class ConfigTestCase(TestCase):
                         command="test_command_mesos",
                         cpus=.1,
                         mem=100,
-                        mesos_address='the-master.mesos',
                         docker_image='container:latest',
                     )
                 ]
@@ -405,7 +404,6 @@ class ConfigTestCase(TestCase):
         assert test_config.command_context == expected.command_context
         assert test_config.ssh_options == expected.ssh_options
         assert test_config.mesos_options == expected.mesos_options
-        assert test_config.notification_options == expected.notification_options
         assert test_config.time_zone == expected.time_zone
         assert test_config.nodes == expected.nodes
         assert test_config.node_pools == expected.node_pools
@@ -945,7 +943,6 @@ class TestValidateJobs(TestCase):
                                     mode='RO'
                                 )
                             ],
-                            mesos_address='http://my-mesos-master.com'
                         )
                     ],
                     cleanup_action=dict(command="command")
@@ -999,7 +996,6 @@ class TestValidateJobs(TestCase):
                                         mode='RO',
                                     ),
                                 ),
-                                mesos_address='http://my-mesos-master.com',
                                 expected_runtime=datetime.timedelta(hours=24),
                             ),
                     }),
@@ -1025,7 +1021,6 @@ class TestValidMesosAction(TestCase):
             executor=schema.ExecutorTypes.mesos,
             cpus=0.2,
             mem=150,
-            mesos_address='http://hello.org',
         )
         assert_raises(
             ConfigError,
@@ -1040,7 +1035,6 @@ class TestValidMesosAction(TestCase):
             executor=schema.ExecutorTypes.mesos,
             cpus=0.2,
             mem=150,
-            mesos_address='http://hello.org',
         )
         assert_raises(
             ConfigError,
@@ -1396,7 +1390,7 @@ class TestValidateVolume(TestCase):
         )
 
     def test_mesos_default_volumes(self):
-        mesos_options = {}
+        mesos_options = {'master_address': 'mesos_master'}
         mesos_options['default_volumes'] = [
             {
                 'container_path': '/nail/srv',

@@ -96,7 +96,6 @@ class ActionRunFactory(object):
             'docker_parameters': action.docker_parameters,
             'env': action.env,
             'extra_volumes': action.extra_volumes,
-            'mesos_address': action.mesos_address,
         }
         if action.executor == ExecutorTypes.mesos:
             return MesosActionRun(**args)
@@ -202,7 +201,6 @@ class ActionRun(object):
         docker_parameters=None,
         env=None,
         extra_volumes=None,
-        mesos_address=None,
         mesos_task_id=None,
     ):
         self.job_run_id = maybe_decode(job_run_id)
@@ -228,7 +226,6 @@ class ActionRun(object):
         self.docker_parameters = docker_parameters
         self.env = env
         self.extra_volumes = extra_volumes
-        self.mesos_address = mesos_address
         self.mesos_task_id = mesos_task_id
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(self.id)
@@ -317,7 +314,6 @@ class ActionRun(object):
             docker_parameters=state_data.get('docker_parameters'),
             env=state_data.get('env'),
             extra_volumes=state_data.get('extra_volumes'),
-            mesos_address=state_data.get('mesos_address'),
             mesos_task_id=state_data.get('mesos_task_id'),
         )
 
@@ -482,7 +478,6 @@ class ActionRun(object):
             'docker_parameters': self.docker_parameters,
             'env': self.env,
             'extra_volumes': self.extra_volumes,
-            'mesos_address': self.mesos_address,
             'mesos_task_id': self.mesos_task_id,
         }
 
@@ -634,7 +629,7 @@ class MesosActionRun(ActionRun, Observer):
 
     def submit_command(self):
         serializer = filehandler.OutputStreamSerializer(self.output_path)
-        mesos_cluster = MesosClusterRepository.get_cluster(self.mesos_address)
+        mesos_cluster = MesosClusterRepository.get_cluster()
         task = mesos_cluster.create_task(
             action_run_id=self.id,
             command=self.command,
@@ -680,9 +675,7 @@ class MesosActionRun(ActionRun, Observer):
         return "Warning: It might take up to docker_stop_timeout (current setting is 2 mins) for killing."
 
     def _kill_mesos_task(self):
-        mesos_cluster = MesosClusterRepository.get_cluster(
-            self.mesos_address
-        )
+        mesos_cluster = MesosClusterRepository.get_cluster()
         if self.mesos_task_id is None:
             return "Error: Can't find task id for the action."
         succeeded = mesos_cluster.kill(self.mesos_task_id)
