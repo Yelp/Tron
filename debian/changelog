@@ -1,3 +1,10 @@
+tron (0.9.2.1) trusty; urgency=medium
+
+  * 0.9.2.1 tagged with 'make release'
+    Commit: Merge pull request #508 from Yelp/nix_testify  Nix testify
+
+ -- root <root@c42f36e81d9b>  Wed, 22 Aug 2018 10:53:38 +0000
+
 tron (0.9.2.0) trusty; urgency=medium
 
   * 0.9.2.0 tagged with 'make release'

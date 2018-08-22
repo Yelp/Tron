@@ -1,13 +1,12 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-from testify import assert_equal
-from testify import assert_in
-from testify import assert_raises
-from testify import run
-from testify import setup
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import assert_raises
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import TestCase
 from tron.utils.proxy import AttributeProxy
 from tron.utils.proxy import CollectionProxy
 
@@ -37,7 +36,7 @@ class DummyObject(object):
         return self.proxy.perform(item)
 
 
-class CollectionProxyTestCase(TestCase):
+class TestCollectionProxy(TestCase):
     @setup
     def setup_proxy(self):
         self.target_list = [DummyTarget(1), DummyTarget(2), DummyTarget(0)]
@@ -71,7 +70,7 @@ class CollectionProxyTestCase(TestCase):
         )
 
 
-class AttributeProxyTestCase(TestCase):
+class TestAttributeProxy(TestCase):
     @setup
     def setup_proxy(self):
         self.target = DummyTarget(1)

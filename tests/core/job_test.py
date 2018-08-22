@@ -7,21 +7,19 @@ from unittest.mock import MagicMock
 
 import mock
 import six
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import setup_teardown
-from testify import teardown
-from testify import TestCase
-from testify.assertions import assert_not_equal
 
+from testifycompat import assert_equal
+from testifycompat import assert_not_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import setup_teardown
+from testifycompat import TestCase
 from tests import testingutils
 from tests.assertions import assert_call
 from tests.assertions import assert_length
 from tests.assertions import assert_mock_calls
 from tests.testingutils import autospec_method
 from tron import actioncommand
-from tron import event
 from tron import node
 from tron import scheduler
 from tron.core import job
@@ -29,7 +27,7 @@ from tron.core import jobrun
 from tron.core.actionrun import ActionRun
 
 
-class JobTestCase(TestCase):
+class TestJob(TestCase):
     @setup_teardown
     def setup_job(self):
         action_graph = mock.Mock(names=lambda: ['one', 'two'])
@@ -40,7 +38,9 @@ class JobTestCase(TestCase):
             actioncommand.SubprocessActionRunnerFactory,
         )
 
-        patcher = mock.patch('tron.core.job.node.NodePoolRepository', autospec=True)
+        patcher = mock.patch(
+            'tron.core.job.node.NodePoolRepository', autospec=True
+        )
         with patcher as self.mock_node_repo:
             self.job = job.Job(
                 "jobname",
@@ -52,14 +52,12 @@ class JobTestCase(TestCase):
             )
             autospec_method(self.job.notify)
             autospec_method(self.job.watch)
-            self.job.event = mock.create_autospec(event.EventRecorder)
             yield
 
     def test__init__(self):
         assert str(self.job.output_path).endswith(self.job.name)
 
-    @mock.patch('tron.core.job.event', autospec=True)
-    def test_from_config(self, _mock_event):
+    def test_from_config(self):
         action = mock.MagicMock(
             name='first',
             command='doit',
@@ -111,7 +109,6 @@ class JobTestCase(TestCase):
         assert_equal(self.job.name, 'otherjob')
         assert_equal(self.job.scheduler, 'scheduler')
         assert_equal(self.job, other_job)
-        self.job.event.ok.assert_called_with('reconfigured')
 
     def test_status_disabled(self):
         self.job.enabled = False
@@ -242,7 +239,7 @@ class JobTestCase(TestCase):
         assert_not_equal(first, second)
 
 
-class JobSchedulerTestCase(TestCase):
+class TestJobScheduler(TestCase):
     @setup
     def setup_job(self):
         self.scheduler = scheduler.ConstantScheduler()
@@ -267,7 +264,8 @@ class JobSchedulerTestCase(TestCase):
         self.job.get_job_runs_from_state.return_value = mock_runs
 
         with mock.patch(
-            'tron.core.job.recovery.launch_recovery_actionruns_for_job_runs', autospec=True,
+            'tron.core.job.recovery.launch_recovery_actionruns_for_job_runs',
+            autospec=True,
         ) as mock_launch_recovery:
             mock_launch_recovery.return_value = mock.Mock(autospec=True)
             self.job_scheduler.restore_state(
@@ -364,7 +362,7 @@ class JobSchedulerTestCase(TestCase):
         assert_length(self.job_scheduler.schedule.mock_calls, 0)
 
 
-class JobSchedulerGetRunsToScheduleTestCase(TestCase):
+class TestJobSchedulerGetRunsToSchedule(TestCase):
     @setup
     def setup_job(self):
         self.scheduler = mock.Mock()
@@ -453,7 +451,8 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
     def test_manual_start_default_with_timezone(self):
         self.job.time_zone = mock.Mock()
         with mock.patch(
-            'tron.core.job.timeutils.current_time', autospec=True,
+            'tron.core.job.timeutils.current_time',
+            autospec=True,
         ) as mock_current:
             manual_runs = self.job_scheduler.manual_start()
             mock_current.assert_called_with(tz=self.job.time_zone)
@@ -473,7 +472,7 @@ class JobSchedulerManualStartTestCase(testingutils.MockTimeTestCase):
         self.manual_run.start.assert_called_once_with()
 
 
-class JobSchedulerScheduleTestCase(TestCase):
+class TestJobSchedulerSchedule(TestCase):
     @setup
     def setup_job(self):
         self.scheduler = mock.Mock(autospec=True)
@@ -504,10 +503,6 @@ class JobSchedulerScheduleTestCase(TestCase):
         patcher = mock.patch('tron.core.job.eventloop', autospec=True)
         with patcher as self.eventloop:
             yield
-
-    @teardown
-    def teardown_job(self):
-        event.EventManager.reset()
 
     def test_enable(self):
         self.job.enabled = False
@@ -595,7 +590,7 @@ class JobSchedulerScheduleTestCase(TestCase):
             mock_schedule.assert_called_once_with()
 
 
-class JobSchedulerFactoryTestCase(TestCase):
+class TestJobSchedulerFactory(TestCase):
     @setup
     def setup_factory(self):
         self.context = mock.Mock()
@@ -627,7 +622,7 @@ class JobSchedulerFactoryTestCase(TestCase):
             assert_equal(action_runner, self.action_runner)
 
 
-class JobCollectionTestCase(TestCase):
+class TestJobCollection(TestCase):
     @setup
     def setup_collection(self):
         self.collection = job.JobCollection()

@@ -1,13 +1,12 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-from testify import assert_equal
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import TestCase
 from tron.utils import dicts
 
 
-class InvertDictListTestCase(TestCase):
+class TestInvertDictList(TestCase):
     def test_invert_dict_list(self):
         expected = {
             'a': 1,
@@ -25,7 +24,7 @@ class InvertDictListTestCase(TestCase):
         assert_equal(dicts.invert_dict_list(original), expected)
 
 
-class GetDeepTestCase(TestCase):
+class TestGetDeep(TestCase):
 
     data = {'foo': 23, 'bar': {'car': 'hello'}}
 

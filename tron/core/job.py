@@ -9,7 +9,6 @@ import six
 from six.moves import filter
 
 from tron import command_context
-from tron import event
 from tron import eventloop
 from tron import node
 from tron.core import actiongraph
@@ -113,9 +112,8 @@ class Job(Observable, Observer):
         self.expected_runtime = expected_runtime
         self.output_path = output_path or filehandler.OutputPath()
         self.output_path.append(name)
-        self.event = event.get_recorder(self.name)
         self.context = command_context.build_context(self, parent_context)
-        self.event.ok('created')
+        log.info(f'{self} created')
 
     @classmethod
     def from_config(
@@ -160,7 +158,7 @@ class Job(Observable, Observer):
         """
         for attr in self.equality_attributes:
             setattr(self, attr, getattr(job, attr))
-        self.event.ok('reconfigured')
+        log.info(f'{self} reconfigured')
 
     @property
     def status(self):
@@ -265,7 +263,7 @@ class JobScheduler(Observer):
         for run in job_runs:
             self.job.watch(run)
         self.job.runs.runs.extend(job_runs)
-        self.job.event.ok('restored')
+        log.info(f'{self} restored')
 
         recovery.launch_recovery_actionruns_for_job_runs(
             job_runs=job_runs, master_action_runner=config_action_runner

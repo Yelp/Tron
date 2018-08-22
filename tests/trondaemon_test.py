@@ -6,19 +6,19 @@ import tempfile
 
 import lockfile
 import mock
-from testify import assert_equal
-from testify import setup
-from testify import teardown
-from testify import TestCase
-from testify.assertions import assert_in
 
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests.assertions import assert_raises
 from tron.eventbus import make_eventbus
 from tron.trondaemon import PIDFile
 from tron.trondaemon import TronDaemon
 
 
-class PIDFileTestCase(TestCase):
+class TestPIDFile(TestCase):
     @setup
     @mock.patch('tron.trondaemon.log', autospec=None)
     def setup_pidfile(self, _):

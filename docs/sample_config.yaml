@@ -7,11 +7,6 @@ ssh_options:
   identities: # default []
     - "/home/batch/.ssh/id_dsa-nopasswd"
 
-# optional
-notification_options:
-  smtp_host: localhost
-  notification_addr: batch+errors@example.com
-
 command_context:
   PYTHON: /usr/bin/python
   TMPDIR: /tmp

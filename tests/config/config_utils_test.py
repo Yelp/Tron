@@ -4,12 +4,12 @@ from __future__ import unicode_literals
 import datetime
 
 import mock
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import TestCase
-from testify.assertions import assert_in
 
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import TestCase
 from tests.assertions import assert_raises
 from tron.config import config_utils
 from tron.config import ConfigError
@@ -19,7 +19,7 @@ from tron.config.config_utils import ConfigContext
 from tron.config.config_utils import valid_identifier
 
 
-class UniqueNameDictTestCase(TestCase):
+class TestUniqueNameDict(TestCase):
     @setup
     def setup_dict(self):
         self.msg = "The key %s was there."
@@ -34,7 +34,7 @@ class UniqueNameDictTestCase(TestCase):
         assert_raises(ConfigError, self.dict.__setitem__, 'a', 'next_thing')
 
 
-class ValidatorIdentifierTestCase(TestCase):
+class TestValidatorIdentifier(TestCase):
     def test_valid_identifier_too_long(self):
         assert_raises(ConfigError, valid_identifier, 'a' * 256, mock.Mock())
 
@@ -47,7 +47,7 @@ class ValidatorIdentifierTestCase(TestCase):
             assert_raises(ConfigError, valid_identifier, name, mock.Mock())
 
 
-class BuildListOfTypeValidatorTestCase(TestCase):
+class TestBuildListOfTypeValidator(TestCase):
     @setup
     def setup_validator(self):
         self.item_validator = mock.Mock()
@@ -65,7 +65,7 @@ class BuildListOfTypeValidatorTestCase(TestCase):
         assert_raises(ConfigError, self.validator, items, context)
 
 
-class BuildEnumValidatorTestCase(TestCase):
+class TestBuildEnumValidator(TestCase):
     @setup
     def setup_enum_validator(self):
         self.enum = dict(a=1, b=2)
@@ -89,7 +89,7 @@ class BuildEnumValidatorTestCase(TestCase):
         )
 
 
-class ValidTimeTestCase(TestCase):
+class TestValidTime(TestCase):
     @setup
     def setup_config(self):
         self.context = config_utils.NullConfigContext
@@ -116,7 +116,7 @@ class ValidTimeTestCase(TestCase):
         assert_raises(ConfigError, config_utils.valid_time, None, self.context)
 
 
-class ValidTimeDeltaTestCase(TestCase):
+class TestValidTimeDelta(TestCase):
     @setup
     def setup_config(self):
         self.context = config_utils.NullConfigContext
@@ -162,7 +162,7 @@ class ValidTimeDeltaTestCase(TestCase):
             )
 
 
-class ConfigContextTestCase(TestCase):
+class TestConfigContext(TestCase):
     def test_build_config_context(self):
         path, nodes, namespace = 'path', {1, 2, 3}, 'namespace'
         command_context = mock.MagicMock()
@@ -192,7 +192,7 @@ class StubValidator(config_utils.Validator):
     config_class = StubConfigObject
 
 
-class ValidatorTestCase(TestCase):
+class TestValidator(TestCase):
     @setup
     def setup_validator(self):
         self.validator = StubValidator()

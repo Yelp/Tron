@@ -383,15 +383,6 @@ class DisplayActionRuns(TableDisplay):
         self.job_run = data
 
 
-class DisplayEvents(TableDisplay):
-
-    columns = ['Time', 'Level', 'Entity', 'Name']
-    fields = ['time', 'level', 'entity', 'name']
-    widths = [22, 12, 35, 20]
-    title = 'events'
-    resize_fields = ['entity']
-
-
 def display_node(source, _=None):
     if not source:
         return ''

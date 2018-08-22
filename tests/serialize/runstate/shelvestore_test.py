@@ -5,18 +5,17 @@ import os
 import shutil
 import tempfile
 
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import teardown
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tron.serialize.runstate.shelvestore import Py2Shelf
 from tron.serialize.runstate.shelvestore import ShelveKey
 from tron.serialize.runstate.shelvestore import ShelveStateStore
 
 
-class ShelveStateStoreTestCase(TestCase):
+class TestShelveStateStore(TestCase):
     @setup
     def setup_store(self):
         self.tmpdir = tempfile.mkdtemp()

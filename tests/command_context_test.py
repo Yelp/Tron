@@ -4,12 +4,12 @@ from __future__ import unicode_literals
 import datetime
 
 import mock
-from testify import assert_equal
-from testify import assert_raises
-from testify import run
-from testify import setup
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import assert_raises
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import TestCase
 from tron import command_context
 from tron import node
 from tron import scheduler
@@ -19,7 +19,7 @@ from tron.core import jobrun
 from tron.core.jobrun import JobRunCollection
 
 
-class EmptyContextTestCase(TestCase):
+class TestEmptyContext(TestCase):
     @setup
     def build_context(self):
         self.context = command_context.CommandContext(None)
@@ -31,7 +31,7 @@ class EmptyContextTestCase(TestCase):
         assert not self.context.get('foo')
 
 
-class BuildFilledContextTestCase(TestCase):
+class TestBuildFilledContext(TestCase):
     def test_build_filled_context_no_objects(self):
         output = command_context.build_filled_context()
         assert not output.base
@@ -116,7 +116,7 @@ class ChainedDictOverrideContextTestCase(SimpleContextTestCaseBase):
 class ChainedObjectOverrideContextTestCase(SimpleContextTestCaseBase):
     @setup
     def build_context(self):
-        class MyObject(object):
+        class MyObject(TestCase):
             pass
 
         obj = MyObject()
@@ -131,7 +131,7 @@ class ChainedObjectOverrideContextTestCase(SimpleContextTestCaseBase):
         assert_equal(self.context['next_foo'], 'next_bar')
 
 
-class JobContextTestCase(TestCase):
+class TestJobContext(TestCase):
     @setup
     def setup_job(self):
         self.last_success = mock.Mock(run_time=datetime.datetime(2012, 3, 14))
@@ -174,7 +174,7 @@ class JobContextTestCase(TestCase):
         assert_raises(KeyError, lambda: self.context['bogus'])
 
 
-class JobRunContextTestCase(TestCase):
+class TestJobRunContext(TestCase):
     @setup
     def setup_context(self):
         self.jobrun = mock.create_autospec(jobrun.JobRun, run_time='sometime')
@@ -200,7 +200,7 @@ class JobRunContextTestCase(TestCase):
         assert_equal(time_value, mock_date_math.parse.return_value)
 
 
-class ActionRunContextTestCase(TestCase):
+class TestActionRunContext(TestCase):
     @setup
     def build_context(self):
         mock_node = mock.create_autospec(node.Node, hostname='something')
@@ -218,7 +218,7 @@ class ActionRunContextTestCase(TestCase):
         assert_equal(self.context.node, self.action_run.node.hostname)
 
 
-class FillerTestCase(TestCase):
+class TestFiller(TestCase):
     @setup
     def setup_filler(self):
         self.filler = command_context.Filler()

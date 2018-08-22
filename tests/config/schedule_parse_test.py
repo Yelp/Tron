@@ -5,17 +5,17 @@ from __future__ import unicode_literals
 import datetime
 
 import mock
-from testify import assert_equal
-from testify import assert_raises
-from testify import run
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import assert_raises
+from testifycompat import run
+from testifycompat import TestCase
 from tron.config import config_utils
 from tron.config import ConfigError
 from tron.config import schedule_parse
 
 
-class PadSequenceTestCase(TestCase):
+class TestPadSequence(TestCase):
     def test_pad_sequence_short(self):
         expected = [0, 1, 2, 3, None, None]
         assert_equal(schedule_parse.pad_sequence(range(4), 6), expected)
@@ -36,7 +36,7 @@ class PadSequenceTestCase(TestCase):
         assert_equal(schedule_parse.pad_sequence([], -2, "a"), [])
 
 
-class ScheduleConfigFromStringTestCase(TestCase):
+class TestScheduleConfigFromString(TestCase):
     @mock.patch(
         'tron.config.schedule_parse.parse_groc_expression',
         autospec=True,
@@ -60,7 +60,7 @@ class ScheduleConfigFromStringTestCase(TestCase):
         assert_equal(config, schedule_parse.ConfigConstantScheduler())
 
 
-class ValidSchedulerTestCase(TestCase):
+class TestValidScheduler(TestCase):
     @mock.patch('tron.config.schedule_parse.schedulers', autospec=True)
     def assert_validation(self, schedule, expected, mock_schedulers):
         context = config_utils.NullConfigContext
@@ -89,7 +89,7 @@ class ValidSchedulerTestCase(TestCase):
         self.assert_validation(schedule, config)
 
 
-class ValidCronSchedulerTestCase(TestCase):
+class TestValidCronScheduler(TestCase):
     _suites = ['integration']
 
     def validate(self, line):
@@ -107,7 +107,7 @@ class ValidCronSchedulerTestCase(TestCase):
         assert_raises(ConfigError, self.validate, '* * *')
 
 
-class ValidDailySchedulerTestCase(TestCase):
+class TestValidDailyScheduler(TestCase):
     def validate(self, config):
         context = config_utils.NullConfigContext
         config = schedule_parse.ConfigGenericSchedule('daily', config, None)
@@ -140,7 +140,7 @@ class ValidDailySchedulerTestCase(TestCase):
         assert_raises(ConfigError, self.validate, "3")
 
 
-class ValidIntervalSchedulerTestCase(TestCase):
+class TestValidIntervalScheduler(TestCase):
     def validate(self, config_value):
         context = config_utils.NullConfigContext
         config = schedule_parse.ConfigGenericSchedule(

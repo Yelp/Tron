@@ -6,14 +6,11 @@ import logging
 
 from tron import actioncommand
 from tron import command_context
-from tron import crash_reporter
-from tron import event
 from tron import node
 from tron.config import manager
 from tron.core import job
 from tron.mesos import MesosClusterRepository
 from tron.serialize.runstate import statemanager
-from tron.utils import emailer
 
 log = logging.getLogger(__name__)
 
@@ -34,23 +31,20 @@ class MasterControlProgram(object):
         super(MasterControlProgram, self).__init__()
         self.jobs = job.JobCollection()
         self.working_dir = working_dir
-        self.crash_reporter = None
         self.config = manager.ConfigManager(config_path)
         self.context = command_context.CommandContext()
-        self.event_recorder = event.get_recorder()
-        self.event_recorder.ok('started')
         self.state_watcher = statemanager.StateChangeWatcher()
+        log.info('initialized')
 
     def shutdown(self):
         self.state_watcher.shutdown()
 
     def reconfigure(self):
         """Reconfigure MCP while Tron is already running."""
-        self.event_recorder.ok("reconfigured")
+        log.info("reconfigured")
         try:
             self._load_config(reconfigure=True)
         except Exception as e:
-            self.event_recorder.critical("reconfigure_failure")
             log.exception(
                 "reconfigure failure: %s: %s" % (e.__class__.__name__, e)
             )
@@ -84,8 +78,7 @@ class MasterControlProgram(object):
                 'nodes',
                 'node_pools',
                 'ssh_options',
-            ), (self.apply_notification_options, 'notification_options'),
-            (MesosClusterRepository.configure, 'mesos_options')
+            ), (MesosClusterRepository.configure, 'mesos_options')
         ]
         master_config = config_container.get_master()
         apply_master_configuration(master_config_directives, master_config)
@@ -126,17 +119,6 @@ class MasterControlProgram(object):
             for job_scheduler in self.jobs:
                 self.state_watcher.save_job(job_scheduler.get_job())
 
-    def apply_notification_options(self, conf):
-        if not conf:
-            return
-
-        if self.crash_reporter:
-            self.crash_reporter.stop()
-
-        email_sender = emailer.Emailer(conf.smtp_host, conf.notification_addr)
-        self.crash_reporter = crash_reporter.CrashReporter(email_sender)
-        self.crash_reporter.start()
-
     def set_context_base(self, command_context):
         self.context.base = command_context
 
@@ -150,7 +132,7 @@ class MasterControlProgram(object):
         """Use the state manager to retrieve to persisted state and apply it
         to the configured Jobs.
         """
-        self.event_recorder.notice('restoring')
+        log.info('restoring')
         states = self.state_watcher.restore(self.jobs.get_names())
         MesosClusterRepository.restore_state(states.get('mesos_state', {}))
 

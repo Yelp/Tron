@@ -1,18 +1,17 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import teardown
-from testify import TestCase
-
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests.assertions import assert_length
 from tron.serialize import runstate
 sqlalchemystore = None  # pyflakes
 
 
-class SQLAlchmeyStateStoreTestCase(TestCase):
+class TestSQLAlchmeyStateStore(TestCase):
     _suites = ['sqlalchemy']
 
     @setup
