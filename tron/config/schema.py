@@ -135,6 +135,8 @@ ConfigJob = config_object_factory(
         'max_runtime',  # datetime.Timedelta
         'time_zone',  # pytz time zone
         'expected_runtime',  # datetime.Timedelta
+        'deploy_group',  # str
+        'service',  # str
     ],
 )
 
@@ -158,6 +160,8 @@ ConfigAction = config_object_factory(
         'env',  # dict
         'extra_volumes',  # List of ConfigVolume
         'expected_runtime',  # datetime.Timedelta
+        'service',  # str
+        'deploy_group',  # str
     ],
 )
 
