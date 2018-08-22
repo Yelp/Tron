@@ -404,7 +404,6 @@ class ConfigTestCase(TestCase):
         assert test_config.command_context == expected.command_context
         assert test_config.ssh_options == expected.ssh_options
         assert test_config.mesos_options == expected.mesos_options
-        assert test_config.notification_options == expected.notification_options
         assert test_config.time_zone == expected.time_zone
         assert test_config.nodes == expected.nodes
         assert test_config.node_pools == expected.node_pools
