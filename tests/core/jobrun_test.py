@@ -16,7 +16,6 @@ from tests.assertions import assert_length
 from tests.assertions import assert_raises
 from tests.testingutils import autospec_method
 from tron import actioncommand
-from tron import event
 from tron import node
 from tron.core import actiongraph
 from tron.core import actionrun
@@ -60,7 +59,6 @@ class TestJobRun(TestCase):
         )
         autospec_method(self.job_run.watch)
         autospec_method(self.job_run.notify)
-        self.job_run.event = mock.create_autospec(event.EventRecorder)
         self.action_run = mock.create_autospec(
             actionrun.ActionRun,
             is_skipped=False,
@@ -156,22 +154,16 @@ class TestJobRun(TestCase):
     def test_start(self):
         autospec_method(self.job_run._do_start)
         assert self.job_run.start()
-        self.job_run.event.info.assert_called_with('start')
         self.job_run._do_start.assert_called_with()
 
     def test_start_failed(self):
         autospec_method(self.job_run._do_start, return_value=False)
         assert not self.job_run.start()
-        self.job_run.event.info.assert_called_with('start')
-        assert not self.job_run.event.ok.mock_calls
 
     def test_start_no_startable_action_runs(self):
         autospec_method(self.job_run._do_start)
         self.job_run.action_runs.has_startable_action_runs = False
-
         assert not self.job_run.start()
-        self.job_run.event.info.assert_called_with('start')
-        assert not self.job_run.event.ok.mock_calls
 
     def test_do_start(self):
         startable_runs = [
@@ -184,21 +176,14 @@ class TestJobRun(TestCase):
         for startable_run in startable_runs:
             startable_run.start.assert_called_with()
 
-        assert_equal(self.job_run.event.ok.call_count, 1)
-        self.job_run.event.ok.assert_called_with('started')
-
     def test_do_start_all_failed(self):
         autospec_method(self.job_run._start_action_runs, return_value=[None])
         assert not self.job_run._do_start()
-        assert not self.job_run.event.ok.mock_calls
 
     def test_do_start_some_failed(self):
         returns = [True, None]
         autospec_method(self.job_run._start_action_runs, return_value=returns)
-
         assert self.job_run._do_start()
-        assert_equal(self.job_run.event.ok.call_count, 1)
-        self.job_run.event.ok.assert_called_with('started')
 
     def test_do_start_no_runs(self):
         assert not self.job_run._do_start()
@@ -311,12 +296,10 @@ class TestJobRun(TestCase):
     def test_finalize(self):
         self.job_run.action_runs.is_failed = False
         self.job_run.finalize()
-        self.job_run.event.ok.assert_called_with('succeeded')
         self.job_run.notify.assert_called_with(self.job_run.NOTIFY_DONE)
 
     def test_finalize_failure(self):
         self.job_run.finalize()
-        self.job_run.event.critical.assert_called_with('failed')
         self.job_run.notify.assert_called_with(self.job_run.NOTIFY_DONE)
 
     def test_cleanup(self):

@@ -110,9 +110,6 @@ class Client(object):
     def status(self):
         return self.http_get('/api/status')
 
-    def events(self):
-        return self.http_get('/api/events')['data']
-
     def config(
         self,
         config_name,
@@ -178,9 +175,6 @@ class Client(object):
             'include_stderr': 1,
         }
         return self.http_get(action_run_url, params)
-
-    def object_events(self, item_url):
-        return self.http_get('%s/_events' % item_url)['data']
 
     def http_get(self, url, data=None):
         return self.request(build_get_url(url, data))

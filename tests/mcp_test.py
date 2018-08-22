@@ -12,7 +12,6 @@ from testifycompat import setup
 from testifycompat import teardown
 from testifycompat import TestCase
 from tests.testingutils import autospec_method
-from tron import event
 from tron import mcp
 from tron.config import config_parse
 from tron.config import manager
@@ -38,7 +37,6 @@ class TestMasterControlProgram(TestCase):
 
     @teardown
     def teardown_mcp(self):
-        event.EventManager.reset()
         shutil.rmtree(self.config_path)
         shutil.rmtree(self.working_dir)
 
@@ -64,7 +62,6 @@ class TestMasterControlProgram(TestCase):
         config_container = mock.create_autospec(config_parse.ConfigContainer)
         master_config = config_container.get_master.return_value
         autospec_method(self.mcp.apply_collection_config)
-        autospec_method(self.mcp.apply_notification_options)
         autospec_method(self.mcp.build_job_scheduler_factory)
         self.mcp.apply_config(config_container)
         self.mcp.state_watcher.update_from_config.assert_called_with(
@@ -72,9 +69,6 @@ class TestMasterControlProgram(TestCase):
         )
         assert_equal(self.mcp.context.base, master_config.command_context)
         assert_equal(len(self.mcp.apply_collection_config.mock_calls), 1)
-        self.mcp.apply_notification_options.assert_called_with(
-            master_config.notification_options,
-        )
         mock_repo.update_from_config.assert_called_with(
             master_config.nodes,
             master_config.node_pools,
@@ -126,7 +120,6 @@ class TestMasterControlProgramRestoreState(TestCase):
 
     @teardown
     def teardown_mcp(self):
-        event.EventManager.reset()
         shutil.rmtree(self.working_dir)
         shutil.rmtree(self.config_path)
 

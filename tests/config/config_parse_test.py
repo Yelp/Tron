@@ -281,7 +281,6 @@ def make_tron_config(
     output_stream_dir='/tmp',
     command_context=None,
     ssh_options=None,
-    notification_options=None,
     time_zone=pytz.timezone("EST"),
     state_persistence=config_parse.DEFAULT_STATE_PERSISTENCE,
     nodes=None,
@@ -295,7 +294,6 @@ def make_tron_config(
         command_context=command_context or
         FrozenDict(batch_dir='/tron/batch/test/foo', python='/usr/bin/python'),
         ssh_options=ssh_options or make_ssh_options(),
-        notification_options=None,
         time_zone=time_zone,
         state_persistence=state_persistence,
         nodes=nodes or make_nodes(),
@@ -403,6 +401,7 @@ class ConfigTestCase(TestCase):
         expected = make_tron_config()
 
         test_config = valid_config(self.config)
+
         assert test_config.command_context == expected.command_context
         assert test_config.ssh_options == expected.ssh_options
         assert test_config.mesos_options == expected.mesos_options

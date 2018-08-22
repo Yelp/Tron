@@ -1,6 +1,7 @@
 <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN"
   "http://www.w3.org/TR/html4/loose.dtd">
 <html>
+
 <head>
   <title>tronweb test runner</title>
 
@@ -24,7 +25,6 @@
   <!-- include source files here... -->
   <script src="../tronweb/js/cs/models.js"></script>
   <script src="../tronweb/js/cs/views.js"></script>
-  <script src="../tronweb/js/cs/events.js"></script>
   <script src="../tronweb/js/cs/nodes.js"></script>
   <script src="../tronweb/js/cs/graph.js"></script>
   <script src="../tronweb/js/cs/config.js"></script>
@@ -43,7 +43,7 @@
   <script src="spec/dashboard_test.js"></script>
 
   <script type="text/javascript">
-    (function() {
+    (function () {
       var jasmineEnv = jasmine.getEnv();
       jasmineEnv.updateInterval = 200;
 
@@ -51,13 +51,13 @@
 
       jasmineEnv.addReporter(htmlReporter);
 
-      jasmineEnv.specFilter = function(spec) {
+      jasmineEnv.specFilter = function (spec) {
         return htmlReporter.specFilter(spec);
       };
 
       var currentWindowOnload = window.onload;
 
-      window.onload = function() {
+      window.onload = function () {
         execJasmine();
       };
 
@@ -72,4 +72,5 @@
 
 <body>
 </body>
+
 </html>
