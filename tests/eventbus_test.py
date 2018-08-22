@@ -2,11 +2,11 @@ import os
 import tempfile
 
 import mock
-from testify import assert_equal
-from testify import setup
-from testify import teardown
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tron import eventbus
 
 
