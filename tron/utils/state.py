@@ -150,7 +150,7 @@ class StateMachine(Observable):
             return False
 
         prev_state = self.state
-        log.debug("Transitioning from %s to %s", self.state, next_state)
+        log.debug(f"Transitioning from {self.state} to {next_state}")
 
         # Check if we are doing some circular transition.
         if stop_item is not None and next_state is stop_item:

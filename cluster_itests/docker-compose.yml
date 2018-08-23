@@ -9,9 +9,10 @@ services:
   mesosmaster:
     build: ../yelp_package/itest_dockerfiles/mesos/
     image: paasta_itest_mesos:latest
+    hostname: mesosmaster
     ports:
       - 5050
-    command: 'mesos-master --zk=zk://zookeeper:2181/mesos-testcluster --registry=in_memory --quorum=1 --authenticate --authenticate_slaves --work_dir=/tmp/mesos --credentials=/etc/mesos-secrets'
+    command: 'mesos-master --zk=zk://zookeeper:2181/mesos-testcluster --registry=in_memory --quorum=1 --authenticate --authenticate_slaves --work_dir=/tmp/mesos --credentials=/etc/mesos-secrets --authenticate_http_frameworks --http_framework_authenticators=basic'
     depends_on:
       - zookeeper
 

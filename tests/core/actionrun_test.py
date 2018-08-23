@@ -173,7 +173,6 @@ class TestActionRunFactory(TestCase):
             extra_volumes=[{
                 'path': '/tmp'
             }],
-            mesos_address='fake-mesos-master.com',
         )
         action_run = ActionRunFactory.build_run_for_action(
             self.job_run,
@@ -188,7 +187,6 @@ class TestActionRunFactory(TestCase):
         assert_equal(action_run.docker_parameters, action.docker_parameters)
         assert_equal(action_run.env, action.env)
         assert_equal(action_run.extra_volumes, action.extra_volumes)
-        assert_equal(action_run.mesos_address, action.mesos_address)
 
     def test_action_run_from_state_default(self):
         state_data = self.action_state_data
@@ -211,7 +209,6 @@ class TestActionRunFactory(TestCase):
         state_data['docker_parameters'] = [{'key': 'test', 'value': 123}]
         state_data['env'] = {'TESTING': 'true'}
         state_data['extra_volumes'] = [{'path': '/tmp'}]
-        state_data['mesos_address'] = 'fake-mesos-master.com'
         action_run = ActionRunFactory.action_run_from_state(
             self.job_run,
             state_data,
@@ -227,7 +224,6 @@ class TestActionRunFactory(TestCase):
         )
         assert_equal(action_run.env, state_data['env'])
         assert_equal(action_run.extra_volumes, state_data['extra_volumes'])
-        assert_equal(action_run.mesos_address, state_data['mesos_address'])
 
         assert not action_run.is_cleanup
         assert_equal(action_run.__class__, MesosActionRun)
@@ -910,7 +906,6 @@ class TestMesosActionRun(TestCase):
     def setup_action_run(self):
         self.output_path = mock.MagicMock()
         self.command = "do the command"
-        self.mesos_address = 'mesos-master.com'
         self.other_task_kwargs = {
             'cpus': 1,
             'mem': 50,
@@ -929,7 +924,6 @@ class TestMesosActionRun(TestCase):
             rendered_command=self.command,
             output_path=self.output_path,
             executor=ExecutorTypes.mesos,
-            mesos_address=self.mesos_address,
             **self.other_task_kwargs
         )
 
@@ -945,7 +939,7 @@ class TestMesosActionRun(TestCase):
             self.action_run.submit_command()
 
             mock_get_cluster = mock_cluster_repo.get_cluster
-            mock_get_cluster.assert_called_once_with(self.mesos_address)
+            mock_get_cluster.assert_called_once_with()
             mock_get_cluster.return_value.create_task.assert_called_once_with(
                 action_run_id=self.action_run.id,
                 command=self.command,
@@ -970,7 +964,7 @@ class TestMesosActionRun(TestCase):
         self.action_run.submit_command()
 
         mock_get_cluster = mock_cluster_repo.get_cluster
-        mock_get_cluster.assert_called_once_with(self.mesos_address)
+        mock_get_cluster.assert_called_once_with()
         assert self.action_run.is_failed
 
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)

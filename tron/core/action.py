@@ -17,7 +17,7 @@ class Action(object):
         'name', 'command', 'node_pool', 'is_cleanup', 'retries',
         'expected_runtime', 'executor', 'cpus', 'mem', 'constraints',
         'docker_image', 'docker_parameters', 'env', 'extra_volumes',
-        'mesos_address', 'retries_delay'
+        'retries_delay'
     ]
 
     def __init__(
@@ -38,7 +38,6 @@ class Action(object):
         docker_parameters=None,
         env=None,
         extra_volumes=None,
-        mesos_address=None,
     ):
         self.name = maybe_decode(name)
         self.command = command
@@ -56,7 +55,6 @@ class Action(object):
         self.docker_parameters = docker_parameters or []
         self.env = env or {}
         self.extra_volumes = extra_volumes or []
-        self.mesos_address = mesos_address
 
     @property
     def is_cleanup(self):
@@ -94,7 +92,6 @@ class Action(object):
             docker_parameters=docker_parameters,
             env=config.env,
             extra_volumes=extra_volumes,
-            mesos_address=config.mesos_address,
         )
 
     def __eq__(self, other):
