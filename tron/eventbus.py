@@ -70,8 +70,7 @@ class EventBus:
         os.symlink(new_file, tmplink)
         os.rename(tmplink, self.log_current)
 
-        self.log_last_save = time.time()
-        duration = self.log_last_save - started
+        duration = time.time() - started
         log.info(f"log dumped to disk because {reason}, took {duration:.4}s")
 
     def sync_loop(self):
@@ -92,6 +91,8 @@ class EventBus:
 
         if save_reason:
             self.sync_save_log(save_reason)
+            self.log_last_save = time.time()
+            self.log_updates = 0
 
         consume_dequeue(self.subscribe_queue, self.sync_subscribe)
         consume_dequeue(self.publish_queue, self.sync_publish)
@@ -107,7 +108,7 @@ class EventBus:
                 return
 
         self.event_log[event['id']] = event
-        self.log_save_updates += 1
+        self.log_updates += 1
         log.debug(f"event stored: {event}")
 
         reactor.callLater(0, self.sync_notify, event['id'])
@@ -145,4 +146,4 @@ class EventBus:
             if event_id.startswith(prefix):
                 for (sub, cb) in subscribers:
                     log.debug(f"notifying {sub} about {event_id}")
-                    reactor.callLater(cb, event)
+                    reactor.callLater(0, cb, event)

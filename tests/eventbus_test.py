@@ -56,7 +56,7 @@ class EventBusTestCase(TestCase):
         assert self.eventbus.event_log == {'foo': 'bar'}
 
     @mock.patch('tron.eventbus.time', autospec=None)
-    def test_sync_save_log(self, time):
+    def test_sync_save_log_time(self, time):
         time.time = mock.Mock(return_value=1.0)
         self.eventbus.sync_save_log("test")
         current_link = os.readlink(self.eventbus.log_current)
@@ -109,6 +109,7 @@ class EventBusTestCase(TestCase):
         self.eventbus.log_updates = 21
         self.eventbus.sync_process()
         assert self.eventbus.sync_save_log.call_count is 1
+        assert self.eventbus.log_updates is 0
 
     def test_sync_process_flush_queues(self):
         self.eventbus.sync_subscribe = mock.Mock()
@@ -130,7 +131,7 @@ class EventBusTestCase(TestCase):
         self.eventbus.event_log = {}
         self.eventbus.log_save_updates = 0
         self.eventbus.sync_publish(evt)
-        assert self.eventbus.log_save_updates is 1
+        assert self.eventbus.log_updates is 1
         assert reactor.callLater.call_count is 1
 
     @mock.patch('tron.eventbus.reactor', autospec=None)
@@ -140,7 +141,7 @@ class EventBusTestCase(TestCase):
         self.eventbus.event_log = {'foo': evt1}
         self.eventbus.log_save_updates = 0
         self.eventbus.sync_publish(evt2)
-        assert self.eventbus.log_save_updates is 1
+        assert self.eventbus.log_updates is 1
         assert reactor.callLater.call_count is 1
 
     @mock.patch('tron.eventbus.reactor', autospec=None)
@@ -149,7 +150,7 @@ class EventBusTestCase(TestCase):
         self.eventbus.event_log = {'foo': evt}
         self.eventbus.log_save_updates = 0
         self.eventbus.sync_publish(evt)
-        assert self.eventbus.log_save_updates is 0
+        assert self.eventbus.log_updates is 0
         assert reactor.callLater.call_count is 0
 
     def test_sync_subscribe(self):
