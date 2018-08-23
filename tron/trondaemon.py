@@ -19,6 +19,7 @@ from twisted.internet import reactor
 from twisted.python import log as twisted_log
 
 import tron
+from tron.eventbus import make_eventbus
 from tron.manhole import make_manhole
 from tron.mesos import MesosClusterRepository
 from tron.utils import flockfile
@@ -48,16 +49,14 @@ class PIDFile(object):
 
         if self.is_process_running(pid):
             self._try_unlock()
-            raise SystemExit("Daemon running as %s" % pid)
+            raise SystemExit(f"Daemon running as {pid}")
 
         if pid:
             self._try_unlock()
             raise SystemExit(
-                "A tron pidfile is already present at %s using PID %s. The existing pidfile must be removed before starting another tron daemon."
-                % (
-                    self.filename,
-                    pid,
-                ),
+                f"A tron pidfile is already present at {self.filename} using "
+                f"PID {pid}. The existing pidfile must be removed before "
+                "starting another tron daemon."
             )
 
     def is_process_running(self, pid):
@@ -180,10 +179,32 @@ class TronDaemon(object):
             self._run_www_api()
             self._run_manhole()
             self._run_reactor()
+            self._run_eventbus()
+
+    def setup_eventbus_dir(self):
+        """Create log directory and link to current log if those don't
+        already exist"""
+        if not os.path.exists(self.eventbus.log_dir):
+            log.warning(f"eventbus: creating {self.eventbus.log_dir}")
+            os.mkdir(self.eventbus.log_dir)
+
+        if not os.path.exists(self.eventbus.log_current) or not os.path.exists(
+            os.readlink(self.eventbus.log_current)
+        ):
+            log.warning(f"eventbus: creating {self.eventbus.log_current}")
+            self.eventbus.sync_save_log("initial save")
+
+    def _run_eventbus(self):
+        self.eventbus = make_eventbus(f"{self.options.working_dir}/_events")
+        self.setup_eventbus_dir()
+        # self.eventbus.start()
 
     def _run_manhole(self):
         self.manhole = make_manhole(dict(trond=self, mcp=self.mcp))
-        reactor.listenUNIX(f"{self.options.working_dir}/manhole.sock", self.manhole)
+
+        reactor.listenUNIX(
+            f"{self.options.working_dir}/manhole.sock", self.manhole
+        )
         log.info(f"manhole started on {self.options.working_dir}/manhole.sock")
 
     def _run_www_api(self):
