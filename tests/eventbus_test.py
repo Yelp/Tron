@@ -10,6 +10,33 @@ from testifycompat import TestCase
 from tron import eventbus
 
 
+class MakeEventBusTestCase(TestCase):
+    @setup
+    def setup(self):
+        self.logdir = tempfile.TemporaryDirectory()
+
+    @teardown
+    def teardown(self):
+        self.logdir.cleanup()
+
+    @mock.patch('tron.eventbus.time', autospec=True)
+    def test_setup_eventbus_dir(self, time):
+        os.rmdir(self.logdir.name)
+
+        time.time = mock.Mock(return_value=1.0)
+        eb = eventbus.make_eventbus(self.logdir.name)
+        assert os.path.exists(self.logdir.name)
+        assert os.path.exists(os.path.join(self.logdir.name, "current"))
+
+        time.time = mock.Mock(return_value=2.0)
+        eb.event_log = {'foo': 'bar'}
+        eb.sync_save_log("test")
+
+        new_eb = eventbus.make_eventbus(self.logdir.name)
+        new_eb.sync_load_log()
+        assert new_eb.event_log == eb.event_log
+
+
 class EventBusTestCase(TestCase):
     @setup
     def setup(self):
@@ -48,7 +75,9 @@ class EventBusTestCase(TestCase):
         self.eventbus.event_log['foo'] = 'bar'
         assert self.eventbus.has_event('foo')
 
-    def test_sync_load_log(self):
+    @mock.patch('tron.eventbus.time', autospec=None)
+    def test_sync_load_log(self, time):
+        time.time = mock.Mock(return_value=1.0)
         self.eventbus.event_log = {'foo': 'bar'}
         self.eventbus.sync_save_log("test")
         self.eventbus.event_log = {}
@@ -69,8 +98,10 @@ class EventBusTestCase(TestCase):
         assert os.path.exists(current_link)
         assert os.path.exists(new_link)
 
+    @mock.patch('tron.eventbus.time', autospec=True)
     @mock.patch('tron.eventbus.reactor', autospec=None)
-    def test_sync_loop(self, reactor):
+    def test_sync_loop(self, reactor, time):
+        time.time = mock.Mock(return_value=0)
         reactor.callLater = mock.Mock()
         self.eventbus.sync_shutdown = mock.Mock()
         self.eventbus.sync_loop()
@@ -111,7 +142,9 @@ class EventBusTestCase(TestCase):
         assert self.eventbus.sync_save_log.call_count is 1
         assert self.eventbus.log_updates is 0
 
-    def test_sync_process_flush_queues(self):
+    @mock.patch('tron.eventbus.time', autospec=True)
+    def test_sync_process_flush_queues(self, time):
+        time.time = mock.Mock(return_value=10)
         self.eventbus.sync_subscribe = mock.Mock()
         self.eventbus.sync_publish = mock.Mock()
 

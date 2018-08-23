@@ -96,6 +96,9 @@ class ActionRunFactory(object):
             'docker_parameters': action.docker_parameters,
             'env': action.env,
             'extra_volumes': action.extra_volumes,
+            'triggers_downstream': action.triggers_downstream,
+            'triggered_by': action.triggered_by,
+            'on_upstream_rerun': action.on_upstream_rerun,
         }
         if action.executor == ExecutorTypes.mesos:
             return MesosActionRun(**args)
@@ -202,6 +205,9 @@ class ActionRun(object):
         env=None,
         extra_volumes=None,
         mesos_task_id=None,
+        triggers_downstream=None,
+        triggered_by=None,
+        on_upstream_rerun=None,
     ):
         self.job_run_id = maybe_decode(job_run_id)
         self.action_name = maybe_decode(name)
@@ -238,6 +244,9 @@ class ActionRun(object):
 
         self.action_command = None
         self.in_delay = None
+        self.triggers_downstream = None
+        self.triggered_by = None
+        self.on_upstream_rerun = None
 
     @property
     def state(self):
@@ -315,6 +324,9 @@ class ActionRun(object):
             env=state_data.get('env'),
             extra_volumes=state_data.get('extra_volumes'),
             mesos_task_id=state_data.get('mesos_task_id'),
+            triggers_downstream=state_data.get('triggers_downstream'),
+            triggered_by=state_data.get('triggered_by'),
+            on_upstream_rerun=state_data.get('on_upstream_rerun'),
         )
 
         # Transition running to fail unknown because exit status was missed
@@ -479,6 +491,9 @@ class ActionRun(object):
             'env': self.env,
             'extra_volumes': self.extra_volumes,
             'mesos_task_id': self.mesos_task_id,
+            'triggers_downstream': self.triggers_downstream,
+            'triggered_by': self.triggered_by,
+            'on_upstream_rerun': self.on_upstream_rerun,
         }
 
     def render_command(self):

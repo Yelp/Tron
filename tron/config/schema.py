@@ -49,6 +49,7 @@ TronConfig = config_object_factory(
         'node_pools',  # FrozenDict of ConfigNodePool
         'jobs',  # FrozenDict of ConfigJob
         'mesos_options',  # ConfigMesos
+        'eventbus_enabled',  # bool or None
     ],
 )
 
@@ -158,6 +159,9 @@ ConfigAction = config_object_factory(
         'env',  # dict
         'extra_volumes',  # List of ConfigVolume
         'expected_runtime',  # datetime.Timedelta
+        'triggers_downstream',  # bool or None
+        'triggered_by',  # dict or None
+        'on_upstream_rerun',  # ActionOnRerun or None
     ],
 )
 
@@ -180,6 +184,9 @@ ConfigCleanupAction = config_object_factory(
         'docker_parameters',  # List of ConfigParameter
         'env',  # dict
         'extra_volumes',  # List of ConfigVolume
+        'triggers_downstream',  # bool or None
+        'triggered_by',  # dict or None
+        'on_upstream_rerun',  # ActionOnRerun or None
     ],
 )
 
@@ -219,3 +226,5 @@ ExecutorTypes = Enum.create('ssh', 'mesos')
 ActionRunnerTypes = Enum.create('none', 'subprocess')
 
 VolumeModes = Enum.create('RO', 'RW')
+
+ActionOnRerun = Enum.create('rerun')
