@@ -1143,6 +1143,26 @@ class TestBuildFormatStringValidator(TestCase):
         )
         assert self.validator(template, context)
 
+    def test_validator_valid_format_string(self):
+        template = "The {one} thing I {seven} is {mars}"
+        context = config_utils.ConfigContext(
+            None,
+            None,
+            {'mars': 'ok'},
+            None,
+        )
+        assert self.validator(template, context)
+
+    def test_validator_valid_percent_string(self):
+        template = "The %(one)s %(seven)s thing is %(mars)s -config {'a': 1}"
+        context = config_utils.ConfigContext(
+            None,
+            None,
+            {'mars': 'ok'},
+            None,
+        )
+        assert self.validator(template, context)
+
 
 class TestValidateConfigMapping(TestCase):
     config = dict(**BASE_CONFIG, command_context=dict(some_var="The string"))
