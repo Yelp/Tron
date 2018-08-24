@@ -239,14 +239,15 @@ class ActionRun(object):
         self.retries_remaining = retries_remaining
         self.retries_delay = retries_delay
         self.exit_statuses = exit_statuses
+        self.triggers_downstream = triggers_downstream
+        self.triggered_by = triggered_by
+        self.on_upstream_rerun = on_upstream_rerun
+
         if self.exit_statuses is None:
             self.exit_statuses = []
 
         self.action_command = None
         self.in_delay = None
-        self.triggers_downstream = None
-        self.triggered_by = None
-        self.on_upstream_rerun = None
 
     @property
     def state(self):
