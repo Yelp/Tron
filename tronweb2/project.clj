@@ -17,7 +17,12 @@
 
   :profiles
   {:dev {:dependencies [[binaryage/devtools "0.9.4"]]}
-   :min {}}
+   :min {}
+   :repl {:plugins [[cider/cider-nrepl "0.18.0-SNAPSHOT"]]
+          :dependencies [[org.clojure/tools.nrepl "0.2.13"]
+                         [cider/piggieback "0.3.8"]
+                         [figwheel-sidecar "0.5.16"]]
+          :repl-options {:nrepl-middleware [cider.piggieback/wrap-cljs-repl]}}}
 
   :cljsbuild
   {:builds
@@ -30,12 +35,11 @@
                     :asset-path           "js/compiled/out"
                     :source-map-timestamp true
                     :preloads             [devtools.preload]
-                    :closure-defines      {tronweb2.routes/api-uri "http://localhost:8089"}
+                    :closure-defines      {tronweb2.routes/api-uri
+                                           "http://localhost:8089/"}
                     :external-config      {:devtools/config {:features-to-install :all}}
                     :foreign-libs         [{:file "d3-timelines.js"
                                             :provides ["timelines"]}]}}
-
-
     {:id           "min"
      :source-paths ["src"]
      :compiler     {:main            tronweb2.core
