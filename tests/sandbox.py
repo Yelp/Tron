@@ -16,11 +16,11 @@ from subprocess import PIPE
 from subprocess import Popen
 
 import mock
-from testify import setup
-from testify import teardown
-from testify import TestCase
-from testify.assertions import assert_not_equal
 
+from testifycompat import assert_not_equal
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tron.commands import client
 from tron.config import manager
 from tron.config import schema
@@ -142,7 +142,7 @@ class ClientProxy(object):
             return f.read()
 
     def wrap(self, func, *args, **kwargs):
-        with mock.patch('tron.commands.client.log'):
+        with mock.patch('tron.commands.client.log', autospec=True):
             try:
                 return func(*args, **kwargs)
             except (client.RequestError, ValueError) as e:

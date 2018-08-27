@@ -24,10 +24,6 @@ Basic Example
     ssh_options:
       agent: true
 
-    notification_options:
-      smtp_host: localhost
-      notification_addr: <your email address>
-
     nodes:
       - name: local
         hostname: 'localhost'
@@ -115,24 +111,6 @@ Example::
         jitter_min_load:          4
         jitter_max_delay:         20
         jitter_load_factor:       1
-
-Notification Options
---------------------
-
-**notification_options**
-    Email settings for sending failure notices.
-
-    **smtp_host** (required)
-        SMTP host of the email server
-
-    **notification_addr** (required)
-        Email address to send mail to
-
-Example::
-
-    notification_options:
-        smtp_host: localhost
-        notification_addr: batch+errors@example.com
 
 .. _time_zone:
 
@@ -244,7 +222,7 @@ Action Runners
                 Run actions with a script which records the pid and runs the
                 action command in a subprocess (on the remote node). This
                 requires that :command:`bin/action_runner.py` and
-                :command:`bin/action_status.py` are avialable on the remote
+                :command:`bin/action_status.py` are available on the remote
                 host.
 
     **remote_status_path**

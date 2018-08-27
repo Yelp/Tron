@@ -3,7 +3,7 @@
 tronview
 ========
 
-Synopsys
+Synopsis
 --------
 
 ``tronview [-n <numshown>] [--server <server_name>] [--verbose] [<job_name> | <job_run_id> | <action_run_id>]``
@@ -62,9 +62,6 @@ Options
 
 ``-e, --stderr``
     Solely displays stderr
-
-``--events``
-    Show events for the specified entity
 
 ``-s, --save``
     Save server and color options to client config file (~/.tron)

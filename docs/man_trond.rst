@@ -3,7 +3,7 @@
 trond
 =====
 
-Synopsys
+Synopsis
 --------
 
 ``trond [--working-dir=<working dir>] [--verbose] [--debug]``

@@ -2,11 +2,11 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import mock
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import TestCase
 from tron import node
 from tron.config.schema import ConfigAction
 from tron.config.schema import ConfigConstraint
@@ -51,7 +51,6 @@ class TestAction(TestCase):
                     mode='RO',
                 ),
             ],
-            mesos_address='fake-mesos-master.com',
         )
         new_action = action.Action.from_config(config)
         assert_equal(new_action.name, config.name)
@@ -79,7 +78,6 @@ class TestAction(TestCase):
                 'mode': 'RO'
             }],
         )
-        assert_equal(new_action.mesos_address, config.mesos_address)
 
     def test_from_config_none_values(self):
         config = ConfigAction(

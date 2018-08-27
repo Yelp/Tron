@@ -154,9 +154,14 @@ def pretty_print_actions(action_run):
 
 
 def get_relevant_run_and_state(job_content):
+    # The order of job run to check is as follows:
+    #   1. The scheduled but hasn't run one checked first
+    #   2. Then currently running ones are always checked (in case an action is failed/unknown)
+    #   3. If there are multiple running ones, then most recent run_time wins
+    #   4. If nothing is currently running, then most recent end_time wins
     job_runs = sorted(
         job_content.get('runs', []),
-        key=lambda k: k['run_time'],
+        key=lambda k: (k['end_time'] is None, k['end_time'], k['run_time']),
         reverse=True,
     )
     if len(job_runs) == 0:

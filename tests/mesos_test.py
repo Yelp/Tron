@@ -2,18 +2,16 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import mock
-from testify import assert_equal
-from testify import setup_teardown
-from testify import TestCase
 
-from tron.mesos import MESOS_ROLE
-from tron.mesos import MESOS_SECRET
+from testifycompat import assert_equal
+from testifycompat import setup_teardown
+from testifycompat import TestCase
 from tron.mesos import MesosCluster
 from tron.mesos import MesosClusterRepository
 from tron.mesos import MesosTask
 
 
-class MesosClusterRepositoryTestCase(TestCase):
+class TestMesosClusterRepository(TestCase):
     @setup_teardown
     def mock_cluster(self):
         # Ensure different mock is returned each time class is instantiated
@@ -23,6 +21,7 @@ class MesosClusterRepositoryTestCase(TestCase):
         with mock.patch(
             'tron.mesos.MesosCluster',
             side_effect=init_cluster,
+            autospec=True,
         ) as self.cluster_cls:
             yield
 
@@ -49,12 +48,17 @@ class MesosClusterRepositoryTestCase(TestCase):
         ]
         mock_volume = mock.Mock()
         options = mock.Mock(
+            master_port=5000,
+            secret='/dev/null',
+            principal="fake-principal",
+            role='tron',
             enabled=False,
             default_volumes=[mock_volume],
             dockercfg_location='auth',
             offer_timeout=1000,
         )
-        MesosClusterRepository.configure(options)
+        with mock.patch('tron.mesos.get_secret_from_file', autospec=True, return_value='test-secret'):
+            MesosClusterRepository.configure(options)
 
         expected_volume = mock_volume._asdict.return_value
         for cluster in clusters:
@@ -68,11 +72,16 @@ class MesosClusterRepositoryTestCase(TestCase):
         # Next cluster we get should be initialized with the same settings
         MesosClusterRepository.get_cluster('f')
         self.cluster_cls.assert_called_with(
-            'f',
-            False,
-            [expected_volume],
-            'auth',
-            1000,
+            mesos_address='f',
+            mesos_master_port=5000,
+            secret='test-secret',
+            principal="fake-principal",
+            mesos_role='tron',
+            framework_id=None,
+            enabled=False,
+            default_volumes=[expected_volume],
+            dockercfg_location='auth',
+            offer_timeout=1000,
         )
 
 
@@ -90,7 +99,7 @@ def mock_task_event(
     )
 
 
-class MesosTaskTestCase(TestCase):
+class TestMesosTask(TestCase):
     @setup_teardown
     def setup(self):
         self.action_run_id = 'my_service.job.1.action'
@@ -237,7 +246,7 @@ class MesosTaskTestCase(TestCase):
         assert self.task.state == MesosTask.RUNNING
 
 
-class MesosClusterTestCase(TestCase):
+class TestMesosCluster(TestCase):
     @setup_teardown
     def setup_mocks(self):
         with mock.patch(
@@ -263,20 +272,30 @@ class MesosClusterTestCase(TestCase):
     @mock.patch('tron.mesos.socket', autospec=True)
     def test_init(self, mock_socket):
         mock_socket.gethostname.return_value = 'hostname'
-        cluster = MesosCluster('mesos-cluster-a.me')
+        cluster = MesosCluster(
+            mesos_address='mesos-cluster-a.me',
+            mesos_master_port=5000,
+            secret='my_secret',
+            mesos_role='tron',
+            framework_id='fake_framework_id',
+            principal="fake-principal",
+        )
 
         assert_equal(cluster.queue, self.mock_queue)
         assert_equal(cluster.processor, self.mock_processor)
 
-        self.mock_get_leader.assert_called_once_with('mesos-cluster-a.me')
+        self.mock_get_leader.assert_called_once_with('mesos-cluster-a.me', 5000)
         self.mock_processor.executor_from_config.assert_has_calls([
             mock.call(
-                provider='mesos',
+                provider='mesos_task',
                 provider_config={
-                    'secret': MESOS_SECRET,
+                    'secret': 'my_secret',
+                    'principal': 'fake-principal',
                     'mesos_address': self.mock_get_leader.return_value,
-                    'role': MESOS_ROLE,
+                    'role': 'tron',
                     'framework_name': 'tron-hostname',
+                    'framework_id': 'fake_framework_id',
+                    'failover': True,
                 },
             ),
             mock.call(

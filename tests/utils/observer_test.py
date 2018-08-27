@@ -1,18 +1,18 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import TestCase
-from testify import turtle
+from unittest import mock
 
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import TestCase
 from tests.assertions import assert_length
 from tron.utils.observer import Observable
 from tron.utils.observer import Observer
 
 
-class ObservableTestCase(TestCase):
+class TestObservable(TestCase):
     @setup
     def setup_observer(self):
         self.obs = Observable()
@@ -35,15 +35,15 @@ class ObservableTestCase(TestCase):
         assert_equal(self.obs._observers['b'], [func])
 
     def test_notify(self):
-        handler = turtle.Turtle()
+        handler = mock.MagicMock()
         self.obs.attach(['a', 'b'], handler)
         self.obs.notify('a')
-        assert_equal(len(handler.handler.calls), 1)
+        assert_equal(len(handler.handler.mock_calls), 1)
         self.obs.notify('b')
-        assert_equal(len(handler.handler.calls), 2)
+        assert_equal(len(handler.handler.mock_calls), 2)
 
 
-class ObserverClearTestCase(TestCase):
+class TestObserverClear(TestCase):
     @setup
     def setup_observer(self):
         self.obs = Observable()
@@ -101,7 +101,7 @@ class MockObserver(Observer):
         self.has_watched += 1
 
 
-class ObserverTestCase(TestCase):
+class TestObserver(TestCase):
     @setup
     def setup_observer(self):
         self.obs = Observable()

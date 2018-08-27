@@ -14,6 +14,8 @@ from tron.commands.client import Client
 from tron.commands.client import get_object_type_from_identifier
 from tron.commands.client import TronObjectType
 from tron.commands.cmd_utils import ExitCode
+from tron.commands.cmd_utils import suggest_possibilities
+from tron.commands.cmd_utils import tron_jobs_completer
 
 
 def parse_cli():
@@ -58,13 +60,6 @@ def parse_cli():
         default=0,
     )
     parser.add_argument(
-        "--events",
-        action="store_true",
-        dest="show_events",
-        help="Show events for the specified entity",
-        default=False,
-    )
-    parser.add_argument(
         'name',
         nargs='?',
         help='job name | job run id | action id',
@@ -81,15 +76,8 @@ def console_height():
     return int(os.popen('stty size', 'r').read().split()[0])
 
 
-def display_events(data):
-    return display.DisplayEvents().format(data)
-
-
 def view_all(args, client):
     """Retrieve jobs and display them."""
-    if args.show_events:
-        return display_events(client.events())
-
     return display.DisplayJobs().format(
         client.jobs(
             include_job_runs=False,
@@ -102,17 +90,11 @@ def view_all(args, client):
 
 def view_job(args, job_id, client):
     """Retrieve details of the specified job and display"""
-    if args.show_events:
-        return display_events(client.object_events(job_id.url))
-
     job_content = client.job(job_id.url, count=args.num_displays)
     return display.format_job_details(job_content)
 
 
 def view_job_run(args, job_run_id, client):
-    if args.show_events:
-        return display_events(client.object_events(job_run_id.url))
-
     actions = client.job_runs(job_run_id.url)
     display_action = display.DisplayActionRuns()
     return display_action.format(actions)
@@ -135,7 +117,14 @@ obj_type_to_view_map = {
 
 def get_view_output(name, args, client):
     url_index = client.index()
-    tron_id = get_object_type_from_identifier(url_index, name)
+    try:
+        tron_id = get_object_type_from_identifier(url_index, name)
+    except ValueError as e:
+        possibilities = list(tron_jobs_completer(prefix='', client=client))
+        suggestions = suggest_possibilities(
+            word=name, possibilities=possibilities
+        )
+        raise SystemExit(f"Error: {e}{suggestions}")
 
     if tron_id.type not in obj_type_to_view_map:
         return

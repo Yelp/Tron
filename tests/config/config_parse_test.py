@@ -8,13 +8,13 @@ import tempfile
 
 import mock
 import pytz
-from testify import assert_equal
-from testify import assert_in
-from testify import run
-from testify import setup
-from testify import teardown
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests.assertions import assert_raises
 from tron.config import config_parse
 from tron.config import config_utils
@@ -98,6 +98,11 @@ def make_node_pools():
 
 def make_mesos_options():
     return schema.ConfigMesos(
+        master_address=None,
+        master_port=5050,
+        secret_file=None,
+        role='*',
+        principal="tron",
         enabled=False,
         default_volumes=(),
         dockercfg_location=None,
@@ -262,7 +267,6 @@ def make_master_jobs():
                             executor='mesos',
                             cpus=0.1,
                             mem=100,
-                            mesos_address='the-master.mesos',
                             docker_image='container:latest',
                         ),
                 }),
@@ -277,7 +281,6 @@ def make_tron_config(
     output_stream_dir='/tmp',
     command_context=None,
     ssh_options=None,
-    notification_options=None,
     time_zone=pytz.timezone("EST"),
     state_persistence=config_parse.DEFAULT_STATE_PERSISTENCE,
     nodes=None,
@@ -291,7 +294,6 @@ def make_tron_config(
         command_context=command_context or
         FrozenDict(batch_dir='/tron/batch/test/foo', python='/usr/bin/python'),
         ssh_options=ssh_options or make_ssh_options(),
-        notification_options=None,
         time_zone=time_zone,
         state_persistence=state_persistence,
         nodes=nodes or make_nodes(),
@@ -377,7 +379,6 @@ class ConfigTestCase(TestCase):
                         command="test_command_mesos",
                         cpus=.1,
                         mem=100,
-                        mesos_address='the-master.mesos',
                         docker_image='container:latest',
                     )
                 ]
@@ -399,28 +400,26 @@ class ConfigTestCase(TestCase):
         expected = make_tron_config()
 
         test_config = valid_config(self.config)
-        assert_equal(test_config.command_context, expected.command_context)
-        assert_equal(test_config.ssh_options, expected.ssh_options)
-        assert_equal(
-            test_config.notification_options,
-            expected.notification_options,
-        )
-        assert_equal(test_config.time_zone, expected.time_zone)
-        assert_equal(test_config.nodes, expected.nodes)
-        assert_equal(test_config.node_pools, expected.node_pools)
+
+        assert test_config.command_context == expected.command_context
+        assert test_config.ssh_options == expected.ssh_options
+        assert test_config.mesos_options == expected.mesos_options
+        assert test_config.time_zone == expected.time_zone
+        assert test_config.nodes == expected.nodes
+        assert test_config.node_pools == expected.node_pools
         for key in ['0', '1', '2', '3', '4', '_mesos']:
             job_name = f"MASTER.test_job{key}"
             assert job_name in test_config.jobs, f"{job_name} in test_config.jobs"
             assert job_name in expected.jobs, f"{job_name} in test_config.jobs"
             assert_equal(test_config.jobs[job_name], expected.jobs[job_name])
 
-        assert_equal(test_config, expected)
+        assert test_config == expected
 
     def test_empty_node_test(self):
         valid_config(dict(nodes=None))
 
 
-class NamedConfigTestCase(TestCase):
+class TestNamedConfig(TestCase):
     config = ConfigTestCase.JOBS_CONFIG
 
     def test_attributes(self):
@@ -455,8 +454,124 @@ class NamedConfigTestCase(TestCase):
         )
         assert_equal(test_config, expected)
 
+    def test_attributes_with_master_context(self):
+        expected = make_named_tron_config(
+            jobs=FrozenDict({
+                'test_namespace.test_job':
+                    make_job(
+                        name="test_namespace.test_job",
+                        namespace="test_namespace",
+                        schedule=ConfigIntervalScheduler(
+                            timedelta=datetime.timedelta(0, 20),
+                            jitter=None,
+                        ),
+                        expected_runtime=datetime.timedelta(1),
+                    )
+            })
+        )
+        master_config = dict(
+            nodes=[
+                dict(
+                    name="node0",
+                    hostname="node0",
+                )
+            ],
+            node_pools=[
+                dict(
+                    name="nodepool0",
+                    nodes=["node0"],
+                )
+            ]
+        )
+        test_config = validate_fragment(
+            'test_namespace',
+            dict(
+                jobs=[
+                    dict(
+                        name="test_job",
+                        namespace='test_namespace',
+                        node="node0",
+                        schedule="interval 20s",
+                        actions=[dict(name="action", command="command")],
+                        cleanup_action=dict(command="command"),
+                    )
+                ]
+            ),
+            master_config=master_config
+        )
+        assert_equal(test_config, expected)
 
-class JobConfigTestCase(TestCase):
+    def test_invalid_job_node_with_master_context(self):
+        master_config = dict(
+            nodes=[
+                dict(
+                    name="node0",
+                    hostname="node0",
+                )
+            ],
+        )
+        test_config = dict(
+            jobs=[
+                dict(
+                    name="test_job",
+                    namespace='test_namespace',
+                    node="node1",
+                    schedule="interval 20s",
+                    actions=[dict(name="action", command="command")],
+                    cleanup_action=dict(command="command"),
+                )
+            ]
+        )
+        expected_message = "Unknown node name node1 at test_namespace.NamedConfigFragment.jobs.Job.test_job.node"
+        exception = assert_raises(
+            ConfigError,
+            validate_fragment,
+            'test_namespace',
+            test_config,
+            master_config,
+        )
+        assert_in(expected_message, str(exception))
+
+    def test_invalid_action_node_with_master_context(self):
+        master_config = dict(
+            nodes=[
+                dict(
+                    name="node0",
+                    hostname="node0",
+                )
+            ],
+            node_pools=[
+                dict(
+                    name="nodepool0",
+                    nodes=["node0"],
+                )
+            ]
+        )
+        test_config = dict(
+            jobs=[
+                dict(
+                    name="test_job",
+                    namespace='test_namespace',
+                    node="node0",
+                    schedule="interval 20s",
+                    actions=[dict(name="action", node="nodepool1", command="command")],
+                    cleanup_action=dict(command="command"),
+                )
+            ]
+        )
+        expected_message = "Unknown node name nodepool1 at test_namespace.NamedConfigFragment.jobs.Job.test_job.actions.Action.action.node"
+
+        exception = assert_raises(
+            ConfigError,
+            validate_fragment,
+            'test_namespace',
+            test_config,
+            master_config,
+        )
+        assert_in(expected_message, str(exception))
+
+
+class TestJobConfig(TestCase):
     def test_no_actions(self):
         test_config = dict(
             jobs=[
@@ -677,7 +792,7 @@ class JobConfigTestCase(TestCase):
         assert_in(expected_msg, str(exception))
 
 
-class NodeConfigTestCase(TestCase):
+class TestNodeConfig(TestCase):
     def test_validate_node_pool(self):
         config_node_pool = valid_node_pool(
             dict(name="theName", nodes=["node1", "node2"]),
@@ -787,7 +902,7 @@ class NodeConfigTestCase(TestCase):
         assert_in(expected_message, str(exception))
 
 
-class ValidateJobsTestCase(TestCase):
+class TestValidateJobs(TestCase):
     def test_valid_jobs_success(self):
         test_config = dict(
             jobs=[
@@ -828,7 +943,6 @@ class ValidateJobsTestCase(TestCase):
                                     mode='RO'
                                 )
                             ],
-                            mesos_address='http://my-mesos-master.com'
                         )
                     ],
                     cleanup_action=dict(command="command")
@@ -882,7 +996,6 @@ class ValidateJobsTestCase(TestCase):
                                         mode='RO',
                                     ),
                                 ),
-                                mesos_address='http://my-mesos-master.com',
                                 expected_runtime=datetime.timedelta(hours=24),
                             ),
                     }),
@@ -900,7 +1013,7 @@ class ValidateJobsTestCase(TestCase):
         assert_equal(expected_jobs, test_config['jobs'])
 
 
-class ValidMesosActionTestCase(TestCase):
+class TestValidMesosAction(TestCase):
     def test_missing_docker_image(self):
         config = dict(
             name='test_missing',
@@ -908,7 +1021,6 @@ class ValidMesosActionTestCase(TestCase):
             executor=schema.ExecutorTypes.mesos,
             cpus=0.2,
             mem=150,
-            mesos_address='http://hello.org',
         )
         assert_raises(
             ConfigError,
@@ -923,7 +1035,6 @@ class ValidMesosActionTestCase(TestCase):
             executor=schema.ExecutorTypes.mesos,
             cpus=0.2,
             mem=150,
-            mesos_address='http://hello.org',
         )
         assert_raises(
             ConfigError,
@@ -933,7 +1044,7 @@ class ValidMesosActionTestCase(TestCase):
         )
 
 
-class ValidCleanupActionNameTestCase(TestCase):
+class TestValidCleanupActionName(TestCase):
     def test_valid_cleanup_action_name_pass(self):
         name = valid_cleanup_action_name(CLEANUP_ACTION_NAME, None)
         assert_equal(CLEANUP_ACTION_NAME, name)
@@ -947,7 +1058,7 @@ class ValidCleanupActionNameTestCase(TestCase):
         )
 
 
-class ValidOutputStreamDirTestCase(TestCase):
+class TestValidOutputStreamDir(TestCase):
     @setup
     def setup_dir(self):
         self.dir = tempfile.mkdtemp()
@@ -985,7 +1096,7 @@ class ValidOutputStreamDirTestCase(TestCase):
         assert_equal(path, dir)
 
 
-class BuildFormatStringValidatorTestCase(TestCase):
+class TestBuildFormatStringValidator(TestCase):
     @setup
     def setup_keys(self):
         self.context = dict.fromkeys(['one', 'seven', 'stars'])
@@ -995,7 +1106,7 @@ class BuildFormatStringValidatorTestCase(TestCase):
         template = "The %(one)s thing I %(seven)s is %(stars)s"
         assert self.validator(template, NullConfigContext)
 
-    def test_validator_error(self):
+    def test_validator_unknown_variable_error(self):
         template = "The %(one)s thing I %(seven)s is %(unknown)s"
         exception = assert_raises(
             ConfigError,
@@ -1004,6 +1115,32 @@ class BuildFormatStringValidatorTestCase(TestCase):
             NullConfigContext,
         )
         assert_in("Unknown context variable", str(exception))
+
+    def test_validator_no_type_error(self):
+        templates = [
+            "The %(one) %(seven)s thing is %(stars)s",
+            "The %(one) %(seven) thing is %(stars)s",
+            "The %(one) something %(seven)s thing is %(stars)s",
+            "The %(one)s %(seven)s thing is %(stars)",
+        ]
+        for template in templates:
+            exception = assert_raises(
+                ConfigError,
+                self.validator,
+                template,
+                NullConfigContext,
+            )
+            assert_in("Context variable expression is invalid", str(exception))
+
+    def test_validator_wrong_type_error(self):
+        template = "The %(one)d %(seven)s thing is %(stars)s"
+        exception = assert_raises(
+            ConfigError,
+            self.validator,
+            template,
+            NullConfigContext,
+        )
+        assert_in("Context variable expression is invalid", str(exception))
 
     def test_validator_passes_with_context(self):
         template = "The %(one)s thing I %(seven)s is %(mars)s"
@@ -1016,7 +1153,7 @@ class BuildFormatStringValidatorTestCase(TestCase):
         assert self.validator(template, context)
 
 
-class ValidateConfigMappingTestCase(TestCase):
+class TestValidateConfigMapping(TestCase):
     config = dict(**BASE_CONFIG, command_context=dict(some_var="The string"))
 
     def test_validate_config_mapping_missing_master(self):
@@ -1027,7 +1164,7 @@ class ValidateConfigMappingTestCase(TestCase):
 
     def test_validate_config_mapping(self):
         master_config = self.config
-        other_config = NamedConfigTestCase.config
+        other_config = TestNamedConfig.config
         config_mapping = {
             'other': other_config,
             MASTER_NAMESPACE: master_config,
@@ -1038,12 +1175,12 @@ class ValidateConfigMappingTestCase(TestCase):
         assert_equal(result[1][0], 'other')
 
 
-class ConfigContainerTestCase(TestCase):
+class TestConfigContainer(TestCase):
     config = BASE_CONFIG
 
     @setup
     def setup_container(self):
-        other_config = NamedConfigTestCase.config
+        other_config = TestNamedConfig.config
         self.config_mapping = {
             MASTER_NAMESPACE: valid_config(self.config),
             'other': validate_fragment('other', other_config),
@@ -1053,7 +1190,7 @@ class ConfigContainerTestCase(TestCase):
     def test_create(self):
         config_mapping = {
             MASTER_NAMESPACE: self.config,
-            'other': NamedConfigTestCase.config,
+            'other': TestNamedConfig.config,
         }
 
         container = config_parse.ConfigContainer.create(config_mapping)
@@ -1096,7 +1233,7 @@ class ConfigContainerTestCase(TestCase):
         assert_equal(node_names, expected)
 
 
-class ValidateSSHOptionsTestCase(TestCase):
+class TestValidateSSHOptions(TestCase):
     @setup
     def setup_context(self):
         self.context = config_utils.NullConfigContext
@@ -1123,7 +1260,7 @@ class ValidateSSHOptionsTestCase(TestCase):
         assert_equal(config.agent, True)
 
 
-class ValidateIdentityFileTestCase(TestCase):
+class TestValidateIdentityFile(TestCase):
     @setup
     def setup_context(self):
         self.context = config_utils.NullConfigContext
@@ -1165,7 +1302,7 @@ class ValidateIdentityFileTestCase(TestCase):
         assert_equal(path, file_path)
 
 
-class ValidKnownHostsFileTestCase(TestCase):
+class TestValidKnownHostsFile(TestCase):
     @setup
     def setup_context(self):
         self.context = config_utils.NullConfigContext
@@ -1197,7 +1334,7 @@ class ValidKnownHostsFileTestCase(TestCase):
         assert_equal(filename, expected)
 
 
-class ValidateVolumeTestCase(TestCase):
+class TestValidateVolume(TestCase):
     @setup
     def setup_context(self):
         self.context = config_utils.NullConfigContext
@@ -1253,7 +1390,7 @@ class ValidateVolumeTestCase(TestCase):
         )
 
     def test_mesos_default_volumes(self):
-        mesos_options = {}
+        mesos_options = {'master_address': 'mesos_master'}
         mesos_options['default_volumes'] = [
             {
                 'container_path': '/nail/srv',

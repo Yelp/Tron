@@ -10,7 +10,6 @@ from collections import deque
 from six.moves import filter
 
 from tron import command_context
-from tron import event
 from tron import node
 from tron.core.actionrun import ActionRun
 from tron.core.actionrun import ActionRunFactory
@@ -63,8 +62,6 @@ class JobRun(Observable, Observer):
         self._action_runs = None
         self.action_graph = action_graph
         self.manual = manual
-        self.event = event.get_recorder(self.full_id)
-        self.event.ok('created')
 
         if action_runs:
             self.action_runs = action_runs
@@ -194,16 +191,14 @@ class JobRun(Observable, Observer):
 
     def start(self):
         """Start this JobRun as a scheduled run (not a manual run)."""
-        self.event.info('start')
         if self.action_runs.has_startable_action_runs and self._do_start():
             return True
 
     def _do_start(self):
-        log.info("Starting JobRun %s", self.id)
-
+        log.info(f"{self} starting")
         self.action_runs.ready()
         if any(self._start_action_runs()):
-            self.event.ok('started')
+            log.info(f'{self} started')
             return True
 
     def stop(self):
@@ -263,17 +258,16 @@ class JobRun(Observable, Observer):
         Triggers an event to notifies the Job that is is done.
         """
         if self.action_runs.is_failed:
-            self.event.critical('failed')
+            log.error(f'{self} failed')
         else:
-            self.event.ok('succeeded')
+            log.info(f'{self} succeeded')
 
         # Notify Job that this JobRun is complete
         self.notify(self.NOTIFY_DONE)
 
     def cleanup(self):
         """Cleanup any resources used by this JobRun."""
-        self.event.notice('removed')
-        event.EventManager.get_instance().remove(self.full_id)
+        log.info(f'{self} removed')
         self.clear_observers()
         self.action_runs.cleanup()
         self.node = None

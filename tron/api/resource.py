@@ -9,6 +9,7 @@ import collections
 import datetime
 import logging
 import re
+import traceback
 
 import six
 
@@ -20,7 +21,6 @@ except ImportError:
 
 from twisted.web import http, resource, static, server
 
-from tron import event
 from tron.api import adapter, controller
 from tron.api import requestargs
 from tron.api.async_resource import AsyncResource
@@ -74,6 +74,12 @@ def handle_command(request, api_controller, obj, **kwargs):
     except controller.UnknownCommandError as e:
         log.warning("Unknown command %s for %s", command, obj)
         return respond(request, {'error': str(e)}, code=http.NOT_IMPLEMENTED)
+    except Exception as e:
+        log.exception('%r while executing command %s for %s', e, command, obj)
+        trace = traceback.format_exc()
+        return respond(
+            request, {'error': trace}, code=http.INTERNAL_SERVER_ERROR
+        )
 
 
 def resource_from_collection(collection, name, child_resource):
@@ -124,8 +130,6 @@ class JobRunResource(resource.Resource):
             return self
 
         action_name = maybe_decode(action_name)
-        if action_name == '_events':
-            return EventResource(self.job_run.id)
         if action_name in self.job_run.action_runs:
             action_run = self.job_run.action_runs[action_name]
             return ActionRunResource(action_run, self.job_run)
@@ -174,9 +178,6 @@ class JobResource(resource.Resource):
             return self
 
         run_id = maybe_decode(run_id)
-        if run_id == '_events':
-            return EventResource(self.job_scheduler.get_name())
-
         run = self.get_run_from_identifier(run_id)
         if run:
             return JobRunResource(run, self.job_scheduler)
@@ -381,24 +382,6 @@ class StatusResource(resource.Resource):
         return respond(request, {'status': "I'm alive."})
 
 
-class EventResource(resource.Resource):
-
-    isLeaf = True
-
-    def __init__(self, entity_name):
-        resource.Resource.__init__(self)
-        self.entity_name = entity_name
-
-    @AsyncResource.bounded
-    def render_GET(self, request):
-        recorder = event.get_recorder(self.entity_name)
-        response_data = adapter.adapt_many(
-            adapter.EventAdapter,
-            recorder.list(),
-        )
-        return respond(request, dict(data=response_data))
-
-
 class ApiRootResource(resource.Resource):
     def __init__(self, mcp):
         self._master_control = mcp
@@ -412,7 +395,6 @@ class ApiRootResource(resource.Resource):
 
         self.putChild(b'config', ConfigResource(mcp))
         self.putChild(b'status', StatusResource(mcp))
-        self.putChild(b'events', EventResource(''))
         self.putChild(b'', self)
 
     @AsyncResource.bounded

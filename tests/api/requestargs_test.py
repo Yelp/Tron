@@ -2,20 +2,19 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import datetime
+from unittest.mock import MagicMock
 
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import TestCase
-
-from tests.testingutils import Turtle
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import TestCase
 from tron.api.requestargs import get_bool
 from tron.api.requestargs import get_datetime
 from tron.api.requestargs import get_integer
 from tron.api.requestargs import get_string
 
 
-class RequestArgsTestCase(TestCase):
+class TestRequestArgs(TestCase):
     @setup
     def setup_args(self):
         self.args = {
@@ -25,7 +24,7 @@ class RequestArgsTestCase(TestCase):
             b'datetime': [b'2012-03-14 15:09:26'],
         }
         self.datetime = datetime.datetime(2012, 3, 14, 15, 9, 26)
-        self.request = Turtle(args=self.args)
+        self.request = MagicMock(args=self.args)
 
     def _add_arg(self, name, value):
         name = name.encode()

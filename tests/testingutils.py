@@ -6,12 +6,12 @@ import logging
 import time
 
 import mock
-from testify import class_setup
-from testify import class_teardown
-from testify import setup
-from testify import teardown
-from testify import TestCase
 
+from testifycompat import class_setup
+from testifycompat import class_teardown
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tron.utils import timeutils
 
 log = logging.getLogger(__name__)
@@ -37,7 +37,7 @@ class MockReactorTestCase(TestCase):
 
     @setup
     def setup_mock_reactor(self):
-        self.reactor = Turtle()
+        self.reactor = mock.MagicMock()
         setattr(self.module_to_mock, 'reactor', self.reactor)
 
 
@@ -78,26 +78,6 @@ def retry(max_tries=3, delay=0.1, exceptions=(KeyError, IndexError)):
         return wrap
 
     return wrapper
-
-
-# TODO: remove when replaced with mock
-class Turtle(object):
-    """A more complete Mock implementation."""
-
-    def __init__(self, *args, **kwargs):
-        self.__dict__.update(kwargs)
-        self.calls = []
-        self.returns = []
-
-    def __getattr__(self, name):
-        self.__dict__[name] = type(self)()
-        return self.__dict__[name]
-
-    def __call__(self, *args, **kwargs):
-        self.calls.append((args, kwargs))
-        new_turtle = type(self)()
-        self.returns.append(new_turtle)
-        return new_turtle
 
 
 def autospec_method(method, *args, **kwargs):

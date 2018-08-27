@@ -44,7 +44,6 @@ TronConfig = config_object_factory(
         'state_persistence',  # ConfigState
         'command_context',  # FrozenDict of str
         'ssh_options',  # ConfigSSHOptions
-        'notification_options',  # NotificationOptions or None
         'time_zone',  # pytz time zone
         'nodes',  # FrozenDict of ConfigNode
         'node_pools',  # FrozenDict of ConfigNodePool
@@ -57,14 +56,6 @@ NamedTronConfig = config_object_factory(
     name='NamedTronConfig',
     optional=[
         'jobs',  # FrozenDict of ConfigJob
-    ],
-)
-
-NotificationOptions = config_object_factory(
-    name='NotificationOptions',
-    required=[
-        'smtp_host',  # str
-        'notification_addr',  # str
     ],
 )
 
@@ -110,6 +101,11 @@ ConfigState = config_object_factory(
 ConfigMesos = config_object_factory(
     name='ConfigMesos',
     optional=[
+        'master_address',
+        'master_port',
+        'secret_file',
+        'principal',
+        'role',
         'enabled',
         'default_volumes',
         'dockercfg_location',
@@ -159,7 +155,6 @@ ConfigAction = config_object_factory(
         'docker_parameters',  # List of ConfigParameter
         'env',  # dict
         'extra_volumes',  # List of ConfigVolume
-        'mesos_address',  # str
         'expected_runtime',  # datetime.Timedelta
     ],
 )
@@ -183,7 +178,6 @@ ConfigCleanupAction = config_object_factory(
         'docker_parameters',  # List of ConfigParameter
         'env',  # dict
         'extra_volumes',  # List of ConfigVolume
-        'mesos_address',  # str
     ],
 )
 

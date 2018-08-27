@@ -2,14 +2,14 @@ from __future__ import absolute_import
 from __future__ import unicode_literals
 
 import mock
-from testify import setup
-from testify import TestCase
-from testify.assertions import assert_equal
 
+from testifycompat import assert_equal
+from testifycompat import setup
+from testifycompat import TestCase
 from tron import eventloop
 
 
-class UniqueCallTestCase(TestCase):
+class TestUniqueCall(TestCase):
     @setup
     def setup_monitor(self):
         self.func = mock.Mock()

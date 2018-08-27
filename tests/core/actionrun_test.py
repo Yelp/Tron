@@ -4,22 +4,21 @@ from __future__ import unicode_literals
 import datetime
 import shutil
 import tempfile
+from unittest import mock
+from unittest.mock import MagicMock
 
-import mock
 import six
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import teardown
-from testify import TestCase
-from testify import turtle
-from testify.assertions import assert_in
-from testify.assertions import assert_raises
 
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import assert_raises
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests import testingutils
 from tests.assertions import assert_length
 from tests.testingutils import autospec_method
-from tests.testingutils import Turtle
 from tron import actioncommand
 from tron import node
 from tron.config.schema import ExecutorTypes
@@ -34,11 +33,15 @@ from tron.core.actionrun import SSHActionRun
 from tron.serialize import filehandler
 
 
-class ActionRunFactoryTestCase(TestCase):
+class TestActionRunFactory(TestCase):
     @setup
     def setup_action_runs(self):
         self.run_time = datetime.datetime(2012, 3, 14, 15, 9, 26)
-        actions = [Turtle(name='act1'), Turtle(name='act2')]
+        a1 = MagicMock()
+        a1.name = 'act1'
+        a2 = MagicMock()
+        a2.name = 'act2'
+        actions = [a1, a2]
         self.action_graph = actiongraph.ActionGraph(
             actions,
             {a.name: a
@@ -107,12 +110,12 @@ class ActionRunFactoryTestCase(TestCase):
         assert_equal(collection.run_map['cleanup'].action_name, 'cleanup')
 
     def test_build_run_for_action(self):
-        action = Turtle(
-            name='theaction',
+        action = MagicMock(
             node_pool=None,
             is_cleanup=False,
             command="doit",
         )
+        action.name = 'theaction'
         action_run = ActionRunFactory.build_run_for_action(
             self.job_run,
             action,
@@ -126,7 +129,8 @@ class ActionRunFactoryTestCase(TestCase):
         assert_equal(action_run.command, action.command)
 
     def test_build_run_for_action_with_node(self):
-        action = Turtle(name='theaction', is_cleanup=True, command="doit")
+        action = MagicMock(name='theaction', is_cleanup=True, command="doit")
+        action.node_pool = mock.create_autospec(node.NodePool)
         action_run = ActionRunFactory.build_run_for_action(
             self.job_run,
             action,
@@ -134,13 +138,13 @@ class ActionRunFactoryTestCase(TestCase):
         )
 
         assert_equal(action_run.job_run_id, self.job_run.id)
-        assert_equal(action_run.node, action.node_pool.next.returns[0])
+        assert_equal(action_run.node, action.node_pool.next())
         assert action_run.is_cleanup
         assert_equal(action_run.action_name, action.name)
         assert_equal(action_run.command, action.command)
 
     def test_build_run_for_ssh_action(self):
-        action = Turtle(
+        action = MagicMock(
             name='theaction',
             command="doit",
             executor=ExecutorTypes.ssh,
@@ -153,7 +157,7 @@ class ActionRunFactoryTestCase(TestCase):
         assert_equal(action_run.__class__, SSHActionRun)
 
     def test_build_run_for_mesos_action(self):
-        action = Turtle(
+        action = MagicMock(
             name='theaction',
             command="doit",
             executor=ExecutorTypes.mesos,
@@ -169,7 +173,6 @@ class ActionRunFactoryTestCase(TestCase):
             extra_volumes=[{
                 'path': '/tmp'
             }],
-            mesos_address='fake-mesos-master.com',
         )
         action_run = ActionRunFactory.build_run_for_action(
             self.job_run,
@@ -184,7 +187,6 @@ class ActionRunFactoryTestCase(TestCase):
         assert_equal(action_run.docker_parameters, action.docker_parameters)
         assert_equal(action_run.env, action.env)
         assert_equal(action_run.extra_volumes, action.extra_volumes)
-        assert_equal(action_run.mesos_address, action.mesos_address)
 
     def test_action_run_from_state_default(self):
         state_data = self.action_state_data
@@ -207,7 +209,6 @@ class ActionRunFactoryTestCase(TestCase):
         state_data['docker_parameters'] = [{'key': 'test', 'value': 123}]
         state_data['env'] = {'TESTING': 'true'}
         state_data['extra_volumes'] = [{'path': '/tmp'}]
-        state_data['mesos_address'] = 'fake-mesos-master.com'
         action_run = ActionRunFactory.action_run_from_state(
             self.job_run,
             state_data,
@@ -223,13 +224,12 @@ class ActionRunFactoryTestCase(TestCase):
         )
         assert_equal(action_run.env, state_data['env'])
         assert_equal(action_run.extra_volumes, state_data['extra_volumes'])
-        assert_equal(action_run.mesos_address, state_data['mesos_address'])
 
         assert not action_run.is_cleanup
         assert_equal(action_run.__class__, MesosActionRun)
 
 
-class ActionRunTestCase(TestCase):
+class TestActionRun(TestCase):
     @setup
     def setup_action_run(self):
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
@@ -263,7 +263,7 @@ class ActionRunTestCase(TestCase):
         self.action_run.fail()
         assert not self.action_run.start()
 
-    @mock.patch('tron.core.actionrun.log')
+    @mock.patch('tron.core.actionrun.log', autospec=True)
     def test_start_invalid_command(self, _log):
         self.action_run.bare_command = "%(notfound)s"
         self.action_run.machine.transition('ready')
@@ -336,7 +336,7 @@ class ActionRunTestCase(TestCase):
         self.action_run.bare_command = "new command"
         assert_equal(self.action_run.command, self.rendered_command)
 
-    @mock.patch('tron.core.actionrun.log')
+    @mock.patch('tron.core.actionrun.log', autospec=True)
     def test_command_failed_render(self, _log):
         self.action_run.bare_command = "%(this_is_missing)s"
         assert_equal(self.action_run.command, ActionRun.FAILED_RENDER)
@@ -373,7 +373,7 @@ class ActionRunTestCase(TestCase):
         )
 
 
-class SSHActionRunTestCase(TestCase):
+class TestSSHActionRun(TestCase):
     @setup
     def setup_action_run(self):
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
@@ -398,7 +398,8 @@ class SSHActionRunTestCase(TestCase):
         def raise_error(c):
             raise node.Error("The error")
 
-        self.action_run.node = turtle.Turtle(submit_command=raise_error)
+        self.action_run.node = mock.MagicMock()
+        self.action_run.node.submit_command.side_effect = raise_error
         self.action_run.machine.transition('ready')
         assert not self.action_run.start()
         assert_equal(self.action_run.exit_status, -2)
@@ -454,7 +455,7 @@ class SSHActionRunTestCase(TestCase):
         assert_equal(self.action_run.exit_statuses, [-1])
         assert_equal(self.action_run.retries_remaining, 0)
 
-    @mock.patch('twisted.internet.reactor.callLater')
+    @mock.patch('twisted.internet.reactor.callLater', autospec=True)
     def test_retries_delay(self, callLater):
         self.action_run.retries_delay = datetime.timedelta()
         self.action_run.retries_remaining = 2
@@ -545,7 +546,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             'end_time': 'end_time',
             'state': 'succeeded',
         }
-        self.run_node = Turtle()
+        self.run_node = MagicMock()
 
     def test_from_state(self):
         state_data = self.state_data
@@ -597,7 +598,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         )
         assert_equal(action_run.node, self.run_node)
 
-    @mock.patch('tron.core.actionrun.node.NodePoolRepository')
+    @mock.patch('tron.core.actionrun.node.NodePoolRepository', autospec=True)
     def test_from_state_with_node_exists(self, mock_store):
         ActionRun.from_state(
             self.state_data,
@@ -646,7 +647,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
         assert_equal(action_run.rendered_command, self.state_data['command'])
 
 
-class ActionRunCollectionTestCase(TestCase):
+class TestActionRunCollection(TestCase):
     def _build_run(self, name):
         mock_node = mock.create_autospec(node.Node)
         return ActionRun(
@@ -661,13 +662,15 @@ class ActionRunCollectionTestCase(TestCase):
     def setup_runs(self):
         action_names = ['action_name', 'second_name', 'cleanup']
 
-        action_graph = [
-            mock.Mock(name=name, required_actions=[]) for name in action_names
-        ]
+        action_graph = []
+        for name in action_names:
+            m = mock.Mock(name=name, required_actions=[])
+            m.name = name
+            action_graph.append(m)
+
         self.action_graph = actiongraph.ActionGraph(
             action_graph,
-            {a.name: a
-             for a in action_graph},
+            {a.name: a for a in action_graph},
         )
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.command = "do command"
@@ -686,7 +689,9 @@ class ActionRunCollectionTestCase(TestCase):
         assert self.collection.proxy_action_runs_with_cleanup
 
     def test_action_runs_for_actions(self):
-        actions = [Turtle(name='action_name')]
+        m = MagicMock()
+        m.name = 'action_name'
+        actions = [m]
         action_runs = self.collection.action_runs_for_actions(actions)
         assert_equal(list(action_runs), self.action_runs[:1])
 
@@ -812,7 +817,7 @@ class ActionRunCollectionTestCase(TestCase):
         assert_equal(self.collection.end_time, None)
 
 
-class ActionRunCollectionIsRunBlockedTestCase(TestCase):
+class TestActionRunCollectionIsRunBlocked(TestCase):
     def _build_run(self, name):
         mock_node = mock.create_autospec(node.Node)
         return ActionRun(
@@ -827,9 +832,12 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
     def setup_collection(self):
         action_names = ['action_name', 'second_name', 'cleanup']
 
-        action_graph = [
-            Turtle(name=name, required_actions=[]) for name in action_names
-        ]
+        action_graph = []
+        for name in action_names:
+            m = MagicMock(name=name, required_actions=[])
+            m.name = name
+            action_graph.append(m)
+
         self.second_act = second_act = action_graph.pop(1)
         second_act.required_actions.append(action_graph[0])
         action_map = {a.name: a for a in action_graph}
@@ -862,10 +870,10 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
         assert not self.collection._is_run_blocked(self.run_map['second_name'])
 
     def test_is_run_blocked_required_actions_blocked(self):
-        third_act = Turtle(
-            name='third_act',
+        third_act = MagicMock(
             required_actions=[self.second_act],
         )
+        third_act.name = 'third_act'
         self.action_graph.action_map['third_act'] = third_act
         self.run_map['third_act'] = self._build_run('third_act')
 
@@ -893,12 +901,11 @@ class ActionRunCollectionIsRunBlockedTestCase(TestCase):
         assert not self.collection._is_run_blocked(self.run_map['second_name'])
 
 
-class MesosActionRunTestCase(TestCase):
+class TestMesosActionRun(TestCase):
     @setup
     def setup_action_run(self):
         self.output_path = mock.MagicMock()
         self.command = "do the command"
-        self.mesos_address = 'mesos-master.com'
         self.other_task_kwargs = {
             'cpus': 1,
             'mem': 50,
@@ -917,7 +924,6 @@ class MesosActionRunTestCase(TestCase):
             rendered_command=self.command,
             output_path=self.output_path,
             executor=ExecutorTypes.mesos,
-            mesos_address=self.mesos_address,
             **self.other_task_kwargs
         )
 
@@ -933,7 +939,7 @@ class MesosActionRunTestCase(TestCase):
             self.action_run.submit_command()
 
             mock_get_cluster = mock_cluster_repo.get_cluster
-            mock_get_cluster.assert_called_once_with(self.mesos_address)
+            mock_get_cluster.assert_called_once_with()
             mock_get_cluster.return_value.create_task.assert_called_once_with(
                 action_run_id=self.action_run.id,
                 command=self.command,
@@ -958,16 +964,16 @@ class MesosActionRunTestCase(TestCase):
         self.action_run.submit_command()
 
         mock_get_cluster = mock_cluster_repo.get_cluster
-        mock_get_cluster.assert_called_once_with(self.mesos_address)
+        mock_get_cluster.assert_called_once_with()
         assert self.action_run.is_failed
 
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_kill_task(self, mock_cluster_repo):
         mock_get_cluster = mock_cluster_repo.get_cluster
-        self.action_run.task_id = 'fake_task_id'
+        self.action_run.mesos_task_id = 'fake_task_id'
         error_message = self.action_run.kill()
         mock_get_cluster.return_value.kill.assert_called_once_with(
-            self.action_run.task_id
+            self.action_run.mesos_task_id
         )
         assert_equal(
             error_message,
@@ -984,10 +990,10 @@ class MesosActionRunTestCase(TestCase):
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)
     def test_stop_task(self, mock_cluster_repo):
         mock_get_cluster = mock_cluster_repo.get_cluster
-        self.action_run.task_id = 'fake_task_id'
+        self.action_run.mesos_task_id = 'fake_task_id'
         self.action_run.stop()
         mock_get_cluster.return_value.kill.assert_called_once_with(
-            self.action_run.task_id
+            self.action_run.mesos_task_id
         )
 
     @mock.patch('tron.core.actionrun.MesosClusterRepository', autospec=True)

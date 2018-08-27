@@ -6,12 +6,12 @@ import shutil
 import tempfile
 
 import mock
-from testify import assert_equal
-from testify import run
-from testify import setup
-from testify import teardown
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import run
+from testifycompat import setup
+from testifycompat import teardown
+from testifycompat import TestCase
 from tests.assertions import assert_raises
 from tests.testingutils import autospec_method
 from tron import yaml
@@ -20,7 +20,7 @@ from tron.config import manager
 from tron.config import schema
 
 
-class FromStringTestCase(TestCase):
+class TestFromString(TestCase):
     def test_from_string_valid(self):
         content = "{'one': 'thing', 'another': 'thing'}\n"
         actual = manager.from_string(content)
@@ -32,7 +32,7 @@ class FromStringTestCase(TestCase):
         assert_raises(ConfigError, manager.from_string, content)
 
 
-class ReadWriteTestCase(TestCase):
+class TestReadWrite(TestCase):
     @setup
     def setup_tempfile(self):
         self.filename = tempfile.NamedTemporaryFile().name
@@ -54,7 +54,7 @@ class ReadWriteTestCase(TestCase):
         assert_equal(content, actual)
 
 
-class ManifestFileTestCase(TestCase):
+class TestManifestFile(TestCase):
     @setup
     def setup_manifest(self):
         self.temp_dir = tempfile.mkdtemp()
@@ -65,7 +65,7 @@ class ManifestFileTestCase(TestCase):
     def teardown_dir(self):
         shutil.rmtree(self.temp_dir)
 
-    @mock.patch('tron.config.manager.os.path')
+    @mock.patch('tron.config.manager.os.path', autospec=True)
     @mock.patch('tron.config.manager.write', autospec=True)
     def test_create_exists(self, mock_write, mock_os):
         mock_os.isfile.return_value = True
@@ -99,7 +99,7 @@ class ManifestFileTestCase(TestCase):
         assert_equal(self.manifest.get_file_mapping(), file_mapping)
 
 
-class ConfigManagerTestCase(TestCase):
+class TestConfigManager(TestCase):
 
     content = {'one': 'stars', 'two': 'other'}
     raw_content = "{'one': 'stars', 'two': 'other'}\n"
@@ -193,7 +193,7 @@ class ConfigManagerTestCase(TestCase):
         expected_mapping[name] = self.content
         mock_config_container.create.assert_called_with(expected_mapping)
 
-    @mock.patch('tron.config.manager.read')
+    @mock.patch('tron.config.manager.read', autospec=True)
     @mock.patch(
         'tron.config.manager.config_parse.ConfigContainer',
         autospec=True,
@@ -224,7 +224,7 @@ class ConfigManagerTestCase(TestCase):
         assert_equal(hash_digest, manager.hash_digest(content))
 
 
-class CreateNewConfigTestCase(TestCase):
+class TestCreateNewConfig(TestCase):
     @mock.patch('tron.config.manager.os.makedirs', autospec=True)
     @mock.patch('tron.config.manager.ManifestFile', autospec=True)
     @mock.patch('tron.config.manager.write_raw', autospec=True)

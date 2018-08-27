@@ -25,6 +25,7 @@ from tron.config.config_utils import build_list_of_type_validator
 from tron.config.config_utils import ConfigContext
 from tron.config.config_utils import PartialConfigContext
 from tron.config.config_utils import valid_bool
+from tron.config.config_utils import valid_context_variable_expr
 from tron.config.config_utils import valid_dict
 from tron.config.config_utils import valid_float
 from tron.config.config_utils import valid_identifier
@@ -45,7 +46,6 @@ from tron.config.schema import ConfigState
 from tron.config.schema import ConfigVolume
 from tron.config.schema import MASTER_NAMESPACE
 from tron.config.schema import NamedTronConfig
-from tron.config.schema import NotificationOptions
 from tron.config.schema import TronConfig
 from tron.utils.dicts import FrozenDict
 
@@ -67,11 +67,15 @@ def build_format_string_validator(context_object):
         )
 
         try:
+            valid_context_variable_expr(value, config_context)
             value % context
             return value
         except (KeyError, ValueError) as e:
             error_msg = "Unknown context variable %s at %s: %s"
             raise ConfigError(error_msg % (e, config_context.path, value))
+        except (TypeError) as e:
+            error_msg = "Wrong command format %s: %s at %s"
+            raise ConfigError(error_msg % (value, e, config_context.path))
 
     return validator
 
@@ -237,15 +241,6 @@ class ValidateSSHOptions(Validator):
 valid_ssh_options = ValidateSSHOptions()
 
 
-class ValidateNotificationOptions(Validator):
-    """Validate notification options."""
-    config_class = NotificationOptions
-    optional = True
-
-
-valid_notification_options = ValidateNotificationOptions()
-
-
 class ValidateNode(Validator):
     config_class = schema.ConfigNode
     validators = {
@@ -308,7 +303,7 @@ action_context = command_context.build_filled_context(
 
 
 def valid_mesos_action(action, config_context):
-    required_keys = {'cpus', 'mem', 'docker_image', 'mesos_address'}
+    required_keys = {'cpus', 'mem', 'docker_image'}
     if action.get('executor') == schema.ExecutorTypes.mesos:
         missing_keys = required_keys - set(action.keys())
         if missing_keys:
@@ -339,7 +334,6 @@ class ValidateAction(Validator):
         'docker_parameters': None,
         'env': None,
         'extra_volumes': None,
-        'mesos_address': None,
     }
     requires = build_list_of_type_validator(
         valid_action_name,
@@ -378,8 +372,6 @@ class ValidateAction(Validator):
             valid_dict,
         'extra_volumes':
             build_list_of_type_validator(valid_volume, allow_empty=True),
-        'mesos_address':
-            valid_string,
     }
 
     def post_validation(self, action, config_context):
@@ -412,7 +404,6 @@ class ValidateCleanupAction(Validator):
         'docker_parameters': None,
         'env': None,
         'extra_volumes': None,
-        'mesos_address': None,
     }
     validators = {
         'name':
@@ -445,8 +436,6 @@ class ValidateCleanupAction(Validator):
             valid_dict,
         'extra_volumes':
             build_list_of_type_validator(valid_volume, allow_empty=True),
-        'mesos_address':
-            valid_string,
     }
 
     def post_validation(self, action, config_context):
@@ -588,6 +577,11 @@ class ValidateMesos(Validator):
     config_class = ConfigMesos
     option = True
     defaults = {
+        'master_address': None,
+        'master_port': 5050,
+        'secret_file': None,
+        'role': '*',
+        'principal': 'tron',
         'enabled': False,
         'default_volumes': (),
         'dockercfg_location': None,
@@ -595,6 +589,14 @@ class ValidateMesos(Validator):
     }
 
     validators = {
+        'master_address':
+            valid_string,
+        'master_port':
+            valid_int,
+        'secret':
+            valid_string,
+        'role':
+            valid_string,
         'enabled':
             valid_bool,
         'default_volumes':
@@ -638,7 +640,6 @@ class ValidateConfig(Validator):
         'output_stream_dir': None,
         'command_context': {},
         'ssh_options': ConfigSSHOptions(**ValidateSSHOptions.defaults),
-        'notification_options': None,
         'time_zone': None,
         'state_persistence': DEFAULT_STATE_PERSISTENCE,
         'nodes': {
@@ -655,7 +656,6 @@ class ValidateConfig(Validator):
         'output_stream_dir': valid_output_stream_dir,
         'command_context': valid_command_context,
         'ssh_options': valid_ssh_options,
-        'notification_options': valid_notification_options,
         'time_zone': valid_time_zone,
         'state_persistence': valid_state_persistence,
         'nodes': nodes,
@@ -716,12 +716,18 @@ valid_config = ValidateConfig()
 valid_named_config = ValidateNamedConfig()
 
 
-def validate_fragment(name, fragment):
+def validate_fragment(name, fragment, master_config=None):
     """Validate a fragment with a partial context."""
     config_context = PartialConfigContext(name, name)
     if name == MASTER_NAMESPACE:
         return valid_config(fragment, config_context=config_context)
-    return valid_named_config(fragment, config_context=config_context)
+    if master_config is None:
+        return valid_named_config(fragment, config_context=config_context)
+
+    config_mapping = {MASTER_NAMESPACE: master_config, name: fragment}
+    for config_name, config in validate_config_mapping(config_mapping):
+        if config_name == name:
+            return config
 
 
 def get_nodes_from_master_namespace(master):

@@ -4,14 +4,15 @@ from __future__ import unicode_literals
 import argparse
 
 import mock
-from testify import assert_equal
-from testify import setup_teardown
-from testify import TestCase
 
+from testifycompat import assert_equal
+from testifycompat import assert_in
+from testifycompat import setup_teardown
+from testifycompat import TestCase
 from tron.commands import cmd_utils
 
 
-class GetConfigTestCase(TestCase):
+class TestGetConfig(TestCase):
     @setup_teardown
     def patch_environment(self):
         with mock.patch('tron.commands.cmd_utils.opener', autospec=True) as self.mock_opener, \
@@ -107,7 +108,7 @@ class GetConfigTestCase(TestCase):
         )
 
 
-class BuildOptionParserTestCase(TestCase):
+class TestBuildOptionParser(TestCase):
     def test_build_option_parser(self):
         """Assert that we don't set default options so that we can load
         the defaults from the config.
@@ -139,3 +140,20 @@ class BuildOptionParserTestCase(TestCase):
             call[2].get('default') for call in parser.add_argument.mock_calls
         ]
         assert_equal(defaults, [None, None, None, None])
+
+
+class TestSuggestions(TestCase):
+    def test_suggest_possibilities_none(self):
+        expected = ""
+        actual = cmd_utils.suggest_possibilities(word='FOO', possibilities=[])
+        assert_equal(actual, expected)
+
+    def test_suggest_possibilities_many(self):
+        expected = "FOOO, FOOBAR"
+        actual = cmd_utils.suggest_possibilities(word='FOO', possibilities=["FOOO", "FOOBAR"])
+        assert_in(expected, actual)
+
+    def test_suggest_possibilities_one(self):
+        expected = "FOOBAR?"
+        actual = cmd_utils.suggest_possibilities(word='FOO', possibilities=["FOOBAR", "BAZ"])
+        assert_in(expected, actual)
