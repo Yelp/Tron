@@ -316,6 +316,16 @@ def valid_mesos_action(action, config_context):
             )
 
 
+def valid_trigger_downstreams(trigger_downstreams, config_context):
+    if trigger_downstreams is None:
+        return
+    if isinstance(trigger_downstreams, bool):
+        return
+    if isinstance(trigger_downstreams, dict):
+        return
+    raise ConfigError('must be None, bool or dict')
+
+
 class ValidateAction(Validator):
     """Validate an action."""
     config_class = ConfigAction
@@ -334,6 +344,9 @@ class ValidateAction(Validator):
         'docker_parameters': None,
         'env': None,
         'extra_volumes': None,
+        'trigger_downstreams': None,
+        'triggered_by': None,
+        'on_upstream_rerun': None,
     }
     requires = build_list_of_type_validator(
         valid_action_name,
@@ -372,6 +385,12 @@ class ValidateAction(Validator):
             valid_dict,
         'extra_volumes':
             build_list_of_type_validator(valid_volume, allow_empty=True),
+        'trigger_downstreams':
+            valid_trigger_downstreams,
+        'triggered_by':
+            build_list_of_type_validator(valid_string, allow_empty=True),
+        'on_upstream_rerun':
+            config_utils.build_enum_validator(schema.ActionOnRerun),
     }
 
     def post_validation(self, action, config_context):
@@ -404,6 +423,9 @@ class ValidateCleanupAction(Validator):
         'docker_parameters': None,
         'env': None,
         'extra_volumes': None,
+        'trigger_downstreams': None,
+        'triggered_by': None,
+        'on_upstream_rerun': None,
     }
     validators = {
         'name':
@@ -436,6 +458,12 @@ class ValidateCleanupAction(Validator):
             valid_dict,
         'extra_volumes':
             build_list_of_type_validator(valid_volume, allow_empty=True),
+        'trigger_downstreams':
+            valid_trigger_downstreams,
+        'triggered_by':
+            build_list_of_type_validator(valid_string, allow_empty=True),
+        'on_upstream_rerun':
+            config_utils.build_enum_validator(schema.ActionOnRerun),
     }
 
     def post_validation(self, action, config_context):
@@ -648,6 +676,7 @@ class ValidateConfig(Validator):
         'node_pools': {},
         'jobs': (),
         'mesos_options': ConfigMesos(**ValidateMesos.defaults),
+        'eventbus_enabled': None,
     }
     node_pools = build_dict_name_validator(valid_node_pool, allow_empty=True)
     nodes = build_dict_name_validator(valid_node, allow_empty=True)
@@ -661,6 +690,7 @@ class ValidateConfig(Validator):
         'nodes': nodes,
         'node_pools': node_pools,
         'mesos_options': valid_mesos_options,
+        'eventbus_enabled': valid_bool,
     }
     optional = False
 

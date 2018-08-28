@@ -14,10 +14,24 @@ class Action(object):
     """A configurable data object for an Action."""
 
     equality_attributes = [
-        'name', 'command', 'node_pool', 'is_cleanup', 'retries',
-        'expected_runtime', 'executor', 'cpus', 'mem', 'constraints',
-        'docker_image', 'docker_parameters', 'env', 'extra_volumes',
-        'retries_delay'
+        'name',
+        'command',
+        'node_pool',
+        'is_cleanup',
+        'retries',
+        'expected_runtime',
+        'executor',
+        'cpus',
+        'mem',
+        'constraints',
+        'docker_image',
+        'docker_parameters',
+        'env',
+        'extra_volumes',
+        'retries_delay',
+        'trigger_downstreamss',
+        'triggered_by',
+        'on_upstream_rerun',
     ]
 
     def __init__(
@@ -38,6 +52,9 @@ class Action(object):
         docker_parameters=None,
         env=None,
         extra_volumes=None,
+        trigger_downstreams=None,
+        triggered_by=None,
+        on_upstream_rerun=None,
     ):
         self.name = maybe_decode(name)
         self.command = command
@@ -55,6 +72,9 @@ class Action(object):
         self.docker_parameters = docker_parameters or []
         self.env = env or {}
         self.extra_volumes = extra_volumes or []
+        self.trigger_downstreams = trigger_downstreams
+        self.triggered_by = triggered_by
+        self.on_upstream_rerun = on_upstream_rerun
 
     @property
     def is_cleanup(self):
@@ -92,6 +112,9 @@ class Action(object):
             docker_parameters=docker_parameters,
             env=config.env,
             extra_volumes=extra_volumes,
+            trigger_downstreams=config.trigger_downstreams,
+            triggered_by=config.triggered_by,
+            on_upstream_rerun=config.on_upstream_rerun,
         )
 
     def __eq__(self, other):

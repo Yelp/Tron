@@ -9,6 +9,7 @@ from tron import command_context
 from tron import node
 from tron.config import manager
 from tron.core import job
+from tron.eventbus import make_eventbus
 from tron.mesos import MesosClusterRepository
 from tron.serialize.runstate import statemanager
 
@@ -34,6 +35,7 @@ class MasterControlProgram(object):
         self.config = manager.ConfigManager(config_path)
         self.context = command_context.CommandContext()
         self.state_watcher = statemanager.StateChangeWatcher()
+        self.eventbus = None
         log.info('initialized')
 
     def shutdown(self):
@@ -78,7 +80,9 @@ class MasterControlProgram(object):
                 'nodes',
                 'node_pools',
                 'ssh_options',
-            ), (MesosClusterRepository.configure, 'mesos_options')
+            ),
+            (MesosClusterRepository.configure, 'mesos_options'),
+            (self.configure_eventbus, 'eventbus_enabled'),
         ]
         master_config = config_container.get_master()
         apply_master_configuration(master_config_directives, master_config)
@@ -121,6 +125,18 @@ class MasterControlProgram(object):
 
     def set_context_base(self, command_context):
         self.context.base = command_context
+
+    def configure_eventbus(self, enabled):
+        if enabled:
+            if self.eventbus:
+                return
+            self.eventbus = make_eventbus(f"{self.working_dir}/_events")
+            self.eventbus.start()
+        else:
+            if not self.eventbus:
+                return
+            self.eventbus.shutdown()
+            self.eventbus = None
 
     def get_job_collection(self):
         return self.jobs

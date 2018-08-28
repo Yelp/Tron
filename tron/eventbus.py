@@ -10,7 +10,21 @@ log = logging.getLogger(__name__)
 
 
 def make_eventbus(log_dir):
-    return EventBus(log_dir)
+    """Create log directory and link to current log if those don't
+    already exist"""
+    eb = EventBus(log_dir)
+
+    if not os.path.exists(eb.log_dir):
+        log.warning(f"creating {eb.log_dir}")
+        os.mkdir(eb.log_dir)
+
+    if not os.path.exists(eb.log_current) or not os.path.exists(
+        os.readlink(eb.log_current)
+    ):
+        log.warning(f"creating {eb.log_current}")
+        eb.sync_save_log("initial save")
+
+    return eb
 
 
 def consume_dequeue(queue, func):
