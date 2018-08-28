@@ -101,10 +101,8 @@ ConfigState = config_object_factory(
 
 ConfigMesos = config_object_factory(
     name='ConfigMesos',
-    required=[
-        'master_address',
-    ],
     optional=[
+        'master_address',
         'master_port',
         'secret_file',
         'principal',

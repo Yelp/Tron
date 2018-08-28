@@ -1,3 +1,10 @@
+tron (0.9.3.0) trusty; urgency=medium
+
+  * 0.9.3.0 tagged with 'make release'
+    Commit: make master address optional (#513)
+
+ -- root <root@bb6820bc1706>  Fri, 24 Aug 2018 22:42:36 +0000
+
 tron (0.9.2.1) trusty; urgency=medium
 
   * 0.9.2.1 tagged with 'make release'

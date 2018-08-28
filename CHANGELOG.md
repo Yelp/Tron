@@ -1,7 +1,91 @@
 # Change Log
 
-## [0.9.1.5](https://github.com/Yelp/Tron/tree/0.9.1.5) (2018-07-03)
-[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.1.4...0.9.1.5)
+## [0.9.3.0](https://github.com/Yelp/Tron/tree/0.9.3.0) (2018-08-24)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.2.1...0.9.3.0)
+
+**Merged pull requests:**
+
+- move mesos address to mesos option section only [\#509](https://github.com/Yelp/Tron/pull/509) ([chlgit](https://github.com/chlgit))
+- Added the prototype of the tronctl backfill command [\#507](https://github.com/Yelp/Tron/pull/507) ([solarkennedy](https://github.com/solarkennedy))
+- Added mesos framework authentication to itests [\#506](https://github.com/Yelp/Tron/pull/506) ([solarkennedy](https://github.com/solarkennedy))
+- Remove event.py and related code [\#504](https://github.com/Yelp/Tron/pull/504) ([keymone](https://github.com/keymone))
+- Event bus with pub/sub and persistance [\#497](https://github.com/Yelp/Tron/pull/497) ([keymone](https://github.com/keymone))
+
+## [v0.9.2.1](https://github.com/Yelp/Tron/tree/v0.9.2.1) (2018-08-22)
+[Full Changelog](https://github.com/Yelp/Tron/compare/list...v0.9.2.1)
+
+## [list](https://github.com/Yelp/Tron/tree/list) (2018-08-21)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.2.0...list)
+
+**Closed issues:**
+
+- Insufficient error logging [\#275](https://github.com/Yelp/Tron/issues/275)
+- tronview add-ons  [\#244](https://github.com/Yelp/Tron/issues/244)
+- Replace Turtle with mock [\#153](https://github.com/Yelp/Tron/issues/153)
+- tron should support weights for items in pools [\#56](https://github.com/Yelp/Tron/issues/56)
+
+**Merged pull requests:**
+
+- Nix testify [\#508](https://github.com/Yelp/Tron/pull/508) ([solarkennedy](https://github.com/solarkennedy))
+- Remove the use of turtle in favor of mock. Fixes \#153 [\#505](https://github.com/Yelp/Tron/pull/505) ([solarkennedy](https://github.com/solarkennedy))
+- Run trond via tox for itests instead of pip installing [\#501](https://github.com/Yelp/Tron/pull/501) ([solarkennedy](https://github.com/solarkennedy))
+- Made tronview and tronctl provide suggestions on unknown identifiers [\#500](https://github.com/Yelp/Tron/pull/500) ([solarkennedy](https://github.com/solarkennedy))
+- Make itests wait for tron to be connected to mesos [\#499](https://github.com/Yelp/Tron/pull/499) ([solarkennedy](https://github.com/solarkennedy))
+- U/chl/save mesos state [\#498](https://github.com/Yelp/Tron/pull/498) ([chlgit](https://github.com/chlgit))
+- save task id of action run [\#495](https://github.com/Yelp/Tron/pull/495) ([chlgit](https://github.com/chlgit))
+- Added Tron + Mesos itest framework [\#494](https://github.com/Yelp/Tron/pull/494) ([solarkennedy](https://github.com/solarkennedy))
+- configure mesos authentication at MASTER [\#492](https://github.com/Yelp/Tron/pull/492) ([chlgit](https://github.com/chlgit))
+
+## [v0.9.2.0](https://github.com/Yelp/Tron/tree/v0.9.2.0) (2018-08-09)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.1.9...v0.9.2.0)
+
+**Merged pull requests:**
+
+- Autospec all the things [\#491](https://github.com/Yelp/Tron/pull/491) ([solarkennedy](https://github.com/solarkennedy))
+- Spell check all the things [\#489](https://github.com/Yelp/Tron/pull/489) ([solarkennedy](https://github.com/solarkennedy))
+- catch command rendering type error [\#488](https://github.com/Yelp/Tron/pull/488) ([chlgit](https://github.com/chlgit))
+- Update taskproc [\#487](https://github.com/Yelp/Tron/pull/487) ([qui](https://github.com/qui))
+- tronfig checks valid nodes [\#486](https://github.com/Yelp/Tron/pull/486) ([chlgit](https://github.com/chlgit))
+- Catch errors from commands and return a nicer error message [\#485](https://github.com/Yelp/Tron/pull/485) ([qui](https://github.com/qui))
+- sort the job run based on endtime and scheduled time [\#484](https://github.com/Yelp/Tron/pull/484) ([chlgit](https://github.com/chlgit))
+
+## [v0.9.1.9](https://github.com/Yelp/Tron/tree/v0.9.1.9) (2018-07-24)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.1.8...v0.9.1.9)
+
+**Fixed bugs:**
+
+- Refactor tron node/ssh [\#247](https://github.com/Yelp/Tron/issues/247)
+
+**Closed issues:**
+
+- Tron uses an ancient ssh key exchange algorithm [\#323](https://github.com/Yelp/Tron/issues/323)
+- Problem start trond [\#307](https://github.com/Yelp/Tron/issues/307)
+
+**Merged pull requests:**
+
+- Retries delay: kill delayed action correctly [\#483](https://github.com/Yelp/Tron/pull/483) ([keymone](https://github.com/keymone))
+- send alerts based on job runtime [\#482](https://github.com/Yelp/Tron/pull/482) ([chlgit](https://github.com/chlgit))
+- Fix the docs [\#481](https://github.com/Yelp/Tron/pull/481) ([solarkennedy](https://github.com/solarkennedy))
+- Delay between actionrun retries [\#479](https://github.com/Yelp/Tron/pull/479) ([keymone](https://github.com/keymone))
+
+## [v0.9.1.8](https://github.com/Yelp/Tron/tree/v0.9.1.8) (2018-07-10)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.1.7...v0.9.1.8)
+
+**Merged pull requests:**
+
+- fix \_get\_seconds\_from\_duration bug [\#480](https://github.com/Yelp/Tron/pull/480) ([chlgit](https://github.com/chlgit))
+
+## [v0.9.1.7](https://github.com/Yelp/Tron/tree/v0.9.1.7) (2018-07-09)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.1.6...v0.9.1.7)
+
+**Merged pull requests:**
+
+- Fix validation of full tronfig directory [\#478](https://github.com/Yelp/Tron/pull/478) ([qui](https://github.com/qui))
+- Unknown actions/jobs are critical alerts [\#477](https://github.com/Yelp/Tron/pull/477) ([qui](https://github.com/qui))
+- Twisted manhole on unix socket [\#476](https://github.com/Yelp/Tron/pull/476) ([keymone](https://github.com/keymone))
+
+## [v0.9.1.6](https://github.com/Yelp/Tron/tree/v0.9.1.6) (2018-07-03)
+[Full Changelog](https://github.com/Yelp/Tron/compare/v0.9.1.4...v0.9.1.6)
 
 **Merged pull requests:**
 
