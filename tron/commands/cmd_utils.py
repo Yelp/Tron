@@ -201,7 +201,9 @@ def setup_logging(options):
 
 
 def suggest_possibilities(word, possibilities, max_suggestions=6):
-    suggestions = difflib.get_close_matches(word=word, possibilities=possibilities, n=max_suggestions)
+    suggestions = difflib.get_close_matches(
+        word=word, possibilities=possibilities, n=max_suggestions
+    )
     if len(suggestions) == 1:
         return f"\nDid you mean: {suggestions[0]}?"
     elif len(suggestions) >= 1:

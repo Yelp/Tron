@@ -396,7 +396,8 @@ class TestIntervalScheduler(TestCase):
     @setup_teardown
     def patch_time(self):
         with mock.patch(
-            'tron.scheduler.timeutils.current_time', autospec=True,
+            'tron.scheduler.timeutils.current_time',
+            autospec=True,
         ) as self.mock_now:
             self.mock_now.return_value = self.now
             yield

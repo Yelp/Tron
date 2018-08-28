@@ -150,10 +150,14 @@ class TestSuggestions(TestCase):
 
     def test_suggest_possibilities_many(self):
         expected = "FOOO, FOOBAR"
-        actual = cmd_utils.suggest_possibilities(word='FOO', possibilities=["FOOO", "FOOBAR"])
+        actual = cmd_utils.suggest_possibilities(
+            word='FOO', possibilities=["FOOO", "FOOBAR"]
+        )
         assert_in(expected, actual)
 
     def test_suggest_possibilities_one(self):
         expected = "FOOBAR?"
-        actual = cmd_utils.suggest_possibilities(word='FOO', possibilities=["FOOBAR", "BAZ"])
+        actual = cmd_utils.suggest_possibilities(
+            word='FOO', possibilities=["FOOBAR", "BAZ"]
+        )
         assert_in(expected, actual)

@@ -382,13 +382,20 @@ class MesosCluster:
         executor = self.processor.executor_from_config(
             provider='mesos_task',
             provider_config={
-                'secret': self.secret,
-                'principal': self.principal,
-                'mesos_address': get_mesos_leader(mesos_address, self.mesos_master_port),
-                'role': self.mesos_role,
-                'framework_name': framework_name,
-                'framework_id': self.framework_id,
-                'failover': True,
+                'secret':
+                    self.secret,
+                'principal':
+                    self.principal,
+                'mesos_address':
+                    get_mesos_leader(mesos_address, self.mesos_master_port),
+                'role':
+                    self.mesos_role,
+                'framework_name':
+                    framework_name,
+                'framework_id':
+                    self.framework_id,
+                'failover':
+                    True,
             }
         )
 
