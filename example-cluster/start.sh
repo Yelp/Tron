@@ -24,7 +24,8 @@ fi
 
 echo Starting Tron
 rm -f /nail/tron/tron.pid
-exec faketime -f '+0.0y x10' \
+FAKETIME_X=${FAKETIME_X:-10}
+exec faketime -f "+0.0y x$FAKETIME_X" \
   trond \
     -l logging.conf \
     --nodaemon \
