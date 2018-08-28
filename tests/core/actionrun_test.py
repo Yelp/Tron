@@ -670,7 +670,8 @@ class TestActionRunCollection(TestCase):
 
         self.action_graph = actiongraph.ActionGraph(
             action_graph,
-            {a.name: a for a in action_graph},
+            {a.name: a
+             for a in action_graph},
         )
         self.output_path = filehandler.OutputPath(tempfile.mkdtemp())
         self.command = "do command"
@@ -870,9 +871,7 @@ class TestActionRunCollectionIsRunBlocked(TestCase):
         assert not self.collection._is_run_blocked(self.run_map['second_name'])
 
     def test_is_run_blocked_required_actions_blocked(self):
-        third_act = MagicMock(
-            required_actions=[self.second_act],
-        )
+        third_act = MagicMock(required_actions=[self.second_act], )
         third_act.name = 'third_act'
         self.action_graph.action_map['third_act'] = third_act
         self.run_map['third_act'] = self._build_run('third_act')

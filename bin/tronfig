@@ -103,8 +103,12 @@ def upload_config(client, config_name, contents, config_hash, check=False):
 def validate(config_name, config_content, master_content=None):
     try:
         config_data = manager.from_string(config_content)
-        master_data = manager.from_string(master_content) if master_content else None
-        config_parse.validate_fragment(name=config_name, fragment=config_data, master_config=master_data)
+        master_data = manager.from_string(
+            master_content
+        ) if master_content else None
+        config_parse.validate_fragment(
+            name=config_name, fragment=config_data, master_config=master_data
+        )
     except ConfigError as e:
         return str(e)
 
@@ -176,8 +180,14 @@ if __name__ == '__main__':
             name, content = get_config_input(args.namespace, args.source)
             master_content = None
             if args.master_config:
-                _, master_content = get_config_input(schema.MASTER_NAMESPACE, args.master_config)
-            result = validate(config_name=name, config_content=content, master_content=master_content)
+                _, master_content = get_config_input(
+                    schema.MASTER_NAMESPACE, args.master_config
+                )
+            result = validate(
+                config_name=name,
+                config_content=content,
+                master_content=master_content
+            )
         elif args.validate_dir:
             result = validate_dir(args.source)
 

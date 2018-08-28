@@ -73,7 +73,8 @@ def parse_cli():
         "--end-date",
         type=parse_date,
         dest="end_date",
-        help="For backfills, what should the last run-date be (note: many jobs operate on date-1). Defaults to today.",
+        help=
+        "For backfills, what should the last run-date be (note: many jobs operate on date-1). Defaults to today.",
     )
     parser.add_argument(
         'command',
@@ -118,8 +119,12 @@ def control_objects(args):
                 identifier,
             )
         except ValueError as e:
-            possibilities = list(tron_jobs_completer(prefix='', client=tron_client))
-            suggestions = suggest_possibilities(word=identifier, possibilities=possibilities)
+            possibilities = list(
+                tron_jobs_completer(prefix='', client=tron_client)
+            )
+            suggestions = suggest_possibilities(
+                word=identifier, possibilities=possibilities
+            )
             raise SystemExit(f"Error: {e}{suggestions}")
         yield edit(args, tron_id.url)
 
@@ -130,7 +135,9 @@ def backfill(args):
         return 1
     if args.end_date is None:
         args.end_date = datetime.datetime.today()
-    dates = get_dates_for_backfill(start_date=args.start_date, end_date=args.end_date)
+    dates = get_dates_for_backfill(
+        start_date=args.start_date, end_date=args.end_date
+    )
     print("tronctl backfill currently only prints jobs for a human to run.")
     print(f"Please run the following {len(dates)} commands:")
     print("")

@@ -210,7 +210,9 @@ class TestStateChangeWatcher(TestCase):
             mock_job.state_data,
         )
 
-    @mock.patch('tron.serialize.runstate.statemanager.StateMetadata', autospec=None)
+    @mock.patch(
+        'tron.serialize.runstate.statemanager.StateMetadata', autospec=None
+    )
     def test_save_metadata(self, mock_state_metadata):
         self.watcher.save_metadata()
         meta_data = mock_state_metadata.return_value

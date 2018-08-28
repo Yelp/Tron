@@ -65,7 +65,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() + 600),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                 },
                 {
                     'id':
@@ -77,7 +78,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                 },
                 {
                     'id':
@@ -118,7 +120,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() + 600),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                 },
                 {
                     'id':
@@ -130,7 +133,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                     'runs': [
                         {
                             'id': 'MASTER.test.2.action2',
@@ -240,7 +244,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() + 600),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                 },
                 {
                     'id':
@@ -252,7 +257,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                 },
                 {
                     'id':
@@ -293,7 +299,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() + 600),
                         ),
-                    'end_time': None
+                    'end_time':
+                        None
                 },
                 {
                     'id':
@@ -350,7 +357,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() + 600),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                 },
                 {
                     'id':
@@ -423,7 +431,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() + 600),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                 },
                 {
                     'id':
@@ -435,7 +444,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                     'runs': [
                         {
                             'id': 'MASTER.test.2.action2',
@@ -542,7 +552,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                 },
                 {
                     'id':
@@ -554,7 +565,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 1200),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                 },
             ],
         }
@@ -581,9 +593,12 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() + 600),
                         ),
-                    'end_time': None,
-                    'start_time': None,
-                    'duration': '',
+                    'end_time':
+                        None,
+                    'start_time':
+                        None,
+                    'duration':
+                        '',
                 },
                 {
                     'id':
@@ -600,7 +615,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                     'duration':
                         '0:10:01.883601',
                 },
@@ -699,7 +715,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                 },
                 {
                     'id':
@@ -711,7 +728,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time()),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                 },
             ],
         }
@@ -983,7 +1001,8 @@ class TestCheckJobs(TestCase):
                         '%Y-%m-%d %H:%M:%S',
                         time.localtime(time.time() + 1200),
                     ),
-                'end_time': None,
+                'end_time':
+                    None,
             }, ],
         }
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
@@ -1019,7 +1038,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                 },
                 {
                     'id':
@@ -1031,7 +1051,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 1200),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                 },
                 {
                     'id':
@@ -1072,7 +1093,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() + 600),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                 },
                 {
                     'id':
@@ -1084,7 +1106,8 @@ class TestCheckJobs(TestCase):
                             '%Y-%m-%d %H:%M:%S',
                             time.localtime(time.time() - 600),
                         ),
-                    'end_time': None,
+                    'end_time':
+                        None,
                     'runs': [
                         {
                             'id': 'MASTER.test.2.action2',
@@ -1117,6 +1140,7 @@ class TestCheckJobs(TestCase):
         run, state = check_tron_jobs.get_relevant_run_and_state(job_runs)
         assert_equal(run['id'], 'MASTER.test.2')
         assert_equal(state, State.UNKNOWN)
+
 
 # These tests test guess realert feature
 
