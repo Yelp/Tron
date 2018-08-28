@@ -29,7 +29,7 @@ class Action(object):
         'env',
         'extra_volumes',
         'retries_delay',
-        'triggers_downstream',
+        'trigger_downstreamss',
         'triggered_by',
         'on_upstream_rerun',
     ]
@@ -52,7 +52,7 @@ class Action(object):
         docker_parameters=None,
         env=None,
         extra_volumes=None,
-        triggers_downstream=None,
+        trigger_downstreams=None,
         triggered_by=None,
         on_upstream_rerun=None,
     ):
@@ -72,7 +72,7 @@ class Action(object):
         self.docker_parameters = docker_parameters or []
         self.env = env or {}
         self.extra_volumes = extra_volumes or []
-        self.triggers_downstream = triggers_downstream
+        self.trigger_downstreams = trigger_downstreams
         self.triggered_by = triggered_by
         self.on_upstream_rerun = on_upstream_rerun
 
@@ -112,7 +112,7 @@ class Action(object):
             docker_parameters=docker_parameters,
             env=config.env,
             extra_volumes=extra_volumes,
-            triggers_downstream=config.triggers_downstream,
+            trigger_downstreams=config.trigger_downstreams,
             triggered_by=config.triggered_by,
             on_upstream_rerun=config.on_upstream_rerun,
         )

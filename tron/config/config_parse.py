@@ -316,6 +316,16 @@ def valid_mesos_action(action, config_context):
             )
 
 
+def valid_trigger_downstreams(trigger_downstreams, config_context):
+    if trigger_downstreams is None:
+        return
+    if isinstance(trigger_downstreams, bool):
+        return
+    if isinstance(trigger_downstreams, dict):
+        return
+    raise ConfigError('must be None, bool or dict')
+
+
 class ValidateAction(Validator):
     """Validate an action."""
     config_class = ConfigAction
@@ -334,7 +344,7 @@ class ValidateAction(Validator):
         'docker_parameters': None,
         'env': None,
         'extra_volumes': None,
-        'triggers_downstream': None,
+        'trigger_downstreams': None,
         'triggered_by': None,
         'on_upstream_rerun': None,
     }
@@ -375,10 +385,10 @@ class ValidateAction(Validator):
             valid_dict,
         'extra_volumes':
             build_list_of_type_validator(valid_volume, allow_empty=True),
-        'triggers_downstream':
-            valid_bool,
+        'trigger_downstreams':
+            valid_trigger_downstreams,
         'triggered_by':
-            valid_dict,
+            build_list_of_type_validator(valid_string, allow_empty=True),
         'on_upstream_rerun':
             config_utils.build_enum_validator(schema.ActionOnRerun),
     }
@@ -413,7 +423,7 @@ class ValidateCleanupAction(Validator):
         'docker_parameters': None,
         'env': None,
         'extra_volumes': None,
-        'triggers_downstream': None,
+        'trigger_downstreams': None,
         'triggered_by': None,
         'on_upstream_rerun': None,
     }
@@ -448,10 +458,10 @@ class ValidateCleanupAction(Validator):
             valid_dict,
         'extra_volumes':
             build_list_of_type_validator(valid_volume, allow_empty=True),
-        'triggers_downstream':
-            valid_bool,
+        'trigger_downstreams':
+            valid_trigger_downstreams,
         'triggered_by':
-            valid_dict,
+            build_list_of_type_validator(valid_string, allow_empty=True),
         'on_upstream_rerun':
             config_utils.build_enum_validator(schema.ActionOnRerun),
     }

@@ -96,7 +96,7 @@ class ActionRunFactory(object):
             'docker_parameters': action.docker_parameters,
             'env': action.env,
             'extra_volumes': action.extra_volumes,
-            'triggers_downstream': action.triggers_downstream,
+            'trigger_downstreams': action.trigger_downstreams,
             'triggered_by': action.triggered_by,
             'on_upstream_rerun': action.on_upstream_rerun,
         }
@@ -205,7 +205,7 @@ class ActionRun(object):
         env=None,
         extra_volumes=None,
         mesos_task_id=None,
-        triggers_downstream=None,
+        trigger_downstreams=None,
         triggered_by=None,
         on_upstream_rerun=None,
     ):
@@ -239,7 +239,7 @@ class ActionRun(object):
         self.retries_remaining = retries_remaining
         self.retries_delay = retries_delay
         self.exit_statuses = exit_statuses
-        self.triggers_downstream = triggers_downstream
+        self.trigger_downstreams = trigger_downstreams
         self.triggered_by = triggered_by
         self.on_upstream_rerun = on_upstream_rerun
 
@@ -325,7 +325,7 @@ class ActionRun(object):
             env=state_data.get('env'),
             extra_volumes=state_data.get('extra_volumes'),
             mesos_task_id=state_data.get('mesos_task_id'),
-            triggers_downstream=state_data.get('triggers_downstream'),
+            trigger_downstreams=state_data.get('trigger_downstreams'),
             triggered_by=state_data.get('triggered_by'),
             on_upstream_rerun=state_data.get('on_upstream_rerun'),
         )
@@ -492,7 +492,7 @@ class ActionRun(object):
             'env': self.env,
             'extra_volumes': self.extra_volumes,
             'mesos_task_id': self.mesos_task_id,
-            'triggers_downstream': self.triggers_downstream,
+            'trigger_downstreams': self.trigger_downstreams,
             'triggered_by': self.triggered_by,
             'on_upstream_rerun': self.on_upstream_rerun,
         }

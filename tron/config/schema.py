@@ -157,8 +157,8 @@ ConfigAction = config_object_factory(
         'env',  # dict
         'extra_volumes',  # List of ConfigVolume
         'expected_runtime',  # datetime.Timedelta
-        'triggers_downstream',  # bool or None
-        'triggered_by',  # dict or None
+        'trigger_downstreams',  # None, bool or dict
+        'triggered_by',  # list or None
         'on_upstream_rerun',  # ActionOnRerun or None
     ],
 )
@@ -182,8 +182,8 @@ ConfigCleanupAction = config_object_factory(
         'docker_parameters',  # List of ConfigParameter
         'env',  # dict
         'extra_volumes',  # List of ConfigVolume
-        'triggers_downstream',  # bool or None
-        'triggered_by',  # dict or None
+        'trigger_downstreams',  # None, bool or dict
+        'triggered_by',  # list or None
         'on_upstream_rerun',  # ActionOnRerun or None
     ],
 )
