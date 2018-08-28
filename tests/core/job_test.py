@@ -122,7 +122,7 @@ class TestJob(TestCase):
         assert_equal(self.job.status, self.job.STATUS_ENABLED)
 
     def test_status_running(self):
-        self.job.runs.get_run_by_state = lambda s:  MagicMock()
+        self.job.runs.get_run_by_state = lambda s: MagicMock()
         assert_equal(self.job.status, self.job.STATUS_RUNNING)
 
     def test_status_unknown(self):

@@ -24,6 +24,9 @@ blank_lines_around_top_level_definition=2
 # Insert a blank line before a class-level docstring.
 blank_line_before_class_docstring=False
 
+# Insert a blank line before a module docstring.
+blank_line_before_module_docstring=False
+
 # Insert a blank line before a 'def' or 'class' immediately nested
 # within another 'def' or 'class'. For example:
 #
@@ -91,6 +94,10 @@ continuation_indent_width=4
 #   )        # <--- this bracket is dedented and on a separate line
 dedent_closing_brackets=True
 
+# Disable the heuristic which places each list element on a separate line
+# if the list is comma-terminated.
+disable_ending_comma_heuristic=False
+
 # Place each dictionary entry onto its own line.
 each_dict_entry_on_separate_line=True
 
@@ -125,11 +132,11 @@ join_multiple_lines=True
 #
 #   1 + 2 * 3 - 4 / 5
 #
-# will be formatted as follows when configured with a value "*,/":
+# will be formatted as follows when configured with *,/:
 #
 #   1 + 2*3 - 4/5
 #
-no_spaces_around_selected_binary_operators=set()
+no_spaces_around_selected_binary_operators=
 
 # Use spaces around default or named assigns.
 spaces_around_default_or_named_assign=False
@@ -143,6 +150,9 @@ spaces_before_comment=2
 # Insert a space between the ending comma and closing bracket of a list,
 # etc.
 space_between_ending_comma_and_closing_bracket=True
+
+# Split before arguments
+split_all_comma_separated_values=False
 
 # Split before arguments if the argument list is terminated by a
 # comma.

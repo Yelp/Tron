@@ -57,7 +57,11 @@ class TestMesosClusterRepository(TestCase):
             dockercfg_location='auth',
             offer_timeout=1000,
         )
-        with mock.patch('tron.mesos.get_secret_from_file', autospec=True, return_value='test-secret'):
+        with mock.patch(
+            'tron.mesos.get_secret_from_file',
+            autospec=True,
+            return_value='test-secret'
+        ):
             MesosClusterRepository.configure(options)
 
         expected_volume = mock_volume._asdict.return_value
@@ -284,7 +288,9 @@ class TestMesosCluster(TestCase):
         assert_equal(cluster.queue, self.mock_queue)
         assert_equal(cluster.processor, self.mock_processor)
 
-        self.mock_get_leader.assert_called_once_with('mesos-cluster-a.me', 5000)
+        self.mock_get_leader.assert_called_once_with(
+            'mesos-cluster-a.me', 5000
+        )
         self.mock_processor.executor_from_config.assert_has_calls([
             mock.call(
                 provider='mesos_task',

@@ -97,7 +97,9 @@ class TestClientRequest(TestCase):
 
     @setup_teardown
     def patch_request(self):
-        with mock.patch('tron.commands.client.request', autospec=True) as self.mock_request:
+        with mock.patch(
+            'tron.commands.client.request', autospec=True
+        ) as self.mock_request:
             yield
 
     def test_request_error(self):

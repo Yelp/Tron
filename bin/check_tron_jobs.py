@@ -244,7 +244,9 @@ def is_action_run_exceeding_expected_runtime(
         if action_name in actions_expected_runtime and actions_expected_runtime[
             action_name
         ] is not None:
-            duration_seconds = pytimeparse.parse(action_run.get('duration', ''))
+            duration_seconds = pytimeparse.parse(
+                action_run.get('duration', '')
+            )
             if duration_seconds > actions_expected_runtime[action_name]:
                 return True
     return False

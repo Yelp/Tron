@@ -146,8 +146,10 @@ if __name__ == "__main__":
     validate_output_dir(args.output_dir)
     configure_logging(run_id=args.run_id, output_dir=args.output_dir)
     proc = run_command(args.command)
-    threads = [threading.Thread(target=stream, args=p, daemon=True) for p in [
-        (proc.stdout, sys.stdout), (proc.stderr, sys.stderr)]]
+    threads = [
+        threading.Thread(target=stream, args=p, daemon=True)
+        for p in [(proc.stdout, sys.stdout), (proc.stderr, sys.stderr)]
+    ]
     for t in threads:
         t.start()
     returncode = run_proc(

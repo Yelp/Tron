@@ -470,18 +470,14 @@ class TestNamedConfig(TestCase):
             })
         )
         master_config = dict(
-            nodes=[
-                dict(
-                    name="node0",
-                    hostname="node0",
-                )
-            ],
-            node_pools=[
-                dict(
-                    name="nodepool0",
-                    nodes=["node0"],
-                )
-            ]
+            nodes=[dict(
+                name="node0",
+                hostname="node0",
+            )],
+            node_pools=[dict(
+                name="nodepool0",
+                nodes=["node0"],
+            )]
         )
         test_config = validate_fragment(
             'test_namespace',
@@ -503,12 +499,10 @@ class TestNamedConfig(TestCase):
 
     def test_invalid_job_node_with_master_context(self):
         master_config = dict(
-            nodes=[
-                dict(
-                    name="node0",
-                    hostname="node0",
-                )
-            ],
+            nodes=[dict(
+                name="node0",
+                hostname="node0",
+            )],
         )
         test_config = dict(
             jobs=[
@@ -534,18 +528,14 @@ class TestNamedConfig(TestCase):
 
     def test_invalid_action_node_with_master_context(self):
         master_config = dict(
-            nodes=[
-                dict(
-                    name="node0",
-                    hostname="node0",
-                )
-            ],
-            node_pools=[
-                dict(
-                    name="nodepool0",
-                    nodes=["node0"],
-                )
-            ]
+            nodes=[dict(
+                name="node0",
+                hostname="node0",
+            )],
+            node_pools=[dict(
+                name="nodepool0",
+                nodes=["node0"],
+            )]
         )
         test_config = dict(
             jobs=[
@@ -554,7 +544,8 @@ class TestNamedConfig(TestCase):
                     namespace='test_namespace',
                     node="node0",
                     schedule="interval 20s",
-                    actions=[dict(name="action", node="nodepool1", command="command")],
+                    actions=
+                    [dict(name="action", node="nodepool1", command="command")],
                     cleanup_action=dict(command="command"),
                 )
             ]
