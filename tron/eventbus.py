@@ -96,8 +96,9 @@ class EventBus:
 
         try:
             self.sync_process()
-        except Exception as e:
-            raise SystemExit(f"eventbus loop crashed with {e}")
+        except Exception:
+            log.error("eventbus exception:", exc_info=1)
+            raise SystemExit("eventbus loop crashed")
 
         reactor.callLater(1, self.sync_loop)
 
