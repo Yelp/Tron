@@ -1,3 +1,5 @@
+eventbus_enabled: true
+
 state_persistence:
   name: "/nail/tron/tron_state"
   store_type: "shelve"

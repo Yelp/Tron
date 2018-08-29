@@ -35,7 +35,7 @@ def consume_dequeue(queue, func):
 
 class EventBus:
     def __init__(self, log_dir):
-        self.must_shutdown = False
+        self.enabled = False
         self.event_log = {}
         self.event_subscribers = {}
         self.publish_queue = deque()
@@ -44,17 +44,20 @@ class EventBus:
         self.log_current = os.path.join(self.log_dir, "current")
         self.log_updates = 0
         self.log_last_save = 0
-        self.log_save_interval = 60
-        self.log_save_updates = 10
+        self.log_save_interval = 60   # save every minute
+        self.log_save_updates = 100   # save every 100 updates
 
     def start(self):
+        self.enabled = True
         log.info("starting")
         self.sync_load_log()
         reactor.callLater(0, self.sync_loop)
 
     def shutdown(self):
-        self.must_shutdown = True
-        log.info(f"shutdown requested")
+        if self.enabled:
+            self.enabled = False
+            self.sync_save_log("shutdown")
+            log.info("shutdown completed")
 
     def publish(self, event):
         self.publish_queue.append(event)
@@ -88,20 +91,30 @@ class EventBus:
         log.info(f"log dumped to disk because {reason}, took {duration:.4}s")
 
     def sync_loop(self):
-        if self.must_shutdown:
-            self.sync_save_log("shutdown")
-            log.info("shutdown completed")
-        else:
+        if not self.enabled:
+            return
+
+        try:
             self.sync_process()
-            reactor.callLater(1, self.sync_loop)
+        except Exception:
+            log.error("eventbus exception:", exc_info=1)
+            raise SystemExit("eventbus loop crashed")
+
+        reactor.callLater(1, self.sync_loop)
 
     def sync_process(self):
+        save_reason = None
         if time.time() > self.log_last_save + self.log_save_interval:
-            save_reason = f"{self.log_save_interval}s passed"
+            if self.log_updates > 0:
+                save_reason = (
+                    f"{self.log_save_interval}s passed, "
+                    f"{self.log_updates} updates"
+                )
+            else:
+                self.log_last_save = time.time()
+                log.debug("skipping save, no updates")
         elif self.log_updates > self.log_save_updates:
             save_reason = f"{self.log_save_updates} updates"
-        else:
-            save_reason = None
 
         if save_reason:
             self.sync_save_log(save_reason)

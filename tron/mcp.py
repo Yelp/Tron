@@ -39,6 +39,8 @@ class MasterControlProgram(object):
         log.info('initialized')
 
     def shutdown(self):
+        if self.eventbus:
+            self.eventbus.shutdown()
         self.state_watcher.shutdown()
 
     def reconfigure(self):

@@ -42,6 +42,7 @@ class EventBusTestCase(TestCase):
     def setup(self):
         self.log_dir = tempfile.TemporaryDirectory(prefix="tron_eventbus_test")
         self.eventbus = eventbus.make_eventbus(self.log_dir.name)
+        self.eventbus.enabled = True
 
     @teardown
     def teardown(self):
@@ -56,9 +57,11 @@ class EventBusTestCase(TestCase):
         assert reactor.callLater.call_count is 1
 
     def test_shutdown(self):
-        assert not self.eventbus.must_shutdown
+        assert self.eventbus.enabled
+        self.eventbus.sync_save_log = mock.Mock()
         self.eventbus.shutdown()
-        assert self.eventbus.must_shutdown
+        assert not self.eventbus.enabled
+        assert self.eventbus.sync_save_log.call_count == 1
 
     def test_publish(self):
         evt = {'id': 'foo'}
@@ -103,6 +106,7 @@ class EventBusTestCase(TestCase):
     def test_sync_loop(self, reactor, time):
         time.time = mock.Mock(return_value=0)
         reactor.callLater = mock.Mock()
+        self.eventbus.enabled = True
         self.eventbus.sync_shutdown = mock.Mock()
         self.eventbus.sync_loop()
         assert reactor.callLater.call_count is 1
@@ -111,15 +115,15 @@ class EventBusTestCase(TestCase):
     @mock.patch('tron.eventbus.reactor', autospec=True)
     def test_sync_loop_shutdown(self, reactor):
         reactor.callLater = mock.Mock()
+        self.eventbus.enabled = False
         self.eventbus.sync_save_log = mock.Mock()
-        self.eventbus.must_shutdown = True
         self.eventbus.sync_loop()
         assert reactor.callLater.call_count is 0
-        assert self.eventbus.sync_save_log.call_count is 1
 
     @mock.patch('tron.eventbus.time', autospec=True)
     def test_sync_process_save_log(self, time):
         time.time = mock.Mock(return_value=10)
+        self.eventbus.log_updates = 1
         self.eventbus.log_last_save = 0
         self.eventbus.log_save_interval = 20
         self.eventbus.sync_save_log = mock.Mock()
