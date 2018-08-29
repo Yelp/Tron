@@ -183,7 +183,7 @@ class TestMesosTask(TestCase):
             success=False,
         )
         self.task.handle_event(event)
-        assert self.task.is_failed
+        assert self.task.is_unknown
         assert self.task.is_done
 
     def test_handle_error(self):
