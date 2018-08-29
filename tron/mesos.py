@@ -293,8 +293,6 @@ class MesosCluster:
         self.dockercfg_location = dockercfg_location
         self.offer_timeout = offer_timeout
 
-    # TODO: Should this be done asynchronously?
-    # TODO: Handle/retry errors
     def connect(self):
         self.runner = self.get_runner(self.mesos_address, self.queue)
         self.handle_next_event()
@@ -312,19 +310,7 @@ class MesosCluster:
         self.deferred.addErrback(logError)
         self.deferred.addErrback(self.handle_next_event)
 
-    def submit(self, task, recover=False):
-        if not task:
-            return
-
-        if not self.enabled:
-            if recover:
-                task.log.info('Could not recover task, Mesos is disabled.')
-                task.exited(None)
-            else:
-                task.log.info('Task failed to start, Mesos is disabled.')
-                task.exited(1)
-            return
-
+    def _check_connection(self):
         if self.runner.stopping:
             # Last framework was terminated for some reason, re-connect.
             log.info('Last framework stopped, re-connecting')
@@ -333,20 +319,41 @@ class MesosCluster:
             # Just in case callbacks are missing, re-add.
             self.handle_next_event()
 
+    def submit(self, task, recover=False):
+        if not task:
+            return
+
+        if not self.enabled:
+            task.log.info('Task failed to start, Mesos is disabled.')
+            task.exited(1)
+            return
+        self._check_connection()
+
         mesos_task_id = task.get_mesos_id()
         self.tasks[mesos_task_id] = task
-        if recover:
-            task.log.info('Reconciling state for this task from Mesos')
-            task.started()
-            self.runner.reconcile(task.get_config())
-        else:
-            self.runner.run(task.get_config())
-            log.info(
-                'Submitting task {} to {}'.format(
-                    mesos_task_id,
-                    self.mesos_address,
-                ),
-            )
+        self.runner.run(task.get_config())
+        log.info(
+            'Submitting task {} to {}'.format(
+                mesos_task_id,
+                self.mesos_address,
+            ),
+        )
+
+    def recover(self, task):
+        if not task:
+            return
+
+        if not self.enabled:
+            task.log.info('Could not recover task, Mesos is disabled.')
+            task.exited(None)
+            return
+        self._check_connection()
+
+        mesos_task_id = task.get_mesos_id()
+        self.tasks[mesos_task_id] = task
+        task.log.info('Reconciling state for this task from Mesos')
+        task.started()
+        self.runner.reconcile(task.get_config())
 
     def create_task(
         self,
