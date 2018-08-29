@@ -18,10 +18,9 @@ def filter_action_runs_needing_recovery(action_runs):
     ]
 
 
-def filter_recoverable_action_runs(action_runs):
+def group_by_actionrun_type(action_runs):
     """
-    Given a list of action_runs, return those that can be recovered.
-    SSHActionRuns and MesosActionRuns are returned separately.
+    Given a list of action_runs, group them by type.
     """
     ssh_runs = []
     mesos_runs = []
@@ -34,7 +33,7 @@ def filter_recoverable_action_runs(action_runs):
 
 
 def filter_recovery_candidates(runs):
-    return filter_recoverable_action_runs(
+    return group_by_actionrun_type(
         action_runs=filter_action_runs_needing_recovery(action_runs=runs),
     )
 
