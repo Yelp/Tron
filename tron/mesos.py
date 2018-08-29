@@ -364,18 +364,6 @@ class MesosCluster:
         if not self.runner:
             return None
 
-        if task_id is not None:
-            try:
-                name, uuid = task_id.rsplit('.', maxsplit=1)
-            except ValueError:
-                log.error(f'Invalid {task_id} for {action_run_id}')
-                return
-            if name != action_run_id:
-                log.error(
-                    f'Task id must start with {action_run_id}, got {task_id}'
-                )
-                return
-
         uris = [self.dockercfg_location] if self.dockercfg_location else []
         volumes = combine_volumes(self.default_volumes, extra_volumes)
         task_kwargs = {
@@ -391,10 +379,15 @@ class MesosCluster:
             'uris': uris,
             'offer_timeout': self.offer_timeout,
         }
-        if task_id is not None:
-            task_kwargs['uuid'] = uuid
-
         task_config = self.runner.TASK_CONFIG_INTERFACE(**task_kwargs)
+
+        if task_id is not None:
+            try:
+                task_config = task_config.set_task_id(task_id)
+            except ValueError:
+                log.error(f'Invalid {task_id} for {action_run_id}')
+                return
+
         return MesosTask(action_run_id, task_config, serializer)
 
     def get_runner(self, mesos_address, queue):
