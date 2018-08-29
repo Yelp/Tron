@@ -690,7 +690,7 @@ class MesosActionRun(ActionRun, Observer):
             return
 
         self.watch(task)
-        mesos_cluster.submit(task, recover=True)
+        mesos_cluster.recover(task)
 
         # Reset status
         self.exit_status = None
