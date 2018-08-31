@@ -8,9 +8,9 @@ from __future__ import unicode_literals
 import logging
 import logging.config
 import os
-import queue
 import signal
 import threading
+import time
 
 import daemon
 import lockfile
@@ -230,12 +230,15 @@ class TronDaemon(object):
                 signal_map[signum](signum, None)
 
     def _handle_shutdown(self, sig_num, stack_frame):
-        stop_queue = queue.Queue()
-        reactor.callLater(0, lambda: (stop_queue.put(True), reactor.stop()))
-        try:
-            stop_queue.get(timeout=5)
-        except TimeoutError:
-            log.exception("timed out stopping the reactor")
+        log.info("Shutdown requested via %s" % sig_num)
+        reactor.callLater(0, reactor.stop)
+        waited = 0
+        while reactor.running:
+            if waited > 5:
+                log.error("timed out waiting for reactor shutdown")
+                break
+            time.sleep(0.1)
+            waited += 0.1
         if self.mcp:
             self.mcp.shutdown()
         MesosClusterRepository.shutdown()
