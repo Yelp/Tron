@@ -53,7 +53,7 @@ tronfig /work/example-cluster/tronfig/MASTER.yaml
 cat /work/example-cluster/tronfig/MASTER.yaml | tronfig -n MASTER -
 
 kill -SIGTERM $TRON_PID
-wait $TRON_PID
+wait $TRON_PID || true
 
 /opt/venvs/tron/bin/python - <<EOF
 import os

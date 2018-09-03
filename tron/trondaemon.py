@@ -9,6 +9,8 @@ import logging
 import logging.config
 import os
 import signal
+import threading
+import time
 
 import daemon
 import lockfile
@@ -142,8 +144,12 @@ class NoDaemonContext(object):
         if self.pidfile:
             self.pidfile.__exit__(exc_type, exc_val, exc_tb)
 
-    def terminate(self, *args):
-        pass
+    def terminate(self, signal_number, *_):
+        raise SystemExit(
+            "Terminating on signal {signal_number!r}".format(
+                signal_number=signal_number
+            )
+        )
 
 
 class TronDaemon(object):
@@ -157,17 +163,12 @@ class TronDaemon(object):
         self.context = self._build_context(options, context_class)
 
     def _build_context(self, options, context_class):
-        signal_map = {
-            signal.SIGHUP: self._handle_reconfigure,
-            signal.SIGINT: self._handle_shutdown,
-            signal.SIGTERM: self._handle_shutdown,
-        }
         pidfile = PIDFile(options.pid_file)
         return context_class(
             working_directory=options.working_dir,
             umask=0o022,
             pidfile=pidfile,
-            signal_map=signal_map,
+            signal_map={},
             files_preserve=[pidfile.lock.file],
         )
 
@@ -210,14 +211,37 @@ class TronDaemon(object):
 
     def _run_reactor(self):
         """Run the twisted reactor."""
-        reactor.run()
+        threading.Thread(
+            target=reactor.run,
+            daemon=True,
+            kwargs=dict(installSignalHandlers=0)
+        ).start()
+        signal_map = {
+            signal.SIGHUP: self._handle_reconfigure,
+            signal.SIGINT: self._handle_shutdown,
+            signal.SIGTERM: self._handle_shutdown,
+            signal.SIGQUIT: self._handle_shutdown,
+        }
+        signal.pthread_sigmask(signal.SIG_BLOCK, signal_map.keys())
+        while True:
+            signum = signal.sigwait(set(signal_map.keys()))
+            logging.info("Got signal %s" % signum)
+            if signum in signal_map:
+                signal_map[signum](signum, None)
 
     def _handle_shutdown(self, sig_num, stack_frame):
-        log.info("Shutdown requested: sig %s" % sig_num)
+        log.info("Shutdown requested via %s" % sig_num)
+        reactor.callLater(0, reactor.stop)
+        waited = 0
+        while reactor.running:
+            if waited > 5:
+                log.error("timed out waiting for reactor shutdown")
+                break
+            time.sleep(0.1)
+            waited += 0.1
         if self.mcp:
             self.mcp.shutdown()
         MesosClusterRepository.shutdown()
-        reactor.stop()
         self.context.terminate(sig_num, stack_frame)
 
     def _handle_reconfigure(self, _signal_number, _stack_frame):
