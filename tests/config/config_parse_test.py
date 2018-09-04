@@ -1146,20 +1146,20 @@ class TestBuildFormatStringValidator(TestCase):
     def test_validator_valid_format_string(self):
         template = "The {one} thing I {seven} is {mars}"
         context = config_utils.ConfigContext(
-            None,
-            None,
-            {'mars': 'ok'},
-            None,
+            path=None,
+            nodes=None,
+            command_context={'mars': 'ok'},
+            namespace=None,
         )
         assert self.validator(template, context)
 
     def test_validator_valid_percent_string(self):
         template = "The %(one)s %(seven)s thing is %(mars)s -config {'a': 1}"
         context = config_utils.ConfigContext(
-            None,
-            None,
-            {'mars': 'ok'},
-            None,
+            path=None,
+            nodes=None,
+            command_context={'mars': 'ok'},
+            namespace=None,
         )
         assert self.validator(template, context)
 
