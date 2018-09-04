@@ -7,7 +7,6 @@ nodes:
 mesos_options:
   master_address: mesos.paasta-mesosstage.yelp
   master_port: 5050
-  secret: ''
   role: '*'
   enabled: True
   dockercfg_location: file:///root/.dockercfg

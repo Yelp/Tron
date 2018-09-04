@@ -46,19 +46,20 @@ def get_secret_from_file(file_path):
 class MesosClusterRepository:
     """A class that stores MesosCluster objects and configuration."""
 
-    clusters = {}
-    mesos_master_address = None
-    mesos_master_port = None
-    mesos_secret_file = None
-    mesos_role = None
-    mesos_principal = None
+    # Config values
     mesos_enabled = False
+    master_address = None
+    master_port = None
+    secret_file = None
+    role = None
+    principal = None
     default_volumes = ()
     dockercfg_location = None
     offer_timeout = None
     secret = None
 
     name = 'frameworks'
+    clusters = {}
     state_data = {}
     state_watcher = None
 
@@ -69,7 +70,7 @@ class MesosClusterRepository:
     @classmethod
     def get_cluster(cls, master_address=None):
         if master_address is None:
-            master_address = cls.mesos_master_address
+            master_address = cls.master_address
         if master_address not in cls.clusters:
             framework_id = cls.state_data.get(master_address)
             cluster = MesosCluster(
@@ -94,7 +95,7 @@ class MesosClusterRepository:
 
     @classmethod
     def configure(cls, mesos_options):
-        cls.mesos_master_address = mesos_options.master_address
+        cls.master_address = mesos_options.master_address
         cls.master_port = mesos_options.master_port
         cls.secret_file = mesos_options.secret_file
         cls.role = mesos_options.role
@@ -132,7 +133,7 @@ class MesosClusterRepository:
 
 
 class MesosTask(ActionCommand):
-    ERROR_STATES = frozenset(['failed', 'killed', 'lost', 'error'])
+    ERROR_STATES = frozenset(['failed', 'killed', 'error'])
 
     def __init__(self, id, task_config, serializer=None):
         super(MesosTask, self).__init__(id, task_config.cmd, serializer)
@@ -218,6 +219,8 @@ class MesosTask(ActionCommand):
             self.started()
         elif mesos_type == 'finished':
             self.exited(0)
+        elif mesos_type == 'lost':
+            self.exited(None)
         elif mesos_type in self.ERROR_STATES:
             self.exited(1)
         else:
@@ -290,8 +293,6 @@ class MesosCluster:
         self.dockercfg_location = dockercfg_location
         self.offer_timeout = offer_timeout
 
-    # TODO: Should this be done asynchronously?
-    # TODO: Handle/retry errors
     def connect(self):
         self.runner = self.get_runner(self.mesos_address, self.queue)
         self.handle_next_event()
@@ -309,15 +310,7 @@ class MesosCluster:
         self.deferred.addErrback(logError)
         self.deferred.addErrback(self.handle_next_event)
 
-    def submit(self, task):
-        if not task:
-            return
-
-        if not self.enabled:
-            task.log.info('Task failed to start, Mesos is disabled.')
-            task.exited(1)
-            return
-
+    def _check_connection(self):
         if self.runner.stopping:
             # Last framework was terminated for some reason, re-connect.
             log.info('Last framework stopped, re-connecting')
@@ -325,6 +318,16 @@ class MesosCluster:
         elif self.deferred.called:
             # Just in case callbacks are missing, re-add.
             self.handle_next_event()
+
+    def submit(self, task, recover=False):
+        if not task:
+            return
+
+        if not self.enabled:
+            task.log.info('Task failed to start, Mesos is disabled.')
+            task.exited(1)
+            return
+        self._check_connection()
 
         mesos_task_id = task.get_mesos_id()
         self.tasks[mesos_task_id] = task
@@ -335,6 +338,22 @@ class MesosCluster:
                 self.mesos_address,
             ),
         )
+
+    def recover(self, task):
+        if not task:
+            return
+
+        if not self.enabled:
+            task.log.info('Could not recover task, Mesos is disabled.')
+            task.exited(None)
+            return
+        self._check_connection()
+
+        mesos_task_id = task.get_mesos_id()
+        self.tasks[mesos_task_id] = task
+        task.log.info('Reconciling state for this task from Mesos')
+        task.started()
+        self.runner.reconcile(task.get_config())
 
     def create_task(
         self,
@@ -348,25 +367,35 @@ class MesosCluster:
         env,
         extra_volumes,
         serializer,
+        task_id=None,
     ):
         if not self.runner:
             return None
 
         uris = [self.dockercfg_location] if self.dockercfg_location else []
         volumes = combine_volumes(self.default_volumes, extra_volumes)
-        task_config = self.runner.TASK_CONFIG_INTERFACE(
-            name=action_run_id,
-            cmd=command,
-            cpus=cpus,
-            mem=mem,
-            constraints=constraints,
-            image=docker_image,
-            docker_parameters=docker_parameters,
-            environment=env,
-            volumes=volumes,
-            uris=uris,
-            offer_timeout=self.offer_timeout,
-        )
+        task_kwargs = {
+            'name': action_run_id,
+            'cmd': command,
+            'cpus': cpus,
+            'mem': mem,
+            'constraints': constraints,
+            'image': docker_image,
+            'docker_parameters': docker_parameters,
+            'environment': env,
+            'volumes': volumes,
+            'uris': uris,
+            'offer_timeout': self.offer_timeout,
+        }
+        task_config = self.runner.TASK_CONFIG_INTERFACE(**task_kwargs)
+
+        if task_id is not None:
+            try:
+                task_config = task_config.set_task_id(task_id)
+            except ValueError:
+                log.error(f'Invalid {task_id} for {action_run_id}')
+                return
+
         return MesosTask(action_run_id, task_config, serializer)
 
     def get_runner(self, mesos_address, queue):

@@ -48,7 +48,7 @@ setup(
         'bsddb3',
         'ipython',
         'ipdb',
-        'task_processing[mesos_executor]>=0.0.17',
+        'task_processing[mesos_executor]>=0.1.1',
         'requests',
         'psutil'
     ],

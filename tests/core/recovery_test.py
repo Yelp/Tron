@@ -14,8 +14,7 @@ from tron.core.actionrun import MesosActionRun
 from tron.core.actionrun import SSHActionRun
 from tron.core.recovery import build_recovery_command
 from tron.core.recovery import filter_action_runs_needing_recovery
-from tron.core.recovery import filter_recoverable_action_runs
-from tron.core.recovery import filter_recovery_candidates
+from tron.core.recovery import group_by_actionrun_type
 from tron.core.recovery import launch_recovery_actionruns_for_job_runs
 from tron.core.recovery import recover_action_run
 from tron.utils import timeutils
@@ -91,47 +90,37 @@ class TestRecovery(TestCase):
         assert action_run.end_time is None
         assert action_run.exit_status is None
 
-    def test_filter_recoverable_action_runs(self):
-        assert filter_recoverable_action_runs(self.action_runs) == \
-            [self.action_runs[0], self.action_runs[1]]
-
-    def test_filter_recovery_candidates(self):
-        with mock.patch('tron.core.recovery.filter_recoverable_action_runs', autospec=True) as mock_filter_recoverable, \
-                mock.patch('tron.core.recovery.filter_action_runs_needing_recovery', autospec=True) as mock_filter_needing_recovery:
-
-            mock_filter_needing_recovery.return_value = ['foo']
-            filter_recovery_candidates(self.action_runs)
-            mock_filter_recoverable.assert_called_once_with(
-                action_runs=['foo']
-            )
-            mock_filter_needing_recovery.assert_called_once_with(
-                action_runs=self.action_runs
-            )
+    def test_group_by_actionrun_type(self):
+        assert group_by_actionrun_type(self.action_runs) == \
+            ([self.action_runs[0], self.action_runs[1]], [self.action_runs[2]])
 
     def test_launch_recovery_actionruns_for_job_runs(self):
-        with mock.patch('tron.core.recovery.filter_recovery_candidates', autospec=True) as mock_filter_recovery_candidates, \
+        with mock.patch('tron.core.recovery.filter_action_runs_needing_recovery', autospec=True) as mock_filter, \
                 mock.patch('tron.core.recovery.recover_action_run', autospec=True) as mock_recover_action_run:
 
-            mock_values = [
+            mock_actions = [
+                mock.Mock(action_runner=NoActionRunnerFactory(), spec=SSHActionRun),
                 mock.Mock(
-                    autospec=True, action_runner=NoActionRunnerFactory()
-                ),
-                mock.Mock(
-                    autospec=True,
                     action_runner=SubprocessActionRunnerFactory(
                         status_path='/tmp/foo', exec_path=('/tmp/foo')
-                    )
+                    ),
+                    spec=SSHActionRun,
                 ),
+                mock.Mock(action_runner=NoActionRunnerFactory(), spec=MesosActionRun),
             ]
 
-            mock_filter_recovery_candidates.return_value = mock_values
+            mock_filter.return_value = mock_actions
             mock_action_runner = mock.Mock(autospec=True)
 
             mock_job_run = mock.Mock()
             launch_recovery_actionruns_for_job_runs([mock_job_run],
                                                     mock_action_runner)
+            ssh_runs = mock_actions[:2]
             calls = [
-                call(mock_values[0], mock_action_runner),
-                call(mock_values[1], mock_values[1].action_runner)
+                call(ssh_runs[0], mock_action_runner),
+                call(ssh_runs[1], ssh_runs[1].action_runner)
             ]
             mock_recover_action_run.assert_has_calls(calls, any_order=True)
+
+            mesos_run = mock_actions[2]
+            assert mesos_run.recover.call_count == 1
