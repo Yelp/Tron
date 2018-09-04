@@ -32,12 +32,6 @@ def group_by_actionrun_type(action_runs):
     return ssh_runs, mesos_runs
 
 
-def filter_recovery_candidates(runs):
-    return group_by_actionrun_type(
-        action_runs=filter_action_runs_needing_recovery(action_runs=runs),
-    )
-
-
 def build_recovery_command(recovery_binary, path):
     return "%s %s" % (recovery_binary, path)
 
@@ -99,7 +93,8 @@ def recover_action_run(action_run, action_runner):
 
 def launch_recovery_actionruns_for_job_runs(job_runs, master_action_runner):
     for run in job_runs:
-        ssh_runs, mesos_runs = filter_recovery_candidates(run._action_runs)
+        to_recover = filter_action_runs_needing_recovery(run._action_runs)
+        ssh_runs, mesos_runs = group_by_actionrun_type(to_recover)
         for action_run in ssh_runs:
             if type(action_run.action_runner) == NoActionRunnerFactory and \
                type(master_action_runner) != NoActionRunnerFactory:
