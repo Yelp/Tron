@@ -1,3 +1,13 @@
+tron (0.9.4.0) trusty; urgency=medium
+
+  * 0.9.4.0 tagged with 'make release'
+  * add string format support (#490)
+  * recover Mesos action runs on restart
+  * run reactor on separate thread
+  * job trigger configs and eventbus
+
+ -- root <root@a3969702bcb5>  Tue, 04 Sep 2018 22:23:25 +0000
+
 tron (0.9.3.0) trusty; urgency=medium
 
   * 0.9.3.0 tagged with 'make release'
