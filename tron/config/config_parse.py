@@ -24,6 +24,7 @@ from tron.config.config_utils import build_dict_name_validator
 from tron.config.config_utils import build_list_of_type_validator
 from tron.config.config_utils import ConfigContext
 from tron.config.config_utils import PartialConfigContext
+from tron.config.config_utils import StringFormatter
 from tron.config.config_utils import valid_bool
 from tron.config.config_utils import valid_context_variable_expr
 from tron.config.config_utils import valid_dict
@@ -68,8 +69,14 @@ def build_format_string_validator(context_object):
 
         try:
             valid_context_variable_expr(value, config_context)
-            value % context
-            return value
+            try:
+                value % context
+                StringFormatter(context).format(value)
+                return value
+            except Exception as e:
+                value % context
+                log.warning("Invalid format string {} at {} {}.\nFall back to % string evaluation".format(e, config_context.path, value))
+                return value
         except (KeyError, ValueError) as e:
             error_msg = "Unknown context variable %s at %s: %s"
             raise ConfigError(error_msg % (e, config_context.path, value))

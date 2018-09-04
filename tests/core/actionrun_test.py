@@ -328,6 +328,16 @@ class TestActionRun(TestCase):
         self.action_run.bare_command = "%(stars)s"
         assert_equal(self.action_run.render_command(), 'bright')
 
+    def test_render_format_string_command(self):
+        self.action_run.context = {'stars': 'bright'}
+        self.action_run.bare_command = "{stars}"
+        assert_equal(self.action_run.render_command(), 'bright')
+
+    def test_render_valid_percent_invalid_format_string_command(self):
+        self.action_run.context = {'stars': 'bright'}
+        self.action_run.bare_command = "%(stars)s --config {'a': 1}"
+        assert_equal(self.action_run.render_command(), "bright --config {'a': 1}")
+
     def test_command_not_yet_rendered(self):
         assert_equal(self.action_run.command, self.rendered_command)
 
