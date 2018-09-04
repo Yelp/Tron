@@ -4,3 +4,5 @@
 /resources/public/js/compiled
 out
 .rebel_readline_history
+.lein-repl-history
+.nrepl-port
