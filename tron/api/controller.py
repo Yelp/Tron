@@ -25,14 +25,7 @@ class JobCollectionController(object):
         self.job_collection = job_collection
 
     def handle_command(self, command):
-        if command == 'disableall':
-            self.job_collection.disable()
-            return "Disabled all jobs."
-
-        if command == 'enableall':
-            self.job_collection.enable()
-            return "Enabled all jobs."
-
+        # No commands to handle, enableall/disableall have been deprecated
         raise UnknownCommandError("Unknown command %s" % command)
 
 
