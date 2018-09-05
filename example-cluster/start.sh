@@ -28,7 +28,6 @@ FAKETIME_X=${FAKETIME_X:-10}
 exec faketime -f "+0.0y x$FAKETIME_X" \
   trond \
     -l logging.conf \
-    --nodaemon \
     --working-dir=/nail/tron \
     -v \
     --host 0.0.0.0

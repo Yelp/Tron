@@ -38,7 +38,7 @@ Options
     Debug mode, extra error reporting, no daemonizing
 
 ``--nodaemon``
-    Indicates we should not fork and daemonize the process (default False)
+    [DEPRECATED in 0.9.4] Indicates we should not fork and daemonize the process (default False)
 
 ``--pid-file=PIDFILE``
     Where to store pid of the executing process (default /var/run/tron.pid)
@@ -75,7 +75,7 @@ Signals
     Reload the configuration file.
 
 `SIGUSR1`
-    If running with ``--nodaemon`` will drop into an ipdb debugging prompt.
+    Will drop into an ipdb debugging prompt.
 
 Logging
 -------
