@@ -13,6 +13,7 @@ from tron import mcp
 from tron.api import controller
 from tron.api.controller import ConfigController
 from tron.api.controller import JobCollectionController
+from tron.api.controller import UnknownCommandError
 from tron.config import config_parse
 from tron.config import ConfigError
 from tron.config import manager
@@ -31,13 +32,10 @@ class TestJobCollectionController(TestCase):
         )
         self.controller = JobCollectionController(self.collection)
 
-    def test_handle_command_enabled(self):
-        self.controller.handle_command('enableall')
-        self.collection.enable.assert_called_with()
-
-    def test_handle_command_disable(self):
-        self.controller.handle_command('disableall')
-        self.collection.disable.assert_called_with()
+    def test_handle_command_unknown(self):
+        with self.assertRaises(UnknownCommandError):
+            self.controller.handle_command('enableall')
+            self.controller.handle_command('disableall')
 
 
 class TestActionRunController(TestCase):
