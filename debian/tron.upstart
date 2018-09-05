@@ -15,5 +15,5 @@ script
       log_failure_msg "and then set RUN to 'yes' in /etc/default/$NAME to enable it."
       exit 0
   fi
-  exec start-stop-daemon --start -c $DAEMONUSER --exec /usr/bin/trond -- --nodaemon $DAEMON_OPTS
+  exec start-stop-daemon --start -c $DAEMONUSER --exec /usr/bin/trond -- $DAEMON_OPTS
 end script

@@ -12,10 +12,9 @@ import signal
 import threading
 import time
 
-import daemon
+import ipdb
 import lockfile
 import pkg_resources
-import six
 from twisted.internet import defer
 from twisted.internet import reactor
 from twisted.python import log as twisted_log
@@ -84,8 +83,9 @@ class PIDFile(object):
         self._try_unlock()
         try:
             os.unlink(self.filename)
+            log.info(f"Removed pidfile: {self.filename}")
         except OSError:
-            log.warning("Failed to remove pidfile: %s" % self.filename)
+            log.warning(f"Failed to remove pidfile: {self.filename}")
 
 
 def setup_logging(options):
@@ -123,33 +123,21 @@ class NoDaemonContext(object):
     """A mock DaemonContext for running trond without being a daemon."""
 
     def __init__(self, **kwargs):
-        self.signal_map = kwargs.pop('signal_map', {})
         self.pidfile = kwargs.pop('pidfile', None)
         self.working_dir = kwargs.pop('working_directory', '.')
-        self.signal_map[signal.SIGUSR1] = self._handle_debug
-
-    def _handle_debug(self, *args):
-        import ipdb
-        ipdb.set_trace()
 
     def __enter__(self):
-        for signum, handler in six.iteritems(self.signal_map):
-            signal.signal(signum, handler)
-
         os.chdir(self.working_dir)
         if self.pidfile:
             self.pidfile.__enter__()
 
     def __exit__(self, exc_type, exc_val, exc_tb):
+        log.info("NoDaemonContext exit")
         if self.pidfile:
             self.pidfile.__exit__(exc_type, exc_val, exc_tb)
 
     def terminate(self, signal_number, *_):
-        raise SystemExit(
-            "Terminating on signal {signal_number!r}".format(
-                signal_number=signal_number
-            )
-        )
+        raise SystemExit(f"Terminating on signal {signal_number!r}")
 
 
 class TronDaemon(object):
@@ -158,13 +146,12 @@ class TronDaemon(object):
     def __init__(self, options):
         self.options = options
         self.mcp = None
-        nodaemon = self.options.nodaemon
-        context_class = NoDaemonContext if nodaemon else daemon.DaemonContext
-        self.context = self._build_context(options, context_class)
+        self.context = self._build_context(options)
+        self.manhole_sock = f"{self.options.working_dir}/manhole.sock"
 
-    def _build_context(self, options, context_class):
+    def _build_context(self, options):
         pidfile = PIDFile(options.pid_file)
-        return context_class(
+        return NoDaemonContext(
             working_directory=options.working_dir,
             umask=0o022,
             pidfile=pidfile,
@@ -182,11 +169,8 @@ class TronDaemon(object):
 
     def _run_manhole(self):
         self.manhole = make_manhole(dict(trond=self, mcp=self.mcp))
-
-        reactor.listenUNIX(
-            f"{self.options.working_dir}/manhole.sock", self.manhole
-        )
-        log.info(f"manhole started on {self.options.working_dir}/manhole.sock")
+        reactor.listenUNIX(self.manhole_sock, self.manhole)
+        log.info(f"manhole started on {self.manhole_sock}")
 
     def _run_www_api(self):
         # Local import required because of reactor import in server and www
@@ -221,9 +205,10 @@ class TronDaemon(object):
             signal.SIGINT: self._handle_shutdown,
             signal.SIGTERM: self._handle_shutdown,
             signal.SIGQUIT: self._handle_shutdown,
+            signal.SIGUSR1: self._handle_debug,
         }
-        signal.pthread_sigmask(signal.SIG_BLOCK, signal_map.keys())
         while True:
+            signal.pthread_sigmask(signal.SIG_BLOCK, signal_map.keys())
             signum = signal.sigwait(set(signal_map.keys()))
             logging.info("Got signal %s" % signum)
             if signum in signal_map:
@@ -247,3 +232,6 @@ class TronDaemon(object):
     def _handle_reconfigure(self, _signal_number, _stack_frame):
         log.info("Reconfigure requested by SIGHUP.")
         reactor.callLater(0, self.mcp.reconfigure)
+
+    def _handle_debug(self, _signal_number, _stack_frame):
+        ipdb.set_trace()

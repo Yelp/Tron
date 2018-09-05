@@ -71,7 +71,6 @@ class TronDaemonTestCase(TestCase):
     def setup(self):
         self.tmpdir = tempfile.TemporaryDirectory()
         trond_opts = mock.Mock()
-        trond_opts.nodaemon = True
         trond_opts.working_dir = self.tmpdir.name
         trond_opts.pid_file = os.path.join(self.tmpdir.name, "pidfile")
         self.trond = TronDaemon(trond_opts)

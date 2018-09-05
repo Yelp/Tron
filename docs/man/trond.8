@@ -61,7 +61,7 @@ Verbose logging
 Debug mode, extra error reporting, no daemonizing
 .TP
 .B \fB\-\-nodaemon\fP
-Indicates we should not fork and daemonize the process (default False)
+(DEPRECATED in 0.9.4) Indicates we should not fork and daemonize the process (default False)
 .TP
 .B \fB\-\-pid\-file=PIDFILE\fP
 Where to store pid of the executing process (default /var/run/tron.pid)
@@ -97,7 +97,7 @@ Does some cleanup before shutting down.
 Reload the configuration file.
 .TP
 .B \fISIGUSR1\fP
-If running with \fB\-\-nodaemon\fP will drop into an ipdb debugging prompt.
+Will drop into an ipdb debugging prompt.
 .UNINDENT
 .SH LOGGING
 .sp

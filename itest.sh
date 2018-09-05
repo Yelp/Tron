@@ -29,7 +29,7 @@ export TRON_WORKDIR=/nail/tron
 mkdir -p $TRON_WORKDIR
 export TRON_START_TIME=$(date +%s)
 
-trond --nodaemon --working-dir=$TRON_WORKDIR &
+trond --working-dir=$TRON_WORKDIR &
 TRON_PID=$!
 
 for i in {1..5}; do
