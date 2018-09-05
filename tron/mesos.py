@@ -496,9 +496,6 @@ class MesosCluster:
         self.queue = PyDeferredQueue()
 
         for key, task in list(self.tasks.items()):
-            task.log.warning(
-                'Still running during Mesos shutdown, becoming unknown'
-            )
             task.exited(None)
             del self.tasks[key]
 
