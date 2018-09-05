@@ -1,3 +1,12 @@
+tron (0.9.5.0) trusty; urgency=medium
+
+  * 0.9.5.0 tagged with 'make release'
+  * Increase upstart timeout
+  * Remove enableall/disableall from jobs controller
+  * Deprecate --nodaemon
+
+ -- root <root@dd45ed9b4f6d>  Wed, 05 Sep 2018 22:04:23 +0000
+
 tron (0.9.4.0) trusty; urgency=medium
 
   * 0.9.4.0 tagged with 'make release'
