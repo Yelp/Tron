@@ -4,6 +4,7 @@ start on filesystem and (started networking)
 stop on shutdown
 
 respawn
+kill timeout 20
 
 script
   set -a
