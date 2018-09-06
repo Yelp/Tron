@@ -721,6 +721,9 @@ class MesosActionRun(ActionRun, Observer):
         return task
 
     def stop(self):
+        if not self.is_active:
+            return f'Action is {self.state}, not running.'
+
         if self.retries_remaining is not None:
             self.retries_remaining = -1
 
@@ -730,6 +733,9 @@ class MesosActionRun(ActionRun, Observer):
         return self._kill_mesos_task()
 
     def kill(self, final=True):
+        if not self.is_active:
+            return f'Action is {self.state}, not running.'
+
         if self.retries_remaining is not None and final:
             self.retries_remaining = -1
 
