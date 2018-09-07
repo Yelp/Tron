@@ -225,13 +225,6 @@ class TronCommandsTestCase(sandbox.SandboxTestCase):
         with pytest.raises(CalledProcessError):
             test_return_code(self.sandbox.tronfig, bad_config)
 
-    def test_tronfig_no_header(self):
-        self.start_with_config(SINGLE_ECHO_CONFIG)
-        namespace = 'second'
-        self.sandbox.tronfig(ALT_NAMESPACED_ECHO_CONFIG, name=namespace)
-        stdout, stderr = self.sandbox.tronfig(name=namespace, no_header=True)
-        assert_equal(stdout.rstrip(), ALT_NAMESPACED_ECHO_CONFIG.rstrip())
-
 
 @pytest.mark.skip(reason="We don't have a setup for sandbox tests yet")
 class JobEndToEndTestCase(sandbox.SandboxTestCase):

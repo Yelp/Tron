@@ -321,17 +321,13 @@ class ConfigResource(resource.Resource):
     @AsyncResource.bounded
     def render_GET(self, request):
         config_name = requestargs.get_string(request, 'name')
-        no_header = requestargs.get_bool(request, 'no_header')
         if not config_name:
             return respond(
                 request,
                 {'error': "'name' for config is required."},
                 code=http.BAD_REQUEST,
             )
-        response = self.controller.read_config(
-            config_name,
-            add_header=not no_header,
-        )
+        response = self.controller.read_config(config_name)
         return respond(request, response)
 
     @AsyncResource.exclusive
