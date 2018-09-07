@@ -7,6 +7,7 @@ import shutil
 import tempfile
 
 import mock
+import pytest
 import pytz
 
 from testifycompat import assert_equal
@@ -1426,6 +1427,35 @@ class TestValidateVolume(TestCase):
             mesos_options,
             self.context,
         )
+
+
+class TestValidMasterAddress:
+
+    @pytest.fixture
+    def context(self):
+        return config_utils.NullConfigContext
+
+    @pytest.mark.parametrize('url', [
+        'http://blah.com',
+        'http://blah.com/',
+        'blah.com',
+        'blah.com/',
+    ])
+    def test_valid(self, url, context):
+        normalized = 'http://blah.com'
+        result = config_parse.valid_master_address(url, context)
+        assert result == normalized
+
+    @pytest.mark.parametrize('url', [
+        'https://blah.com',
+        'http://blah.com/something',
+        'blah.com/other',
+        'http://',
+        'blah.com?a=1',
+    ])
+    def test_invalid(self, url, context):
+        with pytest.raises(ConfigError):
+            config_parse.valid_master_address(url, context)
 
 
 if __name__ == '__main__':
