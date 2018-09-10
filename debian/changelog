@@ -1,3 +1,14 @@
+tron (0.9.5.1) trusty; urgency=medium
+
+  * 0.9.5.1 tagged with 'make release'
+  * Update taskproc to 0.1.2 for Mesos fixes
+  * Save jobs when re-configured
+  * Fix tronweb CSS
+  * Make scheme optional for Mesos master address
+  * More feedback on killing Mesos actions
+
+ -- root <root@df7a4a1e435e>  Mon, 10 Sep 2018 21:14:06 +0000
+
 tron (0.9.5.0) trusty; urgency=medium
 
   * 0.9.5.0 tagged with 'make release'
