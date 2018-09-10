@@ -340,7 +340,10 @@ class JobScheduler(Observer):
         # also possible this job was run (or is running) manually by a user.
         # Alternatively, if run_queued is True, this job_run is already queued.
         if not run_queued and not job_run.is_scheduled:
-            log.info(f"Scheduling {job_run} in state {job_run.state}")
+            log.info(
+                f"{job_run} in state {job_run.state} is not scheduled, "
+                "scheduling a new run instead of running"
+            )
             return self.schedule()
 
         node = job_run.node if self.job.all_nodes else None
