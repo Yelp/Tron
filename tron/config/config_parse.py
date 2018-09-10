@@ -8,7 +8,6 @@ from __future__ import unicode_literals
 import datetime
 import getpass
 import itertools
-import logging
 import os
 from urllib.parse import urlparse
 
@@ -51,8 +50,6 @@ from tron.config.schema import NamedTronConfig
 from tron.config.schema import TronConfig
 from tron.utils.dicts import FrozenDict
 
-log = logging.getLogger(__name__)
-
 
 def build_format_string_validator(context_object):
     """Validate that a string does not contain any unexpected formatting keys.
@@ -76,7 +73,6 @@ def build_format_string_validator(context_object):
                 return value
             except Exception as e:
                 value % context
-                log.warning("Invalid format string {} at {} {}.\nFall back to % string evaluation".format(e, config_context.path, value))
                 return value
         except (KeyError, ValueError) as e:
             error_msg = "Unknown context variable %s at %s: %s"
