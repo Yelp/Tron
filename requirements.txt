@@ -15,5 +15,5 @@ PyYAML>=3.0
 requests
 Sphinx-PyPI-upload>=0.2.1
 Sphinx>=1.1.2
-task_processing[mesos_executor]>=0.1.1
+task_processing[mesos_executor]>=0.1.2
 Twisted>=17.0.0
