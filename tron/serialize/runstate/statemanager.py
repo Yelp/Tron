@@ -179,7 +179,10 @@ class PersistentStateManager(object):
         """Persist an items state."""
         key = self._impl.build_key(type_enum, name)
         log.debug("Buffering state save for: %s", key)
-        if self._buffer.save(key, state_data) and self.enabled:
+        if self._buffer.save(key, state_data):
+            if not self.enabled:
+                log.debug(f"State manager disabled, not persisting {key}")
+                return
             self._save_from_buffer()
 
     def _save_from_buffer(self):

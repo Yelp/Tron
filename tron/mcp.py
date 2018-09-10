@@ -50,9 +50,9 @@ class MasterControlProgram(object):
             self._load_config(reconfigure=True)
         except Exception as e:
             log.exception(
-                "reconfigure failure: %s: %s" % (e.__class__.__name__, e)
+                f"reconfigure failure: {e.__class__.__name__}: {e}"
             )
-            raise
+            raise e
 
     def _load_config(self, reconfigure=False):
         """Read config data and apply it."""

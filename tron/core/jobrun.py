@@ -342,16 +342,8 @@ class JobRunCollection(object):
         and return it.
         """
         run_num = self.next_run_num()
-        log.info(
-            "Building JobRun %s for %s on %s at %s" % (
-                run_num,
-                job,
-                node,
-                run_time,
-            )
-        )
-
         run = JobRun.for_job(job, run_num, run_time, node, manual)
+        log.info(f"Created {run} on {node.name} at {run_time}")
         self.runs.appendleft(run)
         self.remove_old_runs()
         return run
