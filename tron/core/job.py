@@ -1,7 +1,6 @@
 from __future__ import absolute_import
 from __future__ import unicode_literals
 
-import datetime
 import logging
 
 import humanize
@@ -288,6 +287,8 @@ class JobScheduler(Observer):
     def create_and_schedule_runs(self, ignore_last_run_time=False):
         for job_run in self.get_runs_to_schedule(ignore_last_run_time):
             self._set_callback(job_run)
+        # Eagerly save new runs in case tron gets restarted
+        self.job.notify(Job.NOTIFY_STATE_CHANGE)
 
     def disable(self):
         """Disable the job and cancel and pending scheduled jobs."""
@@ -319,13 +320,8 @@ class JobScheduler(Observer):
     def _set_callback(self, job_run):
         """Set a callback for JobRun to fire at the appropriate time."""
         seconds = job_run.seconds_until_run_time()
-        human_time = humanize.naturaltime(datetime.timedelta(seconds=seconds))
-        log.info(
-            "Scheduling next Jobrun for %s about %s from now (%d seconds)",
-            self.job.name,
-            human_time,
-            seconds,
-        )
+        human_time = humanize.naturaltime(seconds, future=True)
+        log.info(f"Scheduling {job_run} {human_time} ({seconds} seconds)")
         eventloop.call_later(seconds, self.run_job, job_run)
 
     # TODO: new class for this method
@@ -336,7 +332,7 @@ class JobScheduler(Observer):
         # If the Job has been disabled after this run was scheduled, then cancel
         # the JobRun and do not schedule another
         if not self.job.enabled:
-            log.info("%s cancelled because job has been disabled." % job_run)
+            log.info(f"Cancelled {job_run} because job has been disabled.")
             return job_run.cancel()
 
         # If the JobRun was cancelled we won't run it.  A JobRun may be
@@ -345,10 +341,8 @@ class JobScheduler(Observer):
         # Alternatively, if run_queued is True, this job_run is already queued.
         if not run_queued and not job_run.is_scheduled:
             log.info(
-                "%s in state %s already out of scheduled state." % (
-                    job_run,
-                    job_run.state,
-                )
+                f"{job_run} in state {job_run.state} is not scheduled, "
+                "scheduling a new run instead of running"
             )
             return self.schedule()
 
@@ -370,10 +364,10 @@ class JobScheduler(Observer):
 
     def _queue_or_cancel_active(self, job_run):
         if self.job.queueing:
-            log.info("%s still running, queueing %s." % (self.job, job_run))
+            log.info(f"{self.job} still running, queueing {job_run}")
             return job_run.queue()
 
-        log.info("%s still running, cancelling %s." % (self.job, job_run))
+        log.info(f"{self.job} still running, cancelling {job_run}")
         job_run.cancel()
         self.schedule()
 
@@ -402,7 +396,7 @@ class JobScheduler(Observer):
     def get_runs_to_schedule(self, ignore_last_run_time):
         """Build and return the runs to schedule."""
         if self.job.runs.has_pending:
-            log.info("%s has pending runs, can't schedule more." % self.job)
+            log.info(f"{self.job} has pending runs, can't schedule more.")
             return []
 
         if ignore_last_run_time:
@@ -414,7 +408,7 @@ class JobScheduler(Observer):
         return self.job.build_new_runs(next_run_time)
 
     def __str__(self):
-        return "%s(%s)" % (self.__class__.__name__, self.job)
+        return f"{self.__class__.__name__}({self.job})"
 
     def get_name(self):
         return self.job.name
@@ -442,7 +436,7 @@ class JobSchedulerFactory(object):
         self.action_runner = action_runner
 
     def build(self, job_config):
-        log.debug("Building new job %s", job_config.name)
+        log.debug(f"Building new job {job_config.name}")
         output_path = filehandler.OutputPath(self.output_stream_dir)
         time_zone = job_config.time_zone or self.time_zone
         scheduler = scheduler_from_config(job_config.schedule, time_zone)
@@ -490,7 +484,7 @@ class JobCollection(object):
         return self.jobs.add(job_scheduler, self.update)
 
     def update(self, new_job_scheduler):
-        log.info("Updating %s", new_job_scheduler)
+        log.info(f"Updating {new_job_scheduler}")
         job_scheduler = self.get_by_name(new_job_scheduler.get_name())
         job_scheduler.get_job().update_from_job(new_job_scheduler.get_job())
         job_scheduler.schedule_reconfigured()
@@ -499,7 +493,7 @@ class JobCollection(object):
     def restore_state(self, job_state_data, config_action_runner):
         for name, state in job_state_data.items():
             self.jobs[name].restore_state(state, config_action_runner)
-        log.info("Loaded state for %d jobs", len(job_state_data))
+        log.info(f"Loaded state for {len(job_state_data)} jobs")
 
     def get_by_name(self, name):
         return self.jobs.get(name)
