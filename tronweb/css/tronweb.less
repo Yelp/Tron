@@ -788,9 +788,33 @@ div.refresh-view span {
  *  States
  *****************************************************************************/
 
-.up {
+.enabled,
+.up,
+.succeeded
+{
     .success;
 }
+
+.running,
+.starting,
+{
+    .info;
+}
+
+.cancelled,
+.disabled
+{
+    .warning;
+}
+
+.unknown,
+.failed,
+.degraded,
+.label-important
+{
+    .error;
+}
+
 
 /******************************************************************************
  *  Label
