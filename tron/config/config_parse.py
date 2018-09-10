@@ -10,6 +10,7 @@ import getpass
 import itertools
 import logging
 import os
+from urllib.parse import urlparse
 
 import pytz
 import six
@@ -159,6 +160,41 @@ def valid_node_name(value, config_context):
         msg = "Unknown node name %s at %s"
         raise ConfigError(msg % (value, config_context.path))
     return value
+
+
+def valid_master_address(value, config_context):
+    """Validates and normalizes Mesos master address.
+
+    Must be HTTP or not include a scheme, and only include
+    a host, without any path components.
+    """
+    valid_string(value, config_context)
+
+    # Parse with HTTP as default, only HTTP allowed.
+    scheme, netloc, path, params, query, fragment = urlparse(value, 'http')
+    if scheme != 'http':
+        msg = f"Only HTTP supported for Mesos master address, got {value}"
+        raise ConfigError(msg)
+
+    if params or query or fragment:
+        msg = f"Mesos master address may not contain path components, got {value}"
+        raise ConfigError(msg)
+
+    # Only one of netloc or path allowed, and no / except trailing ones.
+    # netloc is empty if there's no scheme, then we try the path.
+    path = path.rstrip('/')
+    if (netloc and path) or '/' in path:
+        msg = f"Mesos master address may not contain path components, got {value}"
+        raise ConfigError(msg)
+
+    if not netloc:
+        netloc = path
+
+    if not netloc:
+        msg = f"Mesos master address is missing host, got {value}"
+        raise ConfigError(msg)
+
+    return f'{scheme}://{netloc}'
 
 
 class ValidateConstraint(Validator):
@@ -625,7 +661,7 @@ class ValidateMesos(Validator):
 
     validators = {
         'master_address':
-            valid_string,
+            valid_master_address,
         'master_port':
             valid_int,
         'secret':
