@@ -6,8 +6,6 @@ from __future__ import unicode_literals
 
 import logging
 
-import six
-
 from tron import yaml
 
 log = logging.getLogger(__name__)
@@ -133,15 +131,6 @@ class JobController(object):
             return "Created %s" % ",".join(str(run) for run in runs)
 
         raise UnknownCommandError("Unknown command %s" % command)
-
-
-def format_seq(seq):
-    return "\n# ".join(sorted(seq))
-
-
-def format_mapping(mapping):
-    seq = ("%-30s: %s" % (k, v) for k, v in sorted(six.iteritems(mapping)))
-    return format_seq(seq)
 
 
 class ConfigController(object):
