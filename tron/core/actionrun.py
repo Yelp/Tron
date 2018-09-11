@@ -403,7 +403,11 @@ class ActionRun(object):
         if self.machine.check(target):
             self.exit_status = exit_status
             self.end_time = timeutils.current_time()
-            if self.eventbus_publish and self.trigger_downstreams:
+            transition = self.machine.transition(target)
+            if self.eventbus_publish \
+                    and self.trigger_downstreams \
+                    and transition \
+                    and self.is_complete:
                 formatter = StringFormatter(self.context).format
                 if isinstance(self.trigger_downstreams, bool):
                     shortdate = formatter("%(shortdate)s")
@@ -417,7 +421,7 @@ class ActionRun(object):
                 for trigger in triggers:
                     # self.id in here to make the log message above more concise
                     self.eventbus_publish(f"{self.id}.{trigger}")
-            return self.machine.transition(target)
+            return transition
         else:
             log.debug(f"{self} failed transition {self.state} ->")
 
