@@ -1,6 +1,7 @@
 import logging
 import os
 import pickle
+import signal
 import time
 from collections import deque
 
@@ -107,7 +108,7 @@ class EventBus:
             self.sync_process()
         except Exception:
             log.error("eventbus exception:", exc_info=1)
-            raise SystemExit("eventbus loop crashed")
+            os.kill(os.getpid(), signal.SIGTERM)
 
         reactor.callLater(1, self.sync_loop)
 

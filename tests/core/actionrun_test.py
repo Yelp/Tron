@@ -75,6 +75,7 @@ class TestActionRunFactory(TestCase):
         collection = ActionRunFactory.build_action_run_collection(
             self.job_run,
             self.action_runner,
+            eventbus_publish=lambda: None,
         )
         assert_equal(collection.action_graph, self.action_graph)
         assert_in('act1', collection.run_map)
@@ -102,6 +103,7 @@ class TestActionRunFactory(TestCase):
             self.job_run,
             state_data,
             cleanup_action_state_data,
+            eventbus_publish=lambda: None,
         )
 
         assert_equal(collection.action_graph, self.action_graph)
@@ -120,6 +122,7 @@ class TestActionRunFactory(TestCase):
             self.job_run,
             action,
             self.action_runner,
+            eventbus_publish=lambda: None,
         )
 
         assert_equal(action_run.job_run_id, self.job_run.id)
@@ -135,6 +138,7 @@ class TestActionRunFactory(TestCase):
             self.job_run,
             action,
             self.action_runner,
+            eventbus_publish=lambda: None,
         )
 
         assert_equal(action_run.job_run_id, self.job_run.id)
@@ -153,6 +157,7 @@ class TestActionRunFactory(TestCase):
             self.job_run,
             action,
             self.action_runner,
+            eventbus_publish=lambda: None,
         )
         assert_equal(action_run.__class__, SSHActionRun)
 
@@ -178,6 +183,7 @@ class TestActionRunFactory(TestCase):
             self.job_run,
             action,
             self.action_runner,
+            eventbus_publish=lambda: None,
         )
         assert_equal(action_run.__class__, MesosActionRun)
         assert_equal(action_run.cpus, action.cpus)
@@ -193,6 +199,7 @@ class TestActionRunFactory(TestCase):
         action_run = ActionRunFactory.action_run_from_state(
             self.job_run,
             state_data,
+            eventbus_publish=lambda: None,
         )
 
         assert_equal(action_run.job_run_id, state_data['job_run_id'])
@@ -212,6 +219,7 @@ class TestActionRunFactory(TestCase):
         action_run = ActionRunFactory.action_run_from_state(
             self.job_run,
             state_data,
+            eventbus_publish=lambda: None,
         )
 
         assert_equal(action_run.job_run_id, state_data['job_run_id'])
@@ -237,10 +245,11 @@ class TestActionRun(TestCase):
         self.command = "do command %(actionname)s"
         self.rendered_command = "do command action_name"
         self.action_run = ActionRun(
-            "id",
-            "action_name",
-            mock.create_autospec(node.Node),
-            self.command,
+            job_run_id="id",
+            name="action_name",
+            node=mock.create_autospec(node.Node),
+            eventbus_publish=lambda: None,
+            bare_command=self.command,
             output_path=self.output_path,
             action_runner=self.action_runner,
         )
@@ -392,10 +401,11 @@ class TestSSHActionRun(TestCase):
         )
         self.command = "do command %(actionname)s"
         self.action_run = SSHActionRun(
-            "id",
-            "action_name",
-            mock.create_autospec(node.Node),
-            self.command,
+            job_run_id="id",
+            name="action_name",
+            node=mock.create_autospec(node.Node),
+            bare_command=self.command,
+            eventbus_publish=lambda: None,
             output_path=self.output_path,
             action_runner=self.action_runner,
         )
@@ -565,6 +575,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             self.parent_context,
             list(self.output_path),
             self.run_node,
+            eventbus_publish=lambda: None,
         )
 
         for key, value in six.iteritems(self.state_data):
@@ -583,6 +594,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             self.parent_context,
             self.output_path,
             self.run_node,
+            lambda: None,
         )
         assert action_run.is_unknown
         assert_equal(action_run.exit_status, 0)
@@ -595,6 +607,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             self.parent_context,
             self.output_path,
             self.run_node,
+            lambda: None,
         )
         assert action_run.is_queued
 
@@ -605,6 +618,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             self.parent_context,
             self.output_path,
             self.run_node,
+            lambda: None,
         )
         assert_equal(action_run.node, self.run_node)
 
@@ -615,6 +629,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             self.parent_context,
             self.output_path,
             self.run_node,
+            lambda: None,
         )
         mock_store.get_instance().get_node.assert_called_with(
             self.state_data['node_name'],
@@ -629,6 +644,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             self.parent_context,
             self.output_path,
             self.run_node,
+            lambda: None,
         )
         assert_equal(action_run.bare_command, self.state_data['command'])
         assert not action_run.rendered_command
@@ -640,6 +656,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             self.parent_context,
             self.output_path,
             self.run_node,
+            lambda: None,
         )
         assert_equal(action_run.bare_command, self.state_data['command'])
         assert not action_run.rendered_command
@@ -652,6 +669,7 @@ class ActionRunStateRestoreTestCase(testingutils.MockTimeTestCase):
             self.parent_context,
             self.output_path,
             self.run_node,
+            lambda: None,
         )
         assert_equal(action_run.bare_command, self.state_data['command'])
         assert_equal(action_run.rendered_command, self.state_data['command'])
@@ -927,9 +945,10 @@ class TestMesosActionRun(TestCase):
             'extra_volumes': [],
         }
         self.action_run = MesosActionRun(
-            "job_run_id",
-            "action_name",
-            mock.create_autospec(node.Node),
+            job_run_id="job_run_id",
+            name="action_name",
+            node=mock.create_autospec(node.Node),
+            eventbus_publish=lambda: None,
             rendered_command=self.command,
             output_path=self.output_path,
             executor=ExecutorTypes.mesos,

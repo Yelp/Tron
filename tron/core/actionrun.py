@@ -32,7 +32,7 @@ class ActionRunFactory(object):
     """
 
     @classmethod
-    def build_action_run_collection(cls, job_run, action_runner):
+    def build_action_run_collection(cls, job_run, action_runner, eventbus_publish):
         """Create an ActionRunGraph from an ActionGraph and JobRun."""
         action_map = six.iteritems(job_run.action_graph.get_action_map())
         action_run_map = {
@@ -40,6 +40,7 @@ class ActionRunFactory(object):
                 job_run,
                 action_inst,
                 action_runner,
+                eventbus_publish,
             )
             for name, action_inst in action_map
         }
@@ -51,9 +52,10 @@ class ActionRunFactory(object):
         job_run,
         runs_state_data,
         cleanup_action_state_data,
+        eventbus_publish,
     ):
         action_runs = [
-            cls.action_run_from_state(job_run, state_data)
+            cls.action_run_from_state(job_run, state_data, eventbus_publish)
             for state_data in runs_state_data
         ]
         if cleanup_action_state_data:
@@ -61,6 +63,7 @@ class ActionRunFactory(object):
                 cls.action_run_from_state(
                     job_run,
                     cleanup_action_state_data,
+                    eventbus_publish,
                     cleanup=True,
                 ),
             )
@@ -72,7 +75,7 @@ class ActionRunFactory(object):
         return ActionRunCollection(job_run.action_graph, action_run_map)
 
     @classmethod
-    def build_run_for_action(cls, job_run, action, action_runner):
+    def build_run_for_action(cls, job_run, action, action_runner, eventbus_publish):
         """Create an ActionRun for a JobRun and Action."""
         run_node = action.node_pool.next(
         ) if action.node_pool else job_run.node
@@ -81,6 +84,7 @@ class ActionRunFactory(object):
             'job_run_id': job_run.id,
             'name': action.name,
             'node': run_node,
+            'eventbus_publish': eventbus_publish,
             'bare_command': action.command,
             'parent_context': job_run.context,
             'output_path': job_run.output_path.clone(),
@@ -105,7 +109,7 @@ class ActionRunFactory(object):
         return SSHActionRun(**args)
 
     @classmethod
-    def action_run_from_state(cls, job_run, state_data, cleanup=False):
+    def action_run_from_state(cls, job_run, state_data, eventbus_publish, cleanup=False):
         """Restore an ActionRun for this JobRun from the state data."""
         args = {
             'state_data': state_data,
@@ -113,6 +117,7 @@ class ActionRunFactory(object):
             'output_path': job_run.output_path.clone(),
             'job_run_node': job_run.node,
             'cleanup': cleanup,
+            'eventbus_publish': eventbus_publish,
         }
 
         if state_data.get('executor') == ExecutorTypes.mesos:
@@ -182,6 +187,7 @@ class ActionRun(object):
         job_run_id,
         name,
         node,
+        eventbus_publish,
         bare_command=None,
         parent_context=None,
         output_path=None,
@@ -212,6 +218,7 @@ class ActionRun(object):
         self.job_run_id = maybe_decode(job_run_id)
         self.action_name = maybe_decode(name)
         self.node = node
+        self.eventbus_publish = eventbus_publish
         self.start_time = start_time
         self.end_time = end_time
         self.exit_status = exit_status
@@ -272,6 +279,7 @@ class ActionRun(object):
         parent_context,
         output_path,
         job_run_node,
+        eventbus_publish,
         cleanup=False,
     ):
         """Restore the state of this ActionRun from a serialized state."""
@@ -297,9 +305,10 @@ class ActionRun(object):
 
         rendered_command = state_data.get('rendered_command')
         run = cls(
-            job_run_id,
-            action_name,
-            job_run_node,
+            job_run_id=job_run_id,
+            name=action_name,
+            node=job_run_node,
+            eventbus_publish=eventbus_publish,
             parent_context=parent_context,
             output_path=output_path,
             rendered_command=rendered_command,
@@ -308,7 +317,7 @@ class ActionRun(object):
             start_time=state_data['start_time'],
             end_time=state_data['end_time'],
             run_state=state.named_event_by_name(
-                cls.STATE_SCHEDULED,
+                ActionRun.STATE_SCHEDULED,
                 state_data['state'],
             ),
             exit_status=state_data.get('exit_status'),
@@ -394,6 +403,20 @@ class ActionRun(object):
         if self.machine.check(target):
             self.exit_status = exit_status
             self.end_time = timeutils.current_time()
+            if self.eventbus_publish and self.trigger_downstreams:
+                formatter = StringFormatter(self.context).format
+                if isinstance(self.trigger_downstreams, bool):
+                    shortdate = formatter("%(shortdate)s")
+                    triggers = [f"shortdate.{shortdate}"]
+                else:
+                    triggers = [
+                        f"{key}.{value}" for key, value
+                        in map(lambda k, v: (k, formatter(v)), triggers.items())
+                    ]
+                log.info(f"{self} publishing triggers: [{', '.join(triggers)}]")
+                for trigger in triggers:
+                    # self.id in here to make the log message above more concise
+                    self.eventbus_publish(f"{self.id}.{trigger}")
             return self.machine.transition(target)
         else:
             log.debug(f"{self} failed transition {self.state} ->")
