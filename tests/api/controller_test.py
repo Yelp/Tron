@@ -8,13 +8,11 @@ from testifycompat import assert_in
 from testifycompat import run
 from testifycompat import setup
 from testifycompat import TestCase
-from tests.testingutils import autospec_method
 from tron import mcp
 from tron.api import controller
 from tron.api.controller import ConfigController
 from tron.api.controller import JobCollectionController
 from tron.api.controller import UnknownCommandError
-from tron.config import config_parse
 from tron.config import ConfigError
 from tron.config import manager
 from tron.core import actionrun
@@ -146,34 +144,6 @@ class TestConfigController(TestCase):
         self.mcp.get_config_manager.return_value = self.manager
         self.controller = ConfigController(self.mcp)
 
-    def test_render_template(self):
-        config_content = "asdf asdf"
-        container = self.manager.load.return_value = mock.create_autospec(
-            config_parse.ConfigContainer,
-        )
-        container.get_node_names.return_value = ['one', 'two', 'three']
-        container.get_master.return_value.command_context = {'zing': 'stars'}
-        content = self.controller.render_template(config_content)
-        assert_in('# one\n# three\n# two\n', content)
-        assert_in('# %-30s: %s' % ('zing', 'stars'), content)
-        assert_in(config_content, content)
-
-    def test_strip_header_master(self):
-        name, content = 'MASTER', mock.Mock()
-        assert_equal(self.controller.strip_header(name, content), content)
-
-    def test_strip_header_named(self):
-        expected = "\nthing"
-        name, content = 'something', "{}{}".format(
-            self.controller.TEMPLATE,
-            expected,
-        )
-        assert_equal(self.controller.strip_header(name, content), expected)
-
-    def test_strip_header_named_missing(self):
-        name, content = 'something', 'whatever content'
-        assert_equal(self.controller.strip_header(name, content), content)
-
     def test_get_config_content_new(self):
         self.manager.__contains__.return_value = False
         content = self.controller._get_config_content('name')
@@ -187,7 +157,7 @@ class TestConfigController(TestCase):
         assert_equal(content, self.manager.read_raw_config.return_value)
         self.manager.read_raw_config.assert_called_with(name)
 
-    def test_read_config_master(self):
+    def test_read_config(self):
         self.manager.__contains__.return_value = True
         name = 'MASTER'
         resp = self.controller.read_config(name)
@@ -196,56 +166,25 @@ class TestConfigController(TestCase):
         assert_equal(resp['config'], self.manager.read_raw_config.return_value)
         assert_equal(resp['hash'], self.manager.get_hash.return_value)
 
-    def test_read_config_named(self):
-        name = 'some_name'
-        autospec_method(self.controller._get_config_content)
-        autospec_method(self.controller.render_template)
-        resp = self.controller.read_config(name)
-        self.controller._get_config_content.assert_called_with(name)
-        self.controller.render_template.assert_called_with(
-            self.controller._get_config_content.return_value,
-        )
-        assert_equal(
-            resp['config'],
-            self.controller.render_template.return_value,
-        )
-        assert_equal(resp['hash'], self.manager.get_hash.return_value)
-
-    def test_read_config_no_header(self):
-        name = 'some_name'
-        autospec_method(self.controller._get_config_content)
-        autospec_method(self.controller.render_template)
-        resp = self.controller.read_config(name, add_header=False)
-        assert not self.controller.render_template.called
-        assert_equal(
-            resp['config'],
-            self.controller._get_config_content.return_value,
-        )
-
     def test_update_config(self):
-        autospec_method(self.controller.strip_header)
         name, content, config_hash = None, mock.Mock(), mock.Mock()
         self.manager.get_hash.return_value = config_hash
         assert not self.controller.update_config(name, content, config_hash)
-        striped_content = self.controller.strip_header.return_value
-        self.manager.write_config.assert_called_with(name, striped_content)
-        self.mcp.reconfigure.assert_called_with()
-        self.controller.strip_header.assert_called_with(name, content)
         self.manager.get_hash.assert_called_with(name)
+        self.manager.write_config.assert_called_with(name, content)
+        self.mcp.reconfigure.assert_called_with()
 
     def test_update_config_failure(self):
-        autospec_method(self.controller.strip_header)
-        striped_content = self.controller.strip_header.return_value
-        name, config_hash = None, mock.Mock()
+        name, content, config_hash = None, mock.Mock(), mock.Mock()
         self.manager.get_hash.return_value = config_hash
         self.manager.write_config.side_effect = ConfigError("It broke")
         error = self.controller.update_config(
             name,
-            striped_content,
+            content,
             config_hash,
         )
         assert_equal(error, "It broke")
-        self.manager.write_config.assert_called_with(name, striped_content)
+        self.manager.write_config.assert_called_with(name, content)
         assert not self.mcp.reconfigure.call_count
 
     def test_update_config_hash_mismatch(self):
