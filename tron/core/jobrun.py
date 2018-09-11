@@ -15,6 +15,7 @@ from tron.core.actionrun import ActionRun
 from tron.core.actionrun import ActionRunFactory
 from tron.serialize import filehandler
 from tron.utils import maybe_decode
+from tron.utils import next_or_none
 from tron.utils import proxy
 from tron.utils import timeutils
 from tron.utils.observer import Observable
@@ -210,14 +211,13 @@ class JobRun(Observable, Observer):
         """Start all startable action runs, and return any that were
         successfully started.
         """
-        started_actions = []
-        for action_run in self.action_runs.get_startable_action_runs():
-            if action_run.start():
-                started_actions.append(action_run)
+        return [
+            action_run
+            for action_run in self.action_runs.get_startable_action_runs()
+            if action_run.start()
+        ]
 
-        return started_actions
-
-    def handle_action_run_state_change(self, action_run, _):
+    def handle_action_run_state_change(self, action_run: ActionRun, _):
         """Handle events triggered by JobRuns."""
         # propagate all state changes (from action runs) up to state serializer
         self.notify(self.NOTIFY_STATE_CHANGED)
@@ -228,25 +228,25 @@ class JobRun(Observable, Observer):
         if action_run.is_skipped and self.action_runs.is_scheduled:
             return
 
-        if not action_run.is_broken and any(self._start_action_runs()):
-            log.info("Action runs started for %s." % self)
-            return
+        if not action_run.is_broken:
+            started = self._start_action_runs()
+            if any(started):
+                log.info(
+                    f"{self} action runs started: "
+                    f"{', '.join(str(s) for s in started)}"
+                )
+                return
 
         if self.action_runs.is_active or self.action_runs.is_scheduled:
-            log.info("%s still has running or scheduled actions." % self)
+            log.info(f"{self} still has running or scheduled actions")
             return
 
         # If we can't make any progress, we're done
-        cleanup_run = self.action_runs.cleanup_action_run
+        cleanup_run: ActionRun = self.action_runs.cleanup_action_run
         if not cleanup_run or cleanup_run.is_done:
             return self.finalize()
 
-        # TODO: remove in (0.6), start() no longer raises an exception
-        # When a job is being disabled, or the daemon is being shut down a bunch
-        # of ActionRuns will be cancelled/failed. This would cause cleanup
-        # action to be triggered more then once. Guard against that.
-        if cleanup_run.check_state('start'):
-            cleanup_run.start()
+        cleanup_run.start()
 
     handler = handle_action_run_state_change
 
@@ -283,7 +283,7 @@ class JobRun(Observable, Observer):
         """The overall state of this job run. Based on the state of its actions.
         """
         if not self.action_runs:
-            log.info("%s has no state" % self)
+            log.info(f"{self} has no action runs to determine state")
             return ActionRun.STATE_UNKNOWN
 
         if self.action_runs.is_complete:
@@ -303,17 +303,13 @@ class JobRun(Observable, Observer):
 
         return ActionRun.STATE_UNKNOWN
 
-    @property
-    def full_id(self):
-        return "JobRun:%s" % self.id
-
     def __getattr__(self, name):
         if self.action_runs_proxy:
             return self.action_runs_proxy.perform(name)
         raise AttributeError(name)
 
     def __str__(self):
-        return self.full_id
+        return f"JobRun:{self.id}"
 
 
 class JobRunCollection(object):
@@ -372,26 +368,13 @@ class JobRunCollection(object):
         job_runs = self.runs if not reverse else reversed(self.runs)
         return filter(func, job_runs)
 
-    def _get_run_using(self, func, reverse=False):
-        """Find the first run (from most recent to least recent), where func()
-        returns true.  func() should be a callable which takes a single
-        argument (a JobRun), and return True or False.
-        """
-        try:
-            return next(self._get_runs_using(func, reverse))
-        except StopIteration:
-            return None
-
-    def _filter_by_state(self, state):
-        return lambda r: r.state == state
-
     def get_run_by_state(self, state):
         """Returns the most recent run which matches the state."""
-        return self._get_run_using(self._filter_by_state(state))
+        return next_or_none(r for r in self.runs if r.state == state)
 
     def get_run_by_num(self, num):
         """Return a the run with run number which matches num."""
-        return self._get_run_using(lambda r: r.run_num == num)
+        return next_or_none(r for r in self.runs if r.run_num == num)
 
     def get_run_by_index(self, index):
         """Return the job run at index. Jobs are indexed from oldest to newest.
@@ -403,62 +386,44 @@ class JobRunCollection(object):
 
     def get_run_by_state_short_name(self, short_name):
         """Returns the most recent run which matches the state short name."""
-        return self._get_run_using(lambda r: r.state.short_name == short_name)
+        return next_or_none(r for r in self.runs if r.state.short_name == short_name)
 
     def get_newest(self, include_manual=True):
         """Returns the most recently created JobRun."""
-
-        def func(r):
-            return True if include_manual else not r.manual
-
-        return self._get_run_using(func)
+        return next_or_none(r for r in self.runs if include_manual or not r.manual)
 
     def get_pending(self):
         """Return the job runs that are queued or scheduled."""
-        return self._get_runs_using(lambda r: r.is_scheduled or r.is_queued)
+        return [r for r in self.runs if r.is_scheduled or r.is_queued]
 
     @property
     def has_pending(self):
         return any(self.get_pending())
 
     def get_active(self, node=None):
-        if node:
-
-            def func(r):
-                return (r.is_running or r.is_starting) and r.node == node
-        else:
-
-            def func(r):
-                return r.is_running or r.is_starting
-
-        return self._get_runs_using(func)
+        return [
+            r
+            for r in self.runs
+            if (r.is_running or r.is_starting) and (not node or r.node == node)
+        ]
 
     def get_first_queued(self, node=None):
-        state = ActionRun.STATE_QUEUED
-        if node:
-
-            def queued_func(r):
-                return r.state == state and r.node == node
-        else:
-            queued_func = self._filter_by_state(state)
-        return self._get_run_using(queued_func, reverse=True)
+        return next_or_none(
+            r for r in reversed(self.runs)
+            if (not node or r.node == node) and r.state == ActionRun.STATE_QUEUED
+        )
 
     def get_scheduled(self):
-        state = ActionRun.STATE_SCHEDULED
-        return self._get_runs_using(self._filter_by_state(state))
+        return [r for r in self.runs if r.state == ActionRun.STATE_SCHEDULED]
 
     def get_next_to_finish(self, node=None):
         """Return the most recent run which is either running or scheduled. If
         node is not None, then only looks for runs on that node.
         """
-
-        def compare(run):
-            if node and run.node != node:
-                return False
-            if run.is_running or run.is_scheduled:
-                return run
-
-        return self._get_run_using(compare)
+        return next_or_none(
+            r for r in self.runs
+            if (not node or r.node == node) and (r.is_running or r.is_scheduled)
+        )
 
     def next_run_num(self):
         """Return the next run number to use."""
@@ -475,7 +440,7 @@ class JobRunCollection(object):
             run.cleanup()
 
     def get_action_runs(self, action_name):
-        return [job_run.get_action_run(action_name) for job_run in self]
+        return [job_run.get_action_run(action_name) for job_run in self.runs]
 
     @property
     def state_data(self):

@@ -4,7 +4,6 @@
 import logging
 
 import six
-from six.moves import filter
 from twisted.internet import reactor
 
 from tron import command_context
@@ -390,10 +389,14 @@ class ActionRun(object):
             target,
             exit_status,
         )
+        # TODO: - state machine already does .check()
+        #       - only set exit_status / end_time if transition succeeds?
         if self.machine.check(target):
             self.exit_status = exit_status
             self.end_time = timeutils.current_time()
             return self.machine.transition(target)
+        else:
+            log.debug(f"{self} failed transition {self.state} ->")
 
     def retry(self):
         """Invoked externally (via API) when action needs to be re-tried
@@ -823,7 +826,7 @@ class ActionRunCollection(object):
     action_runs = property(get_action_runs)
 
     @property
-    def cleanup_action_run(self):
+    def cleanup_action_run(self) -> ActionRun:
         return self.run_map.get(action.CLEANUP_ACTION_NAME)
 
     @property
@@ -835,27 +838,13 @@ class ActionRunCollection(object):
         if self.cleanup_action_run:
             return self.cleanup_action_run.state_data
 
-    def _get_runs_using(self, func, include_cleanup=False):
-        """Return an iterator of all the ActionRuns which cause func to return
-        True. func should be a callable that takes a single ActionRun and
-        returns True or False.
-        """
-        if include_cleanup:
-            action_runs = self.action_runs_with_cleanup
-        else:
-            action_runs = self.action_runs
-        return filter(func, action_runs)
-
     def get_startable_action_runs(self):
         """Returns any actions that are scheduled or queued that can be run."""
 
-        def startable(action_run):
-            return (
-                action_run.check_state('start') and
-                not self._is_run_blocked(action_run)
-            )
-
-        return self._get_runs_using(startable)
+        return [
+            r for r in self.action_runs
+            if r.check_state('start') and not self._is_run_blocked(r)
+        ]
 
     @property
     def has_startable_action_runs(self):
